@@ -8,7 +8,7 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { paymentService } from "@/services/paymentService";
 import type { Payment, CreatePaymentRequest } from "@erp/shared-types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
@@ -174,11 +174,14 @@ export default function Payments() {
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-md" dir="rtl">
-          <DialogHeader><DialogTitle>إضافة حركة نقدية</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>إضافة حركة نقدية</DialogTitle>
+            <DialogDescription>تسجيل حركة قبض أو صرف نقدية جديدة في النظام.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1">
               <Label>نوع الحركة</Label>
-              <Select value={form.payment_type} onValueChange={v => setForm(p => ({ ...p, payment_type: v as any }))}>
+              <Select value={form.payment_type} onValueChange={v => setForm(p => ({ ...p, payment_type: v as CreatePaymentRequest['payment_type'] }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(PAYMENT_TYPE_LABELS).map(([k, v]) => (

@@ -82,11 +82,12 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
   ];
 
   const filteredResults = query
-    ? mockResults.filter(
-        (r) =>
-          r.title.toLowerCase().includes(query.toLowerCase()) ||
-          r.subtitle.toLowerCase().includes(query.toLowerCase())
-      )
+    ? mockResults.filter((r) => {
+        const q = (query || "").toLowerCase();
+        const titleMatch = (r.title || "").toLowerCase().includes(q);
+        const subtitleMatch = (r.subtitle || "").toLowerCase().includes(q);
+        return titleMatch || subtitleMatch;
+      })
     : mockResults.slice(0, 5);
 
   const getIcon = (type: SearchResult['type']) => {

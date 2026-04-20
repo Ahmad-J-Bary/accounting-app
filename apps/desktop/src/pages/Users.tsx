@@ -8,7 +8,7 @@ import { Plus, Search, RefreshCw, Users as UsersIcon, ShieldAlert, ShieldCheck }
 import { formatDate } from "@/lib/format";
 import { userService } from "@/services/userService";
 import type { User, Role, CreateUserRequest } from "@erp/shared-types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -39,9 +39,10 @@ export default function Users() {
 
   useEffect(() => { load(); }, []);
 
-  const filtered = users.filter(u =>
-    u.username.includes(search) || u.full_name.includes(search)
-  );
+  const filtered = users.filter(u => {
+    const s = (search || "").toLowerCase();
+    return (u.username || "").toLowerCase().includes(s) || (u.full_name || "").toLowerCase().includes(s);
+  });
 
   const activeCount = users.filter(u => u.is_active).length;
   const adminCount = users.filter(u => roles.find(r => r.id === u.role_id)?.permissions.includes("Admin")).length;
@@ -155,7 +156,10 @@ export default function Users() {
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-md" dir="rtl">
-          <DialogHeader><DialogTitle>إضافة مستخدم جديد</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>إضافة مستخدم جديد</DialogTitle>
+            <DialogDescription>أدخل بيانات الحساب الجديد وتعيين الصلاحيات له.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1">
               <Label>الاسم الكامل *</Label>

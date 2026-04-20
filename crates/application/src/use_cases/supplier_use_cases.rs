@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use domain::suppliers::Supplier;
 use crate::ports::supplier_repository::SupplierRepository;
-use crate::dto::supplier_dto::{CreateSupplierRequest, SupplierDto};
+use crate::dto::supplier_dto::{CreateSupplierRequest, UpdateSupplierRequest, SupplierDto};
 use crate::errors::AppError;
 
 pub struct CreateSupplierUseCase {
@@ -69,6 +69,38 @@ impl GetSupplierUseCase {
         let sid = id.parse().map_err(|_| AppError::NotFound("Ù…Ø¹Ø±Ù Ø§Ù„Ù…ÙˆØ±Ø¯ ØºÙŠØ± ØµØ§Ù„Ø­".into()))?;
         let supplier = self.repo.find_by_id(&sid).await?
             .ok_or_else(|| AppError::NotFound("Ø§Ù„Ù…ÙˆØ±Ø¯ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯".into()))?;
+        Ok(SupplierDto {
+            id: supplier.id.to_string(),
+            name: supplier.name,
+            phone: supplier.phone,
+            email: supplier.email,
+            address: supplier.address,
+            balance: supplier.balance.to_string(),
+            is_active: supplier.is_active,
+            created_at: supplier.created_at.to_rfc3339(),
+            updated_at: supplier.updated_at.to_rfc3339(),
+        })
+    }
+}
+
+pub struct UpdateSupplierUseCase {
+    repo: Arc<dyn SupplierRepository>,
+}
+
+impl UpdateSupplierUseCase {
+    pub fn new(repo: Arc<dyn SupplierRepository>) -> Self {
+        Self { repo }
+    }
+
+    pub async fn execute(&self, req: UpdateSupplierRequest) -> Result<SupplierDto, AppError> {
+        let sid = req.id.parse().map_err(|_| AppError::NotFound("معرف المورد غير صالح".into()))?;
+        let mut supplier = self.repo.find_by_id(&sid).await?
+            .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
+        
+        supplier.update_info(req.name, req.phone, req.email, req.address)
+            .map_err(|e| AppError::Invalid(e.to_string()))?;
+        
+        self.repo.update(&supplier).await?;
         Ok(SupplierDto {
             id: supplier.id.to_string(),
             name: supplier.name,

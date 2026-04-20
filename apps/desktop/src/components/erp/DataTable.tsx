@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 interface Column<T> {
   key: string;
   label: string;
-  render?: (value: any, row: T) => React.ReactNode;
+  render?: (value: unknown, row: T) => React.ReactNode;
   sortable?: boolean;
   className?: string;
 }
@@ -22,10 +22,10 @@ interface DataTableProps<T> {
   pagination?: boolean;
   pageSize?: number;
   onRowAction?: (action: string, row: T) => void;
-  actions?: Array<{ label: string; icon: any; action: string }>;
+  actions?: Array<{ label: string; icon: React.ElementType; action: string }>;
 }
 
-export function DataTable<T extends Record<string, any>>({
+export function DataTable<T extends Record<string, unknown>>({
   data,
   columns,
   searchable = true,
@@ -48,7 +48,8 @@ export function DataTable<T extends Record<string, any>>({
     columns.some((col) => {
       const value = row[col.key];
       if (value === null || value === undefined) return false;
-      return String(value).toLowerCase().includes(searchQuery.toLowerCase());
+      const searchLower = (searchQuery || "").toLowerCase();
+      return String(value).toLowerCase().includes(searchLower);
     })
   );
 

@@ -4,19 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/erp/StatusBadge";
-import { Plus, Download, Search, MoreHorizontal, Eye, Edit, Printer, RefreshCw } from "lucide-react";
+import { Plus, Download, Search, MoreHorizontal, Eye, Edit, Trash2, Printer, RefreshCw } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supplierService } from "@/services/supplierService";
-import type { Supplier } from "@erp/shared-types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import type { SupplierDto } from "@erp/shared-types";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 export default function Suppliers() {
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showDialog, setShowDialog] = useState(false);
+  const [editSupplier, setEditSupplier] = useState<SupplierDto | null>(null);
   const [form, setForm] = useState({ name: "", phone: "", email: "", address: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +30,7 @@ export default function Suppliers() {
       setSuppliers(data);
     } catch (e) {
       setError(String(e));
+      toast.error("فشل تحميل الموردين");
     } finally {
       setLoading(false);
     }
@@ -35,30 +38,59 @@ export default function Suppliers() {
 
   useEffect(() => { loadSuppliers(); }, []);
 
-  const filtered = suppliers.filter(s =>
-    s.name.includes(search) || s.phone.includes(search) || (s.email ?? "").includes(search)
-  );
+  const filtered = suppliers.filter(s => {
+    const q = (search || "").toLowerCase();
+    const nameMatch = (s.name || "").toLowerCase().includes(q);
+    const phoneMatch = (s.phone || "").toLowerCase().includes(q);
+    const emailMatch = (s.email || "").toLowerCase().includes(q);
+    return nameMatch || phoneMatch || emailMatch;
+  });
 
   const totalBalance = suppliers.reduce((sum, s) => sum + parseFloat(s.balance || "0"), 0);
   const activeCount = suppliers.filter(s => s.is_active).length;
 
-  const handleCreate = async () => {
+  const handleSave = async () => {
     if (!form.name || !form.phone) return;
     setSaving(true);
     try {
-      await supplierService.createSupplier({
-        name: form.name,
-        phone: form.phone,
-        email: form.email || undefined,
-        address: form.address || undefined,
-      });
+      if (editSupplier) {
+        await supplierService.updateSupplier({
+          id: editSupplier.id,
+          name: form.name,
+          phone: form.phone,
+          email: form.email || null,
+          address: form.address || null,
+        });
+        toast.success("تم تحديث بيانات المورد بنجاح");
+      } else {
+        await supplierService.createSupplier({
+          name: form.name,
+          phone: form.phone,
+          email: form.email || null,
+          address: form.address || null,
+        });
+        toast.success("تم إضافة المورد بنجاح");
+      }
       setShowDialog(false);
       setForm({ name: "", phone: "", email: "", address: "" });
+      setEditSupplier(null);
       await loadSuppliers();
     } catch (e) {
       setError(String(e));
+      toast.error("خطأ في العملية");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`هل أنت متأكد من حذف المورد ${name}؟`)) return;
+    try {
+      await supplierService.deleteSupplier(id);
+      toast.success("تم حذف المورد بنجاح");
+      loadSuppliers();
+    } catch (e) {
+      toast.error("خطأ في الحذف: " + e);
     }
   };
 
@@ -74,7 +106,11 @@ export default function Suppliers() {
               <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />
               تحديث
             </Button>
-            <Button onClick={() => setShowDialog(true)}>
+            <Button onClick={() => {
+              setEditSupplier(null);
+              setForm({ name: "", phone: "", email: "", address: "" });
+              setShowDialog(true);
+            }}>
               <Plus className="w-4 h-4 ml-2" />مورد جديد
             </Button>
           </>
@@ -164,7 +200,19 @@ export default function Suppliers() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem><Eye className="w-4 h-4 ml-2" />عرض</DropdownMenuItem>
-                          <DropdownMenuItem><Edit className="w-4 h-4 ml-2" />تعديل</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            setEditSupplier(s);
+                            setForm({ 
+                              name: s.name, 
+                              phone: s.phone, 
+                              email: s.email || "", 
+                              address: s.address || "" 
+                            });
+                            setShowDialog(true);
+                          }}><Edit className="w-4 h-4 ml-2" />تعديل</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDelete(s.id, s.name)} className="text-red-600">
+                            <Trash2 className="w-4 h-4 ml-2" />حذف
+                          </DropdownMenuItem>
                           <DropdownMenuItem><Printer className="w-4 h-4 ml-2" />كشف حساب</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -177,13 +225,15 @@ export default function Suppliers() {
         )}
       </Card>
 
-      {/* Create Supplier Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-md" dir="rtl">
           <DialogHeader>
-            <DialogTitle>إضافة مورد جديد</DialogTitle>
+            <DialogTitle>{editSupplier ? "تعديل بيانات المورد" : "إضافة مورد جديد"}</DialogTitle>
+            <DialogDescription>
+              {editSupplier ? "تعديل تفاصيل الاتصال والموقع للمورد المختار." : "إضافة بيانات مورد جديد إلى النظام لبدء التعامل معه."}
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 py-2 text-right">
             <div className="space-y-1">
               <Label>اسم المورد *</Label>
               <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="أدخل اسم المورد" />
@@ -203,7 +253,7 @@ export default function Suppliers() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDialog(false)}>إلغاء</Button>
-            <Button onClick={handleCreate} disabled={saving || !form.name || !form.phone}>
+            <Button onClick={handleSave} disabled={saving || !form.name || !form.phone}>
               {saving ? "جاري الحفظ..." : "حفظ المورد"}
             </Button>
           </DialogFooter>

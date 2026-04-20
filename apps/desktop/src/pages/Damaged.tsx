@@ -7,7 +7,7 @@ import { Plus, Search, RefreshCw, AlertTriangle } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { damagedService } from "@/services/inventoryService";
 import type { DamagedItem, CreateDamagedItemRequest } from "@erp/shared-types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
 export default function Damaged() {
@@ -137,7 +137,10 @@ export default function Damaged() {
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-md" dir="rtl">
-          <DialogHeader><DialogTitle>تسجيل مواد تالفة</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>تسجيل مواد تالفة</DialogTitle>
+            <DialogDescription>إضافة تقرير عن أصناف تالفة لخصمها من المخزون وتسجيل الخسائر.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1">
               <Label>معرف المنتج *</Label>

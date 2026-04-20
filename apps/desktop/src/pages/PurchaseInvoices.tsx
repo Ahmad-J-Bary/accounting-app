@@ -149,7 +149,7 @@ export default function PurchaseInvoices() {
                     <td className="px-4 py-3 text-left tabular-nums text-green-600">{formatCurrency(parseFloat(inv.amount_paid))}</td>
                     <td className="px-4 py-3 text-left tabular-nums text-red-600">{formatCurrency(parseFloat(inv.remaining_amount))}</td>
                     <td className="px-4 py-3 text-left">
-                      <StatusBadge status={inv.status.toLowerCase()} />
+                      <StatusBadge status={(inv.status || "Draft").toLowerCase()} />
                     </td>
                     <td className="px-4 py-3">
                       <DropdownMenu>

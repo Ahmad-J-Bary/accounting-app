@@ -7,7 +7,7 @@ import { Plus, Search, RefreshCw } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { adjustmentService } from "@/services/inventoryService";
 import type { StockAdjustment, CreateStockAdjustmentRequest } from "@erp/shared-types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
 export default function Adjustments() {
@@ -141,7 +141,10 @@ export default function Adjustments() {
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-md" dir="rtl">
-          <DialogHeader><DialogTitle>تسوية جرد جديدة</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>تسوية جرد جديدة</DialogTitle>
+            <DialogDescription>تحديث كمية المخزون الفعلي لتتناسب مع الكمية الموجودة في المستودع.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1">
               <Label>معرف المنتج *</Label>

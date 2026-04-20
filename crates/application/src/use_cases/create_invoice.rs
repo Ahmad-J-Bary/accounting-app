@@ -59,7 +59,6 @@ mod tests {
     use async_trait::async_trait;
     use std::sync::Mutex;
 
-    use rust_decimal_macros::dec;
 
     struct MockInvoiceRepository {
         saved: Mutex<Vec<Invoice>>,

@@ -15,7 +15,7 @@ use infrastructure::{
     SqliteUserRepository,
     SqliteProductionRepository,
 };
-use infrastructure::db::pool::create_pool;
+use infrastructure::db::pool::{create_pool, run_migrations};
 use application::ports::invoice_repository::InvoiceRepository;
 use application::ports::customer_repository::CustomerRepository;
 use application::ports::product_repository::ProductRepository;
@@ -58,6 +58,9 @@ pub async fn build_app_state() -> Result<AppState, String> {
         "sqlite:./erp.db" // Fallback to original
     };
     let pool = create_pool(database_url).await.map_err(|e| e.to_string())?;
+    
+    // Run migrations to ensure all tables exist
+    run_migrations(&pool).await.map_err(|e| format!("Migration error: {}", e))?;
 
     Ok(AppState {
         invoice_repo: Arc::new(SqliteInvoiceRepository::new(pool.clone())),

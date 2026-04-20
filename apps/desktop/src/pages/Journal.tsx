@@ -9,7 +9,7 @@ import { journalEntries } from "@/lib/mockData";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -41,6 +41,7 @@ export default function Journal() {
               <DialogContent className="max-w-4xl">
                 <DialogHeader>
                   <DialogTitle>إنشاء قيد يومية جديد</DialogTitle>
+                  <DialogDescription>أدخل تفاصيل القيد والحسابات المدينة والدائنة لضمان توازن القيد قبل الترحيل.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="grid grid-cols-3 gap-3">

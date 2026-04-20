@@ -11,10 +11,23 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::invoice::create_invoice,
             commands::invoice::list_invoices,
             commands::invoice::post_invoice,
+            // Customers
+            commands::customer::create_customer,
+            commands::customer::get_customer,
+            commands::customer::list_customers,
+            commands::customer::update_customer,
+            commands::customer::delete_customer,
+            // Products
+            commands::product::create_product,
+            commands::product::get_product,
+            commands::product::list_products,
+            commands::product::update_product,
+            commands::product::delete_product,
             // Suppliers
             commands::supplier::create_supplier,
             commands::supplier::list_suppliers,
             commands::supplier::get_supplier,
+            commands::supplier::update_supplier,
             commands::supplier::delete_supplier,
             // Purchase Invoices
             commands::purchase::create_purchase_invoice,

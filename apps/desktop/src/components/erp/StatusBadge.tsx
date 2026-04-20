@@ -1,13 +1,13 @@
 import { cn } from "@/lib/utils";
 
 interface StatusBadgeProps {
-  status: string;
+  status?: string;
   className?: string;
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
   const getStatusConfig = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch ((status || "").toLowerCase()) {
       case 'paid':
       case 'posted':
       case 'approved':

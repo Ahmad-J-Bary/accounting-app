@@ -23,6 +23,18 @@ pub struct CreateProductRequest {
     pub minimum_stock: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateProductRequest {
+    pub id: String,
+    pub name: String,
+    pub code: String,
+    pub unit_price: String,
+    pub cost_price: String,
+    pub stock_quantity: String,
+    pub minimum_stock: String,
+    pub is_active: bool,
+}
+
 impl From<Product> for ProductDto {
     fn from(product: Product) -> Self {
         Self {

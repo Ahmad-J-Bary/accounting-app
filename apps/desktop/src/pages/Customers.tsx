@@ -1,19 +1,94 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { PageHeader } from "@/components/erp/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/erp/StatusBadge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Download, Search, MoreHorizontal, Eye, Edit, Printer, Mail, Phone, MapPin } from "lucide-react";
-import { customers, salesInvoices, payments } from "@/lib/mockData";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { Plus, Download, Search, MoreHorizontal, Eye, Edit, Trash2, Mail, Phone, MapPin } from "lucide-react";
+import { formatCurrency } from "@/lib/format";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { CustomerDto } from "@erp/shared-types";
+import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 export default function Customers() {
-  const [selected, setSelected] = useState<string | null>(null);
-  const current = customers.find((c) => c.id === selected);
+  const [customersList, setCustomersList] = useState<CustomerDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  
+  // Create/Edit state
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editCustomer, setEditCustomer] = useState<CustomerDto | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: ""
+  });
+
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true);
+      const data = await invoke<CustomerDto[]>("list_customers");
+      setCustomersList(data);
+    } catch (error) {
+      toast.error("فشل جلب العملاء: " + error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
+
+  const current = customersList.find((c) => c.id === selectedId);
+
+  const handleSave = async () => {
+    try {
+      if (editCustomer) {
+        await invoke("update_customer", {
+          request: {
+            id: editCustomer.id,
+            ...formData,
+            is_active: editCustomer.is_active
+          }
+        });
+        toast.success("تم تحديث بيانات العميل بنجاح");
+      } else {
+        await invoke("create_customer", { request: formData });
+        toast.success("تم إضافة العميل بنجاح");
+      }
+      setIsDialogOpen(false);
+      fetchCustomers();
+    } catch (error) {
+      toast.error("خطأ في العملية: " + error);
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`هل أنت متأكد من حذف العميل ${name}؟`)) return;
+    try {
+      await invoke("delete_customer", { id });
+      toast.success("تم حذف العميل بنجاح");
+      fetchCustomers();
+    } catch (error) {
+      toast.error("خطأ في الحذف: " + error);
+    }
+  };
+
+  const filteredCustomers = customersList.filter(c => {
+    const searchLower = (search || "").toLowerCase();
+    const nameMatch = (c.name || "").toLowerCase().includes(searchLower);
+    const phoneMatch = (c.phone || "").toLowerCase().includes(searchLower);
+    const emailMatch = (c.email || "").toLowerCase().includes(searchLower);
+    return nameMatch || phoneMatch || emailMatch;
+  });
 
   return (
     <>
@@ -24,7 +99,13 @@ export default function Customers() {
         actions={
           <>
             <Button variant="outline"><Download className="w-4 h-4 ml-2" />تصدير</Button>
-            <Button><Plus className="w-4 h-4 ml-2" />عميل جديد</Button>
+            <Button onClick={() => {
+              setEditCustomer(null);
+              setFormData({ name: "", email: "", phone: "", address: "" });
+              setIsDialogOpen(true);
+            }}>
+              <Plus className="w-4 h-4 ml-2" />عميل جديد
+            </Button>
           </>
         }
       />
@@ -32,19 +113,19 @@ export default function Customers() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
         <Card className="p-4">
           <div className="text-sm text-muted-foreground">إجمالي العملاء</div>
-          <div className="text-2xl font-bold tabular-nums mt-1">{customers.length}</div>
+          <div className="text-2xl font-bold tabular-nums mt-1">{customersList.length}</div>
         </Card>
         <Card className="p-4">
           <div className="text-sm text-muted-foreground">العملاء النشطون</div>
-          <div className="text-2xl font-bold text-green-600 tabular-nums mt-1">{customers.filter(c => c.status === "active").length}</div>
+          <div className="text-2xl font-bold text-green-600 tabular-nums mt-1">{customersList.filter(c => c.is_active).length}</div>
         </Card>
         <Card className="p-4">
           <div className="text-sm text-muted-foreground">إجمالي الذمم</div>
-          <div className="text-2xl font-bold text-primary tabular-nums mt-1">{formatCurrency(customers.reduce((s, c) => s + c.balance, 0))}</div>
+          <div className="text-2xl font-bold text-primary tabular-nums mt-1">{formatCurrency(Number(customersList.reduce((s, c) => s + Number(c.balance || 0), 0)))}</div>
         </Card>
         <Card className="p-4">
           <div className="text-sm text-muted-foreground">عملاء بأرصدة صفرية</div>
-          <div className="text-2xl font-bold tabular-nums mt-1">{customers.filter(c => c.balance === 0).length}</div>
+          <div className="text-2xl font-bold tabular-nums mt-1">{customersList.filter(c => Number(c.balance || 0) === 0).length}</div>
         </Card>
       </div>
 
@@ -52,54 +133,77 @@ export default function Customers() {
         <div className="flex items-center gap-3 mb-4 flex-wrap">
           <div className="relative flex-1 min-w-[220px]">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="بحث بالاسم، الكود، الهاتف..." className="pr-10" />
+            <Input 
+              placeholder="بحث بالاسم، الكود، الهاتف..." 
+              className="pr-10" 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
-          <Button variant="outline">جميع المدن</Button>
-          <Button variant="outline">الحالة</Button>
+          <Button variant="outline" onClick={fetchCustomers}>تحديث</Button>
         </div>
 
-        <div className="border border-border rounded-md overflow-x-auto">
-          <table className="w-full text-sm min-w-[700px]">
-            <thead className="bg-slate-50 border-b border-border">
-              <tr>
-                <th className="text-right px-4 py-3 font-medium">الكود</th>
-                <th className="text-right px-4 py-3 font-medium">اسم العميل</th>
-                <th className="text-right px-4 py-3 font-medium">الهاتف</th>
-                <th className="text-right px-4 py-3 font-medium">المدينة</th>
-                <th className="text-left px-4 py-3 font-medium">الرصيد</th>
-                <th className="text-left px-4 py-3 font-medium">الحالة</th>
-                <th className="text-left px-4 py-3 font-medium w-12"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {customers.map((c) => (
-                <tr key={c.id} className="border-b border-border last:border-0 hover:bg-slate-50 cursor-pointer" onClick={() => setSelected(c.id)}>
-                  <td className="px-4 py-3 font-medium text-primary">{c.code}</td>
-                  <td className="px-4 py-3">{c.name}</td>
-                  <td className="px-4 py-3 tabular-nums">{c.phone}</td>
-                  <td className="px-4 py-3">{c.city}</td>
-                  <td className="px-4 py-3 text-left tabular-nums font-medium">{formatCurrency(c.balance)}</td>
-                  <td className="px-4 py-3 text-left"><StatusBadge status={c.status} /></td>
-                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setSelected(c.id)}><Eye className="w-4 h-4 ml-2" />عرض الملف</DropdownMenuItem>
-                        <DropdownMenuItem><Edit className="w-4 h-4 ml-2" />تعديل</DropdownMenuItem>
-                        <DropdownMenuItem><Printer className="w-4 h-4 ml-2" />كشف حساب</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
+        {loading ? (
+          <div className="text-center py-10">جاري التحميل...</div>
+        ) : (
+          <div className="border border-border rounded-md overflow-x-auto">
+            <table className="w-full text-sm min-w-[700px]">
+              <thead className="bg-slate-50 border-b border-border">
+                <tr>
+                  <th className="text-right px-4 py-3 font-medium">الاسم</th>
+                  <th className="text-right px-4 py-3 font-medium">الهاتف</th>
+                  <th className="text-right px-4 py-3 font-medium">العنوان</th>
+                  <th className="text-left px-4 py-3 font-medium">الرصيد</th>
+                  <th className="text-left px-4 py-3 font-medium">الحالة</th>
+                  <th className="text-left px-4 py-3 font-medium w-12"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filteredCustomers.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-10 text-muted-foreground">لا يوجد عملاء حالياً</td>
+                  </tr>
+                ) : (
+                  filteredCustomers.map((c) => (
+                    <tr key={c.id} className="border-b border-border last:border-0 hover:bg-slate-50 cursor-pointer" onClick={() => setSelectedId(c.id)}>
+                      <td className="px-4 py-3">{c.name}</td>
+                      <td className="px-4 py-3 tabular-nums">{c.phone}</td>
+                      <td className="px-4 py-3">{c.address || "-"}</td>
+                      <td className="px-4 py-3 text-left tabular-nums font-medium">{formatCurrency(Number(c.balance || 0))}</td>
+                      <td className="px-4 py-3 text-left"><StatusBadge status={c.is_active ? "active" : "inactive"} /></td>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setSelectedId(c.id)}><Eye className="w-4 h-4 ml-2" />عرض الملف</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setEditCustomer(c);
+                              setFormData({
+                                name: c.name,
+                                email: c.email || "",
+                                phone: c.phone,
+                                address: c.address || ""
+                              });
+                              setIsDialogOpen(true);
+                            }}><Edit className="w-4 h-4 ml-2" />تعديل</DropdownMenuItem>
+                            <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(c.id, c.name)}>
+                              <Trash2 className="w-4 h-4 ml-2" />حذف
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
 
-      <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+      <Sheet open={!!selectedId} onOpenChange={(o) => !o && setSelectedId(null)}>
         <SheetContent side="left" className="w-full sm:max-w-2xl overflow-y-auto">
           {current && (
             <>
@@ -109,19 +213,19 @@ export default function Customers() {
 
               <div className="mt-6 grid grid-cols-2 gap-3">
                 <div className="p-3 border border-border rounded-md">
-                  <div className="text-xs text-muted-foreground">الكود</div>
-                  <div className="font-bold">{current.code}</div>
+                  <div className="text-xs text-muted-foreground">الرصيد الحالي</div>
+                  <div className="font-bold tabular-nums text-primary">{formatCurrency(Number(current.balance || 0))}</div>
                 </div>
                 <div className="p-3 border border-border rounded-md">
-                  <div className="text-xs text-muted-foreground">الرصيد الحالي</div>
-                  <div className="font-bold tabular-nums text-primary">{formatCurrency(current.balance)}</div>
+                  <div className="text-xs text-muted-foreground">الحالة</div>
+                  <div className="font-bold"><StatusBadge status={current.is_active ? "active" : "inactive"} /></div>
                 </div>
               </div>
 
               <div className="mt-4 space-y-2">
                 <div className="flex items-center gap-2 text-sm"><Phone className="w-4 h-4 text-muted-foreground" />{current.phone}</div>
-                <div className="flex items-center gap-2 text-sm"><Mail className="w-4 h-4 text-muted-foreground" />{current.email}</div>
-                <div className="flex items-center gap-2 text-sm"><MapPin className="w-4 h-4 text-muted-foreground" />{current.city}</div>
+                <div className="flex items-center gap-2 text-sm"><Mail className="w-4 h-4 text-muted-foreground" />{current.email || "لا يوجد بريد"}</div>
+                <div className="flex items-center gap-2 text-sm"><MapPin className="w-4 h-4 text-muted-foreground" />{current.address || "لا يوجد عنوان"}</div>
               </div>
 
               <Tabs defaultValue="invoices" className="mt-6">
@@ -130,58 +234,53 @@ export default function Customers() {
                   <TabsTrigger value="payments">المقبوضات</TabsTrigger>
                   <TabsTrigger value="statement">كشف الحساب</TabsTrigger>
                 </TabsList>
-                <TabsContent value="invoices" className="mt-4">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b border-border">
-                      <tr>
-                        <th className="text-right px-3 py-2 font-medium">رقم</th>
-                        <th className="text-right px-3 py-2 font-medium">التاريخ</th>
-                        <th className="text-left px-3 py-2 font-medium">المبلغ</th>
-                        <th className="text-left px-3 py-2 font-medium">الحالة</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {salesInvoices.slice(0, 4).map((inv) => (
-                        <tr key={inv.id} className="border-b border-border">
-                          <td className="px-3 py-2 text-primary">{inv.number}</td>
-                          <td className="px-3 py-2">{formatDate(inv.date)}</td>
-                          <td className="px-3 py-2 text-left tabular-nums">{formatCurrency(inv.total)}</td>
-                          <td className="px-3 py-2 text-left"><StatusBadge status={inv.status} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <TabsContent value="invoices">
+                  <div className="text-center py-10 text-muted-foreground">لا تنطبق البيانات الوهمية هنا — سيتم ربطها بالمبيعات قريباً</div>
                 </TabsContent>
-                <TabsContent value="payments" className="mt-4">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b border-border">
-                      <tr>
-                        <th className="text-right px-3 py-2 font-medium">رقم السند</th>
-                        <th className="text-right px-3 py-2 font-medium">التاريخ</th>
-                        <th className="text-left px-3 py-2 font-medium">المبلغ</th>
-                        <th className="text-left px-3 py-2 font-medium">الطريقة</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {payments.filter(p => p.type === "receipt").slice(0, 3).map((p) => (
-                        <tr key={p.id} className="border-b border-border">
-                          <td className="px-3 py-2 text-primary">{p.number}</td>
-                          <td className="px-3 py-2">{formatDate(p.date)}</td>
-                          <td className="px-3 py-2 text-left tabular-nums">{formatCurrency(p.amount)}</td>
-                          <td className="px-3 py-2 text-left"><StatusBadge status={p.method} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <TabsContent value="payments">
+                  <div className="text-center py-10 text-muted-foreground">سجل الدفعات فارغ</div>
                 </TabsContent>
-                <TabsContent value="statement" className="mt-4">
-                  <Button variant="outline" className="w-full"><Printer className="w-4 h-4 ml-2" />طباعة كشف الحساب الكامل</Button>
+                <TabsContent value="statement">
+                  <div className="text-center py-10 text-muted-foreground">سجل العمليات فارغ</div>
                 </TabsContent>
               </Tabs>
             </>
           )}
         </SheetContent>
       </Sheet>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{editCustomer ? "تعديل بيانات العميل" : "إضافة عميل جديد"}</DialogTitle>
+            <DialogDescription>
+              {editCustomer ? "قم بتعديل بيانات العميل أدناه." : "أدخل بيانات العميل الجديد لإضافته إلى النظام."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 text-right" dir="rtl">
+            <div className="grid gap-2">
+              <Label htmlFor="name">اسم العميل *</Label>
+              <Input id="name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="phone">رقم الهاتف *</Label>
+              <Input id="phone" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="email">البريد الإلكتروني</Label>
+              <Input id="email" type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="address">العنوان</Label>
+              <Input id="address" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
+            </div>
+          </div>
+          <DialogFooter className="flex-row-reverse gap-2">
+            <Button onClick={handleSave} disabled={!formData.name || !formData.phone}>حفظ</Button>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>إلغاء</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

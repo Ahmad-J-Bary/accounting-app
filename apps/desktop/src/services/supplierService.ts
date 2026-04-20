@@ -1,20 +1,25 @@
 import { invoke } from '@tauri-apps/api/core';
 import type {
-  Supplier,
+  SupplierDto,
   CreateSupplierRequest,
+  UpdateSupplierRequest,
 } from '@erp/shared-types';
 
 export const supplierService = {
-  async createSupplier(request: CreateSupplierRequest): Promise<Supplier> {
-    return await invoke<Supplier>('create_supplier', { request });
+  async createSupplier(request: CreateSupplierRequest): Promise<SupplierDto> {
+    return await invoke<SupplierDto>('create_supplier', { request }); // Rust command uses 'request' (CreateSupplierRequest)
   },
 
-  async listSuppliers(): Promise<Supplier[]> {
-    return await invoke<Supplier[]>('list_suppliers');
+  async listSuppliers(): Promise<SupplierDto[]> {
+    return await invoke<SupplierDto[]>('list_suppliers');
   },
 
-  async getSupplier(id: string): Promise<Supplier> {
-    return await invoke<Supplier>('get_supplier', { id });
+  async getSupplier(id: string): Promise<SupplierDto> {
+    return await invoke<SupplierDto>('get_supplier', { id });
+  },
+
+  async updateSupplier(request: UpdateSupplierRequest): Promise<SupplierDto> {
+    return await invoke<SupplierDto>('update_supplier', { request });
   },
 
   async deleteSupplier(id: string): Promise<void> {

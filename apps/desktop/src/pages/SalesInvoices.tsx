@@ -9,7 +9,7 @@ import { products } from "@/lib/mockData";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { invoiceService } from "@/services/invoiceService";
 import type { InvoiceDto } from "@erp/shared-types";
 
@@ -124,6 +124,7 @@ export default function SalesInvoices() {
               <span>معاينة الفاتورة</span>
               <Button size="sm" variant="outline" onClick={() => window.print()}><Printer className="w-4 h-4 ml-2" />طباعة</Button>
             </DialogTitle>
+            <DialogDescription>عرض تفاصيل الفاتورة الضريبية وجدول الأصناف.</DialogDescription>
           </DialogHeader>
           {selectedInv && (
             <div className="print-area bg-white border border-border rounded-md p-8">

@@ -22,6 +22,16 @@ pub struct CreateCustomerRequest {
     pub address: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateCustomerRequest {
+    pub id: String,
+    pub name: String,
+    pub email: Option<String>,
+    pub phone: String,
+    pub address: Option<String>,
+    pub is_active: bool,
+}
+
 impl From<Customer> for CustomerDto {
     fn from(customer: Customer) -> Self {
         Self {

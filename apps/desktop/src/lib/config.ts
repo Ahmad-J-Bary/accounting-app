@@ -14,10 +14,17 @@ const defaultConfig = {
 // Function to load runtime configuration
 export async function loadRuntimeConfig(): Promise<void> {
   try {
+    // Skip runtime config fetch in Tauri environment as it's meant for Lambda/Web
+    if ((window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__) {
+      console.log('🔧 DEBUG: Tauri environment detected, skipping runtime config fetch');
+      configLoading = false;
+      return;
+    }
+
     console.log('🔧 DEBUG: Starting to load runtime config...');
     // Try to load configuration from a config endpoint
-    const response = await fetch('/api/config');
-    if (response.ok) {
+    const response = await fetch('/api/config').catch(() => null);
+    if (response && response.ok) {
       const contentType = response.headers.get('content-type');
       // Only parse as JSON if the response is actually JSON
       if (contentType && contentType.includes('application/json')) {
