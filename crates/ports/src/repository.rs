@@ -1,5 +1,7 @@
 // Repository interfaces
 
+#![allow(async_fn_in_trait)]
+
 use async_trait::async_trait;
 
 // Generic repository trait

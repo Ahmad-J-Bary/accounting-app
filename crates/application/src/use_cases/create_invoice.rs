@@ -7,6 +7,8 @@ use domain::shared::{CustomerId, ProductId, Money};
 use crate::errors::AppError;
 use crate::ports::invoice_repository::InvoiceRepository;
 use crate::dto::invoice_dto::{CreateInvoiceRequest, InvoiceDto};
+#[cfg(test)]
+use crate::dto::invoice_dto::InvoiceLineDto;
 
 pub struct CreateInvoiceUseCase {
     repo: Arc<dyn InvoiceRepository>,
@@ -56,8 +58,7 @@ mod tests {
     use super::*;
     use async_trait::async_trait;
     use std::sync::Mutex;
-    use domain::sales::invoice_line::InvoiceLine as DomainInvoiceLine;
-    use domain::shared::Money as DomainMoney;
+
     use rust_decimal_macros::dec;
 
     struct MockInvoiceRepository {
@@ -83,7 +84,7 @@ mod tests {
             Ok(vec![])
         }
 
-        async fn delete(&self, _: &core_domain::shared::InvoiceId) -> Result<(), AppError> {
+        async fn delete(&self, _: &domain::shared::InvoiceId) -> Result<(), AppError> {
             Ok(())
         }
     }

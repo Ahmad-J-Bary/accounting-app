@@ -2,5 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    desktop_lib::run()
+    tauri_adapter::run()
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
 }

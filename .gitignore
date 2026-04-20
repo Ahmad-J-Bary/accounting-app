@@ -12,7 +12,25 @@ dist
 dist-ssr
 *.local
 
-target
+# Rust
+target/
+**/*.rs.bk
+
+# SQLite
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Tauri
+src-tauri/target
+src-tauri/gen
+**/dist
+
+# Workspace
+.turbo
+.next
+out
 
 # Editor directories and files
 .vscode/*
@@ -24,3 +42,8 @@ target
 *.njsproj
 *.sln
 *.sw?
+
+# Environment
+.env
+.env.*
+!.env.example

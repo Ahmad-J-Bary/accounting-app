@@ -1,14 +1,7 @@
 use async_trait::async_trait;
-use domain::shared::CustomerId;
+use domain::shared::ids::CustomerId;
 use crate::errors::AppError;
-
-#[derive(Debug, Clone)]
-pub struct Customer {
-    pub id: CustomerId,
-    pub name: String,
-    pub email: String,
-    pub phone: String,
-}
+use domain::customers::Customer;
 
 #[async_trait]
 pub trait CustomerRepository: Send + Sync {

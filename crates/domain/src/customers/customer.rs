@@ -1,0 +1,93 @@
+use crate::shared::errors::DomainError;
+use crate::shared::ids::CustomerId;
+use chrono::{DateTime, Utc};
+use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Customer {
+    pub id: CustomerId,
+    pub name: String,
+    pub phone: String,
+    pub email: Option<String>,
+    pub address: Option<String>,
+    pub balance: Decimal,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl Customer {
+    pub fn new(
+        name: String,
+        phone: String,
+        email: Option<String>,
+        address: Option<String>,
+    ) -> Result<Self, DomainError> {
+        if name.trim().is_empty() {
+            return Err(DomainError::Invalid("اسم العميل لا يمكن أن يكون فارغًا".into()));
+        }
+        if phone.trim().is_empty() {
+            return Err(DomainError::Invalid("رقم هاتف العميل لا يمكن أن يكون فارغًا".into()));
+        }
+        let now = Utc::now();
+        Ok(Self {
+            id: CustomerId(Uuid::new_v4()),
+            name,
+            phone,
+            email,
+            address,
+            balance: Decimal::ZERO,
+            is_active: true,
+            created_at: now,
+            updated_at: now,
+        })
+    }
+
+    pub fn increase_balance(&mut self, amount: Decimal) -> Result<(), DomainError> {
+        if amount <= Decimal::ZERO {
+            return Err(DomainError::Invalid("المبلغ يجب أن يكون موجبًا".into()));
+        }
+        self.balance += amount;
+        self.updated_at = Utc::now();
+        Ok(())
+    }
+
+    pub fn decrease_balance(&mut self, amount: Decimal) -> Result<(), DomainError> {
+        if amount <= Decimal::ZERO {
+            return Err(DomainError::Invalid("المبلغ يجب أن يكون موجبًا".into()));
+        }
+        self.balance -= amount;
+        self.updated_at = Utc::now();
+        Ok(())
+    }
+
+    pub fn update_info(
+        &mut self,
+        name: String,
+        phone: String,
+        email: Option<String>,
+        address: Option<String>,
+    ) -> Result<(), DomainError> {
+        if name.trim().is_empty() {
+            return Err(DomainError::Invalid("اسم العميل لا يمكن أن يكون فارغًا".into()));
+        }
+        self.name = name;
+        self.phone = phone;
+        self.email = email;
+        self.address = address;
+        self.updated_at = Utc::now();
+        Ok(())
+    }
+
+    pub fn deactivate(&mut self) {
+        self.is_active = false;
+        self.updated_at = Utc::now();
+    }
+
+    pub fn activate(&mut self) {
+        self.is_active = true;
+        self.updated_at = Utc::now();
+    }
+}

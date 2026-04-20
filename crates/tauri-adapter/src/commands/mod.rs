@@ -1,1 +1,10 @@
 pub mod invoice;
+pub mod supplier;
+pub mod purchase;
+pub mod payment;
+pub mod damaged;
+pub mod production;
+pub mod adjustment;
+pub mod users;
+pub mod settings;
+pub mod audit;

@@ -78,6 +78,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
+name = "application"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "domain",
+ "rust_decimal",
+ "rust_decimal_macros",
+ "serde",
+ "thiserror 1.0.69",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "arrayvec"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -473,31 +488,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "core-application"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "core-domain",
- "rust_decimal",
- "serde",
- "thiserror 1.0.69",
- "tokio",
- "uuid",
-]
-
-[[package]]
-name = "core-domain"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "rust_decimal",
- "serde",
- "thiserror 1.0.69",
- "uuid",
-]
-
-[[package]]
 name = "core-foundation"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -535,19 +525,6 @@ dependencies = [
  "bitflags 2.11.1",
  "core-foundation",
  "libc",
-]
-
-[[package]]
-name = "core-infrastructure"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "core-application",
- "core-domain",
- "sqlx",
- "thiserror 1.0.69",
- "tokio",
- "uuid",
 ]
 
 [[package]]
@@ -757,21 +734,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "desktop"
-version = "0.1.0"
-dependencies = [
- "core-application",
- "core-domain",
- "core-infrastructure",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-shell",
- "tokio",
-]
-
-[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -863,6 +825,18 @@ dependencies = [
  "precomputed-hash",
  "selectors 0.36.1",
  "tendril 0.5.0",
+]
+
+[[package]]
+name = "domain"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "rust_decimal",
+ "rust_decimal_macros",
+ "serde",
+ "thiserror 1.0.69",
+ "uuid",
 ]
 
 [[package]]
@@ -1884,6 +1858,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "infrastructure"
+version = "0.1.0"
+dependencies = [
+ "application",
+ "async-trait",
+ "chrono",
+ "domain",
+ "rust_decimal",
+ "serde_json",
+ "sqlx",
+ "thiserror 1.0.69",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "ipnet"
 version = "2.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2897,6 +2887,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ports"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "serde",
+ "thiserror 1.0.69",
+ "uuid",
+]
+
+[[package]]
 name = "potential_utf"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3346,6 +3347,16 @@ dependencies = [
  "serde",
  "serde_json",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "rust_decimal_macros"
+version = "1.40.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74a5a6f027e892c7a035c6fddb50435a1fbf5a734ffc0c2a9fed4d0221440519"
+dependencies = [
+ "quote",
+ "syn 2.0.117",
 ]
 
 [[package]]
@@ -3934,6 +3945,7 @@ dependencies = [
  "atoi",
  "byteorder",
  "bytes",
+ "chrono",
  "crc",
  "crossbeam-queue",
  "either",
@@ -3951,6 +3963,7 @@ dependencies = [
  "once_cell",
  "paste",
  "percent-encoding",
+ "rust_decimal",
  "rustls",
  "rustls-pemfile",
  "serde",
@@ -3963,6 +3976,7 @@ dependencies = [
  "tokio-stream",
  "tracing",
  "url",
+ "uuid",
  "webpki-roots",
 ]
 
@@ -3997,6 +4011,7 @@ dependencies = [
  "sha2",
  "sqlx-core",
  "sqlx-mysql",
+ "sqlx-postgres",
  "sqlx-sqlite",
  "syn 1.0.109",
  "tempfile",
@@ -4015,6 +4030,7 @@ dependencies = [
  "bitflags 2.11.1",
  "byteorder",
  "bytes",
+ "chrono",
  "crc",
  "digest",
  "dotenvy",
@@ -4035,6 +4051,7 @@ dependencies = [
  "percent-encoding",
  "rand 0.8.6",
  "rsa",
+ "rust_decimal",
  "serde",
  "sha1",
  "sha2",
@@ -4043,6 +4060,7 @@ dependencies = [
  "stringprep",
  "thiserror 1.0.69",
  "tracing",
+ "uuid",
  "whoami",
 ]
 
@@ -4056,6 +4074,7 @@ dependencies = [
  "base64 0.21.7",
  "bitflags 2.11.1",
  "byteorder",
+ "chrono",
  "crc",
  "dotenvy",
  "etcetera",
@@ -4073,6 +4092,7 @@ dependencies = [
  "memchr",
  "once_cell",
  "rand 0.8.6",
+ "rust_decimal",
  "serde",
  "serde_json",
  "sha2",
@@ -4081,6 +4101,7 @@ dependencies = [
  "stringprep",
  "thiserror 1.0.69",
  "tracing",
+ "uuid",
  "whoami",
 ]
 
@@ -4091,6 +4112,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b244ef0a8414da0bed4bb1910426e890b19e5e9bccc27ada6b797d05c55ae0aa"
 dependencies = [
  "atoi",
+ "chrono",
  "flume",
  "futures-channel",
  "futures-core",
@@ -4105,6 +4127,7 @@ dependencies = [
  "tracing",
  "url",
  "urlencoding",
+ "uuid",
 ]
 
 [[package]]
@@ -4361,6 +4384,20 @@ dependencies = [
  "webview2-com",
  "window-vibrancy",
  "windows",
+]
+
+[[package]]
+name = "tauri-adapter"
+version = "0.1.0"
+dependencies = [
+ "application",
+ "domain",
+ "infrastructure",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-plugin-shell",
+ "tokio",
 ]
 
 [[package]]

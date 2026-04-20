@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 use sqlx::SqlitePool;
 use application::errors::AppError;
-use application::ports::customer_repository::{CustomerRepository, Customer};
+use application::ports::customer_repository::CustomerRepository;
+use domain::customers::Customer;
 use domain::shared::CustomerId;
 use std::sync::Arc;
 

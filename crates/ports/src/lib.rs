@@ -3,7 +3,7 @@
 
 pub mod repository;
 
-use async_trait::async_trait;
+// use async_trait::async_trait;
 
 // Re-export common traits
 pub use repository::*;

@@ -1,6 +1,8 @@
 use super::invoice_line::InvoiceLine;
 use crate::shared::errors::DomainError;
 use crate::shared::ids::InvoiceId;
+#[cfg(test)]
+use crate::shared::ids::ProductId;
 use crate::shared::money::Money;
 use crate::shared::CustomerId;
 use chrono::{DateTime, Utc};

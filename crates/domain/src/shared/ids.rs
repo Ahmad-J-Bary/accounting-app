@@ -1,47 +1,52 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub struct InvoiceId(pub Uuid);
+macro_rules! define_id {
+    ($name:ident) => {
+        #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+        pub struct $name(pub Uuid);
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub struct AccountId(pub Uuid);
+        impl $name {
+            pub fn new() -> Self {
+                Self(Uuid::new_v4())
+            }
+        }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub struct CustomerId(pub Uuid);
+        impl Default for $name {
+            fn default() -> Self {
+                Self::new()
+            }
+        }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub struct ProductId(pub Uuid);
+        impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.0)
+            }
+        }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub struct JournalEntryId(pub Uuid);
-
-impl InvoiceId {
-    pub fn new() -> Self {
-        Self(Uuid::new_v4())
-    }
+        impl std::str::FromStr for $name {
+            type Err = uuid::Error;
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                Ok(Self(Uuid::parse_str(s)?))
+            }
+        }
+    };
 }
 
-impl AccountId {
-    pub fn new() -> Self {
-        Self(Uuid::new_v4())
-    }
-}
+define_id!(InvoiceId);
+define_id!(AccountId);
+define_id!(CustomerId);
+define_id!(ProductId);
+define_id!(JournalEntryId);
+define_id!(SupplierId);
+define_id!(SalesInvoiceId);
+define_id!(PurchaseInvoiceId);
+define_id!(PaymentId);
+define_id!(StockMovementId);
+define_id!(DamagedItemId);
+define_id!(ProductionOrderId);
+define_id!(StockAdjustmentId);
+define_id!(UserId);
+define_id!(RoleId);
+define_id!(AuditLogId);
 
-impl CustomerId {
-    pub fn new() -> Self {
-        Self(Uuid::new_v4())
-    }
-}
-
-impl ProductId {
-    pub fn new() -> Self {
-        Self(Uuid::new_v4())
-    }
-}
-
-impl JournalEntryId {
-    pub fn new() -> Self {
-        Self(Uuid::new_v4())
-    }
-}
