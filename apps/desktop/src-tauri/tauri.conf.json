@@ -5,7 +5,7 @@
   "identifier": "com.erp.system",
   "build": {
     "beforeDevCommand": "pnpm dev",
-    "devUrl": "http://localhost:5173",
+    "devUrl": "http://localhost:3000",
     "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist"
   },
@@ -25,7 +25,6 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
-    "icon": []
+    "targets": []
   }
 }

@@ -1,9 +1,11 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/core-domain",
-    "crates/core-application",
-    "crates/core-infrastructure",
+    "crates/domain",
+    "crates/application",
+    "crates/infrastructure",
+    "crates/ports",
+    "crates/tauri-adapter", "icon-gen",
     # "crates/accounting",
     # "crates/inventory",
     # "crates/sales",
@@ -11,7 +13,9 @@ members = [
     # "crates/payments",
     # "crates/reporting",
     # "crates/auth",
-    # "apps/desktop/src-tauri",
+]
+exclude = [
+    "apps/desktop/src-tauri",
 ]
 
 [workspace.package]
@@ -30,6 +34,9 @@ uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 rust_decimal = { version = "1", features = ["serde"] }
 sqlx = { version = "0.7", features = ["sqlite", "runtime-tokio-rustls", "macros"] }
+domain = { path = "crates/domain" }
+application = { path = "crates/application" }
+infrastructure = { path = "crates/infrastructure" }
 
 [profile.release]
 lto = true
