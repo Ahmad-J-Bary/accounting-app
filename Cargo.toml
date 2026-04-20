@@ -2,8 +2,8 @@
 resolver = "2"
 members = [
     "crates/core-domain",
-    # "crates/core-application",
-    # "crates/core-infrastructure",
+    "crates/core-application",
+    "crates/core-infrastructure",
     # "crates/accounting",
     # "crates/inventory",
     # "crates/sales",

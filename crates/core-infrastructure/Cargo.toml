@@ -1,0 +1,13 @@
+[package]
+name = "core-infrastructure"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+core-domain = { path = "../core-domain" }
+core-application = { path = "../core-application" }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+uuid = { workspace = true }
+sqlx = { workspace = true }
