@@ -35,7 +35,7 @@ export function AppLayout({ children, title, subtitle }: AppLayoutProps) {
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col">
           {/* Top Navigation Bar */}
-          <TopBar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+          <TopBar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} sidebarOpen={sidebarOpen} />
           
           {/* Page Content */}
           <main className="flex-1 p-6">

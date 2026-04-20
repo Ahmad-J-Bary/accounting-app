@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Search, Plus, ChevronDown, Menu, Building2, GitBranch, LogOut, User, Settings as SettingsIcon } from "lucide-react";
+import { Bell, Search, Plus, ChevronDown, PanelLeft, Building2, GitBranch, LogOut, User, Settings as SettingsIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,18 +16,21 @@ import { GlobalSearch } from "@/components/erp/GlobalSearch";
 
 interface TopBarProps {
   onToggleSidebar?: () => void;
+  sidebarOpen?: boolean;
 }
 
-export function TopBar({ onToggleSidebar }: TopBarProps) {
+export function TopBar({ onToggleSidebar, sidebarOpen = true }: TopBarProps) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
   return (
     <>
       <header className="h-16 bg-white border-b border-border flex items-center px-4 md:px-6 gap-3 sticky top-0 z-30">
-        <Button variant="ghost" size="icon" className="lg:hidden" onClick={onToggleSidebar}>
-          <Menu className="w-5 h-5" />
-        </Button>
+        {!sidebarOpen && (
+          <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="transition-all hover:bg-slate-100">
+            <PanelLeft className="w-5 h-5" />
+          </Button>
+        )}
 
         <Button
           variant="outline"

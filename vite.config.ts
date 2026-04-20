@@ -7,7 +7,6 @@ import { vitePrerenderPlugin } from 'vite-prerender-plugin';
 import Sitemap from 'vite-plugin-sitemap';
 import { getBlogRoutes } from './prerender/blog-routes.js';
 import { getSitemapLastmod } from './prerender/blog-sitemap.js';
-import ghPages from 'vite-plugin-gh-pages';
 
 function escapeHtmlAttr(str: string): string {
   return str
@@ -49,7 +48,6 @@ export default defineConfig(({ command }) => {
             additionalPrerenderRoutes: blogPrerenderRoutes,
           })
         : []),
-      ghPages(),
     ],
     resolve: {
       alias: {
