@@ -13,19 +13,27 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Invoice {
     pub id: InvoiceId,
+    pub invoice_number: String,
     pub customer_id: CustomerId,
     pub lines: Vec<InvoiceLine>,
+    pub tax_amount: Money,
+    pub discount_amount: Money,
     pub issued_at: DateTime<Utc>,
     pub posted: bool,
 }
 
 impl Invoice {
-    pub fn new(customer_id: CustomerId, lines: Vec<InvoiceLine>) -> Result<Self, DomainError> {
+    pub fn new(
+        invoice_number: String,
+        customer_id: CustomerId,
+        lines: Vec<InvoiceLine>,
+        tax_amount: Money,
+        discount_amount: Money,
+    ) -> Result<Self, DomainError> {
         if lines.is_empty() {
             return Err(DomainError::Invalid("الفاتورة يجب أن تحتوي على سطر واحد على الأقل".into()));
         }
 
-        // Validate each line
         for line in &lines {
             if line.quantity <= Decimal::ZERO {
                 return Err(DomainError::Invalid("الكمية يجب أن تكون أكبر من صفر".into()));
@@ -37,17 +45,24 @@ impl Invoice {
 
         Ok(Self {
             id: InvoiceId(Uuid::new_v4()),
+            invoice_number,
             customer_id,
             lines,
+            tax_amount,
+            discount_amount,
             issued_at: Utc::now(),
             posted: false,
         })
     }
 
-    pub fn total(&self) -> Money {
+    pub fn subtotal(&self) -> Money {
         self.lines.iter().fold(Money::zero(), |acc, line| {
             acc + line.line_total()
         })
+    }
+
+    pub fn total(&self) -> Money {
+        self.subtotal() + self.tax_amount.clone() - self.discount_amount.clone()
     }
 
     pub fn post(&mut self) -> Result<(), DomainError> {
@@ -106,8 +121,11 @@ mod tests {
     #[test]
     fn invoice_cannot_be_empty() {
         let result = Invoice::new(
+            "INV-001".into(),
             CustomerId(Uuid::new_v4()),
             vec![],
+            Money::zero(),
+            Money::zero(),
         );
         assert!(result.is_err());
     }
@@ -123,7 +141,7 @@ mod tests {
             ),
         ];
 
-        let result = Invoice::new(customer_id, lines);
+        let result = Invoice::new("INV-001".into(), customer_id, lines, Money::zero(), Money::zero());
         assert!(result.is_ok());
     }
 
@@ -143,7 +161,7 @@ mod tests {
             ),
         ];
 
-        let invoice = Invoice::new(customer_id, lines).unwrap();
+        let invoice = Invoice::new("INV-001".into(), customer_id, lines, Money::zero(), Money::zero()).unwrap();
         let total = invoice.total();
         assert_eq!(total.amount(), dec!(400));
     }
@@ -159,7 +177,7 @@ mod tests {
             ),
         ];
 
-        let mut invoice = Invoice::new(customer_id, lines).unwrap();
+        let mut invoice = Invoice::new("INV-001".into(), customer_id, lines, Money::zero(), Money::zero()).unwrap();
         assert!(invoice.post().is_ok());
         assert!(invoice.post().is_err());
     }
@@ -175,7 +193,7 @@ mod tests {
             ),
         ];
 
-        let mut invoice = Invoice::new(customer_id, lines).unwrap();
+        let mut invoice = Invoice::new("INV-001".into(), customer_id, lines, Money::zero(), Money::zero()).unwrap();
         invoice.post().unwrap();
 
         let new_line = InvoiceLine::new(
@@ -198,7 +216,7 @@ mod tests {
             ),
         ];
 
-        let mut invoice = Invoice::new(customer_id, lines).unwrap();
+        let mut invoice = Invoice::new("INV-001".into(), customer_id, lines, Money::zero(), Money::zero()).unwrap();
         invoice.post().unwrap();
 
         assert!(invoice.remove_line(0).is_err());
@@ -215,7 +233,7 @@ mod tests {
             ),
         ];
 
-        let result = Invoice::new(customer_id, lines);
+        let result = Invoice::new("INV-001".into(), customer_id, lines, Money::zero(), Money::zero());
         assert!(result.is_err());
     }
 
@@ -230,7 +248,7 @@ mod tests {
             ),
         ];
 
-        let result = Invoice::new(customer_id, lines);
+        let result = Invoice::new("INV-001".into(), customer_id, lines, Money::zero(), Money::zero());
         assert!(result.is_err());
     }
 }

@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useNavigate } from "react-router-dom";
 import { NotificationsPanel } from "@/components/erp/NotificationsPanel";
 import { GlobalSearch } from "@/components/erp/GlobalSearch";
 
@@ -22,6 +23,21 @@ interface TopBarProps {
 export function TopBar({ onToggleSidebar, sidebarOpen = true }: TopBarProps) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleNewInvoice = () => {
+    navigate("/sales-invoices");
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("erp:open-new-invoice"));
+    }, 100);
+  };
+
+  const handleNewPurchaseInvoice = () => {
+    navigate("/purchase-invoices");
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("erp:open-new-purchase-invoice"));
+    }, 100);
+  };
 
   return (
     <>
@@ -84,9 +100,9 @@ export function TopBar({ onToggleSidebar, sidebarOpen = true }: TopBarProps) {
               <span className="hidden sm:inline">إجراء سريع</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
-            <DropdownMenuItem>فاتورة مبيعات جديدة</DropdownMenuItem>
-            <DropdownMenuItem>فاتورة مشتريات جديدة</DropdownMenuItem>
+          <DropdownMenuContent align="end" className="w-52 text-right">
+            <DropdownMenuItem onClick={handleNewInvoice} className="cursor-pointer">فاتورة مبيعات جديدة</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleNewPurchaseInvoice} className="cursor-pointer">فاتورة مشتريات جديدة</DropdownMenuItem>
             <DropdownMenuItem>سند قبض جديد</DropdownMenuItem>
             <DropdownMenuItem>سند صرف جديد</DropdownMenuItem>
             <DropdownMenuItem>قيد يومية جديد</DropdownMenuItem>

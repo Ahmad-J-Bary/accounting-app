@@ -19,10 +19,16 @@ export function AppLayout({ children, title, subtitle }: AppLayoutProps) {
 
   useKeyboardShortcuts([
     { key: 'k', ctrlKey: true, action: () => console.log('Open search'), description: 'فتح البحث' },
-    { key: 'n', ctrlKey: true, action: () => navigate('/sales-invoices/new'), description: 'فاتورة مبيعات جديدة' },
-    { key: 'b', ctrlKey: true, action: () => navigate('/purchase-invoices/new'), description: 'فاتورة مشتريات جديدة' },
-    { key: 'r', ctrlKey: true, action: () => navigate('/payments/new'), description: 'سند قبض جديد' },
-    { key: 'p', ctrlKey: true, action: () => navigate('/payments/new'), description: 'سند صرف جديد' },
+    { key: 'n', ctrlKey: true, action: () => {
+        navigate('/sales-invoices');
+        setTimeout(() => window.dispatchEvent(new CustomEvent("erp:open-new-invoice")), 100);
+      }, description: 'فاتورة مبيعات جديدة' },
+    { key: 'b', ctrlKey: true, action: () => {
+        navigate('/purchase-invoices');
+        setTimeout(() => window.dispatchEvent(new CustomEvent("erp:open-new-purchase-invoice")), 100);
+      }, description: 'فاتورة مشتريات جديدة' },
+    { key: 'r', ctrlKey: true, action: () => navigate('/payments'), description: 'سند قبض جديد' },
+    { key: 'p', ctrlKey: true, action: () => navigate('/payments'), description: 'سند صرف جديد' },
     { key: 'j', ctrlKey: true, action: () => navigate('/journal'), description: 'قيد يومية جديد' },
   ]);
 

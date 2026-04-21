@@ -11,29 +11,44 @@ pub struct InvoiceLineDto {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InvoiceDto {
     pub id: String,
+    pub invoice_number: String,
     pub customer_id: String,
     pub lines: Vec<InvoiceLineDto>,
+    pub subtotal: String,
+    pub tax_amount: String,
+    pub discount_amount: String,
+    pub total: String,
     pub issued_at: String,
     pub posted: bool,
-    pub total: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateInvoiceRequest {
+    pub invoice_number: String,
     pub customer_id: String,
     pub lines: Vec<InvoiceLineDto>,
+    pub tax_amount: String,
+    pub discount_amount: String,
 }
 
 impl From<Invoice> for InvoiceDto {
     fn from(invoice: Invoice) -> Self {
+        let subtotal = invoice.subtotal().amount().to_string();
+        let tax_amount = invoice.tax_amount.amount().to_string();
+        let discount_amount = invoice.discount_amount.amount().to_string();
         let total = invoice.total().amount().to_string();
+        
         Self {
             id: invoice.id.0.to_string(),
+            invoice_number: invoice.invoice_number,
             customer_id: invoice.customer_id.0.to_string(),
             lines: invoice.lines.into_iter().map(InvoiceLineDto::from).collect(),
+            subtotal,
+            tax_amount,
+            discount_amount,
+            total,
             issued_at: invoice.issued_at.to_rfc3339(),
             posted: invoice.posted,
-            total,
         }
     }
 }

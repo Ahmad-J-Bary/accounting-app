@@ -4,6 +4,7 @@ import {
   Receipt, ShoppingCart, Wallet, FileText, Plus, User, Package, 
   ArrowRight, ChevronRight 
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface QuickAction {
   label: string;
@@ -19,19 +20,31 @@ interface QuickActionsProps {
 }
 
 export function QuickActions({ actions, columns = 4 }: QuickActionsProps) {
+  const navigate = useNavigate();
+
+  const handleNewInvoice = () => {
+    navigate("/sales-invoices");
+    setTimeout(() => window.dispatchEvent(new CustomEvent("erp:open-new-invoice")), 100);
+  };
+
+  const handleNewPurchaseInvoice = () => {
+    navigate("/purchase-invoices");
+    setTimeout(() => window.dispatchEvent(new CustomEvent("erp:open-new-purchase-invoice")), 100);
+  };
+
   const defaultActions: QuickAction[] = actions || [
     {
       label: 'فاتورة مبيعات',
       icon: Receipt,
       description: 'إنشاء فاتورة مبيعات جديدة',
-      onClick: () => {},
+      onClick: handleNewInvoice,
       color: 'bg-blue-50 text-blue-600 hover:bg-blue-100',
     },
     {
       label: 'فاتورة مشتريات',
       icon: ShoppingCart,
       description: 'إنشاء فاتورة مشتريات جديدة',
-      onClick: () => {},
+      onClick: handleNewPurchaseInvoice,
       color: 'bg-purple-50 text-purple-600 hover:bg-purple-100',
     },
     {

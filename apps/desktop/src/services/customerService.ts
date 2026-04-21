@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '@/lib/invoke';
 import type { 
   CustomerDto, 
   CreateCustomerRequest 
@@ -6,17 +6,14 @@ import type {
 
 export const customerService = {
   async createCustomer(request: CreateCustomerRequest): Promise<CustomerDto> {
-    // TODO: Implement Tauri command
-    return {} as CustomerDto;
+    return await invoke<CustomerDto>('create_customer', { request });
   },
 
   async listCustomers(): Promise<CustomerDto[]> {
-    // TODO: Implement Tauri command
-    return [];
+    return await invoke<CustomerDto[]>('list_customers');
   },
 
   async getCustomer(id: string): Promise<CustomerDto> {
-    // TODO: Implement Tauri command
-    return {} as CustomerDto;
+    return await invoke<CustomerDto>('get_customer', { id });
   },
 };

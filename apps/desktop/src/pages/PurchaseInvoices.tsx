@@ -9,15 +9,8 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { purchaseService } from "@/services/purchaseService";
+import { NewPurchaseInvoiceDialog } from "@/components/erp/NewPurchaseInvoiceDialog";
 import type { PurchaseInvoice } from "@erp/shared-types";
-
-const STATUS_MAP: Record<string, string> = {
-  Draft: "مسودة",
-  Posted: "مرحّلة",
-  Cancelled: "ملغية",
-  Paid: "مدفوعة",
-  PartiallyPaid: "جزئية",
-};
 
 export default function PurchaseInvoices() {
   const [invoices, setInvoices] = useState<PurchaseInvoice[]>([]);
@@ -25,6 +18,7 @@ export default function PurchaseInvoices() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [error, setError] = useState<string | null>(null);
+  const [isNewInvoiceOpen, setIsNewInvoiceOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -38,7 +32,13 @@ export default function PurchaseInvoices() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+
+    const handleOpenDialog = () => setIsNewInvoiceOpen(true);
+    window.addEventListener("erp:open-new-purchase-invoice", handleOpenDialog);
+    return () => window.removeEventListener("erp:open-new-purchase-invoice", handleOpenDialog);
+  }, []);
 
   const filtered = invoices.filter(inv => {
     const matchSearch =
@@ -63,20 +63,26 @@ export default function PurchaseInvoices() {
 
   return (
     <>
+      <NewPurchaseInvoiceDialog 
+        open={isNewInvoiceOpen}
+        onOpenChange={setIsNewInvoiceOpen}
+        onSuccess={load}
+      />
+
       <PageHeader
         title="فواتير المشتريات"
         subtitle="إدارة فواتير الشراء من الموردين"
         breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "المشتريات" }, { label: "الفواتير" }]}
         actions={
-          <>
+          <div className="flex items-center gap-2 relative z-[100]">
             <Button variant="outline" onClick={load} disabled={loading}>
               <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />
               تحديث
             </Button>
-            <Button>
+            <Button onClick={() => setIsNewInvoiceOpen(true)}>
               <Plus className="w-4 h-4 ml-2" />فاتورة شراء جديدة
             </Button>
-          </>
+          </div>
         }
       />
 

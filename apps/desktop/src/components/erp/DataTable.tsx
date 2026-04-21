@@ -161,7 +161,7 @@ export function DataTable<T extends Record<string, unknown>>({
                 <TableRow key={index} className="hover:bg-slate-50">
                   {columns.map((col) => (
                     <TableCell key={col.key} className={col.className || ''}>
-                      {col.render ? col.render(row[col.key], row) : row[col.key]}
+                      {col.render ? col.render(row[col.key], row) : (row[col.key] as React.ReactNode)}
                     </TableCell>
                   ))}
                   {actions.length > 0 && (

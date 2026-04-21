@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '@/lib/invoke';
 import type { 
   ProductDto, 
   CreateProductRequest 
@@ -6,17 +6,14 @@ import type {
 
 export const productService = {
   async createProduct(request: CreateProductRequest): Promise<ProductDto> {
-    // TODO: Implement Tauri command
-    return {} as ProductDto;
+    return await invoke<ProductDto>('create_product', { request });
   },
 
   async listProducts(): Promise<ProductDto[]> {
-    // TODO: Implement Tauri command
-    return [];
+    return await invoke<ProductDto[]>('list_products');
   },
 
   async getProduct(id: string): Promise<ProductDto> {
-    // TODO: Implement Tauri command
-    return {} as ProductDto;
+    return await invoke<ProductDto>('get_product', { id });
   },
 };

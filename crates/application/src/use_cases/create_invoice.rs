@@ -25,6 +25,16 @@ impl CreateInvoiceUseCase {
                 .map_err(|e| AppError::Invalid(format!("Invalid customer ID: {}", e)))?
         );
 
+        let tax_amount = Money::new(
+            rust_decimal::Decimal::from_str(&request.tax_amount)
+                .map_err(|e| AppError::Invalid(format!("Invalid tax amount: {}", e)))?
+        );
+
+        let discount_amount = Money::new(
+            rust_decimal::Decimal::from_str(&request.discount_amount)
+                .map_err(|e| AppError::Invalid(format!("Invalid discount amount: {}", e)))?
+        );
+
         let lines: Result<Vec<InvoiceLine>, AppError> = request.lines
             .into_iter()
             .map(|dto| {
@@ -44,8 +54,13 @@ impl CreateInvoiceUseCase {
 
         let lines = lines?;
 
-        let invoice = Invoice::new(customer_id, lines)
-            .map_err(AppError::from)?;
+        let invoice = Invoice::new(
+            request.invoice_number,
+            customer_id,
+            lines,
+            tax_amount,
+            discount_amount,
+        ).map_err(AppError::from)?;
 
         self.repo.save(&invoice).await?;
 
@@ -94,6 +109,7 @@ mod tests {
         let uc = CreateInvoiceUseCase::new(repo.clone());
 
         let request = CreateInvoiceRequest {
+            invoice_number: "INV-001".into(),
             customer_id: Uuid::new_v4().to_string(),
             lines: vec![
                 InvoiceLineDto {
@@ -102,6 +118,8 @@ mod tests {
                     unit_price: "50".to_string(),
                 },
             ],
+            tax_amount: "0".into(),
+            discount_amount: "0".into(),
         };
 
         let result = uc.execute(request).await;
