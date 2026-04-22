@@ -44,8 +44,7 @@ impl ConsumableUseCases {
         let mut item = self.repo.find_by_id(&ConsumableId(id)).await?
             .ok_or_else(|| AppError::NotFound("Item not found".to_string()))?;
         
-        item.quantity_on_hand += quantity;
-        item.updated_at = Utc::now();
+        item.add_stock(quantity);
         self.repo.save(&item).await?;
 
         // Log movement
@@ -65,15 +64,8 @@ impl ConsumableUseCases {
         let mut item = self.repo.find_by_id(&ConsumableId(id)).await?
             .ok_or_else(|| AppError::NotFound("Item not found".to_string()))?;
 
-        if item.quantity_on_hand < quantity {
-            return Err(AppError::Invalid("Insufficient quantity".to_string()));
-        }
-
-        item.quantity_on_hand -= quantity;
-        item.updated_at = Utc::now();
+        let total_value = item.issue(quantity).map_err(|e| AppError::Invalid(e))?;
         self.repo.save(&item).await?;
-
-        let total_value = item.unit_cost.clone() * quantity;
 
         // Log movement
         let movement = AssetMovement::new(
@@ -87,8 +79,6 @@ impl ConsumableUseCases {
 
         // Journal Entry
         let mut lines = Vec::new();
-        
-        // Debit: Expense Account
         lines.push(JournalLine::new(
             AccountId(item.expense_account_id),
             item.unit_cost.currency(),
@@ -98,7 +88,6 @@ impl ConsumableUseCases {
             format!("صرف مستهلكات: {} - {}", item.name, description),
         ));
 
-        // Credit: Asset (Inventory) Account
         lines.push(JournalLine::new(
             AccountId(item.asset_account_id),
             item.unit_cost.currency(),
@@ -122,5 +111,67 @@ impl ConsumableUseCases {
 
     pub async fn list_items(&self) -> Result<Vec<Consumable>, AppError> {
         self.repo.list_all().await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::mocks::{MockAssetRepository, MockJournalRepository};
+    use domain::shared::Currency;
+    use rust_decimal_macros::dec;
+
+    pub struct MockConsumableRepo {
+        pub items: std::sync::Mutex<Vec<Consumable>>,
+    }
+    
+    #[async_trait::async_trait]
+    impl ConsumableRepository for MockConsumableRepo {
+        async fn save(&self, item: &Consumable) -> Result<(), AppError> {
+            let mut items = self.items.lock().unwrap();
+            items.retain(|i| i.id.0 != item.id.0);
+            items.push(item.clone());
+            Ok(())
+        }
+        async fn find_by_id(&self, id: &ConsumableId) -> Result<Option<Consumable>, AppError> {
+            let items = self.items.lock().unwrap();
+            Ok(items.iter().find(|i| i.id.0 == id.0).cloned())
+        }
+        async fn list_all(&self) -> Result<Vec<Consumable>, AppError> {
+            Ok(self.items.lock().unwrap().clone())
+        }
+        async fn delete(&self, _id: &ConsumableId) -> Result<(), AppError> { Ok(()) }
+    }
+
+    #[tokio::test]
+    async fn test_consumable_lifecycle() {
+        let repo = Arc::new(MockConsumableRepo { items: std::sync::Mutex::new(Vec::new()) });
+        let asset_repo = Arc::new(MockAssetRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::new());
+        let use_cases = ConsumableUseCases::new(repo, asset_repo.clone(), journal_repo.clone());
+
+        // 1. Create
+        let id = use_cases.create_item(
+            "C1".to_string(), "Ink".to_string(), Uuid::new_v4(),
+            Money::new(dec!(50), Currency::SYP), dec!(1),
+            Uuid::new_v4(), Uuid::new_v4()
+        ).await.unwrap();
+
+        // 2. Add Stock
+        use_cases.add_stock(id.0, dec!(10)).await.unwrap();
+        
+        let items = use_cases.list_items().await.unwrap();
+        assert_eq!(items[0].quantity_on_hand, dec!(10));
+
+        // 3. Issue
+        use_cases.issue_item(id.0, dec!(2), "Printing".to_string()).await.unwrap();
+        
+        let updated = use_cases.list_items().await.unwrap();
+        assert_eq!(updated[0].quantity_on_hand, dec!(8));
+
+        // Check Accounting
+        let entries = journal_repo.entries.lock().unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].lines[0].debit.amount(), dec!(100)); // 2 * 50
     }
 }

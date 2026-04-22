@@ -3,12 +3,8 @@ use sqlx::{SqlitePool, Row};
 use application::errors::AppError;
 use application::ports::consumable_repository::ConsumableRepository;
 use domain::assets::{Consumable, ConsumableId, ConsumableStatus};
-use domain::shared::{Money, Currency};
 use std::sync::Arc;
-use rust_decimal::Decimal;
-use std::str::FromStr;
-use uuid::Uuid;
-use chrono::DateTime;
+use crate::db::mapper::{map_uuid, map_decimal, map_money, map_datetime};
 
 pub struct SqliteConsumableRepository {
     pool: Arc<SqlitePool>,
@@ -87,20 +83,14 @@ impl ConsumableRepository for SqliteConsumableRepository {
 
 impl SqliteConsumableRepository {
     fn map_row_to_consumable(&self, row: sqlx::sqlite::SqliteRow) -> Result<Consumable, AppError> {
-        let currency_code: String = row.get("currency");
-        let currency = match currency_code.as_str() {
-            "USD" => Currency::USD,
-            _ => Currency::SYP,
-        };
-
         Ok(Consumable {
-            id: ConsumableId(Uuid::parse_str(row.get("id")).unwrap_or_default()),
+            id: ConsumableId(map_uuid(&row, "id")),
             code: row.get("code"),
             name: row.get("name"),
-            category_id: Uuid::parse_str(row.get("category_id")).unwrap_or_default(),
-            quantity_on_hand: Decimal::from_str(row.get("quantity_on_hand")).unwrap_or_default(),
-            unit_cost: Money::new(Decimal::from_str(row.get("unit_cost")).unwrap_or_default(), currency),
-            fx_rate: Decimal::from_str(row.get("fx_rate")).unwrap_or(Decimal::ONE),
+            category_id: map_uuid(&row, "category_id"),
+            quantity_on_hand: map_decimal(&row, "quantity_on_hand"),
+            unit_cost: map_money(&row, "unit_cost", "currency"),
+            fx_rate: map_decimal(&row, "fx_rate"),
             status: match row.get::<String, _>("status").as_str() {
                 "Exhausted" => ConsumableStatus::Exhausted,
                 "Damaged" => ConsumableStatus::Damaged,
@@ -108,10 +98,10 @@ impl SqliteConsumableRepository {
             },
             location: row.get("location"),
             notes: row.get("notes"),
-            asset_account_id: Uuid::parse_str(row.get("asset_account_id")).unwrap_or_default(),
-            expense_account_id: Uuid::parse_str(row.get("expense_account_id")).unwrap_or_default(),
-            created_at: DateTime::parse_from_rfc3339(row.get("created_at")).unwrap_or_default().with_timezone(&chrono::Utc),
-            updated_at: DateTime::parse_from_rfc3339(row.get("updated_at")).unwrap_or_default().with_timezone(&chrono::Utc),
+            asset_account_id: map_uuid(&row, "asset_account_id"),
+            expense_account_id: map_uuid(&row, "expense_account_id"),
+            created_at: map_datetime(&row, "created_at"),
+            updated_at: map_datetime(&row, "updated_at"),
         })
     }
 }

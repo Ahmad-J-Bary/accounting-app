@@ -63,4 +63,53 @@ impl Consumable {
     pub fn total_cost(&self) -> Money {
         self.unit_cost.clone() * self.quantity_on_hand
     }
+
+    pub fn add_stock(&mut self, quantity: Decimal) {
+        self.quantity_on_hand += quantity;
+        self.status = ConsumableStatus::InStock;
+        self.updated_at = Utc::now();
+    }
+
+    pub fn issue(&mut self, quantity: Decimal) -> Result<Money, String> {
+        if self.quantity_on_hand < quantity {
+            return Err("Insufficient quantity".to_string());
+        }
+        
+        self.quantity_on_hand -= quantity;
+        if self.quantity_on_hand == Decimal::ZERO {
+            self.status = ConsumableStatus::Exhausted;
+        }
+        self.updated_at = Utc::now();
+        
+        Ok(self.unit_cost.clone() * quantity)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::shared::Currency;
+
+    #[test]
+    fn test_consumable_stock() {
+        let mut item = Consumable::new(
+            "C1".to_string(),
+            "Paper".to_string(),
+            Uuid::new_v4(),
+            Money::new(Decimal::from(10), Currency::USD),
+            Decimal::ONE,
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+        );
+
+        item.add_stock(Decimal::from(5));
+        assert_eq!(item.quantity_on_hand, Decimal::from(5));
+        assert_eq!(item.total_cost().amount(), Decimal::from(50));
+
+        let cost = item.issue(Decimal::from(2)).unwrap();
+        assert_eq!(cost.amount(), Decimal::from(20));
+        assert_eq!(item.quantity_on_hand, Decimal::from(3));
+
+        assert!(item.issue(Decimal::from(10)).is_err());
+    }
 }

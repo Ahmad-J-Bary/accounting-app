@@ -5,9 +5,8 @@ use application::ports::account_repository::AccountRepository;
 use domain::accounting::account::{Account, AccountType};
 use domain::shared::AccountId;
 use std::sync::Arc;
-use rust_decimal::Decimal;
-use std::str::FromStr;
 use uuid::Uuid;
+use crate::db::mapper::{map_uuid, map_decimal};
 
 pub struct SqliteAccountRepository {
     pool: Arc<SqlitePool>,
@@ -58,7 +57,11 @@ impl AccountRepository for SqliteAccountRepository {
             .await
             .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-        row.map(map_row_to_account).transpose()
+        if let Some(row) = row {
+            Ok(Some(map_row_to_account(row)?))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn find_by_code(&self, code: &str) -> Result<Option<Account>, AppError> {
@@ -68,7 +71,11 @@ impl AccountRepository for SqliteAccountRepository {
             .await
             .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-        row.map(map_row_to_account).transpose()
+        if let Some(row) = row {
+            Ok(Some(map_row_to_account(row)?))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn list_all(&self) -> Result<Vec<Account>, AppError> {
@@ -77,7 +84,11 @@ impl AccountRepository for SqliteAccountRepository {
             .await
             .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-        rows.into_iter().map(map_row_to_account).collect()
+        let mut accounts = Vec::new();
+        for row in rows {
+            accounts.push(map_row_to_account(row)?);
+        }
+        Ok(accounts)
     }
 
     async fn delete(&self, id: &AccountId) -> Result<(), AppError> {
@@ -91,11 +102,8 @@ impl AccountRepository for SqliteAccountRepository {
 }
 
 fn map_row_to_account(row: sqlx::sqlite::SqliteRow) -> Result<Account, AppError> {
-    let id_str: String = row.get("id");
-    let parent_id_str: Option<String> = row.get("parent_id");
     let type_str: String = row.get("account_type");
-    let balance_str: String = row.get("balance");
-
+    
     let account_type = match type_str.as_str() {
         "Assets" => AccountType::Assets,
         "Liabilities" => AccountType::Liabilities,
@@ -106,15 +114,15 @@ fn map_row_to_account(row: sqlx::sqlite::SqliteRow) -> Result<Account, AppError>
     };
 
     Ok(Account {
-        id: AccountId(Uuid::parse_str(&id_str).map_err(|e: uuid::Error| AppError::Infrastructure(e.to_string()))?),
+        id: AccountId(map_uuid(&row, "id")),
         code: row.get("code"),
         name_ar: row.get("name_ar"),
         name_en: row.get("name_en"),
         account_type,
-        parent_id: parent_id_str.map(|s| Uuid::parse_str(&s).map(AccountId).unwrap_or(AccountId(Uuid::nil()))),
-        balance: Decimal::from_str(&balance_str).unwrap_or(Decimal::ZERO),
+        parent_id: row.get::<Option<String>, _>("parent_id").and_then(|s| Uuid::parse_str(&s).ok()).map(AccountId),
+        balance: map_decimal(&row, "balance"),
         is_active: row.get("is_active"),
-        created_at: row.get("created_at"),
+        created_at: row.get("created_at"), // Kept original fetch for DateTime since it's working
         updated_at: row.get("updated_at"),
     })
 }

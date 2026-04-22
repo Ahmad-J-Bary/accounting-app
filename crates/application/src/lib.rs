@@ -2,6 +2,8 @@ pub mod errors;
 pub mod ports;
 pub mod use_cases;
 pub mod dto;
+#[cfg(test)]
+pub mod mocks;
 
 pub use use_cases::create_invoice::CreateInvoiceUseCase;
 pub use use_cases::post_invoice::PostInvoiceUseCase;

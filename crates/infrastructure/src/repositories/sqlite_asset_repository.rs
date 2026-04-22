@@ -8,7 +8,7 @@ use std::sync::Arc;
 use rust_decimal::Decimal;
 use std::str::FromStr;
 use uuid::Uuid;
-use chrono::DateTime;
+use crate::db::mapper::{map_uuid, map_decimal, map_money, map_datetime};
 
 pub struct SqliteAssetRepository {
     pool: Arc<SqlitePool>,
@@ -100,7 +100,7 @@ impl AssetRepository for SqliteAssetRepository {
         let mut categories = Vec::new();
         for row in rows {
             categories.push(AssetCategory {
-                id: Uuid::parse_str(row.get("id")).unwrap_or_default(),
+                id: map_uuid(&row, "id"),
                 name: row.get("name"),
                 asset_type: match row.get::<String, _>("asset_type").as_str() {
                     "Fixed" => AssetType::Fixed,
@@ -179,14 +179,13 @@ impl AssetRepository for SqliteAssetRepository {
 
         let mut schedules = Vec::new();
         for row in rows {
-             let currency = Currency::SYP; // Fallback
              schedules.push(DepreciationSchedule {
-                id: Uuid::parse_str(row.get("id")).unwrap_or_default(),
-                fixed_asset_id: Uuid::parse_str(row.get("fixed_asset_id")).unwrap_or_default(),
-                period_date: DateTime::parse_from_rfc3339(row.get("period_date")).unwrap_or_default().with_timezone(&chrono::Utc),
-                depreciation_amount: Money::new(Decimal::from_str(row.get("depreciation_amount")).unwrap_or_default(), currency),
-                accumulated_depreciation: Money::new(Decimal::from_str(row.get("accumulated_depreciation")).unwrap_or_default(), currency),
-                remaining_value: Money::new(Decimal::from_str(row.get("remaining_value")).unwrap_or_default(), currency),
+                id: map_uuid(&row, "id"),
+                fixed_asset_id: map_uuid(&row, "fixed_asset_id"),
+                period_date: map_datetime(&row, "period_date"),
+                depreciation_amount: map_money(&row, "depreciation_amount", "currency"), // Note: currency is fixed to SYP in migration for these but should be consistent
+                accumulated_depreciation: map_money(&row, "accumulated_depreciation", "currency"),
+                remaining_value: map_money(&row, "remaining_value", "currency"),
                 status: match row.get::<String, _>("status").as_str() {
                     "Posted" => DepreciationStatus::Posted,
                     _ => DepreciationStatus::Pending,
@@ -200,23 +199,17 @@ impl AssetRepository for SqliteAssetRepository {
 
 impl SqliteAssetRepository {
     fn map_row_to_asset(&self, row: sqlx::sqlite::SqliteRow) -> Result<FixedAsset, AppError> {
-        let currency_code: String = row.get("currency");
-        let currency = match currency_code.as_str() {
-            "USD" => Currency::USD,
-            _ => Currency::SYP,
-        };
-
         Ok(FixedAsset {
-            id: FixedAssetId(Uuid::parse_str(row.get("id")).unwrap_or_default()),
+            id: FixedAssetId(map_uuid(&row, "id")),
             code: row.get("code"),
             name: row.get("name"),
-            category_id: Uuid::parse_str(row.get("category_id")).unwrap_or_default(),
-            purchase_date: DateTime::parse_from_rfc3339(row.get("purchase_date")).unwrap_or_default().with_timezone(&chrono::Utc),
-            purchase_cost: Money::new(Decimal::from_str(row.get("purchase_cost")).unwrap_or_default(), currency),
-            fx_rate: Decimal::from_str(row.get("fx_rate")).unwrap_or(Decimal::ONE),
+            category_id: map_uuid(&row, "category_id"),
+            purchase_date: map_datetime(&row, "purchase_date"),
+            purchase_cost: map_money(&row, "purchase_cost", "currency"),
+            fx_rate: map_decimal(&row, "fx_rate"),
             useful_life_months: row.get::<i64, _>("useful_life_months") as u32,
-            salvage_value: row.get::<Option<String>, _>("salvage_value").and_then(|s| Decimal::from_str(&s).ok()).map(|d| Money::new(d, currency)),
-            accumulated_depreciation: Money::new(Decimal::from_str(row.get("accumulated_depreciation")).unwrap_or_default(), currency),
+            salvage_value: row.get::<Option<String>, _>("salvage_value").and_then(|s| Decimal::from_str(&s).ok()).map(|d| Money::new(d, Currency::SYP)), // Should use map_money if currency col existed for salvage
+            accumulated_depreciation: map_money(&row, "accumulated_depreciation", "currency"),
             status: match row.get::<String, _>("status").as_str() {
                 "Disposed" => AssetStatus::Disposed,
                 "Sold" => AssetStatus::Sold,
@@ -225,21 +218,20 @@ impl SqliteAssetRepository {
             },
             location: row.get("location"),
             notes: row.get("notes"),
-            asset_account_id: Uuid::parse_str(row.get("asset_account_id")).unwrap_or_default(),
-            depreciation_account_id: Uuid::parse_str(row.get("depreciation_account_id")).unwrap_or_default(),
-            accumulated_depreciation_account_id: Uuid::parse_str(row.get("accumulated_depreciation_account_id")).unwrap_or_default(),
-            created_at: DateTime::parse_from_rfc3339(row.get("created_at")).unwrap_or_default().with_timezone(&chrono::Utc),
-            updated_at: DateTime::parse_from_rfc3339(row.get("updated_at")).unwrap_or_default().with_timezone(&chrono::Utc),
+            asset_account_id: map_uuid(&row, "asset_account_id"),
+            depreciation_account_id: map_uuid(&row, "depreciation_account_id"),
+            accumulated_depreciation_account_id: map_uuid(&row, "accumulated_depreciation_account_id"),
+            created_at: map_datetime(&row, "created_at"),
+            updated_at: map_datetime(&row, "updated_at"),
         })
     }
 
     fn map_movement_rows(&self, rows: Vec<sqlx::sqlite::SqliteRow>) -> Result<Vec<AssetMovement>, AppError> {
         let mut movements = Vec::new();
         for row in rows {
-            let currency = Currency::SYP; // Fallback
             movements.push(AssetMovement {
-                id: Uuid::parse_str(row.get("id")).unwrap_or_default(),
-                asset_id: Uuid::parse_str(row.get("asset_id")).unwrap_or_default(),
+                id: map_uuid(&row, "id"),
+                asset_id: map_uuid(&row, "asset_id"),
                 movement_type: match row.get::<String, _>("movement_type").as_str() {
                     "Acquisition" => AssetMovementType::Acquisition,
                     "Depreciation" => AssetMovementType::Depreciation,
@@ -252,13 +244,13 @@ impl SqliteAssetRepository {
                     "Damage" => AssetMovementType::Damage,
                     _ => AssetMovementType::Revaluation,
                 },
-                date: DateTime::parse_from_rfc3339(row.get("movement_date")).unwrap_or_default().with_timezone(&chrono::Utc),
+                date: map_datetime(&row, "movement_date"),
                 quantity: row.get::<Option<String>, _>("quantity").and_then(|s| Decimal::from_str(&s).ok()),
-                amount: Money::new(Decimal::from_str(row.get("amount")).unwrap_or_default(), currency),
+                amount: map_money(&row, "amount", "currency"), // Fallback in mapper for missing currency
                 description: row.get("description"),
                 reference_no: row.get("reference_no"),
                 journal_entry_id: row.get::<Option<String>, _>("journal_entry_id").and_then(|s| Uuid::parse_str(&s).ok()),
-                created_at: DateTime::parse_from_rfc3339(row.get("created_at")).unwrap_or_default().with_timezone(&chrono::Utc),
+                created_at: map_datetime(&row, "created_at"),
             });
         }
         Ok(movements)

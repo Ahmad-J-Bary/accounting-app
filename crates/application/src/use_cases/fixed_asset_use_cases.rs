@@ -103,16 +103,11 @@ impl FixedAssetUseCases {
     }
 
     pub async fn post_depreciation(&self, asset_id: Uuid, date: chrono::DateTime<Utc>) -> Result<(), AppError> {
-        let asset = self.repo.find_asset_by_id(&FixedAssetId(asset_id)).await?
+        let mut asset = self.repo.find_asset_by_id(&FixedAssetId(asset_id)).await?
             .ok_or_else(|| AppError::NotFound("Asset not found".to_string()))?;
 
-        let monthly_depreciation = asset.purchase_cost.amount() / Decimal::from(asset.useful_life_months);
-        let depreciation_money = Money::new(monthly_depreciation, asset.purchase_cost.currency());
-
-        let mut updated_asset = asset.clone();
-        updated_asset.accumulated_depreciation = asset.accumulated_depreciation.clone() + depreciation_money.clone();
-        updated_asset.updated_at = Utc::now();
-        self.repo.save_asset(&updated_asset).await?;
+        let depreciation_money = asset.depreciate();
+        self.repo.save_asset(&asset).await?;
 
         let movement = AssetMovement::new(
             asset.id.0,
@@ -156,5 +151,67 @@ impl FixedAssetUseCases {
 
     pub async fn list_movements(&self, asset_id: Uuid) -> Result<Vec<AssetMovement>, AppError> {
         self.repo.list_movements_by_asset(&asset_id).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::mocks::{MockAssetRepository, MockJournalRepository};
+    use domain::shared::Currency;
+    use rust_decimal_macros::dec;
+
+    #[tokio::test]
+    async fn test_asset_lifecycle() {
+        println!("Starting test_asset_lifecycle");
+        let asset_repo = Arc::new(MockAssetRepository::new());
+        let journal_repo = Arc::new(MockJournalRepository::new());
+        let use_cases = FixedAssetUseCases::new(asset_repo.clone(), journal_repo.clone());
+
+        let purchase_date = Utc::now();
+        let cost = Money::new(dec!(12000), Currency::SYP);
+        
+        println!("1. Creating asset...");
+        // 1. Create Asset
+        let asset_id = use_cases.create_asset(
+            "FA-001".to_string(),
+            "Laptop".to_string(),
+            Uuid::new_v4(),
+            purchase_date,
+            cost.clone(),
+            dec!(1),
+            12,
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+        ).await.unwrap();
+        println!("Asset created: {:?}", asset_id);
+
+        // Check if saved
+        let assets = use_cases.list_assets().await.unwrap();
+        assert_eq!(assets.len(), 1);
+        assert_eq!(assets[0].name, "Laptop");
+
+        // Check Journal Entry
+        let entries = journal_repo.entries.lock().unwrap();
+        assert_eq!(entries.len(), 1);
+        assert!(entries[0].description.contains("Laptop"));
+        drop(entries); // Explicitly drop to be safe
+
+        println!("2. Posting depreciation...");
+        // 2. Post Depreciation
+        use_cases.post_depreciation(asset_id.0, Utc::now()).await.unwrap();
+        println!("Depreciation posted.");
+
+        // Check updated asset
+        let updated_asset = asset_repo.find_asset_by_id(&asset_id).await.unwrap().unwrap();
+        assert_eq!(updated_asset.accumulated_depreciation.amount(), dec!(1000));
+        
+        // Check Movements
+        let movements = asset_repo.movements.lock().unwrap();
+        assert_eq!(movements.len(), 2); // Acquisition + Depreciation
+        assert_eq!(movements[1].amount.amount(), dec!(1000));
+        println!("Test finished.");
     }
 }
