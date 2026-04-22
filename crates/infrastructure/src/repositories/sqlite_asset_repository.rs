@@ -24,8 +24,8 @@ impl SqliteAssetRepository {
 impl AssetRepository for SqliteAssetRepository {
     async fn save_asset(&self, asset: &FixedAsset) -> Result<(), AppError> {
         sqlx::query(
-            "INSERT OR REPLACE INTO fixed_assets (id, code, name, category_id, purchase_date, purchase_cost, currency, fx_rate, useful_life_months, salvage_value, accumulated_depreciation, status, location, notes, created_at, updated_at) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT OR REPLACE INTO fixed_assets (id, code, name, category_id, purchase_date, purchase_cost, currency, fx_rate, useful_life_months, salvage_value, accumulated_depreciation, status, location, notes, asset_account_id, depreciation_account_id, accumulated_depreciation_account_id, created_at, updated_at) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
         .bind(asset.id.0.to_string())
         .bind(&asset.code)
@@ -41,6 +41,9 @@ impl AssetRepository for SqliteAssetRepository {
         .bind(format!("{:?}", asset.status))
         .bind(&asset.location)
         .bind(&asset.notes)
+        .bind(asset.asset_account_id.to_string())
+        .bind(asset.depreciation_account_id.to_string())
+        .bind(asset.accumulated_depreciation_account_id.to_string())
         .bind(asset.created_at.to_rfc3339())
         .bind(asset.updated_at.to_rfc3339())
         .execute(&*self.pool)
@@ -138,7 +141,7 @@ impl AssetRepository for SqliteAssetRepository {
 
         let mut movements = Vec::new();
         for row in rows {
-            let currency = Currency::SYP; // This is a limitation, we should store currency in movements or derive from asset
+            let currency = Currency::SYP; // Fallback
             movements.push(AssetMovement {
                 id: Uuid::parse_str(row.get("id")).unwrap_or_default(),
                 asset_id: Uuid::parse_str(row.get("asset_id")).unwrap_or_default(),
@@ -240,6 +243,9 @@ impl SqliteAssetRepository {
             },
             location: row.get("location"),
             notes: row.get("notes"),
+            asset_account_id: Uuid::parse_str(row.get("asset_account_id")).unwrap_or_default(),
+            depreciation_account_id: Uuid::parse_str(row.get("depreciation_account_id")).unwrap_or_default(),
+            accumulated_depreciation_account_id: Uuid::parse_str(row.get("accumulated_depreciation_account_id")).unwrap_or_default(),
             created_at: DateTime::parse_from_rfc3339(row.get("created_at")).unwrap_or_default().with_timezone(&chrono::Utc),
             updated_at: DateTime::parse_from_rfc3339(row.get("updated_at")).unwrap_or_default().with_timezone(&chrono::Utc),
         })

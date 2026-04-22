@@ -1,5 +1,5 @@
 import { invoke } from '@/lib/invoke';
-import type { FixedAssetDto, ConsumableDto } from '@erp/shared-types';
+import type { FixedAssetDto, ConsumableDto, AssetCategoryDto } from '@erp/shared-types';
 
 export const assetService = {
   async createFixedAsset(data: {
@@ -12,6 +12,8 @@ export const assetService = {
     fxRate: string;
     usefulLifeMonths: number;
     assetAccountId: string;
+    depreciationAccountId: string;
+    accumulatedDepreciationAccountId: string;
     paymentAccountId: string;
   }): Promise<string> {
     return await invoke<string>('create_fixed_asset', data);
@@ -34,5 +36,17 @@ export const assetService = {
 
   async listConsumables(): Promise<ConsumableDto[]> {
     return await invoke<ConsumableDto[]>('list_consumables');
+  },
+
+  async listAssetCategories(assetType: 'Fixed' | 'Consumable'): Promise<AssetCategoryDto[]> {
+    return await invoke<AssetCategoryDto[]>('list_asset_categories', { assetType });
+  },
+
+  async createAssetCategory(data: { name: string; assetType: 'Fixed' | 'Consumable' }): Promise<string> {
+    return await invoke<string>('create_asset_category', data);
+  },
+
+  async postDepreciation(assetId: string, date: string): Promise<void> {
+    return await invoke<void>('post_asset_depreciation', { assetId, date });
   },
 };

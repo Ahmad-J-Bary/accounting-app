@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use domain::assets::{FixedAsset, FixedAssetId, AssetCategory, AssetMovement, DepreciationSchedule};
-use domain::shared::AccountId;
 use crate::errors::AppError;
 use uuid::Uuid;
 

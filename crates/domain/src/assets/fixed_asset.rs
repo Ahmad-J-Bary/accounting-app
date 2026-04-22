@@ -1,7 +1,7 @@
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::shared::{Money, Currency};
+use crate::shared::Money;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FixedAssetId(pub Uuid);
@@ -29,6 +29,9 @@ pub struct FixedAsset {
     pub status: AssetStatus,
     pub location: Option<String>,
     pub notes: Option<String>,
+    pub asset_account_id: Uuid,
+    pub depreciation_account_id: Uuid,
+    pub accumulated_depreciation_account_id: Uuid,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -42,6 +45,9 @@ impl FixedAsset {
         purchase_cost: Money,
         fx_rate: rust_decimal::Decimal,
         useful_life_months: u32,
+        asset_account_id: Uuid,
+        depreciation_account_id: Uuid,
+        accumulated_depreciation_account_id: Uuid,
     ) -> Self {
         Self {
             id: FixedAssetId(Uuid::new_v4()),
@@ -57,6 +63,9 @@ impl FixedAsset {
             status: AssetStatus::Active,
             location: None,
             notes: None,
+            asset_account_id,
+            depreciation_account_id,
+            accumulated_depreciation_account_id,
             created_at: Utc::now(),
             updated_at: Utc::now(),
         }

@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS fixed_assets (
     status TEXT NOT NULL, -- 'Active', 'Disposed', 'Sold', 'Damaged'
     location TEXT,
     notes TEXT,
+    asset_account_id TEXT NOT NULL,
+    depreciation_account_id TEXT NOT NULL,
+    accumulated_depreciation_account_id TEXT NOT NULL,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     FOREIGN KEY (category_id) REFERENCES asset_categories(id)

@@ -38,3 +38,9 @@ export interface ConsumableDto {
   location?: string;
   notes?: string;
 }
+
+export interface AssetCategoryDto {
+  id: string;
+  name: string;
+  asset_type: 'Fixed' | 'Consumable';
+}

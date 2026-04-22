@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use crate::ports::asset_repository::AssetRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
-use domain::assets::{FixedAsset, FixedAssetId, AssetMovement, AssetMovementType};
+use domain::assets::{FixedAsset, FixedAssetId, AssetMovement, AssetMovementType, AssetCategory, AssetType};
 use domain::accounting::{JournalEntry, JournalLine};
 use domain::shared::{Money, AccountId};
 use crate::errors::AppError;
@@ -29,6 +29,8 @@ impl FixedAssetUseCases {
         fx_rate: Decimal,
         useful_life_months: u32,
         asset_account_id: Uuid,
+        depreciation_account_id: Uuid,
+        accumulated_depreciation_account_id: Uuid,
         payment_account_id: Uuid,
     ) -> Result<FixedAssetId, AppError> {
         let asset = FixedAsset::new(
@@ -39,6 +41,9 @@ impl FixedAssetUseCases {
             purchase_cost.clone(),
             fx_rate,
             useful_life_months,
+            asset_account_id,
+            depreciation_account_id,
+            accumulated_depreciation_account_id,
         );
 
         // 1. Save Asset
@@ -91,5 +96,74 @@ impl FixedAssetUseCases {
 
     pub async fn list_assets(&self) -> Result<Vec<FixedAsset>, AppError> {
         self.repo.list_assets().await
+    }
+
+    pub async fn create_category(&self, name: String, asset_type: AssetType) -> Result<Uuid, AppError> {
+        let category = AssetCategory::new(name, asset_type);
+        self.repo.save_category(&category).await?;
+        Ok(category.id)
+    }
+
+    pub async fn list_categories(&self, asset_type: AssetType) -> Result<Vec<AssetCategory>, AppError> {
+        self.repo.list_categories(asset_type).await
+    }
+
+    pub async fn post_depreciation(&self, asset_id: Uuid, date: chrono::DateTime<Utc>) -> Result<(), AppError> {
+        let asset = self.repo.find_asset_by_id(&FixedAssetId(asset_id)).await?
+            .ok_or_else(|| AppError::NotFound("Asset not found".to_string()))?;
+
+        // Simple straight-line depreciation calculation
+        let monthly_depreciation = asset.purchase_cost.amount() / Decimal::from(asset.useful_life_months);
+        let depreciation_money = Money::new(monthly_depreciation, asset.purchase_cost.currency());
+
+        // Update asset
+        let mut updated_asset = asset.clone();
+        updated_asset.accumulated_depreciation = asset.accumulated_depreciation.clone() + depreciation_money.clone();
+        updated_asset.updated_at = Utc::now();
+        self.repo.save_asset(&updated_asset).await?;
+
+        // Create Movement
+        let movement = AssetMovement::new(
+            asset.id.0,
+            AssetMovementType::Depreciation,
+            date,
+            depreciation_money.clone(),
+            format!("إهلاك شهري للأصل: {} - للفترة {}", asset.name, date.format("%Y-%m")),
+        );
+        self.repo.save_movement(&movement).await?;
+
+        // Create Journal Entry
+        let mut lines = Vec::new();
+        
+        // Debit: Depreciation Expense
+        lines.push(JournalLine::new(
+            AccountId(asset.depreciation_account_id),
+            asset.purchase_cost.currency(),
+            asset.fx_rate,
+            depreciation_money.clone(),
+            Money::new(Decimal::ZERO, asset.purchase_cost.currency()),
+            format!("مصروف إهلاك: {}", asset.name),
+        ));
+
+        // Credit: Accumulated Depreciation
+        lines.push(JournalLine::new(
+            AccountId(asset.accumulated_depreciation_account_id),
+            asset.purchase_cost.currency(),
+            asset.fx_rate,
+            Money::new(Decimal::ZERO, asset.purchase_cost.currency()),
+            depreciation_money.clone(),
+            format!("مجمع إهلاك: {}", asset.name),
+        ));
+
+        let entry = JournalEntry::new(
+            format!("FA-DEP-{}-{}", asset.code, date.format("%Y%m")),
+            lines,
+            date,
+            format!("إهلاك أصل ثابت: {} للفترة {}", asset.name, date.format("%Y-%m")),
+        ).map_err(|e| AppError::Invalid(e.to_string()))?;
+
+        self.journal_repo.save(&entry).await?;
+
+        Ok(())
     }
 }

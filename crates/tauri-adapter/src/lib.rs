@@ -67,6 +67,9 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::assets::list_fixed_assets,
             commands::assets::create_consumable,
             commands::assets::list_consumables,
+            commands::assets::create_asset_category,
+            commands::assets::list_asset_categories,
+            commands::assets::post_asset_depreciation,
         ])
         .setup(|app| {
             let app_state = tauri::async_runtime::block_on(
