@@ -1,25 +1,33 @@
 import { useState, useEffect } from "react";
-import { invoke } from "@/lib/invoke";
 import { PageHeader } from "@/components/erp/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/erp/StatusBadge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Download, Search, MoreHorizontal, Eye, Edit, Trash2, Mail, Phone, MapPin } from "lucide-react";
-import { formatCurrency } from "@/lib/format";
+import { Plus, Download, Search, MoreHorizontal, Eye, Edit, Trash2, Mail, Phone, MapPin, ArrowDownCircle } from "lucide-react";
+import { formatCurrency, formatDate } from "@/lib/format";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { CustomerDto } from "@erp/shared-types";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+
+import { customerService } from "@/services/customerService";
+import { invoiceService } from "@/services/invoiceService";
+import { paymentService } from "@/services/paymentService";
+import type { CustomerDto, InvoiceDto, Payment } from "@erp/shared-types";
 
 export default function Customers() {
   const [customersList, setCustomersList] = useState<CustomerDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  
+  // Linked data for selected customer
+  const [customerInvoices, setCustomerInvoices] = useState<InvoiceDto[]>([]);
+  const [customerPayments, setCustomerPayments] = useState<Payment[]>([]);
+  const [loadingDetails, setLoadingDetails] = useState(false);
   
   // Create/Edit state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -34,7 +42,7 @@ export default function Customers() {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const data = await invoke<CustomerDto[]>("list_customers");
+      const data = await customerService.listCustomers();
       setCustomersList(data);
     } catch (error) {
       toast.error("فشل جلب العملاء: " + error);
@@ -43,25 +51,48 @@ export default function Customers() {
     }
   };
 
+  const fetchCustomerDetails = async (id: string) => {
+    setLoadingDetails(true);
+    try {
+      const [invoices, payments] = await Promise.all([
+        invoiceService.listInvoices(id),
+        paymentService.listPayments(id)
+      ]);
+      setCustomerInvoices(invoices);
+      setCustomerPayments(payments);
+    } catch (error) {
+      console.error("Failed to load customer details:", error);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
   useEffect(() => {
     fetchCustomers();
   }, []);
+
+  useEffect(() => {
+    if (selectedId) {
+      fetchCustomerDetails(selectedId);
+    } else {
+      setCustomerInvoices([]);
+      setCustomerPayments([]);
+    }
+  }, [selectedId]);
 
   const current = customersList.find((c) => c.id === selectedId);
 
   const handleSave = async () => {
     try {
       if (editCustomer) {
-        await invoke("update_customer", {
-          request: {
-            id: editCustomer.id,
-            ...formData,
-            is_active: editCustomer.is_active
-          }
+        await customerService.updateCustomer({
+          id: editCustomer.id,
+          ...formData,
+          is_active: editCustomer.is_active
         });
         toast.success("تم تحديث بيانات العميل بنجاح");
       } else {
-        await invoke("create_customer", { request: formData });
+        await customerService.createCustomer(formData);
         toast.success("تم إضافة العميل بنجاح");
       }
       setIsDialogOpen(false);
@@ -74,7 +105,7 @@ export default function Customers() {
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`هل أنت متأكد من حذف العميل ${name}؟`)) return;
     try {
-      await invoke("delete_customer", { id });
+      await customerService.deleteCustomer(id);
       toast.success("تم حذف العميل بنجاح");
       fetchCustomers();
     } catch (error) {
@@ -204,10 +235,10 @@ export default function Customers() {
       </Card>
 
       <Sheet open={!!selectedId} onOpenChange={(o) => !o && setSelectedId(null)}>
-        <SheetContent side="left" className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetContent side="left" className="w-full sm:max-w-2xl overflow-y-auto" dir="rtl">
           {current && (
             <>
-              <SheetHeader>
+              <SheetHeader className="text-right">
                 <SheetTitle>ملف العميل - {current.name}</SheetTitle>
               </SheetHeader>
 
@@ -222,26 +253,68 @@ export default function Customers() {
                 </div>
               </div>
 
-              <div className="mt-4 space-y-2">
-                <div className="flex items-center gap-2 text-sm"><Phone className="w-4 h-4 text-muted-foreground" />{current.phone}</div>
-                <div className="flex items-center gap-2 text-sm"><Mail className="w-4 h-4 text-muted-foreground" />{current.email || "لا يوجد بريد"}</div>
-                <div className="flex items-center gap-2 text-sm"><MapPin className="w-4 h-4 text-muted-foreground" />{current.address || "لا يوجد عنوان"}</div>
+              <div className="mt-4 space-y-2 text-right">
+                <div className="flex items-center gap-2 text-sm justify-start"><Phone className="w-4 h-4 text-muted-foreground" />{current.phone}</div>
+                <div className="flex items-center gap-2 text-sm justify-start"><Mail className="w-4 h-4 text-muted-foreground" />{current.email || "لا يوجد بريد"}</div>
+                <div className="flex items-center gap-2 text-sm justify-start"><MapPin className="w-4 h-4 text-muted-foreground" />{current.address || "لا يوجد عنوان"}</div>
               </div>
 
               <Tabs defaultValue="invoices" className="mt-6">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="invoices">الفواتير</TabsTrigger>
                   <TabsTrigger value="payments">المقبوضات</TabsTrigger>
-                  <TabsTrigger value="statement">كشف الحساب</TabsTrigger>
                 </TabsList>
+                
                 <TabsContent value="invoices">
-                  <div className="text-center py-10 text-muted-foreground">لا تنطبق البيانات الوهمية هنا — سيتم ربطها بالمبيعات قريباً</div>
+                  {loadingDetails ? <div className="text-center py-10">جاري التحميل...</div> :
+                    customerInvoices.length === 0 ? <div className="text-center py-10 text-muted-foreground">لا توجد فواتير</div> :
+                    <div className="border rounded-md overflow-hidden text-xs">
+                      <table className="w-full">
+                        <thead className="bg-slate-50 border-b">
+                          <tr>
+                            <th className="text-right p-2">الرقم</th>
+                            <th className="text-right p-2">التاريخ</th>
+                            <th className="text-left p-2">الإجمالي</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {customerInvoices.map(inv => (
+                            <tr key={inv.id} className="border-b last:border-0">
+                              <td className="p-2 font-medium">{inv.invoice_number}</td>
+                              <td className="p-2">{formatDate(inv.issued_at)}</td>
+                              <td className="p-2 text-left tabular-nums">{formatCurrency(parseFloat(inv.total))}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  }
                 </TabsContent>
+                
                 <TabsContent value="payments">
-                  <div className="text-center py-10 text-muted-foreground">سجل الدفعات فارغ</div>
-                </TabsContent>
-                <TabsContent value="statement">
-                  <div className="text-center py-10 text-muted-foreground">سجل العمليات فارغ</div>
+                  {loadingDetails ? <div className="text-center py-10">جاري التحميل...</div> :
+                    customerPayments.length === 0 ? <div className="text-center py-10 text-muted-foreground">لا توجد مقبوضات</div> :
+                    <div className="border rounded-md overflow-hidden text-xs">
+                      <table className="w-full">
+                        <thead className="bg-slate-50 border-b">
+                          <tr>
+                            <th className="text-right p-2">التاريخ</th>
+                            <th className="text-right p-2">المرجع</th>
+                            <th className="text-left p-2">المبلغ</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {customerPayments.map(p => (
+                            <tr key={p.id} className="border-b last:border-0">
+                              <td className="p-2">{formatDate(p.payment_date)}</td>
+                              <td className="p-2 text-muted-foreground">{p.reference || "-"}</td>
+                              <td className="p-2 text-left tabular-nums text-green-600">+{formatCurrency(parseFloat(p.amount))}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  }
                 </TabsContent>
               </Tabs>
             </>

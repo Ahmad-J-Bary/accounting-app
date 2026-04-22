@@ -4,19 +4,31 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/erp/StatusBadge";
-import { Plus, Download, Search, MoreHorizontal, Eye, Edit, Trash2, Printer, RefreshCw } from "lucide-react";
-import { formatCurrency } from "@/lib/format";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Plus, Download, Search, MoreHorizontal, Eye, Edit, Trash2, Mail, Phone, MapPin, Printer, RefreshCw } from "lucide-react";
+import { formatCurrency, formatDate } from "@/lib/format";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { supplierService } from "@/services/supplierService";
-import type { SupplierDto } from "@erp/shared-types";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
+
+import { supplierService } from "@/services/supplierService";
+import { purchaseService } from "@/services/purchaseService";
+import { paymentService } from "@/services/paymentService";
+import type { SupplierDto, PurchaseInvoice, Payment } from "@erp/shared-types";
 
 export default function Suppliers() {
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  
+  // Linked data for selected supplier
+  const [supplierInvoices, setSupplierInvoices] = useState<PurchaseInvoice[]>([]);
+  const [supplierPayments, setSupplierPayments] = useState<Payment[]>([]);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
   const [showDialog, setShowDialog] = useState(false);
   const [editSupplier, setEditSupplier] = useState<SupplierDto | null>(null);
   const [form, setForm] = useState({ name: "", phone: "", email: "", address: "" });
@@ -36,7 +48,31 @@ export default function Suppliers() {
     }
   };
 
+  const fetchSupplierDetails = async (id: string) => {
+    setLoadingDetails(true);
+    try {
+      const [invoices, payments] = await Promise.all([
+        purchaseService.listPurchaseInvoices(id),
+        paymentService.listPayments(undefined, id) // Pass as supplier_id
+      ]);
+      setSupplierInvoices(invoices);
+      setSupplierPayments(payments);
+    } catch (error) {
+      console.error("Failed to load supplier details:", error);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
   useEffect(() => { loadSuppliers(); }, []);
+
+  useEffect(() => {
+    if (selectedId) {
+      fetchSupplierDetails(selectedId);
+    }
+  }, [selectedId]);
+
+  const current = suppliers.find(s => s.id === selectedId);
 
   const filtered = suppliers.filter(s => {
     const q = (search || "").toLowerCase();
@@ -103,8 +139,7 @@ export default function Suppliers() {
         actions={
           <>
             <Button variant="outline" onClick={loadSuppliers} disabled={loading}>
-              <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />
-              تحديث
+              <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />تحديث
             </Button>
             <Button onClick={() => {
               setEditSupplier(null);
@@ -116,13 +151,6 @@ export default function Suppliers() {
           </>
         }
       />
-
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
-          {error}
-          <button className="mr-2 underline" onClick={() => setError(null)}>إغلاق</button>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
         <Card className="p-4">
@@ -172,7 +200,6 @@ export default function Suppliers() {
                   <th className="text-right px-4 py-3 font-medium">اسم المورد</th>
                   <th className="text-right px-4 py-3 font-medium">الهاتف</th>
                   <th className="text-right px-4 py-3 font-medium">البريد</th>
-                  <th className="text-right px-4 py-3 font-medium">العنوان</th>
                   <th className="text-left px-4 py-3 font-medium">الرصيد</th>
                   <th className="text-left px-4 py-3 font-medium">الحالة</th>
                   <th className="text-left px-4 py-3 font-medium w-12"></th>
@@ -180,26 +207,23 @@ export default function Suppliers() {
               </thead>
               <tbody>
                 {filtered.map((s) => (
-                  <tr key={s.id} className="border-b border-border last:border-0 hover:bg-slate-50">
+                  <tr key={s.id} className="border-b border-border last:border-0 hover:bg-slate-50 cursor-pointer" onClick={() => setSelectedId(s.id)}>
                     <td className="px-4 py-3 font-medium">{s.name}</td>
                     <td className="px-4 py-3 tabular-nums">{s.phone}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{s.email ?? "—"}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{s.address ?? "—"}</td>
                     <td className="px-4 py-3 text-left tabular-nums font-medium">
                       {formatCurrency(parseFloat(s.balance))}
                     </td>
                     <td className="px-4 py-3 text-left">
                       <StatusBadge status={s.is_active ? "active" : "inactive"} />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem><Eye className="w-4 h-4 ml-2" />عرض</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setSelectedId(s.id)}><Eye className="w-4 h-4 ml-2" />عرض الملف</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => {
                             setEditSupplier(s);
                             setForm({ 
@@ -213,7 +237,6 @@ export default function Suppliers() {
                           <DropdownMenuItem onClick={() => handleDelete(s.id, s.name)} className="text-red-600">
                             <Trash2 className="w-4 h-4 ml-2" />حذف
                           </DropdownMenuItem>
-                          <DropdownMenuItem><Printer className="w-4 h-4 ml-2" />كشف حساب</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
@@ -224,6 +247,94 @@ export default function Suppliers() {
           </div>
         )}
       </Card>
+
+      <Sheet open={!!selectedId} onOpenChange={(o) => !o && setSelectedId(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto" dir="rtl">
+          {current && (
+            <>
+              <SheetHeader className="text-right">
+                <SheetTitle>ملف المورد - {current.name}</SheetTitle>
+              </SheetHeader>
+
+              <div className="mt-6 grid grid-cols-2 gap-3 text-right">
+                <div className="p-3 border border-border rounded-md">
+                  <div className="text-xs text-muted-foreground">الرصيد الحالي المستحق له</div>
+                  <div className="font-bold tabular-nums text-red-600">{formatCurrency(parseFloat(current.balance || "0"))}</div>
+                </div>
+                <div className="p-3 border border-border rounded-md">
+                  <div className="text-xs text-muted-foreground">الحالة</div>
+                  <div className="font-bold"><StatusBadge status={current.is_active ? "active" : "inactive"} /></div>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2 text-right">
+                <div className="flex items-center gap-2 text-sm justify-start"><Phone className="w-4 h-4 text-muted-foreground" />{current.phone}</div>
+                <div className="flex items-center gap-2 text-sm justify-start"><Mail className="w-4 h-4 text-muted-foreground" />{current.email || "لا يوجد بريد"}</div>
+                <div className="flex items-center gap-2 text-sm justify-start"><MapPin className="w-4 h-4 text-muted-foreground" />{current.address || "لا يوجد عنوان"}</div>
+              </div>
+
+              <Tabs defaultValue="invoices" className="mt-6">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="invoices">فواتير الشراء</TabsTrigger>
+                  <TabsTrigger value="payments">المدفوعات</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="invoices">
+                  {loadingDetails ? <div className="text-center py-10">جاري التحميل...</div> :
+                    supplierInvoices.length === 0 ? <div className="text-center py-10 text-muted-foreground">لا توجد فواتير</div> :
+                    <div className="border rounded-md overflow-hidden text-xs">
+                      <table className="w-full">
+                        <thead className="bg-slate-50 border-b">
+                          <tr>
+                            <th className="text-right p-2">الرقم</th>
+                            <th className="text-right p-2">التاريخ</th>
+                            <th className="text-left p-2">الإجمالي</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {supplierInvoices.map(inv => (
+                            <tr key={inv.id} className="border-b last:border-0">
+                              <td className="p-2 font-medium">{inv.invoice_number}</td>
+                              <td className="p-2">{formatDate(inv.invoice_date)}</td>
+                              <td className="p-2 text-left tabular-nums">{formatCurrency(parseFloat(inv.total))}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  }
+                </TabsContent>
+                
+                <TabsContent value="payments">
+                  {loadingDetails ? <div className="text-center py-10">جاري التحميل...</div> :
+                    supplierPayments.length === 0 ? <div className="text-center py-10 text-muted-foreground">لا توجد مدفوعات</div> :
+                    <div className="border rounded-md overflow-hidden text-xs">
+                      <table className="w-full">
+                        <thead className="bg-slate-50 border-b">
+                          <tr>
+                            <th className="text-right p-2">التاريخ</th>
+                            <th className="text-right p-2">المرجع</th>
+                            <th className="text-left p-2">المبلغ</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {supplierPayments.map(p => (
+                            <tr key={p.id} className="border-b last:border-0">
+                              <td className="p-2">{formatDate(p.payment_date)}</td>
+                              <td className="p-2 text-muted-foreground">{p.reference || "-"}</td>
+                              <td className="p-2 text-left tabular-nums text-red-600">-{formatCurrency(parseFloat(p.amount))}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  }
+                </TabsContent>
+              </Tabs>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-md" dir="rtl">

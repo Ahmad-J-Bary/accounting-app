@@ -56,6 +56,10 @@ export default function Journal() {
       setError("الرجاء إدخال رقم القيد والبيان");
       return;
     }
+    if (lines.some(l => l.account_id.length !== 36)) {
+      setError("معرف الحساب غير صالح. يجب أن يكون بصيغة UUID (36 حرف)");
+      return;
+    }
     setSaving(true);
     try {
       const request: CreateJournalEntryRequest = {
@@ -148,7 +152,18 @@ export default function Journal() {
                       <tbody>
                         {lines.map((l, i) => (
                           <tr key={i} className="border-t border-border">
-                            <td className="px-3 py-2"><Input value={l.account_id} onChange={e => { const newLines = [...lines]; newLines[i].account_id = e.target.value; setLines(newLines); }} className="h-8" /></td>
+                            <td className="px-3 py-2">
+                              <Input 
+                                value={l.account_id} 
+                                onChange={e => { 
+                                  const newLines = [...lines]; 
+                                  newLines[i].account_id = e.target.value; 
+                                  setLines(newLines); 
+                                }} 
+                                placeholder="معرف الحساب (UUID)"
+                                className={`h-8 ${l.account_id.length > 0 && l.account_id.length !== 36 ? "border-red-500" : ""}`} 
+                              />
+                            </td>
                             <td className="px-3 py-2"><Input value={l.desc} onChange={e => { const newLines = [...lines]; newLines[i].desc = e.target.value; setLines(newLines); }} placeholder="بيان السطر" className="h-8" /></td>
                             <td className="px-3 py-2"><Input type="number" value={l.debit || ""} onChange={e => { const newLines = [...lines]; newLines[i].debit = parseFloat(e.target.value) || 0; setLines(newLines); }} className="h-8 text-left tabular-nums" /></td>
                             <td className="px-3 py-2"><Input type="number" value={l.credit || ""} onChange={e => { const newLines = [...lines]; newLines[i].credit = parseFloat(e.target.value) || 0; setLines(newLines); }} className="h-8 text-left tabular-nums" /></td>

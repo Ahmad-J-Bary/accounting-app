@@ -1,5 +1,6 @@
 export interface InvoiceLineDto {
   product_id: string;
+  product_name?: string;
   quantity: string;
   unit_price: string;
 }
@@ -8,6 +9,7 @@ export interface InvoiceDto {
   id: string;
   invoice_number: string;
   customer_id: string;
+  customer_name?: string;
   lines: InvoiceLineDto[];
   subtotal: string;
   tax_amount: string;

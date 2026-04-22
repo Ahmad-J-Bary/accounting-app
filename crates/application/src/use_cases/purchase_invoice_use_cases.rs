@@ -4,18 +4,27 @@ use rust_decimal::Decimal;
 use domain::purchases::{PurchaseInvoice, PurchaseInvoiceItem};
 use domain::shared::ids::{SupplierId, ProductId};
 use crate::ports::purchase_invoice_repository::PurchaseInvoiceRepository;
+use crate::ports::supplier_repository::SupplierRepository;
+use crate::ports::product_repository::ProductRepository;
 use crate::dto::purchase_invoice_dto::{
     CreatePurchaseInvoiceRequest, PurchaseInvoiceDto, PurchaseInvoiceItemDto,
 };
 use crate::errors::AppError;
 
-fn to_dto(inv: PurchaseInvoice) -> PurchaseInvoiceDto {
+async fn enrich_invoice(
+    inv: PurchaseInvoice,
+    supplier_repo: &Arc<dyn SupplierRepository>,
+    product_repo: &Arc<dyn ProductRepository>,
+) -> PurchaseInvoiceDto {
+    let remaining_amount = inv.remaining_amount().to_string();
+    let id = inv.id.to_string();
+    let invoice_number = inv.invoice_number.clone();
+    let supplier_id = inv.supplier_id.to_string();
     let subtotal = inv.subtotal.to_string();
     let tax_amount = inv.tax_amount.to_string();
     let discount_amount = inv.discount_amount.to_string();
     let total = inv.total.to_string();
     let amount_paid = inv.amount_paid.to_string();
-    let remaining_amount = inv.remaining_amount().to_string();
     let status = format!("{:?}", inv.status);
     let invoice_date = inv.invoice_date.to_rfc3339();
     let due_date = inv.due_date.map(|d| d.to_rfc3339());
@@ -23,20 +32,34 @@ fn to_dto(inv: PurchaseInvoice) -> PurchaseInvoiceDto {
     let created_at = inv.created_at.to_rfc3339();
     let updated_at = inv.updated_at.to_rfc3339();
 
-    PurchaseInvoiceDto {
-        id: inv.id.to_string(),
-        invoice_number: inv.invoice_number,
-        supplier_id: inv.supplier_id.to_string(),
-        supplier_name: None,
-        items: inv.items.into_iter().map(|i| PurchaseInvoiceItemDto {
-            id: i.id,
+    let mut supplier_name = None;
+    if let Ok(Some(supplier)) = supplier_repo.find_by_id(&inv.supplier_id).await {
+        supplier_name = Some(supplier.name);
+    }
+
+    let mut items = Vec::new();
+    for i in &inv.items {
+        let mut product_name = None;
+        if let Ok(Some(product)) = product_repo.find_by_id(&i.product_id).await {
+            product_name = Some(product.name);
+        }
+        items.push(PurchaseInvoiceItemDto {
+            id: i.id.clone(),
             product_id: i.product_id.to_string(),
-            product_name: None,
+            product_name,
             quantity: i.quantity.to_string(),
             unit_price: i.unit_price.to_string(),
             line_total: i.line_total.to_string(),
-            notes: i.notes,
-        }).collect(),
+            notes: i.notes.clone(),
+        });
+    }
+
+    PurchaseInvoiceDto {
+        id,
+        invoice_number,
+        supplier_id,
+        supplier_name,
+        items,
         subtotal,
         tax_amount,
         discount_amount,
@@ -54,25 +77,31 @@ fn to_dto(inv: PurchaseInvoice) -> PurchaseInvoiceDto {
 
 pub struct CreatePurchaseInvoiceUseCase {
     repo: Arc<dyn PurchaseInvoiceRepository>,
+    supplier_repo: Arc<dyn SupplierRepository>,
+    product_repo: Arc<dyn ProductRepository>,
 }
 
 impl CreatePurchaseInvoiceUseCase {
-    pub fn new(repo: Arc<dyn PurchaseInvoiceRepository>) -> Self {
-        Self { repo }
+    pub fn new(
+        repo: Arc<dyn PurchaseInvoiceRepository>,
+        supplier_repo: Arc<dyn SupplierRepository>,
+        product_repo: Arc<dyn ProductRepository>,
+    ) -> Self {
+        Self { repo, supplier_repo, product_repo }
     }
 
     pub async fn execute(&self, req: CreatePurchaseInvoiceRequest) -> Result<PurchaseInvoiceDto, AppError> {
         let supplier_id: SupplierId = req.supplier_id.parse()
-            .map_err(|_| AppError::Invalid("Ù…Ø¹Ø±Ù Ø§Ù„Ù…ÙˆØ±Ø¯ ØºÙŠØ± ØµØ§Ù„Ø­".into()))?;
+            .map_err(|_| AppError::Invalid("معرف المورد غير صالح".into()))?;
 
         let invoice_date = DateTime::parse_from_rfc3339(&req.invoice_date)
-            .map_err(|_| AppError::Invalid("ØªØ§Ø±ÙŠØ® Ø§Ù„ÙØ§ØªÙˆØ±Ø© ØºÙŠØ± ØµØ§Ù„Ø­".into()))?
+            .map_err(|_| AppError::Invalid("تاريخ الفاتورة غير صالح".into()))?
             .with_timezone(&chrono::Utc);
 
         let due_date = req.due_date.map(|d| {
             DateTime::parse_from_rfc3339(&d)
                 .map(|dt| dt.with_timezone(&chrono::Utc))
-        }).transpose().map_err(|_| AppError::Invalid("ØªØ§Ø±ÙŠØ® Ø§Ù„Ø§Ø³ØªØ­Ù‚Ø§Ù‚ ØºÙŠØ± ØµØ§Ù„Ø­".into()))?;
+        }).transpose().map_err(|_| AppError::Invalid("تاريخ الاستحقاق غير صالح".into()))?;
 
         let mut invoice = PurchaseInvoice::new(
             req.invoice_number,
@@ -84,11 +113,11 @@ impl CreatePurchaseInvoiceUseCase {
 
         for item_req in req.items {
             let product_id: ProductId = item_req.product_id.parse()
-                .map_err(|_| AppError::Invalid("Ù…Ø¹Ø±Ù Ø§Ù„Ù…Ù†ØªØ¬ ØºÙŠØ± ØµØ§Ù„Ø­".into()))?;
+                .map_err(|_| AppError::Invalid("معرف المنتج غير صالح".into()))?;
             let quantity = Decimal::try_from(item_req.quantity)
-                .map_err(|_| AppError::Invalid("Ø§Ù„ÙƒÙ…ÙŠØ© ØºÙŠØ± ØµØ§Ù„Ø­Ø©".into()))?;
+                .map_err(|_| AppError::Invalid("الكمية غير صالحة".into()))?;
             let unit_price = Decimal::try_from(item_req.unit_price)
-                .map_err(|_| AppError::Invalid("Ø§Ù„Ø³Ø¹Ø± ØºÙŠØ± ØµØ§Ù„Ø­".into()))?;
+                .map_err(|_| AppError::Invalid("السعر غير صالح".into()))?;
             let item = PurchaseInvoiceItem::new(product_id, quantity, unit_price)
                 .map_err(|e| AppError::Invalid(e.to_string()))?;
             invoice.add_item(item).map_err(|e| AppError::Invalid(e.to_string()))?;
@@ -96,58 +125,75 @@ impl CreatePurchaseInvoiceUseCase {
 
         if let Some(tax) = req.tax_amount {
             let tax_dec = Decimal::try_from(tax)
-                .map_err(|_| AppError::Invalid("Ù‚ÙŠÙ…Ø© Ø§Ù„Ø¶Ø±ÙŠØ¨Ø© ØºÙŠØ± ØµØ§Ù„Ø­Ø©".into()))?;
+                .map_err(|_| AppError::Invalid("قيمة الضريبة غير صالحة".into()))?;
             invoice.set_tax(tax_dec).map_err(|e| AppError::Invalid(e.to_string()))?;
         }
 
         if let Some(discount) = req.discount_amount {
             let disc_dec = Decimal::try_from(discount)
-                .map_err(|_| AppError::Invalid("Ù‚ÙŠÙ…Ø© Ø§Ù„Ø®ØµÙ… ØºÙŠØ± ØµØ§Ù„Ø­Ø©".into()))?;
+                .map_err(|_| AppError::Invalid("قيمة الخصم غير صالحة".into()))?;
             invoice.set_discount(disc_dec).map_err(|e| AppError::Invalid(e.to_string()))?;
         }
 
         self.repo.save(&invoice).await?;
-        Ok(to_dto(invoice))
+        Ok(enrich_invoice(invoice, &self.supplier_repo, &self.product_repo).await)
     }
 }
 
 pub struct ListPurchaseInvoicesUseCase {
     repo: Arc<dyn PurchaseInvoiceRepository>,
+    supplier_repo: Arc<dyn SupplierRepository>,
+    product_repo: Arc<dyn ProductRepository>,
 }
 
 impl ListPurchaseInvoicesUseCase {
-    pub fn new(repo: Arc<dyn PurchaseInvoiceRepository>) -> Self {
-        Self { repo }
+    pub fn new(
+        repo: Arc<dyn PurchaseInvoiceRepository>,
+        supplier_repo: Arc<dyn SupplierRepository>,
+        product_repo: Arc<dyn ProductRepository>,
+    ) -> Self {
+        Self { repo, supplier_repo, product_repo }
     }
 
     pub async fn execute(&self, supplier_id: Option<String>) -> Result<Vec<PurchaseInvoiceDto>, AppError> {
         let invoices = if let Some(sid) = supplier_id {
             let supplier_id: SupplierId = sid.parse()
-                .map_err(|_| AppError::Invalid("Ù…Ø¹Ø±Ù Ø§Ù„Ù…ÙˆØ±Ø¯ ØºÙŠØ± ØµØ§Ù„Ø­".into()))?;
+                .map_err(|_| AppError::Invalid("معرف المورد غير صالح".into()))?;
             self.repo.list_by_supplier(&supplier_id).await?
         } else {
             self.repo.list_all().await?
         };
-        Ok(invoices.into_iter().map(to_dto).collect())
+
+        let mut dtos = Vec::new();
+        for inv in invoices {
+            dtos.push(enrich_invoice(inv, &self.supplier_repo, &self.product_repo).await);
+        }
+        Ok(dtos)
     }
 }
 
 pub struct PostPurchaseInvoiceUseCase {
     repo: Arc<dyn PurchaseInvoiceRepository>,
+    supplier_repo: Arc<dyn SupplierRepository>,
+    product_repo: Arc<dyn ProductRepository>,
 }
 
 impl PostPurchaseInvoiceUseCase {
-    pub fn new(repo: Arc<dyn PurchaseInvoiceRepository>) -> Self {
-        Self { repo }
+    pub fn new(
+        repo: Arc<dyn PurchaseInvoiceRepository>,
+        supplier_repo: Arc<dyn SupplierRepository>,
+        product_repo: Arc<dyn ProductRepository>,
+    ) -> Self {
+        Self { repo, supplier_repo, product_repo }
     }
 
     pub async fn execute(&self, invoice_id: String) -> Result<PurchaseInvoiceDto, AppError> {
         let pid = invoice_id.parse()
-            .map_err(|_| AppError::NotFound("Ù…Ø¹Ø±Ù Ø§Ù„ÙØ§ØªÙˆØ±Ø© ØºÙŠØ± ØµØ§Ù„Ø­".into()))?;
+            .map_err(|_| AppError::NotFound("معرف الفاتورة غير صالح".into()))?;
         let mut invoice = self.repo.find_by_id(&pid).await?
-            .ok_or_else(|| AppError::NotFound("ÙØ§ØªÙˆØ±Ø© Ø§Ù„Ø´Ø±Ø§Ø¡ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯Ø©".into()))?;
+            .ok_or_else(|| AppError::NotFound("فاتورة الشراء غير موجودة".into()))?;
         invoice.post().map_err(|e| AppError::Invalid(e.to_string()))?;
         self.repo.update(&invoice).await?;
-        Ok(to_dto(invoice))
+        Ok(enrich_invoice(invoice, &self.supplier_repo, &self.product_repo).await)
     }
 }

@@ -1,18 +1,19 @@
 import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { PageHeader } from "@/components/erp/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Download, Search, MoreHorizontal, Edit, Eye, AlertTriangle, Trash2 } from "lucide-react";
+import { Plus, Download, Search, MoreHorizontal, Edit, Eye, AlertTriangle, Trash2, RefreshCw } from "lucide-react";
 import { formatCurrency, formatNumber } from "@/lib/format";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/erp/StatusBadge";
-import { ProductDto } from "@erp/shared-types";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+
+import { productService } from "@/services/productService";
+import type { ProductDto } from "@erp/shared-types";
 
 export default function Products() {
   const [productsList, setProductsList] = useState<ProductDto[]>([]);
@@ -34,7 +35,7 @@ export default function Products() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const data = await invoke<ProductDto[]>("list_products");
+      const data = await productService.listProducts();
       setProductsList(data);
     } catch (error) {
       toast.error("فشل جلب المنتجات: " + error);
@@ -50,17 +51,19 @@ export default function Products() {
   const handleSave = async () => {
     try {
       if (editProduct) {
-        await invoke("update_product", {
-          request: {
-            id: editProduct.id,
-            ...formData,
-            stock_quantity: formData.initial_stock, // Mapping for update
-            is_active: editProduct.is_active
-          }
+        await productService.updateProduct({
+          id: editProduct.id,
+          name: formData.name,
+          code: formData.code,
+          unit_price: formData.unit_price,
+          cost_price: formData.cost_price,
+          stock_quantity: formData.initial_stock,
+          minimum_stock: formData.minimum_stock,
+          is_active: editProduct.is_active
         });
         toast.success("تم تحديث المنتج بنجاح");
       } else {
-        await invoke("create_product", { request: formData });
+        await productService.createProduct(formData);
         toast.success("تم إضافة المنتج بنجاح");
       }
       setIsDialogOpen(false);
@@ -73,7 +76,7 @@ export default function Products() {
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`هل أنت متأكد من حذف المنتج ${name}؟`)) return;
     try {
-      await invoke("delete_product", { id });
+      await productService.deleteProduct(id);
       toast.success("تم حذف المنتج بنجاح");
       fetchProducts();
     } catch (error) {
@@ -96,6 +99,9 @@ export default function Products() {
         breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "المنتجات" }]}
         actions={
           <>
+            <Button variant="outline" onClick={fetchProducts} disabled={loading}>
+              <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />تحديث
+            </Button>
             <Button variant="outline"><Download className="w-4 h-4 ml-2" />تصدير</Button>
             <Button onClick={() => {
               setEditProduct(null);
@@ -142,7 +148,6 @@ export default function Products() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Button variant="outline" onClick={fetchProducts}>تحديث</Button>
         </div>
 
         {loading ? (

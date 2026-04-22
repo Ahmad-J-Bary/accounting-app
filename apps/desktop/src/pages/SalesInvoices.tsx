@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/erp/StatusBadge";
-import { Plus, Download, Search, MoreHorizontal, Eye, Edit, Printer, Send, FileText, Trash2 } from "lucide-react";
+import { Plus, Download, Search, MoreHorizontal, Eye, Edit, Printer, Send, FileText, Trash2, RefreshCw } from "lucide-react";
 import { products } from "@/lib/mockData";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -48,6 +48,9 @@ export default function SalesInvoices() {
         breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "المبيعات" }, { label: "الفواتير" }]}
         actions={
           <div className="flex items-center gap-2 relative z-[100]">
+            <Button variant="outline" onClick={loadInvoices} disabled={loading}>
+              <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />تحديث
+            </Button>
             <Button variant="outline"><Download className="w-4 h-4 ml-2" />تصدير</Button>
             <Button onClick={() => setIsNewInvoiceOpen(true)}>
               <Plus className="w-4 h-4 ml-2" />فاتورة جديدة
@@ -99,9 +102,9 @@ export default function SalesInvoices() {
               <tbody>
                 {invoices.map((inv) => (
                   <tr key={inv.id} className="border-b border-border last:border-0 hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium text-primary cursor-pointer" onClick={() => setPreview(inv.id)}>{inv.invoice_number}</td>
+                    <td className="px-4 py-3 font-medium cursor-pointer" onClick={() => setPreview(inv.id)}>{inv.invoice_number}</td>
                     <td className="px-4 py-3">{formatDate(inv.issued_at)}</td>
-                    <td className="px-4 py-3 font-medium">{inv.customer_id.substring(0, 8)}...</td>
+                    <td className="px-4 py-3 font-medium">{inv.customer_name || inv.customer_id.substring(0, 8) + "..."}</td>
                     <td className="px-4 py-3 text-left tabular-nums font-medium">{formatCurrency(parseFloat(inv.total))}</td>
                     <td className="px-4 py-3 text-left tabular-nums text-slate-500">{formatCurrency(parseFloat(inv.tax_amount))}</td>
                     <td className="px-4 py-3 text-left">
@@ -166,7 +169,7 @@ export default function SalesInvoices() {
               <div className="grid grid-cols-2 gap-6 mb-6" dir="rtl">
                 <div className="text-right">
                   <div className="text-xs text-muted-foreground mb-1">فاتورة إلى</div>
-                  <div className="font-bold">{selectedInv.customer_id}</div>
+                  <div className="font-bold">{selectedInv.customer_name || selectedInv.customer_id}</div>
                   <div className="text-sm text-muted-foreground">الرياض، المملكة العربية السعودية</div>
                 </div>
                 <div className="space-y-1 text-sm text-left">
@@ -190,7 +193,7 @@ export default function SalesInvoices() {
                   {selectedInv.lines.map((line, i) => (
                     <tr key={i} className="border-t border-border">
                       <td className="px-3 py-2">{i + 1}</td>
-                      <td className="px-3 py-2">{line.product_id}</td>
+                      <td className="px-3 py-2">{line.product_name || line.product_id}</td>
                       <td className="px-3 py-2 text-left tabular-nums">{line.quantity}</td>
                       <td className="px-3 py-2 text-left tabular-nums">{formatCurrency(parseFloat(line.unit_price))}</td>
                       <td className="px-3 py-2 text-left tabular-nums">{formatCurrency(parseFloat(line.quantity) * parseFloat(line.unit_price))}</td>

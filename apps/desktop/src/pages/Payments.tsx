@@ -7,9 +7,12 @@ import { Plus, Search, RefreshCw, ArrowDownCircle, ArrowUpCircle } from "lucide-
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { paymentService } from "@/services/paymentService";
-import type { Payment, CreatePaymentRequest } from "@erp/shared-types";
+import { customerService } from "@/services/customerService";
+import { supplierService } from "@/services/supplierService";
+import type { Payment, CreatePaymentRequest, CustomerDto, SupplierDto } from "@erp/shared-types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
   Receipt: "قبض من عميل",
@@ -21,6 +24,8 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
 
 export default function Payments() {
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [customers, setCustomers] = useState<CustomerDto[]>([]);
+  const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -36,8 +41,18 @@ export default function Payments() {
   const load = async () => {
     setLoading(true);
     try {
-      setPayments(await paymentService.listPayments());
-    } catch (e) { setError(String(e)); }
+      const [pData, cData, sData] = await Promise.all([
+        paymentService.listPayments(),
+        customerService.listCustomers(),
+        supplierService.listSuppliers()
+      ]);
+      setPayments(pData);
+      setCustomers(cData);
+      setSuppliers(sData);
+    } catch (e) { 
+      setError(String(e)); 
+      toast.error("فشل تحميل البيانات");
+    }
     finally { setLoading(false); }
   };
 
@@ -46,9 +61,9 @@ export default function Payments() {
   const filtered = payments.filter(p => {
     const matchType = typeFilter === "all" || p.payment_type === typeFilter;
     const matchSearch =
-      (p.customer_name ?? "").includes(search) ||
-      (p.supplier_name ?? "").includes(search) ||
-      (p.reference ?? "").includes(search);
+      (p.customer_name ?? "").toLowerCase().includes(search.toLowerCase()) ||
+      (p.supplier_name ?? "").toLowerCase().includes(search.toLowerCase()) ||
+      (p.reference ?? "").toLowerCase().includes(search.toLowerCase());
     return matchType && matchSearch;
   });
 
@@ -60,22 +75,46 @@ export default function Payments() {
     .reduce((s, p) => s + parseFloat(p.amount), 0);
 
   const handleCreate = async () => {
-    if (!form.payment_type || !form.amount || !form.payment_date) return;
+    if (!form.payment_type || !form.amount || !form.payment_date) {
+      toast.error("يرجى إكمال البيانات المطلوبة");
+      return;
+    }
+
+    if (form.payment_type === "Receipt" && !form.customer_id) {
+      toast.error("يرجى اختيار العميل لعملية القبض");
+      return;
+    }
+
+    if (form.payment_type === "SupplierPayment" && !form.supplier_id) {
+      toast.error("يرجى اختيار المورد لعملية الدفع");
+      return;
+    }
+
     setSaving(true);
-    const request = { ...form } as CreatePaymentRequest;
-    // Add dummy UUIDs to pass backend domain logic demanding associated parties
-    if (request.payment_type === "SupplierPayment" && !request.supplier_id) {
-      request.supplier_id = crypto.randomUUID?.() || "00000000-0000-0000-0000-000000000001";
-    }
-    if (request.payment_type === "Receipt" && !request.customer_id) {
-      request.customer_id = crypto.randomUUID?.() || "00000000-0000-0000-0000-000000000002";
-    }
+    const request: CreatePaymentRequest = {
+      payment_type: form.payment_type as any,
+      amount: form.amount || 0,
+      payment_date: form.payment_date || new Date().toISOString(),
+      customer_id: form.customer_id || undefined,
+      supplier_id: form.supplier_id || undefined,
+      reference: form.reference || undefined,
+      notes: form.notes || undefined,
+    };
 
     try {
       await paymentService.createPayment(request);
       setShowDialog(false);
+      setForm({
+        payment_type: "Receipt",
+        amount: 0,
+        payment_date: new Date().toISOString(),
+      });
       await load();
-    } catch (e) { setError(String(e)); }
+      toast.success("تم تسجيل الحركة بنجاح");
+    } catch (e) { 
+      setError(String(e)); 
+      toast.error("فشل حفظ الحركة");
+    }
     finally { setSaving(false); }
   };
 
@@ -190,7 +229,7 @@ export default function Payments() {
           <div className="space-y-4 py-2">
             <div className="space-y-1">
               <Label>نوع الحركة</Label>
-              <Select value={form.payment_type} onValueChange={v => setForm(p => ({ ...p, payment_type: v as CreatePaymentRequest['payment_type'] }))}>
+              <Select value={form.payment_type} onValueChange={v => setForm(p => ({ ...p, payment_type: v as CreatePaymentRequest['payment_type'], customer_id: undefined, supplier_id: undefined }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(PAYMENT_TYPE_LABELS).map(([k, v]) => (
@@ -199,6 +238,35 @@ export default function Payments() {
                 </SelectContent>
               </Select>
             </div>
+
+            {form.payment_type === "Receipt" && (
+              <div className="space-y-1">
+                <Label>العميل *</Label>
+                <Select value={form.customer_id} onValueChange={val => setForm(p => ({ ...p, customer_id: val }))}>
+                  <SelectTrigger><SelectValue placeholder="اختر العميل" /></SelectTrigger>
+                  <SelectContent>
+                    {customers.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {form.payment_type === "SupplierPayment" && (
+              <div className="space-y-1">
+                <Label>المورد *</Label>
+                <Select value={form.supplier_id} onValueChange={val => setForm(p => ({ ...p, supplier_id: val }))}>
+                  <SelectTrigger><SelectValue placeholder="اختر المورد" /></SelectTrigger>
+                  <SelectContent>
+                    {suppliers.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-1">
               <Label>المبلغ *</Label>
               <Input type="number" min="0" step="0.01"
