@@ -28,9 +28,9 @@ export default function Journal() {
   });
 
   // Using dummy valid UUIDs for initial lines to prevent UUID parse errors on backend
-  const [lines, setLines] = useState<{account_id: string, desc: string, debit: number, credit: number}[]>([
-    { account_id: crypto.randomUUID?.() || "00000000-0000-0000-0000-000000000001", desc: "", debit: 15000, credit: 0 },
-    { account_id: crypto.randomUUID?.() || "00000000-0000-0000-0000-000000000002", desc: "", debit: 0, credit: 15000 },
+  const [lines, setLines] = useState<{account_id: string, desc: string, currency: string, fx_rate: number, debit: number, credit: number}[]>([
+    { account_id: crypto.randomUUID?.() || "00000000-0000-0000-0000-000000000001", desc: "", currency: "SYP", fx_rate: 1, debit: 0, credit: 0 },
+    { account_id: crypto.randomUUID?.() || "00000000-0000-0000-0000-000000000002", desc: "", currency: "SYP", fx_rate: 1, debit: 0, credit: 0 },
   ]);
 
   const load = async () => {
@@ -46,18 +46,14 @@ export default function Journal() {
 
   useEffect(() => { load(); }, []);
 
-  const totalDebit = lines.reduce((s, l) => s + l.debit, 0);
-  const totalCredit = lines.reduce((s, l) => s + l.credit, 0);
-  const balanced = totalDebit === totalCredit && totalDebit > 0;
+  const totalBaseDebit = lines.reduce((s, l) => s + (l.debit * l.fx_rate), 0);
+  const totalBaseCredit = lines.reduce((s, l) => s + (l.credit * l.fx_rate), 0);
+  const balanced = Math.abs(totalBaseDebit - totalBaseCredit) < 0.01 && (totalBaseDebit > 0 || totalBaseCredit > 0);
 
   const handleCreate = async () => {
     if (!balanced) return;
     if (!form.description?.trim()) {
       setError("الرجاء إدخال رقم القيد والبيان");
-      return;
-    }
-    if (lines.some(l => l.account_id.length !== 36)) {
-      setError("معرف الحساب غير صالح. يجب أن يكون بصيغة UUID (36 حرف)");
       return;
     }
     setSaving(true);
@@ -67,7 +63,9 @@ export default function Journal() {
         entry_date: form.entry_date || new Date().toISOString(),
         description: form.description || "",
         lines: lines.map(l => ({
-          account_id: l.account_id || "00000000-0000-0000-0000-000000000000",
+          account_id: l.account_id,
+          currency: l.currency,
+          fx_rate: String(l.fx_rate),
           description: l.desc,
           debit: String(l.debit),
           credit: String(l.credit)
@@ -83,8 +81,8 @@ export default function Journal() {
         description: "",
       });
       setLines([
-        { account_id: crypto.randomUUID?.() || "00000000-0000-0000-0000-000000000001", desc: "", debit: 0, credit: 0 },
-        { account_id: crypto.randomUUID?.() || "00000000-0000-0000-0000-000000000002", desc: "", debit: 0, credit: 0 },
+        { account_id: crypto.randomUUID?.() || "00000000-0000-0000-0000-000000000001", desc: "", currency: "SYP", fx_rate: 1, debit: 0, credit: 0 },
+        { account_id: crypto.randomUUID?.() || "00000000-0000-0000-0000-000000000002", desc: "", currency: "SYP", fx_rate: 1, debit: 0, credit: 0 },
       ]);
     } catch (e) {
       setError(String(e));
@@ -140,11 +138,13 @@ export default function Journal() {
                   </div>
 
                   <div className="border border-border rounded-md overflow-x-auto">
-                    <table className="w-full text-sm min-w-[600px]">
+                    <table className="w-full text-sm min-w-[800px]">
                       <thead className="bg-slate-50">
                         <tr>
-                          <th className="text-right px-3 py-2 font-medium">رقم الحساب (ID)</th>
+                          <th className="text-right px-3 py-2 font-medium">الحساب (ID)</th>
                           <th className="text-right px-3 py-2 font-medium">البيان</th>
+                          <th className="text-right px-3 py-2 font-medium w-24">العملة</th>
+                          <th className="text-right px-3 py-2 font-medium w-24">سعر الصرف</th>
                           <th className="text-left px-3 py-2 font-medium">مدين</th>
                           <th className="text-left px-3 py-2 font-medium">دائن</th>
                         </tr>
@@ -160,11 +160,32 @@ export default function Journal() {
                                   newLines[i].account_id = e.target.value; 
                                   setLines(newLines); 
                                 }} 
-                                placeholder="معرف الحساب (UUID)"
-                                className={`h-8 ${l.account_id.length > 0 && l.account_id.length !== 36 ? "border-red-500" : ""}`} 
+                                placeholder="معرف الحساب"
+                                className="h-8"
                               />
                             </td>
-                            <td className="px-3 py-2"><Input value={l.desc} onChange={e => { const newLines = [...lines]; newLines[i].desc = e.target.value; setLines(newLines); }} placeholder="بيان السطر" className="h-8" /></td>
+                            <td className="px-3 py-2"><Input value={l.desc} onChange={e => { const newLines = [...lines]; newLines[i].desc = e.target.value; setLines(newLines); }} placeholder="البيان" className="h-8" /></td>
+                            <td className="px-3 py-2">
+                              <Select value={l.currency} onValueChange={v => {
+                                const newLines = [...lines];
+                                newLines[i].currency = v;
+                                newLines[i].fx_rate = v === "USD" ? 15000 : 1; // Default rate
+                                setLines(newLines);
+                              }}>
+                                <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="SYP">SYP</SelectItem>
+                                  <SelectItem value="USD">USD</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </td>
+                            <td className="px-3 py-2">
+                              <Input type="number" value={l.fx_rate} onChange={e => {
+                                const newLines = [...lines];
+                                newLines[i].fx_rate = parseFloat(e.target.value) || 1;
+                                setLines(newLines);
+                              }} className="h-8" disabled={l.currency === "SYP"} />
+                            </td>
                             <td className="px-3 py-2"><Input type="number" value={l.debit || ""} onChange={e => { const newLines = [...lines]; newLines[i].debit = parseFloat(e.target.value) || 0; setLines(newLines); }} className="h-8 text-left tabular-nums" /></td>
                             <td className="px-3 py-2"><Input type="number" value={l.credit || ""} onChange={e => { const newLines = [...lines]; newLines[i].credit = parseFloat(e.target.value) || 0; setLines(newLines); }} className="h-8 text-left tabular-nums" /></td>
                           </tr>
@@ -172,9 +193,9 @@ export default function Journal() {
                       </tbody>
                       <tfoot className="bg-slate-50 font-bold">
                         <tr>
-                          <td colSpan={2} className="px-3 py-2 text-right">الإجمالي</td>
-                          <td className="px-3 py-2 text-left tabular-nums">{formatCurrency(totalDebit)}</td>
-                          <td className="px-3 py-2 text-left tabular-nums">{formatCurrency(totalCredit)}</td>
+                          <td colSpan={4} className="px-3 py-2 text-right">الإجمالي (بالعملة الأساسية - ل.س)</td>
+                          <td className="px-3 py-2 text-left tabular-nums">{formatCurrency(totalBaseDebit)}</td>
+                          <td className="px-3 py-2 text-left tabular-nums">{formatCurrency(totalBaseCredit)}</td>
                         </tr>
                       </tfoot>
                     </table>
@@ -187,7 +208,7 @@ export default function Journal() {
                   <div className={`flex items-center gap-2 p-3 rounded-md ${balanced ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
                     {balanced ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
                     <span className="text-sm font-medium">
-                      {balanced ? "القيد متوازن ✓" : `القيد غير متوازن - الفرق: ${formatCurrency(Math.abs(totalDebit - totalCredit))}`}
+                      {balanced ? "القيد متوازن ✓" : `القيد غير متوازن - الفرق: ${formatCurrency(Math.abs(totalBaseDebit - totalBaseCredit))}`}
                     </span>
                   </div>
                 </div>
@@ -229,8 +250,8 @@ export default function Journal() {
                   <th className="text-right px-4 py-3 font-medium">رقم القيد</th>
                   <th className="text-right px-4 py-3 font-medium">التاريخ</th>
                   <th className="text-right px-4 py-3 font-medium">البيان</th>
-                  <th className="text-left px-4 py-3 font-medium">مدين</th>
-                  <th className="text-left px-4 py-3 font-medium">دائن</th>
+                  <th className="text-left px-4 py-3 font-medium">مدين (ل.س)</th>
+                  <th className="text-left px-4 py-3 font-medium">دائن (ل.س)</th>
                   <th className="text-left px-4 py-3 font-medium">الحالة</th>
                   <th className="text-left px-4 py-3 font-medium w-12"></th>
                 </tr>
@@ -241,8 +262,8 @@ export default function Journal() {
                     <td className="px-4 py-3 font-medium text-primary">{j.entry_number}</td>
                     <td className="px-4 py-3">{formatDate(j.entry_date)}</td>
                     <td className="px-4 py-3">{j.description}</td>
-                    <td className="px-4 py-3 text-left tabular-nums">{formatCurrency(parseFloat(j.total_debit))}</td>
-                    <td className="px-4 py-3 text-left tabular-nums">{formatCurrency(parseFloat(j.total_credit))}</td>
+                    <td className="px-4 py-3 text-left tabular-nums">{formatCurrency(parseFloat(j.total_base_debit))}</td>
+                    <td className="px-4 py-3 text-left tabular-nums">{formatCurrency(parseFloat(j.total_base_credit))}</td>
                     <td className="px-4 py-3 text-left"><StatusBadge status={j.status} /></td>
                     <td className="px-4 py-3">
                       <DropdownMenu>

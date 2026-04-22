@@ -4,6 +4,7 @@ pub mod list_invoices;
 pub mod create_journal_entry;
 pub mod post_journal_entry;
 pub mod list_journal_entries;
+pub mod reverse_journal_entry;
 pub mod customer_use_cases;
 pub mod product_use_cases;
 pub mod supplier_use_cases;
