@@ -164,3 +164,20 @@ pub async fn post_asset_depreciation(
     let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone());
     use_case.post_depreciation(id, dt).await.map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub async fn list_asset_movements(
+    asset_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<domain::assets::AssetMovement>, String> {
+    let id = Uuid::parse_str(&asset_id).map_err(|e| e.to_string())?;
+    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone());
+    use_case.list_movements(id).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn list_all_asset_movements(
+    state: State<'_, AppState>,
+) -> Result<Vec<domain::assets::AssetMovement>, String> {
+    state.asset_repo.list_all_movements().await.map_err(|e| e.to_string())
+}

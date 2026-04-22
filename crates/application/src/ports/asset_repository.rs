@@ -14,6 +14,7 @@ pub trait AssetRepository: Send + Sync {
     
     async fn save_movement(&self, movement: &AssetMovement) -> Result<(), AppError>;
     async fn list_movements_by_asset(&self, asset_id: &Uuid) -> Result<Vec<AssetMovement>, AppError>;
+    async fn list_all_movements(&self) -> Result<Vec<AssetMovement>, AppError>;
     
     async fn save_depreciation_schedule(&self, schedule: &DepreciationSchedule) -> Result<(), AppError>;
     async fn get_depreciation_schedule(&self, asset_id: &Uuid) -> Result<Vec<DepreciationSchedule>, AppError>;

@@ -59,4 +59,12 @@ export const assetService = {
   async postDepreciation(assetId: string, date: string): Promise<void> {
     return await invoke<void>('post_asset_depreciation', { assetId, date });
   },
+
+  async listAssetMovements(assetId: string): Promise<any[]> {
+    return await invoke<any[]>('list_asset_movements', { assetId });
+  },
+
+  async listAllAssetMovements(): Promise<any[]> {
+    return await invoke<any[]>('list_all_asset_movements');
+  },
 };

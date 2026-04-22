@@ -139,34 +139,16 @@ impl AssetRepository for SqliteAssetRepository {
             .await
             .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-        let mut movements = Vec::new();
-        for row in rows {
-            let currency = Currency::SYP; // Fallback
-            movements.push(AssetMovement {
-                id: Uuid::parse_str(row.get("id")).unwrap_or_default(),
-                asset_id: Uuid::parse_str(row.get("asset_id")).unwrap_or_default(),
-                movement_type: match row.get::<String, _>("movement_type").as_str() {
-                    "Acquisition" => AssetMovementType::Acquisition,
-                    "Depreciation" => AssetMovementType::Depreciation,
-                    "Disposal" => AssetMovementType::Disposal,
-                    "Sale" => AssetMovementType::Sale,
-                    "Adjustment" => AssetMovementType::Adjustment,
-                    "Transfer" => AssetMovementType::Transfer,
-                    "Issue" => AssetMovementType::Issue,
-                    "Consumption" => AssetMovementType::Consumption,
-                    "Damage" => AssetMovementType::Damage,
-                    _ => AssetMovementType::Revaluation,
-                },
-                date: DateTime::parse_from_rfc3339(row.get("movement_date")).unwrap_or_default().with_timezone(&chrono::Utc),
-                quantity: row.get::<Option<String>, _>("quantity").and_then(|s| Decimal::from_str(&s).ok()),
-                amount: Money::new(Decimal::from_str(row.get("amount")).unwrap_or_default(), currency),
-                description: row.get("description"),
-                reference_no: row.get("reference_no"),
-                journal_entry_id: row.get::<Option<String>, _>("journal_entry_id").and_then(|s| Uuid::parse_str(&s).ok()),
-                created_at: DateTime::parse_from_rfc3339(row.get("created_at")).unwrap_or_default().with_timezone(&chrono::Utc),
-            });
-        }
-        Ok(movements)
+        self.map_movement_rows(rows)
+    }
+
+    async fn list_all_movements(&self) -> Result<Vec<AssetMovement>, AppError> {
+        let rows = sqlx::query("SELECT * FROM asset_movements ORDER BY movement_date DESC")
+            .fetch_all(&*self.pool)
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+        self.map_movement_rows(rows)
     }
 
     async fn save_depreciation_schedule(&self, schedule: &DepreciationSchedule) -> Result<(), AppError> {
@@ -249,5 +231,36 @@ impl SqliteAssetRepository {
             created_at: DateTime::parse_from_rfc3339(row.get("created_at")).unwrap_or_default().with_timezone(&chrono::Utc),
             updated_at: DateTime::parse_from_rfc3339(row.get("updated_at")).unwrap_or_default().with_timezone(&chrono::Utc),
         })
+    }
+
+    fn map_movement_rows(&self, rows: Vec<sqlx::sqlite::SqliteRow>) -> Result<Vec<AssetMovement>, AppError> {
+        let mut movements = Vec::new();
+        for row in rows {
+            let currency = Currency::SYP; // Fallback
+            movements.push(AssetMovement {
+                id: Uuid::parse_str(row.get("id")).unwrap_or_default(),
+                asset_id: Uuid::parse_str(row.get("asset_id")).unwrap_or_default(),
+                movement_type: match row.get::<String, _>("movement_type").as_str() {
+                    "Acquisition" => AssetMovementType::Acquisition,
+                    "Depreciation" => AssetMovementType::Depreciation,
+                    "Disposal" => AssetMovementType::Disposal,
+                    "Sale" => AssetMovementType::Sale,
+                    "Adjustment" => AssetMovementType::Adjustment,
+                    "Transfer" => AssetMovementType::Transfer,
+                    "Issue" => AssetMovementType::Issue,
+                    "Consumption" => AssetMovementType::Consumption,
+                    "Damage" => AssetMovementType::Damage,
+                    _ => AssetMovementType::Revaluation,
+                },
+                date: DateTime::parse_from_rfc3339(row.get("movement_date")).unwrap_or_default().with_timezone(&chrono::Utc),
+                quantity: row.get::<Option<String>, _>("quantity").and_then(|s| Decimal::from_str(&s).ok()),
+                amount: Money::new(Decimal::from_str(row.get("amount")).unwrap_or_default(), currency),
+                description: row.get("description"),
+                reference_no: row.get("reference_no"),
+                journal_entry_id: row.get::<Option<String>, _>("journal_entry_id").and_then(|s| Uuid::parse_str(&s).ok()),
+                created_at: DateTime::parse_from_rfc3339(row.get("created_at")).unwrap_or_default().with_timezone(&chrono::Utc),
+            });
+        }
+        Ok(movements)
     }
 }

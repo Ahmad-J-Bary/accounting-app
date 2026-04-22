@@ -46,10 +46,8 @@ impl FixedAssetUseCases {
             accumulated_depreciation_account_id,
         );
 
-        // 1. Save Asset
         self.repo.save_asset(&asset).await?;
 
-        // 2. Create Movement
         let movement = AssetMovement::new(
             asset.id.0,
             AssetMovementType::Acquisition,
@@ -59,10 +57,7 @@ impl FixedAssetUseCases {
         );
         self.repo.save_movement(&movement).await?;
 
-        // 3. Create Journal Entry (Accounting Integration)
         let mut lines = Vec::new();
-        
-        // Debit: Fixed Assets Account
         lines.push(JournalLine::new(
             AccountId(asset_account_id),
             purchase_cost.currency(),
@@ -72,7 +67,6 @@ impl FixedAssetUseCases {
             format!("إثبات شراء أصل: {}", asset.name),
         ));
 
-        // Credit: Cash/Supplier Account
         lines.push(JournalLine::new(
             AccountId(payment_account_id),
             purchase_cost.currency(),
@@ -112,17 +106,14 @@ impl FixedAssetUseCases {
         let asset = self.repo.find_asset_by_id(&FixedAssetId(asset_id)).await?
             .ok_or_else(|| AppError::NotFound("Asset not found".to_string()))?;
 
-        // Simple straight-line depreciation calculation
         let monthly_depreciation = asset.purchase_cost.amount() / Decimal::from(asset.useful_life_months);
         let depreciation_money = Money::new(monthly_depreciation, asset.purchase_cost.currency());
 
-        // Update asset
         let mut updated_asset = asset.clone();
         updated_asset.accumulated_depreciation = asset.accumulated_depreciation.clone() + depreciation_money.clone();
         updated_asset.updated_at = Utc::now();
         self.repo.save_asset(&updated_asset).await?;
 
-        // Create Movement
         let movement = AssetMovement::new(
             asset.id.0,
             AssetMovementType::Depreciation,
@@ -132,10 +123,7 @@ impl FixedAssetUseCases {
         );
         self.repo.save_movement(&movement).await?;
 
-        // Create Journal Entry
         let mut lines = Vec::new();
-        
-        // Debit: Depreciation Expense
         lines.push(JournalLine::new(
             AccountId(asset.depreciation_account_id),
             asset.purchase_cost.currency(),
@@ -145,7 +133,6 @@ impl FixedAssetUseCases {
             format!("مصروف إهلاك: {}", asset.name),
         ));
 
-        // Credit: Accumulated Depreciation
         lines.push(JournalLine::new(
             AccountId(asset.accumulated_depreciation_account_id),
             asset.purchase_cost.currency(),
@@ -165,5 +152,9 @@ impl FixedAssetUseCases {
         self.journal_repo.save(&entry).await?;
 
         Ok(())
+    }
+
+    pub async fn list_movements(&self, asset_id: Uuid) -> Result<Vec<AssetMovement>, AppError> {
+        self.repo.list_movements_by_asset(&asset_id).await
     }
 }
