@@ -46,6 +46,10 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             // Stock Adjustments
             commands::adjustment::create_stock_adjustment,
             commands::adjustment::list_stock_adjustments,
+            // Journal Entries
+            commands::journal::create_journal_entry,
+            commands::journal::list_journal_entries,
+            commands::journal::post_journal_entry,
             // Users & Roles
             commands::users::create_user,
             commands::users::list_users,

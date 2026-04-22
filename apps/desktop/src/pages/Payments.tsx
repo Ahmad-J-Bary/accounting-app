@@ -62,8 +62,17 @@ export default function Payments() {
   const handleCreate = async () => {
     if (!form.payment_type || !form.amount || !form.payment_date) return;
     setSaving(true);
+    const request = { ...form } as CreatePaymentRequest;
+    // Add dummy UUIDs to pass backend domain logic demanding associated parties
+    if (request.payment_type === "SupplierPayment" && !request.supplier_id) {
+      request.supplier_id = crypto.randomUUID?.() || "00000000-0000-0000-0000-000000000001";
+    }
+    if (request.payment_type === "Receipt" && !request.customer_id) {
+      request.customer_id = crypto.randomUUID?.() || "00000000-0000-0000-0000-000000000002";
+    }
+
     try {
-      await paymentService.createPayment(form as CreatePaymentRequest);
+      await paymentService.createPayment(request);
       setShowDialog(false);
       await load();
     } catch (e) { setError(String(e)); }

@@ -10,12 +10,15 @@ import {
   TrendingUp, ShoppingCart, Wallet, Users, Truck, Package,
   AlertCircle, FileText, Plus, Download, Receipt, ArrowUpRight
 } from "lucide-react";
-import { dashboardKpis, revenueChartData, salesInvoices, payments, products, journalEntries } from "@/lib/mockData";
+import { dashboardKpis, revenueChartData, salesInvoices, payments, products } from "@/lib/mockData";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   BarChart, Bar, Legend, PieChart, Pie, Cell
 } from "recharts";
+import { useState, useEffect } from "react";
+import { journalEntryService } from "@/services/journalEntryService";
+import type { JournalEntryDto } from "@erp/shared-types";
 
 const pieData = [
   { name: "إلكترونيات", value: 45, color: "#1e3a5f" },
@@ -26,6 +29,13 @@ const pieData = [
 
 export default function Dashboard() {
   const lowStock = products.filter(p => p.stock < p.minStock);
+  const [recentJournals, setRecentJournals] = useState<JournalEntryDto[]>([]);
+
+  useEffect(() => {
+    journalEntryService.listJournalEntries().then(entries => {
+      setRecentJournals(entries.slice(0, 5));
+    }).catch(console.error);
+  }, []);
 
   return (
     <>
@@ -236,16 +246,21 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {journalEntries.slice(0, 5).map((j) => (
+              {recentJournals.map((j) => (
                 <tr key={j.id} className="border-b border-border last:border-0 hover:bg-slate-50">
-                  <td className="py-2.5 font-medium text-primary">{j.number}</td>
-                  <td className="py-2.5">{formatDate(j.date)}</td>
+                  <td className="py-2.5 font-medium text-primary">{j.entry_number}</td>
+                  <td className="py-2.5">{formatDate(j.entry_date)}</td>
                   <td className="py-2.5">{j.description}</td>
-                  <td className="py-2.5 text-left tabular-nums">{formatCurrency(j.debit)}</td>
-                  <td className="py-2.5 text-left tabular-nums">{formatCurrency(j.credit)}</td>
+                  <td className="py-2.5 text-left tabular-nums">{formatCurrency(parseFloat(j.total_debit))}</td>
+                  <td className="py-2.5 text-left tabular-nums">{formatCurrency(parseFloat(j.total_credit))}</td>
                   <td className="py-2.5 text-left"><StatusBadge status={j.status} /></td>
                 </tr>
               ))}
+              {recentJournals.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="text-center py-4 text-muted-foreground">لا توجد قيود</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </Card>

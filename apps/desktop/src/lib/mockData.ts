@@ -42,16 +42,6 @@ export interface Product {
   minStock: number;
 }
 
-export interface JournalEntry {
-  id: string;
-  number: string;
-  date: string;
-  description: string;
-  debit: number;
-  credit: number;
-  status: "posted" | "draft" | "unbalanced";
-}
-
 export interface Account {
   id: string;
   code: string;
@@ -173,14 +163,6 @@ export const products: Product[] = [
   { id: "5", code: "P-005", name: "كرسي مكتبي تنفيذي", category: "أثاث", unit: "قطعة", price: 950, cost: 650, stock: 3, minStock: 5 },
   { id: "6", code: "P-006", name: "مكتب خشبي فاخر", category: "أثاث", unit: "قطعة", price: 2200, cost: 1500, stock: 12, minStock: 5 },
   { id: "7", code: "P-007", name: "شاشة LED 27 بوصة", category: "إلكترونيات", unit: "قطعة", price: 1500, cost: 1100, stock: 18, minStock: 8 },
-];
-
-export const journalEntries: JournalEntry[] = [
-  { id: "1", number: "JE-2026-0234", date: "2026-04-18", description: "قيد مبيعات يومية", debit: 15000, credit: 15000, status: "posted" },
-  { id: "2", number: "JE-2026-0233", date: "2026-04-18", description: "قيد مشتريات", debit: 32000, credit: 32000, status: "posted" },
-  { id: "3", number: "JE-2026-0232", date: "2026-04-17", description: "تسوية رواتب الموظفين", debit: 85000, credit: 85000, status: "posted" },
-  { id: "4", number: "JE-2026-0231", date: "2026-04-17", description: "قيد استلام نقدية", debit: 4000, credit: 4000, status: "draft" },
-  { id: "5", number: "JE-2026-0230", date: "2026-04-16", description: "مصاريف كهرباء ومياه", debit: 3200, credit: 3200, status: "posted" },
 ];
 
 export const accountsTree: Account[] = [

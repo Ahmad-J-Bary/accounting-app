@@ -6,17 +6,14 @@ import type {
 
 export const journalEntryService = {
   async createJournalEntry(request: CreateJournalEntryRequest): Promise<JournalEntryDto> {
-    // TODO: Implement Tauri command
-    return {} as JournalEntryDto;
+    return await invoke<JournalEntryDto>('create_journal_entry', { request });
   },
 
   async listJournalEntries(): Promise<JournalEntryDto[]> {
-    // TODO: Implement Tauri command
-    return [];
+    return await invoke<JournalEntryDto[]>('list_journal_entries');
   },
 
   async postJournalEntry(entryId: string): Promise<JournalEntryDto> {
-    // TODO: Implement Tauri command
-    return {} as JournalEntryDto;
+    return await invoke<JournalEntryDto>('post_journal_entry', { entryId });
   },
 };
