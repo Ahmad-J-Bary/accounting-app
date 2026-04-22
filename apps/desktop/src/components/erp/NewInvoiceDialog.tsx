@@ -89,7 +89,7 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess }: NewInvoiceDi
   };
 
   const subtotal = calculateSubtotal();
-  const taxRate = 0.15; // 15% VAT
+  const taxRate = 0.0; // Default tax rate for Syria (consumption tax or other)
   const calculatedTax = subtotal * taxRate;
   const total = subtotal + calculatedTax - parseFloat(formData.discount_amount || "0");
 
@@ -237,7 +237,7 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess }: NewInvoiceDi
             <span className="text-muted-foreground">المجموع الفرعي:</span>
             <span className="text-left tabular-nums font-medium">{formatCurrency(subtotal)}</span>
             
-            <span className="text-muted-foreground">الضريبة (15%):</span>
+            <span className="text-muted-foreground">الضريبة:</span>
             <span className="text-left tabular-nums font-medium">{formatCurrency(calculatedTax)}</span>
             
             <span className="text-muted-foreground self-center">الخصم:</span>

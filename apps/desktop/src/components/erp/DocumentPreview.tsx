@@ -69,7 +69,7 @@ export function DocumentPreview({
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold mb-1">شركة النجاح التجارية</h1>
+          <h1 className="text-2xl font-bold mb-1">شركة بردى للصناعة</h1>
           <p className="text-sm text-muted-foreground">المحاسبة والمخزون</p>
         </div>
         <div className="text-left">
@@ -141,7 +141,7 @@ export function DocumentPreview({
           </div>
         )}
         <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">الضريبة (15%)</span>
+          <span className="text-muted-foreground">الضريبة</span>
           <span className="font-semibold">{taxAmount.toFixed(2)}</span>
         </div>
         <Separator />
@@ -162,8 +162,8 @@ export function DocumentPreview({
       {/* Footer */}
       <div className="text-center text-xs text-muted-foreground mb-6">
         <p>شكراً لتعاملكم معنا</p>
-        <p>شركة النجاح التجارية - الرياض، المملكة العربية السعودية</p>
-        <p>هاتف: +966 11 234 5678 | بريد: info@alnajah.com</p>
+        <p>شركة بردى للصناعة - دمشق، الجمهورية العربية السورية</p>
+        <p>هاتف: +963 11 234 5678 | بريد: info@barada.com</p>
       </div>
 
       {/* Action Buttons */}

@@ -10,7 +10,10 @@ pub async fn create_product(
     state: State<'_, AppState>,
     request: CreateProductRequest,
 ) -> Result<ProductDto, String> {
-    let use_case = CreateProductUseCase::new(state.product_repo.clone());
+    let use_case = CreateProductUseCase::new(
+        state.product_repo.clone(),
+        state.stock_movement_repo.clone(),
+    );
     use_case.execute(request).await.map_err(|e| e.to_string())
 }
 

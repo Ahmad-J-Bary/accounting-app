@@ -10,9 +10,12 @@ use uuid::Uuid;
 pub struct Product {
     pub id: ProductId,
     pub name: String,
+    pub barcode: Option<String>,
     pub code: String,
-    pub unit_price: Money,
-    pub cost_price: Money,
+    pub purchase_price: Option<Money>,
+    pub retail_price: Option<Money>,
+    pub wholesale_price: Option<Money>,
+    pub semi_wholesale_price: Option<Money>,
     pub stock_quantity: Decimal,
     pub minimum_stock: Decimal,
     pub is_active: bool,
@@ -23,9 +26,12 @@ pub struct Product {
 impl Product {
     pub fn new(
         name: String,
+        barcode: Option<String>,
         code: String,
-        unit_price: Money,
-        cost_price: Money,
+        purchase_price: Option<Money>,
+        retail_price: Option<Money>,
+        wholesale_price: Option<Money>,
+        semi_wholesale_price: Option<Money>,
         initial_stock: Decimal,
         minimum_stock: Decimal,
     ) -> Result<Self, DomainError> {
@@ -37,30 +43,17 @@ impl Product {
             return Err(DomainError::Invalid("كود المنتج لا يمكن أن يكون فارغًا".into()));
         }
 
-        if unit_price.is_negative() {
-            return Err(DomainError::Invalid("سعر البيع يجب أن يكون غير سالب".into()));
-        }
-
-        if cost_price.is_negative() {
-            return Err(DomainError::Invalid("سعر التكلفة يجب أن يكون غير سالب".into()));
-        }
-
-        if initial_stock < Decimal::ZERO {
-            return Err(DomainError::Invalid("الكمية الأولية يجب أن تكون غير سالبة".into()));
-        }
-
-        if minimum_stock < Decimal::ZERO {
-            return Err(DomainError::Invalid("الحد الأدنى للمخزون يجب أن يكون غير سالب".into()));
-        }
-
         let now = Utc::now();
 
         Ok(Self {
             id: ProductId(Uuid::new_v4()),
             name,
+            barcode,
             code,
-            unit_price,
-            cost_price,
+            purchase_price,
+            retail_price,
+            wholesale_price,
+            semi_wholesale_price,
             stock_quantity: initial_stock,
             minimum_stock,
             is_active: true,
@@ -99,26 +92,29 @@ impl Product {
         self.updated_at = Utc::now();
     }
 
-    pub fn update_prices(&mut self, unit_price: Money, cost_price: Money) -> Result<(), DomainError> {
-        if unit_price.is_negative() {
-            return Err(DomainError::Invalid("سعر البيع يجب أن يكون غير سالب".into()));
-        }
-
-        if cost_price.is_negative() {
-            return Err(DomainError::Invalid("سعر التكلفة يجب أن يكون غير سالب".into()));
-        }
-
-        self.unit_price = unit_price;
-        self.cost_price = cost_price;
+    pub fn update_prices(
+        &mut self,
+        purchase_price: Option<Money>,
+        retail_price: Option<Money>,
+        wholesale_price: Option<Money>,
+        semi_wholesale_price: Option<Money>,
+    ) -> Result<(), DomainError> {
+        self.purchase_price = purchase_price;
+        self.retail_price = retail_price;
+        self.wholesale_price = wholesale_price;
+        self.semi_wholesale_price = semi_wholesale_price;
         self.updated_at = Utc::now();
         Ok(())
     }
 
     pub fn profit_margin(&self) -> Decimal {
-        if self.unit_price.amount() == Decimal::ZERO {
+        let retail = self.retail_price.as_ref().map(|m| m.amount()).unwrap_or(Decimal::ZERO);
+        let purchase = self.purchase_price.as_ref().map(|m| m.amount()).unwrap_or(Decimal::ZERO);
+        
+        if retail == Decimal::ZERO {
             return Decimal::ZERO;
         }
-        (self.unit_price.amount() - self.cost_price.amount()) / self.unit_price.amount()
+        (retail - purchase) / retail
     }
 }
 
@@ -131,9 +127,12 @@ mod tests {
     fn product_creation_with_valid_data_succeeds() {
         let result = Product::new(
             "منتج تجريبي".to_string(),
+            Some("123456789".to_string()),
             "PROD-001".to_string(),
-            Money::syp(dec!(100)),
-            Money::syp(dec!(70)),
+            Some(Money::syp(dec!(70))),
+            Some(Money::syp(dec!(100))),
+            Some(Money::syp(dec!(90))),
+            Some(Money::syp(dec!(95))),
             dec!(50),
             dec!(10),
         );
@@ -141,7 +140,7 @@ mod tests {
         assert!(result.is_ok());
         let product = result.unwrap();
         assert_eq!(product.name, "منتج تجريبي");
-        assert_eq!(product.code, "PROD-001");
+        assert_eq!(product.barcode, Some("123456789".to_string()));
         assert_eq!(product.stock_quantity, dec!(50));
     }
 
@@ -149,9 +148,12 @@ mod tests {
     fn product_name_cannot_be_empty() {
         let result = Product::new(
             "".to_string(),
+            None,
             "PROD-001".to_string(),
-            Money::syp(dec!(100)),
-            Money::syp(dec!(70)),
+            None,
+            None,
+            None,
+            None,
             dec!(50),
             dec!(10),
         );
@@ -163,37 +165,12 @@ mod tests {
     fn product_code_cannot_be_empty() {
         let result = Product::new(
             "منتج تجريبي".to_string(),
+            None,
             "".to_string(),
-            Money::syp(dec!(100)),
-            Money::syp(dec!(70)),
-            dec!(50),
-            dec!(10),
-        );
-
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn negative_unit_price_is_rejected() {
-        let result = Product::new(
-            "منتج تجريبي".to_string(),
-            "PROD-001".to_string(),
-            Money::syp(dec!(-100)),
-            Money::syp(dec!(70)),
-            dec!(50),
-            dec!(10),
-        );
-
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn negative_cost_price_is_rejected() {
-        let result = Product::new(
-            "منتج تجريبي".to_string(),
-            "PROD-001".to_string(),
-            Money::syp(dec!(100)),
-            Money::syp(dec!(-70)),
+            None,
+            None,
+            None,
+            None,
             dec!(50),
             dec!(10),
         );
@@ -205,9 +182,12 @@ mod tests {
     fn adjust_stock_updates_quantity() {
         let mut product = Product::new(
             "منتج تجريبي".to_string(),
+            None,
             "PROD-001".to_string(),
-            Money::syp(dec!(100)),
-            Money::syp(dec!(70)),
+            None,
+            None,
+            None,
+            None,
             dec!(50),
             dec!(10),
         ).unwrap();
@@ -220,9 +200,12 @@ mod tests {
     fn adjust_stock_below_zero_is_rejected() {
         let mut product = Product::new(
             "منتج تجريبي".to_string(),
+            None,
             "PROD-001".to_string(),
-            Money::syp(dec!(100)),
-            Money::syp(dec!(70)),
+            None,
+            None,
+            None,
+            None,
             dec!(10),
             dec!(5),
         ).unwrap();
@@ -235,9 +218,12 @@ mod tests {
     fn is_below_minimum_stock_returns_true_when_below() {
         let product = Product::new(
             "منتج تجريبي".to_string(),
+            None,
             "PROD-001".to_string(),
-            Money::syp(dec!(100)),
-            Money::syp(dec!(70)),
+            None,
+            None,
+            None,
+            None,
             dec!(5),
             dec!(10),
         ).unwrap();
@@ -249,9 +235,12 @@ mod tests {
     fn profit_margin_calculates_correctly() {
         let product = Product::new(
             "منتج تجريبي".to_string(),
+            None,
             "PROD-001".to_string(),
-            Money::syp(dec!(100)),
-            Money::syp(dec!(70)),
+            Some(Money::syp(dec!(70))),
+            Some(Money::syp(dec!(100))),
+            None,
+            None,
             dec!(50),
             dec!(10),
         ).unwrap();

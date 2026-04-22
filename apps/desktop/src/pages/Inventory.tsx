@@ -10,9 +10,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export default function Inventory() {
   const warehouses = [
-    { name: "المستودع الرئيسي - الرياض", items: 245, value: 87000 },
-    { name: "مستودع جدة", items: 128, value: 34000 },
-    { name: "مستودع الدمام", items: 89, value: 21000 },
+    { name: "المستودع الرئيسي - دمشق", items: 245, value: 87000 },
+    { name: "مستودع حلب", items: 128, value: 34000 },
+    { name: "مستودع حمص", items: 89, value: 21000 },
   ];
 
   return (

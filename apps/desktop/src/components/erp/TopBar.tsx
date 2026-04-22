@@ -70,9 +70,9 @@ export function TopBar({ onToggleSidebar, sidebarOpen = true }: TopBarProps) {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>تبديل الشركة</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>شركة النجاح التجارية</DropdownMenuItem>
-            <DropdownMenuItem>شركة المستقبل</DropdownMenuItem>
-            <DropdownMenuItem>مؤسسة الأمانة</DropdownMenuItem>
+            <DropdownMenuItem>شركة بردى للصناعة</DropdownMenuItem>
+            <DropdownMenuItem>شركة الشام للتجارة</DropdownMenuItem>
+            <DropdownMenuItem>مؤسسة قاسيون</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -80,16 +80,16 @@ export function TopBar({ onToggleSidebar, sidebarOpen = true }: TopBarProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="gap-2 hidden lg:flex">
               <GitBranch className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm">فرع الرياض</span>
+              <span className="text-sm">فرع دمشق</span>
               <ChevronDown className="w-3.5 h-3.5 opacity-60" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuLabel>تبديل الفرع</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>فرع الرياض</DropdownMenuItem>
-            <DropdownMenuItem>فرع جدة</DropdownMenuItem>
-            <DropdownMenuItem>فرع الدمام</DropdownMenuItem>
+            <DropdownMenuItem>فرع دمشق</DropdownMenuItem>
+            <DropdownMenuItem>فرع حلب</DropdownMenuItem>
+            <DropdownMenuItem>فرع حمص</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 

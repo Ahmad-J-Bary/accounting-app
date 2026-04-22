@@ -25,9 +25,12 @@ export default function Products() {
   const [editProduct, setEditProduct] = useState<ProductDto | null>(null);
   const [formData, setFormData] = useState({
     name: "",
+    barcode: "",
     code: "",
-    unit_price: "0",
-    cost_price: "0",
+    purchase_price: "0",
+    retail_price: "0",
+    wholesale_price: "0",
+    semi_wholesale_price: "0",
     initial_stock: "0",
     minimum_stock: "0"
   });
@@ -54,16 +57,22 @@ export default function Products() {
         await productService.updateProduct({
           id: editProduct.id,
           name: formData.name,
+          barcode: formData.barcode || null,
           code: formData.code,
-          unit_price: formData.unit_price,
-          cost_price: formData.cost_price,
+          purchase_price: formData.purchase_price,
+          retail_price: formData.retail_price,
+          wholesale_price: formData.wholesale_price,
+          semi_wholesale_price: formData.semi_wholesale_price,
           stock_quantity: formData.initial_stock,
           minimum_stock: formData.minimum_stock,
           is_active: editProduct.is_active
         });
         toast.success("تم تحديث المنتج بنجاح");
       } else {
-        await productService.createProduct(formData);
+        await productService.createProduct({
+          ...formData,
+          barcode: formData.barcode || null
+        });
         toast.success("تم إضافة المنتج بنجاح");
       }
       setIsDialogOpen(false);
@@ -88,7 +97,8 @@ export default function Products() {
     const q = (search || "").toLowerCase();
     const nameMatch = (p.name || "").toLowerCase().includes(q);
     const codeMatch = (p.code || "").toLowerCase().includes(q);
-    return nameMatch || codeMatch;
+    const barcodeMatch = (p.barcode || "").toLowerCase().includes(q);
+    return nameMatch || codeMatch || barcodeMatch;
   });
 
   return (
@@ -105,7 +115,17 @@ export default function Products() {
             <Button variant="outline"><Download className="w-4 h-4 ml-2" />تصدير</Button>
             <Button onClick={() => {
               setEditProduct(null);
-              setFormData({ name: "", code: "", unit_price: "0", cost_price: "0", initial_stock: "0", minimum_stock: "0" });
+              setFormData({ 
+                name: "", 
+                barcode: "", 
+                code: "", 
+                purchase_price: "0", 
+                retail_price: "0", 
+                wholesale_price: "0", 
+                semi_wholesale_price: "0", 
+                initial_stock: "0", 
+                minimum_stock: "0" 
+              });
               setIsDialogOpen(true);
             }}>
               <Plus className="w-4 h-4 ml-2" />منتج جديد
@@ -122,7 +142,7 @@ export default function Products() {
         <Card className="p-4">
           <div className="text-sm text-muted-foreground">قيمة المخزون</div>
           <div className="text-xl font-bold text-primary tabular-nums mt-1">
-            {formatCurrency(productsList.reduce((s, p) => s + Number(p.stock_quantity || 0) * Number(p.cost_price || 0), 0))}
+            {formatCurrency(productsList.reduce((s, p) => s + Number(p.stock_quantity || 0) * Number(p.purchase_price || 0), 0))}
           </div>
         </Card>
         <Card className="p-4">
@@ -142,7 +162,7 @@ export default function Products() {
           <div className="relative flex-1 min-w-[220px]">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input 
-              placeholder="بحث بالاسم أو الكود..." 
+              placeholder="بحث بالاسم أو الكود أو الباركود..." 
               className="pr-10" 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -154,13 +174,14 @@ export default function Products() {
           <div className="text-center py-10">جاري التحميل...</div>
         ) : (
           <div className="border border-border rounded-md overflow-x-auto">
-            <table className="w-full text-sm min-w-[800px]">
+            <table className="w-full text-sm min-w-[1000px]">
               <thead className="bg-slate-50 border-b border-border">
                 <tr>
-                  <th className="text-right px-4 py-3 font-medium">الكود</th>
+                  <th className="text-right px-4 py-3 font-medium">الباركود/الكود</th>
                   <th className="text-right px-4 py-3 font-medium">اسم المنتج</th>
                   <th className="text-left px-4 py-3 font-medium">التكلفة</th>
-                  <th className="text-left px-4 py-3 font-medium">السعر</th>
+                  <th className="text-left px-4 py-3 font-medium">مفرق</th>
+                  <th className="text-left px-4 py-3 font-medium">جملة</th>
                   <th className="text-left px-4 py-3 font-medium">المخزون</th>
                   <th className="text-left px-4 py-3 font-medium">الحالة</th>
                   <th className="text-left px-4 py-3 font-medium w-12"></th>
@@ -169,17 +190,23 @@ export default function Products() {
               <tbody>
                 {filteredProducts.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-10 text-muted-foreground">لا توجد منتجات حالياً</td>
+                    <td colSpan={8} className="text-center py-10 text-muted-foreground">لا توجد منتجات حالياً</td>
                   </tr>
                 ) : (
                   filteredProducts.map((p) => {
                     const low = Number(p.stock_quantity || 0) < Number(p.minimum_stock || 0);
                     return (
                       <tr key={p.id} className="border-b border-border last:border-0 hover:bg-slate-50">
-                        <td className="px-4 py-3 font-medium text-primary">{p.code}</td>
+                        <td className="px-4 py-3 font-medium text-primary">
+                          <div className="flex flex-col">
+                            <span>{p.barcode || "---"}</span>
+                            <span className="text-xs text-muted-foreground">{p.code}</span>
+                          </div>
+                        </td>
                         <td className="px-4 py-3">{p.name}</td>
-                        <td className="px-4 py-3 text-left tabular-nums">{formatCurrency(Number(p.cost_price || 0))}</td>
-                        <td className="px-4 py-3 text-left tabular-nums font-medium">{formatCurrency(Number(p.unit_price || 0))}</td>
+                        <td className="px-4 py-3 text-left tabular-nums">{formatCurrency(Number(p.purchase_price || 0))}</td>
+                        <td className="px-4 py-3 text-left tabular-nums font-medium text-green-600">{formatCurrency(Number(p.retail_price || 0))}</td>
+                        <td className="px-4 py-3 text-left tabular-nums">{formatCurrency(Number(p.wholesale_price || 0))}</td>
                         <td className="px-4 py-3 text-left">
                           <div className="flex items-center justify-end gap-1.5">
                             {low && <AlertTriangle className="w-4 h-4 text-red-500" />}
@@ -199,9 +226,12 @@ export default function Products() {
                                 setEditProduct(p);
                                 setFormData({
                                   name: p.name,
+                                  barcode: p.barcode || "",
                                   code: p.code,
-                                  unit_price: p.unit_price,
-                                  cost_price: p.cost_price,
+                                  purchase_price: p.purchase_price || "0",
+                                  retail_price: p.retail_price || "0",
+                                  wholesale_price: p.wholesale_price || "0",
+                                  semi_wholesale_price: p.semi_wholesale_price || "0",
                                   initial_stock: p.stock_quantity,
                                   minimum_stock: p.minimum_stock
                                 });
@@ -224,7 +254,7 @@ export default function Products() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>{editProduct ? "تعديل منتج" : "إضافة منتج جديد"}</DialogTitle>
             <DialogDescription>
@@ -232,32 +262,48 @@ export default function Products() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4 text-right" dir="rtl">
-            <div className="grid gap-2">
-              <Label htmlFor="prod_name">اسم المنتج *</Label>
-              <Input id="prod_name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="prod_code">كود المنتج *</Label>
-              <Input id="prod_code" value={formData.code} onChange={(e) => setFormData({...formData, code: e.target.value})} />
-            </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="prod_unit_price">سعر البيع</Label>
-                <Input id="prod_unit_price" value={formData.unit_price} onChange={(e) => setFormData({...formData, unit_price: e.target.value})} />
+              <div className="grid gap-2 col-span-2">
+                <Label htmlFor="prod_name">اسم المنتج *</Label>
+                <Input id="prod_name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="prod_cost_price">سعر التكلفة</Label>
-                <Input id="prod_cost_price" value={formData.cost_price} onChange={(e) => setFormData({...formData, cost_price: e.target.value})} />
+                <Label htmlFor="prod_barcode">الباركود</Label>
+                <Input id="prod_barcode" value={formData.barcode} onChange={(e) => setFormData({...formData, barcode: e.target.value})} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="prod_code">كود المادة *</Label>
+                <Input id="prod_code" value={formData.code} onChange={(e) => setFormData({...formData, code: e.target.value})} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            
+            <div className="grid grid-cols-2 gap-4 border-t pt-4">
               <div className="grid gap-2">
-                <Label htmlFor="prod_initial_stock">{editProduct ? "الكمية الحالية" : "الكمية الأولية"}</Label>
-                <Input id="prod_initial_stock" value={formData.initial_stock} onChange={(e) => setFormData({...formData, initial_stock: e.target.value})} />
+                <Label htmlFor="prod_purchase_price">سعر الشراء</Label>
+                <Input id="prod_purchase_price" type="number" value={formData.purchase_price} onChange={(e) => setFormData({...formData, purchase_price: e.target.value})} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="prod_retail_price">سعر المبيع (مفرق)</Label>
+                <Input id="prod_retail_price" type="number" value={formData.retail_price} onChange={(e) => setFormData({...formData, retail_price: e.target.value})} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="prod_wholesale_price">سعر المبيع (جملة)</Label>
+                <Input id="prod_wholesale_price" type="number" value={formData.wholesale_price} onChange={(e) => setFormData({...formData, wholesale_price: e.target.value})} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="prod_semi_wholesale">سعر (نصف جملة)</Label>
+                <Input id="prod_semi_wholesale" type="number" value={formData.semi_wholesale_price} onChange={(e) => setFormData({...formData, semi_wholesale_price: e.target.value})} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 border-t pt-4">
+              <div className="grid gap-2">
+                <Label htmlFor="prod_initial_stock">{editProduct ? "الكمية الحالية" : "رصيد أول المدة"}</Label>
+                <Input id="prod_initial_stock" type="number" value={formData.initial_stock} onChange={(e) => setFormData({...formData, initial_stock: e.target.value})} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="prod_minimum_stock">الحد الأدنى</Label>
-                <Input id="prod_minimum_stock" value={formData.minimum_stock} onChange={(e) => setFormData({...formData, minimum_stock: e.target.value})} />
+                <Input id="prod_minimum_stock" type="number" value={formData.minimum_stock} onChange={(e) => setFormData({...formData, minimum_stock: e.target.value})} />
               </div>
             </div>
           </div>

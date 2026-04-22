@@ -123,19 +123,19 @@ export interface AuditLog {
 }
 
 export const customers: Customer[] = [
-  { id: "1", code: "C-001", name: "شركة النور للتجارة", phone: "0501234567", email: "info@alnoor.com", city: "الرياض", balance: 45000, status: "active" },
-  { id: "2", code: "C-002", name: "مؤسسة الفجر", phone: "0557654321", email: "contact@alfajr.com", city: "جدة", balance: 12000, status: "active" },
-  { id: "3", code: "C-003", name: "شركة الأمل الحديثة", phone: "0534567890", email: "amal@modern.com", city: "الدمام", balance: 0, status: "active" },
-  { id: "4", code: "C-004", name: "مؤسسة الريادة", phone: "0509876543", email: "lead@riyada.com", city: "مكة", balance: 78500, status: "active" },
-  { id: "5", code: "C-005", name: "شركة الخليج المتحد", phone: "0561122334", email: "gulf@united.com", city: "الرياض", balance: 23400, status: "inactive" },
-  { id: "6", code: "C-006", name: "مجموعة السلام التجارية", phone: "0549988776", email: "salam@group.com", city: "المدينة", balance: 95000, status: "active" },
+  { id: "1", code: "C-001", name: "شركة النور للتجارة", phone: "0931234567", email: "info@alnoor.com", city: "دمشق", balance: 45000, status: "active" },
+  { id: "2", code: "C-002", name: "مؤسسة الفجر", phone: "0997654321", email: "contact@alfajr.com", city: "حلب", balance: 12000, status: "active" },
+  { id: "3", code: "C-003", name: "شركة الأمل الحديثة", phone: "0934567890", email: "amal@modern.com", city: "حمص", balance: 0, status: "active" },
+  { id: "4", code: "C-004", name: "مؤسسة الريادة", phone: "0999876543", email: "lead@riyada.com", city: "اللاذقية", balance: 78500, status: "active" },
+  { id: "5", code: "C-005", name: "شركة الشرق المتحدة", phone: "0931122334", email: "east@united.com", city: "دمشق", balance: 23400, status: "inactive" },
+  { id: "6", code: "C-006", name: "مجموعة السلام التجارية", phone: "0999988776", email: "salam@group.com", city: "طرطوس", balance: 95000, status: "active" },
 ];
 
 export const suppliers: Supplier[] = [
-  { id: "1", code: "S-001", name: "مصنع الشرق الأوسط", phone: "0112345678", email: "me@factory.com", city: "الرياض", balance: 32000, status: "active" },
-  { id: "2", code: "S-002", name: "شركة الإمداد السريع", phone: "0223456789", email: "supply@fast.com", city: "جدة", balance: 15000, status: "active" },
-  { id: "3", code: "S-003", name: "مؤسسة الجودة للمواد", phone: "0134567890", email: "quality@mat.com", city: "الدمام", balance: 8500, status: "active" },
-  { id: "4", code: "S-004", name: "التوريدات الذهبية", phone: "0145678901", email: "gold@supply.com", city: "الرياض", balance: 42000, status: "active" },
+  { id: "1", code: "S-001", name: "مصنع بردى", phone: "0112345678", email: "barada@factory.com", city: "دمشق", balance: 32000, status: "active" },
+  { id: "2", code: "S-002", name: "شركة الإمداد السريع", phone: "0213456789", email: "supply@fast.com", city: "حلب", balance: 15000, status: "active" },
+  { id: "3", code: "S-003", name: "مؤسسة الجودة للمواد", phone: "0314567890", email: "quality@mat.com", city: "حمص", balance: 8500, status: "active" },
+  { id: "4", code: "S-004", name: "التوريدات الذهبية", phone: "0115678901", email: "gold@supply.com", city: "دمشق", balance: 42000, status: "active" },
 ];
 
 export const salesInvoices: Invoice[] = [
@@ -170,8 +170,8 @@ export const accountsTree: Account[] = [
     id: "1", code: "1", name: "الأصول", type: "asset", balance: 1250000,
     children: [
       { id: "11", code: "11", name: "الأصول المتداولة", type: "asset", balance: 750000, children: [
-        { id: "111", code: "1101", name: "الصندوق", type: "asset", balance: 45000 },
-        { id: "112", code: "1102", name: "البنك الأهلي", type: "asset", balance: 320000 },
+        { id: "111", code: "1101", name: "الصندوق الرئيسي", type: "asset", balance: 45000 },
+        { id: "112", code: "1102", name: "المصرف التجاري السوري", type: "asset", balance: 320000 },
         { id: "113", code: "1103", name: "العملاء", type: "asset", balance: 253900 },
         { id: "114", code: "1104", name: "المخزون", type: "asset", balance: 131100 },
       ]},
@@ -186,7 +186,7 @@ export const accountsTree: Account[] = [
     children: [
       { id: "21", code: "2101", name: "الموردون", type: "liability", balance: 97500 },
       { id: "22", code: "2102", name: "أوراق الدفع", type: "liability", balance: 120000 },
-      { id: "23", code: "2103", name: "ضريبة القيمة المضافة", type: "liability", balance: 32500 },
+      { id: "23", code: "2103", name: "ضرائب ورسوم", type: "liability", balance: 32500 },
     ]
   },
   {
@@ -218,13 +218,13 @@ export const payments: Payment[] = [
   { id: "2", number: "RCP-2026-0077", date: "2026-04-17", type: "receipt", party: "مؤسسة الفجر", amount: 4000, method: "cash", status: "posted" },
   { id: "3", number: "PAY-2026-0056", date: "2026-04-18", type: "payment", party: "مصنع الشرق الأوسط", amount: 32000, method: "bank", status: "posted" },
   { id: "4", number: "PAY-2026-0055", date: "2026-04-16", type: "payment", party: "شركة الإمداد السريع", amount: 7500, method: "check", status: "posted" },
-  { id: "5", number: "RCP-2026-0076", date: "2026-04-15", type: "receipt", party: "شركة الخليج المتحد", amount: 12500, method: "bank", status: "draft" },
+  { id: "5", number: "RCP-2026-0076", date: "2026-04-15", type: "receipt", party: "شركة الشرق المتحدة", amount: 12500, method: "bank", status: "draft" },
 ];
 
 export const stockMovements: StockMovement[] = [
   { id: "1", number: "MV-2026-0312", date: "2026-04-18", type: "in", product: "جهاز كمبيوتر محمول HP", warehouse: "المستودع الرئيسي", quantity: 20, reference: "PUR-2026-0089" },
   { id: "2", number: "MV-2026-0311", date: "2026-04-18", type: "out", product: "ورق تصوير A4", warehouse: "المستودع الرئيسي", quantity: 50, reference: "INV-2026-0145" },
-  { id: "3", number: "MV-2026-0310", date: "2026-04-17", type: "transfer", product: "شاشة LED 27 بوصة", warehouse: "مستودع جدة", quantity: 5, reference: "TR-0045" },
+  { id: "3", number: "MV-2026-0310", date: "2026-04-17", type: "transfer", product: "شاشة LED 27 بوصة", warehouse: "مستودع حلب", quantity: 5, reference: "TR-0045" },
   { id: "4", number: "MV-2026-0309", date: "2026-04-16", type: "in", product: "كرسي مكتبي تنفيذي", warehouse: "المستودع الرئيسي", quantity: 10, reference: "PUR-2026-0087" },
 ];
 
@@ -244,25 +244,25 @@ export const productionOrders: ProductionOrder[] = [
 
 export const stockAdjustments: StockAdjustment[] = [
   { id: "1", number: "ADJ-2026-0012", date: "2026-04-18", warehouse: "المستودع الرئيسي", itemsCount: 15, variance: -1250, status: "draft" },
-  { id: "2", number: "ADJ-2026-0011", date: "2026-04-10", warehouse: "مستودع جدة", itemsCount: 8, variance: 340, status: "approved" },
+  { id: "2", number: "ADJ-2026-0011", date: "2026-04-10", warehouse: "مستودع حلب", itemsCount: 8, variance: 340, status: "approved" },
   { id: "3", number: "ADJ-2026-0010", date: "2026-04-01", warehouse: "المستودع الرئيسي", itemsCount: 22, variance: -780, status: "posted" },
 ];
 
 export const users: User[] = [
-  { id: "1", name: "أحمد محمد العتيبي", email: "ahmed@company.com", role: "مدير عام", branch: "الرياض", lastLogin: "2026-04-19 09:30", status: "active" },
-  { id: "2", name: "فاطمة علي الزهراني", email: "fatima@company.com", role: "محاسب رئيسي", branch: "الرياض", lastLogin: "2026-04-19 08:15", status: "active" },
-  { id: "3", name: "خالد سعد القحطاني", email: "khalid@company.com", role: "مدير مبيعات", branch: "جدة", lastLogin: "2026-04-18 16:45", status: "active" },
-  { id: "4", name: "نورة عبدالله الشمري", email: "noura@company.com", role: "أمين مستودع", branch: "الدمام", lastLogin: "2026-04-18 14:20", status: "active" },
-  { id: "5", name: "محمد فهد الدوسري", email: "mohammed@company.com", role: "محاسب", branch: "الرياض", lastLogin: "2026-04-15 11:00", status: "inactive" },
+  { id: "1", name: "أحمد منصور", email: "ahmed@company.com", role: "مدير عام", branch: "دمشق", lastLogin: "2026-04-19 09:30", status: "active" },
+  { id: "2", name: "فاطمة خليل", email: "fatima@company.com", role: "محاسب رئيسي", branch: "دمشق", lastLogin: "2026-04-19 08:15", status: "active" },
+  { id: "3", name: "خالد الأسد", email: "khalid@company.com", role: "مدير مبيعات", branch: "حلب", lastLogin: "2026-04-18 16:45", status: "active" },
+  { id: "4", name: "نورة جابر", email: "noura@company.com", role: "أمين مستودع", branch: "حمص", lastLogin: "2026-04-18 14:20", status: "active" },
+  { id: "5", name: "محمد ديب", email: "mohammed@company.com", role: "محاسب", branch: "دمشق", lastLogin: "2026-04-15 11:00", status: "inactive" },
 ];
 
 export const auditLogs: AuditLog[] = [
-  { id: "1", date: "2026-04-19 09:35", user: "أحمد محمد العتيبي", action: "إنشاء", module: "فواتير المبيعات", record: "INV-2026-0145", ip: "192.168.1.10" },
-  { id: "2", date: "2026-04-19 09:28", user: "فاطمة علي", action: "تعديل", module: "العملاء", record: "C-001", ip: "192.168.1.15" },
-  { id: "3", date: "2026-04-19 08:50", user: "خالد سعد", action: "حذف", module: "المنتجات", record: "P-099", ip: "192.168.1.22" },
-  { id: "4", date: "2026-04-19 08:20", user: "نورة عبدالله", action: "موافقة", module: "التالف", record: "DMG-2026-0022", ip: "192.168.1.30" },
-  { id: "5", date: "2026-04-18 17:10", user: "أحمد محمد العتيبي", action: "تسجيل دخول", module: "النظام", record: "-", ip: "192.168.1.10" },
-  { id: "6", date: "2026-04-18 16:45", user: "محمد فهد", action: "طباعة", module: "فواتير المبيعات", record: "INV-2026-0140", ip: "192.168.1.18" },
+  { id: "1", date: "2026-04-19 09:35", user: "أحمد منصور", action: "إنشاء", module: "فواتير المبيعات", record: "INV-2026-0145", ip: "192.168.1.10" },
+  { id: "2", date: "2026-04-19 09:28", user: "فاطمة خليل", action: "تعديل", module: "العملاء", record: "C-001", ip: "192.168.1.15" },
+  { id: "3", date: "2026-04-19 08:50", user: "خالد الأسد", action: "حذف", module: "المنتجات", record: "P-099", ip: "192.168.1.22" },
+  { id: "4", date: "2026-04-19 08:20", user: "نورة جابر", action: "موافقة", module: "التالف", record: "DMG-2026-0022", ip: "192.168.1.30" },
+  { id: "5", date: "2026-04-18 17:10", user: "أحمد منصور", action: "تسجيل دخول", module: "النظام", record: "-", ip: "192.168.1.10" },
+  { id: "6", date: "2026-04-18 16:45", user: "محمد ديب", action: "طباعة", module: "فواتير المبيعات", record: "INV-2026-0140", ip: "192.168.1.18" },
 ];
 
 export const dashboardKpis = {

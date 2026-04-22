@@ -2,36 +2,80 @@ use std::sync::Arc;
 use domain::inventory::product::Product;
 use domain::shared::money::Money;
 use crate::ports::product_repository::ProductRepository;
+use crate::ports::stock_movement_repository::StockMovementRepository;
+use domain::inventory::stock_movement::{StockMovement, MovementType};
 use crate::dto::product_dto::{CreateProductRequest, UpdateProductRequest, ProductDto};
 use crate::errors::AppError;
 use rust_decimal::Decimal;
 use std::str::FromStr;
 
+fn parse_optional_money(val: &Option<String>) -> Result<Option<Money>, AppError> {
+    match val {
+        Some(s) if !s.trim().is_empty() => {
+            let amount = Decimal::from_str(s).map_err(|_| AppError::Invalid("سعر غير صالح".into()))?;
+            Ok(Some(Money::syp(amount)))
+        }
+        _ => Ok(None),
+    }
+}
+
 pub struct CreateProductUseCase {
     repo: Arc<dyn ProductRepository>,
+    movement_repo: Arc<dyn StockMovementRepository>,
 }
 
 impl CreateProductUseCase {
-    pub fn new(repo: Arc<dyn ProductRepository>) -> Self {
-        Self { repo }
+    pub fn new(
+        repo: Arc<dyn ProductRepository>,
+        movement_repo: Arc<dyn StockMovementRepository>,
+    ) -> Self {
+        Self { repo, movement_repo }
     }
 
     pub async fn execute(&self, req: CreateProductRequest) -> Result<ProductDto, AppError> {
-        let unit_price = Decimal::from_str(&req.unit_price).map_err(|_| AppError::Invalid("سعر البيع غير صالح".into()))?;
-        let cost_price = Decimal::from_str(&req.cost_price).map_err(|_| AppError::Invalid("سعر التكلفة غير صالح".into()))?;
-        let initial_stock = Decimal::from_str(&req.initial_stock).map_err(|_| AppError::Invalid("الكمية غير صالحة".into()))?;
-        let minimum_stock = Decimal::from_str(&req.minimum_stock).map_err(|_| AppError::Invalid("الحد الأدنى غير صالح".into()))?;
+        let purchase_price = parse_optional_money(&req.purchase_price)?;
+        let retail_price = parse_optional_money(&req.retail_price)?;
+        let wholesale_price = parse_optional_money(&req.wholesale_price)?;
+        let semi_wholesale_price = parse_optional_money(&req.semi_wholesale_price)?;
+
+        let initial_stock = if req.initial_stock.trim().is_empty() {
+            Decimal::ZERO
+        } else {
+            Decimal::from_str(&req.initial_stock).map_err(|_| AppError::Invalid("الكمية غير صالحة".into()))?
+        };
+        let minimum_stock = if req.minimum_stock.trim().is_empty() {
+            Decimal::ZERO
+        } else {
+            Decimal::from_str(&req.minimum_stock).map_err(|_| AppError::Invalid("الحد الأدنى غير صالح".into()))?
+        };
 
         let product = Product::new(
             req.name,
+            req.barcode,
             req.code,
-            Money::syp(unit_price),
-            Money::syp(cost_price),
+            purchase_price,
+            retail_price,
+            wholesale_price,
+            semi_wholesale_price,
             initial_stock,
             minimum_stock,
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
         self.repo.save(&product).await?;
+
+        if initial_stock > Decimal::ZERO {
+            let movement = StockMovement::new(
+                product.id.clone(),
+                MovementType::OpeningBalance,
+                initial_stock,
+                "رصيد_افتتاحي".to_string(),
+                "إدخال رصيد أول المدة عند تعريف المادة".to_string(),
+                chrono::Utc::now(),
+            ).map_err(|e| AppError::Invalid(e.to_string()))?;
+            
+            self.movement_repo.save(&movement).await?;
+        }
+
         Ok(ProductDto::from(product))
     }
 }
@@ -50,15 +94,21 @@ impl UpdateProductUseCase {
         let mut product = self.repo.find_by_id(&pid).await?
             .ok_or_else(|| AppError::NotFound("المنتج غير موجود".into()))?;
         
-        let unit_price = Decimal::from_str(&req.unit_price).map_err(|_| AppError::Invalid("سعر البيع غير صالح".into()))?;
-        let cost_price = Decimal::from_str(&req.cost_price).map_err(|_| AppError::Invalid("سعر التكلفة غير صالح".into()))?;
+        let purchase_price = parse_optional_money(&req.purchase_price)?;
+        let retail_price = parse_optional_money(&req.retail_price)?;
+        let wholesale_price = parse_optional_money(&req.wholesale_price)?;
+        let semi_wholesale_price = parse_optional_money(&req.semi_wholesale_price)?;
+
         let stock_quantity = Decimal::from_str(&req.stock_quantity).map_err(|_| AppError::Invalid("الكمية غير صالحة".into()))?;
         let minimum_stock = Decimal::from_str(&req.minimum_stock).map_err(|_| AppError::Invalid("الحد الأدنى غير صالح".into()))?;
 
         product.name = req.name;
+        product.barcode = req.barcode;
         product.code = req.code;
-        product.unit_price = Money::syp(unit_price);
-        product.cost_price = Money::syp(cost_price);
+        product.purchase_price = purchase_price;
+        product.retail_price = retail_price;
+        product.wholesale_price = wholesale_price;
+        product.semi_wholesale_price = semi_wholesale_price;
         product.stock_quantity = stock_quantity;
         product.minimum_stock = minimum_stock;
         

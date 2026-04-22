@@ -160,9 +160,9 @@ export default function SalesInvoices() {
                   <p className="text-sm text-muted-foreground mt-1">Tax Invoice</p>
                 </div>
                 <div className="text-left" dir="rtl">
-                  <div className="font-bold text-lg">شركة النجاح التجارية</div>
-                  <div className="text-xs text-muted-foreground">الرقم الضريبي: 300123456700003</div>
-                  <div className="text-xs text-muted-foreground">الرياض، المملكة العربية السعودية</div>
+                  <div className="font-bold text-lg">شركة بردى للصناعة</div>
+                  <div className="text-xs text-muted-foreground">الرقم الضريبي: 011-234567-001</div>
+                  <div className="text-xs text-muted-foreground">دمشق، الجمهورية العربية السورية</div>
                 </div>
               </div>
 
@@ -170,7 +170,7 @@ export default function SalesInvoices() {
                 <div className="text-right">
                   <div className="text-xs text-muted-foreground mb-1">فاتورة إلى</div>
                   <div className="font-bold">{selectedInv.customer_name || selectedInv.customer_id}</div>
-                  <div className="text-sm text-muted-foreground">الرياض، المملكة العربية السعودية</div>
+                  <div className="text-sm text-muted-foreground">دمشق، الجمهورية العربية السورية</div>
                 </div>
                 <div className="space-y-1 text-sm text-left">
                   <div className="flex justify-between"><span className="text-muted-foreground">رقم الفاتورة:</span><span className="font-medium">{selectedInv.invoice_number}</span></div>
@@ -205,7 +205,7 @@ export default function SalesInvoices() {
               <div className="flex justify-start mb-6" dir="rtl">
                 <div className="w-72 space-y-1 text-sm mr-auto">
                    <div className="flex justify-between"><span className="text-muted-foreground">المجموع الفرعي:</span><span className="tabular-nums">{formatCurrency(parseFloat(selectedInv.subtotal))}</span></div>
-                   <div className="flex justify-between"><span className="text-muted-foreground">الضريبة (15%):</span><span className="tabular-nums">{formatCurrency(parseFloat(selectedInv.tax_amount))}</span></div>
+                   <div className="flex justify-between"><span className="text-muted-foreground">الضريبة:</span><span className="tabular-nums">{formatCurrency(parseFloat(selectedInv.tax_amount))}</span></div>
                    <div className="flex justify-between"><span className="text-muted-foreground">الخصم:</span><span className="tabular-nums">{formatCurrency(parseFloat(selectedInv.discount_amount))}</span></div>
                    <div className="flex justify-between py-2 border-t-2 border-primary font-bold text-base mt-2"><span>الإجمالي العام</span><span className="tabular-nums">{formatCurrency(parseFloat(selectedInv.total))}</span></div>
                 </div>

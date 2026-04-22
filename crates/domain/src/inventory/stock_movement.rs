@@ -11,6 +11,7 @@ pub enum MovementType {
     Out,     // إخراج
     Transfer,// نقل
     Adjustment, // تسوية
+    OpeningBalance, // رصيد أول المدة
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -59,7 +60,7 @@ impl StockMovement {
     pub fn is_inflow(&self) -> bool {
         matches!(
             self.movement_type,
-            MovementType::In | MovementType::Transfer
+            MovementType::In | MovementType::Transfer | MovementType::OpeningBalance
         )
     }
 

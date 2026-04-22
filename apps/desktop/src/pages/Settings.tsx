@@ -124,8 +124,8 @@ export default function Settings() {
             <CardHeader><CardTitle>الإعدادات المالية</CardTitle><CardDescription>العملة، الضرائب والسنة المالية</CardDescription></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>رمز العملة (مثل SAR, USD)</Label><Input value={settings.currency} onChange={e => handleChange("currency", e.target.value)} dir="ltr" /></div>
-                <div className="space-y-2"><Label>إشارة العملة (مثل ر.س, $)</Label><Input value={settings.currency_symbol} onChange={e => handleChange("currency_symbol", e.target.value)} /></div>
+                <div className="space-y-2"><Label>رمز العملة (مثل SYP, USD)</Label><Input value={settings.currency} onChange={e => handleChange("currency", e.target.value)} dir="ltr" /></div>
+                <div className="space-y-2"><Label>إشارة العملة (مثل ل.س, $)</Label><Input value={settings.currency_symbol} onChange={e => handleChange("currency_symbol", e.target.value)} /></div>
                 <div className="space-y-2"><Label>نسبة الضريبة الافتراضية (%)</Label><Input type="number" step="0.01" value={settings.tax_rate} onChange={e => handleChange("tax_rate", e.target.value)} /></div>
                 <div className="space-y-2">
                   <Label>شهر بداية السنة المالية</Label>
