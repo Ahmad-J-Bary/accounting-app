@@ -41,6 +41,8 @@ CREATE TABLE IF NOT EXISTS consumables (
     status TEXT NOT NULL, -- 'InStock', 'Exhausted', 'Damaged'
     location TEXT,
     notes TEXT,
+    asset_account_id TEXT NOT NULL,
+    expense_account_id TEXT NOT NULL,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     FOREIGN KEY (category_id) REFERENCES asset_categories(id)

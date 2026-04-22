@@ -26,6 +26,8 @@ pub struct Consumable {
     pub status: ConsumableStatus,
     pub location: Option<String>,
     pub notes: Option<String>,
+    pub asset_account_id: Uuid,
+    pub expense_account_id: Uuid,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -37,6 +39,8 @@ impl Consumable {
         category_id: Uuid,
         unit_cost: Money,
         fx_rate: Decimal,
+        asset_account_id: Uuid,
+        expense_account_id: Uuid,
     ) -> Self {
         Self {
             id: ConsumableId(Uuid::new_v4()),
@@ -49,6 +53,8 @@ impl Consumable {
             status: ConsumableStatus::InStock,
             location: None,
             notes: None,
+            asset_account_id,
+            expense_account_id,
             created_at: Utc::now(),
             updated_at: Utc::now(),
         }

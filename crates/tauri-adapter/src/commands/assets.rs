@@ -67,6 +67,8 @@ pub async fn create_consumable(
     unit_cost: String,
     currency: String,
     fx_rate: String,
+    asset_account_id: String,
+    expense_account_id: String,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
     let category_uuid = Uuid::parse_str(&category_id).map_err(|e| e.to_string())?;
@@ -77,9 +79,11 @@ pub async fn create_consumable(
     };
     let money = Money::new(amount, curr);
     let fx = Decimal::from_str(&fx_rate).map_err(|e: rust_decimal::Error| e.to_string())?;
+    let asset_acc = Uuid::parse_str(&asset_account_id).map_err(|e| e.to_string())?;
+    let exp_acc = Uuid::parse_str(&expense_account_id).map_err(|e| e.to_string())?;
 
-    let use_case = ConsumableUseCases::new(state.consumable_repo.clone());
-    let id = use_case.create_item(code, name, category_uuid, money, fx)
+    let use_case = ConsumableUseCases::new(state.consumable_repo.clone(), state.asset_repo.clone(), state.journal_entry_repo.clone());
+    let id = use_case.create_item(code, name, category_uuid, money, fx, asset_acc, exp_acc)
         .await.map_err(|e| e.to_string())?;
 
     Ok(id.0.to_string())
@@ -89,8 +93,33 @@ pub async fn create_consumable(
 pub async fn list_consumables(
     state: State<'_, AppState>,
 ) -> Result<Vec<Consumable>, String> {
-    let use_case = ConsumableUseCases::new(state.consumable_repo.clone());
+    let use_case = ConsumableUseCases::new(state.consumable_repo.clone(), state.asset_repo.clone(), state.journal_entry_repo.clone());
     use_case.list_items().await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn add_consumable_stock(
+    id: String,
+    quantity: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let uuid = Uuid::parse_str(&id).map_err(|e| e.to_string())?;
+    let qty = Decimal::from_str(&quantity).map_err(|e| e.to_string())?;
+    let use_case = ConsumableUseCases::new(state.consumable_repo.clone(), state.asset_repo.clone(), state.journal_entry_repo.clone());
+    use_case.add_stock(uuid, qty).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn issue_consumable(
+    id: String,
+    quantity: String,
+    description: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let uuid = Uuid::parse_str(&id).map_err(|e| e.to_string())?;
+    let qty = Decimal::from_str(&quantity).map_err(|e| e.to_string())?;
+    let use_case = ConsumableUseCases::new(state.consumable_repo.clone(), state.asset_repo.clone(), state.journal_entry_repo.clone());
+    use_case.issue_item(uuid, qty, description).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]

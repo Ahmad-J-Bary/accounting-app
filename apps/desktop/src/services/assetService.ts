@@ -30,12 +30,22 @@ export const assetService = {
     unitCost: string;
     currency: string;
     fxRate: string;
+    assetAccountId: string;
+    expenseAccountId: string;
   }): Promise<string> {
     return await invoke<string>('create_consumable', data);
   },
 
   async listConsumables(): Promise<ConsumableDto[]> {
     return await invoke<ConsumableDto[]>('list_consumables');
+  },
+
+  async addConsumableStock(id: string, quantity: string): Promise<void> {
+    return await invoke<void>('add_consumable_stock', { id, quantity });
+  },
+
+  async issueConsumable(id: string, quantity: string, description: string): Promise<void> {
+    return await invoke<void>('issue_consumable', { id, quantity, description });
   },
 
   async listAssetCategories(assetType: 'Fixed' | 'Consumable'): Promise<AssetCategoryDto[]> {

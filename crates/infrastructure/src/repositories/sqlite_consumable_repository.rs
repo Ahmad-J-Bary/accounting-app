@@ -24,8 +24,8 @@ impl SqliteConsumableRepository {
 impl ConsumableRepository for SqliteConsumableRepository {
     async fn save(&self, consumable: &Consumable) -> Result<(), AppError> {
         sqlx::query(
-            "INSERT OR REPLACE INTO consumables (id, code, name, category_id, quantity_on_hand, unit_cost, currency, fx_rate, status, location, notes, created_at, updated_at) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT OR REPLACE INTO consumables (id, code, name, category_id, quantity_on_hand, unit_cost, currency, fx_rate, status, location, notes, asset_account_id, expense_account_id, created_at, updated_at) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
         .bind(consumable.id.0.to_string())
         .bind(&consumable.code)
@@ -38,6 +38,8 @@ impl ConsumableRepository for SqliteConsumableRepository {
         .bind(format!("{:?}", consumable.status))
         .bind(&consumable.location)
         .bind(&consumable.notes)
+        .bind(consumable.asset_account_id.to_string())
+        .bind(consumable.expense_account_id.to_string())
         .bind(consumable.created_at.to_rfc3339())
         .bind(consumable.updated_at.to_rfc3339())
         .execute(&*self.pool)
@@ -106,6 +108,8 @@ impl SqliteConsumableRepository {
             },
             location: row.get("location"),
             notes: row.get("notes"),
+            asset_account_id: Uuid::parse_str(row.get("asset_account_id")).unwrap_or_default(),
+            expense_account_id: Uuid::parse_str(row.get("expense_account_id")).unwrap_or_default(),
             created_at: DateTime::parse_from_rfc3339(row.get("created_at")).unwrap_or_default().with_timezone(&chrono::Utc),
             updated_at: DateTime::parse_from_rfc3339(row.get("updated_at")).unwrap_or_default().with_timezone(&chrono::Utc),
         })
