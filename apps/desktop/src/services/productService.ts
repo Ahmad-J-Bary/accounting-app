@@ -16,4 +16,12 @@ export const productService = {
   async getProduct(id: string): Promise<ProductDto> {
     return await invoke<ProductDto>('get_product', { id });
   },
+
+  async updateProduct(request: ProductDto): Promise<ProductDto> {
+    return await invoke<ProductDto>('update_product', { request });
+  },
+
+  async deleteProduct(id: string): Promise<void> {
+    return await invoke<void>('delete_product', { id });
+  },
 };

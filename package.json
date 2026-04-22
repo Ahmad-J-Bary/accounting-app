@@ -6,7 +6,8 @@
     "dev": "pnpm --filter desktop dev",
     "build": "pnpm --filter desktop build",
     "tauri": "pnpm --filter desktop tauri",
-    "tauri:dev": "pnpm --filter desktop tauri dev"
+    "tauri:dev": "pnpm --filter desktop tauri dev",
+    "lint": "pnpm --filter desktop lint"
   },
   "devDependencies": {
     "typescript": "^5.5.3"
