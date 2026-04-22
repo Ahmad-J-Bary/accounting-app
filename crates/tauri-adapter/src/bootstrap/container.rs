@@ -14,6 +14,8 @@ use infrastructure::{
     SqliteAuditLogRepository,
     SqliteUserRepository,
     SqliteProductionRepository,
+    SqliteAssetRepository,
+    SqliteConsumableRepository,
 };
 use infrastructure::db::pool::{create_pool, run_migrations};
 use application::ports::invoice_repository::InvoiceRepository;
@@ -30,6 +32,8 @@ use application::ports::settings_repository::SettingsRepository;
 use application::ports::audit_log_repository::AuditLogRepository;
 use application::ports::user_repository::UserRepository;
 use application::ports::production_repository::ProductionRepository;
+use application::ports::asset_repository::AssetRepository;
+use application::ports::consumable_repository::ConsumableRepository;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -47,6 +51,8 @@ pub struct AppState {
     pub audit_repo: Arc<dyn AuditLogRepository>,
     pub user_repo: Arc<dyn UserRepository>,
     pub production_repo: Arc<dyn ProductionRepository>,
+    pub asset_repo: Arc<dyn AssetRepository>,
+    pub consumable_repo: Arc<dyn ConsumableRepository>,
 }
 
 pub async fn build_app_state() -> Result<AppState, String> {
@@ -76,6 +82,8 @@ pub async fn build_app_state() -> Result<AppState, String> {
         settings_repo: Arc::new(SqliteSettingsRepository::new(pool.clone())),
         audit_repo: Arc::new(SqliteAuditLogRepository::new(pool.clone())),
         user_repo: Arc::new(SqliteUserRepository::new(pool.clone())),
-        production_repo: Arc::new(SqliteProductionRepository::new(pool)),
+        production_repo: Arc::new(SqliteProductionRepository::new(pool.clone())),
+        asset_repo: Arc::new(SqliteAssetRepository::new(pool.clone())),
+        consumable_repo: Arc::new(SqliteConsumableRepository::new(pool)),
     })
 }

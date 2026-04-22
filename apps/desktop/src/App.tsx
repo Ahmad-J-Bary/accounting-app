@@ -22,6 +22,7 @@ import Reports from './pages/Reports';
 import Users from './pages/Users';
 import Settings from './pages/Settings';
 import AuditLog from './pages/AuditLog';
+import Assets from './pages/Assets';
 import InvoiceDetail from './pages/InvoiceDetail';
 import AuthCallback from './pages/AuthCallback';
 import AuthError from './pages/AuthError';
@@ -63,6 +64,7 @@ const App = () => (
                 <Route path="/users" element={<Users />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/audit-log" element={<AuditLog />} />
+                <Route path="/assets" element={<Assets />} />
               </Routes>
             </AppLayout>
           } />

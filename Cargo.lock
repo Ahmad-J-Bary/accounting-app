@@ -4391,13 +4391,16 @@ name = "tauri-adapter"
 version = "0.2.3"
 dependencies = [
  "application",
+ "chrono",
  "domain",
  "infrastructure",
+ "rust_decimal",
  "serde",
  "serde_json",
  "tauri",
  "tauri-plugin-shell",
  "tokio",
+ "uuid",
 ]
 
 [[package]]

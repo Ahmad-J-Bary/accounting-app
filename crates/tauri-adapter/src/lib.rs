@@ -63,6 +63,10 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::audit::list_audit_logs,
             commands::accounting::get_chart_of_accounts,
             commands::accounting::get_account_ledger,
+            commands::assets::create_fixed_asset,
+            commands::assets::list_fixed_assets,
+            commands::assets::create_consumable,
+            commands::assets::list_consumables,
         ])
         .setup(|app| {
             let app_state = tauri::async_runtime::block_on(

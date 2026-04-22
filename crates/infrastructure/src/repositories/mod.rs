@@ -10,6 +10,8 @@ pub mod sqlite_damaged_repository;
 pub mod sqlite_stock_adjustment_repository;
 pub mod sqlite_settings_repository;
 pub mod sqlite_audit_log_repository;
+pub mod sqlite_asset_repository;
+pub mod sqlite_consumable_repository;
 pub mod sqlite_user_repository;
 pub mod sqlite_production_repository;
 // pub mod sqlite_role_repository;

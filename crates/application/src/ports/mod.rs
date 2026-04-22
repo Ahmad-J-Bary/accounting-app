@@ -14,3 +14,5 @@ pub mod stock_adjustment_repository;
 pub mod user_repository;
 pub mod audit_log_repository;
 pub mod settings_repository;
+pub mod asset_repository;
+pub mod consumable_repository;

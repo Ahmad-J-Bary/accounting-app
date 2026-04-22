@@ -18,3 +18,5 @@ pub mod settings_use_cases;
 pub mod audit_use_cases;
 pub mod get_chart_of_accounts;
 pub mod get_account_ledger;
+pub mod fixed_asset_use_cases;
+pub mod consumable_use_cases;

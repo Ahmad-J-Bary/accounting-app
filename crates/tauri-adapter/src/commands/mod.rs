@@ -12,3 +12,4 @@ pub mod users;
 pub mod settings;
 pub mod audit;
 pub mod accounting;
+pub mod assets;
