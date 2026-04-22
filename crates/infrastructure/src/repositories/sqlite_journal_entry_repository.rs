@@ -145,6 +145,27 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
         Ok(entries)
     }
 
+    async fn list_by_account(&self, account_id: &AccountId) -> Result<Vec<JournalEntry>, AppError> {
+        let rows = sqlx::query_as::<_, JournalEntryRow>(
+            "SELECT DISTINCT je.id, je.entry_number, je.entry_date, je.description, je.status, je.created_at, je.posted_at, je.updated_at 
+             FROM journal_entries je
+             JOIN journal_lines jl ON je.id = jl.journal_entry_id
+             WHERE jl.account_id = ?
+             ORDER BY je.entry_date DESC"
+        )
+        .bind(account_id.0.to_string())
+        .fetch_all(&*self.pool)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+        let mut entries = Vec::new();
+        for row in rows {
+            let lines = self.load_lines(&row.id).await?;
+            entries.push(self.map_row(row, lines)?);
+        }
+        Ok(entries)
+    }
+
     async fn delete(&self, id: &JournalEntryId) -> Result<(), AppError> {
         sqlx::query("DELETE FROM journal_entries WHERE id = ?")
             .bind(id.0.to_string())

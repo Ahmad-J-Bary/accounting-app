@@ -8,6 +8,7 @@ pub mod payment_dto;
 pub mod stock_dto;
 pub mod damaged_dto;
 pub mod production_dto;
+pub mod account_dto;
 pub mod adjustment_dto;
 pub mod user_dto;
 pub mod report_dto;
