@@ -137,7 +137,7 @@ mod tests {
             InvoiceLine::new(
                 ProductId(Uuid::new_v4()),
                 dec!(2),
-                Money::from(dec!(50)),
+                Money::syp(dec!(50)),
             ),
         ];
 
@@ -152,12 +152,12 @@ mod tests {
             InvoiceLine::new(
                 ProductId(Uuid::new_v4()),
                 dec!(2),
-                Money::from(dec!(50)),
+                Money::syp(dec!(50)),
             ),
             InvoiceLine::new(
                 ProductId(Uuid::new_v4()),
                 dec!(3),
-                Money::from(dec!(100)),
+                Money::syp(dec!(100)),
             ),
         ];
 
@@ -173,7 +173,7 @@ mod tests {
             InvoiceLine::new(
                 ProductId(Uuid::new_v4()),
                 dec!(2),
-                Money::from(dec!(50)),
+                Money::syp(dec!(50)),
             ),
         ];
 
@@ -189,7 +189,7 @@ mod tests {
             InvoiceLine::new(
                 ProductId(Uuid::new_v4()),
                 dec!(2),
-                Money::from(dec!(50)),
+                Money::syp(dec!(50)),
             ),
         ];
 
@@ -199,7 +199,7 @@ mod tests {
         let new_line = InvoiceLine::new(
             ProductId(Uuid::new_v4()),
             dec!(1),
-            Money::from(dec!(30)),
+            Money::syp(dec!(30)),
         );
 
         assert!(invoice.add_line(new_line).is_err());
@@ -212,7 +212,7 @@ mod tests {
             InvoiceLine::new(
                 ProductId(Uuid::new_v4()),
                 dec!(2),
-                Money::from(dec!(50)),
+                Money::syp(dec!(50)),
             ),
         ];
 
@@ -229,7 +229,7 @@ mod tests {
             InvoiceLine::new(
                 ProductId(Uuid::new_v4()),
                 dec!(-1),
-                Money::from(dec!(50)),
+                Money::syp(dec!(50)),
             ),
         ];
 
@@ -244,7 +244,7 @@ mod tests {
             InvoiceLine::new(
                 ProductId(Uuid::new_v4()),
                 dec!(2),
-                Money::from(dec!(-50)),
+                Money::syp(dec!(-50)),
             ),
         ];
 

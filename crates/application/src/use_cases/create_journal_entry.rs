@@ -26,15 +26,24 @@ impl CreateJournalEntryUseCase {
                     Uuid::parse_str(&dto.account_id)
                         .map_err(|e| AppError::Invalid(format!("Invalid account ID: {}", e)))?
                 );
+                let currency = match dto.currency.as_str() {
+                    "USD" => domain::shared::currency::Currency::USD,
+                    _ => domain::shared::currency::Currency::SYP,
+                };
+                let fx_rate = rust_decimal::Decimal::from_str(&dto.fx_rate)
+                    .unwrap_or(rust_decimal::Decimal::ONE);
+
                 let debit = Money::new(
                     rust_decimal::Decimal::from_str(&dto.debit)
-                        .map_err(|e| AppError::Invalid(format!("Invalid debit amount: {}", e)))?
+                        .map_err(|e| AppError::Invalid(format!("Invalid debit amount: {}", e)))?,
+                    currency
                 );
                 let credit = Money::new(
                     rust_decimal::Decimal::from_str(&dto.credit)
-                        .map_err(|e| AppError::Invalid(format!("Invalid credit amount: {}", e)))?
+                        .map_err(|e| AppError::Invalid(format!("Invalid credit amount: {}", e)))?,
+                    currency
                 );
-                Ok(JournalLine::new(account_id, debit, credit, dto.description))
+                Ok(JournalLine::new(account_id, currency, fx_rate, debit, credit, dto.description))
             })
             .collect();
 

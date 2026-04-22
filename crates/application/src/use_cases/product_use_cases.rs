@@ -25,8 +25,8 @@ impl CreateProductUseCase {
         let product = Product::new(
             req.name,
             req.code,
-            Money::from(unit_price),
-            Money::from(cost_price),
+            Money::syp(unit_price),
+            Money::syp(cost_price),
             initial_stock,
             minimum_stock,
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
@@ -57,8 +57,8 @@ impl UpdateProductUseCase {
 
         product.name = req.name;
         product.code = req.code;
-        product.unit_price = Money::from(unit_price);
-        product.cost_price = Money::from(cost_price);
+        product.unit_price = Money::syp(unit_price);
+        product.cost_price = Money::syp(cost_price);
         product.stock_quantity = stock_quantity;
         product.minimum_stock = minimum_stock;
         

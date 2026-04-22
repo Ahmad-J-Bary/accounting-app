@@ -161,7 +161,7 @@ impl SqliteInvoiceRepository {
             lines.push(InvoiceLine::new(
                 ProductId(uuid::Uuid::parse_str(&product_id_str).unwrap()),
                 Decimal::from_str(&quantity_str).unwrap_or(Decimal::ZERO),
-                Money::new(Decimal::from_str(&price_str).unwrap_or(Decimal::ZERO))
+                Money::syp(Decimal::from_str(&price_str).unwrap_or(Decimal::ZERO))
             ));
         }
         Ok(lines)
@@ -181,8 +181,8 @@ impl SqliteInvoiceRepository {
             invoice_number: num,
             customer_id: CustomerId(uuid::Uuid::parse_str(&customer_id_str).unwrap()),
             lines,
-            tax_amount: Money::new(Decimal::from_str(&tax_str).unwrap_or(Decimal::ZERO)),
-            discount_amount: Money::new(Decimal::from_str(&disc_str).unwrap_or(Decimal::ZERO)),
+            tax_amount: Money::syp(Decimal::from_str(&tax_str).unwrap_or(Decimal::ZERO)),
+            discount_amount: Money::syp(Decimal::from_str(&disc_str).unwrap_or(Decimal::ZERO)),
             issued_at: DateTime::from_str(&date_str).unwrap_or(Utc::now()),
             posted: status == "Posted",
         })

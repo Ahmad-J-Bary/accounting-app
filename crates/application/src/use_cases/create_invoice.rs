@@ -42,7 +42,7 @@ impl CreateInvoiceUseCase {
             lines.push(InvoiceLine::new(
                 ProductId(product_id),
                 quantity,
-                unit_price.into(),
+                domain::shared::money::Money::syp(unit_price),
             ));
         }
 
@@ -55,8 +55,8 @@ impl CreateInvoiceUseCase {
             request.invoice_number,
             CustomerId(customer_id),
             lines,
-            tax_amount.into(),
-            discount_amount.into(),
+            domain::shared::money::Money::syp(tax_amount),
+            domain::shared::money::Money::syp(discount_amount),
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
         self.repo.save(&invoice).await?;

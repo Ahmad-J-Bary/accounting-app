@@ -132,8 +132,8 @@ mod tests {
         let result = Product::new(
             "منتج تجريبي".to_string(),
             "PROD-001".to_string(),
-            Money::from(dec!(100)),
-            Money::from(dec!(70)),
+            Money::syp(dec!(100)),
+            Money::syp(dec!(70)),
             dec!(50),
             dec!(10),
         );
@@ -150,8 +150,8 @@ mod tests {
         let result = Product::new(
             "".to_string(),
             "PROD-001".to_string(),
-            Money::from(dec!(100)),
-            Money::from(dec!(70)),
+            Money::syp(dec!(100)),
+            Money::syp(dec!(70)),
             dec!(50),
             dec!(10),
         );
@@ -164,8 +164,8 @@ mod tests {
         let result = Product::new(
             "منتج تجريبي".to_string(),
             "".to_string(),
-            Money::from(dec!(100)),
-            Money::from(dec!(70)),
+            Money::syp(dec!(100)),
+            Money::syp(dec!(70)),
             dec!(50),
             dec!(10),
         );
@@ -178,8 +178,8 @@ mod tests {
         let result = Product::new(
             "منتج تجريبي".to_string(),
             "PROD-001".to_string(),
-            Money::from(dec!(-100)),
-            Money::from(dec!(70)),
+            Money::syp(dec!(-100)),
+            Money::syp(dec!(70)),
             dec!(50),
             dec!(10),
         );
@@ -192,8 +192,8 @@ mod tests {
         let result = Product::new(
             "منتج تجريبي".to_string(),
             "PROD-001".to_string(),
-            Money::from(dec!(100)),
-            Money::from(dec!(-70)),
+            Money::syp(dec!(100)),
+            Money::syp(dec!(-70)),
             dec!(50),
             dec!(10),
         );
@@ -206,8 +206,8 @@ mod tests {
         let mut product = Product::new(
             "منتج تجريبي".to_string(),
             "PROD-001".to_string(),
-            Money::from(dec!(100)),
-            Money::from(dec!(70)),
+            Money::syp(dec!(100)),
+            Money::syp(dec!(70)),
             dec!(50),
             dec!(10),
         ).unwrap();
@@ -221,8 +221,8 @@ mod tests {
         let mut product = Product::new(
             "منتج تجريبي".to_string(),
             "PROD-001".to_string(),
-            Money::from(dec!(100)),
-            Money::from(dec!(70)),
+            Money::syp(dec!(100)),
+            Money::syp(dec!(70)),
             dec!(10),
             dec!(5),
         ).unwrap();
@@ -236,8 +236,8 @@ mod tests {
         let product = Product::new(
             "منتج تجريبي".to_string(),
             "PROD-001".to_string(),
-            Money::from(dec!(100)),
-            Money::from(dec!(70)),
+            Money::syp(dec!(100)),
+            Money::syp(dec!(70)),
             dec!(5),
             dec!(10),
         ).unwrap();
@@ -250,8 +250,8 @@ mod tests {
         let product = Product::new(
             "منتج تجريبي".to_string(),
             "PROD-001".to_string(),
-            Money::from(dec!(100)),
-            Money::from(dec!(70)),
+            Money::syp(dec!(100)),
+            Money::syp(dec!(70)),
             dec!(50),
             dec!(10),
         ).unwrap();

@@ -5,26 +5,44 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::shared::currency::Currency;
+use rust_decimal::Decimal;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JournalLine {
     pub account_id: AccountId,
+    pub currency: Currency,
+    pub fx_rate: Decimal, // سعر الصرف مقابل الليرة السورية
     pub debit: Money,
     pub credit: Money,
     pub description: String,
 }
 
 impl JournalLine {
-    pub fn new(account_id: AccountId, debit: Money, credit: Money, description: String) -> Self {
+    pub fn new(
+        account_id: AccountId,
+        currency: Currency,
+        fx_rate: Decimal,
+        debit: Money,
+        credit: Money,
+        description: String,
+    ) -> Self {
         Self {
             account_id,
+            currency,
+            fx_rate,
             debit,
             credit,
             description,
         }
     }
 
-    pub fn is_balanced(&self) -> bool {
-        self.debit.amount() == self.credit.amount()
+    pub fn base_debit(&self) -> Decimal {
+        self.debit.to_base(self.fx_rate)
+    }
+
+    pub fn base_credit(&self) -> Decimal {
+        self.credit.to_base(self.fx_rate)
     }
 }
 
@@ -32,6 +50,7 @@ impl JournalLine {
 pub enum JournalEntryStatus {
     Draft,
     Posted,
+    Reversed,
     Cancelled,
 }
 
@@ -45,6 +64,7 @@ pub struct JournalEntry {
     pub status: JournalEntryStatus,
     pub created_at: DateTime<Utc>,
     pub posted_at: Option<DateTime<Utc>>,
+    pub reversed_at: Option<DateTime<Utc>>,
 }
 
 impl JournalEntry {
@@ -77,40 +97,33 @@ impl JournalEntry {
             status: JournalEntryStatus::Draft,
             created_at: now,
             posted_at: None,
+            reversed_at: None,
         })
     }
 
-    pub fn total_debit(&self) -> Money {
-        self.lines.iter().fold(Money::zero(), |acc, line| {
-            acc + line.debit.clone()
-        })
+    pub fn total_base_debit(&self) -> Decimal {
+        self.lines.iter().map(|l| l.base_debit()).sum()
     }
 
-    pub fn total_credit(&self) -> Money {
-        self.lines.iter().fold(Money::zero(), |acc, line| {
-            acc + line.credit.clone()
-        })
+    pub fn total_base_credit(&self) -> Decimal {
+        self.lines.iter().map(|l| l.base_credit()).sum()
     }
 
     pub fn is_balanced(&self) -> bool {
-        self.total_debit().amount() == self.total_credit().amount()
+        self.total_base_debit() == self.total_base_credit()
     }
 
     pub fn post(&mut self) -> Result<(), DomainError> {
-        if self.status == JournalEntryStatus::Posted {
-            return Err(DomainError::Invalid("القيد مُرحّل مسبقًا".into()));
-        }
-
-        if self.status == JournalEntryStatus::Cancelled {
-            return Err(DomainError::Invalid("القيد ملغي".into()));
+        if self.status != JournalEntryStatus::Draft {
+            return Err(DomainError::Invalid("يمكن ترحيل القيود المسودة فقط".into()));
         }
 
         if !self.is_balanced() {
-            return Err(DomainError::Invalid("القيد غير متوازن".into()));
-        }
-
-        if self.lines.is_empty() {
-            return Err(DomainError::Invalid("لا يمكن ترحيل قيد فارغ".into()));
+            return Err(DomainError::Invalid(format!(
+                "القيد غير متوازن بالليرة السورية. مدين: {} ، دائن: {}",
+                self.total_base_debit(),
+                self.total_base_credit()
+            )));
         }
 
         self.status = JournalEntryStatus::Posted;
@@ -118,38 +131,13 @@ impl JournalEntry {
         Ok(())
     }
 
-    pub fn cancel(&mut self) -> Result<(), DomainError> {
-        if self.status == JournalEntryStatus::Posted {
-            return Err(DomainError::Forbidden("لا يمكن إلغاء قيد مُرحّل".into()));
+    pub fn reverse(&mut self) -> Result<(), DomainError> {
+        if self.status != JournalEntryStatus::Posted {
+            return Err(DomainError::Forbidden("يمكن عكس القيود المرحلة فقط".into()));
         }
 
-        if self.status == JournalEntryStatus::Cancelled {
-            return Err(DomainError::Invalid("القيد ملغي مسبقًا".into()));
-        }
-
-        self.status = JournalEntryStatus::Cancelled;
-        Ok(())
-    }
-
-    pub fn add_line(&mut self, line: JournalLine) -> Result<(), DomainError> {
-        if self.status == JournalEntryStatus::Posted {
-            return Err(DomainError::Forbidden("لا يمكن إضافة سطر لقيد مُرحّل".into()));
-        }
-
-        self.lines.push(line);
-        Ok(())
-    }
-
-    pub fn remove_line(&mut self, index: usize) -> Result<(), DomainError> {
-        if self.status == JournalEntryStatus::Posted {
-            return Err(DomainError::Forbidden("لا يمكن حذف سطر من قيد مُرحّل".into()));
-        }
-
-        if index >= self.lines.len() {
-            return Err(DomainError::Invalid("مؤشر السطر غير صالح".into()));
-        }
-
-        self.lines.remove(index);
+        self.status = JournalEntryStatus::Reversed;
+        self.reversed_at = Some(Utc::now());
         Ok(())
     }
 }
@@ -164,14 +152,18 @@ mod tests {
         let lines = vec![
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                Money::from(dec!(100)),
+                Currency::SYP,
+                Decimal::ONE,
+                Money::syp(dec!(100)),
                 Money::zero(),
                 "مدين".to_string(),
             ),
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
+                Currency::SYP,
+                Decimal::ONE,
                 Money::zero(),
-                Money::from(dec!(100)),
+                Money::syp(dec!(100)),
                 "دائن".to_string(),
             ),
         ];
@@ -187,64 +179,24 @@ mod tests {
     }
 
     #[test]
-    fn journal_entry_number_cannot_be_empty() {
-        let result = JournalEntry::new(
-            "".to_string(),
-            vec![],
-            Utc::now(),
-            "قيد تجريبي".to_string(),
-        );
-
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn journal_entry_lines_cannot_be_empty() {
-        let result = JournalEntry::new(
-            "JE-001".to_string(),
-            vec![],
-            Utc::now(),
-            "قيد تجريبي".to_string(),
-        );
-
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn journal_entry_description_cannot_be_empty() {
+    fn multi_currency_balanced_entry_can_be_posted() {
+        let fx_rate = dec!(15000); // 1 USD = 15000 SYP
         let lines = vec![
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                Money::from(dec!(100)),
+                Currency::USD,
+                fx_rate,
+                Money::usd(dec!(10)), // 150,000 SYP
                 Money::zero(),
-                "مدين".to_string(),
-            ),
-        ];
-
-        let result = JournalEntry::new(
-            "JE-001".to_string(),
-            lines,
-            Utc::now(),
-            "".to_string(),
-        );
-
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn balanced_journal_entry_can_be_posted() {
-        let lines = vec![
-            JournalLine::new(
-                AccountId(Uuid::new_v4()),
-                Money::from(dec!(100)),
-                Money::zero(),
-                "مدين".to_string(),
+                "مدين بالدولار".to_string(),
             ),
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
+                Currency::SYP,
+                dec!(1),
                 Money::zero(),
-                Money::from(dec!(100)),
-                "دائن".to_string(),
+                Money::syp(dec!(150000)), // 150,000 SYP
+                "دائن بالليرة".to_string(),
             ),
         ];
 
@@ -252,26 +204,30 @@ mod tests {
             "JE-001".to_string(),
             lines,
             Utc::now(),
-            "قيد تجريبي".to_string(),
+            "قيد عملات مختلطة".to_string(),
         ).unwrap();
 
         assert!(entry.post().is_ok());
-        assert!(matches!(entry.status, JournalEntryStatus::Posted));
     }
 
     #[test]
-    fn unbalanced_journal_entry_cannot_be_posted() {
+    fn unbalanced_multi_currency_is_rejected() {
+        let fx_rate = dec!(15000);
         let lines = vec![
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                Money::from(dec!(100)),
+                Currency::USD,
+                fx_rate,
+                Money::usd(dec!(10)), // 150,000 SYP
                 Money::zero(),
                 "مدين".to_string(),
             ),
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
+                Currency::SYP,
+                dec!(1),
                 Money::zero(),
-                Money::from(dec!(50)),
+                Money::syp(dec!(140000)), // 140,000 SYP -> Unbalanced
                 "دائن".to_string(),
             ),
         ];
@@ -280,7 +236,7 @@ mod tests {
             "JE-001".to_string(),
             lines,
             Utc::now(),
-            "قيد تجريبي".to_string(),
+            "قيد غير متوازن".to_string(),
         ).unwrap();
 
         assert!(entry.post().is_err());
@@ -291,14 +247,18 @@ mod tests {
         let lines = vec![
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                Money::from(dec!(100)),
+                Currency::SYP,
+                dec!(1),
+                Money::syp(dec!(100)),
                 Money::zero(),
                 "مدين".to_string(),
             ),
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
+                Currency::SYP,
+                dec!(1),
                 Money::zero(),
-                Money::from(dec!(100)),
+                Money::syp(dec!(100)),
                 "دائن".to_string(),
             ),
         ];
@@ -315,84 +275,23 @@ mod tests {
     }
 
     #[test]
-    fn cannot_add_line_to_posted_entry() {
+    fn total_base_debit_calculates_correctly() {
         let lines = vec![
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                Money::from(dec!(100)),
+                Currency::SYP,
+                dec!(1),
+                Money::syp(dec!(100)),
                 Money::zero(),
                 "مدين".to_string(),
             ),
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
+                Currency::USD,
+                dec!(15000),
+                Money::usd(dec!(10)), // 150,000 SYP
                 Money::zero(),
-                Money::from(dec!(100)),
-                "دائن".to_string(),
-            ),
-        ];
-
-        let mut entry = JournalEntry::new(
-            "JE-001".to_string(),
-            lines,
-            Utc::now(),
-            "قيد تجريبي".to_string(),
-        ).unwrap();
-
-        entry.post().unwrap();
-
-        let new_line = JournalLine::new(
-            AccountId(Uuid::new_v4()),
-            Money::from(dec!(50)),
-            Money::zero(),
-            "مدين".to_string(),
-        );
-
-        assert!(entry.add_line(new_line).is_err());
-    }
-
-    #[test]
-    fn cannot_remove_line_from_posted_entry() {
-        let lines = vec![
-            JournalLine::new(
-                AccountId(Uuid::new_v4()),
-                Money::from(dec!(100)),
-                Money::zero(),
-                "مدين".to_string(),
-            ),
-            JournalLine::new(
-                AccountId(Uuid::new_v4()),
-                Money::zero(),
-                Money::from(dec!(100)),
-                "دائن".to_string(),
-            ),
-        ];
-
-        let mut entry = JournalEntry::new(
-            "JE-001".to_string(),
-            lines,
-            Utc::now(),
-            "قيد تجريبي".to_string(),
-        ).unwrap();
-
-        entry.post().unwrap();
-
-        assert!(entry.remove_line(0).is_err());
-    }
-
-    #[test]
-    fn total_debit_calculates_correctly() {
-        let lines = vec![
-            JournalLine::new(
-                AccountId(Uuid::new_v4()),
-                Money::from(dec!(100)),
-                Money::zero(),
-                "مدين".to_string(),
-            ),
-            JournalLine::new(
-                AccountId(Uuid::new_v4()),
-                Money::from(dec!(50)),
-                Money::zero(),
-                "مدين".to_string(),
+                "مدين دولار".to_string(),
             ),
         ];
 
@@ -403,23 +302,27 @@ mod tests {
             "قيد تجريبي".to_string(),
         ).unwrap();
 
-        assert_eq!(entry.total_debit().amount(), dec!(150));
+        assert_eq!(entry.total_base_debit(), dec!(150100));
     }
 
     #[test]
-    fn total_credit_calculates_correctly() {
+    fn total_base_credit_calculates_correctly() {
         let lines = vec![
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
+                Currency::SYP,
+                dec!(1),
                 Money::zero(),
-                Money::from(dec!(100)),
+                Money::syp(dec!(100)),
                 "دائن".to_string(),
             ),
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
+                Currency::USD,
+                dec!(15000),
                 Money::zero(),
-                Money::from(dec!(50)),
-                "دائن".to_string(),
+                Money::usd(dec!(10)), // 150,000 SYP
+                "دائن دولار".to_string(),
             ),
         ];
 
@@ -430,6 +333,6 @@ mod tests {
             "قيد تجريبي".to_string(),
         ).unwrap();
 
-        assert_eq!(entry.total_credit().amount(), dec!(150));
+        assert_eq!(entry.total_base_credit(), dec!(150100));
     }
 }

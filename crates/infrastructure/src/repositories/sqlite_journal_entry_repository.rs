@@ -39,6 +39,8 @@ struct JournalEntryRow {
 struct JournalLineRow {
     id: String,
     account_id: String,
+    currency: String,
+    fx_rate: String,
     debit: String,
     credit: String,
     description: String,
@@ -73,11 +75,13 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
 
         for line in &entry.lines {
             sqlx::query(
-                "INSERT INTO journal_lines (id, journal_entry_id, account_id, debit, credit, description, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                "INSERT INTO journal_lines (id, journal_entry_id, account_id, currency, fx_rate, debit, credit, description, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
             )
             .bind(Uuid::new_v4().to_string())
             .bind(entry.id.0.to_string())
             .bind(line.account_id.0.to_string())
+            .bind(line.currency.code().to_string())
+            .bind(line.fx_rate.to_string())
             .bind(line.debit.amount().to_string())
             .bind(line.credit.amount().to_string())
             .bind(&line.description)
@@ -154,7 +158,7 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
 impl SqliteJournalEntryRepository {
     async fn load_lines(&self, entry_id: &str) -> Result<Vec<JournalLine>, AppError> {
         let rows = sqlx::query_as::<_, JournalLineRow>(
-            "SELECT id, account_id, debit, credit, description FROM journal_lines WHERE journal_entry_id = ?"
+            "SELECT id, account_id, currency, fx_rate, debit, credit, description FROM journal_lines WHERE journal_entry_id = ?"
         )
         .bind(entry_id)
         .fetch_all(&*self.pool)
@@ -164,9 +168,21 @@ impl SqliteJournalEntryRepository {
         let mut lines = Vec::new();
         for r in rows {
             let account_id = AccountId(Uuid::parse_str(&r.account_id).unwrap_or_default());
-            let debit = Money::new(Decimal::from_str(&r.debit).unwrap_or(Decimal::ZERO));
-            let credit = Money::new(Decimal::from_str(&r.credit).unwrap_or(Decimal::ZERO));
-            lines.push(JournalLine::new(account_id, debit, credit, r.description));
+            let currency = match r.currency.as_str() {
+                "USD" => domain::shared::currency::Currency::USD,
+                _ => domain::shared::currency::Currency::SYP,
+            };
+            let fx_rate = Decimal::from_str(&r.fx_rate).unwrap_or(Decimal::ONE);
+
+            let debit = Money::new(
+                Decimal::from_str(&r.debit).unwrap_or(Decimal::ZERO),
+                currency
+            );
+            let credit = Money::new(
+                Decimal::from_str(&r.credit).unwrap_or(Decimal::ZERO),
+                currency
+            );
+            lines.push(JournalLine::new(account_id, currency, fx_rate, debit, credit, r.description));
         }
         Ok(lines)
     }

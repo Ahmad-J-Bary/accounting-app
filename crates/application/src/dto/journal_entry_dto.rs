@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JournalLineDto {
     pub account_id: String,
+    pub currency: String,
+    pub fx_rate: String,
     pub debit: String,
     pub credit: String,
     pub description: String,
@@ -17,8 +19,8 @@ pub struct JournalEntryDto {
     pub entry_date: String,
     pub description: String,
     pub status: String,
-    pub total_debit: String,
-    pub total_credit: String,
+    pub total_base_debit: String,
+    pub total_base_credit: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,8 +33,8 @@ pub struct CreateJournalEntryRequest {
 
 impl From<JournalEntry> for JournalEntryDto {
     fn from(entry: JournalEntry) -> Self {
-        let total_debit = entry.total_debit().amount().to_string();
-        let total_credit = entry.total_credit().amount().to_string();
+        let total_base_debit = entry.total_base_debit().to_string();
+        let total_base_credit = entry.total_base_credit().to_string();
         let status = format!("{:?}", entry.status);
         Self {
             id: entry.id.0.to_string(),
@@ -41,8 +43,8 @@ impl From<JournalEntry> for JournalEntryDto {
             entry_date: entry.entry_date.to_rfc3339(),
             description: entry.description,
             status,
-            total_debit,
-            total_credit,
+            total_base_debit,
+            total_base_credit,
         }
     }
 }
@@ -51,6 +53,8 @@ impl From<JournalLine> for JournalLineDto {
     fn from(line: JournalLine) -> Self {
         Self {
             account_id: line.account_id.0.to_string(),
+            currency: line.currency.code().to_string(),
+            fx_rate: line.fx_rate.to_string(),
             debit: line.debit.amount().to_string(),
             credit: line.credit.amount().to_string(),
             description: line.description,
