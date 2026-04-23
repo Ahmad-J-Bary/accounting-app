@@ -32,7 +32,6 @@ impl Product {
         retail_price: Option<Money>,
         wholesale_price: Option<Money>,
         semi_wholesale_price: Option<Money>,
-        initial_stock: Decimal,
         minimum_stock: Decimal,
     ) -> Result<Self, DomainError> {
         if name.trim().is_empty() {
@@ -54,7 +53,7 @@ impl Product {
             retail_price,
             wholesale_price,
             semi_wholesale_price,
-            stock_quantity: initial_stock,
+            stock_quantity: Decimal::ZERO,
             minimum_stock,
             is_active: true,
             created_at: now,
@@ -133,7 +132,6 @@ mod tests {
             Some(Money::syp(dec!(100))),
             Some(Money::syp(dec!(90))),
             Some(Money::syp(dec!(95))),
-            dec!(50),
             dec!(10),
         );
 
@@ -141,7 +139,7 @@ mod tests {
         let product = result.unwrap();
         assert_eq!(product.name, "منتج تجريبي");
         assert_eq!(product.barcode, Some("123456789".to_string()));
-        assert_eq!(product.stock_quantity, dec!(50));
+        assert_eq!(product.stock_quantity, dec!(0));
     }
 
     #[test]
@@ -154,7 +152,6 @@ mod tests {
             None,
             None,
             None,
-            dec!(50),
             dec!(10),
         );
 
@@ -171,7 +168,6 @@ mod tests {
             None,
             None,
             None,
-            dec!(50),
             dec!(10),
         );
 
@@ -188,12 +184,11 @@ mod tests {
             None,
             None,
             None,
-            dec!(50),
             dec!(10),
         ).unwrap();
 
         product.adjust_stock(dec!(10)).unwrap();
-        assert_eq!(product.stock_quantity, dec!(60));
+        assert_eq!(product.stock_quantity, dec!(10));
     }
 
     #[test]
@@ -206,7 +201,6 @@ mod tests {
             None,
             None,
             None,
-            dec!(10),
             dec!(5),
         ).unwrap();
 
@@ -224,7 +218,6 @@ mod tests {
             None,
             None,
             None,
-            dec!(5),
             dec!(10),
         ).unwrap();
 
@@ -241,7 +234,6 @@ mod tests {
             Some(Money::syp(dec!(100))),
             None,
             None,
-            dec!(50),
             dec!(10),
         ).unwrap();
 

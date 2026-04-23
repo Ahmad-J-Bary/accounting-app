@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/erp/StatusBadge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Download, Search, MoreHorizontal, Eye, Edit, Trash2, Mail, Phone, MapPin, Printer, RefreshCw } from "lucide-react";
+import { Plus, Download, Search, MoreHorizontal, Eye, Edit, Trash2, Phone, MapPin, Printer, RefreshCw } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -31,7 +31,7 @@ export default function Suppliers() {
 
   const [showDialog, setShowDialog] = useState(false);
   const [editSupplier, setEditSupplier] = useState<SupplierDto | null>(null);
-  const [form, setForm] = useState({ name: "", phone: "", email: "", address: "" });
+  const [form, setForm] = useState({ name: "", phone: "", address: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,37 +78,34 @@ export default function Suppliers() {
     const q = (search || "").toLowerCase();
     const nameMatch = (s.name || "").toLowerCase().includes(q);
     const phoneMatch = (s.phone || "").toLowerCase().includes(q);
-    const emailMatch = (s.email || "").toLowerCase().includes(q);
-    return nameMatch || phoneMatch || emailMatch;
+    return nameMatch || phoneMatch;
   });
 
   const totalBalance = suppliers.reduce((sum, s) => sum + parseFloat(s.balance || "0"), 0);
   const activeCount = suppliers.filter(s => s.is_active).length;
 
   const handleSave = async () => {
-    if (!form.name || !form.phone) return;
+    if (!form.name) return;
     setSaving(true);
     try {
       if (editSupplier) {
         await supplierService.updateSupplier({
           id: editSupplier.id,
           name: form.name,
-          phone: form.phone,
-          email: form.email || null,
+          phone: form.phone || null,
           address: form.address || null,
         });
         toast.success("تم تحديث بيانات المورد بنجاح");
       } else {
         await supplierService.createSupplier({
           name: form.name,
-          phone: form.phone,
-          email: form.email || null,
+          phone: form.phone || null,
           address: form.address || null,
         });
         toast.success("تم إضافة المورد بنجاح");
       }
       setShowDialog(false);
-      setForm({ name: "", phone: "", email: "", address: "" });
+      setForm({ name: "", phone: "", address: "" });
       setEditSupplier(null);
       await loadSuppliers();
     } catch (e) {
@@ -143,7 +140,7 @@ export default function Suppliers() {
             </Button>
             <Button onClick={() => {
               setEditSupplier(null);
-              setForm({ name: "", phone: "", email: "", address: "" });
+              setForm({ name: "", phone: "", address: "" });
               setShowDialog(true);
             }}>
               <Plus className="w-4 h-4 ml-2" />مورد جديد
@@ -199,7 +196,7 @@ export default function Suppliers() {
                 <tr>
                   <th className="text-right px-4 py-3 font-medium">اسم المورد</th>
                   <th className="text-right px-4 py-3 font-medium">الهاتف</th>
-                  <th className="text-right px-4 py-3 font-medium">البريد</th>
+                  <th className="text-right px-4 py-3 font-medium">العنوان</th>
                   <th className="text-left px-4 py-3 font-medium">الرصيد</th>
                   <th className="text-left px-4 py-3 font-medium">الحالة</th>
                   <th className="text-left px-4 py-3 font-medium w-12"></th>
@@ -209,8 +206,8 @@ export default function Suppliers() {
                 {filtered.map((s) => (
                   <tr key={s.id} className="border-b border-border last:border-0 hover:bg-slate-50 cursor-pointer" onClick={() => setSelectedId(s.id)}>
                     <td className="px-4 py-3 font-medium">{s.name}</td>
-                    <td className="px-4 py-3 tabular-nums">{s.phone}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{s.email ?? "—"}</td>
+                    <td className="px-4 py-3 tabular-nums">{s.phone || "—"}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{s.address ?? "—"}</td>
                     <td className="px-4 py-3 text-left tabular-nums font-medium">
                       {formatCurrency(parseFloat(s.balance))}
                     </td>
@@ -228,8 +225,7 @@ export default function Suppliers() {
                             setEditSupplier(s);
                             setForm({ 
                               name: s.name, 
-                              phone: s.phone, 
-                              email: s.email || "", 
+                              phone: s.phone || "", 
                               address: s.address || "" 
                             });
                             setShowDialog(true);
@@ -268,8 +264,7 @@ export default function Suppliers() {
               </div>
 
               <div className="mt-4 space-y-2 text-right">
-                <div className="flex items-center gap-2 text-sm justify-start"><Phone className="w-4 h-4 text-muted-foreground" />{current.phone}</div>
-                <div className="flex items-center gap-2 text-sm justify-start"><Mail className="w-4 h-4 text-muted-foreground" />{current.email || "لا يوجد بريد"}</div>
+                <div className="flex items-center gap-2 text-sm justify-start"><Phone className="w-4 h-4 text-muted-foreground" />{current.phone || "لا يوجد هاتف"}</div>
                 <div className="flex items-center gap-2 text-sm justify-start"><MapPin className="w-4 h-4 text-muted-foreground" />{current.address || "لا يوجد عنوان"}</div>
               </div>
 
@@ -350,12 +345,8 @@ export default function Suppliers() {
               <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="أدخل اسم المورد" />
             </div>
             <div className="space-y-1">
-              <Label>رقم الهاتف *</Label>
+              <Label>رقم الهاتف</Label>
               <Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="05xxxxxxxx" />
-            </div>
-            <div className="space-y-1">
-              <Label>البريد الإلكتروني</Label>
-              <Input value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="example@email.com" type="email" />
             </div>
             <div className="space-y-1">
               <Label>العنوان</Label>
@@ -364,7 +355,7 @@ export default function Suppliers() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDialog(false)}>إلغاء</Button>
-            <Button onClick={handleSave} disabled={saving || !form.name || !form.phone}>
+            <Button onClick={handleSave} disabled={saving || !form.name}>
               {saving ? "جاري الحفظ..." : "حفظ المورد"}
             </Button>
           </DialogFooter>

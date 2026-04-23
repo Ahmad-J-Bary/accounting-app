@@ -17,7 +17,6 @@ impl CreateCustomerUseCase {
         let customer = Customer::new(
             req.name,
             req.phone,
-            req.email,
             req.address,
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
 

@@ -1,7 +1,8 @@
 import { invoke } from '@/lib/invoke';
 import type { 
   ProductDto, 
-  CreateProductRequest 
+  CreateProductRequest,
+  RecordOpeningStockRequest
 } from '@erp/shared-types';
 
 export const productService = {
@@ -23,5 +24,9 @@ export const productService = {
 
   async deleteProduct(id: string): Promise<void> {
     return await invoke<void>('delete_product', { id });
+  },
+
+  async recordOpeningStock(request: RecordOpeningStockRequest): Promise<void> {
+    return await invoke<void>('record_opening_stock', { request });
   },
 };

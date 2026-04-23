@@ -9,8 +9,7 @@ use uuid::Uuid;
 pub struct Supplier {
     pub id: SupplierId,
     pub name: String,
-    pub phone: String,
-    pub email: Option<String>,
+    pub phone: Option<String>,
     pub address: Option<String>,
     pub balance: Decimal,
     pub is_active: bool,
@@ -21,22 +20,17 @@ pub struct Supplier {
 impl Supplier {
     pub fn new(
         name: String,
-        phone: String,
-        email: Option<String>,
+        phone: Option<String>,
         address: Option<String>,
     ) -> Result<Self, DomainError> {
         if name.trim().is_empty() {
             return Err(DomainError::Invalid("اسم المورد لا يمكن أن يكون فارغًا".into()));
-        }
-        if phone.trim().is_empty() {
-            return Err(DomainError::Invalid("رقم هاتف المورد لا يمكن أن يكون فارغًا".into()));
         }
         let now = Utc::now();
         Ok(Self {
             id: SupplierId(Uuid::new_v4()),
             name,
             phone,
-            email,
             address,
             balance: Decimal::ZERO,
             is_active: true,
@@ -66,8 +60,7 @@ impl Supplier {
     pub fn update_info(
         &mut self,
         name: String,
-        phone: String,
-        email: Option<String>,
+        phone: Option<String>,
         address: Option<String>,
     ) -> Result<(), DomainError> {
         if name.trim().is_empty() {
@@ -75,7 +68,6 @@ impl Supplier {
         }
         self.name = name;
         self.phone = phone;
-        self.email = email;
         self.address = address;
         self.updated_at = Utc::now();
         Ok(())

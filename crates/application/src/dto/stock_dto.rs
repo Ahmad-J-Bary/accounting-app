@@ -32,3 +32,17 @@ pub struct StockBalanceDto {
     pub minimum_stock: String,
     pub is_low_stock: bool,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OpeningStockItem {
+    pub product_id: String,
+    pub quantity: String,
+    pub unit_cost: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecordOpeningStockRequest {
+    pub items: Vec<OpeningStockItem>,
+    pub date: String,
+    pub notes: Option<String>,
+}

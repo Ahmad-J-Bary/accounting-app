@@ -17,7 +17,6 @@ impl CreateCustomerUseCase {
         let customer = Customer::new(
             req.name,
             req.phone,
-            req.email,
             req.address,
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
@@ -40,7 +39,7 @@ impl UpdateCustomerUseCase {
         let mut customer = self.repo.find_by_id(&cid).await?
             .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
         
-        customer.update_info(req.name, req.phone, req.email, req.address)
+        customer.update_info(req.name, req.phone, req.address)
             .map_err(|e| AppError::Invalid(e.to_string()))?;
         
         if req.is_active {

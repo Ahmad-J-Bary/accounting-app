@@ -7,6 +7,7 @@ pub mod payment;
 pub mod damaged;
 pub mod production;
 pub mod adjustment;
+pub mod inventory;
 pub mod journal;
 pub mod users;
 pub mod settings;

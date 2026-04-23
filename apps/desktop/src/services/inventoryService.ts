@@ -44,3 +44,10 @@ export const productionService = {
     return await invoke<ProductionOrder>('get_production_order', { id });
   },
 };
+
+// Stock Movements
+export const inventoryService = {
+  async listStockMovements(): Promise<any[]> {
+    return await invoke<any[]>('list_stock_movements');
+  },
+};

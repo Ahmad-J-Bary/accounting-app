@@ -14,14 +14,13 @@ impl CreateSupplierUseCase {
     }
 
     pub async fn execute(&self, req: CreateSupplierRequest) -> Result<SupplierDto, AppError> {
-        let supplier = Supplier::new(req.name, req.phone, req.email, req.address)
+        let supplier = Supplier::new(req.name, req.phone, req.address)
             .map_err(|e| AppError::Invalid(e.to_string()))?;
         self.repo.save(&supplier).await?;
         Ok(SupplierDto {
             id: supplier.id.to_string(),
             name: supplier.name,
             phone: supplier.phone,
-            email: supplier.email,
             address: supplier.address,
             balance: supplier.balance.to_string(),
             is_active: supplier.is_active,
@@ -46,7 +45,6 @@ impl ListSuppliersUseCase {
             id: s.id.to_string(),
             name: s.name,
             phone: s.phone,
-            email: s.email,
             address: s.address,
             balance: s.balance.to_string(),
             is_active: s.is_active,
@@ -73,7 +71,6 @@ impl GetSupplierUseCase {
             id: supplier.id.to_string(),
             name: supplier.name,
             phone: supplier.phone,
-            email: supplier.email,
             address: supplier.address,
             balance: supplier.balance.to_string(),
             is_active: supplier.is_active,
@@ -97,7 +94,7 @@ impl UpdateSupplierUseCase {
         let mut supplier = self.repo.find_by_id(&sid).await?
             .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
         
-        supplier.update_info(req.name, req.phone, req.email, req.address)
+        supplier.update_info(req.name, req.phone, req.address)
             .map_err(|e| AppError::Invalid(e.to_string()))?;
         
         self.repo.update(&supplier).await?;
@@ -105,7 +102,6 @@ impl UpdateSupplierUseCase {
             id: supplier.id.to_string(),
             name: supplier.name,
             phone: supplier.phone,
-            email: supplier.email,
             address: supplier.address,
             balance: supplier.balance.to_string(),
             is_active: supplier.is_active,

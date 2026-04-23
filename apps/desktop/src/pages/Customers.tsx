@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/erp/StatusBadge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Download, Search, MoreHorizontal, Eye, Edit, Trash2, Mail, Phone, MapPin, ArrowDownCircle } from "lucide-react";
+import { Plus, Download, Search, MoreHorizontal, Eye, Edit, Trash2, Phone, MapPin, ArrowDownCircle } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -34,7 +34,6 @@ export default function Customers() {
   const [editCustomer, setEditCustomer] = useState<CustomerDto | null>(null);
   const [formData, setFormData] = useState({
     name: "",
-    email: "",
     phone: "",
     address: ""
   });
@@ -117,8 +116,7 @@ export default function Customers() {
     const searchLower = (search || "").toLowerCase();
     const nameMatch = (c.name || "").toLowerCase().includes(searchLower);
     const phoneMatch = (c.phone || "").toLowerCase().includes(searchLower);
-    const emailMatch = (c.email || "").toLowerCase().includes(searchLower);
-    return nameMatch || phoneMatch || emailMatch;
+    return nameMatch || phoneMatch;
   });
 
   return (
@@ -132,7 +130,7 @@ export default function Customers() {
             <Button variant="outline"><Download className="w-4 h-4 ml-2" />تصدير</Button>
             <Button onClick={() => {
               setEditCustomer(null);
-              setFormData({ name: "", email: "", phone: "", address: "" });
+              setFormData({ name: "", phone: "", address: "" });
               setIsDialogOpen(true);
             }}>
               <Plus className="w-4 h-4 ml-2" />عميل جديد
@@ -213,8 +211,7 @@ export default function Customers() {
                               setEditCustomer(c);
                               setFormData({
                                 name: c.name,
-                                email: c.email || "",
-                                phone: c.phone,
+                                phone: c.phone || "",
                                 address: c.address || ""
                               });
                               setIsDialogOpen(true);
@@ -254,8 +251,7 @@ export default function Customers() {
               </div>
 
               <div className="mt-4 space-y-2 text-right">
-                <div className="flex items-center gap-2 text-sm justify-start"><Phone className="w-4 h-4 text-muted-foreground" />{current.phone}</div>
-                <div className="flex items-center gap-2 text-sm justify-start"><Mail className="w-4 h-4 text-muted-foreground" />{current.email || "لا يوجد بريد"}</div>
+                <div className="flex items-center gap-2 text-sm justify-start"><Phone className="w-4 h-4 text-muted-foreground" />{current.phone || "لا يوجد هاتف"}</div>
                 <div className="flex items-center gap-2 text-sm justify-start"><MapPin className="w-4 h-4 text-muted-foreground" />{current.address || "لا يوجد عنوان"}</div>
               </div>
 
@@ -336,12 +332,8 @@ export default function Customers() {
               <Input id="name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="phone">رقم الهاتف *</Label>
+              <Label htmlFor="phone">رقم الهاتف</Label>
               <Input id="phone" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="email">البريد الإلكتروني</Label>
-              <Input id="email" type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="address">العنوان</Label>
@@ -349,7 +341,7 @@ export default function Customers() {
             </div>
           </div>
           <DialogFooter className="flex-row-reverse gap-2">
-            <Button onClick={handleSave} disabled={!formData.name || !formData.phone}>حفظ</Button>
+            <Button onClick={handleSave} disabled={!formData.name}>حفظ</Button>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>إلغاء</Button>
           </DialogFooter>
         </DialogContent>

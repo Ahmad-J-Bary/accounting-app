@@ -25,8 +25,7 @@ use chrono::DateTime;
 struct CustomerRow {
     id: String,
     name: String,
-    email: Option<String>,
-    phone: String,
+    phone: Option<String>,
     address: Option<String>,
     balance: String,
     is_active: bool,
@@ -38,7 +37,6 @@ fn row_to_customer(row: CustomerRow) -> Result<Customer, AppError> {
     Ok(Customer {
         id: CustomerId(Uuid::parse_str(&row.id).map_err(|e| AppError::Infrastructure(e.to_string()))?),
         name: row.name,
-        email: row.email,
         phone: row.phone,
         address: row.address,
         balance: Decimal::from_str(&row.balance).unwrap_or(Decimal::ZERO),
@@ -52,12 +50,11 @@ fn row_to_customer(row: CustomerRow) -> Result<Customer, AppError> {
 impl CustomerRepository for SqliteCustomerRepository {
     async fn save(&self, customer: &Customer) -> Result<(), AppError> {
         sqlx::query(
-            "INSERT INTO customers (id, name, email, phone, address, balance, is_active, created_at, updated_at) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO customers (id, name, phone, address, balance, is_active, created_at, updated_at) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
         )
         .bind(customer.id.to_string())
         .bind(&customer.name)
-        .bind(&customer.email)
         .bind(&customer.phone)
         .bind(&customer.address)
         .bind(customer.balance.to_string())
@@ -72,7 +69,7 @@ impl CustomerRepository for SqliteCustomerRepository {
 
     async fn find_by_id(&self, id: &CustomerId) -> Result<Option<Customer>, AppError> {
         let row = sqlx::query_as::<_, CustomerRow>(
-            "SELECT id, name, email, phone, address, balance, is_active, created_at, updated_at 
+            "SELECT id, name, phone, address, balance, is_active, created_at, updated_at 
              FROM customers WHERE id = ?"
         )
         .bind(id.to_string())
@@ -85,7 +82,7 @@ impl CustomerRepository for SqliteCustomerRepository {
 
     async fn list_all(&self) -> Result<Vec<Customer>, AppError> {
         let rows = sqlx::query_as::<_, CustomerRow>(
-            "SELECT id, name, email, phone, address, balance, is_active, created_at, updated_at 
+            "SELECT id, name, phone, address, balance, is_active, created_at, updated_at 
              FROM customers ORDER BY name"
         )
         .fetch_all(&*self.pool)
@@ -97,11 +94,10 @@ impl CustomerRepository for SqliteCustomerRepository {
 
     async fn update(&self, customer: &Customer) -> Result<(), AppError> {
         sqlx::query(
-            "UPDATE customers SET name=?, email=?, phone=?, address=?, balance=?, is_active=?, updated_at=? 
+            "UPDATE customers SET name=?, phone=?, address=?, balance=?, is_active=?, updated_at=? 
              WHERE id=?"
         )
         .bind(&customer.name)
-        .bind(&customer.email)
         .bind(&customer.phone)
         .bind(&customer.address)
         .bind(customer.balance.to_string())

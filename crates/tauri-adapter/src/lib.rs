@@ -23,6 +23,7 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::product::list_products,
             commands::product::update_product,
             commands::product::delete_product,
+            commands::product::record_opening_stock,
             // Suppliers
             commands::supplier::create_supplier,
             commands::supplier::list_suppliers,
@@ -46,6 +47,8 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             // Stock Adjustments
             commands::adjustment::create_stock_adjustment,
             commands::adjustment::list_stock_adjustments,
+            // Inventory
+            commands::inventory::list_stock_movements,
             // Journal Entries
             commands::journal::create_journal_entry,
             commands::journal::list_journal_entries,

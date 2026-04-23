@@ -20,7 +20,6 @@ export interface CreateProductRequest {
   retail_price: string | null;
   wholesale_price: string | null;
   semi_wholesale_price: string | null;
-  initial_stock: string;
   minimum_stock: string;
 }
 
@@ -36,4 +35,16 @@ export interface UpdateProductRequest {
   stock_quantity: string;
   minimum_stock: string;
   is_active: boolean;
+}
+
+export interface OpeningStockItem {
+  product_id: string;
+  quantity: string;
+  unit_cost: string;
+}
+
+export interface RecordOpeningStockRequest {
+  items: OpeningStockItem[];
+  date: string;
+  notes?: string | null;
 }

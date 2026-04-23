@@ -10,3 +10,6 @@ pub mod auth;
 pub mod settings;
 pub mod audit;
 pub mod assets;
+
+#[cfg(test)]
+mod tests;

@@ -24,8 +24,7 @@ impl SqliteSupplierRepository {
 struct SupplierRow {
     id: String,
     name: String,
-    phone: String,
-    email: Option<String>,
+    phone: Option<String>,
     address: Option<String>,
     balance: String,
     is_active: bool,
@@ -38,7 +37,6 @@ fn row_to_supplier(row: SupplierRow) -> Result<Supplier, AppError> {
         id: SupplierId(Uuid::parse_str(&row.id).map_err(|e| AppError::Infrastructure(e.to_string()))?),
         name: row.name,
         phone: row.phone,
-        email: row.email,
         address: row.address,
         balance: Decimal::from_str(&row.balance).unwrap_or(Decimal::ZERO),
         is_active: row.is_active,
@@ -51,13 +49,12 @@ fn row_to_supplier(row: SupplierRow) -> Result<Supplier, AppError> {
 impl SupplierRepository for SqliteSupplierRepository {
     async fn save(&self, supplier: &Supplier) -> Result<(), AppError> {
         sqlx::query(
-            "INSERT INTO suppliers (id, name, phone, email, address, balance, is_active, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO suppliers (id, name, phone, address, balance, is_active, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
         )
         .bind(supplier.id.to_string())
         .bind(&supplier.name)
         .bind(&supplier.phone)
-        .bind(&supplier.email)
         .bind(&supplier.address)
         .bind(supplier.balance.to_string())
         .bind(supplier.is_active)
@@ -71,7 +68,7 @@ impl SupplierRepository for SqliteSupplierRepository {
 
     async fn find_by_id(&self, id: &SupplierId) -> Result<Option<Supplier>, AppError> {
         let row = sqlx::query_as::<_, SupplierRow>(
-            "SELECT id, name, phone, email, address, balance, is_active, created_at, updated_at
+            "SELECT id, name, phone, address, balance, is_active, created_at, updated_at
              FROM suppliers WHERE id = ?"
         )
         .bind(id.to_string())
@@ -84,7 +81,7 @@ impl SupplierRepository for SqliteSupplierRepository {
 
     async fn find_by_name(&self, name: &str) -> Result<Vec<Supplier>, AppError> {
         let rows = sqlx::query_as::<_, SupplierRow>(
-            "SELECT id, name, phone, email, address, balance, is_active, created_at, updated_at
+            "SELECT id, name, phone, address, balance, is_active, created_at, updated_at
              FROM suppliers WHERE name LIKE ?"
         )
         .bind(format!("%{}%", name))
@@ -97,7 +94,7 @@ impl SupplierRepository for SqliteSupplierRepository {
 
     async fn list_all(&self) -> Result<Vec<Supplier>, AppError> {
         let rows = sqlx::query_as::<_, SupplierRow>(
-            "SELECT id, name, phone, email, address, balance, is_active, created_at, updated_at
+            "SELECT id, name, phone, address, balance, is_active, created_at, updated_at
              FROM suppliers ORDER BY name"
         )
         .fetch_all(&*self.pool)
@@ -109,12 +106,11 @@ impl SupplierRepository for SqliteSupplierRepository {
 
     async fn update(&self, supplier: &Supplier) -> Result<(), AppError> {
         sqlx::query(
-            "UPDATE suppliers SET name=?, phone=?, email=?, address=?, balance=?, is_active=?, updated_at=?
+            "UPDATE suppliers SET name=?, phone=?, address=?, balance=?, is_active=?, updated_at=?
              WHERE id=?"
         )
         .bind(&supplier.name)
         .bind(&supplier.phone)
-        .bind(&supplier.email)
         .bind(&supplier.address)
         .bind(supplier.balance.to_string())
         .bind(supplier.is_active)

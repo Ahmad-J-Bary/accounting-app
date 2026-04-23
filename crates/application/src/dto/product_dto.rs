@@ -25,7 +25,6 @@ pub struct CreateProductRequest {
     pub retail_price: Option<String>,
     pub wholesale_price: Option<String>,
     pub semi_wholesale_price: Option<String>,
-    pub initial_stock: String,
     pub minimum_stock: String,
 }
 

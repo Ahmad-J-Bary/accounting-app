@@ -5,8 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct CustomerDto {
     pub id: String,
     pub name: String,
-    pub email: Option<String>,
-    pub phone: String,
+    pub phone: Option<String>,
     pub address: Option<String>,
     pub balance: String,
     pub is_active: bool,
@@ -17,8 +16,7 @@ pub struct CustomerDto {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateCustomerRequest {
     pub name: String,
-    pub email: Option<String>,
-    pub phone: String,
+    pub phone: Option<String>,
     pub address: Option<String>,
 }
 
@@ -26,8 +24,7 @@ pub struct CreateCustomerRequest {
 pub struct UpdateCustomerRequest {
     pub id: String,
     pub name: String,
-    pub email: Option<String>,
-    pub phone: String,
+    pub phone: Option<String>,
     pub address: Option<String>,
     pub is_active: bool,
 }
@@ -37,7 +34,6 @@ impl From<Customer> for CustomerDto {
         Self {
             id: customer.id.to_string(),
             name: customer.name,
-            email: customer.email,
             phone: customer.phone,
             address: customer.address,
             balance: customer.balance.to_string(),

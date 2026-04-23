@@ -1,8 +1,7 @@
 export interface CustomerDto {
   id: string;
   name: string;
-  email: string | null; // Corrected to match Option<String>
-  phone: string;
+  phone: string | null;
   address: string | null;
   balance: string;
   is_active: boolean;
@@ -12,16 +11,14 @@ export interface CustomerDto {
 
 export interface CreateCustomerRequest {
   name: string;
-  email: string | null;
-  phone: string;
+  phone: string | null;
   address: string | null;
 }
 
 export interface UpdateCustomerRequest {
   id: string;
   name: string;
-  email: string | null;
-  phone: string;
+  phone: string | null;
   address: string | null;
   is_active: boolean;
 }

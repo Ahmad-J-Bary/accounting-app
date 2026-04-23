@@ -1,8 +1,7 @@
 export interface SupplierDto {
   id: string;
   name: string;
-  phone: string;
-  email: string | null;
+  phone: string | null;
   address: string | null;
   balance: string;
   is_active: boolean;
@@ -12,15 +11,13 @@ export interface SupplierDto {
 
 export interface CreateSupplierRequest {
   name: string;
-  phone: string;
-  email: string | null;
+  phone: string | null;
   address: string | null;
 }
 
 export interface UpdateSupplierRequest {
   id: string;
   name: string;
-  phone: string;
-  email: string | null;
+  phone: string | null;
   address: string | null;
 }

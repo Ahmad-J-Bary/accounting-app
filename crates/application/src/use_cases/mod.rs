@@ -20,3 +20,4 @@ pub mod get_chart_of_accounts;
 pub mod get_account_ledger;
 pub mod fixed_asset_use_cases;
 pub mod consumable_use_cases;
+pub mod opening_stock_use_cases;

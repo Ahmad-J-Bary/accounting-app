@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/erp/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Download, Search, MoreHorizontal, Edit, Eye, AlertTriangle, Trash2, RefreshCw } from "lucide-react";
+import { Plus, Download, Search, MoreHorizontal, Edit, AlertTriangle, Trash2, RefreshCw, Package } from "lucide-react";
 import { formatCurrency, formatNumber } from "@/lib/format";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,7 @@ import { StatusBadge } from "@/components/erp/StatusBadge";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { invoke } from "@tauri-apps/api/core";
 
 import { productService } from "@/services/productService";
 import type { ProductDto } from "@erp/shared-types";
@@ -31,9 +32,15 @@ export default function Products() {
     retail_price: "0",
     wholesale_price: "0",
     semi_wholesale_price: "0",
-    initial_stock: "0",
     minimum_stock: "0"
   });
+
+  // Opening Stock dialog state
+  const [isOpeningStockOpen, setIsOpeningStockOpen] = useState(false);
+  const [openingStockProduct, setOpeningStockProduct] = useState<ProductDto | null>(null);
+  const [openingQty, setOpeningQty] = useState("0");
+  const [openingCost, setOpeningCost] = useState("0");
+  const [openingDate, setOpeningDate] = useState(new Date().toISOString().split('T')[0]);
 
   const fetchProducts = async () => {
     try {
@@ -63,7 +70,7 @@ export default function Products() {
           retail_price: formData.retail_price,
           wholesale_price: formData.wholesale_price,
           semi_wholesale_price: formData.semi_wholesale_price,
-          stock_quantity: formData.initial_stock,
+          stock_quantity: editProduct.stock_quantity,
           minimum_stock: formData.minimum_stock,
           is_active: editProduct.is_active
         });
@@ -73,12 +80,36 @@ export default function Products() {
           ...formData,
           barcode: formData.barcode || null
         });
-        toast.success("تم إضافة المنتج بنجاح");
+        toast.success("تم إضافة المنتج بنجاح - يمكنك الآن تسجيل رصيد أول المدة من القائمة");
       }
       setIsDialogOpen(false);
       fetchProducts();
     } catch (error) {
       toast.error("خطأ في العملية: " + error);
+    }
+  };
+
+  const handleRecordOpeningStock = async () => {
+    if (!openingStockProduct) return;
+    const qty = parseFloat(openingQty);
+    const cost = parseFloat(openingCost);
+    if (isNaN(qty) || qty <= 0) { toast.error("أدخل كمية صحيحة أكبر من صفر"); return; }
+    if (isNaN(cost) || cost < 0) { toast.error("أدخل سعر تكلفة صحيح"); return; }
+    try {
+      await productService.recordOpeningStock({
+        items: [{ 
+          product_id: openingStockProduct.id, 
+          quantity: openingQty, 
+          unit_cost: openingCost 
+        }],
+        date: new Date(openingDate).toISOString(),
+        notes: `رصيد أول المدة - ${openingStockProduct.name}`
+      });
+      toast.success(`تم تسجيل رصيد أول المدة: ${qty} وحدة للمنتج "${openingStockProduct.name}"`);
+      setIsOpeningStockOpen(false);
+      fetchProducts();
+    } catch (error) {
+      toast.error("خطأ في تسجيل أول المدة: " + error);
     }
   };
 
@@ -123,7 +154,6 @@ export default function Products() {
                 retail_price: "0", 
                 wholesale_price: "0", 
                 semi_wholesale_price: "0", 
-                initial_stock: "0", 
                 minimum_stock: "0" 
               });
               setIsDialogOpen(true);
@@ -232,11 +262,17 @@ export default function Products() {
                                   retail_price: p.retail_price || "0",
                                   wholesale_price: p.wholesale_price || "0",
                                   semi_wholesale_price: p.semi_wholesale_price || "0",
-                                  initial_stock: p.stock_quantity,
                                   minimum_stock: p.minimum_stock
                                 });
                                 setIsDialogOpen(true);
                               }}><Edit className="w-4 h-4 ml-2" />تعديل</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                setOpeningStockProduct(p);
+                                setOpeningCost(p.purchase_price || "0");
+                                setOpeningQty("0");
+                                setOpeningDate(new Date().toISOString().split('T')[0]);
+                                setIsOpeningStockOpen(true);
+                              }}><Package className="w-4 h-4 ml-2" />بضاعة أول المدة</DropdownMenuItem>
                               <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(p.id, p.name)}>
                                 <Trash2 className="w-4 h-4 ml-2" />حذف
                               </DropdownMenuItem>
@@ -297,12 +333,17 @@ export default function Products() {
             </div>
 
             <div className="grid grid-cols-2 gap-4 border-t pt-4">
-              <div className="grid gap-2">
-                <Label htmlFor="prod_initial_stock">{editProduct ? "الكمية الحالية" : "رصيد أول المدة"}</Label>
-                <Input id="prod_initial_stock" type="number" value={formData.initial_stock} onChange={(e) => setFormData({...formData, initial_stock: e.target.value})} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="prod_minimum_stock">الحد الأدنى</Label>
+              {editProduct && (
+                <div className="grid gap-2 col-span-2">
+                  <Label>المخزون الحالي</Label>
+                  <div className="px-3 py-2 bg-muted rounded-md text-sm font-medium tabular-nums">
+                    {formatNumber(Number(editProduct.stock_quantity || 0))} وحدة
+                    <span className="text-muted-foreground text-xs mr-2">(يُعدَّل عبر الحركات فقط)</span>
+                  </div>
+                </div>
+              )}
+              <div className="grid gap-2 col-span-2">
+                <Label htmlFor="prod_minimum_stock">الحد الأدنى للتنبيه</Label>
                 <Input id="prod_minimum_stock" type="number" value={formData.minimum_stock} onChange={(e) => setFormData({...formData, minimum_stock: e.target.value})} />
               </div>
             </div>
@@ -310,6 +351,41 @@ export default function Products() {
           <DialogFooter className="flex-row-reverse gap-2">
             <Button onClick={handleSave} disabled={!formData.name || !formData.code}>حفظ</Button>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>إلغاء</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Opening Stock Dialog */}
+      <Dialog open={isOpeningStockOpen} onOpenChange={setIsOpeningStockOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>تسجيل بضاعة أول المدة</DialogTitle>
+            <DialogDescription>
+              {openingStockProduct?.name} — سيتم إنشاء حركة مخزون وقيد محاسبي تلقائيًا
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 text-right" dir="rtl">
+            <div className="grid gap-2">
+              <Label htmlFor="op_qty">الكمية *</Label>
+              <Input id="op_qty" type="number" min="0.01" step="0.01" value={openingQty} onChange={(e) => setOpeningQty(e.target.value)} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="op_cost">سعر التكلفة (للوحدة) *</Label>
+              <Input id="op_cost" type="number" min="0" step="0.01" value={openingCost} onChange={(e) => setOpeningCost(e.target.value)} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="op_date">تاريخ الرصيد الافتتاحي</Label>
+              <Input id="op_date" type="date" value={openingDate} onChange={(e) => setOpeningDate(e.target.value)} />
+            </div>
+            <div className="rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">
+              القيد: مدين حساب المخزون / دائن حساب رأس المال (رصيد افتتاحي)
+            </div>
+          </div>
+          <DialogFooter className="flex-row-reverse gap-2">
+            <Button onClick={handleRecordOpeningStock} disabled={!openingStockProduct || parseFloat(openingQty) <= 0}>
+              تسجيل الرصيد
+            </Button>
+            <Button variant="outline" onClick={() => setIsOpeningStockOpen(false)}>إلغاء</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
