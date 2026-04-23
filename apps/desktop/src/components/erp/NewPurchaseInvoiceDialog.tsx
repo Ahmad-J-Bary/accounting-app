@@ -82,7 +82,7 @@ export function NewPurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: NewP
     if (field === 'product_id') {
       const product = products.find(p => p.id === value);
       if (product) {
-        newItems[index].unit_price = product.cost_price || product.unit_price;
+        newItems[index].unit_price = product.purchase_price || "0";
       }
     }
     
@@ -98,7 +98,7 @@ export function NewPurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: NewP
   };
 
   const subtotal = calculateSubtotal();
-  const taxRate = 0.15;
+  const taxRate = 0.0; // Localized for Syria
   const calculatedTax = subtotal * taxRate;
   const total = subtotal + calculatedTax - parseFloat(formData.discount_amount || "0");
 
@@ -256,7 +256,7 @@ export function NewPurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: NewP
             <span className="text-muted-foreground">المجموع الفرعي:</span>
             <span className="text-left tabular-nums font-medium">{formatCurrency(subtotal)}</span>
             
-            <span className="text-muted-foreground">الضريبة (15%):</span>
+            <span className="text-muted-foreground">الضريبة:</span>
             <span className="text-left tabular-nums font-medium">{formatCurrency(calculatedTax)}</span>
             
             <span className="text-muted-foreground self-center">الخصم:</span>

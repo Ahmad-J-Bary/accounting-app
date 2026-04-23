@@ -29,6 +29,18 @@ export default function SalesInvoices() {
     return () => window.removeEventListener("erp:open-new-invoice", handleOpenDialog);
   }, []);
 
+  const postInvoice = async (id: string) => {
+    try {
+      setLoading(true);
+      await invoiceService.postInvoice(id);
+      await loadInvoices();
+    } catch (error) {
+      console.error('Failed to post invoice:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const loadInvoices = async () => {
     try {
       const data = await invoiceService.listInvoices();
@@ -116,9 +128,16 @@ export default function SalesInvoices() {
                           <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setPreview(inv.id)}><Eye className="w-4 h-4 ml-2" />عرض</DropdownMenuItem>
-                          {!inv.posted && <DropdownMenuItem><Edit className="w-4 h-4 ml-2" />تعديل</DropdownMenuItem>}
-                          <DropdownMenuItem><Printer className="w-4 h-4 ml-2" />طباعة</DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => setPreview(inv.id)}><Eye className="w-4 h-4 ml-2" />عرض</DropdownMenuItem>
+                           {!inv.posted && (
+                             <>
+                               <DropdownMenuItem><Edit className="w-4 h-4 ml-2" />تعديل</DropdownMenuItem>
+                               <DropdownMenuItem onClick={() => postInvoice(inv.id)} className="text-green-600">
+                                 <Send className="w-4 h-4 ml-2" />ترحيل
+                               </DropdownMenuItem>
+                             </>
+                           )}
+                           <DropdownMenuItem><Printer className="w-4 h-4 ml-2" />طباعة</DropdownMenuItem>
                           <DropdownMenuItem className="text-destructive"><Trash2 className="w-4 h-4 ml-2" />حذف</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -146,10 +165,17 @@ export default function SalesInvoices() {
       <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>معاينة الفاتورة</span>
-              <Button size="sm" variant="outline" onClick={() => window.print()}><Printer className="w-4 h-4 ml-2" />طباعة</Button>
-            </DialogTitle>
+             <DialogTitle className="flex items-center justify-between">
+               <span>معاينة الفاتورة</span>
+               <div className="flex gap-2">
+                 {selectedInv && !selectedInv.posted && (
+                   <Button size="sm" variant="default" onClick={() => { postInvoice(selectedInv.id); setPreview(null); }} className="bg-green-600 hover:bg-green-700">
+                     <Send className="w-4 h-4 ml-2" />ترحيل الفاتورة
+                   </Button>
+                 )}
+                 <Button size="sm" variant="outline" onClick={() => window.print()}><Printer className="w-4 h-4 ml-2" />طباعة</Button>
+               </div>
+             </DialogTitle>
             <DialogDescription>عرض تفاصيل الفاتورة الضريبية وجدول الأصناف.</DialogDescription>
           </DialogHeader>
           {selectedInv && (

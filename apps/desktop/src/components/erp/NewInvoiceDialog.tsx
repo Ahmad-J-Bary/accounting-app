@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, Calculator } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { customerService } from "@/services/customerService";
 import { productService } from "@/services/productService";
 import { invoiceService } from "@/services/invoiceService";
@@ -69,11 +70,11 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess }: NewInvoiceDi
     const newLines = [...formData.lines];
     newLines[index] = { ...newLines[index], [field]: value };
     
-    // If product changed, update price automatically
+    // If product changed, update price automatically (default to retail)
     if (field === 'product_id') {
       const product = products.find(p => p.id === value);
       if (product) {
-        newLines[index].unit_price = product.unit_price;
+        newLines[index].unit_price = product.retail_price || "0";
       }
     }
     
@@ -204,14 +205,41 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess }: NewInvoiceDi
                         className="h-8 tabular-nums"
                       />
                     </td>
-                    <td className="p-2">
-                      <Input 
-                        type="number" 
-                        value={line.unit_price} 
-                        onChange={e => updateLine(index, 'unit_price', e.target.value)}
-                        className="h-8 tabular-nums"
-                      />
-                    </td>
+                     <td className="p-2">
+                       <div className="flex gap-1 items-center">
+                         <Input 
+                           type="number" 
+                           value={line.unit_price} 
+                           onChange={e => updateLine(index, 'unit_price', e.target.value)}
+                           className="h-8 tabular-nums flex-1"
+                         />
+                         <DropdownMenu>
+                           <DropdownMenuTrigger asChild>
+                             <Button variant="ghost" size="icon" className="h-7 w-7"><Calculator className="w-3.5 h-3.5" /></Button>
+                           </DropdownMenuTrigger>
+                           <DropdownMenuContent align="end" dir="rtl">
+                             <div className="p-2 text-xs font-bold border-b mb-1">اختر نوع السعر</div>
+                             {(() => {
+                               const p = products.find(prod => prod.id === line.product_id);
+                               if (!p) return <div className="p-2 text-xs text-muted-foreground">اختر منتجاً أولاً</div>;
+                               return (
+                                 <>
+                                   <DropdownMenuItem onClick={() => updateLine(index, 'unit_price', p.retail_price || "0")}>
+                                     مفرق: {formatCurrency(parseFloat(p.retail_price || "0"))}
+                                   </DropdownMenuItem>
+                                   <DropdownMenuItem onClick={() => updateLine(index, 'unit_price', p.wholesale_price || "0")}>
+                                     جملة: {formatCurrency(parseFloat(p.wholesale_price || "0"))}
+                                   </DropdownMenuItem>
+                                   <DropdownMenuItem onClick={() => updateLine(index, 'unit_price', p.semi_wholesale_price || "0")}>
+                                     نصف جملة: {formatCurrency(parseFloat(p.semi_wholesale_price || "0"))}
+                                   </DropdownMenuItem>
+                                 </>
+                               );
+                             })()}
+                           </DropdownMenuContent>
+                         </DropdownMenu>
+                       </div>
+                     </td>
                     <td className="p-2 text-left tabular-nums font-medium">
                       {formatCurrency(parseFloat(line.quantity) * parseFloat(line.unit_price))}
                     </td>

@@ -6,6 +6,8 @@ use domain::shared::ids::{SupplierId, ProductId};
 use crate::ports::purchase_invoice_repository::PurchaseInvoiceRepository;
 use crate::ports::supplier_repository::SupplierRepository;
 use crate::ports::product_repository::ProductRepository;
+use crate::ports::stock_movement_repository::StockMovementRepository;
+use domain::inventory::stock_movement::{StockMovement, MovementType};
 use crate::dto::purchase_invoice_dto::{
     CreatePurchaseInvoiceRequest, PurchaseInvoiceDto, PurchaseInvoiceItemDto,
 };
@@ -176,6 +178,7 @@ pub struct PostPurchaseInvoiceUseCase {
     repo: Arc<dyn PurchaseInvoiceRepository>,
     supplier_repo: Arc<dyn SupplierRepository>,
     product_repo: Arc<dyn ProductRepository>,
+    movement_repo: Arc<dyn StockMovementRepository>,
 }
 
 impl PostPurchaseInvoiceUseCase {
@@ -183,8 +186,9 @@ impl PostPurchaseInvoiceUseCase {
         repo: Arc<dyn PurchaseInvoiceRepository>,
         supplier_repo: Arc<dyn SupplierRepository>,
         product_repo: Arc<dyn ProductRepository>,
+        movement_repo: Arc<dyn StockMovementRepository>,
     ) -> Self {
-        Self { repo, supplier_repo, product_repo }
+        Self { repo, supplier_repo, product_repo, movement_repo }
     }
 
     pub async fn execute(&self, invoice_id: String) -> Result<PurchaseInvoiceDto, AppError> {
@@ -193,6 +197,27 @@ impl PostPurchaseInvoiceUseCase {
         let mut invoice = self.repo.find_by_id(&pid).await?
             .ok_or_else(|| AppError::NotFound("فاتورة الشراء غير موجودة".into()))?;
         invoice.post().map_err(|e| AppError::Invalid(e.to_string()))?;
+
+        // Update stock and record movements
+        for item in &invoice.items {
+            if let Some(mut product) = self.product_repo.find_by_id(&item.product_id).await? {
+                // Adjust stock (increase for purchases)
+                product.adjust_stock(item.quantity).map_err(|e| AppError::Invalid(e.to_string()))?;
+                self.product_repo.update(&product).await?;
+
+                // Record stock movement
+                let movement = StockMovement::new(
+                    product.id.clone(),
+                    MovementType::In,
+                    item.quantity,
+                    invoice.invoice_number.clone(),
+                    format!("شراء بموجب فاتورة مشتريات رقم {}", invoice.invoice_number),
+                    chrono::Utc::now(),
+                ).map_err(|e| AppError::Invalid(e.to_string()))?;
+                self.movement_repo.save(&movement).await?;
+            }
+        }
+
         self.repo.update(&invoice).await?;
         Ok(enrich_invoice(invoice, &self.supplier_repo, &self.product_repo).await)
     }

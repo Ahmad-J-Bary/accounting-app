@@ -13,6 +13,7 @@ pub use repositories::sqlite_damaged_repository::SqliteDamagedItemRepository;
 pub use repositories::sqlite_stock_adjustment_repository::SqliteStockAdjustmentRepository;
 pub use repositories::sqlite_settings_repository::SqliteSettingsRepository;
 pub use repositories::sqlite_audit_log_repository::SqliteAuditLogRepository;
+pub use repositories::sqlite_stock_movement_repository::SqliteStockMovementRepository;
 pub use repositories::sqlite_user_repository::SqliteUserRepository;
 pub use repositories::sqlite_production_repository::SqliteProductionRepository;
 pub use repositories::sqlite_asset_repository::SqliteAssetRepository;

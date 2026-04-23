@@ -274,7 +274,7 @@ export default function Assets() {
                         <Button variant="outline" size="sm" onClick={() => { setSelectedConsumable(item); setIsIssuingConsumable(true); }}>صرف</Button>
                         <Button variant="outline" size="sm" onClick={async () => {
                           const qty = prompt("الكمية:");
-                          if (qty) { try { await assetService.addConsumableStock(item.id, qty); loadData(); } catch (e) {} }
+                          if (qty) { try { await assetService.addConsumableStock(item.id, qty); loadData(); } catch (e) { console.error(e); } }
                         }}>توريد</Button>
                       </td>
                     </tr>

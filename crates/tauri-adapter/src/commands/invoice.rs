@@ -30,14 +30,14 @@ pub async fn list_invoices(
 
 #[tauri::command]
 pub async fn post_invoice(
-    invoice_id: String,
     state: State<'_, AppState>,
+    id: String,
 ) -> Result<InvoiceDto, String> {
     let use_case = PostInvoiceUseCase::new(
         state.invoice_repo.clone(),
         state.customer_repo.clone(),
         state.product_repo.clone(),
+        state.stock_movement_repo.clone(),
     );
-    let result: Result<InvoiceDto, AppError> = use_case.execute(invoice_id).await;
-    result.map_err(|e| e.to_string())
+    use_case.execute(id).await.map_err(|e| e.to_string())
 }

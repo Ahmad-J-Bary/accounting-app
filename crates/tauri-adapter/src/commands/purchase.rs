@@ -44,6 +44,7 @@ pub async fn post_purchase_invoice(
         state.purchase_invoice_repo.clone(),
         state.supplier_repo.clone(),
         state.product_repo.clone(),
+        state.stock_movement_repo.clone(),
     )
     .execute(invoice_id)
     .await
