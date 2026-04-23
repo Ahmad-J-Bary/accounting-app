@@ -27,8 +27,8 @@ impl AccountRepository for SqliteAccountRepository {
         };
 
         sqlx::query(
-            "INSERT INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, notes, is_active, created_at, updated_at) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            "INSERT INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, notes, is_active, is_default, created_at, updated_at) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
              ON CONFLICT(id) DO UPDATE SET
                 code = excluded.code,
                 name_ar = excluded.name_ar,
@@ -41,6 +41,7 @@ impl AccountRepository for SqliteAccountRepository {
                 balance = excluded.balance,
                 notes = excluded.notes,
                 is_active = excluded.is_active,
+                is_default = excluded.is_default,
                 updated_at = excluded.updated_at"
         )
         .bind(account.id.0.to_string())
@@ -55,6 +56,7 @@ impl AccountRepository for SqliteAccountRepository {
         .bind(account.balance.to_string())
         .bind(&account.notes)
         .bind(account.is_active)
+        .bind(account.is_default)
         .bind(account.created_at)
         .bind(account.updated_at)
         .execute(&*self.pool)
@@ -145,7 +147,8 @@ fn map_row_to_account(row: sqlx::sqlite::SqliteRow) -> Result<Account, AppError>
         balance: map_decimal(&row, "balance"),
         notes: row.get("notes"),
         is_active: row.get("is_active"),
-        created_at: row.get("created_at"), // Kept original fetch for DateTime since it's working
+        is_default: row.get::<Option<bool>, _>("is_default").unwrap_or(false),
+        created_at: row.get("created_at"),
         updated_at: row.get("updated_at"),
     })
 }

@@ -15,6 +15,7 @@ pub struct AccountDto {
     pub balance: String,
     pub notes: Option<String>,
     pub is_active: bool,
+    pub is_default: bool,
 }
 
 impl From<Account> for AccountDto {
@@ -32,6 +33,7 @@ impl From<Account> for AccountDto {
             balance: account.balance.to_string(),
             notes: account.notes,
             is_active: account.is_active,
+            is_default: account.is_default,
         }
     }
 }

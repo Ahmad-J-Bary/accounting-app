@@ -11,6 +11,7 @@ export interface AccountDto {
   balance: string;
   notes: string | null;
   is_active: boolean;
+  is_default: boolean;
 }
 
 export interface AccountLedgerLineDto {

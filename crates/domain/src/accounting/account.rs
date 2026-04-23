@@ -34,6 +34,7 @@ pub struct Account {
     pub balance: Decimal,
     pub notes: Option<String>,
     pub is_active: bool,
+    pub is_default: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -49,6 +50,7 @@ impl Account {
         level: i32,
         opening_balance: Decimal,
         notes: Option<String>,
+        is_default: bool,
     ) -> Result<Self, DomainError> {
         if code.trim().is_empty() {
             return Err(DomainError::Invalid("كود الحساب لا يمكن أن يكون فارغًا".into()));
@@ -81,6 +83,7 @@ impl Account {
             balance: opening_balance,
             notes,
             is_active: true,
+            is_default,
             created_at: now,
             updated_at: now,
         })
@@ -147,6 +150,7 @@ mod tests {
             1,
             Decimal::ZERO,
             None,
+            false,
         )
     }
 
