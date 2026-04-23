@@ -208,7 +208,7 @@ impl PostPurchaseInvoiceUseCase {
                 // Record stock movement
                 let movement = StockMovement::new(
                     product.id.clone(),
-                    MovementType::In,
+                    MovementType::Purchase,
                     item.quantity,
                     invoice.invoice_number.clone(),
                     format!("شراء بموجب فاتورة مشتريات رقم {}", invoice.invoice_number),

@@ -367,7 +367,7 @@ export default function Products() {
           <div className="grid gap-4 py-4 text-right" dir="rtl">
             <div className="grid gap-2">
               <Label htmlFor="op_qty">الكمية *</Label>
-              <Input id="op_qty" type="number" min="0.01" step="0.01" value={openingQty} onChange={(e) => setOpeningQty(e.target.value)} />
+              <Input id="op_qty" type="number" min="1" step="1" value={openingQty} onChange={(e) => setOpeningQty(e.target.value)} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="op_cost">سعر التكلفة (للوحدة) *</Label>

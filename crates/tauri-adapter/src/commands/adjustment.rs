@@ -21,6 +21,6 @@ pub async fn create_stock_adjustment(
 pub async fn list_stock_adjustments(
     state: State<'_, AppState>,
 ) -> Result<Vec<StockAdjustmentDto>, String> {
-    ListStockAdjustmentsUseCase::new(state.adjustment_repo.clone())
+    ListStockAdjustmentsUseCase::new(state.adjustment_repo.clone(), state.product_repo.clone())
         .execute().await.map_err(|e| e.to_string())
 }

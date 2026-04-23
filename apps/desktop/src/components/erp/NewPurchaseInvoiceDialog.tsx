@@ -250,6 +250,8 @@ export function NewPurchaseInvoiceDialog({ open, onOpenChange, onSuccess, invoic
                     <td className="p-2">
                       <Input 
                         type="number" 
+                        min="1"
+                        step="1"
                         value={item.quantity} 
                         onChange={e => updateLine(index, 'quantity', e.target.value)}
                         className="h-8 tabular-nums"

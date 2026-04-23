@@ -64,14 +64,24 @@ impl CreateStockAdjustmentUseCase {
 
 pub struct ListStockAdjustmentsUseCase {
     repo: Arc<dyn StockAdjustmentRepository>,
+    product_repo: Arc<dyn ProductRepository>,
 }
 
 impl ListStockAdjustmentsUseCase {
-    pub fn new(repo: Arc<dyn StockAdjustmentRepository>) -> Self {
-        Self { repo }
+    pub fn new(repo: Arc<dyn StockAdjustmentRepository>, product_repo: Arc<dyn ProductRepository>) -> Self {
+        Self { repo, product_repo }
     }
 
     pub async fn execute(&self) -> Result<Vec<StockAdjustmentDto>, AppError> {
-        Ok(self.repo.list_all().await?.into_iter().map(to_dto).collect())
+        let adjustments = self.repo.list_all().await?;
+        let mut dtos = Vec::new();
+        for adj in adjustments {
+            let mut dto = to_dto(adj.clone());
+            if let Ok(Some(product)) = self.product_repo.find_by_id(&adj.product_id).await {
+                dto.product_name = Some(product.name);
+            }
+            dtos.push(dto);
+        }
+        Ok(dtos)
     }
 }

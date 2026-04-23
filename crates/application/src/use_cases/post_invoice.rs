@@ -49,7 +49,7 @@ impl PostInvoiceUseCase {
                 // Record stock movement
                 let movement = StockMovement::new(
                     product.id.clone(),
-                    MovementType::Out,
+                    MovementType::Sale,
                     line.quantity,
                     invoice.invoice_number.clone(),
                     format!("بيع بموجب فاتورة مبيعات رقم {}", invoice.invoice_number),

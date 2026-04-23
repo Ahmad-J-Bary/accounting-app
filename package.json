@@ -1,6 +1,7 @@
 {
   "name": "erp-workspace",
-  "version": "0.3.3",
+  "version": "0.3.4",
+  "author": "Ahmad Abdelbary",
   "private": true,
   "scripts": {
     "dev": "pnpm --filter desktop dev",

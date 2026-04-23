@@ -1,6 +1,7 @@
 {
   "name": "desktop",
-  "version": "0.3.3",
+  "version": "0.3.4",
+  "author": "Ahmad Abdelbary",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -6,12 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Plus, Search, RefreshCw } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { adjustmentService } from "@/services/inventoryService";
-import type { StockAdjustment, CreateStockAdjustmentRequest } from "@erp/shared-types";
+import { productService } from "@/services/productService";
+import type { StockAdjustment, CreateStockAdjustmentRequest, Product } from "@erp/shared-types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
 export default function Adjustments() {
   const [adjustments, setAdjustments] = useState<StockAdjustment[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showDialog, setShowDialog] = useState(false);
@@ -25,7 +27,14 @@ export default function Adjustments() {
 
   const load = async () => {
     setLoading(true);
-    try { setAdjustments(await adjustmentService.listStockAdjustments()); }
+    try {
+      const [adjData, productsData] = await Promise.all([
+        adjustmentService.listStockAdjustments(),
+        productService.listProducts()
+      ]);
+      setAdjustments(adjData);
+      setProducts(productsData);
+    }
     catch (e) { setError(String(e)); }
     finally { setLoading(false); }
   };
@@ -41,7 +50,7 @@ export default function Adjustments() {
   const shortageCount = adjustments.filter(a => parseFloat(a.difference) < 0).length;
 
   const handleCreate = async () => {
-    if (!form.product_id || !form.actual_quantity || !form.adjustment_date) return;
+    if (!form.product_id || form.actual_quantity === undefined || !form.adjustment_date) return;
     setSaving(true);
     try {
       await adjustmentService.createStockAdjustment(form as CreateStockAdjustmentRequest);
@@ -147,12 +156,21 @@ export default function Adjustments() {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1">
-              <Label>معرف المنتج *</Label>
-              <Input value={form.product_id ?? ""} onChange={e => setForm(p => ({ ...p, product_id: e.target.value }))} placeholder="UUID المنتج" />
+              <Label>المنتج *</Label>
+              <select 
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={form.product_id ?? ""} 
+                onChange={e => setForm(p => ({ ...p, product_id: e.target.value }))}
+              >
+                <option value="">اختر المنتج...</option>
+                {products.map(p => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.code})</option>
+                ))}
+              </select>
             </div>
             <div className="space-y-1">
               <Label>الكمية الفعلية المعدودة *</Label>
-              <Input type="number" min="0" step="0.01"
+              <Input type="number" min="0" step="1"
                 value={form.actual_quantity ?? ""}
                 onChange={e => setForm(p => ({ ...p, actual_quantity: parseFloat(e.target.value) }))} />
             </div>

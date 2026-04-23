@@ -7,11 +7,14 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MovementType {
-    In,      // إدخال
-    Out,     // إخراج
-    Transfer,// نقل
-    Adjustment, // تسوية
+    In,             // إدخال يدوي
+    Out,            // إخراج يدوي
+    Transfer,       // نقل
+    Adjustment,     // تسوية جرد
     OpeningBalance, // رصيد أول المدة
+    Damaged,        // تالف وهدر
+    Sale,           // مبيعات
+    Purchase,       // مشتريات
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -60,14 +63,14 @@ impl StockMovement {
     pub fn is_inflow(&self) -> bool {
         matches!(
             self.movement_type,
-            MovementType::In | MovementType::Transfer | MovementType::OpeningBalance
+            MovementType::In | MovementType::Transfer | MovementType::OpeningBalance | MovementType::Purchase
         )
     }
 
     pub fn is_outflow(&self) -> bool {
         matches!(
             self.movement_type,
-            MovementType::Out | MovementType::Transfer
+            MovementType::Out | MovementType::Transfer | MovementType::Damaged | MovementType::Sale | MovementType::Adjustment
         )
     }
 }

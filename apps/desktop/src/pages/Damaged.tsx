@@ -6,12 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Plus, Search, RefreshCw, AlertTriangle } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { damagedService } from "@/services/inventoryService";
-import type { DamagedItem, CreateDamagedItemRequest } from "@erp/shared-types";
+import { productService } from "@/services/productService";
+import type { DamagedItem, CreateDamagedItemRequest, Product } from "@erp/shared-types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
 export default function Damaged() {
   const [items, setItems] = useState<DamagedItem[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showDialog, setShowDialog] = useState(false);
@@ -27,7 +29,14 @@ export default function Damaged() {
 
   const load = async () => {
     setLoading(true);
-    try { setItems(await damagedService.listDamagedItems()); }
+    try {
+      const [damagedData, productsData] = await Promise.all([
+        damagedService.listDamagedItems(),
+        productService.listProducts()
+      ]);
+      setItems(damagedData);
+      setProducts(productsData);
+    }
     catch (e) { setError(String(e)); }
     finally { setLoading(false); }
   };
@@ -143,14 +152,39 @@ export default function Damaged() {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1">
-              <Label>معرف المنتج *</Label>
-              <Input value={form.product_id ?? ""} onChange={e => setForm(p => ({ ...p, product_id: e.target.value }))} placeholder="UUID المنتج" />
+              <Label>المنتج *</Label>
+              <select 
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={form.product_id ?? ""} 
+                onChange={e => {
+                  const pid = e.target.value;
+                  const prod = products.find(p => p.id === pid);
+                  setForm(p => ({ 
+                    ...p, 
+                    product_id: pid,
+                    cost_impact: prod ? parseFloat(prod.purchase_price || "0") * (p.quantity || 1) : p.cost_impact
+                  }));
+                }}
+              >
+                <option value="">اختر المنتج...</option>
+                {products.map(p => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.code})</option>
+                ))}
+              </select>
             </div>
             <div className="space-y-1">
               <Label>الكمية *</Label>
-              <Input type="number" min="0.01" step="0.01"
+              <Input type="number" min="1" step="1"
                 value={form.quantity ?? ""}
-                onChange={e => setForm(p => ({ ...p, quantity: parseFloat(e.target.value) }))} />
+                onChange={e => {
+                  const qty = parseFloat(e.target.value) || 0;
+                  const prod = products.find(p => p.id === form.product_id);
+                  setForm(p => ({ 
+                    ...p, 
+                    quantity: qty,
+                    cost_impact: prod ? parseFloat(prod.purchase_price || "0") * qty : p.cost_impact
+                  }));
+                }} />
             </div>
             <div className="space-y-1">
               <Label>سبب التلف *</Label>
