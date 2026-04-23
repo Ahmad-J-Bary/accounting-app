@@ -9,7 +9,11 @@ pub struct AccountDto {
     pub name_en: String,
     pub account_type: String,
     pub parent_id: Option<String>,
+    pub category: String,
+    pub level: i32,
+    pub opening_balance: String,
     pub balance: String,
+    pub notes: Option<String>,
     pub is_active: bool,
 }
 
@@ -22,7 +26,11 @@ impl From<Account> for AccountDto {
             name_en: account.name_en,
             account_type: format!("{:?}", account.account_type),
             parent_id: account.parent_id.map(|id| id.0.to_string()),
+            category: format!("{:?}", account.category),
+            level: account.level,
+            opening_balance: account.opening_balance.to_string(),
             balance: account.balance.to_string(),
+            notes: account.notes,
             is_active: account.is_active,
         }
     }

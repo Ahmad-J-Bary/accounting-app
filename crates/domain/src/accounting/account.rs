@@ -15,6 +15,12 @@ pub enum AccountType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AccountCategory {
+    Summary, // حساب تجميعي
+    Detail,  // حساب فرعي/نهائي
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Account {
     pub id: AccountId,
     pub code: String,
@@ -22,7 +28,11 @@ pub struct Account {
     pub name_en: String,
     pub account_type: AccountType,
     pub parent_id: Option<AccountId>,
+    pub category: AccountCategory,
+    pub level: i32,
+    pub opening_balance: Decimal,
     pub balance: Decimal,
+    pub notes: Option<String>,
     pub is_active: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -35,6 +45,10 @@ impl Account {
         name_en: String,
         account_type: AccountType,
         parent_id: Option<AccountId>,
+        category: AccountCategory,
+        level: i32,
+        opening_balance: Decimal,
+        notes: Option<String>,
     ) -> Result<Self, DomainError> {
         if code.trim().is_empty() {
             return Err(DomainError::Invalid("كود الحساب لا يمكن أن يكون فارغًا".into()));
@@ -48,6 +62,10 @@ impl Account {
             return Err(DomainError::Invalid("اسم الحساب بالإنجليزية لا يمكن أن يكون فارغًا".into()));
         }
 
+        if level < 1 {
+            return Err(DomainError::Invalid("مستوى الحساب يجب أن يكون 1 أو أكبر".into()));
+        }
+
         let now = Utc::now();
 
         Ok(Self {
@@ -57,7 +75,11 @@ impl Account {
             name_en,
             account_type,
             parent_id,
-            balance: Decimal::ZERO,
+            category,
+            level,
+            opening_balance,
+            balance: opening_balance,
+            notes,
             is_active: true,
             created_at: now,
             updated_at: now,
@@ -114,18 +136,23 @@ mod tests {
     use super::*;
     use rust_decimal_macros::dec;
 
+    fn create_test_account(code: &str, name_ar: &str, name_en: &str, acc_type: AccountType) -> Result<Account, DomainError> {
+        Account::new(
+            code.to_string(),
+            name_ar.to_string(),
+            name_en.to_string(),
+            acc_type,
+            None,
+            AccountCategory::Detail,
+            1,
+            Decimal::ZERO,
+            None,
+        )
+    }
+
     #[test]
     fn account_creation_with_valid_data_succeeds() {
-        let result = Account::new(
-            "1001".to_string(),
-            "النقدية".to_string(),
-            "Cash".to_string(),
-            AccountType::Assets,
-            None,
-        );
-
-        assert!(result.is_ok());
-        let account = result.unwrap();
+        let account = create_test_account("1001", "النقدية", "Cash", AccountType::Assets).unwrap();
         assert_eq!(account.code, "1001");
         assert_eq!(account.name_ar, "النقدية");
         assert_eq!(account.balance, Decimal::ZERO);
@@ -133,54 +160,26 @@ mod tests {
 
     #[test]
     fn account_code_cannot_be_empty() {
-        let result = Account::new(
-            "".to_string(),
-            "النقدية".to_string(),
-            "Cash".to_string(),
-            AccountType::Assets,
-            None,
-        );
-
+        let result = create_test_account("", "النقدية", "Cash", AccountType::Assets);
         assert!(result.is_err());
     }
 
     #[test]
     fn account_name_ar_cannot_be_empty() {
-        let result = Account::new(
-            "1001".to_string(),
-            "".to_string(),
-            "Cash".to_string(),
-            AccountType::Assets,
-            None,
-        );
-
+        let result = create_test_account("1001", "", "Cash", AccountType::Assets);
         assert!(result.is_err());
     }
 
     #[test]
     fn debit_increases_balance() {
-        let mut account = Account::new(
-            "1001".to_string(),
-            "النقدية".to_string(),
-            "Cash".to_string(),
-            AccountType::Assets,
-            None,
-        ).unwrap();
-
+        let mut account = create_test_account("1001", "النقدية", "Cash", AccountType::Assets).unwrap();
         account.debit(dec!(100)).unwrap();
         assert_eq!(account.balance, dec!(100));
     }
 
     #[test]
     fn credit_decreases_balance() {
-        let mut account = Account::new(
-            "1001".to_string(),
-            "النقدية".to_string(),
-            "Cash".to_string(),
-            AccountType::Assets,
-            None,
-        ).unwrap();
-
+        let mut account = create_test_account("1001", "النقدية", "Cash", AccountType::Assets).unwrap();
         account.debit(dec!(100)).unwrap();
         account.credit(dec!(50)).unwrap();
         assert_eq!(account.balance, dec!(50));
@@ -188,94 +187,45 @@ mod tests {
 
     #[test]
     fn negative_debit_is_rejected() {
-        let mut account = Account::new(
-            "1001".to_string(),
-            "النقدية".to_string(),
-            "Cash".to_string(),
-            AccountType::Assets,
-            None,
-        ).unwrap();
-
+        let mut account = create_test_account("1001", "النقدية", "Cash", AccountType::Assets).unwrap();
         let result = account.debit(dec!(-10));
         assert!(result.is_err());
     }
 
     #[test]
     fn negative_credit_is_rejected() {
-        let mut account = Account::new(
-            "1001".to_string(),
-            "النقدية".to_string(),
-            "Cash".to_string(),
-            AccountType::Assets,
-            None,
-        ).unwrap();
-
+        let mut account = create_test_account("1001", "النقدية", "Cash", AccountType::Assets).unwrap();
         let result = account.credit(dec!(-10));
         assert!(result.is_err());
     }
 
     #[test]
     fn assets_account_is_debit_account() {
-        let account = Account::new(
-            "1001".to_string(),
-            "النقدية".to_string(),
-            "Cash".to_string(),
-            AccountType::Assets,
-            None,
-        ).unwrap();
-
+        let account = create_test_account("1001", "النقدية", "Cash", AccountType::Assets).unwrap();
         assert!(account.is_debit_account());
     }
 
     #[test]
     fn expenses_account_is_debit_account() {
-        let account = Account::new(
-            "5001".to_string(),
-            "المصاريف".to_string(),
-            "Expenses".to_string(),
-            AccountType::Expenses,
-            None,
-        ).unwrap();
-
+        let account = create_test_account("5001", "المصاريف", "Expenses", AccountType::Expenses).unwrap();
         assert!(account.is_debit_account());
     }
 
     #[test]
     fn liabilities_account_is_credit_account() {
-        let account = Account::new(
-            "2001".to_string(),
-            "الدائنون".to_string(),
-            "Creditors".to_string(),
-            AccountType::Liabilities,
-            None,
-        ).unwrap();
-
+        let account = create_test_account("2001", "الدائنون", "Creditors", AccountType::Liabilities).unwrap();
         assert!(account.is_credit_account());
     }
 
     #[test]
     fn equity_account_is_credit_account() {
-        let account = Account::new(
-            "3001".to_string(),
-            "رأس المال".to_string(),
-            "Capital".to_string(),
-            AccountType::Equity,
-            None,
-        ).unwrap();
-
+        let account = create_test_account("3001", "رأس المال", "Capital", AccountType::Equity).unwrap();
         assert!(account.is_credit_account());
     }
 
     #[test]
     fn revenue_account_is_credit_account() {
-        let account = Account::new(
-            "4001".to_string(),
-            "المبيعات".to_string(),
-            "Sales".to_string(),
-            AccountType::Revenue,
-            None,
-        ).unwrap();
-
+        let account = create_test_account("4001", "المبيعات", "Sales", AccountType::Revenue).unwrap();
         assert!(account.is_credit_account());
     }
 }

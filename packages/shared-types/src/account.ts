@@ -5,7 +5,11 @@ export interface AccountDto {
   name_en: string;
   account_type: string;
   parent_id: string | null;
+  category: string;
+  level: number;
+  opening_balance: string;
   balance: string;
+  notes: string | null;
   is_active: boolean;
 }
 
