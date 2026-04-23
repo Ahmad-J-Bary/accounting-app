@@ -17,9 +17,10 @@ interface NewInvoiceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  invoiceToEdit?: InvoiceDto | null;
 }
 
-export function NewInvoiceDialog({ open, onOpenChange, onSuccess }: NewInvoiceDialogProps) {
+export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit }: NewInvoiceDialogProps) {
   const [customers, setCustomers] = useState<CustomerDto[]>([]);
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -34,9 +35,30 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess }: NewInvoiceDi
 
   useEffect(() => {
     if (open) {
+      if (invoiceToEdit) {
+        setFormData({
+          invoice_number: invoiceToEdit.invoice_number,
+          customer_id: invoiceToEdit.customer_id,
+          lines: invoiceToEdit.lines.map(l => ({
+            product_id: l.product_id,
+            quantity: l.quantity,
+            unit_price: l.unit_price
+          })),
+          tax_amount: invoiceToEdit.tax_amount,
+          discount_amount: invoiceToEdit.discount_amount,
+        });
+      } else {
+        setFormData({
+          invoice_number: `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+          customer_id: "",
+          lines: [],
+          tax_amount: "0",
+          discount_amount: "0",
+        });
+      }
       loadData();
     }
-  }, [open]);
+  }, [open, invoiceToEdit]);
 
   const loadData = async () => {
     try {

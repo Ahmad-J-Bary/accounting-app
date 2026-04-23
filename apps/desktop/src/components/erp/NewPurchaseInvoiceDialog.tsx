@@ -16,9 +16,10 @@ interface NewPurchaseInvoiceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  invoiceToEdit?: PurchaseInvoice | null;
 }
 
-export function NewPurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: NewPurchaseInvoiceDialogProps) {
+export function NewPurchaseInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit }: NewPurchaseInvoiceDialogProps) {
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -43,9 +44,35 @@ export function NewPurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: NewP
 
   useEffect(() => {
     if (open) {
+      if (invoiceToEdit) {
+        setFormData({
+          invoice_number: invoiceToEdit.invoice_number,
+          supplier_id: invoiceToEdit.supplier_id,
+          items: invoiceToEdit.items.map(i => ({
+            product_id: i.product_id,
+            quantity: i.quantity,
+            unit_price: i.unit_price,
+            notes: i.notes
+          })),
+          tax_amount: invoiceToEdit.tax_amount,
+          discount_amount: invoiceToEdit.discount_amount,
+          invoice_date: invoiceToEdit.invoice_date.split('T')[0],
+          notes: invoiceToEdit.notes || "",
+        });
+      } else {
+        setFormData({
+          invoice_number: `PUR-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+          supplier_id: "",
+          items: [],
+          tax_amount: "0",
+          discount_amount: "0",
+          invoice_date: new Date().toISOString().split('T')[0],
+          notes: "",
+        });
+      }
       loadData();
     }
-  }, [open]);
+  }, [open, invoiceToEdit]);
 
   const loadData = async () => {
     try {

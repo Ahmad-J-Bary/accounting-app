@@ -13,7 +13,7 @@ export const purchaseService = {
     return await invoke<PurchaseInvoice[]>('list_purchase_invoices', { supplierId });
   },
 
-  async postPurchaseInvoice(invoiceId: string): Promise<PurchaseInvoice> {
-    return await invoke<PurchaseInvoice>('post_purchase_invoice', { invoiceId });
+  async postPurchaseInvoice(id: string): Promise<PurchaseInvoice> {
+    return await invoke<PurchaseInvoice>('post_purchase_invoice', { id });
   },
 };

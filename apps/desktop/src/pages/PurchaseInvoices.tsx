@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/erp/StatusBadge";
-import { Plus, Search, MoreHorizontal, Eye, Printer, RefreshCw, CheckCircle } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Eye, Printer, RefreshCw, CheckCircle, Edit } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { purchaseService } from "@/services/purchaseService";
 import { NewPurchaseInvoiceDialog } from "@/components/erp/NewPurchaseInvoiceDialog";
 import type { PurchaseInvoice } from "@erp/shared-types";
@@ -19,6 +20,9 @@ export default function PurchaseInvoices() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [error, setError] = useState<string | null>(null);
   const [isNewInvoiceOpen, setIsNewInvoiceOpen] = useState(false);
+  const [invoiceToEdit, setInvoiceToEdit] = useState<PurchaseInvoice | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const selectedInv = invoices.find(i => i.id === preview);
 
   const load = async () => {
     setLoading(true);
@@ -42,8 +46,8 @@ export default function PurchaseInvoices() {
 
   const filtered = invoices.filter(inv => {
     const matchSearch =
-      inv.invoice_number.includes(search) ||
-      (inv.supplier_name ?? "").includes(search);
+      inv.invoice_number.toLowerCase().includes(search.toLowerCase()) ||
+      (inv.supplier_name ?? "").toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || inv.status === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -65,8 +69,12 @@ export default function PurchaseInvoices() {
     <>
       <NewPurchaseInvoiceDialog 
         open={isNewInvoiceOpen}
-        onOpenChange={setIsNewInvoiceOpen}
+        onOpenChange={(open) => {
+          setIsNewInvoiceOpen(open);
+          if (!open) setInvoiceToEdit(null);
+        }}
         onSuccess={load}
+        invoiceToEdit={invoiceToEdit}
       />
 
       <PageHeader
@@ -92,7 +100,7 @@ export default function PurchaseInvoices() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4" dir="rtl">
         <Card className="p-4"><div className="text-sm text-muted-foreground">إجمالي الفواتير</div><div className="text-2xl font-bold tabular-nums mt-1">{invoices.length}</div></Card>
         <Card className="p-4"><div className="text-sm text-muted-foreground">مدفوعة</div><div className="text-2xl font-bold text-green-600 tabular-nums mt-1">{paid}</div></Card>
         <Card className="p-4"><div className="text-sm text-muted-foreground">جزئية</div><div className="text-2xl font-bold text-amber-600 tabular-nums mt-1">{partial}</div></Card>
@@ -100,7 +108,7 @@ export default function PurchaseInvoices() {
         <Card className="p-4"><div className="text-sm text-muted-foreground">الإجمالي</div><div className="text-xl font-bold text-primary tabular-nums mt-1">{formatCurrency(total)}</div></Card>
       </div>
 
-      <Card className="p-5">
+      <Card className="p-5" dir="rtl">
         <div className="flex items-center gap-3 mb-4 flex-wrap">
           <div className="relative flex-1 min-w-[220px]">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -163,11 +171,14 @@ export default function PurchaseInvoices() {
                           <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem><Eye className="w-4 h-4 ml-2" />عرض</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setPreview(inv.id)}><Eye className="w-4 h-4 ml-2" />عرض</DropdownMenuItem>
                           {inv.status === "Draft" && (
-                            <DropdownMenuItem onClick={() => handlePost(inv.id)}>
-                              <CheckCircle className="w-4 h-4 ml-2" />ترحيل
-                            </DropdownMenuItem>
+                            <>
+                              <DropdownMenuItem onClick={() => { setInvoiceToEdit(inv); setIsNewInvoiceOpen(true); }}><Edit className="w-4 h-4 ml-2" />تعديل</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handlePost(inv.id)}>
+                                <CheckCircle className="w-4 h-4 ml-2" />ترحيل
+                              </DropdownMenuItem>
+                            </>
                           )}
                           <DropdownMenuItem><Printer className="w-4 h-4 ml-2" />طباعة</DropdownMenuItem>
                         </DropdownMenuContent>
@@ -180,6 +191,101 @@ export default function PurchaseInvoices() {
           </div>
         )}
       </Card>
+      
+      <PurchaseInvoiceView 
+        selectedInv={selectedInv} 
+        preview={preview} 
+        setPreview={setPreview} 
+        handlePost={handlePost} 
+      />
     </>
+  );
+}
+
+function PurchaseInvoiceView({ selectedInv, preview, setPreview, handlePost }: any) {
+  return (
+    <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center justify-between">
+            <span>معاينة فاتورة المشتريات</span>
+            <div className="flex gap-2">
+              {selectedInv && selectedInv.status === "Draft" && (
+                <Button size="sm" variant="default" onClick={() => { handlePost(selectedInv.id); setPreview(null); }} className="bg-green-600 hover:bg-green-700">
+                  <CheckCircle className="w-4 h-4 ml-2" />ترحيل الفاتورة
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={() => window.print()}><Printer className="w-4 h-4 ml-2" />طباعة</Button>
+            </div>
+          </DialogTitle>
+          <DialogDescription>عرض تفاصيل فاتورة الشراء وجدول الأصناف المشتراة.</DialogDescription>
+        </DialogHeader>
+        {selectedInv && (
+          <div className="print-area bg-white border border-border rounded-md p-8" dir="rtl">
+            <div className="flex justify-between items-start mb-6 pb-6 border-b-2 border-primary">
+              <div>
+                <h2 className="text-2xl font-bold text-primary">فاتورة مشتريات</h2>
+                <p className="text-sm text-muted-foreground mt-1">Purchase Invoice</p>
+              </div>
+              <div className="text-left" dir="rtl">
+                <div className="font-bold text-lg">{selectedInv.supplier_name || "المورد"}</div>
+                <div className="text-xs text-muted-foreground">فاتورة صادرة من المورد</div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6 mb-6">
+              <div className="text-right">
+                <div className="text-xs text-muted-foreground mb-1">تفاصيل المورد</div>
+                <div className="font-bold">{selectedInv.supplier_name || selectedInv.supplier_id}</div>
+              </div>
+              <div className="space-y-1 text-sm text-left">
+                <div className="flex justify-between"><span className="text-muted-foreground">رقم الفاتورة:</span><span className="font-medium">{selectedInv.invoice_number}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">التاريخ:</span><span>{formatDate(selectedInv.invoice_date)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">الحالة:</span><span>{selectedInv.status}</span></div>
+              </div>
+            </div>
+
+            <table className="w-full text-sm mb-6 border border-border">
+              <thead className="bg-slate-100">
+                <tr>
+                  <th className="text-right px-3 py-2 font-medium">#</th>
+                  <th className="text-right px-3 py-2 font-medium">الصنف</th>
+                  <th className="text-left px-3 py-2 font-medium">الكمية</th>
+                  <th className="text-left px-3 py-2 font-medium">السعر</th>
+                  <th className="text-left px-3 py-2 font-medium">الإجمالي</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedInv.items.map((item: any, i: number) => (
+                  <tr key={i} className="border-t border-border">
+                    <td className="px-3 py-2">{i + 1}</td>
+                    <td className="px-3 py-2">{item.product_name || item.product_id}</td>
+                    <td className="px-3 py-2 text-left tabular-nums">{item.quantity}</td>
+                    <td className="px-3 py-2 text-left tabular-nums">{formatCurrency(parseFloat(item.unit_price))}</td>
+                    <td className="px-3 py-2 text-left tabular-nums">{formatCurrency(parseFloat(item.line_total))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="flex justify-start mb-6">
+              <div className="w-72 space-y-1 text-sm mr-auto">
+                 <div className="flex justify-between"><span className="text-muted-foreground">المجموع الفرعي:</span><span className="tabular-nums">{formatCurrency(parseFloat(selectedInv.subtotal))}</span></div>
+                 <div className="flex justify-between"><span className="text-muted-foreground">الضريبة:</span><span className="tabular-nums">{formatCurrency(parseFloat(selectedInv.tax_amount))}</span></div>
+                 <div className="flex justify-between"><span className="text-muted-foreground">الخصم:</span><span className="tabular-nums">{formatCurrency(parseFloat(selectedInv.discount_amount))}</span></div>
+                 <div className="flex justify-between py-2 border-t-2 border-primary font-bold text-base mt-2"><span>الإجمالي العام</span><span className="tabular-nums">{formatCurrency(parseFloat(selectedInv.total))}</span></div>
+              </div>
+            </div>
+
+            {selectedInv.notes && (
+              <div className="border-t border-border pt-4 text-xs text-muted-foreground text-right">
+                <div className="font-medium text-slate-700 mb-1">ملاحظات:</div>
+                <div>{selectedInv.notes}</div>
+              </div>
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -37,7 +37,7 @@ pub async fn list_purchase_invoices(
 
 #[tauri::command]
 pub async fn post_purchase_invoice(
-    invoice_id: String,
+    id: String,
     state: State<'_, AppState>,
 ) -> Result<PurchaseInvoiceDto, String> {
     PostPurchaseInvoiceUseCase::new(
@@ -46,7 +46,7 @@ pub async fn post_purchase_invoice(
         state.product_repo.clone(),
         state.stock_movement_repo.clone(),
     )
-    .execute(invoice_id)
+    .execute(id)
     .await
     .map_err(|e| e.to_string())
 }

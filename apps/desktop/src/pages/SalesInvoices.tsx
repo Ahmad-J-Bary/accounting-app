@@ -19,6 +19,7 @@ export default function SalesInvoices() {
   const [loading, setLoading] = useState(true);
   const [preview, setPreview] = useState<string | null>(null);
   const [isNewInvoiceOpen, setIsNewInvoiceOpen] = useState(false);
+  const [invoiceToEdit, setInvoiceToEdit] = useState<InvoiceDto | null>(null);
   const selectedInv = invoices.find(i => i.id === preview);
 
   useEffect(() => {
@@ -131,7 +132,7 @@ export default function SalesInvoices() {
                            <DropdownMenuItem onClick={() => setPreview(inv.id)}><Eye className="w-4 h-4 ml-2" />عرض</DropdownMenuItem>
                            {!inv.posted && (
                              <>
-                               <DropdownMenuItem><Edit className="w-4 h-4 ml-2" />تعديل</DropdownMenuItem>
+                               <DropdownMenuItem onClick={() => { setInvoiceToEdit(inv); setIsNewInvoiceOpen(true); }}><Edit className="w-4 h-4 ml-2" />تعديل</DropdownMenuItem>
                                <DropdownMenuItem onClick={() => postInvoice(inv.id)} className="text-green-600">
                                  <Send className="w-4 h-4 ml-2" />ترحيل
                                </DropdownMenuItem>
@@ -157,8 +158,12 @@ export default function SalesInvoices() {
 
       <NewInvoiceDialog 
         open={isNewInvoiceOpen} 
-        onOpenChange={setIsNewInvoiceOpen}
+        onOpenChange={(open) => {
+          setIsNewInvoiceOpen(open);
+          if (!open) setInvoiceToEdit(null);
+        }}
         onSuccess={loadInvoices}
+        invoiceToEdit={invoiceToEdit}
       />
 
       {/* Invoice preview dialog - printable */}

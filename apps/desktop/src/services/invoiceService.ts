@@ -13,7 +13,7 @@ export const invoiceService = {
     return await invoke<InvoiceDto[]>('list_invoices', { customerId });
   },
 
-  async postInvoice(invoiceId: string): Promise<InvoiceDto> {
-    return await invoke<InvoiceDto>('post_invoice', { invoiceId });
+  async postInvoice(id: string): Promise<InvoiceDto> {
+    return await invoke<InvoiceDto>('post_invoice', { id });
   },
 };

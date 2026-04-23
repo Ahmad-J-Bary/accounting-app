@@ -23,7 +23,11 @@ pub async fn list_invoices(
     customer_id: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<Vec<InvoiceDto>, String> {
-    let use_case = ListInvoicesUseCase::new(state.invoice_repo.clone(), state.customer_repo.clone());
+    let use_case = ListInvoicesUseCase::new(
+        state.invoice_repo.clone(),
+        state.customer_repo.clone(),
+        state.product_repo.clone(),
+    );
     let result: Result<Vec<InvoiceDto>, AppError> = use_case.execute(customer_id).await;
     result.map_err(|e| e.to_string())
 }
