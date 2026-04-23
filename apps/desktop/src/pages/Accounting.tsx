@@ -344,30 +344,32 @@ export default function Accounting() {
     setIsDialogOpen(true);
   }, [selected]);
 
-  const handleDelete = useCallback(async () => {
+  const handleToggleActive = useCallback(async () => {
     if (!selected) return;
 
-    if (selected.is_default) {
-      window.alert("لا يمكن حذف حسابات النظام الافتراضية");
+    if (selected.is_default && selected.is_active) {
+      window.alert("لا يمكن تعطيل حسابات النظام الافتراضية");
       return;
     }
 
+    const actionLabel = selected.is_active ? "تعطيل" : "تفعيل";
     if (
-      !window.confirm(
-        `هل أنت متأكد من حذف الحساب "${selected.name_ar}"؟ لا يمكن التراجع عن هذه العملية.`,
-      )
+      !window.confirm(`هل تريد ${actionLabel} الحساب "${selected.name_ar}"؟`)
     ) {
       return;
     }
 
     try {
       setLoading(true);
-      await accountingService.deleteAccount(selected.id);
-      setSelected(null);
+      if (selected.is_active) {
+        await accountingService.deactivateAccount(selected.id);
+      } else {
+        await accountingService.activateAccount(selected.id);
+      }
       await load();
     } catch (error: unknown) {
       console.error(error);
-      window.alert(`فشل الحذف: ${getErrorMessage(error)}`);
+      window.alert(`فشلت العملية: ${getErrorMessage(error)}`);
     } finally {
       setLoading(false);
     }
@@ -516,17 +518,20 @@ export default function Accounting() {
                     تعديل
                   </Button>
 
-                  {!selected.is_default && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-100"
-                      onClick={() => void handleDelete()}
-                    >
-                      <Trash2 className="w-3.5 h-3.5 ml-1.5" />
-                      حذف
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "h-8",
+                      selected.is_active
+                        ? "text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-100"
+                        : "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-100",
+                    )}
+                    onClick={() => void handleToggleActive()}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 ml-1.5" />
+                    {selected.is_active ? "تعطيل" : "تفعيل"}
+                  </Button>
                 </div>
               </div>
 

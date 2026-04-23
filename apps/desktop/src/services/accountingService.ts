@@ -46,4 +46,12 @@ export const accountingService = {
   async deleteAccount(id: string): Promise<void> {
     return await invoke<void>("delete_account", { id });
   },
+
+  async activateAccount(id: string): Promise<AccountDto> {
+    return await invoke<AccountDto>("activate_account", { id });
+  },
+
+  async deactivateAccount(id: string): Promise<AccountDto> {
+    return await invoke<AccountDto>("deactivate_account", { id });
+  },
 };

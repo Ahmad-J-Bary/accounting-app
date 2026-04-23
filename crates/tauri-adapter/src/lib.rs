@@ -1,5 +1,5 @@
-pub mod commands;
 pub mod bootstrap;
+pub mod commands;
 
 use tauri::Manager;
 
@@ -69,6 +69,8 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::accounting::create_account,
             commands::accounting::update_account,
             commands::accounting::delete_account,
+            commands::accounting::activate_account,
+            commands::accounting::deactivate_account,
             commands::assets::create_fixed_asset,
             commands::assets::list_fixed_assets,
             commands::assets::create_consumable,
@@ -82,9 +84,8 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::assets::list_all_asset_movements,
         ])
         .setup(|app| {
-            let app_state = tauri::async_runtime::block_on(
-                bootstrap::container::build_app_state()
-            ).expect("Failed to create app state");
+            let app_state = tauri::async_runtime::block_on(bootstrap::container::build_app_state())
+                .expect("Failed to create app state");
             app.manage(app_state);
             Ok(())
         })
