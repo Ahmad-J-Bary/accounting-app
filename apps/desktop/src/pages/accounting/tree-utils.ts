@@ -2,8 +2,8 @@ import type { AccountDto } from "@erp/shared-types";
 import type { AccountTreeNode } from "./types";
 
 export const isSummaryAccount = (
-  account: Pick<AccountDto, "category">,
-): boolean => account.category === "Summary";
+  account: Pick<AccountDto, "category" | "level">,
+): boolean => account.category === "Summary" || (account.level ?? 1) <= 2;
 
 export const parseAmount = (
   value: string | number | null | undefined,

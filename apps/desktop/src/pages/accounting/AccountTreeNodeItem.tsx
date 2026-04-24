@@ -11,6 +11,7 @@ interface AccountTreeNodeItemProps {
   onSelect: (account: AccountTreeNode) => void;
   expandedNodes: Set<string>;
   toggleNode: ToggleNodeHandler;
+  virtualRootId?: string;
 }
 
 export function AccountTreeNodeItem({
@@ -20,11 +21,13 @@ export function AccountTreeNodeItem({
   onSelect,
   expandedNodes,
   toggleNode,
+  virtualRootId,
 }: AccountTreeNodeItemProps) {
   const isExpanded = expandedNodes.has(account.id);
   const hasChildren = account.children.length > 0;
   const isSelected = selectedId === account.id;
-  const isSummary = isSummaryAccount(account);
+  const isVirtualRoot = virtualRootId === account.id;
+  const isSummary = isVirtualRoot || isSummaryAccount(account);
 
   return (
     <div>
@@ -63,7 +66,9 @@ export function AccountTreeNodeItem({
             <File className="w-4 h-4 text-slate-300" />
           )}
 
-          <span className="tabular-nums min-w-[60px]">{account.code}</span>
+          <span className="tabular-nums min-w-[60px]">
+            {isVirtualRoot ? "—" : account.code}
+          </span>
           <span className="flex-1">{account.name_ar}</span>
 
           {account.is_default && (
@@ -80,7 +85,9 @@ export function AccountTreeNodeItem({
         </div>
 
         <div className="w-[100px] text-xs">
-          {isSummary ? (
+          {isVirtualRoot ? (
+            <span className="text-slate-400">رئيسي</span>
+          ) : isSummary ? (
             <span className="text-slate-400">تجميعي</span>
           ) : (
             <span className="text-slate-500">فرعي</span>
@@ -88,18 +95,22 @@ export function AccountTreeNodeItem({
         </div>
 
         <div className="w-[120px]">
-          <span
-            className={cn(
-              "text-[10px] px-2 py-0.5 rounded-full border",
-              TYPE_LABELS[account.account_type]?.color || "",
-            )}
-          >
-            {TYPE_LABELS[account.account_type]?.label || account.account_type}
-          </span>
+          {isVirtualRoot ? (
+            <span className="text-slate-400 text-xs">—</span>
+          ) : (
+            <span
+              className={cn(
+                "text-[10px] px-2 py-0.5 rounded-full border",
+                TYPE_LABELS[account.account_type]?.color || "",
+              )}
+            >
+              {TYPE_LABELS[account.account_type]?.label || account.account_type}
+            </span>
+          )}
         </div>
 
         <div className="w-[120px] text-left tabular-nums">
-          {formatCurrency(parseAmount(account.balance))}
+          {isVirtualRoot ? "—" : formatCurrency(parseAmount(account.balance))}
         </div>
       </div>
 
@@ -114,6 +125,7 @@ export function AccountTreeNodeItem({
               onSelect={onSelect}
               expandedNodes={expandedNodes}
               toggleNode={toggleNode}
+              virtualRootId={virtualRootId}
             />
           ))}
         </div>

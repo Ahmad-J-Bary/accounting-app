@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Plus, Download, Search, RefreshCw, Folder } from "lucide-react";
 import { accountingService } from "@/services/accountingService";
 import type { AccountDto } from "@erp/shared-types";
-import { AccountDialog } from "@/components/erp/AccountDialog";
 import {
   buildTree,
   getVisibleRootTree,
@@ -18,17 +17,14 @@ import { AccountTreeNodeItem } from "./accounting/AccountTreeNodeItem";
 import { AccountDetailsSidebar } from "./accounting/AccountDetailsSidebar";
 import { cn } from "@/lib/utils";
 
+const ROOT_ACCOUNT_ID = "__chart_of_accounts_root__";
+
 export default function Accounting() {
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<AccountTreeNode | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
-
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingAccount, setEditingAccount] = useState<AccountDto | null>(null);
-  const [parentAccountForNew, setParentAccountForNew] =
-    useState<AccountDto | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -37,18 +33,53 @@ export default function Accounting() {
       setAccounts(data);
 
       const defaultExpanded = new Set<string>();
+      defaultExpanded.add(ROOT_ACCOUNT_ID);
       for (const account of data) {
         if ((account.level ?? 1) <= 2) defaultExpanded.add(account.id);
       }
       setExpandedNodes(defaultExpanded);
 
       setSelected((prev) => {
+        if (prev?.id === ROOT_ACCOUNT_ID) {
+          return {
+            id: ROOT_ACCOUNT_ID,
+            code: "",
+            name_ar: "دليل الحسابات",
+            name_en: "Chart of Accounts",
+            account_type: "Assets",
+            parent_id: null,
+            category: "Summary",
+            level: 0,
+            opening_balance: "0",
+            balance: "0",
+            notes: null,
+            is_active: true,
+            is_default: false,
+            children: [],
+          };
+        }
+
         if (prev) {
           const updated = data.find((a) => a.id === prev.id);
           return updated ? { ...updated, children: [] } : null;
         }
-        if (data.length === 0) return null;
-        return { ...data[0], children: [] };
+
+        return {
+          id: ROOT_ACCOUNT_ID,
+          code: "",
+          name_ar: "دليل الحسابات",
+          name_en: "Chart of Accounts",
+          account_type: "Assets",
+          parent_id: null,
+          category: "Summary",
+          level: 0,
+          opening_balance: "0",
+          balance: "0",
+          notes: null,
+          is_active: true,
+          is_default: false,
+          children: [],
+        };
       });
     } catch (error: unknown) {
       console.error(error);
@@ -106,6 +137,27 @@ export default function Accounting() {
     () => getVisibleRootTree(tree, searchQuery),
     [tree, searchQuery],
   );
+  const rootNode = useMemo<AccountTreeNode>(
+    () => ({
+      id: ROOT_ACCOUNT_ID,
+      code: "",
+      name_ar: "دليل الحسابات",
+      name_en: "Chart of Accounts",
+      account_type: "Assets",
+      parent_id: null,
+      category: "Summary",
+      level: 0,
+      opening_balance: "0",
+      balance: "0",
+      notes: null,
+      is_active: true,
+      is_default: false,
+      children: visibleTree,
+    }),
+    [visibleTree],
+  );
+  const isRootSelected = selected?.id === ROOT_ACCOUNT_ID;
+  const selectedForSidebar = isRootSelected ? null : selected;
 
   const parentName = useMemo(() => {
     if (!selected?.parent_id) return null;
@@ -113,21 +165,8 @@ export default function Accounting() {
     return parent?.name_ar ?? null;
   }, [selected, accounts]);
 
-  const handleCreateNew = useCallback(() => {
-    setEditingAccount(null);
-    setParentAccountForNew(selected ?? null);
-    setIsDialogOpen(true);
-  }, [selected]);
-
-  const handleEdit = useCallback(() => {
-    if (!selected) return;
-    setEditingAccount(selected);
-    setParentAccountForNew(null);
-    setIsDialogOpen(true);
-  }, [selected]);
-
   const handleDelete = useCallback(async () => {
-    if (!selected) return;
+    if (!selected || selected.id === ROOT_ACCOUNT_ID) return;
 
     if (!window.confirm(`هل تريد حذف/تعطيل الحساب "${selected.name_ar}"؟`)) {
       return;
@@ -232,44 +271,36 @@ export default function Accounting() {
                   variant="outline"
                   size="sm"
                   className="mt-2"
-                  onClick={handleCreateNew}
+                  onClick={() => setSelected(null)}
                 >
                   <Plus className="w-4 h-4 ml-2" />
-                  إضافة حساب
+                  اختر عنصرًا من اليمين لإضافة حساب
                 </Button>
               </div>
             ) : (
-              visibleTree.map((account) => (
                 <AccountTreeNodeItem
-                  key={account.id}
-                  account={account}
+                  key={rootNode.id}
+                  account={rootNode}
                   selectedId={selected?.id || ""}
                   onSelect={setSelected}
                   expandedNodes={expandedNodes}
                   toggleNode={toggleNode}
+                  virtualRootId={ROOT_ACCOUNT_ID}
                 />
-              ))
             )}
           </div>
         </Card>
 
         <AccountDetailsSidebar
-          selected={selected}
+          selected={selectedForSidebar}
+          allAccounts={accounts}
           parentName={parentName}
-          onCreateNew={handleCreateNew}
-          onEdit={handleEdit}
+          onSaved={() => void load()}
           onDelete={() => void handleDelete()}
+          canEdit={!isRootSelected && !!selected}
+          canDelete={!isRootSelected && !!selected}
         />
       </div>
-
-      <AccountDialog
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        onSaved={() => void load()}
-        initialData={editingAccount}
-        parentAccount={parentAccountForNew}
-        allAccounts={accounts}
-      />
     </>
   );
 }
