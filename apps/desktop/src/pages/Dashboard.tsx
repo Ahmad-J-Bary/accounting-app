@@ -10,7 +10,7 @@ import {
   TrendingUp, ShoppingCart, Wallet, Users, Truck, Package,
   AlertCircle, FileText, Plus, Download, Receipt, ArrowUpRight
 } from "lucide-react";
-import { dashboardKpis, revenueChartData, salesInvoices, payments, products } from "@/lib/mockData";
+import { revenueChartData, salesInvoices, payments } from "@/lib/mockData";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -18,7 +18,11 @@ import {
 } from "recharts";
 import { useState, useEffect } from "react";
 import { journalEntryService } from "@/services/journalEntryService";
-import type { JournalEntryDto } from "@erp/shared-types";
+import { invoiceService } from "@/services/invoiceService";
+import { purchaseService } from "@/services/purchaseService";
+import { paymentService } from "@/services/paymentService";
+import { productService } from "@/services/productService";
+import type { InvoiceDto, JournalEntryDto, Payment, ProductDto, PurchaseInvoice } from "@erp/shared-types";
 
 const pieData = [
   { name: "إلكترونيات", value: 45, color: "#1e3a5f" },
@@ -28,13 +32,71 @@ const pieData = [
 ];
 
 export default function Dashboard() {
-  const lowStock = products.filter(p => p.stock < p.minStock);
   const [recentJournals, setRecentJournals] = useState<JournalEntryDto[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
+  const [purchaseInvoices, setPurchaseInvoices] = useState<PurchaseInvoice[]>([]);
+  const [paymentEntries, setPaymentEntries] = useState<Payment[]>([]);
+  const [productItems, setProductItems] = useState<ProductDto[]>([]);
+
+  const toNumber = (value?: string | null) => {
+    const parsed = Number.parseFloat(value ?? "0");
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const postedSalesTotal = invoices
+    .filter((invoice) => invoice.posted)
+    .reduce((sum, invoice) => sum + toNumber(invoice.total), 0);
+
+  const approvedPurchasesTotal = purchaseInvoices
+    .filter((invoice) => invoice.status !== "Draft" && invoice.status !== "Cancelled")
+    .reduce((sum, invoice) => sum + toNumber(invoice.total), 0);
+
+  const totalCashIn = paymentEntries
+    .filter((entry) => entry.payment_type === "Receipt" || entry.payment_type === "CashIn")
+    .reduce((sum, entry) => sum + toNumber(entry.amount), 0);
+
+  const totalCashOut = paymentEntries
+    .filter((entry) => entry.payment_type === "SupplierPayment" || entry.payment_type === "CashOut")
+    .reduce((sum, entry) => sum + toNumber(entry.amount), 0);
+
+  const totalCustomerReceipts = paymentEntries
+    .filter((entry) => entry.payment_type === "Receipt")
+    .reduce((sum, entry) => sum + toNumber(entry.amount), 0);
+
+  const totalSupplierPayments = paymentEntries
+    .filter((entry) => entry.payment_type === "SupplierPayment")
+    .reduce((sum, entry) => sum + toNumber(entry.amount), 0);
+
+  const cashBalance = totalCashIn - totalCashOut;
+  const receivablesBalance = Math.max(postedSalesTotal - totalCustomerReceipts, 0);
+  const payablesBalance = Math.max(approvedPurchasesTotal - totalSupplierPayments, 0);
+
+  const inventoryValue = productItems.reduce((sum, product) => {
+    const stockQuantity = toNumber(product.stock_quantity);
+    const purchasePrice = toNumber(product.purchase_price);
+    return sum + (stockQuantity * purchasePrice);
+  }, 0);
+
+  const lowStock = productItems.filter(
+    (product) => toNumber(product.stock_quantity) < toNumber(product.minimum_stock)
+  );
 
   useEffect(() => {
-    journalEntryService.listJournalEntries().then(entries => {
-      setRecentJournals(entries.slice(0, 5));
-    }).catch(console.error);
+    Promise.all([
+      journalEntryService.listJournalEntries(),
+      invoiceService.listInvoices(),
+      purchaseService.listPurchaseInvoices(),
+      paymentService.listPayments(),
+      productService.listProducts(),
+    ])
+      .then(([entries, salesData, purchaseData, paymentData, productData]) => {
+        setRecentJournals(entries.slice(0, 5));
+        setInvoices(salesData);
+        setPurchaseInvoices(purchaseData);
+        setPaymentEntries(paymentData);
+        setProductItems(productData);
+      })
+      .catch(console.error);
   }, []);
 
   return (
@@ -64,12 +126,12 @@ export default function Dashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-        <KpiCard title="إجمالي المبيعات" value={dashboardKpis.sales.value} change={dashboardKpis.sales.change} icon={TrendingUp} iconColor="bg-blue-50 text-blue-600" />
-        <KpiCard title="إجمالي المشتريات" value={dashboardKpis.purchases.value} change={dashboardKpis.purchases.change} icon={ShoppingCart} iconColor="bg-purple-50 text-purple-600" />
-        <KpiCard title="الرصيد النقدي" value={dashboardKpis.cash.value} change={dashboardKpis.cash.change} icon={Wallet} iconColor="bg-green-50 text-green-600" />
-        <KpiCard title="ذمم العملاء" value={dashboardKpis.receivables.value} change={dashboardKpis.receivables.change} icon={Users} iconColor="bg-amber-50 text-amber-600" />
-        <KpiCard title="ذمم الموردين" value={dashboardKpis.payables.value} change={dashboardKpis.payables.change} icon={Truck} iconColor="bg-red-50 text-red-600" />
-        <KpiCard title="قيمة المخزون" value={dashboardKpis.inventory.value} change={dashboardKpis.inventory.change} icon={Package} iconColor="bg-teal-50 text-teal-600" />
+        <KpiCard title="إجمالي المبيعات" value={postedSalesTotal} icon={TrendingUp} iconColor="bg-blue-50 text-blue-600" />
+        <KpiCard title="إجمالي المشتريات" value={approvedPurchasesTotal} icon={ShoppingCart} iconColor="bg-purple-50 text-purple-600" />
+        <KpiCard title="الرصيد النقدي" value={cashBalance} icon={Wallet} iconColor="bg-green-50 text-green-600" />
+        <KpiCard title="ذمم العملاء" value={receivablesBalance} icon={Users} iconColor="bg-amber-50 text-amber-600" />
+        <KpiCard title="ذمم الموردين" value={payablesBalance} icon={Truck} iconColor="bg-red-50 text-red-600" />
+        <KpiCard title="قيمة المخزون" value={inventoryValue} icon={Package} iconColor="bg-teal-50 text-teal-600" />
       </div>
 
       {/* Charts */}
@@ -146,7 +208,7 @@ export default function Dashboard() {
             {lowStock.slice(0, 4).map((p) => (
               <div key={p.id} className="flex items-center justify-between text-sm py-1.5 border-b border-border last:border-0">
                 <span className="truncate">{p.name}</span>
-                <span className="text-red-600 font-medium tabular-nums">{p.stock} / {p.minStock}</span>
+                <span className="text-red-600 font-medium tabular-nums">{p.stock_quantity} / {p.minimum_stock}</span>
               </div>
             ))}
           </div>
@@ -251,8 +313,8 @@ export default function Dashboard() {
                   <td className="py-2.5 font-medium text-primary">{j.entry_number}</td>
                   <td className="py-2.5">{formatDate(j.entry_date)}</td>
                   <td className="py-2.5">{j.description}</td>
-                  <td className="py-2.5 text-left tabular-nums">{formatCurrency(parseFloat(j.total_debit))}</td>
-                  <td className="py-2.5 text-left tabular-nums">{formatCurrency(parseFloat(j.total_credit))}</td>
+                  <td className="py-2.5 text-left tabular-nums">{formatCurrency(parseFloat(j.total_base_debit))}</td>
+                  <td className="py-2.5 text-left tabular-nums">{formatCurrency(parseFloat(j.total_base_credit))}</td>
                   <td className="py-2.5 text-left"><StatusBadge status={j.status} /></td>
                 </tr>
               ))}
