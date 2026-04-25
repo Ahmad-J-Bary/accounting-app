@@ -82,6 +82,8 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::assets::issue_consumable,
             commands::assets::list_asset_movements,
             commands::assets::list_all_asset_movements,
+            // Dashboard
+            commands::dashboard::get_receivables_payables_summary,
         ])
         .setup(|app| {
             let app_state = tauri::async_runtime::block_on(bootstrap::container::build_app_state())

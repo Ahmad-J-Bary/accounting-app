@@ -12,11 +12,14 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { accountingService } from "@/services/accountingService";
+import type { AccountDto } from "@erp/shared-types";
 
 import { customerService } from "@/services/customerService";
 import { invoiceService } from "@/services/invoiceService";
 import { paymentService } from "@/services/paymentService";
-import type { CustomerDto, InvoiceDto, Payment } from "@erp/shared-types";
+import type { CustomerDto, InvoiceDto, Payment, CreateCustomerRequest, UpdateCustomerRequest } from "@erp/shared-types";
 
 export default function Customers() {
   const [customersList, setCustomersList] = useState<CustomerDto[]>([]);
@@ -33,10 +36,35 @@ export default function Customers() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editCustomer, setEditCustomer] = useState<CustomerDto | null>(null);
   const [formData, setFormData] = useState({
+    code: "",
     name: "",
     phone: "",
-    address: ""
+    address: "",
+    notes: ""
   });
+  // Accounting related fields
+  const [linkedAccountId, setLinkedAccountId] = useState<string>("null");
+  const [openingBalance, setOpeningBalance] = useState<string>("0");
+  const [debit, setDebit] = useState<string>("0");
+  const [credit, setCredit] = useState<string>("0");
+  const [currency, setCurrency] = useState<string>("USD");
+  const [accountsForLink, setAccountsForLink] = useState<AccountDto[]>([]);
+
+  const loadAccountsForLink = async () => {
+    try {
+      const accounts = await accountingService.getChartOfAccounts();
+      // Filter for Assets accounts (receivables) starting with 123 (المستوى 3 والمستوى 4)
+      const filtered = accounts.filter((a) => a.account_type === "Assets" && (a.code === "123" || a.code.startsWith("123")));
+      setAccountsForLink(filtered);
+      // Auto-select the "123" parent account for new customers
+      const parent123 = accounts.find((a) => a.code === "123");
+      if (parent123) {
+        setLinkedAccountId(parent123.id);
+      }
+    } catch {
+      // ignore
+    }
+  };
 
   const fetchCustomers = async () => {
     try {
@@ -68,6 +96,7 @@ export default function Customers() {
 
   useEffect(() => {
     fetchCustomers();
+    void loadAccountsForLink();
   }, []);
 
   useEffect(() => {
@@ -84,14 +113,37 @@ export default function Customers() {
   const handleSave = async () => {
     try {
       if (editCustomer) {
-        await customerService.updateCustomer({
+        const updatePayload: UpdateCustomerRequest = {
           id: editCustomer.id,
-          ...formData,
-          is_active: editCustomer.is_active
-        });
+          code: formData.code,
+          name: formData.name,
+          phone: formData.phone || null,
+          address: formData.address || null,
+          notes: formData.notes || null,
+          account_id: linkedAccountId === "null" ? null : linkedAccountId,
+          opening_balance: openingBalance,
+          debit,
+          credit,
+          currency,
+          is_active: editCustomer.is_active,
+        };
+        await customerService.updateCustomer(updatePayload);
         toast.success("تم تحديث بيانات العميل بنجاح");
       } else {
-        await customerService.createCustomer(formData);
+        const createPayload: CreateCustomerRequest = {
+          code: formData.code,
+          name: formData.name,
+          phone: formData.phone || null,
+          address: formData.address || null,
+          notes: formData.notes || null,
+          account_id: linkedAccountId === "null" ? null : linkedAccountId,
+          opening_balance: openingBalance,
+          debit,
+          credit,
+          currency,
+          is_active: true,
+        };
+        await customerService.createCustomer(createPayload);
         toast.success("تم إضافة العميل بنجاح");
       }
       setIsDialogOpen(false);
@@ -130,7 +182,12 @@ export default function Customers() {
             <Button variant="outline"><Download className="w-4 h-4 ml-2" />تصدير</Button>
             <Button onClick={() => {
               setEditCustomer(null);
-              setFormData({ name: "", phone: "", address: "" });
+              setFormData({ code: "", name: "", phone: "", address: "", notes: "" });
+              setLinkedAccountId("null");
+              setOpeningBalance("0");
+              setDebit("0");
+              setCredit("0");
+              setCurrency("SYP");
               setIsDialogOpen(true);
             }}>
               <Plus className="w-4 h-4 ml-2" />عميل جديد
@@ -179,9 +236,11 @@ export default function Customers() {
             <table className="w-full text-sm min-w-[700px]">
               <thead className="bg-slate-50 border-b border-border">
                 <tr>
+                  <th className="text-right px-4 py-3 font-medium">الكود</th>
                   <th className="text-right px-4 py-3 font-medium">الاسم</th>
                   <th className="text-right px-4 py-3 font-medium">الهاتف</th>
-                  <th className="text-right px-4 py-3 font-medium">العنوان</th>
+                  <th className="text-left px-4 py-3 font-medium">المدين</th>
+                  <th className="text-left px-4 py-3 font-medium">الدائن</th>
                   <th className="text-left px-4 py-3 font-medium">الرصيد</th>
                   <th className="text-left px-4 py-3 font-medium">الحالة</th>
                   <th className="text-left px-4 py-3 font-medium w-12"></th>
@@ -195,9 +254,11 @@ export default function Customers() {
                 ) : (
                   filteredCustomers.map((c) => (
                     <tr key={c.id} className="border-b border-border last:border-0 hover:bg-slate-50 cursor-pointer" onClick={() => setSelectedId(c.id)}>
+                      <td className="px-4 py-3 font-medium text-muted-foreground">{c.code}</td>
                       <td className="px-4 py-3">{c.name}</td>
                       <td className="px-4 py-3 tabular-nums">{c.phone}</td>
-                      <td className="px-4 py-3">{c.address || "-"}</td>
+                      <td className="px-4 py-3 text-left tabular-nums text-red-600">{formatCurrency(Number(c.debit || 0))}</td>
+                      <td className="px-4 py-3 text-left tabular-nums text-green-600">{formatCurrency(Number(c.credit || 0))}</td>
                       <td className="px-4 py-3 text-left tabular-nums font-medium">{formatCurrency(Number(c.balance || 0))}</td>
                       <td className="px-4 py-3 text-left"><StatusBadge status={c.is_active ? "active" : "inactive"} /></td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -210,10 +271,17 @@ export default function Customers() {
                             <DropdownMenuItem onClick={() => {
                               setEditCustomer(c);
                               setFormData({
+                                code: c.code,
                                 name: c.name,
                                 phone: c.phone || "",
-                                address: c.address || ""
+                                address: c.address || "",
+                                notes: c.notes || ""
                               });
+                              setLinkedAccountId(c.account_id || "null");
+                              setOpeningBalance(c.opening_balance || "0");
+                              setDebit(c.debit || "0");
+                              setCredit(c.credit || "0");
+                              setCurrency(c.currency || "SYP");
                               setIsDialogOpen(true);
                             }}><Edit className="w-4 h-4 ml-2" />تعديل</DropdownMenuItem>
                             <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(c.id, c.name)}>
@@ -338,6 +406,52 @@ export default function Customers() {
             <div className="grid gap-2">
               <Label htmlFor="address">العنوان</Label>
               <Input id="address" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="notes">ملاحظات</Label>
+              <Input id="notes" value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} />
+            </div>
+            <div className="grid grid-cols-2 gap-4 pt-2" style={{direction:'rtl'}}>
+              <div className="hidden">
+                <Label>الحساب المحاسبي المرتبط</Label>
+                <Select value={linkedAccountId} onValueChange={setLinkedAccountId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر حساب محاسبي" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={"null"}>— بدون حساب محاسبي —</SelectItem>
+                    {accountsForLink.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>{a.code} - {a.name_ar}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>الرصيد الافتتاحي</Label>
+                <Input value={openingBalance} onChange={e => setOpeningBalance(e.target.value)} placeholder="0" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 pt-2" style={{direction:'rtl'}}>
+              <div>
+                <Label>مدين</Label>
+                <Input value={debit} onChange={e => setDebit(e.target.value)} placeholder="0" />
+              </div>
+              <div>
+                <Label>دائن</Label>
+                <Input value={credit} onChange={e => setCredit(e.target.value)} placeholder="0" />
+              </div>
+            </div>
+            <div className="pt-2">
+              <Label>العملة</Label>
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر عملة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SYP">SYP - ليرة سورية</SelectItem>
+                  <SelectItem value="USD">USD - دولار أمريكي</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter className="flex-row-reverse gap-2">

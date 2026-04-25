@@ -12,11 +12,14 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { supplierService } from "@/services/supplierService";
+import { accountingService } from "@/services/accountingService";
+import type { AccountDto } from "@erp/shared-types";
 import { purchaseService } from "@/services/purchaseService";
 import { paymentService } from "@/services/paymentService";
-import type { SupplierDto, PurchaseInvoice, Payment } from "@erp/shared-types";
+import type { SupplierDto, PurchaseInvoice, Payment, CreateSupplierRequest, UpdateSupplierRequest } from "@erp/shared-types";
 
 export default function Suppliers() {
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
@@ -31,9 +34,32 @@ export default function Suppliers() {
 
   const [showDialog, setShowDialog] = useState(false);
   const [editSupplier, setEditSupplier] = useState<SupplierDto | null>(null);
-  const [form, setForm] = useState({ name: "", phone: "", address: "" });
+  const [form, setForm] = useState({ code: "", name: "", phone: "", address: "", notes: "" });
+  // New accounting-related fields
+  const [linkedAccountId, setLinkedAccountId] = useState<string>("null");
+  const [openingBalance, setOpeningBalance] = useState<string>("0");
+  const [debit, setDebit] = useState<string>("0");
+  const [credit, setCredit] = useState<string>("0");
+  const [currency, setCurrency] = useState<string>("USD");
+  const [accountsForLink, setAccountsForLink] = useState<AccountDto[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const loadAccountsForLink = async () => {
+    try {
+      const accounts = await accountingService.getChartOfAccounts();
+      // Filter for Liabilities accounts (payables) starting with 223 (المستوى 3 والمستوى 4)
+      const filtered = accounts.filter((a) => a.account_type === "Liabilities" && (a.code === "223" || a.code.startsWith("223")));
+      setAccountsForLink(filtered);
+      // Auto-select the "223" parent account for new suppliers
+      const parent223 = accounts.find((a) => a.code === "223");
+      if (parent223) {
+        setLinkedAccountId(parent223.id);
+      }
+    } catch {
+      // ignore
+    }
+  };
 
   const loadSuppliers = async () => {
     setLoading(true);
@@ -46,6 +72,7 @@ export default function Suppliers() {
     } finally {
       setLoading(false);
     }
+    await loadAccountsForLink();
   };
 
   const fetchSupplierDetails = async (id: string) => {
@@ -64,7 +91,10 @@ export default function Suppliers() {
     }
   };
 
-  useEffect(() => { loadSuppliers(); }, []);
+  useEffect(() => { 
+    void loadSuppliers(); 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (selectedId) {
@@ -89,23 +119,46 @@ export default function Suppliers() {
     setSaving(true);
     try {
       if (editSupplier) {
-        await supplierService.updateSupplier({
+        const updatePayload: UpdateSupplierRequest = {
           id: editSupplier.id,
+          code: form.code,
           name: form.name,
           phone: form.phone || null,
           address: form.address || null,
-        });
+          notes: form.notes || null,
+          account_id: linkedAccountId === "null" ? null : linkedAccountId,
+          opening_balance: openingBalance,
+          debit,
+          credit,
+          currency,
+          is_active: editSupplier.is_active,
+        };
+        await supplierService.updateSupplier(updatePayload);
         toast.success("تم تحديث بيانات المورد بنجاح");
       } else {
-        await supplierService.createSupplier({
+        const createPayload: CreateSupplierRequest = {
+          code: form.code,
           name: form.name,
           phone: form.phone || null,
           address: form.address || null,
-        });
+          notes: form.notes || null,
+          account_id: linkedAccountId === "null" ? null : linkedAccountId,
+          opening_balance: openingBalance,
+          debit,
+          credit,
+          currency,
+          is_active: true,
+        };
+        await supplierService.createSupplier(createPayload);
         toast.success("تم إضافة المورد بنجاح");
       }
       setShowDialog(false);
-      setForm({ name: "", phone: "", address: "" });
+      setForm({ code: "", name: "", phone: "", address: "", notes: "" });
+      setLinkedAccountId("null");
+      setOpeningBalance("0");
+      setDebit("0");
+      setCredit("0");
+      setCurrency("SYP");
       setEditSupplier(null);
       await loadSuppliers();
     } catch (e) {
@@ -140,7 +193,12 @@ export default function Suppliers() {
             </Button>
             <Button onClick={() => {
               setEditSupplier(null);
-              setForm({ name: "", phone: "", address: "" });
+              setForm({ code: "", name: "", phone: "", address: "", notes: "" });
+              setLinkedAccountId("null");
+              setOpeningBalance("0");
+              setDebit("0");
+              setCredit("0");
+              setCurrency("SYP");
               setShowDialog(true);
             }}>
               <Plus className="w-4 h-4 ml-2" />مورد جديد
@@ -194,9 +252,11 @@ export default function Suppliers() {
             <table className="w-full text-sm min-w-[700px]">
               <thead className="bg-slate-50 border-b border-border">
                 <tr>
+                  <th className="text-right px-4 py-3 font-medium">الكود</th>
                   <th className="text-right px-4 py-3 font-medium">اسم المورد</th>
                   <th className="text-right px-4 py-3 font-medium">الهاتف</th>
-                  <th className="text-right px-4 py-3 font-medium">العنوان</th>
+                  <th className="text-left px-4 py-3 font-medium">المدين</th>
+                  <th className="text-left px-4 py-3 font-medium">الدائن</th>
                   <th className="text-left px-4 py-3 font-medium">الرصيد</th>
                   <th className="text-left px-4 py-3 font-medium">الحالة</th>
                   <th className="text-left px-4 py-3 font-medium w-12"></th>
@@ -205,9 +265,11 @@ export default function Suppliers() {
               <tbody>
                 {filtered.map((s) => (
                   <tr key={s.id} className="border-b border-border last:border-0 hover:bg-slate-50 cursor-pointer" onClick={() => setSelectedId(s.id)}>
+                    <td className="px-4 py-3 font-medium text-muted-foreground">{s.code}</td>
                     <td className="px-4 py-3 font-medium">{s.name}</td>
                     <td className="px-4 py-3 tabular-nums">{s.phone || "—"}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{s.address ?? "—"}</td>
+                    <td className="px-4 py-3 text-left tabular-nums text-red-600">{formatCurrency(parseFloat(s.debit || "0"))}</td>
+                    <td className="px-4 py-3 text-left tabular-nums text-green-600">{formatCurrency(parseFloat(s.credit || "0"))}</td>
                     <td className="px-4 py-3 text-left tabular-nums font-medium">
                       {formatCurrency(parseFloat(s.balance))}
                     </td>
@@ -224,10 +286,17 @@ export default function Suppliers() {
                           <DropdownMenuItem onClick={() => {
                             setEditSupplier(s);
                             setForm({ 
+                              code: s.code,
                               name: s.name, 
                               phone: s.phone || "", 
-                              address: s.address || "" 
+                              address: s.address || "",
+                              notes: s.notes || ""
                             });
+                            setLinkedAccountId(s.account_id || "null");
+                            setOpeningBalance(s.opening_balance || "0");
+                            setDebit(s.debit || "0");
+                            setCredit(s.credit || "0");
+                            setCurrency(s.currency || "SYP");
                             setShowDialog(true);
                           }}><Edit className="w-4 h-4 ml-2" />تعديل</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleDelete(s.id, s.name)} className="text-red-600">
@@ -331,7 +400,7 @@ export default function Suppliers() {
         </SheetContent>
       </Sheet>
 
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+  <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-md" dir="rtl">
           <DialogHeader>
             <DialogTitle>{editSupplier ? "تعديل بيانات المورد" : "إضافة مورد جديد"}</DialogTitle>
@@ -351,6 +420,52 @@ export default function Suppliers() {
             <div className="space-y-1">
               <Label>العنوان</Label>
               <Input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="عنوان المورد" />
+            </div>
+            <div className="space-y-1">
+              <Label>ملاحظات</Label>
+              <Input value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="ملاحظات إضافية" />
+            </div>
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              <div className="hidden">
+                <Label>الحساب المحاسبي المرتبط</Label>
+                <Select value={linkedAccountId} onValueChange={setLinkedAccountId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر حساب محاسبي" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={"null"}>— بدون حساب محاسبي —</SelectItem>
+                    {accountsForLink.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>{a.code} - {a.name_ar}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>الرصيد الافتتاحي</Label>
+                <Input value={openingBalance} onChange={e => setOpeningBalance(e.target.value)} placeholder="0" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              <div>
+                <Label>مدين</Label>
+                <Input value={debit} onChange={e => setDebit(e.target.value)} placeholder="0" />
+              </div>
+              <div>
+                <Label>دائن</Label>
+                <Input value={credit} onChange={e => setCredit(e.target.value)} placeholder="0" />
+              </div>
+            </div>
+            <div className="pt-2">
+              <Label>العملة</Label>
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر عملة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SYP">SYP - ليرة سورية</SelectItem>
+                  <SelectItem value="USD">USD - دولار أمريكي</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>

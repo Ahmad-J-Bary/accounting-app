@@ -9,7 +9,7 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { assetService } from "@/services/assetService";
 import { accountingService } from "@/services/accountingService";
-import type { FixedAssetDto, ConsumableDto, AssetCategoryDto, AccountDto } from "@erp/shared-types";
+import type { FixedAssetDto, ConsumableDto, AssetCategoryDto, AccountDto, AssetMovement } from "@erp/shared-types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,7 +20,7 @@ export default function Assets() {
   const [consumables, setConsumables] = useState<ConsumableDto[]>([]);
   const [categories, setCategories] = useState<AssetCategoryDto[]>([]);
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
-  const [movements, setMovements] = useState<any[]>([]);
+  const [movements, setMovements] = useState<AssetMovement[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("fixed");
 
@@ -88,6 +88,7 @@ export default function Assets() {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadData(); }, [activeTab]);
 
   const handleCreateAsset = async () => {
@@ -150,8 +151,8 @@ export default function Assets() {
   return (
     <div className="space-y-6" dir="rtl">
       <PageHeader 
-        title="إدارة الموجودات" 
-        description="إدارة الأصول الثابتة والمستهلكات التشغيلية والاهلاك"
+        title="إدارة الموجودات"
+        subtitle="إدارة الأصول الثابتة والمستهلكات التشغيلية والاهلاك"
         actions={
           <div className="flex gap-2">
             <Button variant="outline"><Download className="w-4 h-4 ml-2" />تصدير</Button>
@@ -183,12 +184,12 @@ export default function Assets() {
                       <div className="space-y-2"><Label>سعر الصرف</Label><Input type="number" value={newAsset.fxRate} onChange={e => setNewAsset({...newAsset, fxRate: e.target.value})} disabled={newAsset.currency === 'SYP'}/></div>
                     </div>
                     <div className="grid grid-cols-2 gap-4 border-t pt-4">
-                      <div className="space-y-2"><Label>حساب الأصول</Label><Select value={newAsset.assetAccountId} onValueChange={v => setNewAsset({...newAsset, assetAccountId: v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.filter(a => a.type === 'Asset').map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.code} - {acc.name}</SelectItem>)}</SelectContent></Select></div>
-                      <div className="space-y-2"><Label>حساب الدفع</Label><Select value={newAsset.paymentAccountId} onValueChange={v => setNewAsset({...newAsset, paymentAccountId: v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.code} - {acc.name}</SelectItem>)}</SelectContent></Select></div>
+                      <div className="space-y-2"><Label>حساب الأصول</Label><Select value={newAsset.assetAccountId} onValueChange={v => setNewAsset({...newAsset, assetAccountId: v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.filter(a => a.account_type === 'Assets').map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.code} - {acc.name_ar}</SelectItem>)}</SelectContent></Select></div>
+                      <div className="space-y-2"><Label>حساب الدفع</Label><Select value={newAsset.paymentAccountId} onValueChange={v => setNewAsset({...newAsset, paymentAccountId: v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.code} - {acc.name_ar}</SelectItem>)}</SelectContent></Select></div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2"><Label>حساب مصروف الإهلاك</Label><Select value={newAsset.depreciationAccountId} onValueChange={v => setNewAsset({...newAsset, depreciationAccountId: v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.filter(a => a.type === 'Expense').map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.code} - {acc.name}</SelectItem>)}</SelectContent></Select></div>
-                      <div className="space-y-2"><Label>حساب مجمع الإهلاك</Label><Select value={newAsset.accumulatedDepreciationAccountId} onValueChange={v => setNewAsset({...newAsset, accumulatedDepreciationAccountId: v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.filter(a => a.type === 'Asset' || a.type === 'Liability').map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.code} - {acc.name}</SelectItem>)}</SelectContent></Select></div>
+                      <div className="space-y-2"><Label>حساب مصروف الإهلاك</Label><Select value={newAsset.depreciationAccountId} onValueChange={v => setNewAsset({...newAsset, depreciationAccountId: v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.filter(a => a.account_type === 'Expenses').map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.code} - {acc.name_ar}</SelectItem>)}</SelectContent></Select></div>
+                      <div className="space-y-2"><Label>حساب مجمع الإهلاك</Label><Select value={newAsset.accumulatedDepreciationAccountId} onValueChange={v => setNewAsset({...newAsset, accumulatedDepreciationAccountId: v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.filter(a => a.account_type === 'Assets' || a.account_type === 'Liabilities').map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.code} - {acc.name_ar}</SelectItem>)}</SelectContent></Select></div>
                     </div>
                   </div>
                   <DialogFooter><Button onClick={handleCreateAsset} disabled={isSubmitting}>حفظ</Button></DialogFooter>
@@ -304,7 +305,7 @@ export default function Assets() {
                       <td className="p-4 tabular-nums">{formatDate(mov.date)}</td>
                       <td className="p-4">
                         <span className={cn("px-2 py-0.5 rounded text-[10px] font-bold uppercase", 
-                          mov.movement_type === 'Acquisition' ? "bg-blue-100 text-blue-700" :
+                          mov.movement_type === 'Purchase' ? "bg-blue-100 text-blue-700" :
                           mov.movement_type === 'Depreciation' ? "bg-amber-100 text-amber-700" :
                           mov.movement_type === 'Issue' ? "bg-purple-100 text-purple-700" : "bg-slate-100 text-slate-700"
                         )}>

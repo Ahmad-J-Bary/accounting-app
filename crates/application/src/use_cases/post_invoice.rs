@@ -64,8 +64,8 @@ impl PostInvoiceUseCase {
         let mut dto = InvoiceDto::from(invoice);
         
         // Enrich with customer name
-        if let Ok(id) = Uuid::parse_str(&dto.customer_id) {
-            if let Ok(Some(customer)) = self.customer_repo.find_by_id(&CustomerId(id)).await {
+        if let Ok(id) = dto.customer_id.parse::<u64>() {
+            if let Ok(Some(customer)) = self.customer_repo.find_by_id(&CustomerId::from_u64(id)).await {
                 dto.customer_name = Some(customer.name);
             }
         }

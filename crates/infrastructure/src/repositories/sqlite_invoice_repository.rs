@@ -179,7 +179,7 @@ impl SqliteInvoiceRepository {
         Ok(Invoice {
             id: InvoiceId(uuid::Uuid::parse_str(&id_str).unwrap()),
             invoice_number: num,
-            customer_id: CustomerId(uuid::Uuid::parse_str(&customer_id_str).unwrap()),
+            customer_id: CustomerId::from_u64(customer_id_str.parse::<u64>().unwrap_or(0)),
             lines,
             tax_amount: Money::syp(Decimal::from_str(&tax_str).unwrap_or(Decimal::ZERO)),
             discount_amount: Money::syp(Decimal::from_str(&disc_str).unwrap_or(Decimal::ZERO)),

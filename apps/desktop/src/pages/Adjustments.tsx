@@ -7,13 +7,13 @@ import { Plus, Search, RefreshCw } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { adjustmentService } from "@/services/inventoryService";
 import { productService } from "@/services/productService";
-import type { StockAdjustment, CreateStockAdjustmentRequest, Product } from "@erp/shared-types";
+import type { StockAdjustment, CreateStockAdjustmentRequest, ProductDto } from "@erp/shared-types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
 export default function Adjustments() {
   const [adjustments, setAdjustments] = useState<StockAdjustment[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showDialog, setShowDialog] = useState(false);

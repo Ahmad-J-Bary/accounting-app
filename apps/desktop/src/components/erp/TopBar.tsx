@@ -39,6 +39,27 @@ export function TopBar({ onToggleSidebar, sidebarOpen = true }: TopBarProps) {
     }, 100);
   };
 
+  const handleNewCustomer = () => {
+    navigate("/customers");
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("erp:open-new-customer"));
+    }, 100);
+  };
+
+  const handleNewSupplier = () => {
+    navigate("/suppliers");
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("erp:open-new-supplier"));
+    }, 100);
+  };
+
+  const handleNewProduct = () => {
+    navigate("/products");
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("erp:open-new-product"));
+    }, 100);
+  };
+
   return (
     <>
       <header className="h-16 bg-white border-b border-border flex items-center px-4 md:px-6 gap-3 sticky top-0 z-30">
@@ -107,8 +128,9 @@ export function TopBar({ onToggleSidebar, sidebarOpen = true }: TopBarProps) {
             <DropdownMenuItem>سند صرف جديد</DropdownMenuItem>
             <DropdownMenuItem>قيد يومية جديد</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>عميل جديد</DropdownMenuItem>
-            <DropdownMenuItem>منتج جديد</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleNewCustomer} className="cursor-pointer">عميل جديد</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleNewSupplier} className="cursor-pointer">مورد جديد</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleNewProduct} className="cursor-pointer">منتج جديد</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 

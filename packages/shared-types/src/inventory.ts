@@ -87,3 +87,17 @@ export interface CreateProductionOrderRequest {
   production_date: string;
   notes?: string;
 }
+
+export interface StockMovement {
+  id: string;
+  product_id: string;
+  product_name?: string;
+  movement_type: 'In' | 'Out' | 'Adjustment' | 'Production' | 'Damaged';
+  quantity: string;
+  unit_cost?: string;
+  total_cost?: string;
+  reference?: string;
+  notes?: string;
+  date: string;
+  created_at: string;
+}

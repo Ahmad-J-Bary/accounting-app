@@ -26,7 +26,7 @@ export default function Settings() {
 
   useEffect(() => { load(); }, []);
 
-  const handleChange = (key: keyof CompanySettings, value: any) => {
+  const handleChange = (key: keyof CompanySettings, value: string | number | boolean) => {
     if (settings) {
       setSettings({ ...settings, [key]: value });
     }

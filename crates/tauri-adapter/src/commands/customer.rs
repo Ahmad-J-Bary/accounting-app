@@ -10,7 +10,7 @@ pub async fn create_customer(
     state: State<'_, AppState>,
     request: CreateCustomerRequest,
 ) -> Result<CustomerDto, String> {
-    let use_case = CreateCustomerUseCase::new(state.customer_repo.clone());
+    let use_case = CreateCustomerUseCase::new(state.customer_repo.clone(), state.account_repo.clone());
     use_case.execute(request).await.map_err(|e| e.to_string())
 }
 
@@ -36,7 +36,7 @@ pub async fn update_customer(
     state: State<'_, AppState>,
     request: UpdateCustomerRequest,
 ) -> Result<CustomerDto, String> {
-    let use_case = UpdateCustomerUseCase::new(state.customer_repo.clone());
+    let use_case = UpdateCustomerUseCase::new(state.customer_repo.clone(), state.account_repo.clone());
     use_case.execute(request).await.map_err(|e| e.to_string())
 }
 
@@ -45,6 +45,6 @@ pub async fn delete_customer(
     state: State<'_, AppState>,
     id: String,
 ) -> Result<(), String> {
-    let use_case = DeleteCustomerUseCase::new(state.customer_repo.clone());
+    let use_case = DeleteCustomerUseCase::new(state.customer_repo.clone(), state.account_repo.clone());
     use_case.execute(id).await.map_err(|e| e.to_string())
 }

@@ -8,7 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   TrendingUp, ShoppingCart, Wallet, Users, Truck, Package,
-  AlertCircle, FileText, Plus, Download, Receipt, ArrowUpRight
+  AlertCircle, FileText, Plus, Download, Receipt, ArrowUpRight, ArrowDownRight
 } from "lucide-react";
 import { revenueChartData, salesInvoices, payments } from "@/lib/mockData";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -22,7 +22,12 @@ import { invoiceService } from "@/services/invoiceService";
 import { purchaseService } from "@/services/purchaseService";
 import { paymentService } from "@/services/paymentService";
 import { productService } from "@/services/productService";
-import type { InvoiceDto, JournalEntryDto, Payment, ProductDto, PurchaseInvoice } from "@erp/shared-types";
+import { customerService } from "@/services/customerService";
+import { supplierService } from "@/services/supplierService";
+import { accountingService } from "@/services/accountingService";
+import type { InvoiceDto, JournalEntryDto, Payment, ProductDto, PurchaseInvoice, ReceivablesPayablesSummary } from "@erp/shared-types";
+import type { CustomerDto } from "@erp/shared-types";
+import type { SupplierDto } from "@erp/shared-types";
 
 const pieData = [
   { name: "إلكترونيات", value: 45, color: "#1e3a5f" },
@@ -37,6 +42,9 @@ export default function Dashboard() {
   const [purchaseInvoices, setPurchaseInvoices] = useState<PurchaseInvoice[]>([]);
   const [paymentEntries, setPaymentEntries] = useState<Payment[]>([]);
   const [productItems, setProductItems] = useState<ProductDto[]>([]);
+  const [customers, setCustomers] = useState<CustomerDto[]>([]);
+  const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
+  const [rpSummary, setRpSummary] = useState<ReceivablesPayablesSummary | null>(null);
 
   const toNumber = (value?: string | null) => {
     const parsed = Number.parseFloat(value ?? "0");
@@ -81,6 +89,8 @@ export default function Dashboard() {
     (product) => toNumber(product.stock_quantity) < toNumber(product.minimum_stock)
   );
 
+  // (no explicit separate totals; integrate into customers/suppliers sections)
+
   useEffect(() => {
     Promise.all([
       journalEntryService.listJournalEntries(),
@@ -88,16 +98,20 @@ export default function Dashboard() {
       purchaseService.listPurchaseInvoices(),
       paymentService.listPayments(),
       productService.listProducts(),
+      accountingService.getReceivablesPayablesSummary(),
     ])
-      .then(([entries, salesData, purchaseData, paymentData, productData]) => {
+      .then(([entries, salesData, purchaseData, paymentData, productData, rpData]) => {
         setRecentJournals(entries.slice(0, 5));
         setInvoices(salesData);
         setPurchaseInvoices(purchaseData);
         setPaymentEntries(paymentData);
         setProductItems(productData);
+        setRpSummary(rpData);
       })
       .catch(console.error);
   }, []);
+
+  // (no-op placeholder removed to avoid duplicate state declarations)
 
   return (
     <>
@@ -133,6 +147,61 @@ export default function Dashboard() {
         <KpiCard title="ذمم الموردين" value={payablesBalance} icon={Truck} iconColor="bg-red-50 text-red-600" />
         <KpiCard title="قيمة المخزون" value={inventoryValue} icon={Package} iconColor="bg-teal-50 text-teal-600" />
       </div>
+
+      {/* Receivables/Payables Summary */}
+      {rpSummary && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          <Card className="p-5 border-r-4 border-r-amber-500">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <ArrowUpRight className="w-5 h-5 text-amber-600" />
+                <h3 className="font-semibold">تفاصيل ذمم العملاء (المدينة لنا)</h3>
+              </div>
+              <span className="text-2xl font-bold text-amber-600">{formatCurrency(parseFloat(rpSummary.total_receivables))}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="p-3 bg-slate-50 rounded-md">
+                <div className="text-muted-foreground">إجمالي المدين</div>
+                <div className="font-bold text-red-600">{formatCurrency(parseFloat(rpSummary.customers_debit))}</div>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-md">
+                <div className="text-muted-foreground">إجمالي الدائن</div>
+                <div className="font-bold text-green-600">{formatCurrency(parseFloat(rpSummary.customers_credit))}</div>
+              </div>
+            </div>
+            {rpSummary.unlinked_customers > 0 && (
+              <div className="mt-3 text-xs text-amber-600">
+                ⚠️ {rpSummary.unlinked_customers} عملاء غير مرتبطين بحسابات محاسبية
+              </div>
+            )}
+          </Card>
+
+          <Card className="p-5 border-r-4 border-r-red-500">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <ArrowDownRight className="w-5 h-5 text-red-600" />
+                <h3 className="font-semibold">تفاصيل ذمم الموردين (الدائنة لنا)</h3>
+              </div>
+              <span className="text-2xl font-bold text-red-600">{formatCurrency(parseFloat(rpSummary.total_payables))}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="p-3 bg-slate-50 rounded-md">
+                <div className="text-muted-foreground">إجمالي المدين</div>
+                <div className="font-bold text-red-600">{formatCurrency(parseFloat(rpSummary.suppliers_debit))}</div>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-md">
+                <div className="text-muted-foreground">إجمالي الدائن</div>
+                <div className="font-bold text-green-600">{formatCurrency(parseFloat(rpSummary.suppliers_credit))}</div>
+              </div>
+            </div>
+            {rpSummary.unlinked_suppliers > 0 && (
+              <div className="mt-3 text-xs text-red-600">
+                ⚠️ {rpSummary.unlinked_suppliers} موردين غير مرتبطين بحسابات محاسبية
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">

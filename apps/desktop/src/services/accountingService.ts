@@ -1,5 +1,5 @@
 import { invoke } from "@/lib/invoke";
-import type { AccountDto, AccountLedgerDto } from "@erp/shared-types";
+import type { AccountDto, AccountLedgerDto, ReceivablesPayablesSummary } from "@erp/shared-types";
 
 export type AccountType =
   | "Assets"
@@ -21,6 +21,11 @@ export interface SaveAccountCommand {
   notes: string | null;
   is_default?: boolean;
   is_active?: boolean;
+  debit?: string;
+  credit?: string;
+  currency?: string;
+  linked_customer_id?: string | null;
+  linked_supplier_id?: string | null;
 }
 
 export const accountingService = {
@@ -53,5 +58,9 @@ export const accountingService = {
 
   async deactivateAccount(id: string): Promise<AccountDto> {
     return await invoke<AccountDto>("deactivate_account", { id });
+  },
+
+  async getReceivablesPayablesSummary(): Promise<ReceivablesPayablesSummary> {
+    return await invoke<ReceivablesPayablesSummary>("get_receivables_payables_summary");
   },
 };

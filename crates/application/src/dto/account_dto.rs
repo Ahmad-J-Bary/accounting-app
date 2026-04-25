@@ -16,6 +16,9 @@ pub struct AccountDto {
     pub notes: Option<String>,
     pub is_active: bool,
     pub is_default: bool,
+    pub is_final: bool,
+    pub linked_customer_id: Option<String>,
+    pub linked_supplier_id: Option<String>,
 }
 
 impl From<Account> for AccountDto {
@@ -34,6 +37,9 @@ impl From<Account> for AccountDto {
             notes: account.notes,
             is_active: account.is_active,
             is_default: account.is_default,
+            is_final: account.is_final,
+            linked_customer_id: account.linked_customer_id.map(|id| id.0.to_string()),
+            linked_supplier_id: account.linked_supplier_id.map(|id| id.0.to_string()),
         }
     }
 }

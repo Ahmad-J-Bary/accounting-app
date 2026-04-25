@@ -27,7 +27,7 @@ impl CreateInvoiceUseCase {
     }
 
     pub async fn execute(&self, request: CreateInvoiceRequest) -> Result<InvoiceDto, AppError> {
-        let customer_id = Uuid::parse_str(&request.customer_id)
+        let customer_id: u64 = request.customer_id.parse()
             .map_err(|e| AppError::Invalid(format!("Invalid customer ID: {}", e)))?;
         
         let mut lines = Vec::new();
@@ -53,7 +53,7 @@ impl CreateInvoiceUseCase {
 
         let invoice = Invoice::new(
             request.invoice_number,
-            CustomerId(customer_id),
+            CustomerId::from_u64(customer_id),
             lines,
             domain::shared::money::Money::syp(tax_amount),
             domain::shared::money::Money::syp(discount_amount),
@@ -64,7 +64,7 @@ impl CreateInvoiceUseCase {
         let mut dto = InvoiceDto::from(invoice);
         
         // Enrich with customer name
-        if let Ok(Some(customer)) = self.customer_repo.find_by_id(&CustomerId(customer_id)).await {
+        if let Ok(Some(customer)) = self.customer_repo.find_by_id(&CustomerId::from_u64(customer_id)).await {
             dto.customer_name = Some(customer.name);
         }
         

@@ -1,9 +1,14 @@
 use crate::ports::account_repository::AccountRepository;
+use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
+use crate::ports::supplier_repository::SupplierRepository;
 use chrono::Utc;
 use domain::accounting::account::{Account, AccountCategory, AccountType};
 use domain::accounting::journal_entry::JournalEntryStatus;
-use domain::shared::AccountId;
+use domain::customers::Customer;
+use domain::suppliers::Supplier;
+use domain::shared::currency::Currency;
+use domain::shared::ids::{AccountId, CustomerId, SupplierId};
 use rust_decimal::Decimal;
 use serde::Deserialize;
 use std::str::FromStr;
@@ -48,11 +53,15 @@ pub struct CreateAccountCommand {
     pub level: i32,
     pub opening_balance: String,
     pub notes: Option<String>,
+    pub linked_customer_id: Option<String>,
+    pub linked_supplier_id: Option<String>,
 }
 
 pub struct AccountUseCases {
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
+    customer_repo: Option<Arc<dyn CustomerRepository>>,
+    supplier_repo: Option<Arc<dyn SupplierRepository>>,
 }
 
 impl AccountUseCases {
@@ -63,7 +72,19 @@ impl AccountUseCases {
         Self {
             account_repo,
             journal_repo,
+            customer_repo: None,
+            supplier_repo: None,
         }
+    }
+
+    pub fn with_customer_repo(mut self, repo: Arc<dyn CustomerRepository>) -> Self {
+        self.customer_repo = Some(repo);
+        self
+    }
+
+    pub fn with_supplier_repo(mut self, repo: Arc<dyn SupplierRepository>) -> Self {
+        self.supplier_repo = Some(repo);
+        self
     }
 
     pub async fn create_account(
@@ -80,6 +101,16 @@ impl AccountUseCases {
         self.validate_type_hierarchy(&cmd).await?;
         self.protect_root_policy_on_create(&cmd)?;
 
+        let linked_customer_id = cmd.linked_customer_id
+            .as_deref()
+            .and_then(|s| s.parse::<u64>().ok())
+            .map(CustomerId::from_u64);
+
+        let linked_supplier_id = cmd.linked_supplier_id
+            .as_deref()
+            .and_then(|s| s.parse::<u64>().ok())
+            .map(SupplierId::from_u64);
+
         let account = Account {
             id: AccountId::new(),
             code: cmd.code.trim().to_string(),
@@ -94,6 +125,9 @@ impl AccountUseCases {
             notes: cmd.notes.map(|n| n.trim().to_string()),
             is_active: true,
             is_default: matches!(cmd.code.trim(), "120301" | "220301"),
+            is_final: cmd.code.trim().len() == 4 && (cmd.code.trim().starts_with("123") || cmd.code.trim().starts_with("223")),
+            linked_customer_id,
+            linked_supplier_id,
             created_at: Utc::now(),
             updated_at: Utc::now(),
         };
@@ -102,6 +136,98 @@ impl AccountUseCases {
             .save(&account)
             .await
             .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
+
+        // Auto-create customer if account is under "123" (receivables)
+        // Account code format: 123 + customer_id (e.g., 1232 means customer_id = 2)
+        if account.code.len() == 4 && account.code.starts_with("123") {
+            if let Some(ref customer_repo) = self.customer_repo {
+                // Extract customer ID from account code (last digit)
+                let customer_id_str = &account.code[3..];
+                let customer_id_num: u64 = customer_id_str.parse().unwrap_or(0);
+                let customer_code = customer_id_str.to_string();
+                
+                // Use account name as-is (strip legacy prefix if present)
+                let customer_name = account.name_ar
+                    .strip_prefix("ذمة العميل: ")
+                    .unwrap_or(&account.name_ar)
+                    .to_string();
+
+                // Use custom ID if valid
+                let customer_id = if customer_id_num > 0 {
+                    CustomerId::from_u64(customer_id_num)
+                } else {
+                    CustomerId::new()
+                };
+
+                let customer = Customer::new_with_id(
+                    customer_id,
+                    customer_code,
+                    customer_name,
+                    None, // phone
+                    None, // address
+                    Some(account.id.clone()),
+                    Decimal::ZERO, // debit
+                    Decimal::ZERO, // credit
+                    account.opening_balance,
+                    Currency::SYP,
+                    None, // notes
+                );
+
+                if let Ok(customer) = customer {
+                    let _ = customer_repo.save(&customer).await;
+                    // Link account back to customer
+                    let mut updated_account = account.clone();
+                    updated_account.linked_customer_id = Some(customer.id);
+                    let _ = self.account_repo.save(&updated_account).await;
+                }
+            }
+        }
+
+        // Auto-create supplier if account is under "223" (payables)
+        // Account code format: 223 + supplier_id (e.g., 2233 means supplier_id = 3)
+        if account.code.len() == 4 && account.code.starts_with("223") {
+            if let Some(ref supplier_repo) = self.supplier_repo {
+                // Extract supplier ID from account code (last digit)
+                let supplier_id_str = &account.code[3..];
+                let supplier_id_num: u64 = supplier_id_str.parse().unwrap_or(0);
+                let supplier_code = supplier_id_str.to_string();
+                
+                // Use account name as-is (strip legacy prefix if present)
+                let supplier_name = account.name_ar
+                    .strip_prefix("ذمة المورد: ")
+                    .unwrap_or(&account.name_ar)
+                    .to_string();
+
+                // Use custom ID if valid
+                let supplier_id = if supplier_id_num > 0 {
+                    SupplierId::from_u64(supplier_id_num)
+                } else {
+                    SupplierId::new()
+                };
+
+                let supplier = Supplier::new_with_id(
+                    supplier_id,
+                    supplier_code,
+                    supplier_name,
+                    None, // phone
+                    None, // address
+                    Some(account.id.clone()),
+                    Decimal::ZERO, // debit
+                    Decimal::ZERO, // credit
+                    account.opening_balance,
+                    Currency::SYP,
+                    None, // notes
+                );
+
+                if let Ok(supplier) = supplier {
+                    let _ = supplier_repo.save(&supplier).await;
+                    // Link account back to supplier
+                    let mut updated_account = account.clone();
+                    updated_account.linked_supplier_id = Some(supplier.id);
+                    let _ = self.account_repo.save(&updated_account).await;
+                }
+            }
+        }
 
         Ok(account)
     }
@@ -142,6 +268,14 @@ impl AccountUseCases {
         account.level = cmd.level;
         account.opening_balance = opening_balance;
         account.notes = cmd.notes.map(|n| n.trim().to_string());
+        account.linked_customer_id = cmd.linked_customer_id
+            .as_deref()
+            .and_then(|s| s.parse::<u64>().ok())
+            .map(CustomerId::from_u64);
+        account.linked_supplier_id = cmd.linked_supplier_id
+            .as_deref()
+            .and_then(|s| s.parse::<u64>().ok())
+            .map(SupplierId::from_u64);
         account.updated_at = Utc::now();
 
         self.account_repo
@@ -156,6 +290,7 @@ impl AccountUseCases {
     /// - If account has journal usage or children => deactivate (is_active=false)
     /// - If no usage and no children => hard delete allowed
     /// - Root accounts are never deleted; only deactivated
+    /// - Cascade: hard-deleting an account also deletes its linked customer/supplier
     pub async fn delete_account(&self, id: AccountId) -> Result<(), AccountUseCaseError> {
         let mut account = self
             .account_repo
@@ -184,6 +319,20 @@ impl AccountUseCases {
                 .await
                 .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
             return Ok(());
+        }
+
+        // Cascade: delete linked customer if any
+        if let Some(customer_id) = &account.linked_customer_id {
+            if let Some(ref customer_repo) = self.customer_repo {
+                let _ = customer_repo.delete(customer_id).await;
+            }
+        }
+
+        // Cascade: delete linked supplier if any
+        if let Some(supplier_id) = &account.linked_supplier_id {
+            if let Some(ref supplier_repo) = self.supplier_repo {
+                let _ = supplier_repo.delete(supplier_id).await;
+            }
         }
 
         self.account_repo

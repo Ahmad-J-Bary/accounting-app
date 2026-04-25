@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { paymentService } from "@/services/paymentService";
 import { customerService } from "@/services/customerService";
 import { supplierService } from "@/services/supplierService";
-import type { Payment, CreatePaymentRequest, CustomerDto, SupplierDto } from "@erp/shared-types";
+import type { Payment, CreatePaymentRequest, CustomerDto, SupplierDto, PaymentType } from "@erp/shared-types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -92,7 +92,7 @@ export default function Payments() {
 
     setSaving(true);
     const request: CreatePaymentRequest = {
-      payment_type: form.payment_type as any,
+      payment_type: form.payment_type as PaymentType,
       amount: form.amount || 0,
       payment_date: form.payment_date || new Date().toISOString(),
       customer_id: form.customer_id || undefined,

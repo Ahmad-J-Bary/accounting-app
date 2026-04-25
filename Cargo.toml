@@ -38,7 +38,12 @@ domain = { path = "crates/domain" }
 application = { path = "crates/application" }
 infrastructure = { path = "crates/infrastructure" }
 
+[profile.dev]
+opt-level = 1
+
 [profile.release]
+panic = "abort"
 lto = true
+opt-level = "s"
 codegen-units = 1
 strip = true

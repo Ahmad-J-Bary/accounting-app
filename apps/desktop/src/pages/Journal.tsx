@@ -201,7 +201,7 @@ export default function Journal() {
                     </table>
                   </div>
 
-                  <Button variant="outline" size="sm" onClick={() => setLines([...lines, { account_id: crypto.randomUUID?.() || "00000000-0000-0000-0000-000000000000", desc: "", debit: 0, credit: 0 }])}>
+                  <Button variant="outline" size="sm" onClick={() => setLines([...lines, { account_id: crypto.randomUUID?.() || "00000000-0000-0000-0000-000000000000", desc: "", currency: "SYP", fx_rate: 1, debit: 0, credit: 0 }])}>
                     <Plus className="w-4 h-4 ml-2" />إضافة سطر
                   </Button>
 

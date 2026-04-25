@@ -40,31 +40,7 @@ export default function Accounting() {
       setExpandedNodes(defaultExpanded);
 
       setSelected((prev) => {
-        if (prev?.id === ROOT_ACCOUNT_ID) {
-          return {
-            id: ROOT_ACCOUNT_ID,
-            code: "",
-            name_ar: "دليل الحسابات",
-            name_en: "Chart of Accounts",
-            account_type: "Assets",
-            parent_id: null,
-            category: "Summary",
-            level: 0,
-            opening_balance: "0",
-            balance: "0",
-            notes: null,
-            is_active: true,
-            is_default: false,
-            children: [],
-          };
-        }
-
-        if (prev) {
-          const updated = data.find((a) => a.id === prev.id);
-          return updated ? { ...updated, children: [] } : null;
-        }
-
-        return {
+        const rootNode: AccountTreeNode = {
           id: ROOT_ACCOUNT_ID,
           code: "",
           name_ar: "دليل الحسابات",
@@ -78,8 +54,22 @@ export default function Accounting() {
           notes: null,
           is_active: true,
           is_default: false,
+          is_final: false,
+          linked_customer_id: null,
+          linked_supplier_id: null,
           children: [],
         };
+
+        if (prev?.id === ROOT_ACCOUNT_ID) {
+          return rootNode;
+        }
+
+        if (prev) {
+          const updated = data.find((a) => a.id === prev.id);
+          return updated ? { ...updated, children: [] } : null;
+        }
+
+        return rootNode;
       });
     } catch (error: unknown) {
       console.error(error);
@@ -103,7 +93,9 @@ export default function Accounting() {
   }, []);
 
   const expandAll = useCallback(() => {
-    setExpandedNodes(new Set(accounts.map((a) => a.id)));
+    const allIds = new Set(accounts.map((a) => a.id));
+    allIds.add(ROOT_ACCOUNT_ID);
+    setExpandedNodes(allIds);
   }, [accounts]);
 
   const collapseAll = useCallback(() => {
@@ -152,6 +144,9 @@ export default function Accounting() {
       notes: null,
       is_active: true,
       is_default: false,
+      is_final: false,
+      linked_customer_id: null,
+      linked_supplier_id: null,
       children: visibleTree,
     }),
     [visibleTree],

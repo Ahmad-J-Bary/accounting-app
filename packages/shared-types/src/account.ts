@@ -12,6 +12,9 @@ export interface AccountDto {
   notes: string | null;
   is_active: boolean;
   is_default: boolean;
+  is_final: boolean;
+  linked_customer_id: string | null;
+  linked_supplier_id: string | null;
 }
 
 export interface AccountLedgerLineDto {
@@ -34,4 +37,16 @@ export interface AccountLedgerDto {
   total_debit: string;
   total_credit: string;
   final_balance: string;
+}
+
+export interface ReceivablesPayablesSummary {
+  total_receivables: string;
+  total_payables: string;
+  net_position: string;
+  customers_debit: string;
+  customers_credit: string;
+  suppliers_debit: string;
+  suppliers_credit: string;
+  unlinked_customers: number;
+  unlinked_suppliers: number;
 }

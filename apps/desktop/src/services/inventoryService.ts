@@ -6,6 +6,7 @@ import type {
   CreateStockAdjustmentRequest,
   ProductionOrder,
   CreateProductionOrderRequest,
+  StockMovement,
 } from '@erp/shared-types';
 
 // Damaged Items
@@ -47,7 +48,7 @@ export const productionService = {
 
 // Stock Movements
 export const inventoryService = {
-  async listStockMovements(): Promise<any[]> {
-    return await invoke<any[]>('list_stock_movements');
+  async listStockMovements(): Promise<StockMovement[]> {
+    return await invoke<StockMovement[]>('list_stock_movements');
   },
 };

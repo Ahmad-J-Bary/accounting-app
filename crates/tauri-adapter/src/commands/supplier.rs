@@ -10,7 +10,7 @@ pub async fn create_supplier(
     request: CreateSupplierRequest,
     state: State<'_, AppState>,
 ) -> Result<SupplierDto, String> {
-    CreateSupplierUseCase::new(state.supplier_repo.clone())
+    CreateSupplierUseCase::new(state.supplier_repo.clone(), state.account_repo.clone())
         .execute(request).await.map_err(|e| e.to_string())
 }
 
@@ -31,12 +31,12 @@ pub async fn update_supplier(
     request: UpdateSupplierRequest,
     state: State<'_, AppState>,
 ) -> Result<SupplierDto, String> {
-    UpdateSupplierUseCase::new(state.supplier_repo.clone())
+    UpdateSupplierUseCase::new(state.supplier_repo.clone(), state.account_repo.clone())
         .execute(request).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn delete_supplier(id: String, state: State<'_, AppState>) -> Result<(), String> {
-    DeleteSupplierUseCase::new(state.supplier_repo.clone())
+    DeleteSupplierUseCase::new(state.supplier_repo.clone(), state.account_repo.clone())
         .execute(id).await.map_err(|e| e.to_string())
 }

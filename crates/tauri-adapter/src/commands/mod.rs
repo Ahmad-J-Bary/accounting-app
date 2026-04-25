@@ -14,3 +14,4 @@ pub mod settings;
 pub mod audit;
 pub mod accounting;
 pub mod assets;
+pub mod dashboard;

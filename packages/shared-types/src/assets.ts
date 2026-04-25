@@ -44,3 +44,19 @@ export interface AssetCategoryDto {
   name: string;
   asset_type: 'Fixed' | 'Consumable';
 }
+
+export interface AssetMovement {
+  id: string;
+  asset_id: string;
+  asset_name?: string;
+  movement_type: 'Purchase' | 'Depreciation' | 'Disposal' | 'Transfer' | 'Issue' | 'Return';
+  quantity?: string;
+  amount: {
+    amount: string;
+    currency: string;
+  };
+  date: string;
+  description?: string;
+  reference?: string;
+  created_at: string;
+}

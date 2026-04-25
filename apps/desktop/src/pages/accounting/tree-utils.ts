@@ -3,7 +3,7 @@ import type { AccountTreeNode } from "./types";
 
 export const isSummaryAccount = (
   account: Pick<AccountDto, "category" | "level">,
-): boolean => account.category === "Summary" || (account.level ?? 1) <= 2;
+): boolean => true; // All accounts are Summary (can have children)
 
 export const parseAmount = (
   value: string | number | null | undefined,

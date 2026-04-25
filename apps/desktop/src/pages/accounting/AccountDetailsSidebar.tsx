@@ -1,16 +1,9 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Edit, Plus, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import type { AccountDto } from "@erp/shared-types";
 import { accountingService } from "@/services/accountingService";
 import type { AccountCategory, AccountType } from "@/services/accountingService";
@@ -53,22 +46,40 @@ export function AccountDetailsSidebar({
     setParentId("null");
   }, [selected?.id]);
 
-  const summaryAccounts = useMemo(
-    () =>
-      allAccounts.filter(
-        (account) => account.category === "Summary" || (account.level ?? 1) <= 2,
-      ),
-    [allAccounts],
-  );
-
   const suggestChildCode = (account: AccountDto | null): string => {
     if (!account) return "";
     const base = account.code ?? "";
-    if (base.length === 0) return "";
-    return `${base}01`;
+    const baseLen = (account.level ?? 1) + 1; // desired total digits for child code
+
+    // Collect existing children under this parent
+    const children = allAccounts.filter(a => a.parent_id === account.id);
+    const existingCodes = children.map(c => c.code ?? "");
+    const existingAtDepth = existingCodes.filter(code => code.length === baseLen);
+
+    if (existingAtDepth.length === 0) {
+      const seed = base.length > 0 ? base + "1" : "1";
+      const res = seed.length >= baseLen ? seed : seed.padEnd(baseLen, '0');
+      return res.substring(0, baseLen);
+    }
+
+    // Determine next by incrementing last digit
+    const lastCode = existingAtDepth[existingAtDepth.length - 1];
+    const lastDigit = parseInt(lastCode.charAt(base.length), 10);
+    if (!isNaN(lastDigit) && lastDigit < 9) {
+      return `${base}${lastDigit + 1}`;
+    }
+
+    // Try to find a gap in 1..9
+    for (let i = 1; i <= 9; i++) {
+      const candidate = `${base}${i}`;
+      if (!existingAtDepth.includes(candidate)) return candidate;
+    }
+
+    // Fallback
+    return (base + "1").substring(0, baseLen);
   };
 
-  const getDescendantIds = (accountId: string): Set<string> => {
+  const getDescendantIds = useCallback((accountId: string): Set<string> => {
     const descendants = new Set<string>();
     const queue = [accountId];
 
@@ -84,16 +95,21 @@ export function AccountDetailsSidebar({
     }
 
     return descendants;
-  };
+  }, [allAccounts]);
 
   const openCreateDialog = () => {
+    // Prevent creating children under final (leaf) accounts
+    if (selected?.is_final) {
+      setError("لا يمكن إضافة حسابات فرعية تحت حساب نهائي (ورقة)");
+      return;
+    }
     setFormMode("create");
     setError(null);
-    const targetParent =
-      selected && (selected.level ?? 1) >= 3 ? selected.parent_id : selected?.id;
+    // Always use selected account as parent (no level restrictions)
+    const targetParent = selected?.id ?? "null";
     setCode(suggestChildCode(selected));
     setNameAr("");
-    setParentId(targetParent ?? "null");
+    setParentId(targetParent);
   };
 
   const openEditDialog = () => {
@@ -129,11 +145,7 @@ export function AccountDetailsSidebar({
     try {
       const effectiveParentId = parentId === "null" ? null : parentId;
       const targetLevel = resolveLevel(parentId);
-      if (targetLevel > 3) {
-        setError("الحد الأقصى لعمق الشجرة هو المستوى الثالث.");
-        return;
-      }
-      const targetCategory = (targetLevel <= 2 ? "Summary" : "Detail") as AccountCategory;
+      const targetCategory = "Summary" as AccountCategory; // All accounts are Summary
 
       if (formMode === "edit" && selected) {
         const payload = {
@@ -169,6 +181,9 @@ export function AccountDetailsSidebar({
           notes: null,
           is_default: false,
           is_active: true,
+          debit: "0",
+          credit: "0",
+          currency: "SYP",
         };
 
         await accountingService.createAccount(payload);
@@ -190,13 +205,7 @@ export function AccountDetailsSidebar({
     const descendants = getDescendantIds(selected.id);
     descendants.add(selected.id);
     return descendants;
-  }, [formMode, selected, allAccounts]);
-
-  const parentOptions = summaryAccounts.filter((account) => {
-    if ((account.level ?? 1) >= 3) return false;
-    if (blockedIds.has(account.id)) return false;
-    return true;
-  });
+  }, [formMode, selected, getDescendantIds]);
 
   const formPanel = formMode && (
     <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-4">
@@ -236,19 +245,16 @@ export function AccountDetailsSidebar({
 
         <div className="space-y-1">
           <Label>فرعي من</Label>
-          <Select value={parentId} onValueChange={setParentId}>
-            <SelectTrigger>
-              <SelectValue placeholder="بدون حساب أب" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="null">-- مستوى أول (بدون أب) --</SelectItem>
-              {parentOptions.map((account) => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.code} - {account.name_ar}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="rounded-md border border-input bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+            {parentId === "null" 
+              ? "-- مستوى أول (بدون أب) --"
+              : (() => {
+                  const parent = allAccounts.find(a => a.id === parentId);
+                  return parent ? `${parent.code} - ${parent.name_ar}` : "--";
+                })()
+            }
+          </div>
+          <input type="hidden" value={parentId} />
         </div>
       </div>
 
@@ -282,7 +288,12 @@ export function AccountDetailsSidebar({
             </>
           ) : (
             <>
-              <Button size="sm" onClick={openCreateDialog}>
+              <Button 
+                size="sm" 
+                onClick={openCreateDialog}
+                disabled={selected?.is_final}
+                title={selected?.is_final ? "لا يمكن إضافة حسابات تحت حساب نهائي" : "إضافة حساب جديد"}
+              >
                 <Plus className="w-4 h-4 ml-1.5" />
                 جديد
               </Button>

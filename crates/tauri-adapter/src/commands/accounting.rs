@@ -34,7 +34,9 @@ pub async fn create_account(
     state: State<'_, AppState>,
 ) -> Result<AccountDto, String> {
     let use_cases =
-        AccountUseCases::new(state.account_repo.clone(), state.journal_entry_repo.clone());
+        AccountUseCases::new(state.account_repo.clone(), state.journal_entry_repo.clone())
+            .with_customer_repo(state.customer_repo.clone())
+            .with_supplier_repo(state.supplier_repo.clone());
 
     let account = use_cases
         .create_account(cmd)

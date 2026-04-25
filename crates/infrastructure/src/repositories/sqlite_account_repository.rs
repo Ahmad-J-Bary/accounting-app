@@ -3,7 +3,7 @@ use sqlx::{SqlitePool, Row};
 use application::errors::AppError;
 use application::ports::account_repository::AccountRepository;
 use domain::accounting::account::{Account, AccountType, AccountCategory};
-use domain::shared::AccountId;
+use domain::shared::ids::{AccountId, CustomerId, SupplierId};
 use std::sync::Arc;
 use uuid::Uuid;
 use crate::db::mapper::{map_uuid, map_decimal};
@@ -27,8 +27,8 @@ impl AccountRepository for SqliteAccountRepository {
         };
 
         sqlx::query(
-            "INSERT INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, notes, is_active, is_default, created_at, updated_at) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            "INSERT INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, notes, is_active, is_default, is_final, linked_customer_id, linked_supplier_id, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
              ON CONFLICT(id) DO UPDATE SET
                 code = excluded.code,
                 name_ar = excluded.name_ar,
@@ -42,6 +42,9 @@ impl AccountRepository for SqliteAccountRepository {
                 notes = excluded.notes,
                 is_active = excluded.is_active,
                 is_default = excluded.is_default,
+                is_final = excluded.is_final,
+                linked_customer_id = excluded.linked_customer_id,
+                linked_supplier_id = excluded.linked_supplier_id,
                 updated_at = excluded.updated_at"
         )
         .bind(account.id.0.to_string())
@@ -57,6 +60,9 @@ impl AccountRepository for SqliteAccountRepository {
         .bind(&account.notes)
         .bind(account.is_active)
         .bind(account.is_default)
+        .bind(account.is_final)
+        .bind(account.linked_customer_id.as_ref().map(|id| id.0.to_string()))
+        .bind(account.linked_supplier_id.as_ref().map(|id| id.0.to_string()))
         .bind(account.created_at)
         .bind(account.updated_at)
         .execute(&*self.pool)
@@ -148,6 +154,9 @@ fn map_row_to_account(row: sqlx::sqlite::SqliteRow) -> Result<Account, AppError>
         notes: row.get("notes"),
         is_active: row.get("is_active"),
         is_default: row.get::<Option<bool>, _>("is_default").unwrap_or(false),
+        is_final: row.get::<Option<bool>, _>("is_final").unwrap_or(false),
+        linked_customer_id: row.get::<Option<String>, _>("linked_customer_id").and_then(|s| s.parse::<u64>().ok()).map(CustomerId::from_u64),
+        linked_supplier_id: row.get::<Option<String>, _>("linked_supplier_id").and_then(|s| s.parse::<u64>().ok()).map(SupplierId::from_u64),
         created_at: row.get("created_at"),
         updated_at: row.get("updated_at"),
     })

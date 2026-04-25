@@ -1,5 +1,5 @@
 import { invoke } from '@/lib/invoke';
-import type { FixedAssetDto, ConsumableDto, AssetCategoryDto } from '@erp/shared-types';
+import type { FixedAssetDto, ConsumableDto, AssetCategoryDto, AssetMovement } from '@erp/shared-types';
 
 export const assetService = {
   async createFixedAsset(data: {
@@ -60,11 +60,11 @@ export const assetService = {
     return await invoke<void>('post_asset_depreciation', { assetId, date });
   },
 
-  async listAssetMovements(assetId: string): Promise<any[]> {
-    return await invoke<any[]>('list_asset_movements', { assetId });
+  async listAssetMovements(assetId: string): Promise<AssetMovement[]> {
+    return await invoke<AssetMovement[]>('list_asset_movements', { assetId });
   },
 
-  async listAllAssetMovements(): Promise<any[]> {
-    return await invoke<any[]>('list_all_asset_movements');
+  async listAllAssetMovements(): Promise<AssetMovement[]> {
+    return await invoke<AssetMovement[]>('list_all_asset_movements');
   },
 };

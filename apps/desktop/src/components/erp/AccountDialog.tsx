@@ -57,6 +57,12 @@ const accountSchema = z.object({
   notes: z.string().optional(),
   is_default: z.boolean().default(false),
   is_active: z.boolean().default(true),
+  // dynamic fields
+  debit: z.string().optional(),
+  credit: z.string().optional(),
+  currency: z.string().optional(),
+  linked_customer_id: z.string().nullable().optional(),
+  linked_supplier_id: z.string().nullable().optional(),
 });
 
 type AccountFormValues = z.infer<typeof accountSchema>;
@@ -116,6 +122,11 @@ export function AccountDialog({
       notes: "",
       is_default: false,
       is_active: true,
+      debit: "",
+      credit: "",
+      currency: "",
+      linked_customer_id: null,
+      linked_supplier_id: null,
     },
   });
 
@@ -193,6 +204,11 @@ export function AccountDialog({
         notes: values.notes?.trim() ? values.notes.trim() : null,
         is_default: values.is_default,
         is_active: values.is_active,
+        debit: values.debit,
+        credit: values.credit,
+        currency: values.currency,
+        linked_customer_id: values.linked_customer_id ?? null,
+        linked_supplier_id: values.linked_supplier_id ?? null,
       };
 
       if (initialData) {
@@ -214,6 +230,177 @@ export function AccountDialog({
   const summaryAccounts = allAccounts.filter(
     (a) => toAccountCategory(a.category) === "Summary",
   );
+
+  // Determine dynamic fields to render based on selected account_type
+  const dynamicFieldsForType = (type: string) => {
+    const t = type as typeof ACCOUNT_TYPES[number];
+    const isDebtor = t === "Assets"; // treat as debtors
+    const isCreditor = t === "Liabilities"; // treat as creditors
+    if (isDebtor) {
+      return (
+        <>
+          <FormField
+            control={form.control}
+            name="debit"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>مدين</FormLabel>
+                <FormControl>
+                  <Input placeholder="مثال: 1000" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="credit"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>دائن</FormLabel>
+                <FormControl>
+                  <Input placeholder="مثال: 500" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="currency"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>العملة</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر عملة" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EGP">EGP</SelectItem>
+                    <SelectItem value="SAR">SAR</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="linked_customer_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>العميل المرتبط</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value ?? "null"}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر عميل مرتبط" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value={"null"}>— بدون عميل —</SelectItem>
+                    {allAccounts
+                      .filter((a) => a.account_type === "Assets")
+                      .map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.code} - {a.name_ar}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </>
+      );
+    }
+    if (isCreditor) {
+      return (
+        <>
+          <FormField
+            control={form.control}
+            name="debit"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>مدين</FormLabel>
+                <FormControl>
+                  <Input placeholder="مثال: 1000" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="credit"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>دائن</FormLabel>
+                <FormControl>
+                  <Input placeholder="مثال: 500" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="currency"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>العملة</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر عملة" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EGP">EGP</SelectItem>
+                    <SelectItem value="SAR">SAR</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="linked_supplier_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>المورد المرتبط</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value ?? "null"}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر مورد مرتبط" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value={"null"}>— بدون مورد —</SelectItem>
+                    {allAccounts
+                      .filter((a) => a.account_type === "Liabilities" || a.account_type === "Expenses")
+                      .map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.code} - {a.name_ar}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </>
+      );
+    }
+    // For Assets with other types, show a minimal set of fields if needed (handled by default below)
+    return null;
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -378,6 +565,9 @@ export function AccountDialog({
             </div>
 
             {form.watch("category") === "Detail" && (
+              <>
+                {dynamicFieldsForType(form.watch("account_type"))}
+              
               <FormField
                 control={form.control}
                 name="opening_balance"
@@ -394,6 +584,7 @@ export function AccountDialog({
                   </FormItem>
                 )}
               />
+              </>
             )}
 
             <div className="grid grid-cols-2 gap-4 pt-2">

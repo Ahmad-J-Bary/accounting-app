@@ -7,13 +7,13 @@ import { Plus, Search, RefreshCw, AlertTriangle } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { damagedService } from "@/services/inventoryService";
 import { productService } from "@/services/productService";
-import type { DamagedItem, CreateDamagedItemRequest, Product } from "@erp/shared-types";
+import type { DamagedItem, CreateDamagedItemRequest, ProductDto } from "@erp/shared-types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
 export default function Damaged() {
   const [items, setItems] = useState<DamagedItem[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showDialog, setShowDialog] = useState(false);

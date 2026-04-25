@@ -1,5 +1,5 @@
 use crate::shared::errors::DomainError;
-use crate::shared::ids::AccountId;
+use crate::shared::ids::{AccountId, CustomerId, SupplierId};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -35,6 +35,9 @@ pub struct Account {
     pub notes: Option<String>,
     pub is_active: bool,
     pub is_default: bool,
+    pub is_final: bool,
+    pub linked_customer_id: Option<CustomerId>,
+    pub linked_supplier_id: Option<SupplierId>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -91,6 +94,9 @@ impl Account {
             notes,
             is_active: true,
             is_default: false,
+            is_final: false,
+            linked_customer_id: None,
+            linked_supplier_id: None,
             created_at: now,
             updated_at: now,
         })
@@ -138,6 +144,46 @@ impl Account {
     pub fn activate(&mut self) {
         self.is_active = true;
         self.updated_at = Utc::now();
+    }
+
+    pub fn link_customer(&mut self, customer_id: CustomerId) {
+        self.linked_customer_id = Some(customer_id);
+        self.updated_at = Utc::now();
+    }
+
+    pub fn link_supplier(&mut self, supplier_id: SupplierId) {
+        self.linked_supplier_id = Some(supplier_id);
+        self.updated_at = Utc::now();
+    }
+
+    pub fn unlink_customer(&mut self) {
+        self.linked_customer_id = None;
+        self.updated_at = Utc::now();
+    }
+
+    pub fn unlink_supplier(&mut self) {
+        self.linked_supplier_id = None;
+        self.updated_at = Utc::now();
+    }
+
+    /// هل هذا الحساب مربوط بعميل؟
+    pub fn is_linked_to_customer(&self) -> bool {
+        self.linked_customer_id.is_some()
+    }
+
+    /// هل هذا الحساب مربوط بمورد؟
+    pub fn is_linked_to_supplier(&self) -> bool {
+        self.linked_supplier_id.is_some()
+    }
+
+    /// هل هذا الحساب ضمن ذمم العملاء؟ (كود يبدأ بـ 1203)
+    pub fn is_receivable_account(&self) -> bool {
+        self.code.starts_with("1203") && self.account_type == AccountType::Assets
+    }
+
+    /// هل هذا الحساب ضمن ذمم الموردين؟ (كود يبدأ بـ 2203)
+    pub fn is_payable_account(&self) -> bool {
+        self.code.starts_with("2203") && self.account_type == AccountType::Liabilities
     }
 }
 

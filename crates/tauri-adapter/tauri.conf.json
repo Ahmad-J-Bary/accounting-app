@@ -1,7 +1,7 @@
 {
-  "productName": "AccountingApp",
-  "version": "0.1.0",
-  "identifier": "com.accounting.app",
+  "productName": "Almowakeb",
+  "version": "0.4.2",
+  "identifier": "com.almowakeb.erp",
   "build": {
     "frontendDist": "dist",
     "devUrl": "http://localhost:1420",
@@ -11,7 +11,7 @@
   "app": {
     "windows": [
       {
-        "title": "Accounting App",
+        "title": "المواكب",
         "width": 800,
         "height": 600
       }

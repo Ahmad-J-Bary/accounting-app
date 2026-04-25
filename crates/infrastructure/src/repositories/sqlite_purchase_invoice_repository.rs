@@ -118,7 +118,7 @@ impl PurchaseInvoiceRepository for SqlitePurchaseInvoiceRepository {
             Ok(Some(PurchaseInvoice {
                 id: PurchaseInvoiceId(Uuid::parse_str(&row.id).unwrap()),
                 invoice_number: row.invoice_number,
-                supplier_id: SupplierId(Uuid::parse_str(&row.supplier_id).unwrap()),
+                supplier_id: SupplierId::from_u64(row.supplier_id.parse::<u64>().unwrap_or(0)),
                 items,
                 subtotal: Decimal::from_str(&row.subtotal).unwrap_or(Decimal::ZERO),
                 tax_amount: Decimal::from_str(&row.tax_amount).unwrap_or(Decimal::ZERO),

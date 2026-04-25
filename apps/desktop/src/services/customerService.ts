@@ -1,7 +1,8 @@
 import { invoke } from '@/lib/invoke';
 import type { 
   CustomerDto, 
-  CreateCustomerRequest 
+  CreateCustomerRequest, 
+  UpdateCustomerRequest 
 } from '@erp/shared-types';
 
 export const customerService = {
@@ -15,5 +16,11 @@ export const customerService = {
 
   async getCustomer(id: string): Promise<CustomerDto> {
     return await invoke<CustomerDto>('get_customer', { id });
+  },
+  async updateCustomer(request: UpdateCustomerRequest): Promise<CustomerDto> {
+    return await invoke<CustomerDto>('update_customer', { request });
+  },
+  async deleteCustomer(id: string): Promise<void> {
+    return await invoke<void>('delete_customer', { id });
   },
 };

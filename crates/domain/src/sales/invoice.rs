@@ -122,7 +122,7 @@ mod tests {
     fn invoice_cannot_be_empty() {
         let result = Invoice::new(
             "INV-001".into(),
-            CustomerId(Uuid::new_v4()),
+            CustomerId::new(),
             vec![],
             Money::zero(),
             Money::zero(),
@@ -132,7 +132,7 @@ mod tests {
 
     #[test]
     fn invoice_with_valid_lines_succeeds() {
-        let customer_id = CustomerId(Uuid::new_v4());
+        let customer_id = CustomerId::new();
         let lines = vec![
             InvoiceLine::new(
                 ProductId(Uuid::new_v4()),
@@ -147,7 +147,7 @@ mod tests {
 
     #[test]
     fn invoice_total_calculates_correctly() {
-        let customer_id = CustomerId(Uuid::new_v4());
+        let customer_id = CustomerId::new();
         let lines = vec![
             InvoiceLine::new(
                 ProductId(Uuid::new_v4()),
@@ -168,7 +168,7 @@ mod tests {
 
     #[test]
     fn posting_twice_is_rejected() {
-        let customer_id = CustomerId(Uuid::new_v4());
+        let customer_id = CustomerId::new();
         let lines = vec![
             InvoiceLine::new(
                 ProductId(Uuid::new_v4()),
@@ -184,7 +184,7 @@ mod tests {
 
     #[test]
     fn cannot_add_line_to_posted_invoice() {
-        let customer_id = CustomerId(Uuid::new_v4());
+        let customer_id = CustomerId::new();
         let lines = vec![
             InvoiceLine::new(
                 ProductId(Uuid::new_v4()),
@@ -207,7 +207,7 @@ mod tests {
 
     #[test]
     fn cannot_remove_line_from_posted_invoice() {
-        let customer_id = CustomerId(Uuid::new_v4());
+        let customer_id = CustomerId::new();
         let lines = vec![
             InvoiceLine::new(
                 ProductId(Uuid::new_v4()),
@@ -224,7 +224,7 @@ mod tests {
 
     #[test]
     fn negative_quantity_is_rejected() {
-        let customer_id = CustomerId(Uuid::new_v4());
+        let customer_id = CustomerId::new();
         let lines = vec![
             InvoiceLine::new(
                 ProductId(Uuid::new_v4()),
@@ -239,7 +239,7 @@ mod tests {
 
     #[test]
     fn negative_unit_price_is_rejected() {
-        let customer_id = CustomerId(Uuid::new_v4());
+        let customer_id = CustomerId::new();
         let lines = vec![
             InvoiceLine::new(
                 ProductId(Uuid::new_v4()),
