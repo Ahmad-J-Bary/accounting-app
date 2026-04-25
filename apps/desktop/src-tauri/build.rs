@@ -25,7 +25,8 @@ fn main() {
 
         if let Err(err) = fs::copy(&source_dll, &dest_dll) {
             // If the file is locked but exists, it's likely already the correct version
-            if dest_dll.exists() && err.kind() == std::io::ErrorKind::PermissionDenied || err.raw_os_error() == Some(32) {
+            let is_locked = err.kind() == std::io::ErrorKind::PermissionDenied || err.raw_os_error() == Some(32);
+            if dest_dll.exists() && is_locked {
                 println!("cargo:warning=Could not update WebView2Loader.dll (file locked), but it already exists. Continuing build.");
             } else {
                 panic!("Failed to copy WebView2Loader.dll to '{}': {err}", dest_dll.display());
