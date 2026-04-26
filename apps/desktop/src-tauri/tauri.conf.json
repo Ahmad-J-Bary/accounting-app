@@ -27,7 +27,12 @@
   "bundle": {
     "active": true,
     "targets": [
-      "nsis"
+      "nsis",
+      "app",
+      "dmg",
+      "deb",
+      "rpm",
+      "appimage"
     ],
     "publisher": "Ahmad Abdelbary",
     "copyright": "© 2025 Ahmad Abdelbary",

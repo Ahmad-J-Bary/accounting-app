@@ -6,14 +6,14 @@ use tokio::sync::Mutex;
 use sqlx::{Transaction, Sqlite};
 
 pub struct SqliteUnitOfWork {
-    pool: DbPool,
+    _pool: DbPool,
     transaction: Mutex<Option<Transaction<'static, Sqlite>>>,
 }
 
 impl SqliteUnitOfWork {
     pub fn new(pool: DbPool) -> Self {
         Self {
-            pool,
+            _pool: pool,
             transaction: Mutex::new(None),
         }
     }

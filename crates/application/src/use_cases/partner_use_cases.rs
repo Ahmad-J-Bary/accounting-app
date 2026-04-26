@@ -91,16 +91,13 @@ impl PartnerUseCases {
         let capital_parent = self.account_repo.find_by_code("222").await?
             .ok_or_else(|| AppError::Invalid("حساب رأس المال العام (222) غير موجود".into()))?;
         
-        let existing_accounts = self.account_repo.list_all().await?;
-        
-        // Generate code for Capital account (e.g. 22201, 22202...)
-        let cap_count = existing_accounts.iter().filter(|a| a.code.starts_with("222") && a.code.len() > 3).count();
-        let cap_code = format!("222{:02}", cap_count + 1);
+        // Code is parent code + partner numeric ID
+        let cap_code = format!("222{}", partner.id.0);
 
-        let cap_account = Account::new(
+        let mut cap_account = Account::new(
             cap_code,
-            format!("رأس مال - {}", name),
-            format!("Capital - {}", name),
+            name.clone(),
+            name.clone(),
             AccountType::Equity,
             Some(capital_parent.id),
             AccountCategory::Detail,
@@ -108,6 +105,7 @@ impl PartnerUseCases {
             partner.amount_local, 
             Some(format!("حساب رأس مال الشريك {}", name)),
         ).map_err(|e| AppError::Domain(e))?;
+        cap_account.set_final(true);
 
         self.account_repo.save(&cap_account).await?;
         
@@ -115,13 +113,14 @@ impl PartnerUseCases {
         let drawings_parent = self.account_repo.find_by_code("44").await?
             .ok_or_else(|| AppError::Invalid("حساب المسحوبات العام (44) غير موجود".into()))?;
 
-        let draw_count = existing_accounts.iter().filter(|a| a.code.starts_with("44") && a.code.len() > 2).count();
-        let draw_code = format!("44{:02}", draw_count + 1);
+        // Code is parent code + partner numeric ID
+        let draw_code = format!("44{}", partner.id.0);
 
-        let draw_account = Account::new(
+        let draw_account_name = format!("مسحوبات {}", name);
+        let mut draw_account = Account::new(
             draw_code,
-            format!("مسحوبات - {}", name),
-            format!("Drawings - {}", name),
+            draw_account_name.clone(),
+            draw_account_name,
             AccountType::Expenses,
             Some(drawings_parent.id),
             AccountCategory::Detail,
@@ -129,6 +128,7 @@ impl PartnerUseCases {
             Decimal::ZERO, 
             Some(format!("حساب مسحوبات الشريك {}", name)),
         ).map_err(|e| AppError::Domain(e))?;
+        draw_account.set_final(true);
 
         self.account_repo.save(&draw_account).await?;
 
@@ -164,8 +164,10 @@ impl PartnerUseCases {
             _ => return Err(AppError::Invalid("نوع تقاسم أرباح غير صالح".into())),
         };
 
+        let old_name = partner.name.clone();
+
         partner.update_info(
-            name,
+            name.clone(),
             exchange_rate,
             amount,
             is_amount_in_usd,
@@ -175,6 +177,26 @@ impl PartnerUseCases {
 
         self.uow.begin().await?;
         self.repo.update(&partner).await?;
+
+        // Update linked accounts names if name changed
+        if old_name != name {
+            if let Some(cap_id) = partner.linked_account_id {
+                if let Some(mut acc) = self.account_repo.find_by_id(&cap_id).await? {
+                    acc.name_ar = name.clone();
+                    acc.name_en = name.clone();
+                    self.account_repo.save(&acc).await?;
+                }
+            }
+            if let Some(draw_id) = partner.drawings_account_id {
+                if let Some(mut acc) = self.account_repo.find_by_id(&draw_id).await? {
+                    let draw_account_name = format!("مسحوبات {}", name);
+                    acc.name_ar = draw_account_name.clone();
+                    acc.name_en = draw_account_name;
+                    self.account_repo.save(&acc).await?;
+                }
+            }
+        }
+
         self.uow.commit().await?;
 
         Ok(())
@@ -187,19 +209,25 @@ impl PartnerUseCases {
 
     pub async fn delete_partner(&self, id: u64) -> Result<(), AppError> {
         let partner_id = PartnerId::from_u64(id);
-        let partner = self.repo.find_by_id(&partner_id).await?;
         
-        if let Some(_p) = partner {
-            self.uow.begin().await?;
-            
-            // Delete linked account if it exists and has no balance?
-            // Actually, maybe we should just deactivate the partner.
-            // For now, simple delete.
-            self.repo.delete(&partner_id).await?;
-            
-            self.uow.commit().await?;
+        let partner = self.repo.find_by_id(&partner_id).await?
+            .ok_or_else(|| AppError::NotFound("الشريك غير موجود".into()))?;
+
+        self.uow.begin().await?;
+
+        // 1. Delete the partner record first to satisfy foreign key constraints 
+        // (the partner table references the accounts table)
+        self.repo.delete(&partner_id).await?;
+
+        // 2. Now it's safe to delete the associated accounts
+        if let Some(cap_id) = partner.linked_account_id {
+            self.account_repo.delete(&cap_id).await?;
+        }
+        if let Some(draw_id) = partner.drawings_account_id {
+            self.account_repo.delete(&draw_id).await?;
         }
         
+        self.uow.commit().await?;
         Ok(())
     }
 }

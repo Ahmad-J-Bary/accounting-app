@@ -102,6 +102,11 @@ impl Account {
         })
     }
 
+    pub fn set_final(&mut self, is_final: bool) {
+        self.is_final = is_final;
+        self.updated_at = Utc::now();
+    }
+
     pub fn debit(&mut self, amount: Decimal) -> Result<(), DomainError> {
         if amount <= Decimal::ZERO {
             return Err(DomainError::Invalid("مبلغ المدين يجب أن يكون موجبًا".into()));
