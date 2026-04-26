@@ -86,7 +86,14 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::dashboard::get_receivables_payables_summary,
         ])
         .setup(|app| {
-            let app_state = tauri::async_runtime::block_on(bootstrap::container::build_app_state())
+            let app_data_dir = app.path().app_data_dir().expect("Failed to get app data directory");
+            if !app_data_dir.exists() {
+                std::fs::create_dir_all(&app_data_dir).expect("Failed to create app data directory");
+            }
+            let db_path = app_data_dir.join("erp.db");
+            let database_url = format!("sqlite:{}?mode=rwc", db_path.display());
+
+            let app_state = tauri::async_runtime::block_on(bootstrap::container::build_app_state(&database_url))
                 .expect("Failed to create app state");
             app.manage(app_state);
             Ok(())

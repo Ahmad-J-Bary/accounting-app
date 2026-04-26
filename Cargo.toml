@@ -6,17 +6,9 @@ members = [
     "crates/infrastructure",
     "crates/ports",
     "crates/tauri-adapter",
-    # "crates/accounting",
-    # "crates/inventory",
-    # "crates/sales",
-    # "crates/purchases",
-    # "crates/payments",
-    # "crates/reporting",
-    # "crates/auth",
-]
-exclude = [
     "apps/desktop/src-tauri",
 ]
+exclude = []
 
 [workspace.package]
 edition = "2021"

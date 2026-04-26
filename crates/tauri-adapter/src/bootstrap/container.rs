@@ -58,14 +58,7 @@ pub struct AppState {
     pub stock_movement_repo: Arc<dyn StockMovementRepository>,
 }
 
-pub async fn build_app_state() -> Result<AppState, String> {
-    let database_url = if std::path::Path::new("erp.db").exists() {
-        "sqlite:erp.db?mode=rwc"
-    } else if std::path::Path::new("../../../erp.db").exists() {
-        "sqlite:../../../erp.db?mode=rwc"
-    } else {
-        "sqlite:erp.db?mode=rwc"
-    };
+pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
     let pool = create_pool(database_url).await.map_err(|e| e.to_string())?;
     
     // Run migrations to ensure all tables exist
