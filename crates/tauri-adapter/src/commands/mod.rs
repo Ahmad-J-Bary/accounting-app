@@ -1,5 +1,6 @@
 pub mod customer;
-pub mod product;
+pub mod material;
+pub mod category;
 pub mod invoice;
 pub mod supplier;
 pub mod purchase;

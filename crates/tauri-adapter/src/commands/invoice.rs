@@ -12,7 +12,7 @@ pub async fn create_invoice(
     let use_case = CreateInvoiceUseCase::new(
         state.invoice_repo.clone(),
         state.customer_repo.clone(),
-        state.product_repo.clone(),
+        state.material_repo.clone(),
     );
     let result: Result<InvoiceDto, AppError> = use_case.execute(request).await;
     result.map_err(|e| e.to_string())
@@ -26,7 +26,7 @@ pub async fn list_invoices(
     let use_case = ListInvoicesUseCase::new(
         state.invoice_repo.clone(),
         state.customer_repo.clone(),
-        state.product_repo.clone(),
+        state.material_repo.clone(),
     );
     let result: Result<Vec<InvoiceDto>, AppError> = use_case.execute(customer_id).await;
     result.map_err(|e| e.to_string())
@@ -40,7 +40,7 @@ pub async fn post_invoice(
     let use_case = PostInvoiceUseCase::new(
         state.invoice_repo.clone(),
         state.customer_repo.clone(),
-        state.product_repo.clone(),
+        state.material_repo.clone(),
         state.stock_movement_repo.clone(),
     );
     use_case.execute(id).await.map_err(|e| e.to_string())

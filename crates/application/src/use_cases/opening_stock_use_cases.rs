@@ -2,7 +2,7 @@ use crate::dto::stock_dto::RecordOpeningStockRequest;
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
-use crate::ports::product_repository::ProductRepository;
+use crate::ports::material_repository::MaterialRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
 use chrono::{DateTime, Utc};
 use domain::accounting::journal_entry::{JournalEntry, JournalLine};
@@ -14,7 +14,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 pub struct RecordOpeningStockUseCase {
-    product_repo: Arc<dyn ProductRepository>,
+    material_repo: Arc<dyn MaterialRepository>,
     movement_repo: Arc<dyn StockMovementRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
     account_repo: Arc<dyn AccountRepository>,
@@ -22,13 +22,13 @@ pub struct RecordOpeningStockUseCase {
 
 impl RecordOpeningStockUseCase {
     pub fn new(
-        product_repo: Arc<dyn ProductRepository>,
+        material_repo: Arc<dyn MaterialRepository>,
         movement_repo: Arc<dyn StockMovementRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
         account_repo: Arc<dyn AccountRepository>,
     ) -> Self {
         Self {
-            product_repo,
+            material_repo,
             movement_repo,
             journal_repo,
             account_repo,
@@ -44,11 +44,11 @@ impl RecordOpeningStockUseCase {
         // 1. Process items
         for item in &req.items {
             let pid = item
-                .product_id
+                .material_id
                 .parse()
-                .map_err(|_| AppError::Invalid("معرف منتج غير صالح".into()))?;
-            let mut product = self.product_repo.find_by_id(&pid).await?.ok_or_else(|| {
-                AppError::NotFound(format!("المنتج {} غير موجود", item.product_id))
+                .map_err(|_| AppError::Invalid("معرف مادة غير صالح".into()))?;
+            let material = self.material_repo.find_by_id(&pid).await?.ok_or_else(|| {
+                AppError::NotFound(format!("المادة {} غير موجودة", item.material_id))
             })?;
 
             let quantity = Decimal::from_str(&item.quantity)
@@ -57,7 +57,7 @@ impl RecordOpeningStockUseCase {
                 .map_err(|_| AppError::Invalid("سعر تكلفة غير صالح".into()))?;
 
             let movement = StockMovement::new(
-                product.id.clone(),
+                material.id.clone(),
                 MovementType::OpeningBalance,
                 quantity,
                 "OP-STOCK".to_string(),
@@ -66,12 +66,7 @@ impl RecordOpeningStockUseCase {
             )
             .map_err(|e| AppError::Invalid(e.to_string()))?;
 
-            // Update product stock snapshot
-            product
-                .adjust_stock(quantity)
-                .map_err(|e| AppError::Invalid(e.to_string()))?;
-
-            self.product_repo.update(&product).await?;
+            // Record movement (dynamic balance)
             self.movement_repo.save(&movement).await?;
 
             total_value += quantity * unit_cost;

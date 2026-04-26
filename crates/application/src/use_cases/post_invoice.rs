@@ -2,11 +2,11 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use domain::shared::InvoiceId;
-use domain::shared::ids::{CustomerId, ProductId};
+use domain::shared::ids::{CustomerId, MaterialId};
 use crate::errors::AppError;
 use crate::ports::invoice_repository::InvoiceRepository;
 use crate::ports::customer_repository::CustomerRepository;
-use crate::ports::product_repository::ProductRepository;
+use crate::ports::material_repository::MaterialRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
 use domain::inventory::stock_movement::{StockMovement, MovementType};
 use crate::dto::invoice_dto::InvoiceDto;
@@ -14,7 +14,7 @@ use crate::dto::invoice_dto::InvoiceDto;
 pub struct PostInvoiceUseCase {
     repo: Arc<dyn InvoiceRepository>,
     customer_repo: Arc<dyn CustomerRepository>,
-    product_repo: Arc<dyn ProductRepository>,
+    material_repo: Arc<dyn MaterialRepository>,
     movement_repo: Arc<dyn StockMovementRepository>,
 }
 
@@ -22,10 +22,10 @@ impl PostInvoiceUseCase {
     pub fn new(
         repo: Arc<dyn InvoiceRepository>, 
         customer_repo: Arc<dyn CustomerRepository>,
-        product_repo: Arc<dyn ProductRepository>,
+        material_repo: Arc<dyn MaterialRepository>,
         movement_repo: Arc<dyn StockMovementRepository>,
     ) -> Self {
-        Self { repo, customer_repo, product_repo, movement_repo }
+        Self { repo, customer_repo, material_repo, movement_repo }
     }
 
     pub async fn execute(&self, invoice_id: String) -> Result<InvoiceDto, AppError> {
@@ -39,16 +39,12 @@ impl PostInvoiceUseCase {
 
         invoice.post().map_err(AppError::from)?;
 
-        // Update stock and record movements
+        // Record movements (stock balance is calculated dynamically now)
         for line in &invoice.lines {
-            if let Some(mut product) = self.product_repo.find_by_id(&line.product_id).await? {
-                // Adjust stock (decrease for sales)
-                product.adjust_stock(-line.quantity).map_err(|e| AppError::Invalid(e.to_string()))?;
-                self.product_repo.update(&product).await?;
-
+            if let Ok(Some(material)) = self.material_repo.find_by_id(&line.material_id).await {
                 // Record stock movement
                 let movement = StockMovement::new(
-                    product.id.clone(),
+                    material.id.clone(),
                     MovementType::Sale,
                     line.quantity,
                     invoice.invoice_number.clone(),
@@ -70,11 +66,11 @@ impl PostInvoiceUseCase {
             }
         }
         
-        // Enrich with product names
+        // Enrich with material names
         for line in &mut dto.lines {
-            if let Ok(pid) = Uuid::parse_str(&line.product_id) {
-                if let Ok(Some(product)) = self.product_repo.find_by_id(&ProductId(pid)).await {
-                    line.product_name = Some(product.name);
+            if let Ok(pid) = Uuid::parse_str(&line.material_id) {
+                if let Ok(Some(material)) = self.material_repo.find_by_id(&MaterialId(pid)).await {
+                    line.material_name = Some(material.name);
                 }
             }
         }

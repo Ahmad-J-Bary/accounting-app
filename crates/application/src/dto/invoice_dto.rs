@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InvoiceLineDto {
-    pub product_id: String,
-    pub product_name: Option<String>,
+    pub material_id: String,
+    pub material_name: Option<String>,
     pub quantity: String,
     pub unit_price: String,
 }
@@ -59,8 +59,8 @@ impl From<Invoice> for InvoiceDto {
 impl From<InvoiceLine> for InvoiceLineDto {
     fn from(line: InvoiceLine) -> Self {
         Self {
-            product_id: line.product_id.0.to_string(),
-            product_name: None,
+            material_id: line.material_id.0.to_string(),
+            material_name: None,
             quantity: line.quantity.to_string(),
             unit_price: line.unit_price.amount().to_string(),
         }

@@ -4,7 +4,7 @@ use std::sync::Arc;
 use application::errors::AppError;
 use application::ports::stock_adjustment_repository::StockAdjustmentRepository;
 use domain::inventory::StockAdjustment;
-use domain::shared::ids::{StockAdjustmentId, ProductId};
+use domain::shared::ids::{StockAdjustmentId, MaterialId};
 use rust_decimal::Decimal;
 use std::str::FromStr;
 use uuid::Uuid;
@@ -23,7 +23,7 @@ impl SqliteStockAdjustmentRepository {
 #[derive(sqlx::FromRow)]
 struct AdjustmentRow {
     id: String,
-    product_id: String,
+    material_id: String,
     system_quantity: String,
     actual_quantity: String,
     difference: String,
@@ -35,7 +35,7 @@ struct AdjustmentRow {
 fn row_to_adjustment(row: AdjustmentRow) -> Result<StockAdjustment, AppError> {
     Ok(StockAdjustment {
         id: StockAdjustmentId(Uuid::parse_str(&row.id).map_err(|e| AppError::Infrastructure(e.to_string()))?),
-        product_id: ProductId(Uuid::parse_str(&row.product_id).map_err(|e| AppError::Infrastructure(e.to_string()))?),
+        material_id: MaterialId(Uuid::parse_str(&row.material_id).map_err(|e| AppError::Infrastructure(e.to_string()))?),
         system_quantity: Decimal::from_str(&row.system_quantity).unwrap_or(Decimal::ZERO),
         actual_quantity: Decimal::from_str(&row.actual_quantity).unwrap_or(Decimal::ZERO),
         difference: Decimal::from_str(&row.difference).unwrap_or(Decimal::ZERO),
@@ -49,11 +49,11 @@ fn row_to_adjustment(row: AdjustmentRow) -> Result<StockAdjustment, AppError> {
 impl StockAdjustmentRepository for SqliteStockAdjustmentRepository {
     async fn save(&self, adj: &StockAdjustment) -> Result<(), AppError> {
         sqlx::query(
-            "INSERT INTO stock_adjustments (id, product_id, system_quantity, actual_quantity, difference, reason, adjustment_date, created_at)
+            "INSERT INTO stock_adjustments (id, material_id, system_quantity, actual_quantity, difference, reason, adjustment_date, created_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
         )
         .bind(adj.id.to_string())
-        .bind(adj.product_id.to_string())
+        .bind(adj.material_id.to_string())
         .bind(adj.system_quantity.to_string())
         .bind(adj.actual_quantity.to_string())
         .bind(adj.difference.to_string())
@@ -68,7 +68,7 @@ impl StockAdjustmentRepository for SqliteStockAdjustmentRepository {
 
     async fn find_by_id(&self, id: &StockAdjustmentId) -> Result<Option<StockAdjustment>, AppError> {
         let row = sqlx::query_as::<_, AdjustmentRow>(
-            "SELECT id, product_id, system_quantity, actual_quantity, difference, reason, adjustment_date, created_at
+            "SELECT id, material_id, system_quantity, actual_quantity, difference, reason, adjustment_date, created_at
              FROM stock_adjustments WHERE id = ?"
         )
         .bind(id.to_string())
@@ -80,7 +80,7 @@ impl StockAdjustmentRepository for SqliteStockAdjustmentRepository {
 
     async fn list_all(&self) -> Result<Vec<StockAdjustment>, AppError> {
         let rows = sqlx::query_as::<_, AdjustmentRow>(
-            "SELECT id, product_id, system_quantity, actual_quantity, difference, reason, adjustment_date, created_at
+            "SELECT id, material_id, system_quantity, actual_quantity, difference, reason, adjustment_date, created_at
              FROM stock_adjustments ORDER BY adjustment_date DESC"
         )
         .fetch_all(&*self.pool)

@@ -7,9 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2, Calculator } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { customerService } from "@/services/customerService";
-import { productService } from "@/services/productService";
+import { materialService } from "@/services/materialService";
 import { invoiceService } from "@/services/invoiceService";
-import type { CustomerDto, ProductDto, CreateInvoiceRequest, InvoiceLineDto } from "@erp/shared-types";
+import type { CustomerDto, MaterialDto, CreateInvoiceRequest, InvoiceLineDto, InvoiceDto } from "@erp/shared-types";
 import { formatCurrency } from "@/lib/format";
 import { toast } from "sonner"; // Assuming sonner is used
 
@@ -22,7 +22,7 @@ interface NewInvoiceDialogProps {
 
 export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit }: NewInvoiceDialogProps) {
   const [customers, setCustomers] = useState<CustomerDto[]>([]);
-  const [products, setProducts] = useState<ProductDto[]>([]);
+  const [products, setProducts] = useState<MaterialDto[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState<CreateInvoiceRequest>({
@@ -64,7 +64,7 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
     try {
       const [cData, pData] = await Promise.all([
         customerService.listCustomers(),
-        productService.listProducts(),
+        materialService.listMaterials(),
       ]);
       setCustomers(cData);
       setProducts(pData);
@@ -241,7 +241,7 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
                            <DropdownMenuTrigger asChild>
                              <Button variant="ghost" size="icon" className="h-7 w-7"><Calculator className="w-3.5 h-3.5" /></Button>
                            </DropdownMenuTrigger>
-                           <DropdownMenuContent align="end" dir="rtl">
+                           <DropdownMenuContent align="end">
                              <div className="p-2 text-xs font-bold border-b mb-1">اختر نوع السعر</div>
                              {(() => {
                                const p = products.find(prod => prod.id === line.product_id);

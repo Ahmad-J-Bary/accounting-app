@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StockAdjustmentDto {
     pub id: String,
-    pub product_id: String,
-    pub product_name: Option<String>,
+    pub material_id: String,
+    pub material_name: Option<String>,
     pub system_quantity: String,
     pub actual_quantity: String,
     pub difference: String,
@@ -15,7 +15,7 @@ pub struct StockAdjustmentDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateStockAdjustmentRequest {
-    pub product_id: String,
+    pub material_id: String,
     pub actual_quantity: f64,
     pub reason: Option<String>,
     pub adjustment_date: String,

@@ -141,7 +141,8 @@ impl std::str::FromStr for PartnerId {
 
 define_id!(InvoiceId);
 define_id!(AccountId);
-define_id!(ProductId);
+define_id!(MaterialId);
+define_id!(MaterialCategoryId);
 define_id!(JournalEntryId);
 define_id!(SalesInvoiceId);
 define_id!(PurchaseInvoiceId);

@@ -13,8 +13,8 @@ pub async fn list_stock_movements(
 
     Ok(movements.into_iter().map(|m| StockMovementDto {
         id: m.id.to_string(),
-        product_id: m.product_id.to_string(),
-        product_name: None,
+        material_id: m.material_id.to_string(),
+        material_name: None,
         quantity: m.quantity.to_string(),
         movement_type: format!("{:?}", m.movement_type),
         reason: if m.notes.is_empty() { None } else { Some(m.notes) },

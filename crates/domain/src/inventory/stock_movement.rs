@@ -1,5 +1,5 @@
 use crate::shared::errors::DomainError;
-use crate::shared::ids::ProductId;
+use crate::shared::ids::MaterialId;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -20,7 +20,7 @@ pub enum MovementType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StockMovement {
     pub id: Uuid,
-    pub product_id: ProductId,
+    pub material_id: MaterialId,
     pub movement_type: MovementType,
     pub quantity: Decimal,
     pub reference: String, // رقم الفاتورة أو المستند
@@ -31,7 +31,7 @@ pub struct StockMovement {
 
 impl StockMovement {
     pub fn new(
-        product_id: ProductId,
+        material_id: MaterialId,
         movement_type: MovementType,
         quantity: Decimal,
         reference: String,
@@ -50,7 +50,7 @@ impl StockMovement {
 
         Ok(Self {
             id: Uuid::new_v4(),
-            product_id,
+            material_id,
             movement_type,
             quantity,
             reference,
@@ -83,7 +83,7 @@ mod tests {
     #[test]
     fn stock_movement_creation_with_valid_data_succeeds() {
         let result = StockMovement::new(
-            ProductId(Uuid::new_v4()),
+            MaterialId(Uuid::new_v4()),
             MovementType::In,
             dec!(100),
             "INV-001".to_string(),
@@ -97,7 +97,7 @@ mod tests {
     #[test]
     fn stock_movement_quantity_must_be_positive() {
         let result = StockMovement::new(
-            ProductId(Uuid::new_v4()),
+            MaterialId(Uuid::new_v4()),
             MovementType::In,
             dec!(-10),
             "INV-001".to_string(),
@@ -111,7 +111,7 @@ mod tests {
     #[test]
     fn stock_movement_reference_cannot_be_empty() {
         let result = StockMovement::new(
-            ProductId(Uuid::new_v4()),
+            MaterialId(Uuid::new_v4()),
             MovementType::In,
             dec!(100),
             "".to_string(),
@@ -125,7 +125,7 @@ mod tests {
     #[test]
     fn in_movement_is_inflow() {
         let movement = StockMovement::new(
-            ProductId(Uuid::new_v4()),
+            MaterialId(Uuid::new_v4()),
             MovementType::In,
             dec!(100),
             "INV-001".to_string(),
@@ -139,7 +139,7 @@ mod tests {
     #[test]
     fn out_movement_is_outflow() {
         let movement = StockMovement::new(
-            ProductId(Uuid::new_v4()),
+            MaterialId(Uuid::new_v4()),
             MovementType::Out,
             dec!(100),
             "INV-001".to_string(),
@@ -153,7 +153,7 @@ mod tests {
     #[test]
     fn transfer_is_both_inflow_and_outflow() {
         let movement = StockMovement::new(
-            ProductId(Uuid::new_v4()),
+            MaterialId(Uuid::new_v4()),
             MovementType::Transfer,
             dec!(100),
             "TRF-001".to_string(),

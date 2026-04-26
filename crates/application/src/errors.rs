@@ -17,6 +17,9 @@ pub enum AppError {
     #[error("بيانات غير صالحة: {0}")]
     Invalid(String),
     
+    #[error("غير مسموح: {0}")]
+    Forbidden(String),
+    
     #[error("خطأ غير معروف: {0}")]
     Unknown(String),
 }

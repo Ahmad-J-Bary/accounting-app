@@ -2,7 +2,7 @@ use super::invoice_line::InvoiceLine;
 use crate::shared::errors::DomainError;
 use crate::shared::ids::InvoiceId;
 #[cfg(test)]
-use crate::shared::ids::ProductId;
+use crate::shared::ids::MaterialId;
 use crate::shared::money::Money;
 use crate::shared::CustomerId;
 use chrono::{DateTime, Utc};
@@ -135,7 +135,7 @@ mod tests {
         let customer_id = CustomerId::new();
         let lines = vec![
             InvoiceLine::new(
-                ProductId(Uuid::new_v4()),
+                MaterialId(Uuid::new_v4()),
                 dec!(2),
                 Money::syp(dec!(50)),
             ),
@@ -150,12 +150,12 @@ mod tests {
         let customer_id = CustomerId::new();
         let lines = vec![
             InvoiceLine::new(
-                ProductId(Uuid::new_v4()),
+                MaterialId(Uuid::new_v4()),
                 dec!(2),
                 Money::syp(dec!(50)),
             ),
             InvoiceLine::new(
-                ProductId(Uuid::new_v4()),
+                MaterialId(Uuid::new_v4()),
                 dec!(3),
                 Money::syp(dec!(100)),
             ),
@@ -171,7 +171,7 @@ mod tests {
         let customer_id = CustomerId::new();
         let lines = vec![
             InvoiceLine::new(
-                ProductId(Uuid::new_v4()),
+                MaterialId(Uuid::new_v4()),
                 dec!(2),
                 Money::syp(dec!(50)),
             ),
@@ -187,7 +187,7 @@ mod tests {
         let customer_id = CustomerId::new();
         let lines = vec![
             InvoiceLine::new(
-                ProductId(Uuid::new_v4()),
+                MaterialId(Uuid::new_v4()),
                 dec!(2),
                 Money::syp(dec!(50)),
             ),
@@ -197,7 +197,7 @@ mod tests {
         invoice.post().unwrap();
 
         let new_line = InvoiceLine::new(
-            ProductId(Uuid::new_v4()),
+            MaterialId(Uuid::new_v4()),
             dec!(1),
             Money::syp(dec!(30)),
         );
@@ -210,7 +210,7 @@ mod tests {
         let customer_id = CustomerId::new();
         let lines = vec![
             InvoiceLine::new(
-                ProductId(Uuid::new_v4()),
+                MaterialId(Uuid::new_v4()),
                 dec!(2),
                 Money::syp(dec!(50)),
             ),
@@ -227,7 +227,7 @@ mod tests {
         let customer_id = CustomerId::new();
         let lines = vec![
             InvoiceLine::new(
-                ProductId(Uuid::new_v4()),
+                MaterialId(Uuid::new_v4()),
                 dec!(-1),
                 Money::syp(dec!(50)),
             ),
@@ -242,7 +242,7 @@ mod tests {
         let customer_id = CustomerId::new();
         let lines = vec![
             InvoiceLine::new(
-                ProductId(Uuid::new_v4()),
+                MaterialId(Uuid::new_v4()),
                 dec!(2),
                 Money::syp(dec!(-50)),
             ),
@@ -252,3 +252,4 @@ mod tests {
         assert!(result.is_err());
     }
 }
+

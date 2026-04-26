@@ -1,4 +1,5 @@
-pub mod product;
+pub mod material;
+pub mod category;
 pub mod stock_movement;
 pub mod damaged_item;
 pub mod production_order;

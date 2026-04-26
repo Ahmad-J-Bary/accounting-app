@@ -4,26 +4,26 @@ use uuid::Uuid;
 use crate::errors::AppError;
 use crate::ports::invoice_repository::InvoiceRepository;
 use crate::ports::customer_repository::CustomerRepository;
-use crate::ports::product_repository::ProductRepository;
+use crate::ports::material_repository::MaterialRepository;
 use crate::dto::invoice_dto::{CreateInvoiceRequest, InvoiceDto};
 use domain::sales::{Invoice, InvoiceLine};
-use domain::shared::ids::{CustomerId, ProductId};
+use domain::shared::ids::{CustomerId, MaterialId};
 use rust_decimal::Decimal;
 use std::str::FromStr;
 
 pub struct CreateInvoiceUseCase {
     repo: Arc<dyn InvoiceRepository>,
     customer_repo: Arc<dyn CustomerRepository>,
-    product_repo: Arc<dyn ProductRepository>,
+    material_repo: Arc<dyn MaterialRepository>,
 }
 
 impl CreateInvoiceUseCase {
     pub fn new(
         repo: Arc<dyn InvoiceRepository>,
         customer_repo: Arc<dyn CustomerRepository>,
-        product_repo: Arc<dyn ProductRepository>,
+        material_repo: Arc<dyn MaterialRepository>,
     ) -> Self {
-        Self { repo, customer_repo, product_repo }
+        Self { repo, customer_repo, material_repo }
     }
 
     pub async fn execute(&self, request: CreateInvoiceRequest) -> Result<InvoiceDto, AppError> {
@@ -32,15 +32,15 @@ impl CreateInvoiceUseCase {
         
         let mut lines = Vec::new();
         for line_dto in request.lines {
-            let product_id = Uuid::parse_str(&line_dto.product_id)
-                .map_err(|e| AppError::Invalid(format!("Invalid product ID: {}", e)))?;
+            let material_id = Uuid::parse_str(&line_dto.material_id)
+                .map_err(|e| AppError::Invalid(format!("Invalid material ID: {}", e)))?;
             let quantity = Decimal::from_str(&line_dto.quantity)
                 .map_err(|e| AppError::Invalid(format!("Invalid quantity: {}", e)))?;
             let unit_price = Decimal::from_str(&line_dto.unit_price)
                 .map_err(|e| AppError::Invalid(format!("Invalid unit price: {}", e)))?;
             
             lines.push(InvoiceLine::new(
-                ProductId(product_id),
+                MaterialId(material_id),
                 quantity,
                 domain::shared::money::Money::syp(unit_price),
             ));
@@ -68,11 +68,11 @@ impl CreateInvoiceUseCase {
             dto.customer_name = Some(customer.name);
         }
         
-        // Enrich with product names
+        // Enrich with material names
         for line in &mut dto.lines {
-            if let Ok(pid) = Uuid::parse_str(&line.product_id) {
-                if let Ok(Some(product)) = self.product_repo.find_by_id(&ProductId(pid)).await {
-                    line.product_name = Some(product.name);
+            if let Ok(pid) = Uuid::parse_str(&line.material_id) {
+                if let Ok(Some(material)) = self.material_repo.find_by_id(&MaterialId(pid)).await {
+                    line.material_name = Some(material.name);
                 }
             }
         }

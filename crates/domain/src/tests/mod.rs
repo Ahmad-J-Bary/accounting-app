@@ -111,14 +111,14 @@ mod product_domain_tests {
 #[cfg(test)]
 mod stock_movement_domain_tests {
     use crate::inventory::stock_movement::{StockMovement, MovementType};
-    use crate::shared::ids::ProductId;
+    use crate::shared::ids::MaterialId;
     use uuid::Uuid;
     use rust_decimal_macros::dec;
     use chrono::Utc;
 
     fn mv(t: MovementType, qty: rust_decimal::Decimal) -> StockMovement {
         StockMovement::new(
-            ProductId(Uuid::new_v4()), t, qty,
+            MaterialId(Uuid::new_v4()), t, qty,
             "REF-001".to_string(), "ملاحظات".to_string(), Utc::now(),
         ).unwrap()
     }
@@ -147,7 +147,7 @@ mod stock_movement_domain_tests {
     #[test]
     fn zero_quantity_movement_fails() {
         let r = StockMovement::new(
-            ProductId(Uuid::new_v4()), MovementType::In, dec!(0),
+            MaterialId(Uuid::new_v4()), MovementType::In, dec!(0),
             "REF".to_string(), "".to_string(), Utc::now(),
         );
         assert!(r.is_err(), "الكمية صفر يجب أن ترفض");
@@ -156,7 +156,7 @@ mod stock_movement_domain_tests {
     #[test]
     fn negative_quantity_movement_fails() {
         let r = StockMovement::new(
-            ProductId(Uuid::new_v4()), MovementType::Out, dec!(-10),
+            MaterialId(Uuid::new_v4()), MovementType::Out, dec!(-10),
             "REF".to_string(), "".to_string(), Utc::now(),
         );
         assert!(r.is_err(), "الكمية السالبة يجب أن ترفض");
@@ -165,7 +165,7 @@ mod stock_movement_domain_tests {
     #[test]
     fn empty_reference_movement_fails() {
         let r = StockMovement::new(
-            ProductId(Uuid::new_v4()), MovementType::In, dec!(10),
+            MaterialId(Uuid::new_v4()), MovementType::In, dec!(10),
             "".to_string(), "".to_string(), Utc::now(),
         );
         assert!(r.is_err(), "المرجع الفارغ يجب أن يُرفض");
@@ -239,3 +239,4 @@ mod journal_entry_domain_tests {
         assert!(e.post().is_ok());
     }
 }
+

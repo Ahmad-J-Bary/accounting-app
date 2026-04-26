@@ -3,7 +3,7 @@ use sqlx::{SqlitePool, Row};
 use application::errors::AppError;
 use application::ports::invoice_repository::InvoiceRepository;
 use domain::sales::{Invoice, InvoiceLine};
-use domain::shared::{InvoiceId, CustomerId, ProductId, Money};
+use domain::shared::{InvoiceId, CustomerId, MaterialId, Money};
 use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
@@ -65,13 +65,13 @@ impl InvoiceRepository for SqliteInvoiceRepository {
             sqlx::query(
                 r#"
                 INSERT INTO sales_invoice_items (
-                    id, sales_invoice_id, product_id, quantity, unit_price, line_total
+                    id, sales_invoice_id, material_id, quantity, unit_price, line_total
                 ) VALUES (?, ?, ?, ?, ?, ?)
                 "#
             )
             .bind(uuid::Uuid::new_v4().to_string())
             .bind(invoice.id.0.to_string())
-            .bind(line.product_id.0.to_string())
+            .bind(line.material_id.0.to_string())
             .bind(line.quantity.to_string())
             .bind(line.unit_price.amount().to_string())
             .bind(line.line_total().amount().to_string())
@@ -154,12 +154,12 @@ impl SqliteInvoiceRepository {
 
         let mut lines = Vec::new();
         for row in rows {
-            let product_id_str: String = row.get("product_id");
+            let material_id_str: String = row.get("material_id");
             let quantity_str: String = row.get("quantity");
             let price_str: String = row.get("unit_price");
 
             lines.push(InvoiceLine::new(
-                ProductId(uuid::Uuid::parse_str(&product_id_str).unwrap()),
+                MaterialId(uuid::Uuid::parse_str(&material_id_str).unwrap()),
                 Decimal::from_str(&quantity_str).unwrap_or(Decimal::ZERO),
                 Money::syp(Decimal::from_str(&price_str).unwrap_or(Decimal::ZERO))
             ));

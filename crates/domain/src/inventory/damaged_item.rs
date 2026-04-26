@@ -1,5 +1,5 @@
 use crate::shared::errors::DomainError;
-use crate::shared::ids::{DamagedItemId, ProductId};
+use crate::shared::ids::{DamagedItemId, MaterialId};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -8,7 +8,7 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DamagedItem {
     pub id: DamagedItemId,
-    pub product_id: ProductId,
+    pub material_id: MaterialId,
     pub quantity: Decimal,
     pub reason: String,
     pub damage_date: DateTime<Utc>,
@@ -19,7 +19,7 @@ pub struct DamagedItem {
 
 impl DamagedItem {
     pub fn new(
-        product_id: ProductId,
+        material_id: MaterialId,
         quantity: Decimal,
         reason: String,
         damage_date: DateTime<Utc>,
@@ -37,7 +37,7 @@ impl DamagedItem {
         }
         Ok(Self {
             id: DamagedItemId(Uuid::new_v4()),
-            product_id,
+            material_id,
             quantity,
             reason,
             damage_date,

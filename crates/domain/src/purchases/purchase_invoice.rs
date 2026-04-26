@@ -1,5 +1,5 @@
 use crate::shared::errors::DomainError;
-use crate::shared::ids::{PurchaseInvoiceId, SupplierId, ProductId};
+use crate::shared::ids::{PurchaseInvoiceId, SupplierId, MaterialId};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -17,7 +17,7 @@ pub enum PurchaseInvoiceStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PurchaseInvoiceItem {
     pub id: String,
-    pub product_id: ProductId,
+    pub material_id: MaterialId,
     pub quantity: Decimal,
     pub unit_price: Decimal,
     pub line_total: Decimal,
@@ -26,7 +26,7 @@ pub struct PurchaseInvoiceItem {
 
 impl PurchaseInvoiceItem {
     pub fn new(
-        product_id: ProductId,
+        material_id: MaterialId,
         quantity: Decimal,
         unit_price: Decimal,
     ) -> Result<Self, DomainError> {
@@ -38,7 +38,7 @@ impl PurchaseInvoiceItem {
         }
         Ok(Self {
             id: Uuid::new_v4().to_string(),
-            product_id,
+            material_id,
             quantity,
             unit_price,
             line_total: quantity * unit_price,

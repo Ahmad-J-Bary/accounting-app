@@ -4,22 +4,22 @@ use uuid::Uuid;
 use crate::errors::AppError;
 use crate::ports::invoice_repository::InvoiceRepository;
 use crate::ports::customer_repository::CustomerRepository;
-use crate::ports::product_repository::ProductRepository;
+use crate::ports::material_repository::MaterialRepository;
 use crate::dto::invoice_dto::InvoiceDto;
 
 pub struct ListInvoicesUseCase {
     repo: Arc<dyn InvoiceRepository>,
     customer_repo: Arc<dyn CustomerRepository>,
-    product_repo: Arc<dyn ProductRepository>,
+    material_repo: Arc<dyn MaterialRepository>,
 }
 
 impl ListInvoicesUseCase {
     pub fn new(
         repo: Arc<dyn InvoiceRepository>,
         customer_repo: Arc<dyn CustomerRepository>,
-        product_repo: Arc<dyn ProductRepository>,
+        material_repo: Arc<dyn MaterialRepository>,
     ) -> Self {
-        Self { repo, customer_repo, product_repo }
+        Self { repo, customer_repo, material_repo }
     }
 
     pub async fn execute(&self, customer_id: Option<String>) -> Result<Vec<InvoiceDto>, AppError> {
@@ -43,11 +43,11 @@ impl ListInvoicesUseCase {
                 }
             }
             
-            // Populate Product Names
+            // Populate Material Names
             for line in &mut dto.lines {
-                if let Ok(pid) = Uuid::parse_str(&line.product_id) {
-                    if let Ok(Some(product)) = self.product_repo.find_by_id(&domain::shared::ids::ProductId(pid)).await {
-                        line.product_name = Some(product.name);
+                if let Ok(pid) = Uuid::parse_str(&line.material_id) {
+                    if let Ok(Some(material)) = self.material_repo.find_by_id(&domain::shared::ids::MaterialId(pid)).await {
+                        line.material_name = Some(material.name);
                     }
                 }
             }

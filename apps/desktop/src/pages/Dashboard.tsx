@@ -21,11 +21,11 @@ import { journalEntryService } from "@/services/journalEntryService";
 import { invoiceService } from "@/services/invoiceService";
 import { purchaseService } from "@/services/purchaseService";
 import { paymentService } from "@/services/paymentService";
-import { productService } from "@/services/productService";
+import { materialService } from "@/services/materialService";
 import { customerService } from "@/services/customerService";
 import { supplierService } from "@/services/supplierService";
 import { accountingService } from "@/services/accountingService";
-import type { InvoiceDto, JournalEntryDto, Payment, ProductDto, PurchaseInvoice, ReceivablesPayablesSummary } from "@erp/shared-types";
+import type { InvoiceDto, JournalEntryDto, Payment, MaterialDto, PurchaseInvoice, ReceivablesPayablesSummary } from "@erp/shared-types";
 import type { CustomerDto } from "@erp/shared-types";
 import type { SupplierDto } from "@erp/shared-types";
 
@@ -41,7 +41,7 @@ export default function Dashboard() {
   const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
   const [purchaseInvoices, setPurchaseInvoices] = useState<PurchaseInvoice[]>([]);
   const [paymentEntries, setPaymentEntries] = useState<Payment[]>([]);
-  const [productItems, setProductItems] = useState<ProductDto[]>([]);
+  const [productItems, setProductItems] = useState<MaterialDto[]>([]);
   const [customers, setCustomers] = useState<CustomerDto[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [rpSummary, setRpSummary] = useState<ReceivablesPayablesSummary | null>(null);
@@ -97,7 +97,7 @@ export default function Dashboard() {
       invoiceService.listInvoices(),
       purchaseService.listPurchaseInvoices(),
       paymentService.listPayments(),
-      productService.listProducts(),
+      materialService.listMaterials(),
       accountingService.getReceivablesPayablesSummary(),
     ])
       .then(([entries, salesData, purchaseData, paymentData, productData, rpData]) => {

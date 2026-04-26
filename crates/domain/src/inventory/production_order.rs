@@ -1,5 +1,5 @@
 use crate::shared::errors::DomainError;
-use crate::shared::ids::{ProductionOrderId, ProductId};
+use crate::shared::ids::{ProductionOrderId, MaterialId};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,7 @@ pub enum ProductionOrderStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProductionMaterial {
     pub id: String,
-    pub product_id: ProductId,  // raw material
+    pub material_id: MaterialId,  // raw material
     pub quantity_required: Decimal,
     pub quantity_consumed: Decimal,
 }
@@ -24,7 +24,7 @@ pub struct ProductionMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProductionOutput {
     pub id: String,
-    pub product_id: ProductId,  // finished good
+    pub material_id: MaterialId,  // finished good
     pub quantity_produced: Decimal,
     pub unit_cost: Decimal,
 }
@@ -69,7 +69,7 @@ impl ProductionOrder {
 
     pub fn add_material(
         &mut self,
-        product_id: ProductId,
+        material_id: MaterialId,
         quantity_required: Decimal,
     ) -> Result<(), DomainError> {
         if self.status == ProductionOrderStatus::Completed {
@@ -80,7 +80,7 @@ impl ProductionOrder {
         }
         self.materials.push(ProductionMaterial {
             id: Uuid::new_v4().to_string(),
-            product_id,
+            material_id,
             quantity_required,
             quantity_consumed: Decimal::ZERO,
         });
@@ -90,7 +90,7 @@ impl ProductionOrder {
 
     pub fn add_output(
         &mut self,
-        product_id: ProductId,
+        material_id: MaterialId,
         quantity_produced: Decimal,
         unit_cost: Decimal,
     ) -> Result<(), DomainError> {
@@ -102,7 +102,7 @@ impl ProductionOrder {
         }
         self.outputs.push(ProductionOutput {
             id: Uuid::new_v4().to_string(),
-            product_id,
+            material_id,
             quantity_produced,
             unit_cost,
         });

@@ -17,13 +17,16 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::customer::list_customers,
             commands::customer::update_customer,
             commands::customer::delete_customer,
-            // Products
-            commands::product::create_product,
-            commands::product::get_product,
-            commands::product::list_products,
-            commands::product::update_product,
-            commands::product::delete_product,
-            commands::product::record_opening_stock,
+            // Materials & Categories
+            commands::material::create_material,
+            commands::material::get_material,
+            commands::material::list_materials,
+            commands::material::update_material,
+            commands::material::delete_material,
+            commands::category::create_category,
+            commands::category::list_categories,
+            commands::category::update_category,
+            commands::category::delete_category,
             // Suppliers
             commands::supplier::create_supplier,
             commands::supplier::list_suppliers,

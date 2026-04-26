@@ -12,8 +12,8 @@ import Suppliers from './pages/Suppliers';
 import SalesInvoices from './pages/SalesInvoices';
 import PurchaseInvoices from './pages/PurchaseInvoices';
 import Payments from './pages/Payments';
-import Products from './pages/Products';
-import ProductDetail from './pages/ProductDetail';
+import Materials from './pages/Materials';
+import Categories from './pages/Categories';
 import Inventory from './pages/Inventory';
 import Damaged from './pages/Damaged';
 import Production from './pages/Production';
@@ -56,8 +56,8 @@ const App = () => (
                 <Route path="/sales-invoices/:id" element={<InvoiceDetail />} />
                 <Route path="/purchase-invoices" element={<PurchaseInvoices />} />
                 <Route path="/payments" element={<Payments />} />
-                <Route path="/products" element={<Products />} />
-                <Route path="/products/:id" element={<ProductDetail />} />
+                <Route path="/materials" element={<Materials />} />
+                <Route path="/categories" element={<Categories />} />
                 <Route path="/inventory" element={<Inventory />} />
                 <Route path="/damaged" element={<Damaged />} />
                 <Route path="/production" element={<Production />} />

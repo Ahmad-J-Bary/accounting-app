@@ -1,5 +1,5 @@
 use crate::shared::errors::DomainError;
-use crate::shared::ids::{StockAdjustmentId, ProductId};
+use crate::shared::ids::{StockAdjustmentId, MaterialId};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -8,7 +8,7 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StockAdjustment {
     pub id: StockAdjustmentId,
-    pub product_id: ProductId,
+    pub material_id: MaterialId,
     pub system_quantity: Decimal,
     pub actual_quantity: Decimal,
     pub difference: Decimal,
@@ -19,7 +19,7 @@ pub struct StockAdjustment {
 
 impl StockAdjustment {
     pub fn new(
-        product_id: ProductId,
+        material_id: MaterialId,
         system_quantity: Decimal,
         actual_quantity: Decimal,
         reason: Option<String>,
@@ -38,7 +38,7 @@ impl StockAdjustment {
         let difference = actual_quantity - system_quantity;
         Ok(Self {
             id: StockAdjustmentId(Uuid::new_v4()),
-            product_id,
+            material_id,
             system_quantity,
             actual_quantity,
             difference,

@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use sqlx::SqlitePool;
 use domain::inventory::stock_movement::{StockMovement, MovementType};
-use domain::shared::ids::{StockMovementId, ProductId};
+use domain::shared::ids::{StockMovementId, MaterialId};
 use application::ports::stock_movement_repository::StockMovementRepository;
 use application::errors::AppError;
 use rust_decimal::Decimal;
@@ -22,7 +22,7 @@ impl SqliteStockMovementRepository {
 #[derive(sqlx::FromRow)]
 struct StockMovementRow {
     id: String,
-    product_id: String,
+    material_id: String,
     quantity: String,
     movement_type: String,
     reason: Option<String>,
@@ -38,12 +38,15 @@ fn row_to_movement(row: StockMovementRow) -> Result<StockMovement, AppError> {
         "Transfer" | "MovementType::Transfer" => MovementType::Transfer,
         "Adjustment" | "MovementType::Adjustment" => MovementType::Adjustment,
         "OpeningBalance" | "MovementType::OpeningBalance" => MovementType::OpeningBalance,
+        "Damaged" | "MovementType::Damaged" => MovementType::Damaged,
+        "Sale" | "MovementType::Sale" => MovementType::Sale,
+        "Purchase" | "MovementType::Purchase" => MovementType::Purchase,
         _ => MovementType::Adjustment,
     };
 
     Ok(StockMovement {
         id: uuid::Uuid::from_str(&row.id).map_err(|e| AppError::Invalid(e.to_string()))?,
-        product_id: ProductId(uuid::Uuid::from_str(&row.product_id).map_err(|e| AppError::Invalid(e.to_string()))?),
+        material_id: MaterialId(uuid::Uuid::from_str(&row.material_id).map_err(|e| AppError::Invalid(e.to_string()))?),
         movement_type: m_type,
         quantity: Decimal::from_str(&row.quantity).map_err(|e| AppError::Invalid(e.to_string()))?,
         reference: row.reference.unwrap_or_default(),
@@ -57,11 +60,11 @@ fn row_to_movement(row: StockMovementRow) -> Result<StockMovement, AppError> {
 impl StockMovementRepository for SqliteStockMovementRepository {
     async fn save(&self, movement: &StockMovement) -> Result<(), AppError> {
         sqlx::query(
-            "INSERT INTO stock_movements (id, product_id, quantity, movement_type, reason, reference, movement_date, created_at)
+            "INSERT INTO stock_movements (id, material_id, quantity, movement_type, reason, reference, movement_date, created_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
         )
         .bind(movement.id.to_string())
-        .bind(movement.product_id.to_string())
+        .bind(movement.material_id.to_string())
         .bind(movement.quantity.to_string())
         .bind(format!("{:?}", movement.movement_type))
         .bind(&movement.notes)
@@ -77,7 +80,7 @@ impl StockMovementRepository for SqliteStockMovementRepository {
 
     async fn find_by_id(&self, id: &StockMovementId) -> Result<Option<StockMovement>, AppError> {
         let row = sqlx::query_as::<_, StockMovementRow>(
-            "SELECT id, product_id, quantity, movement_type, reason, reference, movement_date, created_at FROM stock_movements WHERE id = ?"
+            "SELECT id, material_id, quantity, movement_type, reason, reference, movement_date, created_at FROM stock_movements WHERE id = ?"
         )
         .bind(id.to_string())
         .fetch_optional(&*self.pool)
@@ -96,11 +99,11 @@ impl StockMovementRepository for SqliteStockMovementRepository {
         rows.into_iter().map(row_to_movement).collect()
     }
 
-    async fn list_by_product(&self, product_id: &ProductId) -> Result<Vec<StockMovement>, AppError> {
+    async fn list_by_material(&self, material_id: &MaterialId) -> Result<Vec<StockMovement>, AppError> {
         let rows = sqlx::query_as::<_, StockMovementRow>(
-            "SELECT * FROM stock_movements WHERE product_id = ? ORDER BY movement_date DESC"
+            "SELECT * FROM stock_movements WHERE material_id = ? ORDER BY movement_date DESC"
         )
-        .bind(product_id.to_string())
+        .bind(material_id.to_string())
         .fetch_all(&*self.pool)
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
@@ -108,8 +111,8 @@ impl StockMovementRepository for SqliteStockMovementRepository {
         rows.into_iter().map(row_to_movement).collect()
     }
 
-    async fn get_stock_balance(&self, product_id: &ProductId) -> Result<Decimal, AppError> {
-        let movements = self.list_by_product(product_id).await?;
+    async fn get_stock_balance(&self, material_id: &MaterialId) -> Result<Decimal, AppError> {
+        let movements = self.list_by_material(material_id).await?;
         let mut balance = Decimal::ZERO;
         for m in movements {
             if m.is_inflow() {

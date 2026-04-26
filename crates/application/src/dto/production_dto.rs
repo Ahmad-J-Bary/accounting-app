@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProductionMaterialDto {
     pub id: String,
-    pub product_id: String,
+    pub material_id: String,
     pub product_name: Option<String>,
     pub quantity_required: String,
     pub quantity_consumed: String,
@@ -12,7 +12,7 @@ pub struct ProductionMaterialDto {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProductionOutputDto {
     pub id: String,
-    pub product_id: String,
+    pub material_id: String,
     pub product_name: Option<String>,
     pub quantity_produced: String,
     pub unit_cost: String,
@@ -34,13 +34,13 @@ pub struct ProductionOrderDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateProductionMaterialRequest {
-    pub product_id: String,
+    pub material_id: String,
     pub quantity_required: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateProductionOutputRequest {
-    pub product_id: String,
+    pub material_id: String,
     pub quantity_produced: f64,
     pub unit_cost: f64,
 }

@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DamagedItemDto {
     pub id: String,
-    pub product_id: String,
-    pub product_name: Option<String>,
+    pub material_id: String,
+    pub material_name: Option<String>,
     pub quantity: String,
     pub reason: String,
     pub damage_date: String,
@@ -15,7 +15,7 @@ pub struct DamagedItemDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateDamagedItemRequest {
-    pub product_id: String,
+    pub material_id: String,
     pub quantity: f64,
     pub reason: String,
     pub damage_date: String,

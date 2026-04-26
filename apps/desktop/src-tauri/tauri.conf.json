@@ -28,6 +28,7 @@
     "active": true,
     "targets": [
       "nsis",
+      "msi",
       "app",
       "dmg",
       "deb",

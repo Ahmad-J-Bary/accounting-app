@@ -6,9 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
 import { supplierService } from "@/services/supplierService";
-import { productService } from "@/services/productService";
+import { materialService } from "@/services/materialService";
 import { purchaseService } from "@/services/purchaseService";
-import type { SupplierDto, ProductDto, CreatePurchaseInvoiceRequest, CreatePurchaseInvoiceItemRequest } from "@erp/shared-types";
+import type { SupplierDto, MaterialDto, CreatePurchaseInvoiceRequest, CreatePurchaseInvoiceItemRequest, PurchaseInvoice } from "@erp/shared-types";
 import { formatCurrency } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -21,7 +21,7 @@ interface NewPurchaseInvoiceDialogProps {
 
 export function NewPurchaseInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit }: NewPurchaseInvoiceDialogProps) {
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
-  const [products, setProducts] = useState<ProductDto[]>([]);
+  const [products, setProducts] = useState<MaterialDto[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState<{
@@ -78,7 +78,7 @@ export function NewPurchaseInvoiceDialog({ open, onOpenChange, onSuccess, invoic
     try {
       const [sData, pData] = await Promise.all([
         supplierService.listSuppliers(),
-        productService.listProducts(),
+        materialService.listMaterials(),
       ]);
       setSuppliers(sData);
       setProducts(pData);

@@ -4,7 +4,7 @@ use std::sync::Arc;
 use application::errors::AppError;
 use application::ports::purchase_invoice_repository::PurchaseInvoiceRepository;
 use domain::purchases::{PurchaseInvoice, PurchaseInvoiceItem, PurchaseInvoiceStatus};
-use domain::shared::ids::{PurchaseInvoiceId, SupplierId, ProductId};
+use domain::shared::ids::{PurchaseInvoiceId, SupplierId, MaterialId};
 use rust_decimal::Decimal;
 use std::str::FromStr;
 use uuid::Uuid;
@@ -41,7 +41,7 @@ struct PurchaseInvoiceRow {
 #[derive(sqlx::FromRow)]
 struct PurchaseInvoiceItemRow {
     id: String,
-    product_id: String,
+    material_id: String,
     quantity: String,
     unit_price: String,
     line_total: String,
@@ -77,12 +77,12 @@ impl PurchaseInvoiceRepository for SqlitePurchaseInvoiceRepository {
 
         for item in &invoice.items {
             sqlx::query(
-                "INSERT INTO purchase_invoice_items (id, purchase_invoice_id, product_id, quantity, unit_price, line_total, notes)
+                "INSERT INTO purchase_invoice_items (id, purchase_invoice_id, material_id, quantity, unit_price, line_total, notes)
                  VALUES (?, ?, ?, ?, ?, ?, ?)"
             )
             .bind(&item.id)
             .bind(invoice.id.to_string())
-            .bind(item.product_id.to_string())
+            .bind(item.material_id.to_string())
             .bind(item.quantity.to_string())
             .bind(item.unit_price.to_string())
             .bind(item.line_total.to_string())
@@ -210,7 +210,7 @@ impl PurchaseInvoiceRepository for SqlitePurchaseInvoiceRepository {
 impl SqlitePurchaseInvoiceRepository {
     async fn load_items(&self, invoice_id: &str) -> Result<Vec<PurchaseInvoiceItem>, AppError> {
         let rows = sqlx::query_as::<_, PurchaseInvoiceItemRow>(
-            "SELECT id, product_id, quantity, unit_price, line_total, notes
+            "SELECT id, material_id, quantity, unit_price, line_total, notes
              FROM purchase_invoice_items WHERE purchase_invoice_id = ?"
         )
         .bind(invoice_id)
@@ -220,7 +220,7 @@ impl SqlitePurchaseInvoiceRepository {
 
         Ok(rows.into_iter().map(|r| PurchaseInvoiceItem {
             id: r.id,
-            product_id: ProductId(Uuid::parse_str(&r.product_id).unwrap()),
+            material_id: MaterialId(Uuid::parse_str(&r.material_id).unwrap()),
             quantity: Decimal::from_str(&r.quantity).unwrap_or(Decimal::ZERO),
             unit_price: Decimal::from_str(&r.unit_price).unwrap_or(Decimal::ZERO),
             line_total: Decimal::from_str(&r.line_total).unwrap_or(Decimal::ZERO),

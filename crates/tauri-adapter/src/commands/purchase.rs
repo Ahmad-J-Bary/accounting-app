@@ -13,7 +13,7 @@ pub async fn create_purchase_invoice(
     CreatePurchaseInvoiceUseCase::new(
         state.purchase_invoice_repo.clone(),
         state.supplier_repo.clone(),
-        state.product_repo.clone(),
+        state.material_repo.clone(),
     )
     .execute(request)
     .await
@@ -28,7 +28,7 @@ pub async fn list_purchase_invoices(
     ListPurchaseInvoicesUseCase::new(
         state.purchase_invoice_repo.clone(),
         state.supplier_repo.clone(),
-        state.product_repo.clone(),
+        state.material_repo.clone(),
     )
     .execute(supplier_id)
     .await
@@ -43,7 +43,7 @@ pub async fn post_purchase_invoice(
     PostPurchaseInvoiceUseCase::new(
         state.purchase_invoice_repo.clone(),
         state.supplier_repo.clone(),
-        state.product_repo.clone(),
+        state.material_repo.clone(),
         state.stock_movement_repo.clone(),
     )
     .execute(id)

@@ -10,7 +10,7 @@ pub async fn create_damaged_item(
 ) -> Result<DamagedItemDto, String> {
     CreateDamagedItemUseCase::new(
         state.damaged_repo.clone(),
-        state.product_repo.clone(),
+        state.material_repo.clone(),
         state.stock_movement_repo.clone(),
         state.journal_entry_repo.clone(),
         state.account_repo.clone(),
@@ -22,6 +22,6 @@ pub async fn create_damaged_item(
 pub async fn list_damaged_items(
     state: State<'_, AppState>,
 ) -> Result<Vec<DamagedItemDto>, String> {
-    ListDamagedItemsUseCase::new(state.damaged_repo.clone(), state.product_repo.clone())
+    ListDamagedItemsUseCase::new(state.damaged_repo.clone(), state.material_repo.clone())
         .execute().await.map_err(|e| e.to_string())
 }

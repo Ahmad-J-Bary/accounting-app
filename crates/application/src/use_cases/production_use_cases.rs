@@ -2,7 +2,7 @@ use std::sync::Arc;
 use chrono::DateTime;
 use rust_decimal::Decimal;
 use domain::inventory::ProductionOrder;
-use domain::shared::ids::ProductId;
+use domain::shared::ids::MaterialId;
 use crate::ports::production_repository::ProductionRepository;
 use crate::dto::production_dto::{
     CreateProductionOrderRequest, ProductionOrderDto,
@@ -16,14 +16,14 @@ fn to_dto(o: ProductionOrder) -> ProductionOrderDto {
         order_number: o.order_number,
         materials: o.materials.into_iter().map(|m| ProductionMaterialDto {
             id: m.id,
-            product_id: m.product_id.to_string(),
+            material_id: m.material_id.to_string(),
             product_name: None,
             quantity_required: m.quantity_required.to_string(),
             quantity_consumed: m.quantity_consumed.to_string(),
         }).collect(),
         outputs: o.outputs.into_iter().map(|out| ProductionOutputDto {
             id: out.id,
-            product_id: out.product_id.to_string(),
+            material_id: out.material_id.to_string(),
             product_name: None,
             quantity_produced: out.quantity_produced.to_string(),
             unit_cost: out.unit_cost.to_string(),
@@ -48,27 +48,27 @@ impl CreateProductionOrderUseCase {
 
     pub async fn execute(&self, req: CreateProductionOrderRequest) -> Result<ProductionOrderDto, AppError> {
         let production_date = DateTime::parse_from_rfc3339(&req.production_date)
-            .map_err(|_| AppError::Invalid("Ø§Ù„ØªØ§Ø±ÙŠØ® ØºÙŠØ± ØµØ§Ù„Ø­".into()))?
+            .map_err(|_| AppError::Invalid("التاريخ غير صالح".into()))?
             .with_timezone(&chrono::Utc);
 
         let mut order = ProductionOrder::new(req.order_number, production_date, req.notes)
             .map_err(|e| AppError::Invalid(e.to_string()))?;
 
         for mat in req.materials {
-            let pid = mat.product_id.parse::<ProductId>()
-                .map_err(|_| AppError::Invalid("Ù…Ø¹Ø±Ù Ø§Ù„Ù…Ù†ØªØ¬ ØºÙŠØ± ØµØ§Ù„Ø­".into()))?;
+            let pid = mat.material_id.parse::<MaterialId>()
+                .map_err(|_| AppError::Invalid("معرف المادة غير صالح".into()))?;
             let qty = Decimal::try_from(mat.quantity_required)
-                .map_err(|_| AppError::Invalid("Ø§Ù„ÙƒÙ…ÙŠØ© ØºÙŠØ± ØµØ§Ù„Ø­Ø©".into()))?;
+                .map_err(|_| AppError::Invalid("الكمية غير صالحة".into()))?;
             order.add_material(pid, qty).map_err(|e| AppError::Invalid(e.to_string()))?;
         }
 
         for out in req.outputs {
-            let pid = out.product_id.parse::<ProductId>()
-                .map_err(|_| AppError::Invalid("Ù…Ø¹Ø±Ù Ø§Ù„Ù…Ù†ØªØ¬ ØºÙŠØ± ØµØ§Ù„Ø­".into()))?;
+            let pid = out.material_id.parse::<MaterialId>()
+                .map_err(|_| AppError::Invalid("معرف المادة غير صالح".into()))?;
             let qty = Decimal::try_from(out.quantity_produced)
-                .map_err(|_| AppError::Invalid("Ø§Ù„ÙƒÙ…ÙŠØ© ØºÙŠØ± ØµØ§Ù„Ø­Ø©".into()))?;
+                .map_err(|_| AppError::Invalid("الكمية غير صالحة".into()))?;
             let cost = Decimal::try_from(out.unit_cost)
-                .map_err(|_| AppError::Invalid("Ø§Ù„ØªÙƒÙ„ÙØ© ØºÙŠØ± ØµØ§Ù„Ø­Ø©".into()))?;
+                .map_err(|_| AppError::Invalid("التكلفة غير صالحة".into()))?;
             order.add_output(pid, qty, cost).map_err(|e| AppError::Invalid(e.to_string()))?;
         }
 
