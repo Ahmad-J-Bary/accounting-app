@@ -44,6 +44,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     items: [
       { to: "/categories", label: "تصنيفات المواد", icon: FolderTree },
       { to: "/materials", label: "بطاقات المواد", icon: Package },
+      { to: "/opening-balance", label: "رصيد أول المدة", icon: Layers },
       { to: "/inventory", label: "حركات المخزون", icon: Warehouse },
       { to: "/damaged", label: "التالف والهدر", icon: AlertTriangle },
       { to: "/production", label: "الإنتاج", icon: Factory },

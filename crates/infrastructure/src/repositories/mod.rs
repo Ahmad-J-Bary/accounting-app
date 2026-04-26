@@ -1,11 +1,9 @@
-pub mod sqlite_invoice_repository;
 pub mod sqlite_customer_repository;
 pub mod sqlite_material_repository;
 pub mod sqlite_category_repository;
 pub mod sqlite_account_repository;
 pub mod sqlite_journal_entry_repository;
 pub mod sqlite_supplier_repository;
-pub mod sqlite_purchase_invoice_repository;
 pub mod sqlite_payment_repository;
 pub mod sqlite_damaged_repository;
 pub mod sqlite_stock_adjustment_repository;
@@ -18,4 +16,4 @@ pub mod sqlite_user_repository;
 pub mod sqlite_production_repository;
 pub mod sqlite_partner_repository;
 pub mod sqlite_unit_of_work;
-// pub mod sqlite_role_repository;
+pub mod sqlite_unified_invoice_repository;

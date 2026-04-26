@@ -17,6 +17,7 @@ import Categories from './pages/Categories';
 import Inventory from './pages/Inventory';
 import Damaged from './pages/Damaged';
 import Production from './pages/Production';
+import OpeningBalance from './pages/OpeningBalance';
 import Adjustments from './pages/Adjustments';
 import Reports from './pages/Reports';
 import Users from './pages/Users';
@@ -61,6 +62,7 @@ const App = () => (
                 <Route path="/inventory" element={<Inventory />} />
                 <Route path="/damaged" element={<Damaged />} />
                 <Route path="/production" element={<Production />} />
+                <Route path="/opening-balance" element={<OpeningBalance />} />
                 <Route path="/adjustments" element={<Adjustments />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/users" element={<Users />} />

@@ -1,6 +1,7 @@
 use thiserror::Error;
+use serde::Serialize;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Serialize)]
 pub enum AppError {
     #[error("خطأ في Domain: {0}")]
     Domain(#[from] domain::shared::errors::DomainError),

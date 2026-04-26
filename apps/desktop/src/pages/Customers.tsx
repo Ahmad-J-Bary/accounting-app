@@ -82,7 +82,7 @@ export default function Customers() {
     setLoadingDetails(true);
     try {
       const [invoices, payments] = await Promise.all([
-        invoiceService.listInvoices(id),
+        invoiceService.listInvoicesByType("Sales").then(list => list.filter(inv => inv.customer_id === id)),
         paymentService.listPayments(id)
       ]);
       setCustomerInvoices(invoices);
@@ -358,7 +358,7 @@ export default function Customers() {
                             <tr key={inv.id} className="border-b last:border-0">
                               <td className="p-2 font-medium">{inv.invoice_number}</td>
                               <td className="p-2">{formatDate(inv.issued_at)}</td>
-                              <td className="p-2 text-left tabular-nums">{formatCurrency(parseFloat(inv.total))}</td>
+                              <td className="p-2 text-left tabular-nums">{formatCurrency(parseFloat(inv.total_amount))}</td>
                             </tr>
                           ))}
                         </tbody>

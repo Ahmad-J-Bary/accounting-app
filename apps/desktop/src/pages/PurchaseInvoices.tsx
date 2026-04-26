@@ -4,288 +4,281 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/erp/StatusBadge";
-import { Plus, Search, MoreHorizontal, Eye, Printer, RefreshCw, CheckCircle, Edit } from "lucide-react";
+import { 
+  Plus, 
+  Search, 
+  MoreHorizontal, 
+  Eye, 
+  Edit, 
+  Printer, 
+  Send, 
+  Trash2, 
+  RefreshCw,
+  Save,
+  Truck
+} from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { purchaseService } from "@/services/purchaseService";
-import { NewPurchaseInvoiceDialog } from "@/components/erp/NewPurchaseInvoiceDialog";
-import type { PurchaseInvoice } from "@erp/shared-types";
+import { invoiceService } from "@/services/invoiceService";
+import { supplierService } from "@/services/supplierService";
+import type { InvoiceDto, InvoiceLineDto, SupplierDto } from "@erp/shared-types";
+import { toast } from "sonner";
+import { InvoiceEditor } from "@/components/erp/InvoiceEditor";
+import { Label } from "@/components/ui/label";
 
 export default function PurchaseInvoices() {
-  const [invoices, setInvoices] = useState<PurchaseInvoice[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
+  const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [error, setError] = useState<string | null>(null);
-  const [isNewInvoiceOpen, setIsNewInvoiceOpen] = useState(false);
-  const [invoiceToEdit, setInvoiceToEdit] = useState<PurchaseInvoice | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const selectedInv = invoices.find(i => i.id === preview);
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentInvoice, setCurrentInvoice] = useState<Partial<InvoiceDto> | null>(null);
 
-  const load = async () => {
-    setLoading(true);
+  const loadData = async () => {
     try {
-      const data = await purchaseService.listPurchaseInvoices();
-      setInvoices(data);
-    } catch (e) {
-      setError(String(e));
+      setLoading(true);
+      const [invData, suppData] = await Promise.all([
+        invoiceService.listInvoicesByType("Purchase"),
+        supplierService.listSuppliers()
+      ]);
+      setInvoices(invData);
+      setSuppliers(suppData);
+    } catch (error) {
+      toast.error("فشل تحميل البيانات");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    load();
-
-    const handleOpenDialog = () => setIsNewInvoiceOpen(true);
-    window.addEventListener("erp:open-new-purchase-invoice", handleOpenDialog);
-    return () => window.removeEventListener("erp:open-new-purchase-invoice", handleOpenDialog);
+    loadData();
   }, []);
 
-  const filtered = invoices.filter(inv => {
-    const matchSearch =
-      inv.invoice_number.toLowerCase().includes(search.toLowerCase()) ||
-      (inv.supplier_name ?? "").toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "all" || inv.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  const handleCreate = () => {
+    setCurrentInvoice({
+      invoice_number: `PUR-${Date.now().toString().slice(-6)}`,
+      invoice_type: "Purchase",
+      lines: [],
+      tax_amount: "0",
+      discount_amount: "0",
+      issued_at: new Date().toISOString(),
+      status: "Draft"
+    });
+    setIsEditing(true);
+  };
 
-  const total = invoices.reduce((s, i) => s + parseFloat(i.total || "0"), 0);
-  const paid = invoices.filter(i => i.status === "Paid").length;
-  const partial = invoices.filter(i => i.status === "PartiallyPaid").length;
+  const handleSave = async () => {
+    if (!currentInvoice?.supplier_id) {
+      toast.error("يجب تحديد المورد");
+      return;
+    }
+    if (!currentInvoice.lines || currentInvoice.lines.length === 0) {
+      toast.error("يجب إضافة مادة واحدة على الأقل");
+      return;
+    }
 
-  const handlePost = async (id: string) => {
     try {
-      await purchaseService.postPurchaseInvoice(id);
-      await load();
-    } catch (e) {
-      setError(String(e));
+      setLoading(true);
+      const request = {
+        invoice_number: currentInvoice.invoice_number!,
+        invoice_type: "Purchase",
+        supplier_id: currentInvoice.supplier_id,
+        lines: currentInvoice.lines as InvoiceLineDto[],
+        tax_amount: currentInvoice.tax_amount || "0",
+        discount_amount: currentInvoice.discount_amount || "0",
+        issued_at: currentInvoice.issued_at || new Date().toISOString(),
+        notes: currentInvoice.notes,
+      };
+
+      await invoiceService.createInvoice(request);
+      toast.success("تم حفظ فاتورة المشتريات بنجاح");
+      setIsEditing(false);
+      loadData();
+    } catch (error) {
+      toast.error("خطأ في الحفظ: " + error);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const postInvoice = async (id: string) => {
+    try {
+      setLoading(true);
+      await invoiceService.postInvoice(id);
+      toast.success("تم ترحيل الفاتورة بنجاح");
+      loadData();
+    } catch (error) {
+      toast.error("فشل الترحيل: " + error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <div className="space-y-6 pb-20">
+        <PageHeader
+          title={currentInvoice?.id ? "تعديل فاتورة مشتريات" : "فاتورة مشتريات جديدة"}
+          subtitle="إدخال مشتريات المواد وتحديث تكاليف المخزون"
+          breadcrumbs={[{ label: "الفواتير", onClick: () => setIsEditing(false) }, { label: "تحرير" }]}
+          actions={
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setIsEditing(false)}>إلغاء</Button>
+              <Button onClick={handleSave} disabled={loading}>
+                <Save className="w-4 h-4 ml-2" />
+                {loading ? "جاري الحفظ..." : "حفظ الفاتورة"}
+              </Button>
+            </div>
+          }
+        />
+
+        <Card className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-right" dir="rtl">
+            <div className="space-y-2">
+              <Label>رقم الفاتورة</Label>
+              <Input 
+                value={currentInvoice?.invoice_number} 
+                onChange={e => setCurrentInvoice({...currentInvoice, invoice_number: e.target.value})} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>المورد *</Label>
+              <Select 
+                value={currentInvoice?.supplier_id} 
+                onValueChange={val => setCurrentInvoice({...currentInvoice, supplier_id: val})}
+              >
+                <SelectTrigger className="text-right">
+                  <SelectValue placeholder="اختر المورد..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {suppliers.map(s => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>التاريخ</Label>
+              <Input 
+                type="date" 
+                value={currentInvoice?.issued_at?.split('T')[0]} 
+                onChange={e => setCurrentInvoice({...currentInvoice, issued_at: new Date(e.target.value).toISOString()})} 
+              />
+            </div>
+          </div>
+
+          <InvoiceEditor 
+            type="Purchase" 
+            lines={currentInvoice?.lines as InvoiceLineDto[] || []} 
+            onChange={lines => setCurrentInvoice({...currentInvoice, lines})} 
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8 border-t pt-6" dir="rtl">
+             <div className="space-y-4">
+                <div className="space-y-2 text-right">
+                  <Label>ملاحظات</Label>
+                  <Input 
+                    value={currentInvoice?.notes || ""} 
+                    onChange={e => setCurrentInvoice({...currentInvoice, notes: e.target.value})} 
+                    placeholder="ملاحظات الشراء..."
+                  />
+                </div>
+             </div>
+             <div className="bg-slate-50 p-6 rounded-lg space-y-3">
+                <div className="flex justify-between items-center pt-3 border-t-2 border-primary">
+                  <span className="font-black text-lg">إجمالي الشراء:</span>
+                  <span className="font-black text-2xl text-primary tabular-nums">
+                    {formatCurrency(
+                      (currentInvoice?.lines as InvoiceLineDto[] || []).reduce((s, l) => s + (Number(l.quantity) * Number(l.unit_price)), 0) + 
+                      Number(currentInvoice?.tax_amount || 0) - 
+                      Number(currentInvoice?.discount_amount || 0)
+                    )}
+                  </span>
+                </div>
+             </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <>
-      <NewPurchaseInvoiceDialog 
-        open={isNewInvoiceOpen}
-        onOpenChange={(open) => {
-          setIsNewInvoiceOpen(open);
-          if (!open) setInvoiceToEdit(null);
-        }}
-        onSuccess={load}
-        invoiceToEdit={invoiceToEdit}
-      />
-
       <PageHeader
         title="فواتير المشتريات"
-        subtitle="إدارة فواتير الشراء من الموردين"
-        breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "المشتريات" }, { label: "الفواتير" }]}
+        subtitle="إدارة عمليات الشراء من الموردين"
+        breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "المشتريات" }]}
         actions={
-          <div className="flex items-center gap-2 relative z-[100]">
-            <Button variant="outline" onClick={load} disabled={loading}>
-              <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />
-              تحديث
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={loadData} disabled={loading}>
+              <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />تحديث
             </Button>
-            <Button onClick={() => setIsNewInvoiceOpen(true)}>
+            <Button onClick={handleCreate}>
               <Plus className="w-4 h-4 ml-2" />فاتورة شراء جديدة
             </Button>
           </div>
         }
       />
 
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
-          {error} <button className="mr-2 underline" onClick={() => setError(null)}>إغلاق</button>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4" dir="rtl">
-        <Card className="p-4"><div className="text-sm text-muted-foreground">إجمالي الفواتير</div><div className="text-2xl font-bold tabular-nums mt-1">{invoices.length}</div></Card>
-        <Card className="p-4"><div className="text-sm text-muted-foreground">مدفوعة</div><div className="text-2xl font-bold text-green-600 tabular-nums mt-1">{paid}</div></Card>
-        <Card className="p-4"><div className="text-sm text-muted-foreground">جزئية</div><div className="text-2xl font-bold text-amber-600 tabular-nums mt-1">{partial}</div></Card>
-        <Card className="p-4"><div className="text-sm text-muted-foreground">غير مدفوعة</div><div className="text-2xl font-bold text-red-600 tabular-nums mt-1">{invoices.filter(i => i.status === "Draft" || i.status === "Posted").length}</div></Card>
-        <Card className="p-4"><div className="text-sm text-muted-foreground">الإجمالي</div><div className="text-xl font-bold text-primary tabular-nums mt-1">{formatCurrency(total)}</div></Card>
-      </div>
-
-      <Card className="p-5" dir="rtl">
-        <div className="flex items-center gap-3 mb-4 flex-wrap">
-          <div className="relative flex-1 min-w-[220px]">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="بحث برقم الفاتورة أو المورد..."
-              className="pr-10"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">جميع الحالات</SelectItem>
-              <SelectItem value="Paid">مدفوعة</SelectItem>
-              <SelectItem value="PartiallyPaid">جزئية</SelectItem>
-              <SelectItem value="Posted">مرحّلة</SelectItem>
-              <SelectItem value="Draft">مسودة</SelectItem>
-              <SelectItem value="Cancelled">ملغية</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
+      <Card className="p-5">
         {loading ? (
           <div className="text-center py-12 text-muted-foreground">جاري التحميل...</div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            {search || statusFilter !== "all" ? "لا توجد نتائج" : "لا توجد فواتير شراء حتى الآن"}
-          </div>
         ) : (
-          <div className="border border-border rounded-md overflow-x-auto">
+          <div className="border border-border rounded-md overflow-x-auto text-right" dir="rtl">
             <table className="w-full text-sm min-w-[800px]">
               <thead className="bg-slate-50 border-b border-border">
                 <tr>
-                  <th className="text-right px-4 py-3 font-medium">رقم الفاتورة</th>
-                  <th className="text-right px-4 py-3 font-medium">التاريخ</th>
-                  <th className="text-right px-4 py-3 font-medium">المورد</th>
-                  <th className="text-left px-4 py-3 font-medium">الإجمالي</th>
-                  <th className="text-left px-4 py-3 font-medium">المدفوع</th>
-                  <th className="text-left px-4 py-3 font-medium">المتبقي</th>
-                  <th className="text-left px-4 py-3 font-medium">الحالة</th>
-                  <th className="text-left px-4 py-3 font-medium w-12"></th>
+                  <th className="px-4 py-3 font-medium text-right">رقم الفاتورة</th>
+                  <th className="px-4 py-3 font-medium text-right">التاريخ</th>
+                  <th className="px-4 py-3 font-medium text-right">المورد</th>
+                  <th className="px-4 py-3 font-medium text-left">الإجمالي</th>
+                  <th className="px-4 py-3 font-medium text-right">الحالة</th>
+                  <th className="px-4 py-3 font-medium w-12 text-center"></th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((inv) => (
+                {invoices.map((inv) => (
                   <tr key={inv.id} className="border-b border-border last:border-0 hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium text-primary">{inv.invoice_number}</td>
-                    <td className="px-4 py-3">{formatDate(inv.invoice_date)}</td>
-                    <td className="px-4 py-3">{inv.supplier_name ?? inv.supplier_id}</td>
-                    <td className="px-4 py-3 text-left tabular-nums font-medium">{formatCurrency(parseFloat(inv.total))}</td>
-                    <td className="px-4 py-3 text-left tabular-nums text-green-600">{formatCurrency(parseFloat(inv.amount_paid))}</td>
-                    <td className="px-4 py-3 text-left tabular-nums text-red-600">{formatCurrency(parseFloat(inv.remaining_amount))}</td>
-                    <td className="px-4 py-3 text-left">
-                      <StatusBadge status={(inv.status || "Draft").toLowerCase()} />
-                    </td>
+                    <td className="px-4 py-3 font-bold text-primary">{inv.invoice_number}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{formatDate(inv.issued_at)}</td>
+                    <td className="px-4 py-3 font-medium">{inv.supplier_name || "مورد غير معروف"}</td>
+                    <td className="px-4 py-3 text-left tabular-nums font-black">{formatCurrency(Number(inv.total_amount))}</td>
                     <td className="px-4 py-3">
+                      <StatusBadge status={inv.status.toLowerCase()} />
+                    </td>
+                    <td className="px-4 py-3 text-center">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setPreview(inv.id)}><Eye className="w-4 h-4 ml-2" />عرض</DropdownMenuItem>
-                          {inv.status === "Draft" && (
-                            <>
-                              <DropdownMenuItem onClick={() => { setInvoiceToEdit(inv); setIsNewInvoiceOpen(true); }}><Edit className="w-4 h-4 ml-2" />تعديل</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handlePost(inv.id)}>
-                                <CheckCircle className="w-4 h-4 ml-2" />ترحيل
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          <DropdownMenuItem><Printer className="w-4 h-4 ml-2" />طباعة</DropdownMenuItem>
+                        <DropdownMenuContent align="start">
+                           <DropdownMenuItem><Eye className="w-4 h-4 ml-2" />عرض التفاصيل</DropdownMenuItem>
+                           {inv.status === "Draft" && (
+                             <>
+                               <DropdownMenuItem onClick={() => { setCurrentInvoice(inv); setIsEditing(true); }}>
+                                 <Edit className="w-4 h-4 ml-2" />تعديل
+                               </DropdownMenuItem>
+                               <DropdownMenuItem onClick={() => postInvoice(inv.id)} className="text-green-600">
+                                 <Send className="w-4 h-4 ml-2" />ترحيل الفاتورة
+                               </DropdownMenuItem>
+                             </>
+                           )}
+                           <DropdownMenuItem><Printer className="w-4 h-4 ml-2" />طباعة</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
                   </tr>
                 ))}
+                {invoices.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-muted-foreground">لا توجد فواتير مشتريات حتى الآن.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
         )}
       </Card>
-      
-      <PurchaseInvoiceView 
-        selectedInv={selectedInv} 
-        preview={preview} 
-        setPreview={setPreview} 
-        handlePost={handlePost} 
-      />
     </>
-  );
-}
-
-function PurchaseInvoiceView({ selectedInv, preview, setPreview, handlePost }: any) {
-  return (
-    <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>معاينة فاتورة المشتريات</span>
-            <div className="flex gap-2">
-              {selectedInv && selectedInv.status === "Draft" && (
-                <Button size="sm" variant="default" onClick={() => { handlePost(selectedInv.id); setPreview(null); }} className="bg-green-600 hover:bg-green-700">
-                  <CheckCircle className="w-4 h-4 ml-2" />ترحيل الفاتورة
-                </Button>
-              )}
-              <Button size="sm" variant="outline" onClick={() => window.print()}><Printer className="w-4 h-4 ml-2" />طباعة</Button>
-            </div>
-          </DialogTitle>
-          <DialogDescription>عرض تفاصيل فاتورة الشراء وجدول الأصناف المشتراة.</DialogDescription>
-        </DialogHeader>
-        {selectedInv && (
-          <div className="print-area bg-white border border-border rounded-md p-8" dir="rtl">
-            <div className="flex justify-between items-start mb-6 pb-6 border-b-2 border-primary">
-              <div>
-                <h2 className="text-2xl font-bold text-primary">فاتورة مشتريات</h2>
-                <p className="text-sm text-muted-foreground mt-1">Purchase Invoice</p>
-              </div>
-              <div className="text-left" dir="rtl">
-                <div className="font-bold text-lg">{selectedInv.supplier_name || "المورد"}</div>
-                <div className="text-xs text-muted-foreground">فاتورة صادرة من المورد</div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              <div className="text-right">
-                <div className="text-xs text-muted-foreground mb-1">تفاصيل المورد</div>
-                <div className="font-bold">{selectedInv.supplier_name || selectedInv.supplier_id}</div>
-              </div>
-              <div className="space-y-1 text-sm text-left">
-                <div className="flex justify-between"><span className="text-muted-foreground">رقم الفاتورة:</span><span className="font-medium">{selectedInv.invoice_number}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">التاريخ:</span><span>{formatDate(selectedInv.invoice_date)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">الحالة:</span><span>{selectedInv.status}</span></div>
-              </div>
-            </div>
-
-            <table className="w-full text-sm mb-6 border border-border">
-              <thead className="bg-slate-100">
-                <tr>
-                  <th className="text-right px-3 py-2 font-medium">#</th>
-                  <th className="text-right px-3 py-2 font-medium">الصنف</th>
-                  <th className="text-left px-3 py-2 font-medium">الكمية</th>
-                  <th className="text-left px-3 py-2 font-medium">السعر</th>
-                  <th className="text-left px-3 py-2 font-medium">الإجمالي</th>
-                </tr>
-              </thead>
-              <tbody>
-                {selectedInv.items.map((item: any, i: number) => (
-                  <tr key={i} className="border-t border-border">
-                    <td className="px-3 py-2">{i + 1}</td>
-                    <td className="px-3 py-2">{item.product_name || item.product_id}</td>
-                    <td className="px-3 py-2 text-left tabular-nums">{item.quantity}</td>
-                    <td className="px-3 py-2 text-left tabular-nums">{formatCurrency(parseFloat(item.unit_price))}</td>
-                    <td className="px-3 py-2 text-left tabular-nums">{formatCurrency(parseFloat(item.line_total))}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <div className="flex justify-start mb-6">
-              <div className="w-72 space-y-1 text-sm mr-auto">
-                 <div className="flex justify-between"><span className="text-muted-foreground">المجموع الفرعي:</span><span className="tabular-nums">{formatCurrency(parseFloat(selectedInv.subtotal))}</span></div>
-                 <div className="flex justify-between"><span className="text-muted-foreground">الضريبة:</span><span className="tabular-nums">{formatCurrency(parseFloat(selectedInv.tax_amount))}</span></div>
-                 <div className="flex justify-between"><span className="text-muted-foreground">الخصم:</span><span className="tabular-nums">{formatCurrency(parseFloat(selectedInv.discount_amount))}</span></div>
-                 <div className="flex justify-between py-2 border-t-2 border-primary font-bold text-base mt-2"><span>الإجمالي العام</span><span className="tabular-nums">{formatCurrency(parseFloat(selectedInv.total))}</span></div>
-              </div>
-            </div>
-
-            {selectedInv.notes && (
-              <div className="border-t border-border pt-4 text-xs text-muted-foreground text-right">
-                <div className="font-medium text-slate-700 mb-1">ملاحظات:</div>
-                <div>{selectedInv.notes}</div>
-              </div>
-            )}
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
   );
 }

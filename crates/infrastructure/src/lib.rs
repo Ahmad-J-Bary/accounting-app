@@ -1,14 +1,12 @@
 pub mod db;
 pub mod repositories;
 
-pub use repositories::sqlite_invoice_repository::SqliteInvoiceRepository;
 pub use repositories::sqlite_customer_repository::SqliteCustomerRepository;
 pub use repositories::sqlite_material_repository::SqliteMaterialRepository;
 pub use repositories::sqlite_category_repository::SqliteCategoryRepository;
 pub use repositories::sqlite_account_repository::SqliteAccountRepository;
 pub use repositories::sqlite_journal_entry_repository::SqliteJournalEntryRepository;
 pub use repositories::sqlite_supplier_repository::SqliteSupplierRepository;
-pub use repositories::sqlite_purchase_invoice_repository::SqlitePurchaseInvoiceRepository;
 pub use repositories::sqlite_payment_repository::SqlitePaymentRepository;
 pub use repositories::sqlite_damaged_repository::SqliteDamagedItemRepository;
 pub use repositories::sqlite_stock_adjustment_repository::SqliteStockAdjustmentRepository;
@@ -20,4 +18,5 @@ pub use repositories::sqlite_production_repository::SqliteProductionRepository;
 pub use repositories::sqlite_asset_repository::SqliteAssetRepository;
 pub use repositories::sqlite_consumable_repository::SqliteConsumableRepository;
 pub use repositories::sqlite_partner_repository::SqlitePartnerRepository;
+pub use repositories::sqlite_unified_invoice_repository::SqliteUnifiedInvoiceRepository;
 pub use repositories::sqlite_unit_of_work::SqliteUnitOfWork;

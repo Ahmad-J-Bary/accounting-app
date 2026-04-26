@@ -1,28 +1,44 @@
 export interface InvoiceLineDto {
-  product_id: string;
-  product_name?: string;
+  material_id: string;
+  material_name?: string;
+  barcode?: string;
+  code?: string;
+  category_name?: string;
   quantity: string;
   unit_price: string;
+  purchase_price?: string;
+  retail_price?: string;
+  wholesale_price?: string;
+  semi_wholesale_price?: string;
+  minimum_stock?: string;
+  notes?: string;
 }
 
 export interface InvoiceDto {
   id: string;
   invoice_number: string;
-  customer_id: string;
+  invoice_type: string;
+  customer_id?: string;
   customer_name?: string;
+  supplier_id?: string;
+  supplier_name?: string;
   lines: InvoiceLineDto[];
-  subtotal: string;
   tax_amount: string;
   discount_amount: string;
-  total: string;
+  total_amount: string;
+  status: string;
   issued_at: string;
-  posted: boolean;
+  notes?: string;
 }
 
 export interface CreateInvoiceRequest {
   invoice_number: string;
-  customer_id: string;
+  invoice_type: string;
+  customer_id?: string;
+  supplier_id?: string;
   lines: InvoiceLineDto[];
   tax_amount: string;
   discount_amount: string;
+  issued_at: string;
+  notes?: string;
 }

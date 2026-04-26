@@ -5,8 +5,6 @@ pub mod dto;
 #[cfg(test)]
 pub mod mocks;
 
-pub use use_cases::create_invoice::CreateInvoiceUseCase;
-pub use use_cases::post_invoice::PostInvoiceUseCase;
-pub use use_cases::list_invoices::ListInvoicesUseCase;
+// Removed obsolete exports
 pub use use_cases::create_journal_entry::CreateJournalEntryUseCase;
 pub use use_cases::post_journal_entry::PostJournalEntryUseCase;

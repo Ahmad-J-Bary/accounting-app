@@ -17,9 +17,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supplierService } from "@/services/supplierService";
 import { accountingService } from "@/services/accountingService";
 import type { AccountDto } from "@erp/shared-types";
-import { purchaseService } from "@/services/purchaseService";
+import { invoiceService } from "@/services/invoiceService";
 import { paymentService } from "@/services/paymentService";
-import type { SupplierDto, PurchaseInvoice, Payment, CreateSupplierRequest, UpdateSupplierRequest } from "@erp/shared-types";
+import type { SupplierDto, InvoiceDto, Payment, CreateSupplierRequest, UpdateSupplierRequest } from "@erp/shared-types";
 
 export default function Suppliers() {
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
@@ -28,7 +28,7 @@ export default function Suppliers() {
   const [search, setSearch] = useState("");
   
   // Linked data for selected supplier
-  const [supplierInvoices, setSupplierInvoices] = useState<PurchaseInvoice[]>([]);
+  const [supplierInvoices, setSupplierInvoices] = useState<InvoiceDto[]>([]);
   const [supplierPayments, setSupplierPayments] = useState<Payment[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
@@ -79,7 +79,7 @@ export default function Suppliers() {
     setLoadingDetails(true);
     try {
       const [invoices, payments] = await Promise.all([
-        purchaseService.listPurchaseInvoices(id),
+        invoiceService.listInvoicesByType("Purchase").then(list => list.filter(inv => inv.supplier_id === id)),
         paymentService.listPayments(undefined, id) // Pass as supplier_id
       ]);
       setSupplierInvoices(invoices);
@@ -371,8 +371,8 @@ export default function Suppliers() {
                           {supplierInvoices.map(inv => (
                             <tr key={inv.id} className="border-b last:border-0">
                               <td className="p-2 font-medium">{inv.invoice_number}</td>
-                              <td className="p-2">{formatDate(inv.invoice_date)}</td>
-                              <td className="p-2 text-left tabular-nums">{formatCurrency(parseFloat(inv.total))}</td>
+                              <td className="p-2">{formatDate(inv.issued_at)}</td>
+                              <td className="p-2 text-left tabular-nums">{formatCurrency(parseFloat(inv.total_amount))}</td>
                             </tr>
                           ))}
                         </tbody>

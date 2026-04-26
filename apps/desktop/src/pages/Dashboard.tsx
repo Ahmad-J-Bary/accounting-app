@@ -19,7 +19,6 @@ import {
 import { useState, useEffect } from "react";
 import { journalEntryService } from "@/services/journalEntryService";
 import { invoiceService } from "@/services/invoiceService";
-import { purchaseService } from "@/services/purchaseService";
 import { paymentService } from "@/services/paymentService";
 import { materialService } from "@/services/materialService";
 import { customerService } from "@/services/customerService";
@@ -39,7 +38,7 @@ const pieData = [
 export default function Dashboard() {
   const [recentJournals, setRecentJournals] = useState<JournalEntryDto[]>([]);
   const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
-  const [purchaseInvoices, setPurchaseInvoices] = useState<PurchaseInvoice[]>([]);
+  const [purchaseInvoices, setPurchaseInvoices] = useState<InvoiceDto[]>([]);
   const [paymentEntries, setPaymentEntries] = useState<Payment[]>([]);
   const [productItems, setProductItems] = useState<MaterialDto[]>([]);
   const [customers, setCustomers] = useState<CustomerDto[]>([]);
@@ -52,12 +51,12 @@ export default function Dashboard() {
   };
 
   const postedSalesTotal = invoices
-    .filter((invoice) => invoice.posted)
-    .reduce((sum, invoice) => sum + toNumber(invoice.total), 0);
+    .filter((invoice) => invoice.status === "Posted")
+    .reduce((sum, invoice) => sum + toNumber(invoice.total_amount), 0);
 
   const approvedPurchasesTotal = purchaseInvoices
     .filter((invoice) => invoice.status !== "Draft" && invoice.status !== "Cancelled")
-    .reduce((sum, invoice) => sum + toNumber(invoice.total), 0);
+    .reduce((sum, invoice) => sum + toNumber(invoice.total_amount), 0);
 
   const totalCashIn = paymentEntries
     .filter((entry) => entry.payment_type === "Receipt" || entry.payment_type === "CashIn")
@@ -94,8 +93,8 @@ export default function Dashboard() {
   useEffect(() => {
     Promise.all([
       journalEntryService.listJournalEntries(),
-      invoiceService.listInvoices(),
-      purchaseService.listPurchaseInvoices(),
+      invoiceService.listInvoicesByType("Sales"),
+      invoiceService.listInvoicesByType("Purchase"),
       paymentService.listPayments(),
       materialService.listMaterials(),
       accountingService.getReceivablesPayablesSummary(),

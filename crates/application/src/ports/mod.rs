@@ -1,4 +1,4 @@
-pub mod invoice_repository;
+// Removed obsolete invoice ports
 pub mod customer_repository;
 pub mod material_repository;
 pub mod category_repository;
@@ -6,7 +6,7 @@ pub mod account_repository;
 pub mod journal_entry_repository;
 pub mod unit_of_work;
 pub mod supplier_repository;
-pub mod purchase_invoice_repository;
+// Removed obsolete invoice ports
 pub mod payment_repository;
 pub mod stock_movement_repository;
 pub mod damaged_item_repository;
@@ -18,3 +18,4 @@ pub mod settings_repository;
 pub mod asset_repository;
 pub mod consumable_repository;
 pub mod partner_repository;
+pub mod unified_invoice_repository;

@@ -25,7 +25,7 @@ impl PartnerRepository for SqlitePartnerRepository {
             .bind(id.0 as i64)
             .fetch_optional(&*self.pool)
             .await
-            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+            .map_err(|e: sqlx::Error| AppError::Infrastructure(e.to_string()))?;
 
         match row {
             Some(row) => Ok(Some(self.map_row_to_partner(row)?)),
@@ -37,7 +37,7 @@ impl PartnerRepository for SqlitePartnerRepository {
         let rows = sqlx::query("SELECT * FROM partners ORDER BY name ASC")
             .fetch_all(&*self.pool)
             .await
-            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+            .map_err(|e: sqlx::Error| AppError::Infrastructure(e.to_string()))?;
 
         let mut partners = Vec::new();
         for row in rows {
@@ -68,7 +68,7 @@ impl PartnerRepository for SqlitePartnerRepository {
         .bind(partner.updated_at)
         .execute(&*self.pool)
         .await
-        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+        .map_err(|e: sqlx::Error| AppError::Infrastructure(e.to_string()))?;
 
         Ok(())
     }
@@ -95,7 +95,7 @@ impl PartnerRepository for SqlitePartnerRepository {
         .bind(partner.id.0 as i64)
         .execute(&*self.pool)
         .await
-        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+        .map_err(|e: sqlx::Error| AppError::Infrastructure(e.to_string()))?;
 
         Ok(())
     }
@@ -105,7 +105,7 @@ impl PartnerRepository for SqlitePartnerRepository {
             .bind(id.0 as i64)
             .execute(&*self.pool)
             .await
-            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+            .map_err(|e: sqlx::Error| AppError::Infrastructure(e.to_string()))?;
         Ok(())
     }
 }

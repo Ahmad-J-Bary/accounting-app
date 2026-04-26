@@ -1,10 +1,21 @@
 use sqlx::SqlitePool;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::sync::Arc;
+use std::str::FromStr;
+use std::time::Duration;
 
 pub type DbPool = Arc<SqlitePool>;
 
 pub async fn create_pool(database_url: &str) -> Result<DbPool, sqlx::Error> {
-    let pool = SqlitePool::connect(database_url).await?;
+    let options = SqliteConnectOptions::from_str(database_url)?
+        .busy_timeout(Duration::from_secs(10))
+        .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal);
+    
+    let pool = SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect_with(options)
+        .await?;
+        
     Ok(Arc::new(pool))
 }
 

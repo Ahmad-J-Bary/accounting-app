@@ -3,10 +3,9 @@ import { PageHeader } from "@/components/erp/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Download, Search, MoreHorizontal, Edit, AlertTriangle, Trash2, RefreshCw, Package, Tag, Layers } from "lucide-react";
-import { formatCurrency, formatNumber } from "@/lib/format";
+import { Plus, Search, MoreHorizontal, Edit, Trash2, RefreshCw, Layers } from "lucide-react";
+import { formatNumber } from "@/lib/format";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/erp/StatusBadge";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -15,7 +14,6 @@ import { materialService } from "@/services/materialService";
 import { categoryService } from "@/services/categoryService";
 import type { MaterialDto, CategoryDto } from "@erp/shared-types";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 
 export default function Materials() {
   const [materialsList, setMaterialsList] = useState<MaterialDto[]>([]);
@@ -23,20 +21,10 @@ export default function Materials() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  // Create/Edit state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editMaterial, setEditMaterial] = useState<MaterialDto | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    barcode: "",
-    code: "",
-    purchase_price: "0",
-    retail_price: "0",
-    wholesale_price: "0",
-    semi_wholesale_price: "0",
-    minimum_stock: "0",
-    notes: "",
-    category_ids: [] as string[]
+  const [formData, setFormData] = useState({ 
+    name: "", barcode: "", code: "", minimum_stock: "0", category_ids: [] as string[] 
   });
 
   const fetchMaterials = async () => {
@@ -110,7 +98,7 @@ export default function Materials() {
     <>
       <PageHeader
         title="بطاقات المواد"
-        subtitle="إدارة بيانات الأصناف والأسعار والمستودع"
+        subtitle="تعريف هوية المواد وتصنيفاتها"
         breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "المواد" }]}
         actions={
           <>
@@ -120,9 +108,7 @@ export default function Materials() {
             <Button onClick={() => {
               setEditMaterial(null);
               setFormData({ 
-                name: "", barcode: "", code: "", purchase_price: "0", 
-                retail_price: "0", wholesale_price: "0", semi_wholesale_price: "0", 
-                minimum_stock: "0", notes: "", category_ids: [] 
+                name: "", barcode: "", code: "", minimum_stock: "0", category_ids: [] 
               });
               setIsDialogOpen(true);
             }}>
@@ -132,26 +118,20 @@ export default function Materials() {
         }
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <Card className="p-4">
           <div className="text-sm text-muted-foreground">إجمالي المواد</div>
           <div className="text-2xl font-bold tabular-nums mt-1">{materialsList.length}</div>
         </Card>
         <Card className="p-4">
-          <div className="text-sm text-muted-foreground">قيمة المخزون (تكلفة)</div>
-          <div className="text-xl font-bold text-primary tabular-nums mt-1">
-            {formatCurrency(materialsList.reduce((s, m) => s + Number(m.stock_quantity || 0) * Number(m.purchase_price || 0), 0))}
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-sm text-muted-foreground">تحت الحد الأدنى</div>
-          <div className="text-2xl font-bold text-red-600 tabular-nums mt-1">
-            {materialsList.filter(m => Number(m.stock_quantity || 0) < Number(m.minimum_stock || 0)).length}
-          </div>
-        </Card>
-        <Card className="p-4">
           <div className="text-sm text-muted-foreground">التصنيفات</div>
           <div className="text-2xl font-bold tabular-nums mt-1">{categoriesList.length}</div>
+        </Card>
+        <Card className="p-4">
+          <div className="text-sm text-muted-foreground">نشط</div>
+          <div className="text-2xl font-bold text-green-600 tabular-nums mt-1">
+            {materialsList.filter(m => m.is_active).length}
+          </div>
         </Card>
       </div>
 
@@ -172,15 +152,13 @@ export default function Materials() {
           <div className="text-center py-10">جاري التحميل...</div>
         ) : (
           <div className="border border-border rounded-md overflow-x-auto text-right" dir="rtl">
-            <table className="w-full text-sm min-w-[1000px]">
+            <table className="w-full text-sm min-w-[800px]">
               <thead className="bg-slate-50 border-b border-border">
                 <tr>
-                  <th className="px-4 py-3 font-medium">الرمز/الباركود</th>
+                  <th className="px-4 py-3 font-medium text-right">الرمز/الباركود</th>
                   <th className="px-4 py-3 font-medium text-right">اسم المادة</th>
                   <th className="px-4 py-3 font-medium text-right">التصنيف</th>
-                  <th className="px-4 py-3 font-medium text-left">التكلفة</th>
-                  <th className="px-4 py-3 font-medium text-left">مفرق</th>
-                  <th className="px-4 py-3 font-medium text-left">المخزون</th>
+                  <th className="px-4 py-3 font-medium text-center">المخزون الحالي</th>
                   <th className="px-4 py-3 font-medium text-right">الحالة</th>
                   <th className="px-4 py-3 font-medium w-12 text-center"></th>
                 </tr>
@@ -188,11 +166,10 @@ export default function Materials() {
               <tbody>
                 {filteredMaterials.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-10 text-muted-foreground">لا توجد مواد حالياً</td>
+                    <td colSpan={6} className="text-center py-10 text-muted-foreground">لا توجد مواد حالياً</td>
                   </tr>
                 ) : (
                   filteredMaterials.map((m) => {
-                    const low = Number(m.stock_quantity || 0) < Number(m.minimum_stock || 0);
                     const cats = categoriesList.filter(c => m.category_ids.includes(c.id)).map(c => c.name).join(", ");
                     return (
                       <tr key={m.id} className="border-b border-border last:border-0 hover:bg-slate-50">
@@ -203,17 +180,9 @@ export default function Materials() {
                           </div>
                         </td>
                         <td className="px-4 py-3 font-medium">{m.name}</td>
-                        <td className="px-4 py-3 text-muted-foreground max-w-[150px] truncate">{cats || "غير مصنف"}</td>
-                        <td className="px-4 py-3 text-left tabular-nums">{formatCurrency(Number(m.purchase_price || 0))}</td>
-                        <td className="px-4 py-3 text-left tabular-nums font-bold text-green-700">{formatCurrency(Number(m.retail_price || 0))}</td>
-                        <td className="px-4 py-3 text-left">
-                          <div className="flex items-center justify-start gap-1.5 tabular-nums">
-                            <span className={cn("font-medium", low && "text-red-600")}>
-                              {formatNumber(Number(m.stock_quantity || 0))}
-                            </span>
-                            <span className="text-xs text-muted-foreground">/ {formatNumber(Number(m.minimum_stock || 0))}</span>
-                            {low && <AlertTriangle className="w-4 h-4 text-red-500" />}
-                          </div>
+                        <td className="px-4 py-3 text-muted-foreground">{cats || "عام"}</td>
+                        <td className="px-4 py-3 text-center tabular-nums font-bold">
+                          {formatNumber(Number(m.stock_quantity || 0))}
                         </td>
                         <td className="px-4 py-3"><StatusBadge status={m.is_active ? "active" : "inactive"} /></td>
                         <td className="px-4 py-3 text-center">
@@ -228,16 +197,11 @@ export default function Materials() {
                                   name: m.name,
                                   barcode: m.barcode,
                                   code: m.code,
-                                  purchase_price: m.purchase_price || "0",
-                                  retail_price: m.retail_price || "0",
-                                  wholesale_price: m.wholesale_price || "0",
-                                  semi_wholesale_price: m.semi_wholesale_price || "0",
                                   minimum_stock: m.minimum_stock,
-                                  notes: m.notes || "",
                                   category_ids: m.category_ids
                                 });
                                 setIsDialogOpen(true);
-                              }}><Edit className="w-4 h-4 ml-2" />تعديل البطاقة</DropdownMenuItem>
+                              }}><Edit className="w-4 h-4 ml-2" />تعديل</DropdownMenuItem>
                               <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(m.id, m.name)}>
                                 <Trash2 className="w-4 h-4 ml-2" />حذف
                               </DropdownMenuItem>
@@ -255,30 +219,34 @@ export default function Materials() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{editMaterial ? "تعديل بطاقة مادة" : "إضافة بطاقة مادة جديدة"}</DialogTitle>
-            <DialogDescription>أدخل بيانات التكويد والأسعار والتصنيفات.</DialogDescription>
+            <DialogTitle>{editMaterial ? "تعديل مادة" : "إضافة مادة جديدة"}</DialogTitle>
+            <DialogDescription>هوية المادة وتصنيفها الأساسي.</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-6 py-4 text-right" dir="rtl">
+          <div className="grid gap-4 py-4 text-right" dir="rtl">
+            <div className="grid gap-2">
+              <Label htmlFor="m_name">اسم المادة *</Label>
+              <Input id="m_name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="مثال: إسمنت مقاوم" />
+            </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2 col-span-2">
-                <Label htmlFor="m_name">اسم المادة *</Label>
-                <Input id="m_name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="مثال: إسمنت مقاوم" />
-              </div>
               <div className="grid gap-2">
-                <Label htmlFor="m_code">كود المادة (تلقائي إذا ترك فارغاً)</Label>
-                <Input id="m_code" value={formData.code} onChange={(e) => setFormData({...formData, code: e.target.value})} placeholder="مثال: MAT001" />
+                <Label htmlFor="m_code">الكود (تلقائي إذا ترك فارغاً)</Label>
+                <Input id="m_code" value={formData.code} onChange={(e) => setFormData({...formData, code: e.target.value})} placeholder="MAT001" />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="m_barcode">الباركود</Label>
-                <Input id="m_barcode" value={formData.barcode} onChange={(e) => setFormData({...formData, barcode: e.target.value})} placeholder="أو استخدم الماسح" />
+                <Input id="m_barcode" value={formData.barcode} onChange={(e) => setFormData({...formData, barcode: e.target.value})} placeholder="استخدم الماسح" />
               </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="m_min_stock">حد الطلب (الحد الأدنى للمخزون)</Label>
+              <Input id="m_min_stock" type="number" value={formData.minimum_stock} onChange={(e) => setFormData({...formData, minimum_stock: e.target.value})} />
             </div>
 
             <div className="border-t pt-4">
-              <Label className="mb-3 block font-bold flex items-center gap-2"><Layers className="w-4 h-4" /> التصنيفات</Label>
-              <div className="grid grid-cols-3 gap-3 p-3 bg-slate-50 rounded-md border">
+              <Label className="mb-3 font-bold flex items-center gap-2"><Layers className="w-4 h-4" /> التصنيفات</Label>
+              <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-md border max-h-[150px] overflow-y-auto">
                 {categoriesList.map(cat => (
                   <div key={cat.id} className="flex items-center space-x-2 space-x-reverse">
                     <Checkbox 
@@ -289,37 +257,6 @@ export default function Materials() {
                     <label htmlFor={`cat-${cat.id}`} className="text-sm cursor-pointer">{cat.name}</label>
                   </div>
                 ))}
-                {categoriesList.length === 0 && <div className="text-xs text-muted-foreground col-span-3 text-center">لا توجد تصنيفات معرفة</div>}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 border-t pt-4">
-              <div className="grid gap-2">
-                <Label htmlFor="m_purchase">سعر الشراء (التكلفة)</Label>
-                <Input id="m_purchase" type="number" value={formData.purchase_price} onChange={(e) => setFormData({...formData, purchase_price: e.target.value})} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="m_retail">سعر المبيع (مفرق)</Label>
-                <Input id="m_retail" type="number" value={formData.retail_price} onChange={(e) => setFormData({...formData, retail_price: e.target.value})} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="m_wholesale">سعر المبيع (جملة)</Label>
-                <Input id="m_wholesale" type="number" value={formData.wholesale_price} onChange={(e) => setFormData({...formData, wholesale_price: e.target.value})} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="m_semi">سعر (نصف جملة)</Label>
-                <Input id="m_semi" type="number" value={formData.semi_wholesale_price} onChange={(e) => setFormData({...formData, semi_wholesale_price: e.target.value})} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 border-t pt-4">
-              <div className="grid gap-2">
-                <Label htmlFor="m_min">حد الطلب (الحد الأدنى)</Label>
-                <Input id="m_min" type="number" value={formData.minimum_stock} onChange={(e) => setFormData({...formData, minimum_stock: e.target.value})} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="m_notes">ملاحظات</Label>
-                <Input id="m_notes" value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} />
               </div>
             </div>
           </div>

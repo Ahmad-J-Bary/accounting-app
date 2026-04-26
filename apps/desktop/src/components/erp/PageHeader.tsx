@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 interface Crumb {
   label: string;
   to?: string;
+  onClick?: () => void;
 }
 
 interface PageHeaderProps {
@@ -22,6 +23,8 @@ export function PageHeader({ title, subtitle, breadcrumbs, actions }: PageHeader
             <div key={i} className="flex items-center gap-1">
               {c.to ? (
                 <Link to={c.to} className="hover:text-primary">{c.label}</Link>
+              ) : c.onClick ? (
+                <button onClick={c.onClick} className="hover:text-primary border-none bg-transparent p-0 cursor-pointer">{c.label}</button>
               ) : (
                 <span>{c.label}</span>
               )}

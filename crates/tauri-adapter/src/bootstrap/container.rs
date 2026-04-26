@@ -1,11 +1,9 @@
 use std::sync::Arc;
 use infrastructure::{
-    SqliteInvoiceRepository,
     SqliteCustomerRepository,
     SqliteAccountRepository,
     SqliteJournalEntryRepository,
     SqliteSupplierRepository,
-    SqlitePurchaseInvoiceRepository,
     SqlitePaymentRepository,
     SqliteDamagedItemRepository,
     SqliteStockAdjustmentRepository,
@@ -20,19 +18,19 @@ use infrastructure::{
     SqlitePartnerRepository,
     SqliteMaterialRepository,
     SqliteCategoryRepository,
+    SqliteUnifiedInvoiceRepository,
 };
 use application::use_cases::partner_use_cases::PartnerUseCases;
 use application::use_cases::material_use_cases::MaterialUseCases;
 use application::use_cases::category_use_cases::CategoryUseCases;
+use application::use_cases::unified_invoice_use_cases::UnifiedInvoiceUseCases;
 use infrastructure::db::pool::{create_pool, run_migrations};
-use application::ports::invoice_repository::InvoiceRepository;
 use application::ports::customer_repository::CustomerRepository;
 use application::ports::material_repository::MaterialRepository;
 use application::ports::category_repository::CategoryRepository;
 use application::ports::account_repository::AccountRepository;
 use application::ports::journal_entry_repository::JournalEntryRepository;
 use application::ports::supplier_repository::SupplierRepository;
-use application::ports::purchase_invoice_repository::PurchaseInvoiceRepository;
 use application::ports::payment_repository::PaymentRepository;
 use application::ports::damaged_item_repository::DamagedItemRepository;
 use application::ports::stock_adjustment_repository::StockAdjustmentRepository;
@@ -43,17 +41,16 @@ use application::ports::production_repository::ProductionRepository;
 use application::ports::asset_repository::AssetRepository;
 use application::ports::consumable_repository::ConsumableRepository;
 use application::ports::stock_movement_repository::StockMovementRepository;
+use application::ports::unified_invoice_repository::UnifiedInvoiceRepository;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub invoice_repo: Arc<dyn InvoiceRepository>,
     pub customer_repo: Arc<dyn CustomerRepository>,
     pub material_repo: Arc<dyn MaterialRepository>,
     pub category_repo: Arc<dyn CategoryRepository>,
     pub account_repo: Arc<dyn AccountRepository>,
     pub journal_entry_repo: Arc<dyn JournalEntryRepository>,
     pub supplier_repo: Arc<dyn SupplierRepository>,
-    pub purchase_invoice_repo: Arc<dyn PurchaseInvoiceRepository>,
     pub payment_repo: Arc<dyn PaymentRepository>,
     pub damaged_repo: Arc<dyn DamagedItemRepository>,
     pub adjustment_repo: Arc<dyn StockAdjustmentRepository>,
@@ -64,30 +61,33 @@ pub struct AppState {
     pub asset_repo: Arc<dyn AssetRepository>,
     pub consumable_repo: Arc<dyn ConsumableRepository>,
     pub stock_movement_repo: Arc<dyn StockMovementRepository>,
+    pub unified_invoice_repo: Arc<dyn UnifiedInvoiceRepository>,
     pub partner_use_cases: Arc<PartnerUseCases>,
     pub material_use_cases: Arc<MaterialUseCases>,
     pub category_use_cases: Arc<CategoryUseCases>,
+    pub unified_invoice_use_cases: Arc<UnifiedInvoiceUseCases>,
 }
 
 pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
     let pool = create_pool(database_url).await.map_err(|e| e.to_string())?;
     
-    // Run migrations to ensure all tables exist
     run_migrations(&pool).await.map_err(|e| format!("Migration error: {}", e))?;
 
     let material_repo = Arc::new(SqliteMaterialRepository::new(pool.clone()));
     let category_repo = Arc::new(SqliteCategoryRepository::new(pool.clone()));
     let stock_movement_repo = Arc::new(SqliteStockMovementRepository::new(pool.clone()));
+    let customer_repo = Arc::new(SqliteCustomerRepository::new(pool.clone()));
+    let supplier_repo = Arc::new(SqliteSupplierRepository::new(pool.clone()));
+    let journal_repo = Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
+    let unified_invoice_repo = Arc::new(SqliteUnifiedInvoiceRepository::new(pool.clone()));
 
     Ok(AppState {
-        invoice_repo: Arc::new(SqliteInvoiceRepository::new(pool.clone())) as Arc<dyn InvoiceRepository>,
-        customer_repo: Arc::new(SqliteCustomerRepository::new(pool.clone())) as Arc<dyn CustomerRepository>,
+        customer_repo: customer_repo.clone() as Arc<dyn CustomerRepository>,
         material_repo: material_repo.clone() as Arc<dyn MaterialRepository>,
         category_repo: category_repo.clone() as Arc<dyn CategoryRepository>,
         account_repo: Arc::new(SqliteAccountRepository::new(pool.clone())) as Arc<dyn AccountRepository>,
-        journal_entry_repo: Arc::new(SqliteJournalEntryRepository::new(pool.clone())) as Arc<dyn JournalEntryRepository>,
-        supplier_repo: Arc::new(SqliteSupplierRepository::new(pool.clone())) as Arc<dyn SupplierRepository>,
-        purchase_invoice_repo: Arc::new(SqlitePurchaseInvoiceRepository::new(pool.clone())) as Arc<dyn PurchaseInvoiceRepository>,
+        journal_entry_repo: journal_repo.clone() as Arc<dyn JournalEntryRepository>,
+        supplier_repo: supplier_repo.clone() as Arc<dyn SupplierRepository>,
         payment_repo: Arc::new(SqlitePaymentRepository::new(pool.clone())) as Arc<dyn PaymentRepository>,
         damaged_repo: Arc::new(SqliteDamagedItemRepository::new(pool.clone())) as Arc<dyn DamagedItemRepository>,
         adjustment_repo: Arc::new(SqliteStockAdjustmentRepository::new(pool.clone())) as Arc<dyn StockAdjustmentRepository>,
@@ -98,6 +98,7 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
         asset_repo: Arc::new(SqliteAssetRepository::new(pool.clone())) as Arc<dyn AssetRepository>,
         consumable_repo: Arc::new(SqliteConsumableRepository::new(pool.clone())) as Arc<dyn ConsumableRepository>,
         stock_movement_repo: stock_movement_repo.clone() as Arc<dyn StockMovementRepository>,
+        unified_invoice_repo: unified_invoice_repo.clone() as Arc<dyn UnifiedInvoiceRepository>,
         partner_use_cases: Arc::new(PartnerUseCases::new(
             Arc::new(SqlitePartnerRepository::new(pool.clone())),
             Arc::new(SqliteAccountRepository::new(pool.clone())),
@@ -109,5 +110,14 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
             category_repo.clone(),
         )),
         category_use_cases: Arc::new(CategoryUseCases::new(category_repo.clone())),
+        unified_invoice_use_cases: Arc::new(UnifiedInvoiceUseCases::new(
+            unified_invoice_repo.clone(),
+            material_repo.clone(),
+            stock_movement_repo.clone(),
+            customer_repo.clone(),
+            supplier_repo.clone(),
+            category_repo.clone(),
+            journal_repo.clone(),
+        )),
     })
 }

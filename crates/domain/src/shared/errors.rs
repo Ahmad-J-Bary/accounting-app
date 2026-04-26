@@ -1,6 +1,7 @@
 use thiserror::Error;
+use serde::Serialize;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Serialize)]
 pub enum DomainError {
     #[error("خطأ في البيانات: {0}")]
     Invalid(String),

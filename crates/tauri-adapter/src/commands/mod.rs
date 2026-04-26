@@ -1,9 +1,8 @@
 pub mod customer;
 pub mod material;
 pub mod category;
-pub mod invoice;
+// Removed obsolete modules
 pub mod supplier;
-pub mod purchase;
 pub mod payment;
 pub mod damaged;
 pub mod production;
@@ -17,3 +16,4 @@ pub mod accounting;
 pub mod assets;
 pub mod dashboard;
 pub mod partner;
+pub mod unified_invoice;

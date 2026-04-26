@@ -7,10 +7,12 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
-            // Invoices (Sales)
-            commands::invoice::create_invoice,
-            commands::invoice::list_invoices,
-            commands::invoice::post_invoice,
+            // Unified Invoices
+            commands::unified_invoice::create_unified_invoice,
+            commands::unified_invoice::list_unified_invoices_by_type,
+            commands::unified_invoice::post_unified_invoice,
+            commands::unified_invoice::get_unified_invoice_by_id,
+            commands::unified_invoice::list_all_unified_invoices,
             // Customers
             commands::customer::create_customer,
             commands::customer::get_customer,
@@ -33,10 +35,6 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::supplier::get_supplier,
             commands::supplier::update_supplier,
             commands::supplier::delete_supplier,
-            // Purchase Invoices
-            commands::purchase::create_purchase_invoice,
-            commands::purchase::list_purchase_invoices,
-            commands::purchase::post_purchase_invoice,
             // Payments
             commands::payment::create_payment,
             commands::payment::list_payments,
