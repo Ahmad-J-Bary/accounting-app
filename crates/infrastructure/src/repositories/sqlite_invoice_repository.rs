@@ -101,7 +101,7 @@ impl InvoiceRepository for SqliteInvoiceRepository {
         }
     }
 
-    async fn list_for_customer(&self, customer_id: uuid::Uuid) -> Result<Vec<Invoice>, AppError> {
+    async fn list_for_customer(&self, customer_id: CustomerId) -> Result<Vec<Invoice>, AppError> {
         let rows = sqlx::query("SELECT * FROM sales_invoices WHERE customer_id = ?")
             .bind(customer_id.to_string())
             .fetch_all(&*self.pool)

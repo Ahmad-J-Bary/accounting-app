@@ -56,6 +56,24 @@ export default function Products() {
 
   useEffect(() => {
     fetchProducts();
+
+    const handleOpenNew = () => {
+      setEditProduct(null);
+      setFormData({ 
+        name: "", 
+        barcode: "", 
+        code: "", 
+        purchase_price: "0", 
+        retail_price: "0", 
+        wholesale_price: "0", 
+        semi_wholesale_price: "0", 
+        minimum_stock: "0" 
+      });
+      setIsDialogOpen(true);
+    };
+
+    window.addEventListener("erp:open-new-product", handleOpenNew);
+    return () => window.removeEventListener("erp:open-new-product", handleOpenNew);
   }, []);
 
   const handleSave = async () => {

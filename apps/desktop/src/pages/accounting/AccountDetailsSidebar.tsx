@@ -31,8 +31,34 @@ export function AccountDetailsSidebar({
   const [code, setCode] = useState("");
   const [nameAr, setNameAr] = useState("");
   const [parentId, setParentId] = useState<string>("null");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [notes, setNotes] = useState("");
+  const [openingBalance, setOpeningBalance] = useState("0");
+  const [debit, setDebit] = useState("0");
+  const [credit, setCredit] = useState("0");
+  const [currency, setCurrency] = useState("SYP");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const parentAccount = useMemo(() => {
+    if (parentId === "null") return null;
+    return allAccounts.find(a => a.id === parentId);
+  }, [parentId, allAccounts]);
+
+  const isCustomerParent = parentAccount?.code?.startsWith("123") || parentAccount?.code?.startsWith("1203") || parentAccount?.name_ar?.includes("المدينون");
+  const isSupplierParent = parentAccount?.code?.startsWith("223") || parentAccount?.code?.startsWith("2203") || parentAccount?.name_ar?.includes("الدائنون");
+  
+  const isSyncAccount = useMemo(() => {
+    if (formMode === "create") return isCustomerParent || isSupplierParent;
+    if (formMode === "edit" && selected) return !!selected.linked_customer_id || !!selected.linked_supplier_id;
+    return false;
+  }, [formMode, isCustomerParent, isSupplierParent, selected]);
+
+  const isCustomer = useMemo(() => {
+    if (formMode === "create") return isCustomerParent;
+    return !!selected?.linked_customer_id;
+  }, [formMode, isCustomerParent, selected]);
 
   // Reset form state when the selected account changes (so user returns to details view)
   useEffect(() => {
@@ -44,7 +70,48 @@ export function AccountDetailsSidebar({
     setCode("");
     setNameAr("");
     setParentId("null");
+    setPhone("");
+    setAddress("");
+    setNotes("");
+    setOpeningBalance("0");
+    setDebit("0");
+    setCredit("0");
+    setCurrency("SYP");
   }, [selected?.id]);
+
+  // Fetch linked details when entering edit mode for a sync account
+  useEffect(() => {
+    async function fetchLinkedDetails() {
+      if (formMode === "edit" && selected && isSyncAccount) {
+        try {
+          if (selected.linked_customer_id) {
+            const { customerService } = await import("@/services/customerService");
+            const customer = await customerService.getCustomer(selected.linked_customer_id);
+            if (customer) {
+              setPhone(customer.phone || "");
+              setAddress(customer.address || "");
+              setDebit(customer.debit || "0");
+              setCredit(customer.credit || "0");
+              setCurrency(customer.currency || "SYP");
+            }
+          } else if (selected.linked_supplier_id) {
+            const { supplierService } = await import("@/services/supplierService");
+            const supplier = await supplierService.getSupplier(selected.linked_supplier_id);
+            if (supplier) {
+              setPhone(supplier.phone || "");
+              setAddress(supplier.address || "");
+              setDebit(supplier.debit || "0");
+              setCredit(supplier.credit || "0");
+              setCurrency(supplier.currency || "SYP");
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch linked details:", err);
+        }
+      }
+    }
+    fetchLinkedDetails();
+  }, [formMode, selected, isSyncAccount]);
 
   const suggestChildCode = (account: AccountDto | null): string => {
     if (!account) return "";
@@ -110,6 +177,13 @@ export function AccountDetailsSidebar({
     setCode(suggestChildCode(selected));
     setNameAr("");
     setParentId(targetParent);
+    setPhone("");
+    setAddress("");
+    setNotes("");
+    setOpeningBalance("0");
+    setDebit("0");
+    setCredit("0");
+    setCurrency("SYP");
   };
 
   const openEditDialog = () => {
@@ -119,6 +193,9 @@ export function AccountDetailsSidebar({
     setCode(selected.code ?? "");
     setNameAr(selected.name_ar ?? "");
     setParentId(selected.parent_id ?? "null");
+    setNotes(selected.notes ?? "");
+    setOpeningBalance(selected.opening_balance ?? "0");
+    // Phone, address etc. are fetched by the useEffect hook
   };
 
   const closeDialog = () => {
@@ -145,7 +222,7 @@ export function AccountDetailsSidebar({
     try {
       const effectiveParentId = parentId === "null" ? null : parentId;
       const targetLevel = resolveLevel(parentId);
-      const targetCategory = "Summary" as AccountCategory; // All accounts are Summary
+      const targetCategory = "Detail" as AccountCategory; // Use Detail for leaves
 
       if (formMode === "edit" && selected) {
         const payload = {
@@ -154,21 +231,21 @@ export function AccountDetailsSidebar({
           name_en: selected.name_en,
           account_type: selected.account_type as AccountType,
           parent_id: effectiveParentId,
-          category: targetCategory,
+          category: selected.category as AccountCategory,
           level: targetLevel,
-          opening_balance: selected.opening_balance ?? "0",
-          notes: selected.notes ?? null,
+          opening_balance: openingBalance || "0",
+          notes: notes.trim() || null,
           is_default: selected.is_default,
           is_active: selected.is_active,
+          phone: phone.trim() || null,
+          address: address.trim() || null,
+          debit: debit || "0",
+          credit: credit || "0",
+          currency: currency,
         };
 
         await accountingService.updateAccount(selected.id, payload);
       } else {
-        const parentAccount =
-          effectiveParentId === null
-            ? null
-            : allAccounts.find((account) => account.id === effectiveParentId) ?? null;
-
         const payload = {
           code: code.trim(),
           name_ar: nameAr.trim(),
@@ -177,13 +254,15 @@ export function AccountDetailsSidebar({
           parent_id: effectiveParentId,
           category: targetCategory,
           level: targetLevel,
-          opening_balance: "0",
-          notes: null,
+          opening_balance: openingBalance || "0",
+          notes: notes.trim() || null,
           is_default: false,
           is_active: true,
-          debit: "0",
-          credit: "0",
-          currency: "SYP",
+          phone: phone.trim() || null,
+          address: address.trim() || null,
+          debit: debit || "0",
+          credit: credit || "0",
+          currency: currency,
         };
 
         await accountingService.createAccount(payload);
@@ -225,27 +304,31 @@ export function AccountDetailsSidebar({
           </div>
         )}
 
-        <div className="space-y-1">
-          <Label>رقم الحساب</Label>
-          <Input
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
-            placeholder="مثال: 1101"
-          />
-        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label>رقم الحساب</Label>
+            <Input
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+              placeholder="مثال: 1101"
+              className="bg-white"
+            />
+          </div>
 
-        <div className="space-y-1">
-          <Label>اسم الحساب</Label>
-          <Input
-            value={nameAr}
-            onChange={(event) => setNameAr(event.target.value)}
-            placeholder="مثال: صندوق فرعي"
-          />
+          <div className="space-y-1">
+            <Label>اسم الحساب</Label>
+            <Input
+              value={nameAr}
+              onChange={(event) => setNameAr(event.target.value)}
+              placeholder="مثال: صندوق فرعي"
+              className="bg-white"
+            />
+          </div>
         </div>
 
         <div className="space-y-1">
           <Label>فرعي من</Label>
-          <div className="rounded-md border border-input bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+          <div className="rounded-md border border-input bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
             {parentId === "null" 
               ? "-- مستوى أول (بدون أب) --"
               : (() => {
@@ -254,11 +337,91 @@ export function AccountDetailsSidebar({
                 })()
             }
           </div>
-          <input type="hidden" value={parentId} />
+        </div>
+
+        {/* Advanced Fields for Sync Accounts (Customers/Suppliers) */}
+        {isSyncAccount && (
+          <div className="pt-2 space-y-4 border-t border-primary/10">
+            <p className="text-[10px] font-bold text-primary uppercase tracking-wider">خانات متقدمة ({isCustomer ? "عميل" : "مورد"})</p>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>رقم الهاتف</Label>
+                <Input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="اختياري"
+                  className="bg-white"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>العنوان</Label>
+                <Input
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="اختياري"
+                  className="bg-white"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label>مدين</Label>
+                <Input
+                  type="number"
+                  value={debit}
+                  onChange={(e) => setDebit(e.target.value)}
+                  className="bg-white"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>دائن</Label>
+                <Input
+                  type="number"
+                  value={credit}
+                  onChange={(e) => setCredit(e.target.value)}
+                  className="bg-white"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>العملة</Label>
+                <select 
+                  className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                >
+                  <option value="SYP">SYP - ليرة سورية</option>
+                  <option value="USD">USD - دولار أمريكي</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Common Details */}
+        <div className="pt-2 space-y-3 border-t border-primary/10">
+          <div className="space-y-1">
+            <Label>الرصيد الافتتاحي</Label>
+            <Input
+              type="number"
+              value={openingBalance}
+              onChange={(e) => setOpeningBalance(e.target.value)}
+              className="bg-white"
+            />
+          </div>
+          
+          <div className="space-y-1">
+            <Label>ملاحظات</Label>
+            <textarea
+              className="flex min-h-[60px] w-full rounded-md border border-input bg-white px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="ملاحظات اختيارية..."
+            />
+          </div>
         </div>
       </div>
-
-      {/* Removed inline bottom action buttons. Use header/form actions instead. */}
     </div>
   );
 

@@ -55,6 +55,12 @@ pub struct CreateAccountCommand {
     pub notes: Option<String>,
     pub linked_customer_id: Option<String>,
     pub linked_supplier_id: Option<String>,
+    // Advanced fields for Customer/Supplier sync
+    pub phone: Option<String>,
+    pub address: Option<String>,
+    pub debit: Option<String>,
+    pub credit: Option<String>,
+    pub currency: Option<String>,
 }
 
 pub struct AccountUseCases {
@@ -122,7 +128,7 @@ impl AccountUseCases {
             level: cmd.level,
             opening_balance,
             balance: opening_balance,
-            notes: cmd.notes.map(|n| n.trim().to_string()),
+            notes: cmd.notes.as_ref().map(|n| n.trim().to_string()),
             is_active: true,
             is_default: matches!(cmd.code.trim(), "120301" | "220301"),
             is_final: cmd.code.trim().len() == 4 && (cmd.code.trim().starts_with("123") || cmd.code.trim().starts_with("223")),
@@ -137,22 +143,27 @@ impl AccountUseCases {
             .await
             .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
 
-        // Auto-create customer if account is under "123" (receivables)
-        // Account code format: 123 + customer_id (e.g., 1232 means customer_id = 2)
-        if account.code.len() == 4 && account.code.starts_with("123") {
+        let debit = cmd.debit.as_deref()
+            .and_then(|s| Decimal::from_str(s).ok())
+            .unwrap_or(Decimal::ZERO);
+        let credit = cmd.credit.as_deref()
+            .and_then(|s| Decimal::from_str(s).ok())
+            .unwrap_or(Decimal::ZERO);
+        let currency = cmd.currency.as_deref()
+            .map(|s| if s == "USD" { Currency::USD } else { Currency::SYP })
+            .unwrap_or(Currency::SYP);
+
+        // Auto-create customer if account is under "123" or "1203" (receivables)
+        if account.code.len() >= 4 && (account.code.starts_with("123") || account.code.starts_with("1203")) {
             if let Some(ref customer_repo) = self.customer_repo {
-                // Extract customer ID from account code (last digit)
-                let customer_id_str = &account.code[3..];
-                let customer_id_num: u64 = customer_id_str.parse().unwrap_or(0);
-                let customer_code = customer_id_str.to_string();
+                let customer_code = if account.code.starts_with("1203") { &account.code[4..] } else { &account.code[3..] };
+                let customer_id_num: u64 = customer_code.parse().unwrap_or(0);
                 
-                // Use account name as-is (strip legacy prefix if present)
                 let customer_name = account.name_ar
                     .strip_prefix("ذمة العميل: ")
                     .unwrap_or(&account.name_ar)
                     .to_string();
 
-                // Use custom ID if valid
                 let customer_id = if customer_id_num > 0 {
                     CustomerId::from_u64(customer_id_num)
                 } else {
@@ -161,21 +172,20 @@ impl AccountUseCases {
 
                 let customer = Customer::new_with_id(
                     customer_id,
-                    customer_code,
+                    customer_code.to_string(),
                     customer_name,
-                    None, // phone
-                    None, // address
+                    cmd.phone.clone(),
+                    cmd.address.clone(),
                     Some(account.id.clone()),
-                    Decimal::ZERO, // debit
-                    Decimal::ZERO, // credit
+                    debit,
+                    credit,
                     account.opening_balance,
-                    Currency::SYP,
-                    None, // notes
+                    currency,
+                    cmd.notes.clone(),
                 );
 
                 if let Ok(customer) = customer {
                     let _ = customer_repo.save(&customer).await;
-                    // Link account back to customer
                     let mut updated_account = account.clone();
                     updated_account.linked_customer_id = Some(customer.id);
                     let _ = self.account_repo.save(&updated_account).await;
@@ -183,22 +193,17 @@ impl AccountUseCases {
             }
         }
 
-        // Auto-create supplier if account is under "223" (payables)
-        // Account code format: 223 + supplier_id (e.g., 2233 means supplier_id = 3)
-        if account.code.len() == 4 && account.code.starts_with("223") {
+        // Auto-create supplier if account is under "223" or "2203" (payables)
+        if account.code.len() >= 4 && (account.code.starts_with("223") || account.code.starts_with("2203")) {
             if let Some(ref supplier_repo) = self.supplier_repo {
-                // Extract supplier ID from account code (last digit)
-                let supplier_id_str = &account.code[3..];
-                let supplier_id_num: u64 = supplier_id_str.parse().unwrap_or(0);
-                let supplier_code = supplier_id_str.to_string();
+                let supplier_code = if account.code.starts_with("2203") { &account.code[4..] } else { &account.code[3..] };
+                let supplier_id_num: u64 = supplier_code.parse().unwrap_or(0);
                 
-                // Use account name as-is (strip legacy prefix if present)
                 let supplier_name = account.name_ar
                     .strip_prefix("ذمة المورد: ")
                     .unwrap_or(&account.name_ar)
                     .to_string();
 
-                // Use custom ID if valid
                 let supplier_id = if supplier_id_num > 0 {
                     SupplierId::from_u64(supplier_id_num)
                 } else {
@@ -207,21 +212,20 @@ impl AccountUseCases {
 
                 let supplier = Supplier::new_with_id(
                     supplier_id,
-                    supplier_code,
+                    supplier_code.to_string(),
                     supplier_name,
-                    None, // phone
-                    None, // address
+                    cmd.phone.clone(),
+                    cmd.address.clone(),
                     Some(account.id.clone()),
-                    Decimal::ZERO, // debit
-                    Decimal::ZERO, // credit
+                    debit,
+                    credit,
                     account.opening_balance,
-                    Currency::SYP,
-                    None, // notes
+                    currency,
+                    cmd.notes.clone(),
                 );
 
                 if let Ok(supplier) = supplier {
                     let _ = supplier_repo.save(&supplier).await;
-                    // Link account back to supplier
                     let mut updated_account = account.clone();
                     updated_account.linked_supplier_id = Some(supplier.id);
                     let _ = self.account_repo.save(&updated_account).await;
@@ -267,7 +271,7 @@ impl AccountUseCases {
         account.category = cmd.category;
         account.level = cmd.level;
         account.opening_balance = opening_balance;
-        account.notes = cmd.notes.map(|n| n.trim().to_string());
+        account.notes = cmd.notes.as_ref().map(|n| n.trim().to_string());
         account.linked_customer_id = cmd.linked_customer_id
             .as_deref()
             .and_then(|s| s.parse::<u64>().ok())
@@ -282,6 +286,60 @@ impl AccountUseCases {
             .save(&account)
             .await
             .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
+
+        // Sync with linked customer if any
+        if let Some(customer_id) = &account.linked_customer_id {
+            if let Some(ref customer_repo) = self.customer_repo {
+                if let Ok(Some(mut customer)) = customer_repo.find_by_id(customer_id).await {
+                    let debit = cmd.debit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(customer.debit);
+                    let credit = cmd.credit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(customer.credit);
+                    let currency = cmd.currency.as_deref()
+                        .map(|s| if s == "USD" { Currency::USD } else { Currency::SYP })
+                        .unwrap_or(customer.currency);
+
+                    let _ = customer.update_info(
+                        account.name_ar.clone(),
+                        cmd.phone.as_ref().cloned().or(customer.phone.clone()),
+                        cmd.address.as_ref().cloned().or(customer.address.clone()),
+                        cmd.notes.as_ref().cloned().or(customer.notes.clone()),
+                    );
+                    customer.debit = debit;
+                    customer.credit = credit;
+                    customer.currency = currency;
+                    customer.opening_balance = account.opening_balance;
+                    customer.balance = debit - credit;
+
+                    let _ = customer_repo.save(&customer).await;
+                }
+            }
+        }
+
+        // Sync with linked supplier if any
+        if let Some(supplier_id) = &account.linked_supplier_id {
+            if let Some(ref supplier_repo) = self.supplier_repo {
+                if let Ok(Some(mut supplier)) = supplier_repo.find_by_id(supplier_id).await {
+                    let debit = cmd.debit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(supplier.debit);
+                    let credit = cmd.credit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(supplier.credit);
+                    let currency = cmd.currency.as_deref()
+                        .map(|s| if s == "USD" { Currency::USD } else { Currency::SYP })
+                        .unwrap_or(supplier.currency);
+
+                    let _ = supplier.update_info(
+                        account.name_ar.clone(),
+                        cmd.phone.as_ref().cloned().or(supplier.phone.clone()),
+                        cmd.address.as_ref().cloned().or(supplier.address.clone()),
+                        cmd.notes.as_ref().cloned().or(supplier.notes.clone()),
+                    );
+                    supplier.debit = debit;
+                    supplier.credit = credit;
+                    supplier.currency = currency;
+                    supplier.opening_balance = account.opening_balance;
+                    supplier.balance = debit - credit;
+
+                    let _ = supplier_repo.save(&supplier).await;
+                }
+            }
+        }
 
         Ok(account)
     }

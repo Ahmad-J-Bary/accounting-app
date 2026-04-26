@@ -93,6 +93,20 @@ export default function Suppliers() {
 
   useEffect(() => { 
     void loadSuppliers(); 
+
+    const handleOpenNew = () => {
+      setEditSupplier(null);
+      setForm({ code: "", name: "", phone: "", address: "", notes: "" });
+      setLinkedAccountId("null");
+      setOpeningBalance("0");
+      setDebit("0");
+      setCredit("0");
+      setCurrency("SYP");
+      setShowDialog(true);
+    };
+
+    window.addEventListener("erp:open-new-supplier", handleOpenNew);
+    return () => window.removeEventListener("erp:open-new-supplier", handleOpenNew);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -252,7 +266,6 @@ export default function Suppliers() {
             <table className="w-full text-sm min-w-[700px]">
               <thead className="bg-slate-50 border-b border-border">
                 <tr>
-                  <th className="text-right px-4 py-3 font-medium">الكود</th>
                   <th className="text-right px-4 py-3 font-medium">اسم المورد</th>
                   <th className="text-right px-4 py-3 font-medium">الهاتف</th>
                   <th className="text-left px-4 py-3 font-medium">المدين</th>
@@ -265,7 +278,6 @@ export default function Suppliers() {
               <tbody>
                 {filtered.map((s) => (
                   <tr key={s.id} className="border-b border-border last:border-0 hover:bg-slate-50 cursor-pointer" onClick={() => setSelectedId(s.id)}>
-                    <td className="px-4 py-3 font-medium text-muted-foreground">{s.code}</td>
                     <td className="px-4 py-3 font-medium">{s.name}</td>
                     <td className="px-4 py-3 tabular-nums">{s.phone || "—"}</td>
                     <td className="px-4 py-3 text-left tabular-nums text-red-600">{formatCurrency(parseFloat(s.debit || "0"))}</td>

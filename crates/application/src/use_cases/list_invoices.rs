@@ -24,8 +24,9 @@ impl ListInvoicesUseCase {
 
     pub async fn execute(&self, customer_id: Option<String>) -> Result<Vec<InvoiceDto>, AppError> {
         let invoices = if let Some(cid) = customer_id {
-            let id = Uuid::parse_str(&cid)
+            let id_num = cid.parse::<u64>()
                 .map_err(|e| AppError::Invalid(format!("Invalid customer ID: {}", e)))?;
+            let id = domain::shared::ids::CustomerId::from_u64(id_num);
             self.repo.list_for_customer(id).await?
         } else {
             self.repo.list_all().await?

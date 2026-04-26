@@ -97,6 +97,20 @@ export default function Customers() {
   useEffect(() => {
     fetchCustomers();
     void loadAccountsForLink();
+
+    const handleOpenNew = () => {
+      setEditCustomer(null);
+      setFormData({ code: "", name: "", phone: "", address: "", notes: "" });
+      setLinkedAccountId("null");
+      setOpeningBalance("0");
+      setDebit("0");
+      setCredit("0");
+      setCurrency("SYP");
+      setIsDialogOpen(true);
+    };
+
+    window.addEventListener("erp:open-new-customer", handleOpenNew);
+    return () => window.removeEventListener("erp:open-new-customer", handleOpenNew);
   }, []);
 
   useEffect(() => {
@@ -236,7 +250,6 @@ export default function Customers() {
             <table className="w-full text-sm min-w-[700px]">
               <thead className="bg-slate-50 border-b border-border">
                 <tr>
-                  <th className="text-right px-4 py-3 font-medium">الكود</th>
                   <th className="text-right px-4 py-3 font-medium">الاسم</th>
                   <th className="text-right px-4 py-3 font-medium">الهاتف</th>
                   <th className="text-left px-4 py-3 font-medium">المدين</th>
@@ -254,7 +267,6 @@ export default function Customers() {
                 ) : (
                   filteredCustomers.map((c) => (
                     <tr key={c.id} className="border-b border-border last:border-0 hover:bg-slate-50 cursor-pointer" onClick={() => setSelectedId(c.id)}>
-                      <td className="px-4 py-3 font-medium text-muted-foreground">{c.code}</td>
                       <td className="px-4 py-3">{c.name}</td>
                       <td className="px-4 py-3 tabular-nums">{c.phone}</td>
                       <td className="px-4 py-3 text-left tabular-nums text-red-600">{formatCurrency(Number(c.debit || 0))}</td>
