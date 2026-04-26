@@ -18,3 +18,5 @@ pub use repositories::sqlite_user_repository::SqliteUserRepository;
 pub use repositories::sqlite_production_repository::SqliteProductionRepository;
 pub use repositories::sqlite_asset_repository::SqliteAssetRepository;
 pub use repositories::sqlite_consumable_repository::SqliteConsumableRepository;
+pub use repositories::sqlite_partner_repository::SqlitePartnerRepository;
+pub use repositories::sqlite_unit_of_work::SqliteUnitOfWork;

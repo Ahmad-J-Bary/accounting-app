@@ -84,6 +84,11 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::assets::list_all_asset_movements,
             // Dashboard
             commands::dashboard::get_receivables_payables_summary,
+            // Partners
+            commands::partner::add_partner,
+            commands::partner::list_partners,
+            commands::partner::delete_partner,
+            commands::partner::update_partner,
         ])
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir().expect("Failed to get app data directory");

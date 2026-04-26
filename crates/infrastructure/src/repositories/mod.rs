@@ -15,4 +15,6 @@ pub mod sqlite_consumable_repository;
 pub mod sqlite_stock_movement_repository;
 pub mod sqlite_user_repository;
 pub mod sqlite_production_repository;
+pub mod sqlite_partner_repository;
+pub mod sqlite_unit_of_work;
 // pub mod sqlite_role_repository;

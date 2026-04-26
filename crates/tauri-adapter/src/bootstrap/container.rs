@@ -17,7 +17,10 @@ use infrastructure::{
     SqliteAssetRepository,
     SqliteConsumableRepository,
     SqliteStockMovementRepository,
+    SqliteUnitOfWork,
+    SqlitePartnerRepository,
 };
+use application::use_cases::partner_use_cases::PartnerUseCases;
 use infrastructure::db::pool::{create_pool, run_migrations};
 use application::ports::invoice_repository::InvoiceRepository;
 use application::ports::customer_repository::CustomerRepository;
@@ -56,6 +59,7 @@ pub struct AppState {
     pub asset_repo: Arc<dyn AssetRepository>,
     pub consumable_repo: Arc<dyn ConsumableRepository>,
     pub stock_movement_repo: Arc<dyn StockMovementRepository>,
+    pub partner_use_cases: Arc<PartnerUseCases>,
 }
 
 pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
@@ -65,22 +69,27 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
     run_migrations(&pool).await.map_err(|e| format!("Migration error: {}", e))?;
 
     Ok(AppState {
-        invoice_repo: Arc::new(SqliteInvoiceRepository::new(pool.clone())),
-        customer_repo: Arc::new(SqliteCustomerRepository::new(pool.clone())),
-        product_repo: Arc::new(SqliteProductRepository::new(pool.clone())),
-        account_repo: Arc::new(SqliteAccountRepository::new(pool.clone())),
-        journal_entry_repo: Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
-        supplier_repo: Arc::new(SqliteSupplierRepository::new(pool.clone())),
-        purchase_invoice_repo: Arc::new(SqlitePurchaseInvoiceRepository::new(pool.clone())),
-        payment_repo: Arc::new(SqlitePaymentRepository::new(pool.clone())),
-        damaged_repo: Arc::new(SqliteDamagedItemRepository::new(pool.clone())),
-        adjustment_repo: Arc::new(SqliteStockAdjustmentRepository::new(pool.clone())),
-        settings_repo: Arc::new(SqliteSettingsRepository::new(pool.clone())),
-        audit_repo: Arc::new(SqliteAuditLogRepository::new(pool.clone())),
-        user_repo: Arc::new(SqliteUserRepository::new(pool.clone())),
-        production_repo: Arc::new(SqliteProductionRepository::new(pool.clone())),
-        asset_repo: Arc::new(SqliteAssetRepository::new(pool.clone())),
-        consumable_repo: Arc::new(SqliteConsumableRepository::new(pool.clone())),
-        stock_movement_repo: Arc::new(SqliteStockMovementRepository::new(pool)),
+        invoice_repo: Arc::new(SqliteInvoiceRepository::new(pool.clone())) as Arc<dyn InvoiceRepository>,
+        customer_repo: Arc::new(SqliteCustomerRepository::new(pool.clone())) as Arc<dyn CustomerRepository>,
+        product_repo: Arc::new(SqliteProductRepository::new(pool.clone())) as Arc<dyn ProductRepository>,
+        account_repo: Arc::new(SqliteAccountRepository::new(pool.clone())) as Arc<dyn AccountRepository>,
+        journal_entry_repo: Arc::new(SqliteJournalEntryRepository::new(pool.clone())) as Arc<dyn JournalEntryRepository>,
+        supplier_repo: Arc::new(SqliteSupplierRepository::new(pool.clone())) as Arc<dyn SupplierRepository>,
+        purchase_invoice_repo: Arc::new(SqlitePurchaseInvoiceRepository::new(pool.clone())) as Arc<dyn PurchaseInvoiceRepository>,
+        payment_repo: Arc::new(SqlitePaymentRepository::new(pool.clone())) as Arc<dyn PaymentRepository>,
+        damaged_repo: Arc::new(SqliteDamagedItemRepository::new(pool.clone())) as Arc<dyn DamagedItemRepository>,
+        adjustment_repo: Arc::new(SqliteStockAdjustmentRepository::new(pool.clone())) as Arc<dyn StockAdjustmentRepository>,
+        settings_repo: Arc::new(SqliteSettingsRepository::new(pool.clone())) as Arc<dyn SettingsRepository>,
+        audit_repo: Arc::new(SqliteAuditLogRepository::new(pool.clone())) as Arc<dyn AuditLogRepository>,
+        user_repo: Arc::new(SqliteUserRepository::new(pool.clone())) as Arc<dyn UserRepository>,
+        production_repo: Arc::new(SqliteProductionRepository::new(pool.clone())) as Arc<dyn ProductionRepository>,
+        asset_repo: Arc::new(SqliteAssetRepository::new(pool.clone())) as Arc<dyn AssetRepository>,
+        consumable_repo: Arc::new(SqliteConsumableRepository::new(pool.clone())) as Arc<dyn ConsumableRepository>,
+        stock_movement_repo: Arc::new(SqliteStockMovementRepository::new(pool.clone())) as Arc<dyn StockMovementRepository>,
+        partner_use_cases: Arc::new(PartnerUseCases::new(
+            Arc::new(SqlitePartnerRepository::new(pool.clone())),
+            Arc::new(SqliteAccountRepository::new(pool.clone())),
+            Arc::new(SqliteUnitOfWork::new(pool.clone())),
+        )),
     })
 }

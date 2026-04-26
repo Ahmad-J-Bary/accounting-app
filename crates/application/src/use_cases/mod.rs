@@ -22,3 +22,4 @@ pub mod fixed_asset_use_cases;
 pub mod consumable_use_cases;
 pub mod opening_stock_use_cases;
 pub mod account_use_cases;
+pub mod partner_use_cases;

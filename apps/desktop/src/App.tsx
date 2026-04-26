@@ -22,6 +22,7 @@ import Reports from './pages/Reports';
 import Users from './pages/Users';
 import Settings from './pages/Settings';
 import AuditLog from './pages/AuditLog';
+import Partners from './pages/Partners';
 import Assets from './pages/Assets';
 import InvoiceDetail from './pages/InvoiceDetail';
 import AuthCallback from './pages/AuthCallback';
@@ -45,6 +46,7 @@ const App = () => (
             <AppLayout>
               <Routes>
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/partners" element={<Partners />} />
                 <Route path="/accounting" element={<Accounting />} />
                 <Route path="/journal" element={<Journal />} />
                 <Route path="/customers" element={<Customers />} />

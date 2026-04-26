@@ -24,6 +24,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     title: "المحاسبة",
     items: [
       { to: "/accounting", label: "دليل الحسابات", icon: BookOpen },
+      { to: "/partners", label: "الشركاء ورأس المال", icon: Users },
       { to: "/journal", label: "القيود اليومية", icon: FileText },
       { to: "/assets", label: "إدارة الموجودات", icon: HardDrive },
     ],
