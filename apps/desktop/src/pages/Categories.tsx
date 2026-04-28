@@ -24,67 +24,72 @@ interface CategoryTreeNode extends CategoryDto {
 function buildTree(cats: CategoryDto[], materials: MaterialDto[]): CategoryTreeNode {
   const map = new Map<string, CategoryTreeNode>();
   
-  // 1. Initialize map with all non-hybrid categories
+  // 1. Initialize map with clones
   const normalCats = cats.filter(c => !c.is_hybrid);
   normalCats.forEach(c => map.set(c.id, { ...c, children: [] }));
   
-  // 2. Attach materials as "virtual children" to categories
+  // 2. Attach materials
   materials.forEach(m => {
     const categoryIds = m.category_ids || [];
-    
+    const matNode: CategoryTreeNode = {
+      id: `mat-${m.id}`,
+      name: m.name,
+      code_prefix: m.code, 
+      is_hybrid: false,
+      is_active: m.is_active,
+      material_count: 0,
+      parent_id: "",
+      children: [],
+      isMaterial: true,
+      materialData: m,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
     if (categoryIds.length === 0) {
-      // Uncategorized material
       const uncategorized = normalCats.find(c => c.name === DEFAULT_CATEGORY_NAME && !c.parent_id);
       if (uncategorized) {
         const node = map.get(uncategorized.id);
-        if (node) {
-          node.children.push({
-            id: `mat-${m.id}`,
-            name: m.name,
-            code_prefix: m.code, 
-            is_hybrid: false,
-            is_active: m.is_active,
-            material_count: 0,
-            parent_id: uncategorized.id,
-            children: [],
-            isMaterial: true,
-            materialData: m 
-          } as any);
-        }
+        if (node) node.children.push({ ...matNode, parent_id: uncategorized.id });
       }
     } else {
-      // Material with categories
       categoryIds.forEach(catId => {
         const node = map.get(catId);
-        if (node) {
-          node.children.push({
-            id: `mat-${m.id}`,
-            name: m.name,
-            code_prefix: m.code,
-            is_hybrid: false,
-            is_active: m.is_active,
-            material_count: 0,
-            parent_id: catId,
-            children: [],
-            isMaterial: true,
-            materialData: m 
-          } as any);
-        }
+        if (node) node.children.push({ ...matNode, parent_id: catId });
       });
     }
   });
 
-  // 3. Build the hierarchical structure
+  // 3. Build hierarchy with strict cycle detection
   const rootChildren: CategoryTreeNode[] = [];
   const uncategorizedNode = normalCats.find(c => c.name === DEFAULT_CATEGORY_NAME && !c.parent_id);
-  
+  const attachedIds = new Set<string>();
+
+  // Helper to check for cycles
+  const isAncestor = (parentId: string, nodeId: string): boolean => {
+    let current = map.get(parentId);
+    while (current) {
+      if (current.id === nodeId) return true;
+      if (!current.parent_id) break;
+      current = map.get(current.parent_id);
+    }
+    return false;
+  };
+
   normalCats.forEach(c => {
     const node = map.get(c.id)!;
-    if (c.parent_id && map.has(c.parent_id)) {
-      const parent = map.get(c.parent_id);
-      if (parent) parent.children.push(node);
-    } else if (c.id !== uncategorizedNode?.id) {
+    if (c.parent_id && map.has(c.parent_id) && c.parent_id !== c.id) {
+      if (!attachedIds.has(c.id) && !isAncestor(c.parent_id, c.id)) {
+        map.get(c.parent_id)?.children.push(node);
+        attachedIds.add(c.id);
+      } else if (!attachedIds.has(c.id)) {
+        // Fallback to root if cycle detected
+        rootChildren.push(node);
+        attachedIds.add(c.id);
+      }
+    } else if (c.id !== uncategorizedNode?.id && !attachedIds.has(c.id)) {
       rootChildren.push(node);
+      attachedIds.add(c.id);
     }
   });
 
@@ -154,19 +159,19 @@ export default function Categories() {
     return filterNode(tree) || { ...tree, children: [] };
   }, [tree, search]);
 
-  const toggleExpand = (id: string, event: React.MouseEvent) => {
+  const toggleExpand = useCallback((id: string, event: React.MouseEvent) => {
     event.stopPropagation();
     setExpandedIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
-  };
+  }, []);
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     if (!selected || selected.id === VIRTUAL_ROOT_ID) return;
     
-    const isMat = (selected as any).isMaterial;
+    const isMat = selected.isMaterial;
     const name = selected.name;
     const id = isMat ? selected.id.replace('mat-', '') : selected.id;
 
@@ -198,7 +203,7 @@ export default function Categories() {
     } finally { 
       setLoading(false); 
     }
-  };
+  }, [selected, fetchData]);
 
   const parentName = useMemo(() => {
     if (!selected?.parent_id) return null;
@@ -272,29 +277,27 @@ export default function Categories() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
-        <div className="w-full">
-          <TreeLayout
-            searchQuery={search}
-            onSearchChange={setSearch}
-            onExpandAll={() => setExpandedIds(new Set([VIRTUAL_ROOT_ID, ...categories.map(c => c.id)]))}
-            onCollapseAll={() => setExpandedIds(new Set([VIRTUAL_ROOT_ID]))}
-            onRefresh={() => void fetchData(true)}
-            loading={loading}
-            tableHeader={tableHeader}
-            treeContent={treeContent}
-            sidebarContent={
-              <CategoryDetailsSidebar
-                selected={selected?.id === VIRTUAL_ROOT_ID ? null : selected}
-                allCategories={categories}
-                parentName={parentName}
-                onSaved={() => void fetchData(false)}
-                onDelete={handleDelete}
-                isVirtualRootSelected={selected?.id === VIRTUAL_ROOT_ID}
-              />
-            }
-          />
-        </div>
+      <div className="mt-6">
+        <TreeLayout
+          searchQuery={search}
+          onSearchChange={setSearch}
+          onExpandAll={() => setExpandedIds(new Set([VIRTUAL_ROOT_ID, ...categories.map(c => c.id)]))}
+          onCollapseAll={() => setExpandedIds(new Set([VIRTUAL_ROOT_ID]))}
+          onRefresh={() => void fetchData(true)}
+          loading={loading}
+          tableHeader={tableHeader}
+          treeContent={treeContent}
+          sidebarContent={
+            <CategoryDetailsSidebar
+              selected={selected?.id === VIRTUAL_ROOT_ID ? null : selected}
+              allCategories={categories}
+              parentName={parentName}
+              onSaved={() => void fetchData(false)}
+              onDelete={handleDelete}
+              isVirtualRootSelected={selected?.id === VIRTUAL_ROOT_ID}
+            />
+          }
+        />
       </div>
     </>
   );

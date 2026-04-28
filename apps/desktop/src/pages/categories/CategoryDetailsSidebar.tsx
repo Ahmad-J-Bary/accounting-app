@@ -11,8 +11,14 @@ import { TreeSidebar } from "../../components/erp/tree-management/TreeSidebar";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+interface CategoryTreeNode extends CategoryDto {
+  children: CategoryTreeNode[];
+  isMaterial?: boolean;
+  materialData?: MaterialDto;
+}
+
 interface CategoryDetailsSidebarProps {
-  selected: any | null; // Can be CategoryTreeNode (which might be a material)
+  selected: CategoryTreeNode | null; 
   allCategories: CategoryDto[];
   parentName?: string | null;
   onSaved: () => void;

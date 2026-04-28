@@ -81,7 +81,13 @@ export default function Accounting() {
         }
       }
     }
-    if (matchingAncestors.size > 0) setExpandedNodes((prev) => new Set([...prev, ...matchingAncestors]));
+    if (matchingAncestors.size > 0) {
+      setExpandedNodes((prev) => {
+        const hasNew = Array.from(matchingAncestors).some(id => !prev.has(id));
+        if (!hasNew) return prev;
+        return new Set([...prev, ...matchingAncestors]);
+      });
+    }
   }, [searchQuery, accounts]);
 
   const tree = useMemo(() => buildTree(accounts), [accounts]);

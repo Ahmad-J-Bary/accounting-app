@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
@@ -17,7 +17,7 @@ export function AppLayout({ children, title, subtitle }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const navigate = useNavigate();
 
-  useKeyboardShortcuts([
+  const shortcuts = useMemo(() => [
     { key: 'k', ctrlKey: true, action: () => console.log('Open search'), description: 'فتح البحث' },
     { key: 'n', ctrlKey: true, action: () => {
         navigate('/sales-invoices');
@@ -30,7 +30,9 @@ export function AppLayout({ children, title, subtitle }: AppLayoutProps) {
     { key: 'r', ctrlKey: true, action: () => navigate('/payments'), description: 'سند قبض جديد' },
     { key: 'p', ctrlKey: true, action: () => navigate('/payments'), description: 'سند صرف جديد' },
     { key: 'j', ctrlKey: true, action: () => navigate('/journal'), description: 'قيد يومية جديد' },
-  ]);
+  ], [navigate]);
+
+  useKeyboardShortcuts(shortcuts);
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">

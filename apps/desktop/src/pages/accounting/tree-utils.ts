@@ -28,14 +28,34 @@ export function buildTree(accounts: AccountDto[]): AccountTreeNode[] {
     map.set(account.id, { ...account, children: [] });
   }
 
+  const attachedIds = new Set<string>();
+
+  // Helper to check for cycles
+  const isAncestor = (parentId: string, nodeId: string): boolean => {
+    let current = map.get(parentId);
+    while (current) {
+      if (current.id === nodeId) return true;
+      if (!current.parent_id) break;
+      current = map.get(current.parent_id);
+    }
+    return false;
+  };
+
   for (const account of sorted) {
     const node = map.get(account.id);
     if (!node) continue;
 
-    if (account.parent_id && map.has(account.parent_id)) {
-      map.get(account.parent_id)?.children.push(node);
-    } else {
+    if (account.parent_id && account.parent_id !== account.id && map.has(account.parent_id)) {
+      if (!attachedIds.has(account.id) && !isAncestor(account.parent_id, account.id)) {
+        map.get(account.parent_id)?.children.push(node);
+        attachedIds.add(account.id);
+      } else if (!attachedIds.has(account.id)) {
+        roots.push(node);
+        attachedIds.add(account.id);
+      }
+    } else if (!attachedIds.has(account.id)) {
       roots.push(node);
+      attachedIds.add(account.id);
     }
   }
 
@@ -46,16 +66,19 @@ export function getVisibleRootTree(
   roots: AccountTreeNode[],
   query: string,
 ): AccountTreeNode[] {
-  const q = query.trim();
+  const q = query.trim().toLowerCase();
   if (!q) return roots;
 
   const includesQuery = (a: Pick<AccountDto, "name_ar" | "code">): boolean =>
-    a.name_ar.includes(q) || a.code.includes(q);
+    a.name_ar.toLowerCase().includes(q) || a.code.toLowerCase().includes(q);
 
-  const hasMatchingDescendant = (node: AccountTreeNode): boolean =>
-    node.children.some(
-      (child) => includesQuery(child) || hasMatchingDescendant(child),
+  // Helper with depth limit to prevent infinite recursion on circular data
+  const hasMatchingDescendant = (node: AccountTreeNode, depth = 0): boolean => {
+    if (depth > 20) return false; // Sanity check for deep trees
+    return node.children.some(
+      (child) => includesQuery(child) || hasMatchingDescendant(child, depth + 1),
     );
+  };
 
   return roots.filter(
     (node) => includesQuery(node) || hasMatchingDescendant(node),

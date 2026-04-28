@@ -6,7 +6,7 @@ import { Plus, Edit, Trash2 } from "lucide-react";
 interface TreeSidebarProps {
   title: string;
   subtitle?: string;
-  selected: any | null;
+  selected: unknown | null;
   formMode: "create" | "edit" | null;
   onOpenCreate: () => void;
   onOpenEdit: () => void;
