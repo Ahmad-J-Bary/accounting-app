@@ -241,10 +241,10 @@ export function CategoryDetailsSidebar({
         <div className="flex gap-2">
           <Input 
             value={codePrefix} 
-            onChange={(e) => setCodePrefix(e.target.value.toUpperCase())} 
-            placeholder="W" 
-            className="bg-white font-mono"
-            maxLength={10}
+            onChange={(e) => setCodePrefix(e.target.value.slice(0, 1).toUpperCase())} 
+            placeholder="A" 
+            className="bg-white font-mono text-center"
+            maxLength={1}
           />
           <Button variant="outline" size="icon" className="flex-shrink-0" onClick={() => setCodePrefix(suggestPrefix())} title="اقتراح بادئة">
             <Shuffle className="w-4 h-4" />
