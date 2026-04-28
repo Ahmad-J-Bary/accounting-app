@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { PageHeader } from "@/components/erp/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,56 +8,91 @@ import { Plus, Search, RefreshCw, Users as UsersIcon, ShieldAlert, ShieldCheck }
 import { formatDate } from "@/lib/format";
 import { userService } from "@/services/userService";
 import type { User, Role, CreateUserRequest } from "@erp/shared-types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+
+// Refactored Components & Hooks
+import { DataTable, Column } from "@/components/erp/shared/DataTable";
+import { useDataTable } from "@/hooks/useDataTable";
+import { UserForm } from "@/components/erp/users/UserForm";
 
 export default function Users() {
-  const [users, setUsers] = useState<User[]>([]);
+  const {
+    filtered: users,
+    loading: usersLoading,
+    search,
+    setSearch,
+    refresh,
+  } = useDataTable<User>({
+    fetchData: () => userService.listUsers(),
+    searchFields: ["username", "full_name"],
+    errorLabel: "فشل تحميل المستخدمين",
+  });
+
   const [roles, setRoles] = useState<Role[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [loadingRoles, setLoadingRoles] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
-  const [form, setForm] = useState<Partial<CreateUserRequest>>({
-    username: "",
-    full_name: "",
-    password: "",
-    role_id: "",
-  });
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const load = async () => {
-    setLoading(true);
+  const loadRoles = useCallback(async () => {
     try {
-      const [uArgs, rArgs] = await Promise.all([userService.listUsers(), userService.listRoles()]);
-      setUsers(uArgs);
+      setLoadingRoles(true);
+      const rArgs = await userService.listRoles();
       setRoles(rArgs);
-    } catch (e) { setError(String(e)); }
-    finally { setLoading(false); }
-  };
+    } catch (e) {
+      toast.error("فشل تحميل الصلاحيات");
+    } finally {
+      setLoadingRoles(false);
+    }
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    loadRoles();
+  }, [loadRoles]);
 
-  const filtered = users.filter(u => {
-    const s = (search || "").toLowerCase();
-    return (u.username || "").toLowerCase().includes(s) || (u.full_name || "").toLowerCase().includes(s);
-  });
+  const activeCount = useMemo(() => users.filter(u => u.is_active).length, [users]);
+  const adminCount = useMemo(() => users.filter(u => roles.find(r => r.id === u.role_id)?.permissions.includes("Admin")).length, [users, roles]);
 
-  const activeCount = users.filter(u => u.is_active).length;
-  const adminCount = users.filter(u => roles.find(r => r.id === u.role_id)?.permissions.includes("Admin")).length;
-
-  const handleCreate = async () => {
-    if (!form.username || !form.full_name || !form.password || !form.role_id) return;
+  const handleCreate = async (payload: CreateUserRequest) => {
     setSaving(true);
     try {
-      await userService.createUser(form as CreateUserRequest);
+      await userService.createUser(payload);
       setShowDialog(false);
-      setForm({ username: "", full_name: "", password: "", role_id: "" });
-      await load();
-    } catch (e) { setError(String(e)); }
-    finally { setSaving(false); }
+      refresh(true);
+      toast.success("تم إضافة المستخدم بنجاح");
+    } catch (e) {
+      toast.error("فشل الحفظ: " + e);
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const columns = useMemo<Column<User>[]>(() => [
+    { header: "الاسم الكامل", accessor: "full_name", className: "font-medium" },
+    { header: "اسم المستخدم", accessor: "username", className: "text-muted-foreground" },
+    { 
+      header: "الصلاحية", 
+      accessor: (u) => {
+        const role = roles.find(r => r.id === u.role_id);
+        return (
+          <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full text-xs font-medium">
+            {role?.name ?? u.role_name ?? "غير محدد"}
+          </span>
+        );
+      }
+    },
+    { 
+      header: "آخر دخول", 
+      accessor: (u) => u.last_login ? formatDate(u.last_login) : "لم يسجل دخول",
+      className: "text-xs text-muted-foreground tabular-nums"
+    },
+    { 
+      header: "الحالة", 
+      accessor: (u) => <StatusBadge status={u.is_active ? "active" : "inactive"} />, 
+      align: "left" 
+    }
+  ], [roles]);
+
+  const isLoading = usersLoading || loadingRoles;
 
   return (
     <>
@@ -67,8 +102,8 @@ export default function Users() {
         breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "الإعدادات" }, { label: "المستخدمون" }]}
         actions={
           <>
-            <Button variant="outline" onClick={load} disabled={loading}>
-              <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />تحديث
+            <Button variant="outline" onClick={() => refresh()} disabled={isLoading}>
+              <RefreshCw className={`w-4 h-4 ml-2 ${isLoading ? "animate-spin" : ""}`} />تحديث
             </Button>
             <Button onClick={() => setShowDialog(true)}>
               <Plus className="w-4 h-4 ml-2" />مستخدم جديد
@@ -76,12 +111,6 @@ export default function Users() {
           </>
         }
       />
-
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
-          {error} <button className="mr-2 underline" onClick={() => setError(null)}>إغلاق</button>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <Card className="p-4">
@@ -113,86 +142,21 @@ export default function Users() {
           </div>
         </div>
 
-        {loading ? (
-          <div className="text-center py-12 text-muted-foreground">جاري التحميل...</div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">لا يوجد مستخدمين مضافين</div>
-        ) : (
-          <div className="border border-border rounded-md overflow-x-auto">
-            <table className="w-full text-sm min-w-[700px]">
-              <thead className="bg-slate-50 border-b border-border">
-                <tr>
-                  <th className="text-right px-4 py-3 font-medium">الاسم الكامل</th>
-                  <th className="text-right px-4 py-3 font-medium">اسم المستخدم</th>
-                  <th className="text-right px-4 py-3 font-medium">الصلاحية</th>
-                  <th className="text-right px-4 py-3 font-medium">آخر دخول</th>
-                  <th className="text-left px-4 py-3 font-medium">الحالة</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(u => {
-                  const role = roles.find(r => r.id === u.role_id);
-                  return (
-                    <tr key={u.id} className="border-b border-border last:border-0 hover:bg-slate-50">
-                      <td className="px-4 py-3 font-medium">{u.full_name}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{u.username}</td>
-                      <td className="px-4 py-3">
-                        <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full text-xs font-medium">
-                          {role?.name ?? u.role_name ?? "غير محدد"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground">{u.last_login ? formatDate(u.last_login) : "لم يسجل دخول"}</td>
-                      <td className="px-4 py-3 text-left">
-                        <StatusBadge status={u.is_active ? "active" : "inactive"} />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <DataTable
+          data={users}
+          columns={columns}
+          loading={isLoading}
+          emptyMessage={search ? "لا توجد نتائج للبحث" : "لا يوجد مستخدمين مضافين"}
+        />
       </Card>
 
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-md" dir="rtl">
-          <DialogHeader>
-            <DialogTitle>إضافة مستخدم جديد</DialogTitle>
-            <DialogDescription>أدخل بيانات الحساب الجديد وتعيين الصلاحيات له.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1">
-              <Label>الاسم الكامل *</Label>
-              <Input value={form.full_name ?? ""} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))} placeholder="أحمد محمد" />
-            </div>
-            <div className="space-y-1">
-              <Label>اسم المستخدم للولوج *</Label>
-              <Input value={form.username ?? ""} onChange={e => setForm(p => ({ ...p, username: e.target.value }))} placeholder="ahmad_m" />
-            </div>
-            <div className="space-y-1">
-              <Label>كلمة المرور *</Label>
-              <Input type="password" value={form.password ?? ""} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} />
-            </div>
-            <div className="space-y-1">
-              <Label>دور النظام (الصلاحية) *</Label>
-              <Select value={form.role_id} onValueChange={v => setForm(p => ({ ...p, role_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="اختر الدور" /></SelectTrigger>
-                <SelectContent>
-                  {roles.map(r => (
-                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDialog(false)}>إلغاء</Button>
-            <Button onClick={handleCreate} disabled={saving || !form.username || !form.full_name || !form.password || !form.role_id}>
-              {saving ? "جاري الحفظ..." : "حفظ المستخدم"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <UserForm
+        open={showDialog}
+        onOpenChange={setShowDialog}
+        roles={roles}
+        onSave={handleCreate}
+        saving={saving}
+      />
     </>
   );
 }

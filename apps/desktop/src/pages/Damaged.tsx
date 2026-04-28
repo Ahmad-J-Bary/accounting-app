@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { PageHeader } from "@/components/erp/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,59 +8,83 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { damagedService } from "@/services/inventoryService";
 import { materialService } from "@/services/materialService";
 import type { DamagedItem, CreateDamagedItemRequest, MaterialDto } from "@erp/shared-types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+
+// Refactored Components & Hooks
+import { DataTable, Column } from "@/components/erp/shared/DataTable";
+import { useDataTable } from "@/hooks/useDataTable";
+import { DamagedForm } from "@/components/erp/inventory/DamagedForm";
 
 export default function Damaged() {
-  const [items, setItems] = useState<DamagedItem[]>([]);
-  const [products, setProducts] = useState<MaterialDto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [showDialog, setShowDialog] = useState(false);
-  const [form, setForm] = useState<Partial<CreateDamagedItemRequest>>({
-    damage_date: new Date().toISOString(),
-    quantity: 0,
-    cost_impact: 0,
-    reason: "",
-    product_id: "",
+  const {
+    filtered: items,
+    loading: itemsLoading,
+    search,
+    setSearch,
+    refresh,
+  } = useDataTable<DamagedItem>({
+    fetchData: () => damagedService.listDamagedItems(),
+    searchFields: ["product_name", "product_id", "reason"],
+    errorLabel: "فشل تحميل المواد التالفة",
   });
+
+  const [products, setProducts] = useState<MaterialDto[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [showDialog, setShowDialog] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const load = async () => {
-    setLoading(true);
+  const loadProducts = useCallback(async () => {
     try {
-      const [damagedData, productsData] = await Promise.all([
-        damagedService.listDamagedItems(),
-        materialService.listMaterials()
-      ]);
-      setItems(damagedData);
-      setProducts(productsData);
+      setLoadingProducts(true);
+      const pData = await materialService.listMaterials();
+      setProducts(pData);
+    } catch (e) {
+      toast.error("فشل تحميل المنتجات");
+    } finally {
+      setLoadingProducts(false);
     }
-    catch (e) { setError(String(e)); }
-    finally { setLoading(false); }
-  };
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
 
-  const filtered = items.filter(i =>
-    (i.product_name ?? i.product_id).includes(search) || i.reason.includes(search)
-  );
+  const totalCost = useMemo(() => items.reduce((s, i) => s + parseFloat(i.cost_impact || "0"), 0), [items]);
+  const totalQty = useMemo(() => items.reduce((s, i) => s + parseFloat(i.quantity || "0"), 0), [items]);
 
-  const totalCost = items.reduce((s, i) => s + parseFloat(i.cost_impact || "0"), 0);
-  const totalQty = items.reduce((s, i) => s + parseFloat(i.quantity || "0"), 0);
-
-  const handleCreate = async () => {
-    if (!form.product_id || !form.reason || !form.quantity) return;
+  const handleCreate = async (payload: CreateDamagedItemRequest) => {
     setSaving(true);
     try {
-      await damagedService.createDamagedItem(form as CreateDamagedItemRequest);
+      await damagedService.createDamagedItem(payload);
       setShowDialog(false);
-      setForm({ damage_date: new Date().toISOString(), quantity: 0, cost_impact: 0, reason: "", product_id: "" });
-      await load();
-    } catch (e) { setError(String(e)); }
-    finally { setSaving(false); }
+      refresh(true);
+      toast.success("تم تسجيل التالف بنجاح");
+    } catch (e) {
+      toast.error("فشل الحفظ: " + e);
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const columns = useMemo<Column<DamagedItem>[]>(() => [
+    { header: "المنتج", accessor: (i) => i.product_name ?? i.product_id, className: "font-medium" },
+    { header: "السبب", accessor: "reason", className: "text-muted-foreground" },
+    { header: "التاريخ", accessor: (i) => formatDate(i.damage_date) },
+    { 
+      header: "الكمية", 
+      accessor: (i) => parseFloat(i.quantity).toFixed(2), 
+      align: "left", 
+      className: "tabular-nums text-amber-600" 
+    },
+    { 
+      header: "التكلفة", 
+      accessor: (i) => formatCurrency(parseFloat(i.cost_impact)), 
+      align: "left", 
+      className: "tabular-nums text-red-600" 
+    }
+  ], []);
+
+  const isLoading = itemsLoading || loadingProducts;
 
   return (
     <>
@@ -70,8 +94,8 @@ export default function Damaged() {
         breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "المخزون" }, { label: "التالف" }]}
         actions={
           <>
-            <Button variant="outline" onClick={load} disabled={loading}>
-              <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />تحديث
+            <Button variant="outline" onClick={() => refresh()} disabled={isLoading}>
+              <RefreshCw className={`w-4 h-4 ml-2 ${isLoading ? "animate-spin" : ""}`} />تحديث
             </Button>
             <Button onClick={() => setShowDialog(true)}>
               <Plus className="w-4 h-4 ml-2" />تسجيل تالف
@@ -79,12 +103,6 @@ export default function Damaged() {
           </>
         }
       />
-
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
-          {error} <button className="mr-2 underline" onClick={() => setError(null)}>إغلاق</button>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <Card className="p-4">
@@ -112,105 +130,21 @@ export default function Damaged() {
           </div>
         </div>
 
-        {loading ? (
-          <div className="text-center py-12 text-muted-foreground">جاري التحميل...</div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">لا توجد سجلات تالف</div>
-        ) : (
-          <div className="border border-border rounded-md overflow-x-auto">
-            <table className="w-full text-sm min-w-[640px]">
-              <thead className="bg-slate-50 border-b border-border">
-                <tr>
-                  <th className="text-right px-4 py-3 font-medium">المنتج</th>
-                  <th className="text-right px-4 py-3 font-medium">السبب</th>
-                  <th className="text-right px-4 py-3 font-medium">التاريخ</th>
-                  <th className="text-left px-4 py-3 font-medium">الكمية</th>
-                  <th className="text-left px-4 py-3 font-medium">التكلفة</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(i => (
-                  <tr key={i.id} className="border-b border-border last:border-0 hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium">{i.product_name ?? i.product_id}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{i.reason}</td>
-                    <td className="px-4 py-3">{formatDate(i.damage_date)}</td>
-                    <td className="px-4 py-3 text-left tabular-nums text-amber-600">{parseFloat(i.quantity).toFixed(2)}</td>
-                    <td className="px-4 py-3 text-left tabular-nums text-red-600">{formatCurrency(parseFloat(i.cost_impact))}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <DataTable
+          data={items}
+          columns={columns}
+          loading={isLoading}
+          emptyMessage={search ? "لا توجد نتائج للبحث" : "لا توجد سجلات تالف"}
+        />
       </Card>
 
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-md" dir="rtl">
-          <DialogHeader>
-            <DialogTitle>تسجيل مواد تالفة</DialogTitle>
-            <DialogDescription>إضافة تقرير عن أصناف تالفة لخصمها من المخزون وتسجيل الخسائر.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1">
-              <Label>المنتج *</Label>
-              <select 
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                value={form.product_id ?? ""} 
-                onChange={e => {
-                  const pid = e.target.value;
-                  const prod = products.find(p => p.id === pid);
-                  setForm(p => ({ 
-                    ...p, 
-                    product_id: pid,
-                    cost_impact: prod ? parseFloat(prod.purchase_price || "0") * (p.quantity || 1) : p.cost_impact
-                  }));
-                }}
-              >
-                <option value="">اختر المنتج...</option>
-                {products.map(p => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.code})</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <Label>الكمية *</Label>
-              <Input type="number" min="1" step="1"
-                value={form.quantity ?? ""}
-                onChange={e => {
-                  const qty = parseFloat(e.target.value) || 0;
-                  const prod = products.find(p => p.id === form.product_id);
-                  setForm(p => ({ 
-                    ...p, 
-                    quantity: qty,
-                    cost_impact: prod ? parseFloat(prod.purchase_price || "0") * qty : p.cost_impact
-                  }));
-                }} />
-            </div>
-            <div className="space-y-1">
-              <Label>سبب التلف *</Label>
-              <Input value={form.reason ?? ""} onChange={e => setForm(p => ({ ...p, reason: e.target.value }))} placeholder="استهلاك، كسر، انتهاء صلاحية..." />
-            </div>
-            <div className="space-y-1">
-              <Label>تأثير التكلفة</Label>
-              <Input type="number" min="0" step="0.01"
-                value={form.cost_impact ?? ""}
-                onChange={e => setForm(p => ({ ...p, cost_impact: parseFloat(e.target.value) }))} />
-            </div>
-            <div className="space-y-1">
-              <Label>تاريخ التلف</Label>
-              <Input type="date"
-                value={form.damage_date?.slice(0, 10) ?? ""}
-                onChange={e => setForm(p => ({ ...p, damage_date: new Date(e.target.value).toISOString() }))} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDialog(false)}>إلغاء</Button>
-            <Button onClick={handleCreate} disabled={saving || !form.product_id || !form.reason || !form.quantity}>
-              {saving ? "جاري الحفظ..." : "حفظ"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DamagedForm
+        open={showDialog}
+        onOpenChange={setShowDialog}
+        products={products}
+        onSave={handleCreate}
+        saving={saving}
+      />
     </>
   );
 }

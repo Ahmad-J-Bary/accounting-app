@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { PageHeader } from "@/components/erp/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,114 +9,133 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { paymentService } from "@/services/paymentService";
 import { customerService } from "@/services/customerService";
 import { supplierService } from "@/services/supplierService";
-import type { Payment, CreatePaymentRequest, CustomerDto, SupplierDto, PaymentType } from "@erp/shared-types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+import type { Payment, CreatePaymentRequest, CustomerDto, SupplierDto } from "@erp/shared-types";
 import { toast } from "sonner";
 
-const PAYMENT_TYPE_LABELS: Record<string, string> = {
-  Receipt: "قبض من عميل",
-  SupplierPayment: "دفع لمورد",
-  CashIn: "إيداع نقدي",
-  CashOut: "سحب نقدي",
-  Other: "أخرى",
-};
+// Refactored Components & Hooks
+import { DataTable, Column } from "@/components/erp/shared/DataTable";
+import { useDataTable } from "@/hooks/useDataTable";
+import { PaymentForm, PAYMENT_TYPE_LABELS } from "@/components/erp/payments/PaymentForm";
 
 export default function Payments() {
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const {
+    filtered: payments,
+    loading: paymentsLoading,
+    search,
+    setSearch,
+    refresh,
+  } = useDataTable<Payment>({
+    fetchData: () => paymentService.listPayments(),
+    searchFields: ["customer_name", "supplier_name", "reference"],
+    errorLabel: "فشل تحميل المدفوعات",
+  });
+
   const [customers, setCustomers] = useState<CustomerDto[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [loadingExtras, setLoadingExtras] = useState(true);
   const [typeFilter, setTypeFilter] = useState("all");
   const [showDialog, setShowDialog] = useState(false);
-  const [form, setForm] = useState<Partial<CreatePaymentRequest>>({
-    payment_type: "Receipt",
-    amount: 0,
-    payment_date: new Date().toISOString(),
-  });
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const load = async () => {
-    setLoading(true);
+  const loadExtras = useCallback(async () => {
     try {
-      const [pData, cData, sData] = await Promise.all([
-        paymentService.listPayments(),
+      setLoadingExtras(true);
+      const [cData, sData] = await Promise.all([
         customerService.listCustomers(),
         supplierService.listSuppliers()
       ]);
-      setPayments(pData);
       setCustomers(cData);
       setSuppliers(sData);
-    } catch (e) { 
-      setError(String(e)); 
-      toast.error("فشل تحميل البيانات");
+    } catch (e) {
+      toast.error("فشل تحميل العملاء والموردين");
+    } finally {
+      setLoadingExtras(false);
     }
-    finally { setLoading(false); }
-  };
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    loadExtras();
+  }, [loadExtras]);
 
-  const filtered = payments.filter(p => {
-    const matchType = typeFilter === "all" || p.payment_type === typeFilter;
-    const matchSearch =
-      (p.customer_name ?? "").toLowerCase().includes(search.toLowerCase()) ||
-      (p.supplier_name ?? "").toLowerCase().includes(search.toLowerCase()) ||
-      (p.reference ?? "").toLowerCase().includes(search.toLowerCase());
-    return matchType && matchSearch;
-  });
+  const filtered = useMemo(() => {
+    return payments.filter(p => {
+      return typeFilter === "all" || p.payment_type === typeFilter;
+    });
+  }, [payments, typeFilter]);
 
-  const totalIn = payments
+  const totalIn = useMemo(() => payments
     .filter(p => ["Receipt", "CashIn"].includes(p.payment_type))
-    .reduce((s, p) => s + parseFloat(p.amount), 0);
-  const totalOut = payments
+    .reduce((s, p) => s + parseFloat(p.amount), 0), [payments]);
+    
+  const totalOut = useMemo(() => payments
     .filter(p => ["SupplierPayment", "CashOut"].includes(p.payment_type))
-    .reduce((s, p) => s + parseFloat(p.amount), 0);
+    .reduce((s, p) => s + parseFloat(p.amount), 0), [payments]);
 
-  const handleCreate = async () => {
-    if (!form.payment_type || !form.amount || !form.payment_date) {
-      toast.error("يرجى إكمال البيانات المطلوبة");
-      return;
-    }
-
-    if (form.payment_type === "Receipt" && !form.customer_id) {
+  const handleCreate = async (payload: CreatePaymentRequest) => {
+    if (payload.payment_type === "Receipt" && !payload.customer_id) {
       toast.error("يرجى اختيار العميل لعملية القبض");
       return;
     }
-
-    if (form.payment_type === "SupplierPayment" && !form.supplier_id) {
+    if (payload.payment_type === "SupplierPayment" && !payload.supplier_id) {
       toast.error("يرجى اختيار المورد لعملية الدفع");
       return;
     }
 
     setSaving(true);
-    const request: CreatePaymentRequest = {
-      payment_type: form.payment_type as PaymentType,
-      amount: form.amount || 0,
-      payment_date: form.payment_date || new Date().toISOString(),
-      customer_id: form.customer_id || undefined,
-      supplier_id: form.supplier_id || undefined,
-      reference: form.reference || undefined,
-      notes: form.notes || undefined,
-    };
-
     try {
-      await paymentService.createPayment(request);
+      await paymentService.createPayment(payload);
       setShowDialog(false);
-      setForm({
-        payment_type: "Receipt",
-        amount: 0,
-        payment_date: new Date().toISOString(),
-      });
-      await load();
+      refresh(true);
       toast.success("تم تسجيل الحركة بنجاح");
     } catch (e) { 
-      setError(String(e)); 
-      toast.error("فشل حفظ الحركة");
+      toast.error("فشل حفظ الحركة: " + e);
+    } finally { 
+      setSaving(false); 
     }
-    finally { setSaving(false); }
   };
+
+  const columns = useMemo<Column<Payment>[]>(() => [
+    { 
+      header: "التاريخ", 
+      accessor: (p) => formatDate(p.payment_date),
+      className: "tabular-nums"
+    },
+    { 
+      header: "النوع", 
+      accessor: (p) => {
+        const isIn = ["Receipt", "CashIn"].includes(p.payment_type);
+        return (
+          <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${isIn ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+            {isIn ? <ArrowDownCircle className="w-3 h-3" /> : <ArrowUpCircle className="w-3 h-3" />}
+            {PAYMENT_TYPE_LABELS[p.payment_type]}
+          </span>
+        );
+      }
+    },
+    { 
+      header: "الطرف", 
+      accessor: (p) => p.customer_name ?? p.supplier_name ?? "—"
+    },
+    { 
+      header: "المرجع", 
+      accessor: (p) => p.reference ?? "—",
+      className: "text-muted-foreground text-xs"
+    },
+    { 
+      header: "المبلغ", 
+      accessor: (p) => {
+        const isIn = ["Receipt", "CashIn"].includes(p.payment_type);
+        return (
+          <span className={`tabular-nums font-medium ${isIn ? "text-green-600" : "text-red-600"}`}>
+            {isIn ? "+" : "-"}{formatCurrency(parseFloat(p.amount))}
+          </span>
+        );
+      },
+      align: "left"
+    }
+  ], []);
+
+  const isLoading = paymentsLoading || loadingExtras;
 
   return (
     <>
@@ -126,8 +145,8 @@ export default function Payments() {
         breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "المدفوعات" }]}
         actions={
           <>
-            <Button variant="outline" onClick={load} disabled={loading}>
-              <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />تحديث
+            <Button variant="outline" onClick={() => refresh()} disabled={isLoading}>
+              <RefreshCw className={`w-4 h-4 ml-2 ${isLoading ? "animate-spin" : ""}`} />تحديث
             </Button>
             <Button onClick={() => setShowDialog(true)}>
               <Plus className="w-4 h-4 ml-2" />حركة جديدة
@@ -135,12 +154,6 @@ export default function Payments() {
           </>
         }
       />
-
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
-          {error} <button className="mr-2 underline" onClick={() => setError(null)}>إغلاق</button>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <Card className="p-4">
@@ -165,7 +178,7 @@ export default function Payments() {
         <div className="flex items-center gap-3 mb-4 flex-wrap">
           <div className="relative flex-1 min-w-[220px]">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="بحث..." className="pr-10" value={search} onChange={e => setSearch(e.target.value)} />
+            <Input placeholder="بحث بالاسم أو المرجع..." className="pr-10" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
@@ -178,120 +191,22 @@ export default function Payments() {
           </Select>
         </div>
 
-        {loading ? (
-          <div className="text-center py-12 text-muted-foreground">جاري التحميل...</div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">لا توجد حركات</div>
-        ) : (
-          <div className="border border-border rounded-md overflow-x-auto">
-            <table className="w-full text-sm min-w-[700px]">
-              <thead className="bg-slate-50 border-b border-border">
-                <tr>
-                  <th className="text-right px-4 py-3 font-medium">التاريخ</th>
-                  <th className="text-right px-4 py-3 font-medium">النوع</th>
-                  <th className="text-right px-4 py-3 font-medium">الطرف</th>
-                  <th className="text-right px-4 py-3 font-medium">المرجع</th>
-                  <th className="text-left px-4 py-3 font-medium">المبلغ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(p => {
-                  const isIn = ["Receipt", "CashIn"].includes(p.payment_type);
-                  return (
-                    <tr key={p.id} className="border-b border-border last:border-0 hover:bg-slate-50">
-                      <td className="px-4 py-3">{formatDate(p.payment_date)}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${isIn ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                          {isIn ? <ArrowDownCircle className="w-3 h-3" /> : <ArrowUpCircle className="w-3 h-3" />}
-                          {PAYMENT_TYPE_LABELS[p.payment_type]}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">{p.customer_name ?? p.supplier_name ?? "—"}</td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs">{p.reference ?? "—"}</td>
-                      <td className={`px-4 py-3 text-left tabular-nums font-medium ${isIn ? "text-green-600" : "text-red-600"}`}>
-                        {isIn ? "+" : "-"}{formatCurrency(parseFloat(p.amount))}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <DataTable
+          data={filtered}
+          columns={columns}
+          loading={isLoading}
+          emptyMessage={search || typeFilter !== "all" ? "لا توجد حركات تطابق الفلتر" : "لا توجد حركات نقدية"}
+        />
       </Card>
 
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-md" dir="rtl">
-          <DialogHeader>
-            <DialogTitle>إضافة حركة نقدية</DialogTitle>
-            <DialogDescription>تسجيل حركة قبض أو صرف نقدية جديدة في النظام.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1">
-              <Label>نوع الحركة</Label>
-              <Select value={form.payment_type} onValueChange={v => setForm(p => ({ ...p, payment_type: v as CreatePaymentRequest['payment_type'], customer_id: undefined, supplier_id: undefined }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(PAYMENT_TYPE_LABELS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {form.payment_type === "Receipt" && (
-              <div className="space-y-1">
-                <Label>العميل *</Label>
-                <Select value={form.customer_id} onValueChange={val => setForm(p => ({ ...p, customer_id: val }))}>
-                  <SelectTrigger><SelectValue placeholder="اختر العميل" /></SelectTrigger>
-                  <SelectContent>
-                    {customers.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {form.payment_type === "SupplierPayment" && (
-              <div className="space-y-1">
-                <Label>المورد *</Label>
-                <Select value={form.supplier_id} onValueChange={val => setForm(p => ({ ...p, supplier_id: val }))}>
-                  <SelectTrigger><SelectValue placeholder="اختر المورد" /></SelectTrigger>
-                  <SelectContent>
-                    {suppliers.map(s => (
-                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div className="space-y-1">
-              <Label>المبلغ *</Label>
-              <Input type="number" min="0" step="0.01"
-                value={form.amount ?? ""}
-                onChange={e => setForm(p => ({ ...p, amount: parseFloat(e.target.value) }))} />
-            </div>
-            <div className="space-y-1">
-              <Label>التاريخ</Label>
-              <Input type="date"
-                value={form.payment_date?.slice(0, 10) ?? ""}
-                onChange={e => setForm(p => ({ ...p, payment_date: new Date(e.target.value).toISOString() }))} />
-            </div>
-            <div className="space-y-1">
-              <Label>المرجع</Label>
-              <Input value={form.reference ?? ""} onChange={e => setForm(p => ({ ...p, reference: e.target.value }))} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDialog(false)}>إلغاء</Button>
-            <Button onClick={handleCreate} disabled={saving || !form.amount}>
-              {saving ? "جاري الحفظ..." : "حفظ"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PaymentForm
+        open={showDialog}
+        onOpenChange={setShowDialog}
+        customers={customers}
+        suppliers={suppliers}
+        onSave={handleCreate}
+        saving={saving}
+      />
     </>
   );
 }

@@ -20,6 +20,7 @@ import { DataTable, Column } from "@/components/erp/shared/DataTable";
 import { useDataTable } from "@/hooks/useDataTable";
 import { CustomerDetails } from "@/components/erp/customers/CustomerDetails";
 import { CustomerForm } from "@/components/erp/customers/CustomerForm";
+import { StatCard } from "@/components/erp/shared/StatCard";
 
 export default function Customers() {
   const {
@@ -193,14 +194,5 @@ export default function Customers() {
         saving={saving}
       />
     </>
-  );
-}
-
-function StatCard({ label, value, color }: { label: string; value: string | number; color?: string }) {
-  return (
-    <Card className="p-4">
-      <div className="text-sm text-muted-foreground">{label}</div>
-      <div className={`text-2xl font-bold tabular-nums mt-1 ${color || ""}`}>{value}</div>
-    </Card>
   );
 }

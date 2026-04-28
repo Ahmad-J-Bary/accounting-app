@@ -18,6 +18,7 @@ import { DataTable, Column } from "@/components/erp/shared/DataTable";
 import { useDataTable } from "@/hooks/useDataTable";
 import { SupplierDetails } from "@/components/erp/suppliers/SupplierDetails";
 import { SupplierForm } from "@/components/erp/suppliers/SupplierForm";
+import { StatCard } from "@/components/erp/shared/StatCard";
 
 export default function Suppliers() {
   // Use our new generic hook for data fetching and searching
@@ -199,14 +200,5 @@ export default function Suppliers() {
         saving={saving}
       />
     </>
-  );
-}
-
-function StatCard({ label, value, color }: { label: string; value: string | number; color?: string }) {
-  return (
-    <Card className="p-4">
-      <div className="text-sm text-muted-foreground">{label}</div>
-      <div className={`text-2xl font-bold tabular-nums mt-1 ${color || ""}`}>{value}</div>
-    </Card>
   );
 }

@@ -61,6 +61,10 @@ export function SupplierForm({ open, onOpenChange, supplier, accounts, onSave, s
         address: form.address || null,
         notes: form.notes || null,
         account_id: supplier.account_id,
+        opening_balance: openingBalance,
+        debit,
+        credit,
+        currency,
         is_active: supplier.is_active,
       };
       onSave(payload);
@@ -84,14 +88,14 @@ export function SupplierForm({ open, onOpenChange, supplier, accounts, onSave, s
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl" dir="rtl">
+      <DialogContent className="sm:max-w-2xl overflow-y-auto max-h-[90vh]" dir="rtl">
         <form onSubmit={handleSubmit}>
           <DialogHeader className="text-right">
             <DialogTitle>{supplier ? "تعديل بيانات مورد" : "إضافة مورد جديد"}</DialogTitle>
-            <DialogDescription>أدخل معلومات المورد الأساسية.</DialogDescription>
+            <DialogDescription>أدخل معلومات المورد الأساسية والمالية.</DialogDescription>
           </DialogHeader>
           
-          <div className="grid grid-cols-2 gap-4 py-4 text-right">
+          <div className="grid grid-cols-2 gap-4 py-6 text-right">
             <div className="space-y-2 col-span-2">
               <Label>اسم المورد *</Label>
               <Input required value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="اسم الشركة أو المورد" />
@@ -105,24 +109,29 @@ export function SupplierForm({ open, onOpenChange, supplier, accounts, onSave, s
               <Input value={form.address} onChange={e => setForm({...form, address: e.target.value})} placeholder="المدينة، الشارع..." />
             </div>
             
-            {!supplier && (
-              <>
-                <div className="space-y-2">
-                  <Label>رصيد افتتاحي</Label>
-                  <Input type="number" step="any" value={openingBalance} onChange={e => setOpeningBalance(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>العملة</Label>
-                  <Select value={currency} onValueChange={setCurrency}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="SYP">ليرة سورية (SYP)</SelectItem>
-                      <SelectItem value="USD">دولار أمريكي (USD)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </>
-            )}
+            <div className="space-y-2">
+              <Label>رصيد افتتاحي</Label>
+              <Input type="number" step="any" value={openingBalance} onChange={e => setOpeningBalance(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>العملة</Label>
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SYP">ليرة سورية (SYP)</SelectItem>
+                  <SelectItem value="USD">دولار أمريكي (USD)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>مدين (حالي)</Label>
+              <Input type="number" step="any" value={debit} onChange={e => setDebit(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>دائن (حالي)</Label>
+              <Input type="number" step="any" value={credit} onChange={e => setCredit(e.target.value)} />
+            </div>
 
             <div className="space-y-2 col-span-2">
               <Label>ملاحظات</Label>

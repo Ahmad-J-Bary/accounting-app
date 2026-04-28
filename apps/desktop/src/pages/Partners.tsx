@@ -15,6 +15,7 @@ import { partnerService, type PartnerDto, type PartnerRequest } from "@/services
 import { DataTable, Column } from "@/components/erp/shared/DataTable";
 import { useDataTable } from "@/hooks/useDataTable";
 import { PartnerForm } from "@/components/erp/partners/PartnerForm";
+import { StatCard } from "@/components/erp/shared/StatCard";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
@@ -186,26 +187,6 @@ export default function Partners() {
         saving={saving}
       />
     </div>
-  );
-}
-
-interface StatCardProps {
-  label: string;
-  value: string | number;
-  icon: React.ReactNode;
-  color: string;
-  textColor: string;
-}
-
-function StatCard({ label, value, icon, color, textColor }: StatCardProps) {
-  return (
-    <Card className={`p-4 flex items-center gap-4 border-r-4 ${color} shadow-sm`}>
-      <div className={`p-3 rounded-full ${textColor.replace('text-', 'bg-').replace('600', '100').replace('primary', 'primary/10')}`}>{icon}</div>
-      <div>
-        <div className="text-xs text-muted-foreground">{label}</div>
-        <div className={`text-xl font-bold tabular-nums ${textColor}`}>{value}</div>
-      </div>
-    </Card>
   );
 }
 
