@@ -2,15 +2,17 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, Shuffle } from "lucide-react";
-import type { CategoryDto } from "@erp/shared-types";
+import { AlertCircle, Shuffle, Package, Hash, Barcode, Layers, Wand2 } from "lucide-react";
+import type { CategoryDto, MaterialDto } from "@erp/shared-types";
 import { categoryService } from "@/services/categoryService";
+import { materialService } from "@/services/materialService";
+import { materialCodeService } from "@/services/materialCodeService";
 import { TreeSidebar } from "../../components/erp/tree-management/TreeSidebar";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
 interface CategoryDetailsSidebarProps {
-  selected: CategoryDto | null;
+  selected: any | null; // Can be CategoryTreeNode (which might be a material)
   allCategories: CategoryDto[];
   parentName?: string | null;
   onSaved: () => void;
@@ -32,19 +34,29 @@ export function CategoryDetailsSidebar({
   canDelete = true,
   isVirtualRootSelected = false,
 }: CategoryDetailsSidebarProps) {
-  const navigate = useNavigate();
-  const [formMode, setFormMode] = useState<"create" | "edit" | null>(null);
+  const [formMode, setFormMode] = useState<"create_cat" | "edit_cat" | "create_mat" | "edit_mat" | null>(null);
+  
+  // Shared fields
   const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // Category fields
   const [parentId, setParentId] = useState<string | null>(null);
   const [codePrefix, setCodePrefix] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const isUncategorized = selected?.name === DEFAULT_CATEGORY_NAME;
-  const isSubCategory = !!selected?.parent_id;
-  const isRoot = selected && !selected.parent_id && !isUncategorized;
+  // Material fields
+  const [barcode, setBarcode] = useState("");
+  const [code, setCode] = useState("");
+  const [minimumStock, setMinimumStock] = useState("0");
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
 
-  // Find the prefix of the "General" sub-category for the current root
+  const isMaterial = !!selected?.isMaterial;
+  const materialData = selected?.materialData as MaterialDto | undefined;
+  const isUncategorized = selected?.name === DEFAULT_CATEGORY_NAME && !isMaterial;
+  const isSubCategory = !!selected?.parent_id && !isMaterial;
+  const isRoot = selected && !selected.parent_id && !isUncategorized && !isMaterial;
+
   const getGeneralSubPrefix = useCallback((rootId: string) => {
     const generalSub = allCategories.find(c => c.parent_id === rootId && c.name.endsWith("عام"));
     return generalSub?.code_prefix || "";
@@ -54,40 +66,61 @@ export function CategoryDetailsSidebar({
     setFormMode(null);
     setError(null);
     if (selected) {
-      setName(selected.name);
-      setParentId(selected.parent_id || null);
-      
-      if (isUncategorized && !selected.code_prefix) {
-        setCodePrefix("غ");
-      } else if (isRoot) {
-        // If it's a root, show the prefix of its general sub-category
-        setCodePrefix(getGeneralSubPrefix(selected.id));
+      if (isMaterial && materialData) {
+        setName(materialData.name);
+        setBarcode(materialData.barcode || "");
+        setCode(materialData.code || "");
+        setMinimumStock(materialData.minimum_stock || "0");
       } else {
-        setCodePrefix(selected.code_prefix || "");
+        setName(selected.name);
+        setParentId(selected.parent_id || null);
+        if (isUncategorized && !selected.code_prefix) setCodePrefix("غ");
+        else if (isRoot) setCodePrefix(getGeneralSubPrefix(selected.id));
+        else setCodePrefix(selected.code_prefix || "");
       }
     } else {
       setName("");
       setParentId(null);
       setCodePrefix("");
+      setBarcode("");
+      setCode("");
+      setMinimumStock("0");
     }
-  }, [selected, isVirtualRootSelected, isRoot, getGeneralSubPrefix]);
+  }, [selected, isVirtualRootSelected, isRoot, getGeneralSubPrefix, isMaterial, materialData, isUncategorized]);
 
   const suggestPrefix = useCallback(() => {
     const chars = "أبتثجحخدذرزسشصضطظعغفقكلمنهوي";
     const existingPrefixes = new Set(allCategories.map(c => c.code_prefix).filter(Boolean));
-    for (const char of chars) {
-      if (!existingPrefixes.has(char)) return char;
-    }
+    for (const char of chars) { if (!existingPrefixes.has(char)) return char; }
     return "X"; 
   }, [allCategories]);
 
+  const handleGenerateAutoCode = async () => {
+    const categoryId = selected?.id;
+    if (!categoryId || isMaterial) return;
+    try {
+      setIsGeneratingCode(true);
+      const generated = await materialCodeService.generateCode(categoryId);
+      setCode(generated);
+      toast.success("تم توليد الكود");
+    } catch (err) {
+      toast.error("فشل التوليد: " + err);
+    } finally {
+      setIsGeneratingCode(false);
+    }
+  };
+
   const openCreate = () => {
     if (isSubCategory || isUncategorized) {
-       // Navigate to New Material instead
-       navigate(`/materials?categoryId=${selected?.id}`);
-       return;
+      setFormMode("create_mat");
+      setError(null);
+      setName("");
+      setBarcode("");
+      setCode("");
+      setMinimumStock("0");
+      return;
     }
-    setFormMode("create");
+    setFormMode("create_cat");
     setError(null);
     setName("");
     setParentId(selected?.id || null);
@@ -96,79 +129,80 @@ export function CategoryDetailsSidebar({
 
   const openEdit = () => {
     if (!selected || !canEdit) return;
-    setFormMode("edit");
-    setError(null);
-    setName(selected.name);
-    setParentId(selected.parent_id || null);
-    if (isRoot) {
-      setCodePrefix(getGeneralSubPrefix(selected.id));
+    if (isMaterial) {
+      setFormMode("edit_mat");
     } else {
-      setCodePrefix(selected.code_prefix || "");
+      setFormMode("edit_cat");
     }
+    setError(null);
   };
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      setError("الاسم مطلوب");
-      return;
-    }
-
-    if (codePrefix.trim().length === 0 && (formMode === "create" || isUncategorized)) {
-       setError("بادئة الكود مطلوبة.");
-       return;
-    }
-
-    if (codePrefix.trim()) {
-      const existing = allCategories.find(c => 
-        c.code_prefix?.toUpperCase() === codePrefix.trim().toUpperCase() && 
-        c.id !== (isRoot ? allCategories.find(sub => sub.parent_id === selected?.id && sub.name.endsWith("عام"))?.id : selected?.id)
-      );
-      if (existing) {
-        setError(`البادئة "${codePrefix}" مستخدمة بالفعل في تصنيف "${existing.name}"`);
-        return;
-      }
-    }
-
+    if (!name.trim()) { setError("الاسم مطلوب"); return; }
     setSaving(true);
     try {
-      if (formMode === "edit" && selected) {
-        if (isRoot) {
-          // Update root name and its general sub prefix
-          await categoryService.updateCategory({
-            id: selected.id,
+      if (formMode === "create_mat" || formMode === "edit_mat") {
+        let finalCode = code.trim();
+        // Zero-waste generation if empty on save
+        if (formMode === "create_mat" && !finalCode && selected?.id) {
+          finalCode = await materialCodeService.generateCode(selected.id);
+        }
+
+        if (formMode === "edit_mat" && materialData) {
+          await materialService.updateMaterial({
+            ...materialData,
             name: name.trim(),
-            parent_id: undefined,
-            is_active: selected.is_active,
-            code_prefix: null, // Root never has a prefix
+            barcode: barcode.trim(),
+            code: finalCode,
+            minimum_stock: minimumStock,
           });
-          
-          const generalSub = allCategories.find(c => c.parent_id === selected.id && c.name.endsWith("عام"));
-          if (generalSub) {
-            await categoryService.updateCategory({
-              id: generalSub.id,
-              name: `${name.trim()} عام`,
-              parent_id: selected.id,
-              is_active: generalSub.is_active,
-              code_prefix: codePrefix.trim().toUpperCase(),
+          toast.success("تم تحديث المادة");
+        } else {
+          await materialService.createMaterial({
+            name: name.trim(),
+            barcode: barcode.trim(),
+            code: finalCode,
+            minimum_stock: minimumStock,
+            category_ids: [selected.id],
+          });
+          toast.success("تمت إضافة المادة");
+        }
+      } else {
+        // Category Save Logic
+        if (codePrefix.trim().length === 0 && (formMode === "create_cat" || isUncategorized)) {
+          setError("بادئة الكود مطلوبة."); setSaving(false); return;
+        }
+        if (formMode === "edit_cat" && selected) {
+          if (isRoot) {
+            await categoryService.updateCategory({ 
+              id: selected.id, 
+              name: name.trim(), 
+              is_active: selected.is_active,
+              code_prefix: null 
+            });
+            const generalSub = allCategories.find(c => c.parent_id === selected.id && c.name.endsWith("عام"));
+            if (generalSub) {
+              await categoryService.updateCategory({ 
+                id: generalSub.id, 
+                name: `${name.trim()} عام`, 
+                is_active: generalSub.is_active,
+                code_prefix: codePrefix.trim().toUpperCase() 
+              });
+            }
+          } else {
+            await categoryService.updateCategory({ 
+              id: selected.id, 
+              name: name.trim(), 
+              parent_id: parentId || undefined, 
+              is_active: selected.is_active,
+              code_prefix: codePrefix.trim().toUpperCase() || null 
             });
           }
+          toast.success("تم تحديث التصنيف");
         } else {
-          await categoryService.updateCategory({
-            id: selected.id,
-            name: name.trim(),
-            parent_id: parentId || undefined,
-            is_active: selected.is_active,
-            code_prefix: codePrefix.trim().toUpperCase() || null,
-          });
+          await categoryService.createCategory({ name: name.trim(), parent_id: parentId || undefined, code_prefix: codePrefix.trim().toUpperCase() || null });
+          toast.success("تمت إضافة التصنيف");
         }
-        toast.success("تم التحديث بنجاح");
-      } else {
-        await categoryService.createCategory({
-          name: name.trim(),
-          parent_id: parentId || undefined,
-          code_prefix: codePrefix.trim().toUpperCase() || null,
-        });
-        toast.success("تمت الإضافة بنجاح");
       }
       setFormMode(null);
       onSaved();
@@ -180,109 +214,104 @@ export function CategoryDetailsSidebar({
   };
 
   const detailsView = (
-    <>
+    <div className="grid gap-3">
       {!selected ? (
-        isVirtualRootSelected ? (
-          <div className="grid gap-3">
-            <div className="rounded-md border bg-primary/5 p-3">
-              <p className="text-[11px] text-primary mb-1">اسم العنصر</p>
-              <p className="font-semibold text-primary">شجرة التصنيفات (الجذر)</p>
-            </div>
-            <p className="text-[11px] text-slate-500">يمكنك إضافة تصنيفات رئيسية جديدة من هنا.</p>
+        <p className="text-sm text-slate-500">{isVirtualRootSelected ? "شجرة التصنيفات (الجذر)" : "اختر عنصراً من الشجرة."}</p>
+      ) : isMaterial ? (
+        <>
+          <div className="rounded-md border bg-slate-50 p-3">
+            <p className="text-[11px] text-slate-500 mb-1">اسم المادة</p>
+            <p className="font-semibold text-slate-800">{materialData?.name}</p>
           </div>
-        ) : (
-          <p className="text-sm text-slate-500">اختر تصنيفاً من الشجرة لعرض التفاصيل.</p>
-        )
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-md border bg-slate-50 p-3">
+              <p className="text-[11px] text-slate-500 mb-1">الكود</p>
+              <p className="font-mono text-xs font-bold">{materialData?.code}</p>
+            </div>
+            <div className="rounded-md border bg-slate-50 p-3">
+              <p className="text-[11px] text-slate-500 mb-1">الباركود</p>
+              <p className="font-mono text-xs">{materialData?.barcode || "—"}</p>
+            </div>
+          </div>
+          <div className="rounded-md border bg-slate-50 p-3">
+            <p className="text-[11px] text-slate-500 mb-1">الحد الأدنى للمخزون</p>
+            <p className="font-bold">{materialData?.minimum_stock}</p>
+          </div>
+        </>
       ) : (
-        <div className="grid gap-3">
+        <>
           <div className="rounded-md border bg-slate-50 p-3">
             <p className="text-[11px] text-slate-500 mb-1">اسم التصنيف</p>
             <p className="font-semibold text-slate-800">{selected.name}</p>
           </div>
           {codePrefix && (
             <div className="rounded-md border bg-slate-50 p-3">
-              <p className="text-[11px] text-slate-500 mb-1">{isRoot ? "بادئة التصنيف الفرعي العام" : "بادئة الكود"}</p>
-              <p className="font-semibold tabular-nums text-slate-800">{codePrefix}</p>
+              <p className="text-[11px] text-slate-500 mb-1">البادئة</p>
+              <p className="font-semibold tabular-nums">{codePrefix}</p>
             </div>
           )}
-          <div className="rounded-md border bg-slate-50 p-3">
-            <p className="text-[11px] text-slate-500 mb-1">فرعي من</p>
-            <p className="font-semibold text-slate-800">
-              {parentName && parentName.trim().length > 0 ? parentName : "تصنيف رئيسي"}
-            </p>
-          </div>
-        </div>
-      )}
-    </>
-  );
-
-  const formPanel = (
-    <div className="space-y-4">
-      {error && (
-        <div className="bg-red-50 text-red-700 border border-red-200 rounded-md px-3 py-2 text-sm flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          {error}
-        </div>
-      )}
-
-      <div className="space-y-1">
-        <Label>اسم التصنيف</Label>
-        <Input 
-          value={name} 
-          onChange={(e) => setName(e.target.value)} 
-          placeholder="مثال: ساعات" 
-          className="bg-white" 
-          disabled={isUncategorized && formMode === "edit"}
-        />
-      </div>
-
-      <div className="space-y-1">
-        <Label>{!parentId || isRoot ? "بادئة التصنيف الفرعي العام" : "بادئة الكود"}</Label>
-        <div className="flex gap-2">
-          <Input 
-            value={codePrefix} 
-            onChange={(e) => setCodePrefix(e.target.value.slice(0, 1).toUpperCase())} 
-            placeholder="A" 
-            className="bg-white font-mono text-center"
-            maxLength={1}
-          />
-          <Button variant="outline" size="icon" className="flex-shrink-0" onClick={() => setCodePrefix(suggestPrefix())} title="اقتراح بادئة">
-            <Shuffle className="w-4 h-4" />
-          </Button>
-        </div>
-        <p className="text-[10px] text-slate-400">
-          {!parentId || isRoot
-            ? "هذه البادئة ستخصص للتصنيف الفرعي الافتراضي المرتبط بهذا التصنيف الرئيسي."
-            : "تستخدم لتوليد أكواد المواد تلقائياً."}
-        </p>
-      </div>
-
-      <div className="space-y-1">
-        <Label>فرعي من</Label>
-        <div className="rounded-md border border-input bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-          {parentId === null 
-            ? "-- تصنيف رئيسي (مستوى أول) --" 
-            : (() => {
-                const parent = allCategories.find(c => c.id === parentId);
-                return parent ? parent.name : (parentName || "--");
-              })()}
-        </div>
-      </div>
-
-      {formMode === "create" && !parentId && name && (
-        <div className="text-[10px] text-blue-600 bg-blue-50 rounded-md p-2 flex items-center gap-2">
-          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-          سيُنشأ تلقائياً: «{name} عام» بالبادئة المحددة أعلاه.
-        </div>
+        </>
       )}
     </div>
   );
 
+  const formPanel = (
+    <div className="space-y-4">
+      {error && <div className="bg-red-50 text-red-700 border border-red-200 rounded-md px-3 py-2 text-xs flex items-center gap-2"><AlertCircle className="w-4 h-4 flex-shrink-0" />{error}</div>}
+      
+      {(formMode === "create_mat" || formMode === "edit_mat") ? (
+        <>
+          <div className="space-y-1">
+            <Label>اسم المادة <span className="text-red-500">*</span></Label>
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder="اسم المادة" className="bg-white" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label>الكود</Label>
+              <div className="relative group">
+                <Input value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="توليد تلقائي" className="bg-white font-mono text-xs pr-10" dir="ltr" />
+                <Button size="icon" variant="ghost" onClick={handleGenerateAutoCode} disabled={isGeneratingCode} className="absolute right-1 top-1 h-8 w-8 text-blue-500 hover:bg-blue-50"><Wand2 className={cn("w-4 h-4", isGeneratingCode && "animate-spin")} /></Button>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>الباركود</Label>
+              <Input value={barcode} onChange={e => setBarcode(e.target.value)} placeholder="000000" className="bg-white font-mono text-xs" dir="ltr" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label>الحد الأدنى للمخزون</Label>
+            <Input type="number" value={minimumStock} onChange={e => setMinimumStock(e.target.value)} className="bg-white" />
+          </div>
+          <div className="bg-slate-50 rounded-md p-3 border border-slate-100 flex items-center gap-3">
+            <Layers className="w-4 h-4 text-emerald-500" />
+            <div>
+              <p className="text-[10px] text-slate-400 font-bold uppercase">تصنيف المادة</p>
+              <p className="text-xs font-bold text-slate-700">{selected?.name}</p>
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="space-y-1">
+            <Label>اسم التصنيف</Label>
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder="مثال: ساعات" className="bg-white" disabled={isUncategorized && formMode === "edit_cat"} />
+          </div>
+          <div className="space-y-1">
+            <Label>{!parentId || isRoot ? "بادئة التصنيف الفرعي العام" : "بادئة الكود"}</Label>
+            <div className="flex gap-2">
+              <Input value={codePrefix} onChange={e => setCodePrefix(e.target.value.slice(0, 1).toUpperCase())} placeholder="A" className="bg-white font-mono text-center" maxLength={1} />
+              <Button variant="outline" size="icon" onClick={() => setCodePrefix(suggestPrefix())} title="اقتراح بادئة"><Shuffle className="w-4 h-4" /></Button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
   return (
     <TreeSidebar
-      title={formMode === "create" ? "إضافة تصنيف" : formMode === "edit" ? "تعديل تصنيف" : "تفاصيل التصنيف"}
+      title={formMode?.startsWith("create") ? "إضافة" : formMode?.startsWith("edit") ? "تعديل" : "التفاصيل"}
       selected={selected}
-      formMode={formMode}
+      formMode={formMode?.startsWith("create") ? "create" : formMode?.startsWith("edit") ? "edit" : null}
       onOpenCreate={openCreate}
       onOpenEdit={openEdit}
       onDelete={onDelete}
@@ -290,10 +319,10 @@ export function CategoryDetailsSidebar({
       onSave={handleSave}
       saving={saving}
       canEdit={canEdit}
-      canDelete={canDelete && !isUncategorized && (selected?.material_count || 0) === 0}
+      canDelete={canDelete && !isUncategorized && (selected?.material_count || 0) === 0 && !isMaterial}
       formPanel={formPanel}
-      disableNew={isUncategorized || isSubCategory}
-      newButtonLabel={isUncategorized || isSubCategory ? "مادة جديدة" : undefined}
+      disableNew={false}
+      newButtonLabel={isSubCategory || isUncategorized ? "مادة جديدة" : "تصنيف جديد"}
     >
       {detailsView}
     </TreeSidebar>

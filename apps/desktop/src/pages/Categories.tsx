@@ -17,6 +17,8 @@ const VIRTUAL_ROOT_ID = "__categories_root__";
 
 interface CategoryTreeNode extends CategoryDto {
   children: CategoryTreeNode[];
+  isMaterial?: boolean;
+  materialData?: MaterialDto;
 }
 
 function buildTree(cats: CategoryDto[], materials: MaterialDto[]): CategoryTreeNode {
@@ -39,15 +41,14 @@ function buildTree(cats: CategoryDto[], materials: MaterialDto[]): CategoryTreeN
           node.children.push({
             id: `mat-${m.id}`,
             name: m.name,
-            code_prefix: m.code, // Hack to pass code through existing prop or handle in renderer
+            code_prefix: m.code, 
             is_hybrid: false,
-            is_active: true,
+            is_active: m.is_active,
             material_count: 0,
             parent_id: uncategorized.id,
-            created_at: "",
-            updated_at: "",
             children: [],
-            isMaterial: true // Custom flag for renderer
+            isMaterial: true,
+            materialData: m 
           } as any);
         }
       }
@@ -61,13 +62,12 @@ function buildTree(cats: CategoryDto[], materials: MaterialDto[]): CategoryTreeN
             name: m.name,
             code_prefix: m.code,
             is_hybrid: false,
-            is_active: true,
+            is_active: m.is_active,
             material_count: 0,
             parent_id: catId,
-            created_at: "",
-            updated_at: "",
             children: [],
-            isMaterial: true
+            isMaterial: true,
+            materialData: m 
           } as any);
         }
       });
@@ -165,23 +165,39 @@ export default function Categories() {
 
   const handleDelete = async () => {
     if (!selected || selected.id === VIRTUAL_ROOT_ID) return;
-    if (selected.name === DEFAULT_CATEGORY_NAME) {
-      toast.error(`لا يمكن حذف التصنيف الافتراضي "${DEFAULT_CATEGORY_NAME}"`);
-      return;
+    
+    const isMat = (selected as any).isMaterial;
+    const name = selected.name;
+    const id = isMat ? selected.id.replace('mat-', '') : selected.id;
+
+    if (!isMat) {
+      if (name === DEFAULT_CATEGORY_NAME) {
+        toast.error(`لا يمكن حذف التصنيف الافتراضي "${DEFAULT_CATEGORY_NAME}"`);
+        return;
+      }
+      if ((selected.material_count ?? 0) > 0) {
+        toast.error("لا يمكن حذف تصنيف يحتوي على مواد");
+        return;
+      }
     }
-    if ((selected.material_count ?? 0) > 0) {
-      toast.error("لا يمكن حذف تصنيف يحتوي على مواد");
-      return;
-    }
-    if (!confirm(`هل أنت متأكد من حذف "${selected.name}"؟`)) return;
+
+    if (!confirm(`هل أنت متأكد من حذف "${name}"؟`)) return;
+
     try {
       setLoading(true);
-      await categoryService.deleteCategory(selected.id);
-      toast.success("تم الحذف");
+      if (isMat) {
+        await materialService.deleteMaterial(id);
+      } else {
+        await categoryService.deleteCategory(id);
+      }
+      toast.success("تم الحذف بنجاح");
       setSelected(null);
-      await fetchData(true);
-    } catch (error) { toast.error("فشل الحذف: " + error); }
-    finally { setLoading(false); }
+      await fetchData(false);
+    } catch (error) { 
+      toast.error("فشل الحذف: " + error); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const parentName = useMemo(() => {
@@ -256,8 +272,8 @@ export default function Categories() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2">
+      <div className="grid grid-cols-1 gap-6">
+        <div className="w-full">
           <TreeLayout
             searchQuery={search}
             onSearchChange={setSearch}
@@ -269,7 +285,7 @@ export default function Categories() {
             treeContent={treeContent}
             sidebarContent={
               <CategoryDetailsSidebar
-                selected={selected?.id === VIRTUAL_ROOT_ID || selected?.id.startsWith('mat-') ? null : (selected as any)}
+                selected={selected?.id === VIRTUAL_ROOT_ID ? null : selected}
                 allCategories={categories}
                 parentName={parentName}
                 onSaved={() => void fetchData(false)}
@@ -278,63 +294,6 @@ export default function Categories() {
               />
             }
           />
-        </div>
-
-        {/* Hybrid Categories Section */}
-        <div className="space-y-4">
-          <Card className="p-5 border-purple-100 bg-purple-50/10 h-fit sticky top-6">
-            <h3 className="text-sm font-bold text-purple-800 flex items-center gap-2 mb-4">
-              <Shuffle className="w-4 h-4" />
-              التصنيفات الهجينة
-            </h3>
-            
-            {hybridCategories.length === 0 ? (
-              <div className="text-center py-8 text-slate-400">
-                <Info className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                <p className="text-xs">لا توجد تصنيفات هجينة حالياً.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {hybridCategories.map(cat => {
-                  const catMaterials = materials.filter(m => m.category_ids?.includes(cat.id));
-                  return (
-                    <div key={cat.id} className="bg-white border border-purple-100 rounded-lg overflow-hidden shadow-sm">
-                      <div className="bg-purple-50/50 px-3 py-2 border-b border-purple-100 flex items-center justify-between">
-                        <div className="flex items-center gap-2 overflow-hidden">
-                          <span className="text-xs font-bold text-purple-900 truncate">{cat.name}</span>
-                          {cat.code_prefix && (
-                            <Badge variant="outline" className="text-[10px] py-0 px-1 border-purple-200 bg-purple-50 text-purple-600 font-mono">
-                              {cat.code_prefix}
-                            </Badge>
-                          )}
-                        </div>
-                        <Badge variant="secondary" className="text-[9px] bg-purple-100 text-purple-700">
-                          {catMaterials.length} مادة
-                        </Badge>
-                      </div>
-                      <div className="p-2 space-y-1">
-                        {catMaterials.length === 0 ? (
-                          <p className="text-[10px] text-slate-400 text-center py-2 italic">لا توجد مواد بعد</p>
-                        ) : (
-                          catMaterials.map(m => (
-                            <div key={m.id} className="flex items-center justify-between p-1.5 rounded-md hover:bg-slate-50 transition-colors">
-                              <div className="flex items-center gap-2 overflow-hidden">
-                                <Package className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                                <span className="text-[11px] text-slate-700 truncate">{m.name}</span>
-                              </div>
-                              <span className="text-[9px] font-mono bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">
-                                {m.code}
-                              </span>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </Card>
         </div>
       </div>
     </>

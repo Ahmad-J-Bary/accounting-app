@@ -104,7 +104,7 @@ export function CategoryTreeNodeItem({
       level={level}
       selectedId={selectedId}
       onSelect={(n: any) => {
-        if (!n.isMaterial) onSelect(n);
+        onSelect(n);
       }}
       expandedNodes={expandedNodes}
       onToggle={onToggle}
