@@ -2,6 +2,7 @@ pub mod sqlite_customer_repository;
 pub mod sqlite_material_repository;
 pub mod sqlite_category_repository;
 pub mod sqlite_account_repository;
+pub mod sqlite_code_prefix_repository;
 pub mod sqlite_journal_entry_repository;
 pub mod sqlite_supplier_repository;
 pub mod sqlite_payment_repository;

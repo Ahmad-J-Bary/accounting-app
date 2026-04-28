@@ -3,6 +3,8 @@ export interface CategoryDto {
   name: string;
   parent_id: string | null;
   is_active: boolean;
+  is_hybrid: boolean;
+  code_prefix: string | null;
   material_count: number;
   created_at: string;
   updated_at: string;
@@ -11,6 +13,8 @@ export interface CategoryDto {
 export interface CreateCategoryRequest {
   name: string;
   parent_id?: string | null;
+  is_hybrid?: boolean;
+  code_prefix?: string | null;
 }
 
 export interface UpdateCategoryRequest {
@@ -18,4 +22,5 @@ export interface UpdateCategoryRequest {
   name: string;
   parent_id?: string | null;
   is_active: boolean;
+  code_prefix?: string | null;
 }

@@ -1,258 +1,216 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { PageHeader } from "@/components/erp/PageHeader";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Plus, Search, MoreHorizontal, Edit, Trash2, RefreshCw, FolderTree, ChevronRight, ChevronDown, Package } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { RefreshCw, Folders } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { StatusBadge } from "@/components/erp/StatusBadge";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { categoryService } from "@/services/categoryService";
 import type { CategoryDto } from "@erp/shared-types";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TreeLayout } from "../components/erp/tree-management/TreeLayout";
+import { CategoryTreeNodeItem } from "./categories/CategoryTreeNodeItem";
+import { CategoryDetailsSidebar } from "./categories/CategoryDetailsSidebar";
+
+const DEFAULT_CATEGORY_NAME = "غير مصنف";
+const VIRTUAL_ROOT_ID = "__categories_root__";
 
 interface CategoryTreeNode extends CategoryDto {
   children: CategoryTreeNode[];
-  isExpanded?: boolean;
+}
+
+function buildTree(cats: CategoryDto[]): CategoryTreeNode {
+  const map = new Map<string, CategoryTreeNode>();
+  cats.filter(c => !c.is_hybrid).forEach(c => map.set(c.id, { ...c, children: [] }));
+  
+  const rootChildren: CategoryTreeNode[] = [];
+  
+  // Sort cats so "Uncategorized" is processed first or handled specially
+  const uncategorized = cats.find(c => c.name === DEFAULT_CATEGORY_NAME && !c.parent_id);
+  
+  cats.filter(c => !c.is_hybrid).forEach(c => {
+    const node = map.get(c.id)!;
+    if (c.parent_id && map.has(c.parent_id)) {
+      const parent = map.get(c.parent_id);
+      if (parent && !parent.parent_id) parent.children.push(node);
+    } else if (c.id !== uncategorized?.id) {
+      rootChildren.push(node);
+    }
+  });
+
+  // Create virtual root
+  const virtualRoot: CategoryTreeNode = {
+    id: VIRTUAL_ROOT_ID,
+    name: "التصنيفات",
+    parent_id: null,
+    is_active: true,
+    is_hybrid: false,
+    material_count: 0,
+    code_prefix: null,
+    created_at: "",
+    updated_at: "",
+    children: []
+  };
+
+  if (uncategorized && map.has(uncategorized.id)) {
+    virtualRoot.children.push(map.get(uncategorized.id)!);
+  }
+  
+  virtualRoot.children.push(...rootChildren);
+  
+  return virtualRoot;
 }
 
 export default function Categories() {
   const [categories, setCategories] = useState<CategoryDto[]>([]);
-  const [tree, setTree] = useState<CategoryTreeNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<CategoryTreeNode | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set([VIRTUAL_ROOT_ID]));
 
-  // Dialog state
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editCategory, setEditCategory] = useState<CategoryDto | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    parent_id: "" as string | null
-  });
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async (isInitial = false) => {
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
       const data = await categoryService.listCategories();
       setCategories(data);
-      buildTree(data);
-    } catch (error) {
-      toast.error("فشل جلب التصنيفات: " + error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const buildTree = (cats: CategoryDto[]) => {
-    const map = new Map<string, CategoryTreeNode>();
-    const roots: CategoryTreeNode[] = [];
-
-    cats.forEach(c => map.set(c.id, { ...c, children: [] }));
-    cats.forEach(c => {
-      const node = map.get(c.id)!;
-      if (c.parent_id && map.has(c.parent_id)) {
-        map.get(c.parent_id)!.children.push(node);
-      } else {
-        roots.push(node);
+      if (isInitial) {
+        setExpandedIds(new Set([VIRTUAL_ROOT_ID, ...data.filter(c => !c.parent_id && !c.is_hybrid).map(c => c.id)]));
       }
-    });
-    setTree(roots);
-  };
-
-  useEffect(() => {
-    fetchCategories();
+    } catch (error) { toast.error("فشل جلب التصنيفات: " + error); }
+    finally { if (isInitial) setLoading(false); }
   }, []);
 
-  const handleSave = async () => {
-    try {
-      if (editCategory) {
-        await categoryService.updateCategory({
-          id: editCategory.id,
-          name: formData.name,
-          parent_id: formData.parent_id === "root" ? null : formData.parent_id,
-          is_active: editCategory.is_active
-        });
-        toast.success("تم التحديث بنجاح");
-      } else {
-        await categoryService.createCategory({
-          name: formData.name,
-          parent_id: formData.parent_id === "root" ? null : formData.parent_id
-        });
-        toast.success("تمت الإضافة بنجاح");
+  useEffect(() => { void fetchCategories(true); }, [fetchCategories]);
+
+  const tree = useMemo(() => buildTree(categories), [categories]);
+  
+  const filteredTree = useMemo(() => {
+    if (!search) return tree;
+    // For search, we still want to show the virtual root but filter its children
+    const filterNode = (node: CategoryTreeNode): CategoryTreeNode | null => {
+      const filteredChildren = node.children.map(filterNode).filter(Boolean) as CategoryTreeNode[];
+      const matches = node.name.includes(search);
+      if (matches || filteredChildren.length > 0) {
+        return { ...node, children: filteredChildren };
       }
-      setIsDialogOpen(false);
-      fetchCategories();
-    } catch (error) {
-      toast.error("خطأ: " + error);
-    }
+      return null;
+    };
+    return filterNode(tree) || { ...tree, children: [] };
+  }, [tree, search]);
+
+  const toggleExpand = (id: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
   };
 
-  const handleDelete = async (cat: CategoryDto) => {
-    if (cat.name === "عام") {
-        toast.error("لا يمكن حذف التصنيف الافتراضي");
-        return;
+  const handleDelete = async () => {
+    if (!selected || selected.id === VIRTUAL_ROOT_ID) return;
+    if (selected.name === DEFAULT_CATEGORY_NAME) {
+      toast.error(`لا يمكن حذف التصنيف الافتراضي "${DEFAULT_CATEGORY_NAME}"`);
+      return;
     }
-    if (cat.material_count > 0) {
-        toast.error("لا يمكن حذف تصنيف يحتوي على مواد");
-        return;
+    if ((selected.material_count ?? 0) > 0) {
+      toast.error("لا يمكن حذف تصنيف يحتوي على مواد");
+      return;
     }
-    if (!confirm(`هل أنت متأكد من حذف ${cat.name}؟`)) return;
+    if (!confirm(`هل أنت متأكد من حذف "${selected.name}"؟`)) return;
     try {
-      await categoryService.deleteCategory(cat.id);
-      toast.success("تم الحذف بنجاح");
-      fetchCategories();
-    } catch (error) {
-      toast.error("فشل الحذف: " + error);
-    }
+      setLoading(true);
+      await categoryService.deleteCategory(selected.id);
+      toast.success("تم الحذف");
+      setSelected(null);
+      await fetchCategories(true);
+    } catch (error) { toast.error("فشل الحذف: " + error); }
+    finally { setLoading(false); }
   };
 
-  const toggleExpand = (id: string) => {
-    const newSet = new Set(expandedIds);
-    if (newSet.has(id)) newSet.delete(id);
-    else newSet.add(id);
-    setExpandedIds(newSet);
-  };
+  const parentName = useMemo(() => {
+    if (!selected?.parent_id) return null;
+    return categories.find(c => c.id === selected.parent_id)?.name ?? null;
+  }, [selected, categories]);
 
-  const renderNode = (node: CategoryTreeNode, level: number = 0) => {
-    const isExpanded = expandedIds.has(node.id);
-    const hasChildren = node.children.length > 0;
-
-    return (
-      <div key={node.id} className="flex flex-col">
-        <div 
-          className={cn(
-            "flex items-center gap-2 py-2 px-3 hover:bg-slate-50 border-b border-slate-100 group transition-colors",
-            level > 0 && "mr-6 border-r-2 border-slate-200"
-          )}
-        >
-          <div className="flex items-center gap-2 flex-1">
-            {hasChildren ? (
-              <button onClick={() => toggleExpand(node.id)} className="p-1 hover:bg-slate-200 rounded">
-                {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-              </button>
-            ) : (
-              <div className="w-6" />
-            )}
-            <FolderTree className={cn("w-4 h-4", node.name === "عام" ? "text-blue-500" : "text-slate-400")} />
-            <span className="font-medium text-slate-700">{node.name}</span>
-            <Badge variant="outline" className="text-[10px] py-0 px-1 tabular-nums bg-slate-50">
-              <Package className="w-3 h-3 ml-1 opacity-50" /> {node.material_count}
-            </Badge>
-          </div>
-          
-          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <StatusBadge status={node.is_active ? "active" : "inactive"} />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="w-4 h-4" /></Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuItem onClick={() => {
-                  setEditCategory(node);
-                  setFormData({ name: node.name, parent_id: node.parent_id || "root" });
-                  setIsDialogOpen(true);
-                }}><Edit className="w-4 h-4 ml-2" />تعديل</DropdownMenuItem>
-                <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(node)}>
-                  <Trash2 className="w-4 h-4 ml-2" />حذف
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+  const treeContent = (
+    <>
+      {loading ? (
+        <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
+          <RefreshCw className="w-8 h-8 animate-spin" />
+          <p>جاري تحميل التصنيفات...</p>
         </div>
-        {isExpanded && node.children.map(child => renderNode(child, level + 1))}
-      </div>
-    );
-  };
+      ) : (
+        <CategoryTreeNodeItem
+          key={filteredTree.id}
+          node={filteredTree}
+          selectedId={selected?.id || ""}
+          onSelect={setSelected}
+          expandedNodes={expandedIds}
+          onToggle={toggleExpand}
+        />
+      )}
+    </>
+  );
+
+  const tableHeader = (
+    <>
+      <div className="w-[40px]" />
+      <div className="flex-1">اسم التصنيف</div>
+      <div className="w-[80px]">المواد</div>
+      <div className="w-[80px]">الحالة</div>
+    </>
+  );
 
   return (
     <>
       <PageHeader
         title="تصنيفات المواد"
-        subtitle="تنظيم المواد في هيكل شجري (أب وأبناء)"
-        breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "المواد", to: "/materials" }, { label: "التصنيفات" }]}
-        actions={
-          <Button onClick={() => {
-            setEditCategory(null);
-            setFormData({ name: "", parent_id: "root" });
-            setIsDialogOpen(true);
-          }}>
-            <Plus className="w-4 h-4 ml-2" />تصنيف جديد
-          </Button>
-        }
+        subtitle="إدارة شجرة التصنيفات الهرمية وتصنيفات المواد"
+        breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "بطاقات المواد", to: "/materials" }, { label: "التصنيفات" }]}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-right" dir="rtl">
-        <Card className="lg:col-span-2 p-0 overflow-hidden">
-          <div className="p-4 border-b bg-slate-50 flex items-center justify-between">
-            <h3 className="font-bold flex items-center gap-2"><FolderTree className="w-5 h-5 text-primary" /> شجرة التصنيفات</h3>
-            <Button variant="ghost" size="sm" onClick={fetchCategories} disabled={loading}>
-              <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
-            </Button>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <Card className="p-4 flex items-center gap-4 bg-slate-50/50">
+          <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+            <Folders className="w-6 h-6 text-blue-600" />
           </div>
-          <div className="min-h-[400px]">
-            {loading ? (
-              <div className="p-10 text-center text-muted-foreground">جاري التحميل...</div>
-            ) : tree.length === 0 ? (
-              <div className="p-10 text-center text-muted-foreground">لا توجد تصنيفات معرفة</div>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {tree.map(node => renderNode(node))}
-              </div>
-            )}
+          <div>
+            <div className="text-2xl font-bold tabular-nums">{categories.filter(c => !c.is_hybrid).length}</div>
+            <div className="text-xs text-muted-foreground">إجمالي التصنيفات</div>
           </div>
         </Card>
-
-        <Card className="p-5 h-fit sticky top-6">
-          <h3 className="font-bold mb-4 border-b pb-2">نصائح التنظيم</h3>
-          <ul className="text-sm space-y-3 text-slate-600">
-            <li>• استخدم التصنيفات لتجميع المواد المتشابهة (مثال: "مواد بناء"، "دهانات").</li>
-            <li>• يمكنك إنشاء مستويات متعددة (أب وابنه) لتنظيم أدق.</li>
-            <li>• لا يمكن حذف تصنيف يحتوي على مواد نشطة.</li>
-            <li>• التصنيف "عام" هو التصنيف الافتراضي ولا يمكن حذفه.</li>
-          </ul>
+        <Card className="p-4 flex items-center gap-4 bg-slate-50/50">
+          <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
+            <Folders className="w-6 h-6 text-emerald-600" />
+          </div>
+          <div>
+            <div className="text-2xl font-bold tabular-nums text-blue-600">
+              {categories.reduce((s, c) => s + (c.material_count ?? 0), 0)}
+            </div>
+            <div className="text-xs text-muted-foreground">إجمالي المواد المصنفة</div>
+          </div>
         </Card>
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>{editCategory ? "تعديل تصنيف" : "إضافة تصنيف جديد"}</DialogTitle>
-            <DialogDescription>أدخل اسم التصنيف واختر التصنيف الأب (اختياري).</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4 text-right" dir="rtl">
-            <div className="grid gap-2">
-              <Label htmlFor="cat_name">اسم التصنيف *</Label>
-              <Input id="cat_name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="cat_parent">التصنيف الأب</Label>
-              <Select 
-                value={formData.parent_id || "root"} 
-                onValueChange={(val) => setFormData({...formData, parent_id: val})}
-              >
-                <SelectTrigger id="cat_parent">
-                  <SelectValue placeholder="اختر الأب (اختياري)" />
-                </SelectTrigger>
-                <SelectContent dir="rtl">
-                  <SelectItem value="root">-- بدون أب (تصنيف رئيسي) --</SelectItem>
-                  {categories.filter(c => !editCategory || c.id !== editCategory.id).map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter className="flex-row-reverse gap-2">
-            <Button onClick={handleSave} disabled={!formData.name}>حفظ</Button>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>إلغاء</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <TreeLayout
+        searchQuery={search}
+        onSearchChange={setSearch}
+        onExpandAll={() => setExpandedIds(new Set([VIRTUAL_ROOT_ID, ...categories.map(c => c.id)]))}
+        onCollapseAll={() => setExpandedIds(new Set([VIRTUAL_ROOT_ID]))}
+        onRefresh={() => void fetchCategories(true)}
+        loading={loading}
+        tableHeader={tableHeader}
+        treeContent={treeContent}
+        sidebarContent={
+          <CategoryDetailsSidebar
+            selected={selected?.id === VIRTUAL_ROOT_ID ? null : selected}
+            allCategories={categories}
+            parentName={parentName}
+            onSaved={() => void fetchCategories(false)}
+            onDelete={handleDelete}
+            isVirtualRootSelected={selected?.id === VIRTUAL_ROOT_ID}
+          />
+        }
+      />
     </>
   );
 }

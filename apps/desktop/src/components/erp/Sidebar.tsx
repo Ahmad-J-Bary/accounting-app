@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard, BookOpen, FileText, Users, Truck, Receipt,
   ShoppingCart, Wallet, Package, Warehouse, AlertTriangle,
-  Factory, ClipboardCheck, BarChart3, Shield, Settings, History, Layers, X, HardDrive, FolderTree
+  Factory, ClipboardCheck, BarChart3, Shield, Settings, History, Layers, X, HardDrive, Folders
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -42,7 +42,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
   {
     title: "المخزون",
     items: [
-      { to: "/categories", label: "تصنيفات المواد", icon: FolderTree },
+      { to: "/categories", label: "تصنيفات المواد", icon: Folders },
       { to: "/materials", label: "بطاقات المواد", icon: Package },
       { to: "/opening-balance", label: "رصيد أول المدة", icon: Layers },
       { to: "/inventory", label: "حركات المخزون", icon: Warehouse },

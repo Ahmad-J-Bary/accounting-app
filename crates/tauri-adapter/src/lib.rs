@@ -29,6 +29,8 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::category::list_categories,
             commands::category::update_category,
             commands::category::delete_category,
+            commands::category::get_or_create_hybrid_category,
+            commands::material_code::generate_material_code,
             // Suppliers
             commands::supplier::create_supplier,
             commands::supplier::list_suppliers,

@@ -14,6 +14,7 @@ pub mod production_use_cases;
 pub mod adjustment_use_cases;
 pub mod user_use_cases;
 pub mod settings_use_cases;
+pub mod generate_material_code;
 pub mod audit_use_cases;
 pub mod get_chart_of_accounts;
 pub mod get_account_ledger;

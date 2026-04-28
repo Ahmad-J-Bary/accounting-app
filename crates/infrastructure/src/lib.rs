@@ -20,3 +20,4 @@ pub use repositories::sqlite_consumable_repository::SqliteConsumableRepository;
 pub use repositories::sqlite_partner_repository::SqlitePartnerRepository;
 pub use repositories::sqlite_unified_invoice_repository::SqliteUnifiedInvoiceRepository;
 pub use repositories::sqlite_unit_of_work::SqliteUnitOfWork;
+pub use repositories::sqlite_code_prefix_repository::SqliteCodePrefixRepository;

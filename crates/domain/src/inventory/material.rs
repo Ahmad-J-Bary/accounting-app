@@ -19,8 +19,8 @@ pub struct Material {
 impl Material {
     pub fn new(
         name: String,
-        barcode: Option<String>,
-        code: Option<String>,
+        barcode: String,
+        code: String,
         minimum_stock: rust_decimal::Decimal,
         category_ids: Vec<MaterialCategoryId>,
     ) -> Result<Self, DomainError> {
@@ -28,24 +28,17 @@ impl Material {
             return Err(DomainError::Invalid("اسم المادة لا يمكن أن يكون فارغًا".into()));
         }
 
-        // Smart Barcode/Code logic
-        let (final_barcode, final_code) = match (barcode, code) {
-            (Some(b), Some(c)) => (b, c),
-            (Some(b), None) => (b.clone(), b),
-            (None, Some(c)) => (c.clone(), c),
-            (None, None) => {
-                let id = uuid::Uuid::new_v4().to_string();
-                (id.clone(), id)
-            }
-        };
+        if code.trim().is_empty() && barcode.trim().is_empty() {
+            return Err(DomainError::Invalid("يجب إدخال إما الكود أو الباركود على الأقل".into()));
+        }
 
         let now = Utc::now();
         
         Ok(Self {
             id: MaterialId::new(),
             name,
-            barcode: final_barcode,
-            code: final_code,
+            barcode,
+            code,
             is_active: true,
             minimum_stock,
             category_ids,

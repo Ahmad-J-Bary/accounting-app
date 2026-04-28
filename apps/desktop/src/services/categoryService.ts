@@ -21,4 +21,8 @@ export const categoryService = {
   async deleteCategory(id: string): Promise<void> {
     return await invoke<void>('delete_category', { id });
   },
+
+  async getOrCreateHybridCategory(prefixes: string[]): Promise<CategoryDto> {
+    return await invoke<CategoryDto>('get_or_create_hybrid_category', { prefixes });
+  },
 };

@@ -19,11 +19,13 @@ use infrastructure::{
     SqliteMaterialRepository,
     SqliteCategoryRepository,
     SqliteUnifiedInvoiceRepository,
+    SqliteCodePrefixRepository,
 };
 use application::use_cases::partner_use_cases::PartnerUseCases;
 use application::use_cases::material_use_cases::MaterialUseCases;
 use application::use_cases::category_use_cases::CategoryUseCases;
 use application::use_cases::unified_invoice_use_cases::UnifiedInvoiceUseCases;
+use application::use_cases::generate_material_code::MaterialCodeUseCases;
 use infrastructure::db::pool::{create_pool, run_migrations};
 use application::ports::customer_repository::CustomerRepository;
 use application::ports::material_repository::MaterialRepository;
@@ -66,6 +68,7 @@ pub struct AppState {
     pub material_use_cases: Arc<MaterialUseCases>,
     pub category_use_cases: Arc<CategoryUseCases>,
     pub unified_invoice_use_cases: Arc<UnifiedInvoiceUseCases>,
+    pub material_code_use_cases: Arc<MaterialCodeUseCases>,
 }
 
 pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
@@ -110,6 +113,10 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
             category_repo.clone(),
         )),
         category_use_cases: Arc::new(CategoryUseCases::new(category_repo.clone())),
+        material_code_use_cases: Arc::new(MaterialCodeUseCases::new(
+            Arc::new(SqliteCodePrefixRepository::new(pool.clone())),
+            category_repo.clone(),
+        )),
         unified_invoice_use_cases: Arc::new(UnifiedInvoiceUseCases::new(
             unified_invoice_repo.clone(),
             material_repo.clone(),

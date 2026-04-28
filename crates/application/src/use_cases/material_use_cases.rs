@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use domain::inventory::material::Material;
+use domain::inventory::category::DEFAULT_CATEGORY_NAME;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
 use crate::ports::category_repository::CategoryRepository;
@@ -29,7 +30,7 @@ impl MaterialUseCases {
         }
 
         if category_ids.is_empty() {
-             if let Some(cat) = self.category_repo.find_by_name("عام").await? {
+             if let Some(cat) = self.category_repo.find_by_name(DEFAULT_CATEGORY_NAME).await? {
                  category_ids.push(cat.id);
              }
         }
@@ -38,8 +39,8 @@ impl MaterialUseCases {
 
         let material = Material::new(
             req.name,
-            req.barcode,
-            req.code,
+            req.barcode.unwrap_or_default(),
+            req.code.unwrap_or_default(),
             min_stock,
             category_ids,
         ).map_err(|e| AppError::Invalid(e.to_string()))?;

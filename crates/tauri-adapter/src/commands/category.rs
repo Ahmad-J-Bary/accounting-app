@@ -32,3 +32,11 @@ pub async fn delete_category(
 ) -> Result<(), String> {
     state.category_use_cases.delete(id).await.map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub async fn get_or_create_hybrid_category(
+    state: State<'_, AppState>,
+    prefixes: Vec<String>,
+) -> Result<CategoryDto, String> {
+    state.category_use_cases.get_or_create_hybrid(prefixes).await.map_err(|e| e.to_string())
+}
