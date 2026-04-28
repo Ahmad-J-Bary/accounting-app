@@ -78,5 +78,5 @@ jobs:
           releaseDraft: true
           prerelease: false
           includeUpdaterJson: true
-          distPath: ../dist
+          distPath: apps/desktop/dist
           projectPath: ./apps/desktop
