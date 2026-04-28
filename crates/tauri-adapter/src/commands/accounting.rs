@@ -1,18 +1,18 @@
 use tauri::State;
-
-use crate::bootstrap::container::AppState;
-use application::dto::account_dto::{AccountDto, AccountLedgerDto};
-use application::use_cases::account_use_cases::{AccountUseCases, CreateAccountCommand};
-use application::use_cases::get_account_ledger::GetAccountLedgerUseCase;
-use application::use_cases::get_chart_of_accounts::GetChartOfAccountsUseCase;
-use domain::shared::AccountId;
 use std::str::FromStr;
 use uuid::Uuid;
 
+use crate::bootstrap::container::AppState;
+use application::dto::account_dto::{AccountDto, AccountLedgerDto};
+use application::use_cases::account::{
+    CreateAccountUseCase, UpdateAccountUseCase, DeleteAccountUseCase, AccountQueries, CreateAccountCommand
+};
+use domain::shared::AccountId;
+
 #[tauri::command]
 pub async fn get_chart_of_accounts(state: State<'_, AppState>) -> Result<Vec<AccountDto>, String> {
-    GetChartOfAccountsUseCase::new(state.account_repo.clone())
-        .execute()
+    AccountQueries::new(state.account_repo.clone(), state.journal_entry_repo.clone())
+        .get_chart_of_accounts()
         .await
         .map_err(|e| e.to_string())
 }
@@ -22,10 +22,14 @@ pub async fn get_account_ledger(
     account_id: String,
     state: State<'_, AppState>,
 ) -> Result<AccountLedgerDto, String> {
-    GetAccountLedgerUseCase::new(state.account_repo.clone(), state.journal_entry_repo.clone())
-        .execute(account_id)
+    let aid = AccountId(Uuid::from_str(&account_id).map_err(|e| e.to_string())?);
+    
+    let ledger = AccountQueries::new(state.account_repo.clone(), state.journal_entry_repo.clone())
+        .get_ledger(&aid)
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+        
+    Ok(AccountLedgerDto::from(ledger))
 }
 
 #[tauri::command]
@@ -33,15 +37,14 @@ pub async fn create_account(
     cmd: CreateAccountCommand,
     state: State<'_, AppState>,
 ) -> Result<AccountDto, String> {
-    let use_cases =
-        AccountUseCases::new(state.account_repo.clone(), state.journal_entry_repo.clone())
-            .with_customer_repo(state.customer_repo.clone())
-            .with_supplier_repo(state.supplier_repo.clone());
-
-    let account = use_cases
-        .create_account(cmd)
-        .await
-        .map_err(|e| e.to_string())?;
+    let account = CreateAccountUseCase::new(
+        state.account_repo.clone(),
+        Some(state.customer_repo.clone()),
+        Some(state.supplier_repo.clone()),
+    )
+    .execute(cmd)
+    .await
+    .map_err(|e| e.to_string())?;
 
     Ok(AccountDto::from(account))
 }
@@ -54,13 +57,14 @@ pub async fn update_account(
 ) -> Result<AccountDto, String> {
     let account_id = AccountId(Uuid::from_str(&id).map_err(|e| e.to_string())?);
 
-    let use_cases =
-        AccountUseCases::new(state.account_repo.clone(), state.journal_entry_repo.clone());
-
-    let account = use_cases
-        .update_account(account_id, cmd)
-        .await
-        .map_err(|e| e.to_string())?;
+    let account = UpdateAccountUseCase::new(
+        state.account_repo.clone(),
+        Some(state.customer_repo.clone()),
+        Some(state.supplier_repo.clone()),
+    )
+    .execute(account_id, cmd)
+    .await
+    .map_err(|e| e.to_string())?;
 
     Ok(AccountDto::from(account))
 }
@@ -69,13 +73,15 @@ pub async fn update_account(
 pub async fn delete_account(id: String, state: State<'_, AppState>) -> Result<(), String> {
     let account_id = AccountId(Uuid::from_str(&id).map_err(|e| e.to_string())?);
 
-    let use_cases =
-        AccountUseCases::new(state.account_repo.clone(), state.journal_entry_repo.clone());
-
-    use_cases
-        .delete_account(account_id)
-        .await
-        .map_err(|e| e.to_string())
+    DeleteAccountUseCase::new(
+        state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
+        Some(state.customer_repo.clone()),
+        Some(state.supplier_repo.clone()),
+    )
+    .delete(account_id)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -85,13 +91,15 @@ pub async fn activate_account(
 ) -> Result<AccountDto, String> {
     let account_id = AccountId(Uuid::from_str(&id).map_err(|e| e.to_string())?);
 
-    let use_cases =
-        AccountUseCases::new(state.account_repo.clone(), state.journal_entry_repo.clone());
-
-    let account = use_cases
-        .set_account_active(account_id, true)
-        .await
-        .map_err(|e| e.to_string())?;
+    let account = DeleteAccountUseCase::new(
+        state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
+        None,
+        None,
+    )
+    .set_active(account_id, true)
+    .await
+    .map_err(|e| e.to_string())?;
 
     Ok(AccountDto::from(account))
 }
@@ -103,13 +111,15 @@ pub async fn deactivate_account(
 ) -> Result<AccountDto, String> {
     let account_id = AccountId(Uuid::from_str(&id).map_err(|e| e.to_string())?);
 
-    let use_cases =
-        AccountUseCases::new(state.account_repo.clone(), state.journal_entry_repo.clone());
-
-    let account = use_cases
-        .set_account_active(account_id, false)
-        .await
-        .map_err(|e| e.to_string())?;
+    let account = DeleteAccountUseCase::new(
+        state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
+        None,
+        None,
+    )
+    .set_active(account_id, false)
+    .await
+    .map_err(|e| e.to_string())?;
 
     Ok(AccountDto::from(account))
 }

@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use domain::accounting::account::Account;
+use crate::use_cases::account::types::{AccountLedger, LedgerLine};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AccountDto {
@@ -54,6 +55,19 @@ pub struct AccountLedgerDto {
     pub final_balance: String,
 }
 
+impl From<AccountLedger> for AccountLedgerDto {
+    fn from(ledger: AccountLedger) -> Self {
+        Self {
+            account_id: ledger.account_id.0.to_string(),
+            account_name: ledger.account_name,
+            lines: ledger.lines.into_iter().map(AccountLedgerLineDto::from).collect(),
+            total_debit: ledger.total_debit.to_string(),
+            total_credit: ledger.total_credit.to_string(),
+            final_balance: ledger.closing_balance.to_string(),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AccountLedgerLineDto {
     pub date: String,
@@ -66,4 +80,21 @@ pub struct AccountLedgerLineDto {
     pub base_debit: String,
     pub base_credit: String,
     pub running_balance: String,
+}
+
+impl From<LedgerLine> for AccountLedgerLineDto {
+    fn from(line: LedgerLine) -> Self {
+        Self {
+            date: line.date.to_rfc3339(),
+            journal_id: line.journal_id.0.to_string(),
+            description: line.description,
+            currency: "SYP".to_string(), // Default since it's base balance calculation
+            fx_rate: "1".to_string(),
+            debit: line.debit.to_string(),
+            credit: line.credit.to_string(),
+            base_debit: line.debit.to_string(),
+            base_credit: line.credit.to_string(),
+            running_balance: line.balance.to_string(),
+        }
+    }
 }

@@ -1,5 +1,7 @@
 use crate::bootstrap::container::AppState;
-use application::use_cases::partner_use_cases::PartnerDto;
+use application::use_cases::partner::{
+    CreatePartnerUseCase, PartnerQueries, UpdatePartnerUseCase, DeletePartnerUseCase, PartnerDto
+};
 use rust_decimal::Decimal;
 use tauri::State;
 use std::str::FromStr;
@@ -18,7 +20,11 @@ pub async fn add_partner(
     let amt = Decimal::from_str(&amount).map_err(|e| e.to_string())?;
     let ratio = manual_ratio.and_then(|r| Decimal::from_str(&r).ok());
 
-    state.partner_use_cases.add_partner(
+    CreatePartnerUseCase::new(
+        state.partner_repo.clone(),
+        state.account_repo.clone(),
+        state.uow.clone(),
+    ).execute(
         name,
         rate,
         amt,
@@ -32,7 +38,10 @@ pub async fn add_partner(
 pub async fn list_partners(
     state: State<'_, AppState>
 ) -> Result<Vec<PartnerDto>, String> {
-    state.partner_use_cases.list_partners().await.map_err(|e| e.to_string())
+    PartnerQueries::new(state.partner_repo.clone())
+        .list_partners()
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -40,7 +49,11 @@ pub async fn delete_partner(
     state: State<'_, AppState>,
     id: u64
 ) -> Result<(), String> {
-    state.partner_use_cases.delete_partner(id).await.map_err(|e| e.to_string())
+    DeletePartnerUseCase::new(
+        state.partner_repo.clone(),
+        state.account_repo.clone(),
+        state.uow.clone(),
+    ).execute(id).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -58,7 +71,11 @@ pub async fn update_partner(
     let amt = Decimal::from_str(&amount).map_err(|e| e.to_string())?;
     let ratio = manual_ratio.and_then(|r| Decimal::from_str(&r).ok());
 
-    state.partner_use_cases.update_partner(
+    UpdatePartnerUseCase::new(
+        state.partner_repo.clone(),
+        state.account_repo.clone(),
+        state.uow.clone(),
+    ).execute(
         id,
         name,
         rate,
