@@ -4,8 +4,8 @@ pub mod post_journal_entry;
 pub mod list_journal_entries;
 pub mod reverse_journal_entry;
 pub mod customer;
-pub mod material_use_cases;
-pub mod category_use_cases;
+pub mod material;
+pub mod category;
 pub mod supplier;
 // Removed obsolete purchase invoice use cases
 pub mod payment_use_cases;
