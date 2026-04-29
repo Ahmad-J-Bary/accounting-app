@@ -9,6 +9,7 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
         .invoke_handler(tauri::generate_handler![
             // Unified Invoices
             commands::unified_invoice::create_unified_invoice,
+            commands::unified_invoice::update_unified_invoice,
             commands::unified_invoice::list_unified_invoices_by_type,
             commands::unified_invoice::post_unified_invoice,
             commands::unified_invoice::get_unified_invoice_by_id,

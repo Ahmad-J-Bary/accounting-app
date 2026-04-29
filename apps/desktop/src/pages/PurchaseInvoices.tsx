@@ -12,7 +12,9 @@ import { toast } from "sonner";
 
 // Document components
 import { DocumentShell } from "@/components/erp/document/DocumentShell";
-import { InvoiceGrid, GridLine, toBackendLines, generateDocNumber } from "@/components/erp/document/InvoiceGrid";
+import { InvoiceGrid } from "@/components/erp/document/InvoiceGrid";
+import { GridLine, toBackendLines, generateDocNumber } from "@/components/erp/document/invoiceUtils";
+import { DocumentStatus } from "@/components/erp/document/DocumentStatusBadge";
 import { SummaryPanel } from "@/components/erp/document/SummaryPanel";
 import { InvoicePartySelector } from "@/components/erp/document/InvoicePartySelector";
 import { DocumentStatusBadge } from "@/components/erp/document/DocumentStatusBadge";
@@ -131,17 +133,29 @@ export default function PurchaseInvoices() {
         setSaving(false);
         return;
       }
-      await invoiceService.createInvoice({
-        invoice_number: editor.invoice_number,
-        invoice_type: "Purchase",
-        supplier_id: editor.supplier_id || undefined,
-        lines: backendLines,
-        tax_amount: editor.tax_amount,
-        discount_amount: editor.discount_amount,
-        issued_at: new Date(editor.issued_at).toISOString(),
-        notes: editor.notes || undefined,
-      });
-      toast.success("تم حفظ فاتورة المشتريات");
+      if (editor.id) {
+        await invoiceService.updateInvoice({
+          id: editor.id,
+          supplier_id: editor.supplier_id || undefined,
+          lines: backendLines,
+          tax_amount: editor.tax_amount,
+          discount_amount: editor.discount_amount,
+          notes: editor.notes || undefined,
+        });
+        toast.success("تم تعديل فاتورة المشتريات");
+      } else {
+        await invoiceService.createInvoice({
+          invoice_number: editor.invoice_number,
+          invoice_type: "Purchase",
+          supplier_id: editor.supplier_id || undefined,
+          lines: backendLines,
+          tax_amount: editor.tax_amount,
+          discount_amount: editor.discount_amount,
+          issued_at: new Date(editor.issued_at).toISOString(),
+          notes: editor.notes || undefined,
+        });
+        toast.success("تم حفظ فاتورة المشتريات");
+      }
       setView("list");
       loadData();
     } catch (e) {
@@ -204,7 +218,7 @@ export default function PurchaseInvoices() {
             tax={tax}
             extraCosts={extraCosts}
             net={net}
-            status={editor.status as any}
+            status={editor.status as DocumentStatus}
           />
         }
       >

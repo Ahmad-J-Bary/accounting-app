@@ -1,8 +1,8 @@
 use tauri::State;
 use crate::bootstrap::container::AppState;
-use application::dto::invoice_dto::{CreateInvoiceRequest, InvoiceDto};
+use application::dto::invoice_dto::{CreateInvoiceRequest, UpdateInvoiceRequest, InvoiceDto};
 use application::use_cases::unified_invoice::{
-    CreateInvoiceUseCase, InvoiceQueries, PostInvoiceUseCase
+    CreateInvoiceUseCase, UpdateInvoiceUseCase, InvoiceQueries, PostInvoiceUseCase
 };
 
 #[tauri::command]
@@ -11,6 +11,15 @@ pub async fn create_unified_invoice(
     request: CreateInvoiceRequest,
 ) -> Result<InvoiceDto, String> {
     CreateInvoiceUseCase::new(state.unified_invoice_repo.clone())
+        .execute(request).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn update_unified_invoice(
+    state: State<'_, AppState>,
+    request: UpdateInvoiceRequest,
+) -> Result<InvoiceDto, String> {
+    UpdateInvoiceUseCase::new(state.unified_invoice_repo.clone())
         .execute(request).await.map_err(|e| e.to_string())
 }
 

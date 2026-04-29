@@ -12,7 +12,8 @@ import type { InvoiceDto, CustomerDto, SupplierDto, AccountDto } from "@erp/shar
 import { toast } from "sonner";
 
 // Document components
-import { InvoiceGrid, GridLine, toBackendLines, generateDocNumber } from "@/components/erp/document/InvoiceGrid";
+import { InvoiceGrid } from "@/components/erp/document/InvoiceGrid";
+import { GridLine, toBackendLines, generateDocNumber } from "@/components/erp/document/invoiceUtils";
 import { SummaryPanel } from "@/components/erp/document/SummaryPanel";
 import { InvoicePartySelector } from "@/components/erp/document/InvoicePartySelector";
 import { DocumentToolbar } from "@/components/erp/document/DocumentToolbar";

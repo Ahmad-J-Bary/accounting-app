@@ -49,6 +49,17 @@ pub struct CreateInvoiceRequest {
     pub notes: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateInvoiceRequest {
+    pub id: String,
+    pub customer_id: Option<String>,
+    pub supplier_id: Option<String>,
+    pub lines: Vec<InvoiceLineDto>,
+    pub tax_amount: String,
+    pub discount_amount: String,
+    pub notes: Option<String>,
+}
+
 impl From<UnifiedInvoice> for InvoiceDto {
     fn from(invoice: UnifiedInvoice) -> Self {
         let invoice_type = match invoice.invoice_type {

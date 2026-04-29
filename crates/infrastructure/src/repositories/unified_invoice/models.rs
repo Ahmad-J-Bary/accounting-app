@@ -16,9 +16,10 @@ pub struct InvoiceRow {
 }
 
 #[derive(sqlx::FromRow)]
+#[allow(dead_code)]
 pub struct LineRow {
-    pub _id: String,
-    pub _invoice_id: String,
+    pub id: String,
+    pub invoice_id: String,
     pub material_id: String,
     pub quantity: String,
     pub unit_price: String,

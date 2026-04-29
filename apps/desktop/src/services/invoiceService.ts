@@ -1,12 +1,17 @@
 import { invoke } from '@/lib/invoke';
 import type { 
   InvoiceDto, 
-  CreateInvoiceRequest 
+  CreateInvoiceRequest,
+  UpdateInvoiceRequest
 } from '@erp/shared-types';
 
 export const invoiceService = {
   async createInvoice(request: CreateInvoiceRequest): Promise<InvoiceDto> {
     return await invoke<InvoiceDto>('create_unified_invoice', { request });
+  },
+
+  async updateInvoice(request: UpdateInvoiceRequest): Promise<InvoiceDto> {
+    return await invoke<InvoiceDto>('update_unified_invoice', { request });
   },
 
   async listInvoicesByType(invoiceType: "Sales" | "Purchase" | "OpeningBalance"): Promise<InvoiceDto[]> {

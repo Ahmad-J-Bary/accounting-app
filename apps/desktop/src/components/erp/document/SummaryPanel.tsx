@@ -1,7 +1,7 @@
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-type DocStatus = "Draft" | "Posted" | "Cancelled" | "PartiallyPaid" | "Paid";
+import { DocumentStatus } from "./DocumentStatusBadge";
 
 interface SummaryPanelProps {
   subtotal: number;
@@ -11,16 +11,17 @@ interface SummaryPanelProps {
   net: number;
   paid?: number;
   currency?: string;
-  status?: DocStatus;
+  status?: DocumentStatus;
   compact?: boolean;
 }
 
-const STATUS_LABELS: Record<DocStatus, { label: string; color: string; bg: string }> = {
+const STATUS_LABELS: Record<DocumentStatus, { label: string; color: string; bg: string }> = {
   Draft:         { label: "مسودة",        color: "text-amber-700",  bg: "bg-amber-50 border-amber-200" },
+  Saved:         { label: "محفوظ",        color: "text-blue-700",  bg: "bg-blue-50 border-blue-200" },
   Posted:        { label: "مرحّل",        color: "text-green-700",  bg: "bg-green-50 border-green-200" },
   Cancelled:     { label: "ملغي",         color: "text-red-700",    bg: "bg-red-50 border-red-200" },
   PartiallyPaid: { label: "مدفوع جزئياً", color: "text-blue-700",   bg: "bg-blue-50 border-blue-200" },
-  Paid:          { label: "مدفوع بالكامل", color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200" },
+  FullyPaid:     { label: "مدفوع بالكامل", color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200" },
 };
 
 export function SummaryPanel({

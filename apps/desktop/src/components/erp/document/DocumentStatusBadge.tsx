@@ -39,7 +39,7 @@ const STATUS_CONFIG: Record<DocumentStatus, {
   },
 };
 
-export function normalizeStatus(status: string): DocumentStatus {
+function normalizeStatus(status: string): DocumentStatus {
   const map: Record<string, DocumentStatus> = {
     Draft: "Draft",
     draft: "Draft",

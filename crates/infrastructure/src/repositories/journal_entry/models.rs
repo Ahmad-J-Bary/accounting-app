@@ -1,4 +1,5 @@
 #[derive(sqlx::FromRow)]
+#[allow(dead_code)]
 pub struct JournalEntryRow {
     pub id: String,
     pub entry_number: String,
@@ -11,6 +12,7 @@ pub struct JournalEntryRow {
 }
 
 #[derive(sqlx::FromRow)]
+#[allow(dead_code)]
 pub struct JournalLineRow {
     pub id: String,
     pub account_id: String,

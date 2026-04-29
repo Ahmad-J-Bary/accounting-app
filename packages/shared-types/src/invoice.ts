@@ -42,3 +42,13 @@ export interface CreateInvoiceRequest {
   issued_at: string;
   notes?: string;
 }
+
+export interface UpdateInvoiceRequest {
+  id: string;
+  customer_id?: string;
+  supplier_id?: string;
+  lines: InvoiceLineDto[];
+  tax_amount: string;
+  discount_amount: string;
+  notes?: string;
+}

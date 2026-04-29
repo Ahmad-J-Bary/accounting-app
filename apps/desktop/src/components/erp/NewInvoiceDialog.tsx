@@ -67,7 +67,7 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
       }
       loadData();
     }
-  }, [open, invoiceToEdit]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, invoiceToEdit]);
 
   const loadData = async () => {
     try {
