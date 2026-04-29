@@ -1,10 +1,7 @@
 use std::sync::Arc;
-use std::str::FromStr;
-use chrono::Utc;
-use rust_decimal::Decimal;
 use uuid::Uuid;
+use chrono::Utc;
 use domain::shared::ids::{AccountId, CustomerId};
-use domain::shared::currency::Currency;
 
 use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::account_repository::AccountRepository;
@@ -25,17 +22,14 @@ impl UpdateCustomerUseCase {
     }
 
     pub async fn execute(&self, req: UpdateCustomerRequest) -> Result<CustomerDto, AppError> {
-        let cid = req.id.parse::<u64>().map_err(|_| AppError::NotFound("معرف العميل غير صالح".into()))?;
-        let cid = CustomerId::from_u64(cid);
+        let cid = req.id.parse::<CustomerId>().map_err(|_| AppError::NotFound("معرف العميل غير صالح".into()))?;
         let mut customer = self.customer_repo.find_by_id(&cid).await?
             .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
 
         customer.update_info(req.name.clone(), req.phone.clone(), req.address.clone(), req.notes.clone())
             .map_err(|e| AppError::Invalid(e.to_string()))?;
 
-        if !req.code.trim().is_empty() {
-            customer.code = req.code;
-        }
+        customer.code = crate::utils::ensure_code(Some(req.code), customer.code);
 
         if let Some(ref acc_id_str) = req.account_id {
             let account_id = Uuid::parse_str(acc_id_str)
@@ -45,28 +39,20 @@ impl UpdateCustomerUseCase {
         }
 
         if let Some(ref d) = req.debit {
-            let debit = Decimal::from_str(d)
-                .map_err(|e| AppError::Invalid(format!("قيمة المدين غير صالحة: {}", e)))?;
-            customer.debit = debit;
+            customer.debit = crate::utils::parse_decimal(Some(d), "المدين")?;
             customer.balance = customer.debit - customer.credit;
         }
         if let Some(ref c) = req.credit {
-            let credit = Decimal::from_str(c)
-                .map_err(|e| AppError::Invalid(format!("قيمة الدائن غير صالحة: {}", e)))?;
-            customer.credit = credit;
+            customer.credit = crate::utils::parse_decimal(Some(c), "الدائن")?;
             customer.balance = customer.debit - customer.credit;
         }
 
         if let Some(ref ob) = req.opening_balance {
-            customer.opening_balance = Decimal::from_str(ob)
-                .map_err(|e| AppError::Invalid(format!("رصيد الافتتاح غير صالح: {}", e)))?;
+            customer.opening_balance = crate::utils::parse_decimal(Some(ob), "رصيد الافتتاح")?;
         }
 
         if let Some(ref cur) = req.currency {
-            customer.currency = match cur.as_str() {
-                "USD" => Currency::USD,
-                _ => Currency::SYP,
-            };
+            customer.currency = crate::utils::parse_currency(Some(cur));
         }
 
         if req.is_active {

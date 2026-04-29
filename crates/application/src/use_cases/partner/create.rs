@@ -32,7 +32,7 @@ impl CreatePartnerUseCase {
         is_amount_in_usd: bool,
         sharing_type: String,
         manual_ratio: Option<Decimal>,
-    ) -> Result<u64, AppError> {
+    ) -> Result<String, AppError> {
         let sharing_enum = match sharing_type.as_str() {
             "BasedOnCapitalLocal" => ProfitSharingType::BasedOnCapitalLocal,
             "BasedOnCapitalUSD" => ProfitSharingType::BasedOnCapitalUSD,
@@ -40,7 +40,18 @@ impl CreatePartnerUseCase {
             _ => return Err(AppError::Invalid("نوع تقاسم أرباح غير صالح".into())),
         };
 
+        // Get next partner code (numeric part)
+        let next_seq = self.account_repo.get_next_child_code("222").await?;
+        let numeric_part = if next_seq.starts_with("222") {
+            &next_seq[3..]
+        } else {
+            &next_seq
+        };
+
+        let code = format!("P{}", numeric_part);
+
         let mut partner = Partner::new(
+            code.clone(),
             name.clone(),
             exchange_rate,
             amount,
@@ -54,7 +65,7 @@ impl CreatePartnerUseCase {
         let capital_parent = self.account_repo.find_by_code("222").await?
             .ok_or_else(|| AppError::Invalid("حساب رأس المال العام (222) غير موجود".into()))?;
         
-        let cap_code = format!("222{}", partner.id.0);
+        let cap_code = format!("222{}", &code[1..]); // Use numeric part of code
 
         let cap_account = Account {
             id: domain::shared::ids::AccountId::new(),
@@ -82,7 +93,7 @@ impl CreatePartnerUseCase {
         let drawings_parent = self.account_repo.find_by_code("44").await?
             .ok_or_else(|| AppError::Invalid("حساب المسحوبات العام (44) غير موجود".into()))?;
 
-        let draw_code = format!("44{}", partner.id.0);
+        let draw_code = format!("44{}", &code[1..]);
         let draw_account_name = format!("مسحوبات {}", name);
         
         let draw_account = Account {
@@ -115,6 +126,6 @@ impl CreatePartnerUseCase {
 
         self.uow.commit().await?;
 
-        Ok(partner.id.0)
+        Ok(partner.id.to_string())
     }
 }

@@ -1,6 +1,5 @@
 use application::errors::AppError;
 use domain::suppliers::Supplier;
-use domain::shared::ids::SupplierId;
 use domain::shared::{AccountId, Currency};
 use rust_decimal::Decimal;
 use std::str::FromStr;
@@ -15,7 +14,7 @@ pub fn row_to_supplier(row: SupplierRow) -> Result<Supplier, AppError> {
     };
 
     Ok(Supplier {
-        id: SupplierId::from_u64(row.id.parse::<u64>().unwrap_or(0)),
+        id: row.id.parse().map_err(|e| AppError::Infrastructure(format!("معرف المورد غير صالح: {}", e)))?,
         code: row.code,
         name: row.name,
         phone: row.phone,

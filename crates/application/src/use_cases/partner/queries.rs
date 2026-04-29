@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PartnerDto {
-    pub id: u64,
+    pub id: String,
     pub name: String,
     pub exchange_rate: String,
     pub amount_local: String,
@@ -21,7 +21,7 @@ pub struct PartnerDto {
 impl From<Partner> for PartnerDto {
     fn from(p: Partner) -> Self {
         Self {
-            id: p.id.0,
+            id: p.id.to_string(),
             name: p.name,
             exchange_rate: p.exchange_rate.to_string(),
             amount_local: p.amount_local.to_string(),

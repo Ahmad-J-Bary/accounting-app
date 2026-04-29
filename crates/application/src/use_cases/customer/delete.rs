@@ -15,8 +15,7 @@ impl DeleteCustomerUseCase {
     }
 
     pub async fn execute(&self, id: String) -> Result<(), AppError> {
-        let cid = id.parse::<u64>().map_err(|_| AppError::NotFound("معرف العميل غير صالح".into()))?;
-        let cid = CustomerId::from_u64(cid);
+        let cid = id.parse::<CustomerId>().map_err(|_| AppError::NotFound("معرف العميل غير صالح".into()))?;
 
         let customer = self.customer_repo.find_by_id(&cid).await?;
 

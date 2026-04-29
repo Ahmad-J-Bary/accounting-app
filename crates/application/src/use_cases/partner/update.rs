@@ -26,7 +26,7 @@ impl UpdatePartnerUseCase {
 
     pub async fn execute(
         &self,
-        id: u64,
+        id: String,
         name: String,
         exchange_rate: Decimal,
         amount: Decimal,
@@ -34,7 +34,7 @@ impl UpdatePartnerUseCase {
         sharing_type: String,
         manual_ratio: Option<Decimal>,
     ) -> Result<(), AppError> {
-        let partner_id = PartnerId::from_u64(id);
+        let partner_id = id.parse::<PartnerId>().map_err(|_| AppError::NotFound("معرف الشريك غير صالح".into()))?;
         let mut partner = self.repo.find_by_id(&partner_id).await?
             .ok_or_else(|| AppError::NotFound("الشريك غير موجود".into()))?;
 
@@ -48,6 +48,7 @@ impl UpdatePartnerUseCase {
         let old_name = partner.name.clone();
 
         partner.update_info(
+            partner.code.clone(), // Keep same code for now
             name.clone(),
             exchange_rate,
             amount,

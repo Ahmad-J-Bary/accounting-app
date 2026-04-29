@@ -60,3 +60,14 @@ export interface AssetMovement {
   reference?: string;
   created_at: string;
 }
+
+export interface CreateConsumableRequest {
+  code: string;
+  name: string;
+  categoryId: string;
+  unitCost: string;
+  currency: string;
+  fxRate: string;
+  assetAccountId: string;
+  expenseAccountId: string;
+}

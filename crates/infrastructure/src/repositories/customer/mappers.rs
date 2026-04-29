@@ -1,6 +1,6 @@
 use application::errors::AppError;
 use domain::customers::Customer;
-use domain::shared::{CustomerId, AccountId, Currency};
+use domain::shared::{AccountId, Currency};
 use rust_decimal::Decimal;
 use std::str::FromStr;
 use uuid::Uuid;
@@ -14,7 +14,7 @@ pub fn row_to_customer(row: CustomerRow) -> Result<Customer, AppError> {
     };
 
     Ok(Customer {
-        id: CustomerId::from_u64(row.id.parse::<u64>().unwrap_or(0)),
+        id: row.id.parse().map_err(|e| AppError::Infrastructure(format!("معرف العميل غير صالح: {}", e)))?,
         code: row.code,
         name: row.name,
         phone: row.phone,

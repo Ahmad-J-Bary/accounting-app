@@ -7,7 +7,7 @@ use super::mappers::row_to_partner;
 
 pub async fn find_by_id(pool: &SqlitePool, id: &PartnerId) -> Result<Option<Partner>, AppError> {
     let row = sqlx::query_as::<_, PartnerRow>("SELECT * FROM partners WHERE id = ?")
-        .bind(id.0 as i64)
+        .bind(id.to_string())
         .fetch_optional(pool)
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;

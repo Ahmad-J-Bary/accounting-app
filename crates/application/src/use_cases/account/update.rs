@@ -69,12 +69,10 @@ impl UpdateAccountUseCase {
         account.notes = cmd.notes.as_ref().map(|n| n.trim().to_string());
         account.linked_customer_id = cmd.linked_customer_id
             .as_deref()
-            .and_then(|s| s.parse::<u64>().ok())
-            .map(CustomerId::from_u64);
+            .and_then(|s| s.parse::<CustomerId>().ok());
         account.linked_supplier_id = cmd.linked_supplier_id
             .as_deref()
-            .and_then(|s| s.parse::<u64>().ok())
-            .map(SupplierId::from_u64);
+            .and_then(|s| s.parse::<SupplierId>().ok());
         account.updated_at = Utc::now();
 
         self.account_repo

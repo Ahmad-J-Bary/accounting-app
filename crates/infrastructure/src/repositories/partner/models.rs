@@ -1,6 +1,7 @@
 #[derive(sqlx::FromRow)]
 pub struct PartnerRow {
-    pub id: i64,
+    pub id: String,
+    pub code: String,
     pub name: String,
     pub exchange_rate: String,
     pub amount_local: String,

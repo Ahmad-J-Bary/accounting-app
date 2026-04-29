@@ -15,7 +15,8 @@ pub fn row_to_partner(row: PartnerRow) -> Result<Partner, AppError> {
     };
 
     Ok(Partner {
-        id: PartnerId(row.id as u64),
+        id: row.id.parse::<PartnerId>().map_err(|e| AppError::Infrastructure(e.to_string()))?,
+        code: row.code,
         name: row.name,
         exchange_rate: Decimal::from_str(&row.exchange_rate).unwrap_or_default(),
         amount_local: Decimal::from_str(&row.amount_local).unwrap_or_default(),

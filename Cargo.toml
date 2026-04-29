@@ -31,7 +31,7 @@ application = { path = "crates/application" }
 infrastructure = { path = "crates/infrastructure" }
 
 [profile.dev]
-opt-level = 1
+opt-level = 0
 
 [profile.release]
 panic = "abort"

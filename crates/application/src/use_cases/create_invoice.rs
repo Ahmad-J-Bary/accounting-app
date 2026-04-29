@@ -27,33 +27,29 @@ impl CreateInvoiceUseCase {
     }
 
     pub async fn execute(&self, request: CreateInvoiceRequest) -> Result<InvoiceDto, AppError> {
-        let customer_id: u64 = request.customer_id.parse()
+        let customer_id = request.customer_id.parse::<CustomerId>()
             .map_err(|e| AppError::Invalid(format!("Invalid customer ID: {}", e)))?;
         
         let mut lines = Vec::new();
         for line_dto in request.lines {
-            let material_id = Uuid::parse_str(&line_dto.material_id)
+            let material_id = line_dto.material_id.parse::<MaterialId>()
                 .map_err(|e| AppError::Invalid(format!("Invalid material ID: {}", e)))?;
-            let quantity = Decimal::from_str(&line_dto.quantity)
-                .map_err(|e| AppError::Invalid(format!("Invalid quantity: {}", e)))?;
-            let unit_price = Decimal::from_str(&line_dto.unit_price)
-                .map_err(|e| AppError::Invalid(format!("Invalid unit price: {}", e)))?;
+            let quantity = crate::utils::parse_decimal(Some(&line_dto.quantity), "الكمية")?;
+            let unit_price = crate::utils::parse_decimal(Some(&line_dto.unit_price), "سعر الوحدة")?;
             
             lines.push(InvoiceLine::new(
-                MaterialId(material_id),
+                material_id,
                 quantity,
                 domain::shared::money::Money::syp(unit_price),
             ));
         }
 
-        let tax_amount = Decimal::from_str(&request.tax_amount)
-            .map_err(|e| AppError::Invalid(format!("Invalid tax amount: {}", e)))?;
-        let discount_amount = Decimal::from_str(&request.discount_amount)
-            .map_err(|e| AppError::Invalid(format!("Invalid discount amount: {}", e)))?;
+        let tax_amount = crate::utils::parse_decimal(Some(&request.tax_amount), "قيمة الضريبة")?;
+        let discount_amount = crate::utils::parse_decimal(Some(&request.discount_amount), "قيمة الخصم")?;
 
         let invoice = Invoice::new(
             request.invoice_number,
-            CustomerId::from_u64(customer_id),
+            customer_id,
             lines,
             domain::shared::money::Money::syp(tax_amount),
             domain::shared::money::Money::syp(discount_amount),
@@ -64,14 +60,14 @@ impl CreateInvoiceUseCase {
         let mut dto = InvoiceDto::from(invoice);
         
         // Enrich with customer name
-        if let Ok(Some(customer)) = self.customer_repo.find_by_id(&CustomerId::from_u64(customer_id)).await {
+        if let Ok(Some(customer)) = self.customer_repo.find_by_id(&customer_id).await {
             dto.customer_name = Some(customer.name);
         }
         
         // Enrich with material names
         for line in &mut dto.lines {
-            if let Ok(pid) = Uuid::parse_str(&line.material_id) {
-                if let Ok(Some(material)) = self.material_repo.find_by_id(&MaterialId(pid)).await {
+            if let Ok(mid) = line.material_id.parse::<MaterialId>() {
+                if let Ok(Some(material)) = self.material_repo.find_by_id(&mid).await {
                     line.material_name = Some(material.name);
                 }
             }

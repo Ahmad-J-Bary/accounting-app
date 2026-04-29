@@ -37,3 +37,25 @@ pub async fn list_all(pool: &SqlitePool) -> Result<Vec<Account>, AppError> {
     }
     Ok(accounts)
 }
+
+pub async fn get_next_child_code(pool: &SqlitePool, parent_code: &str) -> Result<String, AppError> {
+    // نعتبر أن الأبناء لهم أكواد تبدأ بكود الأب
+    // نبحث عن أكبر كود حالي تحت هذا الأب
+    let row: (Option<String>,) = sqlx::query_as("SELECT MAX(code) FROM accounts WHERE code LIKE ? AND length(code) > ?")
+        .bind(format!("{}%", parent_code))
+        .bind(parent_code.len() as i32)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    if let Some(max_code) = row.0 {
+        // إذا وجدنا كود، نقوم بزيادة الجزء الأخير
+        // نفترض أن الأكواد رقمية
+        if let Ok(num) = max_code.parse::<u64>() {
+            return Ok((num + 1).to_string());
+        }
+    }
+
+    // إذا لم نجد أبناء، نبدأ بأول كود (مثلاً كود الأب + 1)
+    Ok(format!("{}1", parent_code))
+}

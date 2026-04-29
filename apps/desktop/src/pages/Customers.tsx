@@ -9,7 +9,7 @@ import { customerService } from "@/services/customerService";
 import { accountingService } from "@/services/accountingService";
 import { invoiceService } from "@/services/invoiceService";
 import { paymentService } from "@/services/paymentService";
-import type { CustomerDto, AccountDto, InvoiceDto, Payment } from "@erp/shared-types";
+import type { CustomerDto, AccountDto, InvoiceDto, Payment, CreateCustomerRequest, UpdateCustomerRequest } from "@erp/shared-types";
 
 // Refactored Components & Hooks
 import { useMasterData } from "@/hooks/useMasterData";
@@ -35,7 +35,7 @@ export default function Customers() {
     handleOpenEdit,
     handleSave,
     handleDelete,
-  } = useMasterData<CustomerDto, any>({
+  } = useMasterData<CustomerDto, CreateCustomerRequest | UpdateCustomerRequest>({
     fetchData: () => customerService.listCustomers(),
     saveData: async (payload) => {
       if (payload.id) return customerService.updateCustomer(payload);

@@ -116,24 +116,20 @@ impl CreatePurchaseInvoiceUseCase {
         for item_req in req.items {
             let material_id: MaterialId = item_req.product_id.parse()
                 .map_err(|_| AppError::Invalid("معرف المادة غير صالح".into()))?;
-            let quantity = Decimal::try_from(item_req.quantity)
-                .map_err(|_| AppError::Invalid("الكمية غير صالحة".into()))?;
-            let unit_price = Decimal::try_from(item_req.unit_price)
-                .map_err(|_| AppError::Invalid("السعر غير صالح".into()))?;
+            let quantity = crate::utils::parse_decimal(Some(&item_req.quantity), "الكمية")?;
+            let unit_price = crate::utils::parse_decimal(Some(&item_req.unit_price), "السعر")?;
             let item = PurchaseInvoiceItem::new(material_id, quantity, unit_price)
                 .map_err(|e| AppError::Invalid(e.to_string()))?;
             invoice.add_item(item).map_err(|e| AppError::Invalid(e.to_string()))?;
         }
 
         if let Some(tax) = req.tax_amount {
-            let tax_dec = Decimal::try_from(tax)
-                .map_err(|_| AppError::Invalid("قيمة الضريبة غير صالحة".into()))?;
+            let tax_dec = crate::utils::parse_decimal(Some(&tax), "قيمة الضريبة")?;
             invoice.set_tax(tax_dec).map_err(|e| AppError::Invalid(e.to_string()))?;
         }
 
         if let Some(discount) = req.discount_amount {
-            let disc_dec = Decimal::try_from(discount)
-                .map_err(|_| AppError::Invalid("قيمة الخصم غير صالحة".into()))?;
+            let disc_dec = crate::utils::parse_decimal(Some(&discount), "قيمة الخصم")?;
             invoice.set_discount(disc_dec).map_err(|e| AppError::Invalid(e.to_string()))?;
         }
 

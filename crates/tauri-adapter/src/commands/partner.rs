@@ -15,7 +15,7 @@ pub async fn add_partner(
     is_amount_in_usd: bool,
     sharing_type: String,
     manual_ratio: Option<String>,
-) -> Result<u64, String> {
+) -> Result<String, String> {
     let rate = Decimal::from_str(&exchange_rate).map_err(|e| e.to_string())?;
     let amt = Decimal::from_str(&amount).map_err(|e| e.to_string())?;
     let ratio = manual_ratio.and_then(|r| Decimal::from_str(&r).ok());
@@ -47,7 +47,7 @@ pub async fn list_partners(
 #[tauri::command]
 pub async fn delete_partner(
     state: State<'_, AppState>,
-    id: u64
+    id: String
 ) -> Result<(), String> {
     DeletePartnerUseCase::new(
         state.partner_repo.clone(),
@@ -59,7 +59,7 @@ pub async fn delete_partner(
 #[tauri::command]
 pub async fn update_partner(
     state: State<'_, AppState>,
-    id: u64,
+    id: String,
     name: String,
     exchange_rate: String,
     amount: String,

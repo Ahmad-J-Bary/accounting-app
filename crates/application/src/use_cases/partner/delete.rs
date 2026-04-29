@@ -20,8 +20,8 @@ impl DeletePartnerUseCase {
         Self { repo, account_repo, uow }
     }
 
-    pub async fn execute(&self, id: u64) -> Result<(), AppError> {
-        let partner_id = PartnerId::from_u64(id);
+    pub async fn execute(&self, id: String) -> Result<(), AppError> {
+        let partner_id = id.parse::<PartnerId>().map_err(|_| AppError::NotFound("معرف الشريك غير صالح".into()))?;
         
         let partner = self.repo.find_by_id(&partner_id).await?
             .ok_or_else(|| AppError::NotFound("الشريك غير موجود".into()))?;

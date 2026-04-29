@@ -7,7 +7,7 @@ import { Plus, Search, RefreshCw } from "lucide-react";
 
 import { supplierService } from "@/services/supplierService";
 import { accountingService } from "@/services/accountingService";
-import type { SupplierDto, AccountDto } from "@erp/shared-types";
+import type { SupplierDto, AccountDto, CreateSupplierRequest, UpdateSupplierRequest } from "@erp/shared-types";
 
 // Refactored Components & Hooks
 import { useMasterData } from "@/hooks/useMasterData";
@@ -31,7 +31,7 @@ export default function Suppliers() {
     handleOpenEdit,
     handleSave,
     handleDelete,
-  } = useMasterData<SupplierDto, any>({
+  } = useMasterData<SupplierDto, CreateSupplierRequest | UpdateSupplierRequest>({
     fetchData: () => supplierService.listSuppliers(),
     saveData: async (payload) => {
       if (payload.id) return supplierService.updateSupplier(payload);

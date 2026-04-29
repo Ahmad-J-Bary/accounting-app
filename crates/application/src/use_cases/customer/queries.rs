@@ -19,8 +19,7 @@ impl CustomerQueries {
     }
 
     pub async fn get_by_id(&self, id: String) -> Result<CustomerDto, AppError> {
-        let cid = id.parse::<u64>().map_err(|_| AppError::NotFound("معرف العميل غير صالح".into()))?;
-        let cid = CustomerId::from_u64(cid);
+        let cid = id.parse::<CustomerId>().map_err(|_| AppError::NotFound("معرف العميل غير صالح".into()))?;
         let customer = self.repo.find_by_id(&cid).await?
             .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
 

@@ -50,13 +50,11 @@ impl CreateAccountUseCase {
 
         let linked_customer_id = cmd.linked_customer_id
             .as_deref()
-            .and_then(|s| s.parse::<u64>().ok())
-            .map(CustomerId::from_u64);
+            .and_then(|s| s.parse::<CustomerId>().ok());
 
         let linked_supplier_id = cmd.linked_supplier_id
             .as_deref()
-            .and_then(|s| s.parse::<u64>().ok())
-            .map(SupplierId::from_u64);
+            .and_then(|s| s.parse::<SupplierId>().ok());
 
         let account = Account {
             id: AccountId::new(),
@@ -98,18 +96,13 @@ impl CreateAccountUseCase {
         if account.code.len() >= 4 && (account.code.starts_with("123") || account.code.starts_with("1203")) {
             if let Some(ref customer_repo) = self.customer_repo {
                 let customer_code = if account.code.starts_with("1203") { &account.code[4..] } else { &account.code[3..] };
-                let customer_id_num: u64 = customer_code.parse().unwrap_or(0);
                 
                 let customer_name = account.name_ar
                     .strip_prefix("ذمة العميل: ")
                     .unwrap_or(&account.name_ar)
                     .to_string();
 
-                let customer_id = if customer_id_num > 0 {
-                    CustomerId::from_u64(customer_id_num)
-                } else {
-                    CustomerId::new()
-                };
+                let customer_id = CustomerId::new();
 
                 let customer = Customer::new_with_id(
                     customer_id,
@@ -138,18 +131,13 @@ impl CreateAccountUseCase {
         if account.code.len() >= 4 && (account.code.starts_with("223") || account.code.starts_with("2203")) {
             if let Some(ref supplier_repo) = self.supplier_repo {
                 let supplier_code = if account.code.starts_with("2203") { &account.code[4..] } else { &account.code[3..] };
-                let supplier_id_num: u64 = supplier_code.parse().unwrap_or(0);
                 
                 let supplier_name = account.name_ar
                     .strip_prefix("ذمة المورد: ")
                     .unwrap_or(&account.name_ar)
                     .to_string();
 
-                let supplier_id = if supplier_id_num > 0 {
-                    SupplierId::from_u64(supplier_id_num)
-                } else {
-                    SupplierId::new()
-                };
+                let supplier_id = SupplierId::new();
 
                 let supplier = Supplier::new_with_id(
                     supplier_id,

@@ -32,12 +32,13 @@ impl CreateMaterialUseCase {
              }
         }
 
-        let min_stock = req.minimum_stock.parse().map_err(|_| AppError::Invalid("حد الطلب غير صالح".into()))?;
+        let min_stock = crate::utils::parse_decimal(Some(&req.minimum_stock), "حد الطلب")?;
+        let code = crate::utils::ensure_code(req.code, "AUTO".to_string());
 
         let material = Material::new(
             req.name,
             req.barcode.unwrap_or_default(),
-            req.code.unwrap_or_default(),
+            code,
             min_stock,
             category_ids,
         ).map_err(|e| AppError::Invalid(e.to_string()))?;

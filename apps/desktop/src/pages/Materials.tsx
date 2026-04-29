@@ -7,7 +7,7 @@ import { Plus, Search, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { materialService } from "@/services/materialService";
 import { categoryService } from "@/services/categoryService";
-import type { MaterialDto, CategoryDto } from "@erp/shared-types";
+import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest } from "@erp/shared-types";
 import { cn } from "@/lib/utils";
 
 // Refactored Components & Hooks
@@ -31,7 +31,7 @@ export default function Materials() {
     handleOpenEdit,
     handleSave,
     handleDelete,
-  } = useMasterData<MaterialDto, any>({
+  } = useMasterData<MaterialDto, CreateMaterialRequest | UpdateMaterialRequest>({
     fetchData: () => materialService.listMaterials(),
     saveData: async (payload) => {
       if (payload.id) return materialService.updateMaterial(payload);

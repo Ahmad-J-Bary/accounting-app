@@ -14,6 +14,7 @@ pub enum ProfitSharingType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Partner {
     pub id: PartnerId,
+    pub code: String,
     pub name: String,
     pub exchange_rate: Decimal,
     pub amount_local: Decimal,
@@ -29,6 +30,7 @@ pub struct Partner {
 
 impl Partner {
     pub fn new(
+        code: String,
         name: String,
         exchange_rate: Decimal,
         amount: Decimal,
@@ -54,6 +56,7 @@ impl Partner {
 
         Ok(Self {
             id: PartnerId::new(),
+            code,
             name,
             exchange_rate,
             amount_local,
@@ -70,6 +73,7 @@ impl Partner {
 
     pub fn update_info(
         &mut self,
+        code: String,
         name: String,
         exchange_rate: Decimal,
         amount: Decimal,
@@ -81,6 +85,7 @@ impl Partner {
             return Err(DomainError::Invalid("اسم الشريك لا يمكن أن يكون فارغًا".into()));
         }
 
+        self.code = code;
         self.name = name;
         self.exchange_rate = exchange_rate;
         self.is_amount_in_usd = is_amount_in_usd;

@@ -42,4 +42,8 @@ impl AccountRepository for SqliteAccountRepository {
     async fn delete(&self, id: &AccountId) -> Result<(), AppError> {
         commands::delete(&self.pool, id).await
     }
+
+    async fn get_next_child_code(&self, parent_code: &str) -> Result<String, AppError> {
+        queries::get_next_child_code(&self.pool, parent_code).await
+    }
 }

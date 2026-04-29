@@ -15,8 +15,7 @@ impl DeleteSupplierUseCase {
     }
 
     pub async fn execute(&self, id: String) -> Result<(), AppError> {
-        let sid = id.parse::<u64>().map_err(|_| AppError::NotFound("معرف المورد غير صالح".into()))?;
-        let sid = SupplierId::from_u64(sid);
+        let sid = id.parse::<SupplierId>().map_err(|_| AppError::NotFound("معرف المورد غير صالح".into()))?;
 
         let supplier = self.supplier_repo.find_by_id(&sid).await?;
 

@@ -5,9 +5,11 @@ use domain::shared::ids::{PartnerId};
 
 pub async fn save(pool: &SqlitePool, partner: &Partner) -> Result<(), AppError> {
     sqlx::query(
-        "INSERT INTO partners (name, exchange_rate, amount_local, amount_usd, is_amount_in_usd, profit_sharing_ratio, profit_sharing_type, linked_account_id, drawings_account_id, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO partners (id, code, name, exchange_rate, amount_local, amount_usd, is_amount_in_usd, profit_sharing_ratio, profit_sharing_type, linked_account_id, drawings_account_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
+    .bind(partner.id.to_string())
+    .bind(&partner.code)
     .bind(&partner.name)
     .bind(partner.exchange_rate.to_string())
     .bind(partner.amount_local.to_string())
@@ -32,9 +34,10 @@ pub async fn save(pool: &SqlitePool, partner: &Partner) -> Result<(), AppError> 
 
 pub async fn update(pool: &SqlitePool, partner: &Partner) -> Result<(), AppError> {
     sqlx::query(
-        "UPDATE partners SET name = ?, exchange_rate = ?, amount_local = ?, amount_usd = ?, is_amount_in_usd = ?, profit_sharing_ratio = ?, profit_sharing_type = ?, linked_account_id = ?, drawings_account_id = ?, updated_at = ?
+        "UPDATE partners SET code = ?, name = ?, exchange_rate = ?, amount_local = ?, amount_usd = ?, is_amount_in_usd = ?, profit_sharing_ratio = ?, profit_sharing_type = ?, linked_account_id = ?, drawings_account_id = ?, updated_at = ?
          WHERE id = ?"
     )
+    .bind(&partner.code)
     .bind(&partner.name)
     .bind(partner.exchange_rate.to_string())
     .bind(partner.amount_local.to_string())
@@ -49,7 +52,7 @@ pub async fn update(pool: &SqlitePool, partner: &Partner) -> Result<(), AppError
     .bind(partner.linked_account_id.as_ref().map(|id| id.to_string()))
     .bind(partner.drawings_account_id.as_ref().map(|id| id.to_string()))
     .bind(&partner.updated_at)
-    .bind(partner.id.0 as i64)
+    .bind(partner.id.to_string())
     .execute(pool)
     .await
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
@@ -59,7 +62,7 @@ pub async fn update(pool: &SqlitePool, partner: &Partner) -> Result<(), AppError
 
 pub async fn delete(pool: &SqlitePool, id: &PartnerId) -> Result<(), AppError> {
     sqlx::query("DELETE FROM partners WHERE id = ?")
-        .bind(id.0 as i64)
+        .bind(id.to_string())
         .execute(pool)
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;

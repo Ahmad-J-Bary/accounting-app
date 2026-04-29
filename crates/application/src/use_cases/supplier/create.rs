@@ -1,11 +1,8 @@
 use std::sync::Arc;
-use std::str::FromStr;
-use chrono::Utc;
-use rust_decimal::Decimal;
 use domain::suppliers::Supplier;
 use domain::shared::ids::{AccountId, SupplierId};
-use domain::shared::currency::Currency;
 use domain::accounting::account::{Account, AccountType, AccountCategory};
+use chrono::Utc;
 
 use crate::ports::supplier_repository::SupplierRepository;
 use crate::ports::account_repository::AccountRepository;
@@ -27,38 +24,12 @@ impl CreateSupplierUseCase {
 
     pub async fn execute(&self, req: CreateSupplierRequest) -> Result<SupplierDto, AppError> {
         let supplier_id = SupplierId::new();
-
-        let code = if req.code.trim().is_empty() {
-            supplier_id.0.to_string()
-        } else {
-            req.code.clone()
-        };
-
-        let debit = req.debit
-            .as_deref()
-            .map(Decimal::from_str)
-            .transpose()
-            .map_err(|e| AppError::Invalid(format!("قيمة المدين غير صالحة: {}", e)))?
-            .unwrap_or(Decimal::ZERO);
-
-        let credit = req.credit
-            .as_deref()
-            .map(Decimal::from_str)
-            .transpose()
-            .map_err(|e| AppError::Invalid(format!("قيمة الدائن غير صالحة: {}", e)))?
-            .unwrap_or(Decimal::ZERO);
-
-        let opening_balance = req.opening_balance
-            .as_deref()
-            .map(Decimal::from_str)
-            .transpose()
-            .map_err(|e| AppError::Invalid(format!("رصيد الافتتاح غير صالح: {}", e)))?
-            .unwrap_or(Decimal::ZERO);
-
-        let currency = match req.currency.as_deref() {
-            Some("USD") => Currency::USD,
-            _ => Currency::SYP,
-        };
+        let code = crate::utils::ensure_code(Some(req.code), supplier_id.to_string());
+        
+        let debit = crate::utils::parse_decimal(req.debit.as_deref(), "المدين")?;
+        let credit = crate::utils::parse_decimal(req.credit.as_deref(), "الدائن")?;
+        let opening_balance = crate::utils::parse_decimal(req.opening_balance.as_deref(), "رصيد الافتتاح")?;
+        let currency = crate::utils::parse_currency(req.currency.as_deref());
 
         let mut supplier = Supplier::new_with_id(
             supplier_id,
@@ -76,7 +47,7 @@ impl CreateSupplierUseCase {
 
         self.supplier_repo.save(&supplier).await?;
 
-        let account_code = format!("223{}", supplier_id);
+        let account_code = self.account_repo.get_next_child_code("223").await?;
 
         let parent = self.account_repo.find_by_code("223").await
             .map_err(|e| AppError::Infrastructure(e.to_string()))?;

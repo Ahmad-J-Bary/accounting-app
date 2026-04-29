@@ -60,16 +60,16 @@ impl PostInvoiceUseCase {
         let mut dto = InvoiceDto::from(invoice);
         
         // Enrich with customer name
-        if let Ok(id) = dto.customer_id.parse::<u64>() {
-            if let Ok(Some(customer)) = self.customer_repo.find_by_id(&CustomerId::from_u64(id)).await {
+        if let Ok(id) = dto.customer_id.parse::<CustomerId>() {
+            if let Ok(Some(customer)) = self.customer_repo.find_by_id(&id).await {
                 dto.customer_name = Some(customer.name);
             }
         }
         
         // Enrich with material names
         for line in &mut dto.lines {
-            if let Ok(pid) = Uuid::parse_str(&line.material_id) {
-                if let Ok(Some(material)) = self.material_repo.find_by_id(&MaterialId(pid)).await {
+            if let Ok(mid) = line.material_id.parse::<MaterialId>() {
+                if let Ok(Some(material)) = self.material_repo.find_by_id(&mid).await {
                     line.material_name = Some(material.name);
                 }
             }

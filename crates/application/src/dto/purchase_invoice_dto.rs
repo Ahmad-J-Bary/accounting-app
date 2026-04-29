@@ -35,8 +35,8 @@ pub struct PurchaseInvoiceDto {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreatePurchaseInvoiceItemRequest {
     pub product_id: String,
-    pub quantity: f64,
-    pub unit_price: f64,
+    pub quantity: String,
+    pub unit_price: String,
     pub notes: Option<String>,
 }
 
@@ -45,8 +45,8 @@ pub struct CreatePurchaseInvoiceRequest {
     pub invoice_number: String,
     pub supplier_id: String,
     pub items: Vec<CreatePurchaseInvoiceItemRequest>,
-    pub tax_amount: Option<f64>,
-    pub discount_amount: Option<f64>,
+    pub tax_amount: Option<String>,
+    pub discount_amount: Option<String>,
     pub invoice_date: String,
     pub due_date: Option<String>,
     pub notes: Option<String>,
