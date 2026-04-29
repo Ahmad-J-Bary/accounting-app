@@ -12,4 +12,8 @@ export const paymentService = {
   async listPayments(customerId?: string, supplierId?: string): Promise<Payment[]> {
     return await invoke<Payment[]>('list_payments', { customerId, supplierId });
   },
+
+  async deletePayment(id: string): Promise<void> {
+    return await invoke<void>('delete_payment', { id });
+  },
 };

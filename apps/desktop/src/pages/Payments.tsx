@@ -96,6 +96,17 @@ export default function Payments() {
     }
   };
 
+  const handleDelete = useCallback(async (id: string) => {
+    if (!confirm("هل أنت متأكد من حذف هذه الحركة؟")) return;
+    try {
+      await paymentService.deletePayment(id);
+      toast.success("تم حذف الحركة بنجاح");
+      refresh(true);
+    } catch (e) {
+      toast.error("فشل حذف الحركة: " + e);
+    }
+  }, [refresh]);
+
   const columns = useMemo<Column<Payment>[]>(() => [
     { 
       header: "التاريخ", 
@@ -144,13 +155,13 @@ export default function Payments() {
       accessor: (p) => (
         <TableActions 
           onView={() => toast.info("عرض تفاصيل الحركة قيد التطوير")}
-          onDelete={() => toast.warning("حذف الحركة قيد التطوير")}
+          onDelete={() => handleDelete(p.id)}
         />
       ),
       align: "left",
       className: "w-16"
     }
-  ], []);
+  ], [handleDelete]);
 
   const isLoading = paymentsLoading || loadingExtras;
 

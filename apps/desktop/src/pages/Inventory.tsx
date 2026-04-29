@@ -1,184 +1,165 @@
+import { useState, useMemo } from "react";
 import { PageHeader } from "@/components/erp/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/erp/StatusBadge";
-import { Plus, Download, Search, Warehouse, ArrowLeftRight } from "lucide-react";
-import { stockMovements, products } from "@/lib/mockData";
+import { Plus, Download, Search, Warehouse, ArrowLeftRight, RefreshCw } from "lucide-react";
 import { formatDate, formatNumber, formatCurrency } from "@/lib/format";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DataTable, Column } from "@/components/erp/shared/DataTable";
-import { useMemo, useState } from "react";
-
-interface StockMovement {
-  number: string;
-  date: string;
-  type: string;
-  product: string;
-  warehouse: string;
-  quantity: number;
-  reference: string;
-}
-
-interface LedgerEntry {
-  date: string;
-  ref: string;
-  desc: string;
-  in: string;
-  out: string;
-  balance: string;
-}
+import { useDataTable } from "@/hooks/useDataTable";
+import { inventoryService } from "@/services/inventoryService";
+import type { StockMovement } from "@erp/shared-types";
+import { toast } from "sonner";
 
 export default function Inventory() {
-  const [search, setSearch] = useState("");
-  
-  const warehouses = [
-    { name: "المستودع الرئيسي - دمشق", items: 245, value: 87000 },
-    { name: "مستودع حلب", items: 128, value: 34000 },
-    { name: "مستودع حمص", items: 89, value: 21000 },
-  ];
+  const {
+    filtered: movements,
+    loading: movementsLoading,
+    search,
+    setSearch,
+    refresh,
+  } = useDataTable<StockMovement>({
+    fetchData: () => inventoryService.listStockMovements(),
+    searchFields: ["product_name", "reference"],
+    errorLabel: "فشل تحميل حركات المخزون",
+  });
 
   const movementColumns = useMemo<Column<StockMovement>[]>(() => [
     { 
-      header: "رقم الحركة", 
-      accessor: "number", 
-      className: "font-bold text-primary" 
-    },
-    { 
       header: "التاريخ", 
       accessor: (m) => formatDate(m.date),
-      className: "text-slate-500" 
+      className: "tabular-nums text-slate-500" 
     },
     { 
       header: "النوع", 
-      accessor: (m) => <StatusBadge status={m.type} />,
+      accessor: (m) => {
+        const typeMap: Record<string, string> = {
+          'In': 'وارد',
+          'Out': 'صادر',
+          'Adjustment': 'تسوية',
+          'Production': 'تصنيع',
+          'Damaged': 'تالف'
+        };
+        return (
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ring-1 ring-inset ${
+            m.movement_type === 'In' ? 'bg-green-50 text-green-700 ring-green-100' :
+            m.movement_type === 'Out' ? 'bg-red-50 text-red-700 ring-red-100' :
+            'bg-blue-50 text-blue-700 ring-blue-100'
+          }`}>
+            {typeMap[m.movement_type] || m.movement_type}
+          </span>
+        );
+      },
       align: "center"
     },
     { 
-      header: "المنتج", 
-      accessor: "product",
-      className: "font-medium" 
-    },
-    { 
-      header: "المستودع", 
-      accessor: "warehouse",
-      className: "text-slate-600" 
+      header: "الصنف / المنتج", 
+      accessor: "product_name",
+      className: "font-bold text-slate-800" 
     },
     { 
       header: "الكمية", 
-      accessor: (m) => formatNumber(m.quantity), 
-      align: "left", 
-      className: "tabular-nums font-bold" 
+      accessor: (m) => (
+        <span className={`tabular-nums font-bold ${parseFloat(m.quantity) < 0 ? "text-red-600" : "text-green-600"}`}>
+          {formatNumber(parseFloat(m.quantity))}
+        </span>
+      ), 
+      align: "left"
+    },
+    { 
+      header: "التكلفة (إجمالي)", 
+      accessor: (m) => m.total_cost ? formatCurrency(parseFloat(m.total_cost)) : "—",
+      className: "tabular-nums text-slate-600"
     },
     { 
       header: "المرجع", 
       accessor: "reference", 
-      align: "left", 
-      className: "text-primary hover:underline cursor-pointer" 
+      className: "text-primary hover:underline cursor-pointer font-medium" 
     }
   ], []);
 
-  const ledgerColumns = useMemo<Column<LedgerEntry>[]>(() => [
-    { header: "التاريخ", accessor: "date" },
-    { header: "المرجع", accessor: "ref", className: "text-primary font-medium" },
-    { header: "البيان", accessor: "desc" },
-    { header: "وارد", accessor: "in", align: "left", className: "text-green-600 tabular-nums font-bold" },
-    { header: "صادر", accessor: "out", align: "left", className: "text-red-600 tabular-nums font-bold" },
-    { header: "الرصيد", accessor: "balance", align: "left", className: "tabular-nums font-extrabold text-slate-900" },
-  ], []);
-
-  const ledgerData = [
-    { date: "2026-04-01", ref: "رصيد افتتاحي", desc: "-", in: "25", out: "-", balance: "25" },
-    { date: "2026-04-18", ref: "PUR-2026-0089", desc: "شراء", in: "20", out: "-", balance: "45" },
-    { date: "2026-04-18", ref: "INV-2026-0145", desc: "بيع", in: "-", out: "0", balance: "45" },
+  const warehouses = [
+    { name: "المستودع الرئيسي - دمشق", items: 245, value: 87000 },
+    { name: "مستودع حلب", items: 128, value: 34000 },
   ];
 
   return (
     <>
       <PageHeader
-        title="حركات المخزون"
-        subtitle="متابعة حركة الأصناف بين المستودعات"
-        breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "المخزون" }, { label: "الحركات" }]}
+        title="إدارة المخزون"
+        subtitle="متابعة حركات الأصناف وحالة المستودعات"
+        breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "المخزون" }]}
         actions={
-          <>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => refresh()} disabled={movementsLoading}>
+              <RefreshCw className={`w-4 h-4 ml-2 ${movementsLoading ? "animate-spin" : ""}`} />تحديث
+            </Button>
             <Button variant="outline"><Download className="w-4 h-4 ml-2" />تصدير</Button>
-            <Button variant="outline"><ArrowLeftRight className="w-4 h-4 ml-2" />تحويل مخزني</Button>
-            <Button><Plus className="w-4 h-4 ml-2" />حركة جديدة</Button>
-          </>
+            <Button onClick={() => toast.info("تحويل مخزني قيد التطوير")}>
+              <ArrowLeftRight className="w-4 h-4 ml-2" />تحويل مخزني
+            </Button>
+            <Button onClick={() => toast.info("إضافة حركة قيد التطوير")}>
+              <Plus className="w-4 h-4 ml-2" />حركة جديدة
+            </Button>
+          </div>
         }
       />
 
       <Tabs defaultValue="movements">
-        <TabsList className="bg-slate-100/50 p-1">
-          <TabsTrigger value="movements">الحركات</TabsTrigger>
-          <TabsTrigger value="warehouses">المستودعات</TabsTrigger>
-          <TabsTrigger value="ledger">دفتر الأستاذ المخزني</TabsTrigger>
+        <TabsList className="bg-white border p-1 h-12 rounded-xl shadow-sm mb-6">
+          <TabsTrigger value="movements" className="rounded-lg px-6 gap-2">الحركات</TabsTrigger>
+          <TabsTrigger value="warehouses" className="rounded-lg px-6 gap-2">المستودعات</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="movements" className="mt-4">
-          <Card className="p-5">
-            <div className="flex items-center gap-3 mb-4 flex-wrap">
-              <div className="relative flex-1 min-w-[220px]">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <TabsContent value="movements">
+          <Card className="p-5 border-none shadow-sm ring-1 ring-slate-100">
+            <div className="flex items-center gap-3 mb-6 flex-wrap">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input 
-                  placeholder="بحث برقم الحركة أو المنتج..." 
-                  className="pr-10" 
+                  placeholder="بحث بالصنف أو المرجع..." 
+                  className="pr-10 border-slate-200 focus:ring-primary/20" 
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
-              <Button variant="outline">تصفية حسب النوع</Button>
-              <Button variant="outline">تصفية حسب المستودع</Button>
             </div>
 
             <DataTable
-              data={stockMovements}
+              data={movements}
               columns={movementColumns}
-              loading={false}
+              loading={movementsLoading}
               emptyMessage="لا توجد حركات مخزنية مسجلة"
             />
           </Card>
         </TabsContent>
 
-        <TabsContent value="warehouses" className="mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <TabsContent value="warehouses">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {warehouses.map((w, i) => (
-              <Card key={i} className="p-5 hover:shadow-lg transition-shadow border-slate-100">
+              <Card key={i} className="p-5 border-none shadow-sm ring-1 ring-slate-100 hover:ring-primary/30 transition-all group">
                 <div className="flex items-start justify-between mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                    <Warehouse className="w-5 h-5 text-blue-600" />
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                    <Warehouse className="w-6 h-6 text-blue-600" />
                   </div>
                   <StatusBadge status="active" />
                 </div>
-                <h3 className="font-bold text-slate-800 mb-1">{w.name}</h3>
-                <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-slate-50">
+                <h3 className="font-bold text-slate-800 text-lg mb-1">{w.name}</h3>
+                <div className="grid grid-cols-2 gap-3 mt-6 pt-6 border-t border-slate-50">
                   <div>
-                    <div className="text-[11px] text-slate-500 uppercase tracking-wider mb-1">عدد الأصناف</div>
-                    <div className="font-bold tabular-nums text-slate-900">{formatNumber(w.items)}</div>
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">عدد الأصناف</div>
+                    <div className="font-bold tabular-nums text-slate-900 text-xl">{formatNumber(w.items)}</div>
                   </div>
                   <div>
-                    <div className="text-[11px] text-slate-500 uppercase tracking-wider mb-1">قيمة المخزون</div>
-                    <div className="font-bold tabular-nums text-primary">{formatCurrency(w.value)}</div>
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">قيمة المخزون</div>
+                    <div className="font-bold tabular-nums text-primary text-xl">{formatCurrency(w.value)}</div>
                   </div>
                 </div>
               </Card>
             ))}
           </div>
-        </TabsContent>
-
-        <TabsContent value="ledger" className="mt-4">
-          <Card className="p-5">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-lg text-slate-800">دفتر الأستاذ المخزني - {products[0].name}</h3>
-              <Button variant="ghost" size="sm" className="text-primary">تغيير المنتج</Button>
-            </div>
-            
-            <DataTable
-              data={ledgerData}
-              columns={ledgerColumns}
-              loading={false}
-            />
-          </Card>
         </TabsContent>
       </Tabs>
     </>
