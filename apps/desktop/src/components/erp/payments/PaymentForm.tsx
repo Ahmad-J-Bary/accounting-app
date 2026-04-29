@@ -6,13 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { CreatePaymentRequest, CustomerDto, SupplierDto, PaymentType } from "@erp/shared-types";
 
-export const PAYMENT_TYPE_LABELS: Record<string, string> = {
-  Receipt: "قبض من عميل",
-  SupplierPayment: "دفع لمورد",
-  CashIn: "إيداع نقدي",
-  CashOut: "سحب نقدي",
-  Other: "أخرى",
-};
+import { PAYMENT_TYPE_LABELS } from "./constants";
 
 interface PaymentFormProps {
   open: boolean;

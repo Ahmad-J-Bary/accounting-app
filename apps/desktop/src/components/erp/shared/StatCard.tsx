@@ -6,15 +6,16 @@ interface StatCardProps {
   label: string;
   value: string | number;
   icon?: ReactNode;
+  iconBg?: string;
   color?: string;
   textColor?: string;
 }
 
-export function StatCard({ label, value, icon, color, textColor }: StatCardProps) {
+export function StatCard({ label, value, icon, iconBg, color, textColor }: StatCardProps) {
   if (icon) {
     return (
       <Card className={cn(`p-4 flex items-center gap-4 border-r-4 shadow-sm`, color)}>
-        <div className={cn(`p-3 rounded-full`, textColor?.replace('text-', 'bg-').replace('600', '100').replace('primary', 'primary/10'))}>
+        <div className={cn(`p-3 rounded-full`, iconBg || textColor?.replace('text-', 'bg-').replace('600', '100').replace('primary', 'primary/10'))}>
           <div className={textColor}>{icon}</div>
         </div>
         <div>

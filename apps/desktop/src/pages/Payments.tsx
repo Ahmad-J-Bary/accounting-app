@@ -15,7 +15,8 @@ import { toast } from "sonner";
 // Refactored Components & Hooks
 import { DataTable, Column } from "@/components/erp/shared/DataTable";
 import { useDataTable } from "@/hooks/useDataTable";
-import { PaymentForm, PAYMENT_TYPE_LABELS } from "@/components/erp/payments/PaymentForm";
+import { PaymentForm } from "@/components/erp/payments/PaymentForm";
+import { PAYMENT_TYPE_LABELS } from "@/components/erp/payments/constants";
 
 export default function Payments() {
   const {

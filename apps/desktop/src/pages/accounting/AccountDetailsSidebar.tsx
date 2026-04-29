@@ -5,6 +5,8 @@ import { Label } from "@/components/ui/label";
 import type { AccountDto } from "@erp/shared-types";
 import { accountingService } from "@/services/accountingService";
 import type { AccountCategory, AccountType } from "@/services/accountingService";
+import { customerService } from "@/services/customerService";
+import { supplierService } from "@/services/supplierService";
 import { TreeSidebar } from "../../components/erp/tree-management/TreeSidebar";
 
 interface AccountDetailsSidebarProps {
@@ -70,7 +72,6 @@ export function AccountDetailsSidebar({
       if (formMode === "edit" && selected && isSyncAccount) {
         try {
           if (selected.linked_customer_id) {
-            const { customerService } = await import("@/services/customerService");
             const customer = await customerService.getCustomer(selected.linked_customer_id);
             if (customer) {
               setPhone(customer.phone || "");
@@ -80,7 +81,6 @@ export function AccountDetailsSidebar({
               setCurrency(customer.currency || "SYP");
             }
           } else if (selected.linked_supplier_id) {
-            const { supplierService } = await import("@/services/supplierService");
             const supplier = await supplierService.getSupplier(selected.linked_supplier_id);
             if (supplier) {
               setPhone(supplier.phone || "");
