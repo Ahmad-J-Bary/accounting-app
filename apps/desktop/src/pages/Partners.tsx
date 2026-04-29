@@ -1,10 +1,10 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { PageHeader } from "@/components/erp/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Plus, Users, Trash2, RefreshCw, Calculator, TrendingUp, DollarSign, PieChart as PieChartIcon, Settings2, Edit } from "lucide-react";
+import { Plus, Users, RefreshCw, Calculator, TrendingUp, DollarSign, PieChart as PieChartIcon, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/format";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
@@ -13,9 +13,11 @@ import { partnerService, type PartnerDto, type PartnerRequest } from "@/services
 
 // Refactored Components & Hooks
 import { DataTable, Column } from "@/components/erp/shared/DataTable";
+import { TableActions } from "@/components/erp/shared/TableActions";
 import { useDataTable } from "@/hooks/useDataTable";
 import { PartnerForm } from "@/components/erp/partners/PartnerForm";
 import { StatCard } from "@/components/erp/shared/StatCard";
+import { usePartnerRatios } from "@/hooks/usePartnerRatios";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
@@ -36,25 +38,12 @@ export default function Partners() {
   const [editPartner, setEditPartner] = useState<PartnerDto | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const totals = useMemo(() => {
-    const local = partners.reduce((sum, p) => sum + parseFloat(p.amount_local), 0);
-    const usd = partners.reduce((sum, p) => sum + parseFloat(p.amount_usd), 0);
-    return { local, usd };
-  }, [partners]);
-
-  const partnersWithRatios = useMemo(() => {
-    return partners.map(p => {
-      let ratio = 0;
-      if (globalStrategy === "Manual") {
-        ratio = parseFloat(p.profit_sharing_ratio || "0");
-      } else if (globalStrategy === "BasedOnCapitalLocal" && totals.local > 0) {
-        ratio = (parseFloat(p.amount_local) / totals.local) * 100;
-      } else if (globalStrategy === "BasedOnCapitalUSD" && totals.usd > 0) {
-        ratio = (parseFloat(p.amount_usd) / totals.usd) * 100;
-      }
-      return { ...p, calculatedRatio: ratio };
-    });
-  }, [partners, totals, globalStrategy]);
+  const {
+    totals,
+    partnersWithRatios,
+    chartCapitalData,
+    chartProfitData
+  } = usePartnerRatios({ partners, strategy: globalStrategy });
 
   const handleSave = async (payload: PartnerRequest) => {
     try {
@@ -76,7 +65,6 @@ export default function Partners() {
   };
 
   const handleDelete = useCallback(async (id: number) => {
-    if (!confirm("هل أنت متأكد من حذف هذا الشريك؟")) return;
     try {
       await partnerService.deletePartner(id);
       toast.success("تم الحذف بنجاح");
@@ -86,17 +74,16 @@ export default function Partners() {
     }
   }, [setData]);
 
-  const chartCapitalData = useMemo(() => 
-    partners.map(p => ({ name: p.name, value: parseFloat(p.amount_local) })),
-    [partners]
-  );
-
-  const chartProfitData = useMemo(() => 
-    partnersWithRatios.map(p => ({ name: p.name, value: p.calculatedRatio })),
-    [partnersWithRatios]
-  );
-
   const columns = useMemo<Column<PartnerDto & { calculatedRatio: number }>[]>(() => [
+    { 
+      header: "الكود", 
+      accessor: (p) => (
+        <span className="font-mono text-[11px] bg-slate-100 text-slate-700 px-2 py-1 rounded-md font-bold ring-1 ring-slate-200/50">
+          {p.code || "—"}
+        </span>
+      ),
+      className: "w-[120px]"
+    },
     { header: "اسم الشريك", accessor: "name", className: "font-bold text-slate-800" },
     { 
       header: "رأس المال (محلي)", 
@@ -112,24 +99,25 @@ export default function Partners() {
     },
     { 
       header: "نسبة الأرباح", 
-      accessor: (p) => <span className="font-extrabold text-green-600 text-base">{p.calculatedRatio.toFixed(2)}%</span>, 
+      accessor: (p) => (
+        <span className="inline-flex items-center justify-center bg-green-50 text-green-700 px-3 py-1 rounded-full font-bold text-sm ring-1 ring-green-100">
+          {p.calculatedRatio.toFixed(2)}%
+        </span>
+      ), 
       align: "left" 
     },
     {
-      header: "",
+      header: "إجراءات",
       accessor: (p) => (
-        <div className="flex gap-1">
-          <Button variant="ghost" size="icon" className="text-blue-600 hover:bg-blue-100 h-8 w-8" onClick={() => { setEditPartner(p); setIsDialogOpen(true); }}>
-            <Edit className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8" onClick={() => handleDelete(p.id)}>
-            <Trash2 className="w-4 h-4" />
-          </Button>
-        </div>
+        <TableActions 
+          onEdit={() => { setEditPartner(p); setIsDialogOpen(true); }}
+          onDelete={() => handleDelete(p.id)}
+        />
       ),
-      className: "w-24"
+      align: "left",
+      className: "w-16"
     }
-  ], [handleDelete, setEditPartner, setIsDialogOpen]);
+  ], [handleDelete]);
 
   return (
     <div className="space-y-6" dir="rtl">

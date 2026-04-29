@@ -14,6 +14,7 @@ import { toast } from "sonner";
 
 // Refactored Components & Hooks
 import { DataTable, Column } from "@/components/erp/shared/DataTable";
+import { TableActions } from "@/components/erp/shared/TableActions";
 import { useDataTable } from "@/hooks/useDataTable";
 import { PaymentForm } from "@/components/erp/payments/PaymentForm";
 import { PAYMENT_TYPE_LABELS } from "@/components/erp/payments/constants";
@@ -99,40 +100,55 @@ export default function Payments() {
     { 
       header: "التاريخ", 
       accessor: (p) => formatDate(p.payment_date),
-      className: "tabular-nums"
+      className: "tabular-nums text-slate-500"
     },
     { 
       header: "النوع", 
       accessor: (p) => {
         const isIn = ["Receipt", "CashIn"].includes(p.payment_type);
         return (
-          <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${isIn ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-            {isIn ? <ArrowDownCircle className="w-3 h-3" /> : <ArrowUpCircle className="w-3 h-3" />}
+          <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full ring-1 ring-inset ${
+            isIn ? "bg-green-50 text-green-700 ring-green-100" : "bg-red-50 text-red-700 ring-red-100"
+          }`}>
+            {isIn ? <ArrowDownCircle className="w-3.5 h-3.5" /> : <ArrowUpCircle className="w-3.5 h-3.5" />}
             {PAYMENT_TYPE_LABELS[p.payment_type]}
           </span>
         );
-      }
+      },
+      align: "center"
     },
     { 
-      header: "الطرف", 
-      accessor: (p) => p.customer_name ?? p.supplier_name ?? "—"
+      header: "الطرف الثاني", 
+      accessor: (p) => p.customer_name ?? p.supplier_name ?? "—",
+      className: "font-bold text-slate-800"
     },
     { 
       header: "المرجع", 
       accessor: (p) => p.reference ?? "—",
-      className: "text-muted-foreground text-xs"
+      className: "text-slate-400 text-xs font-mono"
     },
     { 
       header: "المبلغ", 
       accessor: (p) => {
         const isIn = ["Receipt", "CashIn"].includes(p.payment_type);
         return (
-          <span className={`tabular-nums font-medium ${isIn ? "text-green-600" : "text-red-600"}`}>
+          <span className={`tabular-nums font-bold ${isIn ? "text-green-600" : "text-red-600"}`}>
             {isIn ? "+" : "-"}{formatCurrency(parseFloat(p.amount))}
           </span>
         );
       },
       align: "left"
+    },
+    {
+      header: "إجراءات",
+      accessor: (p) => (
+        <TableActions 
+          onView={() => toast.info("عرض تفاصيل الحركة قيد التطوير")}
+          onDelete={() => toast.warning("حذف الحركة قيد التطوير")}
+        />
+      ),
+      align: "left",
+      className: "w-16"
     }
   ], []);
 

@@ -12,6 +12,7 @@ import { toast } from "sonner";
 
 // Refactored Components & Hooks
 import { DataTable, Column } from "@/components/erp/shared/DataTable";
+import { TableActions } from "@/components/erp/shared/TableActions";
 import { useDataTable } from "@/hooks/useDataTable";
 import { UserForm } from "@/components/erp/users/UserForm";
 
@@ -67,28 +68,48 @@ export default function Users() {
   };
 
   const columns = useMemo<Column<User>[]>(() => [
-    { header: "الاسم الكامل", accessor: "full_name", className: "font-medium" },
-    { header: "اسم المستخدم", accessor: "username", className: "text-muted-foreground" },
+    { 
+      header: "الاسم الكامل", 
+      accessor: "full_name", 
+      className: "font-bold text-slate-800" 
+    },
+    { 
+      header: "اسم المستخدم", 
+      accessor: "username", 
+      className: "text-slate-500 font-mono text-xs" 
+    },
     { 
       header: "الصلاحية", 
       accessor: (u) => {
         const role = roles.find(r => r.id === u.role_id);
         return (
-          <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full text-xs font-medium">
+          <span className="bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
             {role?.name ?? u.role_name ?? "غير محدد"}
           </span>
         );
       }
     },
     { 
-      header: "آخر دخول", 
-      accessor: (u) => u.last_login ? formatDate(u.last_login) : "لم يسجل دخول",
-      className: "text-xs text-muted-foreground tabular-nums"
+      header: "آخر ظهور", 
+      accessor: (u) => u.last_login ? formatDate(u.last_login) : "—",
+      className: "text-xs text-slate-400 tabular-nums"
     },
     { 
       header: "الحالة", 
       accessor: (u) => <StatusBadge status={u.is_active ? "active" : "inactive"} />, 
-      align: "left" 
+      align: "center",
+      className: "w-[100px]"
+    },
+    {
+      header: "إجراءات",
+      accessor: (u) => (
+        <TableActions 
+          onEdit={() => toast.info("تعديل المستخدم قيد التطوير")}
+          onDelete={() => toast.warning("حذف المستخدم قيد التطوير")}
+        />
+      ),
+      align: "left",
+      className: "w-16"
     }
   ], [roles]);
 

@@ -1,17 +1,16 @@
 import { useMemo } from "react";
 import { DataTable, Column } from "@/components/erp/shared/DataTable";
-import { StatusBadge } from "@/components/erp/StatusBadge";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Eye, CheckCircle2 } from "lucide-react";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { TableActions } from "@/components/erp/shared/TableActions";
+import { formatDate, formatCurrency } from "@/lib/format";
 import type { JournalEntryDto } from "@erp/shared-types";
+import { toast } from "sonner";
+import { CheckCircle2 } from "lucide-react";
 
 interface JournalTableProps {
   entries: JournalEntryDto[];
   loading: boolean;
-  onPost: (id: string) => Promise<void>;
-  onView: (id: string) => void;
+  onPost?: (id: string) => void;
+  onView?: (id: string) => void;
 }
 
 export function JournalTable({ entries, loading, onPost, onView }: JournalTableProps) {
@@ -19,55 +18,42 @@ export function JournalTable({ entries, loading, onPost, onView }: JournalTableP
     { 
       header: "رقم القيد", 
       accessor: "entry_number",
-      className: "font-medium text-primary"
+      className: "font-bold text-primary" 
     },
     { 
       header: "التاريخ", 
-      accessor: (j) => formatDate(j.entry_date)
+      accessor: (e) => formatDate(e.entry_date),
+      className: "text-slate-500 tabular-nums" 
     },
     { 
       header: "البيان", 
-      accessor: "description"
+      accessor: "description",
+      className: "max-w-[300px] truncate font-medium text-slate-700" 
     },
     { 
-      header: "مدين (ل.س)", 
-      accessor: (j) => formatCurrency(parseFloat(j.total_base_debit)),
-      align: "left",
-      className: "tabular-nums"
-    },
-    { 
-      header: "دائن (ل.س)", 
-      accessor: (j) => formatCurrency(parseFloat(j.total_base_credit)),
-      align: "left",
-      className: "tabular-nums"
-    },
-    { 
-      header: "الحالة", 
-      accessor: (j) => <StatusBadge status={j.status} />,
-      align: "left"
+      header: "المبلغ الإجمالي", 
+      accessor: (e) => formatCurrency(parseFloat(e.total_base_debit)), 
+      align: "left", 
+      className: "tabular-nums font-bold text-slate-900" 
     },
     {
-      header: "",
-      accessor: (j) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onView(j.id)}>
-              <Eye className="w-4 h-4 ml-2" />عرض
-            </DropdownMenuItem>
-            {j.status !== "Posted" && (
-              <DropdownMenuItem onClick={() => onPost(j.id)}>
-                <CheckCircle2 className="w-4 h-4 ml-2" />ترحيل
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+      header: "إجراءات",
+      accessor: (e) => (
+        <TableActions 
+          onView={() => onView?.(e.id)}
+          onEdit={() => toast.info("تعديل القيد قيد التطوير")}
+          onDelete={() => toast.warning("حذف القيد قيد التطوير")}
+          extraActions={[
+            {
+              label: "ترحيل القيد",
+              icon: CheckCircle2,
+              onClick: () => onPost?.(e.id)
+            }
+          ]}
+        />
       ),
-      className: "w-12"
+      align: "left",
+      className: "w-16"
     }
   ], [onPost, onView]);
 
@@ -76,7 +62,7 @@ export function JournalTable({ entries, loading, onPost, onView }: JournalTableP
       data={entries}
       columns={columns}
       loading={loading}
-      emptyMessage="لا توجد قيود يومية"
+      emptyMessage="لا توجد قيود يومية مسجلة"
     />
   );
 }

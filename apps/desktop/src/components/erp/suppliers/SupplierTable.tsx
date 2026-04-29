@@ -1,9 +1,7 @@
 import { useMemo } from "react";
 import { DataTable, Column } from "@/components/erp/shared/DataTable";
+import { TableActions } from "@/components/erp/shared/TableActions";
 import { StatusBadge } from "@/components/erp/StatusBadge";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import type { SupplierDto } from "@erp/shared-types";
 
@@ -18,29 +16,51 @@ interface SupplierTableProps {
 
 export function SupplierTable({ suppliers, loading, search, onView, onEdit, onDelete }: SupplierTableProps) {
   const columns = useMemo<Column<SupplierDto>[]>(() => [
-    { header: "اسم المورد", accessor: "name", className: "font-medium" },
-    { header: "الهاتف", accessor: (s) => s.phone || "—", className: "tabular-nums" },
-    { header: "المدين", accessor: (s) => formatCurrency(parseFloat(s.debit || "0")), align: "left", className: "tabular-nums text-red-600" },
-    { header: "الدائن", accessor: (s) => formatCurrency(parseFloat(s.credit || "0")), align: "left", className: "tabular-nums text-green-600" },
-    { header: "الرصيد", accessor: (s) => formatCurrency(parseFloat(s.balance || "0")), align: "left", className: "tabular-nums font-bold" },
-    { header: "الحالة", accessor: (s) => <StatusBadge status={s.is_active ? "active" : "inactive"} />, align: "left" },
+    { 
+      header: "اسم المورد", 
+      accessor: "name", 
+      className: "font-bold text-slate-800" 
+    },
+    { 
+      header: "رقم الهاتف", 
+      accessor: (s) => s.phone || "—", 
+      className: "tabular-nums text-slate-500" 
+    },
+    { 
+      header: "المدين", 
+      accessor: (s) => formatCurrency(parseFloat(s.debit || "0")), 
+      align: "left", 
+      className: "tabular-nums text-red-600 font-medium" 
+    },
+    { 
+      header: "الدائن", 
+      accessor: (s) => formatCurrency(parseFloat(s.credit || "0")), 
+      align: "left", 
+      className: "tabular-nums text-green-600 font-medium" 
+    },
+    { 
+      header: "الرصيد النهائي", 
+      accessor: (s) => formatCurrency(parseFloat(s.balance || "0")), 
+      align: "left", 
+      className: "tabular-nums font-bold text-slate-900" 
+    },
+    { 
+      header: "الحالة", 
+      accessor: (s) => <StatusBadge status={s.is_active ? "active" : "inactive"} />, 
+      align: "center",
+      className: "w-[100px]"
+    },
     {
-      header: "",
+      header: "إجراءات",
       accessor: (s) => (
-        <div onClick={e => e.stopPropagation()}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="text-right">
-              <DropdownMenuItem onClick={() => onView(s)}><Eye className="w-4 h-4 ml-2" />عرض الملف</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEdit(s)}><Edit className="w-4 h-4 ml-2" />تعديل</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onDelete(s.id, s.name)} className="text-red-600"><Trash2 className="w-4 h-4 ml-2" />حذف</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <TableActions 
+          onView={() => onView(s)}
+          onEdit={() => onEdit(s)}
+          onDelete={() => onDelete(s.id, s.name)}
+        />
       ),
-      className: "w-12"
+      align: "left",
+      className: "w-16"
     }
   ], [onView, onEdit, onDelete]);
 
@@ -50,7 +70,7 @@ export function SupplierTable({ suppliers, loading, search, onView, onEdit, onDe
       columns={columns}
       loading={loading}
       onRowClick={onView}
-      emptyMessage={search ? "لا توجد نتائج للبحث" : "لا يوجد موردون — أضف مورداً جديداً"}
+      emptyMessage={search ? "لا توجد نتائج بحث تطابق استعلامك" : "قائمة الموردين فارغة حالياً"}
     />
   );
 }

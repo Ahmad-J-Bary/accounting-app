@@ -34,8 +34,8 @@ export default function Suppliers() {
   } = useMasterData<SupplierDto, CreateSupplierRequest | UpdateSupplierRequest>({
     fetchData: () => supplierService.listSuppliers(),
     saveData: async (payload) => {
-      if (payload.id) return supplierService.updateSupplier(payload);
-      return supplierService.createSupplier(payload);
+      if ('id' in payload && payload.id) return supplierService.updateSupplier(payload as UpdateSupplierRequest);
+      return supplierService.createSupplier(payload as CreateSupplierRequest);
     },
     deleteData: (id) => supplierService.deleteSupplier(id),
     searchFields: ["name", "phone", "code"],
