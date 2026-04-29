@@ -22,4 +22,12 @@ export const userService = {
   async createRole(request: CreateRoleRequest): Promise<Role> {
     return await invoke<Role>('create_role', { request });
   },
+
+  async updateRole(role: Role): Promise<Role> {
+    return await invoke<Role>('update_role', { role });
+  },
+
+  async deleteRole(id: string): Promise<void> {
+    return await invoke<void>('delete_role', { id });
+  },
 };
