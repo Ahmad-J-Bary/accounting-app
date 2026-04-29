@@ -14,9 +14,16 @@ import type {
   AssetCategoryDto, 
   AccountDto, 
   AssetMovement,
-  CreateFixedAssetRequest,
   CreateConsumableRequest
 } from "@erp/shared-types";
+
+type CreateFixedAssetRequest = {
+  code: string; name: string; categoryId: string; purchaseDate: string;
+  purchaseCost: string; currency: string; fxRate: string;
+  usefulLifeMonths: number; assetAccountId: string;
+  depreciationAccountId: string; accumulatedDepreciationAccountId: string;
+  paymentAccountId: string;
+};
 import { toast } from "sonner";
 
 // Refactored Components

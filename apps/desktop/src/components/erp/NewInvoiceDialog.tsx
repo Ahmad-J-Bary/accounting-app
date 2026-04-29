@@ -4,20 +4,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Calculator } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Plus, Trash2 } from "lucide-react";
 import { customerService } from "@/services/customerService";
 import { materialService } from "@/services/materialService";
 import { invoiceService } from "@/services/invoiceService";
 import type { CustomerDto, MaterialDto, CreateInvoiceRequest, InvoiceLineDto, InvoiceDto } from "@erp/shared-types";
 import { formatCurrency } from "@/lib/format";
-import { toast } from "sonner"; // Assuming sonner is used
+import { toast } from "sonner";
 
 interface NewInvoiceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   invoiceToEdit?: InvoiceDto | null;
+}
+
+function makeLine(): InvoiceLineDto {
+  return { material_id: "", quantity: "1", unit_price: "0" };
 }
 
 export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit }: NewInvoiceDialogProps) {
@@ -27,6 +30,8 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
 
   const [formData, setFormData] = useState<CreateInvoiceRequest>({
     invoice_number: `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+    invoice_type: "Sales",
+    issued_at: new Date().toISOString(),
     customer_id: "",
     lines: [],
     tax_amount: "0",
@@ -38,11 +43,13 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
       if (invoiceToEdit) {
         setFormData({
           invoice_number: invoiceToEdit.invoice_number,
-          customer_id: invoiceToEdit.customer_id,
+          invoice_type: "Sales",
+          issued_at: invoiceToEdit.issued_at,
+          customer_id: invoiceToEdit.customer_id ?? "",
           lines: invoiceToEdit.lines.map(l => ({
-            product_id: l.product_id,
+            material_id: l.material_id,
             quantity: l.quantity,
-            unit_price: l.unit_price
+            unit_price: l.unit_price,
           })),
           tax_amount: invoiceToEdit.tax_amount,
           discount_amount: invoiceToEdit.discount_amount,
@@ -50,6 +57,8 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
       } else {
         setFormData({
           invoice_number: `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+          invoice_type: "Sales",
+          issued_at: new Date().toISOString(),
           customer_id: "",
           lines: [],
           tax_amount: "0",
@@ -58,7 +67,7 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
       }
       loadData();
     }
-  }, [open, invoiceToEdit]);
+  }, [open, invoiceToEdit]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadData = async () => {
     try {
@@ -77,7 +86,7 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
   const addLine = () => {
     setFormData(prev => ({
       ...prev,
-      lines: [...prev.lines, { product_id: "", quantity: "1", unit_price: "0" }]
+      lines: [...prev.lines, makeLine()]
     }));
   };
 
@@ -91,46 +100,30 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
   const updateLine = (index: number, field: keyof InvoiceLineDto, value: string) => {
     const newLines = [...formData.lines];
     newLines[index] = { ...newLines[index], [field]: value };
-    
-    // If product changed, update price automatically (default to retail)
-    if (field === 'product_id') {
+    if (field === "material_id") {
       const product = products.find(p => p.id === value);
       if (product) {
-        newLines[index].unit_price = product.retail_price || "0";
+        newLines[index].unit_price = product.purchase_price || "0";
       }
     }
-    
     setFormData(prev => ({ ...prev, lines: newLines }));
   };
 
-  const calculateSubtotal = () => {
-    return formData.lines.reduce((sum, line) => {
-      const q = parseFloat(line.quantity) || 0;
-      const p = parseFloat(line.unit_price) || 0;
-      return sum + (q * p);
-    }, 0);
-  };
-
-  const subtotal = calculateSubtotal();
-  const taxRate = 0.0; // Default tax rate for Syria (consumption tax or other)
-  const calculatedTax = subtotal * taxRate;
-  const total = subtotal + calculatedTax - parseFloat(formData.discount_amount || "0");
+  const subtotal = formData.lines.reduce((sum, line) => {
+    return sum + (parseFloat(line.quantity) || 0) * (parseFloat(line.unit_price) || 0);
+  }, 0);
+  const total = subtotal - parseFloat(formData.discount_amount || "0");
 
   const handleSubmit = async () => {
-    if (!formData.customer_id) {
-      toast.error("يرجى اختيار العميل");
-      return;
-    }
     if (formData.lines.length === 0) {
       toast.error("يجب إضافة صنف واحد على الأقل");
       return;
     }
-
     setLoading(true);
     try {
       await invoiceService.createInvoice({
         ...formData,
-        tax_amount: calculatedTax.toFixed(2),
+        customer_id: formData.customer_id || undefined,
       });
       toast.success("تم إنشاء الفاتورة بنجاح");
       onSuccess();
@@ -154,8 +147,8 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4">
           <div className="space-y-2">
             <Label>رقم الفاتورة</Label>
-            <Input 
-              value={formData.invoice_number} 
+            <Input
+              value={formData.invoice_number}
               onChange={e => setFormData(prev => ({ ...prev, invoice_number: e.target.value }))}
               placeholder="مثال: INV-2024-001"
             />
@@ -163,12 +156,12 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
 
           <div className="space-y-2">
             <Label>العميل</Label>
-            <Select 
-              value={formData.customer_id} 
+            <Select
+              value={formData.customer_id ?? ""}
               onValueChange={val => setFormData(prev => ({ ...prev, customer_id: val }))}
             >
               <SelectTrigger>
-                <SelectValue placeholder="اختر العميل" />
+                <SelectValue placeholder="زبون نقدي (اختياري)" />
               </SelectTrigger>
               <SelectContent>
                 {customers.map(c => (
@@ -180,7 +173,11 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
 
           <div className="space-y-2">
             <Label>التاريخ</Label>
-            <Input type="date" defaultValue={new Date().toISOString().split('T')[0]} />
+            <Input
+              type="date"
+              value={formData.issued_at.split("T")[0]}
+              onChange={e => setFormData(prev => ({ ...prev, issued_at: new Date(e.target.value).toISOString() }))}
+            />
           </div>
         </div>
 
@@ -205,9 +202,9 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
                 {formData.lines.map((line, index) => (
                   <tr key={index} className="border-b last:border-0 hover:bg-slate-50/50">
                     <td className="p-2">
-                      <Select 
-                        value={line.product_id} 
-                        onValueChange={val => updateLine(index, 'product_id', val)}
+                      <Select
+                        value={line.material_id}
+                        onValueChange={val => updateLine(index, "material_id", val)}
                       >
                         <SelectTrigger className="border-0 shadow-none focus:ring-0">
                           <SelectValue placeholder="اختر المنتج" />
@@ -220,55 +217,27 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
                       </Select>
                     </td>
                     <td className="p-2">
-                      <Input 
-                        type="number" 
-                        min="1"
-                        step="1"
-                        value={line.quantity} 
-                        onChange={e => updateLine(index, 'quantity', e.target.value)}
+                      <Input
+                        type="number" min="1" step="1"
+                        value={line.quantity}
+                        onChange={e => updateLine(index, "quantity", e.target.value)}
                         className="h-8 tabular-nums"
                       />
                     </td>
-                     <td className="p-2">
-                       <div className="flex gap-1 items-center">
-                         <Input 
-                           type="number" 
-                           value={line.unit_price} 
-                           onChange={e => updateLine(index, 'unit_price', e.target.value)}
-                           className="h-8 tabular-nums flex-1"
-                         />
-                         <DropdownMenu>
-                           <DropdownMenuTrigger asChild>
-                             <Button variant="ghost" size="icon" className="h-7 w-7"><Calculator className="w-3.5 h-3.5" /></Button>
-                           </DropdownMenuTrigger>
-                           <DropdownMenuContent align="end">
-                             <div className="p-2 text-xs font-bold border-b mb-1">اختر نوع السعر</div>
-                             {(() => {
-                               const p = products.find(prod => prod.id === line.product_id);
-                               if (!p) return <div className="p-2 text-xs text-muted-foreground">اختر منتجاً أولاً</div>;
-                               return (
-                                 <>
-                                   <DropdownMenuItem onClick={() => updateLine(index, 'unit_price', p.retail_price || "0")}>
-                                     مفرق: {formatCurrency(parseFloat(p.retail_price || "0"))}
-                                   </DropdownMenuItem>
-                                   <DropdownMenuItem onClick={() => updateLine(index, 'unit_price', p.wholesale_price || "0")}>
-                                     جملة: {formatCurrency(parseFloat(p.wholesale_price || "0"))}
-                                   </DropdownMenuItem>
-                                   <DropdownMenuItem onClick={() => updateLine(index, 'unit_price', p.semi_wholesale_price || "0")}>
-                                     نصف جملة: {formatCurrency(parseFloat(p.semi_wholesale_price || "0"))}
-                                   </DropdownMenuItem>
-                                 </>
-                               );
-                             })()}
-                           </DropdownMenuContent>
-                         </DropdownMenu>
-                       </div>
-                     </td>
+                    <td className="p-2">
+                      <Input
+                        type="number"
+                        value={line.unit_price}
+                        onChange={e => updateLine(index, "unit_price", e.target.value)}
+                        className="h-8 tabular-nums"
+                      />
+                    </td>
                     <td className="p-2 text-left tabular-nums font-medium">
                       {formatCurrency(parseFloat(line.quantity) * parseFloat(line.unit_price))}
                     </td>
                     <td className="p-2">
-                      <Button variant="ghost" size="icon" onClick={() => removeLine(index)} className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
+                      <Button variant="ghost" size="icon" onClick={() => removeLine(index)}
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </td>
@@ -276,7 +245,9 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
                 ))}
                 {formData.lines.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-muted-foreground">لا توجد أصناف مضافة. انقر على "إضافة صنف" للبدء.</td>
+                    <td colSpan={5} className="py-8 text-center text-muted-foreground">
+                      لا توجد أصناف مضافة. انقر على "إضافة صنف" للبدء.
+                    </td>
                   </tr>
                 )}
               </tbody>
@@ -288,18 +259,15 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
           <div className="grid grid-cols-2 w-64 text-sm gap-2">
             <span className="text-muted-foreground">المجموع الفرعي:</span>
             <span className="text-left tabular-nums font-medium">{formatCurrency(subtotal)}</span>
-            
-            <span className="text-muted-foreground">الضريبة:</span>
-            <span className="text-left tabular-nums font-medium">{formatCurrency(calculatedTax)}</span>
-            
+
             <span className="text-muted-foreground self-center">الخصم:</span>
-            <Input 
-              type="number" 
-              value={formData.discount_amount} 
+            <Input
+              type="number"
+              value={formData.discount_amount}
               onChange={e => setFormData(prev => ({ ...prev, discount_amount: e.target.value }))}
               className="h-7 text-left tabular-nums"
             />
-            
+
             <div className="col-span-2 border-t pt-2 mt-1 flex justify-between font-bold text-lg text-primary">
               <span>الإجمالي العام:</span>
               <span className="tabular-nums">{formatCurrency(total)}</span>

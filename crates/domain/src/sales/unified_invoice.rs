@@ -52,15 +52,9 @@ impl UnifiedInvoice {
             return Err(DomainError::Invalid("رقم الفاتورة لا يمكن أن يكون فارغًا".into()));
         }
 
-        match invoice_type {
-            InvoiceType::Sales if customer_id.is_none() => {
-                return Err(DomainError::Invalid("يجب تحديد العميل لفاتورة المبيعات".into()));
-            }
-            InvoiceType::Purchase if supplier_id.is_none() => {
-                return Err(DomainError::Invalid("يجب تحديد المورد لفاتورة المشتريات".into()));
-            }
-            _ => {}
-        }
+        // Allow cash transactions without a specific customer/supplier
+        // (customer/supplier optional for cash sales and purchases)
+        let _ = (customer_id.as_ref(), supplier_id.as_ref()); // suppress unused warnings
 
         let now = Utc::now();
         Ok(Self {

@@ -4,7 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { AssetCategoryDto, AccountDto, CreateFixedAssetRequest } from "@erp/shared-types";
+import type { AssetCategoryDto, AccountDto } from "@erp/shared-types";
+
+type CreateFixedAssetRequest = {
+  code: string; name: string; categoryId: string; purchaseDate: string;
+  purchaseCost: string; currency: string; fxRate: string;
+  usefulLifeMonths: number; assetAccountId: string;
+  depreciationAccountId: string; accumulatedDepreciationAccountId: string;
+  paymentAccountId: string;
+};
 
 interface AssetFormProps {
   open: boolean;

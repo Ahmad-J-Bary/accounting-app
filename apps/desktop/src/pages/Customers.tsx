@@ -38,8 +38,8 @@ export default function Customers() {
   } = useMasterData<CustomerDto, CreateCustomerRequest | UpdateCustomerRequest>({
     fetchData: () => customerService.listCustomers(),
     saveData: async (payload) => {
-      if (payload.id) return customerService.updateCustomer(payload);
-      return customerService.createCustomer(payload);
+      if ((payload as UpdateCustomerRequest).id) return customerService.updateCustomer(payload as UpdateCustomerRequest);
+      return customerService.createCustomer(payload as CreateCustomerRequest);
     },
     deleteData: (id) => customerService.deleteCustomer(id),
     searchFields: ["name", "phone", "code"],

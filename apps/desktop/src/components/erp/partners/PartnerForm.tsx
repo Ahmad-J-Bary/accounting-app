@@ -17,6 +17,7 @@ interface PartnerFormProps {
 
 export function PartnerForm({ open, onOpenChange, partner, onSave, saving }: PartnerFormProps) {
   const [formData, setFormData] = useState({
+    code: "",
     name: "",
     exchangeRate: "500",
     amount: "0",
@@ -27,6 +28,7 @@ export function PartnerForm({ open, onOpenChange, partner, onSave, saving }: Par
   useEffect(() => {
     if (partner) {
       setFormData({
+        code: partner.code,
         name: partner.name,
         exchangeRate: partner.exchange_rate,
         amount: partner.is_amount_in_usd ? partner.amount_usd : partner.amount_local,
@@ -35,6 +37,7 @@ export function PartnerForm({ open, onOpenChange, partner, onSave, saving }: Par
       });
     } else {
       setFormData({
+        code: "",
         name: "",
         exchangeRate: "500",
         amount: "0",
@@ -50,6 +53,7 @@ export function PartnerForm({ open, onOpenChange, partner, onSave, saving }: Par
 
     onSave({
       id: partner?.id,
+      code: formData.code || formData.name.slice(0, 4).toUpperCase().replace(/\s+/g, "") || "P000",
       name: formData.name,
       exchangeRate: formData.exchangeRate,
       amount: formData.amount,

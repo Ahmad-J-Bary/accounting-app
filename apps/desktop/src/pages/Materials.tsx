@@ -34,8 +34,8 @@ export default function Materials() {
   } = useMasterData<MaterialDto, CreateMaterialRequest | UpdateMaterialRequest>({
     fetchData: () => materialService.listMaterials(),
     saveData: async (payload) => {
-      if (payload.id) return materialService.updateMaterial(payload);
-      return materialService.createMaterial(payload);
+      if ((payload as UpdateMaterialRequest).id) return materialService.updateMaterial(payload as UpdateMaterialRequest);
+      return materialService.createMaterial(payload as CreateMaterialRequest);
     },
     deleteData: (id) => materialService.deleteMaterial(id),
     searchFields: ["name", "code", "barcode"],

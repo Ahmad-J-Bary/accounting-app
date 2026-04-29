@@ -1,284 +1,412 @@
-import { useState, useEffect } from "react";
-import { PageHeader } from "@/components/erp/PageHeader";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { StatusBadge } from "@/components/erp/StatusBadge";
-import { 
-  Plus, 
-  Search, 
-  MoreHorizontal, 
-  Eye, 
-  Edit, 
-  Printer, 
-  Send, 
-  Trash2, 
-  RefreshCw,
-  Save,
-  Truck
-} from "lucide-react";
+import { Plus, RefreshCw, Search, Eye, Send, Printer, MoreHorizontal } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { invoiceService } from "@/services/invoiceService";
 import { supplierService } from "@/services/supplierService";
-import type { InvoiceDto, InvoiceLineDto, SupplierDto } from "@erp/shared-types";
+import type { InvoiceDto, SupplierDto } from "@erp/shared-types";
 import { toast } from "sonner";
-import { InvoiceEditor } from "@/components/erp/InvoiceEditor";
-import { Label } from "@/components/ui/label";
+
+// Document components
+import { DocumentShell } from "@/components/erp/document/DocumentShell";
+import { InvoiceGrid, GridLine, toBackendLines, generateDocNumber } from "@/components/erp/document/InvoiceGrid";
+import { SummaryPanel } from "@/components/erp/document/SummaryPanel";
+import { InvoicePartySelector } from "@/components/erp/document/InvoicePartySelector";
+import { DocumentStatusBadge } from "@/components/erp/document/DocumentStatusBadge";
+
+type ViewMode = "list" | "editor";
+
+interface EditorState {
+  invoice_number: string;
+  supplier_id: string;
+  supplier_name: string;
+  issued_at: string;
+  notes: string;
+  tax_amount: string;
+  discount_amount: string;
+  extra_costs: string;
+  payment_method: string;
+  lines: GridLine[];
+  status: string;
+  id?: string;
+}
+
+function defaultEditor(): EditorState {
+  return {
+    invoice_number: generateDocNumber("PUR"),
+    supplier_id: "",
+    supplier_name: "مورد نقدي",
+    issued_at: new Date().toISOString().split("T")[0],
+    notes: "",
+    tax_amount: "0",
+    discount_amount: "0",
+    extra_costs: "0",
+    payment_method: "cash",
+    lines: [],
+    status: "Draft",
+  };
+}
 
 export default function PurchaseInvoices() {
+  const [view, setView] = useState<ViewMode>("list");
   const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [currentInvoice, setCurrentInvoice] = useState<Partial<InvoiceDto> | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const [editor, setEditor] = useState<EditorState>(defaultEditor());
+  const [search, setSearch] = useState("");
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [invData, suppData] = await Promise.all([
         invoiceService.listInvoicesByType("Purchase"),
-        supplierService.listSuppliers()
+        supplierService.listSuppliers(),
       ]);
       setInvoices(invData);
       setSuppliers(suppData);
-    } catch (error) {
+    } catch {
       toast.error("فشل تحميل البيانات");
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadData();
   }, []);
 
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const filteredInvoices = useMemo(() =>
+    invoices.filter(inv =>
+      !search ||
+      inv.invoice_number.includes(search) ||
+      (inv.supplier_name ?? "").includes(search)
+    ), [invoices, search]);
+
+  const subtotal = editor.lines.reduce((s, l) => s + (l.line_total ?? 0), 0);
+  const discount = parseFloat(editor.discount_amount) || 0;
+  const tax = parseFloat(editor.tax_amount) || 0;
+  const extraCosts = parseFloat(editor.extra_costs) || 0;
+  const net = subtotal - discount + tax + extraCosts;
+
   const handleCreate = () => {
-    setCurrentInvoice({
-      invoice_number: `PUR-${Date.now().toString().slice(-6)}`,
-      invoice_type: "Purchase",
-      lines: [],
-      tax_amount: "0",
-      discount_amount: "0",
-      issued_at: new Date().toISOString(),
-      status: "Draft"
+    setEditor(defaultEditor());
+    setView("editor");
+  };
+
+  const handleEdit = (inv: InvoiceDto) => {
+    setEditor({
+      id: inv.id,
+      invoice_number: inv.invoice_number,
+      supplier_id: inv.supplier_id ?? "",
+      supplier_name: inv.supplier_name ?? "مورد نقدي",
+      issued_at: inv.issued_at.split("T")[0],
+      notes: inv.notes ?? "",
+      tax_amount: inv.tax_amount,
+      discount_amount: inv.discount_amount,
+      extra_costs: "0",
+      payment_method: "cash",
+      lines: (inv.lines ?? []).map(l => ({
+        ...l,
+        _id: `line_${Math.random()}`,
+        line_total: parseFloat(l.quantity) * parseFloat(l.unit_price),
+      })),
+      status: inv.status,
     });
-    setIsEditing(true);
+    setView("editor");
   };
 
   const handleSave = async () => {
-    if (!currentInvoice?.supplier_id) {
-      toast.error("يجب تحديد المورد");
+    if (editor.lines.length === 0) {
+      toast.error("يجب إضافة صنف واحد على الأقل");
       return;
     }
-    if (!currentInvoice.lines || currentInvoice.lines.length === 0) {
-      toast.error("يجب إضافة مادة واحدة على الأقل");
-      return;
-    }
-
+    setSaving(true);
     try {
-      setLoading(true);
-      const request = {
-        invoice_number: currentInvoice.invoice_number!,
+      const backendLines = toBackendLines(editor.lines);
+      if (backendLines.length === 0) {
+        toast.error("يجب إضافة صنف واحد على الأقل");
+        setSaving(false);
+        return;
+      }
+      await invoiceService.createInvoice({
+        invoice_number: editor.invoice_number,
         invoice_type: "Purchase",
-        supplier_id: currentInvoice.supplier_id,
-        lines: currentInvoice.lines as InvoiceLineDto[],
-        tax_amount: currentInvoice.tax_amount || "0",
-        discount_amount: currentInvoice.discount_amount || "0",
-        issued_at: currentInvoice.issued_at || new Date().toISOString(),
-        notes: currentInvoice.notes,
-      };
-
-      await invoiceService.createInvoice(request);
-      toast.success("تم حفظ فاتورة المشتريات بنجاح");
-      setIsEditing(false);
+        supplier_id: editor.supplier_id || undefined,
+        lines: backendLines,
+        tax_amount: editor.tax_amount,
+        discount_amount: editor.discount_amount,
+        issued_at: new Date(editor.issued_at).toISOString(),
+        notes: editor.notes || undefined,
+      });
+      toast.success("تم حفظ فاتورة المشتريات");
+      setView("list");
       loadData();
-    } catch (error) {
-      toast.error("خطأ في الحفظ: " + error);
+    } catch (e) {
+      toast.error("فشل الحفظ: " + e);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const postInvoice = async (id: string) => {
+  const handlePost = async () => {
+    if (!editor.id) return;
+    if (!confirm("ترحيل الفاتورة؟ لا يمكن التعديل بعدها.")) return;
+    setPosting(true);
     try {
-      setLoading(true);
-      await invoiceService.postInvoice(id);
-      toast.success("تم ترحيل الفاتورة بنجاح");
+      await invoiceService.postInvoice(editor.id);
+      toast.success("تم الترحيل");
+      setEditor(e => ({ ...e, status: "Posted" }));
       loadData();
-    } catch (error) {
-      toast.error("فشل الترحيل: " + error);
+    } catch (e) {
+      toast.error("فشل الترحيل: " + e);
     } finally {
-      setLoading(false);
+      setPosting(false);
     }
   };
 
-  if (isEditing) {
+  const postFromList = async (id: string) => {
+    if (!confirm("ترحيل الفاتورة؟")) return;
+    try {
+      await invoiceService.postInvoice(id);
+      toast.success("تم الترحيل");
+      loadData();
+    } catch (e) {
+      toast.error("فشل الترحيل: " + e);
+    }
+  };
+
+  // ── EDITOR VIEW ──────────────────────────────────────────────
+  if (view === "editor") {
     return (
-      <div className="space-y-6 pb-20">
-        <PageHeader
-          title={currentInvoice?.id ? "تعديل فاتورة مشتريات" : "فاتورة مشتريات جديدة"}
-          subtitle="إدخال مشتريات المواد وتحديث تكاليف المخزون"
-          breadcrumbs={[{ label: "الفواتير", onClick: () => setIsEditing(false) }, { label: "تحرير" }]}
-          actions={
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setIsEditing(false)}>إلغاء</Button>
-              <Button onClick={handleSave} disabled={loading}>
-                <Save className="w-4 h-4 ml-2" />
-                {loading ? "جاري الحفظ..." : "حفظ الفاتورة"}
-              </Button>
-            </div>
-          }
-        />
-
-        <Card className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-right" dir="rtl">
-            <div className="space-y-2">
-              <Label>رقم الفاتورة</Label>
-              <Input 
-                value={currentInvoice?.invoice_number} 
-                onChange={e => setCurrentInvoice({...currentInvoice, invoice_number: e.target.value})} 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>المورد *</Label>
-              <Select 
-                value={currentInvoice?.supplier_id} 
-                onValueChange={val => setCurrentInvoice({...currentInvoice, supplier_id: val})}
-              >
-                <SelectTrigger className="text-right">
-                  <SelectValue placeholder="اختر المورد..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {suppliers.map(s => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>التاريخ</Label>
-              <Input 
-                type="date" 
-                value={currentInvoice?.issued_at?.split('T')[0]} 
-                onChange={e => setCurrentInvoice({...currentInvoice, issued_at: new Date(e.target.value).toISOString()})} 
-              />
-            </div>
-          </div>
-
-          <InvoiceEditor 
-            type="Purchase" 
-            lines={currentInvoice?.lines as InvoiceLineDto[] || []} 
-            onChange={lines => setCurrentInvoice({...currentInvoice, lines})} 
+      <DocumentShell
+        title="فاتورة مشتريات"
+        subtitle="إدخال مشتريات المواد وتحديث تكاليف المخزون"
+        docNumber={editor.invoice_number}
+        docDate={editor.issued_at}
+        status={editor.status}
+        saving={saving}
+        posting={posting}
+        canPost={!!editor.id && editor.status === "Draft"}
+        canEdit={editor.status === "Draft"}
+        canDelete={!!editor.id && editor.status === "Draft"}
+        onNew={() => setEditor(defaultEditor())}
+        onSave={handleSave}
+        onPost={handlePost}
+        onClose={() => setView("list")}
+        onRefresh={loadData}
+        summaryPanel={
+          <SummaryPanel
+            subtotal={subtotal}
+            discount={discount}
+            tax={tax}
+            extraCosts={extraCosts}
+            net={net}
+            status={editor.status as any}
           />
+        }
+      >
+        {/* Header fields */}
+        <Card className="p-4 border-slate-200 shadow-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <InvoicePartySelector
+              type="supplier"
+              parties={suppliers}
+              selectedId={editor.supplier_id}
+              selectedName={editor.supplier_name}
+              onSelect={(id, name) => setEditor(e => ({ ...e, supplier_id: id, supplier_name: name }))}
+              onClear={() => setEditor(e => ({ ...e, supplier_id: "", supplier_name: "مورد نقدي" }))}
+              defaultName="مورد نقدي"
+            />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8 border-t pt-6" dir="rtl">
-             <div className="space-y-4">
-                <div className="space-y-2 text-right">
-                  <Label>ملاحظات</Label>
-                  <Input 
-                    value={currentInvoice?.notes || ""} 
-                    onChange={e => setCurrentInvoice({...currentInvoice, notes: e.target.value})} 
-                    placeholder="ملاحظات الشراء..."
-                  />
-                </div>
-             </div>
-             <div className="bg-slate-50 p-6 rounded-lg space-y-3">
-                <div className="flex justify-between items-center pt-3 border-t-2 border-primary">
-                  <span className="font-black text-lg">إجمالي الشراء:</span>
-                  <span className="font-black text-2xl text-primary tabular-nums">
-                    {formatCurrency(
-                      (currentInvoice?.lines as InvoiceLineDto[] || []).reduce((s, l) => s + (Number(l.quantity) * Number(l.unit_price)), 0) + 
-                      Number(currentInvoice?.tax_amount || 0) - 
-                      Number(currentInvoice?.discount_amount || 0)
-                    )}
-                  </span>
-                </div>
-             </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">رقم الفاتورة</label>
+              <Input
+                value={editor.invoice_number}
+                onChange={e => setEditor(ed => ({ ...ed, invoice_number: e.target.value }))}
+                className="h-9 text-sm text-right"
+                dir="rtl"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">التاريخ</label>
+              <Input
+                type="date"
+                value={editor.issued_at}
+                onChange={e => setEditor(ed => ({ ...ed, issued_at: e.target.value }))}
+                className="h-9 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">طريقة الدفع</label>
+              <select
+                value={editor.payment_method}
+                onChange={e => setEditor(ed => ({ ...ed, payment_method: e.target.value }))}
+                className="w-full h-9 text-sm border border-slate-200 rounded-md px-3 bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none"
+                dir="rtl"
+              >
+                <option value="cash">نقداً</option>
+                <option value="credit">آجل</option>
+                <option value="bank">تحويل بنكي</option>
+                <option value="check">شيك</option>
+              </select>
+            </div>
+
+            <div className="lg:col-span-2">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">الملاحظات</label>
+              <Input
+                value={editor.notes}
+                onChange={e => setEditor(ed => ({ ...ed, notes: e.target.value }))}
+                placeholder="ملاحظات الشراء، شروط التوريد..."
+                className="h-9 text-sm text-right"
+                dir="rtl"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">الخصم المكتسب (ل.س)</label>
+              <Input
+                type="number" min="0" step="0.01"
+                value={editor.discount_amount}
+                onChange={e => setEditor(ed => ({ ...ed, discount_amount: e.target.value }))}
+                className="h-9 text-sm text-left tabular-nums"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">تكاليف إضافية (ل.س)</label>
+              <Input
+                type="number" min="0" step="0.01"
+                value={editor.extra_costs}
+                onChange={e => setEditor(ed => ({ ...ed, extra_costs: e.target.value }))}
+                className="h-9 text-sm text-left tabular-nums"
+              />
+            </div>
           </div>
         </Card>
-      </div>
+
+        {/* Grid */}
+        <Card className="p-0 overflow-hidden border-slate-200 shadow-sm">
+          <InvoiceGrid
+            type="Purchase"
+            lines={editor.lines}
+            onChange={lines => setEditor(ed => ({ ...ed, lines }))}
+            disabled={editor.status === "Posted"}
+          />
+        </Card>
+      </DocumentShell>
     );
   }
 
+  // ── LIST VIEW ────────────────────────────────────────────────
   return (
-    <>
-      <PageHeader
-        title="فواتير المشتريات"
-        subtitle="إدارة عمليات الشراء من الموردين"
-        breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "المشتريات" }]}
-        actions={
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={loadData} disabled={loading}>
-              <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />تحديث
-            </Button>
-            <Button onClick={handleCreate}>
-              <Plus className="w-4 h-4 ml-2" />فاتورة شراء جديدة
-            </Button>
-          </div>
-        }
-      />
+    <div className="space-y-4" dir="rtl">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-black text-slate-800">فواتير المشتريات</h1>
+          <p className="text-sm text-slate-500">إدارة عمليات الشراء من الموردين</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
+            <RefreshCw className={`w-4 h-4 ml-1 ${loading ? "animate-spin" : ""}`} />تحديث
+          </Button>
+          <Button size="sm" onClick={handleCreate}>
+            <Plus className="w-4 h-4 ml-1" />فاتورة شراء جديدة
+          </Button>
+        </div>
+      </div>
 
-      <Card className="p-5">
-        {loading ? (
-          <div className="text-center py-12 text-muted-foreground">جاري التحميل...</div>
-        ) : (
-          <div className="border border-border rounded-md overflow-x-auto text-right" dir="rtl">
-            <table className="w-full text-sm min-w-[800px]">
-              <thead className="bg-slate-50 border-b border-border">
-                <tr>
-                  <th className="px-4 py-3 font-medium text-right">رقم الفاتورة</th>
-                  <th className="px-4 py-3 font-medium text-right">التاريخ</th>
-                  <th className="px-4 py-3 font-medium text-right">المورد</th>
-                  <th className="px-4 py-3 font-medium text-left">الإجمالي</th>
-                  <th className="px-4 py-3 font-medium text-right">الحالة</th>
-                  <th className="px-4 py-3 font-medium w-12 text-center"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoices.map((inv) => (
-                  <tr key={inv.id} className="border-b border-border last:border-0 hover:bg-slate-50">
-                    <td className="px-4 py-3 font-bold text-primary">{inv.invoice_number}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{formatDate(inv.issued_at)}</td>
-                    <td className="px-4 py-3 font-medium">{inv.supplier_name || "مورد غير معروف"}</td>
-                    <td className="px-4 py-3 text-left tabular-nums font-black">{formatCurrency(Number(inv.total_amount))}</td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={inv.status.toLowerCase()} />
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                           <DropdownMenuItem><Eye className="w-4 h-4 ml-2" />عرض التفاصيل</DropdownMenuItem>
-                           {inv.status === "Draft" && (
-                             <>
-                               <DropdownMenuItem onClick={() => { setCurrentInvoice(inv); setIsEditing(true); }}>
-                                 <Edit className="w-4 h-4 ml-2" />تعديل
-                               </DropdownMenuItem>
-                               <DropdownMenuItem onClick={() => postInvoice(inv.id)} className="text-green-600">
-                                 <Send className="w-4 h-4 ml-2" />ترحيل الفاتورة
-                               </DropdownMenuItem>
-                             </>
-                           )}
-                           <DropdownMenuItem><Printer className="w-4 h-4 ml-2" />طباعة</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
-                  </tr>
-                ))}
-                {invoices.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-muted-foreground">لا توجد فواتير مشتريات حتى الآن.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: "إجمالي فواتير الشراء", value: invoices.length, color: "text-slate-800" },
+          { label: "مرحّلة", value: invoices.filter(i => i.status === "Posted").length, color: "text-green-600" },
+          {
+            label: "إجمالي قيمة الشراء",
+            value: formatCurrency(invoices.filter(i => i.status === "Posted").reduce((s, i) => s + parseFloat(i.total_amount), 0)),
+            color: "text-blue-700",
+            raw: true,
+          },
+        ].map((s, i) => (
+          <Card key={i} className="p-3 border-slate-200 shadow-sm">
+            <div className="text-xs text-slate-500 mb-1">{s.label}</div>
+            <div className={`text-2xl font-black tabular-nums ${s.color}`}>
+              {(s as {raw?: boolean}).raw ? s.value : s.value}
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="border-slate-200 shadow-sm overflow-hidden">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 bg-slate-50">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="بحث برقم الفاتورة أو المورد..."
+              className="pr-9 h-8 text-sm border-slate-200"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              dir="rtl"
+            />
           </div>
-        )}
+          <span className="text-xs text-slate-400">{filteredInvoices.length} فاتورة</span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm" dir="rtl">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-4 py-2.5 text-right text-xs font-bold text-slate-500">رقم الفاتورة</th>
+                <th className="px-4 py-2.5 text-right text-xs font-bold text-slate-500">التاريخ</th>
+                <th className="px-4 py-2.5 text-right text-xs font-bold text-slate-500">المورد</th>
+                <th className="px-4 py-2.5 text-left text-xs font-bold text-slate-500">الإجمالي</th>
+                <th className="px-4 py-2.5 text-center text-xs font-bold text-slate-500">الحالة</th>
+                <th className="px-4 py-2.5 w-10"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i}>{Array.from({ length: 6 }).map((_, j) => (
+                    <td key={j} className="px-4 py-3"><div className="h-4 bg-slate-100 rounded animate-pulse" /></td>
+                  ))}</tr>
+                ))
+              ) : filteredInvoices.length === 0 ? (
+                <tr><td colSpan={6} className="py-16 text-center text-slate-400 text-sm">
+                  {search ? "لا نتائج للبحث" : "لا توجد فواتير مشتريات حتى الآن"}
+                </td></tr>
+              ) : filteredInvoices.map(inv => (
+                <tr key={inv.id} className="hover:bg-slate-50 cursor-pointer transition-colors" onDoubleClick={() => handleEdit(inv)}>
+                  <td className="px-4 py-2.5 font-bold text-blue-700 font-mono">{inv.invoice_number}</td>
+                  <td className="px-4 py-2.5 text-slate-500 text-xs">{formatDate(inv.issued_at)}</td>
+                  <td className="px-4 py-2.5 font-medium text-slate-800">{inv.supplier_name ?? "مورد نقدي"}</td>
+                  <td className="px-4 py-2.5 text-left font-black tabular-nums text-slate-900">{formatCurrency(parseFloat(inv.total_amount))}</td>
+                  <td className="px-4 py-2.5 text-center"><DocumentStatusBadge status={inv.status} /></td>
+                  <td className="px-4 py-2.5 text-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="w-4 h-4" /></Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem onClick={() => handleEdit(inv)}><Eye className="w-4 h-4 ml-2" />عرض / تعديل</DropdownMenuItem>
+                        {inv.status === "Draft" && (
+                          <DropdownMenuItem onClick={() => postFromList(inv.id)} className="text-green-600">
+                            <Send className="w-4 h-4 ml-2" />ترحيل
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem><Printer className="w-4 h-4 ml-2" />طباعة</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Card>
-    </>
+    </div>
   );
 }
