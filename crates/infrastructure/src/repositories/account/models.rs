@@ -1,0 +1,21 @@
+#[derive(sqlx::FromRow)]
+pub struct AccountRow {
+    pub id: String,
+    pub code: String,
+    pub name_ar: String,
+    pub name_en: String,
+    pub account_type: String,
+    pub parent_id: Option<String>,
+    pub category: Option<String>,
+    pub level: Option<i32>,
+    pub opening_balance: String,
+    pub balance: String,
+    pub notes: Option<String>,
+    pub is_active: bool,
+    pub is_default: Option<bool>,
+    pub is_final: Option<bool>,
+    pub linked_customer_id: Option<String>,
+    pub linked_supplier_id: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}

@@ -21,7 +21,6 @@ use infrastructure::{
     SqliteUnifiedInvoiceRepository,
     SqliteCodePrefixRepository,
 };
-use application::use_cases::unified_invoice_use_cases::UnifiedInvoiceUseCases;
 use application::use_cases::generate_material_code::MaterialCodeUseCases;
 use infrastructure::db::pool::{create_pool, run_migrations};
 use application::ports::customer_repository::CustomerRepository;
@@ -67,7 +66,6 @@ pub struct AppState {
     pub partner_repo: Arc<dyn PartnerRepository>,
     pub prefix_repo: Arc<dyn CodePrefixRepository>,
     pub uow: Arc<dyn UnitOfWork>,
-    pub unified_invoice_use_cases: Arc<UnifiedInvoiceUseCases>,
     pub material_code_use_cases: Arc<MaterialCodeUseCases>,
 }
 
@@ -109,15 +107,6 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
         material_code_use_cases: Arc::new(MaterialCodeUseCases::new(
             prefix_repo.clone(),
             category_repo.clone(),
-        )),
-        unified_invoice_use_cases: Arc::new(UnifiedInvoiceUseCases::new(
-            unified_invoice_repo.clone(),
-            material_repo.clone(),
-            stock_movement_repo.clone(),
-            customer_repo.clone(),
-            supplier_repo.clone(),
-            category_repo.clone(),
-            journal_repo.clone(),
         )),
     })
 }

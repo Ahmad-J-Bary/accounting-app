@@ -1,7 +1,7 @@
 use tauri::State;
 use crate::bootstrap::container::AppState;
-use application::use_cases::adjustment_use_cases::{
-    CreateStockAdjustmentUseCase, ListStockAdjustmentsUseCase,
+use application::use_cases::adjustment::{
+    CreateStockAdjustmentUseCase, StockAdjustmentQueries,
 };
 use application::dto::adjustment_dto::{CreateStockAdjustmentRequest, StockAdjustmentDto};
 
@@ -22,6 +22,6 @@ pub async fn create_stock_adjustment(
 pub async fn list_stock_adjustments(
     state: State<'_, AppState>,
 ) -> Result<Vec<StockAdjustmentDto>, String> {
-    ListStockAdjustmentsUseCase::new(state.adjustment_repo.clone(), state.material_repo.clone())
-        .execute().await.map_err(|e| e.to_string())
+    StockAdjustmentQueries::new(state.adjustment_repo.clone(), state.material_repo.clone())
+        .list_all().await.map_err(|e| e.to_string())
 }

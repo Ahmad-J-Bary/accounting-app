@@ -1,0 +1,31 @@
+#[derive(sqlx::FromRow)]
+pub struct InvoiceRow {
+    pub id: String,
+    pub invoice_number: String,
+    pub invoice_type: String,
+    pub customer_id: Option<String>,
+    pub supplier_id: Option<String>,
+    pub tax_amount: String,
+    pub discount_amount: String,
+    pub total_amount: String,
+    pub status: String,
+    pub issued_at: String,
+    pub notes: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(sqlx::FromRow)]
+pub struct LineRow {
+    pub _id: String,
+    pub _invoice_id: String,
+    pub material_id: String,
+    pub quantity: String,
+    pub unit_price: String,
+    pub purchase_price: Option<String>,
+    pub retail_price: Option<String>,
+    pub wholesale_price: Option<String>,
+    pub semi_wholesale_price: Option<String>,
+    pub minimum_stock: Option<String>,
+    pub notes: Option<String>,
+}

@@ -1,0 +1,20 @@
+#[derive(sqlx::FromRow)]
+pub struct SettingsRow {
+    pub id: String,
+    pub company_name: String,
+    pub company_name_en: Option<String>,
+    pub tax_number: Option<String>,
+    pub commercial_register: Option<String>,
+    pub address: Option<String>,
+    pub phone: Option<String>,
+    pub email: Option<String>,
+    pub currency: String,
+    pub currency_symbol: String,
+    pub tax_rate: String,
+    pub invoice_prefix: String,
+    pub purchase_prefix: String,
+    pub journal_prefix: String,
+    pub fiscal_year_start_month: i64,
+    pub logo_path: Option<String>,
+    pub updated_at: String,
+}

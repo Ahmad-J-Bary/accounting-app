@@ -1,0 +1,30 @@
+use std::sync::Arc;
+use crate::ports::stock_adjustment_repository::StockAdjustmentRepository;
+use crate::ports::material_repository::MaterialRepository;
+use crate::dto::adjustment_dto::{StockAdjustmentDto};
+use crate::errors::AppError;
+use super::create::to_dto;
+
+pub struct StockAdjustmentQueries {
+    repo: Arc<dyn StockAdjustmentRepository>,
+    material_repo: Arc<dyn MaterialRepository>,
+}
+
+impl StockAdjustmentQueries {
+    pub fn new(repo: Arc<dyn StockAdjustmentRepository>, material_repo: Arc<dyn MaterialRepository>) -> Self {
+        Self { repo, material_repo }
+    }
+
+    pub async fn list_all(&self) -> Result<Vec<StockAdjustmentDto>, AppError> {
+        let adjustments = self.repo.list_all().await?;
+        let mut dtos = Vec::new();
+        for adj in adjustments {
+            let mut dto = to_dto(adj.clone());
+            if let Ok(Some(material)) = self.material_repo.find_by_id(&adj.material_id).await {
+                dto.material_name = Some(material.name);
+            }
+            dtos.push(dto);
+        }
+        Ok(dtos)
+    }
+}

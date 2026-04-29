@@ -1,12 +1,12 @@
 use tauri::State;
 use crate::bootstrap::container::AppState;
-use application::use_cases::settings_use_cases::{GetSettingsUseCase, UpdateSettingsUseCase};
+use application::use_cases::settings::{SettingsQueries, UpdateSettingsUseCase};
 use application::dto::settings_dto::{CompanySettingsDto, UpdateSettingsRequest};
 
 #[tauri::command]
 pub async fn get_settings(state: State<'_, AppState>) -> Result<CompanySettingsDto, String> {
-    GetSettingsUseCase::new(state.settings_repo.clone())
-        .execute().await.map_err(|e| e.to_string())
+    SettingsQueries::new(state.settings_repo.clone())
+        .get().await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]

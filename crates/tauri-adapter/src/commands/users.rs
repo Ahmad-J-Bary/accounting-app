@@ -1,7 +1,7 @@
 use tauri::State;
 use crate::bootstrap::container::AppState;
-use application::use_cases::user_use_cases::{
-    CreateUserUseCase, ListUsersUseCase, ListRolesUseCase, CreateRoleUseCase,
+use application::use_cases::user::{
+    CreateUserUseCase, UserQueries, CreateRoleUseCase, RoleQueries
 };
 use application::dto::user_dto::{CreateUserRequest, CreateRoleRequest, UserDto, RoleDto};
 
@@ -16,14 +16,14 @@ pub async fn create_user(
 
 #[tauri::command]
 pub async fn list_users(state: State<'_, AppState>) -> Result<Vec<UserDto>, String> {
-    ListUsersUseCase::new(state.user_repo.clone())
-        .execute().await.map_err(|e| e.to_string())
+    UserQueries::new(state.user_repo.clone())
+        .list_all().await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn list_roles(state: State<'_, AppState>) -> Result<Vec<RoleDto>, String> {
-    ListRolesUseCase::new(state.user_repo.clone())
-        .execute().await.map_err(|e| e.to_string())
+    RoleQueries::new(state.user_repo.clone())
+        .list_all().await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]

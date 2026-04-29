@@ -1,6 +1,6 @@
 use tauri::State;
 use crate::bootstrap::container::AppState;
-use application::use_cases::damaged_use_cases::{CreateDamagedItemUseCase, ListDamagedItemsUseCase};
+use application::use_cases::damaged::{CreateDamagedItemUseCase, DamagedItemQueries};
 use application::dto::damaged_dto::{CreateDamagedItemRequest, DamagedItemDto};
 
 #[tauri::command]
@@ -22,6 +22,6 @@ pub async fn create_damaged_item(
 pub async fn list_damaged_items(
     state: State<'_, AppState>,
 ) -> Result<Vec<DamagedItemDto>, String> {
-    ListDamagedItemsUseCase::new(state.damaged_repo.clone(), state.material_repo.clone())
-        .execute().await.map_err(|e| e.to_string())
+    DamagedItemQueries::new(state.damaged_repo.clone(), state.material_repo.clone())
+        .list_all().await.map_err(|e| e.to_string())
 }
