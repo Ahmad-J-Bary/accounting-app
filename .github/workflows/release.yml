@@ -5,31 +5,8 @@ on:
     tags:
       - 'v*'
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
-  create-release:
-    permissions:
-      contents: write
-    runs-on: ubuntu-latest
-    outputs:
-      release_id: ${{ steps.create_release.outputs.id }}
-    steps:
-      - name: Create Global Release
-        id: create_release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: "المواكب ${{ github.ref_name }}"
-          body: "الإصدار الرسمي لتطبيق المواكب"
-          draft: true
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   release:
-    needs: create-release
     permissions:
       contents: write
     strategy:
@@ -48,8 +25,6 @@ jobs:
 
       - name: install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10.29.2
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -78,4 +53,5 @@ jobs:
           releaseDraft: true
           prerelease: false
           includeUpdaterJson: true
+          distPath: ../dist
           projectPath: ./apps/desktop

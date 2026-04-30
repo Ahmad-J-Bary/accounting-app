@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { PageHeader } from "@/components/erp/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -7,12 +7,14 @@ import { Plus, Search, RefreshCw } from "lucide-react";
 
 import { supplierService } from "@/services/supplierService";
 import { accountingService } from "@/services/accountingService";
-import type { SupplierDto, AccountDto, CreateSupplierRequest, UpdateSupplierRequest } from "@erp/shared-types";
+import { invoiceService } from "@/services/invoiceService";
+import { paymentService } from "@/services/paymentService";
+import type { SupplierDto, AccountDto, InvoiceDto, Payment, CreateSupplierRequest, UpdateSupplierRequest } from "@erp/shared-types";
 
 // Refactored Components & Hooks
 import { useMasterData } from "@/hooks/useMasterData";
-import { SupplierDetails } from "@/components/erp/suppliers/SupplierDetails";
-import { SupplierForm } from "@/components/erp/suppliers/SupplierForm";
+import { PartnerProfileSheet } from "@/components/erp/shared/PartnerProfileSheet";
+import { PartnerFormDialog } from "@/components/erp/shared/PartnerFormDialog";
 import { SupplierStats } from "@/components/erp/suppliers/SupplierStats";
 import { SupplierTable } from "@/components/erp/suppliers/SupplierTable";
 
@@ -31,6 +33,8 @@ export default function Suppliers() {
     handleOpenEdit,
     handleSave,
     handleDelete,
+    selectedId,
+    setSelectedId,
   } = useMasterData<SupplierDto, CreateSupplierRequest | UpdateSupplierRequest>({
     fetchData: () => supplierService.listSuppliers(),
     saveData: async (payload) => {
@@ -43,8 +47,12 @@ export default function Suppliers() {
     successLabel: "تم حفظ بيانات المورد بنجاح",
   });
 
-  const [selectedSupplier, setSelectedSupplier] = useState<SupplierDto | null>(null);
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
+  const [supplierInvoices, setSupplierInvoices] = useState<InvoiceDto[]>([]);
+  const [supplierPayments, setSupplierPayments] = useState<Payment[]>([]);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
+  const selectedSupplier = useMemo(() => suppliers.find(s => s.id === selectedId) || null, [suppliers, selectedId]);
 
   const loadAccounts = useCallback(async () => {
     try {
@@ -53,7 +61,22 @@ export default function Suppliers() {
     } catch (e) { console.error(e); }
   }, []);
 
+  const fetchDetails = useCallback(async (id: string) => {
+    setLoadingDetails(true);
+    try {
+      const [invoices, payments] = await Promise.all([
+        invoiceService.listInvoicesByType("Purchase").then(list => list.filter(inv => inv.supplier_id === id)),
+        paymentService.listPayments(id) // Note: this might need adjustment if payment service distinguishes types
+      ]);
+      setSupplierInvoices(invoices);
+      setSupplierPayments(payments);
+    } catch (e) { console.error(e); } finally { setLoadingDetails(false); }
+  }, []);
+
   useEffect(() => { loadAccounts(); }, [loadAccounts]);
+  useEffect(() => {
+    if (selectedId) fetchDetails(selectedId);
+  }, [selectedId, fetchDetails]);
 
   return (
     <>
@@ -92,18 +115,26 @@ export default function Suppliers() {
           suppliers={suppliers}
           loading={loading}
           search={search}
-          onView={setSelectedSupplier}
+          onView={(s) => setSelectedId(s.id)}
           onEdit={(s) => { loadAccounts(); handleOpenEdit(s); }}
           onDelete={handleDelete}
         />
       </Card>
 
-      <SupplierDetails supplier={selectedSupplier} onClose={() => setSelectedSupplier(null)} />
+      <PartnerProfileSheet 
+        type="supplier"
+        partner={selectedSupplier} 
+        onClose={() => setSelectedId(null)} 
+        invoices={supplierInvoices}
+        payments={supplierPayments}
+        loadingDetails={loadingDetails}
+      />
       
-      <SupplierForm 
+      <PartnerFormDialog 
+        type="supplier"
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
-        supplier={editSupplier}
+        partner={editSupplier}
         accounts={accounts}
         onSave={handleSave}
         saving={saving}

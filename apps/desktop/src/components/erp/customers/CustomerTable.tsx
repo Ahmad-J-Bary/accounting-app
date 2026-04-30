@@ -9,7 +9,7 @@ interface CustomerTableProps {
   customers: CustomerDto[];
   loading: boolean;
   search: string;
-  onView: (id: string) => void;
+  onView: (c: CustomerDto) => void;
   onEdit: (c: CustomerDto) => void;
   onDelete: (id: string, name: string) => void;
 }
@@ -54,7 +54,7 @@ export function CustomerTable({ customers, loading, search, onView, onEdit, onDe
       header: "إجراءات",
       accessor: (c) => (
         <TableActions 
-          onView={() => onView(c.id)}
+          onView={() => onView(c)}
           onEdit={() => onEdit(c)}
           onDelete={() => onDelete(c.id, c.name)}
         />
@@ -69,7 +69,7 @@ export function CustomerTable({ customers, loading, search, onView, onEdit, onDe
       data={customers}
       columns={columns}
       loading={loading}
-      onRowClick={(c) => onView(c.id)}
+      onRowClick={onView}
       emptyMessage={search ? "لا توجد نتائج بحث تطابق استعلامك" : "لا يوجد عملاء مسجلون في النظام حالياً"}
     />
   );

@@ -13,8 +13,8 @@ import type { CustomerDto, AccountDto, InvoiceDto, Payment, CreateCustomerReques
 
 // Refactored Components & Hooks
 import { useMasterData } from "@/hooks/useMasterData";
-import { CustomerDetails } from "@/components/erp/customers/CustomerDetails";
-import { CustomerForm } from "@/components/erp/customers/CustomerForm";
+import { PartnerProfileSheet } from "@/components/erp/shared/PartnerProfileSheet";
+import { PartnerFormDialog } from "@/components/erp/shared/PartnerFormDialog";
 import { CustomerStats } from "@/components/erp/customers/CustomerStats";
 import { CustomerTable } from "@/components/erp/customers/CustomerTable";
 
@@ -109,24 +109,26 @@ export default function Customers() {
           customers={customers}
           loading={loading}
           search={search}
-          onView={setSelectedId}
+          onView={(c) => setSelectedId(c.id)}
           onEdit={(c) => { loadAccounts(); handleOpenEdit(c); }}
           onDelete={handleDelete}
         />
       </Card>
 
-      <CustomerDetails 
-        customer={selectedCustomer} 
+      <PartnerProfileSheet 
+        type="customer"
+        partner={selectedCustomer} 
         onClose={() => setSelectedId(null)} 
         invoices={customerInvoices}
         payments={customerPayments}
         loadingDetails={loadingDetails}
       />
 
-      <CustomerForm 
+      <PartnerFormDialog 
+        type="customer"
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
-        customer={editCustomer}
+        partner={editCustomer}
         accounts={accounts}
         onSave={handleSave}
         saving={saving}

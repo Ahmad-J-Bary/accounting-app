@@ -34,6 +34,7 @@ interface EditorState {
   lines: GridLine[];
   status: string;
   id?: string;
+  paid_amount?: string;
 }
 
 function defaultEditor(): EditorState {
@@ -49,6 +50,7 @@ function defaultEditor(): EditorState {
     reference: "",
     lines: [],
     status: "Draft",
+    paid_amount: "0",
   };
 }
 
@@ -94,6 +96,15 @@ export default function SalesInvoices() {
   const tax = parseFloat(editor.tax_amount) || 0;
   const net = subtotal - discount + tax;
 
+  let paid = 0;
+  if (editor.payment_method === "cash") {
+    paid = net;
+  } else if (editor.payment_method === "partial") {
+    paid = parseFloat(editor.paid_amount || "0") || 0;
+  } else {
+    paid = 0; // credit
+  }
+
   const handleCreate = () => {
     setEditor(defaultEditor());
     setView("editor");
@@ -110,6 +121,7 @@ export default function SalesInvoices() {
       tax_amount: inv.tax_amount,
       discount_amount: inv.discount_amount,
       payment_method: "cash",
+      paid_amount: "0",
       reference: "",
       lines: (inv.lines ?? []).map(l => ({
         ...l,
@@ -218,6 +230,7 @@ export default function SalesInvoices() {
             discount={discount}
             tax={tax}
             net={net}
+            paid={paid}
             status={editor.status as DocumentStatus}
           />
         }
@@ -265,10 +278,21 @@ export default function SalesInvoices() {
               >
                 <option value="cash">نقداً</option>
                 <option value="credit">آجل</option>
-                <option value="bank">تحويل بنكي</option>
-                <option value="check">شيك</option>
+                <option value="partial">دفع جزئي</option>
               </select>
             </div>
+
+            {editor.payment_method === "partial" && (
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">المبلغ المدفوع (ل.س)</label>
+                <Input
+                  type="number" min="0" step="0.01"
+                  value={editor.paid_amount}
+                  onChange={e => setEditor(ed => ({ ...ed, paid_amount: e.target.value }))}
+                  className="h-9 text-sm text-left tabular-nums"
+                />
+              </div>
+            )}
 
             <div className="lg:col-span-2">
               <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">الملاحظات</label>

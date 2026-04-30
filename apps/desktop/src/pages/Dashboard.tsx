@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/erp/PageHeader";
 import { KpiCard } from "@/components/erp/KpiCard";
+import { ReceivablesPayablesCard } from "@/components/erp/dashboard/ReceivablesPayablesCard";
 import { StatusBadge } from "@/components/erp/StatusBadge";
 import { QuickActions } from "@/components/erp/QuickActions";
 import { Button } from "@/components/ui/button";
@@ -142,63 +143,35 @@ export default function Dashboard() {
         <KpiCard title="إجمالي المبيعات" value={postedSalesTotal} icon={TrendingUp} iconColor="bg-blue-50 text-blue-600" />
         <KpiCard title="إجمالي المشتريات" value={approvedPurchasesTotal} icon={ShoppingCart} iconColor="bg-purple-50 text-purple-600" />
         <KpiCard title="الرصيد النقدي" value={cashBalance} icon={Wallet} iconColor="bg-green-50 text-green-600" />
-        <KpiCard title="ذمم العملاء" value={receivablesBalance} icon={Users} iconColor="bg-amber-50 text-amber-600" />
-        <KpiCard title="ذمم الموردين" value={payablesBalance} icon={Truck} iconColor="bg-red-50 text-red-600" />
+        <KpiCard title="ذمم العملاء" value={rpSummary ? parseFloat(rpSummary.total_receivables) : receivablesBalance} icon={Users} iconColor="bg-amber-50 text-amber-600" />
+        <KpiCard title="ذمم الموردين" value={rpSummary ? parseFloat(rpSummary.total_payables) : payablesBalance} icon={Truck} iconColor="bg-red-50 text-red-600" />
         <KpiCard title="قيمة المخزون" value={inventoryValue} icon={Package} iconColor="bg-teal-50 text-teal-600" />
       </div>
 
       {/* Receivables/Payables Summary */}
       {rpSummary && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-          <Card className="p-5 border-r-4 border-r-amber-500">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <ArrowUpRight className="w-5 h-5 text-amber-600" />
-                <h3 className="font-semibold">تفاصيل ذمم العملاء (المدينة لنا)</h3>
-              </div>
-              <span className="text-2xl font-bold text-amber-600">{formatCurrency(parseFloat(rpSummary.total_receivables))}</span>
-            </div>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="p-3 bg-slate-50 rounded-md">
-                <div className="text-muted-foreground">إجمالي المدين</div>
-                <div className="font-bold text-red-600">{formatCurrency(parseFloat(rpSummary.customers_debit))}</div>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-md">
-                <div className="text-muted-foreground">إجمالي الدائن</div>
-                <div className="font-bold text-green-600">{formatCurrency(parseFloat(rpSummary.customers_credit))}</div>
-              </div>
-            </div>
-            {rpSummary.unlinked_customers > 0 && (
-              <div className="mt-3 text-xs text-amber-600">
-                ⚠️ {rpSummary.unlinked_customers} عملاء غير مرتبطين بحسابات محاسبية
-              </div>
-            )}
-          </Card>
+          <ReceivablesPayablesCard
+            title="تفاصيل ذمم العملاء (المدينة لنا)"
+            total={rpSummary.total_receivables}
+            debit={rpSummary.customers_debit}
+            credit={rpSummary.customers_credit}
+            icon={ArrowUpRight}
+            color="amber"
+            unlinkedCount={rpSummary.unlinked_customers}
+            type="receivable"
+          />
 
-          <Card className="p-5 border-r-4 border-r-red-500">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <ArrowDownRight className="w-5 h-5 text-red-600" />
-                <h3 className="font-semibold">تفاصيل ذمم الموردين (الدائنة لنا)</h3>
-              </div>
-              <span className="text-2xl font-bold text-red-600">{formatCurrency(parseFloat(rpSummary.total_payables))}</span>
-            </div>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="p-3 bg-slate-50 rounded-md">
-                <div className="text-muted-foreground">إجمالي المدين</div>
-                <div className="font-bold text-red-600">{formatCurrency(parseFloat(rpSummary.suppliers_debit))}</div>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-md">
-                <div className="text-muted-foreground">إجمالي الدائن</div>
-                <div className="font-bold text-green-600">{formatCurrency(parseFloat(rpSummary.suppliers_credit))}</div>
-              </div>
-            </div>
-            {rpSummary.unlinked_suppliers > 0 && (
-              <div className="mt-3 text-xs text-red-600">
-                ⚠️ {rpSummary.unlinked_suppliers} موردين غير مرتبطين بحسابات محاسبية
-              </div>
-            )}
-          </Card>
+          <ReceivablesPayablesCard
+            title="تفاصيل ذمم الموردين (الدائنة لنا)"
+            total={rpSummary.total_payables}
+            debit={rpSummary.suppliers_debit}
+            credit={rpSummary.suppliers_credit}
+            icon={ArrowDownRight}
+            color="red"
+            unlinkedCount={rpSummary.unlinked_suppliers}
+            type="payable"
+          />
         </div>
       )}
 
