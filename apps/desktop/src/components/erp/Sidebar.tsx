@@ -1,4 +1,5 @@
-import { NavLink } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
+import { useTabs } from "@/context/TabContext";
 import {
   LayoutDashboard, BookOpen, FileText, Users, Truck, Receipt,
   ShoppingCart, Wallet, Package, Warehouse, AlertTriangle,
@@ -44,7 +45,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     items: [
       { to: "/categories", label: "تصنيفات المواد", icon: Folders },
       { to: "/materials", label: "بطاقات المواد", icon: Package },
-      { to: "/opening-balance", label: "رصيد أول المدة", icon: Layers },
+      { to: "/opening-balance", label: "فاتورة أول المدة", icon: Layers },
       { to: "/inventory", label: "حركات المخزون", icon: Warehouse },
       { to: "/damaged", label: "التالف والهدر", icon: AlertTriangle },
       { to: "/production", label: "الإنتاج", icon: Factory },
@@ -68,55 +69,81 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed, onClose }: SidebarProps) {
+  const { openTab, activeTabId } = useTabs();
+  const location = useLocation();
+
+  const handleNavClick = (e: React.MouseEvent, item: NavItem) => {
+    const tabId = e.ctrlKey ? `${item.to}-${Date.now()}` : item.to;
+    
+    e.preventDefault();
+    openTab({ 
+      id: tabId, 
+      title: item.label, 
+      path: item.to,
+      closable: item.to !== "/dashboard"
+    });
+    if (onClose && window.innerWidth < 1024) onClose();
+  };
+
   return (
-    <aside className="h-screen w-64 bg-[hsl(var(--sidebar-background))] text-[hsl(var(--sidebar-foreground))] flex flex-col border-l border-[hsl(var(--sidebar-border))]">
-      <div className="h-16 flex items-center gap-3 px-5 border-b border-[hsl(var(--sidebar-border))]">
-        <div className="w-9 h-9 rounded-md bg-white/10 flex items-center justify-center">
-          <Layers className="w-5 h-5" />
+    <aside className="h-screen w-64 bg-slate-900 text-white flex flex-col border-l border-slate-800">
+      <div className="h-16 flex items-center gap-3 px-5 border-b border-white/5">
+        <div className="w-9 h-9 rounded-md bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+          <Layers className="w-5 h-5 text-white" />
         </div>
         <div className="flex-1">
-          <div className="font-bold text-base leading-tight">نظام الإدارة</div>
-          <div className="text-xs opacity-70">المحاسبة والمخزون</div>
+          <div className="font-bold text-sm leading-tight text-white">نظام الإدارة المتكامل</div>
+          <div className="text-[10px] text-slate-400 font-medium">المحاسبة والمخزون</div>
         </div>
         {onClose && (
-          <Button variant="ghost" size="icon" onClick={onClose} className="hover:bg-white/10">
+          <Button variant="ghost" size="icon" onClick={onClose} className="hover:bg-white/10 text-slate-400">
             <X className="w-4 h-4" />
           </Button>
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-3 px-3">
+      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6 scrollbar-hide">
         {navGroups.map((group) => (
-          <div key={group.title} className="mb-4">
-            <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider opacity-60">
+          <div key={group.title}>
+            <div className="px-3 mb-2 text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em]">
               {group.title}
             </div>
-            <ul className="space-y-0.5">
-              {group.items.map((item) => (
-                <li key={item.to}>
-                  <NavLink
-                    to={item.to}
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+            <ul className="space-y-1">
+              {group.items.map((item) => {
+                const isActive = activeTabId === item.to || location.pathname === item.to;
+                return (
+                  <li key={item.to}>
+                    <Link
+                      to={item.to}
+                      onClick={(e) => handleNavClick(e, item)}
+                      className={cn(
+                        "group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200",
                         isActive
-                          ? "bg-white/15 text-white font-medium"
-                          : "hover:bg-white/5"
+                          ? "bg-blue-600 text-white shadow-md shadow-blue-600/20 font-medium"
+                          : "text-slate-400 hover:bg-white/5 hover:text-white"
                       )
                     }
-                  >
-                    <item.icon className="w-4 h-4 shrink-0" />
-                    <span className="truncate">{item.label}</span>
-                  </NavLink>
-                </li>
-              ))}
+                    >
+                      <item.icon className={cn(
+                        "w-4 h-4 shrink-0 transition-colors",
+                        isActive ? "text-white" : "text-slate-500 group-hover:text-slate-300"
+                      )} />
+                      <span className="truncate">{item.label}</span>
+                      {isActive && (
+                        <div className="mr-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ))}
       </nav>
 
-      <div className="border-t border-[hsl(var(--sidebar-border))] p-4 text-xs opacity-70">
-        الإصدار 1.0.0 2026
+      <div className="border-t border-white/5 p-4 flex items-center gap-2">
+        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+        <span className="text-[10px] text-slate-500 font-medium tracking-wide">الإصدار 1.2.0 — نظام الألسنة</span>
       </div>
     </aside>
   );

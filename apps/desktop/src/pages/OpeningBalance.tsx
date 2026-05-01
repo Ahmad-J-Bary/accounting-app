@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
+import { useLocation, useParams } from "react-router-dom";
+import { useTabs } from "@/context/TabContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -69,6 +71,10 @@ function defaultState(): OpeningBalanceState {
 }
 
 export default function OpeningBalance() {
+  const location = useLocation();
+  const { id } = useParams();
+  const { openTab, closeTab, activeTabId } = useTabs();
+  
   const [state, setState] = useState<OpeningBalanceState>(defaultState());
   const [saving, setSaving] = useState(false);
   const [history, setHistory] = useState<InvoiceDto[]>([]);
@@ -76,6 +82,8 @@ export default function OpeningBalance() {
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
   const [loadingData, setLoadingData] = useState(false);
+
+  const isNew = location.pathname.endsWith("/new");
 
   const loadSupporting = useCallback(async () => {
     setLoadingData(true);
@@ -99,7 +107,51 @@ export default function OpeningBalance() {
 
   useEffect(() => { loadSupporting(); }, [loadSupporting]);
 
+  useEffect(() => {
+    if (isNew) {
+      setState(defaultState());
+    } else if (id) {
+       // Logic to load specific opening balance if needed
+    }
+  }, [isNew, id]);
+  
+  const handleLoadInvoice = (inv: InvoiceDto) => {
+    const isSupplier = !!inv.supplier_id;
+    const isCustomer = !!inv.customer_id;
+    
+    setState({
+      balanceType: isSupplier ? "Supplier" : isCustomer ? "Customer" : "Inventory",
+      docNumber: inv.invoice_number,
+      date: inv.issued_at.split("T")[0],
+      notes: inv.notes ?? "",
+      lines: (inv.lines ?? []).map(l => ({
+        ...l,
+        _id: `line_${Math.random()}`,
+        line_total: parseFloat(l.quantity) * parseFloat(l.unit_price),
+      })),
+      partyId: inv.customer_id || inv.supplier_id || "",
+      partyName: inv.customer_name || inv.supplier_name || "",
+      debitCredit: "debit",
+      amount: inv.total_amount,
+      reason: inv.notes || "",
+      prevDocRef: "",
+      accountId: "",
+      accountDebitCredit: "debit",
+      accountAmount: inv.total_amount,
+    });
+    toast.info(`تم تحميل الفاتورة ${inv.invoice_number}`);
+  };
+
   const subtotal = state.lines.reduce((s, l) => s + (l.line_total ?? 0), 0);
+
+  const handleCreate = () => {
+    openTab({
+      id: `/opening-balance/new-${Date.now()}`,
+      title: "فاتورة أول مدة جديدة",
+      path: "/opening-balance/new",
+      closable: true
+    });
+  };
 
   const handleSave = async () => {
     if (state.balanceType === "Inventory" && state.lines.length === 0) {
@@ -135,8 +187,6 @@ export default function OpeningBalance() {
         await invoiceService.postInvoice(created.id);
         toast.success("تم تسجيل رصيد المخزون الافتتاحي وترحيله");
       } else {
-        // For other types, we create a minimal invoice as a placeholder
-        // (In production this would trigger specific backend commands)
         await invoiceService.createInvoice({
           invoice_number: state.docNumber,
           invoice_type: "OpeningBalance",
@@ -144,7 +194,7 @@ export default function OpeningBalance() {
             material_id: "opening-balance",
             quantity: "1",
             unit_price: state.balanceType === "Account" || state.balanceType === "Cash" ? state.accountAmount : state.amount,
-            notes: `رصيد أول المدة - ${BALANCE_TYPE_OPTIONS.find(o => o.value === state.balanceType)?.label}`,
+            notes: `فاتورة أول المدة - ${BALANCE_TYPE_OPTIONS.find(o => o.value === state.balanceType)?.label}`,
           }],
           tax_amount: "0",
           discount_amount: "0",
@@ -156,8 +206,12 @@ export default function OpeningBalance() {
         toast.success("تم تسجيل الرصيد الافتتاحي بنجاح");
       }
 
-      setState(s => ({ ...defaultState(), balanceType: s.balanceType }));
-      loadSupporting();
+      if (isNew) {
+        closeTab(activeTabId);
+      } else {
+        setState(s => ({ ...defaultState(), balanceType: s.balanceType }));
+        loadSupporting();
+      }
     } catch (e) {
       toast.error("فشل الحفظ: " + e);
     } finally {
@@ -172,7 +226,7 @@ export default function OpeningBalance() {
       {/* Title Bar */}
       <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-slate-200 shadow-sm">
         <div>
-          <h1 className="text-base font-black text-slate-800">رصيد أول المدة</h1>
+          <h1 className="text-base font-black text-slate-800">فاتورة أول المدة</h1>
           <p className="text-xs text-slate-500">تأسيس الأرصدة الافتتاحية للنظام</p>
         </div>
         <DocumentStatusBadge status="Draft" size="md" />
@@ -183,7 +237,7 @@ export default function OpeningBalance() {
         docNumber={state.docNumber}
         docDate={currentDate}
         status="Draft"
-        onNew={() => setState(defaultState())}
+        onNew={handleCreate}
         onSave={handleSave}
         onRefresh={loadSupporting}
         saving={saving}
@@ -447,16 +501,20 @@ export default function OpeningBalance() {
             <div className="py-10 text-center text-slate-400 text-xs">لا توجد سجلات سابقة</div>
           ) : (
             history.map(inv => (
-              <div key={inv.id} className="p-3 border border-slate-100 rounded-lg hover:border-slate-200 transition-colors bg-slate-50/50">
+              <div 
+                key={inv.id} 
+                className="p-3 border border-slate-100 rounded-lg hover:border-blue-200 hover:bg-blue-50/30 cursor-pointer transition-all group"
+                onClick={() => handleLoadInvoice(inv)}
+              >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-bold text-slate-800 font-mono">{inv.invoice_number}</span>
+                  <span className="text-xs font-bold text-slate-800 font-mono group-hover:text-blue-700">{inv.invoice_number}</span>
                   <DocumentStatusBadge status={inv.status} />
                 </div>
                 <div className="flex justify-between items-center text-xs text-slate-500 mb-2">
                   <span>{formatDate(inv.issued_at)}</span>
                   <span>{inv.lines.length} صنف</span>
                 </div>
-                <div className="text-left font-black text-blue-700 tabular-nums text-sm">
+                <div className="text-left font-black text-blue-700 tabular-nums text-sm group-hover:scale-105 transition-transform origin-left">
                   {formatCurrency(parseFloat(inv.total_amount))}
                 </div>
               </div>

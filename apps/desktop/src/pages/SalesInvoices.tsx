@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useLocation, useParams } from "react-router-dom";
+import { useTabs } from "@/context/TabContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -55,6 +57,10 @@ function defaultEditor(): EditorState {
 }
 
 export default function SalesInvoices() {
+  const location = useLocation();
+  const { id } = useParams();
+  const { openTab, closeTab, activeTabId } = useTabs();
+  
   const [view, setView] = useState<ViewMode>("list");
   const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
   const [customers, setCustomers] = useState<CustomerDto[]>([]);
@@ -63,6 +69,46 @@ export default function SalesInvoices() {
   const [posting, setPosting] = useState(false);
   const [editor, setEditor] = useState<EditorState>(defaultEditor());
   const [search, setSearch] = useState("");
+
+  const isNew = location.pathname.endsWith("/new");
+
+  useEffect(() => {
+    if (isNew) {
+      setEditor(defaultEditor());
+      setView("editor");
+    } else if (id) {
+      const loadInvoice = async () => {
+        try {
+          const inv = await invoiceService.getInvoiceById(id);
+          setEditor({
+            id: inv.id,
+            invoice_number: inv.invoice_number,
+            customer_id: inv.customer_id ?? "",
+            customer_name: inv.customer_name ?? "زبون نقدي",
+            issued_at: inv.issued_at.split("T")[0],
+            notes: inv.notes ?? "",
+            tax_amount: inv.tax_amount,
+            discount_amount: inv.discount_amount,
+            payment_method: "cash",
+            paid_amount: "0",
+            reference: "",
+            lines: (inv.lines ?? []).map(l => ({
+              ...l,
+              _id: `line_${Math.random()}`,
+              line_total: parseFloat(l.quantity) * parseFloat(l.unit_price),
+            })),
+            status: inv.status,
+          });
+          setView("editor");
+        } catch {
+          toast.error("فشل تحميل الفاتورة");
+        }
+      };
+      loadInvoice();
+    } else {
+      setView("list");
+    }
+  }, [isNew, id]);
 
   const loadData = useCallback(async () => {
     try {
@@ -106,31 +152,21 @@ export default function SalesInvoices() {
   }
 
   const handleCreate = () => {
-    setEditor(defaultEditor());
-    setView("editor");
+    openTab({ 
+      id: `/sales-invoices/new-${Date.now()}`, 
+      title: "فاتورة مبيعات جديدة", 
+      path: "/sales-invoices/new",
+      closable: true
+    });
   };
 
   const handleEdit = (inv: InvoiceDto) => {
-    setEditor({
-      id: inv.id,
-      invoice_number: inv.invoice_number,
-      customer_id: inv.customer_id ?? "",
-      customer_name: inv.customer_name ?? "زبون نقدي",
-      issued_at: inv.issued_at.split("T")[0],
-      notes: inv.notes ?? "",
-      tax_amount: inv.tax_amount,
-      discount_amount: inv.discount_amount,
-      payment_method: "cash",
-      paid_amount: "0",
-      reference: "",
-      lines: (inv.lines ?? []).map(l => ({
-        ...l,
-        _id: `line_${Math.random()}`,
-        line_total: parseFloat(l.quantity) * parseFloat(l.unit_price),
-      })),
-      status: inv.status,
+    openTab({ 
+      id: `/sales-invoices/${inv.id}`, 
+      title: `فاتورة ${inv.invoice_number}`, 
+      path: `/sales-invoices/${inv.id}`,
+      closable: true
     });
-    setView("editor");
   };
 
   const handleSave = async () => {
@@ -169,8 +205,13 @@ export default function SalesInvoices() {
         });
         toast.success("تم حفظ فاتورة المبيعات");
       }
-      setView("list");
-      loadData();
+      // After save, close this tab if it was a 'new' tab, and refresh list tab
+      if (isNew || id) {
+        closeTab(activeTabId);
+      } else {
+        setView("list");
+        loadData();
+      }
     } catch (e) {
       toast.error("فشل الحفظ: " + e);
     } finally {
@@ -219,10 +260,10 @@ export default function SalesInvoices() {
         canPost={!!editor.id && editor.status === "Draft"}
         canEdit={editor.status === "Draft"}
         canDelete={!!editor.id && editor.status === "Draft"}
-        onNew={() => setEditor(defaultEditor())}
+        onNew={handleCreate}
         onSave={handleSave}
         onPost={handlePost}
-        onClose={() => setView("list")}
+        onClose={() => closeTab(activeTabId)}
         onRefresh={loadData}
         summaryPanel={
           <SummaryPanel

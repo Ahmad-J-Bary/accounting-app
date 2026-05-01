@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useLocation, useParams } from "react-router-dom";
+import { useTabs } from "@/context/TabContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -55,6 +57,10 @@ function defaultEditor(): EditorState {
 }
 
 export default function PurchaseInvoices() {
+  const location = useLocation();
+  const { id } = useParams();
+  const { openTab, closeTab, activeTabId } = useTabs();
+  
   const [view, setView] = useState<ViewMode>("list");
   const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
@@ -63,6 +69,46 @@ export default function PurchaseInvoices() {
   const [posting, setPosting] = useState(false);
   const [editor, setEditor] = useState<EditorState>(defaultEditor());
   const [search, setSearch] = useState("");
+
+  const isNew = location.pathname.endsWith("/new");
+
+  useEffect(() => {
+    if (isNew) {
+      setEditor(defaultEditor());
+      setView("editor");
+    } else if (id) {
+      const loadInvoice = async () => {
+        try {
+          const inv = await invoiceService.getInvoiceById(id);
+          setEditor({
+            id: inv.id,
+            invoice_number: inv.invoice_number,
+            supplier_id: inv.supplier_id ?? "",
+            supplier_name: inv.supplier_name ?? "مورد نقدي",
+            issued_at: inv.issued_at.split("T")[0],
+            notes: inv.notes ?? "",
+            tax_amount: inv.tax_amount,
+            discount_amount: inv.discount_amount,
+            extra_costs: "0",
+            payment_method: "cash",
+            paid_amount: "0",
+            lines: (inv.lines ?? []).map(l => ({
+              ...l,
+              _id: `line_${Math.random()}`,
+              line_total: parseFloat(l.quantity) * parseFloat(l.unit_price),
+            })),
+            status: inv.status,
+          });
+          setView("editor");
+        } catch {
+          toast.error("فشل تحميل الفاتورة");
+        }
+      };
+      loadInvoice();
+    } else {
+      setView("list");
+    }
+  }, [isNew, id]);
 
   const loadData = useCallback(async () => {
     try {
@@ -105,31 +151,21 @@ export default function PurchaseInvoices() {
   }
 
   const handleCreate = () => {
-    setEditor(defaultEditor());
-    setView("editor");
+    openTab({ 
+      id: `/purchase-invoices/new-${Date.now()}`, 
+      title: "فاتورة مشتريات جديدة", 
+      path: "/purchase-invoices/new",
+      closable: true
+    });
   };
 
   const handleEdit = (inv: InvoiceDto) => {
-    setEditor({
-      id: inv.id,
-      invoice_number: inv.invoice_number,
-      supplier_id: inv.supplier_id ?? "",
-      supplier_name: inv.supplier_name ?? "مورد نقدي",
-      issued_at: inv.issued_at.split("T")[0],
-      notes: inv.notes ?? "",
-      tax_amount: inv.tax_amount,
-      discount_amount: inv.discount_amount,
-      extra_costs: "0",
-      payment_method: "cash",
-      paid_amount: "0",
-      lines: (inv.lines ?? []).map(l => ({
-        ...l,
-        _id: `line_${Math.random()}`,
-        line_total: parseFloat(l.quantity) * parseFloat(l.unit_price),
-      })),
-      status: inv.status,
+    openTab({ 
+      id: `/purchase-invoices/${inv.id}`, 
+      title: `فاتورة ${inv.invoice_number}`, 
+      path: `/purchase-invoices/${inv.id}`,
+      closable: true
     });
-    setView("editor");
   };
 
   const handleSave = async () => {
@@ -168,8 +204,12 @@ export default function PurchaseInvoices() {
         });
         toast.success("تم حفظ فاتورة المشتريات");
       }
-      setView("list");
-      loadData();
+      if (isNew || id) {
+        closeTab(activeTabId);
+      } else {
+        setView("list");
+        loadData();
+      }
     } catch (e) {
       toast.error("فشل الحفظ: " + e);
     } finally {
@@ -218,10 +258,10 @@ export default function PurchaseInvoices() {
         canPost={!!editor.id && editor.status === "Draft"}
         canEdit={editor.status === "Draft"}
         canDelete={!!editor.id && editor.status === "Draft"}
-        onNew={() => setEditor(defaultEditor())}
+        onNew={handleCreate}
         onSave={handleSave}
         onPost={handlePost}
-        onClose={() => setView("list")}
+        onClose={() => closeTab(activeTabId)}
         onRefresh={loadData}
         summaryPanel={
           <SummaryPanel

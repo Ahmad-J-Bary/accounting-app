@@ -11,7 +11,7 @@ pub enum MovementType {
     Out,            // إخراج يدوي
     Transfer,       // نقل
     Adjustment,     // تسوية جرد
-    OpeningBalance, // رصيد أول المدة
+    OpeningBalance, // فاتورة أول المدة
     Damaged,        // تالف وهدر
     Sale,           // مبيعات
     Purchase,       // مشتريات
@@ -39,7 +39,9 @@ impl StockMovement {
         movement_date: DateTime<Utc>,
     ) -> Result<Self, DomainError> {
         if quantity <= Decimal::ZERO {
-            return Err(DomainError::Invalid("الكمية يجب أن تكون أكبر من صفر".into()));
+            return Err(DomainError::Invalid(
+                "الكمية يجب أن تكون أكبر من صفر".into(),
+            ));
         }
 
         if reference.trim().is_empty() {
@@ -63,14 +65,21 @@ impl StockMovement {
     pub fn is_inflow(&self) -> bool {
         matches!(
             self.movement_type,
-            MovementType::In | MovementType::Transfer | MovementType::OpeningBalance | MovementType::Purchase
+            MovementType::In
+                | MovementType::Transfer
+                | MovementType::OpeningBalance
+                | MovementType::Purchase
         )
     }
 
     pub fn is_outflow(&self) -> bool {
         matches!(
             self.movement_type,
-            MovementType::Out | MovementType::Transfer | MovementType::Damaged | MovementType::Sale | MovementType::Adjustment
+            MovementType::Out
+                | MovementType::Transfer
+                | MovementType::Damaged
+                | MovementType::Sale
+                | MovementType::Adjustment
         )
     }
 }
@@ -131,7 +140,8 @@ mod tests {
             "INV-001".to_string(),
             "إدخال مخزون".to_string(),
             Utc::now(),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(movement.is_inflow());
     }
@@ -145,7 +155,8 @@ mod tests {
             "INV-001".to_string(),
             "إخراج مخزون".to_string(),
             Utc::now(),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(movement.is_outflow());
     }
@@ -159,7 +170,8 @@ mod tests {
             "TRF-001".to_string(),
             "نقل مخزون".to_string(),
             Utc::now(),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(movement.is_inflow());
         assert!(movement.is_outflow());

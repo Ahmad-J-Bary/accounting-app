@@ -44,7 +44,12 @@ impl InvoiceQueries {
         };
 
         let invoices = self.repo.list_by_type(itype).await?;
-        Ok(invoices.into_iter().map(InvoiceDto::from).collect())
+        let mut dtos = Vec::new();
+        for inv in invoices {
+            let dto = InvoiceDto::from(inv);
+            dtos.push(self.populate_dto(dto).await?);
+        }
+        Ok(dtos)
     }
 
     pub async fn get_by_id(&self, id: String) -> Result<InvoiceDto, AppError> {
@@ -52,8 +57,11 @@ impl InvoiceQueries {
         let invoice = self.repo.find_by_id(&invoice_id).await?
             .ok_or_else(|| AppError::NotFound("الفاتورة غير موجودة".into()))?;
         
-        let mut dto = InvoiceDto::from(invoice);
-        
+        let dto = InvoiceDto::from(invoice);
+        self.populate_dto(dto).await
+    }
+
+    async fn populate_dto(&self, mut dto: InvoiceDto) -> Result<InvoiceDto, AppError> {
         if let Some(ref cid) = dto.customer_id {
              if let Ok(id) = CustomerId::from_str(cid) {
                  if let Ok(Some(customer)) = self.customer_repo.find_by_id(&id).await {
@@ -83,12 +91,16 @@ impl InvoiceQueries {
                 }
             }
         }
-
         Ok(dto)
     }
 
     pub async fn list_all(&self) -> Result<Vec<InvoiceDto>, AppError> {
         let invoices = self.repo.list_all().await?;
-        Ok(invoices.into_iter().map(InvoiceDto::from).collect())
+        let mut dtos = Vec::new();
+        for inv in invoices {
+            let dto = InvoiceDto::from(inv);
+            dtos.push(self.populate_dto(dto).await?);
+        }
+        Ok(dtos)
     }
 }
