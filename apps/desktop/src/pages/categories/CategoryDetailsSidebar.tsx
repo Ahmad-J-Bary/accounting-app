@@ -40,7 +40,7 @@ export function CategoryDetailsSidebar({
   canDelete = true,
   isVirtualRootSelected = false,
 }: CategoryDetailsSidebarProps) {
-  const [formMode, setFormMode] = useState<"create_cat" | "edit_cat" | "create_mat" | "edit_mat" | null>(null);
+  const [formMode, setFormMode] = useState<"create_cat" | "edit_cat" | "create_mat" | "edit_mat" | "create_unit" | null>(null);
   
   // Shared fields
   const [name, setName] = useState("");
@@ -57,6 +57,11 @@ export function CategoryDetailsSidebar({
   const [minimumStock, setMinimumStock] = useState("0");
   const [baseUnitName, setBaseUnitName] = useState("قطعة");
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+
+  // Unit fields
+  const [unitName, setUnitName] = useState("");
+  const [unitFactor, setUnitFactor] = useState("");
+  const [unitBarcode, setUnitBarcode] = useState("");
 
   const isMaterial = !!selected?.isMaterial;
   const materialData = selected?.materialData as MaterialDto | undefined;
@@ -121,6 +126,14 @@ export function CategoryDetailsSidebar({
   };
 
   const openCreate = () => {
+    if (isMaterial) {
+      setFormMode("create_unit");
+      setError(null);
+      setUnitName("");
+      setUnitFactor("");
+      setUnitBarcode("");
+      return;
+    }
     if (isSubCategory || isUncategorized) {
       setFormMode("create_mat");
       setError(null);
@@ -174,11 +187,24 @@ export function CategoryDetailsSidebar({
             barcode: barcode.trim(),
             code: finalCode,
             minimum_stock: minimumStock,
-            base_unit_name: baseUnitName,
+            units: [{ name: baseUnitName, conversion_factor: "1", barcode: barcode.trim() || null }],
             category_ids: [selected.id],
           });
           toast.success("تمت إضافة المادة");
         }
+      } else if (formMode === "create_unit") {
+        if (!unitName.trim() || !unitFactor.trim()) {
+          setError("اسم الوحدة والمعامل مطلوبان");
+          setSaving(false);
+          return;
+        }
+        await materialService.addMaterialUnit({
+          material_id: materialData?.id,
+          name: unitName.trim(),
+          conversion_factor: unitFactor.trim(),
+          barcode: unitBarcode.trim() || null
+        });
+        toast.success("تمت إضافة وحدة القياس");
       } else {
         // Category Save Logic
         if (codePrefix.trim().length === 0 && (formMode === "create_cat" || isUncategorized)) {
@@ -249,9 +275,25 @@ export function CategoryDetailsSidebar({
             <p className="text-[11px] text-slate-500 mb-1">الحد الأدنى للمخزون</p>
             <p className="font-bold">{materialData?.minimum_stock}</p>
           </div>
-          <div className="rounded-md border bg-slate-50 p-3">
-            <p className="text-[11px] text-slate-500 mb-1">الوحدة الأساسية</p>
-            <p className="font-bold">{materialData?.units?.find(u => u.is_base)?.name || "قطعة"}</p>
+          <div className="rounded-md border bg-slate-50 p-3 space-y-2">
+            <p className="text-[11px] text-slate-500 flex items-center gap-2">
+              <Scale className="w-3 h-3" /> وحدات القياس
+            </p>
+            <div className="space-y-1.5">
+              {materialData?.units?.map(u => (
+                <div key={u.id} className={cn(
+                  "flex items-center justify-between p-2 rounded border text-xs",
+                  u.is_base ? "bg-blue-50 border-blue-100" : "bg-white border-slate-100"
+                )}>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-slate-700">{u.name}</span>
+                    <span className="text-[10px] text-slate-400">المعامل: {u.conversion_factor}</span>
+                  </div>
+                  {u.is_base && <span className="text-[9px] bg-blue-600 text-white px-1.5 py-0.5 rounded font-bold">أساسية</span>}
+                  {u.barcode && <span className="text-[9px] font-mono text-slate-400">{u.barcode}</span>}
+                </div>
+              ))}
+            </div>
           </div>
         </>
       ) : (
@@ -304,11 +346,28 @@ export function CategoryDetailsSidebar({
               <Input type="number" value={minimumStock} onChange={e => setMinimumStock(e.target.value)} className="bg-white" />
             </div>
           </div>
-          <div className="bg-slate-50 rounded-md p-3 border border-slate-100 flex items-center gap-3">
-            <Layers className="w-4 h-4 text-emerald-500" />
+        </>
+      ) : formMode === "create_unit" ? (
+        <>
+          <div className="space-y-1">
+            <Label>اسم الوحدة <span className="text-red-500">*</span></Label>
+            <Input value={unitName} onChange={e => setUnitName(e.target.value)} placeholder="مثلاً: طرد، كرتونة..." className="bg-white" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label>معامل التعبئة <span className="text-red-500">*</span></Label>
+              <Input type="number" value={unitFactor} onChange={e => setUnitFactor(e.target.value)} placeholder="مثلاً: 12" className="bg-white font-bold" min="0.000001" step="any" />
+            </div>
+            <div className="space-y-1">
+              <Label>الباركود</Label>
+              <Input value={unitBarcode} onChange={e => setUnitBarcode(e.target.value)} placeholder="اختياري" className="bg-white font-mono text-xs" dir="ltr" />
+            </div>
+          </div>
+          <div className="bg-blue-50 rounded-md p-3 border border-blue-100 flex items-center gap-3">
+            <Package className="w-4 h-4 text-blue-500" />
             <div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase">تصنيف المادة</p>
-              <p className="text-xs font-bold text-slate-700">{selected?.name}</p>
+              <p className="text-[10px] text-blue-400 font-bold uppercase">إضافة للمادة</p>
+              <p className="text-xs font-bold text-blue-700">{materialData?.name}</p>
             </div>
           </div>
         </>
@@ -344,7 +403,7 @@ export function CategoryDetailsSidebar({
       canDelete={canDelete && !isUncategorized && (selected?.material_count || 0) === 0 && !isMaterial}
       formPanel={formPanel}
       disableNew={false}
-      newButtonLabel={isSubCategory || isUncategorized ? "مادة جديدة" : "تصنيف جديد"}
+      newButtonLabel={isMaterial ? "إضافة وحدة قياس" : (isSubCategory || isUncategorized ? "مادة جديدة" : "تصنيف جديد")}
     >
       {detailsView}
     </TreeSidebar>

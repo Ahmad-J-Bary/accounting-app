@@ -20,13 +20,19 @@ export interface MaterialDto {
   units: MaterialUnitDto[];
 }
 
+export interface CreateMaterialUnitRequest {
+  name: string;
+  conversion_factor: string;
+  barcode?: string | null;
+}
+
 export interface CreateMaterialRequest {
   name: string;
   barcode?: string;
   code?: string;
   minimum_stock: string;
   category_ids: string[];
-  base_unit_name: string;
+  units: CreateMaterialUnitRequest[];
 }
 
 export interface UpdateMaterialRequest {
