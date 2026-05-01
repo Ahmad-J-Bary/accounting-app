@@ -26,6 +26,8 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::material::list_materials,
             commands::material::update_material,
             commands::material::delete_material,
+            commands::material::add_material_unit,
+            commands::material::delete_material_unit,
             commands::category::create_category,
             commands::category::list_categories,
             commands::category::update_category,

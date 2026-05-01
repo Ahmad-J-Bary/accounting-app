@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Wand2, Hash, Barcode, Package, Layers, Shuffle, Check } from "lucide-react";
+import { Plus, Edit, Wand2, Hash, Barcode, Package, Layers, Shuffle, Check, Scale, Boxes } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { materialCodeService } from "@/services/materialCodeService";
@@ -30,6 +30,9 @@ const EMPTY_FORM = {
   barcode: "",
   code: "",
   minimum_stock: "0",
+  units: [
+    { name: "قطعة", conversion_factor: "1", barcode: "" }
+  ],
   selectedCategoryIds: [] as string[],
 };
 
@@ -43,11 +46,17 @@ export function MaterialForm({ open, onOpenChange, material, categories, onSave,
   useEffect(() => {
     if (open) {
       if (material) {
+        const baseUnit = material.units.find(u => u.is_base);
         setFormData({
           name: material.name,
           barcode: material.barcode || "",
           code: material.code || "",
           minimum_stock: material.minimum_stock,
+          units: material.units.map(u => ({
+            name: u.name,
+            conversion_factor: u.conversion_factor,
+            barcode: u.barcode || ""
+          })),
           selectedCategoryIds: material.category_ids,
         });
       } else {
@@ -122,6 +131,29 @@ export function MaterialForm({ open, onOpenChange, material, categories, onSave,
     });
   };
 
+  const addUnit = () => {
+    setFormData(prev => ({
+      ...prev,
+      units: [...prev.units, { name: "", conversion_factor: "", barcode: "" }]
+    }));
+  };
+
+  const removeUnit = (index: number) => {
+    if (formData.units.length <= 1) return;
+    setFormData(prev => ({
+      ...prev,
+      units: prev.units.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateUnit = (index: number, field: string, value: string) => {
+    setFormData(prev => {
+      const nextUnits = [...prev.units];
+      nextUnits[index] = { ...nextUnits[index], [field]: value };
+      return { ...prev, units: nextUnits };
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px] max-h-[92vh] overflow-y-auto" dir="rtl">
@@ -152,12 +184,100 @@ export function MaterialForm({ open, onOpenChange, material, categories, onSave,
                 <Input value={formData.barcode} onChange={e => setFormData({ ...formData, barcode: e.target.value })} className="h-10 font-mono text-xs" placeholder="الباركود" dir="ltr" />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label className="font-bold text-slate-700">الحد الأدنى للمخزون</Label>
-              <div className="relative">
-                <Package className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                <Input type="number" value={formData.minimum_stock} onChange={e => setFormData({ ...formData, minimum_stock: e.target.value })} className="h-10 pr-10" />
+            
+            <div className="grid grid-cols-1 gap-3">
+              <div className="space-y-2">
+                <Label className="font-bold text-slate-700 flex items-center gap-1.5"><Package className="w-3.5 h-3.5 text-slate-400" /> حد الطلب</Label>
+                <Input type="number" value={formData.minimum_stock} onChange={e => setFormData({ ...formData, minimum_stock: e.target.value })} className="h-10" />
               </div>
+            </div>
+
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <div className="flex items-center gap-2">
+                  <Scale className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-bold text-slate-800">وحدات القياس</span>
+                </div>
+                {!material && (
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={addUnit}
+                    className="h-7 px-2 text-[10px] bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold gap-1"
+                  >
+                    <Plus className="w-3 h-3" /> إضافة وحدة
+                  </Button>
+                )}
+              </div>
+              
+              <div className="space-y-3">
+                {formData.units.map((unit, idx) => (
+                  <div key={idx} className={cn(
+                    "p-3 rounded-lg border bg-white space-y-3 relative transition-all",
+                    idx === 0 ? "border-blue-100 shadow-sm" : "border-slate-100"
+                  )}>
+                    {idx > 0 && !material && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => removeUnit(idx)}
+                        className="absolute -left-1.5 -top-1.5 h-6 w-6 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 border border-red-100 shadow-sm z-10"
+                      >
+                        <Check className="w-3 h-3 rotate-45" /> {/* Use X or Rotate Plus for delete */}
+                      </Button>
+                    )}
+                    
+                    <div className="grid grid-cols-1 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-bold text-slate-500">اسم الوحدة {idx === 0 && <span className="text-blue-500">(الأساسية)</span>}</Label>
+                        <Input 
+                          value={unit.name} 
+                          onChange={e => updateUnit(idx, "name", e.target.value)} 
+                          className="h-9 text-xs" 
+                          placeholder="مثلاً: قطعة، دزينة، طرد..."
+                          disabled={!!material}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] font-bold text-slate-500">معامل التعبئة</Label>
+                          <Input 
+                            type="number"
+                            value={unit.conversion_factor} 
+                            onChange={e => updateUnit(idx, "conversion_factor", e.target.value)} 
+                            className="h-9 text-xs font-bold" 
+                            disabled={idx === 0 || !!material}
+                            min="0"
+                            step="any"
+                          />
+                          {idx === 0 && <p className="text-[8px] text-blue-400 font-medium">دائماً 1 للوحدة الأساسية</p>}
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] font-bold text-slate-500">باركود الوحدة</Label>
+                          <Input 
+                            value={unit.barcode} 
+                            onChange={e => updateUnit(idx, "barcode", e.target.value)} 
+                            className="h-9 text-xs font-mono" 
+                            placeholder="اختياري" 
+                            dir="ltr"
+                            disabled={!!material}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {material && (
+                <div className="bg-white/50 p-2 rounded border border-dashed border-slate-200">
+                  <p className="text-[9px] text-slate-400 italic">
+                    ملاحظة: لإضافة وحدات قياس أخرى بعد إنشاء المادة، استخدم خيار "إدارة الوحدات" من جدول المواد.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

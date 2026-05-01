@@ -35,11 +35,18 @@ impl CreateMaterialUseCase {
         let min_stock = crate::utils::parse_decimal(Some(&req.minimum_stock), "حد الطلب")?;
         let code = crate::utils::ensure_code(req.code, "AUTO".to_string());
 
+        let mut unit_defs = vec![];
+        for u in req.units {
+            let factor = u.conversion_factor.parse().map_err(|_| AppError::Invalid(format!("معامل تعبئة غير صالح للوحدة {}", u.name)))?;
+            unit_defs.push((u.name, factor, u.barcode));
+        }
+
         let material = Material::new(
             req.name,
             req.barcode.unwrap_or_default(),
             code,
             min_stock,
+            unit_defs,
             category_ids,
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
 

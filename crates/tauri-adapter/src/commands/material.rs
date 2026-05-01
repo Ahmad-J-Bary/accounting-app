@@ -48,3 +48,24 @@ pub async fn delete_material(
     DeleteMaterialUseCase::new(state.material_repo.clone(), state.stock_movement_repo.clone())
         .execute(id).await.map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub async fn add_material_unit(
+    state: State<'_, AppState>,
+    request: application::dto::material_dto::AddMaterialUnitRequest,
+) -> Result<(), String> {
+    let mid = request.material_id.parse().map_err(|_| "معرف مادة غير صالح".to_string())?;
+    let factor = request.conversion_factor.parse().map_err(|_| "معامل التحويل غير صالح".to_string())?;
+    
+    state.material_repo.add_unit(&mid, request.name, factor, request.barcode)
+        .await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn delete_material_unit(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<(), String> {
+    state.material_repo.delete_unit(&id)
+        .await.map_err(|e| e.to_string())
+}

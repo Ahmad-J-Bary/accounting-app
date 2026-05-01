@@ -25,4 +25,12 @@ export const materialService = {
   async deleteMaterial(id: string): Promise<void> {
     return await invoke<void>('delete_material', { id });
   },
+  
+  async addMaterialUnit(request: any): Promise<void> {
+    return await invoke<void>('add_material_unit', { request });
+  },
+
+  async deleteMaterialUnit(id: string): Promise<void> {
+    return await invoke<void>('delete_material_unit', { id });
+  },
 };

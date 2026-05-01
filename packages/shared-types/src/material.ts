@@ -1,3 +1,12 @@
+export interface MaterialUnitDto {
+  id: string;
+  material_id: string;
+  name: string;
+  conversion_factor: string;
+  barcode?: string;
+  is_base: boolean;
+}
+
 export interface MaterialDto {
   id: string;
   name: string;
@@ -8,6 +17,7 @@ export interface MaterialDto {
   stock_quantity: string;
   minimum_stock: string;
   purchase_price: string;
+  units: MaterialUnitDto[];
 }
 
 export interface CreateMaterialRequest {
@@ -16,6 +26,7 @@ export interface CreateMaterialRequest {
   code?: string;
   minimum_stock: string;
   category_ids: string[];
+  base_unit_name: string;
 }
 
 export interface UpdateMaterialRequest {
@@ -26,4 +37,18 @@ export interface UpdateMaterialRequest {
   minimum_stock: string;
   is_active: boolean;
   category_ids: string[];
+}
+
+export interface AddMaterialUnitRequest {
+  material_id: string;
+  name: string;
+  conversion_factor: string;
+  barcode?: string;
+}
+
+export interface UpdateMaterialUnitRequest {
+  id: string;
+  name: string;
+  conversion_factor: string;
+  barcode?: string;
 }

@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, Shuffle, Package, Hash, Barcode, Layers, Wand2 } from "lucide-react";
+import { AlertCircle, Shuffle, Package, Hash, Barcode, Layers, Wand2, Scale, Boxes } from "lucide-react";
 import type { CategoryDto, MaterialDto } from "@erp/shared-types";
 import { categoryService } from "@/services/categoryService";
 import { materialService } from "@/services/materialService";
@@ -55,6 +55,7 @@ export function CategoryDetailsSidebar({
   const [barcode, setBarcode] = useState("");
   const [code, setCode] = useState("");
   const [minimumStock, setMinimumStock] = useState("0");
+  const [baseUnitName, setBaseUnitName] = useState("قطعة");
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
 
   const isMaterial = !!selected?.isMaterial;
@@ -73,10 +74,12 @@ export function CategoryDetailsSidebar({
     setError(null);
     if (selected) {
       if (isMaterial && materialData) {
+        const baseUnit = materialData.units?.find(u => u.is_base);
         setName(materialData.name);
         setBarcode(materialData.barcode || "");
         setCode(materialData.code || "");
         setMinimumStock(materialData.minimum_stock || "0");
+        setBaseUnitName(baseUnit?.name || "قطعة");
       } else {
         setName(selected.name);
         setParentId(selected.parent_id || null);
@@ -91,6 +94,7 @@ export function CategoryDetailsSidebar({
       setBarcode("");
       setCode("");
       setMinimumStock("0");
+      setBaseUnitName("قطعة");
     }
   }, [selected, isVirtualRootSelected, isRoot, getGeneralSubPrefix, isMaterial, materialData, isUncategorized]);
 
@@ -124,6 +128,7 @@ export function CategoryDetailsSidebar({
       setBarcode("");
       setCode("");
       setMinimumStock("0");
+      setBaseUnitName("قطعة");
       return;
     }
     setFormMode("create_cat");
@@ -169,6 +174,7 @@ export function CategoryDetailsSidebar({
             barcode: barcode.trim(),
             code: finalCode,
             minimum_stock: minimumStock,
+            base_unit_name: baseUnitName,
             category_ids: [selected.id],
           });
           toast.success("تمت إضافة المادة");
@@ -243,6 +249,10 @@ export function CategoryDetailsSidebar({
             <p className="text-[11px] text-slate-500 mb-1">الحد الأدنى للمخزون</p>
             <p className="font-bold">{materialData?.minimum_stock}</p>
           </div>
+          <div className="rounded-md border bg-slate-50 p-3">
+            <p className="text-[11px] text-slate-500 mb-1">الوحدة الأساسية</p>
+            <p className="font-bold">{materialData?.units?.find(u => u.is_base)?.name || "قطعة"}</p>
+          </div>
         </>
       ) : (
         <>
@@ -284,9 +294,15 @@ export function CategoryDetailsSidebar({
               <Input value={barcode} onChange={e => setBarcode(e.target.value)} placeholder="000000" className="bg-white font-mono text-xs" dir="ltr" />
             </div>
           </div>
-          <div className="space-y-1">
-            <Label>الحد الأدنى للمخزون</Label>
-            <Input type="number" value={minimumStock} onChange={e => setMinimumStock(e.target.value)} className="bg-white" />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="flex items-center gap-1.5"><Scale className="w-3.5 h-3.5 text-slate-400" /> الوحدة الأساسية</Label>
+              <Input value={baseUnitName} onChange={e => setBaseUnitName(e.target.value)} placeholder="قطعة" className="bg-white" disabled={formMode === "edit_mat"} />
+            </div>
+            <div className="space-y-1">
+              <Label>الحد الأدنى</Label>
+              <Input type="number" value={minimumStock} onChange={e => setMinimumStock(e.target.value)} className="bg-white" />
+            </div>
           </div>
           <div className="bg-slate-50 rounded-md p-3 border border-slate-100 flex items-center gap-3">
             <Layers className="w-4 h-4 text-emerald-500" />

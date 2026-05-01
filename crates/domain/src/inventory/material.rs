@@ -1,7 +1,17 @@
 use crate::shared::errors::DomainError;
-use crate::shared::ids::{MaterialId, MaterialCategoryId};
+use crate::shared::ids::{MaterialId, MaterialCategoryId, MaterialUnitId};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MaterialUnit {
+    pub id: MaterialUnitId,
+    pub material_id: MaterialId,
+    pub name: String,
+    pub conversion_factor: rust_decimal::Decimal,
+    pub barcode: Option<String>,
+    pub is_base: bool,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Material {
@@ -11,6 +21,7 @@ pub struct Material {
     pub code: String,
     pub is_active: bool,
     pub minimum_stock: rust_decimal::Decimal,
+    pub units: Vec<MaterialUnit>,
     pub category_ids: Vec<MaterialCategoryId>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -22,6 +33,7 @@ impl Material {
         barcode: String,
         code: String,
         minimum_stock: rust_decimal::Decimal,
+        unit_defs: Vec<(String, rust_decimal::Decimal, Option<String>)>,
         category_ids: Vec<MaterialCategoryId>,
     ) -> Result<Self, DomainError> {
         if name.trim().is_empty() {
@@ -32,15 +44,44 @@ impl Material {
             return Err(DomainError::Invalid("يجب إدخال إما الكود أو الباركود على الأقل".into()));
         }
 
+        if unit_defs.is_empty() {
+            return Err(DomainError::Invalid("يجب إضافة وحدة قياس واحدة على الأقل".into()));
+        }
+
         let now = Utc::now();
+        let mid = MaterialId::new();
         
+        let mut units = Vec::new();
+        let mut found_base = false;
+
+        for (u_name, u_factor, u_barcode) in unit_defs {
+            let is_base = u_factor == rust_decimal::Decimal::from(1) && !found_base;
+            if is_base { found_base = true; }
+
+            units.push(MaterialUnit {
+                id: MaterialUnitId::new(),
+                material_id: mid,
+                name: u_name,
+                conversion_factor: u_factor,
+                barcode: u_barcode,
+                is_base,
+            });
+        }
+
+        // If no unit has factor 1, the first one is forced to be base (though it should ideally have factor 1)
+        if !found_base && !units.is_empty() {
+            units[0].is_base = true;
+            units[0].conversion_factor = rust_decimal::Decimal::from(1);
+        }
+
         Ok(Self {
-            id: MaterialId::new(),
+            id: mid,
             name,
             barcode,
             code,
             is_active: true,
             minimum_stock,
+            units,
             category_ids,
             created_at: now,
             updated_at: now,
@@ -59,6 +100,19 @@ impl Material {
 
     pub fn update_categories(&mut self, category_ids: Vec<MaterialCategoryId>) {
         self.category_ids = category_ids;
+        self.updated_at = Utc::now();
+    }
+
+    pub fn add_unit(&mut self, name: String, factor: rust_decimal::Decimal, barcode: Option<String>) {
+        let unit = MaterialUnit {
+            id: MaterialUnitId::new(),
+            material_id: self.id,
+            name,
+            conversion_factor: factor,
+            barcode,
+            is_base: false,
+        };
+        self.units.push(unit);
         self.updated_at = Utc::now();
     }
 }

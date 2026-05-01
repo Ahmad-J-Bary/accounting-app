@@ -19,7 +19,7 @@ pub async fn create_pool(database_url: &str) -> Result<DbPool, sqlx::Error> {
     Ok(Arc::new(pool))
 }
 
-// Database connection pool and migration runner (Force rebuild: 2026-04-21T00:31)
+// Database connection pool and migration runner (Force rebuild: 2026-05-01T20:41)
 pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::migrate::MigrateError> {
     sqlx::migrate!("./src/db/migrations").run(pool).await
 }

@@ -9,3 +9,15 @@ pub struct MaterialRow {
     pub created_at: String,
     pub updated_at: String,
 }
+
+#[derive(sqlx::FromRow)]
+pub struct MaterialUnitRow {
+    pub id: String,
+    pub material_id: String,
+    pub name: String,
+    pub conversion_factor: String,
+    pub barcode: Option<String>,
+    pub is_base: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}

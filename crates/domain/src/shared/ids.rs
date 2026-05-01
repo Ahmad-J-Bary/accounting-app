@@ -40,6 +40,7 @@ define_id!(InvoiceId);
 define_id!(AccountId);
 define_id!(MaterialId);
 define_id!(MaterialCategoryId);
+define_id!(MaterialUnitId);
 define_id!(JournalEntryId);
 define_id!(SalesInvoiceId);
 define_id!(PurchaseInvoiceId);

@@ -15,6 +15,7 @@ import { useMasterData } from "@/hooks/useMasterData";
 import { MaterialForm } from "@/components/erp/materials/MaterialForm";
 import { MaterialStats } from "@/components/erp/materials/MaterialStats";
 import { MaterialTable } from "@/components/erp/materials/MaterialTable";
+import { MaterialUnitsManager } from "@/components/erp/materials/MaterialUnitsManager";
 
 export default function Materials() {
   const {
@@ -44,6 +45,7 @@ export default function Materials() {
   });
 
   const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [managingUnitsMaterial, setManagingUnitsMaterial] = useState<MaterialDto | null>(null);
 
   const loadCategories = useCallback(async () => {
     try {
@@ -100,6 +102,7 @@ export default function Materials() {
           search={search}
           onEdit={handleOpenEdit}
           onDelete={handleDelete}
+          onManageUnits={setManagingUnitsMaterial}
         />
       </Card>
 
@@ -110,6 +113,13 @@ export default function Materials() {
         categories={categories}
         onSave={handleSave}
         saving={saving}
+      />
+
+      <MaterialUnitsManager 
+        open={!!managingUnitsMaterial}
+        onOpenChange={(open) => !open && setManagingUnitsMaterial(null)}
+        material={managingUnitsMaterial}
+        onUnitsUpdated={refresh}
       />
     </>
   );

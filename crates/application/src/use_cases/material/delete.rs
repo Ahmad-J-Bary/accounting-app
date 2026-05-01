@@ -22,6 +22,6 @@ impl DeleteMaterialUseCase {
         if !movements.is_empty() {
             return Err(AppError::Forbidden("لا يمكن حذف مادة لها حركات مخزنية".into()));
         }
-        self.repo.delete(&mid).await
+        self.repo.delete_material(&mid).await
     }
 }
