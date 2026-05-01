@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   release:
     permissions:
@@ -42,6 +45,9 @@ jobs:
         shell: bash
         run: node scripts/set-version.mjs "$GITHUB_REF_NAME"
 
+      - name: Build frontend
+        run: pnpm build
+
       - name: Build Desktop (Windows/macOS/Linux)
         uses: tauri-apps/tauri-action@v0
         env:
@@ -53,5 +59,4 @@ jobs:
           releaseDraft: true
           prerelease: false
           includeUpdaterJson: true
-          distPath: ../dist
           projectPath: ./apps/desktop
