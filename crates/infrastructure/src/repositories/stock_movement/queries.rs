@@ -1,6 +1,7 @@
 use sqlx::SqlitePool;
 use application::errors::AppError;
-use domain::inventory::stock_movement::{StockMovement};
+use application::dto::stock_dto::StockMovementDetailDto;
+use domain::inventory::stock_movement::StockMovement;
 use domain::shared::ids::{StockMovementId, MaterialId};
 use rust_decimal::Decimal;
 use super::models::StockMovementRow;
@@ -108,4 +109,119 @@ pub async fn get_material_summary(pool: &SqlitePool, material_id: &MaterialId) -
         last_sale_price,
         average_cost,
     })
+}
+
+// Row struct for the enriched detail query (JOINed with invoices + parties)
+#[derive(sqlx::FromRow)]
+struct MovementDetailRow {
+    pub id: String,
+    pub material_id: String,
+    pub movement_type: String,
+    pub quantity: String,
+    pub unit_cost: String,
+    pub total_cost: String,
+    pub reference: Option<String>,
+    pub reason: Option<String>,
+    pub movement_date: String,
+    pub invoice_number: Option<String>,
+    pub invoice_type: Option<String>,
+    pub customer_name: Option<String>,
+    pub supplier_name: Option<String>,
+}
+
+fn movement_type_label(t: &str) -> String {
+    match t {
+        "Purchase" | "MovementType::Purchase" => "شراء".to_string(),
+        "Sale"     | "MovementType::Sale"     => "بيع".to_string(),
+        "OpeningBalance" | "MovementType::OpeningBalance" => "بضاعة أول المدة".to_string(),
+        "In"       | "MovementType::In"       => "إدخال".to_string(),
+        "Out"      | "MovementType::Out"      => "إخراج".to_string(),
+        "Damaged"  | "MovementType::Damaged"  => "تالف".to_string(),
+        "Adjustment"| "MovementType::Adjustment" => "تسوية".to_string(),
+        "Transfer" | "MovementType::Transfer" => "تحويل".to_string(),
+        _ => t.to_string(),
+    }
+}
+
+fn movement_type_is_inflow(t: &str) -> bool {
+    matches!(t, "Purchase" | "MovementType::Purchase"
+             | "In" | "MovementType::In"
+             | "OpeningBalance" | "MovementType::OpeningBalance"
+             | "Transfer" | "MovementType::Transfer")
+}
+
+pub async fn list_detailed_by_material(
+    pool: &SqlitePool,
+    material_id: &MaterialId,
+) -> Result<Vec<StockMovementDetailDto>, AppError> {
+    let rows = sqlx::query_as::<_, MovementDetailRow>(
+        r#"
+        SELECT
+            sm.id,
+            sm.material_id,
+            sm.movement_type,
+            sm.quantity,
+            sm.unit_cost,
+            sm.total_cost,
+            sm.reference,
+            sm.reason,
+            sm.movement_date,
+            ui.invoice_number,
+            ui.invoice_type,
+            c.name  AS customer_name,
+            s.name  AS supplier_name
+        FROM stock_movements sm
+        LEFT JOIN unified_invoices ui ON sm.reference = ui.invoice_number
+        LEFT JOIN customers c         ON ui.customer_id  = c.id
+        LEFT JOIN suppliers s         ON ui.supplier_id  = s.id
+        WHERE sm.material_id = ?
+        ORDER BY sm.movement_date ASC, sm.created_at ASC
+        "#
+    )
+    .bind(material_id.to_string())
+    .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    // Compute running balance (ASC order)
+    let mut balance = Decimal::ZERO;
+    let mut result = Vec::with_capacity(rows.len());
+
+    for row in rows {
+        let qty: Decimal = row.quantity.parse().unwrap_or(Decimal::ZERO);
+        let inflow = movement_type_is_inflow(&row.movement_type);
+
+        let balance_before = balance;
+        if inflow {
+            balance += qty;
+        } else {
+            balance -= qty;
+        }
+        let balance_after = balance;
+
+        let party_name = row.customer_name.or(row.supplier_name);
+        let label = movement_type_label(&row.movement_type);
+        let ref_str = row.reference.clone().unwrap_or_default();
+
+        result.push(StockMovementDetailDto {
+            id: row.id,
+            material_id: row.material_id,
+            movement_type: row.movement_type.replace("MovementType::", ""),
+            movement_type_label: label,
+            quantity: qty.to_string(),
+            unit_cost: row.unit_cost,
+            total_cost: row.total_cost,
+            reference: ref_str,
+            notes: row.reason.unwrap_or_default(),
+            movement_date: row.movement_date,
+            invoice_number: row.invoice_number,
+            invoice_type: row.invoice_type,
+            party_name,
+            balance_before: balance_before.to_string(),
+            balance_after: balance_after.to_string(),
+            is_inflow: inflow,
+        });
+    }
+
+    Ok(result)
 }

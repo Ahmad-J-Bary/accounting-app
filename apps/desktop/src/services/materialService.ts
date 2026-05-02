@@ -2,7 +2,8 @@ import { invoke } from '@/lib/invoke';
 import type { 
   MaterialDto, 
   CreateMaterialRequest,
-  UpdateMaterialRequest
+  UpdateMaterialRequest,
+  StockMovementDetailDto,
 } from '@erp/shared-types';
 
 export const materialService = {
@@ -32,5 +33,9 @@ export const materialService = {
 
   async deleteMaterialUnit(id: string): Promise<void> {
     return await invoke<void>('delete_material_unit', { id });
+  },
+
+  async listMovementsByMaterial(materialId: string): Promise<StockMovementDetailDto[]> {
+    return await invoke<StockMovementDetailDto[]>('list_movements_by_material', { materialId });
   },
 };

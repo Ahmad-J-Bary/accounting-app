@@ -53,7 +53,7 @@ export function DamagedForm({ open, onOpenChange, products, onSave, saving }: Da
                 setForm(p => ({ 
                   ...p, 
                   product_id: pid,
-                  cost_impact: prod ? parseFloat(prod.purchase_price || "0") * (p.quantity || 1) : p.cost_impact
+                  cost_impact: prod ? parseFloat(prod.last_purchase_price || "0") * (p.quantity || 1) : p.cost_impact
                 }));
               }}
             >
@@ -73,7 +73,7 @@ export function DamagedForm({ open, onOpenChange, products, onSave, saving }: Da
                 setForm(p => ({ 
                   ...p, 
                   quantity: qty,
-                  cost_impact: prod ? parseFloat(prod.purchase_price || "0") * qty : p.cost_impact
+                  cost_impact: prod ? parseFloat(prod.last_purchase_price || "0") * qty : p.cost_impact
                 }));
               }} />
           </div>

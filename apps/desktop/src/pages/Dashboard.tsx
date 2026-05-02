@@ -80,13 +80,13 @@ export default function Dashboard() {
   const payablesBalance = Math.max(approvedPurchasesTotal - totalSupplierPayments, 0);
 
   const inventoryValue = productItems.reduce((sum, product) => {
-    const stockQuantity = toNumber(product.stock_quantity);
-    const purchasePrice = toNumber(product.purchase_price);
+    const stockQuantity = toNumber(product.total_available);
+    const purchasePrice = toNumber(product.last_purchase_price);
     return sum + (stockQuantity * purchasePrice);
   }, 0);
 
   const lowStock = productItems.filter(
-    (product) => toNumber(product.stock_quantity) < toNumber(product.minimum_stock)
+    (product) => toNumber(product.total_available) < toNumber(product.minimum_stock)
   );
 
   // (no explicit separate totals; integrate into customers/suppliers sections)
@@ -249,7 +249,7 @@ export default function Dashboard() {
             {lowStock.slice(0, 4).map((p) => (
               <div key={p.id} className="flex items-center justify-between text-sm py-1.5 border-b border-border last:border-0">
                 <span className="truncate">{p.name}</span>
-                <span className="text-red-600 font-medium tabular-nums">{p.stock_quantity} / {p.minimum_stock}</span>
+                <span className="text-red-600 font-medium tabular-nums">{p.total_available} / {p.minimum_stock}</span>
               </div>
             ))}
           </div>

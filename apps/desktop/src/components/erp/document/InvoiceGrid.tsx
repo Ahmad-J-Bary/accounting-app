@@ -102,8 +102,8 @@ function MaterialSearchPanel({ materials, search, visible, onSelect, onClose }: 
                 >
                   <td className="px-3 py-1.5 font-mono text-slate-600">{m.code}</td>
                   <td className="px-3 py-1.5 font-semibold text-slate-800">{m.name}</td>
-                  <td className="px-3 py-1.5 text-left tabular-nums text-slate-600">{m.stock_quantity}</td>
-                  <td className="px-3 py-1.5 text-left tabular-nums text-slate-600">{m.purchase_price}</td>
+                  <td className="px-3 py-1.5 text-left tabular-nums text-slate-600">{m.total_available}</td>
+                  <td className="px-3 py-1.5 text-left tabular-nums text-slate-600">{m.last_purchase_price}</td>
                 </tr>
               ))}
             </tbody>
@@ -176,14 +176,14 @@ export function InvoiceGrid({ type, lines, onChange, disabled = false }: Invoice
   }, [lines, onChange, ensureTrailingRow]);
 
   const selectMaterial = useCallback((rowIdx: number, m: MaterialDto) => {
-    const unitPrice = type === "Purchase" ? (m.purchase_price || "0") : "0";
+    const unitPrice = type === "Purchase" ? (m.last_purchase_price || "0") : "0";
     updateLine(rowIdx, {
       material_id: m.id,
       material_name: m.name,
       code: m.code,
       barcode: m.barcode,
       unit_price: unitPrice,
-      purchase_price: m.purchase_price,
+      purchase_price: m.last_purchase_price,
     });
     setSearchRow(null);
     setSearchTerm("");

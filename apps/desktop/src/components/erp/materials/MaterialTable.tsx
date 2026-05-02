@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTabs } from "@/context/TabContext";
 import { DataTable, Column } from "@/components/erp/shared/DataTable";
 import { TableActions } from "@/components/erp/shared/TableActions";
 import { StatusBadge } from "@/components/erp/StatusBadge";
@@ -179,11 +180,18 @@ export function MaterialTable({ materials, categories, loading, search, onEdit, 
     });
   }, [columns, visibleColumns]);
 
+  const { openTab } = useTabs();
+
   return (
     <DataTable
       data={materials}
       columns={filteredColumns}
       loading={loading}
+      onRowClick={(m) => openTab({
+        id: `material-${m.id}`,
+        title: `بطاقة: ${m.name}`,
+        path: `/materials/${m.id}`
+      })}
       emptyMessage={search ? "لا توجد مواد تطابق معايير البحث" : "قائمة المواد فارغة، ابدأ بإضافة مواد جديدة"}
     />
   );

@@ -7,6 +7,25 @@ export interface MaterialUnitDto {
   is_base: boolean;
 }
 
+export interface StockMovementDetailDto {
+  id: string;
+  material_id: string;
+  movement_type: string;
+  movement_type_label: string;
+  quantity: string;
+  unit_cost: string;
+  total_cost: string;
+  reference: string;
+  notes: string;
+  movement_date: string;
+  invoice_number?: string;
+  invoice_type?: string;
+  party_name?: string;
+  balance_before: string;
+  balance_after: string;
+  is_inflow: boolean;
+}
+
 export interface MaterialDto {
   id: string;
   name: string;

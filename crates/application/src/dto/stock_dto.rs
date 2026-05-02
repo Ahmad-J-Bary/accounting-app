@@ -1,6 +1,26 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StockMovementDetailDto {
+    pub id: String,
+    pub material_id: String,
+    pub movement_type: String,       // "Purchase" | "Sale" | "OpeningBalance" | etc.
+    pub movement_type_label: String, // Arabic label
+    pub quantity: String,
+    pub unit_cost: String,
+    pub total_cost: String,
+    pub reference: String,
+    pub notes: String,
+    pub movement_date: String,       // ISO 8601
+    pub invoice_number: Option<String>,
+    pub invoice_type: Option<String>,
+    pub party_name: Option<String>,  // customer or supplier name
+    pub balance_before: String,      // running balance before this movement
+    pub balance_after: String,       // running balance after this movement
+    pub is_inflow: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StockMovementDto {
     pub id: String,
     pub material_id: String,

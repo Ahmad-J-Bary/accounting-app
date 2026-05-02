@@ -9,6 +9,7 @@ import SalesInvoices from './pages/SalesInvoices';
 import PurchaseInvoices from './pages/PurchaseInvoices';
 import Payments from './pages/Payments';
 import Materials from './pages/Materials';
+import MaterialDetail from './pages/MaterialDetail';
 import Categories from './pages/Categories';
 import Inventory from './pages/Inventory';
 import Damaged from './pages/Damaged';
@@ -41,6 +42,7 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/purchase-invoices/:id" element={<PurchaseInvoices />} />
       <Route path="/payments" element={<Payments />} />
       <Route path="/materials" element={<Materials />} />
+      <Route path="/materials/:id" element={<MaterialDetail />} />
       <Route path="/categories" element={<Categories />} />
       <Route path="/inventory" element={<Inventory />} />
       <Route path="/damaged" element={<Damaged />} />

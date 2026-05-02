@@ -47,4 +47,8 @@ impl StockMovementRepository for SqliteStockMovementRepository {
     async fn get_material_summary(&self, material_id: &MaterialId) -> Result<application::ports::stock_movement_repository::MaterialInventorySummary, AppError> {
         queries::get_material_summary(&self.pool, material_id).await
     }
+
+    async fn list_detailed_by_material(&self, material_id: &MaterialId) -> Result<Vec<application::dto::stock_dto::StockMovementDetailDto>, AppError> {
+        queries::list_detailed_by_material(&self.pool, material_id).await
+    }
 }

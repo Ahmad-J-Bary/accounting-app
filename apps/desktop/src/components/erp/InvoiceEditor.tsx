@@ -74,7 +74,7 @@ export function InvoiceEditor({ type, lines, onChange }: InvoiceEditorProps) {
       material_name: m.name,
       barcode: m.barcode,
       code: m.code,
-      purchase_price: m.purchase_price,
+      purchase_price: m.last_purchase_price,
       minimum_stock: m.minimum_stock,
     });
     setShowResults(null);
@@ -137,7 +137,7 @@ export function InvoiceEditor({ type, lines, onChange }: InvoiceEditorProps) {
                           <span className="text-xs text-muted-foreground">{m.code} | {m.barcode}</span>
                         </div>
                         <span className="text-xs bg-slate-200 px-1.5 py-0.5 rounded tabular-nums">
-                          مخزون: {m.stock_quantity}
+                          مخزون: {m.total_available}
                         </span>
                       </div>
                     ))}

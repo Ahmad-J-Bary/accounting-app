@@ -109,7 +109,7 @@ export function NewPurchaseInvoiceDialog({ open, onOpenChange, onSuccess, invoic
     if (field === 'product_id') {
       const product = products.find(p => p.id === value);
       if (product) {
-        newItems[index].unit_price = product.purchase_price || "0";
+        newItems[index].unit_price = product.last_purchase_price || "0";
       }
     }
     
