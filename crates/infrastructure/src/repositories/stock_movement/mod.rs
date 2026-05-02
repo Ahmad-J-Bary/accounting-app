@@ -43,4 +43,8 @@ impl StockMovementRepository for SqliteStockMovementRepository {
     async fn get_stock_balance(&self, material_id: &MaterialId) -> Result<Decimal, AppError> {
         queries::get_stock_balance(&self.pool, material_id).await
     }
+
+    async fn get_material_summary(&self, material_id: &MaterialId) -> Result<application::ports::stock_movement_repository::MaterialInventorySummary, AppError> {
+        queries::get_material_summary(&self.pool, material_id).await
+    }
 }

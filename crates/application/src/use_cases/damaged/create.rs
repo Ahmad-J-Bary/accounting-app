@@ -71,10 +71,13 @@ impl CreateDamagedItemUseCase {
         .map_err(|e| AppError::Invalid(e.to_string()))?;
         self.repo.save(&item).await?;
 
+        let unit_cost = if quantity > Decimal::ZERO { cost_impact / quantity } else { Decimal::ZERO };
         let movement = StockMovement::new(
             material_id.clone(),
             MovementType::Damaged,
             quantity,
+            unit_cost,
+            cost_impact,
             format!("DAM-{}", item.id),
             req.reason.clone(),
             damage_date,

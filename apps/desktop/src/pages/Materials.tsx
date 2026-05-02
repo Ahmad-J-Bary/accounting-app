@@ -3,8 +3,16 @@ import { PageHeader } from "@/components/erp/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, RefreshCw } from "lucide-react";
+import { Plus, Search, RefreshCw, Settings2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { materialService } from "@/services/materialService";
 import { categoryService } from "@/services/categoryService";
 import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest } from "@erp/shared-types";
@@ -12,6 +20,7 @@ import { cn } from "@/lib/utils";
 
 // Refactored Components & Hooks
 import { useMasterData } from "@/hooks/useMasterData";
+import { useColumnPreferences } from "@/hooks/useColumnPreferences";
 import { MaterialForm } from "@/components/erp/materials/MaterialForm";
 import { MaterialStats } from "@/components/erp/materials/MaterialStats";
 import { MaterialTable } from "@/components/erp/materials/MaterialTable";
@@ -43,6 +52,25 @@ export default function Materials() {
     errorLabel: "فشل تحميل المواد",
     successLabel: "تم حفظ بيانات المادة بنجاح",
   });
+
+  const availableColumns = [
+    { id: "code", label: "الكود" },
+    { id: "barcode", label: "الباركود" },
+    { id: "name", label: "اسم المادة" },
+    { id: "categories", label: "التصنيفات" },
+    { id: "units", label: "الوحدة" },
+    { id: "total_received", label: "الكمية الكلية" },
+    { id: "total_sold", label: "الكمية المباعة" },
+    { id: "total_available", label: "الكمية المتوفرة" },
+    { id: "total_damaged", label: "التالف" },
+    { id: "average_cost", label: "متوسط التكلفة" },
+    { id: "last_purchase_price", label: "آخر شراء" },
+    { id: "last_sale_price", label: "آخر مبيع" },
+  ];
+
+  const defaultVisibleColumns = ["code", "barcode", "name", "categories", "units", "total_available", "average_cost"];
+
+  const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences("materials", defaultVisibleColumns);
 
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [managingUnitsMaterial, setManagingUnitsMaterial] = useState<MaterialDto | null>(null);
@@ -93,6 +121,27 @@ export default function Materials() {
               onChange={e => setSearch(e.target.value)}
             />
           </div>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="shrink-0" title="إعدادات الأعمدة">
+                <Settings2 className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[200px]">
+              <DropdownMenuLabel>الأعمدة الظاهرة</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {availableColumns.map((col) => (
+                <DropdownMenuCheckboxItem
+                  key={col.id}
+                  checked={isVisible(col.id)}
+                  onCheckedChange={() => toggleColumn(col.id)}
+                >
+                  {col.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <MaterialTable 
@@ -103,6 +152,7 @@ export default function Materials() {
           onEdit={handleOpenEdit}
           onDelete={handleDelete}
           onManageUnits={setManagingUnitsMaterial}
+          visibleColumns={visibleColumns}
         />
       </Card>
 

@@ -40,6 +40,8 @@ impl PostInvoiceUseCase {
                 line.material_id.clone(),
                 movement_type.clone(),
                 line.quantity,
+                line.unit_price.amount(),
+                line.line_total().amount(),
                 invoice.invoice_number.clone(),
                 format!("{:?} بموجب فاتورة رقم {}", invoice.invoice_type, invoice.invoice_number),
                 Utc::now(),

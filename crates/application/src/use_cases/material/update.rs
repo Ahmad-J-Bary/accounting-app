@@ -43,8 +43,14 @@ impl UpdateMaterialUseCase {
         self.repo.update(&material).await?;
         
         let mut dto = MaterialDto::from(material);
-        let balance = self.movement_repo.get_stock_balance(&mid).await?;
-        dto.stock_quantity = balance.to_string();
+        let summary = self.movement_repo.get_material_summary(&mid).await?;
+        dto.total_received = summary.total_received.to_string();
+        dto.total_sold = summary.total_sold.to_string();
+        dto.total_available = summary.total_available.to_string();
+        dto.total_damaged = summary.total_damaged.to_string();
+        dto.last_purchase_price = summary.last_purchase_price.to_string();
+        dto.last_sale_price = summary.last_sale_price.to_string();
+        dto.average_cost = summary.average_cost.to_string();
         
         Ok(dto)
     }

@@ -17,12 +17,18 @@ pub struct MaterialDto {
     pub name: String,
     pub barcode: String,
     pub code: String,
-    pub stock_quantity: String,
-    pub minimum_stock: String,
-    pub purchase_price: String,
     pub is_active: bool,
-    pub units: Vec<MaterialUnitDto>,
     pub category_ids: Vec<String>,
+    pub minimum_stock: String,
+    // Summary Fields
+    pub total_received: String,
+    pub total_sold: String,
+    pub total_available: String,
+    pub total_damaged: String,
+    pub last_purchase_price: String,
+    pub last_sale_price: String,
+    pub average_cost: String,
+    pub units: Vec<MaterialUnitDto>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -73,12 +79,17 @@ impl From<Material> for MaterialDto {
             name: material.name,
             barcode: material.barcode,
             code: material.code,
-            stock_quantity: "0".to_string(),
-            minimum_stock: material.minimum_stock.to_string(),
-            purchase_price: "0".to_string(),
             is_active: material.is_active,
-            units: material.units.into_iter().map(MaterialUnitDto::from).collect(),
             category_ids: material.category_ids.iter().map(|id| id.0.to_string()).collect(),
+            minimum_stock: material.minimum_stock.to_string(),
+            total_received: "0".to_string(),
+            total_sold: "0".to_string(),
+            total_available: "0".to_string(),
+            total_damaged: "0".to_string(),
+            last_purchase_price: "0".to_string(),
+            last_sale_price: "0".to_string(),
+            average_cost: "0".to_string(),
+            units: material.units.into_iter().map(MaterialUnitDto::from).collect(),
         }
     }
 }

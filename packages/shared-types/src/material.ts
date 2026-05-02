@@ -14,9 +14,15 @@ export interface MaterialDto {
   code: string;
   is_active: boolean;
   category_ids: string[];
-  stock_quantity: string;
   minimum_stock: string;
-  purchase_price: string;
+  // Summary Fields
+  total_received: string;
+  total_sold: string;
+  total_available: string;
+  total_damaged: string;
+  last_purchase_price: string;
+  last_sale_price: string;
+  average_cost: string;
   units: MaterialUnitDto[];
 }
 

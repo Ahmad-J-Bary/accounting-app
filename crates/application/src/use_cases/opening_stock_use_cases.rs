@@ -60,6 +60,8 @@ impl RecordOpeningStockUseCase {
                 material.id.clone(),
                 MovementType::OpeningBalance,
                 quantity,
+                unit_cost,
+                quantity * unit_cost,
                 "OP-STOCK".to_string(),
                 req.notes.clone().unwrap_or_default(),
                 entry_date,

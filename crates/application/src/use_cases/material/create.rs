@@ -52,8 +52,7 @@ impl CreateMaterialUseCase {
 
         self.repo.save(&material).await?;
 
-        let mut dto = MaterialDto::from(material);
-        dto.stock_quantity = "0".to_string();
+        let dto = MaterialDto::from(material);
         Ok(dto)
     }
 }

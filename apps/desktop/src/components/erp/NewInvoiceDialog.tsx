@@ -103,7 +103,7 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
     if (field === "material_id") {
       const product = products.find(p => p.id === value);
       if (product) {
-        newLines[index].unit_price = product.purchase_price || "0";
+        newLines[index].unit_price = product.last_sale_price || "0";
       }
     }
     setFormData(prev => ({ ...prev, lines: newLines }));

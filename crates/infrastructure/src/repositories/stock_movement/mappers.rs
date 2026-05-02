@@ -25,6 +25,8 @@ pub fn row_to_movement(row: StockMovementRow) -> Result<StockMovement, AppError>
         material_id: MaterialId(Uuid::parse_str(&row.material_id).map_err(|e| AppError::Invalid(e.to_string()))?),
         movement_type: m_type,
         quantity: Decimal::from_str(&row.quantity).map_err(|e| AppError::Invalid(e.to_string()))?,
+        unit_cost: Decimal::from_str(&row.unit_cost).unwrap_or(Decimal::ZERO),
+        total_cost: Decimal::from_str(&row.total_cost).unwrap_or(Decimal::ZERO),
         reference: row.reference.unwrap_or_default(),
         notes: row.reason.unwrap_or_default(),
         movement_date: DateTime::parse_from_rfc3339(&row.movement_date).map_err(|e| AppError::Invalid(e.to_string()))?.with_timezone(&Utc),
