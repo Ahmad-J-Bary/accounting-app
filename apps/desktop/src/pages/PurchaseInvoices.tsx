@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { useTabs } from "@/context/TabContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -58,6 +58,7 @@ function defaultEditor(): EditorState {
 
 export default function PurchaseInvoices() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { id } = useParams();
   const { openTab, closeTab, activeTabId } = useTabs();
   
@@ -67,6 +68,7 @@ export default function PurchaseInvoices() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [posting, setPosting] = useState(false);
+  const [reopening, setReopening] = useState(false);
   const [editor, setEditor] = useState<EditorState>(defaultEditor());
   const [search, setSearch] = useState("");
 
@@ -90,8 +92,8 @@ export default function PurchaseInvoices() {
             tax_amount: inv.tax_amount,
             discount_amount: inv.discount_amount,
             extra_costs: "0",
-            payment_method: "cash",
-            paid_amount: "0",
+            payment_method: inv.payment_method?.toLowerCase() || "cash",
+            paid_amount: inv.amount_paid || "0",
             lines: (inv.lines ?? []).map(l => ({
               ...l,
               _id: `line_${Math.random()}`,
@@ -182,33 +184,57 @@ export default function PurchaseInvoices() {
         setSaving(false);
         return;
       }
+
+      const paymentMethodMap: Record<string, string> = {
+        "cash": "Cash",
+        "credit": "Deferred",
+        "partial": "Partial"
+      };
+
+      const totalNet = editor.lines.reduce((s, l) => s + (l.line_total ?? 0), 0) 
+                       - (parseFloat(editor.discount_amount) || 0) 
+                       + (parseFloat(editor.tax_amount) || 0) 
+                       + (parseFloat(editor.extra_costs) || 0);
+
+      const requestPayload = {
+        invoice_number: editor.invoice_number,
+        invoice_type: "Purchase",
+        supplier_id: editor.supplier_id || undefined,
+        supplier_name: !editor.supplier_id ? editor.supplier_name : undefined,
+        lines: backendLines,
+        tax_amount: editor.tax_amount,
+        discount_amount: editor.discount_amount,
+        payment_method: paymentMethodMap[editor.payment_method] || "Cash",
+        amount_paid: editor.payment_method === "cash" ? totalNet.toString() : (editor.payment_method === "partial" ? editor.paid_amount || "0" : "0"),
+        issued_at: new Date(editor.issued_at).toISOString(),
+        notes: editor.notes || undefined,
+      };
+
+      let savedInvoice: InvoiceDto;
       if (editor.id) {
-        await invoiceService.updateInvoice({
+        savedInvoice = await invoiceService.updateInvoice({
+          ...requestPayload,
           id: editor.id,
-          supplier_id: editor.supplier_id || undefined,
-          lines: backendLines,
-          tax_amount: editor.tax_amount,
-          discount_amount: editor.discount_amount,
-          notes: editor.notes || undefined,
         });
         toast.success("تم تعديل فاتورة المشتريات");
       } else {
-        await invoiceService.createInvoice({
-          invoice_number: editor.invoice_number,
-          invoice_type: "Purchase",
-          supplier_id: editor.supplier_id || undefined,
-          lines: backendLines,
-          tax_amount: editor.tax_amount,
-          discount_amount: editor.discount_amount,
-          issued_at: new Date(editor.issued_at).toISOString(),
-          notes: editor.notes || undefined,
-        });
+        savedInvoice = await invoiceService.createInvoice(requestPayload);
         toast.success("تم حفظ فاتورة المشتريات");
       }
-      if (isNew || id) {
+      
+      if (isNew) {
+        navigate(`/erp/purchase/${savedInvoice.id}`);
         closeTab(activeTabId);
       } else {
-        setView("list");
+        setEditor(prev => ({
+          ...prev,
+          id: savedInvoice.id,
+          status: savedInvoice.status,
+          supplier_id: savedInvoice.supplier_id ?? "",
+          supplier_name: savedInvoice.supplier_name ?? prev.supplier_name,
+          payment_method: savedInvoice.payment_method?.toLowerCase() || prev.payment_method,
+          paid_amount: savedInvoice.amount_paid || prev.paid_amount,
+        }));
         loadData();
       }
     } catch (e) {
@@ -218,14 +244,17 @@ export default function PurchaseInvoices() {
     }
   };
 
-  const handlePost = async () => {
-    if (!editor.id) return;
-    if (!confirm("ترحيل الفاتورة؟ لا يمكن التعديل بعدها.")) return;
+  const handlePost = async (invoiceId?: string) => {
+    const idToPost = invoiceId || editor.id;
+    if (!idToPost) return;
+    if (!confirm("هل تريد ترحيل الفاتورة؟")) return;
     setPosting(true);
     try {
-      await invoiceService.postInvoice(editor.id);
-      toast.success("تم الترحيل");
-      setEditor(e => ({ ...e, status: "Posted" }));
+      await invoiceService.postInvoice(idToPost);
+      toast.success("تم الترحيل بنجاح");
+      if (!invoiceId) {
+        setEditor(e => ({ ...e, status: "Posted" }));
+      }
       loadData();
     } catch (e) {
       toast.error("فشل الترحيل: " + e);
@@ -234,16 +263,92 @@ export default function PurchaseInvoices() {
     }
   };
 
-  const postFromList = async (id: string) => {
-    if (!confirm("ترحيل الفاتورة؟")) return;
+  const handleReopen = async () => {
+    if (!editor.id) return;
+    if (!confirm("هل تريد فك ترحيل الفاتورة للتمكن من تعديلها؟ سيتم حذف القيد المحاسبي وحركة المخزن المرتبطة.")) return;
+    setReopening(true);
     try {
-      await invoiceService.postInvoice(id);
-      toast.success("تم الترحيل");
+      await invoiceService.reopenInvoice(editor.id);
+      toast.success("تم فك الترحيل - الفاتورة الآن في حالة مسودة");
+      setEditor(e => ({ ...e, status: "Draft" }));
       loadData();
     } catch (e) {
-      toast.error("فشل الترحيل: " + e);
+      toast.error("فشل فك الترحيل: " + e);
+    } finally {
+      setReopening(false);
     }
   };
+
+  const handleSaveAndPost = async () => {
+    if (editor.lines.length === 0) {
+      toast.error("يجب إضافة صنف واحد على الأقل");
+      return;
+    }
+    setSaving(true);
+    try {
+      const backendLines = toBackendLines(editor.lines);
+      const paymentMethodMap: Record<string, string> = {
+        "cash": "Cash",
+        "credit": "Deferred",
+        "partial": "Partial"
+      };
+
+      const totalNet = editor.lines.reduce((s, l) => s + (l.line_total ?? 0), 0) 
+                       - (parseFloat(editor.discount_amount) || 0) 
+                       + (parseFloat(editor.tax_amount) || 0)
+                       + (parseFloat(editor.extra_costs) || 0);
+
+      const requestPayload = {
+        invoice_number: editor.invoice_number,
+        invoice_type: "Purchase",
+        supplier_id: editor.supplier_id || undefined,
+        supplier_name: !editor.supplier_id ? editor.supplier_name : undefined,
+        lines: backendLines,
+        tax_amount: editor.tax_amount,
+        discount_amount: editor.discount_amount,
+        payment_method: paymentMethodMap[editor.payment_method] || "Cash",
+        amount_paid: editor.payment_method === "cash" ? totalNet.toString() : (editor.payment_method === "partial" ? editor.paid_amount || "0" : "0"),
+        issued_at: new Date(editor.issued_at).toISOString(),
+        notes: editor.notes || undefined,
+      };
+
+      let savedInvoice: InvoiceDto;
+      if (editor.id) {
+        savedInvoice = await invoiceService.updateInvoice({
+          ...requestPayload,
+          id: editor.id,
+        });
+      } else {
+        savedInvoice = await invoiceService.createInvoice(requestPayload);
+        // Update local editor ID immediately to prevent duplicate creation on retry
+        setEditor(prev => ({ ...prev, id: savedInvoice.id }));
+      }
+      
+      // Post it
+      await invoiceService.postInvoice(savedInvoice.id);
+      toast.success("تم الحفظ والترحيل بنجاح");
+      
+      if (isNew) {
+        navigate(`/erp/purchase/${savedInvoice.id}`);
+        closeTab(activeTabId);
+      } else {
+        setEditor(prev => ({
+          ...prev,
+          id: savedInvoice.id,
+          status: "Posted",
+          supplier_id: savedInvoice.supplier_id ?? "",
+          supplier_name: savedInvoice.supplier_name ?? prev.supplier_name,
+        }));
+        loadData();
+      }
+    } catch (e) {
+      toast.error("فشل الحفظ والترحيل: " + e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const postFromList = (id: string) => handlePost(id);
 
   // ── EDITOR VIEW ──────────────────────────────────────────────
   if (view === "editor") {
@@ -256,86 +361,74 @@ export default function PurchaseInvoices() {
         status={editor.status}
         saving={saving}
         posting={posting}
+        reopening={reopening}
         canPost={!!editor.id && editor.status === "Draft"}
-        canEdit={editor.status === "Draft"}
+        canEdit={editor.status !== "Cancelled"}
         canDelete={!!editor.id && editor.status === "Draft"}
         onNew={handleCreate}
         onSave={handleSave}
+        onSaveAndPost={handleSaveAndPost}
         onPost={handlePost}
+        onReopen={handleReopen}
         onClose={() => closeTab(activeTabId)}
         onRefresh={loadData}
         summaryPanel={
-          <SummaryPanel
-            subtotal={subtotal}
-            discount={discount}
-            tax={tax}
-            extraCosts={extraCosts}
-            net={net}
-            paid={paid}
-            status={editor.status as DocumentStatus}
-          />
+          <div className="space-y-4">
+            <InvoicePartySelector
+                type="supplier"
+                parties={suppliers}
+                selectedId={editor.supplier_id}
+                selectedName={editor.supplier_name}
+                onSelect={(id, name) => setEditor(e => ({ ...e, supplier_id: id, supplier_name: name }))}
+                onClear={() => setEditor(e => ({ ...e, supplier_id: "", supplier_name: "مورد نقدي" }))}
+                defaultName="مورد نقدي"
+            />
+
+            <SummaryPanel
+                subtotal={subtotal}
+                discount={discount}
+                tax={tax}
+                extraCosts={extraCosts}
+                net={net}
+                paid={paid}
+                status={editor.status as DocumentStatus}
+                invoiceType="Purchase"
+            >
+                <div className="space-y-3">
+                    <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">طريقة الدفع</label>
+                        <select
+                            value={editor.payment_method}
+                            onChange={e => setEditor(ed => ({ ...ed, payment_method: e.target.value }))}
+                            className="w-full h-8 text-[11px] border border-slate-200 rounded-md px-2 bg-white font-bold"
+                            dir="rtl"
+                        >
+                            <option value="cash">نقداً</option>
+                            <option value="credit">آجل</option>
+                            <option value="partial">دفع جزئي</option>
+                        </select>
+                    </div>
+
+                    {editor.payment_method === "partial" && (
+                        <div>
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">المبلغ المدفوع</label>
+                            <Input
+                                type="number"
+                                value={editor.paid_amount}
+                                onChange={e => setEditor(ed => ({ ...ed, paid_amount: e.target.value }))}
+                                className="h-8 text-[11px] text-left tabular-nums font-black"
+                            />
+                        </div>
+                    )}
+                </div>
+            </SummaryPanel>
+          </div>
         }
       >
         {/* Header fields */}
         <Card className="p-4 border-slate-200 shadow-sm">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <InvoicePartySelector
-              type="supplier"
-              parties={suppliers}
-              selectedId={editor.supplier_id}
-              selectedName={editor.supplier_name}
-              onSelect={(id, name) => setEditor(e => ({ ...e, supplier_id: id, supplier_name: name }))}
-              onClear={() => setEditor(e => ({ ...e, supplier_id: "", supplier_name: "مورد نقدي" }))}
-              defaultName="مورد نقدي"
-            />
-
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">رقم الفاتورة</label>
-              <Input
-                value={editor.invoice_number}
-                onChange={e => setEditor(ed => ({ ...ed, invoice_number: e.target.value }))}
-                className="h-9 text-sm text-right"
-                dir="rtl"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">التاريخ</label>
-              <Input
-                type="date"
-                value={editor.issued_at}
-                onChange={e => setEditor(ed => ({ ...ed, issued_at: e.target.value }))}
-                className="h-9 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">طريقة الدفع</label>
-              <select
-                value={editor.payment_method}
-                onChange={e => setEditor(ed => ({ ...ed, payment_method: e.target.value }))}
-                className="w-full h-9 text-sm border border-slate-200 rounded-md px-3 bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none"
-                dir="rtl"
-              >
-                <option value="cash">نقداً</option>
-                <option value="credit">آجل</option>
-                <option value="partial">دفع جزئي</option>
-              </select>
-            </div>
-
-            {editor.payment_method === "partial" && (
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">المبلغ المدفوع (ل.س)</label>
-                <Input
-                  type="number" min="0" step="0.01"
-                  value={editor.paid_amount}
-                  onChange={e => setEditor(ed => ({ ...ed, paid_amount: e.target.value }))}
-                  className="h-9 text-sm text-left tabular-nums"
-                />
-              </div>
-            )}
-
-            <div className="lg:col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="md:col-span-1">
               <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">الملاحظات</label>
               <Input
                 value={editor.notes}
@@ -343,6 +436,33 @@ export default function PurchaseInvoices() {
                 placeholder="ملاحظات الشراء، شروط التوريد..."
                 className="h-9 text-sm text-right"
                 dir="rtl"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">الخصم (ل.س)</label>
+              <Input
+                type="number"
+                value={editor.discount_amount}
+                onChange={e => setEditor(ed => ({ ...ed, discount_amount: e.target.value }))}
+                className="h-9 text-sm tabular-nums text-left font-bold"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">الضريبة (ل.س)</label>
+              <Input
+                type="number"
+                value={editor.tax_amount}
+                onChange={e => setEditor(ed => ({ ...ed, tax_amount: e.target.value }))}
+                className="h-9 text-sm tabular-nums text-left font-bold"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">تكاليف إضافية (ل.س)</label>
+              <Input
+                type="number"
+                value={editor.extra_costs}
+                onChange={e => setEditor(ed => ({ ...ed, extra_costs: e.target.value }))}
+                className="h-9 text-sm tabular-nums text-left font-bold"
               />
             </div>
 
@@ -461,7 +581,7 @@ export default function PurchaseInvoices() {
                 <tr key={inv.id} className="hover:bg-slate-50 cursor-pointer transition-colors" onDoubleClick={() => handleEdit(inv)}>
                   <td className="px-4 py-2.5 font-bold text-blue-700 font-mono">{inv.invoice_number}</td>
                   <td className="px-4 py-2.5 text-slate-500 text-xs">{formatDate(inv.issued_at)}</td>
-                  <td className="px-4 py-2.5 font-medium text-slate-800">{inv.supplier_name ?? "مورد نقدي"}</td>
+                  <td className="px-4 py-2.5 font-medium text-slate-800">{inv.supplier_name || "مورد نقدي"}</td>
                   <td className="px-4 py-2.5 text-left font-black tabular-nums text-slate-900">{formatCurrency(parseFloat(inv.total_amount))}</td>
                   <td className="px-4 py-2.5 text-center"><DocumentStatusBadge status={inv.status} /></td>
                   <td className="px-4 py-2.5 text-center">

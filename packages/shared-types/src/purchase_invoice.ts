@@ -37,10 +37,13 @@ export interface CreatePurchaseInvoiceItemRequest {
 
 export interface CreatePurchaseInvoiceRequest {
   invoice_number: string;
-  supplier_id: string;
+  supplier_id?: string;
+  supplier_name?: string;
   items: CreatePurchaseInvoiceItemRequest[];
   tax_amount?: number;
   discount_amount?: number;
+  payment_method: "Cash" | "Deferred" | "Partial";
+  amount_paid: string;
   invoice_date: string;
   due_date?: string;
   notes?: string;

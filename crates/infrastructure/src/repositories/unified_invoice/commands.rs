@@ -1,6 +1,6 @@
 use sqlx::SqlitePool;
 use application::errors::AppError;
-use domain::sales::unified_invoice::{UnifiedInvoice, InvoiceType, InvoiceStatus};
+use domain::sales::unified_invoice::{UnifiedInvoice, InvoiceType, InvoiceStatus, PaymentMethod};
 use domain::shared::ids::{InvoiceId};
 use uuid::Uuid;
 
@@ -20,18 +20,28 @@ pub async fn save(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), App
         InvoiceStatus::Reversed => "Reversed",
     };
 
+    let pmeth = match invoice.payment_method {
+        PaymentMethod::Cash => "Cash",
+        PaymentMethod::Deferred => "Deferred",
+        PaymentMethod::Partial => "Partial",
+    };
+
     sqlx::query(
-        "INSERT INTO unified_invoices (id, invoice_number, invoice_type, customer_id, supplier_id, tax_amount, discount_amount, total_amount, status, issued_at, notes, created_at, updated_at) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO unified_invoices (id, invoice_number, invoice_type, customer_id, customer_name, supplier_id, supplier_name, tax_amount, discount_amount, total_amount, payment_method, amount_paid, status, issued_at, notes, created_at, updated_at) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(invoice.id.to_string())
     .bind(&invoice.invoice_number)
     .bind(itype)
     .bind(invoice.customer_id.as_ref().map(|id| id.to_string()))
+    .bind(&invoice.customer_name)
     .bind(invoice.supplier_id.as_ref().map(|id| id.to_string()))
+    .bind(&invoice.supplier_name)
     .bind(invoice.tax_amount.amount().to_string())
     .bind(invoice.discount_amount.amount().to_string())
     .bind(invoice.total_amount.amount().to_string())
+    .bind(pmeth)
+    .bind(invoice.amount_paid.amount().to_string())
     .bind(istatus)
     .bind(invoice.issued_at.to_rfc3339())
     .bind(&invoice.notes)
@@ -76,15 +86,27 @@ pub async fn update(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), A
         InvoiceStatus::Reversed => "Reversed",
     };
 
+    let pmeth = match invoice.payment_method {
+        PaymentMethod::Cash => "Cash",
+        PaymentMethod::Deferred => "Deferred",
+        PaymentMethod::Partial => "Partial",
+    };
+
     sqlx::query(
-        "UPDATE unified_invoices SET status=?, tax_amount=?, discount_amount=?, total_amount=?, notes=?, updated_at=? WHERE id=?"
+        "UPDATE unified_invoices SET status=?, tax_amount=?, discount_amount=?, total_amount=?, payment_method=?, amount_paid=?, notes=?, updated_at=?, customer_id=?, customer_name=?, supplier_id=?, supplier_name=? WHERE id=?"
     )
     .bind(istatus)
     .bind(invoice.tax_amount.amount().to_string())
     .bind(invoice.discount_amount.amount().to_string())
     .bind(invoice.total_amount.amount().to_string())
+    .bind(pmeth)
+    .bind(invoice.amount_paid.amount().to_string())
     .bind(&invoice.notes)
     .bind(invoice.updated_at.to_rfc3339())
+    .bind(invoice.customer_id.as_ref().map(|id| id.to_string()))
+    .bind(&invoice.customer_name)
+    .bind(invoice.supplier_id.as_ref().map(|id| id.to_string()))
+    .bind(&invoice.supplier_name)
     .bind(invoice.id.to_string())
     .execute(&mut *tx)
     .await

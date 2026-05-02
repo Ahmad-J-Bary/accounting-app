@@ -13,6 +13,8 @@ interface SummaryPanelProps {
   currency?: string;
   status?: DocumentStatus;
   compact?: boolean;
+  invoiceType?: "Sales" | "Purchase" | "OpeningBalance";
+  children?: React.ReactNode;
 }
 
 const STATUS_LABELS: Record<DocumentStatus, { label: string; color: string; bg: string }> = {
@@ -34,6 +36,8 @@ export function SummaryPanel({
   currency = "ل.س",
   status,
   compact = false,
+  invoiceType,
+  children,
 }: SummaryPanelProps) {
   const remaining = Math.max(net - paid, 0);
   const st = status ? STATUS_LABELS[status] : null;
@@ -65,9 +69,14 @@ export function SummaryPanel({
           <span className={cn("tabular-nums font-black", compact ? "text-xl" : "text-2xl")}>
             {formatCurrency(net)}
           </span>
-          <span className="text-xs opacity-60">{currency}</span>
         </div>
       </div>
+
+      {children && (
+        <div className="px-3 pb-3 border-b border-dashed border-slate-100 mb-3">
+            {children}
+        </div>
+      )}
 
       {/* Paid / Remaining */}
       {(paid > 0 || remaining > 0) && (
@@ -81,7 +90,7 @@ export function SummaryPanel({
             remaining <= 0 ? "bg-green-50 border-green-100" : "bg-red-50 border-red-100"
           )}>
             <div className={cn("text-[10px] font-bold mb-0.5", remaining <= 0 ? "text-green-600" : "text-red-600")}>
-              المتبقي
+              {invoiceType === "Sales" ? "مدين (العميل)" : invoiceType === "Purchase" ? "دائن (المورد)" : "المتبقي"}
             </div>
             <div className={cn("text-sm font-black tabular-nums", remaining <= 0 ? "text-green-700" : "text-red-700")}>
               {formatCurrency(remaining)}

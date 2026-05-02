@@ -23,3 +23,12 @@ pub async fn save(pool: &SqlitePool, movement: &StockMovement) -> Result<(), App
 
     Ok(())
 }
+
+pub async fn delete_by_reference(pool: &SqlitePool, reference: &str) -> Result<(), AppError> {
+    sqlx::query("DELETE FROM stock_movements WHERE reference = ?")
+        .bind(reference)
+        .execute(pool)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    Ok(())
+}

@@ -158,6 +158,26 @@ impl Customer {
         Ok(())
     }
 
+    pub fn decrease_debit(&mut self, amount: Decimal) -> Result<(), DomainError> {
+        if amount <= Decimal::ZERO {
+            return Err(DomainError::Invalid("المبلغ يجب أن يكون موجبًا".into()));
+        }
+        self.debit -= amount;
+        self.balance = self.debit - self.credit;
+        self.updated_at = Utc::now();
+        Ok(())
+    }
+
+    pub fn decrease_credit(&mut self, amount: Decimal) -> Result<(), DomainError> {
+        if amount <= Decimal::ZERO {
+            return Err(DomainError::Invalid("المبلغ يجب أن يكون موجبًا".into()));
+        }
+        self.credit -= amount;
+        self.balance = self.debit - self.credit;
+        self.updated_at = Utc::now();
+        Ok(())
+    }
+
     pub fn increase_balance(&mut self, amount: Decimal) -> Result<(), DomainError> {
         if amount <= Decimal::ZERO {
             return Err(DomainError::Invalid("المبلغ يجب أن يكون موجبًا".into()));

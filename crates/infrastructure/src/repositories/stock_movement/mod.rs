@@ -51,4 +51,8 @@ impl StockMovementRepository for SqliteStockMovementRepository {
     async fn list_detailed_by_material(&self, material_id: &MaterialId) -> Result<Vec<application::dto::stock_dto::StockMovementDetailDto>, AppError> {
         queries::list_detailed_by_material(&self.pool, material_id).await
     }
+
+    async fn delete_by_reference(&self, reference: &str) -> Result<(), AppError> {
+        commands::delete_by_reference(&self.pool, reference).await
+    }
 }

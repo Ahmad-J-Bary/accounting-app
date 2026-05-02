@@ -182,6 +182,8 @@ export default function OpeningBalance() {
           lines: backendLines,
           tax_amount: "0",
           discount_amount: "0",
+          payment_method: "Deferred",
+          amount_paid: "0",
           issued_at: new Date(state.date).toISOString(),
           notes: state.notes || undefined,
         });
@@ -199,10 +201,14 @@ export default function OpeningBalance() {
           }],
           tax_amount: "0",
           discount_amount: "0",
+          payment_method: "Deferred",
+          amount_paid: "0",
           issued_at: new Date(state.date).toISOString(),
           notes: state.notes || undefined,
           customer_id: state.balanceType === "Customer" ? state.partyId || undefined : undefined,
+          customer_name: state.balanceType === "Customer" && !state.partyId ? state.partyName : undefined,
           supplier_id: state.balanceType === "Supplier" ? state.partyId || undefined : undefined,
+          supplier_name: state.balanceType === "Supplier" && !state.partyId ? state.partyName : undefined,
         });
         toast.success("تم تسجيل الرصيد الافتتاحي بنجاح");
       }
@@ -347,8 +353,8 @@ export default function OpeningBalance() {
                     className="w-full h-9 text-sm border border-slate-200 rounded-md px-3 bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none"
                     dir="rtl"
                   >
-                    <option value="debit">مدين (له علينا)</option>
-                    <option value="credit">دائن (لنا عليه)</option>
+                    <option value="debit">مدين (لنا عليه)</option>
+                    <option value="credit">دائن (له علينا)</option>
                   </select>
                 </div>
 

@@ -29,4 +29,8 @@ export const invoiceService = {
   async listInvoices(): Promise<InvoiceDto[]> {
     return await invoke<InvoiceDto[]>('list_all_unified_invoices');
   },
+
+  async reopenInvoice(id: string): Promise<InvoiceDto> {
+    return await invoke<InvoiceDto>('reopen_unified_invoice', { id });
+  },
 };

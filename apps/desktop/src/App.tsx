@@ -24,9 +24,7 @@ const App = () => (
           {/* ERP Routes with AppLayout */}
           <Route path="/*" element={
             <TabProvider>
-              <AppLayout>
-                <ErpRoutes />
-              </AppLayout>
+              <AppLayout />
             </TabProvider>
           } />
         </Routes>

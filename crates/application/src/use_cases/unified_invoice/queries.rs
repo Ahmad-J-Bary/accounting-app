@@ -61,7 +61,7 @@ impl InvoiceQueries {
         self.populate_dto(dto).await
     }
 
-    async fn populate_dto(&self, mut dto: InvoiceDto) -> Result<InvoiceDto, AppError> {
+    pub async fn populate_dto(&self, mut dto: InvoiceDto) -> Result<InvoiceDto, AppError> {
         if let Some(ref cid) = dto.customer_id {
              if let Ok(id) = CustomerId::from_str(cid) {
                  if let Ok(Some(customer)) = self.customer_repo.find_by_id(&id).await {

@@ -33,7 +33,7 @@ export function CategoryTreeNodeItem({
   const isRoot = !node.parent_id && !isVirtualRoot;
   const isMaterial = node.isMaterial;
 
-  const renderIcon = (n: any, expanded: boolean) => {
+  const renderIcon = (n: CategoryTreeNode, expanded: boolean) => {
     if (n.isMaterial) {
       return <Package className="w-3.5 h-3.5 text-emerald-500/70" />;
     }
@@ -45,7 +45,7 @@ export function CategoryTreeNodeItem({
     return <Folder className="w-4 h-4 text-slate-300" />;
   };
 
-  const renderLabel = (n: any) => {
+  const renderLabel = (n: CategoryTreeNode) => {
     if (n.isMaterial) {
       return (
         <div className="flex items-center gap-2 overflow-hidden">
@@ -78,7 +78,7 @@ export function CategoryTreeNodeItem({
     );
   };
 
-  const renderRight = (n: any) => {
+  const renderRight = (n: CategoryTreeNode) => {
     if (isVirtualRoot || n.isMaterial) return null;
     
     return (
@@ -103,7 +103,7 @@ export function CategoryTreeNodeItem({
       node={node}
       level={level}
       selectedId={selectedId}
-      onSelect={(n: any) => {
+      onSelect={(n: CategoryTreeNode) => {
         onSelect(n);
       }}
       expandedNodes={expandedNodes}

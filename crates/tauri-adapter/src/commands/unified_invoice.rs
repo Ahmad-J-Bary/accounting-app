@@ -10,8 +10,15 @@ pub async fn create_unified_invoice(
     state: State<'_, AppState>,
     request: CreateInvoiceRequest,
 ) -> Result<InvoiceDto, String> {
-    CreateInvoiceUseCase::new(state.unified_invoice_repo.clone())
-        .execute(request).await.map_err(|e| e.to_string())
+    CreateInvoiceUseCase::new(
+        state.unified_invoice_repo.clone(),
+        state.customer_repo.clone(),
+        state.supplier_repo.clone(),
+        state.account_repo.clone(),
+        state.material_repo.clone(),
+        state.category_repo.clone(),
+    )
+    .execute(request).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -19,8 +26,15 @@ pub async fn update_unified_invoice(
     state: State<'_, AppState>,
     request: UpdateInvoiceRequest,
 ) -> Result<InvoiceDto, String> {
-    UpdateInvoiceUseCase::new(state.unified_invoice_repo.clone())
-        .execute(request).await.map_err(|e| e.to_string())
+    UpdateInvoiceUseCase::new(
+        state.unified_invoice_repo.clone(),
+        state.customer_repo.clone(),
+        state.supplier_repo.clone(),
+        state.account_repo.clone(),
+        state.material_repo.clone(),
+        state.category_repo.clone(),
+    )
+    .execute(request).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -28,8 +42,17 @@ pub async fn post_unified_invoice(
     state: State<'_, AppState>,
     id: String,
 ) -> Result<InvoiceDto, String> {
-    PostInvoiceUseCase::new(state.unified_invoice_repo.clone(), state.stock_movement_repo.clone())
-        .execute(id).await.map_err(|e| e.to_string())
+    PostInvoiceUseCase::new(
+        state.unified_invoice_repo.clone(), 
+        state.stock_movement_repo.clone(),
+        state.journal_entry_repo.clone(),
+        state.account_repo.clone(),
+        state.customer_repo.clone(),
+        state.supplier_repo.clone(),
+        state.material_repo.clone(),
+        state.category_repo.clone(),
+    )
+    .execute(id).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -71,4 +94,19 @@ pub async fn list_all_unified_invoices(
         state.supplier_repo.clone(),
         state.category_repo.clone(),
     ).list_all().await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn reopen_unified_invoice(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<InvoiceDto, String> {
+    application::use_cases::unified_invoice::ReopenInvoiceUseCase::new(
+        state.unified_invoice_repo.clone(),
+        state.stock_movement_repo.clone(),
+        state.journal_entry_repo.clone(),
+        state.customer_repo.clone(),
+        state.supplier_repo.clone(),
+    )
+    .execute(id).await.map_err(|e| e.to_string())
 }

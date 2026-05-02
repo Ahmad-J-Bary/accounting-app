@@ -9,14 +9,17 @@ interface DocumentToolbarProps {
   status: string;
   onNew?: () => void;
   onSave?: () => void;
+  onSaveAndPost?: () => void;
   onSaveAndPrint?: () => void;
   onPost?: () => void;
+  onReopen?: () => void;
   onDelete?: () => void;
   onClose?: () => void;
   onExport?: () => void;
   onRefresh?: () => void;
   saving?: boolean;
   posting?: boolean;
+  reopening?: boolean;
   canPost?: boolean;
   canDelete?: boolean;
   canEdit?: boolean;
@@ -28,14 +31,17 @@ export function DocumentToolbar({
   status,
   onNew,
   onSave,
+  onSaveAndPost,
   onSaveAndPrint,
   onPost,
+  onReopen,
   onDelete,
   onClose,
   onExport,
   onRefresh,
   saving = false,
   posting = false,
+  reopening = false,
   canPost = false,
   canDelete = true,
   canEdit = true,
@@ -71,58 +77,73 @@ export function DocumentToolbar({
 
       {/* Action Buttons */}
       {onNew && (
-        <Button size="sm" variant="ghost" onClick={onNew}
+        <Button size="sm" variant="ghost" onClick={() => onNew()}
           className="h-7 px-2.5 text-slate-200 hover:bg-slate-700 hover:text-white text-xs gap-1">
           <Plus className="w-3.5 h-3.5" /> جديد
         </Button>
       )}
-
-      {onSave && canEdit && (
-        <Button size="sm" variant="ghost" onClick={onSave} disabled={saving}
+ 
+       {onSave && canEdit && (
+        <Button size="sm" variant="ghost" onClick={() => onSave()} disabled={saving}
           className="h-7 px-2.5 text-slate-200 hover:bg-slate-700 hover:text-white text-xs gap-1">
           <Save className="w-3.5 h-3.5" />
           {saving ? "جاري الحفظ..." : "حفظ"}
         </Button>
       )}
-
-      {onSaveAndPrint && canEdit && (
-        <Button size="sm" variant="ghost" onClick={onSaveAndPrint} disabled={saving}
+      
+      {onSaveAndPost && canEdit && (
+        <Button size="sm" variant="ghost" onClick={() => onSaveAndPost()} disabled={saving || posting}
+          className="h-7 px-2.5 text-blue-200 hover:bg-blue-900/40 hover:text-white text-xs gap-1">
+          <Send className="w-3.5 h-3.5" /> {saving || posting ? "جاري المعالجة..." : "حفظ وترحيل"}
+        </Button>
+      )}
+ 
+       {onSaveAndPrint && canEdit && (
+        <Button size="sm" variant="ghost" onClick={() => onSaveAndPrint()} disabled={saving}
           className="h-7 px-2.5 text-slate-200 hover:bg-slate-700 hover:text-white text-xs gap-1">
           <Printer className="w-3.5 h-3.5" /> حفظ وطباعة
         </Button>
       )}
-
-      {onPost && canPost && (
-        <Button size="sm" onClick={onPost} disabled={posting}
+ 
+       {onPost && canPost && (
+        <Button size="sm" onClick={() => onPost()} disabled={posting}
           className="h-7 px-2.5 bg-green-600 hover:bg-green-500 text-white text-xs gap-1 border-0">
           <Send className="w-3.5 h-3.5" />
           {posting ? "جاري الترحيل..." : "ترحيل"}
         </Button>
       )}
 
-      {onRefresh && (
-        <Button size="sm" variant="ghost" onClick={onRefresh}
+      {onReopen && status === "Posted" && (
+        <Button size="sm" variant="ghost" onClick={() => onReopen()} disabled={reopening}
+          className="h-7 px-2.5 text-orange-400 hover:bg-orange-900/40 hover:text-orange-300 text-xs gap-1">
+          <RefreshCw className={`w-3.5 h-3.5 ${reopening ? "animate-spin" : ""}`} />
+          {reopening ? "جاري الإلغاء..." : "فك الترحيل (تعديل)"}
+        </Button>
+      )}
+ 
+       {onRefresh && (
+        <Button size="sm" variant="ghost" onClick={() => onRefresh()}
           className="h-7 px-2 text-slate-400 hover:bg-slate-700 hover:text-white">
           <RefreshCw className="w-3.5 h-3.5" />
         </Button>
       )}
-
-      {onExport && (
-        <Button size="sm" variant="ghost" onClick={onExport}
+ 
+       {onExport && (
+        <Button size="sm" variant="ghost" onClick={() => onExport()}
           className="h-7 px-2 text-slate-400 hover:bg-slate-700 hover:text-white">
           <FileDown className="w-3.5 h-3.5" />
         </Button>
       )}
-
-      {onDelete && canDelete && (
-        <Button size="sm" variant="ghost" onClick={onDelete}
+ 
+       {onDelete && canDelete && (
+        <Button size="sm" variant="ghost" onClick={() => onDelete()}
           className="h-7 px-2 text-red-400 hover:bg-red-900/40 hover:text-red-300">
           <Trash2 className="w-3.5 h-3.5" />
         </Button>
       )}
-
-      {onClose && (
-        <Button size="sm" variant="ghost" onClick={onClose}
+ 
+       {onClose && (
+        <Button size="sm" variant="ghost" onClick={() => onClose()}
           className="h-7 px-2 text-slate-400 hover:bg-slate-700 hover:text-white">
           <X className="w-3.5 h-3.5" />
         </Button>

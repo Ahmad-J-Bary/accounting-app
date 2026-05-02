@@ -26,6 +26,8 @@ export interface InvoiceDto {
   tax_amount: string;
   discount_amount: string;
   total_amount: string;
+  payment_method: string;
+  amount_paid: string;
   status: string;
   issued_at: string;
   notes?: string;
@@ -35,10 +37,14 @@ export interface CreateInvoiceRequest {
   invoice_number: string;
   invoice_type: string;
   customer_id?: string;
+  customer_name?: string;
   supplier_id?: string;
+  supplier_name?: string;
   lines: InvoiceLineDto[];
   tax_amount: string;
   discount_amount: string;
+  payment_method: string;
+  amount_paid: string;
   issued_at: string;
   notes?: string;
 }
@@ -46,7 +52,9 @@ export interface CreateInvoiceRequest {
 export interface UpdateInvoiceRequest {
   id: string;
   customer_id?: string;
+  customer_name?: string;
   supplier_id?: string;
+  supplier_name?: string;
   lines: InvoiceLineDto[];
   tax_amount: string;
   discount_amount: string;

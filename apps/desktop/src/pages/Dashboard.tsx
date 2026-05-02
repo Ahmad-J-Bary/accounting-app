@@ -81,8 +81,9 @@ export default function Dashboard() {
 
   const inventoryValue = productItems.reduce((sum, product) => {
     const stockQuantity = toNumber(product.total_available);
-    const purchasePrice = toNumber(product.last_purchase_price);
-    return sum + (stockQuantity * purchasePrice);
+    // Use average_cost for more accurate valuation, fallback to last_purchase_price
+    const price = toNumber(product.average_cost) || toNumber(product.last_purchase_price);
+    return sum + (stockQuantity * price);
   }, 0);
 
   const lowStock = productItems.filter(

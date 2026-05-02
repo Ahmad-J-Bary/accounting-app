@@ -6,6 +6,13 @@ import type {
   StockMovementDetailDto,
 } from '@erp/shared-types';
 
+export interface AddMaterialUnitRequest {
+  material_id: string;
+  name: string;
+  conversion_factor: string;
+  barcode: string | null;
+}
+
 export const materialService = {
   async createMaterial(request: CreateMaterialRequest): Promise<MaterialDto> {
     return await invoke<MaterialDto>('create_material', { request });
@@ -27,7 +34,7 @@ export const materialService = {
     return await invoke<void>('delete_material', { id });
   },
   
-  async addMaterialUnit(request: any): Promise<void> {
+  async addMaterialUnit(request: AddMaterialUnitRequest): Promise<void> {
     return await invoke<void>('add_material_unit', { request });
   },
 

@@ -27,14 +27,14 @@ export function SupplierTable({ suppliers, loading, search, onView, onEdit, onDe
       className: "tabular-nums text-slate-500" 
     },
     { 
-      header: "المدين", 
-      accessor: (s) => formatCurrency(parseFloat(s.debit || "0")), 
+      header: "المدين (عليه)", 
+      accessor: (s) => parseFloat(s.debit || "0") > 0 ? formatCurrency(parseFloat(s.debit || "0")) : "—", 
       align: "left", 
       className: "tabular-nums text-red-600 font-medium" 
     },
     { 
-      header: "الدائن", 
-      accessor: (s) => formatCurrency(parseFloat(s.credit || "0")), 
+      header: "الدائن (له)", 
+      accessor: (s) => parseFloat(s.credit || "0") > 0 ? formatCurrency(parseFloat(s.credit || "0")) : "—", 
       align: "left", 
       className: "tabular-nums text-green-600 font-medium" 
     },

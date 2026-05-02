@@ -1,5 +1,5 @@
 use application::errors::AppError;
-use domain::sales::unified_invoice::{UnifiedInvoice, InvoiceType, InvoiceStatus};
+use domain::sales::unified_invoice::{UnifiedInvoice, InvoiceType, InvoiceStatus, PaymentMethod};
 use domain::sales::invoice_line::InvoiceLine;
 use domain::shared::ids::{InvoiceId, CustomerId, SupplierId};
 use domain::shared::money::Money;
@@ -25,16 +25,27 @@ pub fn row_to_invoice(row: InvoiceRow, lines: Vec<InvoiceLine>) -> Result<Unifie
         _ => InvoiceStatus::Draft,
     };
 
+    let payment_method = match row.payment_method.as_str() {
+        "Cash" => PaymentMethod::Cash,
+        "Deferred" => PaymentMethod::Deferred,
+        "Partial" => PaymentMethod::Partial,
+        _ => PaymentMethod::Deferred,
+    };
+
     Ok(UnifiedInvoice {
         id: InvoiceId(Uuid::parse_str(&row.id).map_err(|e| AppError::Infrastructure(e.to_string()))?),
         invoice_number: row.invoice_number,
         invoice_type,
         customer_id: row.customer_id.and_then(|id| id.parse::<CustomerId>().ok()),
+        customer_name: row.customer_name,
         supplier_id: row.supplier_id.and_then(|id| id.parse::<SupplierId>().ok()),
+        supplier_name: row.supplier_name,
         lines,
         tax_amount: Money::syp(Decimal::from_str(&row.tax_amount).unwrap_or(Decimal::ZERO)),
         discount_amount: Money::syp(Decimal::from_str(&row.discount_amount).unwrap_or(Decimal::ZERO)),
         total_amount: Money::syp(Decimal::from_str(&row.total_amount).unwrap_or(Decimal::ZERO)),
+        payment_method,
+        amount_paid: Money::syp(Decimal::from_str(&row.amount_paid).unwrap_or(Decimal::ZERO)),
         status,
         issued_at: DateTime::parse_from_rfc3339(&row.issued_at).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
         notes: row.notes,

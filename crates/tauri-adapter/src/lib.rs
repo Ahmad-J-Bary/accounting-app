@@ -14,6 +14,7 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::unified_invoice::post_unified_invoice,
             commands::unified_invoice::get_unified_invoice_by_id,
             commands::unified_invoice::list_all_unified_invoices,
+            commands::unified_invoice::reopen_unified_invoice,
             // Customers
             commands::customer::create_customer,
             commands::customer::get_customer,

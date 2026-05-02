@@ -7,16 +7,37 @@ use domain::sales::invoice_line::InvoiceLine;
 use domain::shared::ids::{MaterialId, CustomerId, SupplierId};
 use domain::shared::money::Money;
 use crate::ports::unified_invoice_repository::UnifiedInvoiceRepository;
+use crate::ports::customer_repository::CustomerRepository;
+use crate::ports::supplier_repository::SupplierRepository;
+use crate::ports::account_repository::AccountRepository;
+use crate::ports::material_repository::MaterialRepository;
+use crate::ports::category_repository::CategoryRepository;
 use crate::dto::invoice_dto::{CreateInvoiceRequest, InvoiceDto};
+use crate::dto::customer_dto::CreateCustomerRequest;
+use crate::dto::supplier_dto::CreateSupplierRequest;
+use crate::use_cases::customer::CreateCustomerUseCase;
+use crate::use_cases::supplier::CreateSupplierUseCase;
 use crate::errors::AppError;
 
 pub struct CreateInvoiceUseCase {
     repo: Arc<dyn UnifiedInvoiceRepository>,
+    customer_repo: Arc<dyn CustomerRepository>,
+    supplier_repo: Arc<dyn SupplierRepository>,
+    account_repo: Arc<dyn AccountRepository>,
+    material_repo: Arc<dyn MaterialRepository>,
+    category_repo: Arc<dyn CategoryRepository>,
 }
 
 impl CreateInvoiceUseCase {
-    pub fn new(repo: Arc<dyn UnifiedInvoiceRepository>) -> Self {
-        Self { repo }
+    pub fn new(
+        repo: Arc<dyn UnifiedInvoiceRepository>,
+        customer_repo: Arc<dyn CustomerRepository>,
+        supplier_repo: Arc<dyn SupplierRepository>,
+        account_repo: Arc<dyn AccountRepository>,
+        material_repo: Arc<dyn MaterialRepository>,
+        category_repo: Arc<dyn CategoryRepository>,
+    ) -> Self {
+        Self { repo, customer_repo, supplier_repo, account_repo, material_repo, category_repo }
     }
 
     pub async fn execute(&self, req: CreateInvoiceRequest) -> Result<InvoiceDto, AppError> {
@@ -27,8 +48,79 @@ impl CreateInvoiceUseCase {
             _ => return Err(AppError::Invalid("نوع فاتورة غير صالح".into())),
         };
 
-        let customer_id = req.customer_id.map(|id| CustomerId::from_str(&id).unwrap());
-        let supplier_id = req.supplier_id.map(|id| SupplierId::from_str(&id).unwrap());
+        let mut customer_id = None;
+        if let Some(id_str) = req.customer_id {
+            if let Ok(id) = CustomerId::from_str(&id_str) {
+                customer_id = Some(id);
+            }
+        }
+        
+        if customer_id.is_none() && invoice_type == InvoiceType::Sales {
+            if let Some(name) = req.customer_name.clone() {
+                if name != "زبون نقدي" && !name.trim().is_empty() {
+                    // Auto-create customer
+                    let create_customer = CreateCustomerUseCase::new(
+                        self.customer_repo.clone(),
+                        self.account_repo.clone(),
+                    );
+                    let customer_dto = create_customer.execute(CreateCustomerRequest {
+                        code: "".into(),
+                        name,
+                        phone: None,
+                        address: None,
+                        account_id: None,
+                        debit: None,
+                        credit: None,
+                        opening_balance: None,
+                        currency: None,
+                        notes: Some("تم إنشاؤه تلقائياً من فاتورة مبيعات".into()),
+                    }).await?;
+                    customer_id = Some(CustomerId::from_str(&customer_dto.id).unwrap());
+                }
+            }
+        }
+
+        let mut supplier_id = None;
+        if let Some(id_str) = req.supplier_id {
+            if let Ok(id) = SupplierId::from_str(&id_str) {
+                supplier_id = Some(id);
+            }
+        }
+
+        if supplier_id.is_none() && invoice_type == InvoiceType::Purchase {
+            if let Some(name) = req.supplier_name.clone() {
+                if name != "مورد نقدي" && !name.trim().is_empty() {
+                    // Auto-create supplier
+                    let create_supplier = CreateSupplierUseCase::new(
+                        self.supplier_repo.clone(),
+                        self.account_repo.clone(),
+                    );
+                    let supplier_dto = create_supplier.execute(CreateSupplierRequest {
+                        code: "".into(),
+                        name,
+                        phone: None,
+                        address: None,
+                        account_id: None,
+                        debit: None,
+                        credit: None,
+                        opening_balance: None,
+                        currency: None,
+                        notes: Some("تم إنشاؤه تلقائياً من فاتورة مشتريات".into()),
+                    }).await?;
+                    supplier_id = Some(SupplierId::from_str(&supplier_dto.id).unwrap());
+                }
+            }
+        }
+
+        let payment_method = match req.payment_method.as_str() {
+            "Cash" => domain::sales::unified_invoice::PaymentMethod::Cash,
+            "Deferred" => domain::sales::unified_invoice::PaymentMethod::Deferred,
+            "Partial" => domain::sales::unified_invoice::PaymentMethod::Partial,
+            _ => domain::sales::unified_invoice::PaymentMethod::Deferred,
+        };
+
+        let amount_paid = Money::syp(Decimal::from_str(&req.amount_paid).unwrap_or(Decimal::ZERO));
+
         let issued_at = chrono::DateTime::parse_from_rfc3339(&req.issued_at)
             .map(|dt| dt.with_timezone(&Utc))
             .unwrap_or_else(|_| Utc::now());
@@ -37,7 +129,11 @@ impl CreateInvoiceUseCase {
             req.invoice_number,
             invoice_type,
             customer_id,
+            req.customer_name,
             supplier_id,
+            req.supplier_name,
+            payment_method,
+            amount_paid,
             issued_at,
             req.notes,
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
@@ -77,6 +173,15 @@ impl CreateInvoiceUseCase {
         invoice.recalculate_totals();
 
         self.repo.save(&invoice).await?;
-        Ok(InvoiceDto::from(invoice))
+        
+        let dto = InvoiceDto::from(invoice);
+        let queries = crate::use_cases::unified_invoice::InvoiceQueries::new(
+            self.repo.clone(),
+            self.material_repo.clone(),
+            self.customer_repo.clone(),
+            self.supplier_repo.clone(),
+            self.category_repo.clone(),
+        );
+        queries.populate_dto(dto).await
     }
 }

@@ -10,13 +10,16 @@ interface DocumentShellProps {
   status: string;
   onNew?: () => void;
   onSave?: () => void;
+  onSaveAndPost?: () => void;
   onSaveAndPrint?: () => void;
   onPost?: () => void;
+  onReopen?: () => void;
   onDelete?: () => void;
   onClose?: () => void;
   onRefresh?: () => void;
   saving?: boolean;
   posting?: boolean;
+  reopening?: boolean;
   canPost?: boolean;
   canDelete?: boolean;
   canEdit?: boolean;
@@ -32,13 +35,16 @@ export function DocumentShell({
   status,
   onNew,
   onSave,
+  onSaveAndPost,
   onSaveAndPrint,
   onPost,
+  onReopen,
   onDelete,
   onClose,
   onRefresh,
   saving,
   posting,
+  reopening,
   canPost,
   canDelete,
   canEdit,
@@ -70,13 +76,16 @@ export function DocumentShell({
         status={status}
         onNew={onNew}
         onSave={onSave}
+        onSaveAndPost={onSaveAndPost}
         onSaveAndPrint={onSaveAndPrint}
         onPost={onPost}
+        onReopen={onReopen}
         onDelete={onDelete}
         onClose={onClose}
         onRefresh={onRefresh}
         saving={saving}
         posting={posting}
+        reopening={reopening}
         canPost={canPost}
         canDelete={canDelete}
         canEdit={canEdit}
@@ -91,7 +100,7 @@ export function DocumentShell({
 
         {/* Summary sidebar */}
         {summaryPanel && (
-          <div className="w-64 flex-shrink-0 p-3 border-r border-slate-200 bg-white overflow-y-auto">
+          <div className="w-80 flex-shrink-0 p-3 border-r border-slate-200 bg-white overflow-y-auto">
             {summaryPanel}
           </div>
         )}

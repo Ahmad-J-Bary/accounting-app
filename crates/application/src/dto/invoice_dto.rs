@@ -1,4 +1,4 @@
-use domain::sales::{UnifiedInvoice, InvoiceLine, InvoiceType, InvoiceStatus};
+use domain::sales::{UnifiedInvoice, InvoiceLine, InvoiceType, InvoiceStatus, PaymentMethod};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,6 +31,8 @@ pub struct InvoiceDto {
     pub tax_amount: String,
     pub discount_amount: String,
     pub total_amount: String,
+    pub payment_method: String,
+    pub amount_paid: String,
     pub status: String,
     pub issued_at: String,
     pub notes: Option<String>,
@@ -41,10 +43,14 @@ pub struct CreateInvoiceRequest {
     pub invoice_number: String,
     pub invoice_type: String,
     pub customer_id: Option<String>,
+    pub customer_name: Option<String>,
     pub supplier_id: Option<String>,
+    pub supplier_name: Option<String>,
     pub lines: Vec<InvoiceLineDto>,
     pub tax_amount: String,
     pub discount_amount: String,
+    pub payment_method: String,
+    pub amount_paid: String,
     pub issued_at: String,
     pub notes: Option<String>,
 }
@@ -53,7 +59,9 @@ pub struct CreateInvoiceRequest {
 pub struct UpdateInvoiceRequest {
     pub id: String,
     pub customer_id: Option<String>,
+    pub customer_name: Option<String>,
     pub supplier_id: Option<String>,
+    pub supplier_name: Option<String>,
     pub lines: Vec<InvoiceLineDto>,
     pub tax_amount: String,
     pub discount_amount: String,
@@ -80,13 +88,19 @@ impl From<UnifiedInvoice> for InvoiceDto {
             invoice_number: invoice.invoice_number,
             invoice_type: invoice_type.to_string(),
             customer_id: invoice.customer_id.map(|id| id.0.to_string()),
-            customer_name: None,
+            customer_name: invoice.customer_name,
             supplier_id: invoice.supplier_id.map(|id| id.0.to_string()),
-            supplier_name: None,
+            supplier_name: invoice.supplier_name,
             lines: invoice.lines.into_iter().map(InvoiceLineDto::from).collect(),
             tax_amount: invoice.tax_amount.amount().to_string(),
             discount_amount: invoice.discount_amount.amount().to_string(),
             total_amount: invoice.total_amount.amount().to_string(),
+            payment_method: match invoice.payment_method {
+                PaymentMethod::Cash => "Cash",
+                PaymentMethod::Deferred => "Deferred",
+                PaymentMethod::Partial => "Partial",
+            }.to_string(),
+            amount_paid: invoice.amount_paid.amount().to_string(),
             status: status.to_string(),
             issued_at: invoice.issued_at.to_rfc3339(),
             notes: invoice.notes,

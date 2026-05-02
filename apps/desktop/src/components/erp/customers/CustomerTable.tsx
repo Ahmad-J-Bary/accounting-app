@@ -27,14 +27,14 @@ export function CustomerTable({ customers, loading, search, onView, onEdit, onDe
       className: "tabular-nums text-slate-500" 
     },
     { 
-      header: "المدين", 
-      accessor: (c) => formatCurrency(Number(c.debit || 0)), 
+      header: "المدين (عليه)", 
+      accessor: (c) => Number(c.debit) > 0 ? formatCurrency(Number(c.debit)) : "—", 
       align: "left", 
       className: "text-red-600 tabular-nums font-medium" 
     },
     { 
-      header: "الدائن", 
-      accessor: (c) => formatCurrency(Number(c.credit || 0)), 
+      header: "الدائن (له)", 
+      accessor: (c) => Number(c.credit) > 0 ? formatCurrency(Number(c.credit)) : "—", 
       align: "left", 
       className: "text-green-600 tabular-nums font-medium" 
     },

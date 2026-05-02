@@ -20,8 +20,14 @@ mod stock_movement_domain_tests {
 
     fn mv(t: MovementType, qty: rust_decimal::Decimal) -> StockMovement {
         StockMovement::new(
-            MaterialId(Uuid::new_v4()), t, qty,
-            "REF-001".to_string(), "ملاحظات".to_string(), Utc::now(),
+            MaterialId(Uuid::new_v4()), 
+            t, 
+            qty,
+            rust_decimal::Decimal::ZERO, 
+            rust_decimal::Decimal::ZERO,
+            "REF-001".to_string(), 
+            "ملاحظات".to_string(), 
+            Utc::now(),
         ).unwrap()
     }
 
@@ -49,8 +55,14 @@ mod stock_movement_domain_tests {
     #[test]
     fn zero_quantity_movement_fails() {
         let r = StockMovement::new(
-            MaterialId(Uuid::new_v4()), MovementType::In, dec!(0),
-            "REF".to_string(), "".to_string(), Utc::now(),
+            MaterialId(Uuid::new_v4()), 
+            MovementType::In, 
+            rust_decimal::Decimal::ZERO,
+            rust_decimal::Decimal::ZERO, 
+            rust_decimal::Decimal::ZERO,
+            "REF".to_string(), 
+            "".to_string(), 
+            Utc::now(),
         );
         assert!(r.is_err(), "الكمية صفر يجب أن ترفض");
     }
@@ -58,8 +70,14 @@ mod stock_movement_domain_tests {
     #[test]
     fn negative_quantity_movement_fails() {
         let r = StockMovement::new(
-            MaterialId(Uuid::new_v4()), MovementType::Out, dec!(-10),
-            "REF".to_string(), "".to_string(), Utc::now(),
+            MaterialId(Uuid::new_v4()), 
+            MovementType::Out, 
+            dec!(-10),
+            rust_decimal::Decimal::ZERO, 
+            rust_decimal::Decimal::ZERO,
+            "REF".to_string(), 
+            "".to_string(), 
+            Utc::now(),
         );
         assert!(r.is_err(), "الكمية السالبة يجب أن ترفض");
     }
@@ -67,8 +85,14 @@ mod stock_movement_domain_tests {
     #[test]
     fn empty_reference_movement_fails() {
         let r = StockMovement::new(
-            MaterialId(Uuid::new_v4()), MovementType::In, dec!(10),
-            "".to_string(), "".to_string(), Utc::now(),
+            MaterialId(Uuid::new_v4()), 
+            MovementType::In, 
+            dec!(10),
+            rust_decimal::Decimal::ZERO, 
+            rust_decimal::Decimal::ZERO,
+            "".to_string(), 
+            "".to_string(), 
+            Utc::now(),
         );
         assert!(r.is_err(), "المرجع الفارغ يجب أن يُرفض");
     }
