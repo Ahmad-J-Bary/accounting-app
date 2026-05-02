@@ -34,10 +34,10 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/customers/:id" element={<CustomerDetail />} />
       <Route path="/suppliers" element={<Suppliers />} />
       <Route path="/sales-invoices" element={<SalesInvoices />} />
-      <Route path="/sales-invoices/new" element={<SalesInvoices />} />
+      <Route path="/sales-invoices/new*" element={<SalesInvoices />} />
       <Route path="/sales-invoices/:id" element={<SalesInvoices />} />
       <Route path="/purchase-invoices" element={<PurchaseInvoices />} />
-      <Route path="/purchase-invoices/new" element={<PurchaseInvoices />} />
+      <Route path="/purchase-invoices/new*" element={<PurchaseInvoices />} />
       <Route path="/purchase-invoices/:id" element={<PurchaseInvoices />} />
       <Route path="/payments" element={<Payments />} />
       <Route path="/materials" element={<Materials />} />
@@ -46,7 +46,7 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/damaged" element={<Damaged />} />
       <Route path="/production" element={<Production />} />
       <Route path="/opening-balance" element={<OpeningBalance />} />
-      <Route path="/opening-balance/new" element={<OpeningBalance />} />
+      <Route path="/opening-balance/new*" element={<OpeningBalance />} />
       <Route path="/opening-balance/:id" element={<OpeningBalance />} />
       <Route path="/adjustments" element={<Adjustments />} />
       <Route path="/reports" element={<Reports />} />

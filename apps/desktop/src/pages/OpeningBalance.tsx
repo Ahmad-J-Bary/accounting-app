@@ -83,7 +83,7 @@ export default function OpeningBalance() {
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
   const [loadingData, setLoadingData] = useState(false);
 
-  const isNew = location.pathname.endsWith("/new");
+  const isNew = location.pathname.includes("/new");
 
   const loadSupporting = useCallback(async () => {
     setLoadingData(true);
@@ -145,10 +145,11 @@ export default function OpeningBalance() {
   const subtotal = state.lines.reduce((s, l) => s + (l.line_total ?? 0), 0);
 
   const handleCreate = () => {
+    const uniqueId = `/opening-balance/new-${Date.now()}`;
     openTab({
-      id: `/opening-balance/new-${Date.now()}`,
+      id: uniqueId,
       title: "فاتورة أول مدة جديدة",
-      path: "/opening-balance/new",
+      path: uniqueId,
       closable: true
     });
   };

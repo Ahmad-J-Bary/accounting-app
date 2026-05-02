@@ -70,7 +70,7 @@ export default function SalesInvoices() {
   const [editor, setEditor] = useState<EditorState>(defaultEditor());
   const [search, setSearch] = useState("");
 
-  const isNew = location.pathname.endsWith("/new");
+  const isNew = location.pathname.includes("/new");
 
   useEffect(() => {
     if (isNew) {
@@ -152,10 +152,11 @@ export default function SalesInvoices() {
   }
 
   const handleCreate = () => {
+    const uniqueId = `/sales-invoices/new-${Date.now()}`;
     openTab({ 
-      id: `/sales-invoices/new-${Date.now()}`, 
+      id: uniqueId, 
       title: "فاتورة مبيعات جديدة", 
-      path: "/sales-invoices/new",
+      path: uniqueId,
       closable: true
     });
   };

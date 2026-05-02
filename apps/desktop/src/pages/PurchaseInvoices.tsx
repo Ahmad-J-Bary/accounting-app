@@ -70,7 +70,7 @@ export default function PurchaseInvoices() {
   const [editor, setEditor] = useState<EditorState>(defaultEditor());
   const [search, setSearch] = useState("");
 
-  const isNew = location.pathname.endsWith("/new");
+  const isNew = location.pathname.includes("/new");
 
   useEffect(() => {
     if (isNew) {
@@ -151,10 +151,11 @@ export default function PurchaseInvoices() {
   }
 
   const handleCreate = () => {
+    const uniqueId = `/purchase-invoices/new-${Date.now()}`;
     openTab({ 
-      id: `/purchase-invoices/new-${Date.now()}`, 
+      id: uniqueId, 
       title: "فاتورة مشتريات جديدة", 
-      path: "/purchase-invoices/new",
+      path: uniqueId,
       closable: true
     });
   };

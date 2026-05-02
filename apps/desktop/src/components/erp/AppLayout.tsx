@@ -21,16 +21,41 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   const shortcuts = useMemo(() => [
     { key: 'k', ctrlKey: true, action: () => console.log('Open search'), description: 'فتح البحث' },
     { key: 'n', ctrlKey: true, action: () => {
-        openTab({ id: '/sales-invoices', title: 'فواتير المبيعات', path: '/sales-invoices' });
-        setTimeout(() => window.dispatchEvent(new CustomEvent("erp:open-new-invoice")), 100);
+        const id = `/sales-invoices/new-${Date.now()}`;
+        openTab({ 
+          id, 
+          title: 'فاتورة مبيعات جديدة', 
+          path: id,
+          closable: true
+        });
       }, description: 'فاتورة مبيعات جديدة' },
     { key: 'b', ctrlKey: true, action: () => {
-        openTab({ id: '/purchase-invoices', title: 'فواتير المشتريات', path: '/purchase-invoices' });
-        setTimeout(() => window.dispatchEvent(new CustomEvent("erp:open-new-purchase-invoice")), 100);
+        const id = `/purchase-invoices/new-${Date.now()}`;
+        openTab({ 
+          id, 
+          title: 'فاتورة مشتريات جديدة', 
+          path: id,
+          closable: true
+        });
       }, description: 'فاتورة مشتريات جديدة' },
-    { key: 'r', ctrlKey: true, action: () => openTab({ id: '/payments', title: 'المقبوضات والمدفوعات', path: '/payments' }), description: 'سند قبض جديد' },
-    { key: 'p', ctrlKey: true, action: () => openTab({ id: '/payments', title: 'المقبوضات والمدفوعات', path: '/payments' }), description: 'سند صرف جديد' },
-    { key: 'j', ctrlKey: true, action: () => openTab({ id: '/journal', title: 'القيود اليومية', path: '/journal' }), description: 'قيد يومية جديد' },
+    { key: 'r', ctrlKey: true, action: () => {
+        const id = `/opening-balance/new-${Date.now()}`;
+        openTab({ 
+          id, 
+          title: 'فاتورة أول المدة جديدة', 
+          path: id,
+          closable: true
+        });
+      }, description: 'فاتورة أول المدة جديدة' },
+    { key: 'j', ctrlKey: true, action: () => {
+        const id = `/journal/new-${Date.now()}`;
+        openTab({ 
+          id, 
+          title: 'قيد يومية جديد', 
+          path: id,
+          closable: true
+        });
+      }, description: 'قيد يومية جديد' },
   ], [openTab]);
 
   useKeyboardShortcuts(shortcuts);

@@ -1,4 +1,6 @@
+#![allow(dead_code)]
 #[derive(sqlx::FromRow)]
+#[allow(dead_code)]
 pub struct MaterialRow {
     pub id: String,
     pub name: String,
@@ -11,6 +13,7 @@ pub struct MaterialRow {
 }
 
 #[derive(sqlx::FromRow)]
+#[allow(dead_code)]
 pub struct MaterialUnitRow {
     pub id: String,
     pub material_id: String,

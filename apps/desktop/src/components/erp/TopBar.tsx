@@ -15,6 +15,8 @@ import { useNavigate } from "react-router-dom";
 import { NotificationsPanel } from "@/components/erp/NotificationsPanel";
 import { GlobalSearch } from "@/components/erp/GlobalSearch";
 
+import { useTabs } from "@/context/TabContext";
+
 interface TopBarProps {
   onToggleSidebar?: () => void;
   sidebarOpen?: boolean;
@@ -23,38 +25,60 @@ interface TopBarProps {
 export function TopBar({ onToggleSidebar, sidebarOpen = true }: TopBarProps) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const { openTab } = useTabs();
   const navigate = useNavigate();
 
   const handleNewInvoice = () => {
-    navigate("/sales-invoices");
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent("erp:open-new-invoice"));
-    }, 100);
+    const id = `/sales-invoices/new-${Date.now()}`;
+    openTab({ 
+      id, 
+      title: "فاتورة مبيعات جديدة", 
+      path: id,
+      closable: true
+    });
   };
 
   const handleNewPurchaseInvoice = () => {
-    navigate("/purchase-invoices");
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent("erp:open-new-purchase-invoice"));
-    }, 100);
+    const id = `/purchase-invoices/new-${Date.now()}`;
+    openTab({ 
+      id, 
+      title: "فاتورة مشتريات جديدة", 
+      path: id,
+      closable: true
+    });
   };
 
   const handleNewCustomer = () => {
-    navigate("/customers");
+    openTab({ 
+      id: `/customers/new-${Date.now()}`, 
+      title: "عميل جديد", 
+      path: "/customers", // Customers currently use a modal for new, so we navigate to list
+      closable: true
+    });
     setTimeout(() => {
       window.dispatchEvent(new CustomEvent("erp:open-new-customer"));
     }, 100);
   };
 
   const handleNewSupplier = () => {
-    navigate("/suppliers");
+    openTab({ 
+      id: `/suppliers/new-${Date.now()}`, 
+      title: "مورد جديد", 
+      path: "/suppliers",
+      closable: true
+    });
     setTimeout(() => {
       window.dispatchEvent(new CustomEvent("erp:open-new-supplier"));
     }, 100);
   };
 
   const handleNewProduct = () => {
-    navigate("/products");
+    openTab({ 
+      id: `/materials/new-${Date.now()}`, 
+      title: "منتج جديد", 
+      path: "/materials",
+      closable: true
+    });
     setTimeout(() => {
       window.dispatchEvent(new CustomEvent("erp:open-new-product"));
     }, 100);

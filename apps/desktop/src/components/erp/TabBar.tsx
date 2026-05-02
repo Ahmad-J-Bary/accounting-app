@@ -18,7 +18,9 @@ export function TabBar() {
     }
   };
 
-  if (tabs.length <= 1 && tabs[0]?.id === "/dashboard") return null;
+  const visibleTabs = tabs.filter(t => t.id !== 'main-tab');
+
+  if (visibleTabs.length === 0) return null;
 
   return (
     <div className="flex items-center bg-white border-b border-slate-200 px-2 h-10 gap-1 overflow-hidden group">
@@ -35,7 +37,7 @@ export function TabBar() {
         ref={scrollRef}
         className="flex-1 flex items-end h-full gap-1 overflow-x-auto no-scrollbar scroll-smooth"
       >
-        {tabs.map((tab) => (
+        {visibleTabs.map((tab) => (
           <div
             key={tab.id}
             onClick={() => switchTab(tab.id)}

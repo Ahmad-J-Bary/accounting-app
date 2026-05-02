@@ -1,31 +1,15 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-export interface Tab {
-  id: string;
-  title: string;
-  path: string;
-  active: boolean;
-  closable: boolean;
-}
-
-interface TabContextType {
-  tabs: Tab[];
-  activeTabId: string;
-  openTab: (tab: { id: string; title: string; path: string; closable?: boolean }) => void;
-  closeTab: (id: string) => void;
-  switchTab: (id: string) => void;
-  nextTab: () => void;
-  prevTab: () => void;
-}
+import { Tab, TabContextType } from '../types/tabs';
 
 const TabContext = createContext<TabContextType | undefined>(undefined);
 
 export const TabProvider = ({ children }: { children: ReactNode }) => {
   const [tabs, setTabs] = useState<Tab[]>([
-    { id: '/dashboard', title: 'لوحة التحكم', path: '/dashboard', active: true, closable: false }
+    { id: 'main-tab', title: 'لوحة التحكم', path: '/dashboard', active: true, closable: false }
   ]);
-  const [activeTabId, setActiveTabId] = useState('/dashboard');
+  const [activeTabId, setActiveTabId] = useState('main-tab');
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -39,6 +23,19 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
       }
       return prev;
     });
+  }, [navigate]);
+
+  const updateMainTab = useCallback((newTab: { title: string; path: string }) => {
+    setTabs(prev => {
+      const updated = prev.map(t => 
+        t.id === 'main-tab' 
+          ? { ...t, title: newTab.title, path: newTab.path, active: true }
+          : { ...t, active: false }
+      );
+      return updated;
+    });
+    setActiveTabId('main-tab');
+    navigate(newTab.path);
   }, [navigate]);
 
   const nextTab = useCallback(() => {
@@ -103,19 +100,19 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
       setActiveTabId(existingTab.id);
       setTabs(prev => prev.map(t => ({ ...t, active: t.id === existingTab.id })));
     }
-  }, [location.pathname]);
+  }, [location.pathname, tabs, activeTabId]);
 
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey) {
         // Ctrl + W: Close current tab
-        if (e.key.toLowerCase() === 'w') {
+        if (e.code === 'KeyW' || e.key.toLowerCase() === 'w') {
           e.preventDefault();
           closeTab(activeTabId);
         }
         // Ctrl + Tab / Ctrl + PageDown: Next tab
-        else if (e.key === 'Tab' || e.key === 'PageDown') {
+        else if (e.code === 'Tab' || e.key === 'Tab' || e.code === 'PageDown' || e.key === 'PageDown') {
           e.preventDefault();
           if (e.shiftKey) {
             prevTab();
@@ -124,7 +121,7 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
           }
         }
         // Ctrl + PageUp / Ctrl + Shift + Tab: Previous tab
-        else if (e.key === 'PageUp') {
+        else if (e.code === 'PageUp' || e.key === 'PageUp') {
           e.preventDefault();
           prevTab();
         }
@@ -136,7 +133,7 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
   }, [activeTabId, closeTab, nextTab, prevTab]);
 
   return (
-    <TabContext.Provider value={{ tabs, activeTabId, openTab, closeTab, switchTab, nextTab, prevTab }}>
+    <TabContext.Provider value={{ tabs, activeTabId, openTab, updateMainTab, closeTab, switchTab, nextTab, prevTab }}>
       {children}
     </TabContext.Provider>
   );

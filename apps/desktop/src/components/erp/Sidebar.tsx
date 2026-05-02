@@ -69,19 +69,29 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed, onClose }: SidebarProps) {
-  const { openTab, activeTabId } = useTabs();
+  const { openTab, updateMainTab, activeTabId } = useTabs();
   const location = useLocation();
 
   const handleNavClick = (e: React.MouseEvent, item: NavItem) => {
-    const tabId = e.ctrlKey ? `${item.to}-${Date.now()}` : item.to;
-    
     e.preventDefault();
-    openTab({ 
-      id: tabId, 
-      title: item.label, 
-      path: item.to,
-      closable: item.to !== "/dashboard"
-    });
+
+    if (e.ctrlKey) {
+      // Ctrl + Click opens a new unique tab
+      openTab({ 
+        id: `${item.to}-${Date.now()}`, 
+        title: item.label, 
+        path: item.to,
+        closable: true
+      });
+    } else {
+      // All regular sidebar clicks update the main background view
+      // This includes dashboard and all module lists
+      updateMainTab({ 
+        title: item.label, 
+        path: item.to 
+      });
+    }
+
     if (onClose && window.innerWidth < 1024) onClose();
   };
 
