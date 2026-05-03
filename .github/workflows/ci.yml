@@ -56,6 +56,8 @@ jobs:
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -79,8 +81,8 @@ jobs:
       - name: Build frontend (required by tauri::generate_context!)
         run: pnpm build
 
-      - name: Cargo check (workspace, all targets)
-        run: cargo check --workspace --all-targets
+      - name: Cargo clippy (workspace, deny warnings)
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Cargo test (workspace)
         run: cargo test --workspace

@@ -1,3 +1,6 @@
+// Tauri commands forward many fields straight to use cases / entities.
+#![allow(clippy::too_many_arguments)]
+
 pub mod bootstrap;
 pub mod commands;
 

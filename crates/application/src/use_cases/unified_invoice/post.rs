@@ -58,7 +58,7 @@ impl PostInvoiceUseCase {
 
         for line in &invoice.lines {
             let movement = StockMovement::new(
-                line.material_id.clone(),
+                line.material_id,
                 movement_type.clone(),
                 line.quantity,
                 line.unit_price.amount(),

@@ -36,11 +36,11 @@ impl AccountQueries {
         let mut roots: Vec<AccountId> = Vec::new();
 
         for account in accounts {
-            let id = account.id.clone();
+            let id = account.id;
             if let Some(parent_id) = &account.parent_id {
-                children_map.entry(parent_id.clone()).or_default().push(id.clone());
+                children_map.entry(*parent_id).or_default().push(id);
             } else {
-                roots.push(id.clone());
+                roots.push(id);
             }
             account_map.insert(id, account);
         }
@@ -108,7 +108,7 @@ impl AccountQueries {
         let mut running_balance = account.opening_balance;
 
         let mut sorted_entries = journal_entries;
-        sorted_entries.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+        sorted_entries.sort_by_key(|a| a.created_at);
 
         for entry in sorted_entries {
             if let Some(line) = entry.lines.iter().find(|l| l.account_id == *account_id) {

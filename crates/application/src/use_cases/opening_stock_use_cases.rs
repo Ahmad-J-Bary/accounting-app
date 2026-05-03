@@ -57,7 +57,7 @@ impl RecordOpeningStockUseCase {
                 .map_err(|_| AppError::Invalid("سعر تكلفة غير صالح".into()))?;
 
             let movement = StockMovement::new(
-                material.id.clone(),
+                material.id,
                 MovementType::OpeningBalance,
                 quantity,
                 unit_cost,
@@ -92,7 +92,7 @@ impl RecordOpeningStockUseCase {
 
             let lines = vec![
                 JournalLine::new(
-                    inventory_account.id.clone(),
+                    inventory_account.id,
                     Currency::SYP,
                     Decimal::ONE,
                     Money::syp(total_value),
@@ -100,7 +100,7 @@ impl RecordOpeningStockUseCase {
                     "رصيد مخزون أول المدة".to_string(),
                 ),
                 JournalLine::new(
-                    equity_account.id.clone(),
+                    equity_account.id,
                     Currency::SYP,
                     Decimal::ONE,
                     Money::zero(),

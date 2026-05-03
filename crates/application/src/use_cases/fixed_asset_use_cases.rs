@@ -194,10 +194,11 @@ mod tests {
         assert_eq!(assets[0].name, "Laptop");
 
         // Check Journal Entry
-        let entries = journal_repo.entries.lock().unwrap();
-        assert_eq!(entries.len(), 1);
-        assert!(entries[0].description.contains("Laptop"));
-        drop(entries); // Explicitly drop to be safe
+        {
+            let entries = journal_repo.entries.lock().unwrap();
+            assert_eq!(entries.len(), 1);
+            assert!(entries[0].description.contains("Laptop"));
+        }
 
         println!("2. Posting depreciation...");
         // 2. Post Depreciation

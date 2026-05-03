@@ -13,6 +13,12 @@ pub struct MockAssetRepository {
     pub categories: Mutex<Vec<AssetCategory>>,
 }
 
+impl Default for MockAssetRepository {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MockAssetRepository {
     pub fn new() -> Self {
         Self {
@@ -62,6 +68,12 @@ impl AssetRepository for MockAssetRepository {
 
 pub struct MockJournalRepository {
     pub entries: Mutex<Vec<JournalEntry>>,
+}
+
+impl Default for MockJournalRepository {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MockJournalRepository {

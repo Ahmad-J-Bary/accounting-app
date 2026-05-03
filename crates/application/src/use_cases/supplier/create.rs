@@ -57,7 +57,7 @@ impl CreateSupplierUseCase {
                 .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
             if let Some(existing) = existing_account {
-                supplier.link_account(existing.id.clone());
+                supplier.link_account(existing.id);
                 self.supplier_repo.save(&supplier).await?;
             } else {
                 let new_account = Account {
@@ -84,7 +84,7 @@ impl CreateSupplierUseCase {
                 self.account_repo.save(&new_account).await
                     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-                let new_account_id = new_account.id.clone();
+                let new_account_id = new_account.id;
                 supplier.link_account(new_account_id);
                 self.supplier_repo.save(&supplier).await?;
             }

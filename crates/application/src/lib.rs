@@ -1,3 +1,7 @@
+// Use cases intentionally accept all fields needed to construct domain
+// entities, mirroring the domain constructors.
+#![allow(clippy::too_many_arguments)]
+
 pub mod errors;
 pub mod ports;
 pub mod use_cases;

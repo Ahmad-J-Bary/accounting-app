@@ -21,7 +21,7 @@ impl MaterialQueries {
         let materials = self.repo.list_all().await?;
         let mut dtos = vec![];
         for m in materials {
-            let mid = m.id.clone();
+            let mid = m.id;
             let mut dto = MaterialDto::from(m);
             let summary = self.movement_repo.get_material_summary(&mid).await?;
             dto.total_received = summary.total_received.to_string();

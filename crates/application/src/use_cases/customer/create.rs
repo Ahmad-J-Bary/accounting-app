@@ -57,7 +57,7 @@ impl CreateCustomerUseCase {
                 .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
             if let Some(existing) = existing_account {
-                customer.link_account(existing.id.clone());
+                customer.link_account(existing.id);
                 self.customer_repo.save(&customer).await?;
             } else {
                 let new_account = Account {
@@ -84,7 +84,7 @@ impl CreateCustomerUseCase {
                 self.account_repo.save(&new_account).await
                     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-                let new_account_id = new_account.id.clone();
+                let new_account_id = new_account.id;
                 customer.link_account(new_account_id);
                 self.customer_repo.save(&customer).await?;
             }

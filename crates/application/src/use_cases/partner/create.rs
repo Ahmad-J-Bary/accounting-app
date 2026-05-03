@@ -42,13 +42,9 @@ impl CreatePartnerUseCase {
 
         // Get next partner code (numeric part)
         let next_seq = self.account_repo.get_next_child_code("222").await?;
-        let numeric_part = if next_seq.starts_with("222") {
-            &next_seq[3..]
-        } else {
-            &next_seq
-        };
+        let numeric_part = next_seq.strip_prefix("222").unwrap_or(&next_seq);
 
-        let code = format!("P{}", numeric_part);
+        let code = format!("P{numeric_part}");
 
         let mut partner = Partner::new(
             code.clone(),
@@ -58,7 +54,7 @@ impl CreatePartnerUseCase {
             is_amount_in_usd,
             sharing_enum,
             manual_ratio,
-        ).map_err(|e| AppError::Domain(e))?;
+        ).map_err(AppError::Domain)?;
 
         self.uow.begin().await?;
 

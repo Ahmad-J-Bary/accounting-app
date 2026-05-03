@@ -23,8 +23,8 @@ pub async fn save(pool: &SqlitePool, partner: &Partner) -> Result<(), AppError> 
     })
     .bind(partner.linked_account_id.as_ref().map(|id| id.to_string()))
     .bind(partner.drawings_account_id.as_ref().map(|id| id.to_string()))
-    .bind(&partner.created_at)
-    .bind(&partner.updated_at)
+    .bind(partner.created_at)
+    .bind(partner.updated_at)
     .execute(pool)
     .await
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
@@ -51,7 +51,7 @@ pub async fn update(pool: &SqlitePool, partner: &Partner) -> Result<(), AppError
     })
     .bind(partner.linked_account_id.as_ref().map(|id| id.to_string()))
     .bind(partner.drawings_account_id.as_ref().map(|id| id.to_string()))
-    .bind(&partner.updated_at)
+    .bind(partner.updated_at)
     .bind(partner.id.to_string())
     .execute(pool)
     .await

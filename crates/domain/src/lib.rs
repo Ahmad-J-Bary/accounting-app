@@ -1,3 +1,7 @@
+// Domain entities intentionally expose rich constructors that take all
+// required fields up front; refactoring them into builders is out of scope.
+#![allow(clippy::too_many_arguments)]
+
 pub mod shared;
 pub mod accounting;
 pub mod sales;

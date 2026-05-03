@@ -55,7 +55,7 @@ impl UpdatePartnerUseCase {
             is_amount_in_usd,
             sharing_enum,
             manual_ratio,
-        ).map_err(|e| AppError::Domain(e))?;
+        ).map_err(AppError::Domain)?;
 
         self.uow.begin().await?;
         self.repo.update(&partner).await?;

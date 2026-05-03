@@ -61,7 +61,7 @@ impl CreateDamagedItemUseCase {
             .with_timezone(&Utc);
 
         let item = DamagedItem::new(
-            material_id.clone(),
+            material_id,
             quantity,
             req.reason.clone(),
             damage_date,
@@ -73,7 +73,7 @@ impl CreateDamagedItemUseCase {
 
         let unit_cost = if quantity > Decimal::ZERO { cost_impact / quantity } else { Decimal::ZERO };
         let movement = StockMovement::new(
-            material_id.clone(),
+            material_id,
             MovementType::Damaged,
             quantity,
             unit_cost,
@@ -99,7 +99,7 @@ impl CreateDamagedItemUseCase {
 
             let lines = vec![
                 JournalLine::new(
-                    loss_account.id.clone(),
+                    loss_account.id,
                     Currency::SYP,
                     Decimal::ONE,
                     Money::syp(cost_impact),
@@ -107,7 +107,7 @@ impl CreateDamagedItemUseCase {
                     format!("خسارة تلف: {} - {}", material.name, req.reason),
                 ),
                 JournalLine::new(
-                    inventory_account.id.clone(),
+                    inventory_account.id,
                     Currency::SYP,
                     Decimal::ONE,
                     Money::zero(),
