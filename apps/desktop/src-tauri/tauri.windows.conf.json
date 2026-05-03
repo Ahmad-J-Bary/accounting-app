@@ -1,0 +1,16 @@
+{
+  "bundle": {
+    "resources": [
+      "WebView2Loader.dll"
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "embedBootstrapper"
+      },
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "displayLanguageSelector": false
+      }
+    }
+  }
+}

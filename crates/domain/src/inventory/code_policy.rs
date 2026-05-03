@@ -39,7 +39,7 @@ impl CodeGenerator {
             return Err(DomainError::Invalid("يجب توفر بادئة واحدة على الأقل".into()));
         }
 
-        let combined_prefix = prefixes.join("-");
+        let combined_prefix = format!("{}-", prefixes.join("-"));
         Self::generate_sequential_code(&combined_prefix, sequence)
     }
 }
