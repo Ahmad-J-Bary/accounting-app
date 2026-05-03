@@ -59,7 +59,6 @@ updateJson('package.json');
 updateJson('apps/desktop/package.json');
 updateJson('apps/desktop/src-tauri/tauri.conf.json');
 updateJson('packages/shared-types/package.json');
-updateJson('crates/tauri-adapter/tauri.conf.json');
 
 // ── TOML files ───────────────────────────────────────────────────────────────
 updateToml('apps/desktop/src-tauri/Cargo.toml');
