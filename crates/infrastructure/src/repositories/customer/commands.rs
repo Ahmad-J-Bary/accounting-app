@@ -32,7 +32,7 @@ pub async fn save(pool: &SqlitePool, customer: &Customer) -> Result<(), AppError
     .bind(customer.credit.to_string())
     .bind(customer.opening_balance.to_string())
     .bind(customer.balance.to_string())
-    .bind(customer.currency.code())
+    .bind(&customer.currency.code)
     .bind(&customer.notes)
     .bind(customer.is_active)
     .bind(customer.created_at.to_rfc3339())

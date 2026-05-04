@@ -18,21 +18,28 @@ impl Money {
     pub fn syp(amount: Decimal) -> Self {
         Self {
             amount,
-            currency: Currency::SYP,
+            currency: Currency::syp(),
         }
     }
 
     pub fn usd(amount: Decimal) -> Self {
         Self {
             amount,
-            currency: Currency::USD,
+            currency: Currency::usd(),
+        }
+    }
+
+    pub fn from_amount_and_code(amount: Decimal, code: &str) -> Self {
+        Self {
+            amount,
+            currency: crate::shared::currency::Currency::from_code(code),
         }
     }
 
     pub fn zero() -> Self {
         Self {
             amount: Decimal::ZERO,
-            currency: Currency::SYP,
+            currency: Currency::usd(),
         }
     }
 
@@ -40,15 +47,18 @@ impl Money {
         self.amount
     }
 
-    pub fn currency(&self) -> Currency {
-        self.currency
+    pub fn currency(&self) -> &Currency {
+        &self.currency
     }
 
-    /// يحسب القيمة بالليرة السورية بناءً على سعر صرف محدد
+    /// Calculates the value in the system's reference base currency using the provided exchange rate.
+    /// The rate should be: 1 unit of this currency = `fx_rate` units of base currency.
+    /// If this currency IS the base currency, the rate is ignored (treated as 1).
     pub fn to_base(&self, fx_rate: Decimal) -> Decimal {
-        match self.currency {
-            Currency::SYP => self.amount,
-            Currency::USD => self.amount * fx_rate,
+        if self.currency.is_base {
+            self.amount
+        } else {
+            self.amount * fx_rate
         }
     }
 
@@ -69,7 +79,7 @@ impl Add for Money {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
-        if self.currency != other.currency {
+        if self.currency.code != other.currency.code {
             panic!("Cannot add different currencies directly. Convert to same currency first.");
         }
         Self {
@@ -83,7 +93,7 @@ impl Sub for Money {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self {
-        if self.currency != other.currency {
+        if self.currency.code != other.currency.code {
             panic!("Cannot subtract different currencies directly. Convert to same currency first.");
         }
         Self {

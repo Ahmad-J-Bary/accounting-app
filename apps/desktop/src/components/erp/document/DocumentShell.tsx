@@ -25,6 +25,7 @@ interface DocumentShellProps {
   canEdit?: boolean;
   children: React.ReactNode;
   summaryPanel?: React.ReactNode;
+  extraActions?: React.ReactNode;
 }
 
 export function DocumentShell({
@@ -50,6 +51,7 @@ export function DocumentShell({
   canEdit,
   children,
   summaryPanel,
+  extraActions,
 }: DocumentShellProps) {
   return (
     <div className="flex flex-col h-full min-h-screen bg-slate-100" dir="rtl">
@@ -89,6 +91,7 @@ export function DocumentShell({
         canPost={canPost}
         canDelete={canDelete}
         canEdit={canEdit}
+        extraActions={extraActions}
       />
 
       {/* Content Area */}

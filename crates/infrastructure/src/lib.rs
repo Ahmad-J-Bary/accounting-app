@@ -1,6 +1,8 @@
 pub mod db;
 pub mod repositories;
+pub use sqlx;
 
+pub use db::pool::{create_pool, run_migrations};
 pub use repositories::SqliteCustomerRepository;
 pub use repositories::SqliteMaterialRepository;
 pub use repositories::SqliteCategoryRepository;
@@ -21,3 +23,5 @@ pub use repositories::SqlitePartnerRepository;
 pub use repositories::SqliteUnifiedInvoiceRepository;
 pub use repositories::sqlite_unit_of_work::SqliteUnitOfWork;
 pub use repositories::SqliteCodePrefixRepository;
+pub use repositories::SqliteCurrencyRepository;
+pub use repositories::SqliteExchangeRateRepository;

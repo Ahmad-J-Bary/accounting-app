@@ -9,6 +9,7 @@ import { PartnerCombobox } from "./shared/PartnerCombobox";
 import { customerService } from "@/services/customerService";
 import { materialService } from "@/services/materialService";
 import { invoiceService } from "@/services/invoiceService";
+import { currencyService, type Currency } from "@/services/currencyService";
 import type { CustomerDto, MaterialDto, CreateInvoiceRequest, InvoiceLineDto, InvoiceDto } from "@erp/shared-types";
 import { formatCurrency } from "@/lib/format";
 import { toast } from "sonner";
@@ -27,6 +28,7 @@ function makeLine(): InvoiceLineDto {
 export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit }: NewInvoiceDialogProps) {
   const [customers, setCustomers] = useState<CustomerDto[]>([]);
   const [products, setProducts] = useState<MaterialDto[]>([]);
+  const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentBalance, setCurrentBalance] = useState<{ debit: string; credit: string } | null>(null);
 
@@ -40,6 +42,8 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
     discount_amount: "0",
     payment_method: "Cash",
     amount_paid: "0",
+    currency_code: "USD",
+    exchange_rate: "1",
   });
 
   useEffect(() => {
@@ -60,6 +64,8 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
           discount_amount: invoiceToEdit.discount_amount,
           payment_method: invoiceToEdit.payment_method || "Cash",
           amount_paid: invoiceToEdit.amount_paid || "0",
+          currency_code: invoiceToEdit.currency_code || "USD",
+          exchange_rate: invoiceToEdit.exchange_rate || "1",
         });
       } else {
         setFormData({
@@ -73,6 +79,8 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
           discount_amount: "0",
           payment_method: "Cash",
           amount_paid: "0",
+          currency_code: "USD",
+          exchange_rate: "1",
         });
       }
       loadData();
@@ -81,17 +89,31 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
 
   const loadData = async () => {
     try {
-      const [cData, pData] = await Promise.all([
+      const [cData, pData, currData] = await Promise.all([
         customerService.listCustomers(),
         materialService.listMaterials(),
+        currencyService.listActiveCurrencies(),
       ]);
       setCustomers(cData);
       setProducts(pData);
+      setCurrencies(currData);
     } catch (error) {
       console.error("Failed to load data for invoice:", error);
       toast.error("فشل تحميل البيانات الأساسية");
     }
   };
+
+  useEffect(() => {
+    if (formData.currency_code && formData.currency_code !== "USD") {
+      currencyService.getLatestExchangeRate("USD", formData.currency_code).then(rate => {
+        if (rate) {
+          setFormData(prev => ({ ...prev, exchange_rate: rate }));
+        }
+      });
+    } else if (formData.currency_code === "USD") {
+      setFormData(prev => ({ ...prev, exchange_rate: "1" }));
+    }
+  }, [formData.currency_code]);
 
   const addLine = () => {
     setFormData(prev => ({
@@ -206,13 +228,41 @@ export function NewInvoiceDialog({ open, onOpenChange, onSuccess, invoiceToEdit 
                 </div>
 
                 <div className="space-y-2">
-                    <Label className="text-blue-900 font-bold">التاريخ</Label>
                     <Input
                     type="date"
                     value={formData.issued_at.split("T")[0]}
                     onChange={e => setFormData(prev => ({ ...prev, issued_at: new Date(e.target.value).toISOString() }))}
                     />
                 </div>
+
+                <div className="space-y-2 pt-2 border-t border-slate-200">
+                    <Label className="text-blue-900 font-bold">العملة</Label>
+                    <Select
+                        value={formData.currency_code}
+                        onValueChange={val => setFormData(prev => ({ ...prev, currency_code: val }))}
+                    >
+                        <SelectTrigger className="font-bold bg-white">
+                            <SelectValue placeholder="اختر العملة" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {currencies.map(c => (
+                                <SelectItem key={c.code} value={c.code}>{c.name_ar} ({c.code})</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                {formData.currency_code !== "USD" && (
+                    <div className="space-y-2 animate-in slide-in-from-top-1 duration-200">
+                        <Label className="text-blue-900 font-bold text-xs">سعر الصرف (1 USD = ? {formData.currency_code})</Label>
+                        <Input
+                            type="number"
+                            value={formData.exchange_rate}
+                            onChange={e => setFormData(prev => ({ ...prev, exchange_rate: e.target.value }))}
+                            className="h-8 font-mono text-sm bg-blue-50/50 border-blue-100"
+                        />
+                    </div>
+                )}
             </div>
 
             {currentBalance && (

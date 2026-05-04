@@ -26,8 +26,13 @@ pub struct MaterialDto {
     pub total_available: String,
     pub total_damaged: String,
     pub last_purchase_price: String,
+    pub last_purchase_price_base: String,
+    pub last_purchase_price_usd: String,
     pub last_sale_price: String,
+    pub last_sale_price_base: String,
+    pub last_sale_price_usd: String,
     pub average_cost: String,
+    pub average_cost_base: String,
     pub units: Vec<MaterialUnitDto>,
 }
 
@@ -87,8 +92,13 @@ impl From<Material> for MaterialDto {
             total_available: "0".to_string(),
             total_damaged: "0".to_string(),
             last_purchase_price: "0".to_string(),
+            last_purchase_price_base: "0".to_string(),
+            last_purchase_price_usd: "0".to_string(),
             last_sale_price: "0".to_string(),
+            last_sale_price_base: "0".to_string(),
+            last_sale_price_usd: "0".to_string(),
             average_cost: "0".to_string(),
+            average_cost_base: "0".to_string(),
             units: material.units.into_iter().map(MaterialUnitDto::from).collect(),
         }
     }

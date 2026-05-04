@@ -46,4 +46,8 @@ impl UnifiedInvoiceRepository for SqliteUnifiedInvoiceRepository {
     async fn delete(&self, id: &InvoiceId) -> Result<(), AppError> {
         commands::delete(&self.pool, id).await
     }
+
+    async fn get_last_usd_prices(&self, material_id: &str) -> Result<(String, String), AppError> {
+        queries::get_last_usd_prices(&self.pool, material_id).await
+    }
 }

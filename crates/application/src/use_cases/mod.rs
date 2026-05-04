@@ -22,3 +22,4 @@ pub mod consumable_use_cases;
 pub mod opening_stock_use_cases;
 pub mod partner;
 pub mod unified_invoice;
+pub mod currency;

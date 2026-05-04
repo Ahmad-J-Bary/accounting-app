@@ -4,6 +4,8 @@ import { materialService } from "@/services/materialService";
 import type { MaterialDto, InvoiceLineDto } from "@erp/shared-types";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useCurrencyContext } from "@/context/CurrencyContext";
+import { Coins, DollarSign } from "lucide-react";
 
 import {
   GridLine,
@@ -24,31 +26,40 @@ interface ColumnDef {
 }
 
 const SALES_COLS: ColumnDef[] = [
-  { key: "material_name", header: "المادة / الصنف", width: "min-w-[200px] flex-[3]", align: "right", type: "material" },
-  { key: "quantity",      header: "الكمية",          width: "w-[90px]",               align: "center", type: "number" },
-  { key: "unit_price",    header: "سعر البيع",        width: "w-[110px]",              align: "left",   type: "number" },
-  { key: "discount",      header: "خصم %",           width: "w-[80px]",               align: "center", type: "number" },
-  { key: "line_total",    header: "الإجمالي",         width: "w-[120px]",              align: "left",   type: "readonly" },
-  { key: "notes",         header: "ملاحظات",          width: "flex-[2]",               align: "right",  type: "text" },
+  { key: "material_name",      header: "المادة / الصنف", width: "min-w-[200px] flex-[3]", align: "right", type: "material" },
+  { key: "quantity",           header: "الكمية",          width: "w-[80px]",               align: "center", type: "number" },
+  { key: "unit_price",         header: "سعر البيع",        width: "w-[100px]",              align: "left",   type: "number" },
+  { key: "unit_price_usd",     header: "سعر البيع ($)",    width: "w-[100px]",              align: "left",   type: "number" },
+  { key: "purchase_price",     header: "تكلفة المرجع",     width: "w-[100px]",              align: "left",   type: "readonly" },
+  { key: "purchase_price_usd", header: "تكلفة المرجع ($)", width: "w-[100px]",              align: "left",   type: "readonly" },
+  { key: "profit_amount",      header: "الربح",            width: "w-[90px]",               align: "left",   type: "readonly" },
+  { key: "profit_amount_usd",  header: "الربح ($)",        width: "w-[90px]",               align: "left",   type: "readonly" },
+  { key: "profit_percent",     header: "الربح %",          width: "w-[70px]",               align: "center", type: "readonly" },
+  { key: "line_total",         header: "الإجمالي",         width: "w-[110px]",              align: "left",   type: "readonly" },
+  { key: "notes",              header: "ملاحظات",          width: "flex-[1]",               align: "right",  type: "text" },
 ];
 
+// All possible purchase columns (user can show/hide via visibleColumns prop)
 const PURCHASE_COLS: ColumnDef[] = [
-  { key: "material_name", header: "المادة / الصنف", width: "min-w-[200px] flex-[3]", align: "right", type: "material" },
-  { key: "quantity",      header: "الكمية",          width: "w-[90px]",               align: "center", type: "number" },
-  { key: "unit_price",    header: "سعر الشراء",       width: "w-[110px]",              align: "left",   type: "number" },
-  { key: "discount",      header: "خصم %",           width: "w-[80px]",               align: "center", type: "number" },
-  { key: "line_total",    header: "الإجمالي",         width: "w-[120px]",              align: "left",   type: "readonly" },
-  { key: "notes",         header: "ملاحظات",          width: "flex-[2]",               align: "right",  type: "text" },
+  { key: "material_name",  header: "المادة / الصنف",   width: "min-w-[180px] flex-[3]", align: "right",  type: "material" },
+  { key: "code",           header: "الكود",             width: "w-[90px]",               align: "center", type: "readonly" },
+  { key: "barcode",        header: "الباركود",          width: "w-[110px]",              align: "center", type: "readonly" },
+  { key: "quantity",       header: "الكمية",            width: "w-[90px]",               align: "center", type: "number" },
+  { key: "unit_price",     header: "سعر الشراء",        width: "w-[110px]",              align: "left",   type: "number" },
+  { key: "unit_price_usd", header: "سعر الشراء ($)",    width: "w-[110px]",              align: "left",   type: "number" },
+  { key: "retail_price",   header: "سعر بيع مقترح",    width: "w-[120px]",              align: "left",   type: "readonly" },
+  { key: "discount",       header: "خصم %",            width: "w-[80px]",               align: "center", type: "number" },
+  { key: "line_total",     header: "الإجمالي",          width: "w-[120px]",              align: "left",   type: "readonly" },
+  { key: "notes",          header: "ملاحظات",           width: "flex-[2]",               align: "right",  type: "text" },
 ];
 
 const OPENING_COLS: ColumnDef[] = [
-  { key: "material_name",   header: "المادة / الصنف", width: "min-w-[200px] flex-[3]", align: "right",  type: "material" },
-  { key: "quantity",         header: "الكمية",          width: "w-[90px]",               align: "center", type: "number" },
-  { key: "unit_price",       header: "سعر التكلفة",     width: "w-[110px]",              align: "left",   type: "number" },
-  { key: "retail_price",     header: "مفرق",            width: "w-[100px]",              align: "left",   type: "number" },
-  { key: "wholesale_price",  header: "جملة",            width: "w-[100px]",              align: "left",   type: "number" },
-  { key: "minimum_stock",    header: "حد الطلب",        width: "w-[80px]",               align: "center", type: "number" },
-  { key: "line_total",       header: "القيمة",           width: "w-[120px]",              align: "left",   type: "readonly" },
+  { key: "material_name",   header: "المادة / الصنف",  width: "min-w-[200px] flex-[3]", align: "right",  type: "material" },
+  { key: "quantity",        header: "الكمية",          width: "w-[90px]",               align: "center", type: "number" },
+  { key: "unit_price",      header: "تكلفة افتتاحية",    width: "w-[120px]",              align: "left",   type: "number" },
+  { key: "unit_price_usd",  header: "تكلفة ($)",       width: "w-[100px]",              align: "left",   type: "number" },
+  { key: "minimum_stock",   header: "حد الطلب",        width: "w-[80px]",               align: "center", type: "number" },
+  { key: "line_total",      header: "القيمة الإجمالية",   width: "w-[120px]",              align: "left",   type: "readonly" },
 ];
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -90,7 +101,7 @@ function MaterialSearchPanel({ materials, search, visible, onSelect, onClose }: 
                 <th className="px-3 py-1.5 text-right font-bold text-slate-500 w-24">الكود</th>
                 <th className="px-3 py-1.5 text-right font-bold text-slate-500">اسم الصنف</th>
                 <th className="px-3 py-1.5 text-left font-bold text-slate-500 w-20">المخزون</th>
-                <th className="px-3 py-1.5 text-left font-bold text-slate-500 w-24">سعر الشراء</th>
+                <th className="px-3 py-1.5 text-left font-bold text-slate-500 w-24">آخر تكلفة شراء</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-blue-50">
@@ -122,16 +133,23 @@ interface InvoiceGridProps {
   lines: GridLine[];
   onChange: (lines: GridLine[]) => void;
   disabled?: boolean;
+  visibleColumns?: string[]; // Optional: list of keys to show
+  currencyCode?: string;
+  exchangeRate?: string;
 }
 
-export function InvoiceGrid({ type, lines, onChange, disabled = false }: InvoiceGridProps) {
+export function InvoiceGrid({ type, lines, onChange, disabled = false, visibleColumns, currencyCode, exchangeRate }: InvoiceGridProps) {
+  const { formatAmount, baseCurrency, convertBetween } = useCurrencyContext();
   const [materials, setMaterials] = useState<MaterialDto[]>([]);
   const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchRow, setSearchRow] = useState<number | null>(null);
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 
-  const columns = type === "Sales" ? SALES_COLS : type === "Purchase" ? PURCHASE_COLS : OPENING_COLS;
+  const defaultCols = type === "Sales" ? SALES_COLS : type === "Purchase" ? PURCHASE_COLS : OPENING_COLS;
+  const columns = visibleColumns 
+    ? defaultCols.filter(c => visibleColumns.includes(c.key))
+    : defaultCols;
   const editableCols = columns.filter(c => c.type !== "readonly");
 
   // Always keep at least one empty row at the bottom
@@ -157,11 +175,43 @@ export function InvoiceGrid({ type, lines, onChange, disabled = false }: Invoice
     const updated = lines.map((l, i) => {
       if (i !== idx) return l;
       const merged = { ...l, ...updates };
+      
+      const rate = parseFloat(exchangeRate || "1") || 1;
+      const isBaseUsd = baseCurrency?.code === "USD";
+      const isDocUsd = (currencyCode || baseCurrency?.code) === "USD";
+
+      // Price synchronization
+      if ("unit_price" in updates && !("unit_price_usd" in updates)) {
+        const val = parseFloat(updates.unit_price || "0") || 0;
+        if (isDocUsd) merged.unit_price_usd = updates.unit_price;
+        else merged.unit_price_usd = (val / rate).toString();
+      } else if ("unit_price_usd" in updates && !("unit_price" in updates)) {
+        const valUsd = parseFloat(updates.unit_price_usd || "0") || 0;
+        if (isDocUsd) merged.unit_price = updates.unit_price_usd;
+        else merged.unit_price = (valUsd * rate).toString();
+      }
+
       merged.line_total = calcLineTotal(merged);
+      
+      // Calculate profit if sales
+      if (type === "Sales") {
+        const qty = parseFloat(merged.quantity) || 0;
+        const sp = parseFloat(merged.unit_price) || 0;
+        const cp = parseFloat(merged.purchase_price || "0") || 0;
+        const profit = (sp - cp) * qty;
+        merged.profit_amount = profit.toString();
+        merged.profit_percent = sp > 0 ? ((sp - cp) / sp * 100).toFixed(1) : "0";
+
+        const spUsd = parseFloat(merged.unit_price_usd || "0") || 0;
+        const cpUsd = parseFloat(merged.purchase_price_usd || "0") || 0;
+        const profitUsd = (spUsd - cpUsd) * qty;
+        merged.profit_amount_usd = profitUsd.toString();
+      }
+      
       return merged;
     });
     onChange(ensureTrailingRow(updated));
-  }, [lines, onChange, ensureTrailingRow]);
+  }, [lines, onChange, ensureTrailingRow, type, exchangeRate, currencyCode, baseCurrency]);
 
   const removeLine = useCallback((idx: number) => {
     const remaining = lines.filter((_, i) => i !== idx);
@@ -176,14 +226,22 @@ export function InvoiceGrid({ type, lines, onChange, disabled = false }: Invoice
   }, [lines, onChange, ensureTrailingRow]);
 
   const selectMaterial = useCallback((rowIdx: number, m: MaterialDto) => {
-    const unitPrice = type === "Purchase" ? (m.last_purchase_price || "0") : "0";
+    const suggestedPrice = type === "Purchase" ? (m.last_purchase_price || "0") : (m.last_sale_price || "0");
+    const suggestedPriceUsd = type === "Purchase" ? (m.last_purchase_price_usd || "0") : (m.last_sale_price_usd || "0");
+    const referenceCost = m.average_cost !== "0" ? m.average_cost : m.last_purchase_price;
+    const referenceCostUsd = m.last_purchase_price_usd || "0";
+
     updateLine(rowIdx, {
       material_id: m.id,
       material_name: m.name,
       code: m.code,
       barcode: m.barcode,
-      unit_price: unitPrice,
-      purchase_price: m.last_purchase_price,
+      unit_price: suggestedPrice,
+      purchase_price: referenceCost,
+      unit_price_usd: suggestedPriceUsd,
+      purchase_price_usd: referenceCostUsd,
+      profit_amount: "0",
+      profit_amount_usd: "0",
     });
     setSearchRow(null);
     setSearchTerm("");
@@ -238,8 +296,34 @@ export function InvoiceGrid({ type, lines, onChange, disabled = false }: Invoice
   }, [searchRow, editableCols.length, lines, onChange, ensureTrailingRow, removeLine, duplicateLine]);
 
   const getCellValue = (line: GridLine, key: string): string => {
-    if (key === "line_total") return formatCurrency(line.line_total ?? 0);
-    return String((line as unknown as Record<string, unknown>)[key] ?? "");
+    const docCode = currencyCode || baseCurrency?.code || "USD";
+
+    if (key === "line_total") return formatAmount(line.line_total ?? 0, { currencyCode: docCode });
+
+    if (key.endsWith("_usd")) {
+      const val = parseFloat((line as Record<string, any>)[key] || "0");
+      return val > 0 ? formatAmount(val, { currencyCode: "USD" }) : "—";
+    }
+
+    // Format price-type readonly columns as currency
+    if (key === "retail_price" || key === "wholesale_price" || key === "semi_wholesale_price" || key === "purchase_price") {
+      const val = parseFloat((line as Record<string, any>)[key] || "0");
+      return val > 0 ? formatAmount(val, { currencyCode: docCode }) : "—";
+    }
+
+    if (key === "profit_amount" || key === "profit_percent") {
+      const q = parseFloat(line.quantity) || 0;
+      const sp = parseFloat(line.unit_price) || 0;
+      const cp = parseFloat(line.purchase_price || "0") || 0;
+      const profit = (sp - cp) * q;
+      if (key === "profit_amount") {
+        return profit !== 0 ? formatAmount(profit, { currencyCode: docCode }) : "—";
+      }
+      const percent = sp > 0 ? ((sp - cp) / sp) * 100 : 0;
+      return cp > 0 ? percent.toFixed(1) + "٪" : "—";
+    }
+
+    return String((line as Record<string, any>)[key] ?? "");
   };
 
   const showSearchPanel = searchRow !== null;
@@ -408,7 +492,7 @@ export function InvoiceGrid({ type, lines, onChange, disabled = false }: Invoice
           <kbd className="bg-slate-200 px-1 rounded text-[10px]">Insert</kbd> تكرار
         </span>
         <span className="font-bold text-slate-700 tabular-nums text-sm">
-          {formatCurrency(lines.reduce((s, l) => s + (l.line_total ?? 0), 0))}
+          {formatAmount(lines.reduce((s, l) => s + (l.line_total ?? 0), 0), { currencyCode: currencyCode || baseCurrency?.code })}
         </span>
       </div>
     </div>

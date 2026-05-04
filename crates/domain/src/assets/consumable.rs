@@ -1,4 +1,4 @@
-use uuid::Uuid;
+﻿use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use crate::shared::Money;
@@ -96,7 +96,7 @@ mod tests {
             "C1".to_string(),
             "Paper".to_string(),
             Uuid::new_v4(),
-            Money::new(Decimal::from(10), Currency::USD),
+            Money::new(Decimal::from(10), Currency::usd()),
             Decimal::ONE,
             Uuid::new_v4(),
             Uuid::new_v4(),

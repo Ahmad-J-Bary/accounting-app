@@ -1,4 +1,4 @@
-use application::errors::AppError;
+﻿use application::errors::AppError;
 use domain::suppliers::Supplier;
 use domain::shared::{AccountId, Currency};
 use rust_decimal::Decimal;
@@ -9,12 +9,12 @@ use super::models::SupplierRow;
 
 pub fn row_to_supplier(row: SupplierRow) -> Result<Supplier, AppError> {
     let currency = match row.currency.as_str() {
-        "USD" => Currency::USD,
-        _ => Currency::SYP,
+        "USD" => Currency::usd(),
+        _ => Currency::syp(),
     };
 
     Ok(Supplier {
-        id: row.id.parse().map_err(|e| AppError::Infrastructure(format!("معرف المورد غير صالح: {}", e)))?,
+        id: row.id.parse().map_err(|e| AppError::Infrastructure(format!("Ù…Ø¹Ø±Ù Ø§Ù„Ù…ÙˆØ±Ø¯ ØºÙŠØ± ØµØ§Ù„Ø­: {}", e)))?,
         code: row.code,
         name: row.name,
         phone: row.phone,

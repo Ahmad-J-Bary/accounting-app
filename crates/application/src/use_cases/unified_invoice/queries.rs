@@ -9,6 +9,7 @@ use crate::ports::supplier_repository::SupplierRepository;
 use crate::ports::category_repository::CategoryRepository;
 use crate::dto::invoice_dto::{InvoiceDto};
 use crate::errors::AppError;
+use rust_decimal::Decimal;
 
 pub struct InvoiceQueries {
     repo: Arc<dyn UnifiedInvoiceRepository>,
@@ -91,6 +92,25 @@ impl InvoiceQueries {
                 }
             }
         }
+
+        if dto.invoice_type == "Sales" {
+            let mut total_profit = Decimal::ZERO;
+            for line in &dto.lines {
+                let q = Decimal::from_str(&line.quantity).unwrap_or(Decimal::ZERO);
+                let sp = Decimal::from_str(&line.unit_price).unwrap_or(Decimal::ZERO);
+                let cp = line.purchase_price.as_ref().and_then(|p| Decimal::from_str(p).ok()).unwrap_or(Decimal::ZERO);
+                total_profit += (sp - cp) * q;
+            }
+            let net = Decimal::from_str(&dto.total_amount).unwrap_or(Decimal::ZERO);
+            dto.total_profit = Some(total_profit.to_string());
+            if net > Decimal::ZERO {
+                let percent = (total_profit / net) * Decimal::from(100);
+                dto.profit_percent = Some(percent.round_dp(1).to_string());
+            } else {
+                dto.profit_percent = Some("0".to_string());
+            }
+        }
+
         Ok(dto)
     }
 

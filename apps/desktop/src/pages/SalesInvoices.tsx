@@ -4,13 +4,17 @@ import { useTabs } from "@/context/TabContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, RefreshCw, Search, Eye, Send, Printer, MoreHorizontal } from "lucide-react";
+import { Plus, RefreshCw, Search, Eye, Send, Printer, MoreHorizontal, SlidersHorizontal } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 import { invoiceService } from "@/services/invoiceService";
 import { customerService } from "@/services/customerService";
+import { currencyService, type Currency } from "@/services/currencyService";
 import type { InvoiceDto, CustomerDto } from "@erp/shared-types";
 import { toast } from "sonner";
+import { useColumnPreferences } from "@/hooks/useColumnPreferences";
+import { Settings2 } from "lucide-react";
+import { useCurrencyContext } from "@/context/CurrencyContext";
 
 // Document components
 import { DocumentShell } from "@/components/erp/document/DocumentShell";
@@ -37,6 +41,8 @@ interface EditorState {
   status: string;
   id?: string;
   paid_amount?: string;
+  currency_code: string;
+  exchange_rate: string;
 }
 
 function defaultEditor(): EditorState {
@@ -53,6 +59,8 @@ function defaultEditor(): EditorState {
     lines: [],
     status: "Draft",
     paid_amount: "0",
+    currency_code: "USD",
+    exchange_rate: "1",
   };
 }
 
@@ -65,12 +73,31 @@ export default function SalesInvoices() {
   const [view, setView] = useState<ViewMode>("list");
   const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
   const [customers, setCustomers] = useState<CustomerDto[]>([]);
+  const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [posting, setPosting] = useState(false);
   const [reopening, setReopening] = useState(false);
   const [editor, setEditor] = useState<EditorState>(defaultEditor());
   const [search, setSearch] = useState("");
+  const { baseCurrency, getLatestRate, formatAmount, formatMonetaryAmount, hasTodayRate } = useCurrencyContext();
+
+  const availableColumns = [
+    { id: "material_name", label: "المادة" },
+    { id: "quantity", label: "الكمية" },
+    { id: "unit_price", label: "سعر البيع" },
+    { id: "unit_price_usd", label: "سعر البيع ($)" },
+    { id: "purchase_price", label: "تكلفة المرجع" },
+    { id: "purchase_price_usd", label: "تكلفة المرجع ($)" },
+    { id: "profit_amount", label: "الربح" },
+    { id: "profit_amount_usd", label: "الربح ($)" },
+    { id: "profit_percent", label: "الربح %" },
+    { id: "line_total", label: "الإجمالي" },
+    { id: "notes", label: "ملاحظات" },
+  ];
+
+  const defaultVisibleCols = ["material_name", "quantity", "unit_price", "purchase_price", "profit_amount", "line_total"];
+  const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences("sales_invoice", defaultVisibleCols);
 
   const isNew = location.pathname.includes("/new");
 
@@ -100,6 +127,8 @@ export default function SalesInvoices() {
               line_total: parseFloat(l.quantity) * parseFloat(l.unit_price),
             })),
             status: inv.status,
+            currency_code: inv.currency_code || "USD",
+            exchange_rate: inv.exchange_rate || "1",
           });
           setView("editor");
         } catch {
@@ -115,12 +144,14 @@ export default function SalesInvoices() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [invData, custData] = await Promise.all([
+      const [invData, custData, currData] = await Promise.all([
         invoiceService.listInvoicesByType("Sales"),
         customerService.listCustomers(),
+        currencyService.listCurrencies(),
       ]);
       setInvoices(invData);
       setCustomers(custData);
+      setCurrencies(currData);
     } catch {
       toast.error("فشل تحميل البيانات");
     } finally {
@@ -129,6 +160,26 @@ export default function SalesInvoices() {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Handle currency change and fetch rates
+  useEffect(() => {
+    if (!baseCurrency) return;
+    if (editor.currency_code === baseCurrency.code) {
+      setEditor((prev) => ({ ...prev, exchange_rate: "1" }));
+      return;
+    }
+
+    let cancelled = false;
+    void getLatestRate(editor.currency_code).then((value) => {
+      if (cancelled || !value) return;
+      setEditor((prev) => ({ ...prev, exchange_rate: value }));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editor.currency_code, baseCurrency, getLatestRate]);
+
 
   const filteredInvoices = useMemo(() =>
     invoices.filter(inv =>
@@ -153,6 +204,27 @@ export default function SalesInvoices() {
     paid = 0; // credit
   }
 
+  const totalProfit = editor.lines.reduce((acc, l) => {
+    const q = parseFloat(l.quantity) || 0;
+    const sp = parseFloat(l.unit_price) || 0;
+    const cp = parseFloat(l.purchase_price || "0") || 0;
+    return acc + (sp - cp) * q;
+  }, 0);
+
+  const profitPercent = net > 0 ? (totalProfit / net) * 100 : 0;
+  const baseCode = baseCurrency?.code ?? "USD";
+  const exchangeRateNum = Math.max(parseFloat(editor.exchange_rate || "1") || 1, 1e-9);
+  const isForeignDoc = editor.currency_code !== baseCode;
+
+  // Totals in document currency
+  const totalInDoc = net;
+  const paidInDoc = paid;
+
+  // Totals in base currency (for accounting)
+  const totalInBase = isForeignDoc ? net / exchangeRateNum : net;
+  const paidInBase = isForeignDoc ? paid / exchangeRateNum : paid;
+  const profitInBase = isForeignDoc ? totalProfit / exchangeRateNum : totalProfit;
+
   const handleCreate = () => {
     const uniqueId = `/sales-invoices/new-${Date.now()}`;
     openTab({ 
@@ -175,6 +247,10 @@ export default function SalesInvoices() {
   const handleSave = async () => {
     if (editor.lines.length === 0) {
       toast.error("يجب إضافة صنف واحد على الأقل");
+      return;
+    }
+    if (editor.currency_code !== baseCode && !hasTodayRate(editor.currency_code)) {
+      toast.error("لا يوجد سعر صرف محدث لليوم لهذه العملة");
       return;
     }
     setSaving(true);
@@ -207,6 +283,8 @@ export default function SalesInvoices() {
         payment_method: paymentMethodMap[editor.payment_method] || "Cash",
         amount_paid: editor.payment_method === "cash" ? totalNet.toString() : (editor.payment_method === "partial" ? editor.paid_amount || "0" : "0"),
         issued_at: new Date(editor.issued_at).toISOString(),
+        currency_code: editor.currency_code,
+        exchange_rate: editor.exchange_rate,
         notes: editor.notes || undefined,
       };
 
@@ -285,6 +363,10 @@ export default function SalesInvoices() {
       toast.error("يجب إضافة صنف واحد على الأقل");
       return;
     }
+    if (editor.currency_code !== baseCode && !hasTodayRate(editor.currency_code)) {
+      toast.error("لا يوجد سعر صرف محدث لليوم لهذه العملة");
+      return;
+    }
     setSaving(true);
     try {
       const backendLines = toBackendLines(editor.lines);
@@ -309,6 +391,8 @@ export default function SalesInvoices() {
         payment_method: paymentMethodMap[editor.payment_method] || "Cash",
         amount_paid: editor.payment_method === "cash" ? totalNet.toString() : (editor.payment_method === "partial" ? editor.paid_amount || "0" : "0"),
         issued_at: new Date(editor.issued_at).toISOString(),
+        currency_code: editor.currency_code,
+        exchange_rate: editor.exchange_rate,
         notes: editor.notes || undefined,
       };
 
@@ -371,6 +455,29 @@ export default function SalesInvoices() {
         onReopen={handleReopen}
         onClose={() => closeTab(activeTabId)}
         onRefresh={loadData}
+        extraActions={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600" title="إعدادات الأعمدة">
+                <Settings2 className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[200px]">
+              <DropdownMenuLabel className="text-right">الأعمدة الظاهرة</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {availableColumns.map((col) => (
+                <DropdownMenuCheckboxItem
+                  key={col.id}
+                  checked={isVisible(col.id)}
+                  onCheckedChange={() => toggleColumn(col.id)}
+                  className="text-right flex-row-reverse gap-2"
+                >
+                  {col.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
         summaryPanel={
           <div className="space-y-4">
             <InvoicePartySelector
@@ -393,6 +500,38 @@ export default function SalesInvoices() {
                 invoiceType="Sales"
             >
                 <div className="space-y-3">
+                    {/* Profit Card — detailed breakdown */}
+                    {totalProfit !== 0 || subtotal > 0 ? (
+                      <div className={`border rounded-lg p-2.5 mb-2 ${totalProfit >= 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'}`}>
+                        <div className="flex justify-between items-center mb-2">
+                          <span className={`text-[10px] font-bold uppercase ${totalProfit >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                            الربح التقديري
+                          </span>
+                          <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${totalProfit >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                            {profitPercent.toFixed(1)}٪
+                          </span>
+                        </div>
+                        <div className={`text-xl font-black tabular-nums mb-1 ${totalProfit >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                          {formatAmount(totalProfit, { currencyCode: editor.currency_code })}
+                        </div>
+                        {isForeignDoc && (
+                          <div className="text-[10px] text-slate-400 font-mono mb-2">
+                            ≈ {formatAmount(profitInBase)}
+                          </div>
+                        )}
+                        <div className="space-y-1 border-t border-dashed border-current border-opacity-20 pt-2">
+                          <div className="flex justify-between text-[10px]">
+                            <span className="text-slate-500">إجمالي تكلفة المرجع</span>
+                            <span className="font-semibold tabular-nums text-slate-600">{formatCurrency(editor.lines.reduce((a,l) => a + (parseFloat(l.purchase_price||'0')||0) * (parseFloat(l.quantity)||0), 0))}</span>
+                          </div>
+                          <div className="flex justify-between text-[10px]">
+                            <span className="text-slate-500">إجمالي سعر البيع</span>
+                            <span className="font-semibold tabular-nums text-slate-600">{formatCurrency(subtotal)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+
                     <div>
                         <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">طريقة التحصيل</label>
                         <select
@@ -407,6 +546,34 @@ export default function SalesInvoices() {
                         </select>
                     </div>
 
+                    <div className="pt-2 border-t border-slate-100">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">العملة</label>
+                        <select
+                            value={editor.currency_code}
+                            onChange={e => {
+                                const code = e.target.value;
+                                setEditor(ed => ({ ...ed, currency_code: code }));
+                            }}
+                            className="w-full h-8 text-[11px] border border-slate-200 rounded-md px-2 bg-white font-bold mb-2"
+                        >
+                            {currencies.map(c => (
+                                <option key={c.code} value={c.code}>{c.name_ar} ({c.code})</option>
+                            ))}
+                        </select>
+                        
+                        {editor.currency_code !== baseCode && (
+                            <div className="space-y-1 animate-in slide-in-from-top-1 duration-200">
+                                <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-tight">سعر الصرف (مقابل {baseCode})</label>
+                                <Input
+                                    type="number"
+                                    value={editor.exchange_rate}
+                                    onChange={e => setEditor(ed => ({ ...ed, exchange_rate: e.target.value }))}
+                                    className="h-7 text-[11px] font-mono bg-slate-50 border-slate-200 text-left"
+                                />
+                            </div>
+                        )}
+                    </div>
+
                     {editor.payment_method === "partial" && (
                         <div>
                             <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">المبلغ المحصل</label>
@@ -418,6 +585,21 @@ export default function SalesInvoices() {
                             />
                         </div>
                     )}
+                    <div className="rounded-lg border border-blue-100 bg-blue-50 p-2.5 text-[11px] space-y-1">
+                      <div className="font-bold text-blue-700">القيمة الأصلية والمحوّلة</div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">الصافي ({editor.currency_code})</span>
+                        <span className="font-semibold tabular-nums">{formatAmount(net, { currencyCode: editor.currency_code })}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">الصافي ({baseCode})</span>
+                        <span className="font-semibold tabular-nums">{formatAmount(totalInBase)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">المدفوع ({baseCode})</span>
+                        <span className="font-semibold tabular-nums">{formatAmount(paidInBase)}</span>
+                      </div>
+                    </div>
                 </div>
             </SummaryPanel>
           </div>
@@ -466,6 +648,9 @@ export default function SalesInvoices() {
             lines={editor.lines}
             onChange={lines => setEditor(ed => ({ ...ed, lines }))}
             disabled={editor.status === "Posted"}
+            visibleColumns={visibleColumns}
+            currencyCode={editor.currency_code}
+            exchangeRate={editor.exchange_rate}
           />
         </Card>
       </DocumentShell>
@@ -531,6 +716,7 @@ export default function SalesInvoices() {
                 <th className="px-4 py-2.5 text-right text-xs font-bold text-slate-500">التاريخ</th>
                 <th className="px-4 py-2.5 text-right text-xs font-bold text-slate-500">العميل</th>
                 <th className="px-4 py-2.5 text-left text-xs font-bold text-slate-500">الإجمالي</th>
+                <th className="px-4 py-2.5 text-left text-xs font-bold text-blue-600">الربح</th>
                 <th className="px-4 py-2.5 text-center text-xs font-bold text-slate-500">الحالة</th>
                 <th className="px-4 py-2.5 w-10"></th>
               </tr>
@@ -563,7 +749,12 @@ export default function SalesInvoices() {
                     <td className="px-4 py-2.5 text-slate-500 text-xs">{formatDate(inv.issued_at)}</td>
                     <td className="px-4 py-2.5 font-medium text-slate-800">{inv.customer_name || "زبون نقدي"}</td>
                     <td className="px-4 py-2.5 text-left font-black tabular-nums text-slate-900">
-                      {formatCurrency(parseFloat(inv.total_amount))}
+                      <div>{formatMonetaryAmount(inv.total_amount_v2 || inv.total_amount, "both")}</div>
+                    </td>
+                    <td className="px-4 py-2.5 text-left font-bold tabular-nums text-blue-700">
+                      {inv.total_profit ? (
+                        <div>{formatMonetaryAmount(inv.total_profit, "both")}</div>
+                      ) : "---"}
                     </td>
                     <td className="px-4 py-2.5 text-center">
                       <DocumentStatusBadge status={inv.status} />

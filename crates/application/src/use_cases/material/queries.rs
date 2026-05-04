@@ -1,20 +1,23 @@
 use std::sync::Arc;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
+use crate::ports::unified_invoice_repository::UnifiedInvoiceRepository;
 use crate::dto::material_dto::{MaterialDto};
 use crate::errors::AppError;
 
 pub struct MaterialQueries {
     repo: Arc<dyn MaterialRepository>,
     movement_repo: Arc<dyn StockMovementRepository>,
+    invoice_repo: Arc<dyn UnifiedInvoiceRepository>,
 }
 
 impl MaterialQueries {
     pub fn new(
         repo: Arc<dyn MaterialRepository>,
         movement_repo: Arc<dyn StockMovementRepository>,
+        invoice_repo: Arc<dyn UnifiedInvoiceRepository>,
     ) -> Self {
-        Self { repo, movement_repo }
+        Self { repo, movement_repo, invoice_repo }
     }
 
     pub async fn list_all(&self) -> Result<Vec<MaterialDto>, AppError> {
@@ -29,8 +32,16 @@ impl MaterialQueries {
             dto.total_available = summary.total_available.to_string();
             dto.total_damaged = summary.total_damaged.to_string();
             dto.last_purchase_price = summary.last_purchase_price.to_string();
+            dto.last_purchase_price_base = summary.last_purchase_price_base.to_string();
             dto.last_sale_price = summary.last_sale_price.to_string();
+            dto.last_sale_price_base = summary.last_sale_price_base.to_string();
             dto.average_cost = summary.average_cost.to_string();
+            dto.average_cost_base = summary.average_cost_base.to_string();
+
+            let (last_p_usd, last_s_usd) = self.invoice_repo.get_last_usd_prices(&mid.to_string()).await?;
+            dto.last_purchase_price_usd = last_p_usd;
+            dto.last_sale_price_usd = last_s_usd;
+
             dtos.push(dto);
         }
         Ok(dtos)
@@ -48,8 +59,16 @@ impl MaterialQueries {
         dto.total_available = summary.total_available.to_string();
         dto.total_damaged = summary.total_damaged.to_string();
         dto.last_purchase_price = summary.last_purchase_price.to_string();
+        dto.last_purchase_price_base = summary.last_purchase_price_base.to_string();
         dto.last_sale_price = summary.last_sale_price.to_string();
+        dto.last_sale_price_base = summary.last_sale_price_base.to_string();
         dto.average_cost = summary.average_cost.to_string();
+        dto.average_cost_base = summary.average_cost_base.to_string();
+
+        let (last_p_usd, last_s_usd) = self.invoice_repo.get_last_usd_prices(&mid.to_string()).await?;
+        dto.last_purchase_price_usd = last_p_usd;
+        dto.last_sale_price_usd = last_s_usd;
+
         Ok(dto)
     }
 }

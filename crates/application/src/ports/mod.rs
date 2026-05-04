@@ -20,3 +20,5 @@ pub mod asset_repository;
 pub mod consumable_repository;
 pub mod partner_repository;
 pub mod unified_invoice_repository;
+pub mod currency_repository;
+pub mod exchange_rate_repository;

@@ -14,7 +14,11 @@ export interface StockMovementDetailDto {
   movement_type_label: string;
   quantity: string;
   unit_cost: string;
+  unit_cost_base: string;
   total_cost: string;
+  total_cost_base: string;
+  currency?: string;
+  fx_rate: string;
   reference: string;
   notes: string;
   movement_date: string;
@@ -40,8 +44,13 @@ export interface MaterialDto {
   total_available: string;
   total_damaged: string;
   last_purchase_price: string;
+  last_purchase_price_base: string;
+  last_purchase_price_usd: string;
   last_sale_price: string;
+  last_sale_price_base: string;
+  last_sale_price_usd: string;
   average_cost: string;
+  average_cost_base: string;
   units: MaterialUnitDto[];
 }
 

@@ -30,6 +30,8 @@ async fn enrich_invoice(
     let status = format!("{:?}", inv.status);
     let invoice_date = inv.invoice_date.to_rfc3339();
     let due_date = inv.due_date.map(|d| d.to_rfc3339());
+    let currency_code = inv.currency_code.clone();
+    let exchange_rate = inv.exchange_rate.to_string();
     let notes = inv.notes.clone();
     let created_at = inv.created_at.to_rfc3339();
     let updated_at = inv.updated_at.to_rfc3339();
@@ -71,6 +73,8 @@ async fn enrich_invoice(
         status,
         invoice_date,
         due_date,
+        currency_code,
+        exchange_rate,
         notes,
         created_at,
         updated_at,
@@ -105,11 +109,16 @@ impl CreatePurchaseInvoiceUseCase {
                 .map(|dt| dt.with_timezone(&chrono::Utc))
         }).transpose().map_err(|_| AppError::Invalid("تاريخ الاستحقاق غير صالح".into()))?;
 
+        let currency_code = req.currency_code.clone();
+        let exchange_rate = crate::utils::parse_decimal(Some(&req.exchange_rate), "سعر الصرف")?;
+
         let mut invoice = PurchaseInvoice::new(
             req.invoice_number,
             supplier_id,
             invoice_date,
             due_date,
+            currency_code,
+            exchange_rate,
             req.notes,
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
 

@@ -27,6 +27,8 @@ pub struct PurchaseInvoiceDto {
     pub status: String,
     pub invoice_date: String,
     pub due_date: Option<String>,
+    pub currency_code: String,
+    pub exchange_rate: String,
     pub notes: Option<String>,
     pub created_at: String,
     pub updated_at: String,
@@ -49,5 +51,7 @@ pub struct CreatePurchaseInvoiceRequest {
     pub discount_amount: Option<String>,
     pub invoice_date: String,
     pub due_date: Option<String>,
+    pub currency_code: String,
+    pub exchange_rate: String,
     pub notes: Option<String>,
 }

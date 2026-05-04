@@ -1,13 +1,13 @@
 import { useMemo } from "react";
-import { useTabs } from "@/context/TabContext";
-import { DataTable, Column } from "@/components/erp/shared/DataTable";
-import { TableActions } from "@/components/erp/shared/TableActions";
-import { StatusBadge } from "@/components/erp/StatusBadge";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Shuffle, Scale, Plus } from "lucide-react";
+import { Plus, Scale, Shuffle, DollarSign, Coins } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MaterialDto, CategoryDto } from "@erp/shared-types";
+import { useCurrencyContext } from "@/context/CurrencyContext";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { DataTable, Column } from "@/components/erp/shared/DataTable";
+import { TableActions } from "@/components/erp/shared/TableActions";
+import { useTabs } from "@/context/TabContext";
 
 interface MaterialTableProps {
   materials: MaterialDto[];
@@ -18,9 +18,13 @@ interface MaterialTableProps {
   onDelete: (id: string, name: string) => void;
   onManageUnits?: (material: MaterialDto) => void;
   visibleColumns: string[];
+  selectedId?: string | null;
+  onRowClick?: (material: MaterialDto) => void;
 }
 
-export function MaterialTable({ materials, categories, loading, search, onEdit, onDelete, onManageUnits, visibleColumns }: MaterialTableProps) {
+export function MaterialTable({ materials, categories, loading, search, onEdit, onDelete, onManageUnits, visibleColumns, selectedId, onRowClick }: MaterialTableProps) {
+  const { formatAmount, baseCurrency } = useCurrencyContext();
+
   const columns = useMemo<Column<MaterialDto>[]>(() => [
     { 
       id: "code",
@@ -132,22 +136,53 @@ export function MaterialTable({ materials, categories, loading, search, onEdit, 
     },
     { 
       id: "average_cost",
-      header: "متوسط التكلفة", 
-      accessor: (m) => parseFloat(m.average_cost).toLocaleString(), 
+      header: (
+        <div className="flex items-center justify-center gap-1">
+          <DollarSign className="w-3 h-3" />
+          <span>متوسط التكلفة ({baseCurrency?.code || "USD"})</span>
+        </div>
+      ), 
+      accessor: (m) => formatAmount(parseFloat(m.average_cost_base), { currencyCode: baseCurrency?.code || "USD" }), 
       align: "center", 
       className: "tabular-nums font-bold text-amber-600" 
     },
     { 
+      id: "average_cost_local",
+      header: (
+        <div className="flex items-center justify-center gap-1">
+          <Coins className="w-3 h-3" />
+          <span>متوسط التكلفة (عرض)</span>
+        </div>
+      ), 
+      accessor: (m) => formatAmount(parseFloat(m.average_cost)), 
+      align: "center", 
+      className: "tabular-nums font-bold text-amber-700 bg-amber-50/30" 
+    },
+    { 
       id: "last_purchase_price",
       header: "آخر شراء", 
-      accessor: (m) => parseFloat(m.last_purchase_price).toLocaleString(), 
+      accessor: (m) => (
+        <div className="flex flex-col items-center gap-0.5">
+          <span className="font-bold">{formatAmount(parseFloat(m.last_purchase_price))}</span>
+          <span className="text-[9px] text-slate-400 font-mono">
+            ≈ {formatAmount(parseFloat(m.last_purchase_price_base), { currencyCode: baseCurrency?.code || "USD" })}
+          </span>
+        </div>
+      ),
       align: "center", 
       className: "tabular-nums text-slate-600" 
     },
     { 
       id: "last_sale_price",
       header: "آخر مبيع", 
-      accessor: (m) => parseFloat(m.last_sale_price).toLocaleString(), 
+      accessor: (m) => (
+        <div className="flex flex-col items-center gap-0.5">
+          <span className="font-bold">{formatAmount(parseFloat(m.last_sale_price))}</span>
+          <span className="text-[9px] text-slate-400 font-mono">
+            ≈ {formatAmount(parseFloat(m.last_sale_price_base), { currencyCode: baseCurrency?.code || "USD" })}
+          </span>
+        </div>
+      ),
       align: "center", 
       className: "tabular-nums text-slate-600" 
     },
@@ -170,7 +205,7 @@ export function MaterialTable({ materials, categories, loading, search, onEdit, 
       align: "left",
       className: "w-24"
     }
-  ], [categories, onEdit, onDelete, onManageUnits]);
+  ], [categories, onEdit, onDelete, onManageUnits, formatAmount, baseCurrency?.code]);
 
   const filteredColumns = useMemo(() => {
     return columns.filter(col => {
@@ -187,11 +222,8 @@ export function MaterialTable({ materials, categories, loading, search, onEdit, 
       data={materials}
       columns={filteredColumns}
       loading={loading}
-      onRowClick={(m) => openTab({
-        id: `material-${m.id}`,
-        title: `بطاقة: ${m.name}`,
-        path: `/materials/${m.id}`
-      })}
+      onRowClick={onRowClick}
+      selectedId={selectedId}
       emptyMessage={search ? "لا توجد مواد تطابق معايير البحث" : "قائمة المواد فارغة، ابدأ بإضافة مواد جديدة"}
     />
   );

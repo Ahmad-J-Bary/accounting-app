@@ -87,8 +87,8 @@ impl UpdateAccountUseCase {
                     let debit = cmd.debit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(customer.debit);
                     let credit = cmd.credit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(customer.credit);
                     let currency = cmd.currency.as_deref()
-                        .map(|s| if s == "USD" { Currency::USD } else { Currency::SYP })
-                        .unwrap_or(customer.currency);
+                        .map(|s| if s == "USD" { Currency::usd() } else { Currency::syp() })
+                        .unwrap_or(customer.currency.clone());
 
                     let _ = customer.update_info(
                         account.name_ar.clone(),
@@ -114,8 +114,8 @@ impl UpdateAccountUseCase {
                     let debit = cmd.debit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(supplier.debit);
                     let credit = cmd.credit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(supplier.credit);
                     let currency = cmd.currency.as_deref()
-                        .map(|s| if s == "USD" { Currency::USD } else { Currency::SYP })
-                        .unwrap_or(supplier.currency);
+                        .map(|s| if s == "USD" { Currency::usd() } else { Currency::syp() })
+                        .unwrap_or(supplier.currency.clone());
 
                     let _ = supplier.update_info(
                         account.name_ar.clone(),

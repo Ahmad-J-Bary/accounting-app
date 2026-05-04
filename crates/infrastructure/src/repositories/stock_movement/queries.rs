@@ -9,7 +9,7 @@ use super::mappers::row_to_movement;
 
 pub async fn find_by_id(pool: &SqlitePool, id: &StockMovementId) -> Result<Option<StockMovement>, AppError> {
     let row = sqlx::query_as::<_, StockMovementRow>(
-        "SELECT id, material_id, quantity, unit_cost, total_cost, movement_type, reason, reference, movement_date, created_at FROM stock_movements WHERE id = ?"
+        "SELECT id, material_id, quantity, unit_cost, unit_cost_base, total_cost, total_cost_base, original_currency, fx_rate, movement_type, reason, reference, movement_date, created_at FROM stock_movements WHERE id = ?"
     )
     .bind(id.to_string())
     .fetch_optional(pool)
@@ -20,7 +20,7 @@ pub async fn find_by_id(pool: &SqlitePool, id: &StockMovementId) -> Result<Optio
 }
 
 pub async fn list_all(pool: &SqlitePool) -> Result<Vec<StockMovement>, AppError> {
-    let rows = sqlx::query_as::<_, StockMovementRow>("SELECT id, material_id, quantity, unit_cost, total_cost, movement_type, reason, reference, movement_date, created_at FROM stock_movements ORDER BY movement_date DESC")
+    let rows = sqlx::query_as::<_, StockMovementRow>("SELECT id, material_id, quantity, unit_cost, unit_cost_base, total_cost, total_cost_base, original_currency, fx_rate, movement_type, reason, reference, movement_date, created_at FROM stock_movements ORDER BY movement_date DESC")
         .fetch_all(pool)
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
@@ -30,7 +30,7 @@ pub async fn list_all(pool: &SqlitePool) -> Result<Vec<StockMovement>, AppError>
 
 pub async fn list_by_material(pool: &SqlitePool, material_id: &MaterialId) -> Result<Vec<StockMovement>, AppError> {
     let rows = sqlx::query_as::<_, StockMovementRow>(
-        "SELECT id, material_id, quantity, unit_cost, total_cost, movement_type, reason, reference, movement_date, created_at FROM stock_movements WHERE material_id = ? ORDER BY movement_date DESC"
+        "SELECT id, material_id, quantity, unit_cost, unit_cost_base, total_cost, total_cost_base, original_currency, fx_rate, movement_type, reason, reference, movement_date, created_at FROM stock_movements WHERE material_id = ? ORDER BY movement_date DESC"
     )
     .bind(material_id.to_string())
     .fetch_all(pool)
@@ -61,9 +61,12 @@ pub async fn get_material_summary(pool: &SqlitePool, material_id: &MaterialId) -
     let mut total_damaged = Decimal::ZERO;
     let mut total_available = Decimal::ZERO;
     let mut total_inflow_cost = Decimal::ZERO;
+    let mut total_inflow_cost_base = Decimal::ZERO;
     
     let mut last_purchase_price = Decimal::ZERO;
+    let mut last_purchase_price_base = Decimal::ZERO;
     let mut last_sale_price = Decimal::ZERO;
+    let mut last_sale_price_base = Decimal::ZERO;
 
     // movements are ordered by date DESC
     let mut found_last_purchase = false;
@@ -74,9 +77,15 @@ pub async fn get_material_summary(pool: &SqlitePool, material_id: &MaterialId) -
             total_available += m.quantity;
             total_received += m.quantity;
             total_inflow_cost += m.total_cost;
+            total_inflow_cost_base += m.total_cost_base;
             
-            if !found_last_purchase && (matches!(m.movement_type, domain::inventory::stock_movement::MovementType::Purchase) || matches!(m.movement_type, domain::inventory::stock_movement::MovementType::In)) {
+            if !found_last_purchase && (
+                matches!(m.movement_type, domain::inventory::stock_movement::MovementType::Purchase) || 
+                matches!(m.movement_type, domain::inventory::stock_movement::MovementType::In) ||
+                matches!(m.movement_type, domain::inventory::stock_movement::MovementType::OpeningBalance)
+            ) {
                 last_purchase_price = m.unit_cost;
+                last_purchase_price_base = m.unit_cost_base;
                 found_last_purchase = true;
             }
         } else if m.is_outflow() {
@@ -86,6 +95,7 @@ pub async fn get_material_summary(pool: &SqlitePool, material_id: &MaterialId) -
                 total_sold += m.quantity;
                 if !found_last_sale {
                     last_sale_price = m.unit_cost;
+                    last_sale_price_base = m.unit_cost_base;
                     found_last_sale = true;
                 }
             } else if matches!(m.movement_type, domain::inventory::stock_movement::MovementType::Damaged) {
@@ -100,26 +110,39 @@ pub async fn get_material_summary(pool: &SqlitePool, material_id: &MaterialId) -
         Decimal::ZERO
     };
 
+    let average_cost_base = if total_received > Decimal::ZERO {
+        total_inflow_cost_base / total_received
+    } else {
+        Decimal::ZERO
+    };
+
     Ok(application::ports::stock_movement_repository::MaterialInventorySummary {
         total_received,
         total_sold,
         total_available,
         total_damaged,
         last_purchase_price,
+        last_purchase_price_base,
         last_sale_price,
+        last_sale_price_base,
         average_cost,
+        average_cost_base,
     })
 }
 
 // Row struct for the enriched detail query (JOINed with invoices + parties)
 #[derive(sqlx::FromRow)]
-struct MovementDetailRow {
+pub struct MovementDetailRow {
     pub id: String,
     pub material_id: String,
     pub movement_type: String,
     pub quantity: String,
     pub unit_cost: String,
+    pub unit_cost_base: String,
     pub total_cost: String,
+    pub total_cost_base: String,
+    pub original_currency: Option<String>,
+    pub fx_rate: String,
     pub reference: Option<String>,
     pub reason: Option<String>,
     pub movement_date: String,
@@ -162,7 +185,11 @@ pub async fn list_detailed_by_material(
             sm.movement_type,
             sm.quantity,
             sm.unit_cost,
+            sm.unit_cost_base,
             sm.total_cost,
+            sm.total_cost_base,
+            sm.original_currency,
+            sm.fx_rate,
             sm.reference,
             sm.reason,
             sm.movement_date,
@@ -210,7 +237,11 @@ pub async fn list_detailed_by_material(
             movement_type_label: label,
             quantity: qty.to_string(),
             unit_cost: row.unit_cost,
+            unit_cost_base: row.unit_cost_base,
             total_cost: row.total_cost,
+            total_cost_base: row.total_cost_base,
+            currency: row.original_currency,
+            fx_rate: row.fx_rate,
             reference: ref_str,
             notes: row.reason.unwrap_or_default(),
             movement_date: row.movement_date,

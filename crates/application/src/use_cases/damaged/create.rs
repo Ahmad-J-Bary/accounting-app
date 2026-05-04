@@ -11,6 +11,7 @@ use domain::inventory::stock_movement::{MovementType, StockMovement};
 use domain::inventory::DamagedItem;
 use domain::shared::currency::Currency;
 use domain::shared::ids::MaterialId;
+use domain::shared::monetary_amount::MonetaryAmount;
 use domain::shared::money::Money;
 use rust_decimal::Decimal;
 use std::sync::Arc;
@@ -44,20 +45,20 @@ impl CreateDamagedItemUseCase {
         let material_id = req
             .material_id
             .parse::<MaterialId>()
-            .map_err(|_| AppError::Invalid("معرف المادة غير صالح".into()))?;
+            .map_err(|_| AppError::Invalid("Ù…Ø¹Ø±Ù Ø§Ù„Ù…Ø§Ø¯Ø© ØºÙŠØ± ØµØ§Ù„Ø­".into()))?;
 
         let material = self
             .material_repo
             .find_by_id(&material_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("المادة غير موجودة".into()))?;
+            .ok_or_else(|| AppError::NotFound("Ø§Ù„Ù…Ø§Ø¯Ø© ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯Ø©".into()))?;
 
         let quantity = Decimal::try_from(req.quantity)
-            .map_err(|_| AppError::Invalid("الكمية غير صالحة".into()))?;
+            .map_err(|_| AppError::Invalid("Ø§Ù„ÙƒÙ…ÙŠØ© ØºÙŠØ± ØµØ§Ù„Ø­Ø©".into()))?;
         let cost_impact = Decimal::try_from(req.cost_impact)
-            .map_err(|_| AppError::Invalid("قيمة التكلفة غير صالحة".into()))?;
+            .map_err(|_| AppError::Invalid("Ù‚ÙŠÙ…Ø© Ø§Ù„ØªÙƒÙ„ÙØ© ØºÙŠØ± ØµØ§Ù„Ø­Ø©".into()))?;
         let damage_date = DateTime::parse_from_rfc3339(&req.damage_date)
-            .map_err(|_| AppError::Invalid("التاريخ غير صالح".into()))?
+            .map_err(|_| AppError::Invalid("Ø§Ù„ØªØ§Ø±ÙŠØ® ØºÙŠØ± ØµØ§Ù„Ø­".into()))?
             .with_timezone(&Utc);
 
         let item = DamagedItem::new(
@@ -71,7 +72,11 @@ impl CreateDamagedItemUseCase {
         .map_err(|e| AppError::Invalid(e.to_string()))?;
         self.repo.save(&item).await?;
 
-        let unit_cost = if quantity > Decimal::ZERO { cost_impact / quantity } else { Decimal::ZERO };
+        let unit_cost = if quantity > Decimal::ZERO {
+            cost_impact / quantity
+        } else {
+            Decimal::ZERO
+        };
         let movement = StockMovement::new(
             material_id.clone(),
             MovementType::Damaged,
@@ -86,32 +91,28 @@ impl CreateDamagedItemUseCase {
         self.movement_repo.save(&movement).await?;
 
         if cost_impact > Decimal::ZERO {
-            let loss_account = self
-                .account_repo
-                .find_by_code("43")
-                .await?
-                .ok_or_else(|| AppError::NotFound("حساب مصاريف أخرى (43) غير موجود".into()))?;
-            let inventory_account = self
-                .account_repo
-                .find_by_code("1204")
-                .await?
-                .ok_or_else(|| AppError::NotFound("حساب المخزون (1204) غير موجود".into()))?;
+            let loss_account = self.account_repo.find_by_code("43").await?.ok_or_else(|| {
+                AppError::NotFound("Ø­Ø³Ø§Ø¨ Ù…ØµØ§Ø±ÙŠÙ Ø£Ø®Ø±Ù‰ (43) ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯".into())
+            })?;
+            let inventory_account =
+                self.account_repo
+                    .find_by_code("1204")
+                    .await?
+                    .ok_or_else(|| {
+                        AppError::NotFound("Ø­Ø³Ø§Ø¨ Ø§Ù„Ù…Ø®Ø²ÙˆÙ† (1204) ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯".into())
+                    })?;
 
             let lines = vec![
                 JournalLine::new(
                     loss_account.id.clone(),
-                    Currency::SYP,
-                    Decimal::ONE,
-                    Money::syp(cost_impact),
-                    Money::zero(),
+                    MonetaryAmount::new(Money::syp(cost_impact), Decimal::ONE),
+                    MonetaryAmount::zero(Currency::syp()),
                     format!("خسارة تلف: {} - {}", material.name, req.reason),
                 ),
                 JournalLine::new(
                     inventory_account.id.clone(),
-                    Currency::SYP,
-                    Decimal::ONE,
-                    Money::zero(),
-                    Money::syp(cost_impact),
+                    MonetaryAmount::zero(Currency::syp()),
+                    MonetaryAmount::new(Money::syp(cost_impact), Decimal::ONE),
                     format!("تخفيض مخزون بسبب تلف: {}", material.name),
                 ),
             ];
@@ -120,7 +121,7 @@ impl CreateDamagedItemUseCase {
                 format!("JE-DAM-{}", Utc::now().timestamp()),
                 lines,
                 damage_date,
-                format!("قيد تلف مواد: {} - {}", material.name, req.reason),
+                format!("Ù‚ÙŠØ¯ ØªÙ„Ù Ù…ÙˆØ§Ø¯: {} - {}", material.name, req.reason),
             )
             .map_err(|e| AppError::Invalid(e.to_string()))?;
 

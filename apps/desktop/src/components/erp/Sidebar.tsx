@@ -3,7 +3,7 @@ import { useTabs } from "@/context/TabContext";
 import {
   LayoutDashboard, BookOpen, FileText, Users, Truck, Receipt,
   ShoppingCart, Wallet, Package, Warehouse, AlertTriangle,
-  Factory, ClipboardCheck, BarChart3, Shield, Settings, History, Layers, X, HardDrive, Folders
+  Factory, ClipboardCheck, BarChart3, Shield, Settings, History, Layers, X, HardDrive, Folders, DollarSign
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     title: "التقارير والإدارة",
     items: [
       { to: "/reports", label: "التقارير", icon: BarChart3 },
+      { to: "/currencies", label: "إدارة العملات", icon: DollarSign },
       { to: "/users", label: "المستخدمون والصلاحيات", icon: Shield },
       { to: "/settings", label: "الإعدادات", icon: Settings },
       { to: "/audit-log", label: "سجل النشاط", icon: History },

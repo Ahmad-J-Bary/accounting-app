@@ -18,3 +18,4 @@ pub mod dashboard;
 pub mod partner;
 pub mod unified_invoice;
 pub mod material_code;
+pub mod currency;

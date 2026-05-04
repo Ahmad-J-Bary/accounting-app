@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { FormPanel } from "@/components/erp/shells/FormPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,17 +9,17 @@ import type { PartnerDto, PartnerRequest } from "@/services/partnerService";
 
 interface PartnerFormProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onClose: () => void;
   partner: PartnerDto | null;
   onSave: (payload: PartnerRequest) => Promise<void>;
   saving?: boolean;
 }
 
-export function PartnerForm({ open, onOpenChange, partner, onSave, saving }: PartnerFormProps) {
+export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerFormProps) {
   const [formData, setFormData] = useState({
     code: "",
     name: "",
-    exchangeRate: "500",
+    exchangeRate: "100",
     amount: "0",
     isAmountInUsd: false,
     manualRatio: "",
@@ -39,7 +39,7 @@ export function PartnerForm({ open, onOpenChange, partner, onSave, saving }: Par
       setFormData({
         code: "",
         name: "",
-        exchangeRate: "500",
+        exchangeRate: "100",
         amount: "0",
         isAmountInUsd: false,
         manualRatio: "",
@@ -63,16 +63,22 @@ export function PartnerForm({ open, onOpenChange, partner, onSave, saving }: Par
     });
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md" dir="rtl">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader className="text-right">
-            <DialogTitle>{partner ? "تعديل بيانات الشريك" : "إضافة شريك جديد"}</DialogTitle>
-            <DialogDescription>أدخل بيانات الشريك وحصة رأس المال الابتدائي.</DialogDescription>
-          </DialogHeader>
+  if (!open) return null;
 
-          <div className="space-y-4 py-4">
+  return (
+    <FormPanel
+      title={partner ? "تعديل بيانات الشريك" : "إضافة شريك جديد"}
+      onClose={onClose}
+      onSave={handleSubmit}
+      isSaving={saving}
+      saveDisabled={!formData.name || !formData.amount}
+      saveLabel={partner ? "تحديث البيانات" : "حفظ الشريك"}
+    >
+      <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 mb-2">
+        <p className="text-xs text-blue-800">أدخل بيانات الشريك وحصة رأس المال الابتدائي.</p>
+      </div>
+
+      <div className="space-y-4 text-right">
             <div className="space-y-2">
               <Label>اسم الشريك</Label>
               <Input 
@@ -139,15 +145,6 @@ export function PartnerForm({ open, onOpenChange, partner, onSave, saving }: Par
               </div>
             </div>
           </div>
-
-          <DialogFooter className="gap-2">
-            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>إلغاء</Button>
-            <Button type="submit" disabled={saving} className="flex-1">
-              {saving ? "جاري الحفظ..." : partner ? "تحديث البيانات" : "حفظ الشريك"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    </FormPanel>
   );
 }

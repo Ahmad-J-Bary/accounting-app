@@ -1,4 +1,5 @@
 use crate::shared::money::Money;
+use crate::shared::monetary_amount::MonetaryAmount;
 use crate::shared::MaterialId;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -7,26 +8,32 @@ use serde::{Deserialize, Serialize};
 pub struct InvoiceLine {
     pub material_id: MaterialId,
     pub quantity: Decimal,
-    pub unit_price: Money, // This is the price actually used for the invoice (e.g. Retail price chosen)
-    pub purchase_price: Option<Money>,
-    pub retail_price: Option<Money>,
-    pub wholesale_price: Option<Money>,
-    pub semi_wholesale_price: Option<Money>,
+    pub unit_price: MonetaryAmount, // Encapsulates both original and base
+    pub purchase_price: Option<MonetaryAmount>,
+    pub retail_price: Option<MonetaryAmount>,
+    pub wholesale_price: Option<MonetaryAmount>,
+    pub semi_wholesale_price: Option<MonetaryAmount>,
     pub minimum_stock: Option<Decimal>,
     pub notes: Option<String>,
+    pub unit_price_usd: Option<Money>, // Legacy, keep for now or refactor
+    pub purchase_price_usd: Option<Money>,
+    pub profit_amount_usd: Option<Money>,
 }
 
 impl InvoiceLine {
     pub fn new(
         material_id: MaterialId, 
         quantity: Decimal, 
-        unit_price: Money,
-        purchase_price: Option<Money>,
-        retail_price: Option<Money>,
-        wholesale_price: Option<Money>,
-        semi_wholesale_price: Option<Money>,
+        unit_price: MonetaryAmount,
+        purchase_price: Option<MonetaryAmount>,
+        retail_price: Option<MonetaryAmount>,
+        wholesale_price: Option<MonetaryAmount>,
+        semi_wholesale_price: Option<MonetaryAmount>,
         minimum_stock: Option<Decimal>,
         notes: Option<String>,
+        unit_price_usd: Option<Money>,
+        purchase_price_usd: Option<Money>,
+        profit_amount_usd: Option<Money>,
     ) -> Self {
         Self {
             material_id,
@@ -38,10 +45,13 @@ impl InvoiceLine {
             semi_wholesale_price,
             minimum_stock,
             notes,
+            unit_price_usd,
+            purchase_price_usd,
+            profit_amount_usd,
         }
     }
 
-    pub fn line_total(&self) -> Money {
+    pub fn line_total(&self) -> MonetaryAmount {
         self.unit_price.clone() * self.quantity
     }
 }

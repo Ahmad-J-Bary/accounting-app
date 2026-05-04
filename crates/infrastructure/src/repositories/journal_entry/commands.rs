@@ -30,15 +30,17 @@ pub async fn save(pool: &SqlitePool, entry: &JournalEntry) -> Result<(), AppErro
 
     for line in &entry.lines {
         sqlx::query(
-            "INSERT INTO journal_lines (id, journal_entry_id, account_id, currency, fx_rate, debit, credit, description, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO journal_lines (id, journal_entry_id, account_id, currency, fx_rate, debit, debit_base, credit, credit_base, description, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
         .bind(Uuid::new_v4().to_string())
         .bind(entry.id.0.to_string())
         .bind(line.account_id.0.to_string())
-        .bind(line.currency.code().to_string())
-        .bind(line.fx_rate.to_string())
+        .bind(&line.debit.currency().code)
+        .bind(line.debit.fx_rate.to_string())
         .bind(line.debit.amount().to_string())
+        .bind(line.debit.base_amount.to_string())
         .bind(line.credit.amount().to_string())
+        .bind(line.credit.base_amount.to_string())
         .bind(&line.description)
         .bind(chrono::Utc::now().to_rfc3339())
         .execute(&mut *tx)

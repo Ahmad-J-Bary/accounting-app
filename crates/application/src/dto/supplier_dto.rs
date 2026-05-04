@@ -1,4 +1,4 @@
-use domain::suppliers::Supplier;
+﻿use domain::suppliers::Supplier;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -62,7 +62,7 @@ impl From<Supplier> for SupplierDto {
             credit: supplier.credit.to_string(),
             opening_balance: supplier.opening_balance.to_string(),
             balance: supplier.balance.to_string(),
-            currency: supplier.currency.code().to_string(),
+            currency: supplier.currency.code.clone(),
             notes: supplier.notes,
             is_active: supplier.is_active,
             created_at: supplier.created_at.to_rfc3339(),

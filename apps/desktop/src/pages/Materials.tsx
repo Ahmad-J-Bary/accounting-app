@@ -25,6 +25,8 @@ import { MaterialForm } from "@/components/erp/materials/MaterialForm";
 import { MaterialStats } from "@/components/erp/materials/MaterialStats";
 import { MaterialTable } from "@/components/erp/materials/MaterialTable";
 import { MaterialUnitsManager } from "@/components/erp/materials/MaterialUnitsManager";
+import { MasterDetailLayout } from "@/components/erp/layouts/MasterDetailLayout";
+import { MaterialDetailPanel } from "@/components/erp/materials/MaterialDetailPanel";
 
 export default function Materials() {
   const {
@@ -37,6 +39,8 @@ export default function Materials() {
     isFormOpen,
     setIsFormOpen,
     saving,
+    selectedId,
+    setSelectedId,
     handleOpenAdd,
     handleOpenEdit,
     handleSave,
@@ -63,12 +67,13 @@ export default function Materials() {
     { id: "total_sold", label: "الكمية المباعة" },
     { id: "total_available", label: "الكمية المتوفرة" },
     { id: "total_damaged", label: "التالف" },
-    { id: "average_cost", label: "متوسط التكلفة" },
-    { id: "last_purchase_price", label: "آخر شراء" },
-    { id: "last_sale_price", label: "آخر مبيع" },
+    { id: "average_cost", label: "متوسط التكلفة (USD)" },
+    { id: "average_cost_local", label: "متوسط التكلفة (Display)" },
+    { id: "last_purchase_price", label: "آخر شراء (USD)" },
+    { id: "last_sale_price", label: "آخر مبيع (USD)" },
   ];
 
-  const defaultVisibleColumns = ["code", "barcode", "name", "categories", "units", "total_available", "average_cost"];
+  const defaultVisibleColumns = ["code", "barcode", "name", "categories", "units", "total_available", "average_cost", "average_cost_local"];
 
   const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences("materials", defaultVisibleColumns);
 
@@ -86,37 +91,57 @@ export default function Materials() {
 
   useEffect(() => { loadCategories(); }, [loadCategories]);
 
-  return (
-    <>
-      <PageHeader
-        title="بطاقات المواد"
-        subtitle="تعريف هوية المواد وتصنيفاتها ومتابعة بياناتها"
-        breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "المخزون" }, { label: "بطاقات المواد" }]}
-        actions={
-          <>
-            <Button variant="outline" onClick={() => refresh()} disabled={loading}>
-              <RefreshCw className={cn("w-4 h-4 ml-2", loading && "animate-spin")} />تحديث
-            </Button>
-            <Button onClick={handleOpenAdd}>
-              <Plus className="w-4 h-4 ml-2" /> مادة جديدة
-            </Button>
-          </>
-        }
-      />
+  const selectedMaterial = useMemo(() => materials.find(m => m.id === selectedId) || null, [materials, selectedId]);
 
-      <MaterialStats 
-        totalMaterials={materials.length}
-        totalCategories={categories.length}
-        materialsWithBarcode={materials.filter(m => m.barcode).length}
-      />
+  useEffect(() => {
+    if (selectedId) {
+      setIsFormOpen(false);
+    }
+  }, [selectedId, setIsFormOpen]);
 
-      <Card className="p-5 overflow-hidden">
-        <div className="flex items-center gap-3 mb-6">
+  const handleOpenAddMaterial = () => {
+    setSelectedId(null);
+    handleOpenAdd();
+  };
+
+  const handleEditMaterial = (m: MaterialDto) => {
+    handleOpenEdit(m);
+  };
+
+  const masterContent = (
+    <div className="flex flex-col h-full bg-slate-50 relative p-6">
+      <div className="shrink-0 mb-6">
+        <PageHeader
+          title="بطاقات المواد"
+          subtitle="تعريف هوية المواد وتصنيفاتها ومتابعة بياناتها"
+          breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "المخزون" }, { label: "بطاقات المواد" }]}
+          actions={
+            <>
+              <Button variant="outline" onClick={() => refresh()} disabled={loading} className="bg-white">
+                <RefreshCw className={cn("w-4 h-4 ml-2", loading && "animate-spin")} />تحديث
+              </Button>
+              <Button onClick={handleOpenAddMaterial} className="shadow-sm">
+                <Plus className="w-4 h-4 ml-2" /> مادة جديدة
+              </Button>
+            </>
+          }
+        />
+        <div className="mt-6">
+          <MaterialStats 
+            totalMaterials={materials.length}
+            totalCategories={categories.length}
+            materialsWithBarcode={materials.filter(m => m.barcode).length}
+          />
+        </div>
+      </div>
+
+      <Card className="flex-1 min-h-0 flex flex-col p-0 border-none shadow-sm rounded-xl overflow-hidden bg-white">
+        <div className="flex items-center gap-3 p-4 border-b shrink-0 bg-white">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="بحث بالاسم أو الكود أو الباركود..."
-              className="pr-10 bg-slate-50/50 border-slate-200"
+              className="pr-10 bg-slate-50 border-slate-200"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
@@ -124,7 +149,7 @@ export default function Materials() {
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="shrink-0" title="إعدادات الأعمدة">
+              <Button variant="outline" size="icon" className="bg-white shrink-0" title="إعدادات الأعمدة">
                 <Settings2 className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -144,33 +169,53 @@ export default function Materials() {
           </DropdownMenu>
         </div>
 
-        <MaterialTable 
-          materials={materials}
-          categories={categories}
-          loading={loading}
-          search={search}
-          onEdit={handleOpenEdit}
-          onDelete={handleDelete}
-          onManageUnits={setManagingUnitsMaterial}
-          visibleColumns={visibleColumns}
-        />
+        <div className="flex-1 overflow-auto bg-white relative">
+          <MaterialTable 
+            materials={materials}
+            categories={categories}
+            loading={loading}
+            search={search}
+            onEdit={handleEditMaterial}
+            onDelete={handleDelete}
+            onManageUnits={setManagingUnitsMaterial}
+            visibleColumns={visibleColumns}
+            selectedId={selectedId}
+            onRowClick={(m) => setSelectedId(m.id)}
+          />
+        </div>
       </Card>
+    </div>
+  );
 
-      <MaterialForm 
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        material={editMaterial}
-        categories={categories}
-        onSave={handleSave}
-        saving={saving}
+  const detailContent = isFormOpen ? (
+    <MaterialForm 
+      open={isFormOpen}
+      onClose={() => setIsFormOpen(false)}
+      material={editMaterial}
+      categories={categories}
+      onSave={handleSave}
+      saving={saving}
+    />
+  ) : (
+    <MaterialDetailPanel 
+      material={selectedMaterial}
+      onClose={() => setSelectedId(null)}
+    />
+  );
+
+  return (
+    <div className="absolute inset-0">
+      <MasterDetailLayout 
+        masterContent={masterContent}
+        detailContent={detailContent}
+        isDetailOpen={isFormOpen || !!selectedId}
       />
-
       <MaterialUnitsManager 
         open={!!managingUnitsMaterial}
         onOpenChange={(open) => !open && setManagingUnitsMaterial(null)}
         material={managingUnitsMaterial}
         onUnitsUpdated={refresh}
       />
-    </>
+    </div>
   );
 }

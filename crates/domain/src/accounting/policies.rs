@@ -34,7 +34,7 @@ impl DoubleEntryPolicy {
                     "يجب أن يكون السطر إما مديناً أو دائناً".into(),
                 ));
             }
-            if line.fx_rate <= Decimal::ZERO {
+            if line.debit.fx_rate <= Decimal::ZERO || line.credit.fx_rate <= Decimal::ZERO {
                 return Err(DomainError::Invalid(
                     "سعر الصرف يجب أن يكون أكبر من الصفر".into(),
                 ));
@@ -45,8 +45,13 @@ impl DoubleEntryPolicy {
     }
 }
 
-pub fn validate_journal_entry_balance() -> Result<(), DomainError> {
-    // Placeholder for journal entry balance validation
+pub fn validate_journal_entry_balance(debit: Decimal, credit: Decimal) -> Result<(), DomainError> {
+    if debit != credit {
+        return Err(DomainError::Invalid(format!(
+            "القيد غير متوازن بالقيمة الأساسية (USD). مدين: {} ، دائن: {}",
+            debit, credit
+        )));
+    }
     Ok(())
 }
 

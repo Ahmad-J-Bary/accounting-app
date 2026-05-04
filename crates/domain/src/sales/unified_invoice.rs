@@ -1,10 +1,13 @@
 use crate::shared::errors::DomainError;
 use crate::shared::ids::{InvoiceId, CustomerId, SupplierId};
+use crate::shared::currency::Currency;
 use crate::shared::money::Money;
+use crate::shared::monetary_amount::MonetaryAmount;
 use super::invoice_line::InvoiceLine;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use rust_decimal::Decimal;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum InvoiceType {
@@ -38,13 +41,15 @@ pub struct UnifiedInvoice {
     pub supplier_id: Option<SupplierId>, // For Purchase
     pub supplier_name: Option<String>,
     pub lines: Vec<InvoiceLine>,
-    pub tax_amount: Money,
-    pub discount_amount: Money,
-    pub total_amount: Money,
+    pub tax_amount: MonetaryAmount,
+    pub discount_amount: MonetaryAmount,
+    pub total_amount: MonetaryAmount,
     pub payment_method: PaymentMethod,
-    pub amount_paid: Money,
+    pub amount_paid: MonetaryAmount,
     pub status: InvoiceStatus,
     pub issued_at: DateTime<Utc>,
+    pub currency_code: String,
+    pub exchange_rate: Decimal,
     pub notes: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -60,6 +65,8 @@ impl UnifiedInvoice {
         supplier_name: Option<String>,
         payment_method: PaymentMethod,
         amount_paid: Money,
+        currency_code: String,
+        exchange_rate: Decimal,
         issued_at: DateTime<Utc>,
         notes: Option<String>,
     ) -> Result<Self, DomainError> {
@@ -68,6 +75,9 @@ impl UnifiedInvoice {
         }
 
         let now = Utc::now();
+        let _base_currency = Currency::from_code("USD"); // System reference
+        let doc_currency = Currency::from_code(&currency_code);
+
         Ok(Self {
             id: InvoiceId(Uuid::new_v4()),
             invoice_number,
@@ -77,12 +87,14 @@ impl UnifiedInvoice {
             supplier_id,
             supplier_name,
             lines: vec![],
-            tax_amount: Money::zero(),
-            discount_amount: Money::zero(),
-            total_amount: Money::zero(),
+            tax_amount: MonetaryAmount::zero(doc_currency.clone()),
+            discount_amount: MonetaryAmount::zero(doc_currency.clone()),
+            total_amount: MonetaryAmount::zero(doc_currency.clone()),
             payment_method,
-            amount_paid,
+            amount_paid: MonetaryAmount::new(amount_paid, exchange_rate),
             status: InvoiceStatus::Draft,
+            currency_code,
+            exchange_rate,
             issued_at,
             notes,
             created_at: now,
@@ -106,15 +118,22 @@ impl UnifiedInvoice {
     }
 
     pub fn recalculate_totals(&mut self) {
-        let subtotal = self.lines.iter().fold(Money::zero(), |acc, line| {
-            acc + line.line_total()
-        });
-        self.total_amount = subtotal + self.tax_amount.clone() - self.discount_amount.clone();
+        let doc_currency = Currency::from_code(&self.currency_code);
+        
+        let subtotal = self.lines.iter().fold(
+            MonetaryAmount::zero(doc_currency.clone()), 
+            |acc, line| {
+                (acc + line.line_total()).unwrap_or_else(|_| MonetaryAmount::zero(doc_currency.clone()))
+            }
+        );
+
+        // Convert to MonetaryAmount using the invoice's exchange rate
+        self.total_amount = ((subtotal + self.tax_amount.clone()).unwrap() - self.discount_amount.clone()).unwrap();
         
         if self.payment_method == PaymentMethod::Cash {
             self.amount_paid = self.total_amount.clone();
         } else if self.payment_method == PaymentMethod::Deferred {
-            self.amount_paid = Money::zero();
+            self.amount_paid = MonetaryAmount::zero(doc_currency);
         }
 
         self.updated_at = Utc::now();

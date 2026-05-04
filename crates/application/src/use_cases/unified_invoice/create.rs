@@ -6,6 +6,7 @@ use domain::sales::unified_invoice::{UnifiedInvoice, InvoiceType};
 use domain::sales::invoice_line::InvoiceLine;
 use domain::shared::ids::{MaterialId, CustomerId, SupplierId};
 use domain::shared::money::Money;
+use domain::shared::monetary_amount::MonetaryAmount;
 use crate::ports::unified_invoice_repository::UnifiedInvoiceRepository;
 use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::supplier_repository::SupplierRepository;
@@ -119,7 +120,9 @@ impl CreateInvoiceUseCase {
             _ => domain::sales::unified_invoice::PaymentMethod::Deferred,
         };
 
-        let amount_paid = Money::syp(Decimal::from_str(&req.amount_paid).unwrap_or(Decimal::ZERO));
+        let currency_code = req.currency_code.clone();
+        let exchange_rate = Decimal::from_str(&req.exchange_rate).unwrap_or(Decimal::ONE);
+        let amount_paid = Money::from_amount_and_code(Decimal::from_str(&req.amount_paid).unwrap_or(Decimal::ZERO), &currency_code);
 
         let issued_at = chrono::DateTime::parse_from_rfc3339(&req.issued_at)
             .map(|dt| dt.with_timezone(&Utc))
@@ -134,6 +137,8 @@ impl CreateInvoiceUseCase {
             req.supplier_name,
             payment_method,
             amount_paid,
+            currency_code.clone(),
+            exchange_rate,
             issued_at,
             req.notes,
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
@@ -145,14 +150,26 @@ impl CreateInvoiceUseCase {
             let quantity = Decimal::from_str(&line_dto.quantity)
                 .map_err(|_| AppError::Invalid("كمية غير صالحة".into()))?;
             
-            let unit_price = Money::syp(Decimal::from_str(&line_dto.unit_price)
-                .map_err(|_| AppError::Invalid("سعر غير صالح".into()))?);
+            let unit_price = MonetaryAmount::new(
+                Money::from_amount_and_code(Decimal::from_str(&line_dto.unit_price)
+                .map_err(|_| AppError::Invalid("سعر غير صالح".into()))?, &currency_code),
+                exchange_rate
+            );
 
-            let purchase_price = line_dto.purchase_price.and_then(|s| Decimal::from_str(&s).ok().map(Money::syp));
-            let retail_price = line_dto.retail_price.and_then(|s| Decimal::from_str(&s).ok().map(Money::syp));
-            let wholesale_price = line_dto.wholesale_price.and_then(|s| Decimal::from_str(&s).ok().map(Money::syp));
-            let semi_wholesale_price = line_dto.semi_wholesale_price.and_then(|s| Decimal::from_str(&s).ok().map(Money::syp));
+            let to_monetary = |s: Option<String>| s.and_then(|v| {
+                Decimal::from_str(&v).ok().map(|amt| {
+                    MonetaryAmount::new(Money::from_amount_and_code(amt, &currency_code), exchange_rate)
+                })
+            });
+            
+            let purchase_price = to_monetary(line_dto.purchase_price);
+            let retail_price = to_monetary(line_dto.retail_price);
+            let wholesale_price = to_monetary(line_dto.wholesale_price);
+            let semi_wholesale_price = to_monetary(line_dto.semi_wholesale_price);
             let minimum_stock = line_dto.minimum_stock.and_then(|s| Decimal::from_str(&s).ok());
+            let unit_price_usd = line_dto.unit_price_usd.and_then(|s| Decimal::from_str(&s).ok().map(|amt| Money::from_amount_and_code(amt, "USD")));
+            let purchase_price_usd = line_dto.purchase_price_usd.and_then(|s| Decimal::from_str(&s).ok().map(|amt| Money::from_amount_and_code(amt, "USD")));
+            let profit_amount_usd = line_dto.profit_amount_usd.and_then(|s| Decimal::from_str(&s).ok().map(|amt| Money::from_amount_and_code(amt, "USD")));
 
             let line = InvoiceLine::new(
                 material_id,
@@ -164,12 +181,15 @@ impl CreateInvoiceUseCase {
                 semi_wholesale_price,
                 minimum_stock,
                 line_dto.notes,
+                unit_price_usd,
+                purchase_price_usd,
+                profit_amount_usd,
             );
             invoice.add_line(line).map_err(|e| AppError::Invalid(e.to_string()))?;
         }
 
-        invoice.tax_amount = Money::syp(Decimal::from_str(&req.tax_amount).unwrap_or(Decimal::ZERO));
-        invoice.discount_amount = Money::syp(Decimal::from_str(&req.discount_amount).unwrap_or(Decimal::ZERO));
+        invoice.tax_amount = MonetaryAmount::new(Money::from_amount_and_code(Decimal::from_str(&req.tax_amount).unwrap_or(Decimal::ZERO), &currency_code), exchange_rate);
+        invoice.discount_amount = MonetaryAmount::new(Money::from_amount_and_code(Decimal::from_str(&req.discount_amount).unwrap_or(Decimal::ZERO), &currency_code), exchange_rate);
         invoice.recalculate_totals();
 
         self.repo.save(&invoice).await?;

@@ -1,10 +1,10 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 use crate::ports::consumable_repository::ConsumableRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::asset_repository::AssetRepository;
 use domain::assets::{Consumable, ConsumableId, AssetMovement, AssetMovementType};
 use domain::accounting::{JournalEntry, JournalLine};
-use domain::shared::{Money, AccountId};
+use domain::shared::{Money, AccountId, MonetaryAmount};
 use crate::errors::AppError;
 use rust_decimal::Decimal;
 use uuid::Uuid;
@@ -79,21 +79,21 @@ impl ConsumableUseCases {
 
         // Journal Entry
         let mut lines = Vec::new();
+        let debit_ma = MonetaryAmount::new(total_value.clone(), item.fx_rate);
+        let credit_zero = MonetaryAmount::zero(item.unit_cost.currency().clone());
         lines.push(JournalLine::new(
             AccountId(item.expense_account_id),
-            item.unit_cost.currency(),
-            item.fx_rate,
-            total_value.clone(),
-            Money::new(Decimal::ZERO, item.unit_cost.currency()),
+            debit_ma,
+            credit_zero.clone(),
             format!("صرف مستهلكات: {} - {}", item.name, description),
         ));
 
+        let debit_zero = MonetaryAmount::zero(item.unit_cost.currency().clone());
+        let credit_ma = MonetaryAmount::new(total_value.clone(), item.fx_rate);
         lines.push(JournalLine::new(
             AccountId(item.asset_account_id),
-            item.unit_cost.currency(),
-            item.fx_rate,
-            Money::new(Decimal::ZERO, item.unit_cost.currency()),
-            total_value.clone(),
+            debit_zero,
+            credit_ma,
             format!("تخفيض مخزون مستهلكات: {}", item.name),
         ));
 
@@ -153,7 +153,7 @@ mod tests {
         // 1. Create
         let id = use_cases.create_item(
             "C1".to_string(), "Ink".to_string(), Uuid::new_v4(),
-            Money::new(dec!(50), Currency::SYP), dec!(1),
+            Money::new(dec!(50), Currency::syp()), dec!(1),
             Uuid::new_v4(), Uuid::new_v4()
         ).await.unwrap();
 

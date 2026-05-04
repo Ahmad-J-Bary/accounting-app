@@ -1,4 +1,4 @@
-use sqlx::SqlitePool;
+﻿use sqlx::SqlitePool;
 use application::errors::AppError;
 use domain::assets::{Consumable, ConsumableId};
 
@@ -13,7 +13,7 @@ pub async fn save(pool: &SqlitePool, consumable: &Consumable) -> Result<(), AppE
     .bind(consumable.category_id.to_string())
     .bind(consumable.quantity_on_hand.to_string())
     .bind(consumable.unit_cost.amount().to_string())
-    .bind(consumable.unit_cost.currency().code().to_string())
+    .bind(consumable.unit_cost.currency().code.clone())
     .bind(consumable.fx_rate.to_string())
     .bind(format!("{:?}", consumable.status))
     .bind(&consumable.location)

@@ -19,6 +19,8 @@ pub struct JournalLineRow {
     pub currency: String,
     pub fx_rate: String,
     pub debit: String,
+    pub debit_base: String,
     pub credit: String,
+    pub credit_base: String,
     pub description: String,
 }

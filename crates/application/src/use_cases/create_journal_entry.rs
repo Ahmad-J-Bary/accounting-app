@@ -4,7 +4,7 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 use domain::accounting::journal_entry::{JournalEntry, JournalLine};
-use domain::shared::{AccountId, Money};
+use domain::shared::{AccountId, Money, MonetaryAmount};
 use crate::errors::AppError;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::dto::journal_entry_dto::{CreateJournalEntryRequest, JournalEntryDto};
@@ -27,8 +27,8 @@ impl CreateJournalEntryUseCase {
                         .map_err(|e| AppError::Invalid(format!("Invalid account ID: {}", e)))?
                 );
                 let currency = match dto.currency.as_str() {
-                    "USD" => domain::shared::currency::Currency::USD,
-                    _ => domain::shared::currency::Currency::SYP,
+                    "USD" => domain::shared::currency::Currency::usd(),
+                    _ => domain::shared::currency::Currency::syp(),
                 };
                 let fx_rate = rust_decimal::Decimal::from_str(&dto.fx_rate)
                     .unwrap_or(rust_decimal::Decimal::ONE);
@@ -36,14 +36,19 @@ impl CreateJournalEntryUseCase {
                 let debit = Money::new(
                     rust_decimal::Decimal::from_str(&dto.debit)
                         .map_err(|e| AppError::Invalid(format!("Invalid debit amount: {}", e)))?,
-                    currency
+                    currency.clone()
                 );
                 let credit = Money::new(
                     rust_decimal::Decimal::from_str(&dto.credit)
                         .map_err(|e| AppError::Invalid(format!("Invalid credit amount: {}", e)))?,
-                    currency
+                    currency.clone()
                 );
-                Ok(JournalLine::new(account_id, currency, fx_rate, debit, credit, dto.description))
+                Ok(JournalLine::new(
+                    account_id,
+                    MonetaryAmount::new(debit, fx_rate),
+                    MonetaryAmount::new(credit, fx_rate),
+                    dto.description
+                ))
             })
             .collect();
 

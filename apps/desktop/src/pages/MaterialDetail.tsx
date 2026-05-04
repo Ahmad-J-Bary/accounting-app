@@ -22,6 +22,17 @@ import { materialService } from "@/services/materialService";
 import { categoryService } from "@/services/categoryService";
 import type { MaterialDto, CategoryDto, StockMovementDetailDto } from "@erp/shared-types";
 import { toast } from "sonner";
+import { useCurrencyContext } from "@/context/CurrencyContext";
+import { useColumnPreferences } from "@/hooks/useColumnPreferences";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Settings2, DollarSign, Coins } from "lucide-react";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -132,9 +143,14 @@ function BalanceChart({ movements }: { movements: StockMovementDetailDto[] }) {
 interface MovementTableProps {
   movements: StockMovementDetailDto[];
   loading: boolean;
+  visibleColumns: string[];
 }
 
-function MovementTable({ movements, loading }: MovementTableProps) {
+function MovementTable({ movements, loading, visibleColumns }: MovementTableProps) {
+  const { formatAmount } = useCurrencyContext();
+  
+  const isVisible = (id: string) => visibleColumns.includes(id);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-40 text-slate-400">
@@ -162,9 +178,24 @@ function MovementTable({ movements, loading }: MovementTableProps) {
             <th className="px-3 py-2.5 text-right font-semibold">الجهة</th>
             <th className="px-3 py-2.5 text-center font-semibold text-green-600">الداخل</th>
             <th className="px-3 py-2.5 text-center font-semibold text-red-600">الخارج</th>
-            <th className="px-3 py-2.5 text-center font-semibold">الرصيد قبل</th>
-            <th className="px-3 py-2.5 text-center font-semibold">الرصيد بعد</th>
-            <th className="px-3 py-2.5 text-center font-semibold">تكلفة الوحدة</th>
+            {isVisible("balance_before") && <th className="px-3 py-2.5 text-center font-semibold">الرصيد قبل</th>}
+            {isVisible("balance_after") && <th className="px-3 py-2.5 text-center font-semibold">الرصيد بعد</th>}
+            {isVisible("unit_cost_usd") && (
+              <th className="px-3 py-2.5 text-center font-semibold text-amber-700">
+                <div className="flex items-center justify-center gap-1">
+                  <DollarSign className="w-2.5 h-2.5" />
+                  <span>التكلفة (USD)</span>
+                </div>
+              </th>
+            )}
+            {isVisible("unit_cost_local") && (
+              <th className="px-3 py-2.5 text-center font-semibold text-amber-800">
+                <div className="flex items-center justify-center gap-1">
+                  <Coins className="w-2.5 h-2.5" />
+                  <span>التكلفة (Display)</span>
+                </div>
+              </th>
+            )}
             <th className="px-3 py-2.5 text-right font-semibold">ملاحظات</th>
           </tr>
         </thead>
@@ -225,24 +256,37 @@ function MovementTable({ movements, loading }: MovementTableProps) {
               </td>
 
               {/* Balance Before */}
-              <td className="px-3 py-2.5 text-center tabular-nums text-slate-500 text-xs font-mono">
-                {fmt(m.balance_before)}
-              </td>
+              {isVisible("balance_before") && (
+                <td className="px-3 py-2.5 text-center tabular-nums text-slate-500 text-xs font-mono">
+                  {fmt(m.balance_before)}
+                </td>
+              )}
 
               {/* Balance After */}
-              <td className="px-3 py-2.5 text-center tabular-nums">
-                <span className={cn(
-                  "font-bold text-sm font-mono",
-                  parseFloat(m.balance_after) > 0 ? "text-slate-700" : "text-red-600"
-                )}>
-                  {fmt(m.balance_after)}
-                </span>
-              </td>
+              {isVisible("balance_after") && (
+                <td className="px-3 py-2.5 text-center tabular-nums">
+                  <span className={cn(
+                    "font-bold text-sm font-mono",
+                    parseFloat(m.balance_after) > 0 ? "text-slate-700" : "text-red-600"
+                  )}>
+                    {fmt(m.balance_after)}
+                  </span>
+                </td>
+              )}
 
-              {/* Unit Cost */}
-              <td className="px-3 py-2.5 text-center tabular-nums text-amber-700 text-xs font-mono">
-                {parseFloat(m.unit_cost) > 0 ? fmt(m.unit_cost) : "—"}
-              </td>
+              {/* Unit Cost USD */}
+              {isVisible("unit_cost_usd") && (
+                <td className="px-3 py-2.5 text-center tabular-nums text-amber-700 text-xs font-mono">
+                  {parseFloat(m.unit_cost) > 0 ? formatAmount(parseFloat(m.unit_cost), { currencyCode: "USD" }) : "—"}
+                </td>
+              )}
+
+              {/* Unit Cost Local */}
+              {isVisible("unit_cost_local") && (
+                <td className="px-3 py-2.5 text-center tabular-nums text-amber-800 text-xs font-mono">
+                  {parseFloat(m.unit_cost) > 0 ? formatAmount(parseFloat(m.unit_cost)) : "—"}
+                </td>
+              )}
 
               {/* Notes */}
               <td className="px-3 py-2.5 text-[11px] text-slate-400 max-w-[120px] truncate">
@@ -267,6 +311,17 @@ export default function MaterialDetail() {
   const [movements, setMovements] = useState<StockMovementDetailDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [movLoading, setMovLoading] = useState(true);
+  
+  const { formatAmount } = useCurrencyContext();
+
+  const availableColumns = [
+    { id: "balance_before", label: "الرصيد قبل" },
+    { id: "balance_after", label: "الرصيد بعد" },
+    { id: "unit_cost_usd", label: "التكلفة (USD)" },
+    { id: "unit_cost_local", label: "التكلفة (Display)" },
+  ];
+  const defaultCols = ["balance_after", "unit_cost_usd", "unit_cost_local"];
+  const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences("material-movements", defaultCols);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -421,9 +476,9 @@ export default function MaterialDetail() {
           {/* Quick stats */}
           <div className="flex flex-wrap gap-2">
             <StatCard label="المتوفر" value={fmt(material.total_available)} color="bg-emerald-50 border-emerald-200 text-emerald-800" />
-            <StatCard label="متوسط التكلفة" value={fmt(material.average_cost)} color="bg-amber-50 border-amber-200 text-amber-800" />
-            <StatCard label="آخر شراء" value={fmt(material.last_purchase_price)} color="bg-green-50 border-green-200 text-green-800" />
-            <StatCard label="آخر بيع" value={fmt(material.last_sale_price)} color="bg-blue-50 border-blue-200 text-blue-800" />
+            <StatCard label="متوسط التكلفة" value={formatAmount(parseFloat(material.average_cost))} color="bg-amber-50 border-amber-200 text-amber-800" sub={`USD: ${formatAmount(parseFloat(material.average_cost), { currencyCode: "USD" })}`} />
+            <StatCard label="آخر شراء" value={formatAmount(parseFloat(material.last_purchase_price))} color="bg-green-50 border-green-200 text-green-800" sub={`USD: ${formatAmount(parseFloat(material.last_purchase_price), { currencyCode: "USD" })}`} />
+            <StatCard label="آخر مبيع" value={formatAmount(parseFloat(material.last_sale_price))} color="bg-blue-50 border-blue-200 text-blue-800" sub={`USD: ${formatAmount(parseFloat(material.last_sale_price), { currencyCode: "USD" })}`} />
           </div>
         </div>
       </Card>
@@ -497,14 +552,36 @@ export default function MaterialDetail() {
                   onChange={e => setSearch(e.target.value)}
                 />
               </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-8 w-8 shrink-0">
+                    <Settings2 className="w-3.5 h-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[180px]">
+                  <DropdownMenuLabel className="text-xs">الأعمدة الظاهرة</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {availableColumns.map((col) => (
+                    <DropdownMenuCheckboxItem
+                      key={col.id}
+                      className="text-xs"
+                      checked={isVisible(col.id)}
+                      onCheckedChange={() => toggleColumn(col.id)}
+                    >
+                      {col.label}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
-          <TabsContent value="all"      className="mt-0"><MovementTable movements={filtered} loading={movLoading} /></TabsContent>
-          <TabsContent value="purchases" className="mt-0"><MovementTable movements={filtered} loading={movLoading} /></TabsContent>
-          <TabsContent value="sales"    className="mt-0"><MovementTable movements={filtered} loading={movLoading} /></TabsContent>
-          <TabsContent value="opening"  className="mt-0"><MovementTable movements={filtered} loading={movLoading} /></TabsContent>
-          <TabsContent value="other"    className="mt-0"><MovementTable movements={filtered} loading={movLoading} /></TabsContent>
+          <TabsContent value="all"      className="mt-0"><MovementTable movements={filtered} loading={movLoading} visibleColumns={visibleColumns} /></TabsContent>
+          <TabsContent value="purchases" className="mt-0"><MovementTable movements={filtered} loading={movLoading} visibleColumns={visibleColumns} /></TabsContent>
+          <TabsContent value="sales"    className="mt-0"><MovementTable movements={filtered} loading={movLoading} visibleColumns={visibleColumns} /></TabsContent>
+          <TabsContent value="opening"  className="mt-0"><MovementTable movements={filtered} loading={movLoading} visibleColumns={visibleColumns} /></TabsContent>
+          <TabsContent value="other"    className="mt-0"><MovementTable movements={filtered} loading={movLoading} visibleColumns={visibleColumns} /></TabsContent>
         </Tabs>
 
         {/* Legend */}

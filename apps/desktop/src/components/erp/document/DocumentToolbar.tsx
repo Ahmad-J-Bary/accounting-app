@@ -20,9 +20,10 @@ interface DocumentToolbarProps {
   saving?: boolean;
   posting?: boolean;
   reopening?: boolean;
-  canPost?: boolean;
   canDelete?: boolean;
   canEdit?: boolean;
+  canPost?: boolean;
+  extraActions?: React.ReactNode;
 }
 
 export function DocumentToolbar({
@@ -45,6 +46,7 @@ export function DocumentToolbar({
   canPost = false,
   canDelete = true,
   canEdit = true,
+  extraActions,
 }: DocumentToolbarProps) {
   return (
     <div
@@ -126,6 +128,12 @@ export function DocumentToolbar({
           className="h-7 px-2 text-slate-400 hover:bg-slate-700 hover:text-white">
           <RefreshCw className="w-3.5 h-3.5" />
         </Button>
+      )}
+
+      {extraActions && (
+        <div className="flex items-center gap-1 border-r border-slate-700 pr-1.5 mr-1.5">
+          {extraActions}
+        </div>
       )}
  
        {onExport && (

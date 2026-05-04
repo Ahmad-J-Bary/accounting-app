@@ -1,4 +1,4 @@
-use tauri::State;
+﻿use tauri::State;
 use crate::bootstrap::container::AppState;
 use application::use_cases::fixed_asset_use_cases::FixedAssetUseCases;
 use application::use_cases::consumable_use_cases::ConsumableUseCases;
@@ -31,8 +31,8 @@ pub async fn create_fixed_asset(
     
     let amount = Decimal::from_str(&purchase_cost).map_err(|e: rust_decimal::Error| e.to_string())?;
     let curr = match currency.as_str() {
-        "USD" => domain::shared::Currency::USD,
-        _ => domain::shared::Currency::SYP,
+        "USD" => domain::shared::Currency::usd(),
+        _ => domain::shared::Currency::syp(),
     };
     let money = Money::new(amount, curr);
     let fx = Decimal::from_str(&fx_rate).map_err(|e: rust_decimal::Error| e.to_string())?;
@@ -74,8 +74,8 @@ pub async fn create_consumable(
     let category_uuid = Uuid::parse_str(&category_id).map_err(|e| e.to_string())?;
     let amount = Decimal::from_str(&unit_cost).map_err(|e: rust_decimal::Error| e.to_string())?;
     let curr = match currency.as_str() {
-        "USD" => domain::shared::Currency::USD,
-        _ => domain::shared::Currency::SYP,
+        "USD" => domain::shared::Currency::usd(),
+        _ => domain::shared::Currency::syp(),
     };
     let money = Money::new(amount, curr);
     let fx = Decimal::from_str(&fx_rate).map_err(|e: rust_decimal::Error| e.to_string())?;

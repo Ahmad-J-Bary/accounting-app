@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export interface Column<T> {
   id?: string;
-  header: string;
+  header: ReactNode;
   accessor: keyof T | ((row: T) => ReactNode);
   className?: string;
   headerClassName?: string;
@@ -20,6 +20,7 @@ interface DataTableProps<T> {
   className?: string;
   idKey?: keyof T;
   skeletonRows?: number;
+  selectedId?: string | number | null;
 }
 
 export function DataTable<T>({
@@ -31,6 +32,7 @@ export function DataTable<T>({
   className,
   idKey = "id" as keyof T,
   skeletonRows = 5,
+  selectedId,
 }: DataTableProps<T>) {
   const renderContent = () => {
     if (loading) {
@@ -67,12 +69,17 @@ export function DataTable<T>({
       );
     }
 
-    return data.map((row, rowIdx) => (
+    return data.map((row, rowIdx) => {
+      const rowId = String(row[idKey] || rowIdx);
+      const isSelected = selectedId && String(selectedId) === rowId;
+      
+      return (
       <tr
-        key={String(row[idKey] || rowIdx)}
+        key={rowId}
         className={cn(
           "group transition-all duration-150 ease-out border-b border-border/40",
-          onRowClick ? "cursor-pointer hover:bg-slate-50/70 active:bg-slate-100" : "hover:bg-slate-50/30"
+          onRowClick ? "cursor-pointer" : "",
+          isSelected ? "bg-blue-50/60" : onRowClick ? "hover:bg-slate-50/70 active:bg-slate-100" : "hover:bg-slate-50/30"
         )}
         onClick={() => onRowClick?.(row)}
       >
@@ -91,7 +98,8 @@ export function DataTable<T>({
           </td>
         ))}
       </tr>
-    ));
+      );
+    });
   };
 
   return (

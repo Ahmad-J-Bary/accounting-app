@@ -11,4 +11,5 @@ pub trait UnifiedInvoiceRepository: Send + Sync {
     async fn list_by_type(&self, invoice_type: InvoiceType) -> Result<Vec<UnifiedInvoice>, AppError>;
     async fn update(&self, invoice: &UnifiedInvoice) -> Result<(), AppError>;
     async fn delete(&self, id: &InvoiceId) -> Result<(), AppError>;
+    async fn get_last_usd_prices(&self, material_id: &str) -> Result<(String, String), AppError>;
 }

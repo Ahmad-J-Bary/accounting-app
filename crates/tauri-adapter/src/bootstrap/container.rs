@@ -1,5 +1,31 @@
 use std::sync::Arc;
+use application::ports::customer_repository::CustomerRepository;
+use application::ports::material_repository::MaterialRepository;
+use application::ports::category_repository::CategoryRepository;
+use application::ports::account_repository::AccountRepository;
+use application::ports::journal_entry_repository::JournalEntryRepository;
+use application::ports::supplier_repository::SupplierRepository;
+use application::ports::payment_repository::PaymentRepository;
+use application::ports::damaged_item_repository::DamagedItemRepository;
+use application::ports::stock_adjustment_repository::StockAdjustmentRepository;
+use application::ports::settings_repository::SettingsRepository;
+use application::ports::audit_log_repository::AuditLogRepository;
+use application::ports::user_repository::UserRepository;
+use application::ports::production_repository::ProductionRepository;
+use application::ports::asset_repository::AssetRepository;
+use application::ports::consumable_repository::ConsumableRepository;
+use application::ports::stock_movement_repository::StockMovementRepository;
+use application::ports::unified_invoice_repository::UnifiedInvoiceRepository;
+use application::ports::partner_repository::PartnerRepository;
+use application::ports::code_prefix_repository::CodePrefixRepository;
+use application::ports::currency_repository::CurrencyRepository;
+use application::ports::exchange_rate_repository::ExchangeRateRepository;
+use application::ports::unit_of_work::UnitOfWork;
+use application::use_cases::generate_material_code::MaterialCodeUseCases;
+use application::use_cases::currency::commands::CurrencyCommands;
+use application::use_cases::currency::queries::CurrencyQueries;
 use infrastructure::{
+    create_pool, run_migrations,
     SqliteCustomerRepository,
     SqliteAccountRepository,
     SqliteJournalEntryRepository,
@@ -20,29 +46,9 @@ use infrastructure::{
     SqliteCategoryRepository,
     SqliteUnifiedInvoiceRepository,
     SqliteCodePrefixRepository,
+    SqliteCurrencyRepository,
+    SqliteExchangeRateRepository,
 };
-use application::use_cases::generate_material_code::MaterialCodeUseCases;
-use infrastructure::db::pool::{create_pool, run_migrations};
-use application::ports::customer_repository::CustomerRepository;
-use application::ports::material_repository::MaterialRepository;
-use application::ports::category_repository::CategoryRepository;
-use application::ports::account_repository::AccountRepository;
-use application::ports::journal_entry_repository::JournalEntryRepository;
-use application::ports::supplier_repository::SupplierRepository;
-use application::ports::payment_repository::PaymentRepository;
-use application::ports::damaged_item_repository::DamagedItemRepository;
-use application::ports::stock_adjustment_repository::StockAdjustmentRepository;
-use application::ports::settings_repository::SettingsRepository;
-use application::ports::audit_log_repository::AuditLogRepository;
-use application::ports::user_repository::UserRepository;
-use application::ports::production_repository::ProductionRepository;
-use application::ports::asset_repository::AssetRepository;
-use application::ports::consumable_repository::ConsumableRepository;
-use application::ports::stock_movement_repository::StockMovementRepository;
-use application::ports::unified_invoice_repository::UnifiedInvoiceRepository;
-use application::ports::partner_repository::PartnerRepository;
-use application::ports::unit_of_work::UnitOfWork;
-use application::ports::code_prefix_repository::CodePrefixRepository;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -65,14 +71,18 @@ pub struct AppState {
     pub unified_invoice_repo: Arc<dyn UnifiedInvoiceRepository>,
     pub partner_repo: Arc<dyn PartnerRepository>,
     pub prefix_repo: Arc<dyn CodePrefixRepository>,
+    pub currency_repo: Arc<dyn CurrencyRepository>,
+    pub exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
     pub uow: Arc<dyn UnitOfWork>,
     pub material_code_use_cases: Arc<MaterialCodeUseCases>,
+    pub currency_commands: Arc<CurrencyCommands>,
+    pub currency_queries: Arc<CurrencyQueries>,
 }
 
 pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
-    let pool = create_pool(database_url).await.map_err(|e| e.to_string())?;
+    let pool = create_pool(database_url).await.map_err(|e: infrastructure::sqlx::Error| e.to_string())?;
     
-    run_migrations(&pool).await.map_err(|e| format!("Migration error: {}", e))?;
+    run_migrations(&pool).await.map_err(|e: infrastructure::sqlx::migrate::MigrateError| format!("Migration error: {}", e))?;
  
     let material_repo = Arc::new(SqliteMaterialRepository::new(pool.clone()));
     let category_repo = Arc::new(SqliteCategoryRepository::new(pool.clone()));
@@ -82,6 +92,8 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
     let journal_repo = Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
     let unified_invoice_repo = Arc::new(SqliteUnifiedInvoiceRepository::new(pool.clone()));
     let prefix_repo = Arc::new(SqliteCodePrefixRepository::new(pool.clone()));
+    let currency_repo = Arc::new(SqliteCurrencyRepository::new(pool.clone()));
+    let exchange_rate_repo = Arc::new(SqliteExchangeRateRepository::new(pool.clone()));
 
     Ok(AppState {
         customer_repo: customer_repo.clone() as Arc<dyn CustomerRepository>,
@@ -103,10 +115,20 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
         unified_invoice_repo: unified_invoice_repo.clone() as Arc<dyn UnifiedInvoiceRepository>,
         partner_repo: Arc::new(SqlitePartnerRepository::new(pool.clone())) as Arc<dyn PartnerRepository>,
         prefix_repo: prefix_repo.clone() as Arc<dyn CodePrefixRepository>,
+        currency_repo: currency_repo.clone() as Arc<dyn CurrencyRepository>,
+        exchange_rate_repo: exchange_rate_repo.clone() as Arc<dyn ExchangeRateRepository>,
         uow: Arc::new(SqliteUnitOfWork::new(pool.clone())) as Arc<dyn UnitOfWork>,
         material_code_use_cases: Arc::new(MaterialCodeUseCases::new(
             prefix_repo.clone(),
             category_repo.clone(),
+        )),
+        currency_commands: Arc::new(CurrencyCommands::new(
+            currency_repo.clone() as Arc<dyn CurrencyRepository>,
+            exchange_rate_repo.clone() as Arc<dyn ExchangeRateRepository>,
+        )),
+        currency_queries: Arc::new(CurrencyQueries::new(
+            currency_repo.clone() as Arc<dyn CurrencyRepository>,
+            exchange_rate_repo.clone() as Arc<dyn ExchangeRateRepository>,
         )),
     })
 }

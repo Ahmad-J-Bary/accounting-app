@@ -33,6 +33,8 @@ struct PurchaseInvoiceRow {
     status: String,
     invoice_date: String,
     due_date: Option<String>,
+    currency_code: String,
+    exchange_rate: String,
     notes: Option<String>,
     created_at: String,
     updated_at: String,
@@ -54,8 +56,8 @@ impl PurchaseInvoiceRepository for SqlitePurchaseInvoiceRepository {
         let mut tx = self.pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
         sqlx::query(
-            "INSERT INTO purchase_invoices (id, invoice_number, supplier_id, subtotal, tax_amount, discount_amount, total, amount_paid, status, invoice_date, due_date, notes, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO purchase_invoices (id, invoice_number, supplier_id, subtotal, tax_amount, discount_amount, total, amount_paid, status, invoice_date, due_date, currency_code, exchange_rate, notes, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
         .bind(invoice.id.to_string())
         .bind(&invoice.invoice_number)
@@ -68,6 +70,8 @@ impl PurchaseInvoiceRepository for SqlitePurchaseInvoiceRepository {
         .bind(format!("{:?}", invoice.status))
         .bind(invoice.invoice_date.to_rfc3339())
         .bind(invoice.due_date.map(|d| d.to_rfc3339()))
+        .bind(&invoice.currency_code)
+        .bind(invoice.exchange_rate.to_string())
         .bind(&invoice.notes)
         .bind(invoice.created_at.to_rfc3339())
         .bind(invoice.updated_at.to_rfc3339())
@@ -98,7 +102,7 @@ impl PurchaseInvoiceRepository for SqlitePurchaseInvoiceRepository {
 
     async fn find_by_id(&self, id: &PurchaseInvoiceId) -> Result<Option<PurchaseInvoice>, AppError> {
         let row = sqlx::query_as::<_, PurchaseInvoiceRow>(
-            "SELECT id, invoice_number, supplier_id, subtotal, tax_amount, discount_amount, total, amount_paid, status, invoice_date, due_date, notes, created_at, updated_at
+            "SELECT id, invoice_number, supplier_id, subtotal, tax_amount, discount_amount, total, amount_paid, status, invoice_date, due_date, currency_code, exchange_rate, notes, created_at, updated_at
              FROM purchase_invoices WHERE id = ?"
         )
         .bind(id.to_string())
@@ -128,6 +132,8 @@ impl PurchaseInvoiceRepository for SqlitePurchaseInvoiceRepository {
                 status,
                 invoice_date: DateTime::parse_from_rfc3339(&row.invoice_date).map(|d| d.with_timezone(&chrono::Utc)).unwrap_or_else(|_| chrono::Utc::now()),
                 due_date: row.due_date.as_ref().map(|d| DateTime::parse_from_rfc3339(d).map(|dt| dt.with_timezone(&chrono::Utc)).ok()).flatten(),
+                currency_code: row.currency_code,
+                exchange_rate: Decimal::from_str(&row.exchange_rate).unwrap_or(Decimal::ONE),
                 notes: row.notes,
                 created_at: DateTime::parse_from_rfc3339(&row.created_at).map(|d| d.with_timezone(&chrono::Utc)).unwrap_or_else(|_| chrono::Utc::now()),
                 updated_at: DateTime::parse_from_rfc3339(&row.updated_at).map(|d| d.with_timezone(&chrono::Utc)).unwrap_or_else(|_| chrono::Utc::now()),
@@ -180,7 +186,7 @@ impl PurchaseInvoiceRepository for SqlitePurchaseInvoiceRepository {
 
     async fn update(&self, invoice: &PurchaseInvoice) -> Result<(), AppError> {
         sqlx::query(
-            "UPDATE purchase_invoices SET status=?, amount_paid=?, total=?, subtotal=?, tax_amount=?, discount_amount=?, updated_at=?
+            "UPDATE purchase_invoices SET status=?, amount_paid=?, total=?, subtotal=?, tax_amount=?, discount_amount=?, currency_code=?, exchange_rate=?, updated_at=?
              WHERE id=?"
         )
         .bind(format!("{:?}", invoice.status))
@@ -189,6 +195,8 @@ impl PurchaseInvoiceRepository for SqlitePurchaseInvoiceRepository {
         .bind(invoice.subtotal.to_string())
         .bind(invoice.tax_amount.to_string())
         .bind(invoice.discount_amount.to_string())
+        .bind(&invoice.currency_code)
+        .bind(invoice.exchange_rate.to_string())
         .bind(invoice.updated_at.to_rfc3339())
         .bind(invoice.id.to_string())
         .execute(&*self.pool)

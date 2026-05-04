@@ -8,7 +8,11 @@ pub struct StockMovementDetailDto {
     pub movement_type_label: String, // Arabic label
     pub quantity: String,
     pub unit_cost: String,
+    pub unit_cost_base: String,
     pub total_cost: String,
+    pub total_cost_base: String,
+    pub currency: Option<String>,
+    pub fx_rate: String,
     pub reference: String,
     pub notes: String,
     pub movement_date: String,       // ISO 8601
@@ -58,11 +62,14 @@ pub struct OpeningStockItem {
     pub material_id: String,
     pub quantity: String,
     pub unit_cost: String,
+    pub unit_cost_base: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecordOpeningStockRequest {
     pub items: Vec<OpeningStockItem>,
     pub date: String,
+    pub currency_code: String,
+    pub exchange_rate: String,
     pub notes: Option<String>,
 }

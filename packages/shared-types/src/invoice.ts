@@ -1,3 +1,10 @@
+export interface MonetaryAmount {
+  original_amount: string;
+  original_currency: string;
+  base_amount: string;
+  fx_rate: string;
+}
+
 export interface InvoiceLineDto {
   material_id: string;
   material_name?: string;
@@ -6,12 +13,20 @@ export interface InvoiceLineDto {
   category_name?: string;
   quantity: string;
   unit_price: string;
+  unit_price_v2?: MonetaryAmount;
   purchase_price?: string;
+  purchase_price_v2?: MonetaryAmount;
   retail_price?: string;
+  retail_price_v2?: MonetaryAmount;
   wholesale_price?: string;
+  wholesale_price_v2?: MonetaryAmount;
   semi_wholesale_price?: string;
+  semi_wholesale_price_v2?: MonetaryAmount;
   minimum_stock?: string;
   notes?: string;
+  unit_price_usd?: string;
+  purchase_price_usd?: string;
+  profit_amount_usd?: string;
 }
 
 export interface InvoiceDto {
@@ -23,14 +38,22 @@ export interface InvoiceDto {
   supplier_id?: string;
   supplier_name?: string;
   lines: InvoiceLineDto[];
-  tax_amount: string;
+  tax_amount: string; // Keep string for backward compatibility or transition
+  tax_amount_v2?: MonetaryAmount;
   discount_amount: string;
+  discount_amount_v2?: MonetaryAmount;
   total_amount: string;
+  total_amount_v2?: MonetaryAmount;
   payment_method: string;
   amount_paid: string;
+  amount_paid_v2?: MonetaryAmount;
   status: string;
   issued_at: string;
+  currency_code: string;
+  exchange_rate: string;
   notes?: string;
+  total_profit?: string;
+  profit_percent?: string;
 }
 
 export interface CreateInvoiceRequest {
@@ -46,6 +69,8 @@ export interface CreateInvoiceRequest {
   payment_method: string;
   amount_paid: string;
   issued_at: string;
+  currency_code: string;
+  exchange_rate: string;
   notes?: string;
 }
 

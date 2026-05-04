@@ -97,6 +97,18 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::partner::list_partners,
             commands::partner::delete_partner,
             commands::partner::update_partner,
+            // Currency
+            commands::currency::list_currencies,
+            commands::currency::list_active_currencies,
+            commands::currency::create_currency,
+            commands::currency::update_currency,
+            commands::currency::set_base_currency,
+            commands::currency::delete_currency,
+            commands::currency::get_currency_context,
+            commands::currency::get_today_rates_status,
+            commands::currency::set_exchange_rate,
+            commands::currency::list_rate_history,
+            commands::currency::get_latest_exchange_rate,
         ])
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir().expect("Failed to get app data directory");

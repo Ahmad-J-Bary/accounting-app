@@ -1,4 +1,4 @@
-use application::errors::AppError;
+﻿use application::errors::AppError;
 use domain::assets::{Consumable, ConsumableId, ConsumableStatus};
 use domain::shared::{Money, Currency};
 use rust_decimal::Decimal;
@@ -14,7 +14,7 @@ pub fn row_to_consumable(row: ConsumableRow) -> Result<Consumable, AppError> {
         name: row.name,
         category_id: Uuid::parse_str(&row.category_id).map_err(|e| AppError::Infrastructure(e.to_string()))?,
         quantity_on_hand: Decimal::from_str(&row.quantity_on_hand).unwrap_or_default(),
-        unit_cost: Money::new(Decimal::from_str(&row.unit_cost).unwrap_or_default(), if row.currency == "USD" { Currency::USD } else { Currency::SYP }),
+        unit_cost: Money::new(Decimal::from_str(&row.unit_cost).unwrap_or_default(), if row.currency == "USD" { Currency::usd() } else { Currency::syp() }),
         fx_rate: Decimal::from_str(&row.fx_rate).unwrap_or(Decimal::ONE),
         status: match row.status.as_str() {
             "Exhausted" => ConsumableStatus::Exhausted,

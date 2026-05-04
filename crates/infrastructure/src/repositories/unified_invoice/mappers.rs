@@ -3,6 +3,7 @@ use domain::sales::unified_invoice::{UnifiedInvoice, InvoiceType, InvoiceStatus,
 use domain::sales::invoice_line::InvoiceLine;
 use domain::shared::ids::{InvoiceId, CustomerId, SupplierId};
 use domain::shared::money::Money;
+use domain::shared::monetary_amount::MonetaryAmount;
 use std::str::FromStr;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
@@ -41,13 +42,31 @@ pub fn row_to_invoice(row: InvoiceRow, lines: Vec<InvoiceLine>) -> Result<Unifie
         supplier_id: row.supplier_id.and_then(|id| id.parse::<SupplierId>().ok()),
         supplier_name: row.supplier_name,
         lines,
-        tax_amount: Money::syp(Decimal::from_str(&row.tax_amount).unwrap_or(Decimal::ZERO)),
-        discount_amount: Money::syp(Decimal::from_str(&row.discount_amount).unwrap_or(Decimal::ZERO)),
-        total_amount: Money::syp(Decimal::from_str(&row.total_amount).unwrap_or(Decimal::ZERO)),
+        tax_amount: MonetaryAmount {
+            original: Money::from_amount_and_code(Decimal::from_str(&row.tax_amount).unwrap_or(Decimal::ZERO), &row.currency_code),
+            base_amount: Decimal::from_str(&row.tax_amount_base).unwrap_or(Decimal::ZERO),
+            fx_rate: Decimal::from_str(&row.exchange_rate).unwrap_or(Decimal::ONE),
+        },
+        discount_amount: MonetaryAmount {
+            original: Money::from_amount_and_code(Decimal::from_str(&row.discount_amount).unwrap_or(Decimal::ZERO), &row.currency_code),
+            base_amount: Decimal::from_str(&row.discount_amount_base).unwrap_or(Decimal::ZERO),
+            fx_rate: Decimal::from_str(&row.exchange_rate).unwrap_or(Decimal::ONE),
+        },
+        total_amount: MonetaryAmount {
+            original: Money::from_amount_and_code(Decimal::from_str(&row.total_amount).unwrap_or(Decimal::ZERO), &row.currency_code),
+            base_amount: Decimal::from_str(&row.total_amount_base).unwrap_or(Decimal::ZERO),
+            fx_rate: Decimal::from_str(&row.exchange_rate).unwrap_or(Decimal::ONE),
+        },
         payment_method,
-        amount_paid: Money::syp(Decimal::from_str(&row.amount_paid).unwrap_or(Decimal::ZERO)),
+        amount_paid: MonetaryAmount {
+            original: Money::from_amount_and_code(Decimal::from_str(&row.amount_paid).unwrap_or(Decimal::ZERO), &row.currency_code),
+            base_amount: Decimal::from_str(&row.amount_paid_base).unwrap_or(Decimal::ZERO),
+            fx_rate: Decimal::from_str(&row.exchange_rate).unwrap_or(Decimal::ONE),
+        },
         status,
         issued_at: DateTime::parse_from_rfc3339(&row.issued_at).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
+        currency_code: row.currency_code,
+        exchange_rate: Decimal::from_str(&row.exchange_rate).unwrap_or(Decimal::ONE),
         notes: row.notes,
         created_at: DateTime::parse_from_rfc3339(&row.created_at).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
         updated_at: DateTime::parse_from_rfc3339(&row.updated_at).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),

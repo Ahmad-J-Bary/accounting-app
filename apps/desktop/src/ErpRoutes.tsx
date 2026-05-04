@@ -3,13 +3,11 @@ import Dashboard from './pages/Dashboard';
 import Accounting from './pages/Accounting';
 import Journal from './pages/Journal';
 import Customers from './pages/Customers';
-import CustomerDetail from './pages/CustomerDetail';
 import Suppliers from './pages/Suppliers';
 import SalesInvoices from './pages/SalesInvoices';
 import PurchaseInvoices from './pages/PurchaseInvoices';
 import Payments from './pages/Payments';
 import Materials from './pages/Materials';
-import MaterialDetail from './pages/MaterialDetail';
 import Categories from './pages/Categories';
 import Inventory from './pages/Inventory';
 import Damaged from './pages/Damaged';
@@ -23,6 +21,7 @@ import AuditLog from './pages/AuditLog';
 import Partners from './pages/Partners';
 import Assets from './pages/Assets';
 import InvoiceDetail from './pages/InvoiceDetail';
+import CurrencySettings from './pages/CurrencySettings';
 
 export function ErpRoutes({ location }: { location?: string | Partial<Location> }) {
   return (
@@ -32,7 +31,6 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/accounting" element={<Accounting />} />
       <Route path="/journal" element={<Journal />} />
       <Route path="/customers" element={<Customers />} />
-      <Route path="/customers/:id" element={<CustomerDetail />} />
       <Route path="/suppliers" element={<Suppliers />} />
       <Route path="/sales-invoices" element={<SalesInvoices />} />
       <Route path="/sales-invoices/new*" element={<SalesInvoices />} />
@@ -42,7 +40,6 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/purchase-invoices/:id" element={<PurchaseInvoices />} />
       <Route path="/payments" element={<Payments />} />
       <Route path="/materials" element={<Materials />} />
-      <Route path="/materials/:id" element={<MaterialDetail />} />
       <Route path="/categories" element={<Categories />} />
       <Route path="/inventory" element={<Inventory />} />
       <Route path="/damaged" element={<Damaged />} />
@@ -56,6 +53,7 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/settings" element={<Settings />} />
       <Route path="/audit-log" element={<AuditLog />} />
       <Route path="/assets" element={<Assets />} />
+      <Route path="/currencies" element={<CurrencySettings />} />
     </Routes>
   );
 }

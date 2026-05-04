@@ -7,6 +7,7 @@ import { ErpRoutes } from '../../ErpRoutes';
 import { useTabs } from '@/context/TabContext';
 import { cn } from '@/lib/utils';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { FloatingExchangeRateWidget } from './currency/FloatingExchangeRateWidget';
 
 interface AppLayoutProps {
   title?: string;
@@ -98,6 +99,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
                 </div>
               </div>
             ))}
+            <FloatingExchangeRateWidget />
           </main>
         </div>
       </div>

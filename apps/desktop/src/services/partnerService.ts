@@ -7,5 +7,5 @@ export const partnerService = {
   listPartners: () => invoke<PartnerDto[]>("list_partners"),
   addPartner: (data: PartnerRequest) => invoke("add_partner", data),
   updatePartner: (data: PartnerRequest) => invoke("update_partner", data),
-  deletePartner: (id: number) => invoke("delete_partner", { id }),
+  deletePartner: (id: string) => invoke("delete_partner", { id }),
 };

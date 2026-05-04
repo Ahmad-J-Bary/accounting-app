@@ -1,4 +1,4 @@
-use domain::customers::Customer;
+﻿use domain::customers::Customer;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -63,7 +63,7 @@ impl From<Customer> for CustomerDto {
             credit: customer.credit.to_string(),
             opening_balance: customer.opening_balance.to_string(),
             balance: customer.balance.to_string(),
-            currency: customer.currency.code().to_string(),
+            currency: customer.currency.code.clone(),
             notes: customer.notes,
             is_active: customer.is_active,
             created_at: customer.created_at.to_rfc3339(),

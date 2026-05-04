@@ -1,4 +1,4 @@
-use application::errors::AppError;
+﻿use application::errors::AppError;
 use domain::customers::Customer;
 use domain::shared::{AccountId, Currency};
 use rust_decimal::Decimal;
@@ -9,12 +9,12 @@ use super::models::CustomerRow;
 
 pub fn row_to_customer(row: CustomerRow) -> Result<Customer, AppError> {
     let currency = match row.currency.as_str() {
-        "USD" => Currency::USD,
-        _ => Currency::SYP,
+        "USD" => Currency::usd(),
+        _ => Currency::syp(),
     };
 
     Ok(Customer {
-        id: row.id.parse().map_err(|e| AppError::Infrastructure(format!("معرف العميل غير صالح: {}", e)))?,
+        id: row.id.parse().map_err(|e| AppError::Infrastructure(format!("Ù…Ø¹Ø±Ù Ø§Ù„Ø¹Ù…ÙŠÙ„ ØºÙŠØ± ØµØ§Ù„Ø­: {}", e)))?,
         code: row.code,
         name: row.name,
         phone: row.phone,

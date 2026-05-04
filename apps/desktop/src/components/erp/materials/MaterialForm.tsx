@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Wand2, Hash, Barcode, Package, Layers, Shuffle, Check, Scale, Boxes } from "lucide-react";
+import { Plus, Edit, Wand2, Hash, Barcode, Package, Layers, Shuffle, Check, Scale, Boxes, Package2 } from "lucide-react";
+import { FormPanel } from "../shells/FormPanel";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { materialCodeService } from "@/services/materialCodeService";
@@ -18,7 +19,7 @@ const DEFAULT_CATEGORY_NAME = "غير مصنف";
 
 interface MaterialFormProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onClose: () => void;
   material: MaterialDto | null;
   categories: CategoryDto[];
   onSave: (payload: any) => Promise<void>;
@@ -36,7 +37,7 @@ const EMPTY_FORM = {
   selectedCategoryIds: [] as string[],
 };
 
-export function MaterialForm({ open, onOpenChange, material, categories, onSave, saving }: MaterialFormProps) {
+export function MaterialForm({ open, onClose, material, categories, onSave, saving }: MaterialFormProps) {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
 
@@ -154,16 +155,22 @@ export function MaterialForm({ open, onOpenChange, material, categories, onSave,
     });
   };
 
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[92vh] overflow-y-auto" dir="rtl">
-        <DialogHeader className="border-b pb-4 mb-4">
-          <DialogTitle className="text-xl flex items-center gap-2 text-slate-800">
-            {material ? <Edit className="w-5 h-5 text-blue-600" /> : <Plus className="w-5 h-5 text-emerald-600" />}
-            {material ? "تعديل بطاقة المادة" : "إضافة مادة جديدة"}
-          </DialogTitle>
-          <DialogDescription>يرجى ملء البيانات التالية بدقة. الحقول المميزة بـ <span className="text-red-500">*</span> إجبارية.</DialogDescription>
-        </DialogHeader>
+    <FormPanel 
+      title={material ? "تعديل بطاقة المادة" : "إضافة مادة جديدة"}
+      icon={material ? <Edit className="w-5 h-5 text-blue-600" /> : <Package2 className="w-5 h-5 text-emerald-600" />}
+      onClose={onClose}
+      onSave={handleSave}
+      isSaving={saving}
+      saveDisabled={!formData.name.trim() || formData.selectedCategoryIds.length === 0}
+      saveLabel={material ? "حفظ التعديلات" : "إضافة المادة"}
+    >
+      <div className="space-y-6 text-right">
+        <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 mb-2">
+          <p className="text-xs text-blue-800">يرجى ملء البيانات التالية بدقة. الحقول المميزة بـ <span className="text-red-500">*</span> إجبارية.</p>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
           <div className="space-y-5">
@@ -315,12 +322,7 @@ export function MaterialForm({ open, onOpenChange, material, categories, onSave,
             )}
           </div>
         </div>
-
-        <DialogFooter className="border-t pt-6 mt-2 gap-3 flex-row-reverse">
-          <Button onClick={handleSave} disabled={saving || !formData.name.trim() || formData.selectedCategoryIds.length === 0} className="h-11 px-8 bg-blue-600 hover:bg-blue-700 font-bold">{saving ? "جاري الحفظ..." : (material ? "حفظ التعديلات" : "إضافة المادة")}</Button>
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="h-11">إلغاء</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FormPanel>
   );
 }

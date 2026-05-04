@@ -2,18 +2,18 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { FormPanel } from "@/components/erp/shells/FormPanel";
 import type { CreateDamagedItemRequest, MaterialDto } from "@erp/shared-types";
 
 interface DamagedFormProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onClose: () => void;
   products: MaterialDto[];
   onSave: (payload: CreateDamagedItemRequest) => Promise<void>;
   saving: boolean;
 }
 
-export function DamagedForm({ open, onOpenChange, products, onSave, saving }: DamagedFormProps) {
+export function DamagedForm({ open, onClose, products, onSave, saving }: DamagedFormProps) {
   const [form, setForm] = useState<Partial<CreateDamagedItemRequest>>({
     damage_date: new Date().toISOString(),
     quantity: 0,
@@ -22,26 +22,33 @@ export function DamagedForm({ open, onOpenChange, products, onSave, saving }: Da
     product_id: "",
   });
 
-  const handleOpenChange = (isOpen: boolean) => {
-    if (isOpen) {
+  // Reset on open
+  useState(() => {
+    if (open) {
       setForm({ damage_date: new Date().toISOString(), quantity: 0, cost_impact: 0, reason: "", product_id: "" });
     }
-    onOpenChange(isOpen);
-  };
+  });
 
   const handleSave = async () => {
     if (!form.product_id || !form.reason || !form.quantity) return;
     await onSave(form as CreateDamagedItemRequest);
   };
 
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md" dir="rtl">
-        <DialogHeader>
-          <DialogTitle>تسجيل مواد تالفة</DialogTitle>
-          <DialogDescription>إضافة تقرير عن أصناف تالفة لخصمها من المخزون وتسجيل الخسائر.</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-2">
+    <FormPanel
+      title="تسجيل مواد تالفة"
+      onClose={onClose}
+      onSave={handleSave}
+      isSaving={saving}
+      saveDisabled={!form.product_id || !form.reason || !form.quantity}
+      saveLabel="حفظ"
+    >
+      <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 mb-2 text-right">
+        <p className="text-xs text-blue-800">إضافة تقرير عن أصناف تالفة لخصمها من المخزون وتسجيل الخسائر.</p>
+      </div>
+      <div className="space-y-4 py-2 text-right">
           <div className="space-y-1">
             <Label>المنتج *</Label>
             <select 
@@ -94,13 +101,6 @@ export function DamagedForm({ open, onOpenChange, products, onSave, saving }: Da
               onChange={e => setForm(p => ({ ...p, damage_date: new Date(e.target.value).toISOString() }))} />
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
-          <Button onClick={handleSave} disabled={saving || !form.product_id || !form.reason || !form.quantity}>
-            {saving ? "جاري الحفظ..." : "حفظ"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </FormPanel>
   );
 }

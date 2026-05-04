@@ -4,13 +4,18 @@ import { useTabs } from "@/context/TabContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, RefreshCw, Search, Eye, Send, Printer, MoreHorizontal } from "lucide-react";
+import { Plus, RefreshCw, Search, Eye, Send, Printer, SlidersHorizontal, MoreHorizontal } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
+import { useColumnPreferences } from "@/hooks/useColumnPreferences";
+import { Settings2 } from "lucide-react";
 import { invoiceService } from "@/services/invoiceService";
 import { supplierService } from "@/services/supplierService";
+import { currencyService, type Currency } from "@/services/currencyService";
 import type { InvoiceDto, SupplierDto } from "@erp/shared-types";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { useCurrencyContext } from "@/context/CurrencyContext";
 
 // Document components
 import { DocumentShell } from "@/components/erp/document/DocumentShell";
@@ -37,6 +42,8 @@ interface EditorState {
   status: string;
   id?: string;
   paid_amount?: string;
+  currency_code: string;
+  exchange_rate: string;
 }
 
 function defaultEditor(): EditorState {
@@ -53,6 +60,8 @@ function defaultEditor(): EditorState {
     lines: [],
     status: "Draft",
     paid_amount: "0",
+    currency_code: "USD",
+    exchange_rate: "1",
   };
 }
 
@@ -65,12 +74,30 @@ export default function PurchaseInvoices() {
   const [view, setView] = useState<ViewMode>("list");
   const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
+  const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [posting, setPosting] = useState(false);
   const [reopening, setReopening] = useState(false);
   const [editor, setEditor] = useState<EditorState>(defaultEditor());
   const [search, setSearch] = useState("");
+  const { baseCurrency, getLatestRate, formatAmount, formatMonetaryAmount, hasTodayRate } = useCurrencyContext();
+
+  const availableColumns = [
+    { id: "material_name", label: "المادة / الصنف" },
+    { id: "code", label: "الكود" },
+    { id: "barcode", label: "الباركود" },
+    { id: "quantity", label: "الكمية" },
+    { id: "unit_price", label: "سعر الشراء" },
+    { id: "unit_price_usd", label: "سعر الشراء ($)" },
+    { id: "retail_price", label: "سعر مبيع مقترح" },
+    { id: "discount", label: "الخصم %" },
+    { id: "line_total", label: "الإجمالي" },
+    { id: "notes", label: "ملاحظات" },
+  ];
+
+  const defaultVisibleCols = ["material_name", "quantity", "unit_price", "line_total"];
+  const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences("purchase_invoice", defaultVisibleCols);
 
   const isNew = location.pathname.includes("/new");
 
@@ -100,6 +127,8 @@ export default function PurchaseInvoices() {
               line_total: parseFloat(l.quantity) * parseFloat(l.unit_price),
             })),
             status: inv.status,
+            currency_code: inv.currency_code || "USD",
+            exchange_rate: inv.exchange_rate || "1",
           });
           setView("editor");
         } catch {
@@ -115,12 +144,14 @@ export default function PurchaseInvoices() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [invData, suppData] = await Promise.all([
+      const [invData, suppData, currData] = await Promise.all([
         invoiceService.listInvoicesByType("Purchase"),
         supplierService.listSuppliers(),
+        currencyService.listCurrencies(),
       ]);
       setInvoices(invData);
       setSuppliers(suppData);
+      setCurrencies(currData);
     } catch {
       toast.error("فشل تحميل البيانات");
     } finally {
@@ -129,6 +160,26 @@ export default function PurchaseInvoices() {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Handle currency change and fetch rates
+  useEffect(() => {
+    if (!baseCurrency) return;
+    if (editor.currency_code === baseCurrency.code) {
+      setEditor((prev) => ({ ...prev, exchange_rate: "1" }));
+      return;
+    }
+
+    let cancelled = false;
+    void getLatestRate(editor.currency_code).then((value) => {
+      if (cancelled || !value) return;
+      setEditor((prev) => ({ ...prev, exchange_rate: value }));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editor.currency_code, baseCurrency, getLatestRate]);
+
 
   const filteredInvoices = useMemo(() =>
     invoices.filter(inv =>
@@ -151,6 +202,17 @@ export default function PurchaseInvoices() {
   } else {
     paid = 0; // credit
   }
+  const baseCode = baseCurrency?.code ?? "USD";
+  const exchangeRateNum = Math.max(parseFloat(editor.exchange_rate || "1") || 1e-9, 1e-9);
+  const isForeignDoc = editor.currency_code !== baseCode;
+  
+  // Totals in document currency
+  const totalInDoc = net;
+  const paidInDoc = paid;
+
+  // Totals in base currency (for accounting)
+  const totalInBase = isForeignDoc ? net / exchangeRateNum : net;
+  const paidInBase = isForeignDoc ? paid / exchangeRateNum : paid;
 
   const handleCreate = () => {
     const uniqueId = `/purchase-invoices/new-${Date.now()}`;
@@ -174,6 +236,10 @@ export default function PurchaseInvoices() {
   const handleSave = async () => {
     if (editor.lines.length === 0) {
       toast.error("يجب إضافة صنف واحد على الأقل");
+      return;
+    }
+    if (editor.currency_code !== baseCode && !hasTodayRate(editor.currency_code)) {
+      toast.error("لا يوجد سعر صرف محدث لليوم لهذه العملة");
       return;
     }
     setSaving(true);
@@ -207,6 +273,8 @@ export default function PurchaseInvoices() {
         payment_method: paymentMethodMap[editor.payment_method] || "Cash",
         amount_paid: editor.payment_method === "cash" ? totalNet.toString() : (editor.payment_method === "partial" ? editor.paid_amount || "0" : "0"),
         issued_at: new Date(editor.issued_at).toISOString(),
+        currency_code: editor.currency_code,
+        exchange_rate: editor.exchange_rate,
         notes: editor.notes || undefined,
       };
 
@@ -284,6 +352,10 @@ export default function PurchaseInvoices() {
       toast.error("يجب إضافة صنف واحد على الأقل");
       return;
     }
+    if (editor.currency_code !== baseCode && !hasTodayRate(editor.currency_code)) {
+      toast.error("لا يوجد سعر صرف محدث لليوم لهذه العملة");
+      return;
+    }
     setSaving(true);
     try {
       const backendLines = toBackendLines(editor.lines);
@@ -309,6 +381,8 @@ export default function PurchaseInvoices() {
         payment_method: paymentMethodMap[editor.payment_method] || "Cash",
         amount_paid: editor.payment_method === "cash" ? totalNet.toString() : (editor.payment_method === "partial" ? editor.paid_amount || "0" : "0"),
         issued_at: new Date(editor.issued_at).toISOString(),
+        currency_code: editor.currency_code,
+        exchange_rate: editor.exchange_rate,
         notes: editor.notes || undefined,
       };
 
@@ -372,6 +446,29 @@ export default function PurchaseInvoices() {
         onReopen={handleReopen}
         onClose={() => closeTab(activeTabId)}
         onRefresh={loadData}
+        extraActions={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600" title="إعدادات الأعمدة">
+                <Settings2 className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[200px]">
+              <DropdownMenuLabel className="text-right">الأعمدة الظاهرة</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {availableColumns.map((col) => (
+                <DropdownMenuCheckboxItem
+                  key={col.id}
+                  checked={isVisible(col.id)}
+                  onCheckedChange={() => toggleColumn(col.id)}
+                  className="text-right flex-row-reverse gap-2"
+                >
+                  {col.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
         summaryPanel={
           <div className="space-y-4">
             <InvoicePartySelector
@@ -407,6 +504,34 @@ export default function PurchaseInvoices() {
                             <option value="credit">آجل</option>
                             <option value="partial">دفع جزئي</option>
                         </select>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">العملة</label>
+                        <select
+                            value={editor.currency_code}
+                            onChange={e => {
+                                const code = e.target.value;
+                                setEditor(ed => ({ ...ed, currency_code: code }));
+                            }}
+                            className="w-full h-8 text-[11px] border border-slate-200 rounded-md px-2 bg-white font-bold mb-2"
+                        >
+                            {currencies.map(c => (
+                                <option key={c.code} value={c.code}>{c.name_ar} ({c.code})</option>
+                            ))}
+                        </select>
+                        
+                        {editor.currency_code !== "USD" && (
+                            <div className="space-y-1 animate-in slide-in-from-top-1 duration-200">
+                                <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-tight">سعر الصرف (مقابل USD)</label>
+                                <Input
+                                    type="number"
+                                    value={editor.exchange_rate}
+                                    onChange={e => setEditor(ed => ({ ...ed, exchange_rate: e.target.value }))}
+                                    className="h-7 text-[11px] font-mono bg-slate-50 border-slate-200 text-left"
+                                />
+                            </div>
+                        )}
                     </div>
 
                     {editor.payment_method === "partial" && (
@@ -465,26 +590,6 @@ export default function PurchaseInvoices() {
                 className="h-9 text-sm tabular-nums text-left font-bold"
               />
             </div>
-
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">الخصم المكتسب (ل.س)</label>
-              <Input
-                type="number" min="0" step="0.01"
-                value={editor.discount_amount}
-                onChange={e => setEditor(ed => ({ ...ed, discount_amount: e.target.value }))}
-                className="h-9 text-sm text-left tabular-nums"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">تكاليف إضافية (ل.س)</label>
-              <Input
-                type="number" min="0" step="0.01"
-                value={editor.extra_costs}
-                onChange={e => setEditor(ed => ({ ...ed, extra_costs: e.target.value }))}
-                className="h-9 text-sm text-left tabular-nums"
-              />
-            </div>
           </div>
         </Card>
 
@@ -495,6 +600,9 @@ export default function PurchaseInvoices() {
             lines={editor.lines}
             onChange={lines => setEditor(ed => ({ ...ed, lines }))}
             disabled={editor.status === "Posted"}
+            visibleColumns={visibleColumns}
+            currencyCode={editor.currency_code}
+            exchangeRate={editor.exchange_rate}
           />
         </Card>
       </DocumentShell>
@@ -533,8 +641,13 @@ export default function PurchaseInvoices() {
           <Card key={i} className="p-3 border-slate-200 shadow-sm">
             <div className="text-xs text-slate-500 mb-1">{s.label}</div>
             <div className={`text-2xl font-black tabular-nums ${s.color}`}>
-              {(s as {raw?: boolean}).raw ? s.value : s.value}
+              {s.value}
             </div>
+            {s.raw && (
+              <div className="text-[10px] text-slate-400 font-mono mt-1">
+                ≈ {formatMonetaryAmount(invoices.filter(i => i.status === "Posted").reduce((s, i) => s + (parseFloat(i.total_amount) / (parseFloat(i.exchange_rate) || 1)), 0), "base")}
+              </div>
+            )}
           </Card>
         ))}
       </div>
@@ -582,7 +695,9 @@ export default function PurchaseInvoices() {
                   <td className="px-4 py-2.5 font-bold text-blue-700 font-mono">{inv.invoice_number}</td>
                   <td className="px-4 py-2.5 text-slate-500 text-xs">{formatDate(inv.issued_at)}</td>
                   <td className="px-4 py-2.5 font-medium text-slate-800">{inv.supplier_name || "مورد نقدي"}</td>
-                  <td className="px-4 py-2.5 text-left font-black tabular-nums text-slate-900">{formatCurrency(parseFloat(inv.total_amount))}</td>
+                  <td className="px-4 py-2.5 text-left font-black tabular-nums text-slate-900">
+                    <div>{formatMonetaryAmount(inv.total_amount_v2 || inv.total_amount, "both")}</div>
+                  </td>
                   <td className="px-4 py-2.5 text-center"><DocumentStatusBadge status={inv.status} /></td>
                   <td className="px-4 py-2.5 text-center">
                     <DropdownMenu>

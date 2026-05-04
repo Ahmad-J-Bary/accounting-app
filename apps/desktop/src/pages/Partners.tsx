@@ -12,6 +12,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recha
 import { partnerService, type PartnerDto, type PartnerRequest } from "@/services/partnerService";
 
 // Refactored Components & Hooks
+import { MasterDetailLayout } from "@/components/erp/layouts/MasterDetailLayout";
 import { DataTable, Column } from "@/components/erp/shared/DataTable";
 import { TableActions } from "@/components/erp/shared/TableActions";
 import { useDataTable } from "@/hooks/useDataTable";
@@ -36,6 +37,7 @@ export default function Partners() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editPartner, setEditPartner] = useState<PartnerDto | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const {
@@ -64,7 +66,7 @@ export default function Partners() {
     }
   };
 
-  const handleDelete = useCallback(async (id: number) => {
+  const handleDelete = useCallback(async (id: string) => {
     try {
       await partnerService.deletePartner(id);
       toast.success("تم الحذف بنجاح");
@@ -110,7 +112,11 @@ export default function Partners() {
       header: "إجراءات",
       accessor: (p) => (
         <TableActions 
-          onEdit={() => { setEditPartner(p); setIsDialogOpen(true); }}
+          onEdit={() => { 
+            setEditPartner(p); 
+            setIsDialogOpen(true); 
+            setSelectedId(p.id);
+          }}
           onDelete={() => handleDelete(p.id)}
         />
       ),
@@ -120,28 +126,51 @@ export default function Partners() {
   ], [handleDelete]);
 
   return (
-    <div className="space-y-6" dir="rtl">
-      <PageHeader
-        title="الشركاء ورأس المال"
-        subtitle="إدارة الشركاء، حصص رأس المال، وتوزيع الأرباح"
-        breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "المحاسبة" }, { label: "الشركاء" }]}
-        actions={
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => refresh()} disabled={loading}>
-              <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />تحديث
-            </Button>
-            <Button onClick={() => { setEditPartner(null); setIsDialogOpen(true); }}>
-              <Plus className="w-4 h-4 ml-2" />إضافة شريك جديد
-            </Button>
-          </div>
-        }
-      />
+    <MasterDetailLayout
+      selectedId={selectedId || (isDialogOpen ? "new" : null)}
+      onCloseDetail={() => {
+        setSelectedId(null);
+        setIsDialogOpen(false);
+        setEditPartner(null);
+      }}
+      detailContent={
+        isDialogOpen ? (
+          <PartnerForm 
+            open={isDialogOpen}
+            onClose={() => {
+              setIsDialogOpen(false);
+              setSelectedId(null);
+              setEditPartner(null);
+            }}
+            partner={editPartner}
+            onSave={handleSave}
+            saving={saving}
+          />
+        ) : null
+      }
+      masterContent={
+        <div className="space-y-6" dir="rtl">
+          <PageHeader
+            title="الشركاء ورأس المال"
+            subtitle="إدارة الشركاء، حصص رأس المال، وتوزيع الأرباح"
+            breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "المحاسبة" }, { label: "الشركاء" }]}
+            actions={
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => refresh()} disabled={loading}>
+                  <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />تحديث
+                </Button>
+                <Button onClick={() => { setEditPartner(null); setIsDialogOpen(true); setSelectedId("new"); }}>
+                  <Plus className="w-4 h-4 ml-2" />إضافة شريك جديد
+                </Button>
+              </div>
+            }
+          />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard label="إجمالي رأس المال" value={formatCurrency(totals.local)} icon={<Calculator />} color="border-r-primary" textColor="text-primary" />
-        <StatCard label="عدد الشركاء" value={partners.length} icon={<Users />} color="border-r-blue-500" textColor="text-blue-600" />
-        <StatCard label="رأس المال بالدولار" value={formatCurrency(totals.usd, "") + " $"} icon={<DollarSign />} color="border-r-green-500" textColor="text-green-600" />
-      </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <StatCard label="إجمالي رأس المال" value={formatCurrency(totals.local)} icon={<Calculator />} color="border-r-primary" textColor="text-primary" />
+            <StatCard label="عدد الشركاء" value={partners.length} icon={<Users />} color="border-r-blue-500" textColor="text-blue-600" />
+            <StatCard label="رأس المال بالدولار" value={formatCurrency(totals.usd, "") + " $"} icon={<DollarSign />} color="border-r-green-500" textColor="text-green-600" />
+          </div>
 
       <Card className="p-5 bg-slate-50/80 border-dashed border-2 shadow-inner">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -165,16 +194,20 @@ export default function Partners() {
         </div>
       )}
 
-      <DataTable data={partnersWithRatios} columns={columns} loading={loading} />
-
-      <PartnerForm 
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        partner={editPartner}
-        onSave={handleSave}
-        saving={saving}
-      />
-    </div>
+          <DataTable 
+            data={partnersWithRatios} 
+            columns={columns} 
+            loading={loading} 
+            selectedId={selectedId}
+            onRowClick={(p) => {
+              setEditPartner(p);
+              setSelectedId(p.id);
+              setIsDialogOpen(true);
+            }}
+          />
+        </div>
+      }
+    />
   );
 }
 

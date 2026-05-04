@@ -89,8 +89,8 @@ impl CreateAccountUseCase {
             .and_then(|s| Decimal::from_str(s).ok())
             .unwrap_or(Decimal::ZERO);
         let currency = cmd.currency.as_deref()
-            .map(|s| if s == "USD" { Currency::USD } else { Currency::SYP })
-            .unwrap_or(Currency::SYP);
+            .map(|s| if s == "USD" { Currency::usd() } else { Currency::syp() })
+            .unwrap_or(Currency::syp());
 
         // Auto-create customer if account is under "123" or "1203" (receivables)
         if account.code.len() >= 4 && (account.code.starts_with("123") || account.code.starts_with("1203")) {
@@ -98,7 +98,7 @@ impl CreateAccountUseCase {
                 let customer_code = if account.code.starts_with("1203") { &account.code[4..] } else { &account.code[3..] };
                 
                 let customer_name = account.name_ar
-                    .strip_prefix("ذمة العميل: ")
+                    .strip_prefix("Ø°Ù…Ø© Ø§Ù„Ø¹Ù…ÙŠÙ„: ")
                     .unwrap_or(&account.name_ar)
                     .to_string();
 
@@ -114,7 +114,7 @@ impl CreateAccountUseCase {
                     debit,
                     credit,
                     account.opening_balance,
-                    currency,
+                    currency.clone(),
                     cmd.notes.clone(),
                 );
 
@@ -133,7 +133,7 @@ impl CreateAccountUseCase {
                 let supplier_code = if account.code.starts_with("2203") { &account.code[4..] } else { &account.code[3..] };
                 
                 let supplier_name = account.name_ar
-                    .strip_prefix("ذمة المورد: ")
+                    .strip_prefix("Ø°Ù…Ø© Ø§Ù„Ù…ÙˆØ±Ø¯: ")
                     .unwrap_or(&account.name_ar)
                     .to_string();
 
@@ -149,7 +149,7 @@ impl CreateAccountUseCase {
                     debit,
                     credit,
                     account.opening_balance,
-                    currency,
+                    currency.clone(),
                     cmd.notes.clone(),
                 );
 

@@ -27,8 +27,8 @@ pub async fn save(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), App
     };
 
     sqlx::query(
-        "INSERT INTO unified_invoices (id, invoice_number, invoice_type, customer_id, customer_name, supplier_id, supplier_name, tax_amount, discount_amount, total_amount, payment_method, amount_paid, status, issued_at, notes, created_at, updated_at) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO unified_invoices (id, invoice_number, invoice_type, customer_id, customer_name, supplier_id, supplier_name, tax_amount, tax_amount_base, discount_amount, discount_amount_base, total_amount, total_amount_base, payment_method, amount_paid, amount_paid_base, status, issued_at, currency_code, exchange_rate, notes, created_at, updated_at) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(invoice.id.to_string())
     .bind(&invoice.invoice_number)
@@ -38,12 +38,18 @@ pub async fn save(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), App
     .bind(invoice.supplier_id.as_ref().map(|id| id.to_string()))
     .bind(&invoice.supplier_name)
     .bind(invoice.tax_amount.amount().to_string())
+    .bind(invoice.tax_amount.base_amount.to_string())
     .bind(invoice.discount_amount.amount().to_string())
+    .bind(invoice.discount_amount.base_amount.to_string())
     .bind(invoice.total_amount.amount().to_string())
+    .bind(invoice.total_amount.base_amount.to_string())
     .bind(pmeth)
     .bind(invoice.amount_paid.amount().to_string())
+    .bind(invoice.amount_paid.base_amount.to_string())
     .bind(istatus)
     .bind(invoice.issued_at.to_rfc3339())
+    .bind(&invoice.currency_code)
+    .bind(invoice.exchange_rate.to_string())
     .bind(&invoice.notes)
     .bind(invoice.created_at.to_rfc3339())
     .bind(invoice.updated_at.to_rfc3339())
@@ -53,8 +59,8 @@ pub async fn save(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), App
 
     for line in &invoice.lines {
         sqlx::query(
-            "INSERT INTO unified_invoice_lines (id, invoice_id, material_id, quantity, unit_price, purchase_price, retail_price, wholesale_price, semi_wholesale_price, minimum_stock, notes) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO unified_invoice_lines (id, invoice_id, material_id, quantity, unit_price, purchase_price, retail_price, wholesale_price, semi_wholesale_price, minimum_stock, notes, unit_price_usd, purchase_price_usd, profit_amount_usd) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
         .bind(Uuid::new_v4().to_string())
         .bind(invoice.id.to_string())
@@ -67,6 +73,9 @@ pub async fn save(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), App
         .bind(line.semi_wholesale_price.as_ref().map(|m| m.amount().to_string()))
         .bind(line.minimum_stock.as_ref().map(|s| s.to_string()))
         .bind(&line.notes)
+        .bind(line.unit_price_usd.as_ref().map(|m| m.amount().to_string()))
+        .bind(line.purchase_price_usd.as_ref().map(|m| m.amount().to_string()))
+        .bind(line.profit_amount_usd.as_ref().map(|m| m.amount().to_string()))
         .execute(&mut *tx)
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
@@ -93,14 +102,20 @@ pub async fn update(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), A
     };
 
     sqlx::query(
-        "UPDATE unified_invoices SET status=?, tax_amount=?, discount_amount=?, total_amount=?, payment_method=?, amount_paid=?, notes=?, updated_at=?, customer_id=?, customer_name=?, supplier_id=?, supplier_name=? WHERE id=?"
+        "UPDATE unified_invoices SET status=?, tax_amount=?, tax_amount_base=?, discount_amount=?, discount_amount_base=?, total_amount=?, total_amount_base=?, payment_method=?, amount_paid=?, amount_paid_base=?, currency_code=?, exchange_rate=?, notes=?, updated_at=?, customer_id=?, customer_name=?, supplier_id=?, supplier_name=? WHERE id=?"
     )
     .bind(istatus)
     .bind(invoice.tax_amount.amount().to_string())
+    .bind(invoice.tax_amount.base_amount.to_string())
     .bind(invoice.discount_amount.amount().to_string())
+    .bind(invoice.discount_amount.base_amount.to_string())
     .bind(invoice.total_amount.amount().to_string())
+    .bind(invoice.total_amount.base_amount.to_string())
     .bind(pmeth)
     .bind(invoice.amount_paid.amount().to_string())
+    .bind(invoice.amount_paid.base_amount.to_string())
+    .bind(&invoice.currency_code)
+    .bind(invoice.exchange_rate.to_string())
     .bind(&invoice.notes)
     .bind(invoice.updated_at.to_rfc3339())
     .bind(invoice.customer_id.as_ref().map(|id| id.to_string()))
@@ -121,8 +136,8 @@ pub async fn update(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), A
 
         for line in &invoice.lines {
             sqlx::query(
-                "INSERT INTO unified_invoice_lines (id, invoice_id, material_id, quantity, unit_price, purchase_price, retail_price, wholesale_price, semi_wholesale_price, minimum_stock, notes) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                "INSERT INTO unified_invoice_lines (id, invoice_id, material_id, quantity, unit_price, purchase_price, retail_price, wholesale_price, semi_wholesale_price, minimum_stock, notes, unit_price_usd, purchase_price_usd, profit_amount_usd) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             )
             .bind(Uuid::new_v4().to_string())
             .bind(invoice.id.to_string())
@@ -135,6 +150,9 @@ pub async fn update(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), A
             .bind(line.semi_wholesale_price.as_ref().map(|m| m.amount().to_string()))
             .bind(line.minimum_stock.as_ref().map(|s| s.to_string()))
             .bind(&line.notes)
+            .bind(line.unit_price_usd.as_ref().map(|m| m.amount().to_string()))
+            .bind(line.purchase_price_usd.as_ref().map(|m| m.amount().to_string()))
+            .bind(line.profit_amount_usd.as_ref().map(|m| m.amount().to_string()))
             .execute(&mut *tx)
             .await
             .map_err(|e| AppError::Infrastructure(e.to_string()))?;

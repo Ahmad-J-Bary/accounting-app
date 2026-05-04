@@ -1,4 +1,4 @@
-use uuid::Uuid;
+﻿use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use crate::shared::Money;
@@ -60,7 +60,7 @@ impl FixedAsset {
             fx_rate,
             useful_life_months,
             salvage_value: None,
-            accumulated_depreciation: Money::new(Decimal::ZERO, purchase_cost.currency()),
+            accumulated_depreciation: Money::new(Decimal::ZERO, purchase_cost.currency().clone()),
             status: AssetStatus::Active,
             location: None,
             notes: None,
@@ -78,7 +78,7 @@ impl FixedAsset {
 
     pub fn calculate_monthly_depreciation(&self) -> Money {
         if self.useful_life_months == 0 {
-            return Money::new(Decimal::ZERO, self.purchase_cost.currency());
+            return Money::new(Decimal::ZERO, self.purchase_cost.currency().clone());
         }
         
         let cost = self.purchase_cost.amount();
@@ -86,7 +86,7 @@ impl FixedAsset {
         let depreciable_amount = cost - salvage;
         
         let monthly = depreciable_amount / Decimal::from(self.useful_life_months);
-        Money::new(monthly.round_dp(2), self.purchase_cost.currency())
+        Money::new(monthly.round_dp(2), self.purchase_cost.currency().clone())
     }
 
     pub fn depreciate(&mut self) -> Money {
@@ -104,7 +104,7 @@ mod tests {
 
     #[test]
     fn test_calculate_depreciation() {
-        let cost = Money::new(Decimal::from(1200), Currency::USD);
+        let cost = Money::new(Decimal::from(1200), Currency::usd());
         let mut asset = FixedAsset::new(
             "CODE".to_string(),
             "NAME".to_string(),

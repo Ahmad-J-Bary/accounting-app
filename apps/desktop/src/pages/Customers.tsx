@@ -3,7 +3,15 @@ import { PageHeader } from "@/components/erp/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, RefreshCw } from "lucide-react";
+import { Plus, Search, RefreshCw, Settings2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { customerService } from "@/services/customerService";
 import { accountingService } from "@/services/accountingService";
@@ -11,12 +19,14 @@ import { invoiceService } from "@/services/invoiceService";
 import { paymentService } from "@/services/paymentService";
 import type { CustomerDto, AccountDto, InvoiceDto, Payment, CreateCustomerRequest, UpdateCustomerRequest } from "@erp/shared-types";
 
-// Refactored Components & Hooks
 import { useMasterData } from "@/hooks/useMasterData";
-import { PartnerProfileSheet } from "@/components/erp/shared/PartnerProfileSheet";
-import { PartnerFormDialog } from "@/components/erp/shared/PartnerFormDialog";
+import { useColumnPreferences } from "@/hooks/useColumnPreferences";
 import { CustomerStats } from "@/components/erp/customers/CustomerStats";
 import { CustomerTable } from "@/components/erp/customers/CustomerTable";
+
+import { MasterDetailLayout } from "@/components/erp/layouts/MasterDetailLayout";
+import { PartnerDetailPanel } from "@/components/erp/shared/PartnerDetailPanel";
+import { PartnerFormPanel } from "@/components/erp/shared/PartnerFormPanel";
 
 export default function Customers() {
   const {
@@ -51,6 +61,17 @@ export default function Customers() {
   const [customerPayments, setCustomerPayments] = useState<Payment[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
+  
+  const availableColumns = [
+    { id: "name", label: "اسم العميل" },
+    { id: "phone", label: "رقم الهاتف" },
+    { id: "debit", label: "المدين" },
+    { id: "credit", label: "الدائن" },
+    { id: "balance", label: "الرصيد النهائي" },
+    { id: "status", label: "الحالة" },
+  ];
+  const defaultVisibleColumns = ["name", "phone", "debit", "credit", "balance", "status"];
+  const { visibleColumns, isVisible, toggleColumn } = useColumnPreferences("customers", defaultVisibleColumns);
 
   const selectedCustomer = useMemo(() => customers.find(c => c.id === selectedId) || null, [customers, selectedId]);
 
@@ -74,65 +95,122 @@ export default function Customers() {
   }, []);
 
   useEffect(() => {
-    if (selectedId) fetchDetails(selectedId);
-  }, [selectedId, fetchDetails]);
+    if (selectedId) {
+      fetchDetails(selectedId);
+      setIsFormOpen(false); // Close form if opening details
+    }
+  }, [selectedId, fetchDetails, setIsFormOpen]);
 
-  return (
-    <>
-      <PageHeader
-        title="العملاء"
-        subtitle="إدارة قاعدة بيانات العملاء والأرصدة"
-        breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "العملاء" }]}
-        actions={
-          <>
-            <Button variant="outline" onClick={() => refresh()} disabled={loading}>
-              <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />تحديث
-            </Button>
-            <Button onClick={() => { loadAccounts(); handleOpenAdd(); }}>
-              <Plus className="w-4 h-4 ml-2" />عميل جديد
-            </Button>
-          </>
-        }
-      />
+  const handleOpenAddCustomer = () => {
+    loadAccounts();
+    setSelectedId(null); // Deselect row to switch to add mode
+    handleOpenAdd();
+  };
 
-      <CustomerStats customers={customers} />
+  const handleEditCustomer = (c: CustomerDto) => {
+    loadAccounts();
+    handleOpenEdit(c);
+  };
 
-      <Card className="p-5">
-        <div className="flex items-center gap-3 mb-4">
+  const masterContent = (
+    <div className="flex flex-col h-full bg-slate-50 relative p-6">
+      <div className="shrink-0 mb-6">
+        <PageHeader
+          title="العملاء"
+          subtitle="إدارة قاعدة بيانات العملاء والأرصدة"
+          breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "العملاء" }]}
+          actions={
+            <>
+              <Button variant="outline" onClick={() => refresh()} disabled={loading} className="bg-white">
+                <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />تحديث
+              </Button>
+              <Button onClick={handleOpenAddCustomer} className="shadow-sm">
+                <Plus className="w-4 h-4 ml-2" />عميل جديد
+              </Button>
+            </>
+          }
+        />
+        <div className="mt-6">
+          <CustomerStats customers={customers} />
+        </div>
+      </div>
+
+      <Card className="flex-1 min-h-0 flex flex-col p-0 border-none shadow-sm rounded-xl overflow-hidden bg-white">
+        <div className="flex items-center gap-3 p-4 border-b shrink-0 bg-white">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="بحث بالاسم، الكود، الهاتف..." className="pr-10" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Input 
+              placeholder="بحث بالاسم، الكود، الهاتف..." 
+              className="pr-10 bg-slate-50 border-slate-200" 
+              value={search} 
+              onChange={(e) => setSearch(e.target.value)} 
+            />
           </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" title="إعدادات الأعمدة" className="bg-white">
+                <Settings2 className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[200px]">
+              <DropdownMenuLabel>الأعمدة الظاهرة</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {availableColumns.map((col) => (
+                <DropdownMenuCheckboxItem
+                  key={col.id}
+                  checked={isVisible(col.id)}
+                  onCheckedChange={() => toggleColumn(col.id)}
+                >
+                  {col.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        <CustomerTable 
-          customers={customers}
-          loading={loading}
-          search={search}
-          onView={(c) => setSelectedId(c.id)}
-          onEdit={(c) => { loadAccounts(); handleOpenEdit(c); }}
-          onDelete={handleDelete}
-        />
+        <div className="flex-1 overflow-auto bg-white relative">
+          <CustomerTable 
+            customers={customers}
+            loading={loading}
+            search={search}
+            visibleColumns={visibleColumns}
+            onView={(c) => setSelectedId(c.id)}
+            onEdit={handleEditCustomer}
+            onDelete={handleDelete}
+            selectedId={selectedId}
+          />
+        </div>
       </Card>
+    </div>
+  );
 
-      <PartnerProfileSheet 
-        type="customer"
-        partner={selectedCustomer} 
-        onClose={() => setSelectedId(null)} 
-        invoices={customerInvoices}
-        payments={customerPayments}
-        loadingDetails={loadingDetails}
-      />
+  const detailContent = isFormOpen ? (
+    <PartnerFormPanel 
+      type="customer"
+      partner={editCustomer}
+      accounts={accounts}
+      onSave={handleSave}
+      onClose={() => setIsFormOpen(false)}
+      saving={saving}
+    />
+  ) : (
+    <PartnerDetailPanel 
+      type="customer"
+      partner={selectedCustomer}
+      onClose={() => setSelectedId(null)}
+      invoices={customerInvoices}
+      payments={customerPayments}
+      loadingDetails={loadingDetails}
+    />
+  );
 
-      <PartnerFormDialog 
-        type="customer"
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        partner={editCustomer}
-        accounts={accounts}
-        onSave={handleSave}
-        saving={saving}
+  return (
+    <div className="absolute inset-0">
+      <MasterDetailLayout 
+        masterContent={masterContent}
+        detailContent={detailContent}
+        isDetailOpen={isFormOpen || !!selectedId}
       />
-    </>
+    </div>
   );
 }

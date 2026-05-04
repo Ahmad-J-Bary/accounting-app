@@ -1,5 +1,5 @@
 // ============================================================
-// Domain Tests — Arabic ERP System
+// Domain Tests â€” Arabic ERP System
 // Uses crate:: paths since tests live inside the domain crate
 // ============================================================
 
@@ -64,7 +64,7 @@ mod stock_movement_domain_tests {
             "".to_string(), 
             Utc::now(),
         );
-        assert!(r.is_err(), "الكمية صفر يجب أن ترفض");
+        assert!(r.is_err(), "Ø§Ù„ÙƒÙ…ÙŠØ© ØµÙØ± ÙŠØ¬Ø¨ Ø£Ù† ØªØ±ÙØ¶");
     }
 
     #[test]
@@ -79,7 +79,7 @@ mod stock_movement_domain_tests {
             "".to_string(), 
             Utc::now(),
         );
-        assert!(r.is_err(), "الكمية السالبة يجب أن ترفض");
+        assert!(r.is_err(), "Ø§Ù„ÙƒÙ…ÙŠØ© Ø§Ù„Ø³Ø§Ù„Ø¨Ø© ÙŠØ¬Ø¨ Ø£Ù† ØªØ±ÙØ¶");
     }
 
     #[test]
@@ -94,7 +94,7 @@ mod stock_movement_domain_tests {
             "".to_string(), 
             Utc::now(),
         );
-        assert!(r.is_err(), "المرجع الفارغ يجب أن يُرفض");
+        assert!(r.is_err(), "Ø§Ù„Ù…Ø±Ø¬Ø¹ Ø§Ù„ÙØ§Ø±Øº ÙŠØ¬Ø¨ Ø£Ù† ÙŠÙØ±ÙØ¶");
     }
 }
 
@@ -104,6 +104,7 @@ mod journal_entry_domain_tests {
     use crate::shared::ids::AccountId;
     use crate::shared::money::Money;
     use crate::shared::currency::Currency;
+    use crate::shared::monetary_amount::MonetaryAmount;
     use uuid::Uuid;
     use rust_decimal_macros::dec;
     use rust_decimal::Decimal;
@@ -111,10 +112,18 @@ mod journal_entry_domain_tests {
 
     fn balanced_lines(amount: rust_decimal::Decimal) -> Vec<JournalLine> {
         vec![
-            JournalLine::new(AccountId(Uuid::new_v4()), Currency::SYP, Decimal::ONE,
-                Money::syp(amount), Money::zero(), "مدين".to_string()),
-            JournalLine::new(AccountId(Uuid::new_v4()), Currency::SYP, Decimal::ONE,
-                Money::zero(), Money::syp(amount), "دائن".to_string()),
+            JournalLine::new(
+                AccountId(Uuid::new_v4()),
+                MonetaryAmount::new(Money::syp(amount), Decimal::ONE),
+                MonetaryAmount::zero(Currency::syp()),
+                "مدين".to_string(),
+            ),
+            JournalLine::new(
+                AccountId(Uuid::new_v4()),
+                MonetaryAmount::zero(Currency::syp()),
+                MonetaryAmount::new(Money::syp(amount), Decimal::ONE),
+                "دائن".to_string(),
+            ),
         ]
     }
 
@@ -122,7 +131,7 @@ mod journal_entry_domain_tests {
     fn balanced_entry_posts_successfully() {
         let mut e = JournalEntry::new(
             "JE-001".to_string(), balanced_lines(dec!(50000)),
-            Utc::now(), "قيد متوازن".to_string(),
+            Utc::now(), "Ù‚ÙŠØ¯ Ù…ØªÙˆØ§Ø²Ù†".to_string(),
         ).unwrap();
         assert!(e.post().is_ok());
     }
@@ -130,12 +139,20 @@ mod journal_entry_domain_tests {
     #[test]
     fn unbalanced_entry_fails_to_post() {
         let lines = vec![
-            JournalLine::new(AccountId(Uuid::new_v4()), Currency::SYP, Decimal::ONE,
-                Money::syp(dec!(100)), Money::zero(), "مدين".to_string()),
-            JournalLine::new(AccountId(Uuid::new_v4()), Currency::SYP, Decimal::ONE,
-                Money::zero(), Money::syp(dec!(90)), "دائن".to_string()),
+            JournalLine::new(
+                AccountId(Uuid::new_v4()),
+                MonetaryAmount::new(Money::syp(dec!(100)), Decimal::ONE),
+                MonetaryAmount::zero(Currency::syp()),
+                "مدين".to_string(),
+            ),
+            JournalLine::new(
+                AccountId(Uuid::new_v4()),
+                MonetaryAmount::zero(Currency::syp()),
+                MonetaryAmount::new(Money::syp(dec!(90)), Decimal::ONE),
+                "دائن".to_string(),
+            ),
         ];
-        let mut e = JournalEntry::new("JE-002".to_string(), lines, Utc::now(), "غير متوازن".to_string()).unwrap();
+        let mut e = JournalEntry::new("JE-002".to_string(), lines, Utc::now(), "ØºÙŠØ± Ù…ØªÙˆØ§Ø²Ù†".to_string()).unwrap();
         assert!(e.post().is_err());
     }
 
@@ -143,7 +160,7 @@ mod journal_entry_domain_tests {
     fn cannot_post_twice() {
         let mut e = JournalEntry::new(
             "JE-003".to_string(), balanced_lines(dec!(1000)),
-            Utc::now(), "قيد".to_string(),
+            Utc::now(), "Ù‚ÙŠØ¯".to_string(),
         ).unwrap();
         e.post().unwrap();
         assert!(e.post().is_err());
@@ -151,7 +168,7 @@ mod journal_entry_domain_tests {
 
     #[test]
     fn entry_without_lines_fails() {
-        let r = JournalEntry::new("JE-EMPTY".to_string(), vec![], Utc::now(), "فارغ".to_string());
+        let r = JournalEntry::new("JE-EMPTY".to_string(), vec![], Utc::now(), "ÙØ§Ø±Øº".to_string());
         assert!(r.is_err());
     }
 
@@ -160,7 +177,7 @@ mod journal_entry_domain_tests {
         let amount = dec!(150000);
         let mut e = JournalEntry::new(
             "JE-OP-001".to_string(), balanced_lines(amount),
-            Utc::now(), "قيد بضاعة أول المدة".to_string(),
+            Utc::now(), "Ù‚ÙŠØ¯ Ø¨Ø¶Ø§Ø¹Ø© Ø£ÙˆÙ„ Ø§Ù„Ù…Ø¯Ø©".to_string(),
         ).unwrap();
         assert!(e.post().is_ok());
     }

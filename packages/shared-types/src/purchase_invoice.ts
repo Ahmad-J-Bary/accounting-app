@@ -23,6 +23,8 @@ export interface PurchaseInvoice {
   status: 'Draft' | 'Posted' | 'Cancelled' | 'Paid' | 'PartiallyPaid';
   invoice_date: string;
   due_date?: string;
+  currency_code: string;
+  exchange_rate: string;
   notes?: string;
   created_at: string;
   updated_at: string;
@@ -46,5 +48,7 @@ export interface CreatePurchaseInvoiceRequest {
   amount_paid: string;
   invoice_date: string;
   due_date?: string;
+  currency_code: string;
+  exchange_rate: string;
   notes?: string;
 }

@@ -19,16 +19,24 @@ pub async fn get_material(
     state: State<'_, AppState>,
     id: String,
 ) -> Result<MaterialDto, String> {
-    MaterialQueries::new(state.material_repo.clone(), state.stock_movement_repo.clone())
-        .get_by_id(id).await.map_err(|e| e.to_string())
+    MaterialQueries::new(
+        state.material_repo.clone(), 
+        state.stock_movement_repo.clone(),
+        state.unified_invoice_repo.clone()
+    )
+    .get_by_id(id).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn list_materials(
     state: State<'_, AppState>,
 ) -> Result<Vec<MaterialDto>, String> {
-    MaterialQueries::new(state.material_repo.clone(), state.stock_movement_repo.clone())
-        .list_all().await.map_err(|e| e.to_string())
+    MaterialQueries::new(
+        state.material_repo.clone(), 
+        state.stock_movement_repo.clone(),
+        state.unified_invoice_repo.clone()
+    )
+    .list_all().await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]

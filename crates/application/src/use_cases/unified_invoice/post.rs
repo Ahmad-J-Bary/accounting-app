@@ -13,7 +13,7 @@ use crate::ports::supplier_repository::SupplierRepository;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::category_repository::CategoryRepository;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine};
-use domain::shared::{Currency, Money};
+use domain::shared::{Currency, Money, MonetaryAmount};
 use rust_decimal::Decimal;
 use crate::dto::invoice_dto::{InvoiceDto};
 use crate::errors::AppError;
@@ -44,9 +44,9 @@ impl PostInvoiceUseCase {
     }
 
     pub async fn execute(&self, id: String) -> Result<InvoiceDto, AppError> {
-        let invoice_id = InvoiceId::from_str(&id).map_err(|_| AppError::Invalid("معرف فاتورة غير صالح".into()))?;
+        let invoice_id = InvoiceId::from_str(&id).map_err(|_| AppError::Invalid("Ù…Ø¹Ø±Ù ÙØ§ØªÙˆØ±Ø© ØºÙŠØ± ØµØ§Ù„Ø­".into()))?;
         let mut invoice = self.repo.find_by_id(&invoice_id).await?
-            .ok_or_else(|| AppError::NotFound("الفاتورة غير موجودة".into()))?;
+            .ok_or_else(|| AppError::NotFound("Ø§Ù„ÙØ§ØªÙˆØ±Ø© ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯Ø©".into()))?;
 
         invoice.post().map_err(|e| AppError::Invalid(e.to_string()))?;
 
@@ -72,8 +72,11 @@ impl PostInvoiceUseCase {
 
         self.repo.update(&invoice).await?;
 
-        // --- Accounting Logic ---
+                                        // --- Accounting Logic ---
         let mut journal_lines = Vec::new();
+        let doc_currency = Currency::from_code(&invoice.currency_code);
+        let fx_rate = invoice.exchange_rate;
+
         let total_amount = invoice.total_amount.amount();
         let amount_paid = invoice.amount_paid.amount();
         let amount_deferred = total_amount - amount_paid;
@@ -96,17 +99,32 @@ impl PostInvoiceUseCase {
 
         if invoice.invoice_type == InvoiceType::Sales {
             // Sales: Credit Revenue, Debit Cash/Customer
-            journal_lines.push(JournalLine::new(main_account.id, Currency::SYP, Decimal::ONE, Money::zero(), Money::syp(total_amount), format!("إثبات مبيعات فاتورة رقم {}", invoice.invoice_number)));
+            journal_lines.push(JournalLine::new(
+                main_account.id, 
+                MonetaryAmount::zero(doc_currency.clone()), 
+                MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate), 
+                format!("إثبات مبيعات فاتورة رقم {}", invoice.invoice_number)
+            ));
             
             if amount_paid > Decimal::ZERO {
-                journal_lines.push(JournalLine::new(cash_account.id, Currency::SYP, Decimal::ONE, Money::syp(amount_paid), Money::zero(), format!("دفعة نقدية - فاتورة رقم {}", invoice.invoice_number)));
+                journal_lines.push(JournalLine::new(
+                    cash_account.id, 
+                    MonetaryAmount::new(Money::new(amount_paid, doc_currency.clone()), fx_rate), 
+                    MonetaryAmount::zero(doc_currency.clone()), 
+                    format!("دفعة نقدية - فاتورة رقم {}", invoice.invoice_number)
+                ));
             }
             
             if amount_deferred > Decimal::ZERO {
                 if let Some(cid) = &invoice.customer_id {
                     if let Some(customer) = self.customer_repo.find_by_id(cid).await? {
                         if let Some(p_acc_id) = customer.account_id {
-                            journal_lines.push(JournalLine::new(p_acc_id, Currency::SYP, Decimal::ONE, Money::syp(amount_deferred), Money::zero(), format!("ذمة مدينة - فاتورة رقم {}", invoice.invoice_number)));
+                            journal_lines.push(JournalLine::new(
+                                p_acc_id, 
+                                MonetaryAmount::new(Money::new(amount_deferred, doc_currency.clone()), fx_rate), 
+                                MonetaryAmount::zero(doc_currency.clone()), 
+                                format!("ذمة مدينة - فاتورة رقم {}", invoice.invoice_number)
+                            ));
                             
                             // Update customer balance in subledger
                             let mut updated_customer = customer;
@@ -118,17 +136,32 @@ impl PostInvoiceUseCase {
             }
         } else if invoice.invoice_type == InvoiceType::Purchase {
             // Purchase: Debit Expense, Credit Cash/Supplier
-            journal_lines.push(JournalLine::new(main_account.id, Currency::SYP, Decimal::ONE, Money::syp(total_amount), Money::zero(), format!("إثبات مشتريات فاتورة رقم {}", invoice.invoice_number)));
+            journal_lines.push(JournalLine::new(
+                main_account.id, 
+                MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate), 
+                MonetaryAmount::zero(doc_currency.clone()), 
+                format!("إثبات مشتريات فاتورة رقم {}", invoice.invoice_number)
+            ));
             
             if amount_paid > Decimal::ZERO {
-                journal_lines.push(JournalLine::new(cash_account.id, Currency::SYP, Decimal::ONE, Money::zero(), Money::syp(amount_paid), format!("دفعة نقدية - فاتورة رقم {}", invoice.invoice_number)));
+                journal_lines.push(JournalLine::new(
+                    cash_account.id, 
+                    MonetaryAmount::zero(doc_currency.clone()), 
+                    MonetaryAmount::new(Money::new(amount_paid, doc_currency.clone()), fx_rate), 
+                    format!("دفعة نقدية - فاتورة رقم {}", invoice.invoice_number)
+                ));
             }
             
             if amount_deferred > Decimal::ZERO {
                 if let Some(sid) = &invoice.supplier_id {
                     if let Some(supplier) = self.supplier_repo.find_by_id(sid).await? {
                         if let Some(p_acc_id) = supplier.account_id {
-                            journal_lines.push(JournalLine::new(p_acc_id, Currency::SYP, Decimal::ONE, Money::zero(), Money::syp(amount_deferred), format!("ذمة دائنة - فاتورة رقم {}", invoice.invoice_number)));
+                            journal_lines.push(JournalLine::new(
+                                p_acc_id, 
+                                MonetaryAmount::zero(doc_currency.clone()), 
+                                MonetaryAmount::new(Money::new(amount_deferred, doc_currency.clone()), fx_rate), 
+                                format!("ذمة دائنة - فاتورة رقم {}", invoice.invoice_number)
+                            ));
                             
                             // Update supplier balance in subledger
                             let mut updated_supplier = supplier;
@@ -140,9 +173,20 @@ impl PostInvoiceUseCase {
             }
         } else if invoice.invoice_type == InvoiceType::OpeningBalance {
             // Opening Balance (Inventory): Debit Inventory, Credit Equity
-            if let Some(inv_account) = self.account_repo.find_by_code("124").await? {
-                journal_lines.push(JournalLine::new(inv_account.id, Currency::SYP, Decimal::ONE, Money::syp(total_amount), Money::zero(), format!("بضاعة أول المدة - فاتورة رقم {}", invoice.invoice_number)));
-                journal_lines.push(JournalLine::new(main_account.id, Currency::SYP, Decimal::ONE, Money::zero(), Money::syp(total_amount), format!("رصيد افتتاح لليومية - فاتورة رقم {}", invoice.invoice_number)));
+            let inv_account_opt = self.account_repo.find_by_code("124").await?;
+            if let Some(inv_account) = inv_account_opt {
+                journal_lines.push(JournalLine::new(
+                    inv_account.id, 
+                    MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate), 
+                    MonetaryAmount::zero(doc_currency.clone()), 
+                    format!("بضاعة أول المدة - فاتورة رقم {}", invoice.invoice_number)
+                ));
+                journal_lines.push(JournalLine::new(
+                    main_account.id, 
+                    MonetaryAmount::zero(doc_currency.clone()), 
+                    MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate), 
+                    format!("رصيد افتتاحي لليومية - فاتورة رقم {}", invoice.invoice_number)
+                ));
             }
         }
 
@@ -159,7 +203,6 @@ impl PostInvoiceUseCase {
             
             self.journal_repo.save(&journal_entry).await?;
         }
-
         let dto = InvoiceDto::from(invoice);
         let queries = crate::use_cases::unified_invoice::InvoiceQueries::new(
             self.repo.clone(),
@@ -171,3 +214,7 @@ impl PostInvoiceUseCase {
         queries.populate_dto(dto).await
     }
 }
+
+
+
+

@@ -3,7 +3,15 @@ import { PageHeader } from "@/components/erp/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, RefreshCw } from "lucide-react";
+import { Plus, Search, RefreshCw, Settings2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { supplierService } from "@/services/supplierService";
 import { accountingService } from "@/services/accountingService";
@@ -11,12 +19,14 @@ import { invoiceService } from "@/services/invoiceService";
 import { paymentService } from "@/services/paymentService";
 import type { SupplierDto, AccountDto, InvoiceDto, Payment, CreateSupplierRequest, UpdateSupplierRequest } from "@erp/shared-types";
 
-// Refactored Components & Hooks
 import { useMasterData } from "@/hooks/useMasterData";
-import { PartnerProfileSheet } from "@/components/erp/shared/PartnerProfileSheet";
-import { PartnerFormDialog } from "@/components/erp/shared/PartnerFormDialog";
+import { useColumnPreferences } from "@/hooks/useColumnPreferences";
 import { SupplierStats } from "@/components/erp/suppliers/SupplierStats";
 import { SupplierTable } from "@/components/erp/suppliers/SupplierTable";
+
+import { MasterDetailLayout } from "@/components/erp/layouts/MasterDetailLayout";
+import { PartnerDetailPanel } from "@/components/erp/shared/PartnerDetailPanel";
+import { PartnerFormPanel } from "@/components/erp/shared/PartnerFormPanel";
 
 export default function Suppliers() {
   const {
@@ -51,6 +61,17 @@ export default function Suppliers() {
   const [supplierInvoices, setSupplierInvoices] = useState<InvoiceDto[]>([]);
   const [supplierPayments, setSupplierPayments] = useState<Payment[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  
+  const availableColumns = [
+    { id: "name", label: "اسم المورد" },
+    { id: "phone", label: "رقم الهاتف" },
+    { id: "debit", label: "المدين" },
+    { id: "credit", label: "الدائن" },
+    { id: "balance", label: "الرصيد النهائي" },
+    { id: "status", label: "الحالة" },
+  ];
+  const defaultVisibleColumns = ["name", "phone", "debit", "credit", "balance", "status"];
+  const { visibleColumns, isVisible, toggleColumn } = useColumnPreferences("suppliers", defaultVisibleColumns);
 
   const selectedSupplier = useMemo(() => suppliers.find(s => s.id === selectedId) || null, [suppliers, selectedId]);
 
@@ -66,7 +87,7 @@ export default function Suppliers() {
     try {
       const [invoices, payments] = await Promise.all([
         invoiceService.listInvoicesByType("Purchase").then(list => list.filter(inv => inv.supplier_id === id)),
-        paymentService.listPayments(id) // Note: this might need adjustment if payment service distinguishes types
+        paymentService.listPayments(id)
       ]);
       setSupplierInvoices(invoices);
       setSupplierPayments(payments);
@@ -74,71 +95,124 @@ export default function Suppliers() {
   }, []);
 
   useEffect(() => { loadAccounts(); }, [loadAccounts]);
+  
   useEffect(() => {
-    if (selectedId) fetchDetails(selectedId);
-  }, [selectedId, fetchDetails]);
+    if (selectedId) {
+      fetchDetails(selectedId);
+      setIsFormOpen(false);
+    }
+  }, [selectedId, fetchDetails, setIsFormOpen]);
 
-  return (
-    <>
-      <PageHeader
-        title="الموردون"
-        subtitle="إدارة قاعدة بيانات الموردين وأرصدتهم"
-        breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "الموردون" }]}
-        actions={
-          <>
-            <Button variant="outline" onClick={() => refresh()} disabled={loading}>
-              <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />تحديث
-            </Button>
-            <Button onClick={() => { loadAccounts(); handleOpenAdd(); }}>
-              <Plus className="w-4 h-4 ml-2" />مورد جديد
-            </Button>
-          </>
-        }
-      />
+  const handleOpenAddSupplier = () => {
+    loadAccounts();
+    setSelectedId(null);
+    handleOpenAdd();
+  };
 
-      <SupplierStats suppliers={suppliers} />
+  const handleEditSupplier = (s: SupplierDto) => {
+    loadAccounts();
+    handleOpenEdit(s);
+  };
 
-      <Card className="p-5">
-        <div className="flex items-center gap-3 mb-4 flex-wrap">
-          <div className="relative flex-1 min-w-[220px]">
+  const masterContent = (
+    <div className="flex flex-col h-full bg-slate-50 relative p-6">
+      <div className="shrink-0 mb-6">
+        <PageHeader
+          title="الموردون"
+          subtitle="إدارة قاعدة بيانات الموردين وأرصدتهم"
+          breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "الموردون" }]}
+          actions={
+            <>
+              <Button variant="outline" onClick={() => refresh()} disabled={loading} className="bg-white">
+                <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />تحديث
+              </Button>
+              <Button onClick={handleOpenAddSupplier} className="shadow-sm">
+                <Plus className="w-4 h-4 ml-2" />مورد جديد
+              </Button>
+            </>
+          }
+        />
+        <div className="mt-6">
+          <SupplierStats suppliers={suppliers} />
+        </div>
+      </div>
+
+      <Card className="flex-1 min-h-0 flex flex-col p-0 border-none shadow-sm rounded-xl overflow-hidden bg-white">
+        <div className="flex items-center gap-3 p-4 border-b shrink-0 bg-white">
+          <div className="relative flex-1 max-w-md">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="بحث بالاسم أو الهاتف أو الكود..."
-              className="pr-10"
+              className="pr-10 bg-slate-50 border-slate-200"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
           </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" title="إعدادات الأعمدة" className="bg-white">
+                <Settings2 className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[200px]">
+              <DropdownMenuLabel>الأعمدة الظاهرة</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {availableColumns.map((col) => (
+                <DropdownMenuCheckboxItem
+                  key={col.id}
+                  checked={isVisible(col.id)}
+                  onCheckedChange={() => toggleColumn(col.id)}
+                >
+                  {col.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        <SupplierTable 
-          suppliers={suppliers}
-          loading={loading}
-          search={search}
-          onView={(s) => setSelectedId(s.id)}
-          onEdit={(s) => { loadAccounts(); handleOpenEdit(s); }}
-          onDelete={handleDelete}
-        />
+        <div className="flex-1 overflow-auto bg-white relative">
+          <SupplierTable 
+            suppliers={suppliers}
+            loading={loading}
+            search={search}
+            visibleColumns={visibleColumns}
+            onView={(s) => setSelectedId(s.id)}
+            onEdit={handleEditSupplier}
+            onDelete={handleDelete}
+            selectedId={selectedId}
+          />
+        </div>
       </Card>
+    </div>
+  );
 
-      <PartnerProfileSheet 
-        type="supplier"
-        partner={selectedSupplier} 
-        onClose={() => setSelectedId(null)} 
-        invoices={supplierInvoices}
-        payments={supplierPayments}
-        loadingDetails={loadingDetails}
+  const detailContent = isFormOpen ? (
+    <PartnerFormPanel 
+      type="supplier"
+      partner={editSupplier}
+      accounts={accounts}
+      onSave={handleSave}
+      onClose={() => setIsFormOpen(false)}
+      saving={saving}
+    />
+  ) : (
+    <PartnerDetailPanel 
+      type="supplier"
+      partner={selectedSupplier} 
+      onClose={() => setSelectedId(null)} 
+      invoices={supplierInvoices}
+      payments={supplierPayments}
+      loadingDetails={loadingDetails}
+    />
+  );
+
+  return (
+    <div className="absolute inset-0">
+      <MasterDetailLayout 
+        masterContent={masterContent}
+        detailContent={detailContent}
+        isDetailOpen={isFormOpen || !!selectedId}
       />
-      
-      <PartnerFormDialog 
-        type="supplier"
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        partner={editSupplier}
-        accounts={accounts}
-        onSave={handleSave}
-        saving={saving}
-      />
-    </>
+    </div>
   );
 }

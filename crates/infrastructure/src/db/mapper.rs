@@ -1,4 +1,4 @@
-use sqlx::Row;
+﻿use sqlx::Row;
 use domain::shared::{Money, Currency};
 use rust_decimal::Decimal;
 use std::str::FromStr;
@@ -17,8 +17,8 @@ pub fn map_money(row: &sqlx::sqlite::SqliteRow, amount_col: &str, currency_col: 
     let amount = map_decimal(row, amount_col);
     let currency_code: String = row.get(currency_col);
     let currency = match currency_code.as_str() {
-        "USD" => Currency::USD,
-        _ => Currency::SYP,
+        "USD" => Currency::usd(),
+        _ => Currency::syp(),
     };
     Money::new(amount, currency)
 }

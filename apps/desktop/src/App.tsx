@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppLayout } from '@/components/erp/AppLayout';
 import { TabProvider } from '@/context/TabContext';
+import { CurrencyProvider } from '@/context/CurrencyContext';
 import { ErpRoutes } from './ErpRoutes';
 import AuthCallback from './pages/AuthCallback';
 import AuthError from './pages/AuthError';
@@ -23,9 +24,11 @@ const App = () => (
           
           {/* ERP Routes with AppLayout */}
           <Route path="/*" element={
-            <TabProvider>
-              <AppLayout />
-            </TabProvider>
+            <CurrencyProvider>
+              <TabProvider>
+                <AppLayout />
+              </TabProvider>
+            </CurrencyProvider>
           } />
         </Routes>
       </BrowserRouter>

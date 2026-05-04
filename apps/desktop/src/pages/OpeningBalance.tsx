@@ -4,14 +4,20 @@ import { useTabs } from "@/context/TabContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Save, RefreshCw, History, CheckCircle2, Clock, ChevronDown } from "lucide-react";
+import { Save, RefreshCw, History, CheckCircle2, Clock, ChevronDown, SlidersHorizontal } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
+import { useColumnPreferences } from "@/hooks/useColumnPreferences";
+import { Settings2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { invoiceService } from "@/services/invoiceService";
 import { customerService } from "@/services/customerService";
 import { supplierService } from "@/services/supplierService";
 import { accountingService } from "@/services/accountingService";
 import type { InvoiceDto, CustomerDto, SupplierDto, AccountDto } from "@erp/shared-types";
 import { toast } from "sonner";
+import { useCurrencyContext } from "@/context/CurrencyContext";
+import { Coins, DollarSign } from "lucide-react";
 
 // Document components
 import { InvoiceGrid } from "@/components/erp/document/InvoiceGrid";
@@ -49,6 +55,9 @@ interface OpeningBalanceState {
   accountId: string;
   accountDebitCredit: "debit" | "credit";
   accountAmount: string;
+  // Multi-currency
+  currencyCode: string;
+  exchangeRate: string;
 }
 
 function defaultState(): OpeningBalanceState {
@@ -67,6 +76,8 @@ function defaultState(): OpeningBalanceState {
     accountId: "",
     accountDebitCredit: "debit",
     accountAmount: "0",
+    currencyCode: "USD",
+    exchangeRate: "1",
   };
 }
 
@@ -82,6 +93,19 @@ export default function OpeningBalance() {
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
   const [loadingData, setLoadingData] = useState(false);
+  const { baseCurrency, currencies, formatAmount, convertBetween } = useCurrencyContext();
+
+  const availableColumns = [
+    { id: "material_name", label: "المادة" },
+    { id: "quantity", label: "الكمية" },
+    { id: "unit_price", label: "تكلفة افتتاحية" },
+    { id: "unit_price_usd", label: "تكلفة ($)" },
+    { id: "minimum_stock", label: "حد الطلب" },
+    { id: "line_total", label: "الإجمالي" },
+  ];
+
+  const defaultVisibleCols = ["material_name", "quantity", "unit_price", "line_total"];
+  const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences("opening_balance", defaultVisibleCols);
 
   const isNew = location.pathname.includes("/new");
 
@@ -98,12 +122,17 @@ export default function OpeningBalance() {
       setCustomers(custs);
       setSuppliers(supps);
       setAccounts(accs);
+      
+      // Initialize currency with base
+      if (baseCurrency) {
+        setState(s => ({ ...s, currencyCode: baseCurrency.code }));
+      }
     } catch {
       toast.error("فشل تحميل البيانات");
     } finally {
       setLoadingData(false);
     }
-  }, []);
+  }, [baseCurrency]);
 
   useEffect(() => { loadSupporting(); }, [loadSupporting]);
 
@@ -138,6 +167,8 @@ export default function OpeningBalance() {
       accountId: "",
       accountDebitCredit: "debit",
       accountAmount: inv.total_amount,
+      currencyCode: inv.currency_code,
+      exchangeRate: inv.exchange_rate,
     });
     toast.info(`تم تحميل الفاتورة ${inv.invoice_number}`);
   };
@@ -185,6 +216,8 @@ export default function OpeningBalance() {
           payment_method: "Deferred",
           amount_paid: "0",
           issued_at: new Date(state.date).toISOString(),
+          currency_code: state.currencyCode,
+          exchange_rate: state.exchangeRate,
           notes: state.notes || undefined,
         });
         await invoiceService.postInvoice(created.id);
@@ -204,6 +237,8 @@ export default function OpeningBalance() {
           payment_method: "Deferred",
           amount_paid: "0",
           issued_at: new Date(state.date).toISOString(),
+          currency_code: state.currencyCode,
+          exchange_rate: state.exchangeRate,
           notes: state.notes || undefined,
           customer_id: state.balanceType === "Customer" ? state.partyId || undefined : undefined,
           customer_name: state.balanceType === "Customer" && !state.partyId ? state.partyName : undefined,
@@ -313,19 +348,77 @@ export default function OpeningBalance() {
                   dir="rtl"
                 />
               </div>
+
+              {/* Currency & Exchange Rate */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">العملة</label>
+                <div className="flex gap-2">
+                  <select
+                    value={state.currencyCode}
+                    onChange={async e => {
+                      const code = e.target.value;
+                      const rate = await (async () => {
+                        if (baseCurrency && code === baseCurrency.code) return "1";
+                        // Import and use context helper if needed, but here we can just set it
+                        return "1"; // Will be updated by rate fetching logic or manual entry
+                      })();
+                      setState(s => ({ ...s, currencyCode: code, exchangeRate: rate }));
+                    }}
+                    className="flex-1 h-9 text-sm border border-slate-200 rounded-md px-3 bg-white"
+                  >
+                    {currencies.map(c => (
+                      <option key={c.code} value={c.code}>{c.code} - {c.name_ar}</option>
+                    ))}
+                  </select>
+                  {state.currencyCode !== baseCurrency?.code && (
+                    <Input 
+                      type="number"
+                      step="0.000001"
+                      value={state.exchangeRate}
+                      onChange={e => setState(s => ({ ...s, exchangeRate: e.target.value }))}
+                      className="w-24 h-9 text-xs font-mono text-center"
+                      title="سعر الصرف"
+                    />
+                  )}
+                </div>
+              </div>
             </div>
           </Card>
 
           {/* Context-sensitive fields */}
           {state.balanceType === "Inventory" && (
             <Card className="p-0 overflow-hidden border-slate-200 shadow-sm">
-              <div className="px-4 py-2 bg-slate-50 border-b border-slate-200">
+              <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
                 <span className="text-xs font-bold text-slate-600">📦 أصناف المخزون الافتتاحي</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600" title="إعدادات الأعمدة">
+                      <Settings2 className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-[200px]">
+                    <DropdownMenuLabel className="text-right">الأعمدة الظاهرة</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {availableColumns.map((col) => (
+                      <DropdownMenuCheckboxItem
+                        key={col.id}
+                        checked={isVisible(col.id)}
+                        onCheckedChange={() => toggleColumn(col.id)}
+                        className="text-right flex-row-reverse gap-2"
+                      >
+                        {col.label}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               <InvoiceGrid
                 type="OpeningBalance"
                 lines={state.lines}
                 onChange={lines => setState(s => ({ ...s, lines }))}
+                visibleColumns={visibleColumns}
+                currencyCode={state.currencyCode}
+                exchangeRate={state.exchangeRate}
               />
             </Card>
           )}
@@ -401,8 +494,13 @@ export default function OpeningBalance() {
                     <div className={`text-xl font-black tabular-nums ${
                       state.debitCredit === "debit" ? "text-orange-700" : "text-green-700"
                     }`}>
-                      {formatCurrency(parseFloat(state.amount) || 0)}
+                      {formatAmount(parseFloat(state.amount) || 0, { currencyCode: state.currencyCode })}
                     </div>
+                    {state.currencyCode !== baseCurrency?.code && (
+                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                        ≈ {formatAmount(convertBetween(parseFloat(state.amount) || 0, state.currencyCode, baseCurrency?.code || "USD"), { currencyCode: baseCurrency?.code || "USD" })}
+                      </div>
+                    )}
                     <div className="text-[10px] font-bold mt-1 text-slate-500">
                       {state.debitCredit === "debit" ? "مدين ← له علينا" : "دائن ← لنا عليه"}
                     </div>
@@ -474,8 +572,13 @@ export default function OpeningBalance() {
                   <div className={`text-2xl font-black tabular-nums ${
                     state.accountDebitCredit === "debit" ? "text-blue-700" : "text-purple-700"
                   }`}>
-                    {formatCurrency(parseFloat(state.accountAmount) || 0)}
+                    {formatAmount(parseFloat(state.accountAmount) || 0, { currencyCode: state.currencyCode })}
                   </div>
+                  {state.currencyCode !== baseCurrency?.code && (
+                    <div className="text-xs text-slate-400 font-mono mt-0.5">
+                      ≈ {formatAmount(convertBetween(parseFloat(state.accountAmount) || 0, state.currencyCode, baseCurrency?.code || "USD"), { currencyCode: baseCurrency?.code || "USD" })}
+                    </div>
+                  )}
                   <div className="text-[10px] font-bold mt-1 text-slate-500">
                     {state.accountDebitCredit === "debit" ? "رصيد مدين" : "رصيد دائن"}
                   </div>

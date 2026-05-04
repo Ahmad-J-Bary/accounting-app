@@ -1,6 +1,6 @@
 use application::errors::AppError;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalEntryStatus};
-use domain::shared::{JournalEntryId, AccountId, Money};
+use domain::shared::{JournalEntryId, AccountId, Money, MonetaryAmount};
 use domain::shared::currency::Currency;
 use rust_decimal::Decimal;
 use std::str::FromStr;
@@ -40,18 +40,20 @@ pub fn row_to_entry(row: JournalEntryRow, lines: Vec<JournalLine>) -> Result<Jou
 pub fn row_to_line(r: JournalLineRow) -> JournalLine {
     let account_id = AccountId(Uuid::parse_str(&r.account_id).unwrap_or_default());
     let currency = match r.currency.as_str() {
-        "USD" => Currency::USD,
-        _ => Currency::SYP,
+        "USD" => Currency::usd(),
+        _ => Currency::syp(),
     };
     let fx_rate = Decimal::from_str(&r.fx_rate).unwrap_or(Decimal::ONE);
 
-    let debit = Money::new(
-        Decimal::from_str(&r.debit).unwrap_or(Decimal::ZERO),
-        currency
-    );
-    let credit = Money::new(
-        Decimal::from_str(&r.credit).unwrap_or(Decimal::ZERO),
-        currency
-    );
-    JournalLine::new(account_id, currency, fx_rate, debit, credit, r.description)
+    let debit = MonetaryAmount {
+        original: Money::new(Decimal::from_str(&r.debit).unwrap_or(Decimal::ZERO), currency.clone()),
+        base_amount: Decimal::from_str(&r.debit_base).unwrap_or(Decimal::ZERO),
+        fx_rate,
+    };
+    let credit = MonetaryAmount {
+        original: Money::new(Decimal::from_str(&r.credit).unwrap_or(Decimal::ZERO), currency.clone()),
+        base_amount: Decimal::from_str(&r.credit_base).unwrap_or(Decimal::ZERO),
+        fx_rate,
+    };
+    JournalLine::new(account_id, debit, credit, r.description)
 }

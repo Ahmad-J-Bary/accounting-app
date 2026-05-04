@@ -4,6 +4,7 @@ use domain::sales::unified_invoice::{UnifiedInvoice, InvoiceType};
 use domain::sales::invoice_line::InvoiceLine;
 use domain::shared::ids::{InvoiceId, MaterialId};
 use domain::shared::money::Money;
+use domain::shared::MonetaryAmount;
 use std::str::FromStr;
 use uuid::Uuid;
 use rust_decimal::Decimal;
@@ -20,7 +21,8 @@ pub async fn find_by_id(pool: &SqlitePool, id: &InvoiceId) -> Result<Option<Unif
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     if let Some(r) = row {
-        let lines = get_lines(pool, &r.id).await?;
+        let fx_rate = Decimal::from_str(&r.exchange_rate).unwrap_or(Decimal::ONE);
+        let lines = get_lines(pool, &r.id, &r.currency_code, fx_rate).await?;
         Ok(Some(row_to_invoice(r, lines)?))
     } else {
         Ok(None)
@@ -37,7 +39,8 @@ pub async fn list_all(pool: &SqlitePool) -> Result<Vec<UnifiedInvoice>, AppError
 
     let mut invoices = vec![];
     for r in rows {
-        let lines = get_lines(pool, &r.id).await?;
+        let fx_rate = Decimal::from_str(&r.exchange_rate).unwrap_or(Decimal::ONE);
+        let lines = get_lines(pool, &r.id, &r.currency_code, fx_rate).await?;
         invoices.push(row_to_invoice(r, lines)?);
     }
     Ok(invoices)
@@ -60,13 +63,14 @@ pub async fn list_by_type(pool: &SqlitePool, invoice_type: InvoiceType) -> Resul
 
     let mut invoices = vec![];
     for r in rows {
-        let lines = get_lines(pool, &r.id).await?;
+        let fx_rate = Decimal::from_str(&r.exchange_rate).unwrap_or(Decimal::ONE);
+        let lines = get_lines(pool, &r.id, &r.currency_code, fx_rate).await?;
         invoices.push(row_to_invoice(r, lines)?);
     }
     Ok(invoices)
 }
 
-pub async fn get_lines(pool: &SqlitePool, invoice_id: &str) -> Result<Vec<InvoiceLine>, AppError> {
+pub async fn get_lines(pool: &SqlitePool, invoice_id: &str, currency_code: &str, fx_rate: Decimal) -> Result<Vec<InvoiceLine>, AppError> {
     let rows = sqlx::query_as::<_, LineRow>("SELECT * FROM unified_invoice_lines WHERE invoice_id = ?")
         .bind(invoice_id)
         .fetch_all(pool)
@@ -77,21 +81,69 @@ pub async fn get_lines(pool: &SqlitePool, invoice_id: &str) -> Result<Vec<Invoic
     for r in rows {
         let material_id = MaterialId(Uuid::parse_str(&r.material_id).map_err(|e| AppError::Infrastructure(e.to_string()))?);
         let quantity = Decimal::from_str(&r.quantity).unwrap_or(Decimal::ZERO);
-        let unit_price = Money::syp(Decimal::from_str(&r.unit_price).unwrap_or(Decimal::ZERO));
         
-        let parse_money = |s: Option<String>| s.and_then(|v| Decimal::from_str(&v).ok().map(Money::syp));
+        let to_monetary = |amt_str: String| {
+            let amt = Decimal::from_str(&amt_str).unwrap_or(Decimal::ZERO);
+            MonetaryAmount::new(Money::from_amount_and_code(amt, currency_code), fx_rate)
+        };
+        
+        let to_opt_monetary = |s: Option<String>| s.map(|v| to_monetary(v));
+        
+        let parse_money = |s: Option<String>| s.and_then(|v| Decimal::from_str(&v).ok().map(|amt| Money::from_amount_and_code(amt, currency_code)));
         
         lines.push(InvoiceLine::new(
             material_id,
             quantity,
-            unit_price,
-            parse_money(r.purchase_price),
-            parse_money(r.retail_price),
-            parse_money(r.wholesale_price),
-            parse_money(r.semi_wholesale_price),
+            to_monetary(r.unit_price),
+            to_opt_monetary(r.purchase_price),
+            to_opt_monetary(r.retail_price),
+            to_opt_monetary(r.wholesale_price),
+            to_opt_monetary(r.semi_wholesale_price),
             r.minimum_stock.and_then(|v| Decimal::from_str(&v).ok()),
             r.notes,
+            parse_money(r.unit_price_usd),
+            parse_money(r.purchase_price_usd),
+            parse_money(r.profit_amount_usd),
         ));
     }
     Ok(lines)
+}
+
+pub async fn get_last_usd_prices(pool: &SqlitePool, material_id: &str) -> Result<(String, String), AppError> {
+    // Fetch last purchase USD price
+    let last_purchase: Option<String> = sqlx::query_scalar(
+        r#"
+        SELECT l.unit_price_usd 
+        FROM unified_invoice_lines l
+        JOIN unified_invoices i ON l.invoice_id = i.id
+        WHERE l.material_id = ? AND i.invoice_type IN ('Purchase', 'OpeningBalance') AND l.unit_price_usd IS NOT NULL
+        ORDER BY i.issued_at DESC
+        LIMIT 1
+        "#
+    )
+    .bind(material_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    // Fetch last sale USD price
+    let last_sale: Option<String> = sqlx::query_scalar(
+        r#"
+        SELECT l.unit_price_usd 
+        FROM unified_invoice_lines l
+        JOIN unified_invoices i ON l.invoice_id = i.id
+        WHERE l.material_id = ? AND i.invoice_type = 'Sales' AND l.unit_price_usd IS NOT NULL
+        ORDER BY i.issued_at DESC
+        LIMIT 1
+        "#
+    )
+    .bind(material_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    Ok((
+        last_purchase.unwrap_or_else(|| "0".to_string()),
+        last_sale.unwrap_or_else(|| "0".to_string())
+    ))
 }

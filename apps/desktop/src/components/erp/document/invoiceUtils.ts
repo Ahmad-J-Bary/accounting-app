@@ -5,13 +5,15 @@ export interface GridLine extends InvoiceLineDto {
   _id: string;        // local React key only
   discount?: string;  // line-level discount %
   line_total?: number; // computed
+  profit_amount?: string;
+  profit_percent?: string;
 }
 
 /** Strip local-only fields before sending to backend */
 export function toBackendLines(lines: GridLine[]): InvoiceLineDto[] {
   return lines
     .filter(l => l.material_id || l.material_name) // skip truly empty rows
-    .map(({ _id, line_total, discount, ...rest }) => rest);
+    .map(({ _id, line_total, discount, profit_amount, profit_percent, ...rest }) => rest);
 }
 
 /** Create a fresh empty local line */

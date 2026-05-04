@@ -61,6 +61,8 @@ pub struct PurchaseInvoice {
     pub status: PurchaseInvoiceStatus,
     pub invoice_date: DateTime<Utc>,
     pub due_date: Option<DateTime<Utc>>,
+    pub currency_code: String,
+    pub exchange_rate: Decimal,
     pub notes: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -72,6 +74,8 @@ impl PurchaseInvoice {
         supplier_id: SupplierId,
         invoice_date: DateTime<Utc>,
         due_date: Option<DateTime<Utc>>,
+        currency_code: String,
+        exchange_rate: Decimal,
         notes: Option<String>,
     ) -> Result<Self, DomainError> {
         if invoice_number.trim().is_empty() {
@@ -91,6 +95,8 @@ impl PurchaseInvoice {
             status: PurchaseInvoiceStatus::Draft,
             invoice_date,
             due_date,
+            currency_code,
+            exchange_rate,
             notes,
             created_at: now,
             updated_at: now,

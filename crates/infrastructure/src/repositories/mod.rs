@@ -37,3 +37,7 @@ pub use partner::SqlitePartnerRepository;
 pub mod sqlite_unit_of_work;
 pub mod unified_invoice;
 pub use unified_invoice::SqliteUnifiedInvoiceRepository;
+pub mod currency;
+pub use currency::SqliteCurrencyRepository;
+pub mod exchange_rate;
+pub use exchange_rate::SqliteExchangeRateRepository;
