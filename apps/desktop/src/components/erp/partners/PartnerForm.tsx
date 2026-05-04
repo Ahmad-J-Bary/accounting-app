@@ -47,8 +47,7 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
     }
   }, [partner, open]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = () => {
     if (!formData.name || !formData.amount) return;
 
     onSave({
@@ -69,7 +68,7 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
     <FormPanel
       title={partner ? "تعديل بيانات الشريك" : "إضافة شريك جديد"}
       onClose={onClose}
-      onSave={handleSubmit}
+      onSave={() => handleSubmit()}
       isSaving={saving}
       saveDisabled={!formData.name || !formData.amount}
       saveLabel={partner ? "تحديث البيانات" : "حفظ الشريك"}

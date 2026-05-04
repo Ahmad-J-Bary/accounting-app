@@ -11,7 +11,6 @@ import type { DamagedItem, CreateDamagedItemRequest, MaterialDto } from "@erp/sh
 import { toast } from "sonner";
 
 // Refactored Components & Hooks
-import { MasterDetailLayout } from "@/components/erp/layouts/MasterDetailLayout";
 import { DataTable, Column } from "@/components/erp/shared/DataTable";
 import { useDataTable } from "@/hooks/useDataTable";
 import { DamagedForm } from "@/components/erp/inventory/DamagedForm";
@@ -88,39 +87,24 @@ export default function Damaged() {
   const isLoading = itemsLoading || loadingProducts;
 
   return (
-    <MasterDetailLayout
-      selectedId={showDialog ? "new" : null}
-      onCloseDetail={() => setShowDialog(false)}
-      detailContent={
-        showDialog ? (
-          <DamagedForm
-            open={showDialog}
-            onClose={() => setShowDialog(false)}
-            products={products}
-            onSave={handleCreate}
-            saving={saving}
-          />
-        ) : null
-      }
-      masterContent={
-        <>
-          <PageHeader
-            title="المواد التالفة"
-            subtitle="تسجيل ومتابعة المواد والمنتجات التالفة"
-            breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "المخزون" }, { label: "التالف" }]}
-            actions={
-              <>
-                <Button variant="outline" onClick={() => refresh()} disabled={isLoading}>
-                  <RefreshCw className={`w-4 h-4 ml-2 ${isLoading ? "animate-spin" : ""}`} />تحديث
-                </Button>
-                <Button onClick={() => setShowDialog(true)}>
-                  <Plus className="w-4 h-4 ml-2" />تسجيل تالف
-                </Button>
-              </>
-            }
-          />
+    <>
+      <PageHeader
+        title="المواد التالفة"
+        subtitle="تسجيل ومتابعة المواد والمنتجات التالفة"
+        breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "المخزون" }, { label: "التالف" }]}
+        actions={
+          <>
+            <Button variant="outline" onClick={() => refresh()} disabled={isLoading}>
+              <RefreshCw className={`w-4 h-4 ml-2 ${isLoading ? "animate-spin" : ""}`} />تحديث
+            </Button>
+            <Button onClick={() => setShowDialog(true)}>
+              <Plus className="w-4 h-4 ml-2" />تسجيل تالف
+            </Button>
+          </>
+        }
+      />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <Card className="p-4">
           <div className="text-sm text-muted-foreground flex items-center gap-1">
             <AlertTriangle className="w-4 h-4 text-amber-500" /> إجمالي السجلات
@@ -153,8 +137,14 @@ export default function Damaged() {
           emptyMessage={search ? "لا توجد نتائج للبحث" : "لا توجد سجلات تالف"}
         />
       </Card>
-        </>
-      }
-    />
+
+      <DamagedForm
+        open={showDialog}
+        onClose={() => setShowDialog(false)}
+        products={products}
+        onSave={handleCreate}
+        saving={saving}
+      />
+    </>
   );
 }

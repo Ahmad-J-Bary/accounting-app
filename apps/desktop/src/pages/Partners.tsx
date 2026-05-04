@@ -127,12 +127,7 @@ export default function Partners() {
 
   return (
     <MasterDetailLayout
-      selectedId={selectedId || (isDialogOpen ? "new" : null)}
-      onCloseDetail={() => {
-        setSelectedId(null);
-        setIsDialogOpen(false);
-        setEditPartner(null);
-      }}
+      isDetailOpen={isDialogOpen}
       detailContent={
         isDialogOpen ? (
           <PartnerForm 
