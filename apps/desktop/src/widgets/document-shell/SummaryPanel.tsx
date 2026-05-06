@@ -1,7 +1,7 @@
-import { formatCurrency } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import { formatCurrency } from '@shared/lib/format';
+import { cn } from '@shared/lib/utils';
 
-import { DocumentStatus } from "./DocumentStatusBadge";
+import { DocumentStatus } from "@modules/invoicing/components/DocumentStatusBadge";
 
 interface SummaryPanelProps {
   subtotal: number;

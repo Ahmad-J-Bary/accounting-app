@@ -1,3 +1,4 @@
+﻿#![allow(clippy::invisible_characters)]
 pub mod shared;
 pub mod accounting;
 pub mod sales;
@@ -13,3 +14,4 @@ pub mod assets;
 
 #[cfg(test)]
 mod tests;
+

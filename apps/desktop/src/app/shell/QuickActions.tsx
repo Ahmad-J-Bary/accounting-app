@@ -1,5 +1,5 @@
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Button } from '@shared/ui/button';
+import { Card } from '@shared/ui/card';
 import { 
   Receipt, ShoppingCart, Wallet, FileText, Plus, User, Package, 
   ArrowRight, ChevronRight 

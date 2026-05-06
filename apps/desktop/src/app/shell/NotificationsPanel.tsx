@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@shared/ui/button';
+import { Card } from '@shared/ui/card';
+import { ScrollArea } from '@shared/ui/scroll-area';
 import { Bell, CheckCircle, AlertTriangle, Info, X, ExternalLink, Clock } from 'lucide-react';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime } from '@shared/lib/format';
 
 interface Notification {
   id: string;

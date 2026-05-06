@@ -1,3 +1,4 @@
+﻿#![allow(clippy::too_many_arguments)]
 use crate::shared::errors::DomainError;
 use crate::shared::ids::{AccountId, CustomerId, SupplierId};
 use chrono::{DateTime, Utc};

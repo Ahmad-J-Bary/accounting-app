@@ -1,9 +1,9 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import React, { useState, useCallback, ReactNode, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-import { Tab, TabContextType } from '../types/tabs';
+import { Tab, TabContextType } from '@shared/types/tabs';
 
-const TabContext = createContext<TabContextType | undefined>(undefined);
+import { TabContext } from './TabContext';
 
 export const TabProvider = ({ children }: { children: ReactNode }) => {
   const [tabs, setTabs] = useState<Tab[]>([
@@ -137,10 +137,4 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
       {children}
     </TabContext.Provider>
   );
-};
-
-export const useTabs = () => {
-  const context = useContext(TabContext);
-  if (!context) throw new Error('useTabs must be used within TabProvider');
-  return context;
 };

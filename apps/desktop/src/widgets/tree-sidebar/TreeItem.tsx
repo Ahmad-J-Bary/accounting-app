@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from '@shared/lib/utils';
 import { TreeItemProps, BaseTreeNode } from "./types";
 
 export function TreeItem<T extends BaseTreeNode>({

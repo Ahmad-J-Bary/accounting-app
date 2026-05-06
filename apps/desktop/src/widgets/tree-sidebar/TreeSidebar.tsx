@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card } from "@shared/ui/card";
+import { Button } from "@shared/ui/button";
 import { Plus, Edit, Trash2 } from "lucide-react";
 
 interface TreeSidebarProps {

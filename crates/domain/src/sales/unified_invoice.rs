@@ -1,13 +1,14 @@
-use crate::shared::errors::DomainError;
-use crate::shared::ids::{InvoiceId, CustomerId, SupplierId};
-use crate::shared::currency::Currency;
-use crate::shared::money::Money;
-use crate::shared::monetary_amount::MonetaryAmount;
+﻿#![allow(clippy::too_many_arguments)]
 use super::invoice_line::InvoiceLine;
+use crate::shared::currency::Currency;
+use crate::shared::errors::DomainError;
+use crate::shared::ids::{CustomerId, InvoiceId, SupplierId};
+use crate::shared::monetary_amount::MonetaryAmount;
+use crate::shared::money::Money;
 use chrono::{DateTime, Utc};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use rust_decimal::Decimal;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum InvoiceType {
@@ -26,9 +27,9 @@ pub enum InvoiceStatus {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PaymentMethod {
-    Cash,      // نقدي
-    Deferred,  // آجل
-    Partial,   // دفع جزئي
+    Cash,     // نقدي
+    Deferred, // آجل
+    Partial,  // دفع جزئي
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -71,7 +72,9 @@ impl UnifiedInvoice {
         notes: Option<String>,
     ) -> Result<Self, DomainError> {
         if invoice_number.trim().is_empty() {
-            return Err(DomainError::Invalid("رقم الفاتورة لا يمكن أن يكون فارغًا".into()));
+            return Err(DomainError::Invalid(
+                "رقم الفاتورة لا يمكن أن يكون فارغًا".into(),
+            ));
         }
 
         let now = Utc::now();
@@ -119,17 +122,19 @@ impl UnifiedInvoice {
 
     pub fn recalculate_totals(&mut self) {
         let doc_currency = Currency::from_code(&self.currency_code);
-        
-        let subtotal = self.lines.iter().fold(
-            MonetaryAmount::zero(doc_currency.clone()), 
-            |acc, line| {
-                (acc + line.line_total()).unwrap_or_else(|_| MonetaryAmount::zero(doc_currency.clone()))
-            }
-        );
+
+        let subtotal =
+            self.lines
+                .iter()
+                .fold(MonetaryAmount::zero(doc_currency.clone()), |acc, line| {
+                    (acc + line.line_total())
+                        .unwrap_or_else(|_| MonetaryAmount::zero(doc_currency.clone()))
+                });
 
         // Convert to MonetaryAmount using the invoice's exchange rate
-        self.total_amount = ((subtotal + self.tax_amount.clone()).unwrap() - self.discount_amount.clone()).unwrap();
-        
+        self.total_amount =
+            ((subtotal + self.tax_amount.clone()).unwrap() - self.discount_amount.clone()).unwrap();
+
         if self.payment_method == PaymentMethod::Cash {
             self.amount_paid = self.total_amount.clone();
         } else if self.payment_method == PaymentMethod::Deferred {
@@ -153,7 +158,9 @@ impl UnifiedInvoice {
 
     pub fn cancel(&mut self) -> Result<(), DomainError> {
         if self.status == InvoiceStatus::Posted {
-            return Err(DomainError::Forbidden("لا يمكن إلغاء فاتورة مرحّلة، استخدم العكس بدلاً من ذلك".into()));
+            return Err(DomainError::Forbidden(
+                "لا يمكن إلغاء فاتورة مرحّلة، استخدم العكس بدلاً من ذلك".into(),
+            ));
         }
         self.status = InvoiceStatus::Cancelled;
         self.updated_at = Utc::now();
@@ -162,7 +169,9 @@ impl UnifiedInvoice {
 
     pub fn reopen(&mut self) -> Result<(), DomainError> {
         if self.status != InvoiceStatus::Posted {
-            return Err(DomainError::Invalid("يمكن فقط إعادة فتح الفواتير المرحلة".into()));
+            return Err(DomainError::Invalid(
+                "يمكن فقط إعادة فتح الفواتير المرحلة".into(),
+            ));
         }
         self.status = InvoiceStatus::Draft;
         self.updated_at = Utc::now();

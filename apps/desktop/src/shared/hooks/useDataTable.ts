@@ -34,23 +34,40 @@ export function useDataTable<T>({
 
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState(initialSearch);
   const [error, setError] = useState<string | null>(null);
 
   const initialFetchCalledRef = useRef(false);
+  const activeRequestRef = useRef<number>(0);
 
   const refresh = useCallback(async (silent = false) => {
+    const requestId = ++activeRequestRef.current;
     try {
-      if (!silent) setLoading(true);
+      if (silent) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
+      
       const result = await optionsRef.current.fetchData();
-      setData(result);
+      
+      // Only update if this is the most recent request
+      if (requestId === activeRequestRef.current) {
+        setData(result);
+      }
     } catch (e) {
-      const msg = String(e);
-      setError(msg);
-      toast.error(`${optionsRef.current.errorLabel}: ${msg}`);
+      if (requestId === activeRequestRef.current) {
+        const msg = String(e);
+        setError(msg);
+        toast.error(`${optionsRef.current.errorLabel}: ${msg}`);
+      }
     } finally {
-      if (!silent) setLoading(false);
+      if (requestId === activeRequestRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, []);
 
@@ -78,10 +95,11 @@ export function useDataTable<T>({
     data,
     filtered,
     loading,
+    refreshing,
     search,
     setSearch,
     refresh,
     error,
     setData,
-  }), [data, filtered, loading, search, refresh, error, setData]);
+  }), [data, filtered, loading, refreshing, search, refresh, error, setData]);
 }

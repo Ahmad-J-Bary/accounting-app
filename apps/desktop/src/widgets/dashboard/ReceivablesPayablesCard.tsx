@@ -1,5 +1,5 @@
-import { Card } from "@/components/ui/card";
-import { formatCurrency } from "@/lib/format";
+import { Card } from "@shared/ui/card";
+import { formatCurrency } from '@shared/lib/format';
 import { ArrowUpRight, ArrowDownRight, LucideIcon } from "lucide-react";
 
 interface ReceivablesPayablesCardProps {

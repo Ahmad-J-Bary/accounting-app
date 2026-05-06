@@ -1,9 +1,9 @@
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { Button } from '@shared/ui/button';
+import { Card } from '@shared/ui/card';
+import { Separator } from '@shared/ui/separator';
 import { Printer, Download, Mail, Share2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@shared/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@shared/ui/table';
 
 interface DocumentItem {
   description: string;

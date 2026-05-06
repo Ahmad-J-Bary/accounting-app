@@ -1,6 +1,6 @@
-import { Card } from "@/components/ui/card";
+import { Card } from "@shared/ui/card";
 import { ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from '@shared/lib/utils';
 
 interface StatCardProps {
   label: string;

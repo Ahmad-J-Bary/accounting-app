@@ -1,12 +1,13 @@
-import { useLocation, Link } from "react-router-dom";
-import { useTabs } from "@/context/TabContext";
+import { useLocation, Link, useNavigate } from "react-router-dom";
+import { useTabs } from '@app/providers/TabContext';
+import { useMemo } from "react";
 import {
   LayoutDashboard, BookOpen, FileText, Users, Truck, Receipt,
   ShoppingCart, Wallet, Package, Warehouse, AlertTriangle,
-  Factory, ClipboardCheck, BarChart3, Shield, Settings, History, Layers, X, HardDrive, Folders, DollarSign
+  Factory, ClipboardCheck, BarChart3, Shield, Settings, History, Layers, X, HardDrive, Folders, DollarSign, Plus
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { cn } from '@shared/lib/utils';
+import { Button } from "@shared/ui/button";
 
 interface NavItem {
   to: string;
@@ -72,6 +73,28 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onClose }: SidebarProps) {
   const { openTab, updateMainTab, activeTabId } = useTabs();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const currentAction = useMemo(() => {
+    const path = activeTabId || location.pathname;
+    
+    if (path.includes('sales-invoices')) return { label: "فاتورة مبيع", action: () => navigate('/sales-invoices/new') };
+    if (path.includes('purchase-invoices')) return { label: "فاتورة شراء", action: () => navigate('/purchase-invoices/new') };
+    if (path.includes('customers')) return { label: "عميل جديد", action: () => window.dispatchEvent(new CustomEvent("erp:open-new-customer")) };
+    if (path.includes('suppliers')) return { label: "مورد جديد", action: () => window.dispatchEvent(new CustomEvent("erp:open-new-supplier")) };
+    if (path.includes('materials')) return { label: "مادة جديدة", action: () => window.dispatchEvent(new CustomEvent("erp:open-new-product")) };
+    if (path.includes('accounting')) return { label: "حساب جديد", action: () => window.dispatchEvent(new CustomEvent("erp:open-new-account")) };
+    if (path.includes('categories')) return { label: "تصنيف جديد", action: () => window.dispatchEvent(new CustomEvent("erp:open-new-category")) };
+    if (path.includes('journal')) return { label: "قيد جديد", action: () => window.dispatchEvent(new CustomEvent("erp:open-new-journal")) };
+    
+    return { 
+      label: "إنشاء سريع", 
+      action: () => {
+        const id = `/sales-invoices/new-${Date.now()}`;
+        openTab({ id, title: 'فاتورة مبيعات جديدة', path: '/sales-invoices/new', closable: true });
+      } 
+    };
+  }, [activeTabId, location.pathname, navigate, openTab]);
 
   const handleNavClick = (e: React.MouseEvent, item: NavItem) => {
     e.preventDefault();
@@ -111,6 +134,16 @@ export function Sidebar({ collapsed, onClose }: SidebarProps) {
             <X className="w-4 h-4" />
           </Button>
         )}
+      </div>
+
+      <div className="px-4 py-4 border-b border-white/5">
+        <Button 
+          onClick={currentAction.action}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black h-11 rounded-xl shadow-lg shadow-blue-900/20 gap-2 transition-all active:scale-[0.98]"
+        >
+          <Plus className="w-5 h-5" />
+          {currentAction.label}
+        </Button>
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6 scrollbar-hide">

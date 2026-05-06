@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Bell, Search, Plus, ChevronDown, PanelLeft, Building2, GitBranch, LogOut, User, Settings as SettingsIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Bell, Search, Plus, ChevronDown, PanelLeft, Building2, GitBranch, LogOut, User, Settings as SettingsIcon, DollarSign } from "lucide-react";
+import { cn } from '@shared/lib/utils';
+import { Button } from "@shared/ui/button";
+import { Input } from "@shared/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,20 +10,27 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+} from "@shared/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@shared/ui/avatar";
 import { useNavigate } from "react-router-dom";
-import { NotificationsPanel } from "@/components/erp/NotificationsPanel";
-import { GlobalSearch } from "@/components/erp/GlobalSearch";
+import { NotificationsPanel } from '@app/shell/NotificationsPanel';
+import { GlobalSearch } from '@app/shell/GlobalSearch';
 
-import { useTabs } from "@/context/TabContext";
+import { useTabs } from '@app/providers/TabContext';
 
 interface TopBarProps {
   onToggleSidebar?: () => void;
   sidebarOpen?: boolean;
+  isExchangeVisible?: boolean;
+  onToggleExchange?: () => void;
 }
 
-export function TopBar({ onToggleSidebar, sidebarOpen = true }: TopBarProps) {
+export function TopBar({ 
+  onToggleSidebar, 
+  sidebarOpen = true,
+  isExchangeVisible,
+  onToggleExchange
+}: TopBarProps) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const { openTab } = useTabs();
@@ -157,6 +165,16 @@ export function TopBar({ onToggleSidebar, sidebarOpen = true }: TopBarProps) {
             <DropdownMenuItem onClick={handleNewProduct} className="cursor-pointer">منتج جديد</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <Button 
+          variant={isExchangeVisible ? "secondary" : "ghost"} 
+          size="icon" 
+          onClick={onToggleExchange}
+          title={isExchangeVisible ? "إخفاء سعر الصرف" : "إظهار سعر الصرف"}
+          className={cn(isExchangeVisible && "bg-blue-50 text-blue-600 hover:bg-blue-100")}
+        >
+          <DollarSign className="w-5 h-5" />
+        </Button>
 
         <Button variant="ghost" size="icon" className="relative" onClick={() => setNotificationsOpen(true)}>
           <Bell className="w-5 h-5" />

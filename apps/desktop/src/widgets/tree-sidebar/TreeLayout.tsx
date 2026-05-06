@@ -1,9 +1,9 @@
 import { ReactNode } from "react";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Card } from "@shared/ui/card";
+import { Input } from "@shared/ui/input";
+import { Button } from "@shared/ui/button";
 import { Search, RefreshCw } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from '@shared/lib/utils';
 
 interface TreeLayoutProps {
   searchQuery: string;

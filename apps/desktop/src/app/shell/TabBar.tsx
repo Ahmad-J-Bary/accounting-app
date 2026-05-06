@@ -1,7 +1,7 @@
-import { useTabs } from "@/context/TabContext";
+import { useTabs } from '@app/providers/TabContext';
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { cn } from '@shared/lib/utils';
+import { Button } from "@shared/ui/button";
 import { useRef } from "react";
 
 export function TabBar() {

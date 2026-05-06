@@ -1,3 +1,4 @@
+﻿#![allow(clippy::too_many_arguments)]
 use crate::shared::currency::Currency;
 use crate::shared::errors::DomainError;
 use crate::shared::ids::{AccountId, CustomerId};
@@ -38,16 +39,24 @@ impl Customer {
         notes: Option<String>,
     ) -> Result<Self, DomainError> {
         if name.trim().is_empty() {
-            return Err(DomainError::Invalid("اسم العميل لا يمكن أن يكون فارغًا".into()));
+            return Err(DomainError::Invalid(
+                "اسم العميل لا يمكن أن يكون فارغًا".into(),
+            ));
         }
         if code.trim().is_empty() {
-            return Err(DomainError::Invalid("كود العميل لا يمكن أن يكون فارغًا".into()));
+            return Err(DomainError::Invalid(
+                "كود العميل لا يمكن أن يكون فارغًا".into(),
+            ));
         }
         if debit < Decimal::ZERO {
-            return Err(DomainError::Invalid("مبلغ المدين لا يمكن أن يكون سالبًا".into()));
+            return Err(DomainError::Invalid(
+                "مبلغ المدين لا يمكن أن يكون سالبًا".into(),
+            ));
         }
         if credit < Decimal::ZERO {
-            return Err(DomainError::Invalid("مبلغ الدائن لا يمكن أن يكون سالبًا".into()));
+            return Err(DomainError::Invalid(
+                "مبلغ الدائن لا يمكن أن يكون سالبًا".into(),
+            ));
         }
 
         let now = Utc::now();
@@ -89,16 +98,24 @@ impl Customer {
         notes: Option<String>,
     ) -> Result<Self, DomainError> {
         if name.trim().is_empty() {
-            return Err(DomainError::Invalid("اسم العميل لا يمكن أن يكون فارغًا".into()));
+            return Err(DomainError::Invalid(
+                "اسم العميل لا يمكن أن يكون فارغًا".into(),
+            ));
         }
         if code.trim().is_empty() {
-            return Err(DomainError::Invalid("كود العميل لا يمكن أن يكون فارغًا".into()));
+            return Err(DomainError::Invalid(
+                "كود العميل لا يمكن أن يكون فارغًا".into(),
+            ));
         }
         if debit < Decimal::ZERO {
-            return Err(DomainError::Invalid("مبلغ المدين لا يمكن أن يكون سالبًا".into()));
+            return Err(DomainError::Invalid(
+                "مبلغ المدين لا يمكن أن يكون سالبًا".into(),
+            ));
         }
         if credit < Decimal::ZERO {
-            return Err(DomainError::Invalid("مبلغ الدائن لا يمكن أن يكون سالبًا".into()));
+            return Err(DomainError::Invalid(
+                "مبلغ الدائن لا يمكن أن يكون سالبًا".into(),
+            ));
         }
 
         let now = Utc::now();
@@ -211,7 +228,9 @@ impl Customer {
         notes: Option<String>,
     ) -> Result<(), DomainError> {
         if name.trim().is_empty() {
-            return Err(DomainError::Invalid("اسم العميل لا يمكن أن يكون فارغًا".into()));
+            return Err(DomainError::Invalid(
+                "اسم العميل لا يمكن أن يكون فارغًا".into(),
+            ));
         }
         self.name = name;
         self.phone = phone;

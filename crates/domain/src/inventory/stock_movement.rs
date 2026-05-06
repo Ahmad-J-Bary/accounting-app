@@ -1,3 +1,4 @@
+﻿#![allow(clippy::too_many_arguments)]
 use crate::shared::errors::DomainError;
 use crate::shared::ids::MaterialId;
 use chrono::{DateTime, Utc};
@@ -23,9 +24,9 @@ pub struct StockMovement {
     pub material_id: MaterialId,
     pub movement_type: MovementType,
     pub quantity: Decimal,
-    pub unit_cost: Decimal, // Original currency
-    pub unit_cost_base: Decimal, // Base currency
-    pub total_cost: Decimal, // Original currency
+    pub unit_cost: Decimal,       // Original currency
+    pub unit_cost_base: Decimal,  // Base currency
+    pub total_cost: Decimal,      // Original currency
     pub total_cost_base: Decimal, // Base currency
     pub original_currency: Option<String>,
     pub fx_rate: Decimal,

@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@shared/ui/button";
 import {
   Plus, Save, Printer, Send, Trash2, X, RefreshCw, FileDown,
 } from "lucide-react";

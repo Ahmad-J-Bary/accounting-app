@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
-import { Sidebar } from "@/components/erp/Sidebar";
-import { TopBar } from "@/components/erp/TopBar";
-import { cn } from "@/lib/utils";
+import { Sidebar } from '@app/shell/Sidebar';
+import { TopBar } from '@app/shell/TopBar';
+import { cn } from '@shared/lib/utils';
 
 export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);

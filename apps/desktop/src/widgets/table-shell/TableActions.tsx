@@ -1,7 +1,7 @@
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Button } from "@shared/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@shared/ui/dropdown-menu";
 import { LucideIcon, MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from '@shared/lib/utils';
 
 interface ActionItem {
   label: string;

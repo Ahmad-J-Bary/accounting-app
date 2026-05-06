@@ -1,3 +1,4 @@
+﻿#![allow(clippy::invisible_characters)]
 use crate::shared::errors::DomainError;
 use crate::shared::ids::{AccountId, JournalEntryId};
 use crate::shared::monetary_amount::MonetaryAmount;
@@ -68,15 +69,21 @@ impl JournalEntry {
         description: String,
     ) -> Result<Self, DomainError> {
         if entry_number.trim().is_empty() {
-            return Err(DomainError::Invalid("Ø±Ù‚Ù… Ø§Ù„Ù‚ÙŠØ¯ Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø£Ù† ÙŠÙƒÙˆÙ† ÙØ§Ø±ØºÙ‹Ø§".into()));
+            return Err(DomainError::Invalid(
+                "Ø±Ù‚Ù… Ø§Ù„Ù‚ÙŠØ¯ Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø£Ù† ÙŠÙƒÙˆÙ† ÙØ§Ø±ØºÙ‹Ø§".into(),
+            ));
         }
 
         if lines.is_empty() {
-            return Err(DomainError::Invalid("Ø§Ù„Ù‚ÙŠØ¯ ÙŠØ¬Ø¨ Ø£Ù† ÙŠØ­ØªÙˆÙŠ Ø¹Ù„Ù‰ Ø³Ø·Ø± ÙˆØ§Ø­Ø¯ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„".into()));
+            return Err(DomainError::Invalid(
+                "Ø§Ù„Ù‚ÙŠØ¯ ÙŠØ¬Ø¨ Ø£Ù† ÙŠØ­ØªÙˆÙŠ Ø¹Ù„Ù‰ Ø³Ø·Ø± ÙˆØ§Ø­Ø¯ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„".into(),
+            ));
         }
 
         if description.trim().is_empty() {
-            return Err(DomainError::Invalid("ÙˆØµÙ Ø§Ù„Ù‚ÙŠØ¯ Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø£Ù† ÙŠÙƒÙˆÙ† ÙØ§Ø±ØºÙ‹Ø§".into()));
+            return Err(DomainError::Invalid(
+                "ÙˆØµÙ Ø§Ù„Ù‚ÙŠØ¯ Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø£Ù† ÙŠÙƒÙˆÙ† ÙØ§Ø±ØºÙ‹Ø§".into(),
+            ));
         }
 
         let now = Utc::now();
@@ -108,7 +115,9 @@ impl JournalEntry {
 
     pub fn post(&mut self) -> Result<(), DomainError> {
         if self.status != JournalEntryStatus::Draft {
-            return Err(DomainError::Invalid("ÙŠÙ…ÙƒÙ† ØªØ±Ø­ÙŠÙ„ Ø§Ù„Ù‚ÙŠÙˆØ¯ Ø§Ù„Ù…Ø³ÙˆØ¯Ø© ÙÙ‚Ø·".into()));
+            return Err(DomainError::Invalid(
+                "ÙŠÙ…ÙƒÙ† ØªØ±Ø­ÙŠÙ„ Ø§Ù„Ù‚ÙŠÙˆØ¯ Ø§Ù„Ù…Ø³ÙˆØ¯Ø© ÙÙ‚Ø·".into(),
+            ));
         }
 
         if !self.is_balanced() {
@@ -126,7 +135,9 @@ impl JournalEntry {
 
     pub fn reverse(&mut self) -> Result<(), DomainError> {
         if self.status != JournalEntryStatus::Posted {
-            return Err(DomainError::Forbidden("ÙŠÙ…ÙƒÙ† Ø¹ÙƒØ³ Ø§Ù„Ù‚ÙŠÙˆØ¯ Ø§Ù„Ù…Ø±Ø­Ù„Ø© ÙÙ‚Ø·".into()));
+            return Err(DomainError::Forbidden(
+                "ÙŠÙ…ÙƒÙ† Ø¹ÙƒØ³ Ø§Ù„Ù‚ÙŠÙˆØ¯ Ø§Ù„Ù…Ø±Ø­Ù„Ø© ÙÙ‚Ø·".into(),
+            ));
         }
 
         self.status = JournalEntryStatus::Reversed;
@@ -138,8 +149,8 @@ impl JournalEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shared::money::Money;
     use crate::shared::currency::Currency;
+    use crate::shared::money::Money;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -192,7 +203,8 @@ mod tests {
             lines,
             Utc::now(),
             "Ù‚ÙŠØ¯ Ø¹Ù…Ù„Ø§Øª Ù…Ø®ØªÙ„Ø·Ø©".to_string(),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(entry.post().is_ok());
     }
@@ -220,7 +232,8 @@ mod tests {
             lines,
             Utc::now(),
             "Ù‚ÙŠØ¯ ØºÙŠØ± Ù…ØªÙˆØ§Ø²Ù†".to_string(),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(entry.post().is_err());
     }
@@ -247,7 +260,8 @@ mod tests {
             lines,
             Utc::now(),
             "Ù‚ÙŠØ¯ ØªØ¬Ø±ÙŠØ¨ÙŠ".to_string(),
-        ).unwrap();
+        )
+        .unwrap();
 
         entry.post().unwrap();
         assert!(entry.post().is_err());
@@ -275,7 +289,8 @@ mod tests {
             lines,
             Utc::now(),
             "Ù‚ÙŠØ¯ ØªØ¬Ø±ÙŠØ¨ÙŠ".to_string(),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(entry.total_base_debit(), dec!(150100));
     }
@@ -302,7 +317,8 @@ mod tests {
             lines,
             Utc::now(),
             "Ù‚ÙŠØ¯ ØªØ¬Ø±ÙŠØ¨ÙŠ".to_string(),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(entry.total_base_credit(), dec!(150100));
     }

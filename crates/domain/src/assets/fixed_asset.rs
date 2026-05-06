@@ -1,4 +1,5 @@
-﻿use uuid::Uuid;
+﻿#![allow(clippy::too_many_arguments)]
+use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use crate::shared::Money;
@@ -126,3 +127,4 @@ mod tests {
         assert_eq!(asset.net_book_value().amount(), Decimal::from(1100));
     }
 }
+

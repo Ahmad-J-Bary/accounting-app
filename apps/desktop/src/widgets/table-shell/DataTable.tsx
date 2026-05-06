@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
-import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from '@shared/lib/utils';
+import { Skeleton } from "@shared/ui/skeleton";
 
 export interface Column<T> {
   id?: string;
@@ -15,6 +15,7 @@ interface DataTableProps<T> {
   data: T[];
   columns: Column<T>[];
   onRowClick?: (row: T) => void;
+  onRowDoubleClick?: (row: T) => void;
   loading?: boolean;
   emptyMessage?: string;
   className?: string;
@@ -27,6 +28,7 @@ export function DataTable<T>({
   data,
   columns,
   onRowClick,
+  onRowDoubleClick,
   loading,
   emptyMessage = "لا توجد بيانات متاحة",
   className,
@@ -82,6 +84,7 @@ export function DataTable<T>({
           isSelected ? "bg-blue-50/60" : onRowClick ? "hover:bg-slate-50/70 active:bg-slate-100" : "hover:bg-slate-50/30"
         )}
         onClick={() => onRowClick?.(row)}
+        onDoubleClick={() => onRowDoubleClick?.(row)}
       >
         {columns.map((col, colIdx) => (
           <td

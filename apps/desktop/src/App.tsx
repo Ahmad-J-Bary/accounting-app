@@ -1,14 +1,14 @@
-import { Toaster } from '@/components/ui/sonner';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { Toaster } from '@shared/ui/sonner';
+import { TooltipProvider } from '@shared/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AppLayout } from '@/components/erp/AppLayout';
-import { TabProvider } from '@/context/TabContext';
-import { CurrencyProvider } from '@/context/CurrencyContext';
-import { ErpRoutes } from './ErpRoutes';
-import AuthCallback from './pages/AuthCallback';
-import AuthError from './pages/AuthError';
-import Index from './pages/Index';
+import { AppLayout } from '@app/shell/AppLayout';
+import { TabProvider } from '@app/providers/TabProvider';
+import { CurrencyProvider } from '@app/providers/CurrencyProvider';
+import { ErpRoutes } from '@app/router/ErpRoutes';
+import AuthCallback from '@modules/core/pages/authCallback';
+import AuthError from '@modules/core/pages/authError';
+import Index from '@modules/core/pages/index';
 
 const queryClient = new QueryClient();
 

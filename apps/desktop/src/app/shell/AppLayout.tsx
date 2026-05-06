@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { TabBar } from './TabBar';
-import { ErpRoutes } from '../../ErpRoutes';
-import { useTabs } from '@/context/TabContext';
-import { cn } from '@/lib/utils';
-import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { FloatingExchangeRateWidget } from './currency/FloatingExchangeRateWidget';
+import { ErpRoutes } from '@app/router/ErpRoutes';
+import { useTabs } from '@app/providers/TabContext';
+import { cn } from '@shared/lib/utils';
+import { useKeyboardShortcuts } from '@shared/hooks/useKeyboardShortcuts';
+import { FloatingExchangeRateWidget } from '@modules/core/components/FloatingExchangeRateWidget';
 
 interface AppLayoutProps {
   title?: string;
@@ -18,6 +18,20 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { tabs, openTab } = useTabs();
   const navigate = useNavigate();
+
+  const [isExchangeVisible, setIsExchangeVisible] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('erp_exchange_visible') !== 'false';
+    }
+    return true;
+  });
+
+  const toggleExchange = () => {
+    setIsExchangeVisible(prev => {
+      localStorage.setItem('erp_exchange_visible', String(!prev));
+      return !prev;
+    });
+  };
 
   const shortcuts = useMemo(() => [
     { key: 'k', ctrlKey: true, action: () => console.log('Open search'), description: 'فتح البحث' },
@@ -70,7 +84,12 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Top Navigation Bar */}
-          <TopBar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} sidebarOpen={sidebarOpen} />
+          <TopBar 
+            onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} 
+            sidebarOpen={sidebarOpen} 
+            isExchangeVisible={isExchangeVisible}
+            onToggleExchange={toggleExchange}
+          />
           
           {/* Tab Bar */}
           <TabBar />
@@ -99,7 +118,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
                 </div>
               </div>
             ))}
-            <FloatingExchangeRateWidget />
+            <FloatingExchangeRateWidget isVisible={isExchangeVisible} onClose={() => toggleExchange()} />
           </main>
         </div>
       </div>

@@ -1,3 +1,4 @@
+﻿#![allow(clippy::too_many_arguments)]
 use crate::shared::money::Money;
 use crate::shared::monetary_amount::MonetaryAmount;
 use crate::shared::MaterialId;
@@ -55,3 +56,4 @@ impl InvoiceLine {
         self.unit_price.clone() * self.quantity
     }
 }
+

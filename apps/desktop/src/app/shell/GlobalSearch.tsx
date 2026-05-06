@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
+import { Button } from '@shared/ui/button';
+import { Input } from '@shared/ui/input';
+import { Card } from '@shared/ui/card';
 import { Search, X, FileText, Receipt, User, Package, ChevronRight, Clock } from 'lucide-react';
-import { formatCurrency, formatDate } from '@/lib/format';
+import { formatCurrency, formatDate } from '@shared/lib/format';
 
 interface SearchResult {
   id: string;

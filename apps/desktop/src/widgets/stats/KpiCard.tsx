@@ -1,6 +1,6 @@
-import { cn } from "@/lib/utils";
+import { cn } from '@shared/lib/utils';
 import { TrendingUp, TrendingDown, LucideIcon } from "lucide-react";
-import { formatCurrency, formatNumber } from "@/lib/format";
+import { formatCurrency, formatNumber } from '@shared/lib/format';
 
 interface KpiCardProps {
   title: string;

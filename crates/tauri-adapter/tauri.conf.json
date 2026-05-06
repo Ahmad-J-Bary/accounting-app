@@ -3,7 +3,7 @@
   "version": "0.6.6",
   "identifier": "com.almowakeb.erp",
   "build": {
-    "frontendDist": "dist",
+    "frontendDist": "../../apps/desktop/dist",
     "devUrl": "http://localhost:1420",
     "beforeDevCommand": "pnpm run dev",
     "beforeBuildCommand": "pnpm run build"

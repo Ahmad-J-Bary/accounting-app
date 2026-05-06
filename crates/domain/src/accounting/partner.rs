@@ -1,8 +1,9 @@
-use crate::shared::ids::{PartnerId, AccountId};
+﻿#![allow(clippy::too_many_arguments)]
 use crate::shared::errors::DomainError;
+use crate::shared::ids::{AccountId, PartnerId};
+use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ProfitSharingType {
@@ -39,11 +40,15 @@ impl Partner {
         profit_sharing_ratio: Option<Decimal>,
     ) -> Result<Self, DomainError> {
         if name.trim().is_empty() {
-            return Err(DomainError::Invalid("اسم الشريك لا يمكن أن يكون فارغًا".into()));
+            return Err(DomainError::Invalid(
+                "اسم الشريك لا يمكن أن يكون فارغًا".into(),
+            ));
         }
 
         if exchange_rate <= Decimal::ZERO {
-            return Err(DomainError::Invalid("سعر الصرف يجب أن يكون أكبر من الصفر".into()));
+            return Err(DomainError::Invalid(
+                "سعر الصرف يجب أن يكون أكبر من الصفر".into(),
+            ));
         }
 
         let (amount_local, amount_usd) = if is_amount_in_usd {
@@ -82,26 +87,28 @@ impl Partner {
         profit_sharing_ratio: Option<Decimal>,
     ) -> Result<(), DomainError> {
         if name.trim().is_empty() {
-            return Err(DomainError::Invalid("اسم الشريك لا يمكن أن يكون فارغًا".into()));
+            return Err(DomainError::Invalid(
+                "اسم الشريك لا يمكن أن يكون فارغًا".into(),
+            ));
         }
 
         self.code = code;
         self.name = name;
         self.exchange_rate = exchange_rate;
         self.is_amount_in_usd = is_amount_in_usd;
-        
+
         let (amount_local, amount_usd) = if is_amount_in_usd {
             (amount * exchange_rate, amount)
         } else {
             (amount, amount / exchange_rate)
         };
-        
+
         self.amount_local = amount_local;
         self.amount_usd = amount_usd;
         self.profit_sharing_type = profit_sharing_type;
         self.profit_sharing_ratio = profit_sharing_ratio;
         self.updated_at = Utc::now();
-        
+
         Ok(())
     }
 

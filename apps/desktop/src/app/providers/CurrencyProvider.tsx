@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { currencyService, type Currency, type TodayRateStatus } from "@/services/currencyService";
+import { currencyService, type Currency, type TodayRateStatus } from '@modules/core/api/currencyService';
 
 type CurrencyDisplayMode = "base" | "selected";
 
@@ -234,6 +234,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       convertFromBase,
       convertBetween,
       formatAmount,
+      formatMonetaryAmount,
       hasTodayRate,
     ]
   );

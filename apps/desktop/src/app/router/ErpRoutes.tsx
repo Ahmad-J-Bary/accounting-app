@@ -1,27 +1,27 @@
 import { Routes, Route } from 'react-router-dom';
-import Dashboard from './pages/Dashboard';
-import Accounting from './pages/Accounting';
-import Journal from './pages/Journal';
-import Customers from './pages/Customers';
-import Suppliers from './pages/Suppliers';
-import SalesInvoices from './pages/SalesInvoices';
-import PurchaseInvoices from './pages/PurchaseInvoices';
-import Payments from './pages/Payments';
-import Materials from './pages/Materials';
-import Categories from './pages/Categories';
-import Inventory from './pages/Inventory';
-import Damaged from './pages/Damaged';
-import Production from './pages/Production';
-import OpeningBalance from './pages/OpeningBalance';
-import Adjustments from './pages/Adjustments';
-import Reports from './pages/Reports';
-import Users from './pages/Users';
-import Settings from './pages/Settings';
-import AuditLog from './pages/AuditLog';
-import Partners from './pages/Partners';
-import Assets from './pages/Assets';
-import InvoiceDetail from './pages/InvoiceDetail';
-import CurrencySettings from './pages/CurrencySettings';
+import Dashboard from '@modules/core/pages/dashboard';
+import Accounting from '@modules/accounting/pages/accounting';
+import Journal from '@modules/accounting/pages/journal';
+import Customers from '@modules/partners/pages/customers';
+import Suppliers from '@modules/partners/pages/suppliers';
+import SalesInvoices from '@modules/invoicing/pages/salesInvoices';
+import PurchaseInvoices from '@modules/invoicing/pages/purchaseInvoices';
+import Payments from '@modules/payments/pages/payments';
+import Materials from '@modules/inventory/pages/materials';
+import Categories from '@modules/inventory/pages/categories';
+import Inventory from '@modules/inventory/pages/inventory';
+import Damaged from '@modules/inventory/pages/damaged';
+import Production from '@modules/inventory/pages/production';
+import OpeningBalance from '@modules/accounting/pages/openingBalance';
+import Adjustments from '@modules/inventory/pages/adjustments';
+import Reports from '@modules/core/pages/reports';
+import Users from '@modules/core/pages/users';
+import Settings from '@modules/core/pages/settings';
+import AuditLog from '@modules/core/pages/auditLog';
+import Partners from '@modules/partners/pages/partners';
+import Assets from '@modules/assets/pages/assets';
+import InvoiceDetail from '@modules/invoicing/pages/invoiceDetail';
+import CurrencySettings from '@modules/core/pages/currencySettings';
 
 export function ErpRoutes({ location }: { location?: string | Partial<Location> }) {
   return (
@@ -33,10 +33,10 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/customers" element={<Customers />} />
       <Route path="/suppliers" element={<Suppliers />} />
       <Route path="/sales-invoices" element={<SalesInvoices />} />
-      <Route path="/sales-invoices/new*" element={<SalesInvoices />} />
+      <Route path="/sales-invoices/new/*" element={<SalesInvoices />} />
       <Route path="/sales-invoices/:id" element={<SalesInvoices />} />
       <Route path="/purchase-invoices" element={<PurchaseInvoices />} />
-      <Route path="/purchase-invoices/new*" element={<PurchaseInvoices />} />
+      <Route path="/purchase-invoices/new/*" element={<PurchaseInvoices />} />
       <Route path="/purchase-invoices/:id" element={<PurchaseInvoices />} />
       <Route path="/payments" element={<Payments />} />
       <Route path="/materials" element={<Materials />} />
@@ -45,7 +45,7 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/damaged" element={<Damaged />} />
       <Route path="/production" element={<Production />} />
       <Route path="/opening-balance" element={<OpeningBalance />} />
-      <Route path="/opening-balance/new*" element={<OpeningBalance />} />
+      <Route path="/opening-balance/new/*" element={<OpeningBalance />} />
       <Route path="/opening-balance/:id" element={<OpeningBalance />} />
       <Route path="/adjustments" element={<Adjustments />} />
       <Route path="/reports" element={<Reports />} />
