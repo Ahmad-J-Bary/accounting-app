@@ -43,37 +43,36 @@ export function TreeSidebar({
   newButtonLabel
 }: TreeSidebarProps) {
   return (
-    <Card className="p-6 h-fit border-border/60 shadow-sm flex flex-col gap-5 sticky top-6" dir="rtl">
+    <Card className="p-5 h-fit border-border/60 shadow-sm flex flex-col gap-5 sticky top-6" dir="rtl">
       {/* Actions */}
-      <div className="grid grid-cols-3 gap-2 pt-1">
+      <div className="flex flex-wrap items-center gap-2 pt-1">
         {formMode ? (
           <>
-            <Button size="sm" variant="outline" onClick={onCancel} disabled={saving}>
+            <Button size="sm" variant="outline" onClick={onCancel} disabled={saving} className="flex-1">
               إلغاء
             </Button>
-            <Button size="sm" onClick={onSave} disabled={saving}>
+            <Button size="sm" onClick={onSave} disabled={saving} className="flex-1">
               {saving ? "جاري الحفظ..." : "حفظ"}
             </Button>
-            <div />
           </>
         ) : (
           <>
-            <Button size="sm" onClick={onOpenCreate} disabled={disableNew && !newButtonLabel}>
-              <Plus className="w-4 h-4 ml-1.5" />
+            <Button size="sm" onClick={onOpenCreate} disabled={disableNew && !newButtonLabel} className="flex-1 whitespace-nowrap min-w-fit">
+              <Plus className="w-4 h-4 ml-1.5 shrink-0" />
               {newButtonLabel || "جديد"}
             </Button>
-            <Button size="sm" variant="outline" onClick={onOpenEdit} disabled={!canEdit}>
-              <Edit className="w-4 h-4 ml-1.5" />
+            <Button size="sm" variant="outline" onClick={onOpenEdit} disabled={!canEdit} className="whitespace-nowrap">
+              <Edit className="w-4 h-4 ml-1.5 shrink-0" />
               تعديل
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50"
+              className="text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50 whitespace-nowrap"
               onClick={onDelete}
               disabled={!canDelete}
             >
-              <Trash2 className="w-4 h-4 ml-1.5" />
+              <Trash2 className="w-4 h-4 ml-1.5 shrink-0" />
               حذف
             </Button>
           </>

@@ -18,6 +18,8 @@ interface OperationalTableTemplateProps {
   isPanelOpen?: boolean;
   /** Optional bottom summary/stats area */
   summaryContent?: ReactNode;
+  /** Optional bottom widgets (e.g. charts, grids) */
+  bottomWidgets?: ReactNode;
   /** Custom class */
   className?: string;
   /** Extra content (e.g. Modals, Dialogs) */
@@ -37,6 +39,7 @@ export function OperationalTableTemplate({
   sidePanel,
   isPanelOpen = false,
   summaryContent,
+  bottomWidgets,
   className,
   children
 }: OperationalTableTemplateProps) {
@@ -62,7 +65,7 @@ export function OperationalTableTemplate({
       <div className="flex-1 flex overflow-hidden p-6 gap-6">
         
         {/* Main Column: Widgets + Filters + Table */}
-        <div className="flex-1 flex flex-col min-w-0 gap-6 overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 gap-4 overflow-hidden">
           
           {/* Header Widgets (Stats/Charts) */}
           {headerWidgets && (
@@ -73,21 +76,28 @@ export function OperationalTableTemplate({
 
           {/* Filter Bar */}
           {filterBar && (
-            <div className="bg-white rounded-2xl border border-slate-200/70 shadow-sm p-6 shrink-0 transition-all hover:shadow-md">
+            <div className="bg-white rounded-xl border border-slate-200/70 shadow-sm px-5 py-3 shrink-0 transition-all hover:shadow-md">
               {filterBar}
             </div>
           )}
 
           {/* Table Container */}
-          <div className="flex-1 flex flex-col bg-white rounded-2xl border border-slate-200/70 shadow-sm overflow-hidden transition-all hover:shadow-md">
+          <div className="flex-1 flex flex-col bg-white rounded-xl border border-slate-200/70 shadow-sm overflow-hidden transition-all hover:shadow-md">
             <div className="flex-1 overflow-auto relative custom-scrollbar">
               {tableContent}
             </div>
           </div>
 
+          {/* Optional Bottom Widgets (Charts/Grids) */}
+          {bottomWidgets && (
+            <div className="shrink-0">
+              {bottomWidgets}
+            </div>
+          )}
+
           {/* Optional Footer Summary (Pagination, Totals) */}
           {summaryContent && (
-            <div className="bg-white rounded-2xl border border-slate-200/70 shadow-sm p-5 shrink-0 flex items-center justify-between transition-all hover:shadow-md">
+            <div className="bg-white rounded-xl border border-slate-200/70 shadow-sm px-5 py-3 shrink-0 flex items-center justify-between transition-all hover:shadow-md">
               {summaryContent}
             </div>
           )}
@@ -96,7 +106,7 @@ export function OperationalTableTemplate({
         {/* Optional Side Detail Panel */}
         {sidePanel && (
           <aside className={cn(
-            "bg-white rounded-2xl border border-slate-200/70 shadow-xl flex flex-col overflow-hidden transition-all duration-300 shrink-0",
+            "bg-white rounded-xl border border-slate-200/70 shadow-xl flex flex-col overflow-hidden transition-all duration-300 shrink-0",
             isPanelOpen ? "w-[500px] opacity-100" : "w-0 opacity-0 border-none p-0 overflow-hidden"
           )}>
             <div className="flex-1 overflow-auto min-w-[500px] custom-scrollbar">

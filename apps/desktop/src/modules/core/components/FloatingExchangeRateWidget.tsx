@@ -41,7 +41,7 @@ export function FloatingExchangeRateWidget({ isVisible, onClose }: FloatingExcha
     }
   }, []);
 
-  const handleStop = (_e: any, data: { x: number; y: number }) => {
+  const handleStop = (_e: unknown, data: { x: number; y: number }) => {
     const newPos = { x: data.x, y: data.y };
     setPosition(newPos);
     localStorage.setItem("exchange-widget-pos", JSON.stringify(newPos));

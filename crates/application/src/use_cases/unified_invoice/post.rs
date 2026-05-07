@@ -130,8 +130,12 @@ impl PostInvoiceUseCase {
                             let mut updated_customer = customer;
                             updated_customer.increase_debit(amount_deferred).map_err(|e| AppError::Invalid(e.to_string()))?;
                             self.customer_repo.update(&updated_customer).await?;
+                        } else {
+                            return Err(AppError::Invalid(format!("العميل {} لا يملك حساباً محاسبياً مرتبطاً. لا يمكن إجراء عملية آجلة.", customer.name)));
                         }
                     }
+                } else {
+                    return Err(AppError::Invalid("يجب تحديد عميل للمبيعات الآجلة لضمان توازن القيد المحاسبي".into()));
                 }
             }
         } else if invoice.invoice_type == InvoiceType::Purchase {

@@ -92,11 +92,7 @@ export function FinancialDocumentTemplate({
         <aside className="w-80 flex flex-col gap-6 shrink-0">
           {/* Summary Panel (Sticky calculation area) */}
           <div className="bg-white rounded-2xl border border-slate-200/70 shadow-sm overflow-hidden flex flex-col sticky top-0 transition-all hover:shadow-md">
-            <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-              <h2 className="text-sm font-black text-slate-800 uppercase tracking-wider">خلاصة الحساب</h2>
-              <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-            </div>
-            <div className="p-6 flex flex-col gap-5">
+            <div className="p-4 flex flex-col gap-3">
               {summaryPanel}
             </div>
           </div>

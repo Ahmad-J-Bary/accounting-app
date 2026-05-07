@@ -55,7 +55,7 @@ export function SummaryPanel({
       </div>
 
       {/* Breakdown rows */}
-      <div className="px-3 py-2.5 space-y-1.5">
+      <div className="px-3 py-1.5 space-y-1">
         <SummaryRow label="المجموع الفرعي" value={subtotal} />
         {discount > 0 && <SummaryRow label="الخصم" value={-discount} valueClass="text-red-600" />}
         {tax > 0 && <SummaryRow label="الضريبة / الرسوم" value={tax} valueClass="text-orange-600" />}
@@ -63,10 +63,10 @@ export function SummaryPanel({
       </div>
 
       {/* NET — prominent */}
-      <div className="mx-3 mb-2.5 bg-gradient-to-l from-blue-600 to-blue-700 rounded-lg px-3 py-2.5 text-white">
+      <div className="mx-3 mb-2 bg-gradient-to-l from-blue-600 to-blue-700 rounded-lg px-3 py-2 text-white">
         <div className="text-[10px] font-medium opacity-75 mb-0.5">الصافي النهائي</div>
         <div className="flex items-baseline gap-2">
-          <span className={cn("tabular-nums font-black", compact ? "text-xl" : "text-2xl")}>
+          <span className={cn("tabular-nums font-black", compact ? "text-lg" : "text-xl")}>
             {formatCurrency(net)}
           </span>
         </div>
@@ -99,20 +99,6 @@ export function SummaryPanel({
         </div>
       )}
 
-      {/* Keyboard shortcuts reminder */}
-      <div className="px-3 pb-2.5 space-y-1">
-        {[
-          ["Tab / Enter", "انتقال بين الخلايا"],
-          ["↑ ↓", "التنقل بين الصفوف"],
-          ["Ctrl+Del", "حذف السطر"],
-          ["Insert", "تكرار السطر"],
-        ].map(([key, desc]) => (
-          <div key={key} className="flex items-center justify-between text-[10px] text-slate-400">
-            <span>{desc}</span>
-            <kbd className="bg-slate-100 px-1.5 py-0.5 rounded font-mono text-slate-500">{key}</kbd>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Plus, Search, RefreshCw, ArrowDownCircle, ArrowUpCircle, Banknote, Wallet, ReceiptText } from "lucide-react";
-import { formatCurrency, formatDate } from '@shared/lib/format';
+import { Plus, Search, RefreshCw, ArrowDownCircle, ArrowUpCircle, Wallet, ReceiptText, Settings2 } from "lucide-react";
+import { formatDate } from '@shared/lib/format';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { paymentService } from '@modules/payments/api/paymentService';
 import { customerService } from '@modules/partners/api/customerService';
@@ -11,15 +11,18 @@ import type { Payment, CreatePaymentRequest, CustomerDto, SupplierDto } from "@e
 import { toast } from "sonner";
 import { cn } from "@shared/lib/utils";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@shared/ui/dropdown-menu";
 
 // Refactored Components & Hooks
 import { DataTable, Column } from '@widgets/table-shell/DataTable';
 import { TableActions } from '@widgets/table-shell/TableActions';
-import { useDataTable } from '@shared/hooks';
+import { useDataTable, useColumnPreferences } from '@shared/hooks';
 import { PaymentForm } from '@modules/payments/components/PaymentForm';
 import { PAYMENT_TYPE_LABELS } from '@modules/payments/lib/constants';
+import { useCurrencyContext } from "@app/providers/CurrencyProvider";
 
 export default function Payments() {
+  const { formatAmount, currencies, baseCurrency, formatMonetaryAmount } = useCurrencyContext();
   const {
     filtered: payments,
     loading: paymentsLoading,
@@ -61,6 +64,32 @@ export default function Payments() {
       return typeFilter === "all" || p.payment_type === typeFilter;
     });
   }, [payments, typeFilter]);
+
+  const availableColumns = useMemo(() => {
+    const cols = [
+      { id: "payment_date", label: "التاريخ" },
+      { id: "payment_type", label: "النوع" },
+      { id: "party_name", label: "الطرف الثاني" },
+      { id: "reference", label: "المرجع" },
+    ];
+
+    currencies.forEach(curr => {
+      const s = curr.symbol || curr.code;
+      cols.push({ id: `amount_${curr.code}`, label: `المبلغ (${s})` });
+    });
+
+    return cols;
+  }, [currencies]);
+
+  const defaultVisibleColumns = useMemo(() => {
+    const base = ["payment_date", "payment_type", "party_name", "reference"];
+    if (baseCurrency) {
+      base.push(`amount_${baseCurrency.code}`);
+    }
+    return base;
+  }, [baseCurrency]);
+
+  const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences("payments", defaultVisibleColumns);
 
   const totalIn = useMemo(() => payments
     .filter(p => ["Receipt", "CashIn"].includes(p.payment_type))
@@ -104,54 +133,71 @@ export default function Payments() {
     }
   }, [refresh]);
 
-  const columns = useMemo<Column<Payment>[]>(() => [
-    { 
-      header: "التاريخ", 
-      accessor: (p) => formatDate(p.payment_date),
-      className: "tabular-nums text-slate-500 font-medium"
-    },
-    { 
-      header: "النوع", 
-      accessor: (p) => {
-        const isIn = ["Receipt", "CashIn"].includes(p.payment_type);
-        return (
-          <span className={cn(
-            "inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-1 rounded-lg ring-1 ring-inset uppercase tracking-wider",
-            isIn ? "bg-emerald-50 text-emerald-700 ring-emerald-100" : "bg-rose-50 text-rose-700 ring-rose-100"
-          )}>
-            {isIn ? <ArrowDownCircle className="w-3.5 h-3.5" /> : <ArrowUpCircle className="w-3.5 h-3.5" />}
-            {PAYMENT_TYPE_LABELS[p.payment_type]}
-          </span>
-        );
+  const columns = useMemo<Column<Payment>[]>(() => {
+    const cols: Column<Payment>[] = [
+      { 
+        id: "payment_date",
+        header: "التاريخ", 
+        accessor: (p) => formatDate(p.payment_date),
+        className: "tabular-nums text-slate-500 font-medium"
       },
-      align: "center"
-    },
-    { 
-      header: "الطرف الثاني", 
-      accessor: (p) => p.customer_name ?? p.supplier_name ?? "—",
-      className: "font-black text-slate-900"
-    },
-    { 
-      header: "المرجع / ملاحظات", 
-      accessor: (p) => p.reference ?? "—",
-      className: "text-slate-500 text-xs font-medium italic"
-    },
-    { 
-      header: "المبلغ", 
-      accessor: (p) => {
-        const isIn = ["Receipt", "CashIn"].includes(p.payment_type);
-        return (
-          <span className={cn(
-            "tabular-nums font-black text-base",
-            isIn ? "text-emerald-600" : "text-rose-600"
-          )}>
-            {isIn ? "+" : "-"}{formatCurrency(parseFloat(p.amount))}
-          </span>
-        );
+      { 
+        id: "payment_type",
+        header: "النوع", 
+        accessor: (p) => {
+          const isIn = ["Receipt", "CashIn"].includes(p.payment_type);
+          return (
+            <span className={cn(
+              "inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-1 rounded-lg ring-1 ring-inset uppercase tracking-wider",
+              isIn ? "bg-emerald-50 text-emerald-700 ring-emerald-100" : "bg-rose-50 text-rose-700 ring-rose-100"
+            )}>
+              {isIn ? <ArrowDownCircle className="w-3.5 h-3.5" /> : <ArrowUpCircle className="w-3.5 h-3.5" />}
+              {PAYMENT_TYPE_LABELS[p.payment_type]}
+            </span>
+          );
+        },
+        align: "center"
       },
-      align: "left"
-    },
-    {
+      { 
+        id: "party_name",
+        header: "الطرف الثاني", 
+        accessor: (p) => p.customer_name ?? p.supplier_name ?? "—",
+        className: "font-black text-slate-900"
+      },
+      { 
+        id: "reference",
+        header: "المرجع / ملاحظات", 
+        accessor: (p) => p.reference ?? "—",
+        className: "text-slate-500 text-xs font-medium italic"
+      },
+    ];
+
+    // Dynamic Multi-Currency Amount columns
+    currencies.forEach(curr => {
+      cols.push({
+        id: `amount_${curr.code}`,
+        header: `المبلغ (${curr.symbol || curr.code})`,
+        accessor: (p) => {
+          const isIn = ["Receipt", "CashIn"].includes(p.payment_type);
+          // Assuming p.amount is in base currency or has a currency context. 
+          // If p.amount is already in a specific currency, we should handle that.
+          // For now, following the pattern: show base amount converted to this currency.
+          const val = parseFloat(p.amount);
+          return (
+            <span className={cn(
+              "tabular-nums font-black text-sm",
+              isIn ? "text-emerald-600" : "text-rose-600"
+            )}>
+              {isIn ? "+" : "-"}{formatAmount(val, { currencyCode: curr.code })}
+            </span>
+          );
+        },
+        align: "left"
+      });
+    });
+
+    cols.push({
+      id: "actions",
       header: "إجراءات",
       accessor: (p) => (
         <TableActions 
@@ -161,17 +207,26 @@ export default function Payments() {
       ),
       align: "left",
       className: "w-16"
-    }
-  ], [handleDelete]);
+    });
+
+    return cols;
+  }, [handleDelete, formatAmount, currencies]);
+
+  const filteredColumns = useMemo(() => {
+    return columns.filter(col => {
+      if (!col.id || col.id === "actions") return true;
+      return visibleColumns.includes(col.id);
+    });
+  }, [columns, visibleColumns]);
 
   const isLoading = paymentsLoading || loadingExtras;
 
   const stats = useMemo(() => [
-    { label: "إجمالي المقبوضات", value: formatCurrency(totalIn), icon: ArrowDownCircle, color: "text-emerald-600" },
-    { label: "إجمالي المدفوعات", value: formatCurrency(totalOut), icon: ArrowUpCircle, color: "text-rose-600" },
-    { label: "صافي الحركة", value: formatCurrency(totalIn - totalOut), icon: Wallet, color: (totalIn - totalOut) >= 0 ? "text-blue-600" : "text-amber-600" },
+    { label: "إجمالي المقبوضات", value: formatMonetaryAmount(totalIn.toString(), "base"), icon: ArrowDownCircle, color: "text-emerald-600" },
+    { label: "إجمالي المدفوعات", value: formatMonetaryAmount(totalOut.toString(), "base"), icon: ArrowUpCircle, color: "text-rose-600" },
+    { label: "صافي الحركة", value: formatMonetaryAmount((totalIn - totalOut).toString(), "base"), icon: Wallet, color: (totalIn - totalOut) >= 0 ? "text-blue-600" : "text-amber-600" },
     { label: "عدد الحركات", value: payments.length, icon: ReceiptText, color: "text-slate-900" },
-  ], [totalIn, totalOut, payments.length]);
+  ], [totalIn, totalOut, payments.length, formatMonetaryAmount]);
 
   return (
     <OperationalTableTemplate
@@ -186,21 +241,6 @@ export default function Payments() {
           </Button>
         </div>
       }
-      headerWidgets={
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {stats.map((s, i) => (
-            <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between transition-all hover:shadow-md">
-              <div className="space-y-1">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{s.label}</span>
-                <div className={cn("text-xl font-black tabular-nums", s.color)}>{s.value}</div>
-              </div>
-              <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center bg-slate-50", s.color)}>
-                <s.icon className="w-6 h-6" />
-              </div>
-            </div>
-          ))}
-        </div>
-      }
       filterBar={
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
@@ -213,8 +253,8 @@ export default function Payments() {
             />
           </div>
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-[200px] h-11 border-slate-200">
-              <SelectValue placeholder="تصفية حسب النوع" />
+            <SelectTrigger className="w-[180px] h-11 border-slate-200">
+              <SelectValue placeholder="تصفية النوع" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">جميع الحركات</SelectItem>
@@ -223,12 +263,47 @@ export default function Payments() {
               ))}
             </SelectContent>
           </Select>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="h-11 w-11 bg-white border-slate-200">
+                <Settings2 className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[220px] max-h-[450px] overflow-y-auto shadow-xl">
+              <DropdownMenuLabel className="text-right text-xs font-black uppercase text-slate-400 tracking-widest">تخصيص الأعمدة</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {availableColumns.map((col) => (
+                <DropdownMenuCheckboxItem
+                  key={col.id}
+                  checked={isVisible(col.id)}
+                  onCheckedChange={() => toggleColumn(col.id)}
+                  className="text-right flex-row-reverse gap-2 text-xs font-bold py-2"
+                >
+                  {col.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <div className="flex items-center gap-6 mr-auto pl-2">
+            {stats.map((s, i) => (
+              <div key={i} className="flex flex-col items-start gap-1">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{s.label}</span>
+                <div className="flex items-center gap-2">
+                   <s.icon className={cn("w-4 h-4", s.color)} />
+                   <span className={cn("text-lg font-black tabular-nums", s.color)}>{s.value}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
         </div>
       }
       tableContent={
         <DataTable
           data={filtered}
-          columns={columns}
+          columns={filteredColumns}
           loading={isLoading}
           emptyMessage={search || typeFilter !== "all" ? "لا توجد حركات تطابق الفلتر" : "لا توجد حركات نقدية مسجّلة"}
         />

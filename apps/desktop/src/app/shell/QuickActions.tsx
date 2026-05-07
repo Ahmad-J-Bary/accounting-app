@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 
 interface QuickAction {
   label: string;
-  icon: any;
+  icon: React.ElementType;
   description: string;
   onClick: () => void;
   color: string;

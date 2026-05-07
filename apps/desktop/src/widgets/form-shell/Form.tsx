@@ -15,14 +15,14 @@ interface FieldConfig {
   required?: boolean;
   options?: Array<{ value: string; label: string }>;
   defaultValue?: string | number;
-  validation?: (value: any) => string | null;
+  validation?: (value: unknown) => string | null;
 }
 
 interface FormProps {
   title: string;
   description?: string;
   fields: FieldConfig[];
-  onSubmit: (data: Record<string, any>) => void;
+  onSubmit: (data: Record<string, unknown>) => void;
   submitLabel?: string;
   cancelLabel?: string;
   onCancel?: () => void;
@@ -39,8 +39,8 @@ export function Form({
   onCancel,
   isLoading = false,
 }: FormProps) {
-  const [formData, setFormData] = useState<Record<string, any>>(() => {
-    const initialData: Record<string, any> = {};
+  const [formData, setFormData] = useState<Record<string, unknown>>(() => {
+    const initialData: Record<string, unknown> = {};
     fields.forEach((field) => {
       if (field.defaultValue !== undefined) {
         initialData[field.name] = field.defaultValue;
@@ -51,7 +51,7 @@ export function Form({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleChange = (name: string, value: any) => {
+  const handleChange = (name: string, value: unknown) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
     // Clear error when user starts typing
     if (errors[name]) {
@@ -95,7 +95,7 @@ export function Form({
 
   const renderField = (field: FieldConfig) => {
     const error = errors[field.name];
-    const value = formData[field.name] || '';
+    const value = (formData[field.name] as string | number | readonly string[] | undefined) ?? '';
 
     switch (field.type) {
       case 'textarea':
@@ -124,7 +124,7 @@ export function Form({
               {field.required && <span className="text-red-500 mr-1">*</span>}
             </Label>
             <Select
-              value={value}
+              value={value as string}
               onValueChange={(val) => handleChange(field.name, val)}
             >
               <SelectTrigger className={error ? 'border-red-500' : ''}>

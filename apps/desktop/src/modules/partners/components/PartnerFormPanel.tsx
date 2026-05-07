@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { AccountDto, CustomerDto, SupplierDto, PartnerDto } from "@erp/shared-types";
 import { FormPanel } from '@widgets/form-shell/FormPanel';
 import { User, Building2 } from "lucide-react";
+import { useCurrencyContext } from "@app/providers/CurrencyProvider";
 
 interface PartnerFormPanelProps {
   type: "customer" | "supplier";
@@ -23,6 +24,7 @@ export function PartnerFormPanel({
   onClose,
   saving
 }: PartnerFormPanelProps) {
+  const { currencies, baseCurrency } = useCurrencyContext();
   const isCustomer = type === "customer";
   const title = isCustomer 
     ? (partner ? "تعديل بيانات العميل" : "إضافة عميل جديد")
@@ -36,7 +38,7 @@ export function PartnerFormPanel({
   const [openingBalance, setOpeningBalance] = useState("0");
   const [debit, setDebit] = useState("0");
   const [credit, setCredit] = useState("0");
-  const [currency, setCurrency] = useState("SYP");
+  const [currency, setCurrency] = useState(baseCurrency?.code || "USD");
 
   const parentAccount = useMemo(() => {
     const searchTerms = isCustomer 
@@ -47,7 +49,7 @@ export function PartnerFormPanel({
 
   useEffect(() => {
     if (partner) {
-      const p = partner as Record<string, any>;
+      const p = partner as any;
       setForm({
         name: p.name,
         phone: p.phone || "",
@@ -57,15 +59,15 @@ export function PartnerFormPanel({
       setOpeningBalance(p.opening_balance || "0");
       setDebit(p.debit || "0");
       setCredit(p.credit || "0");
-      setCurrency(p.currency || "SYP");
+      setCurrency(p.currency || baseCurrency?.code || "USD");
     } else {
       setForm({ name: "", phone: "", address: "", notes: "" });
       setOpeningBalance("0");
       setDebit("0");
       setCredit("0");
-      setCurrency("SYP");
+      setCurrency(baseCurrency?.code || "USD");
     }
-  }, [partner]);
+  }, [partner, baseCurrency]);
 
   const handleSubmit = () => {
     if (!form.name) return;
@@ -82,20 +84,20 @@ export function PartnerFormPanel({
     };
 
     if (partner) {
-      const p = partner as Record<string, any>;
+      const p = partner as any;
       onSave({
         ...payload,
         id: p.id,
         code: p.code,
         account_id: p.account_id,
-        is_active: p.is_active,
+        is_active: p.is_active, // Keep existing status if editing
       });
     } else {
       onSave({
         ...payload,
         code: "", 
         account_id: parentAccount?.id || null,
-        is_active: true,
+        is_active: true, // Default to true for new ones
       });
     }
   };
@@ -145,12 +147,13 @@ export function PartnerFormPanel({
               <Input type="number" step="any" value={openingBalance} onChange={e => setOpeningBalance(e.target.value)} className="h-9 tabular-nums" />
             </div>
             <div className="space-y-1.5 col-span-2 sm:col-span-1">
-              <Label className="text-xs font-bold text-slate-600">العملة</Label>
+              <Label className="text-xs font-bold text-slate-600">العملة الافتراضية</Label>
               <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-9 font-bold"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="SYP">SYP - ليرة سورية</SelectItem>
-                  <SelectItem value="USD">USD - دولار أمريكي</SelectItem>
+                  {currencies.map(c => (
+                    <SelectItem key={c.code} value={c.code}>{c.code} - {c.name_ar}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

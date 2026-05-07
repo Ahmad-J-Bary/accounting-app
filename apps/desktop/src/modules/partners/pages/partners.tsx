@@ -7,6 +7,15 @@ import { Plus, Users, RefreshCw, Calculator, TrendingUp, DollarSign, PieChart as
 import { toast } from "sonner";
 import { formatCurrency } from '@shared/lib/format';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { Input } from "@shared/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@shared/ui/dropdown-menu";
 
 import { partnerService, type PartnerDto, type PartnerRequest } from '@modules/partners/api/partnerService';
 
@@ -14,7 +23,7 @@ import { partnerService, type PartnerDto, type PartnerRequest } from '@modules/p
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { DataTable, Column } from '@widgets/table-shell/DataTable';
 import { TableActions } from '@widgets/table-shell/TableActions';
-import { useDataTable } from '@shared/hooks';
+import { useDataTable, useColumnPreferences } from '@shared/hooks';
 import { PartnerForm } from '@modules/partners/components/PartnerForm';
 import { usePartnerRatios } from '@modules/partners/hooks/usePartnerRatios';
 import { cn } from "@shared/lib/utils";
@@ -28,6 +37,8 @@ export default function Partners() {
     loading,
     refresh,
     setData,
+    search,
+    setSearch,
   } = useDataTable<PartnerDto>({
     fetchData: () => partnerService.listPartners(),
     searchFields: ["name"],
@@ -45,6 +56,23 @@ export default function Partners() {
     chartCapitalData,
     chartProfitData
   } = usePartnerRatios({ partners, strategy: globalStrategy });
+
+  const stats = useMemo(() => [
+    { label: "إجمالي رأس المال (ل.س)", value: formatCurrency(totals.local), icon: Calculator, color: "text-slate-900" },
+    { label: "عدد الشركاء", value: partners.length, icon: Users, color: "text-blue-600" },
+    { label: "رأس المال ($)", value: formatCurrency(totals.usd, "") + " $", icon: DollarSign, color: "text-emerald-600" },
+  ], [totals, partners.length]);
+
+  const availableColumns = [
+    { id: "code", label: "الكود" },
+    { id: "name", label: "اسم الشريك" },
+    { id: "amount_usd", label: "رأس المال ($)" },
+    { id: "amount_local", label: "رأس المال (ل.س)" },
+    { id: "ratio", label: "نسبة الأرباح" },
+    { id: "actions", label: "إجراءات" },
+  ];
+  const defaultVisibleColumns = ["code", "name", "amount_usd", "amount_local", "ratio", "actions"];
+  const { visibleColumns, isVisible, toggleColumn } = useColumnPreferences("partners", defaultVisibleColumns);
 
   const handleSave = async (payload: PartnerRequest) => {
     try {
@@ -76,8 +104,10 @@ export default function Partners() {
     }
   }, [setData]);
 
-  const columns = useMemo<Column<PartnerDto & { calculatedRatio: number }>[]>(() => [
-    { 
+  const columns = useMemo<Column<PartnerDto & { calculatedRatio: number }>[]>(() => {
+    const allColumns: Column<PartnerDto & { calculatedRatio: number }>[] = [
+      { 
+      id: "code",
       header: "الكود", 
       accessor: (p) => (
         <span className="font-mono text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200 font-black">
@@ -86,41 +116,42 @@ export default function Partners() {
       ),
       className: "w-[100px]"
     },
-    { header: "اسم الشريك", accessor: "name", className: "font-black text-slate-800" },
+    { id: "name", header: "اسم الشريك", accessor: (p) => p.name, className: "font-black text-slate-800" },
     { 
-      header: "رأس المال (محلي)", 
+      id: "amount_usd",
+      header: "رأس المال ($)", 
+      accessor: (p) => formatCurrency(parseFloat(p.amount_usd), "$"), 
+      align: "left", 
+      className: "tabular-nums font-black text-blue-600" 
+    },
+    { 
+      id: "amount_local",
+      header: "رأس المال (ل.س)", 
       accessor: (p) => formatCurrency(parseFloat(p.amount_local)), 
       align: "left", 
-      className: "tabular-nums font-bold text-slate-700" 
+      className: "tabular-nums font-black text-slate-900" 
     },
     { 
-      header: "رأس المال ($)", 
-      accessor: (p) => (
-        <div className="flex flex-col items-start">
-          <span className="tabular-nums text-blue-600 font-black">{formatCurrency(parseFloat(p.amount_usd), "")}</span>
-          <span className="text-[9px] text-slate-400 font-mono">USD</span>
-        </div>
-      ), 
-      align: "left", 
-    },
-    { 
+      id: "ratio",
       header: "نسبة الأرباح", 
       accessor: (p) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 justify-end">
+          <span className="text-xs font-black text-emerald-700 tabular-nums">
+            {p.calculatedRatio.toFixed(2)}%
+          </span>
           <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
             <div 
               className="h-full bg-emerald-500 rounded-full" 
               style={{ width: `${p.calculatedRatio}%` }} 
             />
           </div>
-          <span className="text-xs font-black text-emerald-700 tabular-nums">
-            {p.calculatedRatio.toFixed(2)}%
-          </span>
         </div>
       ), 
-      align: "left" 
+      align: "right",
+      headerClassName: "text-left"
     },
     {
+      id: "actions",
       header: "إجراءات",
       accessor: (p) => (
         <TableActions 
@@ -135,7 +166,9 @@ export default function Partners() {
       align: "left",
       className: "w-20"
     }
-  ], [handleDelete]);
+    ];
+    return allColumns.filter(col => col.id ? isVisible(col.id) : true);
+  }, [handleDelete, isVisible]);
 
   return (
     <OperationalTableTemplate
@@ -150,42 +183,60 @@ export default function Partners() {
           </Button>
         </>
       }
-      headerWidgets={
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <StatsCard label="إجمالي رأس المال" value={formatCurrency(totals.local)} icon={Calculator} color="text-slate-900" border="border-slate-200" />
-            <StatsCard label="عدد الشركاء" value={partners.length} icon={Users} color="text-blue-600" border="border-blue-200" />
-            <StatsCard label="رأس المال بالدولار" value={formatCurrency(totals.usd, "") + " $"} icon={DollarSign} color="text-emerald-600" border="border-emerald-200" />
+
+      filterBar={
+        <div className="flex items-center gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input 
+              placeholder="بحث عن شريك..." 
+              className="pr-10 h-11 border-slate-200 focus:ring-2 focus:ring-blue-500 transition-all text-sm" 
+              value={search} 
+              onChange={(e) => setSearch(e.target.value)} 
+            />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="h-11 w-11 bg-white border-slate-200">
+                <Settings2 className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[200px]">
+              <DropdownMenuLabel className="text-right">الأعمدة الظاهرة</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {availableColumns.map((col) => (
+                <DropdownMenuCheckboxItem
+                  key={col.id}
+                  checked={isVisible(col.id)}
+                  onCheckedChange={() => toggleColumn(col.id)}
+                  className="text-right flex-row-reverse gap-2"
+                >
+                  {col.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          <div className="flex items-center gap-2 mr-auto pl-2" dir="rtl">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider hidden md:block">التوزيع:</span>
+            <RadioGroup value={globalStrategy} onValueChange={setGlobalStrategy} className="flex flex-row items-center gap-1">
+              <StrategyOption id="g1" value="BasedOnCapitalLocal" label="محلي" />
+              <StrategyOption id="g2" value="BasedOnCapitalUSD" label="دولار" />
+              <StrategyOption id="g3" value="Manual" label="يدوي" />
+            </RadioGroup>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             <ChartCard title="حصص رأس المال" icon={PieChartIcon} data={chartCapitalData} formatter={formatCurrency} />
-             <ChartCard title="توزيع الأرباح" icon={TrendingUp} data={chartProfitData} formatter={(v: number) => `${v.toFixed(2)}%`} />
+          <div className="flex items-center gap-6 mr-auto pl-2">
+            {stats.map((s, i) => (
+              <div key={i} className="flex flex-col items-start gap-1">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{s.label}</span>
+                <div className="flex items-center gap-2">
+                   <s.icon className={cn("w-4 h-4", s.color)} />
+                   <span className={cn("text-lg font-black tabular-nums", s.color)}>{s.value}</span>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
-      }
-      filterBar={
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-           <div className="flex items-center gap-4 flex-1">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input 
-                  type="text"
-                  placeholder="بحث عن شريك..."
-                  className="w-full pr-10 h-10 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 transition-all text-sm"
-                />
-              </div>
-              <div className="h-6 w-px bg-slate-200 mx-2 hidden md:block" />
-              <div className="flex items-center gap-3">
-                <Settings2 className="w-4 h-4 text-slate-400" />
-                <span className="text-xs font-black text-slate-500">توزيع الأرباح:</span>
-                <RadioGroup value={globalStrategy} onValueChange={setGlobalStrategy} className="flex gap-2">
-                  <StrategyOption id="g1" value="BasedOnCapitalLocal" label="رأس المال (محلي)" />
-                  <StrategyOption id="g2" value="BasedOnCapitalUSD" label="رأس المال (دولار)" />
-                  <StrategyOption id="g3" value="Manual" label="يدوي" />
-                </RadioGroup>
-              </div>
-           </div>
         </div>
       }
       tableContent={
@@ -200,6 +251,12 @@ export default function Partners() {
             setIsDialogOpen(true);
           }}
         />
+      }
+      bottomWidgets={
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+           <ChartCard title="حصص رأس المال" icon={PieChartIcon} data={chartCapitalData} formatter={formatCurrency} />
+           <ChartCard title="توزيع الأرباح" icon={TrendingUp} data={chartProfitData} formatter={(v: number) => `${v.toFixed(2)}%`} />
+        </div>
       }
       sidePanel={
         isDialogOpen ? (
@@ -223,30 +280,31 @@ export default function Partners() {
   );
 }
 
-function StatsCard({ label, value, icon: Icon, color, border }: any) {
-  return (
-    <div className={cn("bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between transition-all hover:shadow-md", border && `border-b-4 ${border}`)}>
-      <div className="space-y-1">
-        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
-        <div className={cn("text-2xl font-black tabular-nums", color)}>{value}</div>
-      </div>
-      <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center bg-slate-50", color)}>
-        <Icon className="w-6 h-6" />
-      </div>
-    </div>
-  );
+
+
+interface StrategyOptionProps {
+  id: string;
+  value: string;
+  label: string;
 }
 
-function StrategyOption({ id, value, label }: any) {
+function StrategyOption({ id, value, label }: StrategyOptionProps) {
   return (
-    <div className="flex items-center space-x-2 space-x-reverse bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 hover:border-blue-200 transition-colors cursor-pointer group">
+    <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors cursor-pointer group shadow-sm">
       <RadioGroupItem value={value} id={id} className="text-blue-600" />
-      <Label htmlFor={id} className="cursor-pointer text-[11px] font-bold text-slate-600 group-hover:text-blue-700 transition-colors">{label}</Label>
+      <Label htmlFor={id} className="cursor-pointer text-xs font-bold text-slate-700 group-hover:text-blue-700 transition-colors">{label}</Label>
     </div>
   );
 }
 
-function ChartCard({ title, icon: Icon, data, formatter }: any) {
+interface ChartCardProps {
+  title: string;
+  icon: React.ElementType;
+  data: any[];
+  formatter: (v: number) => string;
+}
+
+function ChartCard({ title, icon: Icon, data, formatter }: ChartCardProps) {
   return (
     <Card className="p-6 bg-white border-slate-200/70 shadow-sm rounded-2xl overflow-hidden group hover:shadow-md transition-all">
       <div className="flex items-center justify-between mb-6">
@@ -270,7 +328,7 @@ function ChartCard({ title, icon: Icon, data, formatter }: any) {
               dataKey="value"
               stroke="none"
             >
-              {data.map((_: any, index: number) => (
+              {data.map((_: unknown, index: number) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>

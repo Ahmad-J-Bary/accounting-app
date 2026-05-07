@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { DataTable, Column } from '@widgets/table-shell/DataTable';
 import { TableActions } from '@widgets/table-shell/TableActions';
-import { StatusBadge } from '@widgets/stats/StatusBadge';
 import { useCurrencyContext } from "@app/providers/CurrencyProvider";
 import type { CustomerDto } from "@erp/shared-types";
 
@@ -17,49 +16,71 @@ interface CustomerTableProps {
 }
 
 export function CustomerTable({ customers, loading, search, visibleColumns, onView, onEdit, onDelete, selectedId }: CustomerTableProps) {
-  const { formatAmount } = useCurrencyContext();
-  const columns = useMemo<Column<CustomerDto>[]>(() => [
-    { 
-      id: "name",
-      header: "اسم العميل", 
-      accessor: "name", 
-      className: "font-bold text-slate-800" 
-    },
-    { 
-      id: "phone",
-      header: "رقم الهاتف", 
-      accessor: (c) => c.phone || "—", 
-      className: "tabular-nums text-slate-500" 
-    },
-    { 
-      id: "debit",
-      header: "المدين (عليه)", 
-      accessor: (c) => Number(c.debit) > 0 ? formatAmount(Number(c.debit)) : "—", 
-      align: "left", 
-      className: "text-red-600 tabular-nums font-medium" 
-    },
-    { 
-      id: "credit",
-      header: "الدائن (له)", 
-      accessor: (c) => Number(c.credit) > 0 ? formatAmount(Number(c.credit)) : "—", 
-      align: "left", 
-      className: "text-green-600 tabular-nums font-medium" 
-    },
-    { 
-      id: "balance",
-      header: "الرصيد النهائي", 
-      accessor: (c) => formatAmount(Number(c.balance || 0)), 
-      align: "left", 
-      className: "font-bold tabular-nums text-slate-900" 
-    },
-    { 
-      id: "status",
-      header: "الحالة", 
-      accessor: (c) => <StatusBadge status={c.is_active ? "active" : "inactive"} />, 
-      align: "center",
-      className: "w-[100px]"
-    },
-    {
+  const { currencies, convertFromBase, formatAmount } = useCurrencyContext();
+
+  const columns = useMemo<Column<CustomerDto>[]>(() => {
+    const cols: Column<CustomerDto>[] = [
+      { 
+        id: "name",
+        header: "اسم العميل", 
+        accessor: "name", 
+        className: "font-bold text-slate-800" 
+      },
+      { 
+        id: "phone",
+        header: "رقم الهاتف", 
+        accessor: (c) => c.phone || "—", 
+        className: "tabular-nums text-slate-500" 
+      },
+    ];
+
+    // Grouping by Type using symbols instead of codes
+    
+    // 1. Debits
+    currencies.forEach(curr => {
+      const symbol = curr.symbol || curr.code;
+      cols.push({
+        id: `debit_${curr.code}`,
+        header: `مدين (${symbol})`,
+        accessor: (c) => {
+          const val = convertFromBase(Number(c.debit || 0), curr.code);
+          return val > 0 ? formatAmount(Number(c.debit || 0), { currencyCode: curr.code }) : "—";
+        },
+        align: "left",
+        className: "text-red-600 tabular-nums font-medium text-[11px]"
+      });
+    });
+
+    // 2. Credits
+    currencies.forEach(curr => {
+      const symbol = curr.symbol || curr.code;
+      cols.push({
+        id: `credit_${curr.code}`,
+        header: `دائن (${symbol})`,
+        accessor: (c) => {
+          const val = convertFromBase(Number(c.credit || 0), curr.code);
+          return val > 0 ? formatAmount(Number(c.credit || 0), { currencyCode: curr.code }) : "—";
+        },
+        align: "left",
+        className: "text-green-600 tabular-nums font-medium text-[11px]"
+      });
+    });
+
+    // 3. Balances
+    currencies.forEach(curr => {
+      const symbol = curr.symbol || curr.code;
+      cols.push({
+        id: `balance_${curr.code}`,
+        header: `رصيد (${symbol})`,
+        accessor: (c) => {
+          return formatAmount(Number(c.balance || 0), { currencyCode: curr.code });
+        },
+        align: "left",
+        className: "font-bold tabular-nums text-slate-900 text-[12px]"
+      });
+    });
+
+    cols.push({
       id: "actions",
       header: "إجراءات",
       accessor: (c) => (
@@ -71,8 +92,10 @@ export function CustomerTable({ customers, loading, search, visibleColumns, onVi
       ),
       align: "left",
       className: "w-16"
-    }
-  ], [onView, onEdit, onDelete, formatAmount]);
+    });
+
+    return cols;
+  }, [currencies, convertFromBase, formatAmount, onView, onEdit, onDelete]);
 
   const filteredColumns = useMemo(() => {
     return columns.filter(col => {

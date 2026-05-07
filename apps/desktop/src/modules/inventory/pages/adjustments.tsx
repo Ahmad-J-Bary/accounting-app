@@ -1,18 +1,19 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Plus, Search, RefreshCw, Scale, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
-import { formatCurrency, formatDate } from '@shared/lib/format';
+import { Plus, Search, RefreshCw, Scale, ArrowUpCircle, ArrowDownCircle, Settings2 } from "lucide-react";
+import { formatDate } from '@shared/lib/format';
 import { adjustmentService } from '@modules/inventory/api/inventoryService';
 import { materialService } from '@modules/inventory/api/materialService';
 import type { StockAdjustment, CreateStockAdjustmentRequest, MaterialDto } from "@erp/shared-types";
 import { toast } from "sonner";
 import { cn } from "@shared/lib/utils";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@shared/ui/dropdown-menu";
 
 // Refactored Components & Hooks
 import { DataTable, Column } from '@widgets/table-shell/DataTable';
-import { useDataTable } from '@shared/hooks';
+import { useDataTable, useColumnPreferences } from '@shared/hooks';
 import { AdjustmentForm } from '@modules/inventory/components/AdjustmentForm';
 
 export default function Adjustments() {
@@ -28,7 +29,6 @@ export default function Adjustments() {
     searchFields: ["product_name", "product_id", "reason"],
   });
 
-
   const [products, setProducts] = useState<MaterialDto[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
@@ -39,7 +39,7 @@ export default function Adjustments() {
       setLoadingProducts(true);
       const pData = await materialService.listMaterials();
       setProducts(pData);
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error("فشل تحميل المنتجات");
     } finally {
       setLoadingProducts(false);
@@ -47,6 +47,17 @@ export default function Adjustments() {
   }, []);
 
   useEffect(() => { loadProducts(); }, [loadProducts]);
+
+  const availableColumns = useMemo(() => [
+    { id: "product_name", label: "المنتج" },
+    { id: "adjustment_date", label: "التاريخ" },
+    { id: "system_quantity", label: "كمية النظام" },
+    { id: "actual_quantity", label: "الكمية الفعلية" },
+    { id: "difference", label: "الفارق" },
+    { id: "reason", label: "السبب" },
+  ], []);
+
+  const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences("stock_adjustments", ["product_name", "adjustment_date", "difference", "reason"]);
 
   const surplusCount = useMemo(() => adjustments.filter((a: StockAdjustment) => parseFloat(a.difference) > 0).length, [adjustments]);
   const shortageCount = useMemo(() => adjustments.filter((a: StockAdjustment) => parseFloat(a.difference) < 0).length, [adjustments]);
@@ -58,7 +69,7 @@ export default function Adjustments() {
       setShowDialog(false);
       refresh(true);
       toast.success("تم تسجيل تسوية الجرد بنجاح");
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error("فشل الحفظ: " + e);
     } finally {
       setSaving(false);
@@ -67,28 +78,33 @@ export default function Adjustments() {
 
   const columns = useMemo<Column<StockAdjustment>[]>(() => [
     { 
+      id: "product_name",
       header: "المنتج / الصنف", 
       accessor: (a: StockAdjustment) => a.product_name ?? a.product_id, 
       className: "font-black text-slate-900" 
     },
     { 
+      id: "adjustment_date",
       header: "التاريخ", 
       accessor: (a: StockAdjustment) => formatDate(a.adjustment_date),
       className: "tabular-nums text-slate-500 font-medium"
     },
     { 
+      id: "system_quantity",
       header: "كمية النظام", 
       accessor: (a: StockAdjustment) => parseFloat(a.system_quantity).toFixed(2), 
       align: "left", 
       className: "tabular-nums text-slate-600" 
     },
     { 
+      id: "actual_quantity",
       header: "الكمية الفعلية", 
       accessor: (a: StockAdjustment) => parseFloat(a.actual_quantity).toFixed(2), 
       align: "left", 
       className: "tabular-nums font-bold text-slate-800" 
     },
     { 
+      id: "difference",
       header: "الفارق", 
       accessor: (a: StockAdjustment) => {
         const diff = parseFloat(a.difference);
@@ -105,11 +121,19 @@ export default function Adjustments() {
       align: "left"
     },
     { 
+      id: "reason",
       header: "السبب", 
       accessor: (a: StockAdjustment) => a.reason ?? "—", 
       className: "text-slate-500 text-xs font-medium italic" 
     }
   ], []);
+
+  const filteredColumns = useMemo(() => {
+    return columns.filter(col => {
+      if (!col.id) return true;
+      return visibleColumns.includes(col.id);
+    });
+  }, [columns, visibleColumns]);
 
   const isLoading = adjLoading || refreshing || loadingProducts;
 
@@ -124,27 +148,12 @@ export default function Adjustments() {
       title="تسويات الجرد"
       toolbar={
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => refresh(true)} disabled={isLoading} className="bg-white">
+          <Button variant="outline" size="sm" onClick={() => refresh(true)} disabled={isLoading} className="bg-white border-slate-200">
             <RefreshCw className={cn("w-4 h-4 ml-2", isLoading && "animate-spin")} />تحديث
           </Button>
           <Button size="sm" onClick={() => setShowDialog(true)} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
             <Plus className="w-4 h-4 ml-2" />تسوية جديدة
           </Button>
-        </div>
-      }
-      headerWidgets={
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {stats.map((s, i) => (
-            <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between transition-all hover:shadow-md">
-              <div className="space-y-1">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{s.label}</span>
-                <div className={cn("text-2xl font-black tabular-nums", s.color)}>{s.value}</div>
-              </div>
-              <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center bg-slate-50", s.color)}>
-                <s.icon className="w-6 h-6" />
-              </div>
-            </div>
-          ))}
         </div>
       }
       filterBar={
@@ -158,12 +167,47 @@ export default function Adjustments() {
               onChange={e => setSearch(e.target.value)}
             />
           </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="h-11 w-11 bg-white border-slate-200">
+                <Settings2 className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[220px] max-h-[450px] overflow-y-auto shadow-xl">
+              <DropdownMenuLabel className="text-right text-xs font-black uppercase text-slate-400 tracking-widest">تخصيص الأعمدة</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {availableColumns.map((col) => (
+                <DropdownMenuCheckboxItem
+                  key={col.id}
+                  checked={isVisible(col.id)}
+                  onCheckedChange={() => toggleColumn(col.id)}
+                  className="text-right flex-row-reverse gap-2 text-xs font-bold py-2"
+                >
+                  {col.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <div className="flex items-center gap-6 mr-auto pl-2">
+            {stats.map((s, i) => (
+              <div key={i} className="flex flex-col items-start gap-1">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{s.label}</span>
+                <div className="flex items-center gap-2">
+                   <s.icon className={cn("w-4 h-4", s.color)} />
+                   <span className={cn("text-lg font-black tabular-nums", s.color)}>{s.value}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
         </div>
       }
       tableContent={
         <DataTable
           data={adjustments}
-          columns={columns}
+          columns={filteredColumns}
           loading={isLoading}
           emptyMessage={search ? "لا توجد نتائج للبحث" : "لا توجد تسويات مسجّلة"}
         />

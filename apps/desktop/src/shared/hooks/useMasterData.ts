@@ -4,7 +4,7 @@ import { useDataTable } from "./useDataTable";
 
 interface UseMasterDataOptions<T, P> {
   fetchData: () => Promise<T[]>;
-  saveData: (payload: P) => Promise<any>;
+  saveData: (payload: P) => Promise<unknown>;
   deleteData: (id: string) => Promise<void>;
   searchFields: (keyof T)[];
   errorLabel: string;

@@ -23,8 +23,10 @@ import { MaterialTable } from '@modules/inventory/components/MaterialTable';
 import { MaterialUnitsManager } from '@modules/inventory/components/MaterialUnitsManager';
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { MaterialDetailPanel } from '@modules/inventory/components/MaterialDetailPanel';
+import { useCurrencyContext } from "@app/providers/CurrencyProvider";
 
 export default function Materials() {
+  const { currencies, baseCurrency } = useCurrencyContext();
   const {
     filtered: materials,
     loading,
@@ -55,23 +57,46 @@ export default function Materials() {
 
   const isLoading = loading || refreshing;
 
-  const availableColumns = [
-    { id: "code", label: "الكود" },
-    { id: "barcode", label: "الباركود" },
-    { id: "name", label: "اسم المادة" },
-    { id: "categories", label: "التصنيفات" },
-    { id: "units", label: "الوحدة" },
-    { id: "total_received", label: "الكمية الكلية" },
-    { id: "total_sold", label: "الكمية المباعة" },
-    { id: "total_available", label: "الكمية المتوفرة" },
-    { id: "total_damaged", label: "التالف" },
-    { id: "average_cost", label: "متوسط التكلفة (USD)" },
-    { id: "average_cost_local", label: "متوسط التكلفة (Display)" },
-    { id: "last_purchase_price", label: "آخر شراء (USD)" },
-    { id: "last_sale_price", label: "آخر مبيع (USD)" },
-  ];
+  const availableColumns = useMemo(() => {
+    const cols = [
+      { id: "code", label: "الكود" },
+      { id: "barcode", label: "الباركود" },
+      { id: "name", label: "اسم المادة" },
+      { id: "categories", label: "التصنيفات" },
+      { id: "units", label: "الوحدات" },
+      { id: "total_available", label: "المتوفر" },
+    ];
 
-  const defaultVisibleColumns = ["code", "barcode", "name", "categories", "units", "total_available", "average_cost", "average_cost_local"];
+    // Multi-currency price columns grouped by type
+    currencies.forEach(curr => {
+      const s = curr.symbol || curr.code;
+      cols.push({ id: `average_cost_${curr.code}`, label: `التكلفة (${s})` });
+    });
+    currencies.forEach(curr => {
+      const s = curr.symbol || curr.code;
+      cols.push({ id: `last_purchase_${curr.code}`, label: `آخر شراء (${s})` });
+    });
+    currencies.forEach(curr => {
+      const s = curr.symbol || curr.code;
+      cols.push({ id: `last_sale_${curr.code}`, label: `آخر مبيع (${s})` });
+    });
+
+    return cols;
+  }, [currencies]);
+
+  const defaultVisibleColumns = useMemo(() => {
+    const base = ["code", "name", "units", "total_available"];
+    if (baseCurrency) {
+      base.push(`average_cost_${baseCurrency.code}`);
+    }
+    // Add other currency costs by default
+    currencies.forEach(c => {
+      if (baseCurrency && c.code === baseCurrency.code) return;
+      base.push(`average_cost_${c.code}`);
+    });
+    return base;
+  }, [currencies, baseCurrency]);
+
   const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences("materials", defaultVisibleColumns);
 
   const [categories, setCategories] = useState<CategoryDto[]>([]);
@@ -118,21 +143,7 @@ export default function Materials() {
             </Button>
           </>
         }
-        headerWidgets={
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {stats.map((s, i) => (
-              <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between transition-all hover:shadow-md">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{s.label}</span>
-                  <div className={cn("text-2xl font-black tabular-nums", s.color)}>{s.value}</div>
-                </div>
-                <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center bg-slate-50", s.color)}>
-                  <s.icon className="w-6 h-6" />
-                </div>
-              </div>
-            ))}
-          </div>
-        }
+
         filterBar={
           <div className="flex items-center gap-4">
             <div className="relative flex-1 max-w-md">
@@ -150,21 +161,33 @@ export default function Materials() {
                   <Settings2 className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[200px]">
-                <DropdownMenuLabel className="text-right">الأعمدة الظاهرة</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-[220px] max-h-[450px] overflow-y-auto shadow-xl">
+                <DropdownMenuLabel className="text-right text-xs font-black uppercase text-slate-400 tracking-widest">تخصيص الأعمدة</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {availableColumns.map((col) => (
                   <DropdownMenuCheckboxItem
                     key={col.id}
                     checked={isVisible(col.id)}
                     onCheckedChange={() => toggleColumn(col.id)}
-                    className="text-right flex-row-reverse gap-2"
+                    className="text-right flex-row-reverse gap-2 text-xs font-bold py-2"
                   >
                     {col.label}
                   </DropdownMenuCheckboxItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            <div className="flex items-center gap-6 mr-auto pl-2">
+              {stats.map((s, i) => (
+                <div key={i} className="flex flex-col items-start gap-1">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{s.label}</span>
+                  <div className="flex items-center gap-2">
+                     <s.icon className={cn("w-4 h-4", s.color)} />
+                     <span className={cn("text-lg font-black tabular-nums", s.color)}>{s.value}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         }
         tableContent={

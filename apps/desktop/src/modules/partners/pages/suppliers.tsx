@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Plus, Search, RefreshCw, Settings2, Truck, UserCheck, Wallet, DollarSign } from "lucide-react";
+import { Plus, Search, RefreshCw, Settings2, Truck, Wallet } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -28,7 +28,7 @@ import { useCurrencyContext } from "@app/providers/CurrencyProvider";
 import { cn } from "@shared/lib/utils";
 
 export default function Suppliers() {
-  const { formatMonetaryAmount } = useCurrencyContext();
+  const { currencies, formatMonetaryAmount, baseCurrency } = useCurrencyContext();
   const {
     filtered: suppliers,
     loading,
@@ -64,15 +64,46 @@ export default function Suppliers() {
   const [supplierPayments, setSupplierPayments] = useState<Payment[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
   
-  const availableColumns = [
-    { id: "name", label: "اسم المورد" },
-    { id: "phone", label: "رقم الهاتف" },
-    { id: "debit", label: "المدين" },
-    { id: "credit", label: "الدائن" },
-    { id: "balance", label: "الرصيد النهائي" },
-    { id: "status", label: "الحالة" },
-  ];
-  const defaultVisibleColumns = ["name", "phone", "debit", "credit", "balance", "status"];
+  const availableColumns = useMemo(() => {
+    const cols = [
+      { id: "name", label: "اسم المورد" },
+      { id: "phone", label: "رقم الهاتف" },
+    ];
+
+    // Using symbols for dropdown labels
+    currencies.forEach(curr => {
+      const symbol = curr.symbol || curr.code;
+      cols.push({ id: `debit_${curr.code}`, label: `المدين (${symbol})` });
+    });
+    currencies.forEach(curr => {
+      const symbol = curr.symbol || curr.code;
+      cols.push({ id: `credit_${curr.code}`, label: `الدائن (${symbol})` });
+    });
+    currencies.forEach(curr => {
+      const symbol = curr.symbol || curr.code;
+      cols.push({ id: `balance_${curr.code}`, label: `الرصيد (${symbol})` });
+    });
+
+    return cols;
+  }, [currencies]);
+
+  const defaultVisibleColumns = useMemo(() => {
+    const base = ["name", "phone"];
+    
+    if (baseCurrency) {
+      base.push(`debit_${baseCurrency.code}`);
+      base.push(`credit_${baseCurrency.code}`);
+      base.push(`balance_${baseCurrency.code}`);
+    }
+
+    currencies.forEach(c => {
+      if (baseCurrency && c.code === baseCurrency.code) return;
+      base.push(`balance_${c.code}`);
+    });
+
+    return base;
+  }, [currencies, baseCurrency]);
+
   const { visibleColumns, isVisible, toggleColumn } = useColumnPreferences("suppliers", defaultVisibleColumns);
 
   const loadAccounts = useCallback(async () => {
@@ -111,10 +142,8 @@ export default function Suppliers() {
 
   const stats = useMemo(() => {
     const totalBalance = suppliers.reduce((acc, s) => acc + (parseFloat(s.balance || "0")), 0);
-    const activeCount = suppliers.filter(s => s.is_active).length;
     return [
       { label: "إجمالي الموردين", value: suppliers.length, icon: Truck, color: "text-slate-900" },
-      { label: "موردون نشطون", value: activeCount, icon: UserCheck, color: "text-emerald-600" },
       { label: "مستحقات للموردين", value: formatMonetaryAmount(totalBalance, "base"), icon: Wallet, color: "text-blue-600" },
     ];
   }, [suppliers, formatMonetaryAmount]);
@@ -149,15 +178,15 @@ export default function Suppliers() {
                 <Settings2 className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[200px]">
-              <DropdownMenuLabel className="text-right">الأعمدة الظاهرة</DropdownMenuLabel>
+            <DropdownMenuContent align="end" className="w-[220px] max-h-[450px] overflow-y-auto shadow-xl border-slate-200">
+              <DropdownMenuLabel className="text-right text-xs font-black uppercase text-slate-400 tracking-widest">تخصيص الأعمدة</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {availableColumns.map((col) => (
                 <DropdownMenuCheckboxItem
                   key={col.id}
                   checked={isVisible(col.id)}
                   onCheckedChange={() => toggleColumn(col.id)}
-                  className="text-right flex-row-reverse gap-2"
+                  className="text-right flex-row-reverse gap-2 text-xs font-bold py-2"
                 >
                   {col.label}
                 </DropdownMenuCheckboxItem>

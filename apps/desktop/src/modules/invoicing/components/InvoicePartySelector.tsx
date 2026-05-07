@@ -17,6 +17,7 @@ interface InvoicePartySelectorProps {
   onClear?: () => void;
   disabled?: boolean;
   defaultName?: string;
+  predictedBalance?: number;
 }
 
 export function InvoicePartySelector({
@@ -28,6 +29,7 @@ export function InvoicePartySelector({
   onClear,
   disabled = false,
   defaultName,
+  predictedBalance = 0,
 }: InvoicePartySelectorProps) {
   const [inputValue, setInputValue] = useState(selectedName || "");
   const [open, setOpen] = useState(false);
@@ -194,26 +196,39 @@ export function InvoicePartySelector({
       )}
 
       {/* Prominent Balance Card for Page layout */}
-      {currentBalance && !open && (
+      {(!open && (currentBalance || (predictedBalance > 0 && !selectedId))) && (
         <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 shadow-sm animate-in slide-in-from-right-1">
             <div className="flex bg-slate-50 border-b border-slate-100">
                 <div className="flex-1 p-2 text-center border-l border-slate-100">
-                    <div className="text-[9px] text-slate-400 font-black uppercase">مدين (عليه)</div>
-                    <div className="text-sm font-black text-destructive tabular-nums">{formatCurrency(parseFloat(currentBalance.debit))}</div>
+                    <div className="text-[9px] text-slate-400 font-black uppercase">
+                        {type === "customer" ? "مدين (العميل)" : "مدين (عليه)"}
+                    </div>
+                    <div className="text-sm font-black text-destructive tabular-nums">
+                        {formatCurrency(parseFloat(currentBalance?.debit || "0") + (type === "customer" ? predictedBalance : 0))}
+                    </div>
                 </div>
                 <div className="flex-1 p-2 text-center">
-                    <div className="text-[9px] text-slate-400 font-black uppercase">دائن (له)</div>
-                    <div className="text-sm font-black text-green-700 tabular-nums">{formatCurrency(parseFloat(currentBalance.credit))}</div>
+                    <div className="text-[9px] text-slate-400 font-black uppercase">
+                        {type === "supplier" ? "دائن (المورد)" : "دائن (له)"}
+                    </div>
+                    <div className="text-sm font-black text-green-700 tabular-nums">
+                        {formatCurrency(parseFloat(currentBalance?.credit || "0") + (type === "supplier" ? predictedBalance : 0))}
+                    </div>
                 </div>
             </div>
             <div className="p-2 bg-white text-center">
-                <div className="text-[9px] text-slate-400 font-bold">الرصيد الحالي المستحق</div>
+                <div className="text-[9px] text-slate-400 font-bold">الرصيد الحالي (المتوقع بعد الفاتورة)</div>
                 <div className={cn(
                     "text-lg font-black tabular-nums",
-                    (parseFloat(currentBalance.debit) - parseFloat(currentBalance.credit)) > 0 ? "text-destructive" : "text-green-700"
+                    type === "customer" 
+                        ? ((parseFloat(currentBalance?.debit || "0") + predictedBalance) - parseFloat(currentBalance?.credit || "0")) > 0 ? "text-destructive" : "text-green-700"
+                        : (parseFloat(currentBalance?.debit || "0") - (parseFloat(currentBalance?.credit || "0") + predictedBalance)) < 0 ? "text-green-700" : "text-destructive"
                 )}>
-                    {formatCurrency(Math.abs(parseFloat(currentBalance.debit) - parseFloat(currentBalance.credit)))}
-                    <span className="text-[10px] mr-1 opacity-60">ل.س</span>
+                    {formatCurrency(Math.abs(
+                        type === "customer"
+                            ? ((parseFloat(currentBalance?.debit || "0") + predictedBalance) - parseFloat(currentBalance?.credit || "0"))
+                            : (parseFloat(currentBalance?.debit || "0") - (parseFloat(currentBalance?.credit || "0") + predictedBalance))
+                    ))}
                 </div>
             </div>
         </div>

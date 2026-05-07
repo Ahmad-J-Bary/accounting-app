@@ -166,17 +166,17 @@ export default function Accounting() {
           canDelete={!isRootSelected && !!selected}
         />
       }
-      extraContent={
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      filterBar={
+        <div className="flex items-center gap-6 w-full">
            {[
              { label: "إجمالي الحسابات", value: accounts.length, color: "text-slate-900" },
              { label: "الأصول", value: accounts.filter(a => a.account_type === "Assets").length, color: "text-blue-600" },
              { label: "الخصوم", value: accounts.filter(a => a.account_type === "Liabilities").length, color: "text-red-600" },
              { label: "حقوق الملكية", value: accounts.filter(a => a.account_type === "Equity").length, color: "text-emerald-600" },
            ].map((stat, i) => (
-             <div key={i} className="bg-slate-50/50 rounded-xl p-6 border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
-                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{stat.label}</div>
-                <div className={`text-3xl font-black tabular-nums ${stat.color}`}>{stat.value}</div>
+             <div key={i} className="flex flex-col items-start gap-1">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{stat.label}</span>
+                <div className={`text-lg font-black tabular-nums ${stat.color}`}>{stat.value}</div>
              </div>
            ))}
         </div>

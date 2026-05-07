@@ -78,7 +78,7 @@ pub async fn list_by_account(pool: &SqlitePool, account_id: &AccountId) -> Resul
 
 pub async fn load_lines(pool: &SqlitePool, entry_id: &str) -> Result<Vec<JournalLine>, AppError> {
     let rows = sqlx::query_as::<_, JournalLineRow>(
-        "SELECT id, account_id, currency, fx_rate, debit, credit, description FROM journal_lines WHERE journal_entry_id = ?"
+        "SELECT id, account_id, currency, fx_rate, debit, debit_base, credit, credit_base, description FROM journal_lines WHERE journal_entry_id = ?"
     )
     .bind(entry_id)
     .fetch_all(pool)

@@ -8,7 +8,8 @@ import { invoiceService } from '@modules/invoicing/api/invoiceService';
 import { customerService } from '@modules/partners/api/customerService';
 import { supplierService } from '@modules/partners/api/supplierService';
 import { accountingService } from '@modules/accounting/api/accountingService';
-import type { InvoiceDto, CustomerDto, SupplierDto, AccountDto } from "@erp/shared-types";
+import { materialService } from '@modules/inventory/api/materialService';
+import type { InvoiceDto, CustomerDto, SupplierDto, AccountDto, MaterialDto } from "@erp/shared-types";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyProvider";
 
@@ -66,33 +67,36 @@ export default function OpeningBalance() {
   const { closeTab, activeTabId } = useTabs();
   
   const [header, setHeader] = useState<HeaderState>(defaultHeader());
-  const { lines, setLines, updateLine, removeLine, addLine, selectMaterial, totals } = useDocumentEditor();
+  const { lines, setLines, updateLine, removeLine, addLine, selectMaterial, totals } = useDocumentEditor({ priceField: "last_purchase_price" });
   
   const [history, setHistory] = useState<InvoiceDto[]>([]);
   const [customers, setCustomers] = useState<CustomerDto[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
+  const [materials, setMaterials] = useState<MaterialDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   
-  const { baseCurrency, currencies, formatMonetaryAmount } = useCurrencyContext();
+  const { formatAmount, formatMonetaryAmount, convertFromBase, convertBetween, currencies, baseCurrency } = useCurrencyContext();
 
   const isNew = location.pathname.includes("/new");
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [hist, custs, supps, accs] = await Promise.all([
+      const [hist, custs, supps, accs, mats] = await Promise.all([
         invoiceService.listInvoicesByType("OpeningBalance"),
         customerService.listCustomers(),
         supplierService.listSuppliers(),
         accountingService.getChartOfAccounts(),
+        materialService.listMaterials(),
       ]);
       setHistory(hist);
       setCustomers(custs);
       setSuppliers(supps);
       setAccounts(accs);
-    } catch (e: any) {
+      setMaterials(mats);
+    } catch (e: unknown) {
       toast.error("فشل تحميل البيانات: " + e);
     } finally {
       setLoading(false);
@@ -140,19 +144,63 @@ export default function OpeningBalance() {
         setLines([]);
         loadData();
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error("فشل الحفظ: " + e);
     } finally {
       setSaving(false);
     }
   };
 
-  const columns: DocumentColumn[] = [
-    { key: "material_name", header: "المادة / الصنف", width: "flex-[3]", type: "material" },
-    { key: "quantity", header: "الكمية", width: "w-[100px]", align: "center", type: "number" },
-    { key: "unit_price", header: "التكلفة الافتتاحية", width: "w-[120px]", align: "left", type: "number" },
-    { key: "line_total", header: "الإجمالي", width: "w-[130px]", align: "left", type: "readonly" },
-  ];
+  const enrichedLines = useMemo(() => {
+    return lines.map((line: any) => {
+      const enriched: any = { ...line };
+      const docPrice = parseFloat(line.unit_price || "0");
+      const docTotal = (parseFloat(line.quantity || "0") * docPrice);
+      
+      currencies.forEach(curr => {
+        const price = convertFromBase(docPrice, curr.code);
+        const total = convertFromBase(docTotal, curr.code);
+        enriched[`unit_price_${curr.code}`] = price.toFixed(2);
+        enriched[`line_total_${curr.code}`] = formatAmount(total, { currencyCode: curr.code, hideSymbol: true });
+      });
+      return enriched;
+    });
+  }, [lines, currencies, convertFromBase, formatAmount]);
+
+  const gridColumns = useMemo<DocumentColumn[]>(() => {
+    const cols: DocumentColumn[] = [
+      { key: "material_name", header: "المادة / الصنف", width: "flex-[3]", align: "right", type: "material" },
+      { key: "quantity", header: "الكمية", width: "w-[90px]", align: "center", type: "number" },
+    ];
+
+    currencies.forEach(curr => {
+      const s = curr.symbol || curr.code;
+      cols.push({ 
+        key: curr.is_base ? "unit_price" : `unit_price_${curr.code}`, 
+        header: `التكلفة (${s})`, 
+        width: "w-[110px]", 
+        align: "left", 
+        type: curr.is_base ? "number" : "readonly" 
+      });
+    });
+
+    cols.push({ key: "retail_price", header: "مفرق", width: "w-[100px]", align: "left", type: "number" });
+    cols.push({ key: "wholesale_price", header: "جملة", width: "w-[100px]", align: "left", type: "number" });
+    cols.push({ key: "minimum_stock", header: "حد الطلب", width: "w-[80px]", align: "center", type: "number" });
+
+    currencies.forEach(curr => {
+      const s = curr.symbol || curr.code;
+      cols.push({ 
+        key: `line_total_${curr.code}`, 
+        header: `القيمة (${s})`, 
+        width: "w-[120px]", 
+        align: "left", 
+        type: "readonly" 
+      });
+    });
+
+    return cols;
+  }, [currencies]);
 
   return (
     <FinancialDocumentTemplate
@@ -206,13 +254,14 @@ export default function OpeningBalance() {
       lineItemsGrid={
         header.balanceType === "Inventory" ? (
           <GenericDocumentGrid
-            columns={columns}
-            lines={lines}
+            columns={gridColumns}
+            lines={enrichedLines}
             onUpdateLine={updateLine}
             onRemoveLine={removeLine}
             onAddLine={addLine}
             onSelectMaterial={selectMaterial}
-            materials={[]}
+            materials={Object.values(materials)}
+            preferenceKey="opening_balance_grid"
           />
         ) : (
           <div className="bg-white rounded-2xl border border-slate-200/70 p-8 flex flex-col items-center justify-center space-y-6">
@@ -298,33 +347,7 @@ export default function OpeningBalance() {
           </div>
         </SummaryPanel>
       }
-      sidebar={
-        <div className="space-y-4">
-           <div className="bg-white rounded-2xl border border-slate-200/70 shadow-sm p-4 space-y-3">
-              <div className="flex items-center gap-2 text-slate-800">
-                <History className="w-4 h-4" />
-                <span className="text-sm font-black">آخر العمليات</span>
-              </div>
-              <div className="space-y-2">
-                 {history.length === 0 ? (
-                    <div className="text-[11px] text-slate-400 text-center py-4">لا توجد عمليات سابقة</div>
-                 ) : (
-                    history.slice(0, 5).map(inv => (
-                       <div key={inv.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-                          <div className="flex justify-between items-center">
-                             <span className="text-[10px] font-bold font-mono text-blue-600">{inv.invoice_number}</span>
-                             <DocumentStatusBadge status={inv.status} size="sm" />
-                          </div>
-                          <div className="text-[11px] font-black text-slate-700">
-                             {formatMonetaryAmount(inv.total_amount, "base")}
-                          </div>
-                       </div>
-                    ))
-                 )}
-              </div>
-           </div>
-        </div>
-      }
+      sidebar={null}
     />
   );
 }

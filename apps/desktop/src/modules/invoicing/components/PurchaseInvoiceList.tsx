@@ -2,13 +2,14 @@ import { useMemo } from "react";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { RefreshCw, Plus, Search, Eye, Send, Printer, MoreHorizontal, ShoppingCart, Banknote, History } from "lucide-react";
+import { RefreshCw, Plus, Search, Eye, Send, Printer, MoreHorizontal, ShoppingCart, Banknote, History, Settings2 } from "lucide-react";
 import { formatDate } from "@shared/lib/format";
-import { DocumentStatusBadge } from "../components/DocumentStatusBadge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@shared/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@shared/ui/dropdown-menu";
 import { InvoiceDto } from "@erp/shared-types";
 import { DataTable, Column } from "@widgets/table-shell/DataTable";
 import { cn } from "@shared/lib/utils";
+import { useCurrencyContext } from "@app/providers/CurrencyProvider";
+import { useColumnPreferences } from "@shared/hooks";
 
 interface PurchaseInvoiceListProps {
   invoices: InvoiceDto[];
@@ -19,7 +20,7 @@ interface PurchaseInvoiceListProps {
   onCreate: () => void;
   onEdit: (inv: InvoiceDto) => void;
   onPost: (id: string) => void;
-  formatMonetaryAmount: (amount: any, mode: string) => string;
+  formatMonetaryAmount: (amount: string | number | { base_amount?: string } | null | undefined, mode: string) => string;
 }
 
 export function PurchaseInvoiceList({
@@ -33,6 +34,8 @@ export function PurchaseInvoiceList({
   onPost,
   formatMonetaryAmount
 }: PurchaseInvoiceListProps) {
+  const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
+
   const filtered = useMemo(() =>
     invoices.filter(inv =>
       !search ||
@@ -41,34 +44,69 @@ export function PurchaseInvoiceList({
       (inv.notes ?? "").includes(search)
     ), [invoices, search]);
 
-  const columns = useMemo<Column<InvoiceDto>[]>(() => [
-    { 
-      header: "رقم الفاتورة", 
-      accessor: "invoice_number", 
-      className: "font-black text-blue-600 font-mono tracking-tighter" 
-    },
-    { 
-      header: "التاريخ", 
-      accessor: (inv) => formatDate(inv.issued_at),
-      className: "text-slate-500 text-xs font-medium tabular-nums"
-    },
-    { 
-      header: "المورد", 
-      accessor: (inv) => inv.supplier_name || "مورد نقدي",
-      className: "font-bold text-slate-800"
-    },
-    { 
-      header: "الإجمالي", 
-      accessor: (inv) => formatMonetaryAmount(inv.total_amount_v2 || inv.total_amount, "both"),
-      align: "left",
-      className: "font-black tabular-nums text-slate-900"
-    },
-    { 
-      header: "الحالة", 
-      accessor: (inv) => <DocumentStatusBadge status={inv.status} />,
-      align: "center"
-    },
-    {
+  const availableColumns = useMemo(() => {
+    const cols = [
+      { id: "invoice_number", label: "رقم الفاتورة" },
+      { id: "issued_at", label: "التاريخ" },
+      { id: "supplier_name", label: "المورد" },
+    ];
+
+    currencies.forEach(curr => {
+      const s = curr.symbol || curr.code;
+      cols.push({ id: `total_${curr.code}`, label: `الإجمالي (${s})` });
+    });
+    
+    return cols;
+  }, [currencies]);
+
+  const defaultVisibleColumns = useMemo(() => {
+    const base = ["invoice_number", "issued_at", "supplier_name"];
+    currencies.forEach(curr => {
+      base.push(`total_${curr.code}`);
+    });
+    return base;
+  }, [currencies]);
+
+  const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences("purchase_invoices", defaultVisibleColumns);
+
+  const columns = useMemo<Column<InvoiceDto>[]>(() => {
+    const cols: Column<InvoiceDto>[] = [
+      { 
+        id: "invoice_number",
+        header: "رقم الفاتورة", 
+        accessor: "invoice_number", 
+        className: "font-black text-blue-600 font-mono tracking-tighter" 
+      },
+      { 
+        id: "issued_at",
+        header: "التاريخ", 
+        accessor: (inv) => formatDate(inv.issued_at),
+        className: "text-slate-500 text-xs font-medium tabular-nums"
+      },
+      { 
+        id: "supplier_name",
+        header: "المورد", 
+        accessor: (inv) => inv.supplier_name || "مورد نقدي",
+        className: "font-bold text-slate-800"
+      },
+    ];
+
+    // Total Amount columns grouped by currency
+    currencies.forEach(curr => {
+      cols.push({
+        id: `total_${curr.code}`,
+        header: `الإجمالي (${curr.symbol || curr.code})`,
+        accessor: (inv) => {
+          const val = parseFloat(inv.total_amount_v2?.base_amount || inv.total_amount || "0");
+          return formatAmount(val, { currencyCode: curr.code });
+        },
+        align: "left",
+        className: "font-black tabular-nums text-slate-900 text-[11px]"
+      });
+    });
+
+    cols.push({
+      id: "actions",
       header: "",
       accessor: (inv) => (
         <DropdownMenu>
@@ -93,14 +131,23 @@ export function PurchaseInvoiceList({
         </DropdownMenu>
       ),
       className: "w-12"
-    }
-  ], [onEdit, onPost, formatMonetaryAmount]);
+    });
+
+    return cols;
+  }, [onEdit, onPost, formatAmount, currencies]);
+
+  const filteredColumns = useMemo(() => {
+    return columns.filter(col => {
+      if (!col.id || col.id === "actions") return true;
+      return visibleColumns.includes(col.id);
+    });
+  }, [columns, visibleColumns]);
 
   const stats = useMemo(() => {
     const total = filtered.reduce((acc, inv) => acc + parseFloat(inv.total_amount_v2?.base_amount || inv.total_amount || "0"), 0);
     return [
       { label: "عدد الفواتير", value: filtered.length, icon: ShoppingCart, color: "text-slate-900" },
-      { label: "إجمالي المشتريات", value: formatMonetaryAmount(total.toString(), "both"), icon: Banknote, color: "text-rose-600" },
+      { label: "إجمالي المشتريات", value: formatMonetaryAmount(total.toString(), "base"), icon: Banknote, color: "text-rose-600" },
       { label: "فواتير معلقة", value: filtered.filter(i => i.status === 'Draft').length, icon: History, color: "text-amber-600" },
     ];
   }, [filtered, formatMonetaryAmount]);
@@ -118,21 +165,6 @@ export function PurchaseInvoiceList({
           </Button>
         </div>
       }
-      headerWidgets={
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {stats.map((s, i) => (
-            <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between transition-all hover:shadow-md">
-              <div className="space-y-1">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{s.label}</span>
-                <div className={cn("text-xl font-black tabular-nums", s.color)}>{s.value}</div>
-              </div>
-              <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center bg-slate-50", s.color)}>
-                <s.icon className="w-6 h-6" />
-              </div>
-            </div>
-          ))}
-        </div>
-      }
       filterBar={
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
@@ -144,12 +176,47 @@ export function PurchaseInvoiceList({
               onChange={(e) => onSearchChange(e.target.value)} 
             />
           </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="h-11 w-11 bg-white border-slate-200">
+                <Settings2 className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[220px] max-h-[450px] overflow-y-auto shadow-xl">
+              <DropdownMenuLabel className="text-right text-xs font-black uppercase text-slate-400 tracking-widest">تخصيص الأعمدة</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {availableColumns.map((col) => (
+                <DropdownMenuCheckboxItem
+                  key={col.id}
+                  checked={isVisible(col.id)}
+                  onCheckedChange={() => toggleColumn(col.id)}
+                  className="text-right flex-row-reverse gap-2 text-xs font-bold py-2"
+                >
+                  {col.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <div className="flex items-center gap-6 mr-auto pl-2">
+            {stats.map((s, i) => (
+              <div key={i} className="flex flex-col items-start gap-1">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{s.label}</span>
+                <div className="flex items-center gap-2">
+                   <s.icon className={cn("w-4 h-4", s.color)} />
+                   <span className={cn("text-lg font-black tabular-nums", s.color)}>{s.value}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
         </div>
       }
       tableContent={
         <DataTable
           data={filtered}
-          columns={columns}
+          columns={filteredColumns}
           loading={loading}
           emptyMessage={search ? "لا توجد نتائج للبحث" : "لا توجد فواتير مشتريات مسجّلة"}
           onRowDoubleClick={onEdit}

@@ -1,19 +1,22 @@
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Plus, Search, RefreshCw, FileText, CheckCircle2, FileEdit, Banknote } from "lucide-react";
+import { Plus, Search, RefreshCw, FileText, CheckCircle2, FileEdit, Banknote, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { journalEntryService } from '@modules/accounting/api/journalEntryService';
 import type { JournalEntryDto, CreateJournalEntryRequest } from "@erp/shared-types";
 import { cn } from "@shared/lib/utils";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@shared/ui/dropdown-menu";
 
 // Refactored Components & Hooks
-import { useDataTable } from '@shared/hooks';
+import { useDataTable, useColumnPreferences } from '@shared/hooks';
 import { JournalForm } from '@modules/accounting/components/JournalForm';
 import { JournalTable } from '@modules/accounting/components/JournalTable';
+import { useCurrencyContext } from "@app/providers/CurrencyProvider";
 
 export default function Journal() {
+  const { currencies, baseCurrency } = useCurrencyContext();
   const [createOpen, setCreateOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -34,6 +37,31 @@ export default function Journal() {
     fetchData: () => journalEntryService.listJournalEntries(),
     searchFields: ["entry_number", "description"],
   });
+
+  const availableColumns = useMemo(() => {
+    const cols = [
+      { id: "entry_number", label: "رقم القيد" },
+      { id: "entry_date", label: "التاريخ" },
+      { id: "description", label: "البيان" },
+    ];
+
+    currencies.forEach(curr => {
+      const s = curr.symbol || curr.code;
+      cols.push({ id: `amount_${curr.code}`, label: `المبلغ (${s})` });
+    });
+
+    return cols;
+  }, [currencies]);
+
+  const defaultVisibleColumns = useMemo(() => {
+    const base = ["entry_number", "entry_date", "description"];
+    if (baseCurrency) {
+      base.push(`amount_${baseCurrency.code}`);
+    }
+    return base;
+  }, [baseCurrency]);
+
+  const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences("journal_entries", defaultVisibleColumns);
 
   const isLoading = loading || refreshing;
 
@@ -78,27 +106,12 @@ export default function Journal() {
       title="القيود اليومية"
       toolbar={
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => refresh(true)} disabled={isLoading} className="bg-white">
+          <Button variant="outline" size="sm" onClick={() => refresh(true)} disabled={isLoading} className="bg-white border-slate-200">
             <RefreshCw className={cn("w-4 h-4 ml-2", isLoading && "animate-spin")} />تحديث
           </Button>
           <Button size="sm" onClick={() => setCreateOpen(true)} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
             <Plus className="w-4 h-4 ml-2" />قيد جديد
           </Button>
-        </div>
-      }
-      headerWidgets={
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {stats.map((s, i) => (
-            <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between transition-all hover:shadow-md">
-              <div className="space-y-1">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{s.label}</span>
-                <div className={cn("text-2xl font-black tabular-nums", s.color)}>{s.value}</div>
-              </div>
-              <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center bg-slate-50", s.color)}>
-                <s.icon className="w-6 h-6" />
-              </div>
-            </div>
-          ))}
         </div>
       }
       filterBar={
@@ -112,6 +125,41 @@ export default function Journal() {
               onChange={e => setSearch(e.target.value)}
             />
           </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="h-11 w-11 bg-white border-slate-200">
+                <Settings2 className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[220px] max-h-[450px] overflow-y-auto shadow-xl">
+              <DropdownMenuLabel className="text-right text-xs font-black uppercase text-slate-400 tracking-widest">تخصيص الأعمدة</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {availableColumns.map((col) => (
+                <DropdownMenuCheckboxItem
+                  key={col.id}
+                  checked={isVisible(col.id)}
+                  onCheckedChange={() => toggleColumn(col.id)}
+                  className="text-right flex-row-reverse gap-2 text-xs font-bold py-2"
+                >
+                  {col.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <div className="flex items-center gap-6 mr-auto pl-2">
+            {stats.map((s, i) => (
+              <div key={i} className="flex flex-col items-start gap-1">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{s.label}</span>
+                <div className="flex items-center gap-2">
+                   <s.icon className={cn("w-4 h-4", s.color)} />
+                   <span className={cn("text-lg font-black tabular-nums", s.color)}>{s.value}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
         </div>
       }
       tableContent={
@@ -119,7 +167,8 @@ export default function Journal() {
           entries={entries} 
           loading={loading} 
           onPost={handlePost} 
-          onView={(id) => toast.info("سيتم إضافة عرض تفاصيل القيد قريباً")} 
+          onView={(id) => toast.info("سيتم إضافة عرض تفاصيل القيد قريباً")}
+          visibleColumns={visibleColumns}
         />
       }
     >
@@ -131,4 +180,4 @@ export default function Journal() {
       />
     </OperationalTableTemplate>
   );
-}
+}

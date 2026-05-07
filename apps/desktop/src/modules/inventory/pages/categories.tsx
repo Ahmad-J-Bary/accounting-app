@@ -156,19 +156,19 @@ export default function Categories() {
           isVirtualRootSelected={selected?.id === VIRTUAL_ROOT_ID}
         />
       }
-      extraContent={
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      filterBar={
+        <div className="flex items-center gap-8 w-full">
            {[
              { label: "إجمالي التصنيفات", value: categories.length, color: "text-slate-900", icon: Folder },
              { label: "إجمالي المواد", value: materials.length, color: "text-blue-600", icon: BarChart3 },
              { label: "تصنيفات نشطة", value: categories.length, color: "text-emerald-600", icon: RefreshCw },
            ].map((stat, i) => (
-             <div key={i} className="bg-slate-50/50 rounded-xl p-6 border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{stat.label}</div>
-                  <stat.icon className="w-4 h-4 text-slate-300" />
+             <div key={i} className="flex flex-col items-start gap-1">
+                <div className="flex items-center gap-2">
+                  <stat.icon className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{stat.label}</span>
                 </div>
-                <div className={`text-3xl font-black tabular-nums ${stat.color}`}>{stat.value}</div>
+                <div className={`text-lg font-black tabular-nums ${stat.color}`}>{stat.value}</div>
              </div>
            ))}
         </div>

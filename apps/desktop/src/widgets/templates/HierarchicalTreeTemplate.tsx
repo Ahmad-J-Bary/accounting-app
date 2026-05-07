@@ -10,6 +10,8 @@ interface HierarchicalTreeTemplateProps {
   treeSidebar: ReactNode;
   /** The detailed view/editor of the selected node */
   detailContent: ReactNode;
+  /** Filter and stats bar below header */
+  filterBar?: ReactNode;
   /** Optional secondary info or stats */
   extraContent?: ReactNode;
   /** Custom class */
@@ -25,6 +27,7 @@ export function HierarchicalTreeTemplate({
   toolbar,
   treeSidebar,
   detailContent,
+  filterBar,
   extraContent,
   className
 }: HierarchicalTreeTemplateProps) {
@@ -45,6 +48,13 @@ export function HierarchicalTreeTemplate({
           {toolbar}
         </div>
       </header>
+
+      {/* Filter / Stats Bar */}
+      {filterBar && (
+        <div className="bg-white/60 backdrop-blur-md px-8 py-3 border-b border-slate-200/60 shadow-sm shrink-0 flex items-center justify-between z-10">
+          {filterBar}
+        </div>
+      )}
 
       {/* 2. Split Content Layout */}
       <div className="flex-1 flex overflow-hidden p-6 gap-6">
@@ -68,17 +78,10 @@ export function HierarchicalTreeTemplate({
           {/* Node Details Card */}
           <div className="flex-1 flex flex-col bg-white rounded-2xl border border-slate-200/70 shadow-sm overflow-hidden transition-all hover:shadow-md relative">
             <div className="absolute top-0 left-0 w-32 h-32 bg-slate-50 rounded-br-full opacity-30 -ml-16 -mt-16" />
-            <div className="flex-1 overflow-auto p-8 relative z-10 custom-scrollbar">
+            <div className="flex-1 overflow-auto p-5 relative z-10 custom-scrollbar">
               {detailContent}
             </div>
           </div>
-
-          {/* Optional Bottom Extra Content (Stats, History, etc) */}
-          {extraContent && (
-            <div className="h-56 bg-white rounded-2xl border border-slate-200/70 shadow-sm p-8 shrink-0 overflow-auto transition-all hover:shadow-md">
-              {extraContent}
-            </div>
-          )}
         </aside>
       </div>
     </div>

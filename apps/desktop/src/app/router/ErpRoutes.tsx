@@ -20,7 +20,7 @@ import Settings from '@modules/core/pages/settings';
 import AuditLog from '@modules/core/pages/auditLog';
 import Partners from '@modules/partners/pages/partners';
 import Assets from '@modules/assets/pages/assets';
-import InvoiceDetail from '@modules/invoicing/pages/invoiceDetail';
+
 import CurrencySettings from '@modules/core/pages/currencySettings';
 
 export function ErpRoutes({ location }: { location?: string | Partial<Location> }) {

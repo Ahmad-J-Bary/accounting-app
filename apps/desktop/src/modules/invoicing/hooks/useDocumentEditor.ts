@@ -5,13 +5,18 @@ import { MaterialDto } from "@erp/shared-types";
 interface UseDocumentEditorProps {
   initialLines?: GridLine[];
   onLinesChange?: (lines: GridLine[]) => void;
+  priceField?: "last_sale_price" | "last_purchase_price";
 }
 
 /**
  * Shared hook for managing financial document state and logic.
  * Encapsulates line management, calculations, and validation.
  */
-export function useDocumentEditor({ initialLines = [], onLinesChange }: UseDocumentEditorProps = {}) {
+export function useDocumentEditor({ 
+  initialLines = [], 
+  onLinesChange,
+  priceField = "last_sale_price"
+}: UseDocumentEditorProps = {}) {
   const [lines, setLines] = useState<GridLine[]>(
     initialLines.length > 0 ? initialLines : [newGridLine()]
   );
@@ -50,13 +55,14 @@ export function useDocumentEditor({ initialLines = [], onLinesChange }: UseDocum
   }, [onLinesChange]);
 
   const selectMaterial = useCallback((index: number, material: MaterialDto) => {
+    const price = material[priceField]?.toString() || "0";
     updateLine(index, {
       material_id: material.id,
       material_name: material.name,
-      unit_price: material.last_sale_price?.toString() || "0",
+      unit_price: price,
       purchase_price: material.last_purchase_price?.toString() || "0",
     });
-  }, [updateLine]);
+  }, [updateLine, priceField]);
 
   const totals = useMemo(() => {
     const subtotal = lines.reduce((sum, ln) => sum + (ln.line_total || 0), 0);

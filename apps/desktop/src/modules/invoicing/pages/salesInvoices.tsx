@@ -6,8 +6,9 @@ import { Input } from "@shared/ui/input";
 import { Save, Send, Printer, RefreshCw, ChevronRight, History } from "lucide-react";
 import { invoiceService } from '@modules/invoicing/api/invoiceService';
 import { customerService } from '@modules/partners/api/customerService';
+import { materialService } from '@modules/inventory/api/materialService';
 import { currencyService, type Currency } from '@modules/core/api/currencyService';
-import type { InvoiceDto, CustomerDto } from "@erp/shared-types";
+import type { InvoiceDto, CustomerDto, MaterialDto } from "@erp/shared-types";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyProvider";
 
@@ -58,12 +59,13 @@ export default function SalesInvoices() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { openTab, closeTab, activeTabId } = useTabs();
-  const { baseCurrency, getLatestRate, formatAmount, formatMonetaryAmount, hasTodayRate } = useCurrencyContext();
+  const { baseCurrency, getLatestRate, formatAmount, formatMonetaryAmount, convertBetween, hasTodayRate } = useCurrencyContext();
 
   const [view, setView] = useState<ViewMode>("list");
   const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
   const [customers, setCustomers] = useState<CustomerDto[]>([]);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
+  const [materials, setMaterials] = useState<MaterialDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -80,14 +82,16 @@ export default function SalesInvoices() {
       if (isInitial) setLoading(true);
       else setRefreshing(true);
       
-      const [invData, custData, currData] = await Promise.all([
+      const [invData, custData, currData, matData] = await Promise.all([
         invoiceService.listInvoicesByType("Sales"),
         customerService.listCustomers(),
         currencyService.listCurrencies(),
+        materialService.listMaterials(),
       ]);
       setInvoices(invData);
       setCustomers(custData);
       setCurrencies(currData);
+      setMaterials(matData);
     } catch {
       toast.error("فشل تحميل البيانات");
     } finally {
@@ -144,11 +148,29 @@ export default function SalesInvoices() {
       toast.error("يجب إضافة صنف واحد على الأقل");
       return;
     }
+    
+    if (headerState.payment_method !== "cash" && !headerState.customer_id && headerState.customer_name === "زبون نقدي") {
+      toast.error("المبيعات الآجلة أو الجزئية تتطلب اختيار عميل محدد. 'زبون نقدي' مخصص للبيع النقدي فقط.");
+      return;
+    }
+
     setSaving(true);
     try {
       const backendLines = toBackendLines(lines);
+      const paymentMethodMap: Record<string, string> = {
+        "cash": "Cash",
+        "credit": "Deferred",
+        "partial": "Partial"
+      };
+
+      const netAmount = totals.total - (parseFloat(headerState.discount_amount) || 0) + (parseFloat(headerState.tax_amount) || 0);
       const payload = {
         ...headerState,
+        invoice_type: "Sales",
+        customer_id: headerState.customer_id || undefined,
+        customer_name: !headerState.customer_id ? headerState.customer_name : undefined,
+        payment_method: paymentMethodMap[headerState.payment_method] || "Cash",
+        amount_paid: headerState.payment_method === "cash" ? netAmount.toString() : (headerState.payment_method === "partial" ? headerState.paid_amount : "0"),
         lines: backendLines,
         issued_at: new Date(headerState.issued_at).toISOString(),
       };
@@ -158,13 +180,22 @@ export default function SalesInvoices() {
         saved = await invoiceService.updateInvoice({ ...payload, id: headerState.id } as any);
       } else {
         saved = await invoiceService.createInvoice(payload as any);
+        // Set ID locally so retries (e.g. after failed post) use update instead of create
+        setHeaderState(s => ({ ...s, id: saved.id }));
       }
 
       if (andPost) {
-        await invoiceService.postInvoice(saved.id);
-        toast.success("تم الحفظ والترحيل بنجاح");
+        try {
+          await invoiceService.postInvoice(saved.id);
+          toast.success("تم الحفظ والترحيل بنجاح");
+        } catch (postError) {
+          toast.error("تم حفظ الفاتورة كمسودة ولكن فشل الترحيل: " + postError);
+          setSaving(false);
+          // Don't navigate away, let user fix it
+          return;
+        }
       } else {
-        toast.success("تم حفظ الفاتورة");
+        toast.success("تم حفظ الفاتورة كمسودة");
       }
 
       if (isNew) {
@@ -180,12 +211,63 @@ export default function SalesInvoices() {
     }
   };
 
-  const columns: DocumentColumn[] = [
-    { key: "material_name", header: "المادة / الصنف", width: "flex-[3]", type: "material" },
-    { key: "quantity", header: "الكمية", width: "w-[100px]", align: "center", type: "number" },
-    { key: "unit_price", header: "السعر", width: "w-[120px]", align: "left", type: "number" },
-    { key: "line_total", header: "الإجمالي", width: "w-[130px]", align: "left", type: "readonly" },
-  ];
+  const enrichedLines = useMemo(() => {
+    return lines.map(line => {
+      const enriched: any = { ...line };
+      
+      // The current unit_price and line_total are in the document's currency (headerState.currency_code)
+      const docPrice = parseFloat(line.unit_price || "0");
+      const docTotal = line.line_total || 0;
+      
+      // Calculate values for all currencies
+      currencies.forEach(curr => {
+        const price = convertBetween(docPrice, headerState.currency_code, curr.code);
+        const total = convertBetween(docTotal, headerState.currency_code, curr.code);
+        
+        enriched[`unit_price_${curr.code}`] = price.toFixed(2);
+        enriched[`line_total_${curr.code}`] = formatAmount(total, { currencyCode: curr.code, hideSymbol: true });
+      });
+      return enriched;
+    });
+  }, [lines, currencies, headerState.currency_code, convertBetween, formatAmount]);
+
+  const gridColumns = useMemo<DocumentColumn[]>(() => {
+    const cols: DocumentColumn[] = [
+      { key: "material_name", header: "المادة / الصنف", width: "flex-[3]", align: "right", type: "material" },
+      { key: "quantity", header: "الكمية", width: "w-[90px]", align: "center", type: "number" },
+    ];
+
+    // Add unit price for each currency
+    currencies.forEach(curr => {
+      const s = curr.symbol || curr.code;
+      const isDocCurr = curr.code === headerState.currency_code;
+      cols.push({ 
+        key: isDocCurr ? "unit_price" : `unit_price_${curr.code}`, 
+        header: `السعر (${s})`, 
+        width: "w-[110px]", 
+        align: "left", 
+        type: isDocCurr ? "number" : "readonly" 
+      });
+    });
+
+    cols.push({ key: "discount", header: "خصم %", width: "w-[80px]", align: "center", type: "number" });
+
+    // Add line total for each currency
+    currencies.forEach(curr => {
+      const s = curr.symbol || curr.code;
+      cols.push({ 
+        key: `line_total_${curr.code}`, 
+        header: `الإجمالي (${s})`, 
+        width: "w-[120px]", 
+        align: "left", 
+        type: "readonly" 
+      });
+    });
+
+    cols.push({ key: "notes", header: "ملاحظات", width: "flex-[2]", align: "right", type: "text" });
+
+    return cols;
+  }, [currencies, headerState.currency_code]);
 
   if (view === "editor") {
     return (
@@ -227,14 +309,15 @@ export default function SalesInvoices() {
         }
         lineItemsGrid={
           <GenericDocumentGrid
-            columns={columns}
-            lines={lines}
+            columns={gridColumns}
+            lines={enrichedLines}
             onUpdateLine={updateLine}
             onRemoveLine={removeLine}
             onAddLine={addLine}
             onSelectMaterial={selectMaterial}
-            materials={[]} // Add material search logic
+            materials={Object.values(materials)} 
             readOnly={headerState.status === "Posted"}
+            preferenceKey="sales_invoice_grid"
           />
         }
         summaryPanel={
@@ -243,6 +326,13 @@ export default function SalesInvoices() {
             discount={parseFloat(headerState.discount_amount)}
             tax={parseFloat(headerState.tax_amount)}
             net={totals.total - (parseFloat(headerState.discount_amount) || 0) + (parseFloat(headerState.tax_amount) || 0)}
+            paid={
+              headerState.payment_method === "cash" 
+                ? (totals.total - (parseFloat(headerState.discount_amount) || 0) + (parseFloat(headerState.tax_amount) || 0)) 
+                : headerState.payment_method === "partial" 
+                  ? parseFloat(headerState.paid_amount || "0")
+                  : 0
+            }
             currency={headerState.currency_code}
             status={headerState.status as any}
             invoiceType="Sales"
@@ -255,33 +345,77 @@ export default function SalesInvoices() {
                 selectedName={headerState.customer_name}
                 onSelect={(id, name) => setHeaderState(s => ({ ...s, customer_id: id, customer_name: name }))}
                 onClear={() => setHeaderState(s => ({ ...s, customer_id: "", customer_name: "زبون نقدي" }))}
+                predictedBalance={
+                  headerState.payment_method === "cash" 
+                    ? 0 
+                    : (totals.total - (parseFloat(headerState.discount_amount) || 0) + (parseFloat(headerState.tax_amount) || 0)) - (parseFloat(headerState.paid_amount) || 0)
+                }
               />
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase">طريقة الدفع</label>
                 <select 
                   value={headerState.payment_method} 
-                  onChange={e => setHeaderState(s => ({ ...s, payment_method: e.target.value }))}
+                  onChange={e => {
+                    const method = e.target.value;
+                    const net = totals.total - (parseFloat(headerState.discount_amount) || 0) + (parseFloat(headerState.tax_amount) || 0);
+                    setHeaderState(s => ({ 
+                      ...s, 
+                      payment_method: method,
+                      paid_amount: method === "cash" ? net.toString() : (method === "credit" ? "0" : s.paid_amount)
+                    }));
+                  }}
                   className="w-full h-10 px-3 rounded-lg border border-slate-200 bg-white font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                 >
-                  <option value="cash">نقداً</option>
-                  <option value="credit">آجل (ذمم)</option>
-                  <option value="partial">دفع جزئي</option>
+                  <option value="cash">نقداً (دفع كامل)</option>
+                  <option value="credit">آجل (ذمم على العميل)</option>
+                  <option value="partial">دفع جزئي (مقدم + ذمم)</option>
                 </select>
+              </div>
+
+              {headerState.payment_method === "partial" && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <label className="text-[10px] font-black text-blue-500 uppercase flex items-center gap-2">
+                    المبلغ المدفوع الآن (نقداً)
+                    <div className="w-1 h-1 rounded-full bg-blue-500" />
+                  </label>
+                  <Input 
+                    type="number" 
+                    value={headerState.paid_amount} 
+                    onChange={e => setHeaderState(s => ({ ...s, paid_amount: e.target.value }))}
+                    className="h-10 font-black text-lg border-blue-200 focus:ring-blue-500 bg-blue-50/30"
+                    placeholder="0.00"
+                  />
+                  <div className="text-[10px] text-slate-400 font-bold px-1">
+                    المتبقي ذمة على العميل: {formatAmount((totals.total - (parseFloat(headerState.discount_amount) || 0) + (parseFloat(headerState.tax_amount) || 0)) - (parseFloat(headerState.paid_amount) || 0))}
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-2 border-t border-slate-100">
+                <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">العملة وسعر الصرف</label>
+                <select
+                  value={headerState.currency_code}
+                  onChange={e => setHeaderState(s => ({ ...s, currency_code: e.target.value }))}
+                  className="w-full h-9 px-3 rounded-md border border-slate-200 bg-slate-50 font-bold text-xs"
+                >
+                  {currencies.map(c => (
+                    <option key={c.code} value={c.code}>{c.name_ar} ({c.symbol || c.code})</option>
+                  ))}
+                </select>
+                {headerState.currency_code !== baseCurrency?.code && (
+                  <Input
+                    type="number"
+                    value={headerState.exchange_rate}
+                    onChange={e => setHeaderState(s => ({ ...s, exchange_rate: e.target.value }))}
+                    className="mt-2 h-8 text-left font-mono font-bold text-xs"
+                    placeholder="سعر الصرف"
+                  />
+                )}
               </div>
             </div>
           </SummaryPanel>
         }
-        sidebar={
-           <div className="bg-white rounded-2xl border border-slate-200/70 shadow-sm p-6 space-y-4">
-              <div className="flex items-center gap-2 text-slate-800">
-                <History className="w-4 h-4" />
-                <span className="text-sm font-black">سجل الفاتورة</span>
-              </div>
-              <div className="text-[11px] text-slate-400 text-center py-8 border-2 border-dashed border-slate-100 rounded-xl">
-                لا توجد حركات سابقة
-              </div>
-           </div>
-        }
+        sidebar={null}
       />
     );
   }
@@ -293,8 +427,23 @@ export default function SalesInvoices() {
       search={search}
       onSearchChange={setSearch}
       onRefresh={() => loadData(false)}
-      onCreate={() => navigate("/erp/sales/new")}
-      onEdit={(inv) => navigate(`/erp/sales/${inv.id}`)}
+      onCreate={() => {
+        const uniqueId = `/sales-invoices/new-${Date.now()}`;
+        openTab({ 
+          id: uniqueId, 
+          title: "فاتورة مبيعات جديدة", 
+          path: uniqueId,
+          closable: true
+        });
+      }}
+      onEdit={(inv) => {
+        openTab({ 
+          id: `/sales-invoices/${inv.id}`, 
+          title: `فاتورة ${inv.invoice_number}`, 
+          path: `/sales-invoices/${inv.id}`,
+          closable: true
+        });
+      }}
       onPost={(id) => invoiceService.postInvoice(id).then(() => loadData(false))}
       formatMonetaryAmount={formatMonetaryAmount}
     />

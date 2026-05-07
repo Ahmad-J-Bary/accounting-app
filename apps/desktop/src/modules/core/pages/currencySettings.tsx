@@ -10,7 +10,7 @@ import {
   ArrowRightLeft, TrendingUp, AlertCircle, Trash2, CheckCircle2 
 } from "lucide-react";
 import { currencyService, type Currency, type ExchangeRate, type TodayRateStatus } from '@modules/core/api/currencyService';
-import { useToast } from '@shared/hooks';
+import { toast } from "sonner";
 import { 
   Dialog, DialogContent, DialogDescription, 
   DialogFooter, DialogHeader, DialogTitle, DialogTrigger 
@@ -33,8 +33,6 @@ export default function CurrencySettings() {
   const [refreshing, setRefreshing] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedCurrencyForHistory, setSelectedCurrencyForHistory] = useState<string | null>(null);
-  
-  const { toast } = useToast();
 
   const [newCurrency, setNewCurrency] = useState({
     code: "",
@@ -71,11 +69,12 @@ export default function CurrencySettings() {
       }
     } catch (e) {
       console.error(e);
-      toast({ title: "خطأ", description: "فشل تحميل بيانات العملات", variant: "destructive" });
+      toast.error("خطأ", { description: "فشل تحميل بيانات العملات" });
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, [toast]);
+  }, []);
 
   const loadHistory = async (from: string, to: string) => {
     try {
@@ -93,11 +92,11 @@ export default function CurrencySettings() {
   const handleAddCurrency = async () => {
     try {
       await currencyService.createCurrency(newCurrency);
-      toast({ title: "تم النجاح", description: "تمت إضافة العملة بنجاح" });
+      toast.success("تم النجاح", { description: "تمت إضافة العملة بنجاح" });
       setIsAddDialogOpen(false);
       loadData();
     } catch (e) {
-      toast({ title: "خطأ", description: String(e), variant: "destructive" });
+      toast.error("خطأ", { description: String(e) });
     }
   };
 
@@ -105,10 +104,10 @@ export default function CurrencySettings() {
     if (!confirm(`هل أنت متأكد من حذف العملة ${code}؟`)) return;
     try {
       await currencyService.deleteCurrency(code);
-      toast({ title: "تم الحذف", description: "تم حذف العملة بنجاح" });
+      toast.success("تم الحذف", { description: "تم حذف العملة بنجاح" });
       loadData();
     } catch (e) {
-      toast({ title: "خطأ", description: String(e), variant: "destructive" });
+      toast.error("خطأ", { description: String(e) });
     }
   };
 
@@ -123,10 +122,10 @@ export default function CurrencySettings() {
         rate: newRate.rate,
         rate_type: newRate.type
       });
-      toast({ title: "تم التحديث", description: `تم تحديث سعر صرف ${from}` });
+      toast.success("تم التحديث", { description: `تم تحديث سعر صرف ${from}` });
       loadData();
     } catch (e) {
-      toast({ title: "خطأ", description: String(e), variant: "destructive" });
+      toast.error("خطأ", { description: String(e) });
     }
   };
 

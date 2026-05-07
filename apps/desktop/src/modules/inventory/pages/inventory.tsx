@@ -108,21 +108,19 @@ export default function Inventory() {
           <Button size="sm" onClick={() => toast.info("إضافة حركة قيد التطوير")} className="bg-slate-900 hover:bg-slate-800 shadow-lg shadow-slate-200">
             <Plus className="w-4 h-4 ml-2" />حركة جديدة
           </Button>
-        </div>
-      }
-      headerWidgets={
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {stats.map((s, i) => (
-            <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between transition-all hover:shadow-md">
-              <div className="space-y-1">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{s.label}</span>
-                <div className={cn("text-2xl font-black tabular-nums", s.color)}>{s.value}</div>
+
+          <div className="flex items-center gap-6 mr-auto pl-2">
+            {stats.map((s, i) => (
+              <div key={i} className="flex flex-col items-start gap-1">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{s.label}</span>
+                <div className="flex items-center gap-2">
+                   <s.icon className={cn("w-4 h-4", s.color)} />
+                   <span className={cn("text-lg font-black tabular-nums", s.color)}>{s.value}</span>
+                </div>
               </div>
-              <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center bg-slate-50", s.color)}>
-                <s.icon className="w-6 h-6" />
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
+
         </div>
       }
       tableContent={

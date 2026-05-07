@@ -17,8 +17,8 @@ type CurrencyContextValue = {
   getLatestRate: (toCurrency: string) => Promise<string | null>;
   convertFromBase: (amountInBase: number, targetCurrencyCode: string) => number;
   convertBetween: (amount: number, fromCode: string, toCode: string) => number;
-  formatAmount: (amountInBase: number | null | undefined, opts?: { currencyCode?: string; withCode?: boolean; mode?: CurrencyDisplayMode | "both" }) => string;
-  formatMonetaryAmount: (amount: any | null | undefined, mode?: CurrencyDisplayMode | "both") => string;
+  formatAmount: (amountInBase: number | null | undefined, opts?: { currencyCode?: string; withCode?: boolean; hideSymbol?: boolean; mode?: CurrencyDisplayMode | "both" }) => string;
+  formatMonetaryAmount: (amount: string | number | { base_amount?: string } | null | undefined, mode?: CurrencyDisplayMode | "both") => string;
   hasTodayRate: (currencyCode: string) => boolean;
 };
 
@@ -164,7 +164,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   const formatAmount = useCallback(
     (
       amountInBase: number | null | undefined,
-      opts?: { currencyCode?: string; withCode?: boolean; mode?: CurrencyDisplayMode | "both" }
+      opts?: { currencyCode?: string; withCode?: boolean; hideSymbol?: boolean; mode?: CurrencyDisplayMode | "both" }
     ) => {
       const val = amountInBase ?? 0;
       const mode = opts?.mode || displayMode;
@@ -174,7 +174,8 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
         if (!currency) return formatWithLocale(val, 2);
         const amount = convertFromBase(val, currency.code);
         const formatted = formatWithLocale(amount, currency.decimals);
-        return opts?.withCode === false ? formatted : `${formatted} ${currency.symbol || currency.code}`;
+        const showSymbol = opts?.withCode !== false && opts?.hideSymbol !== true;
+        return !showSymbol ? formatted : `${formatted} ${currency.symbol || currency.code}`;
       };
 
       if (mode === "both" && baseCurrency && displayCurrencyCode && baseCurrency.code !== displayCurrencyCode) {
@@ -188,14 +189,14 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   );
 
   const formatMonetaryAmount = useCallback(
-    (amount: any | null | undefined, mode?: CurrencyDisplayMode | "both") => {
+    (amount: string | number | { base_amount?: string } | null | undefined, mode?: CurrencyDisplayMode | "both") => {
       if (!amount) return formatAmount(0, { mode });
       // If it's a MonetaryAmount V2 DTO
-      if (amount.base_amount) {
+      if (typeof amount === "object" && "base_amount" in amount && amount.base_amount) {
         return formatAmount(parseFloat(amount.base_amount), { mode });
       }
       // Fallback for plain numbers (assumed to be base)
-      return formatAmount(parseFloat(amount), { mode });
+      return formatAmount(parseFloat(amount as string), { mode });
     },
     [formatAmount]
   );

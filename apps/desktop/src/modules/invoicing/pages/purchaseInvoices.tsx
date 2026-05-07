@@ -6,8 +6,9 @@ import { Input } from "@shared/ui/input";
 import { Save, Send, Printer, ChevronRight, History, RefreshCw, Plus } from "lucide-react";
 import { invoiceService } from '@modules/invoicing/api/invoiceService';
 import { supplierService } from '@modules/partners/api/supplierService';
+import { materialService } from '@modules/inventory/api/materialService';
 import { currencyService, type Currency } from '@modules/core/api/currencyService';
-import type { InvoiceDto, SupplierDto } from "@erp/shared-types";
+import type { InvoiceDto, SupplierDto, MaterialDto } from "@erp/shared-types";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyProvider";
 
@@ -60,20 +61,21 @@ export default function PurchaseInvoices() {
   const location = useLocation();
   const navigate = useNavigate();
   const { id } = useParams();
-  const { closeTab, activeTabId } = useTabs();
+  const { openTab, closeTab, activeTabId } = useTabs();
   
   const [view, setView] = useState<ViewMode>("list");
   const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
+  const [materials, setMaterials] = useState<MaterialDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   
   const [headerState, setHeaderState] = useState<HeaderState>(defaultHeader());
-  const { lines, setLines, updateLine, removeLine, addLine, selectMaterial, totals } = useDocumentEditor();
-  const { formatMonetaryAmount, baseCurrency, getLatestRate } = useCurrencyContext();
+  const { lines, setLines, updateLine, removeLine, addLine, selectMaterial, totals } = useDocumentEditor({ priceField: "last_purchase_price" });
+  const { formatMonetaryAmount, formatAmount, baseCurrency, getLatestRate, convertBetween } = useCurrencyContext();
 
   const isNew = location.pathname.includes("/new");
 
@@ -82,14 +84,16 @@ export default function PurchaseInvoices() {
       if (isInitial) setLoading(true);
       else setRefreshing(true);
 
-      const [invData, suppData, currData] = await Promise.all([
+      const [invData, suppData, currData, matData] = await Promise.all([
         invoiceService.listInvoicesByType("Purchase"),
         supplierService.listSuppliers(),
         currencyService.listCurrencies(),
+        materialService.listMaterials(),
       ]);
       setInvoices(invData);
       setSuppliers(suppData);
       setCurrencies(currData);
+      setMaterials(matData);
     } catch (e) {
       toast.error("فشل تحميل البيانات: " + e);
     } finally {
@@ -194,12 +198,58 @@ export default function PurchaseInvoices() {
     }
   };
 
-  const columns: DocumentColumn[] = [
-    { key: "material_name", header: "المادة / الصنف", width: "flex-[3]", type: "material" },
-    { key: "quantity", header: "الكمية", width: "w-[100px]", align: "center", type: "number" },
-    { key: "unit_price", header: "سعر الشراء", width: "w-[120px]", align: "left", type: "number" },
-    { key: "line_total", header: "الإجمالي", width: "w-[130px]", align: "left", type: "readonly" },
-  ];
+  const enrichedLines = useMemo(() => {
+    return lines.map((line: any) => {
+      const enriched: any = { ...line };
+      const docPrice = parseFloat(line.unit_price || "0");
+      const docTotal = line.line_total || 0;
+      
+      currencies.forEach(curr => {
+        const price = convertBetween(docPrice, headerState.currency_code, curr.code);
+        const total = convertBetween(docTotal, headerState.currency_code, curr.code);
+        
+        enriched[`unit_price_${curr.code}`] = price.toFixed(2);
+        enriched[`line_total_${curr.code}`] = formatAmount(total, { currencyCode: curr.code, hideSymbol: true });
+      });
+      return enriched;
+    });
+  }, [lines, currencies, headerState.currency_code, convertBetween, formatAmount]);
+
+  const gridColumns = useMemo<DocumentColumn[]>(() => {
+    const cols: DocumentColumn[] = [
+      { key: "material_name", header: "المادة / الصنف", width: "flex-[3]", align: "right", type: "material" },
+      { key: "quantity", header: "الكمية", width: "w-[90px]", align: "center", type: "number" },
+    ];
+
+    currencies.forEach(curr => {
+      const s = curr.symbol || curr.code;
+      const isDocCurr = curr.code === headerState.currency_code;
+      cols.push({ 
+        key: isDocCurr ? "unit_price" : `unit_price_${curr.code}`, 
+        header: `السعر (${s})`, 
+        width: "w-[110px]", 
+        align: "left", 
+        type: isDocCurr ? "number" : "readonly" 
+      });
+    });
+
+    cols.push({ key: "discount", header: "خصم %", width: "w-[80px]", align: "center", type: "number" });
+
+    currencies.forEach(curr => {
+      const s = curr.symbol || curr.code;
+      cols.push({ 
+        key: `line_total_${curr.code}`, 
+        header: `الإجمالي (${s})`, 
+        width: "w-[120px]", 
+        align: "left", 
+        type: "readonly" 
+      });
+    });
+
+    cols.push({ key: "notes", header: "ملاحظات", width: "flex-[2]", align: "right", type: "text" });
+
+    return cols;
+  }, [currencies, headerState.currency_code]);
 
   if (view === "editor") {
     return (
@@ -241,14 +291,15 @@ export default function PurchaseInvoices() {
         }
         lineItemsGrid={
           <GenericDocumentGrid
-            columns={columns}
-            lines={lines}
+            columns={gridColumns}
+            lines={enrichedLines}
             onUpdateLine={updateLine}
             onRemoveLine={removeLine}
             onAddLine={addLine}
             onSelectMaterial={selectMaterial}
-            materials={[]} // Add material search logic
+            materials={Object.values(materials)} 
             readOnly={headerState.status === "Posted"}
+            preferenceKey="purchase_invoice_grid"
           />
         }
         summaryPanel={
@@ -258,6 +309,13 @@ export default function PurchaseInvoices() {
             tax={parseFloat(headerState.tax_amount)}
             extraCosts={parseFloat(headerState.extra_costs)}
             net={totals.subtotal - parseFloat(headerState.discount_amount) + parseFloat(headerState.tax_amount) + parseFloat(headerState.extra_costs)}
+            paid={
+              headerState.payment_method === "cash" 
+                ? (totals.subtotal - parseFloat(headerState.discount_amount) + parseFloat(headerState.tax_amount) + parseFloat(headerState.extra_costs)) 
+                : headerState.payment_method === "partial" 
+                  ? parseFloat(headerState.paid_amount || "0")
+                  : 0
+            }
             currency={headerState.currency_code}
             status={headerState.status as any}
             invoiceType="Purchase"
@@ -270,19 +328,51 @@ export default function PurchaseInvoices() {
                 selectedName={headerState.supplier_name}
                 onSelect={(id, name) => setHeaderState(s => ({ ...s, supplier_id: id, supplier_name: name }))}
                 onClear={() => setHeaderState(s => ({ ...s, supplier_id: "", supplier_name: "مورد نقدي" }))}
+                predictedBalance={
+                  headerState.payment_method === "cash"
+                    ? 0
+                    : (totals.subtotal - parseFloat(headerState.discount_amount) + parseFloat(headerState.tax_amount) + parseFloat(headerState.extra_costs)) - (parseFloat(headerState.paid_amount) || 0)
+                }
               />
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase">طريقة الدفع</label>
                 <select 
                   value={headerState.payment_method} 
-                  onChange={e => setHeaderState(s => ({ ...s, payment_method: e.target.value }))}
+                  onChange={e => {
+                    const method = e.target.value;
+                    const net = totals.subtotal - parseFloat(headerState.discount_amount) + parseFloat(headerState.tax_amount) + parseFloat(headerState.extra_costs);
+                    setHeaderState(s => ({ 
+                      ...s, 
+                      payment_method: method,
+                      paid_amount: method === "cash" ? net.toString() : (method === "credit" ? "0" : s.paid_amount)
+                    }));
+                  }}
                   className="w-full h-10 px-3 rounded-lg border border-slate-200 bg-white font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                 >
-                  <option value="cash">نقداً</option>
-                  <option value="credit">آجل (ذمم)</option>
-                  <option value="partial">دفع جزئي</option>
+                  <option value="cash">نقداً (دفع كامل)</option>
+                  <option value="credit">آجل (ذمم على الشركة)</option>
+                  <option value="partial">دفع جزئي (مقدم + ذمم)</option>
                 </select>
               </div>
+
+              {headerState.payment_method === "partial" && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <label className="text-[10px] font-black text-blue-500 uppercase flex items-center gap-2">
+                    المبلغ المدفوع الآن للمورد (نقداً)
+                    <div className="w-1 h-1 rounded-full bg-blue-500" />
+                  </label>
+                  <Input 
+                    type="number" 
+                    value={headerState.paid_amount} 
+                    onChange={e => setHeaderState(s => ({ ...s, paid_amount: e.target.value }))}
+                    className="h-10 font-black text-lg border-blue-200 focus:ring-blue-500 bg-blue-50/30"
+                    placeholder="0.00"
+                  />
+                  <div className="text-[10px] text-slate-400 font-bold px-1">
+                    المتبقي ذمة للمورد: {formatAmount((totals.subtotal - parseFloat(headerState.discount_amount) + parseFloat(headerState.tax_amount) + parseFloat(headerState.extra_costs)) - (parseFloat(headerState.paid_amount) || 0))}
+                  </div>
+                </div>
+              )}
               
               <div className="pt-2 border-t border-slate-100">
                 <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">العملة وسعر الصرف</label>
@@ -292,7 +382,7 @@ export default function PurchaseInvoices() {
                   className="w-full h-9 px-3 rounded-md border border-slate-200 bg-slate-50 font-bold text-xs"
                 >
                   {currencies.map(c => (
-                    <option key={c.code} value={c.code}>{c.name_ar} ({c.code})</option>
+                    <option key={c.code} value={c.code}>{c.name_ar} ({c.symbol || c.code})</option>
                   ))}
                 </select>
                 {headerState.currency_code !== baseCurrency?.code && (
@@ -308,17 +398,7 @@ export default function PurchaseInvoices() {
             </div>
           </SummaryPanel>
         }
-        sidebar={
-           <div className="bg-white rounded-2xl border border-slate-200/70 shadow-sm p-6 space-y-4">
-              <div className="flex items-center gap-2 text-slate-800">
-                <History className="w-4 h-4" />
-                <span className="text-sm font-black">سجل الفاتورة</span>
-              </div>
-              <div className="text-[11px] text-slate-400 text-center py-8 border-2 border-dashed border-slate-100 rounded-xl">
-                لا توجد حركات سابقة
-              </div>
-           </div>
-        }
+        sidebar={null}
       />
     );
   }
@@ -330,8 +410,23 @@ export default function PurchaseInvoices() {
       search={search}
       onSearchChange={setSearch}
       onRefresh={() => loadData(false)}
-      onCreate={() => navigate("/erp/purchase/new")}
-      onEdit={(inv) => navigate(`/erp/purchase/${inv.id}`)}
+      onCreate={() => {
+        const uniqueId = `/purchase-invoices/new-${Date.now()}`;
+        openTab({ 
+          id: uniqueId, 
+          title: "فاتورة مشتريات جديدة", 
+          path: uniqueId,
+          closable: true
+        });
+      }}
+      onEdit={(inv) => {
+        openTab({ 
+          id: `/purchase-invoices/${inv.id}`, 
+          title: `فاتورة ${inv.invoice_number}`, 
+          path: `/purchase-invoices/${inv.id}`,
+          closable: true
+        });
+      }}
       onPost={(id) => invoiceService.postInvoice(id).then(() => loadData(false))}
       formatMonetaryAmount={formatMonetaryAmount}
     />
