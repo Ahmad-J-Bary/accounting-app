@@ -15,7 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuLab
 import { DataTable, Column } from '@widgets/table-shell/DataTable';
 import { useDataTable, useColumnPreferences } from '@shared/hooks';
 import { DamagedForm } from '@modules/inventory/components/DamagedForm';
-import { useCurrencyContext } from "@app/providers/CurrencyProvider";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 export default function Damaged() {
   const { formatAmount, currencies, baseCurrency, formatMonetaryAmount } = useCurrencyContext();

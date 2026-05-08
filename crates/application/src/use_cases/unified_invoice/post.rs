@@ -29,24 +29,35 @@ pub struct PostInvoiceUseCase {
     category_repo: Arc<dyn CategoryRepository>,
 }
 
+pub struct PostInvoiceDependencies {
+    pub repo: Arc<dyn UnifiedInvoiceRepository>,
+    pub movement_repo: Arc<dyn StockMovementRepository>,
+    pub journal_repo: Arc<dyn JournalEntryRepository>,
+    pub account_repo: Arc<dyn AccountRepository>,
+    pub customer_repo: Arc<dyn CustomerRepository>,
+    pub supplier_repo: Arc<dyn SupplierRepository>,
+    pub material_repo: Arc<dyn MaterialRepository>,
+    pub category_repo: Arc<dyn CategoryRepository>,
+}
+
 impl PostInvoiceUseCase {
-    pub fn new(
-        repo: Arc<dyn UnifiedInvoiceRepository>,
-        movement_repo: Arc<dyn StockMovementRepository>,
-        journal_repo: Arc<dyn JournalEntryRepository>,
-        account_repo: Arc<dyn AccountRepository>,
-        customer_repo: Arc<dyn CustomerRepository>,
-        supplier_repo: Arc<dyn SupplierRepository>,
-        material_repo: Arc<dyn MaterialRepository>,
-        category_repo: Arc<dyn CategoryRepository>,
-    ) -> Self {
-        Self { repo, movement_repo, journal_repo, account_repo, customer_repo, supplier_repo, material_repo, category_repo }
+    pub fn new(deps: PostInvoiceDependencies) -> Self {
+        Self {
+            repo: deps.repo,
+            movement_repo: deps.movement_repo,
+            journal_repo: deps.journal_repo,
+            account_repo: deps.account_repo,
+            customer_repo: deps.customer_repo,
+            supplier_repo: deps.supplier_repo,
+            material_repo: deps.material_repo,
+            category_repo: deps.category_repo,
+        }
     }
 
     pub async fn execute(&self, id: String) -> Result<InvoiceDto, AppError> {
-        let invoice_id = InvoiceId::from_str(&id).map_err(|_| AppError::Invalid("Ù…Ø¹Ø±Ù ÙØ§ØªÙˆØ±Ø© ØºÙŠØ± ØµØ§Ù„Ø­".into()))?;
+        let invoice_id = InvoiceId::from_str(&id).map_err(|_| AppError::Invalid("معرف فاتورة غير صالح".into()))?;
         let mut invoice = self.repo.find_by_id(&invoice_id).await?
-            .ok_or_else(|| AppError::NotFound("Ø§Ù„ÙØ§ØªÙˆØ±Ø© ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯Ø©".into()))?;
+            .ok_or_else(|| AppError::NotFound("الفاتورة غير موجودة".into()))?;
 
         invoice.post().map_err(|e| AppError::Invalid(e.to_string()))?;
 
@@ -58,7 +69,7 @@ impl PostInvoiceUseCase {
 
         for line in &invoice.lines {
             let movement = StockMovement::new(
-                line.material_id.clone(),
+                line.material_id,
                 movement_type.clone(),
                 line.quantity,
                 line.unit_price.amount(),

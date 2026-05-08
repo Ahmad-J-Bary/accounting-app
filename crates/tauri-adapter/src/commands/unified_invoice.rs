@@ -2,7 +2,7 @@ use tauri::State;
 use crate::bootstrap::container::AppState;
 use application::dto::invoice_dto::{CreateInvoiceRequest, UpdateInvoiceRequest, InvoiceDto};
 use application::use_cases::unified_invoice::{
-    CreateInvoiceUseCase, UpdateInvoiceUseCase, InvoiceQueries, PostInvoiceUseCase
+    CreateInvoiceUseCase, UpdateInvoiceUseCase, InvoiceQueries, PostInvoiceUseCase, PostInvoiceDependencies
 };
 
 #[tauri::command]
@@ -42,16 +42,16 @@ pub async fn post_unified_invoice(
     state: State<'_, AppState>,
     id: String,
 ) -> Result<InvoiceDto, String> {
-    PostInvoiceUseCase::new(
-        state.unified_invoice_repo.clone(), 
-        state.stock_movement_repo.clone(),
-        state.journal_entry_repo.clone(),
-        state.account_repo.clone(),
-        state.customer_repo.clone(),
-        state.supplier_repo.clone(),
-        state.material_repo.clone(),
-        state.category_repo.clone(),
-    )
+    PostInvoiceUseCase::new(PostInvoiceDependencies {
+        repo: state.unified_invoice_repo.clone(), 
+        movement_repo: state.stock_movement_repo.clone(),
+        journal_repo: state.journal_entry_repo.clone(),
+        account_repo: state.account_repo.clone(),
+        customer_repo: state.customer_repo.clone(),
+        supplier_repo: state.supplier_repo.clone(),
+        material_repo: state.material_repo.clone(),
+        category_repo: state.category_repo.clone(),
+    })
     .execute(id).await.map_err(|e| e.to_string())
 }
 

@@ -101,9 +101,9 @@ impl GetProductionOrderUseCase {
     }
 
     pub async fn execute(&self, id: String) -> Result<ProductionOrderDto, AppError> {
-        let oid = id.parse().map_err(|_| AppError::NotFound("Ù…Ø¹Ø±Ù Ø§Ù„Ø£Ù…Ø± ØºÙŠØ± ØµØ§Ù„Ø­".into()))?;
+        let oid = id.parse().map_err(|_| AppError::NotFound("معرف الأمر غير صالح".into()))?;
         let order = self.repo.find_by_id(&oid).await?
-            .ok_or_else(|| AppError::NotFound("Ø£Ù…Ø± Ø§Ù„Ø¥Ù†ØªØ§Ø¬ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯".into()))?;
+            .ok_or_else(|| AppError::NotFound("أمر الإنتاج غير موجود".into()))?;
         Ok(to_dto(order))
     }
 }

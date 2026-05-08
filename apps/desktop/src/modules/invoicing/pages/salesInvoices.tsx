@@ -10,7 +10,7 @@ import { materialService } from '@modules/inventory/api/materialService';
 import { currencyService, type Currency } from '@modules/core/api/currencyService';
 import type { InvoiceDto, CustomerDto, MaterialDto } from "@erp/shared-types";
 import { toast } from "sonner";
-import { useCurrencyContext } from "@app/providers/CurrencyProvider";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 import { FinancialDocumentTemplate } from '@widgets/templates/FinancialDocumentTemplate';
 import { SalesInvoiceList } from '../components/SalesInvoiceList';
@@ -19,7 +19,8 @@ import { GenericDocumentGrid, DocumentColumn } from '@widgets/document-shell/Gen
 import { SummaryPanel } from '@widgets/document-shell/SummaryPanel';
 import { InvoicePartySelector } from '../components/InvoicePartySelector';
 import { useDocumentEditor } from '../hooks/useDocumentEditor';
-import { generateDocNumber, toBackendLines, GridLine } from '../lib/invoiceUtils';
+import { generateDocNumber, toBackendLines, type GridLine } from '../lib/invoiceUtils';
+import { type DocumentStatus } from '../components/DocumentStatusBadge';
 
 type ViewMode = "list" | "editor";
 
@@ -177,9 +178,9 @@ export default function SalesInvoices() {
 
       let saved: InvoiceDto;
       if (headerState.id) {
-        saved = await invoiceService.updateInvoice({ ...payload, id: headerState.id } as any);
+        saved = await invoiceService.updateInvoice({ ...payload, id: headerState.id });
       } else {
-        saved = await invoiceService.createInvoice(payload as any);
+        saved = await invoiceService.createInvoice(payload);
         // Set ID locally so retries (e.g. after failed post) use update instead of create
         setHeaderState(s => ({ ...s, id: saved.id }));
       }
@@ -212,8 +213,8 @@ export default function SalesInvoices() {
   };
 
   const enrichedLines = useMemo(() => {
-    return lines.map(line => {
-      const enriched: any = { ...line };
+    return lines.map((line: GridLine) => {
+      const enriched: GridLine & Record<string, string | number | undefined> = { ...line } as any;
       
       // The current unit_price and line_total are in the document's currency (headerState.currency_code)
       const docPrice = parseFloat(line.unit_price || "0");
@@ -334,7 +335,7 @@ export default function SalesInvoices() {
                   : 0
             }
             currency={headerState.currency_code}
-            status={headerState.status as any}
+            status={headerState.status as DocumentStatus}
             invoiceType="Sales"
           >
             <div className="space-y-4 pt-2">

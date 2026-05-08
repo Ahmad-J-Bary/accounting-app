@@ -5,13 +5,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { AccountDto, CustomerDto, SupplierDto, PartnerDto } from "@erp/shared-types";
 import { FormPanel } from '@widgets/form-shell/FormPanel';
 import { User, Building2 } from "lucide-react";
-import { useCurrencyContext } from "@app/providers/CurrencyProvider";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
+
+export interface PartnerFormPayload {
+  id?: string;
+  code: string;
+  name: string;
+  phone: string | null;
+  address: string | null;
+  notes: string | null;
+  opening_balance: string;
+  debit: string;
+  credit: string;
+  currency: string;
+  account_id: string | null;
+  is_active: boolean;
+}
 
 interface PartnerFormPanelProps {
   type: "customer" | "supplier";
   partner: CustomerDto | SupplierDto | PartnerDto | null;
   accounts: AccountDto[];
-  onSave: (payload: any) => Promise<void>;
+  onSave: (payload: PartnerFormPayload) => Promise<void>;
   onClose: () => void;
   saving?: boolean;
 }
@@ -49,17 +64,16 @@ export function PartnerFormPanel({
 
   useEffect(() => {
     if (partner) {
-      const p = partner as any;
       setForm({
-        name: p.name,
-        phone: p.phone || "",
-        address: p.address || "",
-        notes: p.notes || ""
+        name: partner.name,
+        phone: partner.phone || "",
+        address: partner.address || "",
+        notes: partner.notes || ""
       });
-      setOpeningBalance(p.opening_balance || "0");
-      setDebit(p.debit || "0");
-      setCredit(p.credit || "0");
-      setCurrency(p.currency || baseCurrency?.code || "USD");
+      setOpeningBalance(partner.opening_balance || "0");
+      setDebit(partner.debit || "0");
+      setCredit(partner.credit || "0");
+      setCurrency(partner.currency || baseCurrency?.code || "USD");
     } else {
       setForm({ name: "", phone: "", address: "", notes: "" });
       setOpeningBalance("0");
@@ -84,13 +98,12 @@ export function PartnerFormPanel({
     };
 
     if (partner) {
-      const p = partner as any;
       onSave({
         ...payload,
-        id: p.id,
-        code: p.code,
-        account_id: p.account_id,
-        is_active: p.is_active, // Keep existing status if editing
+        id: partner.id,
+        code: partner.code,
+        account_id: ("account_id" in partner) ? partner.account_id : (("linked_account_id" in partner) ? (partner as PartnerDto).linked_account_id : null),
+        is_active: partner.is_active, // Keep existing status if editing
       });
     } else {
       onSave({

@@ -5,7 +5,7 @@ import { formatDate } from '@shared/lib/format';
 import type { JournalEntryDto } from "@erp/shared-types";
 import { toast } from "sonner";
 import { CheckCircle2 } from "lucide-react";
-import { useCurrencyContext } from "@app/providers/CurrencyProvider";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 interface JournalTableProps {
   entries: JournalEntryDto[];

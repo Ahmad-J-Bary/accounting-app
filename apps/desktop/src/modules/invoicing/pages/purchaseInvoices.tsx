@@ -10,7 +10,7 @@ import { materialService } from '@modules/inventory/api/materialService';
 import { currencyService, type Currency } from '@modules/core/api/currencyService';
 import type { InvoiceDto, SupplierDto, MaterialDto } from "@erp/shared-types";
 import { toast } from "sonner";
-import { useCurrencyContext } from "@app/providers/CurrencyProvider";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 // Unified Components
 import { FinancialDocumentTemplate } from "@widgets/templates/FinancialDocumentTemplate";
@@ -20,7 +20,8 @@ import { InvoicePartySelector } from "../components/InvoicePartySelector";
 import { DocumentStatusBadge } from "../components/DocumentStatusBadge";
 import { PurchaseInvoiceList } from "../components/PurchaseInvoiceList";
 import { useDocumentEditor } from "../hooks/useDocumentEditor";
-import { generateDocNumber, toBackendLines } from "../lib/invoiceUtils";
+import { generateDocNumber, toBackendLines, type GridLine } from "../lib/invoiceUtils";
+import { type DocumentStatus } from "../components/DocumentStatusBadge";
 
 type ViewMode = "list" | "editor";
 
@@ -199,8 +200,8 @@ export default function PurchaseInvoices() {
   };
 
   const enrichedLines = useMemo(() => {
-    return lines.map((line: any) => {
-      const enriched: any = { ...line };
+    return lines.map((line: GridLine) => {
+      const enriched: GridLine & Record<string, string | number | undefined> = { ...line } as any;
       const docPrice = parseFloat(line.unit_price || "0");
       const docTotal = line.line_total || 0;
       
@@ -317,7 +318,7 @@ export default function PurchaseInvoices() {
                   : 0
             }
             currency={headerState.currency_code}
-            status={headerState.status as any}
+            status={headerState.status as DocumentStatus}
             invoiceType="Purchase"
           >
             <div className="space-y-4 pt-2">

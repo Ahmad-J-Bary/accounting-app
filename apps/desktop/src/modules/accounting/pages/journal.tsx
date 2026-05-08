@@ -13,7 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuLab
 import { useDataTable, useColumnPreferences } from '@shared/hooks';
 import { JournalForm } from '@modules/accounting/components/JournalForm';
 import { JournalTable } from '@modules/accounting/components/JournalTable';
-import { useCurrencyContext } from "@app/providers/CurrencyProvider";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 export default function Journal() {
   const { currencies, baseCurrency } = useCurrencyContext();
@@ -104,6 +104,7 @@ export default function Journal() {
   return (
     <OperationalTableTemplate
       title="القيود اليومية"
+      stats={stats}
       toolbar={
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => refresh(true)} disabled={isLoading} className="bg-white border-slate-200">
@@ -120,7 +121,7 @@ export default function Journal() {
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
               placeholder="بحث برقم القيد أو البيان..."
-              className="pr-10 h-11 border-slate-200 focus:ring-2 focus:ring-blue-500 transition-all"
+              className="pr-10 h-10 border-slate-200 focus:ring-2 focus:ring-blue-500 transition-all text-sm"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
@@ -128,7 +129,7 @@ export default function Journal() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-11 w-11 bg-white border-slate-200">
+              <Button variant="outline" size="icon" className="h-10 w-10 bg-white border-slate-200">
                 <Settings2 className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -147,19 +148,6 @@ export default function Journal() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-
-          <div className="flex items-center gap-6 mr-auto pl-2">
-            {stats.map((s, i) => (
-              <div key={i} className="flex flex-col items-start gap-1">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{s.label}</span>
-                <div className="flex items-center gap-2">
-                   <s.icon className={cn("w-4 h-4", s.color)} />
-                   <span className={cn("text-lg font-black tabular-nums", s.color)}>{s.value}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
         </div>
       }
       tableContent={

@@ -85,7 +85,7 @@ pub async fn add_unit(pool: &SqlitePool, material_id: &MaterialId, name: String,
     Ok(())
 }
 
-pub async fn delete_unit(pool: &SqlitePool, unit_id: &String) -> Result<(), AppError> {
+pub async fn delete_unit(pool: &SqlitePool, unit_id: &str) -> Result<(), AppError> {
     sqlx::query("DELETE FROM material_units WHERE id = ? AND is_base = 0")
         .bind(unit_id)
         .execute(pool)

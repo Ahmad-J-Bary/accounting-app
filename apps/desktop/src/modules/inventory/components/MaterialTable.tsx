@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Plus, Scale, Shuffle } from "lucide-react";
 import { cn } from '@shared/lib/utils';
 import type { MaterialDto, CategoryDto } from "@erp/shared-types";
-import { useCurrencyContext } from "@app/providers/CurrencyProvider";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { Badge } from "@shared/ui/badge";
 import { Button } from "@shared/ui/button";
 import { DataTable, Column } from '@widgets/table-shell/DataTable';

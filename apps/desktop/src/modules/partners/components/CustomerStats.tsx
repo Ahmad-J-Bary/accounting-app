@@ -1,5 +1,5 @@
 import { StatCard } from '@widgets/stats/StatCard';
-import { useCurrencyContext } from "@app/providers/CurrencyProvider";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import type { CustomerDto } from "@erp/shared-types";
 
 interface CustomerStatsProps {

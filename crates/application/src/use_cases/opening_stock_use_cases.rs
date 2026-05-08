@@ -50,9 +50,9 @@ impl RecordOpeningStockUseCase {
             let pid = item
                 .material_id
                 .parse()
-                .map_err(|_| AppError::Invalid("Ù…Ø¹Ø±Ù  Ù…Ø§Ø¯Ø© ØºÙŠØ± ØµØ§Ù„Ø­".into()))?;
+                .map_err(|_| AppError::Invalid("معرف مادة غير صالح".into()))?;
             let material = self.material_repo.find_by_id(&pid).await?.ok_or_else(|| {
-                AppError::NotFound(format!("Ø§Ù„Ù…Ø§Ø¯Ø© {} ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯Ø©", item.material_id))
+                AppError::NotFound(format!("المادة {} غير موجودة", item.material_id))
             })?;
 
             let quantity = Decimal::from_str(&item.quantity)
@@ -63,7 +63,7 @@ impl RecordOpeningStockUseCase {
                 .map_err(|_| AppError::Invalid("سعر تكلفة (أساسي) غير صالح".into()))?;
 
             let movement = StockMovement::new(
-                material.id.clone(),
+                material.id,
                 MovementType::OpeningBalance,
                 quantity,
                 unit_cost,
@@ -88,24 +88,24 @@ impl RecordOpeningStockUseCase {
                     .find_by_code("1201")
                     .await?
                     .ok_or_else(|| {
-                        AppError::NotFound("Ø­Ø³Ø§Ø¨ Ø¨Ø¶Ø§Ø¹Ø© Ø£ÙˆÙ„ Ø§Ù„Ù…Ø¯Ø© (1201) ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯".into())
+                        AppError::NotFound("حساب بضاعة أول المدة (1201) غير موجود".into())
                     })?;
 
             let equity_account = self
                 .account_repo
                 .find_by_code("2202")
                 .await?
-                .ok_or_else(|| AppError::NotFound("Ø­Ø³Ø§Ø¨ Ø±Ø£Ø³ Ø§Ù„Ù…Ø§Ù„ (2202) ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯".into()))?;
+                .ok_or_else(|| AppError::NotFound("حساب رأس المال (2202) غير موجود".into()))?;
 
             let lines = vec![
                 JournalLine::new(
-                    inventory_account.id.clone(),
+                    inventory_account.id,
                     domain::shared::monetary_amount::MonetaryAmount::new(Money::new(total_value, currency.clone()), fx_rate),
                     domain::shared::monetary_amount::MonetaryAmount::zero(currency.clone()),
                     "رصيد مخزون أول المدة".to_string(),
                 ),
                 JournalLine::new(
-                    equity_account.id.clone(),
+                    equity_account.id,
                     domain::shared::monetary_amount::MonetaryAmount::zero(currency.clone()),
                     domain::shared::monetary_amount::MonetaryAmount::new(Money::new(total_value, currency.clone()), fx_rate),
                     "رصيد افتتاحي مقابل بضاعة أول المدة".to_string(),
@@ -117,7 +117,7 @@ impl RecordOpeningStockUseCase {
                 lines,
                 entry_date,
                 req.notes
-                    .unwrap_or_else(|| "Ù‚ÙŠØ¯ Ø¨Ø¶Ø§Ø¹Ø© Ø£ÙˆÙ„ Ø§Ù„Ù…Ø¯Ø©".to_string()),
+                    .unwrap_or_else(|| "قيد بضاعة أول المدة".to_string()),
             )
             .map_err(|e| AppError::Invalid(e.to_string()))?;
 

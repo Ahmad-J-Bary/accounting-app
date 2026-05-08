@@ -8,7 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { InvoiceDto } from "@erp/shared-types";
 import { DataTable, Column } from "@widgets/table-shell/DataTable";
 import { cn } from "@shared/lib/utils";
-import { useCurrencyContext } from "@app/providers/CurrencyProvider";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useColumnPreferences } from "@shared/hooks";
 
 interface SalesInvoiceListProps {

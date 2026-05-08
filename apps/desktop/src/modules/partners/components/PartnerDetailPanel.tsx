@@ -3,7 +3,7 @@ import { formatDate } from '@shared/lib/format';
 import { Phone, MapPin, FileText, Receipt, Hash, X, Wallet } from "lucide-react";
 import type { InvoiceDto, Payment, CustomerDto, SupplierDto, PartnerDto } from "@erp/shared-types";
 import { Button } from "@shared/ui/button";
-import { useCurrencyContext } from "@app/providers/CurrencyProvider";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 interface PartnerDetailPanelProps {
   type: "customer" | "supplier";

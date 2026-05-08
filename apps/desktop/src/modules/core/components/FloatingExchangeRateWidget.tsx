@@ -5,7 +5,7 @@ import { Input } from "@shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { Badge } from "@shared/ui/badge";
 import { AlertTriangle, RefreshCw, Save, GripVertical, X } from "lucide-react";
-import { useCurrencyContext } from "@app/providers/CurrencyProvider";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 interface FloatingExchangeRateWidgetProps {
   isVisible: boolean;

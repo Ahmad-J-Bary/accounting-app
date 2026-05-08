@@ -11,7 +11,7 @@ import { accountingService } from '@modules/accounting/api/accountingService';
 import { materialService } from '@modules/inventory/api/materialService';
 import type { InvoiceDto, CustomerDto, SupplierDto, AccountDto, MaterialDto } from "@erp/shared-types";
 import { toast } from "sonner";
-import { useCurrencyContext } from "@app/providers/CurrencyProvider";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 // Unified Components
 import { FinancialDocumentTemplate } from "@widgets/templates/FinancialDocumentTemplate";
@@ -20,7 +20,7 @@ import { SummaryPanel } from "@widgets/document-shell/SummaryPanel";
 import { InvoicePartySelector } from "@modules/invoicing/components/InvoicePartySelector";
 import { DocumentStatusBadge } from "@modules/invoicing/components/DocumentStatusBadge";
 import { useDocumentEditor } from "@modules/invoicing/hooks/useDocumentEditor";
-import { generateDocNumber, toBackendLines } from "@modules/invoicing/lib/invoiceUtils";
+import { generateDocNumber, toBackendLines, type GridLine } from "@modules/invoicing/lib/invoiceUtils";
 
 type BalanceType = "Inventory" | "Customer" | "Supplier" | "Account" | "Cash";
 
@@ -152,8 +152,8 @@ export default function OpeningBalance() {
   };
 
   const enrichedLines = useMemo(() => {
-    return lines.map((line: any) => {
-      const enriched: any = { ...line };
+    return lines.map((line: GridLine) => {
+      const enriched: GridLine & Record<string, string> = { ...line } as any;
       const docPrice = parseFloat(line.unit_price || "0");
       const docTotal = (parseFloat(line.quantity || "0") * docPrice);
       

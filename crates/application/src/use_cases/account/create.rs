@@ -98,7 +98,7 @@ impl CreateAccountUseCase {
                 let customer_code = if account.code.starts_with("1203") { &account.code[4..] } else { &account.code[3..] };
                 
                 let customer_name = account.name_ar
-                    .strip_prefix("Ø°Ù…Ø© Ø§Ù„Ø¹Ù…ÙŠÙ„: ")
+                    .strip_prefix("ذمة العميل: ")
                     .unwrap_or(&account.name_ar)
                     .to_string();
 
@@ -110,7 +110,7 @@ impl CreateAccountUseCase {
                     customer_name,
                     cmd.phone.clone(),
                     cmd.address.clone(),
-                    Some(account.id.clone()),
+                    Some(account.id),
                     debit,
                     credit,
                     account.opening_balance,
@@ -133,7 +133,7 @@ impl CreateAccountUseCase {
                 let supplier_code = if account.code.starts_with("2203") { &account.code[4..] } else { &account.code[3..] };
                 
                 let supplier_name = account.name_ar
-                    .strip_prefix("Ø°Ù…Ø© Ø§Ù„Ù…ÙˆØ±Ø¯: ")
+                    .strip_prefix("ذمة المورد: ")
                     .unwrap_or(&account.name_ar)
                     .to_string();
 
@@ -145,7 +145,7 @@ impl CreateAccountUseCase {
                     supplier_name,
                     cmd.phone.clone(),
                     cmd.address.clone(),
-                    Some(account.id.clone()),
+                    Some(account.id),
                     debit,
                     credit,
                     account.opening_balance,

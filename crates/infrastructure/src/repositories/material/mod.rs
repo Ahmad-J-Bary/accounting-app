@@ -51,7 +51,7 @@ impl MaterialRepository for SqliteMaterialRepository {
         commands::add_unit(&self.pool, material_id, name, factor, barcode).await
     }
 
-    async fn delete_unit(&self, unit_id: &String) -> Result<(), AppError> {
+    async fn delete_unit(&self, unit_id: &str) -> Result<(), AppError> {
         commands::delete_unit(&self.pool, unit_id).await
     }
 }

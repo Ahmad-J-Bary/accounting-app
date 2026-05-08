@@ -1,4 +1,4 @@
-﻿use tauri::State;
+use tauri::State;
 use crate::bootstrap::container::AppState;
 use application::use_cases::fixed_asset_use_cases::FixedAssetUseCases;
 use application::use_cases::consumable_use_cases::ConsumableUseCases;
@@ -43,10 +43,19 @@ pub async fn create_fixed_asset(
     let pay_acc = Uuid::parse_str(&payment_account_id).map_err(|e| e.to_string())?;
 
     let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone());
-    let id = use_case.create_asset(
-        code, name, category_uuid, purchase_dt, money, fx, useful_life_months, 
-        asset_acc, dep_acc, acc_dep_acc, pay_acc
-    ).await.map_err(|e| e.to_string())?;
+    let id = use_case.create_asset(application::use_cases::fixed_asset_use_cases::CreateAssetRequest {
+        code,
+        name,
+        category_id: category_uuid,
+        purchase_date: purchase_dt,
+        purchase_cost: money,
+        fx_rate: fx,
+        useful_life_months,
+        asset_account_id: asset_acc,
+        depreciation_account_id: dep_acc,
+        accumulated_depreciation_account_id: acc_dep_acc,
+        payment_account_id: pay_acc,
+    }).await.map_err(|e| e.to_string())?;
 
     Ok(id.0.to_string())
 }
@@ -83,8 +92,16 @@ pub async fn create_consumable(
     let exp_acc = Uuid::parse_str(&expense_account_id).map_err(|e| e.to_string())?;
 
     let use_case = ConsumableUseCases::new(state.consumable_repo.clone(), state.asset_repo.clone(), state.journal_entry_repo.clone());
-    let id = use_case.create_item(code, name, category_uuid, money, fx, asset_acc, exp_acc)
-        .await.map_err(|e| e.to_string())?;
+    let id = use_case.create_item(application::use_cases::consumable_use_cases::CreateConsumableRequest {
+        code,
+        name,
+        category_id: category_uuid,
+        unit_cost: money,
+        fx_rate: fx,
+        asset_account_id: asset_acc,
+        expense_account_id: exp_acc,
+    })
+    .await.map_err(|e| e.to_string())?;
 
     Ok(id.0.to_string())
 }

@@ -19,7 +19,7 @@ import { TableActions } from '@widgets/table-shell/TableActions';
 import { useDataTable, useColumnPreferences } from '@shared/hooks';
 import { PaymentForm } from '@modules/payments/components/PaymentForm';
 import { PAYMENT_TYPE_LABELS } from '@modules/payments/lib/constants';
-import { useCurrencyContext } from "@app/providers/CurrencyProvider";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 export default function Payments() {
   const { formatAmount, currencies, baseCurrency, formatMonetaryAmount } = useCurrencyContext();

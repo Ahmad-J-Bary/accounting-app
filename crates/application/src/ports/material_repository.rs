@@ -12,5 +12,5 @@ pub trait MaterialRepository: Send + Sync {
     async fn update(&self, material: &Material) -> Result<(), AppError>;
     async fn delete_material(&self, id: &MaterialId) -> Result<(), AppError>;
     async fn add_unit(&self, material_id: &MaterialId, name: String, factor: rust_decimal::Decimal, barcode: Option<String>) -> Result<(), AppError>;
-    async fn delete_unit(&self, unit_id: &String) -> Result<(), AppError>;
+    async fn delete_unit(&self, unit_id: &str) -> Result<(), AppError>;
 }

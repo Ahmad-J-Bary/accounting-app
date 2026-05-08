@@ -1,6 +1,6 @@
 use crate::bootstrap::container::AppState;
 use application::use_cases::partner::{
-    CreatePartnerUseCase, PartnerQueries, UpdatePartnerUseCase, DeletePartnerUseCase, PartnerDto
+    CreatePartnerUseCase, PartnerQueries, UpdatePartnerUseCase, UpdatePartnerRequest, DeletePartnerUseCase, PartnerDto
 };
 use rust_decimal::Decimal;
 use tauri::State;
@@ -75,13 +75,13 @@ pub async fn update_partner(
         state.partner_repo.clone(),
         state.account_repo.clone(),
         state.uow.clone(),
-    ).execute(
+    ).execute(UpdatePartnerRequest {
         id,
         name,
-        rate,
-        amt,
+        exchange_rate: rate,
+        amount: amt,
         is_amount_in_usd,
         sharing_type,
-        ratio
-    ).await.map_err(|e| e.to_string())
+        manual_ratio: ratio,
+    }).await.map_err(|e| e.to_string())
 }

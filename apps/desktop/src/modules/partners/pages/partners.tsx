@@ -173,6 +173,7 @@ export default function Partners() {
   return (
     <OperationalTableTemplate
       title="الشركاء ورأس المال"
+      stats={stats}
       toolbar={
         <>
           <Button variant="outline" size="sm" onClick={() => refresh(true)} disabled={loading} className="bg-white">
@@ -190,14 +191,14 @@ export default function Partners() {
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input 
               placeholder="بحث عن شريك..." 
-              className="pr-10 h-11 border-slate-200 focus:ring-2 focus:ring-blue-500 transition-all text-sm" 
+              className="pr-10 h-10 border-slate-200 focus:ring-2 focus:ring-blue-500 transition-all text-sm" 
               value={search} 
               onChange={(e) => setSearch(e.target.value)} 
             />
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-11 w-11 bg-white border-slate-200">
+              <Button variant="outline" size="icon" className="h-10 w-10 bg-white border-slate-200">
                 <Settings2 className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -224,18 +225,6 @@ export default function Partners() {
               <StrategyOption id="g2" value="BasedOnCapitalUSD" label="دولار" />
               <StrategyOption id="g3" value="Manual" label="يدوي" />
             </RadioGroup>
-          </div>
-
-          <div className="flex items-center gap-6 mr-auto pl-2">
-            {stats.map((s, i) => (
-              <div key={i} className="flex flex-col items-start gap-1">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{s.label}</span>
-                <div className="flex items-center gap-2">
-                   <s.icon className={cn("w-4 h-4", s.color)} />
-                   <span className={cn("text-lg font-black tabular-nums", s.color)}>{s.value}</span>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       }
@@ -300,7 +289,7 @@ function StrategyOption({ id, value, label }: StrategyOptionProps) {
 interface ChartCardProps {
   title: string;
   icon: React.ElementType;
-  data: any[];
+  data: { name: string; value: number }[];
   formatter: (v: number) => string;
 }
 

@@ -17,12 +17,27 @@ import type { MaterialDto, CategoryDto } from "@erp/shared-types";
 
 const DEFAULT_CATEGORY_NAME = "غير مصنف";
 
+interface MaterialSavePayload {
+  id?: string;
+  name: string;
+  barcode: string;
+  code: string;
+  minimum_stock: string;
+  is_active: boolean;
+  units: {
+    name: string;
+    conversion_factor: string;
+    barcode: string;
+  }[];
+  category_ids: string[];
+}
+
 interface MaterialFormProps {
   open: boolean;
   onClose: () => void;
   material: MaterialDto | null;
   categories: CategoryDto[];
-  onSave: (payload: any) => Promise<void>;
+  onSave: (payload: MaterialSavePayload) => Promise<void>;
   saving?: boolean;
 }
 

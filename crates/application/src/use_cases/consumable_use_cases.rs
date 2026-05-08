@@ -1,4 +1,4 @@
-﻿use std::sync::Arc;
+use std::sync::Arc;
 use crate::ports::consumable_repository::ConsumableRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::asset_repository::AssetRepository;
@@ -16,6 +16,16 @@ pub struct ConsumableUseCases {
     journal_repo: Arc<dyn JournalEntryRepository>,
 }
 
+pub struct CreateConsumableRequest {
+    pub code: String,
+    pub name: String,
+    pub category_id: Uuid,
+    pub unit_cost: Money,
+    pub fx_rate: Decimal,
+    pub asset_account_id: Uuid,
+    pub expense_account_id: Uuid,
+}
+
 impl ConsumableUseCases {
     pub fn new(
         repo: Arc<dyn ConsumableRepository>,
@@ -27,15 +37,17 @@ impl ConsumableUseCases {
 
     pub async fn create_item(
         &self,
-        code: String,
-        name: String,
-        category_id: Uuid,
-        unit_cost: Money,
-        fx_rate: Decimal,
-        asset_account_id: Uuid,
-        expense_account_id: Uuid,
+        req: CreateConsumableRequest,
     ) -> Result<ConsumableId, AppError> {
-        let item = Consumable::new(code, name, category_id, unit_cost, fx_rate, asset_account_id, expense_account_id);
+        let item = Consumable::new(
+            req.code,
+            req.name,
+            req.category_id,
+            req.unit_cost,
+            req.fx_rate,
+            req.asset_account_id,
+            req.expense_account_id,
+        );
         self.repo.save(&item).await?;
         Ok(item.id)
     }
@@ -151,11 +163,15 @@ mod tests {
         let use_cases = ConsumableUseCases::new(repo, asset_repo.clone(), journal_repo.clone());
 
         // 1. Create
-        let id = use_cases.create_item(
-            "C1".to_string(), "Ink".to_string(), Uuid::new_v4(),
-            Money::new(dec!(50), Currency::syp()), dec!(1),
-            Uuid::new_v4(), Uuid::new_v4()
-        ).await.unwrap();
+        let id = use_cases.create_item(CreateConsumableRequest {
+            code: "C1".to_string(),
+            name: "Ink".to_string(),
+            category_id: Uuid::new_v4(),
+            unit_cost: Money::new(dec!(50), Currency::syp()),
+            fx_rate: dec!(1),
+            asset_account_id: Uuid::new_v4(),
+            expense_account_id: Uuid::new_v4(),
+        }).await.unwrap();
 
         // 2. Add Stock
         use_cases.add_stock(id.0, dec!(10)).await.unwrap();
