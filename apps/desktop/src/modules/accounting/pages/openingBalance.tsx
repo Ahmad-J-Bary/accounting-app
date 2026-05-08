@@ -153,7 +153,8 @@ export default function OpeningBalance() {
 
   const enrichedLines = useMemo(() => {
     return lines.map((line: GridLine) => {
-      const enriched: GridLine & Record<string, string> = { ...line } as any;
+      type EnrichedLine = GridLine & Record<string, string | number>;
+      const enriched = { ...line } as EnrichedLine;
       const docPrice = parseFloat(line.unit_price || "0");
       const docTotal = (parseFloat(line.quantity || "0") * docPrice);
       

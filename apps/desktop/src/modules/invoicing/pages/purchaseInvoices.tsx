@@ -201,7 +201,8 @@ export default function PurchaseInvoices() {
 
   const enrichedLines = useMemo(() => {
     return lines.map((line: GridLine) => {
-      const enriched: GridLine & Record<string, string | number | undefined> = { ...line } as any;
+      type EnrichedLine = GridLine & Record<string, string | number | undefined>;
+      const enriched = { ...line } as EnrichedLine;
       const docPrice = parseFloat(line.unit_price || "0");
       const docTotal = line.line_total || 0;
       

@@ -1,8 +1,8 @@
 use tauri::State;
 use crate::bootstrap::container::AppState;
-use application::use_cases::create_journal_entry::CreateJournalEntryUseCase;
-use application::use_cases::post_journal_entry::PostJournalEntryUseCase;
-use application::use_cases::list_journal_entries::ListJournalEntriesUseCase;
+use application::use_cases::journal::{
+    CreateJournalEntryUseCase, PostJournalEntryUseCase, ListJournalEntriesUseCase, ReverseJournalEntryUseCase
+};
 use application::dto::journal_entry_dto::{CreateJournalEntryRequest, JournalEntryDto};
 
 #[tauri::command]
@@ -31,7 +31,6 @@ pub async fn post_journal_entry(
         .execute(entry_id).await.map_err(|e| e.to_string())
 }
 
-use application::use_cases::reverse_journal_entry::ReverseJournalEntryUseCase;
 
 #[tauri::command]
 pub async fn reverse_journal_entry(

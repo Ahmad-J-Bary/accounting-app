@@ -214,7 +214,8 @@ export default function SalesInvoices() {
 
   const enrichedLines = useMemo(() => {
     return lines.map((line: GridLine) => {
-      const enriched: GridLine & Record<string, string | number | undefined> = { ...line } as any;
+      type EnrichedLine = GridLine & Record<string, string | number | undefined>;
+      const enriched = { ...line } as EnrichedLine;
       
       // The current unit_price and line_total are in the document's currency (headerState.currency_code)
       const docPrice = parseFloat(line.unit_price || "0");

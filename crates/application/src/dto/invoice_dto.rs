@@ -1,4 +1,4 @@
-use domain::sales::{UnifiedInvoice, InvoiceLine, InvoiceType, InvoiceStatus, PaymentMethod};
+use domain::sales::{Invoice, UnifiedInvoice, InvoiceLine, InvoiceType, InvoiceStatus, PaymentMethod};
 use domain::shared::monetary_amount::MonetaryAmount;
 use serde::{Deserialize, Serialize};
 
@@ -104,6 +104,41 @@ pub struct UpdateInvoiceRequest {
     pub tax_amount: String,
     pub discount_amount: String,
     pub notes: Option<String>,
+}
+
+impl From<Invoice> for InvoiceDto {
+    fn from(invoice: Invoice) -> Self {
+        let status = if invoice.posted { "Posted" } else { "Draft" };
+        let _subtotal = invoice.subtotal();
+        let total = invoice.total();
+
+        Self {
+            id: invoice.id.0.to_string(),
+            invoice_number: invoice.invoice_number,
+            invoice_type: "Sales".to_string(),
+            customer_id: Some(invoice.customer_id.0.to_string()),
+            customer_name: None,
+            supplier_id: None,
+            supplier_name: None,
+            lines: invoice.lines.into_iter().map(InvoiceLineDto::from).collect(),
+            tax_amount: invoice.tax_amount.amount().to_string(),
+            tax_amount_v2: None, // Or construct if needed
+            discount_amount: invoice.discount_amount.amount().to_string(),
+            discount_amount_v2: None,
+            total_amount: total.amount().to_string(),
+            total_amount_v2: None,
+            payment_method: "Cash".to_string(), // Default for legacy
+            amount_paid: total.amount().to_string(),
+            amount_paid_v2: None,
+            status: status.to_string(),
+            issued_at: invoice.issued_at.to_rfc3339(),
+            currency_code: invoice.tax_amount.currency().code.clone(),
+            exchange_rate: "1".to_string(),
+            notes: None,
+            total_profit: None,
+            profit_percent: None,
+        }
+    }
 }
 
 impl From<UnifiedInvoice> for InvoiceDto {

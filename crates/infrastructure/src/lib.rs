@@ -25,3 +25,5 @@ pub use repositories::sqlite_unit_of_work::SqliteUnitOfWork;
 pub use repositories::SqliteCodePrefixRepository;
 pub use repositories::SqliteCurrencyRepository;
 pub use repositories::SqliteExchangeRateRepository;
+pub use repositories::SqliteInvoiceRepository;
+pub use repositories::SqlitePurchaseInvoiceRepository;

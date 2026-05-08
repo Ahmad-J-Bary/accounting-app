@@ -41,3 +41,7 @@ pub mod currency;
 pub use currency::SqliteCurrencyRepository;
 pub mod exchange_rate;
 pub use exchange_rate::SqliteExchangeRateRepository;
+pub mod sqlite_invoice_repository;
+pub use sqlite_invoice_repository::SqliteInvoiceRepository;
+pub mod sqlite_purchase_invoice_repository;
+pub use sqlite_purchase_invoice_repository::SqlitePurchaseInvoiceRepository;

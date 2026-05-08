@@ -1,7 +1,6 @@
 use tauri::State;
 use crate::bootstrap::container::AppState;
-use application::use_cases::fixed_asset_use_cases::FixedAssetUseCases;
-use application::use_cases::consumable_use_cases::ConsumableUseCases;
+use application::use_cases::asset::{FixedAssetUseCases, ConsumableUseCases, CreateAssetRequest, CreateConsumableRequest};
 use domain::assets::{FixedAsset, Consumable, AssetType, AssetCategory};
 use domain::shared::Money;
 use rust_decimal::Decimal;
@@ -43,7 +42,7 @@ pub async fn create_fixed_asset(
     let pay_acc = Uuid::parse_str(&payment_account_id).map_err(|e| e.to_string())?;
 
     let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone());
-    let id = use_case.create_asset(application::use_cases::fixed_asset_use_cases::CreateAssetRequest {
+    let id = use_case.create_asset(CreateAssetRequest {
         code,
         name,
         category_id: category_uuid,
@@ -92,7 +91,7 @@ pub async fn create_consumable(
     let exp_acc = Uuid::parse_str(&expense_account_id).map_err(|e| e.to_string())?;
 
     let use_case = ConsumableUseCases::new(state.consumable_repo.clone(), state.asset_repo.clone(), state.journal_entry_repo.clone());
-    let id = use_case.create_item(application::use_cases::consumable_use_cases::CreateConsumableRequest {
+    let id = use_case.create_item(CreateConsumableRequest {
         code,
         name,
         category_id: category_uuid,

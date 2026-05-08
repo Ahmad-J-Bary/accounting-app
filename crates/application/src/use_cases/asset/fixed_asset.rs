@@ -184,7 +184,6 @@ mod tests {
     use crate::mocks::{MockAssetRepository, MockJournalRepository};
     use domain::shared::Currency;
     use rust_decimal_macros::dec;
-    use std::sync::Mutex;
 
     #[tokio::test]
     async fn test_asset_lifecycle() {

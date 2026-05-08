@@ -1,6 +1,6 @@
 use tauri::State;
 use crate::bootstrap::container::AppState;
-use application::use_cases::production_use_cases::{
+use application::use_cases::production::{
     CreateProductionOrderUseCase, ListProductionOrdersUseCase, GetProductionOrderUseCase,
 };
 use application::dto::production_dto::{CreateProductionOrderRequest, ProductionOrderDto};

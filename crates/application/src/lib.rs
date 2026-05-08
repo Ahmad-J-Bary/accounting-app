@@ -1,11 +1,12 @@
-pub mod errors;
-pub mod ports;
-pub mod use_cases;
 pub mod dto;
-pub mod utils;
+pub mod errors;
 #[cfg(test)]
 pub mod mocks;
+pub mod ports;
+pub mod use_cases;
+pub mod utils;
 
 // Removed obsolete exports
-pub use use_cases::create_journal_entry::CreateJournalEntryUseCase;
-pub use use_cases::post_journal_entry::PostJournalEntryUseCase;
+// Re-exporting from modular use_cases
+pub use use_cases::invoice::{CreateInvoiceUseCase, ListInvoicesUseCase, PostInvoiceUseCase};
+pub use use_cases::journal::{CreateJournalEntryUseCase, PostJournalEntryUseCase};

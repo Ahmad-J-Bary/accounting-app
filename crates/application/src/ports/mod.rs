@@ -1,4 +1,5 @@
-// Removed obsolete invoice ports
+pub mod invoice_repository;
+pub mod purchase_invoice_repository;
 pub mod customer_repository;
 pub mod material_repository;
 pub mod category_repository;

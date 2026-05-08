@@ -54,6 +54,14 @@ impl MonetaryAmount {
     pub fn is_zero(&self) -> bool {
         self.original.is_zero()
     }
+
+    pub fn is_negative(&self) -> bool {
+        self.original.is_negative()
+    }
+
+    pub fn is_positive(&self) -> bool {
+        self.original.is_positive()
+    }
 }
 
 impl Add for MonetaryAmount {

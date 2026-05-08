@@ -31,15 +31,21 @@ impl Invoice {
         discount_amount: Money,
     ) -> Result<Self, DomainError> {
         if lines.is_empty() {
-            return Err(DomainError::Invalid("الفاتورة يجب أن تحتوي على سطر واحد على الأقل".into()));
+            return Err(DomainError::Invalid(
+                "الفاتورة يجب أن تحتوي على سطر واحد على الأقل".into(),
+            ));
         }
 
         for line in &lines {
             if line.quantity <= Decimal::ZERO {
-                return Err(DomainError::Invalid("الكمية يجب أن تكون أكبر من صفر".into()));
+                return Err(DomainError::Invalid(
+                    "الكمية يجب أن تكون أكبر من صفر".into(),
+                ));
             }
             if line.unit_price.is_negative() {
-                return Err(DomainError::Invalid("سعر الوحدة يجب أن يكون غير سالب".into()));
+                return Err(DomainError::Invalid(
+                    "سعر الوحدة يجب أن يكون غير سالب".into(),
+                ));
             }
         }
 
@@ -56,9 +62,9 @@ impl Invoice {
     }
 
     pub fn subtotal(&self) -> Money {
-        self.lines.iter().fold(Money::zero(), |acc, line| {
-            acc + line.line_total()
-        })
+        self.lines
+            .iter()
+            .fold(Money::zero(), |acc, line| acc + line.line_total().original)
     }
 
     pub fn total(&self) -> Money {
@@ -69,7 +75,7 @@ impl Invoice {
         if self.posted {
             return Err(DomainError::Invalid("الفاتورة مُرحّلة مسبقًا".into()));
         }
-        
+
         if self.lines.is_empty() {
             return Err(DomainError::Invalid("لا يمكن ترحيل فاتورة فارغة".into()));
         }
@@ -84,15 +90,21 @@ impl Invoice {
 
     pub fn add_line(&mut self, line: InvoiceLine) -> Result<(), DomainError> {
         if self.posted {
-            return Err(DomainError::Forbidden("لا يمكن إضافة سطر لفاتورة مُرحّلة".into()));
+            return Err(DomainError::Forbidden(
+                "لا يمكن إضافة سطر لفاتورة مُرحّلة".into(),
+            ));
         }
-        
+
         if line.quantity <= Decimal::ZERO {
-            return Err(DomainError::Invalid("الكمية يجب أن تكون أكبر من صفر".into()));
+            return Err(DomainError::Invalid(
+                "الكمية يجب أن تكون أكبر من صفر".into(),
+            ));
         }
-        
+
         if line.unit_price.is_negative() {
-            return Err(DomainError::Invalid("سعر الوحدة يجب أن يكون غير سالب".into()));
+            return Err(DomainError::Invalid(
+                "سعر الوحدة يجب أن يكون غير سالب".into(),
+            ));
         }
 
         self.lines.push(line);
@@ -101,7 +113,9 @@ impl Invoice {
 
     pub fn remove_line(&mut self, index: usize) -> Result<(), DomainError> {
         if self.posted {
-            return Err(DomainError::Forbidden("لا يمكن حذف سطر من فاتورة مُرحّلة".into()));
+            return Err(DomainError::Forbidden(
+                "لا يمكن حذف سطر من فاتورة مُرحّلة".into(),
+            ));
         }
 
         if index >= self.lines.len() {
@@ -133,15 +147,20 @@ mod tests {
     #[test]
     fn invoice_with_valid_lines_succeeds() {
         let customer_id = CustomerId::new();
-        let lines = vec![
-            InvoiceLine::new(
-                MaterialId(Uuid::new_v4()),
-                dec!(2),
-                Money::syp(dec!(50)),
-            ),
-        ];
+        let lines = vec![InvoiceLine::new(
+            MaterialId(Uuid::new_v4()),
+            dec!(2),
+            crate::shared::monetary_amount::MonetaryAmount::from_base(dec!(50), crate::shared::currency::Currency::syp()),
+            None, None, None, None, None, None, None, None, None
+        )];
 
-        let result = Invoice::new("INV-001".into(), customer_id, lines, Money::zero(), Money::zero());
+        let result = Invoice::new(
+            "INV-001".into(),
+            customer_id,
+            lines,
+            Money::zero(),
+            Money::zero(),
+        );
         assert!(result.is_ok());
     }
 
@@ -152,16 +171,25 @@ mod tests {
             InvoiceLine::new(
                 MaterialId(Uuid::new_v4()),
                 dec!(2),
-                Money::syp(dec!(50)),
+                crate::shared::monetary_amount::MonetaryAmount::from_base(dec!(50), crate::shared::currency::Currency::syp()),
+                None, None, None, None, None, None, None, None, None
             ),
             InvoiceLine::new(
                 MaterialId(Uuid::new_v4()),
                 dec!(3),
-                Money::syp(dec!(100)),
+                crate::shared::monetary_amount::MonetaryAmount::from_base(dec!(100), crate::shared::currency::Currency::syp()),
+                None, None, None, None, None, None, None, None, None
             ),
         ];
 
-        let invoice = Invoice::new("INV-001".into(), customer_id, lines, Money::zero(), Money::zero()).unwrap();
+        let invoice = Invoice::new(
+            "INV-001".into(),
+            customer_id,
+            lines,
+            Money::zero(),
+            Money::zero(),
+        )
+        .unwrap();
         let total = invoice.total();
         assert_eq!(total.amount(), dec!(400));
     }
@@ -169,15 +197,21 @@ mod tests {
     #[test]
     fn posting_twice_is_rejected() {
         let customer_id = CustomerId::new();
-        let lines = vec![
-            InvoiceLine::new(
-                MaterialId(Uuid::new_v4()),
-                dec!(2),
-                Money::syp(dec!(50)),
-            ),
-        ];
+        let lines = vec![InvoiceLine::new(
+            MaterialId(Uuid::new_v4()),
+            dec!(2),
+            crate::shared::monetary_amount::MonetaryAmount::from_base(dec!(50), crate::shared::currency::Currency::syp()),
+            None, None, None, None, None, None, None, None, None
+        )];
 
-        let mut invoice = Invoice::new("INV-001".into(), customer_id, lines, Money::zero(), Money::zero()).unwrap();
+        let mut invoice = Invoice::new(
+            "INV-001".into(),
+            customer_id,
+            lines,
+            Money::zero(),
+            Money::zero(),
+        )
+        .unwrap();
         assert!(invoice.post().is_ok());
         assert!(invoice.post().is_err());
     }
@@ -185,21 +219,28 @@ mod tests {
     #[test]
     fn cannot_add_line_to_posted_invoice() {
         let customer_id = CustomerId::new();
-        let lines = vec![
-            InvoiceLine::new(
-                MaterialId(Uuid::new_v4()),
-                dec!(2),
-                Money::syp(dec!(50)),
-            ),
-        ];
+        let lines = vec![InvoiceLine::new(
+            MaterialId(Uuid::new_v4()),
+            dec!(2),
+            crate::shared::monetary_amount::MonetaryAmount::from_base(dec!(50), crate::shared::currency::Currency::syp()),
+            None, None, None, None, None, None, None, None, None
+        )];
 
-        let mut invoice = Invoice::new("INV-001".into(), customer_id, lines, Money::zero(), Money::zero()).unwrap();
+        let mut invoice = Invoice::new(
+            "INV-001".into(),
+            customer_id,
+            lines,
+            Money::zero(),
+            Money::zero(),
+        )
+        .unwrap();
         invoice.post().unwrap();
 
         let new_line = InvoiceLine::new(
             MaterialId(Uuid::new_v4()),
             dec!(1),
-            Money::syp(dec!(30)),
+            crate::shared::monetary_amount::MonetaryAmount::from_base(dec!(30), crate::shared::currency::Currency::syp()),
+            None, None, None, None, None, None, None, None, None
         );
 
         assert!(invoice.add_line(new_line).is_err());
@@ -208,15 +249,21 @@ mod tests {
     #[test]
     fn cannot_remove_line_from_posted_invoice() {
         let customer_id = CustomerId::new();
-        let lines = vec![
-            InvoiceLine::new(
-                MaterialId(Uuid::new_v4()),
-                dec!(2),
-                Money::syp(dec!(50)),
-            ),
-        ];
+        let lines = vec![InvoiceLine::new(
+            MaterialId(Uuid::new_v4()),
+            dec!(2),
+            crate::shared::monetary_amount::MonetaryAmount::from_base(dec!(50), crate::shared::currency::Currency::syp()),
+            None, None, None, None, None, None, None, None, None
+        )];
 
-        let mut invoice = Invoice::new("INV-001".into(), customer_id, lines, Money::zero(), Money::zero()).unwrap();
+        let mut invoice = Invoice::new(
+            "INV-001".into(),
+            customer_id,
+            lines,
+            Money::zero(),
+            Money::zero(),
+        )
+        .unwrap();
         invoice.post().unwrap();
 
         assert!(invoice.remove_line(0).is_err());
@@ -225,31 +272,40 @@ mod tests {
     #[test]
     fn negative_quantity_is_rejected() {
         let customer_id = CustomerId::new();
-        let lines = vec![
-            InvoiceLine::new(
-                MaterialId(Uuid::new_v4()),
-                dec!(-1),
-                Money::syp(dec!(50)),
-            ),
-        ];
+        let lines = vec![InvoiceLine::new(
+            MaterialId(Uuid::new_v4()),
+            dec!(-1),
+            crate::shared::monetary_amount::MonetaryAmount::from_base(dec!(50), crate::shared::currency::Currency::syp()),
+            None, None, None, None, None, None, None, None, None
+        )];
 
-        let result = Invoice::new("INV-001".into(), customer_id, lines, Money::zero(), Money::zero());
+        let result = Invoice::new(
+            "INV-001".into(),
+            customer_id,
+            lines,
+            Money::zero(),
+            Money::zero(),
+        );
         assert!(result.is_err());
     }
 
     #[test]
     fn negative_unit_price_is_rejected() {
         let customer_id = CustomerId::new();
-        let lines = vec![
-            InvoiceLine::new(
-                MaterialId(Uuid::new_v4()),
-                dec!(2),
-                Money::syp(dec!(-50)),
-            ),
-        ];
+        let lines = vec![InvoiceLine::new(
+            MaterialId(Uuid::new_v4()),
+            dec!(2),
+            crate::shared::monetary_amount::MonetaryAmount::from_base(dec!(-50), crate::shared::currency::Currency::syp()),
+            None, None, None, None, None, None, None, None, None
+        )];
 
-        let result = Invoice::new("INV-001".into(), customer_id, lines, Money::zero(), Money::zero());
+        let result = Invoice::new(
+            "INV-001".into(),
+            customer_id,
+            lines,
+            Money::zero(),
+            Money::zero(),
+        );
         assert!(result.is_err());
     }
 }
-

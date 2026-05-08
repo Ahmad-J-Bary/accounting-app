@@ -1,6 +1,6 @@
 use tauri::State;
 use crate::bootstrap::container::AppState;
-use application::use_cases::payment_use_cases::{CreatePaymentUseCase, ListPaymentsUseCase};
+use application::use_cases::payment::{CreatePaymentUseCase, ListPaymentsUseCase};
 use application::dto::payment_dto::{CreatePaymentRequest, PaymentDto};
 
 #[tauri::command]

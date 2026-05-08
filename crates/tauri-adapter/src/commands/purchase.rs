@@ -1,6 +1,6 @@
 use tauri::State;
 use crate::bootstrap::container::AppState;
-use application::use_cases::purchase_invoice_use_cases::{
+use application::use_cases::purchase_invoice::{
     CreatePurchaseInvoiceUseCase, ListPurchaseInvoicesUseCase, PostPurchaseInvoiceUseCase,
 };
 use application::dto::purchase_invoice_dto::{CreatePurchaseInvoiceRequest, PurchaseInvoiceDto};

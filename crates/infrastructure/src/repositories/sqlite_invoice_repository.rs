@@ -161,7 +161,11 @@ impl SqliteInvoiceRepository {
             lines.push(InvoiceLine::new(
                 MaterialId(uuid::Uuid::parse_str(&material_id_str).unwrap()),
                 Decimal::from_str(&quantity_str).unwrap_or(Decimal::ZERO),
-                Money::syp(Decimal::from_str(&price_str).unwrap_or(Decimal::ZERO))
+                domain::shared::monetary_amount::MonetaryAmount::from_base(
+                    Decimal::from_str(&price_str).unwrap_or(Decimal::ZERO),
+                    domain::shared::currency::Currency::syp()
+                ),
+                None, None, None, None, None, None, None, None, None
             ));
         }
         Ok(lines)
