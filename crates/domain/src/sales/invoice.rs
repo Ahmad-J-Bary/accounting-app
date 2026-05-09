@@ -62,9 +62,15 @@ impl Invoice {
     }
 
     pub fn subtotal(&self) -> Money {
+        if self.lines.is_empty() {
+            return Money::zero();
+        }
+        let first_currency = self.lines[0].unit_price.currency().clone();
         self.lines
             .iter()
-            .fold(Money::zero(), |acc, line| acc + line.line_total().original)
+            .fold(Money::new(Decimal::ZERO, first_currency), |acc, line| {
+                acc + line.line_total().original
+            })
     }
 
     pub fn total(&self) -> Money {
@@ -138,8 +144,8 @@ mod tests {
             "INV-001".into(),
             CustomerId::new(),
             vec![],
-            Money::zero(),
-            Money::zero(),
+            Money::syp(Decimal::ZERO),
+            Money::syp(Decimal::ZERO),
         );
         assert!(result.is_err());
     }
@@ -158,8 +164,8 @@ mod tests {
             "INV-001".into(),
             customer_id,
             lines,
-            Money::zero(),
-            Money::zero(),
+            Money::syp(Decimal::ZERO),
+            Money::syp(Decimal::ZERO),
         );
         assert!(result.is_ok());
     }
@@ -186,8 +192,8 @@ mod tests {
             "INV-001".into(),
             customer_id,
             lines,
-            Money::zero(),
-            Money::zero(),
+            Money::syp(Decimal::ZERO),
+            Money::syp(Decimal::ZERO),
         )
         .unwrap();
         let total = invoice.total();
@@ -208,8 +214,8 @@ mod tests {
             "INV-001".into(),
             customer_id,
             lines,
-            Money::zero(),
-            Money::zero(),
+            Money::syp(Decimal::ZERO),
+            Money::syp(Decimal::ZERO),
         )
         .unwrap();
         assert!(invoice.post().is_ok());
@@ -230,8 +236,8 @@ mod tests {
             "INV-001".into(),
             customer_id,
             lines,
-            Money::zero(),
-            Money::zero(),
+            Money::syp(Decimal::ZERO),
+            Money::syp(Decimal::ZERO),
         )
         .unwrap();
         invoice.post().unwrap();
@@ -260,8 +266,8 @@ mod tests {
             "INV-001".into(),
             customer_id,
             lines,
-            Money::zero(),
-            Money::zero(),
+            Money::syp(Decimal::ZERO),
+            Money::syp(Decimal::ZERO),
         )
         .unwrap();
         invoice.post().unwrap();
@@ -283,8 +289,8 @@ mod tests {
             "INV-001".into(),
             customer_id,
             lines,
-            Money::zero(),
-            Money::zero(),
+            Money::syp(Decimal::ZERO),
+            Money::syp(Decimal::ZERO),
         );
         assert!(result.is_err());
     }
@@ -303,8 +309,8 @@ mod tests {
             "INV-001".into(),
             customer_id,
             lines,
-            Money::zero(),
-            Money::zero(),
+            Money::syp(Decimal::ZERO),
+            Money::syp(Decimal::ZERO),
         );
         assert!(result.is_err());
     }

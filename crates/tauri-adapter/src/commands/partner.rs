@@ -23,6 +23,7 @@ pub async fn add_partner(
     CreatePartnerUseCase::new(
         state.partner_repo.clone(),
         state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
         state.uow.clone(),
     ).execute(
         name,

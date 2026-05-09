@@ -18,6 +18,10 @@ interface UseDataTableOptions<T> {
    * Custom error message
    */
   errorLabel?: string;
+  /**
+   * Dependencies that trigger a re-fetch
+   */
+  dependencies?: unknown[];
 }
 
 /**
@@ -27,7 +31,8 @@ export function useDataTable<T>({
   fetchData, 
   searchFields, 
   initialSearch = "",
-  errorLabel = "خطأ في جلب البيانات"
+  errorLabel = "خطأ في جلب البيانات",
+  dependencies = []
 }: UseDataTableOptions<T>) {
   const optionsRef = useRef({ fetchData, searchFields, errorLabel });
   optionsRef.current = { fetchData, searchFields, errorLabel };
@@ -77,6 +82,19 @@ export function useDataTable<T>({
       refresh();
     }
   }, [refresh]);
+
+  // Re-fetch when dependencies change
+  const lastDepsRef = useRef<unknown[]>(dependencies);
+  
+  useEffect(() => {
+    const depsChanged = dependencies.length !== lastDepsRef.current.length || 
+                        dependencies.some((d, i) => d !== lastDepsRef.current[i]);
+    
+    if (depsChanged && initialFetchCalledRef.current) {
+      lastDepsRef.current = dependencies;
+      refresh(true);
+    }
+  }, [refresh, dependencies]);
 
   const filtered = useMemo(() => {
     const s = search.toLowerCase().trim();

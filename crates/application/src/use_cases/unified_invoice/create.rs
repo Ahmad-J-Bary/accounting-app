@@ -13,6 +13,7 @@ use crate::ports::supplier_repository::SupplierRepository;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::category_repository::CategoryRepository;
+use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::dto::invoice_dto::{CreateInvoiceRequest, InvoiceDto};
 use crate::dto::customer_dto::CreateCustomerRequest;
 use crate::dto::supplier_dto::CreateSupplierRequest;
@@ -27,6 +28,7 @@ pub struct CreateInvoiceUseCase {
     account_repo: Arc<dyn AccountRepository>,
     material_repo: Arc<dyn MaterialRepository>,
     category_repo: Arc<dyn CategoryRepository>,
+    journal_repo: Arc<dyn JournalEntryRepository>,
 }
 
 impl CreateInvoiceUseCase {
@@ -37,8 +39,9 @@ impl CreateInvoiceUseCase {
         account_repo: Arc<dyn AccountRepository>,
         material_repo: Arc<dyn MaterialRepository>,
         category_repo: Arc<dyn CategoryRepository>,
+        journal_repo: Arc<dyn JournalEntryRepository>,
     ) -> Self {
-        Self { repo, customer_repo, supplier_repo, account_repo, material_repo, category_repo }
+        Self { repo, customer_repo, supplier_repo, account_repo, material_repo, category_repo, journal_repo }
     }
 
     pub async fn execute(&self, req: CreateInvoiceRequest) -> Result<InvoiceDto, AppError> {
@@ -63,6 +66,7 @@ impl CreateInvoiceUseCase {
                     let create_customer = CreateCustomerUseCase::new(
                         self.customer_repo.clone(),
                         self.account_repo.clone(),
+                        self.journal_repo.clone(),
                     );
                     let customer_dto = create_customer.execute(CreateCustomerRequest {
                         code: "".into(),
@@ -95,6 +99,7 @@ impl CreateInvoiceUseCase {
                     let create_supplier = CreateSupplierUseCase::new(
                         self.supplier_repo.clone(),
                         self.account_repo.clone(),
+                        self.journal_repo.clone(),
                     );
                     let supplier_dto = create_supplier.execute(CreateSupplierRequest {
                         code: "".into(),

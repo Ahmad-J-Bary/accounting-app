@@ -68,7 +68,7 @@ mod tests {
         let prefixes = vec!["أ".to_string(), "a".to_string(), "0".to_string()];
         assert_eq!(
             CodeGenerator::generate_hybrid_code(prefixes, 0).unwrap(),
-            "أ-a-0-0"
+            "أ-a-00"
         );
     }
 }

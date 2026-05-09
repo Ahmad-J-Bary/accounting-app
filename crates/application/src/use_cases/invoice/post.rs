@@ -44,7 +44,7 @@ impl PostInvoiceUseCase {
             if let Ok(Some(material)) = self.material_repo.find_by_id(&line.material_id).await {
                 // Record stock movement
                 let movement = StockMovement::new(
-                    material.id.clone(),
+                    material.id,
                     MovementType::Sale,
                     line.quantity,
                     line.unit_price.amount(),

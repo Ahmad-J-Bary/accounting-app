@@ -1,4 +1,4 @@
-﻿#![allow(clippy::too_many_arguments)]
+#![allow(clippy::too_many_arguments)]
 use super::invoice_line::InvoiceLine;
 use crate::shared::currency::Currency;
 use crate::shared::errors::DomainError;
@@ -14,6 +14,7 @@ use uuid::Uuid;
 pub enum InvoiceType {
     Sales,
     Purchase,
+    PurchaseCosts, // تكاليف إضافية للمشتريات
     OpeningBalance,
 }
 

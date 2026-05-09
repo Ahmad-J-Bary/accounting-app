@@ -10,6 +10,7 @@ pub async fn save(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), App
     let itype = match invoice.invoice_type {
         InvoiceType::Sales => "Sales",
         InvoiceType::Purchase => "Purchase",
+        InvoiceType::PurchaseCosts => "PurchaseCosts",
         InvoiceType::OpeningBalance => "OpeningBalance",
     };
 

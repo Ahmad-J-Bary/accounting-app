@@ -8,10 +8,12 @@ pub async fn save(pool: &SqlitePool, entry: &JournalEntry) -> Result<(), AppErro
     let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     sqlx::query(
-        "INSERT OR REPLACE INTO journal_entries (id, entry_number, entry_date, description, status, created_at, posted_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT OR REPLACE INTO journal_entries (id, entry_number, journal_type, source_id, entry_date, description, status, created_at, posted_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(entry.id.0.to_string())
     .bind(&entry.entry_number)
+    .bind(format!("{:?}", entry.journal_type))
+    .bind(&entry.source_id)
     .bind(entry.entry_date.to_rfc3339())
     .bind(&entry.description)
     .bind(format!("{:?}", entry.status))
@@ -30,11 +32,12 @@ pub async fn save(pool: &SqlitePool, entry: &JournalEntry) -> Result<(), AppErro
 
     for line in &entry.lines {
         sqlx::query(
-            "INSERT INTO journal_lines (id, journal_entry_id, account_id, currency, fx_rate, debit, debit_base, credit, credit_base, description, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO journal_lines (id, journal_entry_id, account_id, partner_id, currency, fx_rate, debit, debit_base, credit, credit_base, description, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
         .bind(Uuid::new_v4().to_string())
         .bind(entry.id.0.to_string())
         .bind(line.account_id.0.to_string())
+        .bind(line.partner_id.map(|id| id.to_string()))
         .bind(&line.debit.currency().code)
         .bind(line.debit.fx_rate.to_string())
         .bind(line.debit.amount().to_string())

@@ -64,6 +64,7 @@ impl PostInvoiceUseCase {
         let movement_type = match invoice.invoice_type {
             InvoiceType::Sales => MovementType::Sale,
             InvoiceType::Purchase => MovementType::Purchase,
+            InvoiceType::PurchaseCosts => MovementType::Purchase, // Purchase costs increase value but same movement type logic
             InvoiceType::OpeningBalance => MovementType::OpeningBalance,
         };
 
@@ -99,6 +100,9 @@ impl PostInvoiceUseCase {
             },
             InvoiceType::Purchase => {
                 ("41", ()) // 41 is Purchases
+            },
+            InvoiceType::PurchaseCosts => {
+                ("4101", ()) // 4101 is Purchase Additional Costs
             },
             InvoiceType::OpeningBalance => {
                 ("33", ()) // 33 is Opening Balance Equity
@@ -149,13 +153,19 @@ impl PostInvoiceUseCase {
                     return Err(AppError::Invalid("يجب تحديد عميل للمبيعات الآجلة لضمان توازن القيد المحاسبي".into()));
                 }
             }
-        } else if invoice.invoice_type == InvoiceType::Purchase {
-            // Purchase: Debit Expense, Credit Cash/Supplier
+        } else if invoice.invoice_type == InvoiceType::Purchase || invoice.invoice_type == InvoiceType::PurchaseCosts {
+            // Purchase / Purchase Costs: Debit Expense, Credit Cash/Supplier
+            let desc = if invoice.invoice_type == InvoiceType::PurchaseCosts {
+                format!("إثبات تكاليف إضافية للمشتريات - فاتورة رقم {}", invoice.invoice_number)
+            } else {
+                format!("إثبات مشتريات فاتورة رقم {}", invoice.invoice_number)
+            };
+
             journal_lines.push(JournalLine::new(
                 main_account.id, 
                 MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate), 
                 MonetaryAmount::zero(doc_currency.clone()), 
-                format!("إثبات مشتريات فاتورة رقم {}", invoice.invoice_number)
+                desc
             ));
             
             if amount_paid > Decimal::ZERO {
@@ -206,11 +216,23 @@ impl PostInvoiceUseCase {
         }
 
         if !journal_lines.is_empty() {
+            let journal_type = match invoice.invoice_type {
+                InvoiceType::Sales => {
+                    if amount_deferred > Decimal::ZERO { domain::accounting::JournalType::CreditSalesJournal }
+                    else { domain::accounting::JournalType::CashSalesJournal }
+                },
+                InvoiceType::Purchase => domain::accounting::JournalType::PurchaseJournal,
+                InvoiceType::PurchaseCosts => domain::accounting::JournalType::PurchaseCostsJournal,
+                InvoiceType::OpeningBalance => domain::accounting::JournalType::AccountOpeningBalance,
+            };
+
             let mut journal_entry = JournalEntry::new(
                 format!("INV-JE-{}", invoice.invoice_number),
+                journal_type,
                 journal_lines,
                 Utc::now(),
                 format!("قيد آلي ناتج عن فاتورة رقم {}", invoice.invoice_number),
+                Some(invoice.id.to_string()),
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
             
             // Automatically post the journal entry

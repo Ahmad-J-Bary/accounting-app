@@ -114,10 +114,12 @@ impl RecordOpeningStockUseCase {
 
             let mut entry = JournalEntry::new(
                 format!("JE-OP-{}", Utc::now().timestamp()),
+                domain::accounting::JournalType::AccountOpeningBalance,
                 lines,
                 entry_date,
                 req.notes
                     .unwrap_or_else(|| "قيد بضاعة أول المدة".to_string()),
+                None,
             )
             .map_err(|e| AppError::Invalid(e.to_string()))?;
 

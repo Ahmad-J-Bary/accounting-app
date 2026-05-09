@@ -78,7 +78,7 @@ impl CreateDamagedItemUseCase {
             Decimal::ZERO
         };
         let movement = StockMovement::new(
-            item.material_id.clone(),
+            item.material_id,
             MovementType::Damaged,
             quantity,
             unit_cost,
@@ -119,9 +119,11 @@ impl CreateDamagedItemUseCase {
 
             let mut entry = JournalEntry::new(
                 format!("JE-DAM-{}", Utc::now().timestamp()),
+                domain::accounting::JournalType::GeneralJournal,
                 lines,
                 damage_date,
                 format!("قيد تلف مواد: {} - {}", material.name, req.reason),
+                Some(item.id.to_string()),
             )
             .map_err(|e| AppError::Invalid(e.to_string()))?;
 

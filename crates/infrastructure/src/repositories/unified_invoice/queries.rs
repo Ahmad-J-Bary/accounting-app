@@ -50,6 +50,7 @@ pub async fn list_by_type(pool: &SqlitePool, invoice_type: InvoiceType) -> Resul
     let itype = match invoice_type {
         InvoiceType::Sales => "Sales",
         InvoiceType::Purchase => "Purchase",
+        InvoiceType::PurchaseCosts => "PurchaseCosts",
         InvoiceType::OpeningBalance => "OpeningBalance",
     };
 

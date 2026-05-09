@@ -111,9 +111,11 @@ impl ConsumableUseCases {
 
         let entry = JournalEntry::new(
             format!("CON-ISS-{}", Utc::now().timestamp()),
+            domain::accounting::JournalType::GeneralJournal,
             lines,
             Utc::now(),
             format!("صرف مستهلكات: {}", item.name),
+            None,
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
         self.journal_repo.save(&entry).await?;

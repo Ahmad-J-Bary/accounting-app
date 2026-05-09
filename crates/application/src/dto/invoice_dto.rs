@@ -146,6 +146,7 @@ impl From<UnifiedInvoice> for InvoiceDto {
         let invoice_type = match invoice.invoice_type {
             InvoiceType::Sales => "Sales",
             InvoiceType::Purchase => "Purchase",
+            InvoiceType::PurchaseCosts => "PurchaseCosts",
             InvoiceType::OpeningBalance => "OpeningBalance",
         };
 

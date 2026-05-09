@@ -3,6 +3,8 @@
 pub struct JournalEntryRow {
     pub id: String,
     pub entry_number: String,
+    pub journal_type: String,
+    pub source_id: Option<String>,
     pub entry_date: String,
     pub description: String,
     pub status: String,
@@ -16,6 +18,7 @@ pub struct JournalEntryRow {
 pub struct JournalLineRow {
     pub id: String,
     pub account_id: String,
+    pub partner_id: Option<String>,
     pub currency: String,
     pub fx_rate: String,
     pub debit: String,

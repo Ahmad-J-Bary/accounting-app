@@ -92,5 +92,16 @@ impl JournalEntryRepository for MockJournalRepository {
     async fn find_by_number(&self, _number: &str) -> Result<Option<JournalEntry>, AppError> { Ok(None) }
     async fn list_all(&self) -> Result<Vec<JournalEntry>, AppError> { Ok(self.entries.lock().unwrap().clone()) }
     async fn list_by_account(&self, _account_id: &domain::shared::AccountId) -> Result<Vec<JournalEntry>, AppError> { Ok(vec![]) }
+    async fn list_with_filters(
+        &self,
+        _from_date: Option<chrono::DateTime<chrono::Utc>>,
+        _to_date: Option<chrono::DateTime<chrono::Utc>>,
+        _journal_type: Option<domain::accounting::JournalType>,
+        _account_id: Option<domain::shared::AccountId>,
+        _partner_id: Option<uuid::Uuid>,
+        _status: Option<domain::accounting::JournalEntryStatus>,
+    ) -> Result<Vec<JournalEntry>, AppError> {
+        Ok(self.entries.lock().unwrap().clone())
+    }
     async fn delete(&self, _id: &JournalEntryId) -> Result<(), AppError> { Ok(()) }
 }

@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import Dashboard from '@modules/core/pages/dashboard';
 import Accounting from '@modules/accounting/pages/accounting';
 import Journal from '@modules/accounting/pages/journal';
+import JournalCreate from '@modules/accounting/pages/journalCreate';
 import Customers from '@modules/partners/pages/customers';
 import Suppliers from '@modules/partners/pages/suppliers';
 import SalesInvoices from '@modules/invoicing/pages/salesInvoices';
@@ -22,6 +23,8 @@ import Partners from '@modules/partners/pages/partners';
 import Assets from '@modules/assets/pages/assets';
 
 import CurrencySettings from '@modules/core/pages/currencySettings';
+import AccountingJournalsReport from '@modules/accounting/pages/AccountingJournalsReport';
+import AccountMovementsReport from '@modules/accounting/pages/AccountMovementsReport';
 
 export function ErpRoutes({ location }: { location?: string | Partial<Location> }) {
   return (
@@ -29,7 +32,11 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/partners" element={<Partners />} />
       <Route path="/accounting" element={<Accounting />} />
+      <Route path="/accounting/journals" element={<AccountingJournalsReport />} />
+      <Route path="/accounting/reports/ledger" element={<AccountMovementsReport />} />
+      <Route path="/accounting/reports/movements" element={<AccountMovementsReport />} />
       <Route path="/journal" element={<Journal />} />
+      <Route path="/journal/new" element={<JournalCreate />} />
       <Route path="/customers" element={<Customers />} />
       <Route path="/suppliers" element={<Suppliers />} />
       <Route path="/sales-invoices" element={<SalesInvoices />} />

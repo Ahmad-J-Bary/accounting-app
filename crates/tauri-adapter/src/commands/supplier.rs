@@ -10,8 +10,14 @@ pub async fn create_supplier(
     request: CreateSupplierRequest,
     state: State<'_, AppState>,
 ) -> Result<SupplierDto, String> {
-    CreateSupplierUseCase::new(state.supplier_repo.clone(), state.account_repo.clone())
-        .execute(request).await.map_err(|e| e.to_string())
+    CreateSupplierUseCase::new(
+        state.supplier_repo.clone(), 
+        state.account_repo.clone(),
+        state.journal_entry_repo.clone()
+    )
+    .execute(request)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

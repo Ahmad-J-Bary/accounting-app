@@ -43,6 +43,27 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
         queries::list_by_account(&self.pool, account_id).await
     }
 
+    async fn list_with_filters(
+        &self,
+        from_date: Option<chrono::DateTime<chrono::Utc>>,
+        to_date: Option<chrono::DateTime<chrono::Utc>>,
+        journal_type: Option<domain::accounting::JournalType>,
+        account_id: Option<AccountId>,
+        partner_id: Option<uuid::Uuid>,
+        status: Option<domain::accounting::JournalEntryStatus>,
+    ) -> Result<Vec<JournalEntry>, AppError> {
+        queries::list_with_filters(
+            &self.pool,
+            from_date,
+            to_date,
+            journal_type,
+            account_id,
+            partner_id,
+            status,
+        )
+        .await
+    }
+
     async fn delete(&self, id: &JournalEntryId) -> Result<(), AppError> {
         commands::delete(&self.pool, id).await
     }

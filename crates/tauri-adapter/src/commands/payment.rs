@@ -12,6 +12,8 @@ pub async fn create_payment(
         state.payment_repo.clone(),
         state.customer_repo.clone(),
         state.supplier_repo.clone(),
+        state.journal_entry_repo.clone(),
+        state.account_repo.clone(),
     )
     .execute(request)
     .await

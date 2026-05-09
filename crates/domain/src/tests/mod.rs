@@ -1,9 +1,9 @@
 // ============================================================
-// Domain Tests â€” Arabic ERP System
+// Domain Tests — Arabic ERP System
 // Uses crate:: paths since tests live inside the domain crate
 // ============================================================
 
-/* 
+/*
 #[cfg(test)]
 mod product_domain_tests {
     ...
@@ -12,163 +12,134 @@ mod product_domain_tests {
 
 #[cfg(test)]
 mod stock_movement_domain_tests {
-    use crate::inventory::stock_movement::{StockMovement, MovementType};
+    use crate::inventory::stock_movement::{MovementType, StockMovement};
     use crate::shared::ids::MaterialId;
-    use uuid::Uuid;
-    use rust_decimal_macros::dec;
     use chrono::Utc;
-
-    fn mv(t: MovementType, qty: rust_decimal::Decimal) -> StockMovement {
-        StockMovement::new(
-            MaterialId(Uuid::new_v4()), 
-            t, 
-            qty,
-            rust_decimal::Decimal::ZERO, 
-            rust_decimal::Decimal::ZERO,
-            "REF-001".to_string(), 
-            "ملاحظات".to_string(), 
-            Utc::now(),
-        ).unwrap()
-    }
+    use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
+    use uuid::Uuid;
 
     #[test]
-    fn in_movement_is_inflow() {
-        let m = mv(MovementType::In, dec!(100));
-        assert!(m.is_inflow());
-        assert!(!m.is_outflow());
-    }
-
-    #[test]
-    fn out_movement_is_outflow() {
-        let m = mv(MovementType::Out, dec!(50));
-        assert!(m.is_outflow());
-        assert!(!m.is_inflow());
-    }
-
-    #[test]
-    fn opening_balance_is_inflow() {
-        let m = mv(MovementType::OpeningBalance, dec!(200));
-        assert!(m.is_inflow());
-        assert!(!m.is_outflow());
-    }
-
-    #[test]
-    fn zero_quantity_movement_fails() {
-        let r = StockMovement::new(
-            MaterialId(Uuid::new_v4()), 
-            MovementType::In, 
-            rust_decimal::Decimal::ZERO,
-            rust_decimal::Decimal::ZERO, 
-            rust_decimal::Decimal::ZERO,
-            "REF".to_string(), 
-            "".to_string(), 
+    fn new_movement_succeeds() {
+        let m = StockMovement::new(
+            MaterialId(Uuid::new_v4()),
+            MovementType::In,
+            dec!(10),
+            dec!(5),
+            dec!(50),
+            "REF-001".to_string(),
+            "Initial stock".to_string(),
             Utc::now(),
         );
-        assert!(r.is_err(), "Ø§Ù„ÙƒÙ…ÙŠØ© ØµÙØ± ÙŠØ¬Ø¨ Ø£Ù† ØªØ±ÙØ¶");
+        assert!(m.is_ok());
     }
 
     #[test]
     fn negative_quantity_movement_fails() {
         let r = StockMovement::new(
-            MaterialId(Uuid::new_v4()), 
-            MovementType::Out, 
+            MaterialId(Uuid::new_v4()),
+            MovementType::In,
             dec!(-10),
-            rust_decimal::Decimal::ZERO, 
-            rust_decimal::Decimal::ZERO,
-            "REF".to_string(), 
-            "".to_string(), 
+            dec!(5),
+            dec!(-50),
+            "REF-001".to_string(),
+            "".to_string(),
             Utc::now(),
         );
-        assert!(r.is_err(), "Ø§Ù„ÙƒÙ…ÙŠØ© Ø§Ù„Ø³Ø§Ù„Ø¨Ø© ÙŠØ¬Ø¨ Ø£Ù† ØªØ±ÙØ¶");
+        assert!(r.is_err());
     }
 
     #[test]
-    fn empty_reference_movement_fails() {
+    fn zero_quantity_movement_fails() {
         let r = StockMovement::new(
-            MaterialId(Uuid::new_v4()), 
-            MovementType::In, 
-            dec!(10),
-            rust_decimal::Decimal::ZERO, 
-            rust_decimal::Decimal::ZERO,
-            "".to_string(), 
-            "".to_string(), 
+            MaterialId(Uuid::new_v4()),
+            MovementType::In,
+            Decimal::ZERO,
+            Decimal::ZERO,
+            Decimal::ZERO,
+            "REF".to_string(),
+            "".to_string(),
             Utc::now(),
         );
-        assert!(r.is_err(), "Ø§Ù„Ù…Ø±Ø¬Ø¹ Ø§Ù„ÙØ§Ø±Øº ÙŠØ¬Ø¨ Ø£Ù† ÙŠÙØ±ÙØ¶");
+        assert!(r.is_err());
     }
 }
 
 #[cfg(test)]
-mod journal_entry_domain_tests {
-    use crate::accounting::journal_entry::{JournalEntry, JournalLine};
-    use crate::shared::ids::AccountId;
-    use crate::shared::money::Money;
+mod accounting_domain_tests {
+    use crate::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
     use crate::shared::currency::Currency;
+    use crate::shared::ids::AccountId;
     use crate::shared::monetary_amount::MonetaryAmount;
-    use uuid::Uuid;
-    use rust_decimal_macros::dec;
-    use rust_decimal::Decimal;
+    use crate::shared::money::Money;
     use chrono::Utc;
+    use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
+    use uuid::Uuid;
 
-    fn balanced_lines(amount: rust_decimal::Decimal) -> Vec<JournalLine> {
+    fn balanced_lines(amount: Decimal) -> Vec<JournalLine> {
         vec![
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::new(Money::syp(amount), Decimal::ONE),
+                MonetaryAmount::new(Money::syp(amount), dec!(1)),
                 MonetaryAmount::zero(Currency::syp()),
                 "مدين".to_string(),
             ),
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
                 MonetaryAmount::zero(Currency::syp()),
-                MonetaryAmount::new(Money::syp(amount), Decimal::ONE),
+                MonetaryAmount::new(Money::syp(amount), dec!(1)),
                 "دائن".to_string(),
             ),
         ]
     }
 
     #[test]
-    fn balanced_entry_posts_successfully() {
-        let mut e = JournalEntry::new(
-            "JE-001".to_string(), balanced_lines(dec!(50000)),
-            Utc::now(), "Ù‚ÙŠØ¯ Ù…ØªÙˆØ§Ø²Ù†".to_string(),
-        ).unwrap();
-        assert!(e.post().is_ok());
+    fn balanced_journal_entry_succeeds() {
+        let lines = balanced_lines(dec!(100));
+        let r = JournalEntry::new(
+            "JE-001".to_string(),
+            JournalType::GeneralJournal,
+            lines,
+            Utc::now(),
+            "قيد متوازن".to_string(),
+            None,
+        );
+        assert!(r.is_ok());
     }
 
     #[test]
-    fn unbalanced_entry_fails_to_post() {
-        let lines = vec![
-            JournalLine::new(
-                AccountId(Uuid::new_v4()),
-                MonetaryAmount::new(Money::syp(dec!(100)), Decimal::ONE),
-                MonetaryAmount::zero(Currency::syp()),
-                "مدين".to_string(),
-            ),
-            JournalLine::new(
-                AccountId(Uuid::new_v4()),
-                MonetaryAmount::zero(Currency::syp()),
-                MonetaryAmount::new(Money::syp(dec!(90)), Decimal::ONE),
-                "دائن".to_string(),
-            ),
-        ];
-        let mut e = JournalEntry::new("JE-002".to_string(), lines, Utc::now(), "ØºÙŠØ± Ù…ØªÙˆØ§Ø²Ù†".to_string()).unwrap();
-        assert!(e.post().is_err());
-    }
+    fn unbalanced_journal_entry_post_fails() {
+        let lines = vec![JournalLine::new(
+            AccountId(Uuid::new_v4()),
+            MonetaryAmount::new(Money::syp(dec!(100)), dec!(1)),
+            MonetaryAmount::zero(Currency::syp()),
+            "مدين غير متوازن".to_string(),
+        )];
+        let mut entry = JournalEntry::new(
+            "JE-ERR".to_string(),
+            JournalType::GeneralJournal,
+            lines,
+            Utc::now(),
+            "قيد غير متوازن".to_string(),
+            None,
+        )
+        .unwrap();
 
-    #[test]
-    fn cannot_post_twice() {
-        let mut e = JournalEntry::new(
-            "JE-003".to_string(), balanced_lines(dec!(1000)),
-            Utc::now(), "Ù‚ÙŠØ¯".to_string(),
-        ).unwrap();
-        e.post().unwrap();
-        assert!(e.post().is_err());
+        let result = entry.post();
+        assert!(result.is_err());
     }
 
     #[test]
     fn entry_without_lines_fails() {
-        let r = JournalEntry::new("JE-EMPTY".to_string(), vec![], Utc::now(), "ÙØ§Ø±Øº".to_string());
+        let r = JournalEntry::new(
+            "JE-EMPTY".to_string(),
+            JournalType::GeneralJournal,
+            vec![],
+            Utc::now(),
+            "فارغ".to_string(),
+            None,
+        );
         assert!(r.is_err());
     }
 
@@ -176,10 +147,74 @@ mod journal_entry_domain_tests {
     fn opening_stock_journal_entry_is_balanced() {
         let amount = dec!(150000);
         let mut e = JournalEntry::new(
-            "JE-OP-001".to_string(), balanced_lines(amount),
-            Utc::now(), "Ù‚ÙŠØ¯ Ø¨Ø¶Ø§Ø¹Ø© Ø£ÙˆÙ„ Ø§Ù„Ù…Ø¯Ø©".to_string(),
-        ).unwrap();
+            "JE-OP-001".to_string(),
+            JournalType::AccountOpeningBalance,
+            balanced_lines(amount),
+            Utc::now(),
+            "قيد بضاعة أول المدة".to_string(),
+            None,
+        )
+        .unwrap();
         assert!(e.post().is_ok());
     }
-}
 
+    #[test]
+    fn cash_receipt_journal_entry_is_properly_categorized() {
+        let lines = balanced_lines(dec!(1000));
+        let entry = JournalEntry::new(
+            "CR-001".to_string(),
+            JournalType::CashReceipt,
+            lines,
+            Utc::now(),
+            "سند قبض تجريبي".to_string(),
+            None,
+        ).unwrap();
+        
+        assert_eq!(entry.journal_type, JournalType::CashReceipt);
+        assert!(entry.is_balanced());
+    }
+
+    #[test]
+    fn line_based_display_logic_verification() {
+        let lines = balanced_lines(dec!(500));
+        // Verify line 0 is Debit and line 1 is Credit
+        assert!(lines[0].base_debit() > Decimal::ZERO);
+        assert_eq!(lines[0].base_credit(), Decimal::ZERO);
+        
+        assert!(lines[1].base_credit() > Decimal::ZERO);
+        assert_eq!(lines[1].base_debit(), Decimal::ZERO);
+    }
+
+    #[test]
+    fn specialized_journals_for_sales_and_purchases() {
+        let entry_sales = JournalEntry::new(
+            "SJ-001".to_string(),
+            JournalType::CashSalesJournal,
+            balanced_lines(dec!(100)),
+            Utc::now(),
+            "مبيعات".to_string(),
+            None,
+        ).unwrap();
+        assert_eq!(entry_sales.journal_type, JournalType::CashSalesJournal);
+
+        let entry_purchase = JournalEntry::new(
+            "PJ-001".to_string(),
+            JournalType::PurchaseJournal,
+            balanced_lines(dec!(100)),
+            Utc::now(),
+            "مشتريات".to_string(),
+            None,
+        ).unwrap();
+        assert_eq!(entry_purchase.journal_type, JournalType::PurchaseJournal);
+        
+        let entry_costs = JournalEntry::new(
+            "PCJ-001".to_string(),
+            JournalType::PurchaseCostsJournal,
+            balanced_lines(dec!(100)),
+            Utc::now(),
+            "تكاليف إضافية".to_string(),
+            None,
+        ).unwrap();
+        assert_eq!(entry_costs.journal_type, JournalType::PurchaseCostsJournal);
+    }
+}

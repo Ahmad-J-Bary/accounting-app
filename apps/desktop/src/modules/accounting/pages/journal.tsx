@@ -1,30 +1,49 @@
 import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Plus, Search, RefreshCw, FileText, CheckCircle2, FileEdit, Banknote, Settings2 } from "lucide-react";
+import { Plus, Search, RefreshCw, FileText, CheckCircle2, FileEdit, Banknote, Settings2, Calendar, Filter } from "lucide-react";
 import { toast } from "sonner";
-import { journalEntryService } from '@modules/accounting/api/journalEntryService';
-import type { JournalEntryDto, CreateJournalEntryRequest } from "@erp/shared-types";
+import { journalEntryService, type JournalFilters } from '@modules/accounting/api/journalEntryService';
+import type { JournalEntryDto, CreateJournalEntryRequest, JournalType } from "@erp/shared-types";
 import { cn } from "@shared/lib/utils";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@shared/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 
 // Refactored Components & Hooks
 import { useDataTable, useColumnPreferences } from '@shared/hooks';
-import { JournalForm } from '@modules/accounting/components/JournalForm';
 import { JournalTable } from '@modules/accounting/components/JournalTable';
+import { JournalDetailPanel } from '@modules/accounting/components/JournalDetailPanel';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
+const JOURNAL_TYPES: { value: JournalType | 'ALL'; label: string }[] = [
+  { value: 'ALL', label: 'الكل' },
+  { value: 'GeneralJournal', label: 'يومية عامة' },
+  { value: 'CashJournal', label: 'يومية الصندوق' },
+  { value: 'CashSalesJournal', label: 'مبيعات نقدية' },
+  { value: 'CreditSalesJournal', label: 'مبيعات آجلة' },
+  { value: 'PurchaseJournal', label: 'مشتريات' },
+  { value: 'PurchaseCostsJournal', label: 'تكاليف إضافية للمشتريات' },
+];
+
 export default function Journal() {
+  const navigate = useNavigate();
   const { currencies, baseCurrency } = useCurrencyContext();
-  const [createOpen, setCreateOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<JournalEntryDto | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  
+  const [filters, setFilters] = useState<JournalFilters>({
+    journal_type: undefined,
+    from_date: undefined,
+    to_date: undefined,
+  });
 
   useEffect(() => {
-    const handler = () => setCreateOpen(true);
+    const handler = () => navigate("/journal/new");
     window.addEventListener("erp:open-new-journal", handler);
     return () => window.removeEventListener("erp:open-new-journal", handler);
-  }, []);
+  }, [navigate]);
 
   const {
     filtered: entries,
@@ -34,63 +53,66 @@ export default function Journal() {
     setSearch,
     refresh,
   } = useDataTable<JournalEntryDto>({
-    fetchData: () => journalEntryService.listJournalEntries(),
+    fetchData: () => journalEntryService.listJournalEntries(filters),
     searchFields: ["entry_number", "description"],
+    dependencies: [filters],
   });
 
   const availableColumns = useMemo(() => {
-    const cols = [
-      { id: "entry_number", label: "رقم القيد" },
+    return [
       { id: "entry_date", label: "التاريخ" },
+      { id: "entry_number", label: "رقم القيد" },
+      { id: "journal_type", label: "نوع الحركة" },
       { id: "description", label: "البيان" },
+      { id: "debit_account", label: "الحساب المدين / الوجهة" },
+      { id: "credit_account", label: "الحساب الدائن / المصدر" },
+      { id: "total_debit", label: "عليه / مدين" },
+      { id: "total_credit", label: "له / دائن" },
+      { id: "status", label: "الحالة" },
     ];
-
-    currencies.forEach(curr => {
-      const s = curr.symbol || curr.code;
-      cols.push({ id: `amount_${curr.code}`, label: `المبلغ (${s})` });
-    });
-
-    return cols;
-  }, [currencies]);
+  }, []);
 
   const defaultVisibleColumns = useMemo(() => {
-    const base = ["entry_number", "entry_date", "description"];
-    if (baseCurrency) {
-      base.push(`amount_${baseCurrency.code}`);
-    }
-    return base;
-  }, [baseCurrency]);
+    return ["entry_date", "entry_number", "journal_type", "description", "debit_account", "credit_account", "total_debit", "total_credit", "status"];
+  }, []);
 
   const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences("journal_entries", defaultVisibleColumns);
 
   const isLoading = loading || refreshing;
 
-  const handleCreate = async (payload: CreateJournalEntryRequest) => {
-    if (!payload.description?.trim()) {
-      toast.error("الرجاء إدخال رقم القيد والبيان");
-      return;
-    }
-    setSaving(true);
-    try {
-      await journalEntryService.createJournalEntry(payload);
-      setCreateOpen(false);
-      refresh(true);
-      toast.success("تم تسجيل القيد بنجاح");
-    } catch (e: unknown) {
-      toast.error("فشل حفظ القيد: " + e);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handlePost = async (id: string) => {
-    if (!confirm('هل أنت متأكد من ترحيل القيد؟ لا يمكن التعديل بعد الترحيل.')) return;
     try {
       await journalEntryService.postJournalEntry(id);
       refresh(true);
+      if (detailOpen && selectedEntry?.id === id) {
+        handleView(id);
+      }
       toast.success("تم ترحيل القيد بنجاح");
     } catch (e: unknown) {
-      toast.error("فشل ترحيل القيد: " + e);
+      toast.error("فشل ترحيل القيد: " + String(e));
+    }
+  };
+
+  const handleReverse = async (id: string) => {
+    try {
+      await journalEntryService.reverseJournalEntry(id);
+      refresh(true);
+      if (detailOpen && selectedEntry?.id === id) {
+        handleView(id);
+      }
+      toast.success("تم عكس القيد بنجاح");
+    } catch (e: unknown) {
+      toast.error("فشل عكس القيد: " + String(e));
+    }
+  };
+
+  const handleView = async (id: string) => {
+    try {
+      const details = await journalEntryService.getJournalEntryDetails(id);
+      setSelectedEntry(details);
+      setDetailOpen(true);
+    } catch (e: unknown) {
+      toast.error("فشل تحميل تفاصيل القيد: " + String(e));
     }
   };
 
@@ -107,64 +129,88 @@ export default function Journal() {
       stats={stats}
       toolbar={
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => refresh(true)} disabled={isLoading} className="bg-white border-slate-200">
+          <Button variant="outline" size="sm" onClick={() => refresh(true)} disabled={isLoading} className="bg-white border-slate-200 h-9">
             <RefreshCw className={cn("w-4 h-4 ml-2", isLoading && "animate-spin")} />تحديث
           </Button>
-          <Button size="sm" onClick={() => setCreateOpen(true)} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
-            <Plus className="w-4 h-4 ml-2" />قيد جديد
+          <Button size="sm" onClick={() => navigate("/journal/new")} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 h-9 px-4 font-bold">
+            <Plus className="w-4 h-4 ml-2" />إنشاء قيد يومية
           </Button>
         </div>
       }
       filterBar={
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[280px]">
+            <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <Input
-              placeholder="بحث برقم القيد أو البيان..."
-              className="pr-10 h-10 border-slate-200 focus:ring-2 focus:ring-blue-500 transition-all text-sm"
+              placeholder="بحث في القيود (الرقم، البيان)..."
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-4 pr-10 h-10 w-full bg-white shadow-sm font-bold placeholder:font-medium border-slate-200"
             />
           </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-10 w-10 bg-white border-slate-200">
-                <Settings2 className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[220px] max-h-[450px] overflow-y-auto shadow-xl">
-              <DropdownMenuLabel className="text-right text-xs font-black uppercase text-slate-400 tracking-widest">تخصيص الأعمدة</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {availableColumns.map((col) => (
-                <DropdownMenuCheckboxItem
-                  key={col.id}
-                  checked={isVisible(col.id)}
-                  onCheckedChange={() => toggleColumn(col.id)}
-                  className="text-right flex-row-reverse gap-2 text-xs font-bold py-2"
-                >
-                  {col.label}
-                </DropdownMenuCheckboxItem>
+          <Select 
+            value={filters.journal_type || 'ALL'} 
+            onValueChange={(val) => setFilters(f => ({ ...f, journal_type: val === 'ALL' ? undefined : val as JournalType }))}
+          >
+            <SelectTrigger className="w-[180px] h-10 bg-white font-bold shadow-sm border-slate-200">
+              <Filter className="w-4 h-4 ml-2 text-slate-400" />
+              <SelectValue placeholder="نوع اليومية" />
+            </SelectTrigger>
+            <SelectContent>
+              {JOURNAL_TYPES.map(t => (
+                <SelectItem key={t.value} value={t.value} className="font-bold">{t.label}</SelectItem>
               ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </SelectContent>
+          </Select>
         </div>
       }
       tableContent={
-        <JournalTable 
-          entries={entries} 
-          loading={loading} 
-          onPost={handlePost} 
-          onView={(id) => toast.info("سيتم إضافة عرض تفاصيل القيد قريباً")}
-          visibleColumns={visibleColumns}
-        />
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-full">
+          <div className="border-b border-slate-100 bg-slate-50/50 p-2 flex justify-between items-center shrink-0">
+            <div className="flex gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 bg-white text-xs font-bold shadow-sm">
+                    <Settings2 className="w-4 h-4 ml-2" />
+                    تخصيص الأعمدة
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel className="text-xs font-bold text-slate-500">الأعمدة المعروضة</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {availableColumns.map(col => (
+                    <DropdownMenuCheckboxItem
+                      key={col.id}
+                      checked={isVisible(col.id)}
+                      onCheckedChange={() => toggleColumn(col.id)}
+                      className="text-xs font-bold justify-end text-right"
+                    >
+                      {col.label}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+          
+          <div className="flex-1 overflow-auto">
+            <JournalTable
+              entries={entries}
+              loading={loading}
+              onPost={handlePost}
+              onView={handleView}
+              visibleColumns={visibleColumns}
+            />
+          </div>
+        </div>
       }
     >
-      <JournalForm 
-        open={createOpen} 
-        onOpenChange={setCreateOpen} 
-        onSave={handleCreate} 
-        saving={saving} 
+      <JournalDetailPanel
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        entry={selectedEntry}
+        onPost={handlePost}
+        onReverse={handleReverse}
       />
     </OperationalTableTemplate>
   );

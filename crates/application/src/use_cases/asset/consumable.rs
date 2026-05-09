@@ -76,7 +76,7 @@ impl ConsumableUseCases {
         let mut item = self.repo.find_by_id(&ConsumableId(id)).await?
             .ok_or_else(|| AppError::NotFound("Item not found".to_string()))?;
 
-        let total_value = item.issue(quantity).map_err(|e| AppError::Invalid(e))?;
+        let total_value = item.issue(quantity).map_err(AppError::Invalid)?;
         self.repo.save(&item).await?;
 
         // Log movement
@@ -111,9 +111,11 @@ impl ConsumableUseCases {
 
         let entry = JournalEntry::new(
             format!("CON-ISS-{}", Utc::now().timestamp()),
+            domain::accounting::JournalType::GeneralJournal,
             lines,
             Utc::now(),
             format!("صرف مستهلكات: {}", item.name),
+            Some(item.id.0.to_string()),
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
         self.journal_repo.save(&entry).await?;

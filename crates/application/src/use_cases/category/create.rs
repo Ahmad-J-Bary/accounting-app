@@ -67,7 +67,7 @@ impl CreateCategoryUseCase {
 
         if category.parent_id.is_none() && !is_hybrid {
             let sub_name = category.default_sub_name();
-            let sub = MaterialCategory::new(sub_name, Some(category.id.clone()), false, req.code_prefix)
+            let sub = MaterialCategory::new(sub_name, Some(category.id), false, req.code_prefix)
                 .map_err(|e| AppError::Invalid(e.to_string()))?;
             self.repo.save(&sub).await?;
         }

@@ -36,11 +36,11 @@ impl AccountQueries {
         let mut roots: Vec<AccountId> = Vec::new();
 
         for account in accounts {
-            let id = account.id.clone();
+            let id = account.id;
             if let Some(parent_id) = &account.parent_id {
-                children_map.entry(parent_id.clone()).or_default().push(id.clone());
+                children_map.entry(*parent_id).or_default().push(id);
             } else {
-                roots.push(id.clone());
+                roots.push(id);
             }
             account_map.insert(id, account);
         }

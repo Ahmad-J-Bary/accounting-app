@@ -56,6 +56,7 @@ pub async fn get_next_child_code(pool: &SqlitePool, parent_code: &str) -> Result
         }
     }
 
-    // إذا لم نجد أبناء، نبدأ بأول كود (مثلاً كود الأب + 1)
-    Ok(format!("{}1", parent_code))
+    // إذا لم نجد أبناء، نبدأ بأول كود (مثلاً كود الأب + 01 للأبناء من المستوى الرابع)
+    let suffix = if parent_code.len() == 4 { "01" } else { "1" };
+    Ok(format!("{}{}", parent_code, suffix))
 }

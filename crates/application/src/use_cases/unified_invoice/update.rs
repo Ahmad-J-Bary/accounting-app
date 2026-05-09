@@ -13,6 +13,7 @@ use crate::ports::supplier_repository::SupplierRepository;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::category_repository::CategoryRepository;
+use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::dto::invoice_dto::{UpdateInvoiceRequest, InvoiceDto};
 use crate::dto::customer_dto::CreateCustomerRequest;
 use crate::dto::supplier_dto::CreateSupplierRequest;
@@ -27,6 +28,7 @@ pub struct UpdateInvoiceUseCase {
     account_repo: Arc<dyn AccountRepository>,
     material_repo: Arc<dyn MaterialRepository>,
     category_repo: Arc<dyn CategoryRepository>,
+    journal_repo: Arc<dyn JournalEntryRepository>,
 }
 
 impl UpdateInvoiceUseCase {
@@ -37,8 +39,9 @@ impl UpdateInvoiceUseCase {
         account_repo: Arc<dyn AccountRepository>,
         material_repo: Arc<dyn MaterialRepository>,
         category_repo: Arc<dyn CategoryRepository>,
+        journal_repo: Arc<dyn JournalEntryRepository>,
     ) -> Self {
-        Self { repo, customer_repo, supplier_repo, account_repo, material_repo, category_repo }
+        Self { repo, customer_repo, supplier_repo, account_repo, material_repo, category_repo, journal_repo }
     }
 
     pub async fn execute(&self, req: UpdateInvoiceRequest) -> Result<InvoiceDto, AppError> {
@@ -62,6 +65,7 @@ impl UpdateInvoiceUseCase {
                     let create_customer = CreateCustomerUseCase::new(
                         self.customer_repo.clone(),
                         self.account_repo.clone(),
+                        self.journal_repo.clone(),
                     );
                     let customer_dto = create_customer.execute(CreateCustomerRequest {
                         code: "".into(),
@@ -94,6 +98,7 @@ impl UpdateInvoiceUseCase {
                     let create_supplier = CreateSupplierUseCase::new(
                         self.supplier_repo.clone(),
                         self.account_repo.clone(),
+                        self.journal_repo.clone(),
                     );
                     let supplier_dto = create_supplier.execute(CreateSupplierRequest {
                         code: "".into(),
@@ -147,7 +152,7 @@ impl UpdateInvoiceUseCase {
             let retail_price = to_monetary(line_dto.retail_price.clone());
             let wholesale_price = to_monetary(line_dto.wholesale_price.clone());
             let semi_wholesale_price = to_monetary(line_dto.semi_wholesale_price.clone());
-            let minimum_stock = line_dto.minimum_stock.as_ref().and_then(|s| Decimal::from_str(&s).ok());
+            let minimum_stock = line_dto.minimum_stock.as_ref().and_then(|s| Decimal::from_str(s).ok());
             
             let to_usd = |s: Option<String>| s.and_then(|v| {
                 Decimal::from_str(&v).ok().map(|amt| Money::from_amount_and_code(amt, "USD"))

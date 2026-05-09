@@ -101,6 +101,7 @@ export function useEntityList<T extends { id: string }, Req>({
       setIsFormOpen(false);
       refresh(true);
     } catch (e) {
+      console.error("[useEntityList] Save Error:", e);
       toast.error("فشل الحفظ: " + e);
     } finally {
       setSaving(false);
@@ -115,6 +116,7 @@ export function useEntityList<T extends { id: string }, Req>({
       if (selectedId === id) setSelectedId(null);
       refresh(true);
     } catch (e) {
+      console.error("[useEntityList] Delete Error:", e);
       toast.error("فشل الحذف: " + e);
     }
   }, [selectedId, refresh]);

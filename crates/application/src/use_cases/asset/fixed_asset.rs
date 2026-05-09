@@ -83,9 +83,11 @@ impl FixedAssetUseCases {
 
         let entry = JournalEntry::new(
             format!("FA-ACQ-{}", asset.code),
+            domain::accounting::JournalType::GeneralJournal,
             lines,
             req.purchase_date,
             format!("شراء أصل ثابت: {}", asset.name),
+            Some(asset.id.0.to_string()),
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
 
@@ -158,6 +160,7 @@ impl FixedAssetUseCases {
 
         let entry = JournalEntry::new(
             format!("FA-DEP-{}-{}", asset.code, date.format("%Y%m")),
+            domain::accounting::JournalType::GeneralJournal,
             lines,
             date,
             format!(
@@ -165,6 +168,7 @@ impl FixedAssetUseCases {
                 asset.name,
                 date.format("%Y-%m")
             ),
+            Some(asset.id.0.to_string()),
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
 

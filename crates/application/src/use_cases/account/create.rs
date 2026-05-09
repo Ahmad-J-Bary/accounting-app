@@ -70,7 +70,8 @@ impl CreateAccountUseCase {
             notes: cmd.notes.as_ref().map(|n| n.trim().to_string()),
             is_active: true,
             is_default: matches!(cmd.code.trim(), "120301" | "220301"),
-            is_final: cmd.code.trim().len() == 4 && (cmd.code.trim().starts_with("123") || cmd.code.trim().starts_with("223")),
+            is_final: (cmd.code.trim().len() == 6 && (cmd.code.trim().starts_with("1203") || cmd.code.trim().starts_with("2203"))) 
+                      || (cmd.code.trim().len() == 4 && (cmd.code.trim().starts_with("123") || cmd.code.trim().starts_with("223"))), // Keep old for compatibility
             linked_customer_id,
             linked_supplier_id,
             created_at: Utc::now(),
@@ -92,10 +93,10 @@ impl CreateAccountUseCase {
             .map(|s| if s == "USD" { Currency::usd() } else { Currency::syp() })
             .unwrap_or(Currency::syp());
 
-        // Auto-create customer if account is under "123" or "1203" (receivables)
-        if account.code.len() >= 4 && (account.code.starts_with("123") || account.code.starts_with("1203")) {
+        // Auto-create customer if account is under "1203" (receivables)
+        if account.code.len() >= 4 && account.code.starts_with("1203") {
             if let Some(ref customer_repo) = self.customer_repo {
-                let customer_code = if account.code.starts_with("1203") { &account.code[4..] } else { &account.code[3..] };
+                let customer_code = &account.code[4..];
                 
                 let customer_name = account.name_ar
                     .strip_prefix("ذمة العميل: ")
@@ -127,10 +128,10 @@ impl CreateAccountUseCase {
             }
         }
 
-        // Auto-create supplier if account is under "223" or "2203" (payables)
-        if account.code.len() >= 4 && (account.code.starts_with("223") || account.code.starts_with("2203")) {
+        // Auto-create supplier if account is under "2203" (payables)
+        if account.code.len() >= 4 && account.code.starts_with("2203") {
             if let Some(ref supplier_repo) = self.supplier_repo {
-                let supplier_code = if account.code.starts_with("2203") { &account.code[4..] } else { &account.code[3..] };
+                let supplier_code = &account.code[4..];
                 
                 let supplier_name = account.name_ar
                     .strip_prefix("ذمة المورد: ")

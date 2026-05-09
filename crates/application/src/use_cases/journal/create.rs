@@ -43,12 +43,18 @@ impl CreateJournalEntryUseCase {
                         .map_err(|e| AppError::Invalid(format!("Invalid credit amount: {}", e)))?,
                     currency.clone()
                 );
-                Ok(JournalLine::new(
+                let mut line = JournalLine::new(
                     account_id,
                     MonetaryAmount::new(debit, fx_rate),
                     MonetaryAmount::new(credit, fx_rate),
                     dto.description
-                ))
+                );
+                if let Some(pid_str) = dto.partner_id {
+                    if let Ok(pid) = Uuid::parse_str(&pid_str) {
+                        line.partner_id = Some(pid);
+                    }
+                }
+                Ok(line)
             })
             .collect();
 
@@ -60,9 +66,11 @@ impl CreateJournalEntryUseCase {
 
         let entry = JournalEntry::new(
             request.entry_number,
+            request.journal_type,
             lines,
             entry_date,
             request.description,
+            request.source_id,
         ).map_err(AppError::from)?;
 
         self.repo.save(&entry).await?;

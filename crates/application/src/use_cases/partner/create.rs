@@ -3,15 +3,19 @@ use rust_decimal::Decimal;
 use chrono::Utc;
 use domain::accounting::partner::{Partner, ProfitSharingType};
 use domain::accounting::account::{Account, AccountType, AccountCategory};
+use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
+use domain::shared::{Currency, Money, MonetaryAmount};
 
 use crate::ports::partner_repository::PartnerRepository;
 use crate::ports::account_repository::AccountRepository;
+use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::unit_of_work::UnitOfWork;
 use crate::errors::AppError;
 
 pub struct CreatePartnerUseCase {
     repo: Arc<dyn PartnerRepository>,
     account_repo: Arc<dyn AccountRepository>,
+    journal_repo: Arc<dyn JournalEntryRepository>,
     uow: Arc<dyn UnitOfWork>,
 }
 
@@ -19,9 +23,10 @@ impl CreatePartnerUseCase {
     pub fn new(
         repo: Arc<dyn PartnerRepository>,
         account_repo: Arc<dyn AccountRepository>,
+        journal_repo: Arc<dyn JournalEntryRepository>,
         uow: Arc<dyn UnitOfWork>,
     ) -> Self {
-        Self { repo, account_repo, uow }
+        Self { repo, account_repo, journal_repo, uow }
     }
 
     pub async fn execute(
@@ -40,10 +45,10 @@ impl CreatePartnerUseCase {
             _ => return Err(AppError::Invalid("نوع تقاسم أرباح غير صالح".into())),
         };
 
-        // Get next partner code (numeric part)
+        // Get next partner code
         let next_seq = self.account_repo.get_next_child_code("222").await?;
-        let numeric_part = if next_seq.starts_with("222") {
-            &next_seq[3..]
+        let numeric_part = if let Some(stripped) = next_seq.strip_prefix("222") {
+            stripped
         } else {
             &next_seq
         };
@@ -58,17 +63,18 @@ impl CreatePartnerUseCase {
             is_amount_in_usd,
             sharing_enum,
             manual_ratio,
-        ).map_err(|e| AppError::Domain(e))?;
+        ).map_err(AppError::Domain)?;
 
         self.uow.begin().await?;
 
         let capital_parent = self.account_repo.find_by_code("222").await?
             .ok_or_else(|| AppError::Invalid("حساب رأس المال العام (222) غير موجود".into()))?;
         
-        let cap_code = format!("222{}", &code[1..]); // Use numeric part of code
+        let cap_code = format!("222{}", &code[1..]); 
+        let cap_account_id = domain::shared::ids::AccountId::new();
 
         let cap_account = Account {
-            id: domain::shared::ids::AccountId::new(),
+            id: cap_account_id,
             code: cap_code,
             name_ar: name.clone(),
             name_en: name.clone(),
@@ -123,6 +129,33 @@ impl CreatePartnerUseCase {
         partner.link_drawings_account(draw_account.id);
         
         self.repo.save(&partner).await?;
+
+        // --- Accounting Integration: Opening Capital ---
+        if partner.amount_local != Decimal::ZERO {
+            let opening_equity = self.account_repo.find_by_code("3002").await?
+                .ok_or_else(|| AppError::NotFound("حساب الأرصدة الافتتاحية (3002) غير موجود".into()))?;
+
+            let currency = Currency::syp();
+            let amount_ma = MonetaryAmount::new(Money::new(partner.amount_local.abs(), currency.clone()), Decimal::ONE);
+            let zero_ma = MonetaryAmount::zero(currency.clone());
+
+            let mut lines = Vec::new();
+            // Equity Debit (Opening Balance), Partner Capital Credit
+            lines.push(JournalLine::new(opening_equity.id, amount_ma.clone(), zero_ma.clone(), format!("إثبات رأس مال الشريك: {}", partner.name)));
+            lines.push(JournalLine::new(cap_account_id, zero_ma, amount_ma, format!("رأس مال الشريك الجديد: {}", partner.name)));
+
+            let mut entry = JournalEntry::new(
+                format!("PART-CAP-{}", partner.id.0.simple()),
+                JournalType::AccountOpeningBalance,
+                lines,
+                Utc::now(),
+                format!("قيد إثبات رأس مال الشريك: {}", partner.name),
+                Some(partner.id.to_string()),
+            ).map_err(|e| AppError::Invalid(e.to_string()))?;
+
+            entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
+            self.journal_repo.save(&entry).await?;
+        }
 
         self.uow.commit().await?;
 

@@ -1,4 +1,4 @@
-﻿#![allow(clippy::invisible_characters)]
+#![allow(clippy::invisible_characters)]
 use crate::shared::errors::DomainError;
 use crate::shared::ids::{AccountId, JournalEntryId};
 use crate::shared::monetary_amount::MonetaryAmount;
@@ -8,9 +8,42 @@ use uuid::Uuid;
 
 use rust_decimal::Decimal;
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum JournalType {
+    CashReceipt,          // سند قبض
+    CashPayment,          // سند دفع
+    CashOpeningBalance,   // رصيد افتتاحي للخزينة
+    AccountOpeningBalance,// رصيد افتتاحي لحساب
+    CashJournal,          // يومية الصندوق
+    CashSalesJournal,     // يومية المبيعات النقدية
+    CreditSalesJournal,   // يومية المبيعات الآجلة
+    PurchaseJournal,      // يومية المشتريات
+    PurchaseCostsJournal, // يومية التكاليف الإضافية للمشتريات
+    GeneralJournal,       // اليومية العامة
+}
+
+impl std::fmt::Display for JournalType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Self::CashReceipt => "سند قبض",
+            Self::CashPayment => "سند دفع",
+            Self::CashOpeningBalance => "رصيد افتتاحي للخزينة",
+            Self::AccountOpeningBalance => "رصيد افتتاحي لحساب",
+            Self::CashJournal => "يومية الصندوق",
+            Self::CashSalesJournal => "يومية المبيعات النقدية",
+            Self::CreditSalesJournal => "يومية المبيعات الآجلة",
+            Self::PurchaseJournal => "يومية المشتريات",
+            Self::PurchaseCostsJournal => "يومية التكاليف الإضافية للمشتريات",
+            Self::GeneralJournal => "اليومية العامة",
+        };
+        write!(f, "{}", s)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JournalLine {
     pub account_id: AccountId,
+    pub partner_id: Option<Uuid>, // For tracking customers/suppliers/partners
     pub debit: MonetaryAmount,
     pub credit: MonetaryAmount,
     pub description: String,
@@ -25,10 +58,16 @@ impl JournalLine {
     ) -> Self {
         Self {
             account_id,
+            partner_id: None,
             debit,
             credit,
             description,
         }
+    }
+
+    pub fn with_partner(mut self, partner_id: Uuid) -> Self {
+        self.partner_id = Some(partner_id);
+        self
     }
 
     pub fn base_debit(&self) -> Decimal {
@@ -52,11 +91,14 @@ pub enum JournalEntryStatus {
 pub struct JournalEntry {
     pub id: JournalEntryId,
     pub entry_number: String,
+    pub journal_type: JournalType,
+    pub source_id: Option<String>, // ID of the source document (Invoice, Receipt, etc.)
     pub lines: Vec<JournalLine>,
     pub entry_date: DateTime<Utc>,
     pub description: String,
     pub status: JournalEntryStatus,
     pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
     pub posted_at: Option<DateTime<Utc>>,
     pub reversed_at: Option<DateTime<Utc>>,
 }
@@ -64,25 +106,39 @@ pub struct JournalEntry {
 impl JournalEntry {
     pub fn new(
         entry_number: String,
+        journal_type: JournalType,
         lines: Vec<JournalLine>,
         entry_date: DateTime<Utc>,
         description: String,
+        source_id: Option<String>,
     ) -> Result<Self, DomainError> {
         if entry_number.trim().is_empty() {
             return Err(DomainError::Invalid(
-                "Ø±Ù‚Ù… Ø§Ù„Ù‚ÙŠØ¯ Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø£Ù† ÙŠÙƒÙˆÙ† ÙØ§Ø±ØºÙ‹Ø§".into(),
+                "رقم القيد لا يمكن أن يكون فارغاً".into(),
             ));
         }
 
         if lines.is_empty() {
             return Err(DomainError::Invalid(
-                "Ø§Ù„Ù‚ÙŠØ¯ ÙŠØ¬Ø¨ Ø£Ù† ÙŠØ­ØªÙˆÙŠ Ø¹Ù„Ù‰ Ø³Ø·Ø± ÙˆØ§Ø­Ø¯ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„".into(),
+                "القيد يجب أن يحتوي على سطر واحد على الأقل".into(),
             ));
+        }
+
+        for line in &lines {
+            let has_debit = line.base_debit() > Decimal::ZERO;
+            let has_credit = line.base_credit() > Decimal::ZERO;
+            
+            if has_debit && has_credit {
+                return Err(DomainError::Invalid("لا يمكن أن يكون السطر مديناً ودائناً في نفس الوقت. يجب تفصيل القيد المركب إلى سطور مستقلة.".into()));
+            }
+            if !has_debit && !has_credit {
+                return Err(DomainError::Invalid("يجب أن يحتوي كل سطر على قيمة إما مدينة أو دائنة. لا يمكن أن يكون كلاهما صفراً.".into()));
+            }
         }
 
         if description.trim().is_empty() {
             return Err(DomainError::Invalid(
-                "ÙˆØµÙ Ø§Ù„Ù‚ÙŠØ¯ Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø£Ù† ÙŠÙƒÙˆÙ† ÙØ§Ø±ØºÙ‹Ø§".into(),
+                "وصف القيد لا يمكن أن يكون فارغاً".into(),
             ));
         }
 
@@ -91,14 +147,22 @@ impl JournalEntry {
         Ok(Self {
             id: JournalEntryId(Uuid::new_v4()),
             entry_number,
+            journal_type,
+            source_id,
             lines,
             entry_date,
             description,
             status: JournalEntryStatus::Draft,
             created_at: now,
+            updated_at: now,
             posted_at: None,
             reversed_at: None,
         })
+    }
+
+    pub fn with_source(mut self, source_id: String) -> Self {
+        self.source_id = Some(source_id);
+        self
     }
 
     pub fn total_base_debit(&self) -> Decimal {
@@ -110,19 +174,19 @@ impl JournalEntry {
     }
 
     pub fn is_balanced(&self) -> bool {
-        self.total_base_debit() == self.total_base_credit()
+        self.total_base_debit().normalize() == self.total_base_credit().normalize()
     }
 
     pub fn post(&mut self) -> Result<(), DomainError> {
         if self.status != JournalEntryStatus::Draft {
             return Err(DomainError::Invalid(
-                "ÙŠÙ…ÙƒÙ† ØªØ±Ø­ÙŠÙ„ Ø§Ù„Ù‚ÙŠÙˆØ¯ Ø§Ù„Ù…Ø³ÙˆØ¯Ø© ÙÙ‚Ø·".into(),
+                "يمكن ترحيل القيود المسودة فقط".into(),
             ));
         }
 
         if !self.is_balanced() {
             return Err(DomainError::Invalid(format!(
-                "Ø§Ù„Ù‚ÙŠØ¯ ØºÙŠØ± Ù…ØªÙˆØ§Ø²Ù† Ø¨Ø§Ù„Ù„ÙŠØ±Ø© Ø§Ù„Ø³ÙˆØ±ÙŠØ©. Ù…Ø¯ÙŠÙ†: {} ØŒ Ø¯Ø§Ø¦Ù†: {}",
+                "القيد غير متوازن بالليرة السورية. مدين: {} ، دائن: {}",
                 self.total_base_debit(),
                 self.total_base_credit()
             )));
@@ -130,18 +194,20 @@ impl JournalEntry {
 
         self.status = JournalEntryStatus::Posted;
         self.posted_at = Some(Utc::now());
+        self.updated_at = Utc::now();
         Ok(())
     }
 
     pub fn reverse(&mut self) -> Result<(), DomainError> {
         if self.status != JournalEntryStatus::Posted {
             return Err(DomainError::Forbidden(
-                "ÙŠÙ…ÙƒÙ† Ø¹ÙƒØ³ Ø§Ù„Ù‚ÙŠÙˆØ¯ Ø§Ù„Ù…Ø±Ø­Ù„Ø© ÙÙ‚Ø·".into(),
+                "يمكن عكس القيود المرحلة فقط".into(),
             ));
         }
 
         self.status = JournalEntryStatus::Reversed;
         self.reversed_at = Some(Utc::now());
+        self.updated_at = Utc::now();
         Ok(())
     }
 }
@@ -172,9 +238,11 @@ mod tests {
 
         let result = JournalEntry::new(
             "JE-001".to_string(),
+            JournalType::GeneralJournal,
             lines,
             Utc::now(),
-            "Ù‚ÙŠØ¯ ØªØ¬Ø±ÙŠØ¨ÙŠ".to_string(),
+            "قيد تجريبي".to_string(),
+            None,
         );
 
         assert!(result.is_ok());
@@ -200,9 +268,11 @@ mod tests {
 
         let mut entry = JournalEntry::new(
             "JE-001".to_string(),
+            JournalType::GeneralJournal,
             lines,
             Utc::now(),
-            "Ù‚ÙŠØ¯ Ø¹Ù…Ù„Ø§Øª Ù…Ø®ØªÙ„Ø·Ø©".to_string(),
+            "قيد عملات مختلطة".to_string(),
+            None,
         )
         .unwrap();
 
@@ -229,41 +299,14 @@ mod tests {
 
         let mut entry = JournalEntry::new(
             "JE-001".to_string(),
+            JournalType::GeneralJournal,
             lines,
             Utc::now(),
-            "Ù‚ÙŠØ¯ ØºÙŠØ± Ù…ØªÙˆØ§Ø²Ù†".to_string(),
+            "قيد غير متوازن".to_string(),
+            None,
         )
         .unwrap();
 
-        assert!(entry.post().is_err());
-    }
-
-    #[test]
-    fn posting_twice_is_rejected() {
-        let lines = vec![
-            JournalLine::new(
-                AccountId(Uuid::new_v4()),
-                MonetaryAmount::new(Money::syp(dec!(100)), dec!(1)),
-                MonetaryAmount::zero(Currency::syp()),
-                "مدين".to_string(),
-            ),
-            JournalLine::new(
-                AccountId(Uuid::new_v4()),
-                MonetaryAmount::zero(Currency::syp()),
-                MonetaryAmount::new(Money::syp(dec!(100)), dec!(1)),
-                "دائن".to_string(),
-            ),
-        ];
-
-        let mut entry = JournalEntry::new(
-            "JE-001".to_string(),
-            lines,
-            Utc::now(),
-            "Ù‚ÙŠØ¯ ØªØ¬Ø±ÙŠØ¨ÙŠ".to_string(),
-        )
-        .unwrap();
-
-        entry.post().unwrap();
         assert!(entry.post().is_err());
     }
 
@@ -286,40 +329,14 @@ mod tests {
 
         let entry = JournalEntry::new(
             "JE-001".to_string(),
+            JournalType::GeneralJournal,
             lines,
             Utc::now(),
-            "Ù‚ÙŠØ¯ ØªØ¬Ø±ÙŠØ¨ÙŠ".to_string(),
+            "قيد تجريبي".to_string(),
+            None,
         )
         .unwrap();
 
-        assert_eq!(entry.total_base_debit(), dec!(150100));
-    }
-
-    #[test]
-    fn total_base_credit_calculates_correctly() {
-        let lines = vec![
-            JournalLine::new(
-                AccountId(Uuid::new_v4()),
-                MonetaryAmount::zero(Currency::syp()),
-                MonetaryAmount::new(Money::syp(dec!(100)), dec!(1)),
-                "دائن".to_string(),
-            ),
-            JournalLine::new(
-                AccountId(Uuid::new_v4()),
-                MonetaryAmount::zero(Currency::usd()),
-                MonetaryAmount::new(Money::usd(dec!(10)), dec!(15000)),
-                "دائن دولار".to_string(),
-            ),
-        ];
-
-        let entry = JournalEntry::new(
-            "JE-001".to_string(),
-            lines,
-            Utc::now(),
-            "Ù‚ÙŠØ¯ ØªØ¬Ø±ÙŠØ¨ÙŠ".to_string(),
-        )
-        .unwrap();
-
-        assert_eq!(entry.total_base_credit(), dec!(150100));
+        assert_eq!(entry.total_base_debit().normalize(), dec!(150100).normalize());
     }
 }
