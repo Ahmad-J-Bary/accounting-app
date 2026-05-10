@@ -140,7 +140,7 @@ impl PostInvoiceUseCase {
                                 MonetaryAmount::new(Money::new(amount_deferred, doc_currency.clone()), fx_rate), 
                                 MonetaryAmount::zero(doc_currency.clone()), 
                                 format!("ذمة مدينة - فاتورة رقم {}", invoice.invoice_number)
-                            ));
+                            ).with_partner(cid.0));
                             
                             // Update customer balance in subledger
                             let mut updated_customer = customer;
@@ -187,7 +187,7 @@ impl PostInvoiceUseCase {
                                 MonetaryAmount::zero(doc_currency.clone()), 
                                 MonetaryAmount::new(Money::new(amount_deferred, doc_currency.clone()), fx_rate), 
                                 format!("ذمة دائنة - فاتورة رقم {}", invoice.invoice_number)
-                            ));
+                            ).with_partner(sid.0));
                             
                             // Update supplier balance in subledger
                             let mut updated_supplier = supplier;

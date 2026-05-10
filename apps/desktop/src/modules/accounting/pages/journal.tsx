@@ -16,12 +16,15 @@ import { useDataTable, useColumnPreferences } from '@shared/hooks';
 import { JournalTable } from '@modules/accounting/components/JournalTable';
 import { JournalDetailPanel } from '@modules/accounting/components/JournalDetailPanel';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { JournalSummaryFooter } from "@modules/accounting/components/JournalSummaryFooter";
 
 const JOURNAL_TYPES: { value: JournalType; label: string }[] = [
   { value: 'GeneralJournal', label: 'اليومية العامة' },
   { value: 'CashJournal', label: 'يومية الصندوق' },
-  { value: 'CashSalesJournal', label: 'مبيعات نقدية' },
-  { value: 'CreditSalesJournal', label: 'مبيعات آجلة' },
+  { value: 'CashSalesJournal', label: 'يومية المبيعات النقدية' },
+  { value: 'CreditSalesJournal', label: 'يومية المبيعات الآجلة' },
+  { value: 'CashReceipt', label: 'سندات القبض' },
+  { value: 'CashPayment', label: 'سندات الصرف' },
   { value: 'PurchaseJournal', label: 'يومية المشتريات' },
   { value: 'PurchaseCostsJournal', label: 'يومية تكاليف الشراء' },
   { value: 'MaterialOpeningBalance', label: 'رصيد أول المدة للمواد' },
@@ -136,6 +139,31 @@ export default function Journal() {
     { label: "إجمالي الحركات", value: entries.reduce((s, e) => s + (e.lines?.length || 0), 0), icon: Banknote, color: "text-indigo-600" },
   ], [entries]);
 
+  const journalTotals = useMemo(() => {
+    let debitUSD = 0, creditUSD = 0;
+    let debitSYP = 0, creditSYP = 0;
+
+    entries.forEach(entry => {
+      entry.lines?.forEach(line => {
+        const d = parseFloat(line.debit || "0");
+        const c = parseFloat(line.credit || "0");
+        
+        if (line.currency === 'USD') {
+          debitUSD += d;
+          creditUSD += c;
+        } else if (line.currency === 'SYP') {
+          debitSYP += d;
+          creditSYP += c;
+        }
+      });
+    });
+
+    return [
+      { currencyCode: 'USD', currencySymbol: '$', debit: debitUSD, credit: creditUSD },
+      { currencyCode: 'SYP', currencySymbol: 'ل.س', debit: debitSYP, credit: creditSYP },
+    ];
+  }, [entries]);
+
   const journalTitle = JOURNAL_TYPES.find(t => t.value === (filters.journal_type || 'GeneralJournal'))?.label || 'القيود اليومية';
 
   return (
@@ -213,6 +241,13 @@ export default function Journal() {
             />
           </div>
         </div>
+      }
+      summaryContent={
+        <JournalSummaryFooter 
+          totals={journalTotals} 
+          visibleColumns={visibleColumns} 
+          className="border-none shadow-none bg-transparent p-0"
+        />
       }
     >
       <JournalDetailPanel

@@ -128,7 +128,7 @@ impl CreatePaymentUseCase {
 
                     // Debit Cash, Credit Customer
                     journal_lines.push(JournalLine::new(cash_account.id, amount_ma.clone(), zero_ma.clone(), format!("قبض من العميل: {}", customer.name)));
-                    journal_lines.push(JournalLine::new(p_acc_id, zero_ma, amount_ma, format!("دفعة من العميل: {}", customer.name)));
+                    journal_lines.push(JournalLine::new(p_acc_id, zero_ma, amount_ma, format!("دفعة من العميل: {}", customer.name)).with_partner(cid.0));
                 }
             },
             PaymentType::SupplierPayment => {
@@ -140,7 +140,7 @@ impl CreatePaymentUseCase {
                         .ok_or_else(|| AppError::Invalid("المورد لا يملك حساباً محاسبياً".into()))?;
 
                     // Debit Supplier, Credit Cash
-                    journal_lines.push(JournalLine::new(p_acc_id, amount_ma.clone(), zero_ma.clone(), format!("دفع للمورد: {}", supplier.name)));
+                    journal_lines.push(JournalLine::new(p_acc_id, amount_ma.clone(), zero_ma.clone(), format!("دفع للمورد: {}", supplier.name)).with_partner(sid.0));
                     journal_lines.push(JournalLine::new(cash_account.id, zero_ma, amount_ma, format!("دفعة للمورد: {}", supplier.name)));
                 }
             },

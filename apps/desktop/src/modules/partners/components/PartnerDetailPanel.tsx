@@ -47,20 +47,36 @@ export function PartnerDetailPanel({
         </div>
         <div className="flex items-center gap-2">
           {partner.account_id && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="bg-blue-600 text-white hover:bg-blue-700 border-none h-8 px-3 rounded-lg"
-              onClick={() => openTab({
-                id: `ledger-${partner.account_id}`,
-                title: `حركة: ${partner.name}`,
-                path: `/accounting/account-ledger/${partner.account_id}`,
-                closable: true
-              })}
-            >
-              <BookOpen className="w-3.5 h-3.5 ml-1.5" />
-              حركة الحساب
-            </Button>
+            <div className="flex flex-col gap-1.5">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="bg-blue-600 text-white hover:bg-blue-700 border-none h-8 px-3 rounded-lg w-full"
+                onClick={() => openTab({
+                  id: `ledger-${partner.account_id}`,
+                  title: `حركة: ${partner.name}`,
+                  path: `/accounting/account-ledger/${partner.account_id}`,
+                  closable: true
+                })}
+              >
+                <BookOpen className="w-3.5 h-3.5 ml-1.5" />
+                اليومية العامة
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="bg-emerald-600 text-white hover:bg-emerald-700 border-none h-8 px-3 rounded-lg w-full"
+                onClick={() => openTab({
+                  id: `statement-${partner.id}`,
+                  title: `كشف: ${partner.name}`,
+                  path: `/partners/customer-statement/${partner.id}`,
+                  closable: true
+                })}
+              >
+                <FileText className="w-3.5 h-3.5 ml-1.5" />
+                كشف الحساب التحليلي
+              </Button>
+            </div>
           )}
           <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full text-slate-400 hover:text-slate-600">
             <X className="w-5 h-5" />

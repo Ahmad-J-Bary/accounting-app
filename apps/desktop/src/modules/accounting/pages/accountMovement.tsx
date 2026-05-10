@@ -7,9 +7,9 @@ import { accountingService } from "@modules/accounting/api/accountingService";
 import type { AccountLedgerDto, AccountLedgerLineDto } from "@erp/shared-types";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { AccountMovementTable } from "../components/AccountMovementTable";
-import { Card, CardContent } from "@shared/ui/card";
 import { cn } from "@shared/lib/utils";
 import { useDataTable } from "@shared/hooks";
+import { JournalSummaryFooter } from "../components/JournalSummaryFooter";
 
 export default function AccountMovement() {
   const { accountId } = useParams<{ accountId: string }>();
@@ -106,36 +106,33 @@ export default function AccountMovement() {
         </div>
       }
       tableContent={
-        <div className="space-y-4 p-4">
-          {/* USD Summary Cards for multi-currency tracking */}
-          {ledger && (parseFloat(ledger.total_debit_usd) > 0 || parseFloat(ledger.total_credit_usd) > 0) && (
-            <div className="grid grid-cols-4 gap-4 mb-4">
-               <Card className="bg-blue-50/30 border-blue-100">
-                 <CardContent className="p-3">
-                   <div className="text-[10px] font-bold text-blue-600 mb-1">إجمالي مدين ($)</div>
-                   <div className="text-sm font-black text-blue-800">{parseFloat(ledger.total_debit_usd).toLocaleString()} $</div>
-                 </CardContent>
-               </Card>
-               <Card className="bg-emerald-50/30 border-emerald-100">
-                 <CardContent className="p-3">
-                   <div className="text-[10px] font-bold text-emerald-600 mb-1">إجمالي دائن ($)</div>
-                   <div className="text-sm font-black text-emerald-800">{parseFloat(ledger.total_credit_usd).toLocaleString()} $</div>
-                 </CardContent>
-               </Card>
-               <Card className="bg-slate-50 border-slate-200">
-                 <CardContent className="p-3">
-                   <div className="text-[10px] font-bold text-slate-600 mb-1">الرصيد الختامي ($)</div>
-                   <div className="text-sm font-black text-slate-900">{parseFloat(ledger.closing_balance_usd).toLocaleString()} $</div>
-                 </CardContent>
-               </Card>
-            </div>
-          )}
-
+        <div className="p-4">
           <AccountMovementTable
             lines={ledger?.lines || []}
             loading={loading}
           />
         </div>
+      }
+      summaryContent={
+        ledger && (
+          <JournalSummaryFooter 
+            totals={[
+              { 
+                currencyCode: 'USD', 
+                currencySymbol: '$', 
+                debit: parseFloat(ledger.total_debit_usd), 
+                credit: parseFloat(ledger.total_credit_usd) 
+              },
+              { 
+                currencyCode: 'SYP', 
+                currencySymbol: 'ل.س', 
+                debit: parseFloat(ledger.total_debit_syp), 
+                credit: parseFloat(ledger.total_credit_syp) 
+              }
+            ]} 
+            className="border-none shadow-none bg-transparent p-0"
+          />
+        )
       }
     />
   );
