@@ -25,6 +25,7 @@ import Assets from '@modules/assets/pages/assets';
 import CurrencySettings from '@modules/core/pages/currencySettings';
 import AccountingJournalsReport from '@modules/accounting/pages/AccountingJournalsReport';
 import AccountMovementsReport from '@modules/accounting/pages/AccountMovementsReport';
+import AccountMovement from '@modules/accounting/pages/accountMovement';
 
 export function ErpRoutes({ location }: { location?: string | Partial<Location> }) {
   return (
@@ -35,6 +36,7 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/accounting/journals" element={<AccountingJournalsReport />} />
       <Route path="/accounting/reports/ledger" element={<AccountMovementsReport />} />
       <Route path="/accounting/reports/movements" element={<AccountMovementsReport />} />
+      <Route path="/accounting/account-ledger/:accountId" element={<AccountMovement />} />
       <Route path="/journal" element={<Journal />} />
       <Route path="/journal/new" element={<JournalCreate />} />
       <Route path="/customers" element={<Customers />} />

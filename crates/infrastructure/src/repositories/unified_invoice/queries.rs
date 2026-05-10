@@ -148,3 +148,16 @@ pub async fn get_last_usd_prices(pool: &SqlitePool, material_id: &str) -> Result
         last_sale.unwrap_or_else(|| "0".to_string())
     ))
 }
+
+pub async fn get_next_invoice_number(pool: &SqlitePool) -> Result<String, AppError> {
+    let row: (Option<i64>,) = sqlx::query_as("SELECT MAX(CAST(invoice_number AS INTEGER)) FROM unified_invoices")
+        .fetch_one(pool)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    
+    let next = match row.0 {
+        Some(n) => n + 1,
+        None => 1,
+    };
+    Ok(next.to_string())
+}

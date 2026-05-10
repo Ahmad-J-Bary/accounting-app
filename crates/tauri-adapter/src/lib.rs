@@ -22,6 +22,7 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             // Purchase Invoices (Legacy)
             commands::purchase::create_purchase_invoice,
             commands::purchase::list_purchase_invoices,
+            commands::purchase::get_purchase_invoice,
             commands::purchase::post_purchase_invoice,
             // Customers
             commands::customer::create_customer,

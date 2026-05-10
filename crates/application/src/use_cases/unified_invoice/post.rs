@@ -112,7 +112,8 @@ impl PostInvoiceUseCase {
         let main_account = self.account_repo.find_by_code(main_account_code).await?.ok_or_else(|| AppError::NotFound(format!("حساب الإيرادات/المصاريف غير موجود: {}", main_account_code)))?;
         let cash_account = self.account_repo.find_by_code("122").await?.ok_or_else(|| AppError::NotFound("حساب الصندوق غير موجود: 122".into()))?;
 
-        if invoice.invoice_type == InvoiceType::Sales {
+        if total_amount > Decimal::ZERO {
+            if invoice.invoice_type == InvoiceType::Sales {
             // Sales: Credit Revenue, Debit Cash/Customer
             journal_lines.push(JournalLine::new(
                 main_account.id, 
@@ -215,6 +216,8 @@ impl PostInvoiceUseCase {
             }
         }
 
+        }
+
         if !journal_lines.is_empty() {
             let journal_type = match invoice.invoice_type {
                 InvoiceType::Sales => {
@@ -227,7 +230,7 @@ impl PostInvoiceUseCase {
             };
 
             let mut journal_entry = JournalEntry::new(
-                format!("INV-JE-{}", invoice.invoice_number),
+                self.journal_repo.get_next_entry_number().await?,
                 journal_type,
                 journal_lines,
                 Utc::now(),

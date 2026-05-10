@@ -20,23 +20,33 @@ export interface AccountDto {
 export interface AccountLedgerLineDto {
   date: string;
   journal_id: string;
+  entry_number: string;
+  journal_type: string;
+  source_id: string | null;
   description: string;
+  opposite_account_name: string;
   currency: string;
   fx_rate: string;
-  debit: string;
-  credit: string;
-  base_debit: string;
-  base_credit: string;
-  running_balance: string;
+  debit_syp: string;
+  credit_syp: string;
+  balance_syp: string;
+  debit_usd: string;
+  credit_usd: string;
+  balance_usd: string;
 }
 
 export interface AccountLedgerDto {
   account_id: string;
   account_name: string;
+  opening_balance_syp: string;
+  opening_balance_usd: string;
   lines: AccountLedgerLineDto[];
-  total_debit: string;
-  total_credit: string;
-  final_balance: string;
+  total_debit_syp: string;
+  total_credit_syp: string;
+  closing_balance_syp: string;
+  total_debit_usd: string;
+  total_credit_usd: string;
+  closing_balance_usd: string;
 }
 
 export interface ReceivablesPayablesSummary {

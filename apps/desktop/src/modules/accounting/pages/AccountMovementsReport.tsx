@@ -63,8 +63,8 @@ export default function AccountMovementsReport() {
 
   const totals = useMemo(() => {
     return filteredLines.reduce((acc, curr) => {
-      acc.debit += parseFloat(curr.base_debit);
-      acc.credit += parseFloat(curr.base_credit);
+      acc.debit += parseFloat(curr.debit_syp);
+      acc.credit += parseFloat(curr.credit_syp);
       return acc;
     }, { debit: 0, credit: 0 });
   }, [filteredLines]);
@@ -157,7 +157,7 @@ export default function AccountMovementsReport() {
               </div>
               <div>
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">الرصيد النهائي</span>
-                <div className="text-xl font-black text-slate-900 tabular-nums">{formatCurrency(parseFloat(ledger?.final_balance || "0"))}</div>
+                <div className="text-xl font-black text-slate-900 tabular-nums">{formatCurrency(parseFloat(ledger?.closing_balance_syp || "0"))}</div>
               </div>
            </div>
 
@@ -208,18 +208,18 @@ export default function AccountMovementsReport() {
                   filteredLines.map((l, index) => (
                     <tr key={index} className="hover:bg-slate-50/50 transition-colors group">
                       <td className="px-6 py-5 font-bold text-slate-600 tabular-nums text-xs">{formatDate(l.date)}</td>
-                      <td className="px-6 py-5 font-black text-slate-900 text-xs">{l.journal_id}</td>
+                      <td className="px-6 py-5 font-black text-slate-900 text-xs">{l.entry_number}</td>
                       <td className="px-6 py-5">
                          <span className="font-bold text-slate-700 text-xs">{l.description}</span>
                       </td>
                       <td className="px-6 py-5 text-left tabular-nums font-bold text-blue-700">
-                        {parseFloat(l.base_debit) > 0 ? formatCurrency(parseFloat(l.base_debit)) : "-"}
+                        {parseFloat(l.debit_syp) > 0 ? formatCurrency(parseFloat(l.debit_syp)) : "-"}
                       </td>
                       <td className="px-6 py-5 text-left tabular-nums font-bold text-emerald-700">
-                        {parseFloat(l.base_credit) > 0 ? formatCurrency(parseFloat(l.base_credit)) : "-"}
+                        {parseFloat(l.credit_syp) > 0 ? formatCurrency(parseFloat(l.credit_syp)) : "-"}
                       </td>
                       <td className="px-6 py-5 text-left tabular-nums font-black text-slate-900 bg-slate-50/30">
-                        {formatCurrency(parseFloat(l.running_balance))}
+                        {formatCurrency(parseFloat(l.balance_syp))}
                       </td>
                     </tr>
                   ))

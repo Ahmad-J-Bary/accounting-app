@@ -113,8 +113,8 @@ impl RecordOpeningStockUseCase {
             ];
 
             let mut entry = JournalEntry::new(
-                format!("JE-OP-{}", Utc::now().timestamp()),
-                domain::accounting::JournalType::CashOpeningBalance,
+                self.journal_repo.get_next_entry_number().await?,
+                domain::accounting::JournalType::MaterialOpeningBalance,
                 lines,
                 entry_date,
                 req.notes

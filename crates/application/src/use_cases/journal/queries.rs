@@ -1,6 +1,8 @@
 use std::sync::Arc;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::account_repository::AccountRepository;
+use crate::ports::customer_repository::CustomerRepository;
+use crate::ports::supplier_repository::SupplierRepository;
 use crate::dto::journal_entry_dto::{JournalEntryDto};
 use crate::errors::AppError;
 use domain::accounting::{JournalType, JournalEntryStatus};
@@ -11,14 +13,18 @@ use uuid::Uuid;
 pub struct ListJournalEntriesUseCase {
     repo: Arc<dyn JournalEntryRepository>,
     account_repo: Arc<dyn AccountRepository>,
+    customer_repo: Arc<dyn CustomerRepository>,
+    supplier_repo: Arc<dyn SupplierRepository>,
 }
 
 impl ListJournalEntriesUseCase {
     pub fn new(
         repo: Arc<dyn JournalEntryRepository>,
         account_repo: Arc<dyn AccountRepository>,
+        customer_repo: Arc<dyn CustomerRepository>,
+        supplier_repo: Arc<dyn SupplierRepository>,
     ) -> Self {
-        Self { repo, account_repo }
+        Self { repo, account_repo, customer_repo, supplier_repo }
     }
 
     pub async fn execute(
@@ -63,10 +69,23 @@ impl ListJournalEntriesUseCase {
     async fn map_to_dto(&self, entry: domain::accounting::JournalEntry) -> Result<JournalEntryDto, AppError> {
         let mut dto = JournalEntryDto::from(entry);
         
-        // Enrich lines with account names
+        // Enrich lines with account names and partner names
         for line in &mut dto.lines {
+            // Account name
             if let Ok(acc_id) = line.account_id.parse::<AccountId>() {
                 line.account_name = self.account_repo.find_by_id(&acc_id).await?.map(|a| a.name_ar);
+            }
+
+            // Partner name (Customer or Supplier)
+            if let Some(p_id_str) = &line.partner_id {
+                if let Ok(p_id) = Uuid::parse_str(p_id_str) {
+                    // Try customer repo
+                    if let Ok(Some(customer)) = self.customer_repo.find_by_id(&domain::shared::ids::CustomerId(p_id)).await {
+                        line.partner_name = Some(customer.name);
+                    } else if let Ok(Some(supplier)) = self.supplier_repo.find_by_id(&domain::shared::ids::SupplierId(p_id)).await {
+                        line.partner_name = Some(supplier.name);
+                    }
+                }
             }
         }
 

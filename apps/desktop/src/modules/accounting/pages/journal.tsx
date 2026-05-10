@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Plus, Search, RefreshCw, FileText, CheckCircle2, FileEdit, Banknote, Settings2, Calendar, Filter } from "lucide-react";
@@ -17,33 +17,47 @@ import { JournalTable } from '@modules/accounting/components/JournalTable';
 import { JournalDetailPanel } from '@modules/accounting/components/JournalDetailPanel';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
-const JOURNAL_TYPES: { value: JournalType | 'ALL'; label: string }[] = [
-  { value: 'ALL', label: 'الكل' },
-  { value: 'GeneralJournal', label: 'يومية عامة' },
+const JOURNAL_TYPES: { value: JournalType; label: string }[] = [
+  { value: 'GeneralJournal', label: 'اليومية العامة' },
   { value: 'CashJournal', label: 'يومية الصندوق' },
   { value: 'CashSalesJournal', label: 'مبيعات نقدية' },
   { value: 'CreditSalesJournal', label: 'مبيعات آجلة' },
-  { value: 'PurchaseJournal', label: 'مشتريات' },
-  { value: 'PurchaseCostsJournal', label: 'تكاليف إضافية للمشتريات' },
+  { value: 'PurchaseJournal', label: 'يومية المشتريات' },
+  { value: 'PurchaseCostsJournal', label: 'يومية تكاليف الشراء' },
+  { value: 'MaterialOpeningBalance', label: 'رصيد أول المدة للمواد' },
 ];
 
 export default function Journal() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const typeParam = searchParams.get('type') as JournalType | null;
+
   const { currencies, baseCurrency } = useCurrencyContext();
   const [selectedEntry, setSelectedEntry] = useState<JournalEntryDto | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   
   const [filters, setFilters] = useState<JournalFilters>({
-    journal_type: undefined,
+    journal_type: typeParam || 'GeneralJournal',
     from_date: undefined,
     to_date: undefined,
   });
+
+  useEffect(() => {
+    const activeType = typeParam || 'GeneralJournal';
+    if (activeType !== (filters.journal_type || 'GeneralJournal')) {
+      setFilters(f => ({ ...f, journal_type: activeType }));
+    }
+  }, [typeParam, filters.journal_type]);
 
   useEffect(() => {
     const handler = () => navigate("/journal/new");
     window.addEventListener("erp:open-new-journal", handler);
     return () => window.removeEventListener("erp:open-new-journal", handler);
   }, [navigate]);
+
+  const fetchData = useCallback(() => {
+    return journalEntryService.listJournalEntries(filters);
+  }, [filters]);
 
   const {
     filtered: entries,
@@ -53,7 +67,7 @@ export default function Journal() {
     setSearch,
     refresh,
   } = useDataTable<JournalEntryDto>({
-    fetchData: () => journalEntryService.listJournalEntries(filters),
+    fetchData,
     searchFields: ["entry_number", "description"],
     dependencies: [filters],
   });
@@ -66,14 +80,15 @@ export default function Journal() {
       { id: "description", label: "البيان" },
       { id: "debit_account", label: "الحساب المدين / الوجهة" },
       { id: "credit_account", label: "الحساب الدائن / المصدر" },
-      { id: "total_debit", label: "عليه / مدين" },
-      { id: "total_credit", label: "له / دائن" },
-      { id: "status", label: "الحالة" },
+      { id: "total_debit_usd", label: "عليه / مدين ($)" },
+      { id: "total_debit_syp", label: "عليه / مدين (ل.س)" },
+      { id: "total_credit_usd", label: "له / دائن ($)" },
+      { id: "total_credit_syp", label: "له / دائن (ل.س)" },
     ];
   }, []);
 
   const defaultVisibleColumns = useMemo(() => {
-    return ["entry_date", "entry_number", "journal_type", "description", "debit_account", "credit_account", "total_debit", "total_credit", "status"];
+    return ["entry_date", "entry_number", "journal_type", "description", "debit_account", "credit_account", "total_debit_usd", "total_debit_syp", "total_credit_usd", "total_credit_syp"];
   }, []);
 
   const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences("journal_entries", defaultVisibleColumns);
@@ -118,22 +133,19 @@ export default function Journal() {
 
   const stats = useMemo(() => [
     { label: "إجمالي القيود", value: entries.length, icon: FileText, color: "text-slate-900" },
-    { label: "قيود مسودة", value: entries.filter(e => e.status === 'Draft').length, icon: FileEdit, color: "text-blue-600" },
-    { label: "قيود مرحلة", value: entries.filter(e => e.status === 'Posted').length, icon: CheckCircle2, color: "text-emerald-600" },
     { label: "إجمالي الحركات", value: entries.reduce((s, e) => s + (e.lines?.length || 0), 0), icon: Banknote, color: "text-indigo-600" },
   ], [entries]);
 
+  const journalTitle = JOURNAL_TYPES.find(t => t.value === (filters.journal_type || 'GeneralJournal'))?.label || 'القيود اليومية';
+
   return (
     <OperationalTableTemplate
-      title="القيود اليومية"
+      title={journalTitle}
       stats={stats}
       toolbar={
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => refresh(true)} disabled={isLoading} className="bg-white border-slate-200 h-9">
             <RefreshCw className={cn("w-4 h-4 ml-2", isLoading && "animate-spin")} />تحديث
-          </Button>
-          <Button size="sm" onClick={() => navigate("/journal/new")} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 h-9 px-4 font-bold">
-            <Plus className="w-4 h-4 ml-2" />إنشاء قيد يومية
           </Button>
         </div>
       }
@@ -149,8 +161,8 @@ export default function Journal() {
             />
           </div>
           <Select 
-            value={filters.journal_type || 'ALL'} 
-            onValueChange={(val) => setFilters(f => ({ ...f, journal_type: val === 'ALL' ? undefined : val as JournalType }))}
+            value={filters.journal_type} 
+            onValueChange={(val) => setFilters(f => ({ ...f, journal_type: val as JournalType }))}
           >
             <SelectTrigger className="w-[180px] h-10 bg-white font-bold shadow-sm border-slate-200">
               <Filter className="w-4 h-4 ml-2 text-slate-400" />
@@ -197,8 +209,6 @@ export default function Journal() {
             <JournalTable
               entries={entries}
               loading={loading}
-              onPost={handlePost}
-              onView={handleView}
               visibleColumns={visibleColumns}
             />
           </div>

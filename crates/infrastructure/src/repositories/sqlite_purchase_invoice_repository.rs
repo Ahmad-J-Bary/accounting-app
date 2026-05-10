@@ -50,6 +50,14 @@ struct PurchaseInvoiceItemRow {
     notes: Option<String>,
 }
 
+#[derive(sqlx::FromRow)]
+struct PurchaseInvoiceAdditionalCostRow {
+    id: String,
+    description: String,
+    account_id: String,
+    amount: String,
+}
+
 #[async_trait]
 impl PurchaseInvoiceRepository for SqlitePurchaseInvoiceRepository {
     async fn save(&self, invoice: &PurchaseInvoice) -> Result<(), AppError> {
@@ -96,6 +104,21 @@ impl PurchaseInvoiceRepository for SqlitePurchaseInvoiceRepository {
             .map_err(|e| AppError::Infrastructure(e.to_string()))?;
         }
 
+        for cost in &invoice.additional_costs {
+            sqlx::query(
+                "INSERT INTO purchase_invoice_additional_costs (id, purchase_invoice_id, description, account_id, amount)
+                 VALUES (?, ?, ?, ?, ?)"
+            )
+            .bind(&cost.id)
+            .bind(invoice.id.to_string())
+            .bind(&cost.description)
+            .bind(cost.account_id.to_string())
+            .bind(cost.amount.to_string())
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+        }
+
         tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
         Ok(())
     }
@@ -112,6 +135,7 @@ impl PurchaseInvoiceRepository for SqlitePurchaseInvoiceRepository {
 
         if let Some(row) = row {
             let items = self.load_items(&row.id).await?;
+            let additional_costs = self.load_additional_costs(&row.id).await?;
             let status = match row.status.as_str() {
                 "Posted" => PurchaseInvoiceStatus::Posted,
                 "Cancelled" => PurchaseInvoiceStatus::Cancelled,
@@ -124,6 +148,7 @@ impl PurchaseInvoiceRepository for SqlitePurchaseInvoiceRepository {
                 invoice_number: row.invoice_number,
                 supplier_id: row.supplier_id.parse::<SupplierId>().unwrap_or_default(),
                 items,
+                additional_costs,
                 subtotal: Decimal::from_str(&row.subtotal).unwrap_or(Decimal::ZERO),
                 tax_amount: Decimal::from_str(&row.tax_amount).unwrap_or(Decimal::ZERO),
                 discount_amount: Decimal::from_str(&row.discount_amount).unwrap_or(Decimal::ZERO),
@@ -233,6 +258,24 @@ impl SqlitePurchaseInvoiceRepository {
             unit_price: Decimal::from_str(&r.unit_price).unwrap_or(Decimal::ZERO),
             line_total: Decimal::from_str(&r.line_total).unwrap_or(Decimal::ZERO),
             notes: r.notes,
+        }).collect())
+    }
+
+    async fn load_additional_costs(&self, invoice_id: &str) -> Result<Vec<domain::purchases::purchase_invoice::PurchaseAdditionalCost>, AppError> {
+        let rows = sqlx::query_as::<_, PurchaseInvoiceAdditionalCostRow>(
+            "SELECT id, description, account_id, amount
+             FROM purchase_invoice_additional_costs WHERE purchase_invoice_id = ?"
+        )
+        .bind(invoice_id)
+        .fetch_all(&*self.pool)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+        Ok(rows.into_iter().map(|r| domain::purchases::purchase_invoice::PurchaseAdditionalCost {
+            id: r.id,
+            description: r.description,
+            account_id: domain::shared::ids::AccountId(Uuid::parse_str(&r.account_id).unwrap()),
+            amount: Decimal::from_str(&r.amount).unwrap_or(Decimal::ZERO),
         }).collect())
     }
 }

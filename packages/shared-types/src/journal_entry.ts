@@ -8,6 +8,7 @@ export type JournalType =
   | 'CreditSalesJournal'
   | 'PurchaseJournal'
   | 'PurchaseCostsJournal'
+  | 'MaterialOpeningBalance'
   | 'GeneralJournal';
 
 export interface JournalLineDto {

@@ -65,7 +65,7 @@ impl CreateJournalEntryUseCase {
             .with_timezone(&Utc);
 
         let entry = JournalEntry::new(
-            request.entry_number,
+            self.repo.get_next_entry_number().await?,
             request.journal_type,
             lines,
             entry_date,

@@ -8,6 +8,8 @@ import type { AccountCategory, AccountType } from '@modules/accounting/api/accou
 import { customerService } from '@modules/partners/api/customerService';
 import { supplierService } from '@modules/partners/api/supplierService';
 import { TreeSidebar } from '@widgets/tree-sidebar/TreeSidebar';
+import { BookOpen } from "lucide-react";
+import { useTabs } from "@app/providers/TabContext";
 
 interface AccountDetailsSidebarProps {
   selected: AccountDto | null;
@@ -28,7 +30,9 @@ export function AccountDetailsSidebar({
   canEdit = !!selected,
   canDelete = !!selected,
 }: AccountDetailsSidebarProps) {
+  const { openTab } = useTabs();
   const [formMode, setFormMode] = useState<"create" | "edit" | null>(null);
+// ... existing state ...
   const [code, setCode] = useState("");
   const [nameAr, setNameAr] = useState("");
   const [parentId, setParentId] = useState<string>("null");
@@ -261,6 +265,20 @@ export function AccountDetailsSidebar({
         <p className="text-sm text-slate-500">اختر حسابًا من الشجرة لعرض التفاصيل.</p>
       ) : (
         <div className="grid gap-3">
+          <Button 
+            variant="outline" 
+            className="w-full bg-blue-600 text-white hover:bg-blue-700 hover:text-white border-none h-10 mb-2 font-bold"
+            onClick={() => openTab({
+              id: `ledger-${selected.id}`,
+              title: `حركة: ${selected.name_ar}`,
+              path: `/accounting/account-ledger/${selected.id}`,
+              closable: true
+            })}
+          >
+            <BookOpen className="w-4 h-4 ml-2" />
+            حركة اليومية للحساب
+          </Button>
+
           <div className="rounded-md border bg-slate-50 p-3">
             <p className="text-[11px] text-slate-500 mb-1">رقم الحساب</p>
             <p className="font-semibold tabular-nums text-slate-800">{selected.code}</p>

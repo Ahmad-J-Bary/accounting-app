@@ -82,7 +82,7 @@ impl FixedAssetUseCases {
         ));
 
         let entry = JournalEntry::new(
-            format!("FA-ACQ-{}", asset.code),
+            self.journal_repo.get_next_entry_number().await?,
             domain::accounting::JournalType::GeneralJournal,
             lines,
             req.purchase_date,
@@ -159,7 +159,7 @@ impl FixedAssetUseCases {
         ));
 
         let entry = JournalEntry::new(
-            format!("FA-DEP-{}-{}", asset.code, date.format("%Y%m")),
+            self.journal_repo.get_next_entry_number().await?,
             domain::accounting::JournalType::GeneralJournal,
             lines,
             date,

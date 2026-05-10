@@ -132,20 +132,25 @@ impl CreatePartnerUseCase {
 
         // --- Accounting Integration: Opening Capital ---
         if partner.amount_local != Decimal::ZERO {
-            let opening_equity = self.account_repo.find_by_code("3002").await?
-                .ok_or_else(|| AppError::NotFound("حساب الأرصدة الافتتاحية (3002) غير موجود".into()))?;
+            let opening_equity = self.account_repo.find_by_code("122").await?
+                .ok_or_else(|| AppError::NotFound("حساب الصندوق (الخزينة) (122) غير موجود".into()))?;
 
-            let currency = Currency::syp();
-            let amount_ma = MonetaryAmount::new(Money::new(partner.amount_local.abs(), currency.clone()), Decimal::ONE);
+            let (currency, amount, fx_rate) = if partner.is_amount_in_usd {
+                (Currency::usd(), partner.amount_usd.abs(), partner.exchange_rate)
+            } else {
+                (Currency::syp(), partner.amount_local.abs(), Decimal::ONE)
+            };
+
+            let amount_ma = MonetaryAmount::new(Money::new(amount, currency.clone()), fx_rate);
             let zero_ma = MonetaryAmount::zero(currency.clone());
 
             let mut lines = Vec::new();
             // Equity Debit (Opening Balance), Partner Capital Credit
-            lines.push(JournalLine::new(opening_equity.id, amount_ma.clone(), zero_ma.clone(), format!("إثبات رأس مال الشريك: {}", partner.name)));
+            lines.push(JournalLine::new(opening_equity.id, amount_ma.clone(), zero_ma.clone(), format!("إثبات رأس مال الشريك نقداً الصندوق (الخزينة): {}", partner.name)));
             lines.push(JournalLine::new(cap_account_id, zero_ma, amount_ma, format!("رأس مال الشريك الجديد: {}", partner.name)));
 
             let mut entry = JournalEntry::new(
-                format!("PART-CAP-{}", partner.id.0.simple()),
+                self.journal_repo.get_next_entry_number().await?,
                 JournalType::AccountOpeningBalance,
                 lines,
                 Utc::now(),

@@ -40,6 +40,23 @@ pub async fn find_by_number(pool: &SqlitePool, number: &str) -> Result<Option<Jo
     }
 }
 
+pub async fn find_by_source_id(pool: &SqlitePool, source_id: &str) -> Result<Option<JournalEntry>, AppError> {
+    let row = sqlx::query_as::<_, JournalEntryRow>(
+        "SELECT id, entry_number, journal_type, source_id, entry_date, description, status, created_at, posted_at, updated_at FROM journal_entries WHERE source_id = ?"
+    )
+    .bind(source_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    if let Some(r) = row {
+        let lines = load_lines(pool, &r.id).await?;
+        Ok(Some(row_to_entry(r, lines)?))
+    } else {
+        Ok(None)
+    }
+}
+
 pub async fn list_all(pool: &SqlitePool) -> Result<Vec<JournalEntry>, AppError> {
     let rows = sqlx::query_as::<_, JournalEntryRow>(
         "SELECT id, entry_number, journal_type, source_id, entry_date, description, status, created_at, posted_at, updated_at FROM journal_entries ORDER BY entry_date DESC"
@@ -90,18 +107,26 @@ pub async fn list_with_filters(
     
     if from_date.is_some() { query_str.push_str(" AND je.entry_date >= ?"); }
     if to_date.is_some() { query_str.push_str(" AND je.entry_date <= ?"); }
-    if journal_type.is_some() { query_str.push_str(" AND je.journal_type = ?"); }
+    if let Some(jt) = journal_type {
+        if jt != JournalType::GeneralJournal {
+            query_str.push_str(" AND je.journal_type = ?");
+        }
+    }
     if account_id.is_some() { query_str.push_str(" AND jl.account_id = ?"); }
     if partner_id.is_some() { query_str.push_str(" AND jl.partner_id = ?"); }
     if status.is_some() { query_str.push_str(" AND je.status = ?"); }
     
-    query_str.push_str(" ORDER BY je.entry_date DESC");
+    query_str.push_str(" ORDER BY CAST(je.entry_number AS INTEGER) DESC");
 
     let mut query = sqlx::query_as::<_, JournalEntryRow>(&query_str);
     
     if let Some(date) = from_date { query = query.bind(date.to_rfc3339()); }
     if let Some(date) = to_date { query = query.bind(date.to_rfc3339()); }
-    if let Some(jt) = journal_type { query = query.bind(format!("{:?}", jt)); }
+    if let Some(jt) = journal_type {
+        if jt != JournalType::GeneralJournal {
+            query = query.bind(format!("{:?}", jt));
+        }
+    }
     if let Some(acc_id) = account_id { query = query.bind(acc_id.0.to_string()); }
     if let Some(part_id) = partner_id { query = query.bind(part_id.to_string()); }
     if let Some(s) = status { query = query.bind(format!("{:?}", s)); }
@@ -114,6 +139,19 @@ pub async fn list_with_filters(
         entries.push(row_to_entry(row, lines)?);
     }
     Ok(entries)
+}
+
+pub async fn get_next_entry_number(pool: &SqlitePool) -> Result<String, AppError> {
+    let row: (Option<i64>,) = sqlx::query_as("SELECT MAX(CAST(entry_number AS INTEGER)) FROM journal_entries")
+        .fetch_one(pool)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    
+    let next = match row.0 {
+        Some(n) => n + 1,
+        None => 1,
+    };
+    Ok(next.to_string())
 }
 
 pub async fn load_lines(pool: &SqlitePool, entry_id: &str) -> Result<Vec<JournalLine>, AppError> {

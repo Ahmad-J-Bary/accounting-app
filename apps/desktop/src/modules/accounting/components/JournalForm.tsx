@@ -42,7 +42,7 @@ export function JournalForm({ open, onOpenChange, onSave, saving, inline }: Jour
   useEffect(() => {
     if (open) {
       setForm({
-        entry_number: `JE-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000)}`,
+        entry_number: "",
         entry_date: new Date().toISOString(),
         description: "",
         journal_type: 'GeneralJournal',
@@ -112,9 +112,9 @@ export function JournalForm({ open, onOpenChange, onSave, saving, inline }: Jour
         <div className="space-y-1.5">
           <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">رقم القيد</Label>
           <Input 
-            value={form.entry_number} 
-            onChange={e => setForm(f => ({ ...f, entry_number: e.target.value }))} 
-            className="h-10 bg-white shadow-sm border-slate-200 font-bold tabular-nums"
+            value={form.entry_number || "تلقائي"} 
+            disabled
+            className="h-10 bg-slate-50 shadow-sm border-slate-200 font-bold tabular-nums text-center text-slate-500 cursor-not-allowed"
           />
         </div>
         <div className="space-y-1.5">

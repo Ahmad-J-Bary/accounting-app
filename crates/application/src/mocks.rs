@@ -103,5 +103,14 @@ impl JournalEntryRepository for MockJournalRepository {
     ) -> Result<Vec<JournalEntry>, AppError> {
         Ok(self.entries.lock().unwrap().clone())
     }
+    async fn get_next_entry_number(&self) -> Result<String, AppError> {
+        let entries = self.entries.lock().unwrap();
+        let next = entries.len() + 1;
+        Ok(next.to_string())
+    }
+    async fn find_by_source_id(&self, source_id: &str) -> Result<Option<JournalEntry>, AppError> {
+        let entries = self.entries.lock().unwrap();
+        Ok(entries.iter().find(|e| e.source_id.as_deref() == Some(source_id)).cloned())
+    }
     async fn delete(&self, _id: &JournalEntryId) -> Result<(), AppError> { Ok(()) }
 }

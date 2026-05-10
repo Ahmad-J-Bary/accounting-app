@@ -149,7 +149,7 @@ impl CreatePaymentUseCase {
 
         if !journal_lines.is_empty() {
             let mut entry = JournalEntry::new(
-                format!("PAY-JE-{}", payment.id.0.simple()),
+                self.journal_repo.get_next_entry_number().await?,
                 journal_type,
                 journal_lines,
                 payment.payment_date,

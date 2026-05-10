@@ -1,7 +1,7 @@
 use tauri::State;
 use crate::bootstrap::container::AppState;
 use application::use_cases::purchase_invoice::{
-    CreatePurchaseInvoiceUseCase, ListPurchaseInvoicesUseCase, PostPurchaseInvoiceUseCase,
+    CreatePurchaseInvoiceUseCase, ListPurchaseInvoicesUseCase, PostPurchaseInvoiceUseCase, GetPurchaseInvoiceUseCase,
 };
 use application::dto::purchase_invoice_dto::{CreatePurchaseInvoiceRequest, PurchaseInvoiceDto};
 
@@ -14,6 +14,7 @@ pub async fn create_purchase_invoice(
         state.purchase_invoice_repo.clone(),
         state.supplier_repo.clone(),
         state.material_repo.clone(),
+        state.account_repo.clone(),
     )
     .execute(request)
     .await
@@ -29,8 +30,25 @@ pub async fn list_purchase_invoices(
         state.purchase_invoice_repo.clone(),
         state.supplier_repo.clone(),
         state.material_repo.clone(),
+        state.account_repo.clone(),
     )
     .execute(supplier_id)
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_purchase_invoice(
+    id: String,
+    state: State<'_, AppState>,
+) -> Result<PurchaseInvoiceDto, String> {
+    GetPurchaseInvoiceUseCase::new(
+        state.purchase_invoice_repo.clone(),
+        state.supplier_repo.clone(),
+        state.material_repo.clone(),
+        state.account_repo.clone(),
+    )
+    .execute(&id)
     .await
     .map_err(|e| e.to_string())
 }
@@ -45,6 +63,8 @@ pub async fn post_purchase_invoice(
         state.supplier_repo.clone(),
         state.material_repo.clone(),
         state.stock_movement_repo.clone(),
+        state.journal_entry_repo.clone(),
+        state.account_repo.clone(),
     )
     .execute(id)
     .await

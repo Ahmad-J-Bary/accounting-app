@@ -64,6 +64,14 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
         .await
     }
 
+    async fn get_next_entry_number(&self) -> Result<String, AppError> {
+        queries::get_next_entry_number(&self.pool).await
+    }
+
+    async fn find_by_source_id(&self, source_id: &str) -> Result<Option<JournalEntry>, AppError> {
+        queries::find_by_source_id(&self.pool, source_id).await
+    }
+
     async fn delete(&self, id: &JournalEntryId) -> Result<(), AppError> {
         commands::delete(&self.pool, id).await
     }

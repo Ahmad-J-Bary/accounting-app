@@ -99,46 +99,91 @@ impl AccountQueries {
             .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?
             .ok_or(AccountUseCaseError::AccountNotFound)?;
 
+        let all_accounts = self.account_repo.list_all().await
+            .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
+        let mut account_name_map: HashMap<AccountId, String> = HashMap::new();
+        for acc in all_accounts {
+            account_name_map.insert(acc.id, acc.name_ar);
+        }
+
         let journal_entries = self.journal_repo
             .list_by_account(account_id)
             .await
             .map_err(|e| AccountUseCaseError::JournalRepositoryError(e.to_string()))?;
 
         let mut lines = Vec::new();
-        let mut running_balance = account.opening_balance;
+        let mut running_balance_syp = account.opening_balance;
+        let mut running_balance_usd = Decimal::ZERO;
 
         let mut sorted_entries = journal_entries;
         sorted_entries.sort_by(|a, b| a.created_at.cmp(&b.created_at));
 
         for entry in sorted_entries {
-            if let Some(line) = entry.lines.iter().find(|l| l.account_id == *account_id) {
-                let debit = line.base_debit();
-                let credit = line.base_credit();
+            let account_lines: Vec<_> = entry.lines.iter().filter(|l| l.account_id == *account_id).collect();
+            if account_lines.is_empty() { continue; }
+
+            let opposite_lines: Vec<_> = entry.lines.iter().filter(|l| l.account_id != *account_id).collect();
+            let opposite_account_name = if opposite_lines.len() == 1 {
+                account_name_map.get(&opposite_lines[0].account_id).cloned().unwrap_or_else(|| "-".to_string())
+            } else if opposite_lines.is_empty() {
+                "-".to_string()
+            } else {
+                "حسابات متعددة".to_string()
+            };
+
+            for line in account_lines {
+                let debit_syp = line.base_debit();
+                let credit_syp = line.base_credit();
                 
-                running_balance += debit - credit;
+                let debit_usd = if line.debit.currency().code.to_uppercase() == "USD" { line.debit.amount() } else { Decimal::ZERO };
+                let credit_usd = if line.credit.currency().code.to_uppercase() == "USD" { line.credit.amount() } else { Decimal::ZERO };
+
+                running_balance_syp += debit_syp - credit_syp;
+                running_balance_usd += debit_usd - credit_usd;
                 
+                let (currency, fx_rate) = if line.debit.amount() > Decimal::ZERO {
+                    (line.debit.currency().code.clone(), line.debit.fx_rate)
+                } else {
+                    (line.credit.currency().code.clone(), line.credit.fx_rate)
+                };
+
                 lines.push(LedgerLine {
                     date: entry.entry_date,
                     journal_id: entry.id,
-                    description: entry.description.clone(),
-                    debit,
-                    credit,
-                    balance: running_balance,
+                    entry_number: entry.entry_number.clone(),
+                    journal_type: entry.journal_type.clone(),
+                    source_id: entry.source_id.clone(),
+                    description: line.description.clone(),
+                    opposite_account_name: opposite_account_name.clone(),
+                    currency,
+                    fx_rate,
+                    debit_syp,
+                    credit_syp,
+                    balance_syp: running_balance_syp,
+                    debit_usd,
+                    credit_usd,
+                    balance_usd: running_balance_usd,
                 });
             }
         }
 
-        let total_debit = lines.iter().map(|l| l.debit).sum();
-        let total_credit = lines.iter().map(|l| l.credit).sum();
+        let total_debit_syp = lines.iter().map(|l| l.debit_syp).sum();
+        let total_credit_syp = lines.iter().map(|l| l.credit_syp).sum();
+        let total_debit_usd = lines.iter().map(|l| l.debit_usd).sum();
+        let total_credit_usd = lines.iter().map(|l| l.credit_usd).sum();
 
         Ok(AccountLedger {
             account_id: account.id,
             account_name: account.name_ar,
-            opening_balance: account.opening_balance,
+            opening_balance_syp: account.opening_balance,
+            opening_balance_usd: Decimal::ZERO, // Note: Global accounts only store SYP opening balance
             lines,
-            total_debit,
-            total_credit,
-            closing_balance: running_balance,
+            total_debit_syp,
+            total_credit_syp,
+            closing_balance_syp: running_balance_syp,
+            total_debit_usd,
+            total_credit_usd,
+            closing_balance_usd: running_balance_usd,
         })
     }
 }

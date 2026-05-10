@@ -19,6 +19,7 @@ pub enum JournalType {
     CreditSalesJournal,   // يومية المبيعات الآجلة
     PurchaseJournal,      // يومية المشتريات
     PurchaseCostsJournal, // يومية التكاليف الإضافية للمشتريات
+    MaterialOpeningBalance,// رصيد افتتاحي للمواد
     GeneralJournal,       // اليومية العامة
 }
 
@@ -29,6 +30,7 @@ impl std::fmt::Display for JournalType {
             Self::CashPayment => "سند دفع",
             Self::CashOpeningBalance => "رصيد افتتاحي للخزينة",
             Self::AccountOpeningBalance => "رصيد افتتاحي لحساب",
+            Self::MaterialOpeningBalance => "رصيد افتتاحي للمواد",
             Self::CashJournal => "يومية الصندوق",
             Self::CashSalesJournal => "يومية المبيعات النقدية",
             Self::CreditSalesJournal => "يومية المبيعات الآجلة",
@@ -209,6 +211,80 @@ impl JournalEntry {
         self.reversed_at = Some(Utc::now());
         self.updated_at = Utc::now();
         Ok(())
+    }
+
+    /// Helper for creating purchase journal entries
+    pub fn create_purchase_entry(
+        entry_number: String,
+        description: String,
+        entry_date: DateTime<Utc>,
+        purchase_account_id: AccountId,
+        supplier_account_id: AccountId,
+        supplier_id: Uuid,
+        amount: MonetaryAmount,
+        source_id: String,
+    ) -> Result<Self, DomainError> {
+        let lines = vec![
+            JournalLine::new(
+                purchase_account_id,
+                amount.clone(),
+                MonetaryAmount::zero(amount.currency().clone()),
+                description.clone(),
+            ),
+            JournalLine::new(
+                supplier_account_id,
+                MonetaryAmount::zero(amount.currency().clone()),
+                amount,
+                description.clone(),
+            ).with_partner(supplier_id),
+        ];
+
+        Self::new(
+            entry_number,
+            JournalType::PurchaseJournal,
+            lines,
+            entry_date,
+            description,
+            Some(source_id),
+        )
+    }
+
+    pub fn create_purchase_costs_entry(
+        entry_number: String,
+        description: String,
+        entry_date: DateTime<Utc>,
+        debit_account_id: AccountId,
+        credit_account_id: AccountId,
+        partner_id: Option<Uuid>,
+        amount: MonetaryAmount,
+        source_id: String,
+    ) -> Result<Self, DomainError> {
+        let mut line1 = JournalLine::new(
+            debit_account_id,
+            amount.clone(),
+            MonetaryAmount::zero(amount.currency().clone()),
+            description.clone(),
+        );
+        if let Some(pid) = partner_id { line1 = line1.with_partner(pid); }
+
+        let mut line2 = JournalLine::new(
+            credit_account_id,
+            MonetaryAmount::zero(amount.currency().clone()),
+            amount,
+            description.clone(),
+        );
+        if let Some(pid) = partner_id { line2 = line2.with_partner(pid); }
+
+        let lines = vec![line1, line2];
+
+        Self::new(
+            entry_number,
+            JournalType::PurchaseCostsJournal,
+            lines,
+            entry_date,
+            description,
+            Some(source_id),
+        )
     }
 }
 

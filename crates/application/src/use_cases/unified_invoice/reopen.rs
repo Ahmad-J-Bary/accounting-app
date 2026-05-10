@@ -64,8 +64,7 @@ impl ReopenInvoiceUseCase {
         }
 
         // 2. Delete Journal Entry
-        let je_number = format!("INV-JE-{}", invoice.invoice_number);
-        if let Some(entry) = self.journal_repo.find_by_number(&je_number).await? {
+        if let Some(entry) = self.journal_repo.find_by_source_id(&invoice.id.to_string()).await? {
             self.journal_repo.delete(&entry.id).await?;
         }
 

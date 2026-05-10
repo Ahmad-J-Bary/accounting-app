@@ -118,7 +118,7 @@ impl CreateDamagedItemUseCase {
             ];
 
             let mut entry = JournalEntry::new(
-                format!("JE-DAM-{}", Utc::now().timestamp()),
+                self.journal_repo.get_next_entry_number().await?,
                 domain::accounting::JournalType::GeneralJournal,
                 lines,
                 damage_date,

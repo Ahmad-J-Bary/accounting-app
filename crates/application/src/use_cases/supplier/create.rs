@@ -89,8 +89,8 @@ impl CreateSupplierUseCase {
         // --- Accounting Integration: Opening Balance ---
         let total_opening = credit - debit;
         if total_opening != Decimal::ZERO {
-            let opening_equity = self.account_repo.find_by_code("3002").await?
-                .ok_or_else(|| AppError::NotFound("حساب الأرصدة الافتتاحية (3002) غير موجود".into()))?;
+            let opening_equity = self.account_repo.find_by_code("122").await?
+                .ok_or_else(|| AppError::NotFound("حساب الصندوق (الخزينة) (122) غير موجود".into()))?;
 
             let amount_ma = MonetaryAmount::new(Money::new(total_opening.abs(), currency.clone()), Decimal::ONE);
             let zero_ma = MonetaryAmount::zero(currency.clone());
@@ -107,7 +107,7 @@ impl CreateSupplierUseCase {
             }
 
             let mut entry = JournalEntry::new(
-                format!("OP-SUPP-{}", supplier.id.0.simple()),
+                self.journal_repo.get_next_entry_number().await?,
                 JournalType::AccountOpeningBalance,
                 lines,
                 Utc::now(),

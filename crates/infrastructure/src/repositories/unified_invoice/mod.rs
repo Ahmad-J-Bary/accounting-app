@@ -50,4 +50,8 @@ impl UnifiedInvoiceRepository for SqliteUnifiedInvoiceRepository {
     async fn get_last_usd_prices(&self, material_id: &str) -> Result<(String, String), AppError> {
         queries::get_last_usd_prices(&self.pool, material_id).await
     }
+
+    async fn get_next_invoice_number(&self) -> Result<String, AppError> {
+        queries::get_next_invoice_number(&self.pool).await
+    }
 }

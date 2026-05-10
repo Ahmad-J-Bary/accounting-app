@@ -1,13 +1,14 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
 import { formatDate } from '@shared/lib/format';
-import { Phone, MapPin, FileText, Receipt, Hash, X, Wallet } from "lucide-react";
+import { Phone, MapPin, FileText, Receipt, Hash, X, Wallet, BookOpen } from "lucide-react";
 import type { InvoiceDto, Payment, CustomerDto, SupplierDto, PartnerDto } from "@erp/shared-types";
 import { Button } from "@shared/ui/button";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useTabs } from "@app/providers/TabContext";
 
 interface PartnerDetailPanelProps {
   type: "customer" | "supplier";
-  partner: CustomerDto | SupplierDto | PartnerDto | null;
+  partner: (CustomerDto | SupplierDto | PartnerDto) & { account_id?: string | null };
   onClose: () => void;
   invoices: InvoiceDto[];
   payments: Payment[];
@@ -23,6 +24,7 @@ export function PartnerDetailPanel({
   loadingDetails
 }: PartnerDetailPanelProps) {
   const { currencies, formatAmount, baseCurrency } = useCurrencyContext();
+  const { openTab } = useTabs();
   
   if (!partner) return null;
 
@@ -43,9 +45,27 @@ export function PartnerDetailPanel({
           </h2>
           <span className="text-xs text-muted-foreground">{isCustomer ? "ملف العميل" : "ملف المورد"}</span>
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full text-slate-400 hover:text-slate-600">
-          <X className="w-5 h-5" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {partner.account_id && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="bg-blue-600 text-white hover:bg-blue-700 border-none h-8 px-3 rounded-lg"
+              onClick={() => openTab({
+                id: `ledger-${partner.account_id}`,
+                title: `حركة: ${partner.name}`,
+                path: `/accounting/account-ledger/${partner.account_id}`,
+                closable: true
+              })}
+            >
+              <BookOpen className="w-3.5 h-3.5 ml-1.5" />
+              حركة الحساب
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full text-slate-400 hover:text-slate-600">
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">

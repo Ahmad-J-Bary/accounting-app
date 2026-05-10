@@ -133,8 +133,14 @@ impl CreateInvoiceUseCase {
             .map(|dt| dt.with_timezone(&Utc))
             .unwrap_or_else(|_| Utc::now());
 
+        let invoice_number = if req.invoice_number.trim().is_empty() || req.invoice_number == "تلقائي" {
+            self.repo.get_next_invoice_number().await?
+        } else {
+            req.invoice_number
+        };
+
         let mut invoice = UnifiedInvoice::new(
-            req.invoice_number,
+            invoice_number,
             invoice_type,
             customer_id,
             req.customer_name,

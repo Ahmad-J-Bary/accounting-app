@@ -49,10 +49,15 @@ impl From<Account> for AccountDto {
 pub struct AccountLedgerDto {
     pub account_id: String,
     pub account_name: String,
+    pub opening_balance_syp: String,
+    pub opening_balance_usd: String,
     pub lines: Vec<AccountLedgerLineDto>,
-    pub total_debit: String,
-    pub total_credit: String,
-    pub final_balance: String,
+    pub total_debit_syp: String,
+    pub total_credit_syp: String,
+    pub closing_balance_syp: String,
+    pub total_debit_usd: String,
+    pub total_credit_usd: String,
+    pub closing_balance_usd: String,
 }
 
 impl From<AccountLedger> for AccountLedgerDto {
@@ -60,10 +65,15 @@ impl From<AccountLedger> for AccountLedgerDto {
         Self {
             account_id: ledger.account_id.0.to_string(),
             account_name: ledger.account_name,
+            opening_balance_syp: ledger.opening_balance_syp.to_string(),
+            opening_balance_usd: ledger.opening_balance_usd.to_string(),
             lines: ledger.lines.into_iter().map(AccountLedgerLineDto::from).collect(),
-            total_debit: ledger.total_debit.to_string(),
-            total_credit: ledger.total_credit.to_string(),
-            final_balance: ledger.closing_balance.to_string(),
+            total_debit_syp: ledger.total_debit_syp.to_string(),
+            total_credit_syp: ledger.total_credit_syp.to_string(),
+            closing_balance_syp: ledger.closing_balance_syp.to_string(),
+            total_debit_usd: ledger.total_debit_usd.to_string(),
+            total_credit_usd: ledger.total_credit_usd.to_string(),
+            closing_balance_usd: ledger.closing_balance_usd.to_string(),
         }
     }
 }
@@ -72,14 +82,19 @@ impl From<AccountLedger> for AccountLedgerDto {
 pub struct AccountLedgerLineDto {
     pub date: String,
     pub journal_id: String,
+    pub entry_number: String,
+    pub journal_type: String,
+    pub source_id: Option<String>,
     pub description: String,
+    pub opposite_account_name: String,
     pub currency: String,
     pub fx_rate: String,
-    pub debit: String,
-    pub credit: String,
-    pub base_debit: String,
-    pub base_credit: String,
-    pub running_balance: String,
+    pub debit_syp: String,
+    pub credit_syp: String,
+    pub balance_syp: String,
+    pub debit_usd: String,
+    pub credit_usd: String,
+    pub balance_usd: String,
 }
 
 impl From<LedgerLine> for AccountLedgerLineDto {
@@ -87,14 +102,19 @@ impl From<LedgerLine> for AccountLedgerLineDto {
         Self {
             date: line.date.to_rfc3339(),
             journal_id: line.journal_id.0.to_string(),
+            entry_number: line.entry_number,
+            journal_type: format!("{:?}", line.journal_type),
+            source_id: line.source_id,
             description: line.description,
-            currency: "SYP".to_string(), // Default since it's base balance calculation
-            fx_rate: "1".to_string(),
-            debit: line.debit.to_string(),
-            credit: line.credit.to_string(),
-            base_debit: line.debit.to_string(),
-            base_credit: line.credit.to_string(),
-            running_balance: line.balance.to_string(),
+            opposite_account_name: line.opposite_account_name,
+            currency: line.currency,
+            fx_rate: line.fx_rate.to_string(),
+            debit_syp: line.debit_syp.to_string(),
+            credit_syp: line.credit_syp.to_string(),
+            balance_syp: line.balance_syp.to_string(),
+            debit_usd: line.debit_usd.to_string(),
+            credit_usd: line.credit_usd.to_string(),
+            balance_usd: line.balance_usd.to_string(),
         }
     }
 }

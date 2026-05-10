@@ -110,7 +110,7 @@ impl ConsumableUseCases {
         ));
 
         let entry = JournalEntry::new(
-            format!("CON-ISS-{}", Utc::now().timestamp()),
+            self.journal_repo.get_next_entry_number().await?,
             domain::accounting::JournalType::GeneralJournal,
             lines,
             Utc::now(),

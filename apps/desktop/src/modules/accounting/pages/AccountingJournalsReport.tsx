@@ -160,6 +160,7 @@ export default function AccountingJournalsReport() {
                 <tr className="border-b border-slate-100">
                   <th className="text-right px-6 py-4 font-black text-slate-500 text-[10px] uppercase tracking-widest">رقم القيد</th>
                   <th className="text-right px-6 py-4 font-black text-slate-500 text-[10px] uppercase tracking-widest">نوع الحركة</th>
+                  <th className="text-right px-6 py-4 font-black text-slate-500 text-[10px] uppercase tracking-widest">الجهة / المورد</th>
                   <th className="text-left px-6 py-4 font-black text-slate-500 text-[10px] uppercase tracking-widest w-32">عليه / مدين</th>
                   <th className="text-left px-6 py-4 font-black text-slate-500 text-[10px] uppercase tracking-widest w-32">له / دائن</th>
                   <th className="text-right px-6 py-4 font-black text-slate-500 text-[10px] uppercase tracking-widest">البيان</th>
@@ -172,12 +173,12 @@ export default function AccountingJournalsReport() {
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i} className="animate-pulse">
-                      <td colSpan={8} className="px-6 py-4"><div className="h-10 bg-slate-50 rounded-xl w-full" /></td>
+                      <td colSpan={9} className="px-6 py-4"><div className="h-10 bg-slate-50 rounded-xl w-full" /></td>
                     </tr>
                   ))
                 ) : entries.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-20 text-center">
+                    <td colSpan={9} className="px-6 py-20 text-center">
                        <div className="flex flex-col items-center gap-3">
                           <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center">
                              <FileText className="w-8 h-8 text-slate-300" />
@@ -209,6 +210,9 @@ export default function AccountingJournalsReport() {
                              </span>
                            )}
                         </td>
+                        <td className="px-6 py-4 font-black text-slate-700 text-[10px]">
+                          {l.partner_name || (lIdx === 0 ? e.lines.find(x => x.partner_name)?.partner_name : "")}
+                        </td>
                         <td className="px-6 py-4 text-left tabular-nums font-black text-blue-700 text-xs">
                           {isDebit ? formatCurrency(parseFloat(l.debit)) : ""}
                         </td>
@@ -220,7 +224,9 @@ export default function AccountingJournalsReport() {
                               <span className="font-bold text-slate-700 text-xs truncate" title={l.description || e.description}>
                                 {l.description || e.description}
                               </span>
-                              {lIdx === 0 && <span className="text-[9px] text-slate-400 font-medium">مصدر: {e.source_id || "قيد يدوي"}</span>}
+                              {lIdx === 0 && e.source_id && (
+                                <span className="text-[9px] text-slate-400 font-mono">مصدر: ...{e.source_id.slice(-8)}</span>
+                              )}
                            </div>
                         </td>
                         <td className="px-6 py-4">

@@ -12,12 +12,22 @@ pub struct PurchaseInvoiceItemDto {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PurchaseAdditionalCostDto {
+    pub id: String,
+    pub description: String,
+    pub account_id: String,
+    pub account_name: Option<String>,
+    pub amount: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PurchaseInvoiceDto {
     pub id: String,
     pub invoice_number: String,
     pub supplier_id: String,
     pub supplier_name: Option<String>,
     pub items: Vec<PurchaseInvoiceItemDto>,
+    pub additional_costs: Vec<PurchaseAdditionalCostDto>,
     pub subtotal: String,
     pub tax_amount: String,
     pub discount_amount: String,
@@ -43,10 +53,18 @@ pub struct CreatePurchaseInvoiceItemRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreatePurchaseAdditionalCostRequest {
+    pub description: String,
+    pub account_id: String,
+    pub amount: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreatePurchaseInvoiceRequest {
     pub invoice_number: String,
     pub supplier_id: String,
     pub items: Vec<CreatePurchaseInvoiceItemRequest>,
+    pub additional_costs: Option<Vec<CreatePurchaseAdditionalCostRequest>>,
     pub tax_amount: Option<String>,
     pub discount_amount: Option<String>,
     pub invoice_date: String,

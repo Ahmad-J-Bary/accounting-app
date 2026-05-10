@@ -1,5 +1,5 @@
 use crate::shared::errors::DomainError;
-use crate::shared::ids::{PurchaseInvoiceId, SupplierId, MaterialId};
+use crate::shared::ids::{PurchaseInvoiceId, SupplierId, MaterialId, AccountId};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -48,11 +48,20 @@ impl PurchaseInvoiceItem {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PurchaseAdditionalCost {
+    pub id: String,
+    pub description: String,
+    pub account_id: AccountId,
+    pub amount: Decimal,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PurchaseInvoice {
     pub id: PurchaseInvoiceId,
     pub invoice_number: String,
     pub supplier_id: SupplierId,
     pub items: Vec<PurchaseInvoiceItem>,
+    pub additional_costs: Vec<PurchaseAdditionalCost>,
     pub subtotal: Decimal,
     pub tax_amount: Decimal,
     pub discount_amount: Decimal,
@@ -87,6 +96,7 @@ impl PurchaseInvoice {
             invoice_number,
             supplier_id,
             items: vec![],
+            additional_costs: vec![],
             subtotal: Decimal::ZERO,
             tax_amount: Decimal::ZERO,
             discount_amount: Decimal::ZERO,
@@ -112,9 +122,19 @@ impl PurchaseInvoice {
         Ok(())
     }
 
+    pub fn add_additional_cost(&mut self, cost: PurchaseAdditionalCost) -> Result<(), DomainError> {
+        if self.status == PurchaseInvoiceStatus::Posted {
+            return Err(DomainError::Forbidden("لا يمكن تعديل فاتورة مرحّلة".into()));
+        }
+        self.additional_costs.push(cost);
+        self.recalculate_totals();
+        Ok(())
+    }
+
     pub fn recalculate_totals(&mut self) {
         self.subtotal = self.items.iter().map(|i| i.line_total).sum();
-        self.total = self.subtotal + self.tax_amount - self.discount_amount;
+        let costs: Decimal = self.additional_costs.iter().map(|c| c.amount).sum();
+        self.total = self.subtotal + self.tax_amount + costs - self.discount_amount;
         self.updated_at = Utc::now();
     }
 
