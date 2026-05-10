@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { Button } from "@shared/ui/button";
 import { Card } from "@shared/ui/card";
 import { Label } from "@shared/ui/label";
@@ -19,19 +19,31 @@ import {
 
 import { partnerService, type PartnerDto, type PartnerRequest } from '@modules/partners/api/partnerService';
 
-// Refactored Components & Hooks
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { DataTable, Column } from '@widgets/table-shell/DataTable';
 import { TableActions } from '@widgets/table-shell/TableActions';
 import { useDataTable, useColumnPreferences } from '@shared/hooks';
 import { PartnerForm } from '@modules/partners/components/PartnerForm';
 import { usePartnerRatios } from '@modules/partners/hooks/usePartnerRatios';
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { cn } from "@shared/lib/utils";
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
 
 export default function Partners() {
+  const { rateMap } = useCurrencyContext();
   const [globalStrategy, setGlobalStrategy] = useState("BasedOnCapitalLocal");
+  const [rateMapKey, setRateMapKey] = useState(0);
+
+  const rateMapValues = useMemo(() => {
+    if (!rateMap) return [];
+    return Array.from(rateMap.values());
+  }, [rateMap]);
+  
+  useEffect(() => {
+    setRateMapKey(k => k + 1);
+  }, [rateMapValues]);
+
   const {
     filtered: partners,
     loading,
@@ -43,6 +55,7 @@ export default function Partners() {
     fetchData: () => partnerService.listPartners(),
     searchFields: ["name"],
     errorLabel: "فشل جلب الشركاء",
+    dependencies: [rateMapKey],
   });
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -55,7 +68,7 @@ export default function Partners() {
     partnersWithRatios,
     chartCapitalData,
     chartProfitData
-  } = usePartnerRatios({ partners, strategy: globalStrategy });
+  } = usePartnerRatios({ partners, strategy: globalStrategy, exchangeRate: rateMap?.get("USD") || 100 });
 
   const stats = useMemo(() => [
     { label: "إجمالي رأس المال (ل.س)", value: formatCurrency(totals.local), icon: Calculator, color: "text-slate-900" },
@@ -66,12 +79,13 @@ export default function Partners() {
   const availableColumns = [
     { id: "code", label: "الكود" },
     { id: "name", label: "اسم الشريك" },
-    { id: "amount_usd", label: "رأس المال ($)" },
-    { id: "amount_local", label: "رأس المال (ل.س)" },
-    { id: "ratio", label: "نسبة الأرباح" },
+    { id: "amount_usd", label: "المبلغ المشارك به ($)" },
+    { id: "amount_local", label: "المبلغ المشارك به (ل.س)" },
+    { id: "capital_ratio", label: "نسبة المشاركة برأس المال" },
+    { id: "ratio", label: "نسبة المشاركة بالأرباح" },
     { id: "actions", label: "إجراءات" },
   ];
-  const defaultVisibleColumns = ["code", "name", "amount_usd", "amount_local", "ratio", "actions"];
+  const defaultVisibleColumns = ["code", "name", "amount_usd", "amount_local", "capital_ratio", "ratio", "actions"];
   const { visibleColumns, isVisible, toggleColumn } = useColumnPreferences("partners", defaultVisibleColumns);
 
   const handleSave = async (payload: PartnerRequest) => {
@@ -104,8 +118,8 @@ export default function Partners() {
     }
   }, [setData]);
 
-  const columns = useMemo<Column<PartnerDto & { calculatedRatio: number }>[]>(() => {
-    const allColumns: Column<PartnerDto & { calculatedRatio: number }>[] = [
+  const columns = useMemo<Column<PartnerDto & { calculatedRatio: number; calculatedCapitalRatio: number; displayAmountLocal: number; displayAmountUsd: number }>[]>(() => {
+    const allColumns: Column<PartnerDto & { calculatedRatio: number; calculatedCapitalRatio: number; displayAmountLocal: number; displayAmountUsd: number }>[] = [
       { 
       id: "code",
       header: "الكود", 
@@ -119,36 +133,43 @@ export default function Partners() {
     { id: "name", header: "اسم الشريك", accessor: (p) => p.name, className: "font-black text-slate-800" },
     { 
       id: "amount_usd",
-      header: "رأس المال ($)", 
-      accessor: (p) => formatCurrency(parseFloat(p.amount_usd), "$"), 
+      header: "المبلغ المشارك به ($)", 
+      accessor: (p) => formatCurrency(p.displayAmountUsd || 0, "$"), 
       align: "left", 
       className: "tabular-nums font-black text-blue-600" 
     },
     { 
       id: "amount_local",
-      header: "رأس المال (ل.س)", 
-      accessor: (p) => formatCurrency(parseFloat(p.amount_local)), 
+      header: "المبلغ المشارك به (ل.س)", 
+      accessor: (p) => formatCurrency(p.displayAmountLocal || 0), 
       align: "left", 
       className: "tabular-nums font-black text-slate-900" 
     },
     { 
-      id: "ratio",
-      header: "نسبة الأرباح", 
+      id: "capital_ratio",
+      header: "نسبة المشاركة برأس المال", 
       accessor: (p) => (
-        <div className="flex items-center gap-2 justify-end">
-          <span className="text-xs font-black text-emerald-700 tabular-nums">
-            {p.calculatedRatio.toFixed(2)}%
+        <div className="flex justify-center">
+          <span className="text-xs font-bold text-blue-700 tabular-nums">
+            {p.calculatedCapitalRatio.toFixed(2)}%
           </span>
-          <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-emerald-500 rounded-full" 
-              style={{ width: `${p.calculatedRatio}%` }} 
-            />
-          </div>
         </div>
       ), 
-      align: "right",
-      headerClassName: "text-left"
+      align: "center",
+      headerClassName: "text-center"
+    },
+    { 
+      id: "ratio",
+      header: "نسبة المشاركة بالأرباح", 
+      accessor: (p) => (
+        <div className="flex justify-center">
+          <span className="text-xs font-bold text-emerald-700 tabular-nums">
+            {p.calculatedRatio.toFixed(2)}%
+          </span>
+        </div>
+      ), 
+      align: "center",
+      headerClassName: "text-center"
     },
     {
       id: "actions",
@@ -242,9 +263,35 @@ export default function Partners() {
         />
       }
       bottomWidgets={
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-           <ChartCard title="حصص رأس المال" icon={PieChartIcon} data={chartCapitalData} formatter={formatCurrency} />
-           <ChartCard title="توزيع الأرباح" icon={TrendingUp} data={chartProfitData} formatter={(v: number) => `${v.toFixed(2)}%`} />
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="text-center px-4 py-3 text-xs font-black text-slate-600 uppercase tracking-wider">رأس المال الأجمالي ($)</th>
+                  <th className="text-center px-4 py-3 text-xs font-black text-slate-600 uppercase tracking-wider">رأس المال الأجمالي (ل.س)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-slate-100">
+                  <td className="px-4 py-3 text-center">
+                    <span className="text-sm font-black text-blue-600 tabular-nums">
+                      {formatCurrency(totals.usd, "$")}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span className="text-sm font-black text-slate-900 tabular-nums">
+                      {formatCurrency(totals.local)}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <ChartCard title="حصص رأس المال" icon={PieChartIcon} data={chartCapitalData} formatter={formatCurrency} />
+             <ChartCard title="توزيع الأرباح" icon={TrendingUp} data={chartProfitData} formatter={(v: number) => `${v.toFixed(2)}%`} />
+          </div>
         </div>
       }
       sidePanel={
@@ -268,8 +315,6 @@ export default function Partners() {
     />
   );
 }
-
-
 
 interface StrategyOptionProps {
   id: string;

@@ -28,7 +28,13 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { cn } from "@shared/lib/utils";
 
 export default function Suppliers() {
-  const { currencies, formatMonetaryAmount, baseCurrency } = useCurrencyContext();
+  const { currencies, formatMonetaryAmount, baseCurrency, rateMap } = useCurrencyContext();
+  const [rateMapKey, setRateMapKey] = useState(0);
+
+  useEffect(() => {
+    setRateMapKey(k => k + 1);
+  }, [rateMap]);
+
   const {
     filtered: suppliers,
     loading,
@@ -56,6 +62,12 @@ export default function Suppliers() {
     deleteData: (id) => supplierService.deleteSupplier(id),
     searchFields: ["name", "phone", "code"],
   });
+
+  useEffect(() => {
+    if (rateMapKey > 0) {
+      refresh(true);
+    }
+  }, [rateMapKey]);
 
   const isLoading = loading || refreshing;
 

@@ -1,9 +1,15 @@
 #[derive(sqlx::FromRow)]
 pub struct PaymentRow {
     pub id: String,
+    pub voucher_number: Option<String>,
     pub payment_type: String,
     pub amount: String,
+    pub currency_code: Option<String>,
+    pub exchange_rate: Option<String>,
     pub payment_date: String,
+    pub debit_account_id: Option<String>,
+    pub credit_account_id: Option<String>,
+    pub journal_entry_number: Option<String>,
     pub customer_id: Option<String>,
     pub supplier_id: Option<String>,
     pub reference: Option<String>,

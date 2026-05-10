@@ -12,6 +12,8 @@ use rust_decimal::Decimal;
 pub enum JournalType {
     CashReceipt,          // سند قبض
     CashPayment,          // سند دفع
+    ExpenseVoucher,       // سند مصاريف
+    DrawingsVoucher,      // سند مسحوبات
     CashOpeningBalance,   // رصيد افتتاحي للخزينة
     AccountOpeningBalance,// رصيد افتتاحي لحساب
     CashJournal,          // يومية الصندوق
@@ -28,6 +30,8 @@ impl std::fmt::Display for JournalType {
         let s = match self {
             Self::CashReceipt => "سند قبض",
             Self::CashPayment => "سند دفع",
+            Self::ExpenseVoucher => "سند مصاريف",
+            Self::DrawingsVoucher => "سند مسحوبات",
             Self::CashOpeningBalance => "رصيد افتتاحي للخزينة",
             Self::AccountOpeningBalance => "رصيد افتتاحي لحساب",
             Self::MaterialOpeningBalance => "رصيد افتتاحي للمواد",

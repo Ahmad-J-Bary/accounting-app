@@ -124,14 +124,6 @@ export function PartnerFormPanel({
       isSaving={saving}
     >
       <div className="space-y-6 text-right">
-        
-        {parentAccount && !partner && (
-          <div className={`p-3 rounded-lg border flex items-center gap-3 ${isCustomer ? "bg-green-50 border-green-100 text-green-800" : "bg-blue-50 border-blue-100 text-blue-800"}`}>
-            <div className={`w-2 h-2 rounded-full animate-pulse ${isCustomer ? "bg-green-500" : "bg-blue-500"}`} />
-            <p className="text-[11px] font-medium">سيتم الربط تلقائياً بحساب: <strong>{parentAccount.name_ar}</strong></p>
-          </div>
-        )}
-
         {/* Basic Info */}
         <div className="space-y-4">
           <h3 className="text-sm font-bold text-slate-800 border-b pb-2">المعلومات الأساسية</h3>

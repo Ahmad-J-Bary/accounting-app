@@ -4,7 +4,7 @@ import { Input } from "@shared/ui/input";
 import { Label } from "@shared/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@shared/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
-import type { CreatePaymentRequest, CustomerDto, SupplierDto, PaymentType } from "@erp/shared-types";
+import type { CreatePaymentRequest, CustomerDto, SupplierDto, PaymentType, AccountDto } from "@erp/shared-types";
 
 import { PAYMENT_TYPE_LABELS } from "../lib/constants";
 
@@ -13,11 +13,12 @@ interface PaymentFormProps {
   onOpenChange: (open: boolean) => void;
   customers: CustomerDto[];
   suppliers: SupplierDto[];
+  accounts: AccountDto[];
   onSave: (payload: CreatePaymentRequest) => Promise<void>;
   saving: boolean;
 }
 
-export function PaymentForm({ open, onOpenChange, customers, suppliers, onSave, saving }: PaymentFormProps) {
+export function PaymentForm({ open, onOpenChange, customers, suppliers, accounts, onSave, saving }: PaymentFormProps) {
   const [form, setForm] = useState<Partial<CreatePaymentRequest>>({
     payment_type: "Receipt",
     amount: 0,
@@ -40,7 +41,12 @@ export function PaymentForm({ open, onOpenChange, customers, suppliers, onSave, 
     await onSave({
       payment_type: form.payment_type as PaymentType,
       amount: form.amount || 0,
+      voucher_number: form.voucher_number || undefined,
+      currency_code: form.currency_code || "SYP",
+      exchange_rate: form.exchange_rate || 1,
       payment_date: form.payment_date || new Date().toISOString(),
+      debit_account_id: form.debit_account_id || undefined,
+      credit_account_id: form.credit_account_id || undefined,
       customer_id: form.customer_id || undefined,
       supplier_id: form.supplier_id || undefined,
       reference: form.reference || undefined,
@@ -96,11 +102,39 @@ export function PaymentForm({ open, onOpenChange, customers, suppliers, onSave, 
             </div>
           )}
 
+          {(form.payment_type === "ExpenseVoucher" || form.payment_type === "DrawingsVoucher") && (
+            <div className="space-y-1">
+              <Label>الحساب المدين *</Label>
+              <Select value={form.debit_account_id} onValueChange={val => setForm(p => ({ ...p, debit_account_id: val }))}>
+                <SelectTrigger><SelectValue placeholder="اختر الحساب المدين" /></SelectTrigger>
+                <SelectContent>
+                  {accounts.filter(a => a.is_active).map(a => (
+                    <SelectItem key={a.id} value={a.id}>{a.code} - {a.name_ar}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="space-y-1">
+            <Label>رقم السند (اختياري)</Label>
+            <Input value={form.voucher_number ?? ""} onChange={e => setForm(p => ({ ...p, voucher_number: e.target.value }))} />
+          </div>
           <div className="space-y-1">
             <Label>المبلغ *</Label>
             <Input type="number" min="0" step="0.01"
               value={form.amount || ""}
               onChange={e => setForm(p => ({ ...p, amount: parseFloat(e.target.value) || 0 }))} />
+          </div>
+          <div className="space-y-1">
+            <Label>العملة</Label>
+            <Input value={form.currency_code ?? "SYP"} onChange={e => setForm(p => ({ ...p, currency_code: e.target.value || "SYP" }))} />
+          </div>
+          <div className="space-y-1">
+            <Label>سعر الصرف</Label>
+            <Input type="number" min="0.0001" step="0.0001"
+              value={form.exchange_rate || 1}
+              onChange={e => setForm(p => ({ ...p, exchange_rate: parseFloat(e.target.value) || 1 }))} />
           </div>
           <div className="space-y-1">
             <Label>التاريخ</Label>

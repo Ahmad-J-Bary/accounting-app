@@ -22,6 +22,7 @@ import AuditLog from '@modules/core/pages/auditLog';
 import Partners from '@modules/partners/pages/partners';
 import Assets from '@modules/assets/pages/assets';
 import CustomerStatementPage from '@modules/partners/pages/customerStatementPage';
+import SupplierStatementPage from '@modules/partners/pages/supplierStatementPage';
 
 import CurrencySettings from '@modules/core/pages/currencySettings';
 import AccountingJournalsReport from '@modules/accounting/pages/AccountingJournalsReport';

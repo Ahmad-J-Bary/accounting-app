@@ -9,6 +9,7 @@ import { Plus, CheckCircle2, AlertCircle, Trash2 } from "lucide-react";
 import { formatCurrency } from '@shared/lib/format';
 import type { CreateJournalEntryRequest, JournalType } from "@erp/shared-types";
 import { cn } from "@shared/lib/utils";
+import { JOURNAL_TYPES } from "@modules/accounting/lib/journal-config";
 
 interface JournalFormProps {
   open: boolean;
@@ -17,17 +18,6 @@ interface JournalFormProps {
   saving: boolean;
   inline?: boolean;
 }
-
-const JOURNAL_TYPES: { value: JournalType; label: string }[] = [
-  { value: 'GeneralJournal', label: 'يومية عامة' },
-  { value: 'CashJournal', label: 'يومية الصندوق' },
-  { value: 'CashSalesJournal', label: 'مبيعات نقدية' },
-  { value: 'CreditSalesJournal', label: 'مبيعات آجلة' },
-  { value: 'PurchaseJournal', label: 'مشتريات' },
-  { value: 'PurchaseCostsJournal', label: 'تكاليف إضافية للمشتريات' },
-  { value: 'CashReceipt', label: 'سند قبض' },
-  { value: 'CashPayment', label: 'سند دفع' },
-];
 
 export function JournalForm({ open, onOpenChange, onSave, saving, inline }: JournalFormProps) {
   const [form, setForm] = useState<Partial<CreateJournalEntryRequest>>({

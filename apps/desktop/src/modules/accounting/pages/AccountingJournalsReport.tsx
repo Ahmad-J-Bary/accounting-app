@@ -11,15 +11,7 @@ import type { JournalEntryDto, JournalType } from "@erp/shared-types";
 import { formatCurrency, formatDate } from "@shared/lib/format";
 import { cn } from "@shared/lib/utils";
 import { FileText, Calendar, Filter, ArrowUpRight, ArrowDownLeft, Printer, Download } from "lucide-react";
-
-const JOURNAL_REPORT_TYPES: { value: JournalType; label: string; desc: string }[] = [
-  { value: 'GeneralJournal', label: 'حركة اليومية العامة', desc: 'سجل كامل للقيود اليدوية والتسويات العامة' },
-  { value: 'CashJournal', label: 'يومية الصندوق / الخزينة', desc: 'تتبع المقبوضات والمدفوعات النقدية والتحويلات' },
-  { value: 'CashSalesJournal', label: 'يومية المبيعات النقدية', desc: 'ملخص مبيعات الكاش اليومية والتدفق النقدي' },
-  { value: 'CreditSalesJournal', label: 'يومية المبيعات الآجلة', desc: 'سجل المبيعات للعملاء بالدين والذمم المدينة' },
-  { value: 'PurchaseJournal', label: 'يومية المشتريات', desc: 'توثيق فواتير المشتريات والموردين' },
-  { value: 'PurchaseCostsJournal', label: 'يومية التكاليف الإضافية', desc: 'مصاريف الشحن والتخليص وتكاليف الاستيراد' },
-];
+import { JOURNAL_REPORT_TYPES } from "@modules/accounting/lib/journal-config";
 
 export default function AccountingJournalsReport() {
   const [searchParams] = useSearchParams();

@@ -5,7 +5,7 @@ use domain::shared::ids::{PaymentId, CustomerId, SupplierId};
 use super::models::PaymentRow;
 use super::mappers::row_to_payment;
 
-const SELECT_COLS: &str = "SELECT id, payment_type, amount, payment_date, customer_id, supplier_id, reference, notes, created_at, updated_at FROM payments";
+const SELECT_COLS: &str = "SELECT id, voucher_number, payment_type, amount, currency_code, exchange_rate, payment_date, debit_account_id, credit_account_id, journal_entry_number, customer_id, supplier_id, reference, notes, created_at, updated_at FROM payments";
 
 pub async fn find_by_id(pool: &SqlitePool, id: &PaymentId) -> Result<Option<Payment>, AppError> {
     let row = sqlx::query_as::<_, PaymentRow>(&format!("{} WHERE id = ?", SELECT_COLS))

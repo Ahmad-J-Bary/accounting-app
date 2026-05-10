@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { paymentService } from '@modules/payments/api/paymentService';
 import { customerService } from '@modules/partners/api/customerService';
 import { supplierService } from '@modules/partners/api/supplierService';
-import type { Payment, CreatePaymentRequest, CustomerDto, SupplierDto } from "@erp/shared-types";
+import { accountingService } from '@modules/accounting/api/accountingService';
+import type { Payment, CreatePaymentRequest, CustomerDto, SupplierDto, AccountDto } from "@erp/shared-types";
 import { toast } from "sonner";
 import { cn } from "@shared/lib/utils";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
@@ -36,6 +37,7 @@ export default function Payments() {
 
   const [customers, setCustomers] = useState<CustomerDto[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
+  const [accounts, setAccounts] = useState<AccountDto[]>([]);
   const [loadingExtras, setLoadingExtras] = useState(true);
   const [typeFilter, setTypeFilter] = useState("all");
   const [showDialog, setShowDialog] = useState(false);
@@ -46,12 +48,14 @@ export default function Payments() {
       setLoadingExtras(true);
       const [cData, sData] = await Promise.all([
         customerService.listCustomers(),
-        supplierService.listSuppliers()
+        supplierService.listSuppliers(),
       ]);
+      const aData = await accountingService.getChartOfAccounts();
       setCustomers(cData);
       setSuppliers(sData);
+      setAccounts(aData);
     } catch (e) {
-      toast.error("فشل تحميل العملاء والموردين");
+      toast.error("فشل تحميل بيانات السندات");
     } finally {
       setLoadingExtras(false);
     }
@@ -70,6 +74,8 @@ export default function Payments() {
       { id: "payment_date", label: "التاريخ" },
       { id: "payment_type", label: "النوع" },
       { id: "party_name", label: "الطرف الثاني" },
+      { id: "voucher_number", label: "رقم السند" },
+      { id: "journal_entry_number", label: "رقم القيد" },
       { id: "reference", label: "المرجع" },
     ];
 
@@ -82,7 +88,7 @@ export default function Payments() {
   }, [currencies]);
 
   const defaultVisibleColumns = useMemo(() => {
-    const base = ["payment_date", "payment_type", "party_name", "reference"];
+    const base = ["payment_date", "payment_type", "party_name", "voucher_number", "journal_entry_number", "reference"];
     if (baseCurrency) {
       base.push(`amount_${baseCurrency.code}`);
     }
@@ -96,7 +102,7 @@ export default function Payments() {
     .reduce((s, p) => s + parseFloat(p.amount), 0), [payments]);
     
   const totalOut = useMemo(() => payments
-    .filter(p => ["SupplierPayment", "CashOut"].includes(p.payment_type))
+    .filter(p => ["SupplierPayment", "CashOut", "ExpenseVoucher", "DrawingsVoucher"].includes(p.payment_type))
     .reduce((s, p) => s + parseFloat(p.amount), 0), [payments]);
 
   const handleCreate = async (payload: CreatePaymentRequest) => {
@@ -106,6 +112,10 @@ export default function Payments() {
     }
     if (payload.payment_type === "SupplierPayment" && !payload.supplier_id) {
       toast.error("يرجى اختيار المورد لعملية الدفع");
+      return;
+    }
+    if ((payload.payment_type === "ExpenseVoucher" || payload.payment_type === "DrawingsVoucher") && !payload.debit_account_id) {
+      toast.error("يرجى اختيار الحساب المدين");
       return;
     }
 
@@ -169,6 +179,18 @@ export default function Payments() {
         header: "المرجع / ملاحظات", 
         accessor: (p) => p.reference ?? "—",
         className: "text-slate-500 text-xs font-medium italic"
+      },
+      {
+        id: "voucher_number",
+        header: "رقم السند",
+        accessor: (p) => p.voucher_number ?? "—",
+        className: "font-black text-slate-700 tabular-nums"
+      },
+      {
+        id: "journal_entry_number",
+        header: "رقم القيد",
+        accessor: (p) => p.journal_entry_number ?? "—",
+        className: "font-black text-indigo-700 tabular-nums"
       },
     ];
 
@@ -314,6 +336,7 @@ export default function Payments() {
         onOpenChange={setShowDialog}
         customers={customers}
         suppliers={suppliers}
+        accounts={accounts}
         onSave={handleCreate}
         saving={saving}
       />

@@ -1,30 +1,59 @@
 import { useMemo } from "react";
 import { DataTable, Column } from '@widgets/table-shell/DataTable';
 import { formatDate } from '@shared/lib/format';
-import type { JournalEntryDto } from "@erp/shared-types";
+import type { JournalEntryDto, JournalLineDto } from "@erp/shared-types";
+import type { JournalFilters } from "../api/journalEntryService";
 
 interface JournalTableProps {
   entries: JournalEntryDto[];
   loading: boolean;
   visibleColumns?: string[];
+  filters?: JournalFilters;
 }
 
-export function JournalTable({ entries, loading, visibleColumns }: JournalTableProps) {
+export function JournalTable({ entries, loading, visibleColumns, filters }: JournalTableProps) {
   const tableData = useMemo(() => {
-    return entries.map((e, index) => {
-      // Calculate total transaction value by checking both debit and credit sides
-      // This ensures we get the USD amount even if the USD line was a credit line.
-      const usdDebits = e.lines.reduce((acc, l) => acc + (l.currency?.toUpperCase() === 'USD' ? parseFloat(l.debit || "0") : 0), 0);
-      const usdCredits = e.lines.reduce((acc, l) => acc + (l.currency?.toUpperCase() === 'USD' ? parseFloat(l.credit || "0") : 0), 0);
-      const transactionUsd = Math.max(usdDebits, usdCredits);
+    return entries.map((e) => {
+      const isGeneral = !visibleColumns || filters?.journal_type === 'GeneralJournal';
+      
+      // Determine focal point logic
+      let focalDebitUSD = 0;
+      let focalCreditUSD = 0;
+      let focalDebitSYP = 0;
+      let focalCreditSYP = 0;
 
-      const sypDebits = e.lines.reduce((acc, l) => acc + (parseFloat(l.debit || "0") * parseFloat(l.fx_rate || "1")), 0);
-      const sypCredits = e.lines.reduce((acc, l) => acc + (parseFloat(l.credit || "0") * parseFloat(l.fx_rate || "1")), 0);
-      const transactionSyp = Math.max(sypDebits, sypCredits);
-      
-      // Classify the whole entry as either Debit-natured or Credit-natured
-      const direction = ['CashPayment', 'PurchaseJournal', 'PurchaseCostsJournal'].includes(e.journal_type) ? 'CREDIT' : 'DEBIT';
-      
+      const getFocalPrefix = (type?: string) => {
+        switch(type) {
+          case 'CashJournal':
+          case 'CashReceipt':
+          case 'CashPayment': return '122';
+          case 'CashSalesJournal': return '311';
+          case 'CreditSalesJournal': return '312';
+          case 'PurchaseJournal': return '41';
+          case 'PurchaseCostsJournal': return '221';
+          case 'MaterialOpeningBalance': return '121';
+          default: return null;
+        }
+      };
+
+      const focalPrefix = getFocalPrefix(filters?.journal_type);
+
+      if (focalPrefix && !isGeneral) {
+        // Find lines for the focal account
+        const focalLines = e.lines.filter(l => l.account_id?.startsWith(focalPrefix));
+        focalDebitSYP = focalLines.reduce((acc, l) => acc + (parseFloat(l.debit || "0") * parseFloat(l.fx_rate || "1")), 0);
+        focalCreditSYP = focalLines.reduce((acc, l) => acc + (parseFloat(l.credit || "0") * parseFloat(l.fx_rate || "1")), 0);
+        
+        focalDebitUSD = focalLines.reduce((acc, l) => acc + (l.currency?.toUpperCase() === 'USD' ? parseFloat(l.debit || "0") : 0), 0);
+        focalCreditUSD = focalLines.reduce((acc, l) => acc + (l.currency?.toUpperCase() === 'USD' ? parseFloat(l.credit || "0") : 0), 0);
+      } else {
+        // Balanced General View
+        focalDebitUSD = e.lines.reduce((acc, l) => acc + (l.currency?.toUpperCase() === 'USD' ? parseFloat(l.debit || "0") : 0), 0);
+        focalCreditUSD = e.lines.reduce((acc, l) => acc + (l.currency?.toUpperCase() === 'USD' ? parseFloat(l.credit || "0") : 0), 0);
+        focalDebitSYP = e.lines.reduce((acc, l) => acc + (parseFloat(l.debit || "0") * parseFloat(l.fx_rate || "1")), 0);
+        focalCreditSYP = e.lines.reduce((acc, l) => acc + (parseFloat(l.credit || "0") * parseFloat(l.fx_rate || "1")), 0);
+      }
+
       const debitLines = e.lines.filter(l => parseFloat(l.debit || "0") > 0);
       const creditLines = e.lines.filter(l => parseFloat(l.credit || "0") > 0);
       
@@ -40,17 +69,16 @@ export function JournalTable({ entries, loading, visibleColumns }: JournalTableP
 
       return {
         ...e,
-        direction,
         partner_name: partnerName,
-        total_debit_usd: direction === 'DEBIT' ? transactionUsd : 0,
-        total_debit_syp: direction === 'DEBIT' ? transactionSyp : 0,
-        total_credit_usd: direction === 'CREDIT' ? transactionUsd : 0,
-        total_credit_syp: direction === 'CREDIT' ? transactionSyp : 0,
+        total_debit_usd: focalDebitUSD,
+        total_debit_syp: focalDebitSYP,
+        total_credit_usd: focalCreditUSD,
+        total_credit_syp: focalCreditSYP,
         debit_account_name: debitAccount,
         credit_account_name: creditAccount,
       };
     });
-  }, [entries]);
+  }, [entries, filters?.journal_type, visibleColumns]);
 
   const allColumns = useMemo<Column<typeof tableData[0]>[]>(() => {
     const cols: Column<typeof tableData[0]>[] = [
@@ -70,30 +98,36 @@ export function JournalTable({ entries, loading, visibleColumns }: JournalTableP
         ),
       },
       {
+        id: "partner_name",
+        header: "الطرف",
+        accessor: (e) => e.partner_name || "-",
+        className: "font-bold text-slate-700 text-[10px]"
+      },
+      {
         id: "total_debit_usd",
         header: "عليه / مدين ($)",
-        accessor: (e) => e.direction === 'DEBIT' ? `${e.total_debit_usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $` : "",
+        accessor: (e) => e.total_debit_usd > 0 ? `${e.total_debit_usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $` : "",
         align: "left",
         className: "tabular-nums font-black text-blue-700 text-[11px]"
       },
       {
         id: "total_debit_syp",
         header: "عليه / مدين (ل.س)",
-        accessor: (e) => e.direction === 'DEBIT' ? `${e.total_debit_syp.toLocaleString('en-US', { maximumFractionDigits: 0 })} ل.س` : "",
+        accessor: (e) => e.total_debit_syp > 0 ? `${e.total_debit_syp.toLocaleString('en-US', { maximumFractionDigits: 0 })} ل.س` : "",
         align: "left",
         className: "tabular-nums font-black text-blue-700 text-[11px]"
       },
       {
         id: "total_credit_usd",
         header: "له / دائن ($)",
-        accessor: (e) => e.direction === 'CREDIT' ? `${e.total_credit_usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $` : "",
+        accessor: (e) => e.total_credit_usd > 0 ? `${e.total_credit_usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $` : "",
         align: "left",
         className: "tabular-nums font-black text-emerald-700 text-[11px]"
       },
       {
         id: "total_credit_syp",
         header: "له / دائن (ل.س)",
-        accessor: (e) => e.direction === 'CREDIT' ? `${e.total_credit_syp.toLocaleString('en-US', { maximumFractionDigits: 0 })} ل.س` : "",
+        accessor: (e) => e.total_credit_syp > 0 ? `${e.total_credit_syp.toLocaleString('en-US', { maximumFractionDigits: 0 })} ل.س` : "",
         align: "left",
         className: "tabular-nums font-black text-emerald-700 text-[11px]"
       },

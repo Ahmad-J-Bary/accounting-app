@@ -36,19 +36,33 @@ export function DataTable<T>({
   skeletonRows = 5,
   selectedId,
 }: DataTableProps<T>) {
+  const getAlignment = (colIdx: number, explicitAlign?: "right" | "left" | "center") => {
+    if (explicitAlign) return explicitAlign;
+    if (colIdx === 0) return "right";
+    if (colIdx === columns.length - 1) return "left";
+    return "center";
+  };
+
+  const getTextAlignment = (align: "right" | "left" | "center") => {
+    return align === "left" ? "text-left" : align === "center" ? "text-center" : "text-right";
+  };
+
   const renderContent = () => {
     if (loading) {
       return Array.from({ length: skeletonRows }).map((_, idx) => (
         <tr key={`skeleton-${idx}`} className="animate-pulse border-b border-border/40">
-          {columns.map((col, colIdx) => (
-            <td key={colIdx} className="px-4 py-4">
-              <Skeleton className={cn(
-                "h-4 w-full rounded-md",
-                col.align === "left" ? "mr-auto ml-0" : col.align === "center" ? "mx-auto" : "ml-auto mr-0",
-                idx % 2 === 0 ? "opacity-60" : "opacity-40"
-              )} />
-            </td>
-          ))}
+          {columns.map((col, colIdx) => {
+            const align = getAlignment(colIdx, col.align);
+            return (
+              <td key={colIdx} className="px-4 py-4">
+                <Skeleton className={cn(
+                  "h-4 w-full rounded-md",
+                  align === "left" ? "mr-auto ml-0" : align === "center" ? "mx-auto" : "ml-auto mr-0",
+                  idx % 2 === 0 ? "opacity-60" : "opacity-40"
+                )} />
+              </td>
+            );
+          })}
         </tr>
       ));
     }
@@ -86,12 +100,14 @@ export function DataTable<T>({
         onClick={() => onRowClick?.(row)}
         onDoubleClick={() => onRowDoubleClick?.(row)}
       >
-        {columns.map((col, colIdx) => (
+        {columns.map((col, colIdx) => {
+          const align = getAlignment(colIdx, col.align);
+          return (
           <td
             key={colIdx}
             className={cn(
               "px-4 py-4 text-slate-600 transition-colors group-hover:text-slate-900",
-              col.align === "left" ? "text-left" : col.align === "center" ? "text-center" : "text-right",
+              getTextAlignment(align),
               col.className
             )}
           >
@@ -99,7 +115,8 @@ export function DataTable<T>({
               ? col.accessor(row) 
               : (row[col.accessor] as ReactNode) || "—"}
           </td>
-        ))}
+          );
+        })}
       </tr>
       );
     });
@@ -111,18 +128,21 @@ export function DataTable<T>({
         <table className="w-full text-sm min-w-[800px] border-collapse" dir="rtl">
           <thead className="bg-slate-50/50 backdrop-blur-md border-b border-border/80 sticky top-0 z-10">
             <tr>
-              {columns.map((col, idx) => (
+              {columns.map((col, idx) => {
+                const align = getAlignment(idx, col.align);
+                return (
                 <th
                   key={idx}
                   className={cn(
                     "px-4 py-4 font-bold text-slate-700 tracking-tight",
-                    col.align === "left" ? "text-left" : col.align === "center" ? "text-center" : "text-right",
+                    getTextAlignment(align),
                     col.headerClassName
                   )}
                 >
                   {col.header}
                 </th>
-              ))}
+              );
+              })}
             </tr>
           </thead>
           <tbody className="divide-y-0">

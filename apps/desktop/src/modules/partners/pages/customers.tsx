@@ -28,7 +28,13 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { cn } from "@shared/lib/utils";
 
 export default function Customers() {
-  const { currencies, formatMonetaryAmount, baseCurrency } = useCurrencyContext();
+  const { currencies, formatMonetaryAmount, baseCurrency, rateMap } = useCurrencyContext();
+  const [rateMapKey, setRateMapKey] = useState(0);
+
+  useEffect(() => {
+    setRateMapKey(k => k + 1);
+  }, [rateMap]);
+
   const {
     filtered: customers,
     loading,
@@ -56,6 +62,12 @@ export default function Customers() {
     deleteData: (id) => customerService.deleteCustomer(id),
     searchFields: ["name", "phone", "code"],
   });
+
+  useEffect(() => {
+    if (rateMapKey > 0) {
+      refresh(true);
+    }
+  }, [rateMapKey]);
 
   const [customerInvoices, setCustomerInvoices] = useState<InvoiceDto[]>([]);
   const [customerPayments, setCustomerPayments] = useState<Payment[]>([]);

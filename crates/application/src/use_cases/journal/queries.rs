@@ -48,11 +48,35 @@ impl ListJournalEntriesUseCase {
             _ => None,
         });
 
-        let entries = self.repo.list_with_filters(from, to, journal_type, acc_id, part_id, status_enum).await?;
+        let repo_journal_type = if matches!(
+            journal_type,
+            Some(JournalType::CashJournal)
+                | Some(JournalType::CashSalesJournal)
+                | Some(JournalType::CreditSalesJournal)
+                | Some(JournalType::PurchaseJournal)
+                | Some(JournalType::PurchaseCostsJournal)
+        ) {
+            None
+        } else {
+            journal_type
+        };
+
+        let entries = self.repo.list_with_filters(from, to, repo_journal_type, acc_id, part_id, status_enum).await?;
         
         let mut dtos = Vec::new();
         for entry in entries {
-            dtos.push(self.map_to_dto(entry).await?);
+            let include = match journal_type {
+                Some(JournalType::CashJournal) => self.entry_contains_account_prefix(&entry, "122").await?,
+                Some(JournalType::CashSalesJournal) => self.entry_contains_account_prefix(&entry, "311").await?,
+                Some(JournalType::CreditSalesJournal) => self.entry_contains_account_prefix(&entry, "312").await?,
+                Some(JournalType::PurchaseJournal) => self.entry_contains_account_prefix(&entry, "41").await?,
+                Some(JournalType::PurchaseCostsJournal) => self.entry_contains_account_prefix(&entry, "221").await?,
+                _ => true,
+            };
+
+            if include {
+                dtos.push(self.map_to_dto(entry).await?);
+            }
         }
         
         Ok(dtos)
@@ -73,7 +97,10 @@ impl ListJournalEntriesUseCase {
         for line in &mut dto.lines {
             // Account name
             if let Ok(acc_id) = line.account_id.parse::<AccountId>() {
-                line.account_name = self.account_repo.find_by_id(&acc_id).await?.map(|a| a.name_ar);
+                if let Ok(Some(acc)) = self.account_repo.find_by_id(&acc_id).await {
+                    line.account_name = Some(acc.name_ar);
+                    line.account_code = Some(acc.code);
+                }
             }
 
             // Partner name (Customer or Supplier)
@@ -90,5 +117,16 @@ impl ListJournalEntriesUseCase {
         }
 
         Ok(dto)
+    }
+
+    async fn entry_contains_account_prefix(&self, entry: &domain::accounting::JournalEntry, prefix: &str) -> Result<bool, AppError> {
+        for line in &entry.lines {
+            if let Some(acc) = self.account_repo.find_by_id(&line.account_id).await? {
+                if acc.code.starts_with(prefix) {
+                    return Ok(true);
+                }
+            }
+        }
+        Ok(false)
     }
 }

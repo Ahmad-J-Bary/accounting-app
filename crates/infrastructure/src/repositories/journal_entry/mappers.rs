@@ -16,6 +16,8 @@ pub fn row_to_entry(row: JournalEntryRow, lines: Vec<JournalLine>) -> Result<Jou
     let journal_type = match row.journal_type.as_str() {
         "CashReceipt" => JournalType::CashReceipt,
         "CashPayment" => JournalType::CashPayment,
+        "ExpenseVoucher" => JournalType::ExpenseVoucher,
+        "DrawingsVoucher" => JournalType::DrawingsVoucher,
         "CashOpeningBalance" => JournalType::CashOpeningBalance,
         "AccountOpeningBalance" => JournalType::AccountOpeningBalance,
         "CashJournal" => JournalType::CashJournal,

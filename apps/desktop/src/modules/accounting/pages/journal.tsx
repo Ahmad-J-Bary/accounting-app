@@ -2,33 +2,21 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Plus, Search, RefreshCw, FileText, CheckCircle2, FileEdit, Banknote, Settings2, Calendar, Filter } from "lucide-react";
+import { Search, RefreshCw, FileText, Banknote, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { journalEntryService, type JournalFilters } from '@modules/accounting/api/journalEntryService';
-import type { JournalEntryDto, CreateJournalEntryRequest, JournalType } from "@erp/shared-types";
+import type { JournalEntryDto, JournalType } from "@erp/shared-types";
 import { cn } from "@shared/lib/utils";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@shared/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 
 // Refactored Components & Hooks
-import { useDataTable, useColumnPreferences } from '@shared/hooks';
+import { useDataTable } from '@shared/hooks';
 import { JournalTable } from '@modules/accounting/components/JournalTable';
 import { JournalDetailPanel } from '@modules/accounting/components/JournalDetailPanel';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { JournalSummaryFooter } from "@modules/accounting/components/JournalSummaryFooter";
-
-const JOURNAL_TYPES: { value: JournalType; label: string }[] = [
-  { value: 'GeneralJournal', label: 'اليومية العامة' },
-  { value: 'CashJournal', label: 'يومية الصندوق' },
-  { value: 'CashSalesJournal', label: 'يومية المبيعات النقدية' },
-  { value: 'CreditSalesJournal', label: 'يومية المبيعات الآجلة' },
-  { value: 'CashReceipt', label: 'سندات القبض' },
-  { value: 'CashPayment', label: 'سندات الصرف' },
-  { value: 'PurchaseJournal', label: 'يومية المشتريات' },
-  { value: 'PurchaseCostsJournal', label: 'يومية تكاليف الشراء' },
-  { value: 'MaterialOpeningBalance', label: 'رصيد أول المدة للمواد' },
-];
+import { JOURNAL_TYPES, getJournalColumnsByType } from "@modules/accounting/lib/journal-config";
 
 export default function Journal() {
   const navigate = useNavigate();
@@ -46,9 +34,10 @@ export default function Journal() {
   });
 
   useEffect(() => {
-    const activeType = typeParam || 'GeneralJournal';
-    if (activeType !== (filters.journal_type || 'GeneralJournal')) {
-      setFilters(f => ({ ...f, journal_type: activeType }));
+    // Sync from URL only when the query param exists.
+    // Do not force-reset user selection back to GeneralJournal.
+    if (typeParam && typeParam !== (filters.journal_type || 'GeneralJournal')) {
+      setFilters(f => ({ ...f, journal_type: typeParam }));
     }
   }, [typeParam, filters.journal_type]);
 
@@ -75,26 +64,10 @@ export default function Journal() {
     dependencies: [filters],
   });
 
-  const availableColumns = useMemo(() => {
-    return [
-      { id: "entry_date", label: "التاريخ" },
-      { id: "entry_number", label: "رقم القيد" },
-      { id: "journal_type", label: "نوع الحركة" },
-      { id: "description", label: "البيان" },
-      { id: "debit_account", label: "الحساب المدين / الوجهة" },
-      { id: "credit_account", label: "الحساب الدائن / المصدر" },
-      { id: "total_debit_usd", label: "عليه / مدين ($)" },
-      { id: "total_debit_syp", label: "عليه / مدين (ل.س)" },
-      { id: "total_credit_usd", label: "له / دائن ($)" },
-      { id: "total_credit_syp", label: "له / دائن (ل.س)" },
-    ];
-  }, []);
-
-  const defaultVisibleColumns = useMemo(() => {
-    return ["entry_date", "entry_number", "journal_type", "description", "debit_account", "credit_account", "total_debit_usd", "total_debit_syp", "total_credit_usd", "total_credit_syp"];
-  }, []);
-
-  const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences("journal_entries", defaultVisibleColumns);
+  const visibleColumns = useMemo(
+    () => getJournalColumnsByType(filters.journal_type as JournalType),
+    [filters.journal_type]
+  );
 
   const isLoading = loading || refreshing;
 
@@ -206,38 +179,13 @@ export default function Journal() {
       }
       tableContent={
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-full">
-          <div className="border-b border-slate-100 bg-slate-50/50 p-2 flex justify-between items-center shrink-0">
-            <div className="flex gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8 bg-white text-xs font-bold shadow-sm">
-                    <Settings2 className="w-4 h-4 ml-2" />
-                    تخصيص الأعمدة
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel className="text-xs font-bold text-slate-500">الأعمدة المعروضة</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {availableColumns.map(col => (
-                    <DropdownMenuCheckboxItem
-                      key={col.id}
-                      checked={isVisible(col.id)}
-                      onCheckedChange={() => toggleColumn(col.id)}
-                      className="text-xs font-bold justify-end text-right"
-                    >
-                      {col.label}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-          
           <div className="flex-1 overflow-auto">
             <JournalTable
+              key={`journal-table-${filters.journal_type || 'GeneralJournal'}`}
               entries={entries}
               loading={loading}
               visibleColumns={visibleColumns}
+              filters={filters as JournalFilters}
             />
           </div>
         </div>

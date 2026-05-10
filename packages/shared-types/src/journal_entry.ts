@@ -1,6 +1,8 @@
 export type JournalType = 
   | 'CashReceipt'
   | 'CashPayment'
+  | 'ExpenseVoucher'
+  | 'DrawingsVoucher'
   | 'CashOpeningBalance'
   | 'AccountOpeningBalance'
   | 'CashJournal'
@@ -47,4 +49,3 @@ export interface CreateJournalEntryRequest {
   entry_date: string;
   description: string;
 }
-
