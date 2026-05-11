@@ -39,6 +39,8 @@ pub fn row_to_account(row: AccountRow) -> Result<Account, AppError> {
         is_final: row.is_final.unwrap_or(false),
         linked_customer_id: row.linked_customer_id.and_then(|s| s.parse::<CustomerId>().ok()),
         linked_supplier_id: row.linked_supplier_id.and_then(|s| s.parse::<SupplierId>().ok()),
+        debit: Decimal::from_str(&row.debit).unwrap_or(Decimal::ZERO),
+        credit: Decimal::from_str(&row.credit).unwrap_or(Decimal::ZERO),
         created_at: DateTime::parse_from_rfc3339(&row.created_at).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
         updated_at: DateTime::parse_from_rfc3339(&row.updated_at).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
     })

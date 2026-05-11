@@ -1,4 +1,4 @@
-﻿#![allow(clippy::too_many_arguments)]
+#![allow(clippy::too_many_arguments)]
 use crate::shared::errors::DomainError;
 use crate::shared::ids::{AccountId, CustomerId, SupplierId};
 use chrono::{DateTime, Utc};
@@ -39,6 +39,8 @@ pub struct Account {
     pub is_final: bool,
     pub linked_customer_id: Option<CustomerId>,
     pub linked_supplier_id: Option<SupplierId>,
+    pub debit: Decimal,
+    pub credit: Decimal,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -92,6 +94,8 @@ impl Account {
             level,
             opening_balance,
             balance: opening_balance,
+            debit: Decimal::ZERO,
+            credit: Decimal::ZERO,
             notes,
             is_active: true,
             is_default: false,

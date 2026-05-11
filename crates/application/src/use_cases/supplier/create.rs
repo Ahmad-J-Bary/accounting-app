@@ -92,6 +92,8 @@ impl CreateSupplierUseCase {
             level: parent.level + 1,
             opening_balance,
             balance: credit - debit,
+            debit,
+            credit,
             notes: None,
             is_active: true,
             is_default: false,

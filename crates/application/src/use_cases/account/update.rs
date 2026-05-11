@@ -74,6 +74,8 @@ impl UpdateAccountUseCase {
         account.linked_supplier_id = cmd.linked_supplier_id
             .as_deref()
             .and_then(|s| s.parse::<SupplierId>().ok());
+        account.debit = cmd.debit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(account.debit);
+        account.credit = cmd.credit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(account.credit);
         account.updated_at = Utc::now();
 
         self.account_repo

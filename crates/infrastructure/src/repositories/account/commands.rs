@@ -10,8 +10,8 @@ pub async fn save(pool: &SqlitePool, account: &Account) -> Result<(), AppError> 
     };
 
     sqlx::query(
-        "INSERT INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, notes, is_active, is_default, is_final, linked_customer_id, linked_supplier_id, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        "INSERT INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, debit, credit, notes, is_active, is_default, is_final, linked_customer_id, linked_supplier_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
             code = excluded.code,
             name_ar = excluded.name_ar,
@@ -22,6 +22,8 @@ pub async fn save(pool: &SqlitePool, account: &Account) -> Result<(), AppError> 
             level = excluded.level,
             opening_balance = excluded.opening_balance,
             balance = excluded.balance,
+            debit = excluded.debit,
+            credit = excluded.credit,
             notes = excluded.notes,
             is_active = excluded.is_active,
             is_default = excluded.is_default,
@@ -40,6 +42,8 @@ pub async fn save(pool: &SqlitePool, account: &Account) -> Result<(), AppError> 
     .bind(account.level)
     .bind(account.opening_balance.to_string())
     .bind(account.balance.to_string())
+    .bind(account.debit.to_string())
+    .bind(account.credit.to_string())
     .bind(&account.notes)
     .bind(account.is_active)
     .bind(account.is_default)

@@ -36,6 +36,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     items: [
       { to: "/customers", label: "العملاء", icon: Users },
       { to: "/suppliers", label: "الموردون", icon: Truck },
+      { to: "/expenses", label: "بنود المصاريف", icon: DollarSign },
       { to: "/sales-invoices", label: "فواتير المبيعات", icon: Receipt },
       { to: "/purchase-invoices", label: "فواتير المشتريات", icon: ShoppingCart },
       { to: "/payments", label: "المقبوضات والمدفوعات", icon: Wallet },

@@ -92,6 +92,8 @@ impl CreateCustomerUseCase {
             level: parent.level + 1,
             opening_balance,
             balance: debit - credit,
+            debit,
+            credit,
             notes: None,
             is_active: true,
             is_default: false,

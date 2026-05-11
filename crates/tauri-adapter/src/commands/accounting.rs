@@ -18,6 +18,14 @@ pub async fn get_chart_of_accounts(state: State<'_, AppState>) -> Result<Vec<Acc
 }
 
 #[tauri::command]
+pub async fn get_expense_items(state: State<'_, AppState>) -> Result<Vec<AccountDto>, String> {
+    AccountQueries::new(state.account_repo.clone(), state.journal_entry_repo.clone())
+        .get_expense_items()
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn get_account_ledger(
     account_id: String,
     state: State<'_, AppState>,

@@ -186,4 +186,24 @@ impl AccountQueries {
             closing_balance_usd: running_balance_usd,
         })
     }
+
+    pub async fn get_expense_items(&self) -> Result<Vec<AccountDto>, AccountUseCaseError> {
+        let accounts = self.account_repo
+            .list_all()
+            .await
+            .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
+
+        // Filter for "Other Expenses" children
+        // EXPENSES_PARENT_ID = "00000000-0000-0000-0000-000000000043"
+        let parent_id_str = crate::constants::EXPENSES_PARENT_ID;
+        
+        let mut expense_items: Vec<AccountDto> = accounts.into_iter()
+            .filter(|a| a.parent_id.as_ref().map(|id| id.0.to_string() == parent_id_str).unwrap_or(false))
+            .map(AccountDto::from)
+            .collect();
+
+        expense_items.sort_by(|a, b| a.code.cmp(&b.code));
+
+        Ok(expense_items)
+    }
 }

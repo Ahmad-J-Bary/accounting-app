@@ -20,6 +20,8 @@ pub struct AccountDto {
     pub is_final: bool,
     pub linked_customer_id: Option<String>,
     pub linked_supplier_id: Option<String>,
+    pub debit: String,
+    pub credit: String,
 }
 
 impl From<Account> for AccountDto {
@@ -41,6 +43,8 @@ impl From<Account> for AccountDto {
             is_final: account.is_final,
             linked_customer_id: account.linked_customer_id.map(|id| id.0.to_string()),
             linked_supplier_id: account.linked_supplier_id.map(|id| id.0.to_string()),
+            debit: account.debit.to_string(),
+            credit: account.credit.to_string(),
         }
     }
 }

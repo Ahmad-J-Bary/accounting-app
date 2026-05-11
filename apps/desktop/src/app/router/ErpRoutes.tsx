@@ -24,6 +24,8 @@ import Assets from '@modules/assets/pages/assets';
 import CustomerStatementPage from '@modules/partners/pages/customerStatementPage';
 import SupplierStatementPage from '@modules/partners/pages/supplierStatementPage';
 
+import Expenses from '@modules/accounting/pages/expenses';
+
 import CurrencySettings from '@modules/core/pages/currencySettings';
 import AccountingJournalsReport from '@modules/accounting/pages/AccountingJournalsReport';
 import AccountMovementsReport from '@modules/accounting/pages/AccountMovementsReport';
@@ -45,6 +47,7 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/partners/customer-statement/:id" element={<CustomerStatementPage />} />
       <Route path="/suppliers" element={<Suppliers />} />
       <Route path="/partners/supplier-statement/:id" element={<SupplierStatementPage />} />
+      <Route path="/expenses" element={<Expenses />} />
       <Route path="/sales-invoices" element={<SalesInvoices />} />
       <Route path="/sales-invoices/new/*" element={<SalesInvoices />} />
       <Route path="/sales-invoices/:id" element={<SalesInvoices />} />

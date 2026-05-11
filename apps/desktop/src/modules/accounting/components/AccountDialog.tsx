@@ -29,12 +29,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@shared/ui/select";
-import type { AccountDto } from "@erp/shared-types";
+import type { AccountDto, SaveAccountCommand } from "@erp/shared-types";
 import { accountingService } from '@modules/accounting/api/accountingService';
 import type {
   AccountType,
   AccountCategory,
-  SaveAccountCommand,
 } from '@modules/accounting/api/accountingService';
 
 const ACCOUNT_TYPES = [
@@ -108,6 +107,7 @@ export function AccountDialog({
 }: AccountDialogProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [codePrefix, setCodePrefix] = useState("");
 
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountSchema),

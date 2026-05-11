@@ -78,6 +78,8 @@ impl CreateAccountUseCase {
             is_final,
             linked_customer_id,
             linked_supplier_id,
+            debit: cmd.debit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(Decimal::ZERO),
+            credit: cmd.credit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(Decimal::ZERO),
             created_at: Utc::now(),
             updated_at: Utc::now(),
         };

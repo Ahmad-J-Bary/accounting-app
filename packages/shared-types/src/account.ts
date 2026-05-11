@@ -15,6 +15,27 @@ export interface AccountDto {
   is_final: boolean;
   linked_customer_id: string | null;
   linked_supplier_id: string | null;
+  debit: string;
+  credit: string;
+}
+
+export interface SaveAccountCommand {
+  code: string;
+  name_ar: string;
+  name_en: string;
+  account_type: string;
+  parent_id: string | null;
+  category: string;
+  level: number;
+  opening_balance: string;
+  notes: string | null;
+  is_default?: boolean;
+  is_active?: boolean;
+  debit?: string;
+  credit?: string;
+  currency?: string;
+  linked_customer_id?: string | null;
+  linked_supplier_id?: string | null;
 }
 
 export interface AccountLedgerLineDto {

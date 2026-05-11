@@ -90,6 +90,7 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::accounting::delete_account,
             commands::accounting::activate_account,
             commands::accounting::deactivate_account,
+            commands::accounting::get_expense_items,
             commands::assets::create_fixed_asset,
             commands::assets::list_fixed_assets,
             commands::assets::create_consumable,

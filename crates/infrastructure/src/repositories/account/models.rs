@@ -16,6 +16,8 @@ pub struct AccountRow {
     pub is_final: Option<bool>,
     pub linked_customer_id: Option<String>,
     pub linked_supplier_id: Option<String>,
+    pub debit: String,
+    pub credit: String,
     pub created_at: String,
     pub updated_at: String,
 }

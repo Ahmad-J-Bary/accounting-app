@@ -43,7 +43,7 @@ export default function Accounting() {
           id: ROOT_ACCOUNT_ID, code: "", name_ar: "دليل الحسابات", name_en: "Chart of Accounts",
           account_type: "Assets", parent_id: null, category: "Summary", level: 0, opening_balance: "0",
           balance: "0", notes: null, is_active: true, is_default: false, is_final: false,
-          linked_customer_id: null, linked_supplier_id: null, children: [],
+          linked_customer_id: null, linked_supplier_id: null, debit: "0", credit: "0", children: [],
         };
         if (prev?.id === ROOT_ACCOUNT_ID) return rootNode;
         if (prev) {
@@ -84,7 +84,7 @@ export default function Accounting() {
     id: ROOT_ACCOUNT_ID, code: "", name_ar: "دليل الحسابات", name_en: "Chart of Accounts",
     account_type: "Assets", parent_id: null, category: "Summary", level: 0, opening_balance: "0",
     balance: "0", notes: null, is_active: true, is_default: false, is_final: false,
-    linked_customer_id: null, linked_supplier_id: null, children: visibleTree,
+    linked_customer_id: null, linked_supplier_id: null, debit: "0", credit: "0", children: visibleTree,
   }), [visibleTree]);
 
   const isRootSelected = selected?.id === ROOT_ACCOUNT_ID;
