@@ -1,18 +1,22 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
 import { formatCurrency } from '@shared/lib/format';
-import { Hash, X, Package, Box, RefreshCw } from "lucide-react";
+import { Hash, X, Package, Box, RefreshCw, ShoppingCart, TrendingUp, RotateCcw, Layers, Edit, Trash2 } from "lucide-react";
 import type { MaterialDto } from "@erp/shared-types";
 import { Button } from "@shared/ui/button";
 
 interface MaterialDetailPanelProps {
   material: MaterialDto | null;
   onClose: () => void;
+  onEdit?: (m: MaterialDto) => void;
+  onDelete?: (id: string, name: string) => void;
   loadingDetails?: boolean;
 }
 
 export function MaterialDetailPanel({
   material,
   onClose,
+  onEdit,
+  onDelete,
   loadingDetails = false
 }: MaterialDetailPanelProps) {
   if (!material) return null;
@@ -30,9 +34,37 @@ export function MaterialDetailPanel({
           </h2>
           <span className="text-xs text-muted-foreground">بطاقة مادة</span>
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full text-slate-400 hover:text-slate-600">
-          <X className="w-5 h-5" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {onEdit && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-amber-500 text-white hover:bg-amber-600 border-none h-8 px-3 rounded-lg"
+              onClick={() => onEdit(material)}
+            >
+              <Edit className="w-3.5 h-3.5 ml-1.5" />
+              تعديل
+            </Button>
+          )}
+          {onDelete && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-red-500 text-white hover:bg-red-600 border-none h-8 px-3 rounded-lg"
+              onClick={() => {
+                if (confirm(`هل أنت متأكد من حذف "${material.name}"؟`)) {
+                  onDelete(material.id, material.name);
+                }
+              }}
+            >
+              <Trash2 className="w-3.5 h-3.5 ml-1.5" />
+              حذف
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full text-slate-400 hover:text-slate-600">
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">
@@ -116,14 +148,14 @@ export function MaterialDetailPanel({
             </div>
           </TabsContent>
           
-          <TabsContent value="movement" className="mt-4 focus-visible:outline-none">
-             <div className="text-center py-10 border-2 border-dashed rounded-xl text-muted-foreground bg-slate-50/50">
-               <Box className="w-8 h-8 mx-auto mb-2 opacity-20" />
-               <span className="text-xs">سجل الحركة سيتم إضافته قريباً</span>
-             </div>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
-  );
-}
+<TabsContent value="movement" className="mt-4 focus-visible:outline-none">
+              <div className="text-center py-10 border-2 border-dashed rounded-xl text-muted-foreground bg-slate-50/50">
+                <Box className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                <span className="text-xs">سجل الحركة سيتم إضافته قريباً</span>
+              </div>
+           </TabsContent>
+         </Tabs>
+       </div>
+     </div>
+   );
+ }

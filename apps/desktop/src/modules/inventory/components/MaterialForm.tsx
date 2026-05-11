@@ -183,10 +183,6 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
       saveLabel={material ? "حفظ التعديلات" : "إضافة المادة"}
     >
       <div className="space-y-6 text-right">
-        <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 mb-2">
-          <p className="text-xs text-blue-800">يرجى ملء البيانات التالية بدقة. الحقول المميزة بـ <span className="text-red-500">*</span> إجبارية.</p>
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
           <div className="space-y-5">
             <div className="space-y-2">

@@ -262,6 +262,7 @@ export default function Expenses() {
             onClose={() => setSelectedId(null)}
             onEdit={e => handleOpenEdit(e)}
             onDelete={id => { setSelectedId(null); handleDelete(id); }}
+            parentCode={expensesParent?.code}
           />
         )
       }

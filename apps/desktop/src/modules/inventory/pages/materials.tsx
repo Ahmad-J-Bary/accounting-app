@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Plus, Search, RefreshCw, Settings2, Package, Layers, Barcode } from "lucide-react";
+import { Plus, Search, RefreshCw, Settings2, Package, Layers, Barcode, ShoppingCart, TrendingUp, RotateCcw } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -24,9 +24,11 @@ import { MaterialUnitsManager } from '@modules/inventory/components/MaterialUnit
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { MaterialDetailPanel } from '@modules/inventory/components/MaterialDetailPanel';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useTabs } from "@app/providers/TabContext";
 
 export default function Materials() {
   const { currencies, baseCurrency } = useCurrencyContext();
+  const { openTab } = useTabs();
   const {
     filtered: materials,
     loading,
@@ -101,6 +103,7 @@ export default function Materials() {
 
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [managingUnitsMaterial, setManagingUnitsMaterial] = useState<MaterialDto | null>(null);
+  const [showUnitsPanel, setShowUnitsPanel] = useState(false);
 
   const loadCategories = useCallback(async () => {
     try {
@@ -138,6 +141,70 @@ export default function Materials() {
           <>
             <Button size="sm" onClick={handleOpenAdd} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
               <Plus className="w-4 h-4 ml-2" /> مادة جديدة
+            </Button>
+
+            <div className="h-6 w-px bg-slate-200 mx-1" />
+
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+              disabled={!selectedId}
+              onClick={() => selectedMaterial && openTab({
+                id: `purchases-${selectedId}`,
+                title: `مشتريات: ${selectedMaterial?.name}`,
+                path: `/inventory/purchases/${selectedId}`,
+                closable: true,
+              })}
+            >
+              <ShoppingCart className="w-4 h-4 ml-2 text-emerald-600" />
+              مشتريات المادة
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+              disabled={!selectedId}
+              onClick={() => selectedMaterial && openTab({
+                id: `sales-${selectedId}`,
+                title: `مبيعات: ${selectedMaterial?.name}`,
+                path: `/inventory/sales/${selectedId}`,
+                closable: true,
+              })}
+            >
+              <TrendingUp className="w-4 h-4 ml-2 text-blue-600" />
+              مبيعات المادة
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+              disabled={!selectedId}
+              onClick={() => selectedMaterial && openTab({
+                id: `returns-${selectedId}`,
+                title: `مرتجعات: ${selectedMaterial?.name}`,
+                path: `/inventory/returns/${selectedId}`,
+                closable: true,
+              })}
+            >
+              <RotateCcw className="w-4 h-4 ml-2 text-amber-600" />
+              مرتجعات المادة
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+              disabled={!selectedId}
+              onClick={() => {
+                setManagingUnitsMaterial(selectedMaterial);
+                setShowUnitsPanel(true);
+              }}
+            >
+              <Layers className="w-4 h-4 ml-2 text-purple-600" />
+              الوحدات
             </Button>
           </>
         }
@@ -200,20 +267,22 @@ export default function Materials() {
               onSave={handleSave}
               saving={saving}
             />
+          ) : managingUnitsMaterial ? (
+            <MaterialUnitsManager 
+              material={managingUnitsMaterial}
+              onClose={() => setManagingUnitsMaterial(null)}
+              onUnitsUpdated={refresh}
+            />
           ) : (
             <MaterialDetailPanel 
               material={selectedMaterial}
               onClose={() => setSelectedId(null)}
+              onEdit={handleOpenEdit}
+              onDelete={handleDelete}
             />
           )
         }
-        isPanelOpen={isFormOpen || !!selectedId}
-      />
-      <MaterialUnitsManager 
-        open={!!managingUnitsMaterial}
-        onOpenChange={(open) => !open && setManagingUnitsMaterial(null)}
-        material={managingUnitsMaterial}
-        onUnitsUpdated={refresh}
+        isPanelOpen={isFormOpen || !!selectedId || !!managingUnitsMaterial}
       />
     </>
   );

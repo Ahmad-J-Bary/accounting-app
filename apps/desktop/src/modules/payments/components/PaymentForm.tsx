@@ -61,12 +61,12 @@ export function PaymentForm({ open, onOpenChange, customers, suppliers, accounts
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md" dir="rtl">
         <DialogHeader>
-          <DialogTitle>إضافة حركة نقدية</DialogTitle>
+          <DialogTitle>إضافة سند نقدي</DialogTitle>
           <DialogDescription>تسجيل حركة قبض أو صرف نقدية جديدة في النظام.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-1">
-            <Label>نوع الحركة</Label>
+            <Label>نوع السند</Label>
             <Select value={form.payment_type} onValueChange={v => setForm(p => ({ ...p, payment_type: v as CreatePaymentRequest['payment_type'], customer_id: undefined, supplier_id: undefined }))}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>

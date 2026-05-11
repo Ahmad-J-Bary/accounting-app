@@ -11,6 +11,7 @@ interface ExpenseDetailPanelProps {
   onClose: () => void;
   onEdit: (expense: AccountDto) => void;
   onDelete: (id: string) => void;
+  parentCode?: string;
 }
 
 export function ExpenseDetailPanel({
@@ -18,6 +19,7 @@ export function ExpenseDetailPanel({
   onClose,
   onEdit,
   onDelete,
+  parentCode,
 }: ExpenseDetailPanelProps) {
   const { baseCurrency } = useCurrencyContext();
   const { openTab } = useTabs();
@@ -85,7 +87,15 @@ export function ExpenseDetailPanel({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-slate-600">رقم الحساب</Label>
-                <Input value={expense.code || ""} disabled={isDisabled} className="h-9 bg-slate-50 tabular-nums" />
+                <Input 
+                  value={
+                    expense.code && parentCode && expense.code.startsWith(parentCode)
+                      ? expense.code.substring(parentCode.length)
+                      : expense.code || ""
+                  } 
+                  disabled={isDisabled} 
+                  className="h-9 bg-slate-50 tabular-nums" 
+                />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-slate-600">اسم البند</Label>

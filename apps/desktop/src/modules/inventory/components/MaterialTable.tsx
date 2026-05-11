@@ -1,12 +1,11 @@
 import { useMemo } from "react";
-import { Plus, Scale, Shuffle } from "lucide-react";
+import { Plus, Shuffle } from "lucide-react";
 import { cn } from '@shared/lib/utils';
 import type { MaterialDto, CategoryDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { Badge } from "@shared/ui/badge";
 import { Button } from "@shared/ui/button";
 import { DataTable, Column } from '@widgets/table-shell/DataTable';
-import { TableActions } from '@widgets/table-shell/TableActions';
 
 interface MaterialTableProps {
   materials: MaterialDto[];
@@ -26,9 +25,9 @@ export function MaterialTable({ materials, categories, loading, search, onEdit, 
 
   const columns = useMemo<Column<MaterialDto>[]>(() => {
     const cols: Column<MaterialDto>[] = [
-      { 
+      {
         id: "code",
-        header: "الكود", 
+        header: "الكود",
         accessor: (m) => (
           <span className="font-mono text-[11px] bg-slate-100 text-slate-700 px-2 py-1 rounded-md font-bold ring-1 ring-slate-200/50">
             {m.code || "—"}
@@ -46,15 +45,15 @@ export function MaterialTable({ materials, categories, loading, search, onEdit, 
         ),
         className: "w-[110px]"
       },
-      { 
+      {
         id: "name",
-        header: "اسم المادة", 
-        accessor: "name", 
-        className: "font-bold text-slate-800" 
+        header: "اسم المادة",
+        accessor: "name",
+        className: "font-bold text-slate-800"
       },
-      { 
+      {
         id: "categories",
-        header: "التصنيفات", 
+        header: "التصنيفات",
         accessor: (m) => (
           <div className="flex flex-wrap gap-1.5">
             {m.category_ids.length > 0 ? (
@@ -62,10 +61,10 @@ export function MaterialTable({ materials, categories, loading, search, onEdit, 
                 const cat = categories.find(c => c.id === id);
                 if (!cat) return null;
                 return (
-                  <Badge 
-                    key={id} 
+                  <Badge
+                    key={id}
                     variant={cat.is_hybrid ? "outline" : "secondary"}
-                    className={cn("text-[10px] font-medium px-2 py-0 border-slate-200", cat.is_hybrid && "border-purple-200 bg-purple-50 text-purple-700")}
+                    className={cn("text-[10px] font-medium px-2 py-0.5 border-slate-200", cat.is_hybrid && "border-purple-200 bg-purple-50 text-purple-700")}
                   >
                     {cat.is_hybrid && <Shuffle className="w-2.5 h-2.5 ml-1 inline" />}
                     {cat.name}
@@ -78,9 +77,9 @@ export function MaterialTable({ materials, categories, loading, search, onEdit, 
           </div>
         )
       },
-      { 
+      {
         id: "units",
-        header: "الوحدات", 
+        header: "الوحدات",
         accessor: (m) => (
           <div className="flex flex-wrap items-center gap-1.5 group">
             {m.units?.map((u, i) => (
@@ -103,17 +102,17 @@ export function MaterialTable({ materials, categories, loading, search, onEdit, 
         ),
         className: "min-w-[120px]"
       },
-      { 
+      {
         id: "total_available",
-        header: "المتوفر", 
-        accessor: (m) => parseFloat(m.total_available).toLocaleString(), 
-        align: "center", 
-        className: "tabular-nums font-bold text-slate-700" 
+        header: "المتوفر",
+        accessor: (m) => parseFloat(m.total_available).toLocaleString(),
+        align: "center",
+        className: "tabular-nums font-bold text-slate-700"
       },
     ];
 
     // Dynamic Multi-Currency Price/Cost Columns grouped by Type
-    
+
     // 1. Average Cost
     currencies.forEach(curr => {
       const symbol = curr.symbol || curr.code;
@@ -121,7 +120,6 @@ export function MaterialTable({ materials, categories, loading, search, onEdit, 
         id: `average_cost_${curr.code}`,
         header: `التكلفة (${symbol})`,
         accessor: (m) => {
-          // average_cost_base is usually the reference cost in base currency
           const cost = parseFloat(m.average_cost_base || "0");
           return formatAmount(cost, { currencyCode: curr.code });
         },
@@ -160,32 +158,11 @@ export function MaterialTable({ materials, categories, loading, search, onEdit, 
       });
     });
 
-    cols.push({
-      id: "actions",
-      header: "إجراءات",
-      accessor: (m) => (
-        <TableActions 
-          onEdit={() => onEdit(m)}
-          onDelete={() => onDelete(m.id, m.name)}
-          extraActions={[
-            {
-              label: "إدارة وحدات القياس",
-              icon: Scale,
-              onClick: () => onManageUnits?.(m)
-            }
-          ]}
-        />
-      ),
-      align: "left",
-      className: "w-24"
-    });
-
     return cols;
-  }, [categories, onEdit, onDelete, onManageUnits, formatAmount, currencies]);
+  }, [categories, onManageUnits, formatAmount, currencies]);
 
   const filteredColumns = useMemo(() => {
     return columns.filter(col => {
-      if (!col.id || col.id === "actions") return true;
       return visibleColumns.includes(col.id);
     });
   }, [columns, visibleColumns]);

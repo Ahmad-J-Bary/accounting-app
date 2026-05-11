@@ -272,7 +272,7 @@ export default function Payments() {
       toolbar={
         <div className="flex gap-2">
           <Button size="sm" onClick={() => setShowDialog(true)} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
-            <Plus className="w-4 h-4 ml-2" />حركة جديدة
+            <Plus className="w-4 h-4 ml-2" />سند جديد
           </Button>
         </div>
       }
