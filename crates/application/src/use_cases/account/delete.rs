@@ -55,6 +55,18 @@ impl DeleteAccountUseCase {
         let is_root = account.parent_id.is_none();
 
         if is_root || has_children || usage > 0 {
+            // Even when just deactivating, delete linked customer/supplier
+            if let Some(customer_id) = &account.linked_customer_id {
+                if let Some(ref customer_repo) = self.customer_repo {
+                    let _ = customer_repo.delete(customer_id).await;
+                }
+            }
+            if let Some(supplier_id) = &account.linked_supplier_id {
+                if let Some(ref supplier_repo) = self.supplier_repo {
+                    let _ = supplier_repo.delete(supplier_id).await;
+                }
+            }
+            
             account.is_active = false;
             account.updated_at = Utc::now();
             self.account_repo

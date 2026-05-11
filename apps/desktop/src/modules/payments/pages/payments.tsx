@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Plus, Search, RefreshCw, ArrowDownCircle, ArrowUpCircle, Wallet, ReceiptText, Settings2 } from "lucide-react";
@@ -39,8 +40,20 @@ export default function Payments() {
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
   const [loadingExtras, setLoadingExtras] = useState(true);
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const initialType = searchParams.get("type");
+  const initialCustomerId = searchParams.get("customerId");
+  const initialSupplierId = searchParams.get("supplierId");
+
   const [typeFilter, setTypeFilter] = useState("all");
-  const [showDialog, setShowDialog] = useState(false);
+  const [showDialog, setShowDialog] = useState(!!initialType);
+
+  const initialValues = useMemo(() => ({
+    payment_type: (initialType as any) || "Receipt",
+    customer_id: initialCustomerId || undefined,
+    supplier_id: initialSupplierId || undefined,
+  }), [initialType, initialCustomerId, initialSupplierId]);
   const [saving, setSaving] = useState(false);
 
   const loadExtras = useCallback(async () => {
@@ -336,6 +349,7 @@ export default function Payments() {
         accounts={accounts}
         onSave={handleCreate}
         saving={saving}
+        initialValues={initialValues}
       />
     </OperationalTableTemplate>
   );

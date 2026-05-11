@@ -34,6 +34,7 @@ export function AccountDetailsSidebar({
   const [formMode, setFormMode] = useState<"create" | "edit" | null>(null);
 // ... existing state ...
   const [code, setCode] = useState("");
+  const [codeSuffix, setCodeSuffix] = useState("");
   const [nameAr, setNameAr] = useState("");
   const [parentId, setParentId] = useState<string>("null");
   const [phone, setPhone] = useState("");
@@ -102,6 +103,7 @@ export function AccountDetailsSidebar({
     setError(null);
     const targetParent = selected?.id ?? "null";
     setCode(suggestChildCode(selected));
+    setCodeSuffix("");
     setNameAr("");
     setParentId(targetParent);
     setPhone("");
@@ -176,7 +178,17 @@ export function AccountDetailsSidebar({
     if (!selected || !canEdit) return;
     setFormMode("edit");
     setError(null);
-    setCode(selected.code ?? "");
+    
+    // Calculate parent code and suffix
+    const selectedCode = selected.code ?? "";
+    const parentAccount = allAccounts.find(a => a.id === selected.parent_id);
+    const parentCode = parentAccount?.code ?? "";
+    const suffix = selectedCode.startsWith(parentCode) 
+      ? selectedCode.substring(parentCode.length) 
+      : "";
+    
+    setCode(parentCode); // Only show parent code for editing
+    setCodeSuffix(suffix); // Store suffix separately (read-only)
     setNameAr(selected.name_ar ?? "");
     setParentId(selected.parent_id ?? "null");
     setNotes(selected.notes ?? "");
@@ -196,8 +208,14 @@ export function AccountDetailsSidebar({
   };
 
   const handleSave = async () => {
-    if (!code.trim() || !nameAr.trim()) {
-      setError("يرجى تعبئة رقم الحساب واسم الحساب.");
+    if (!nameAr.trim()) {
+      setError("يرجى تعبئة اسم الحساب.");
+      return;
+    }
+    
+    // In edit mode, require parent code to be filled
+    if (formMode === "edit" && !code.trim()) {
+      setError("يرجى تعبئة رقم الحساب.");
       return;
     }
 
@@ -210,8 +228,11 @@ export function AccountDetailsSidebar({
       const targetCategory = "Detail" as AccountCategory;
 
       if (formMode === "edit" && selected) {
+        // Combine parent code with suffix (e.g., "129" + "1" = "1291")
+        const finalCode = codeSuffix ? `${code.trim()}${codeSuffix}` : code.trim();
+        
         const payload = {
-          code: code.trim(),
+          code: finalCode,
           name_ar: nameAr.trim(),
           name_en: selected.name_en,
           account_type: selected.account_type as AccountType,
@@ -308,7 +329,29 @@ export function AccountDetailsSidebar({
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
           <Label>رقم الحساب</Label>
-          <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="مثال: 1101" className="bg-white" />
+          {formMode === "edit" && codeSuffix ? (
+            <div className="flex gap-1">
+              <Input 
+                value={code} 
+                onChange={(e) => setCode(e.target.value)} 
+                placeholder="مثال: 129" 
+                className="bg-white flex-1" 
+              />
+              <Input 
+                value={codeSuffix} 
+                disabled 
+                className="bg-slate-100 text-slate-500 w-16 text-center" 
+                title="اللاحقة موروثة من الأب ولا يمكن تعديلها"
+              />
+            </div>
+          ) : (
+            <Input 
+              value={code} 
+              onChange={(e) => setCode(e.target.value)} 
+              placeholder={formMode === "create" ? "مثال: 1231" : "مثال: 1101"} 
+              className="bg-white" 
+            />
+          )}
         </div>
         <div className="space-y-1">
           <Label>اسم الحساب</Label>

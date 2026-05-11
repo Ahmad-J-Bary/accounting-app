@@ -16,13 +16,15 @@ interface PaymentFormProps {
   accounts: AccountDto[];
   onSave: (payload: CreatePaymentRequest) => Promise<void>;
   saving: boolean;
+  initialValues?: Partial<CreatePaymentRequest>;
 }
 
-export function PaymentForm({ open, onOpenChange, customers, suppliers, accounts, onSave, saving }: PaymentFormProps) {
+export function PaymentForm({ open, onOpenChange, customers, suppliers, accounts, onSave, saving, initialValues }: PaymentFormProps) {
   const [form, setForm] = useState<Partial<CreatePaymentRequest>>({
     payment_type: "Receipt",
     amount: 0,
     payment_date: new Date().toISOString(),
+    ...initialValues
   });
 
   // Reset form when dialog opens
@@ -32,6 +34,7 @@ export function PaymentForm({ open, onOpenChange, customers, suppliers, accounts
         payment_type: "Receipt",
         amount: 0,
         payment_date: new Date().toISOString(),
+        ...initialValues
       });
     }
     onOpenChange(isOpen);

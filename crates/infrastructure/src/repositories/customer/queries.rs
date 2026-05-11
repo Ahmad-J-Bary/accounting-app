@@ -8,8 +8,19 @@ use super::mappers::row_to_customer;
 pub async fn find_by_id(pool: &SqlitePool, id: &CustomerId) -> Result<Option<Customer>, AppError> {
     let row = sqlx::query_as::<_, CustomerRow>(
         "SELECT id, code, name, phone, address, account_id, debit, credit, opening_balance, balance, currency, notes, is_active, created_at, updated_at 
-         FROM customers WHERE id = ?"
+         FROM customers WHERE id = ?
+         UNION ALL
+         SELECT 
+            a.id, 
+            CASE WHEN a.code LIKE '123%' THEN SUBSTR(a.code, 4) ELSE a.code END as code,
+            a.name_ar as name, '' as phone, '' as address, a.id as account_id,
+            '0' as debit, '0' as credit, a.opening_balance, a.balance, 'SYP' as currency,
+            'تلقائي من دليل الحسابات' as notes, a.is_active, a.created_at, a.updated_at
+         FROM accounts a
+         WHERE a.id = ? AND a.code LIKE '123%' AND a.category = 'Detail'
+         AND NOT EXISTS (SELECT 1 FROM customers WHERE id = a.id OR account_id = a.id)"
     )
+    .bind(id.to_string())
     .bind(id.to_string())
     .fetch_optional(pool)
     .await
@@ -21,8 +32,19 @@ pub async fn find_by_id(pool: &SqlitePool, id: &CustomerId) -> Result<Option<Cus
 pub async fn find_by_account_id(pool: &SqlitePool, account_id: &AccountId) -> Result<Option<Customer>, AppError> {
     let row = sqlx::query_as::<_, CustomerRow>(
         "SELECT id, code, name, phone, address, account_id, debit, credit, opening_balance, balance, currency, notes, is_active, created_at, updated_at 
-         FROM customers WHERE account_id = ?"
+         FROM customers WHERE account_id = ?
+         UNION ALL
+         SELECT 
+            a.id, 
+            CASE WHEN a.code LIKE '123%' THEN SUBSTR(a.code, 4) ELSE a.code END as code,
+            a.name_ar as name, '' as phone, '' as address, a.id as account_id,
+            '0' as debit, '0' as credit, a.opening_balance, a.balance, 'SYP' as currency,
+            'تلقائي من دليل الحسابات' as notes, a.is_active, a.created_at, a.updated_at
+         FROM accounts a
+         WHERE a.id = ? AND a.code LIKE '123%' AND a.category = 'Detail'
+         AND NOT EXISTS (SELECT 1 FROM customers WHERE account_id = a.id OR id = a.id)"
     )
+    .bind(account_id.0.to_string())
     .bind(account_id.0.to_string())
     .fetch_optional(pool)
     .await
@@ -34,7 +56,18 @@ pub async fn find_by_account_id(pool: &SqlitePool, account_id: &AccountId) -> Re
 pub async fn list_all(pool: &SqlitePool) -> Result<Vec<Customer>, AppError> {
     let rows = sqlx::query_as::<_, CustomerRow>(
         "SELECT id, code, name, phone, address, account_id, debit, credit, opening_balance, balance, currency, notes, is_active, created_at, updated_at 
-         FROM customers ORDER BY name"
+         FROM customers
+         UNION ALL
+         SELECT 
+            a.id, 
+            CASE WHEN a.code LIKE '123%' THEN SUBSTR(a.code, 4) ELSE a.code END as code,
+            a.name_ar as name, '' as phone, '' as address, a.id as account_id,
+            '0' as debit, '0' as credit, a.opening_balance, a.balance, 'SYP' as currency,
+            'تلقائي من دليل الحسابات' as notes, a.is_active, a.created_at, a.updated_at
+         FROM accounts a
+         WHERE a.code LIKE '123%' AND a.category = 'Detail'
+         AND NOT EXISTS (SELECT 1 FROM customers WHERE account_id = a.id OR id = a.id)
+         ORDER BY name"
     )
     .fetch_all(pool)
     .await

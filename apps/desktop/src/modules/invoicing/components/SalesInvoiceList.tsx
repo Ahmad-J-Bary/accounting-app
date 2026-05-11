@@ -15,6 +15,7 @@ interface SalesInvoiceListProps {
   invoices: InvoiceDto[];
   loading: boolean;
   search: string;
+  customerIdFilter?: string;
   onSearchChange: (val: string) => void;
   onRefresh: () => void;
   onCreate: () => void;
@@ -27,6 +28,7 @@ export function SalesInvoiceList({
   invoices,
   loading,
   search,
+  customerIdFilter,
   onSearchChange,
   onRefresh,
   onCreate,
@@ -37,12 +39,16 @@ export function SalesInvoiceList({
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
 
   const filtered = useMemo(() =>
-    invoices.filter(inv =>
-      !search ||
-      inv.invoice_number.includes(search) ||
-      (inv.customer_name ?? "").includes(search) ||
-      (inv.notes ?? "").includes(search)
-    ), [invoices, search]);
+    invoices.filter(inv => {
+      const matchesSearch = !search ||
+        inv.invoice_number.includes(search) ||
+        (inv.customer_name ?? "").includes(search) ||
+        (inv.notes ?? "").includes(search);
+      
+      const matchesCustomer = !customerIdFilter || inv.customer_id === customerIdFilter;
+      
+      return matchesSearch && matchesCustomer;
+    }), [invoices, search, customerIdFilter]);
 
   const availableColumns = useMemo(() => {
     const cols = [

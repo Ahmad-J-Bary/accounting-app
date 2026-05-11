@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Plus, Search, Settings2, Truck, Wallet } from "lucide-react";
+import { Plus, Search, Settings2, Truck, Wallet, History, ShoppingBag, Printer, DollarSign, Download } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -26,9 +26,12 @@ import { PartnerDetailPanel } from '@modules/partners/components/PartnerDetailPa
 import { PartnerFormPanel } from '@modules/partners/components/PartnerFormPanel';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { cn } from "@shared/lib/utils";
+import { useTabs } from "@app/providers/TabContext";
+import { exportToCSV } from "@shared/lib/export";
 
 export default function Suppliers() {
   const { currencies, formatMonetaryAmount, baseCurrency, rateMap } = useCurrencyContext();
+  const { openTab } = useTabs();
   const [rateMapKey, setRateMapKey] = useState(0);
 
   useEffect(() => {
@@ -155,11 +158,82 @@ export default function Suppliers() {
       title="إدارة الموردين"
       stats={stats}
       toolbar={
-        <>
+        <div className="flex items-center gap-2">
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            disabled={!selectedId}
+            onClick={() => selectedSupplier?.account_id && openTab({
+              id: `ledger-${selectedSupplier.account_id}`,
+              title: `حركة: ${selectedSupplier.name}`,
+              path: `/accounting/account-ledger/${selectedSupplier.account_id}`,
+              closable: true
+            })}
+          >
+            <History className="w-4 h-4 ml-2 text-slate-500" /> حركة اليومية
+          </Button>
+
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            disabled={!selectedId}
+            onClick={() => openTab({
+              id: `purchases-supplier-${selectedId}`,
+              title: `مشتريات: ${selectedSupplier?.name}`,
+              path: `/purchase-invoices?supplierId=${selectedId}`,
+              closable: true
+            })}
+          >
+            <ShoppingBag className="w-4 h-4 ml-2 text-blue-500" /> مشتريات المورد
+          </Button>
+
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            disabled={!selectedId}
+            onClick={() => openTab({
+              id: `statement-supplier-${selectedId}`,
+              title: `كشف: ${selectedSupplier?.name}`,
+              path: `/partners/supplier-statement/${selectedId}`,
+              closable: true
+            })}
+          >
+            <Printer className="w-4 h-4 ml-2 text-emerald-500" /> طباعة كشف حساب
+          </Button>
+
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            disabled={!selectedId}
+            onClick={() => openTab({
+              id: `new-payment-${Date.now()}`,
+              title: "سند دفع جديد",
+              path: `/payments?type=SupplierPayment&supplierId=${selectedId}`,
+              closable: true
+            })}
+          >
+            <DollarSign className="w-4 h-4 ml-2 text-rose-500" /> إنشاء سند دفع
+          </Button>
+
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            onClick={() => exportToCSV(suppliers, availableColumns, "الموردين")}
+          >
+            <Download className="w-4 h-4 ml-2 text-slate-500" /> تصدير إكسل
+          </Button>
+
+          <div className="h-6 w-px bg-slate-200 mx-1" />
+
           <Button size="sm" onClick={handleOpenAdd} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
             <Plus className="w-4 h-4 ml-2" /> مورد جديد
           </Button>
-        </>
+        </div>
       }
       filterBar={
         <div className="flex items-center gap-4">

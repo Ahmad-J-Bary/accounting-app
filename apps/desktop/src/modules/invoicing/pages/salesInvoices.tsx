@@ -422,11 +422,15 @@ export default function SalesInvoices() {
     );
   }
 
+  const searchParams = new URLSearchParams(location.search);
+  const customerIdFilter = searchParams.get("customerId") || undefined;
+
   return (
     <SalesInvoiceList
       invoices={invoices}
       loading={loading || refreshing}
       search={search}
+      customerIdFilter={customerIdFilter}
       onSearchChange={setSearch}
       onRefresh={() => loadData(false)}
       onCreate={() => {

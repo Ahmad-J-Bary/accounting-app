@@ -405,11 +405,15 @@ export default function PurchaseInvoices() {
     );
   }
 
+  const searchParams = new URLSearchParams(location.search);
+  const supplierIdFilter = searchParams.get("supplierId") || undefined;
+
   return (
     <PurchaseInvoiceList
       invoices={invoices}
       loading={loading || refreshing}
       search={search}
+      supplierIdFilter={supplierIdFilter}
       onSearchChange={setSearch}
       onRefresh={() => loadData(false)}
       onCreate={() => {

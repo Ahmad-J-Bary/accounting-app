@@ -14,7 +14,7 @@ pub fn row_to_supplier(row: SupplierRow) -> Result<Supplier, AppError> {
     };
 
     Ok(Supplier {
-        id: row.id.parse().map_err(|e| AppError::Infrastructure(format!("Ù…Ø¹Ø±Ù Ø§Ù„Ù…ÙˆØ±Ø¯ ØºÙŠØ± ØµØ§Ù„Ø­: {}", e)))?,
+        id: row.id.parse().map_err(|e| AppError::Infrastructure(format!("Invalid supplier ID: {}", e)))?,
         code: row.code,
         name: row.name,
         phone: row.phone,

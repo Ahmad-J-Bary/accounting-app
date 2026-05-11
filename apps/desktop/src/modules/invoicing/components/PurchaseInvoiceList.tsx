@@ -15,6 +15,7 @@ interface PurchaseInvoiceListProps {
   invoices: InvoiceDto[];
   loading: boolean;
   search: string;
+  supplierIdFilter?: string;
   onSearchChange: (val: string) => void;
   onRefresh: () => void;
   onCreate: () => void;
@@ -27,6 +28,7 @@ export function PurchaseInvoiceList({
   invoices,
   loading,
   search,
+  supplierIdFilter,
   onSearchChange,
   onRefresh,
   onCreate,
@@ -37,12 +39,16 @@ export function PurchaseInvoiceList({
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
 
   const filtered = useMemo(() =>
-    invoices.filter(inv =>
-      !search ||
-      inv.invoice_number.includes(search) ||
-      (inv.supplier_name ?? "").includes(search) ||
-      (inv.notes ?? "").includes(search)
-    ), [invoices, search]);
+    invoices.filter(inv => {
+      const matchesSearch = !search ||
+        inv.invoice_number.includes(search) ||
+        (inv.supplier_name ?? "").includes(search) ||
+        (inv.notes ?? "").includes(search);
+      
+      const matchesSupplier = !supplierIdFilter || inv.supplier_id === supplierIdFilter;
+      
+      return matchesSearch && matchesSupplier;
+    }), [invoices, search, supplierIdFilter]);
 
   const availableColumns = useMemo(() => {
     const cols = [

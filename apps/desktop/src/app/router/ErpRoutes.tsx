@@ -44,6 +44,7 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/customers" element={<Customers />} />
       <Route path="/partners/customer-statement/:id" element={<CustomerStatementPage />} />
       <Route path="/suppliers" element={<Suppliers />} />
+      <Route path="/partners/supplier-statement/:id" element={<SupplierStatementPage />} />
       <Route path="/sales-invoices" element={<SalesInvoices />} />
       <Route path="/sales-invoices/new/*" element={<SalesInvoices />} />
       <Route path="/sales-invoices/:id" element={<SalesInvoices />} />

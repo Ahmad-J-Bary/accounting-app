@@ -14,7 +14,7 @@ pub fn row_to_customer(row: CustomerRow) -> Result<Customer, AppError> {
     };
 
     Ok(Customer {
-        id: row.id.parse().map_err(|e| AppError::Infrastructure(format!("Ù…Ø¹Ø±Ù Ø§Ù„Ø¹Ù…ÙŠÙ„ ØºÙŠØ± ØµØ§Ù„Ø­: {}", e)))?,
+        id: row.id.parse().map_err(|e| AppError::Infrastructure(format!("Invalid customer ID: {}", e)))?,
         code: row.code,
         name: row.name,
         phone: row.phone,
