@@ -5,7 +5,6 @@ import { Label } from "@shared/ui/label";
 import { RadioGroup, RadioGroupItem } from "@shared/ui/radio-group";
 import { Plus, Users, Calculator, TrendingUp, DollarSign, PieChart as PieChartIcon, Settings2, Search, Pencil, Trash2, Hash, X } from "lucide-react";
 import { toast } from "sonner";
-import { formatCurrency } from '@shared/lib/format';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { Input } from "@shared/ui/input";
 import {
@@ -30,18 +29,8 @@ import { cn } from "@shared/lib/utils";
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
 
 export default function Partners() {
-  const { rateMap } = useCurrencyContext();
+  const { rateMap, formatAmount, convertFromBase, baseCurrency } = useCurrencyContext();
   const [globalStrategy, setGlobalStrategy] = useState("BasedOnCapitalLocal");
-  const [rateMapKey, setRateMapKey] = useState(0);
-
-  const rateMapValues = useMemo(() => {
-    if (!rateMap) return [];
-    return Array.from(rateMap.values());
-  }, [rateMap]);
-  
-  useEffect(() => {
-    setRateMapKey(k => k + 1);
-  }, [rateMapValues]);
 
   const {
     filtered: partners,
@@ -54,7 +43,8 @@ export default function Partners() {
     fetchData: () => partnerService.listPartners(),
     searchFields: ["name"],
     errorLabel: "فشل جلب الشركاء",
-    dependencies: [rateMapKey],
+    // Removed rateMapKey dependency to prevent slow re-fetches. 
+    // Calculations below are reactive to rateMap changes directly.
   });
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -62,18 +52,40 @@ export default function Partners() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Directly reactive to rateMap.get("USD")
+  const usdRate = useMemo(() => rateMap?.get("USD") || 1, [rateMap]);
+
   const {
     totals,
     partnersWithRatios,
     chartCapitalData,
     chartProfitData
-  } = usePartnerRatios({ partners, strategy: globalStrategy, exchangeRate: rateMap?.get("USD") || 100 });
+  } = usePartnerRatios({ 
+    partners, 
+    strategy: globalStrategy, 
+    exchangeRate: usdRate 
+  });
 
   const stats = useMemo(() => [
-    { label: "إجمالي رأس المال (ل.س)", value: formatCurrency(totals.local), icon: Calculator, color: "text-slate-900" },
-    { label: "عدد الشركاء", value: partners.length, icon: Users, color: "text-blue-600" },
-    { label: "رأس المال ($)", value: formatCurrency(totals.usd, "") + " $", icon: DollarSign, color: "text-emerald-600" },
-  ], [totals, partners.length]);
+    { 
+      label: "إجمالي رأس المال (ل.س)", 
+      value: formatAmount(totals.local, { currencyCode: "SYP", hideSymbol: false }), 
+      icon: Calculator, 
+      color: "text-slate-900" 
+    },
+    { 
+      label: "عدد الشركاء", 
+      value: partners.length.toString(), 
+      icon: Users, 
+      color: "text-blue-600" 
+    },
+    { 
+      label: "رأس المال ($)", 
+      value: formatAmount(totals.usd, { currencyCode: "USD", hideSymbol: false }), 
+      icon: DollarSign, 
+      color: "text-emerald-600" 
+    },
+  ], [totals, partners.length, formatAmount]);
 
   const availableColumns = [
     { id: "name", label: "اسم الشريك" },
@@ -121,14 +133,14 @@ export default function Partners() {
     { 
       id: "amount_usd",
       header: "المبلغ المشارك به ($)", 
-      accessor: (p) => formatCurrency(p.displayAmountUsd || 0, "$"), 
+      accessor: (p) => formatAmount(p.displayAmountUsd, { currencyCode: "USD" }), 
       align: "left", 
       className: "tabular-nums font-black text-blue-600" 
     },
     { 
       id: "amount_local",
       header: "المبلغ المشارك به (ل.س)", 
-      accessor: (p) => formatCurrency(p.displayAmountLocal || 0), 
+      accessor: (p) => formatAmount(p.displayAmountLocal, { currencyCode: "SYP" }), 
       align: "left", 
       className: "tabular-nums font-black text-slate-900" 
     },
@@ -160,7 +172,7 @@ export default function Partners() {
     }
     ];
     return allColumns.filter(col => col.id ? isVisible(col.id) : true);
-  }, [isVisible]);
+  }, [isVisible, formatAmount]);
 
   return (
     <OperationalTableTemplate
@@ -224,7 +236,9 @@ export default function Partners() {
           loading={loading} 
           selectedId={selectedId}
           onRowClick={(p) => {
+            setEditPartner(p);
             setSelectedId(p.id);
+            setIsDialogOpen(true);
           }}
         />
       }
@@ -242,12 +256,12 @@ export default function Partners() {
                 <tr className="border-b border-slate-100">
                   <td className="px-4 py-3 text-center">
                     <span className="text-sm font-black text-blue-600 tabular-nums">
-                      {formatCurrency(totals.usd, "$")}
+                      {formatAmount(totals.usd, { currencyCode: "USD" })}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className="text-sm font-black text-slate-900 tabular-nums">
-                      {formatCurrency(totals.local)}
+                      {formatAmount(totals.local, { currencyCode: "SYP" })}
                     </span>
                   </td>
                 </tr>
@@ -255,7 +269,7 @@ export default function Partners() {
             </table>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <ChartCard title="حصص رأس المال" icon={PieChartIcon} data={chartCapitalData} formatter={formatCurrency} />
+             <ChartCard title="حصص رأس المال" icon={PieChartIcon} data={chartCapitalData} formatter={(v) => formatAmount(v, { hideSymbol: false })} />
              <ChartCard title="توزيع الأرباح" icon={TrendingUp} data={chartProfitData} formatter={(v: number) => `${v.toFixed(2)}%`} />
           </div>
         </div>
@@ -297,11 +311,11 @@ export default function Partners() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 bg-white rounded-xl border border-slate-100">
                     <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">المبلغ ($)</div>
-                    <div className="text-lg font-black text-blue-600 tabular-nums">{formatCurrency(Number(partnersWithRatios.find(p => p.id === selectedId)?.amount_usd || 0), "$")}</div>
+                    <div className="text-lg font-black text-blue-600 tabular-nums">{formatAmount(Number(partnersWithRatios.find(p => p.id === selectedId)?.amount_usd || 0), { currencyCode: "USD" })}</div>
                   </div>
                   <div className="p-3 bg-white rounded-xl border border-slate-100">
                     <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">المبلغ (ل.س)</div>
-                    <div className="text-lg font-black text-slate-900 tabular-nums">{formatCurrency(Number(partnersWithRatios.find(p => p.id === selectedId)?.amount_local || 0))}</div>
+                    <div className="text-lg font-black text-slate-900 tabular-nums">{formatAmount(Number(partnersWithRatios.find(p => p.id === selectedId)?.displayAmountLocal || 0), { currencyCode: "SYP" })}</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mt-4">

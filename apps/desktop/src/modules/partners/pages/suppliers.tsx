@@ -220,7 +220,7 @@ export default function Suppliers() {
             type="supplier"
             partner={selectedSupplier} 
             onClose={() => setSelectedId(null)}
-            onEdit={(p) => { loadAccounts(); handleOpenEdit(p as SupplierDto); }}
+            onEdit={(p) => { loadAccounts(); handleOpenEdit(p as unknown as SupplierDto); }}
             onDelete={(id, name) => { setSelectedId(null); handleDelete(id); }}
             invoices={supplierInvoices}
             payments={supplierPayments}

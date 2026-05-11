@@ -6,6 +6,7 @@ import type { AccountDto, CustomerDto, SupplierDto, PartnerDto } from "@erp/shar
 import { FormPanel } from '@widgets/form-shell/FormPanel';
 import { User, Building2 } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { formatCurrency } from "@shared/lib/format";
 
 export interface PartnerFormPayload {
   id?: string;
@@ -39,7 +40,7 @@ export function PartnerFormPanel({
   onClose,
   saving
 }: PartnerFormPanelProps) {
-  const { currencies, baseCurrency } = useCurrencyContext();
+  const { currencies, baseCurrency, rateMap } = useCurrencyContext();
   const isCustomer = type === "customer";
   const title = isCustomer 
     ? (partner ? "تعديل بيانات العميل" : "إضافة عميل جديد")

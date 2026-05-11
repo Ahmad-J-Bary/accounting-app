@@ -111,7 +111,7 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
                     step="any"
                     value={formData.amount} 
                     onChange={e => setFormData({...formData, amount: e.target.value})} 
-                    className="text-left font-bold"
+                    className="text-left font-bold h-9"
                   />
                 </div>
               </div>
