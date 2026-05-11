@@ -136,9 +136,6 @@ export default function Materials() {
         stats={stats}
         toolbar={
           <>
-            <Button variant="outline" size="sm" onClick={() => refresh(true)} disabled={isLoading} className="bg-white">
-              <RefreshCw className={cn("w-4 h-4 ml-2", isLoading && "animate-spin")} />تحديث
-            </Button>
             <Button size="sm" onClick={handleOpenAdd} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
               <Plus className="w-4 h-4 ml-2" /> مادة جديدة
             </Button>

@@ -56,10 +56,12 @@ impl CreateAccountUseCase {
             .as_deref()
             .and_then(|s| s.parse::<SupplierId>().ok());
 
+        let final_name_ar = cmd.name_ar.trim().to_string();
+
         let account = Account {
             id: AccountId::new(),
             code: cmd.code.trim().to_string(),
-            name_ar: cmd.name_ar.trim().to_string(),
+            name_ar: final_name_ar,
             name_en: cmd.name_en.trim().to_string(),
             account_type: cmd.account_type,
             parent_id: cmd.parent_id,
@@ -93,22 +95,18 @@ impl CreateAccountUseCase {
             .map(|s| if s == "USD" { Currency::usd() } else { Currency::syp() })
             .unwrap_or(Currency::syp());
 
-        // Auto-create customer if account is under "1203" (receivables)
-        if account.code.len() >= 4 && account.code.starts_with("1203") {
+        // Auto-create customer if account is under "123" (المدينون)
+        if account.code.len() >= 3 && account.code.starts_with("123") {
             if let Some(ref customer_repo) = self.customer_repo {
-                let customer_code = &account.code[4..];
+                // Extract customer number: 1232 -> 2, 1233 -> 3, etc.
+                let customer_num = if account.code.len() >= 4 { &account.code[3..] } else { "1" };
                 
-                let customer_name = account.name_ar
-                    .strip_prefix("ذمة العميل: ")
-                    .unwrap_or(&account.name_ar)
-                    .to_string();
-
                 let customer_id = CustomerId::new();
 
                 let customer = Customer::new_with_id(
                     customer_id,
-                    customer_code.to_string(),
-                    customer_name,
+                    customer_num.to_string(),
+                    account.name_ar.clone(),
                     cmd.phone.clone(),
                     cmd.address.clone(),
                     Some(account.id),
@@ -128,22 +126,18 @@ impl CreateAccountUseCase {
             }
         }
 
-        // Auto-create supplier if account is under "2203" (payables)
-        if account.code.len() >= 4 && account.code.starts_with("2203") {
+        // Auto-create supplier if account is under "223" (الدائنون)
+        if account.code.len() >= 3 && account.code.starts_with("223") {
             if let Some(ref supplier_repo) = self.supplier_repo {
-                let supplier_code = &account.code[4..];
+                // Extract supplier number: 2232 -> 2, 2233 -> 3, etc.
+                let supplier_num = if account.code.len() >= 4 { &account.code[3..] } else { "1" };
                 
-                let supplier_name = account.name_ar
-                    .strip_prefix("ذمة المورد: ")
-                    .unwrap_or(&account.name_ar)
-                    .to_string();
-
                 let supplier_id = SupplierId::new();
 
                 let supplier = Supplier::new_with_id(
                     supplier_id,
-                    supplier_code.to_string(),
-                    supplier_name,
+                    supplier_num.to_string(),
+                    account.name_ar.clone(),
                     cmd.phone.clone(),
                     cmd.address.clone(),
                     Some(account.id),

@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Plus, Search, RefreshCw, Settings2, User, Users, Phone, DollarSign, Wallet } from "lucide-react";
+import { Plus, Search, Settings2, User, Users, Phone, DollarSign, Wallet } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -67,7 +67,7 @@ export default function Customers() {
     if (rateMapKey > 0) {
       refresh(true);
     }
-  }, [rateMapKey]);
+  }, [rateMapKey, refresh]);
 
   const [customerInvoices, setCustomerInvoices] = useState<InvoiceDto[]>([]);
   const [customerPayments, setCustomerPayments] = useState<Payment[]>([]);
@@ -76,11 +76,11 @@ export default function Customers() {
   
   const availableColumns = useMemo(() => {
     const cols = [
+      { id: "#", label: "رقم الحساب" },
       { id: "name", label: "اسم العميل" },
       { id: "phone", label: "رقم الهاتف" },
     ];
 
-    // Using symbols for dropdown labels too
     currencies.forEach(curr => {
       const symbol = curr.symbol || curr.code;
       cols.push({ id: `debit_${curr.code}`, label: `المدين (${symbol})` });
@@ -89,30 +89,20 @@ export default function Customers() {
       const symbol = curr.symbol || curr.code;
       cols.push({ id: `credit_${curr.code}`, label: `الدائن (${symbol})` });
     });
-    currencies.forEach(curr => {
-      const symbol = curr.symbol || curr.code;
-      cols.push({ id: `balance_${curr.code}`, label: `الرصيد (${symbol})` });
-    });
 
     return cols;
   }, [currencies]);
 
   const defaultVisibleColumns = useMemo(() => {
-    const base = ["name", "phone"];
+    const base = ["#", "name", "phone"];
     
     if (baseCurrency) {
       base.push(`debit_${baseCurrency.code}`);
       base.push(`credit_${baseCurrency.code}`);
-      base.push(`balance_${baseCurrency.code}`);
     }
 
-    currencies.forEach(c => {
-      if (baseCurrency && c.code === baseCurrency.code) return;
-      base.push(`balance_${c.code}`);
-    });
-
     return base;
-  }, [currencies, baseCurrency]);
+  }, [baseCurrency]);
 
   const { visibleColumns, isVisible, toggleColumn } = useColumnPreferences("customers", defaultVisibleColumns);
 
@@ -164,9 +154,6 @@ export default function Customers() {
       stats={stats}
       toolbar={
         <>
-          <Button variant="outline" size="sm" onClick={() => refresh(true)} disabled={isLoading} className="bg-white">
-            <RefreshCw className={`w-4 h-4 ml-2 ${isLoading ? "animate-spin" : ""}`} />تحديث
-          </Button>
           <Button size="sm" onClick={handleOpenAdd} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
             <Plus className="w-4 h-4 ml-2" /> إضافة عميل جديد
           </Button>
@@ -213,8 +200,6 @@ export default function Customers() {
           search={search}
           visibleColumns={visibleColumns}
           onView={(c) => setSelectedId(c.id)}
-          onEdit={(c) => { loadAccounts(); handleOpenEdit(c); }}
-          onDelete={handleDelete}
           selectedId={selectedId}
         />
       }
@@ -233,6 +218,8 @@ export default function Customers() {
             type="customer"
             partner={selectedCustomer}
             onClose={() => setSelectedId(null)}
+            onEdit={(p) => { loadAccounts(); handleOpenEdit(p as unknown as CustomerDto); }}
+            onDelete={(id, name) => { setSelectedId(null); handleDelete(id); }}
             invoices={customerInvoices}
             payments={customerPayments}
             loadingDetails={loadingDetails}

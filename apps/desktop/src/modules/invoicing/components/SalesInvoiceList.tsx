@@ -179,9 +179,6 @@ export function SalesInvoiceList({
       title="فواتير المبيعات"
       toolbar={
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={onRefresh} disabled={loading} className="bg-white border-slate-200">
-            <RefreshCw className={cn("w-4 h-4 ml-2", loading && "animate-spin")} />تحديث
-          </Button>
           <Button size="sm" onClick={onCreate} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
             <Plus className="w-4 h-4 ml-2" />فاتورة جديدة
           </Button>

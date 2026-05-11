@@ -117,9 +117,6 @@ export default function Categories() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Button variant="outline" size="sm" onClick={() => void fetchData(false)} disabled={isLoading} className="bg-white">
-            <RefreshCw className={`w-4 h-4 ml-2 ${isLoading ? "animate-spin" : ""}`} /> تحديث
-          </Button>
           <Button variant="outline" size="sm" onClick={() => setExpandedIds(new Set([VIRTUAL_ROOT_ID, ...categories.map(c => c.id)]))} className="bg-white">
             <ChevronLeft className="w-4 h-4 ml-1" /> توسيع الكل
           </Button>

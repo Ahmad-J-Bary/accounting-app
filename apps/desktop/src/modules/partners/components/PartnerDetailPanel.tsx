@@ -1,6 +1,7 @@
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
-import { formatDate } from '@shared/lib/format';
-import { Phone, MapPin, FileText, Receipt, Hash, X, Wallet, BookOpen } from "lucide-react";
+import { Input } from "@shared/ui/input";
+import { Label } from "@shared/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
+import { X, Pencil, Trash2, BookOpen, FileText } from "lucide-react";
 import type { InvoiceDto, Payment, CustomerDto, SupplierDto, PartnerDto } from "@erp/shared-types";
 import { Button } from "@shared/ui/button";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
@@ -8,8 +9,10 @@ import { useTabs } from "@app/providers/TabContext";
 
 interface PartnerDetailPanelProps {
   type: "customer" | "supplier";
-  partner: (CustomerDto | SupplierDto | PartnerDto) & { account_id?: string | null };
+  partner: CustomerDto | SupplierDto | PartnerDto;
   onClose: () => void;
+  onEdit: (partner: CustomerDto | SupplierDto | PartnerDto) => void;
+  onDelete: (id: string, name: string) => void;
   invoices: InvoiceDto[];
   payments: Payment[];
   loadingDetails: boolean;
@@ -19,48 +22,69 @@ export function PartnerDetailPanel({
   type,
   partner,
   onClose,
+  onEdit,
+  onDelete,
   invoices,
   payments,
   loadingDetails
 }: PartnerDetailPanelProps) {
-  const { currencies, formatAmount, baseCurrency } = useCurrencyContext();
+  const { currencies, baseCurrency } = useCurrencyContext();
   const { openTab } = useTabs();
   
   if (!partner) return null;
 
   const isCustomer = type === "customer";
-  const balanceLabel = isCustomer ? "الرصيد الحالي" : "الرصيد المستحق له";
-  const transactionsLabel = isCustomer ? "المقبوضات" : "المدفوعات";
+  const isPartner = "amount_usd" in partner;
+  const hasAccountId = (p: typeof partner): p is CustomerDto | SupplierDto => "account_id" in p;
+  const partnerAccountId = hasAccountId(partner) ? partner.account_id : null;
+  const isDisabled = true;
 
   return (
     <div className="flex flex-col h-full bg-white" dir="rtl">
-      {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-slate-50/50 shrink-0">
         <div className="flex flex-col gap-1 text-right">
-          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            {partner.name}
-            <span className="text-xs font-normal text-muted-foreground bg-white border px-2 py-0.5 rounded flex items-center gap-1 shadow-sm">
-              <Hash className="w-3 h-3" /> {partner.code}
-            </span>
+          <h2 className="text-lg font-bold text-slate-800">
+            {isPartner ? "بيانات الشريك" : (isCustomer ? "بيانات العميل" : "بيانات المورد")}
           </h2>
-          <span className="text-xs text-muted-foreground">{isCustomer ? "ملف العميل" : "ملف المورد"}</span>
         </div>
         <div className="flex items-center gap-2">
-          {partner.account_id && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="bg-amber-500 text-white hover:bg-amber-600 border-none h-8 px-3 rounded-lg"
+            onClick={() => onEdit(partner)}
+          >
+            <Pencil className="w-3.5 h-3.5 ml-1.5" />
+            تعديل
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="bg-red-500 text-white hover:bg-red-600 border-none h-8 px-3 rounded-lg"
+            onClick={() => {
+              if (confirm(`هل أنت متأكد من حذف "${partner.name}"؟`)) {
+                onDelete(partner.id, partner.name);
+              }
+            }}
+          >
+            <Trash2 className="w-3.5 h-3.5 ml-1.5" />
+            حذف
+          </Button>
+          {!isPartner && partnerAccountId && (
             <div className="flex flex-col gap-1.5">
               <Button 
                 variant="outline" 
                 size="sm" 
                 className="bg-blue-600 text-white hover:bg-blue-700 border-none h-8 px-3 rounded-lg w-full"
                 onClick={() => openTab({
-                  id: `ledger-${partner.account_id}`,
+                  id: `ledger-${partnerAccountId}`,
                   title: `حركة: ${partner.name}`,
-                  path: `/accounting/account-ledger/${partner.account_id}`,
+                  path: `/accounting/account-ledger/${partnerAccountId}`,
                   closable: true
                 })}
               >
                 <BookOpen className="w-3.5 h-3.5 ml-1.5" />
-                اليومية العامة
+                اليومية
               </Button>
               <Button 
                 variant="outline" 
@@ -74,7 +98,7 @@ export function PartnerDetailPanel({
                 })}
               >
                 <FileText className="w-3.5 h-3.5 ml-1.5" />
-                كشف الحساب التحليلي
+                الكشف
               </Button>
             </div>
           )}
@@ -85,138 +109,121 @@ export function PartnerDetailPanel({
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">
-        {/* Multi-Currency Balances */}
-        <div className="space-y-3 text-right">
-           <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-widest px-1">{balanceLabel}</h4>
-           <div className="grid grid-cols-1 gap-2">
-              {currencies.map(curr => (
-                <div key={curr.code} className="p-4 border border-slate-100 rounded-2xl bg-white shadow-sm flex items-center justify-between">
-                   <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
-                         <Wallet className="w-4 h-4" />
-                      </div>
-                      <span className="text-xs font-bold text-slate-600">{curr.name_ar}</span>
-                   </div>
-                   <div className="text-lg font-black tabular-nums text-slate-900">
-                      {formatAmount(Number(partner.balance || 0), { currencyCode: curr.code })}
-                   </div>
+        {isPartner ? (
+          <div className="space-y-6 text-right">
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-800 border-b pb-2">المعلومات الأساسية</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-600">رقم الحساب</Label>
+                  <Input value={partner.code || ""} disabled={isDisabled} className="h-9 bg-slate-50" />
                 </div>
-              ))}
-           </div>
-        </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-600">الاسم</Label>
+                  <Input value={partner.name} disabled={isDisabled} className="h-9 bg-slate-50" />
+                </div>
+              </div>
+            </div>
 
-        {/* Basic Info */}
-        <div className="mt-8 space-y-4 text-right p-5 border border-slate-100 rounded-2xl bg-slate-50/30">
-          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-4">معلومات الاتصال</h4>
-          <div className="flex flex-col gap-5">
-            <div className="flex items-center gap-4 text-sm">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500 shrink-0 shadow-sm border border-blue-100">
-                <Phone className="w-5 h-5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] text-slate-400 font-bold uppercase">رقم الهاتف</span>
-                <span className="font-bold text-slate-700 tabular-nums">{partner.phone || "—"}</span>
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-800 border-b pb-2">معلومات الاستثمار</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-600">المبلغ ($)</Label>
+                  <Input value={partner.amount_usd || "0"} disabled={isDisabled} className="h-9 bg-slate-50" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-600">المبلغ (ل.س)</Label>
+                  <Input value={partner.amount_local || "0"} disabled={isDisabled} className="h-9 bg-slate-50" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-600">نسبة الأرباح (%)</Label>
+                  <Input value={partner.profit_sharing_ratio || ""} disabled={isDisabled} placeholder="تلقائي" className="h-9 bg-slate-50" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-600">طريقة التوزيع</Label>
+                  <Select value={partner.profit_sharing_type || "BasedOnCapitalLocal"} disabled={isDisabled}>
+                    <SelectTrigger className="h-9 font-bold bg-slate-50"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="BasedOnCapitalLocal">على أساس رأس المال المحلي</SelectItem>
+                      <SelectItem value="BasedOnCapitalUSD">على أساس رأس المال دولار</SelectItem>
+                      <SelectItem value="Manual">يدوي</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-4 text-sm">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500 shrink-0 shadow-sm border border-emerald-100">
-                <MapPin className="w-5 h-5" />
+
+            {partner.notes && (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-600">ملاحظات</Label>
+                <Input value={partner.notes || ""} disabled={isDisabled} className="h-9 bg-slate-50" />
               </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] text-slate-400 font-bold uppercase">العنوان</span>
-                <span className="font-bold text-slate-700">{partner.address || "—"}</span>
-              </div>
-            </div>
+            )}
           </div>
-        </div>
-
-        {/* Tabs for Transactions */}
-        <Tabs defaultValue="invoices" className="mt-10">
-          <TabsList className="grid w-full grid-cols-2 h-11 p-1 bg-slate-100/80 rounded-xl">
-            <TabsTrigger value="invoices" className="flex items-center gap-2 text-xs font-bold rounded-lg data-[state=active]:shadow-sm">
-              <FileText className="w-3.5 h-3.5" /> الفواتير
-            </TabsTrigger>
-            <TabsTrigger value="payments" className="flex items-center gap-2 text-xs font-bold rounded-lg data-[state=active]:shadow-sm">
-              <Receipt className="w-3.5 h-3.5" /> {transactionsLabel}
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="invoices" className="mt-5 focus-visible:outline-none">
-            {loadingDetails ? (
-              <div className="text-center py-10 text-muted-foreground animate-pulse text-sm">جاري التحميل...</div>
-            ) : invoices.length === 0 ? (
-              <div className="text-center py-12 border-2 border-dashed rounded-2xl text-muted-foreground bg-slate-50/50">
-                <FileText className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                <span className="text-xs font-medium">لا توجد فواتير مسجلة</span>
+        ) : (
+          <div className="space-y-6 text-right">
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-800 border-b pb-2">المعلومات الأساسية</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-600">رقم الحساب</Label>
+                  <Input value={partner.code || ""} disabled={isDisabled} className="h-9 bg-slate-50" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-600">{isCustomer ? "اسم العميل" : "اسم المورد"}</Label>
+                  <Input value={partner.name} disabled={isDisabled} className="h-9 bg-slate-50" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-600">رقم الهاتف</Label>
+                  <Input value={partner.phone || ""} disabled={isDisabled} placeholder="—" className="h-9 bg-slate-50" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-600">العنوان</Label>
+                  <Input value={partner.address || ""} disabled={isDisabled} placeholder="—" className="h-9 bg-slate-50" />
+                </div>
               </div>
-            ) : (
-              <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm bg-white">
-                <table className="w-full text-xs text-right">
-                  <thead className="bg-slate-50 border-b border-slate-100">
-                    <tr>
-                      <th className="p-4 font-black text-slate-400 uppercase">رقم الفاتورة</th>
-                      <th className="p-4 font-black text-slate-400 uppercase">التاريخ</th>
-                      <th className="p-4 font-black text-slate-400 uppercase text-left">الإجمالي</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {invoices.map(inv => (
-                      <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="p-4 font-bold text-blue-600">{inv.invoice_number}</td>
-                        <td className="p-4 text-slate-500 font-medium">{formatDate(inv.issued_at)}</td>
-                        <td className="p-4 text-left tabular-nums font-black text-slate-900">
-                          {formatAmount(parseFloat(inv.total_amount), { currencyCode: inv.currency_code })}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="payments" className="mt-5 focus-visible:outline-none">
-            {loadingDetails ? (
-              <div className="text-center py-10 text-muted-foreground animate-pulse text-sm">جاري التحميل...</div>
-            ) : payments.length === 0 ? (
-              <div className="text-center py-12 border-2 border-dashed rounded-2xl text-muted-foreground bg-slate-50/50">
-                <Receipt className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                <span className="text-xs font-medium">لا توجد {transactionsLabel} مسجلة</span>
-              </div>
-            ) : (
-              <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm bg-white">
-                <table className="w-full text-xs text-right">
-                  <thead className="bg-slate-50 border-b border-slate-100">
-                    <tr>
-                      <th className="p-4 font-black text-slate-400 uppercase">التاريخ</th>
-                      <th className="p-4 font-black text-slate-400 uppercase">المرجع</th>
-                      <th className="p-4 font-black text-slate-400 uppercase text-left">المبلغ</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {payments.map(p => (
-                      <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="p-4 text-slate-500 font-medium">{formatDate(p.payment_date)}</td>
-                        <td className="p-4 font-bold text-slate-700">{p.reference || "—"}</td>
-                        <td className={`p-4 text-left tabular-nums font-black ${isCustomer ? "text-emerald-600" : "text-red-600"}`}>
-                          {isCustomer ? "+" : "-"}{formatAmount(parseFloat(p.amount), { currencyCode: (p as { currency_code?: string }).currency_code || baseCurrency?.code })}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-
-        {/* Notes Section */}
-        {partner.notes && (
-          <div className="mt-10 border-t border-slate-100 pt-8">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 px-1">ملاحظات إضافية</h4>
-            <div className="bg-amber-50/30 p-5 rounded-2xl border border-amber-100 text-amber-900/80 text-xs leading-relaxed shadow-sm">
-              {partner.notes}
             </div>
+
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-800 border-b pb-2">البيانات المالية</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-600">الرصيد الافتتاحي</Label>
+                  <Input value={partner.opening_balance || "0"} disabled={isDisabled} className="h-9 bg-slate-50" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-600">العملة</Label>
+                  <Select value={partner.currency || baseCurrency?.code || "SYP"} disabled={isDisabled}>
+                    <SelectTrigger className="h-9 font-bold bg-slate-50"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {currencies.map(c => (
+                        <SelectItem key={c.code} value={c.code}>{c.code} - {c.name_ar}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-600">مدين (حالي)</Label>
+                  <Input value={partner.debit || "0"} disabled={isDisabled} className="h-9 bg-slate-50" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-600">دائن (حالي)</Label>
+                  <Input value={partner.credit || "0"} disabled={isDisabled} className="h-9 bg-slate-50" />
+                </div>
+                <div className="space-y-1.5 col-span-2">
+                  <Label className="text-xs font-bold text-slate-600">الرصيد الحالي</Label>
+                  <Input value={partner.balance || "0"} disabled={isDisabled} className="h-9 bg-slate-50 font-bold" />
+                </div>
+              </div>
+            </div>
+
+            {partner.notes && (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-600">ملاحظات</Label>
+                <Input value={partner.notes || ""} disabled={isDisabled} className="h-9 bg-slate-50" />
+              </div>
+            )}
           </div>
         )}
       </div>

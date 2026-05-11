@@ -11,4 +11,5 @@ pub trait CustomerRepository: Send + Sync {
     async fn list_all(&self) -> Result<Vec<Customer>, AppError>;
     async fn update(&self, customer: &Customer) -> Result<(), AppError>;
     async fn delete(&self, id: &CustomerId) -> Result<(), AppError>;
+    async fn get_next_customer_number(&self) -> Result<i32, AppError>;
 }

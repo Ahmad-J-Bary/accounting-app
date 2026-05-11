@@ -143,13 +143,7 @@ export default function Journal() {
     <OperationalTableTemplate
       title={journalTitle}
       stats={stats}
-      toolbar={
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => refresh(true)} disabled={isLoading} className="bg-white border-slate-200 h-9">
-            <RefreshCw className={cn("w-4 h-4 ml-2", isLoading && "animate-spin")} />تحديث
-          </Button>
-        </div>
-      }
+      toolbar={<div className="flex gap-2"></div>}
       filterBar={
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-[280px]">

@@ -163,9 +163,6 @@ export default function Users() {
         breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "الإعدادات" }, { label: "المستخدمون" }]}
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" onClick={refreshAll} disabled={usersLoading || loadingRoles}>
-              <RefreshCw className={`w-4 h-4 ml-2 ${(usersLoading || loadingRoles) ? "animate-spin" : ""}`} />تحديث
-            </Button>
             <Button onClick={() => {
               if (activeTab === "users") {
                 setShowUserDialog(true);

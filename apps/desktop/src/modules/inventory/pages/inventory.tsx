@@ -98,9 +98,6 @@ export default function Inventory() {
       title="إدارة المخزون"
       toolbar={
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => refresh(true)} disabled={isLoading} className="bg-white">
-            <RefreshCw className={cn("w-4 h-4 ml-2", isLoading && "animate-spin")} />تحديث
-          </Button>
           <Button variant="outline" size="sm" className="bg-white"><Download className="w-4 h-4 ml-2" />تصدير</Button>
           <Button size="sm" onClick={() => toast.info("تحويل مخزني قيد التطوير")} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
             <ArrowLeftRight className="w-4 h-4 ml-2" />تحويل مخزني

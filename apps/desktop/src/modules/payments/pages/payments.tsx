@@ -255,9 +255,6 @@ export default function Payments() {
       title="المدفوعات والمقبوضات"
       toolbar={
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => refresh()} disabled={isLoading} className="bg-white">
-            <RefreshCw className={cn("w-4 h-4 ml-2", isLoading && "animate-spin")} />تحديث
-          </Button>
           <Button size="sm" onClick={() => setShowDialog(true)} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
             <Plus className="w-4 h-4 ml-2" />حركة جديدة
           </Button>

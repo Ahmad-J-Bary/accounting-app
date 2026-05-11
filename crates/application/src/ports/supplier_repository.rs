@@ -12,4 +12,5 @@ pub trait SupplierRepository: Send + Sync {
     async fn list_all(&self) -> Result<Vec<Supplier>, AppError>;
     async fn update(&self, supplier: &Supplier) -> Result<(), AppError>;
     async fn delete(&self, id: &SupplierId) -> Result<(), AppError>;
+    async fn get_next_supplier_number(&self) -> Result<i32, AppError>;
 }

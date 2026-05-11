@@ -159,9 +159,6 @@ export default function Damaged() {
       title="إدارة المواد التالفة"
       toolbar={
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => refresh(true)} disabled={isLoading} className="bg-white">
-            <RefreshCw className={cn("w-4 h-4 ml-2", isLoading && "animate-spin")} />تحديث
-          </Button>
           <Button size="sm" onClick={() => setShowDialog(true)} className="bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-100">
             <Plus className="w-4 h-4 ml-2" />تسجيل تالف
           </Button>

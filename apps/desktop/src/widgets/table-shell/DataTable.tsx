@@ -5,7 +5,7 @@ import { Skeleton } from "@shared/ui/skeleton";
 export interface Column<T> {
   id?: string;
   header: ReactNode;
-  accessor: keyof T | ((row: T) => ReactNode);
+  accessor: keyof T | ((row: T, index?: number) => ReactNode);
   className?: string;
   headerClassName?: string;
   align?: "right" | "left" | "center";
@@ -112,7 +112,7 @@ export function DataTable<T>({
             )}
           >
             {typeof col.accessor === "function" 
-              ? col.accessor(row) 
+              ? col.accessor(row, rowIdx) 
               : (row[col.accessor] as ReactNode) || "—"}
           </td>
           );

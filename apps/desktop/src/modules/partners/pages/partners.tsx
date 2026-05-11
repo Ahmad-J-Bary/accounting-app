@@ -3,7 +3,7 @@ import { Button } from "@shared/ui/button";
 import { Card } from "@shared/ui/card";
 import { Label } from "@shared/ui/label";
 import { RadioGroup, RadioGroupItem } from "@shared/ui/radio-group";
-import { Plus, Users, RefreshCw, Calculator, TrendingUp, DollarSign, PieChart as PieChartIcon, Settings2, Search } from "lucide-react";
+import { Plus, Users, Calculator, TrendingUp, DollarSign, PieChart as PieChartIcon, Settings2, Search, Pencil, Trash2, Hash, X } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from '@shared/lib/format';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
@@ -21,7 +21,6 @@ import { partnerService, type PartnerDto, type PartnerRequest } from '@modules/p
 
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { DataTable, Column } from '@widgets/table-shell/DataTable';
-import { TableActions } from '@widgets/table-shell/TableActions';
 import { useDataTable, useColumnPreferences } from '@shared/hooks';
 import { PartnerForm } from '@modules/partners/components/PartnerForm';
 import { usePartnerRatios } from '@modules/partners/hooks/usePartnerRatios';
@@ -77,15 +76,13 @@ export default function Partners() {
   ], [totals, partners.length]);
 
   const availableColumns = [
-    { id: "code", label: "الكود" },
     { id: "name", label: "اسم الشريك" },
     { id: "amount_usd", label: "المبلغ المشارك به ($)" },
     { id: "amount_local", label: "المبلغ المشارك به (ل.س)" },
     { id: "capital_ratio", label: "نسبة المشاركة برأس المال" },
     { id: "ratio", label: "نسبة المشاركة بالأرباح" },
-    { id: "actions", label: "إجراءات" },
   ];
-  const defaultVisibleColumns = ["code", "name", "amount_usd", "amount_local", "capital_ratio", "ratio", "actions"];
+  const defaultVisibleColumns = ["name", "amount_usd", "amount_local", "capital_ratio", "ratio"];
   const { visibleColumns, isVisible, toggleColumn } = useColumnPreferences("partners", defaultVisibleColumns);
 
   const handleSave = async (payload: PartnerRequest) => {
@@ -120,16 +117,6 @@ export default function Partners() {
 
   const columns = useMemo<Column<PartnerDto & { calculatedRatio: number; calculatedCapitalRatio: number; displayAmountLocal: number; displayAmountUsd: number }>[]>(() => {
     const allColumns: Column<PartnerDto & { calculatedRatio: number; calculatedCapitalRatio: number; displayAmountLocal: number; displayAmountUsd: number }>[] = [
-      { 
-      id: "code",
-      header: "الكود", 
-      accessor: (p) => (
-        <span className="font-mono text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200 font-black">
-          {p.code || "—"}
-        </span>
-      ),
-      className: "w-[100px]"
-    },
     { id: "name", header: "اسم الشريك", accessor: (p) => p.name, className: "font-black text-slate-800" },
     { 
       id: "amount_usd",
@@ -170,26 +157,10 @@ export default function Partners() {
       ), 
       align: "center",
       headerClassName: "text-center"
-    },
-    {
-      id: "actions",
-      header: "إجراءات",
-      accessor: (p) => (
-        <TableActions 
-          onEdit={() => { 
-            setEditPartner(p); 
-            setIsDialogOpen(true); 
-            setSelectedId(p.id);
-          }}
-          onDelete={() => handleDelete(p.id)}
-        />
-      ),
-      align: "left",
-      className: "w-20"
     }
     ];
     return allColumns.filter(col => col.id ? isVisible(col.id) : true);
-  }, [handleDelete, isVisible]);
+  }, [isVisible]);
 
   return (
     <OperationalTableTemplate
@@ -197,9 +168,6 @@ export default function Partners() {
       stats={stats}
       toolbar={
         <>
-          <Button variant="outline" size="sm" onClick={() => refresh(true)} disabled={loading} className="bg-white">
-            <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />تحديث
-          </Button>
           <Button size="sm" onClick={() => { setEditPartner(null); setIsDialogOpen(true); setSelectedId("new"); }} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
             <Plus className="w-4 h-4 ml-2" /> إضافة شريك جديد
           </Button>
@@ -256,9 +224,7 @@ export default function Partners() {
           loading={loading} 
           selectedId={selectedId}
           onRowClick={(p) => {
-            setEditPartner(p);
             setSelectedId(p.id);
-            setIsDialogOpen(true);
           }}
         />
       }
@@ -309,9 +275,82 @@ export default function Partners() {
                 saving={saving}
               />
           </div>
+        ) : selectedId && partnersWithRatios.find(p => p.id === selectedId) ? (
+          <div className="flex flex-col h-full bg-white" dir="rtl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-slate-50/50 shrink-0">
+              <div className="flex flex-col gap-1 text-right">
+                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  {partnersWithRatios.find(p => p.id === selectedId)?.name}
+                  <span className="text-xs font-normal text-muted-foreground bg-white border px-2 py-0.5 rounded flex items-center gap-1 shadow-sm">
+                    <Hash className="w-3 h-3" /> {partnersWithRatios.find(p => p.id === selectedId)?.code}
+                  </span>
+                </h2>
+                <span className="text-xs text-muted-foreground">ملف الشريك</span>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setSelectedId(null)} className="rounded-full text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              <div className="space-y-3 text-right p-5 border border-slate-100 rounded-2xl bg-slate-50/30">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-4">معلومات الاستثمار</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-white rounded-xl border border-slate-100">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">المبلغ ($)</div>
+                    <div className="text-lg font-black text-blue-600 tabular-nums">{formatCurrency(Number(partnersWithRatios.find(p => p.id === selectedId)?.amount_usd || 0), "$")}</div>
+                  </div>
+                  <div className="p-3 bg-white rounded-xl border border-slate-100">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">المبلغ (ل.س)</div>
+                    <div className="text-lg font-black text-slate-900 tabular-nums">{formatCurrency(Number(partnersWithRatios.find(p => p.id === selectedId)?.amount_local || 0))}</div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div className="p-3 bg-white rounded-xl border border-slate-100">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">نسبة رأس المال</div>
+                    <div className="text-sm font-black text-blue-700 tabular-nums">{partnersWithRatios.find(p => p.id === selectedId)?.calculatedCapitalRatio?.toFixed(2) || "0.00"}%</div>
+                  </div>
+                  <div className="p-3 bg-white rounded-xl border border-slate-100">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">نسبة الأرباح</div>
+                    <div className="text-sm font-black text-emerald-700 tabular-nums">{partnersWithRatios.find(p => p.id === selectedId)?.calculatedRatio?.toFixed(2) || "0.00"}%</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-border bg-slate-50/50 shrink-0">
+              <div className="flex gap-3">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 bg-amber-500 text-white hover:bg-amber-600 border-none h-10"
+                  onClick={() => {
+                    const p = partnersWithRatios.find(p => p.id === selectedId);
+                    if (p) {
+                      setEditPartner(p);
+                      setIsDialogOpen(true);
+                    }
+                  }}
+                >
+                  <Pencil className="w-4 h-4 ml-2" />
+                  تعديل
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="flex-1 bg-red-500 text-white hover:bg-red-600 border-none h-10"
+                  onClick={() => {
+                    if (confirm("هل أنت متأكد من حذف هذا الشريك؟")) {
+                      handleDelete(selectedId);
+                      setSelectedId(null);
+                    }
+                  }}
+                >
+                  <Trash2 className="w-4 h-4 ml-2" />
+                  حذف
+                </Button>
+              </div>
+            </div>
+          </div>
         ) : null
       }
-      isPanelOpen={isDialogOpen}
+      isPanelOpen={isDialogOpen || !!selectedId}
     />
   );
 }

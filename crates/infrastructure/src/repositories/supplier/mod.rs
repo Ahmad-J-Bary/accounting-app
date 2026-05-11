@@ -51,4 +51,8 @@ impl SupplierRepository for SqliteSupplierRepository {
     async fn delete(&self, id: &SupplierId) -> Result<(), AppError> {
         commands::delete(&self.pool, id).await
     }
+
+    async fn get_next_supplier_number(&self) -> Result<i32, AppError> {
+        queries::get_next_supplier_number(&self.pool).await
+    }
 }

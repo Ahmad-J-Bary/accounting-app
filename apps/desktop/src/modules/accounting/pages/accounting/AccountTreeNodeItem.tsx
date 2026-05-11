@@ -56,6 +56,7 @@ export function AccountTreeNodeItem({
         )}
         <span className={cn("truncate", isVirtualRoot && "text-primary font-bold")}>
           {node.name_ar}
+          {(node.name_ar?.includes("المدينون") || node.name_ar?.includes("الدائنون"))}
         </span>
         <div className="flex items-center gap-1 flex-shrink-0">
           {node.is_default && (

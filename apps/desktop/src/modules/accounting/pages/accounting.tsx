@@ -121,9 +121,6 @@ export default function Accounting() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button variant="outline" size="sm" onClick={() => load(false)} disabled={isLoading} className="bg-white">
-            <RefreshCw className={`w-4 h-4 ml-2 ${isLoading ? "animate-spin" : ""}`} /> تحديث
-          </Button>
           <Button variant="outline" size="sm" onClick={expandAll} className="bg-white">
             <ChevronLeft className="w-4 h-4 ml-1" /> توسيع الكل
           </Button>

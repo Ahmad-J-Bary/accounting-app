@@ -36,11 +36,7 @@ export default function AuditLog() {
         title="سجل مراقبة النظام"
         subtitle="تتبع كافة الإجراءات والعمليات المنفذة في النظام"
         breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "النظام" }, { label: "سجل العمليات" }]}
-        actions={
-          <Button variant="outline" onClick={load} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />تحديث
-          </Button>
-        }
+        actions={<div />}
       />
 
       {error && (

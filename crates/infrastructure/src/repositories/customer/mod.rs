@@ -46,4 +46,8 @@ impl CustomerRepository for SqliteCustomerRepository {
     async fn delete(&self, id: &CustomerId) -> Result<(), AppError> {
         commands::delete(&self.pool, id).await
     }
+
+    async fn get_next_customer_number(&self) -> Result<i32, AppError> {
+        queries::get_next_customer_number(&self.pool).await
+    }
 }

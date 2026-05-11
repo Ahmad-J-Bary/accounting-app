@@ -214,9 +214,6 @@ export default function Assets() {
       title="إدارة الموجودات"
       toolbar={
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={loadData} disabled={loading} className="bg-white">
-            <RefreshCw className={cn("w-4 h-4 ml-2", loading && "animate-spin")} />تحديث
-          </Button>
           {activeTab === 'fixed' && (
             <Button size="sm" onClick={() => setIsAddingAsset(true)} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
               <Plus className="w-4 h-4 ml-2" />أصل جديد

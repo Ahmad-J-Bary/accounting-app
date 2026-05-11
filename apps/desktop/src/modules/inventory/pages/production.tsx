@@ -98,9 +98,6 @@ export default function Production() {
       title="أوامر الإنتاج"
       toolbar={
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => refresh()} disabled={loading} className="bg-white">
-            <RefreshCw className={cn("w-4 h-4 ml-2", loading && "animate-spin")} />تحديث
-          </Button>
           <Button size="sm" onClick={() => toast.info("أمر إنتاج جديد قيد التطوير")} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
             <Plus className="w-4 h-4 ml-2" />أمر إنتاج جديد
           </Button>

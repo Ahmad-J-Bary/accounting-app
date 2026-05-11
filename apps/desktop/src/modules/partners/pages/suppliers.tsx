@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Plus, Search, RefreshCw, Settings2, Truck, Wallet } from "lucide-react";
+import { Plus, Search, Settings2, Truck, Wallet } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -67,7 +67,7 @@ export default function Suppliers() {
     if (rateMapKey > 0) {
       refresh(true);
     }
-  }, [rateMapKey]);
+  }, [rateMapKey, refresh]);
 
   const isLoading = loading || refreshing;
 
@@ -78,11 +78,11 @@ export default function Suppliers() {
   
   const availableColumns = useMemo(() => {
     const cols = [
+      { id: "#", label: "رقم الحساب" },
       { id: "name", label: "اسم المورد" },
       { id: "phone", label: "رقم الهاتف" },
     ];
 
-    // Using symbols for dropdown labels
     currencies.forEach(curr => {
       const symbol = curr.symbol || curr.code;
       cols.push({ id: `debit_${curr.code}`, label: `المدين (${symbol})` });
@@ -91,30 +91,20 @@ export default function Suppliers() {
       const symbol = curr.symbol || curr.code;
       cols.push({ id: `credit_${curr.code}`, label: `الدائن (${symbol})` });
     });
-    currencies.forEach(curr => {
-      const symbol = curr.symbol || curr.code;
-      cols.push({ id: `balance_${curr.code}`, label: `الرصيد (${symbol})` });
-    });
 
     return cols;
   }, [currencies]);
 
   const defaultVisibleColumns = useMemo(() => {
-    const base = ["name", "phone"];
+    const base = ["#", "name", "phone"];
     
     if (baseCurrency) {
       base.push(`debit_${baseCurrency.code}`);
       base.push(`credit_${baseCurrency.code}`);
-      base.push(`balance_${baseCurrency.code}`);
     }
 
-    currencies.forEach(c => {
-      if (baseCurrency && c.code === baseCurrency.code) return;
-      base.push(`balance_${c.code}`);
-    });
-
     return base;
-  }, [currencies, baseCurrency]);
+  }, [baseCurrency]);
 
   const { visibleColumns, isVisible, toggleColumn } = useColumnPreferences("suppliers", defaultVisibleColumns);
 
@@ -166,9 +156,6 @@ export default function Suppliers() {
       stats={stats}
       toolbar={
         <>
-          <Button variant="outline" size="sm" onClick={() => refresh(true)} disabled={isLoading} className="bg-white">
-            <RefreshCw className={`w-4 h-4 ml-2 ${isLoading ? "animate-spin" : ""}`} />تحديث
-          </Button>
           <Button size="sm" onClick={handleOpenAdd} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
             <Plus className="w-4 h-4 ml-2" /> مورد جديد
           </Button>
@@ -215,8 +202,6 @@ export default function Suppliers() {
           search={search}
           visibleColumns={visibleColumns}
           onView={(s) => setSelectedId(s.id)}
-          onEdit={(s) => { loadAccounts(); handleOpenEdit(s); }}
-          onDelete={handleDelete}
           selectedId={selectedId}
         />
       }
@@ -234,7 +219,9 @@ export default function Suppliers() {
           <PartnerDetailPanel 
             type="supplier"
             partner={selectedSupplier} 
-            onClose={() => setSelectedId(null)} 
+            onClose={() => setSelectedId(null)}
+            onEdit={(p) => { loadAccounts(); handleOpenEdit(p as SupplierDto); }}
+            onDelete={(id, name) => { setSelectedId(null); handleDelete(id); }}
             invoices={supplierInvoices}
             payments={supplierPayments}
             loadingDetails={loadingDetails}

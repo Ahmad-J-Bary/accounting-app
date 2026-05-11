@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { DataTable, Column } from '@widgets/table-shell/DataTable';
-import { TableActions } from '@widgets/table-shell/TableActions';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import type { CustomerDto } from "@erp/shared-types";
 
@@ -10,16 +9,20 @@ interface CustomerTableProps {
   search: string;
   visibleColumns: string[];
   onView: (c: CustomerDto) => void;
-  onEdit: (c: CustomerDto) => void;
-  onDelete: (id: string, name: string) => void;
   selectedId?: string | null;
 }
 
-export function CustomerTable({ customers, loading, search, visibleColumns, onView, onEdit, onDelete, selectedId }: CustomerTableProps) {
+export function CustomerTable({ customers, loading, search, visibleColumns, onView, selectedId }: CustomerTableProps) {
   const { currencies, convertFromBase, formatAmount } = useCurrencyContext();
 
   const columns = useMemo<Column<CustomerDto>[]>(() => {
     const cols: Column<CustomerDto>[] = [
+      { 
+        id: "#",
+        header: "#", 
+        accessor: (c) => c.code || "—",
+        className: "text-center font-black text-slate-500 w-14"
+      },
       { 
         id: "name",
         header: "اسم العميل", 
@@ -66,36 +69,8 @@ export function CustomerTable({ customers, loading, search, visibleColumns, onVi
       });
     });
 
-    // 3. Balances
-    currencies.forEach(curr => {
-      const symbol = curr.symbol || curr.code;
-      cols.push({
-        id: `balance_${curr.code}`,
-        header: `رصيد (${symbol})`,
-        accessor: (c) => {
-          return formatAmount(Number(c.balance || 0), { currencyCode: curr.code });
-        },
-        align: "left",
-        className: "font-bold tabular-nums text-slate-900 text-[12px]"
-      });
-    });
-
-    cols.push({
-      id: "actions",
-      header: "إجراءات",
-      accessor: (c) => (
-        <TableActions 
-          onView={() => onView(c)}
-          onEdit={() => onEdit(c)}
-          onDelete={() => onDelete(c.id, c.name)}
-        />
-      ),
-      align: "left",
-      className: "w-16"
-    });
-
     return cols;
-  }, [currencies, convertFromBase, formatAmount, onView, onEdit, onDelete]);
+  }, [currencies, convertFromBase, formatAmount]);
 
   const filteredColumns = useMemo(() => {
     return columns.filter(col => {
