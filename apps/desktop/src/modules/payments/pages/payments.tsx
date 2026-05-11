@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useLocation } from "react-router-dom";
+import { useTabs } from "@app/providers/TabContext";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Plus, Search, RefreshCw, ArrowDownCircle, ArrowUpCircle, Wallet, ReceiptText, Settings2 } from "lucide-react";
@@ -45,15 +46,17 @@ export default function Payments() {
   const initialType = searchParams.get("type");
   const initialCustomerId = searchParams.get("customerId");
   const initialSupplierId = searchParams.get("supplierId");
+  const initialDrawingsAccountId = searchParams.get("drawingsAccountId");
 
   const [typeFilter, setTypeFilter] = useState("all");
   const [showDialog, setShowDialog] = useState(!!initialType);
 
   const initialValues = useMemo(() => ({
-    payment_type: (initialType as any) || "Receipt",
+    payment_type: (initialType as CreatePaymentRequest['payment_type']) || "Receipt",
     customer_id: initialCustomerId || undefined,
     supplier_id: initialSupplierId || undefined,
-  }), [initialType, initialCustomerId, initialSupplierId]);
+    debit_account_id: initialDrawingsAccountId || undefined,
+  }), [initialType, initialCustomerId, initialSupplierId, initialDrawingsAccountId]);
   const [saving, setSaving] = useState(false);
 
   const loadExtras = useCallback(async () => {

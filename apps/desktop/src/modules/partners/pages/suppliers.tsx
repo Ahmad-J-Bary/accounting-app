@@ -18,6 +18,7 @@ import { paymentService } from '@modules/payments/api/paymentService';
 import type { SupplierDto, AccountDto, InvoiceDto, Payment, CreateSupplierRequest, UpdateSupplierRequest } from "@erp/shared-types";
 
 import { useColumnPreferences } from '@shared/hooks';
+import { useTabs } from "@app/providers/TabContext";
 import { useEntityList } from '@shared/hooks/useEntityList';
 import { SupplierTable } from '@modules/partners/components/SupplierTable';
 
@@ -26,7 +27,6 @@ import { PartnerDetailPanel } from '@modules/partners/components/PartnerDetailPa
 import { PartnerFormPanel } from '@modules/partners/components/PartnerFormPanel';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { cn } from "@shared/lib/utils";
-import { useTabs } from "@app/providers/TabContext";
 import { exportToCSV } from "@shared/lib/export";
 
 export default function Suppliers() {

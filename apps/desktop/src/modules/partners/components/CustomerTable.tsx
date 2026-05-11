@@ -135,7 +135,7 @@ export function CustomerTable({ customers, loading, search, visibleColumns, onVi
     });
 
     return cols;
-  }, [currencies, convertFromBase, formatAmount, baseCurrency, sortField, sortDirection, handleSort]);
+  }, [currencies, convertFromBase, formatAmount, sortField, sortDirection, handleSort]);
 
   const filteredColumns = useMemo(() => {
     return columns.filter(col => {

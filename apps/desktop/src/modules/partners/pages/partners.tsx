@@ -3,7 +3,9 @@ import { Button } from "@shared/ui/button";
 import { Card } from "@shared/ui/card";
 import { Label } from "@shared/ui/label";
 import { RadioGroup, RadioGroupItem } from "@shared/ui/radio-group";
-import { Plus, Users, Calculator, TrendingUp, DollarSign, PieChart as PieChartIcon, Settings2, Search, Pencil, Trash2, Hash, X } from "lucide-react";
+import { Plus, Users, Calculator, TrendingUp, DollarSign, PieChart as PieChartIcon, Settings2, Search, Pencil, Trash2, Hash, X, History, Wallet, Download, PlusCircle } from "lucide-react";
+import { useTabs } from "@app/providers/TabContext";
+import { exportToCSV } from "@shared/lib/export";
 import { toast } from "sonner";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { Input } from "@shared/ui/input";
@@ -29,6 +31,7 @@ import { cn } from "@shared/lib/utils";
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
 
 export default function Partners() {
+  const { openTab } = useTabs();
   const { rateMap, formatAmount, convertFromBase, baseCurrency } = useCurrencyContext();
   const [globalStrategy, setGlobalStrategy] = useState("BasedOnCapitalLocal");
 
@@ -179,11 +182,68 @@ export default function Partners() {
       title="الشركاء ورأس المال"
       stats={stats}
       toolbar={
-        <>
+        <div className="flex items-center gap-2">
+          <Button 
+            size="sm" 
+            variant="outline"
+            disabled={!selectedId}
+            onClick={() => {
+              const p = partnersWithRatios.find(p => p.id === selectedId);
+              if (p?.drawings_account_id) {
+                openTab({
+                  id: `ledger-${p.drawings_account_id}`,
+                  title: `مسحوبات ${p.name}`,
+                  path: `/accounting/account-ledger/${p.drawings_account_id}`,
+                  closable: true
+                });
+              } else {
+                toast.error("لا يوجد حساب مسحوبات مرتبط بهذا الشريك");
+              }
+            }}
+            className="border-slate-200 text-slate-700 hover:bg-slate-50"
+          >
+            <History className="w-4 h-4 ml-2 text-slate-500" /> مسحوبات الشريك
+          </Button>
+
+          <Button 
+            size="sm" 
+            variant="outline"
+            disabled={!selectedId}
+            onClick={() => {
+              const p = partnersWithRatios.find(p => p.id === selectedId);
+              if (p) {
+                const query = new URLSearchParams({
+                  type: "DrawingsVoucher",
+                  drawingsAccountId: p.drawings_account_id || ""
+                }).toString();
+                openTab({
+                  id: "payments-drawings",
+                  title: "سند مسحوبات",
+                  path: `/payments?${query}`,
+                  closable: true
+                });
+              }
+            }}
+            className="border-slate-200 text-slate-700 hover:bg-slate-50"
+          >
+            <PlusCircle className="w-4 h-4 ml-2 text-amber-500" /> سند مسحوبات
+          </Button>
+
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={() => exportToCSV(partnersWithRatios, availableColumns, "partners_and_capital.csv")}
+            className="border-slate-200 text-slate-700 hover:bg-slate-50"
+          >
+            <Download className="w-4 h-4 ml-2 text-emerald-500" /> تصدير إكسل
+          </Button>
+
+          <div className="w-px h-6 bg-slate-200 mx-1" />
+
           <Button size="sm" onClick={() => { setEditPartner(null); setIsDialogOpen(true); setSelectedId("new"); }} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
             <Plus className="w-4 h-4 ml-2" /> إضافة شريك جديد
           </Button>
-        </>
+        </div>
       }
 
       filterBar={
