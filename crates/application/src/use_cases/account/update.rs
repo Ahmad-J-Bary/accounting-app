@@ -49,6 +49,7 @@ impl UpdateAccountUseCase {
             .ok_or(AccountUseCaseError::AccountNotFound)?;
 
         let was_root = account.parent_id.is_none();
+        let old_code = account.code.clone();
 
         AccountValidation::validate_names_and_code(&cmd)?;
         AccountValidation::ensure_code_not_exists(&*self.account_repo, &cmd.code, Some(&id)).await?;
@@ -81,8 +82,8 @@ impl UpdateAccountUseCase {
             .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
 
         // Update all children accounts if code changed
-        if account.code != cmd.code.trim().to_string() {
-            self.update_children_codes(&account, &cmd.code.trim().to_string()).await?;
+        if account.code != old_code {
+            self.update_children_codes(&account, &old_code, &account.code).await?;
         }
 
         // Sync with linked customer if any
@@ -142,7 +143,7 @@ impl UpdateAccountUseCase {
         Ok(account)
     }
 
-    async fn update_children_codes(&self, parent: &Account, new_code: &str) -> Result<(), AccountUseCaseError> {
+    async fn update_children_codes(&self, parent: &Account, old_parent_code: &str, new_parent_code: &str) -> Result<(), AccountUseCaseError> {
         let all_accounts = self.account_repo.list_all().await
             .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
         
@@ -178,12 +179,11 @@ impl UpdateAccountUseCase {
         // Update each child's code based on parent's new code
         for child_id in descendant_ids {
             if let Some(child) = account_map.get(&child_id) {
-                let old_parent_code = &parent.code;
                 let old_child_code = &child.code;
                 
                 if old_child_code.starts_with(old_parent_code) {
                     let suffix = &old_child_code[old_parent_code.len()..];
-                    let new_child_code = format!("{}{}", new_code, suffix);
+                    let new_child_code = format!("{}{}", new_parent_code, suffix);
                     
                     let mut updated_child = child.clone();
                     updated_child.code = new_child_code;

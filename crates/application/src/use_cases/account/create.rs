@@ -11,6 +11,7 @@ use domain::suppliers::Supplier;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::supplier_repository::SupplierRepository;
+use crate::constants::{RECEIVABLES_PARENT_ID, PAYABLES_PARENT_ID};
 
 use super::error::AccountUseCaseError;
 use super::types::CreateAccountCommand;
@@ -58,6 +59,8 @@ impl CreateAccountUseCase {
 
         let final_name_ar = cmd.name_ar.trim().to_string();
 
+        let is_final = cmd.category == domain::accounting::account::AccountCategory::Detail;
+
         let account = Account {
             id: AccountId::new(),
             code: cmd.code.trim().to_string(),
@@ -71,9 +74,8 @@ impl CreateAccountUseCase {
             balance: opening_balance,
             notes: cmd.notes.as_ref().map(|n| n.trim().to_string()),
             is_active: true,
-            is_default: matches!(cmd.code.trim(), "120301" | "220301"),
-            is_final: (cmd.code.trim().len() == 6 && (cmd.code.trim().starts_with("1203") || cmd.code.trim().starts_with("2203"))) 
-                      || (cmd.code.trim().len() == 4 && (cmd.code.trim().starts_with("123") || cmd.code.trim().starts_with("223"))), // Keep old for compatibility
+            is_default: false,
+            is_final,
             linked_customer_id,
             linked_supplier_id,
             created_at: Utc::now(),
@@ -95,11 +97,13 @@ impl CreateAccountUseCase {
             .map(|s| if s == "USD" { Currency::usd() } else { Currency::syp() })
             .unwrap_or(Currency::syp());
 
-        // Auto-create customer if account is under "123" (المدينون)
-        if account.code.len() >= 3 && account.code.starts_with("123") {
+        // Auto-create customer if account is under Receivables Parent
+        let is_receivable = cmd.parent_id.as_ref().map(|p| p.to_string() == RECEIVABLES_PARENT_ID).unwrap_or(false);
+        if is_receivable {
             if let Some(ref customer_repo) = self.customer_repo {
-                // Extract customer number: 1232 -> 2, 1233 -> 3, etc.
-                let customer_num = if account.code.len() >= 4 { &account.code[3..] } else { "1" };
+                // Extract customer number: suffix of the code
+                let parent_code = self.account_repo.find_by_id(&cmd.parent_id.as_ref().unwrap()).await.ok().flatten().map(|p| p.code).unwrap_or_default();
+                let customer_num = if account.code.starts_with(&parent_code) { &account.code[parent_code.len()..] } else { &account.code };
                 
                 let customer_id = CustomerId::new();
 
@@ -126,11 +130,13 @@ impl CreateAccountUseCase {
             }
         }
 
-        // Auto-create supplier if account is under "223" (الدائنون)
-        if account.code.len() >= 3 && account.code.starts_with("223") {
+        // Auto-create supplier if account is under Payables Parent
+        let is_payable = cmd.parent_id.as_ref().map(|p| p.to_string() == PAYABLES_PARENT_ID).unwrap_or(false);
+        if is_payable {
             if let Some(ref supplier_repo) = self.supplier_repo {
-                // Extract supplier number: 2232 -> 2, 2233 -> 3, etc.
-                let supplier_num = if account.code.len() >= 4 { &account.code[3..] } else { "1" };
+                // Extract supplier number: suffix of the code
+                let parent_code = self.account_repo.find_by_id(&cmd.parent_id.as_ref().unwrap()).await.ok().flatten().map(|p| p.code).unwrap_or_default();
+                let supplier_num = if account.code.starts_with(&parent_code) { &account.code[parent_code.len()..] } else { &account.code };
                 
                 let supplier_id = SupplierId::new();
 

@@ -12,6 +12,8 @@ use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::supplier_repository::SupplierRepository;
+use crate::constants::{PAYABLES_PARENT_ID, OPENING_EQUITY_ID};
+use std::str::FromStr;
 
 pub struct CreateSupplierUseCase {
     supplier_repo: Arc<dyn SupplierRepository>,
@@ -63,15 +65,17 @@ impl CreateSupplierUseCase {
 
         self.supplier_repo.save(&supplier).await?;
 
-        // Generate account code as "223" + sequential number (e.g., "2232", "2233")
-        // The account name will include "رقم الحساب" suffix
-        let account_code = format!("223{}", code_for_account);
+        // Find the parent account dynamically using its fixed System ID
+        let parent_id = AccountId::from_str(PAYABLES_PARENT_ID).unwrap();
         let parent = self
             .account_repo
-            .find_by_code("223")
+            .find_by_id(&parent_id)
             .await
             .map_err(|e| AppError::Infrastructure(e.to_string()))?
-            .ok_or_else(|| AppError::NotFound("حساب ذمم الموردين (223) غير موجود".into()))?;
+            .ok_or_else(|| AppError::NotFound("حساب ذمم الموردين الرئيسي غير موجود في النظام".into()))?;
+
+        // Generate account code dynamically based on the CURRENT parent code
+        let account_code = format!("{}{}", parent.code, code_for_account);
 
         // Add "رقم الحساب" suffix to the account name
         let account_name = req.name.clone();
@@ -109,12 +113,13 @@ impl CreateSupplierUseCase {
         // --- Accounting Integration: Opening Balance ---
         let total_opening = credit - debit;
         if total_opening != Decimal::ZERO {
+            let equity_id = AccountId::from_str(OPENING_EQUITY_ID).unwrap();
             let opening_equity = self
                 .account_repo
-                .find_by_code("122")
+                .find_by_id(&equity_id)
                 .await?
                 .ok_or_else(|| {
-                    AppError::NotFound("حساب الصندوق (الخزينة) (122) غير موجود".into())
+                    AppError::NotFound("حساب رأس المال / رصيد افتتاحي غير موجود".into())
                 })?;
 
             let amount_ma = MonetaryAmount::new(

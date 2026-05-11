@@ -102,8 +102,16 @@ export function AccountDetailsSidebar({
     setFormMode("create");
     setError(null);
     const targetParent = selected?.id ?? "null";
-    setCode(suggestChildCode(selected));
-    setCodeSuffix("");
+    
+    // Split suggested code into parent prefix and own suffix
+    const parentCode = selected?.code ?? "";
+    const fullSuggested = suggestChildCode(selected);
+    const suffix = fullSuggested.startsWith(parentCode) 
+      ? fullSuggested.substring(parentCode.length) 
+      : fullSuggested;
+
+    setCode(suffix); 
+    setCodeSuffix(parentCode);
     setNameAr("");
     setParentId(targetParent);
     setPhone("");
@@ -187,8 +195,8 @@ export function AccountDetailsSidebar({
       ? selectedCode.substring(parentCode.length) 
       : "";
     
-    setCode(parentCode); // Only show parent code for editing
-    setCodeSuffix(suffix); // Store suffix separately (read-only)
+    setCode(suffix); // Own part is editable
+    setCodeSuffix(parentCode); // Parent part is read-only
     setNameAr(selected.name_ar ?? "");
     setParentId(selected.parent_id ?? "null");
     setNotes(selected.notes ?? "");
@@ -228,8 +236,8 @@ export function AccountDetailsSidebar({
       const targetCategory = "Detail" as AccountCategory;
 
       if (formMode === "edit" && selected) {
-        // Combine parent code with suffix (e.g., "129" + "1" = "1291")
-        const finalCode = codeSuffix ? `${code.trim()}${codeSuffix}` : code.trim();
+        // Combine parent prefix with own suffix
+        const finalCode = codeSuffix ? `${codeSuffix}${code.trim()}` : code.trim();
         
         const payload = {
           code: finalCode,
@@ -251,8 +259,11 @@ export function AccountDetailsSidebar({
         };
         await accountingService.updateAccount(selected.id, payload);
       } else {
+        // Combine parent prefix with own suffix for creation
+        const finalCode = codeSuffix ? `${codeSuffix}${code.trim()}` : code.trim();
+
         const payload = {
-          code: code.trim(),
+          code: finalCode,
           name_ar: nameAr.trim(),
           name_en: nameAr.trim(),
           account_type: (parentAccount?.account_type ?? selected?.account_type ?? "Assets") as AccountType,
@@ -329,26 +340,26 @@ export function AccountDetailsSidebar({
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
           <Label>رقم الحساب</Label>
-          {formMode === "edit" && codeSuffix ? (
+          {codeSuffix ? (
             <div className="flex gap-1">
-              <Input 
-                value={code} 
-                onChange={(e) => setCode(e.target.value)} 
-                placeholder="مثال: 129" 
-                className="bg-white flex-1" 
-              />
               <Input 
                 value={codeSuffix} 
                 disabled 
                 className="bg-slate-100 text-slate-500 w-16 text-center" 
-                title="اللاحقة موروثة من الأب ولا يمكن تعديلها"
+                title="الجزء الموروث من الأب ولا يمكن تعديله"
+              />
+              <Input 
+                value={code} 
+                onChange={(e) => setCode(e.target.value)} 
+                placeholder="الجزء الفرعي" 
+                className="bg-white flex-1" 
               />
             </div>
           ) : (
             <Input 
               value={code} 
               onChange={(e) => setCode(e.target.value)} 
-              placeholder={formMode === "create" ? "مثال: 1231" : "مثال: 1101"} 
+              placeholder="مثال: 1101" 
               className="bg-white" 
             />
           )}
