@@ -10,17 +10,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@shared/ui/dropdown-menu";
+import { toast } from "sonner";
 
 import { customerService } from '@modules/partners/api/customerService';
 import { accountingService } from '@modules/accounting/api/accountingService';
 import { invoiceService } from '@modules/invoicing/api/invoiceService';
 import { paymentService } from '@modules/payments/api/paymentService';
-import type { CustomerDto, AccountDto, InvoiceDto, Payment, CreateCustomerRequest, UpdateCustomerRequest } from "@erp/shared-types";
+import type { CustomerDto, AccountDto, InvoiceDto, Payment, CreateCustomerRequest, UpdateCustomerRequest, CreatePaymentRequest } from "@erp/shared-types";
 
 import { useColumnPreferences } from '@shared/hooks';
 import { useTabs } from "@app/providers/TabContext";
 import { useEntityList } from '@shared/hooks/useEntityList';
 import { CustomerTable } from '@modules/partners/components/CustomerTable';
+import { CustomerReceiptForm } from '@modules/partners/components/CustomerReceiptForm';
 
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { PartnerDetailPanel } from '@modules/partners/components/PartnerDetailPanel';
@@ -65,6 +67,23 @@ export default function Customers() {
     deleteData: (id) => customerService.deleteCustomer(id),
     searchFields: ["name", "phone", "code"],
   });
+
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+  const [receiptSaving, setReceiptSaving] = useState(false);
+
+  const handleSaveReceipt = async (payload: CreatePaymentRequest) => {
+    try {
+      setReceiptSaving(true);
+      await paymentService.createPayment(payload);
+      toast.success("تم تسجيل سند القبض بنجاح");
+      setIsReceiptOpen(false);
+      refresh(true);
+    } catch (error) {
+      toast.error("فشل تسجيل السند: " + error);
+    } finally {
+      setReceiptSaving(false);
+    }
+  };
 
   useEffect(() => {
     if (rateMapKey > 0) {
@@ -207,12 +226,10 @@ export default function Customers() {
             variant="outline"
             className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
             disabled={!selectedId}
-            onClick={() => openTab({
-              id: `new-receipt-${Date.now()}`,
-              title: "سند قبض جديد",
-              path: `/payments?type=Receipt&customerId=${selectedId}`,
-              closable: true
-            })}
+            onClick={() => {
+              setIsReceiptOpen(true);
+              setIsFormOpen(false);
+            }}
           >
             <Receipt className="w-4 h-4 ml-2 text-amber-500" /> إنشاء سند قبض
           </Button>
@@ -287,6 +304,15 @@ export default function Customers() {
             onClose={() => setIsFormOpen(false)}
             saving={saving}
           />
+        ) : isReceiptOpen && selectedCustomer ? (
+          <div className="p-6">
+            <CustomerReceiptForm 
+              customer={selectedCustomer}
+              onSave={handleSaveReceipt}
+              onClose={() => setIsReceiptOpen(false)}
+              saving={receiptSaving}
+            />
+          </div>
         ) : (
           <PartnerDetailPanel 
             type="customer"
@@ -300,7 +326,7 @@ export default function Customers() {
           />
         )
       }
-      isPanelOpen={isFormOpen || !!selectedId}
+      isPanelOpen={isFormOpen || isReceiptOpen || !!selectedId}
     />
   );
 }

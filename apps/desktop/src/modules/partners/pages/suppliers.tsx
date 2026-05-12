@@ -10,17 +10,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@shared/ui/dropdown-menu";
+import { toast } from "sonner";
 
 import { supplierService } from '@modules/partners/api/supplierService';
 import { accountingService } from '@modules/accounting/api/accountingService';
 import { invoiceService } from '@modules/invoicing/api/invoiceService';
 import { paymentService } from '@modules/payments/api/paymentService';
-import type { SupplierDto, AccountDto, InvoiceDto, Payment, CreateSupplierRequest, UpdateSupplierRequest } from "@erp/shared-types";
+import type { SupplierDto, AccountDto, InvoiceDto, Payment, CreateSupplierRequest, UpdateSupplierRequest, CreatePaymentRequest } from "@erp/shared-types";
 
 import { useColumnPreferences } from '@shared/hooks';
 import { useTabs } from "@app/providers/TabContext";
 import { useEntityList } from '@shared/hooks/useEntityList';
 import { SupplierTable } from '@modules/partners/components/SupplierTable';
+import { SupplierPaymentForm } from '@modules/partners/components/SupplierPaymentForm';
 
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { PartnerDetailPanel } from '@modules/partners/components/PartnerDetailPanel';
@@ -65,6 +67,23 @@ export default function Suppliers() {
     deleteData: (id) => supplierService.deleteSupplier(id),
     searchFields: ["name", "phone", "code"],
   });
+
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [paymentSaving, setPaymentSaving] = useState(false);
+
+  const handleSavePayment = async (payload: CreatePaymentRequest) => {
+    try {
+      setPaymentSaving(true);
+      await paymentService.createPayment(payload);
+      toast.success("تم تسجيل سند الدفع بنجاح");
+      setIsPaymentOpen(false);
+      refresh(true);
+    } catch (error) {
+      toast.error("فشل تسجيل السند: " + error);
+    } finally {
+      setPaymentSaving(false);
+    }
+  };
 
   useEffect(() => {
     if (rateMapKey > 0) {
@@ -209,12 +228,10 @@ export default function Suppliers() {
             variant="outline"
             className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
             disabled={!selectedId}
-            onClick={() => openTab({
-              id: `new-payment-${Date.now()}`,
-              title: "سند دفع جديد",
-              path: `/payments?type=SupplierPayment&supplierId=${selectedId}`,
-              closable: true
-            })}
+            onClick={() => {
+              setIsPaymentOpen(true);
+              setIsFormOpen(false);
+            }}
           >
             <DollarSign className="w-4 h-4 ml-2 text-rose-500" /> إنشاء سند دفع
           </Button>
@@ -289,6 +306,15 @@ export default function Suppliers() {
             onClose={() => setIsFormOpen(false)}
             saving={saving}
           />
+        ) : isPaymentOpen && selectedSupplier ? (
+          <div className="p-6">
+            <SupplierPaymentForm 
+              supplier={selectedSupplier}
+              onSave={handleSavePayment}
+              onClose={() => setIsPaymentOpen(false)}
+              saving={paymentSaving}
+            />
+          </div>
         ) : (
           <PartnerDetailPanel 
             type="supplier"
@@ -302,7 +328,7 @@ export default function Suppliers() {
           />
         )
       }
-      isPanelOpen={isFormOpen || !!selectedId}
+      isPanelOpen={isFormOpen || isPaymentOpen || !!selectedId}
     />
   );
 }

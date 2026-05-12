@@ -24,6 +24,9 @@ import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTem
 import { DataTable, Column } from '@widgets/table-shell/DataTable';
 import { useDataTable, useColumnPreferences } from '@shared/hooks';
 import { PartnerForm } from '@modules/partners/components/PartnerForm';
+import { PartnerDrawingsForm } from '@modules/partners/components/PartnerDrawingsForm';
+import { paymentService } from '@modules/payments/api/paymentService';
+import { type CreatePaymentRequest } from '@erp/shared-types';
 import { usePartnerRatios } from '@modules/partners/hooks/usePartnerRatios';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { cn } from "@shared/lib/utils";
@@ -54,6 +57,8 @@ export default function Partners() {
   const [editPartner, setEditPartner] = useState<PartnerDto | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [isDrawingsOpen, setIsDrawingsOpen] = useState(false);
+  const [drawingsSaving, setDrawingsSaving] = useState(false);
 
   // Directly reactive to rateMap.get("USD")
   const usdRate = useMemo(() => rateMap?.get("USD") || 1, [rateMap]);
@@ -129,6 +134,20 @@ export default function Partners() {
       toast.error("فشل الحذف: " + error);
     }
   }, [setData]);
+
+  const handleSaveDrawings = async (payload: CreatePaymentRequest) => {
+    try {
+      setDrawingsSaving(true);
+      await paymentService.createPayment(payload);
+      toast.success("تم تسجيل سند المسحوبات بنجاح");
+      setIsDrawingsOpen(false);
+      refresh(true);
+    } catch (error) {
+      toast.error("فشل تسجيل السند: " + error);
+    } finally {
+      setDrawingsSaving(false);
+    }
+  };
 
   const columns = useMemo<Column<PartnerDto & { calculatedRatio: number; calculatedCapitalRatio: number; displayAmountLocal: number; displayAmountUsd: number }>[]>(() => {
     const allColumns: Column<PartnerDto & { calculatedRatio: number; calculatedCapitalRatio: number; displayAmountLocal: number; displayAmountUsd: number }>[] = [
@@ -212,16 +231,12 @@ export default function Partners() {
             onClick={() => {
               const p = partnersWithRatios.find(p => p.id === selectedId);
               if (p) {
-                const query = new URLSearchParams({
-                  type: "DrawingsVoucher",
-                  drawingsAccountId: p.drawings_account_id || ""
-                }).toString();
-                openTab({
-                  id: "payments-drawings",
-                  title: "سند مسحوبات",
-                  path: `/payments?${query}`,
-                  closable: true
-                });
+                if (p.drawings_account_id) {
+                  setIsDrawingsOpen(true);
+                  setIsDialogOpen(false);
+                } else {
+                  toast.error("لا يوجد حساب مسحوبات مرتبط بهذا الشريك");
+                }
               }
             }}
             className="border-slate-200 text-slate-700 hover:bg-slate-50"
@@ -296,9 +311,9 @@ export default function Partners() {
           loading={loading} 
           selectedId={selectedId}
           onRowClick={(p) => {
-            setEditPartner(p);
             setSelectedId(p.id);
-            setIsDialogOpen(true);
+            setIsDialogOpen(false);
+            setIsDrawingsOpen(false);
           }}
         />
       }
@@ -348,6 +363,15 @@ export default function Partners() {
                 onSave={handleSave}
                 saving={saving}
               />
+          </div>
+        ) : isDrawingsOpen && selectedId ? (
+          <div className="p-6">
+            <PartnerDrawingsForm 
+              partner={partnersWithRatios.find(p => p.id === selectedId)!}
+              onSave={handleSaveDrawings}
+              onClose={() => setIsDrawingsOpen(false)}
+              saving={drawingsSaving}
+            />
           </div>
         ) : selectedId && partnersWithRatios.find(p => p.id === selectedId) ? (
           <div className="flex flex-col h-full bg-white" dir="rtl">
@@ -424,7 +448,7 @@ export default function Partners() {
           </div>
         ) : null
       }
-      isPanelOpen={isDialogOpen || !!selectedId}
+      isPanelOpen={isDialogOpen || isDrawingsOpen || !!selectedId}
     />
   );
 }

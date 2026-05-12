@@ -21,10 +21,15 @@ import { ExpenseTable } from '@modules/accounting/components/ExpenseTable';
 import { ExpenseFormPanel } from '@modules/accounting/components/ExpenseFormPanel';
 import type { ExpenseFormPayload } from '@modules/accounting/components/ExpenseFormPanel';
 import { ExpenseDetailPanel } from '@modules/accounting/components/ExpenseDetailPanel';
+import { ExpenseVoucherForm } from '@modules/accounting/components/ExpenseVoucherForm';
+import { paymentService } from '@modules/payments/api/paymentService';
+import { type CreatePaymentRequest } from "@erp/shared-types";
 
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { exportToCSV } from "@shared/lib/export";
+// import { toast } from "sonner"; // Assuming toast is available via shared types or similar, wait, shared-types might not have toast.
+import { toast as toastSonner } from "sonner";
 
 // The "مصاريف أخرى" parent account ID in the chart of accounts
 const OTHER_EXPENSES_PARENT_ID = SYSTEM_ACCOUNT_IDS.OTHER_EXPENSES;
@@ -83,6 +88,23 @@ export default function Expenses() {
     deleteData: (id) => accountingService.deleteAccount(id),
     searchFields: ["name_ar", "code"],
   });
+
+  const [isVoucherOpen, setIsVoucherOpen] = useState(false);
+  const [voucherSaving, setVoucherSaving] = useState(false);
+
+  const handleSaveVoucher = async (payload: CreatePaymentRequest) => {
+    try {
+      setVoucherSaving(true);
+      await paymentService.createPayment(payload);
+      toastSonner.success("تم تسجيل سند الصرف بنجاح");
+      setIsVoucherOpen(false);
+      refresh(true);
+    } catch (error) {
+      toastSonner.error("فشل تسجيل السند: " + error);
+    } finally {
+      setVoucherSaving(false);
+    }
+  };
 
   useEffect(() => {
     if (rateMapKey > 0) {
@@ -175,12 +197,10 @@ export default function Expenses() {
             variant="outline"
             className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
             disabled={!selectedId}
-            onClick={() => openTab({
-              id: `new-payment-${Date.now()}`,
-              title: "سند صرف جديد",
-              path: `/payments?type=Payment&accountId=${selectedId}`,
-              closable: true,
-            })}
+            onClick={() => {
+              setIsVoucherOpen(true);
+              setIsFormOpen(false);
+            }}
           >
             <Receipt className="w-4 h-4 ml-2 text-amber-500" /> إنشاء سند صرف
           </Button>
@@ -256,6 +276,15 @@ export default function Expenses() {
             onClose={() => setIsFormOpen(false)}
             saving={saving}
           />
+        ) : isVoucherOpen && selectedExpense ? (
+          <div className="p-6">
+            <ExpenseVoucherForm 
+              expenseAccount={selectedExpense}
+              onSave={handleSaveVoucher}
+              onClose={() => setIsVoucherOpen(false)}
+              saving={voucherSaving}
+            />
+          </div>
         ) : (
           <ExpenseDetailPanel
             expense={selectedExpense!}
@@ -266,7 +295,7 @@ export default function Expenses() {
           />
         )
       }
-      isPanelOpen={isFormOpen || !!selectedId}
+      isPanelOpen={isFormOpen || isVoucherOpen || !!selectedId}
     />
   );
 }

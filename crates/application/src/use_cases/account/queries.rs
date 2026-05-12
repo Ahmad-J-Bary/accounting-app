@@ -116,7 +116,7 @@ impl AccountQueries {
         let mut running_balance_usd = Decimal::ZERO;
 
         let mut sorted_entries = journal_entries;
-        sorted_entries.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+        sorted_entries.sort_by_key(|a| a.created_at);
 
         for entry in sorted_entries {
             let account_lines: Vec<_> = entry.lines.iter().filter(|l| l.account_id == *account_id).collect();
