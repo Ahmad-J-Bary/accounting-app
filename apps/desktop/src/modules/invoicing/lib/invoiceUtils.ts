@@ -7,6 +7,7 @@ export interface GridLine extends InvoiceLineDto {
   line_total?: number; // computed
   
   // High-density metadata (read-only in grid usually)
+  material_code?: string;
   name_en?: string;
   barcode?: string;
   material_image?: string; // Material thumbnail

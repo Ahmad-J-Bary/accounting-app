@@ -223,7 +223,8 @@ export default function PurchaseInvoices() {
   const gridColumns = useMemo<DocumentColumn[]>(() => {
     const cols: DocumentColumn[] = [
       { key: "material_image", header: "", width: "w-[40px]", align: "center", type: "image" },
-      { key: "unit_barcode", header: "الباركود", width: "w-[100px]", align: "center", type: "readonly" },
+      { key: "material_code", header: "الكود", width: "w-[100px]", align: "center", type: "material_code" },
+      { key: "unit_barcode", header: "الباركود", width: "w-[120px]", align: "center", type: "material_barcode" },
       { key: "material_name", header: "الصنف (عربي)", width: "flex-[2]", align: "right", type: "material" },
       { key: "name_en", header: "الصنف (EN)", width: "flex-[1.5]", align: "left", type: "readonly" },
       { key: "warehouse_qty", header: "المتوفر", width: "w-[70px]", align: "center", type: "readonly" },

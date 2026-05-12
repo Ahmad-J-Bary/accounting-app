@@ -94,6 +94,7 @@ export function useDocumentEditor({
     updateLine(index, {
       material_id: material.id,
       material_name: material.name,
+      material_code: material.code,
       material_image: material.image_path || undefined,
       name_en: material.name_en,
       barcode: material.barcode,

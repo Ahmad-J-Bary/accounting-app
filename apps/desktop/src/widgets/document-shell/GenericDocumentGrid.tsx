@@ -13,24 +13,32 @@ export interface DocumentColumn {
   header: string;
   width: string;
   align?: "right" | "left" | "center";
-  type: "text" | "number" | "material" | "readonly" | "image" | "badge" | "unit_select";
+  type: "text" | "number" | "material" | "material_code" | "material_barcode" | "readonly" | "image" | "badge" | "unit_select";
 }
 
 interface MaterialSearchPanelProps {
   materials: MaterialDto[];
   search: string;
+  searchType: "name" | "code" | "barcode";
   visible: boolean;
   onSelect: (m: MaterialDto) => void;
   onClose: () => void;
 }
 
-function MaterialSearchPanel({ materials, search, visible, onSelect, onClose }: MaterialSearchPanelProps) {
-  const filtered = materials.filter(m =>
-    !search ||
-    m.name.toLowerCase().includes(search.toLowerCase()) ||
-    m.code.toLowerCase().includes(search.toLowerCase()) ||
-    (m.barcode ?? "").includes(search)
-  ).slice(0, 30);
+function MaterialSearchPanel({ materials, search, searchType, visible, onSelect, onClose }: MaterialSearchPanelProps) {
+  const filtered = materials.filter(m => {
+    if (!search) return false;
+    const s = search.toLowerCase();
+    if (searchType === "code") {
+        return m.code.toLowerCase().includes(s);
+    } else if (searchType === "barcode") {
+        const materialBarcode = (m.barcode ?? "").toLowerCase().includes(s);
+        const unitBarcode = m.units.some(u => (u.barcode ?? "").toLowerCase().includes(s));
+        return materialBarcode || unitBarcode;
+    } else {
+        return m.name.toLowerCase().includes(s);
+    }
+  }).slice(0, 30);
 
   if (!visible) return null;
 
@@ -101,6 +109,7 @@ export function GenericDocumentGrid({
 }: GenericDocumentGridProps) {
   const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchType, setSearchType] = useState<"name" | "code" | "barcode">("name");
   const [searchRow, setSearchRow] = useState<number | null>(null);
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 
@@ -320,7 +329,14 @@ export function GenericDocumentGrid({
                     );
                 }
 
-                if (col.type === "material") {
+                if (col.type === "material" || col.type === "material_code" || col.type === "material_barcode") {
+                  const isCodeSearch = col.type === "material_code";
+                  const isBarcodeSearch = col.type === "material_barcode";
+                  
+                  let displayValue = line.material_name || "";
+                  if (isCodeSearch) displayValue = line.material_code || "";
+                  if (isBarcodeSearch) displayValue = line.unit_barcode || "";
+
                   return (
                     <div key={col.key}
                       className={cn(
@@ -340,17 +356,26 @@ export function GenericDocumentGrid({
                           readOnly && "opacity-50"
                         )}
                         placeholder="البحث..."
-                        value={line.material_name || ""}
+                        value={displayValue}
                         autoComplete="off"
                         onFocus={() => {
                           setActiveCell({ row: rowIdx, col: editColIdx });
                           setSearchRow(rowIdx);
-                          setSearchTerm(line.material_name || "");
+                          setSearchType(isCodeSearch ? "code" : isBarcodeSearch ? "barcode" : "name");
+                          setSearchTerm(displayValue);
                         }}
                         onChange={e => {
                           setSearchTerm(e.target.value);
                           setSearchRow(rowIdx);
-                          onUpdateLine(rowIdx, { material_name: e.target.value, material_id: "" });
+                          setSearchType(isCodeSearch ? "code" : isBarcodeSearch ? "barcode" : "name");
+                          
+                          if (isCodeSearch) {
+                            onUpdateLine(rowIdx, { material_code: e.target.value, material_id: "" });
+                          } else if (isBarcodeSearch) {
+                            onUpdateLine(rowIdx, { unit_barcode: e.target.value, material_id: "" });
+                          } else {
+                            onUpdateLine(rowIdx, { material_name: e.target.value, material_id: "" });
+                          }
                         }}
                         onBlur={() => setTimeout(() => {
                           if (searchRow === rowIdx) setSearchRow(null);
@@ -422,6 +447,7 @@ export function GenericDocumentGrid({
       <MaterialSearchPanel
         materials={materials}
         search={searchTerm}
+        searchType={searchType}
         visible={showSearchPanel}
         onSelect={m => {
           if (searchRow !== null) {
