@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@shared/ui/tabs";
-import { Plus, Download, HardDrive, Package, TrendingUp, History, Calendar, RefreshCw, Search, Wallet } from "lucide-react";
-import { formatCurrency, formatDate } from '@shared/lib/format';
+import { Plus, Download, HardDrive, Package, TrendingUp, History, Calendar, Search, Wallet } from "lucide-react";
+import { formatCurrency, formatDateTime } from '@shared/lib/format';
 import { cn } from '@shared/lib/utils';
 import { assetService } from '@modules/assets/api/assetService';
 import { accountingService } from '@modules/accounting/api/accountingService';
@@ -191,7 +191,7 @@ export default function Assets() {
   ], [loadData]);
 
   const movementColumns = useMemo<Column<AssetMovement>[]>(() => [
-    { header: "التاريخ", accessor: (m) => formatDate(m.date), className: "tabular-nums text-slate-500 font-medium" },
+    { header: "التاريخ", accessor: (m) => formatDateTime(m.date), className: "tabular-nums text-slate-500 font-medium" },
     { 
       header: "النوع", 
       accessor: (m) => (

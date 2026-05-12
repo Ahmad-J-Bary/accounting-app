@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Plus, Download, Search, Warehouse, ArrowLeftRight, RefreshCw, History, Package } from "lucide-react";
-import { formatDate, formatNumber, formatCurrency } from '@shared/lib/format';
+import { Plus, Download, Search, Warehouse, ArrowLeftRight, History, Package } from "lucide-react";
+import { formatNumber, formatCurrency, formatDateTime } from '@shared/lib/format';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
 import { DataTable, Column } from '@widgets/table-shell/DataTable';
 import { useDataTable } from '@shared/hooks';
@@ -30,7 +30,7 @@ export default function Inventory() {
   const movementColumns = useMemo<Column<StockMovement>[]>(() => [
     { 
       header: "التاريخ", 
-      accessor: (m) => formatDate(m.date),
+      accessor: (m) => formatDateTime(m.date),
       className: "tabular-nums text-slate-500 font-medium" 
     },
     { 

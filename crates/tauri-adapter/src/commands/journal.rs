@@ -27,8 +27,6 @@ pub async fn list_journal_entries(
     ListJournalEntriesUseCase::new(
         state.journal_entry_repo.clone(),
         state.account_repo.clone(),
-        state.customer_repo.clone(),
-        state.supplier_repo.clone(),
     )
     .execute(from_date, to_date, journal_type, account_id, partner_id, status)
     .await
@@ -43,8 +41,6 @@ pub async fn get_journal_entry_details(
     ListJournalEntriesUseCase::new(
         state.journal_entry_repo.clone(),
         state.account_repo.clone(),
-        state.customer_repo.clone(),
-        state.supplier_repo.clone(),
     )
     .get_details(id)
     .await

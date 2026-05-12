@@ -41,3 +41,7 @@ export interface CreatePaymentRequest {
   reference?: string;
   notes?: string;
 }
+
+export interface UpdatePaymentRequest extends CreatePaymentRequest {
+  id: string;
+}

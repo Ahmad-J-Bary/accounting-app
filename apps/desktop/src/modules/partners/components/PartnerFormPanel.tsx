@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Input } from "@shared/ui/input";
 import { Label } from "@shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
-import type { AccountDto, CustomerDto, SupplierDto, PartnerDto } from "@erp/shared-types";
+import { SYSTEM_ACCOUNT_IDS, type AccountDto, type CustomerDto, type SupplierDto, type PartnerDto } from "@erp/shared-types";
 import { FormPanel } from '@widgets/form-shell/FormPanel';
 import { User, Building2 } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
@@ -57,10 +57,8 @@ export function PartnerFormPanel({
   const [currency, setCurrency] = useState(baseCurrency?.code || "USD");
 
   const parentAccount = useMemo(() => {
-    const searchTerms = isCustomer 
-      ? ["المدينون", "العملاء"] 
-      : ["الدائنون", "الموردون"];
-    return accounts.find(acc => searchTerms.some(term => acc.name_ar.includes(term)));
+    const parentId = isCustomer ? SYSTEM_ACCOUNT_IDS.CUSTOMERS : SYSTEM_ACCOUNT_IDS.SUPPLIERS;
+    return accounts.find(acc => acc.id === parentId);
   }, [accounts, isCustomer]);
 
   useEffect(() => {

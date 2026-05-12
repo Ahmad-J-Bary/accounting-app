@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@shared/ui/dialog";
 import { Button } from "@shared/ui/button";
 import { CheckCircle2, RotateCcw, Printer, FileText, Link as LinkIcon, ExternalLink } from "lucide-react";
-import { formatCurrency, formatDate } from "@shared/lib/format";
+import { formatCurrency, formatDate, formatDateTime } from "@shared/lib/format";
 import type { JournalEntryDto } from "@erp/shared-types";
 import { cn } from "@shared/lib/utils";
 
@@ -36,7 +36,7 @@ export function JournalDetailPanel({ entry, open, onOpenChange, onPost, onRevers
                   {isPosted ? "مرحل" : isReversed ? "معكوس" : "مسودة"}
                 </span>
               </DialogTitle>
-              <p className="text-slate-500 text-sm font-medium">{entry.journal_type_display} - {formatDate(entry.entry_date)}</p>
+              <p className="text-slate-500 text-sm font-medium">{entry.journal_type_display} - {formatDateTime(entry.entry_date)}</p>
             </div>
             
             <div className="flex gap-2">
@@ -62,7 +62,7 @@ export function JournalDetailPanel({ entry, open, onOpenChange, onPost, onRevers
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">تاريخ الإنشاء</label>
-                  <p className="text-slate-600 text-xs tabular-nums font-medium">{formatDate(entry.created_at)}</p>
+                  <p className="text-slate-600 text-xs tabular-nums font-medium">{formatDateTime(entry.created_at)}</p>
                 </div>
              </div>
              
@@ -89,17 +89,6 @@ export function JournalDetailPanel({ entry, open, onOpenChange, onPost, onRevers
               <tbody className="divide-y divide-slate-100">
                 {entry.lines.map((l, i) => (
                   <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-4 py-4">
-                       <div className="flex flex-col gap-0.5">
-                          <span className="font-black text-slate-900">{l.account_name || "حساب غير معروف"}</span>
-                          <span className="text-[10px] text-slate-400 font-mono">{l.account_id}</span>
-                          {l.partner_name && (
-                            <span className="text-[10px] bg-indigo-50 text-indigo-600 self-start px-1.5 py-0.5 rounded-md mt-1 font-bold">
-                              الطرف: {l.partner_name}
-                            </span>
-                          )}
-                       </div>
-                    </td>
                     <td className="px-4 py-4 text-slate-500 font-medium">{l.description}</td>
                     <td className="px-4 py-4 text-left tabular-nums">
                        {parseFloat(l.debit) > 0 ? (

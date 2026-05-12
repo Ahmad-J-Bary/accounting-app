@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Plus, Search, RefreshCw, AlertTriangle, Banknote, PackageOpen, Settings2 } from "lucide-react";
-import { formatDate } from '@shared/lib/format';
+import { Plus, Search, AlertTriangle, Banknote, PackageOpen, Settings2 } from "lucide-react";
+import { formatDateTime } from '@shared/lib/format';
 import { damagedService } from '@modules/inventory/api/inventoryService';
 import { materialService } from '@modules/inventory/api/materialService';
 import type { DamagedItem, CreateDamagedItemRequest, MaterialDto } from "@erp/shared-types";
@@ -110,7 +110,7 @@ export default function Damaged() {
       { 
         id: "damage_date",
         header: "التاريخ", 
-        accessor: (i: DamagedItem) => formatDate(i.damage_date),
+        accessor: (i: DamagedItem) => formatDateTime(i.damage_date),
         className: "tabular-nums text-slate-500 font-medium"
       },
       { 

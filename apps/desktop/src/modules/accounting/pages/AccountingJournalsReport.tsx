@@ -8,7 +8,7 @@ import { Label } from "@shared/ui/label";
 import { useDataTable } from "@shared/hooks";
 import { journalEntryService, type JournalFilters } from "@modules/accounting/api/journalEntryService";
 import type { JournalEntryDto, JournalType } from "@erp/shared-types";
-import { formatCurrency, formatDate } from "@shared/lib/format";
+import { formatCurrency, formatDate, formatDateTime } from "@shared/lib/format";
 import { cn } from "@shared/lib/utils";
 import { FileText, Calendar, Filter, ArrowUpRight, ArrowDownLeft, Printer, Download } from "lucide-react";
 import { JOURNAL_REPORT_TYPES } from "@modules/accounting/lib/journal-config";
@@ -202,9 +202,6 @@ export default function AccountingJournalsReport() {
                              </span>
                            )}
                         </td>
-                        <td className="px-6 py-4 font-black text-slate-700 text-[10px]">
-                          {l.partner_name || (lIdx === 0 ? e.lines.find(x => x.partner_name)?.partner_name : "")}
-                        </td>
                         <td className="px-6 py-4 text-left tabular-nums font-black text-blue-700 text-xs">
                           {isDebit ? formatCurrency(parseFloat(l.debit)) : ""}
                         </td>
@@ -232,7 +229,7 @@ export default function AccountingJournalsReport() {
                            </span>
                         </td>
                         <td className="px-6 py-4 font-bold text-slate-500 tabular-nums text-[11px] whitespace-nowrap">
-                          {lIdx === 0 ? formatDate(e.entry_date) : ""}
+                          {lIdx === 0 ? formatDateTime(e.entry_date) : ""}
                         </td>
                       </tr>
                     );

@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Plus, Search, RefreshCw, Scale, ArrowUpCircle, ArrowDownCircle, Settings2 } from "lucide-react";
-import { formatDate } from '@shared/lib/format';
+import { Plus, Search, Scale, ArrowUpCircle, ArrowDownCircle, Settings2 } from "lucide-react";
+import { formatDateTime } from '@shared/lib/format';
 import { adjustmentService } from '@modules/inventory/api/inventoryService';
 import { materialService } from '@modules/inventory/api/materialService';
 import type { StockAdjustment, CreateStockAdjustmentRequest, MaterialDto } from "@erp/shared-types";
@@ -86,7 +86,7 @@ export default function Adjustments() {
     { 
       id: "adjustment_date",
       header: "التاريخ", 
-      accessor: (a: StockAdjustment) => formatDate(a.adjustment_date),
+      accessor: (a: StockAdjustment) => formatDateTime(a.adjustment_date),
       className: "tabular-nums text-slate-500 font-medium"
     },
     { 

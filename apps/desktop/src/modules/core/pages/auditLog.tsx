@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { PageHeader } from '@widgets/page-header/PageHeader';
 import { Card } from "@shared/ui/card";
 import { Input } from "@shared/ui/input";
-import { Search, RefreshCw, Activity, Shield } from "lucide-react";
-import { formatDate } from '@shared/lib/format';
+import { Search, Activity, Shield } from "lucide-react";
+import { formatDateTime } from '@shared/lib/format';
 import { auditService } from '@modules/core/api/auditService';
 import type { AuditLog } from "@erp/shared-types";
 import { Button } from "@shared/ui/button";
@@ -91,7 +91,7 @@ export default function AuditLog() {
               <tbody className="font-mono text-xs">
                 {filtered.map(l => (
                   <tr key={l.id} className="border-b border-border last:border-0 hover:bg-slate-50">
-                    <td className="px-4 py-3">{formatDate(l.created_at)}</td>
+                    <td className="px-4 py-3">{formatDateTime(l.created_at)}</td>
                     <td className="px-4 py-3">{l.username}</td>
                     <td className="px-4 py-3 text-blue-600 font-bold">{l.action}</td>
                     <td className="px-4 py-3">{l.entity_type}</td>

@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@shared/ui/label";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import type { AccountDto, AccountLedgerDto } from "@erp/shared-types";
-import { formatCurrency, formatDate } from "@shared/lib/format";
+import { formatCurrency, formatDate, formatDateTime } from "@shared/lib/format";
 import { cn } from "@shared/lib/utils";
 import { FileText, Calendar, Filter, ArrowUpRight, ArrowDownLeft, Printer, Download, BookOpen, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -207,7 +207,7 @@ export default function AccountMovementsReport() {
                 ) : (
                   filteredLines.map((l, index) => (
                     <tr key={index} className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="px-6 py-5 font-bold text-slate-600 tabular-nums text-xs">{formatDate(l.date)}</td>
+                      <td className="px-6 py-5 font-bold text-slate-600 tabular-nums text-xs">{formatDateTime(l.date)}</td>
                       <td className="px-6 py-5 font-black text-slate-900 text-xs">{l.entry_number}</td>
                       <td className="px-6 py-5">
                          <span className="font-bold text-slate-700 text-xs">{l.description}</span>

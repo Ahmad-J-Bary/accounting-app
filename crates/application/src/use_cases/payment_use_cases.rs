@@ -147,6 +147,32 @@ impl CreatePaymentUseCase {
                     journal_lines.push(JournalLine::new(cash_account.id, zero_ma, amount_ma, format!("دفعة للمورد: {}", supplier.name)));
                 }
             },
+            PaymentType::ExpenseVoucher => {
+                if let Some(debit_acc) = &req.debit_account_id {
+                    let expense_account_id = debit_acc.parse::<AccountId>()
+                        .map_err(|_| AppError::Invalid("معرف حساب المصروف غير صالح".into()))?;
+                    
+                    let expense_account = self.account_repo.find_by_id(&expense_account_id).await?
+                        .ok_or_else(|| AppError::NotFound("حساب المصروف غير موجود".into()))?;
+
+                    // Debit Expense, Credit Cash
+                    journal_lines.push(JournalLine::new(expense_account.id, amount_ma.clone(), zero_ma.clone(), format!("مصروف: {}", expense_account.name_ar)));
+                    journal_lines.push(JournalLine::new(cash_account.id, zero_ma, amount_ma, format!("سداد مصروف: {}", expense_account.name_ar)));
+                }
+            },
+            PaymentType::DrawingsVoucher => {
+                if let Some(debit_acc) = &req.debit_account_id {
+                    let drawing_account_id = debit_acc.parse::<AccountId>()
+                        .map_err(|_| AppError::Invalid("معرف حساب المسحوبات غير صالح".into()))?;
+                    
+                    let drawing_account = self.account_repo.find_by_id(&drawing_account_id).await?
+                        .ok_or_else(|| AppError::NotFound("حساب المسحوبات غير موجود".into()))?;
+
+                    // Debit Drawings, Credit Cash
+                    journal_lines.push(JournalLine::new(drawing_account.id, amount_ma.clone(), zero_ma.clone(), format!("مسحوبات: {}", drawing_account.name_ar)));
+                    journal_lines.push(JournalLine::new(cash_account.id, zero_ma, amount_ma, format!("سداد مسحوبات: {}", drawing_account.name_ar)));
+                }
+            },
             _ => {}
         }
 

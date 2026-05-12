@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { DataTable, Column } from '@widgets/table-shell/DataTable';
-import { formatDate } from '@shared/lib/format';
+import { formatDate, formatDateTime } from '@shared/lib/format';
 import type { AccountLedgerLineDto } from "@erp/shared-types";
 
 interface AccountMovementTableProps {
@@ -119,7 +119,7 @@ export function AccountMovementTable({ lines, loading, visibleColumns }: Account
       { 
         id: "date",
         header: "التاريخ", 
-        accessor: (l) => formatDate(l.date),
+        accessor: (l) => formatDateTime(l.date),
         className: "text-slate-500 tabular-nums text-xs text-center" 
       }
     ];

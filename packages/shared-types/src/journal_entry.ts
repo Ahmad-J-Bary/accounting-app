@@ -17,7 +17,6 @@ export interface JournalLineDto {
   account_id: string;
   account_name?: string;
   partner_id?: string;
-  partner_name?: string;
   currency: string;
   fx_rate: string;
   debit: string;

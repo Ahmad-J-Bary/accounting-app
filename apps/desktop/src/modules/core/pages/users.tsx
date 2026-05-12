@@ -4,8 +4,8 @@ import { Button } from "@shared/ui/button";
 import { Card } from "@shared/ui/card";
 import { Input } from "@shared/ui/input";
 import { StatusBadge } from '@widgets/stats/StatusBadge';
-import { Plus, Search, RefreshCw, Users as UsersIcon, ShieldAlert, ShieldCheck, Shield } from "lucide-react";
-import { formatDate } from '@shared/lib/format';
+import { Plus, Search, Users as UsersIcon, ShieldCheck, Shield } from "lucide-react";
+import { formatDateTime } from '@shared/lib/format';
 import { userService } from '@modules/core/api/userService';
 import type { User, Role, CreateUserRequest, CreateRoleRequest } from "@erp/shared-types";
 import { toast } from "sonner";
@@ -128,7 +128,7 @@ export default function Users() {
     },
     { 
       header: "آخر ظهور", 
-      accessor: (u) => u.last_login ? formatDate(u.last_login) : "—",
+      accessor: (u) => u.last_login ? formatDateTime(u.last_login) : "—",
       className: "text-xs text-slate-400 tabular-nums"
     },
     { 

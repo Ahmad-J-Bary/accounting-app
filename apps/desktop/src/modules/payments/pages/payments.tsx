@@ -4,13 +4,13 @@ import { useTabs } from "@app/providers/TabContext";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Plus, Search, RefreshCw, ArrowDownCircle, ArrowUpCircle, Wallet, ReceiptText, Settings2 } from "lucide-react";
-import { formatDate } from '@shared/lib/format';
+import { formatDate, formatDateTime } from '@shared/lib/format';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { paymentService } from '@modules/payments/api/paymentService';
 import { customerService } from '@modules/partners/api/customerService';
 import { supplierService } from '@modules/partners/api/supplierService';
 import { accountingService } from '@modules/accounting/api/accountingService';
-import type { Payment, CreatePaymentRequest, CustomerDto, SupplierDto, AccountDto } from "@erp/shared-types";
+import type { Payment, CreatePaymentRequest, UpdatePaymentRequest, PaymentType, CustomerDto, SupplierDto, AccountDto } from "@erp/shared-types";
 import { toast } from "sonner";
 import { cn } from "@shared/lib/utils";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
@@ -20,7 +20,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { DataTable, Column } from '@widgets/table-shell/DataTable';
 import { TableActions } from '@widgets/table-shell/TableActions';
 import { useDataTable, useColumnPreferences } from '@shared/hooks';
-import { PaymentForm } from '@modules/payments/components/PaymentForm';
+import { PaymentForm, type PaymentFormPayload } from '@modules/payments/components/PaymentForm';
+import { PaymentDetailPanel } from '@modules/payments/components/PaymentDetailPanel';
 import { PAYMENT_TYPE_LABELS } from '@modules/payments/lib/constants';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
@@ -50,6 +51,8 @@ export default function Payments() {
 
   const [typeFilter, setTypeFilter] = useState("all");
   const [showDialog, setShowDialog] = useState(!!initialType);
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>({ key: "payment_date", direction: "desc" });
 
   const initialValues = useMemo(() => ({
     payment_type: (initialType as CreatePaymentRequest['payment_type']) || "Receipt",
@@ -79,37 +82,92 @@ export default function Payments() {
 
   useEffect(() => { loadExtras(); }, [loadExtras]);
 
+  const handleSort = useCallback((key: string) => {
+    setSortConfig(current => {
+      if (current?.key === key) {
+        return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  }, []);
+
+  const renderSortableHeader = useCallback((label: string, sortKey: string) => {
+    const isActive = sortConfig?.key === sortKey;
+    return (
+      <button 
+        onClick={() => handleSort(sortKey)}
+        className="flex items-center gap-1.5 hover:text-blue-600 transition-colors focus:outline-none"
+      >
+        {label}
+        {isActive ? (
+          <span className="text-[10px] text-blue-600 font-black">
+            {sortConfig.direction === "asc" ? "▲" : "▼"}
+          </span>
+        ) : (
+          <span className="text-[10px] text-slate-300 opacity-50 hover:opacity-100">
+            ↕
+          </span>
+        )}
+      </button>
+    );
+  }, [sortConfig, handleSort]);
+
+  const sortedFiltered = useMemo(() => {
+    if (!sortConfig) return payments;
+    
+    return [...payments].sort((a, b) => {
+      let aVal: string | number = a[sortConfig.key as keyof Payment] as unknown as string | number;
+      let bVal: string | number = b[sortConfig.key as keyof Payment] as unknown as string | number;
+
+      if (sortConfig.key === "amount_usd" || sortConfig.key === "amount_syp") {
+        const amtA = parseFloat(a.amount);
+        const rateA = parseFloat(a.exchange_rate);
+        const amtB = parseFloat(b.amount);
+        const rateB = parseFloat(b.exchange_rate);
+
+        if (sortConfig.key === "amount_usd") {
+            aVal = a.currency_code === "USD" ? amtA : (rateA ? amtA / rateA : amtA);
+            bVal = b.currency_code === "USD" ? amtB : (rateB ? amtB / rateB : amtB);
+        } else {
+            aVal = a.currency_code === "SYP" ? amtA : amtA * rateA;
+            bVal = b.currency_code === "SYP" ? amtB : amtB * rateB;
+        }
+      } else if (sortConfig.key === "journal_entry_number") {
+          aVal = parseInt(a.journal_entry_number || "0", 10);
+          bVal = parseInt(b.journal_entry_number || "0", 10);
+      } else if (sortConfig.key === "payment_date") {
+          aVal = new Date(a.payment_date).getTime();
+          bVal = new Date(b.payment_date).getTime();
+      }
+
+      if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [payments, sortConfig]);
+
   const filtered = useMemo(() => {
-    return payments.filter(p => {
+    return sortedFiltered.filter(p => {
       return typeFilter === "all" || p.payment_type === typeFilter;
     });
-  }, [payments, typeFilter]);
+  }, [sortedFiltered, typeFilter]);
 
   const availableColumns = useMemo(() => {
-    const cols = [
-      { id: "payment_date", label: "التاريخ" },
-      { id: "payment_type", label: "النوع" },
-      { id: "party_name", label: "الطرف الثاني" },
-      { id: "voucher_number", label: "رقم السند" },
+    return [
       { id: "journal_entry_number", label: "رقم القيد" },
-      { id: "reference", label: "المرجع" },
+      { id: "payment_type", label: "النوع" },
+      { id: "amount_usd", label: "المبلغ ($)" },
+      { id: "amount_syp", label: "المبلغ (ل.س)" },
+      { id: "notes", label: "البيان" },
+      { id: "credit_account", label: "الحساب الدائن / المصدر" },
+      { id: "debit_account", label: "الحساب المدين / الوجهة" },
+      { id: "payment_date", label: "التاريخ" },
     ];
-
-    currencies.forEach(curr => {
-      const s = curr.symbol || curr.code;
-      cols.push({ id: `amount_${curr.code}`, label: `المبلغ (${s})` });
-    });
-
-    return cols;
-  }, [currencies]);
+  }, []);
 
   const defaultVisibleColumns = useMemo(() => {
-    const base = ["payment_date", "payment_type", "party_name", "voucher_number", "journal_entry_number", "reference"];
-    if (baseCurrency) {
-      base.push(`amount_${baseCurrency.code}`);
-    }
-    return base;
-  }, [baseCurrency]);
+    return ["journal_entry_number", "payment_type", "amount_usd", "amount_syp", "notes", "credit_account", "debit_account", "payment_date"];
+  }, []);
 
   const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences("payments", defaultVisibleColumns);
 
@@ -148,28 +206,49 @@ export default function Payments() {
     }
   };
 
-  const handleDelete = useCallback(async (id: string) => {
-    if (!confirm("هل أنت متأكد من حذف هذه الحركة؟")) return;
+  const handleUpdate = async (payload: PaymentFormPayload) => {
+    setSaving(true);
     try {
-      await paymentService.deletePayment(id);
-      toast.success("تم حذف الحركة بنجاح");
+      if (payload.id) {
+        await paymentService.updatePayment(payload as UpdatePaymentRequest);
+        toast.success("تم التعديل بنجاح");
+      } else {
+        await handleCreate(payload);
+        return;
+      }
+      setShowDialog(false);
+      setSelectedPayment(null);
       refresh(true);
     } catch (e) {
-      toast.error("فشل حذف الحركة: " + e);
+      toast.error("فشل التعديل: " + e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = useCallback(async (id: string) => {
+    if (!confirm("هل أنت متأكد من حذف هذه الحركة؟ سيتم حذف القيد اليومي المرتبط بها نهائياً.")) return;
+    try {
+      await paymentService.deletePayment(id);
+      toast.success("تم الحذف بنجاح");
+      setSelectedPayment(null);
+      refresh(true);
+    } catch (e) {
+      toast.error("فشل الحذف: " + e);
     }
   }, [refresh]);
 
   const columns = useMemo<Column<Payment>[]>(() => {
-    const cols: Column<Payment>[] = [
-      { 
-        id: "payment_date",
-        header: "التاريخ", 
-        accessor: (p) => formatDate(p.payment_date),
-        className: "tabular-nums text-slate-500 font-medium"
+    return [
+      {
+        id: "journal_entry_number",
+        header: renderSortableHeader("رقم القيد", "journal_entry_number"),
+        accessor: (p) => p.journal_entry_number ?? "—",
+        className: "font-black text-indigo-700 tabular-nums"
       },
       { 
         id: "payment_type",
-        header: "النوع", 
+        header: renderSortableHeader("النوع", "payment_type"),
         accessor: (p) => {
           const isIn = ["Receipt", "CashIn"].includes(p.payment_type);
           return (
@@ -184,75 +263,78 @@ export default function Payments() {
         },
         align: "center"
       },
-      { 
-        id: "party_name",
-        header: "الطرف الثاني", 
-        accessor: (p) => p.customer_name ?? p.supplier_name ?? "—",
-        className: "font-black text-slate-900"
-      },
-      { 
-        id: "reference",
-        header: "المرجع / ملاحظات", 
-        accessor: (p) => p.reference ?? "—",
-        className: "text-slate-500 text-xs font-medium italic"
-      },
       {
-        id: "voucher_number",
-        header: "رقم السند",
-        accessor: (p) => p.voucher_number ?? "—",
-        className: "font-black text-slate-700 tabular-nums"
-      },
-      {
-        id: "journal_entry_number",
-        header: "رقم القيد",
-        accessor: (p) => p.journal_entry_number ?? "—",
-        className: "font-black text-indigo-700 tabular-nums"
-      },
-    ];
-
-    // Dynamic Multi-Currency Amount columns
-    currencies.forEach(curr => {
-      cols.push({
-        id: `amount_${curr.code}`,
-        header: `المبلغ (${curr.symbol || curr.code})`,
+        id: "amount_usd",
+        header: renderSortableHeader("المبلغ ($)", "amount_usd"),
         accessor: (p) => {
+          const amt = parseFloat(p.amount);
+          const rate = parseFloat(p.exchange_rate);
+          const val = p.currency_code === "USD" ? amt : amt / rate;
           const isIn = ["Receipt", "CashIn"].includes(p.payment_type);
-          // Assuming p.amount is in base currency or has a currency context. 
-          // If p.amount is already in a specific currency, we should handle that.
-          // For now, following the pattern: show base amount converted to this currency.
-          const val = parseFloat(p.amount);
           return (
-            <span className={cn(
-              "tabular-nums font-black text-sm",
-              isIn ? "text-emerald-600" : "text-rose-600"
-            )}>
-              {isIn ? "+" : "-"}{formatAmount(val, { currencyCode: curr.code })}
+            <span className={cn("tabular-nums font-black text-sm", isIn ? "text-emerald-600" : "text-rose-600")}>
+              {isIn ? "+" : "-"}{formatAmount(val, { currencyCode: "USD" })}
             </span>
           );
         },
         align: "left"
-      });
-    });
-
-    cols.push({
-      id: "actions",
-      header: "إجراءات",
-      accessor: (p) => (
-        <TableActions 
-          onView={() => toast.info("عرض تفاصيل الحركة قيد التطوير")}
-          onDelete={() => handleDelete(p.id)}
-        />
-      ),
-      align: "left",
-      className: "w-16"
-    });
-
-    return cols;
-  }, [handleDelete, formatAmount, currencies]);
+      },
+      {
+        id: "amount_syp",
+        header: renderSortableHeader("المبلغ (ل.س)", "amount_syp"),
+        accessor: (p) => {
+          const amt = parseFloat(p.amount);
+          const rate = parseFloat(p.exchange_rate);
+          const val = p.currency_code === "SYP" ? amt : amt * rate;
+          const isIn = ["Receipt", "CashIn"].includes(p.payment_type);
+          return (
+            <span className={cn("tabular-nums font-black text-sm", isIn ? "text-emerald-600" : "text-rose-600")}>
+              {isIn ? "+" : "-"}{formatAmount(val, { currencyCode: "SYP" })}
+            </span>
+          );
+        },
+        align: "left"
+      },
+      { 
+        id: "notes",
+        header: "البيان", 
+        accessor: (p) => p.notes || p.reference || "—",
+        className: "text-slate-600 text-sm max-w-[200px] truncate"
+      },
+      { 
+        id: "credit_account",
+        header: "الحساب الدائن / المصدر", 
+        accessor: (p) => {
+          if (p.credit_account_id) {
+            return accounts.find(a => a.id === p.credit_account_id)?.name_ar || "—";
+          }
+          return "—";
+        },
+        className: "font-medium text-slate-800 text-sm"
+      },
+      { 
+        id: "debit_account",
+        header: "الحساب المدين / الوجهة", 
+        accessor: (p) => {
+          if (p.debit_account_id) {
+            return accounts.find(a => a.id === p.debit_account_id)?.name_ar || "—";
+          }
+          return "—";
+        },
+        className: "font-medium text-slate-800 text-sm"
+      },
+      { 
+        id: "payment_date",
+        header: renderSortableHeader("التاريخ", "payment_date"),
+        accessor: (p) => formatDateTime(p.payment_date),
+        className: "tabular-nums text-slate-500 font-medium"
+      },
+    ];
+  }, [formatAmount, accounts, renderSortableHeader]);
 
   const filteredColumns = useMemo(() => {
     return columns.filter(col => {
-      if (!col.id || col.id === "actions") return true;
+      if (!col.id) return true;
       return visibleColumns.includes(col.id);
     });
   }, [columns, visibleColumns]);
@@ -271,7 +353,7 @@ export default function Payments() {
       title="المدفوعات والمقبوضات"
       toolbar={
         <div className="flex gap-2">
-          <Button size="sm" onClick={() => setShowDialog(true)} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
+          <Button size="sm" onClick={() => { setSelectedPayment(null); setShowDialog(true); }} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
             <Plus className="w-4 h-4 ml-2" />سند جديد
           </Button>
         </div>
@@ -341,19 +423,47 @@ export default function Payments() {
           columns={filteredColumns}
           loading={isLoading}
           emptyMessage={search || typeFilter !== "all" ? "لا توجد حركات تطابق الفلتر" : "لا توجد حركات نقدية مسجّلة"}
+          onRowClick={(row) => setSelectedPayment(row)}
         />
       }
-    >
-      <PaymentForm
-        open={showDialog}
-        onOpenChange={setShowDialog}
-        customers={customers}
-        suppliers={suppliers}
-        accounts={accounts}
-        onSave={handleCreate}
-        saving={saving}
-        initialValues={initialValues}
-      />
-    </OperationalTableTemplate>
+      sidePanel={
+        showDialog ? (
+          <PaymentForm
+            customers={customers}
+            suppliers={suppliers}
+            accounts={accounts}
+            onSave={handleUpdate}
+            onClose={() => setShowDialog(false)}
+            saving={saving}
+            initialValues={selectedPayment ? {
+              id: selectedPayment.id,
+              payment_type: selectedPayment.payment_type as PaymentType,
+              amount: parseFloat(selectedPayment.amount),
+              currency_code: selectedPayment.currency_code,
+              exchange_rate: parseFloat(selectedPayment.exchange_rate),
+              payment_date: selectedPayment.payment_date,
+              debit_account_id: selectedPayment.debit_account_id,
+              credit_account_id: selectedPayment.credit_account_id,
+              customer_id: selectedPayment.customer_id,
+              supplier_id: selectedPayment.supplier_id,
+              reference: selectedPayment.reference,
+              notes: selectedPayment.notes,
+              voucher_number: selectedPayment.voucher_number
+            } : undefined}
+          />
+        ) : selectedPayment ? (
+          <PaymentDetailPanel
+            payment={selectedPayment}
+            accounts={accounts}
+            customers={customers}
+            suppliers={suppliers}
+            onClose={() => setSelectedPayment(null)}
+            onEdit={() => setShowDialog(true)}
+            onDelete={handleDelete}
+          />
+        ) : null
+      }
+      isPanelOpen={showDialog || !!selectedPayment}
+    />
   );
 }

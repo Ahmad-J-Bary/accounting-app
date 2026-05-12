@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { DataTable, Column } from '@widgets/table-shell/DataTable';
-import { formatDate } from '@shared/lib/format';
+import { formatDate, formatDateTime } from '@shared/lib/format';
 import type { JournalEntryDto, JournalLineDto } from "@erp/shared-types";
 import type { JournalFilters } from "../api/journalEntryService";
 
@@ -65,11 +65,8 @@ export function JournalTable({ entries, loading, visibleColumns, filters }: Jour
         ? creditLines[0].account_name 
         : (creditLines.length > 1 ? "حسابات متعددة" : "-");
 
-      const partnerName = e.lines.find(l => l.partner_name)?.partner_name || "-";
-
       return {
         ...e,
-        partner_name: partnerName,
         total_debit_usd: focalDebitUSD,
         total_debit_syp: focalDebitSYP,
         total_credit_usd: focalCreditUSD,
@@ -96,12 +93,6 @@ export function JournalTable({ entries, loading, visibleColumns, filters }: Jour
             {e.journal_type_display}
           </span>
         ),
-      },
-      {
-        id: "partner_name",
-        header: "الطرف",
-        accessor: (e) => e.partner_name || "-",
-        className: "font-bold text-slate-700 text-[10px]"
       },
       {
         id: "total_debit_usd",
@@ -152,7 +143,7 @@ export function JournalTable({ entries, loading, visibleColumns, filters }: Jour
       { 
         id: "entry_date",
         header: "التاريخ", 
-        accessor: (e) => formatDate(e.entry_date),
+        accessor: (e) => formatDateTime(e.entry_date),
         className: "text-slate-500 tabular-nums text-[10px]" 
       }
     ];

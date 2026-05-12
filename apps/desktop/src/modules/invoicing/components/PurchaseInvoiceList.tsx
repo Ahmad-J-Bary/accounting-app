@@ -2,8 +2,8 @@ import { useMemo } from "react";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { RefreshCw, Plus, Search, Eye, Send, Printer, MoreHorizontal, ShoppingCart, Banknote, History, Settings2 } from "lucide-react";
-import { formatDate } from "@shared/lib/format";
+import { Plus, Search, Eye, Send, Printer, MoreHorizontal, ShoppingCart, Banknote, History, Settings2 } from "lucide-react";
+import { formatDateTime } from "@shared/lib/format";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@shared/ui/dropdown-menu";
 import { InvoiceDto } from "@erp/shared-types";
 import { DataTable, Column } from "@widgets/table-shell/DataTable";
@@ -86,7 +86,7 @@ export function PurchaseInvoiceList({
       { 
         id: "issued_at",
         header: "التاريخ", 
-        accessor: (inv) => formatDate(inv.issued_at),
+        accessor: (inv) => formatDateTime(inv.issued_at),
         className: "text-slate-500 text-xs font-medium tabular-nums"
       },
       { 

@@ -12,7 +12,7 @@ import {
 } from "@shared/ui/dropdown-menu";
 
 import { accountingService } from '@modules/accounting/api/accountingService';
-import type { AccountDto, SaveAccountCommand } from "@erp/shared-types";
+import { SYSTEM_ACCOUNT_IDS, type AccountDto, type SaveAccountCommand } from "@erp/shared-types";
 
 import { useColumnPreferences } from '@shared/hooks';
 import { useTabs } from "@app/providers/TabContext";
@@ -27,7 +27,7 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { exportToCSV } from "@shared/lib/export";
 
 // The "مصاريف أخرى" parent account ID in the chart of accounts
-const OTHER_EXPENSES_PARENT_ID = "00000000-0000-0000-0000-000000000043";
+const OTHER_EXPENSES_PARENT_ID = SYSTEM_ACCOUNT_IDS.OTHER_EXPENSES;
 
 // Internal payload type that can carry an optional id for updates
 type ExpenseSavePayload = SaveAccountCommand & { _id?: string };

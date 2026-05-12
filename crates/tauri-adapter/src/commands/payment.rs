@@ -41,8 +41,25 @@ pub async fn delete_payment(
     id: String,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    DeletePaymentUseCase::new(state.payment_repo.clone())
+    DeletePaymentUseCase::new(state.payment_repo.clone(), state.journal_entry_repo.clone())
         .execute(id)
         .await
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn update_payment(
+    request: application::dto::payment_dto::UpdatePaymentRequest,
+    state: State<'_, AppState>,
+) -> Result<PaymentDto, String> {
+    application::use_cases::payment::UpdatePaymentUseCase::new(
+        state.payment_repo.clone(),
+        state.customer_repo.clone(),
+        state.supplier_repo.clone(),
+        state.journal_entry_repo.clone(),
+        state.account_repo.clone(),
+    )
+    .execute(request)
+    .await
+    .map_err(|e| e.to_string())
 }

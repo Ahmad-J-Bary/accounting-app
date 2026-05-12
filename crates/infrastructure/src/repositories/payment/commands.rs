@@ -6,7 +6,22 @@ use domain::shared::ids::PaymentId;
 pub async fn save(pool: &SqlitePool, payment: &Payment) -> Result<(), AppError> {
     sqlx::query(
         "INSERT INTO payments (id, voucher_number, payment_type, amount, currency_code, exchange_rate, payment_date, debit_account_id, credit_account_id, journal_entry_number, customer_id, supplier_id, reference, notes, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+            voucher_number = excluded.voucher_number,
+            payment_type = excluded.payment_type,
+            amount = excluded.amount,
+            currency_code = excluded.currency_code,
+            exchange_rate = excluded.exchange_rate,
+            payment_date = excluded.payment_date,
+            debit_account_id = excluded.debit_account_id,
+            credit_account_id = excluded.credit_account_id,
+            journal_entry_number = excluded.journal_entry_number,
+            customer_id = excluded.customer_id,
+            supplier_id = excluded.supplier_id,
+            reference = excluded.reference,
+            notes = excluded.notes,
+            updated_at = excluded.updated_at"
     )
     .bind(payment.id.to_string())
     .bind(payment.voucher_number.as_str())

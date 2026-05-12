@@ -36,3 +36,20 @@ pub struct CreatePaymentRequest {
     pub reference: Option<String>,
     pub notes: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdatePaymentRequest {
+    pub id: String,
+    pub voucher_number: Option<String>,
+    pub payment_type: String,
+    pub amount: f64,
+    pub currency_code: Option<String>,
+    pub exchange_rate: Option<f64>,
+    pub payment_date: String,
+    pub debit_account_id: Option<String>,
+    pub credit_account_id: Option<String>,
+    pub customer_id: Option<String>,
+    pub supplier_id: Option<String>,
+    pub reference: Option<String>,
+    pub notes: Option<String>,
+}

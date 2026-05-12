@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Plus, Search, RefreshCw, Factory, CheckCircle, Clock, Banknote, History } from "lucide-react";
-import { formatCurrency, formatDate } from '@shared/lib/format';
+import { Plus, Search, Factory, CheckCircle, Clock, Banknote } from "lucide-react";
+import { formatCurrency, formatDateTime } from '@shared/lib/format';
 import { productionService } from '@modules/inventory/api/inventoryService';
 import type { ProductionOrder } from "@erp/shared-types";
 import { cn } from "@shared/lib/utils";
@@ -42,7 +42,7 @@ export default function Production() {
     },
     { 
       header: "التاريخ", 
-      accessor: (o) => formatDate(o.production_date),
+      accessor: (o) => formatDateTime(o.production_date),
       className: "tabular-nums text-slate-500 font-medium"
     },
     { 

@@ -52,6 +52,7 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::supplier::delete_supplier,
             // Payments
             commands::payment::create_payment,
+            commands::payment::update_payment,
             commands::payment::list_payments,
             commands::payment::delete_payment,
             // Damaged Items
