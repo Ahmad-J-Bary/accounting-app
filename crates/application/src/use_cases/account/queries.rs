@@ -151,7 +151,7 @@ impl AccountQueries {
                     date: entry.entry_date,
                     journal_id: entry.id,
                     entry_number: entry.entry_number.clone(),
-                    journal_type: entry.journal_type.clone(),
+                    journal_type: entry.journal_type,
                     source_id: entry.source_id.clone(),
                     description: line.description.clone(),
                     opposite_account_name: opposite_account_name.clone(),

@@ -58,6 +58,7 @@ pub async fn delete_partner(
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn update_partner(
     state: State<'_, AppState>,
     id: String,

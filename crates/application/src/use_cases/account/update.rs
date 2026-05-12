@@ -183,8 +183,7 @@ impl UpdateAccountUseCase {
             if let Some(child) = account_map.get(&child_id) {
                 let old_child_code = &child.code;
                 
-                if old_child_code.starts_with(old_parent_code) {
-                    let suffix = &old_child_code[old_parent_code.len()..];
+                if let Some(suffix) = old_child_code.strip_prefix(old_parent_code) {
                     let new_child_code = format!("{}{}", new_parent_code, suffix);
                     
                     let mut updated_child = child.clone();

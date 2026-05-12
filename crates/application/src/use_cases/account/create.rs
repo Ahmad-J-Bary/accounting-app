@@ -104,7 +104,7 @@ impl CreateAccountUseCase {
         if is_receivable {
             if let Some(ref customer_repo) = self.customer_repo {
                 // Extract customer number: suffix of the code
-                let parent_code = self.account_repo.find_by_id(&cmd.parent_id.as_ref().unwrap()).await.ok().flatten().map(|p| p.code).unwrap_or_default();
+                let parent_code = self.account_repo.find_by_id(cmd.parent_id.as_ref().unwrap()).await.ok().flatten().map(|p| p.code).unwrap_or_default();
                 let customer_num = if account.code.starts_with(&parent_code) { &account.code[parent_code.len()..] } else { &account.code };
                 
                 let customer_id = CustomerId::new();
@@ -137,7 +137,7 @@ impl CreateAccountUseCase {
         if is_payable {
             if let Some(ref supplier_repo) = self.supplier_repo {
                 // Extract supplier number: suffix of the code
-                let parent_code = self.account_repo.find_by_id(&cmd.parent_id.as_ref().unwrap()).await.ok().flatten().map(|p| p.code).unwrap_or_default();
+                let parent_code = self.account_repo.find_by_id(cmd.parent_id.as_ref().unwrap()).await.ok().flatten().map(|p| p.code).unwrap_or_default();
                 let supplier_num = if account.code.starts_with(&parent_code) { &account.code[parent_code.len()..] } else { &account.code };
                 
                 let supplier_id = SupplierId::new();

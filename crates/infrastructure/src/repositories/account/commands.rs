@@ -50,8 +50,8 @@ pub async fn save(pool: &SqlitePool, account: &Account) -> Result<(), AppError> 
     .bind(account.is_final)
     .bind(account.linked_customer_id.as_ref().map(|id| id.0.to_string()))
     .bind(account.linked_supplier_id.as_ref().map(|id| id.0.to_string()))
-    .bind(&account.created_at)
-    .bind(&account.updated_at)
+    .bind(account.created_at)
+    .bind(account.updated_at)
     .execute(pool)
     .await
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;

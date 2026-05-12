@@ -218,6 +218,7 @@ impl JournalEntry {
     }
 
     /// Helper for creating purchase journal entries
+    #[allow(clippy::too_many_arguments)]
     pub fn create_purchase_entry(
         entry_number: String,
         description: String,
@@ -253,6 +254,7 @@ impl JournalEntry {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn create_purchase_costs_entry(
         entry_number: String,
         description: String,

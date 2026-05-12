@@ -156,7 +156,7 @@ impl PurchaseInvoiceRepository for SqlitePurchaseInvoiceRepository {
                 amount_paid: Decimal::from_str(&row.amount_paid).unwrap_or(Decimal::ZERO),
                 status,
                 invoice_date: DateTime::parse_from_rfc3339(&row.invoice_date).map(|d| d.with_timezone(&chrono::Utc)).unwrap_or_else(|_| chrono::Utc::now()),
-                due_date: row.due_date.as_ref().map(|d| DateTime::parse_from_rfc3339(d).map(|dt| dt.with_timezone(&chrono::Utc)).ok()).flatten(),
+                due_date: row.due_date.as_ref().and_then(|d| DateTime::parse_from_rfc3339(d).map(|dt| dt.with_timezone(&chrono::Utc)).ok()),
                 currency_code: row.currency_code,
                 exchange_rate: Decimal::from_str(&row.exchange_rate).unwrap_or(Decimal::ONE),
                 notes: row.notes,

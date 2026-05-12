@@ -37,6 +37,7 @@ pub struct Payment {
 }
 
 impl Payment {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         voucher_number: String,
         payment_type: PaymentType,

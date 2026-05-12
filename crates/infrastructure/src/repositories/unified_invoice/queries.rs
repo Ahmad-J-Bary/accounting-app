@@ -88,7 +88,7 @@ pub async fn get_lines(pool: &SqlitePool, invoice_id: &str, currency_code: &str,
             MonetaryAmount::new(Money::from_amount_and_code(amt, currency_code), fx_rate)
         };
         
-        let to_opt_monetary = |s: Option<String>| s.map(|v| to_monetary(v));
+        let to_opt_monetary = |s: Option<String>| s.map(to_monetary);
         
         let parse_money = |s: Option<String>| s.and_then(|v| Decimal::from_str(&v).ok().map(|amt| Money::from_amount_and_code(amt, currency_code)));
         

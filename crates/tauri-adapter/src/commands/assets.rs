@@ -8,6 +8,7 @@ use std::str::FromStr;
 use uuid::Uuid;
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn create_fixed_asset(
     code: String,
     name: String,
@@ -68,6 +69,7 @@ pub async fn list_fixed_assets(
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn create_consumable(
     code: String,
     name: String,
