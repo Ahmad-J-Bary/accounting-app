@@ -165,7 +165,7 @@ impl SqliteInvoiceRepository {
                     Decimal::from_str(&price_str).unwrap_or(Decimal::ZERO),
                     domain::shared::currency::Currency::syp()
                 ),
-                None, None, None, None, None, None, None, None, None
+                None, None, None, None, None, None, None, None, None, None, None
             ));
         }
         Ok(lines)

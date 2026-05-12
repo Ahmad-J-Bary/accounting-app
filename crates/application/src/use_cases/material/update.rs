@@ -23,16 +23,46 @@ impl UpdateMaterialUseCase {
             .ok_or_else(|| AppError::NotFound("المادة غير موجودة".into()))?;
         
         material.name = req.name;
+        material.name_en = req.name_en;
         material.barcode = req.barcode;
         material.code = req.code;
         material.minimum_stock = req.minimum_stock.parse().map_err(|_| AppError::Invalid("حد الطلب غير صالح".into()))?;
-        
+        material.notes = req.notes;
+        material.image_path = req.image_path;
+        material.default_purchase_unit_id = req.default_purchase_unit_id.and_then(|id| id.parse().ok().map(domain::shared::ids::MaterialUnitId));
+        material.default_sale_unit_id = req.default_sale_unit_id.and_then(|id| id.parse().ok().map(domain::shared::ids::MaterialUnitId));
+
         let mut category_ids = vec![];
         for cid_str in req.category_ids {
             let cid = cid_str.parse().map_err(|_| AppError::Invalid("معرف تصنيف غير صالح".into()))?;
             category_ids.push(cid);
         }
         material.category_ids = category_ids;
+
+        let mut purchase_prices = vec![];
+        for p in req.purchase_prices {
+            purchase_prices.push(domain::inventory::material::MaterialPurchasePrice {
+                id: uuid::Uuid::new_v4().to_string(),
+                unit_id: p.unit_id.parse().map_err(|_| AppError::Invalid("معرف وحدة غير صالح".into()))?,
+                price_usd: p.price_usd.parse().unwrap_or_default(),
+                price_syp: p.price_syp.parse().unwrap_or_default(),
+            });
+        }
+        material.purchase_prices = purchase_prices;
+
+        let mut sale_prices = vec![];
+        for p in req.sale_prices {
+            sale_prices.push(domain::inventory::material::MaterialSalePrice {
+                id: uuid::Uuid::new_v4().to_string(),
+                unit_id: p.unit_id.parse().map_err(|_| AppError::Invalid("معرف وحدة غير صالح".into()))?,
+                tier: p.tier,
+                price_usd: p.price_usd.parse().unwrap_or_default(),
+                price_syp: p.price_syp.parse().unwrap_or_default(),
+                min_price_usd: p.min_price_usd.parse().unwrap_or_default(),
+                min_price_syp: p.min_price_syp.parse().unwrap_or_default(),
+            });
+        }
+        material.sale_prices = sale_prices;
 
         if req.is_active {
             material.activate();

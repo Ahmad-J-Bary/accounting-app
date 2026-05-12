@@ -43,10 +43,20 @@ impl PostInvoiceUseCase {
         for line in &invoice.lines {
             if let Ok(Some(material)) = self.material_repo.find_by_id(&line.material_id).await {
                 // Record stock movement
+                // Calculate effective quantity in base units
+                let effective_quantity = line.quantity * line.conversion_factor.unwrap_or(rust_decimal::Decimal::ONE);
+
+                let cost_price = line.purchase_price.as_ref()
+                    .map(|m| m.original.amount())
+                    .unwrap_or(rust_decimal::Decimal::ZERO);
+                let total_cost = cost_price * line.quantity;
+
                 let movement = StockMovement::new(
                     material.id.clone(),
                     MovementType::Sale,
-                    line.quantity,
+                    effective_quantity,
+                    cost_price,
+                    total_cost,
                     invoice.invoice_number.clone(),
                     format!("بيع بموجب فاتورة مبيعات رقم {}", invoice.invoice_number),
                     chrono::Utc::now(),

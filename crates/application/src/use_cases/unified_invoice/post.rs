@@ -69,14 +69,22 @@ impl PostInvoiceUseCase {
         };
 
         for line in &invoice.lines {
+            // Calculate effective quantity in base units
+            let conversion_factor = line.conversion_factor.unwrap_or(Decimal::ONE);
+            let effective_quantity = line.quantity * conversion_factor;
+            
+            // For stock movements, we record unit_cost and total_cost in original currency if possible
+            let unit_cost = line.unit_price.amount();
+            let total_cost = line.line_total().amount();
+
             let movement = StockMovement::new(
                 line.material_id,
                 movement_type.clone(),
-                line.quantity,
-                line.unit_price.amount(),
-                line.line_total().amount(),
+                effective_quantity,
+                unit_cost,
+                total_cost,
                 invoice.invoice_number.clone(),
-                format!("{:?} بموجب فاتورة رقم {}", invoice.invoice_type, invoice.invoice_number),
+                format!("{:?} بموجب فاتورة رقم {} ({} x {})", invoice.invoice_type, invoice.invoice_number, line.quantity, conversion_factor),
                 Utc::now(),
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
             self.movement_repo.save(&movement).await?;

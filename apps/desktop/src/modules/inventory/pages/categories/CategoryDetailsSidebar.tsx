@@ -195,6 +195,8 @@ export function CategoryDetailsSidebar({
             minimum_stock: minimumStock,
             units: [{ name: baseUnitName, conversion_factor: "1", barcode: barcode.trim() || null }],
             category_ids: [selected.id],
+            purchase_prices: [],
+            sale_prices: [],
           });
           toast.success("تمت إضافة المادة");
         }

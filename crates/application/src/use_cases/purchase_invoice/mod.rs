@@ -58,6 +58,8 @@ async fn enrich_invoice(
             product_id: i.material_id.to_string(),
             product_name: material_name,
             quantity: i.quantity.to_string(),
+            unit_id: i.unit_id.clone(),
+            conversion_factor: i.conversion_factor.map(|c| c.to_string()),
             unit_price: i.unit_price.to_string(),
             line_total: i.line_total.to_string(),
             notes: i.notes.clone(),
@@ -151,8 +153,17 @@ impl CreatePurchaseInvoiceUseCase {
                 .map_err(|_| AppError::Invalid("معرف المادة غير صالح".into()))?;
             let quantity = crate::utils::parse_decimal(Some(&item_req.quantity), "الكمية")?;
             let unit_price = crate::utils::parse_decimal(Some(&item_req.unit_price), "السعر")?;
-            let item = PurchaseInvoiceItem::new(material_id, quantity, unit_price)
-                .map_err(|e| AppError::Invalid(e.to_string()))?;
+            let conversion_factor = item_req.conversion_factor.as_ref()
+                .map(|c| crate::utils::parse_decimal(Some(c), "معامل التحويل"))
+                .transpose()?;
+                
+            let item = PurchaseInvoiceItem::new(
+                material_id, 
+                quantity, 
+                unit_price, 
+                item_req.unit_id.clone(), 
+                conversion_factor
+            ).map_err(|e| AppError::Invalid(e.to_string()))?;
             invoice.add_item(item).map_err(|e| AppError::Invalid(e.to_string()))?;
         }
 
@@ -251,11 +262,14 @@ impl PostPurchaseInvoiceUseCase {
         // 1. Update stock and record movements
         for item in &invoice.items {
             if let Ok(Some(material)) = self.material_repo.find_by_id(&item.material_id).await {
+                // Calculate effective quantity in base units
+                let effective_quantity = item.quantity * item.conversion_factor.unwrap_or(rust_decimal::Decimal::ONE);
+
                 // Record stock movement
                 let movement = StockMovement::new(
                     material.id,
                     MovementType::Purchase,
-                    item.quantity,
+                    effective_quantity,
                     item.unit_price,
                     item.line_total,
                     invoice.invoice_number.clone(),

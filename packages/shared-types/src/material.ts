@@ -30,14 +30,38 @@ export interface StockMovementDetailDto {
   is_inflow: boolean;
 }
 
+export interface MaterialPurchasePriceDto {
+  id: string;
+  unit_id: string;
+  price_usd: string;
+  price_syp: string;
+}
+
+export interface MaterialSalePriceDto {
+  id: string;
+  unit_id: string;
+  tier: string;
+  price_usd: string;
+  price_syp: string;
+  min_price_usd: string;
+  min_price_syp: string;
+}
+
 export interface MaterialDto {
   id: string;
   name: string;
+  name_en: string;
   barcode: string;
   code: string;
   is_active: boolean;
   category_ids: string[];
   minimum_stock: string;
+  notes?: string | null;
+  image_path?: string | null;
+  default_purchase_unit_id?: string | null;
+  default_sale_unit_id?: string | null;
+  purchase_prices: MaterialPurchasePriceDto[];
+  sale_prices: MaterialSalePriceDto[];
   // Summary Fields
   total_received: string;
   total_sold: string;
@@ -60,23 +84,52 @@ export interface CreateMaterialUnitRequest {
   barcode?: string | null;
 }
 
+export interface CreateMaterialPriceRequest {
+  unit_id: string;
+  price_usd: string;
+  price_syp: string;
+}
+
+export interface CreateMaterialSalePriceRequest {
+  unit_id: string;
+  tier: string;
+  price_usd: string;
+  price_syp: string;
+  min_price_usd: string;
+  min_price_syp: string;
+}
+
 export interface CreateMaterialRequest {
   name: string;
+  name_en?: string;
   barcode?: string;
   code?: string;
   minimum_stock: string;
   category_ids: string[];
   units: CreateMaterialUnitRequest[];
+  notes?: string;
+  image_path?: string;
+  default_purchase_unit_id?: string;
+  default_sale_unit_id?: string;
+  purchase_prices: CreateMaterialPriceRequest[];
+  sale_prices: CreateMaterialSalePriceRequest[];
 }
 
 export interface UpdateMaterialRequest {
   id: string;
   name: string;
+  name_en: string;
   barcode: string;
   code: string;
   minimum_stock: string;
   is_active: boolean;
   category_ids: string[];
+  notes?: string | null;
+  image_path?: string | null;
+  default_purchase_unit_id?: string | null;
+  default_sale_unit_id?: string | null;
+  purchase_prices: CreateMaterialPriceRequest[];
+  sale_prices: CreateMaterialSalePriceRequest[];
 }
 
 export interface AddMaterialUnitRequest {

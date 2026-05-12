@@ -14,15 +14,41 @@ pub struct MaterialUnit {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MaterialPurchasePrice {
+    pub id: String,
+    pub unit_id: MaterialUnitId,
+    pub price_usd: rust_decimal::Decimal,
+    pub price_syp: rust_decimal::Decimal,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MaterialSalePrice {
+    pub id: String,
+    pub unit_id: MaterialUnitId,
+    pub tier: String,
+    pub price_usd: rust_decimal::Decimal,
+    pub price_syp: rust_decimal::Decimal,
+    pub min_price_usd: rust_decimal::Decimal,
+    pub min_price_syp: rust_decimal::Decimal,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Material {
     pub id: MaterialId,
     pub name: String,
+    pub name_en: String,
     pub barcode: String,
     pub code: String,
     pub is_active: bool,
     pub minimum_stock: rust_decimal::Decimal,
     pub units: Vec<MaterialUnit>,
     pub category_ids: Vec<MaterialCategoryId>,
+    pub notes: Option<String>,
+    pub image_path: Option<String>,
+    pub default_purchase_unit_id: Option<MaterialUnitId>,
+    pub default_sale_unit_id: Option<MaterialUnitId>,
+    pub purchase_prices: Vec<MaterialPurchasePrice>,
+    pub sale_prices: Vec<MaterialSalePrice>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -77,12 +103,19 @@ impl Material {
         Ok(Self {
             id: mid,
             name,
+            name_en: "".to_string(),
             barcode,
             code,
             is_active: true,
             minimum_stock,
             units,
             category_ids,
+            notes: None,
+            image_path: None,
+            default_purchase_unit_id: None,
+            default_sale_unit_id: None,
+            purchase_prices: Vec::new(),
+            sale_prices: Vec::new(),
             created_at: now,
             updated_at: now,
         })

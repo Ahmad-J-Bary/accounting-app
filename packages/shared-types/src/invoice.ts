@@ -12,6 +12,9 @@ export interface InvoiceLineDto {
   code?: string;
   category_name?: string;
   quantity: string;
+  unit_id?: string;
+  unit_name?: string;
+  conversion_factor?: string;
   unit_price: string;
   unit_price_v2?: MonetaryAmount;
   purchase_price?: string;

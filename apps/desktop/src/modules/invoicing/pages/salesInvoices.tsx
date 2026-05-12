@@ -73,7 +73,9 @@ export default function SalesInvoices() {
   const [search, setSearch] = useState("");
   const [headerState, setHeaderState] = useState<EditorState>(DEFAULT_EDITOR(baseCurrency?.code || "USD"));
 
-  const { lines, setLines, updateLine, addLine, removeLine, selectMaterial, totals } = useDocumentEditor();
+  const { lines, setLines, updateLine, addLine, removeLine, selectMaterial, totals } = useDocumentEditor({
+    materials
+  });
 
   const isNew = location.pathname.includes("/new");
 
@@ -235,8 +237,13 @@ export default function SalesInvoices() {
 
   const gridColumns = useMemo<DocumentColumn[]>(() => {
     const cols: DocumentColumn[] = [
-      { key: "material_name", header: "المادة / الصنف", width: "flex-[3]", align: "right", type: "material" },
-      { key: "quantity", header: "الكمية", width: "w-[90px]", align: "center", type: "number" },
+      { key: "material_image", header: "", width: "w-[40px]", align: "center", type: "image" },
+      { key: "unit_barcode", header: "الباركود", width: "w-[100px]", align: "center", type: "readonly" },
+      { key: "material_name", header: "الصنف (عربي)", width: "flex-[2]", align: "right", type: "material" },
+      { key: "name_en", header: "الصنف (EN)", width: "flex-[1.5]", align: "left", type: "readonly" },
+      { key: "warehouse_qty", header: "المتوفر", width: "w-[70px]", align: "center", type: "readonly" },
+      { key: "quantity", header: "الكمية", width: "w-[80px]", align: "center", type: "number" },
+      { key: "unit_name", header: "الوحدة", width: "w-[70px]", align: "center", type: "unit_select" },
     ];
 
     // Add unit price for each currency
@@ -246,13 +253,13 @@ export default function SalesInvoices() {
       cols.push({ 
         key: isDocCurr ? "unit_price" : `unit_price_${curr.code}`, 
         header: `السعر (${s})`, 
-        width: "w-[110px]", 
+        width: "w-[100px]", 
         align: "left", 
         type: isDocCurr ? "number" : "readonly" 
       });
     });
 
-    cols.push({ key: "discount", header: "خصم %", width: "w-[80px]", align: "center", type: "number" });
+    cols.push({ key: "discount", header: "خصم %", width: "w-[70px]", align: "center", type: "number" });
 
     // Add line total for each currency
     currencies.forEach(curr => {
@@ -260,13 +267,18 @@ export default function SalesInvoices() {
       cols.push({ 
         key: `line_total_${curr.code}`, 
         header: `الإجمالي (${s})`, 
-        width: "w-[120px]", 
+        width: "w-[110px]", 
         align: "left", 
         type: "readonly" 
       });
     });
 
-    cols.push({ key: "notes", header: "ملاحظات", width: "flex-[2]", align: "right", type: "text" });
+    // Profit & Cost Columns (Readonly)
+    cols.push({ key: "cost_price", header: "التكلفة ($)", width: "w-[90px]", align: "left", type: "readonly" });
+    cols.push({ key: "profit_amount", header: "الربح ($)", width: "w-[90px]", align: "left", type: "readonly" });
+    cols.push({ key: "profit_percent", header: "الربح %", width: "w-[70px]", align: "center", type: "readonly" });
+
+    cols.push({ key: "notes", header: "ملاحظات", width: "flex-[1]", align: "right", type: "text" });
 
     return cols;
   }, [currencies, headerState.currency_code]);
@@ -278,10 +290,6 @@ export default function SalesInvoices() {
         statusBadge={<DocumentStatusBadge status={headerState.status} />}
         toolbar={
           <>
-            <Button variant="outline" size="sm" onClick={() => setView("list")} className="bg-white">
-              <ChevronRight className="w-4 h-4 ml-2" /> العودة للقائمة
-            </Button>
-            <div className="h-6 w-px bg-slate-200 mx-2" />
             <Button variant="outline" size="sm" onClick={() => handleSave(false)} disabled={saving} className="bg-white border-slate-200 text-slate-700">
               <Save className="w-4 h-4 ml-2" /> {saving ? "جاري الحفظ..." : "حفظ مسودة"}
             </Button>

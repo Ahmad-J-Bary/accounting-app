@@ -5,19 +5,26 @@ use domain::shared::ids::{MaterialId, MaterialCategoryId};
 use chrono::Utc;
 use uuid::Uuid;
 
+use domain::inventory::material::{MaterialPurchasePrice, MaterialSalePrice};
+
 pub async fn save(pool: &SqlitePool, material: &Material) -> Result<(), AppError> {
     let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     sqlx::query(
-        "INSERT INTO materials (id, name, barcode, code, minimum_stock, is_active, created_at, updated_at) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO materials (id, name, name_en, barcode, code, minimum_stock, is_active, notes, image_path, default_purchase_unit_id, default_sale_unit_id, created_at, updated_at) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(material.id.to_string())
     .bind(&material.name)
+    .bind(&material.name_en)
     .bind(&material.barcode)
     .bind(&material.code)
     .bind(material.minimum_stock.to_string())
     .bind(material.is_active)
+    .bind(&material.notes)
+    .bind(&material.image_path)
+    .bind(material.default_purchase_unit_id.as_ref().map(|id| id.to_string()))
+    .bind(material.default_sale_unit_id.as_ref().map(|id| id.to_string()))
     .bind(material.created_at.to_rfc3339())
     .bind(material.updated_at.to_rfc3339())
     .execute(&mut *tx)
@@ -26,6 +33,8 @@ pub async fn save(pool: &SqlitePool, material: &Material) -> Result<(), AppError
 
     save_category_links(&mut tx, &material.id.to_string(), &material.category_ids).await?;
     save_units(&mut tx, &material.units).await?;
+    save_purchase_prices(&mut tx, &material.id.to_string(), &material.purchase_prices).await?;
+    save_sale_prices(&mut tx, &material.id.to_string(), &material.sale_prices).await?;
 
     tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
@@ -35,14 +44,19 @@ pub async fn update(pool: &SqlitePool, material: &Material) -> Result<(), AppErr
     let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     sqlx::query(
-        "UPDATE materials SET name=?, barcode=?, code=?, minimum_stock=?, is_active=?, updated_at=? 
+        "UPDATE materials SET name=?, name_en=?, barcode=?, code=?, minimum_stock=?, is_active=?, notes=?, image_path=?, default_purchase_unit_id=?, default_sale_unit_id=?, updated_at=? 
          WHERE id=?"
     )
     .bind(&material.name)
+    .bind(&material.name_en)
     .bind(&material.barcode)
     .bind(&material.code)
     .bind(material.minimum_stock.to_string())
     .bind(material.is_active)
+    .bind(&material.notes)
+    .bind(&material.image_path)
+    .bind(material.default_purchase_unit_id.as_ref().map(|id| id.to_string()))
+    .bind(material.default_sale_unit_id.as_ref().map(|id| id.to_string()))
     .bind(material.updated_at.to_rfc3339())
     .bind(material.id.to_string())
     .execute(&mut *tx)
@@ -51,6 +65,8 @@ pub async fn update(pool: &SqlitePool, material: &Material) -> Result<(), AppErr
 
     save_category_links(&mut tx, &material.id.to_string(), &material.category_ids).await?;
     save_units(&mut tx, &material.units).await?;
+    save_purchase_prices(&mut tx, &material.id.to_string(), &material.purchase_prices).await?;
+    save_sale_prices(&mut tx, &material.id.to_string(), &material.sale_prices).await?;
 
     tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
@@ -138,6 +154,61 @@ async fn save_units(tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>, units: &[Mater
         .bind(&u.barcode)
         .bind(u.is_base)
         .bind(&now)
+        .bind(&now)
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    }
+    Ok(())
+}
+
+async fn save_purchase_prices(tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>, material_id: &str, prices: &[MaterialPurchasePrice]) -> Result<(), AppError> {
+    sqlx::query("DELETE FROM material_purchase_prices WHERE material_id = ?")
+        .bind(material_id)
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    let now = Utc::now().to_rfc3339();
+    for p in prices {
+        sqlx::query(
+            "INSERT INTO material_purchase_prices (id, material_id, unit_id, price_usd, price_syp, updated_at) 
+             VALUES (?, ?, ?, ?, ?, ?)"
+        )
+        .bind(&p.id)
+        .bind(material_id)
+        .bind(p.unit_id.to_string())
+        .bind(rust_decimal::prelude::ToPrimitive::to_f64(&p.price_usd).unwrap_or_default())
+        .bind(rust_decimal::prelude::ToPrimitive::to_f64(&p.price_syp).unwrap_or_default())
+        .bind(&now)
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    }
+    Ok(())
+}
+
+async fn save_sale_prices(tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>, material_id: &str, prices: &[MaterialSalePrice]) -> Result<(), AppError> {
+    sqlx::query("DELETE FROM material_sale_prices WHERE material_id = ?")
+        .bind(material_id)
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    let now = Utc::now().to_rfc3339();
+    for p in prices {
+        sqlx::query(
+            "INSERT INTO material_sale_prices (id, material_id, unit_id, tier, price_usd, price_syp, min_price_usd, min_price_syp, updated_at) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        )
+        .bind(&p.id)
+        .bind(material_id)
+        .bind(p.unit_id.to_string())
+        .bind(&p.tier)
+        .bind(rust_decimal::prelude::ToPrimitive::to_f64(&p.price_usd).unwrap_or_default())
+        .bind(rust_decimal::prelude::ToPrimitive::to_f64(&p.price_syp).unwrap_or_default())
+        .bind(rust_decimal::prelude::ToPrimitive::to_f64(&p.min_price_usd).unwrap_or_default())
+        .bind(rust_decimal::prelude::ToPrimitive::to_f64(&p.min_price_syp).unwrap_or_default())
         .bind(&now)
         .execute(&mut **tx)
         .await

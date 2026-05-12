@@ -13,7 +13,7 @@ export interface DocumentColumn {
   header: string;
   width: string;
   align?: "right" | "left" | "center";
-  type: "text" | "number" | "material" | "readonly";
+  type: "text" | "number" | "material" | "readonly" | "image" | "badge" | "unit_select";
 }
 
 interface MaterialSearchPanelProps {
@@ -198,7 +198,7 @@ export function GenericDocumentGrid({
         {filteredColumns.map((col) => (
           <div 
             key={col.key} 
-            className={cn("px-3 py-2 text-slate-500 font-bold border-l border-slate-200 text-[11px] uppercase tracking-wider", col.width)}
+            className={cn("px-2 py-1.5 text-slate-500 font-black border-l border-slate-200 text-[10px] uppercase tracking-tighter", col.width)}
             style={{ textAlign: col.align || "right" }}
           >
             {col.header}
@@ -237,13 +237,87 @@ export function GenericDocumentGrid({
                   return (
                     <div key={col.key}
                       className={cn(
-                        "flex items-center px-3 border-l border-slate-100 text-[12px] font-bold text-slate-700 truncate",
+                        "flex items-center px-2 border-l border-slate-100 text-[11px] font-bold text-slate-600 truncate",
                         col.width,
                         col.align === "left" ? "text-left" : col.align === "center" ? "text-center" : "text-right"
                       )}>
                       {getCellValue(line, col.key)}
                     </div>
                   );
+                }
+
+                if (col.type === "image") {
+                    const src = getCellValue(line, col.key);
+                    return (
+                      <div key={col.key}
+                        className={cn(
+                          "flex items-center justify-center p-1 border-l border-slate-100",
+                          col.width
+                        )}>
+                        {src ? (
+                            <img src={src} alt="" className="w-6 h-6 object-contain rounded bg-slate-50 border border-slate-100" />
+                        ) : (
+                            <div className="w-6 h-6 rounded bg-slate-100 border border-dashed border-slate-200" />
+                        )}
+                      </div>
+                    );
+                }
+
+                if (col.type === "badge") {
+                    return (
+                      <div key={col.key}
+                        className={cn(
+                          "flex items-center justify-center px-1 border-l border-slate-100",
+                          col.width
+                        )}>
+                        <span className="text-[9px] font-black bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 uppercase tracking-tighter">
+                            {getCellValue(line, col.key)}
+                        </span>
+                      </div>
+                    );
+                }
+
+                if (col.type === "unit_select") {
+                    const material = materials.find(m => m.id === line.material_id);
+                    const units = material?.units || [];
+                    const currentUnit = getCellValue(line, col.key);
+
+                    return (
+                      <div key={col.key}
+                        className={cn(
+                          "flex items-center justify-center px-1 border-l border-slate-100",
+                          col.width
+                        )}>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild disabled={readOnly || !line.material_id}>
+                                <button className={cn(
+                                    "text-[9px] font-black px-2 py-0.5 rounded border uppercase tracking-tighter transition-all",
+                                    line.material_id 
+                                        ? "bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 cursor-pointer" 
+                                        : "bg-slate-50 text-slate-400 border-slate-100 cursor-default"
+                                )}>
+                                    {currentUnit || "اختر"}
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="center" className="min-w-[100px] shadow-xl">
+                                <DropdownMenuLabel className="text-right text-[9px] font-black text-slate-400 uppercase">الوحدات المتاحة</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {units.map((u) => (
+                                    <DropdownMenuCheckboxItem
+                                        key={u.id}
+                                        checked={line.unit_id === u.id || currentUnit === u.name}
+                                        onCheckedChange={() => {
+                                            onUpdateLine(rowIdx, { unit_id: u.id, unit_name: u.name });
+                                        }}
+                                        className="text-right flex-row-reverse gap-2 text-[10px] font-bold py-1.5"
+                                    >
+                                        {u.name}
+                                    </DropdownMenuCheckboxItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    );
                 }
 
                 if (col.type === "material") {
@@ -261,11 +335,11 @@ export function GenericDocumentGrid({
                         }}
                         disabled={readOnly}
                         className={cn(
-                          "w-full h-9 px-3 text-[12px] bg-transparent border-none outline-none text-right font-bold text-blue-800",
+                          "w-full h-8 px-2 text-[11px] bg-transparent border-none outline-none text-right font-bold text-blue-800",
                           "placeholder:text-slate-300 focus:bg-white transition-colors",
                           readOnly && "opacity-50"
                         )}
-                        placeholder="الكود أو الاسم..."
+                        placeholder="البحث..."
                         value={line.material_name || ""}
                         autoComplete="off"
                         onFocus={() => {
@@ -304,7 +378,7 @@ export function GenericDocumentGrid({
                       step={col.type === "number" ? "any" : undefined}
                       disabled={readOnly}
                       className={cn(
-                        "w-full h-9 px-3 text-[12px] bg-transparent border-none outline-none tabular-nums font-bold",
+                        "w-full h-8 px-2 text-[11px] bg-transparent border-none outline-none tabular-nums font-bold",
                         "focus:bg-white transition-colors",
                         col.align === "left" ? "text-left" : col.align === "center" ? "text-center" : "text-right",
                         readOnly && "opacity-50"

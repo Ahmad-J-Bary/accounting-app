@@ -19,6 +19,8 @@ pub struct PurchaseInvoiceItem {
     pub id: String,
     pub material_id: MaterialId,
     pub quantity: Decimal,
+    pub unit_id: Option<String>,
+    pub conversion_factor: Option<Decimal>,
     pub unit_price: Decimal,
     pub line_total: Decimal,
     pub notes: Option<String>,
@@ -29,6 +31,8 @@ impl PurchaseInvoiceItem {
         material_id: MaterialId,
         quantity: Decimal,
         unit_price: Decimal,
+        unit_id: Option<String>,
+        conversion_factor: Option<Decimal>,
     ) -> Result<Self, DomainError> {
         if quantity <= Decimal::ZERO {
             return Err(DomainError::Invalid("الكمية يجب أن تكون موجبة".into()));
@@ -40,6 +44,8 @@ impl PurchaseInvoiceItem {
             id: Uuid::new_v4().to_string(),
             material_id,
             quantity,
+            unit_id,
+            conversion_factor,
             unit_price,
             line_total: quantity * unit_price,
             notes: None,

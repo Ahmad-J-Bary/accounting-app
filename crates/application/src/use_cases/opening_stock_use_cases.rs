@@ -62,10 +62,15 @@ impl RecordOpeningStockUseCase {
             let unit_cost_base = Decimal::from_str(&item.unit_cost_base)
                 .map_err(|_| AppError::Invalid("سعر تكلفة (أساسي) غير صالح".into()))?;
 
+            let conversion_factor = item.conversion_factor.as_ref()
+                .and_then(|s| Decimal::from_str(s).ok())
+                .unwrap_or(Decimal::ONE);
+            let effective_quantity = quantity * conversion_factor;
+
             let movement = StockMovement::new(
                 material.id,
                 MovementType::OpeningBalance,
-                quantity,
+                effective_quantity,
                 unit_cost,
                 quantity * unit_cost,
                 "OP-STOCK".to_string(),

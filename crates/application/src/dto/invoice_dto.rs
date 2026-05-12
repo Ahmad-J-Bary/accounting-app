@@ -29,6 +29,8 @@ pub struct InvoiceLineDto {
     pub code: Option<String>,
     pub category_name: Option<String>,
     pub quantity: String,
+    pub unit_id: Option<String>,
+    pub conversion_factor: Option<String>,
     pub unit_price: String, // Selection
     pub unit_price_v2: Option<MonetaryAmountDto>,
     pub purchase_price: Option<String>,
@@ -199,6 +201,8 @@ impl From<InvoiceLine> for InvoiceLineDto {
             code: None,
             category_name: None,
             quantity: line.quantity.to_string(),
+            unit_id: line.unit_id,
+            conversion_factor: line.conversion_factor.map(|c| c.to_string()),
             unit_price: line.unit_price.amount().to_string(),
             unit_price_v2: Some(MonetaryAmountDto::from(line.unit_price)),
             purchase_price: line.purchase_price.clone().map(|m| m.amount().to_string()),

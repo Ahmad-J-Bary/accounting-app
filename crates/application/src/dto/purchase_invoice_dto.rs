@@ -6,6 +6,8 @@ pub struct PurchaseInvoiceItemDto {
     pub product_id: String,
     pub product_name: Option<String>,
     pub quantity: String,
+    pub unit_id: Option<String>,
+    pub conversion_factor: Option<String>,
     pub unit_price: String,
     pub line_total: String,
     pub notes: Option<String>,
@@ -48,6 +50,8 @@ pub struct PurchaseInvoiceDto {
 pub struct CreatePurchaseInvoiceItemRequest {
     pub product_id: String,
     pub quantity: String,
+    pub unit_id: Option<String>,
+    pub conversion_factor: Option<String>,
     pub unit_price: String,
     pub notes: Option<String>,
 }

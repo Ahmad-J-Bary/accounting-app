@@ -43,81 +43,70 @@ export function SummaryPanel({
   const st = status ? STATUS_LABELS[status] : null;
 
   return (
-    <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm" dir="rtl">
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-200">
-        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">ملخص المستند</span>
+    <div className="bg-slate-900 text-white rounded-lg overflow-hidden shadow-lg border border-slate-800" dir="rtl">
+      <div className="flex items-center divide-x divide-x-reverse divide-slate-800">
+        
+        {/* 1. Status Section (Optional) */}
         {st && (
-          <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border", st.color, st.bg)}>
-            {st.label}
+          <div className="px-4 py-2 bg-slate-800/50 flex items-center shrink-0">
+            <span className={cn("text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-tighter", st.color, st.bg)}>
+              {st.label}
+            </span>
+          </div>
+        )}
+
+        {/* 2. Breakdown Section (Subtotal, Discount, etc) */}
+        <div className="flex-1 flex items-center gap-6 px-4 py-2 overflow-x-auto no-scrollbar">
+          <SummaryItem label="المجموع" value={subtotal} currency={currency} />
+          {discount > 0 && <SummaryItem label="الخصم" value={-discount} currency={currency} color="text-red-400" />}
+          {tax > 0 && <SummaryItem label="الضريبة" value={tax} currency={currency} color="text-orange-400" />}
+          {extraCosts > 0 && <SummaryItem label="تكاليف" value={extraCosts} currency={currency} />}
+          
+          {children && (
+            <div className="flex items-center gap-4 border-r border-slate-800 pr-4 mr-2 h-6">
+              {children}
+            </div>
+          )}
+        </div>
+
+        {/* 3. Main Total (NET) */}
+        <div className="bg-blue-600 px-6 py-2 flex flex-col items-center justify-center min-w-[160px] shrink-0 shadow-[inset_0_0_20px_rgba(0,0,0,0.2)]">
+          <span className="text-[9px] font-black uppercase tracking-widest text-blue-100 opacity-70">الصافي النهائي</span>
+          <span className={cn("tabular-nums font-black leading-none", compact ? "text-xl" : "text-2xl")}>
+            {formatCurrency(net, currency)}
           </span>
+        </div>
+
+        {/* 4. Payment Info (Paid/Remaining) */}
+        {(paid > 0 || remaining > 0) && (
+          <div className="flex items-center gap-4 px-4 py-2 bg-slate-800/30 shrink-0">
+            <div className="flex flex-col items-start">
+              <span className="text-[8px] font-bold text-slate-400">المدفوع</span>
+              <span className="text-xs font-black tabular-nums text-slate-200">{formatCurrency(paid, currency)}</span>
+            </div>
+            <div className="w-px h-6 bg-slate-700" />
+            <div className="flex flex-col items-start">
+              <span className={cn("text-[8px] font-bold", remaining <= 0 ? "text-emerald-400" : "text-red-400")}>
+                {invoiceType === "Sales" ? "مدين" : invoiceType === "Purchase" ? "دائن" : "المتبقي"}
+              </span>
+              <span className={cn("text-xs font-black tabular-nums", remaining <= 0 ? "text-emerald-300" : "text-red-300")}>
+                {formatCurrency(remaining, currency)}
+              </span>
+            </div>
+          </div>
         )}
       </div>
-
-      {/* Breakdown rows */}
-      <div className="px-3 py-1.5 space-y-1">
-        <SummaryRow label="المجموع الفرعي" value={subtotal} />
-        {discount > 0 && <SummaryRow label="الخصم" value={-discount} valueClass="text-red-600" />}
-        {tax > 0 && <SummaryRow label="الضريبة / الرسوم" value={tax} valueClass="text-orange-600" />}
-        {extraCosts > 0 && <SummaryRow label="تكاليف إضافية" value={extraCosts} />}
-      </div>
-
-      {/* NET — prominent */}
-      <div className="mx-3 mb-2 bg-gradient-to-l from-blue-600 to-blue-700 rounded-lg px-3 py-2 text-white">
-        <div className="text-[10px] font-medium opacity-75 mb-0.5">الصافي النهائي</div>
-        <div className="flex items-baseline gap-2">
-          <span className={cn("tabular-nums font-black", compact ? "text-lg" : "text-xl")}>
-            {formatCurrency(net)}
-          </span>
-        </div>
-      </div>
-
-      {children && (
-        <div className="px-3 pb-3 border-b border-dashed border-slate-100 mb-3">
-            {children}
-        </div>
-      )}
-
-      {/* Paid / Remaining */}
-      {(paid > 0 || remaining > 0) && (
-        <div className="px-3 pb-3 grid grid-cols-2 gap-2">
-          <div className="bg-green-50 border border-green-100 rounded-lg p-2 text-center">
-            <div className="text-[10px] text-green-600 font-bold mb-0.5">المدفوع</div>
-            <div className="text-sm font-black text-green-700 tabular-nums">{formatCurrency(paid)}</div>
-          </div>
-          <div className={cn(
-            "rounded-lg p-2 text-center border",
-            remaining <= 0 ? "bg-green-50 border-green-100" : "bg-red-50 border-red-100"
-          )}>
-            <div className={cn("text-[10px] font-bold mb-0.5", remaining <= 0 ? "text-green-600" : "text-red-600")}>
-              {invoiceType === "Sales" ? "مدين (العميل)" : invoiceType === "Purchase" ? "دائن (المورد)" : "المتبقي"}
-            </div>
-            <div className={cn("text-sm font-black tabular-nums", remaining <= 0 ? "text-green-700" : "text-red-700")}>
-              {formatCurrency(remaining)}
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }
 
-function SummaryRow({
-  label,
-  value,
-  valueClass = "text-slate-800",
-}: {
-  label: string;
-  value: number;
-  valueClass?: string;
-}) {
+function SummaryItem({ label, value, currency, color = "text-slate-300" }: { label: string; value: number; currency: string; color?: string }) {
   return (
-    <div className="flex justify-between items-center text-xs">
-      <span className="text-slate-500">{label}</span>
-      <span className={cn("tabular-nums font-semibold", valueClass)}>
+    <div className="flex items-center gap-2 shrink-0">
+      <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap">{label}:</span>
+      <span className={cn("text-xs font-black tabular-nums", color)}>
         {value < 0 ? "-" : ""}
-        {formatCurrency(Math.abs(value))}
+        {formatCurrency(Math.abs(value), currency)}
       </span>
     </div>
   );

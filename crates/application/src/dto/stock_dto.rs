@@ -61,6 +61,8 @@ pub struct StockBalanceDto {
 pub struct OpeningStockItem {
     pub material_id: String,
     pub quantity: String,
+    pub unit_id: Option<String>,
+    pub conversion_factor: Option<String>,
     pub unit_cost: String,
     pub unit_cost_base: String,
 }

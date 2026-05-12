@@ -45,6 +45,8 @@ struct PurchaseInvoiceItemRow {
     id: String,
     material_id: String,
     quantity: String,
+    unit_id: Option<String>,
+    conversion_factor: Option<String>,
     unit_price: String,
     line_total: String,
     notes: Option<String>,
@@ -243,7 +245,7 @@ impl PurchaseInvoiceRepository for SqlitePurchaseInvoiceRepository {
 impl SqlitePurchaseInvoiceRepository {
     async fn load_items(&self, invoice_id: &str) -> Result<Vec<PurchaseInvoiceItem>, AppError> {
         let rows = sqlx::query_as::<_, PurchaseInvoiceItemRow>(
-            "SELECT id, material_id, quantity, unit_price, line_total, notes
+            "SELECT id, material_id, quantity, unit_id, conversion_factor, unit_price, line_total, notes
              FROM purchase_invoice_items WHERE purchase_invoice_id = ?"
         )
         .bind(invoice_id)
@@ -255,6 +257,8 @@ impl SqlitePurchaseInvoiceRepository {
             id: r.id,
             material_id: MaterialId(Uuid::parse_str(&r.material_id).unwrap()),
             quantity: Decimal::from_str(&r.quantity).unwrap_or(Decimal::ZERO),
+            unit_id: r.unit_id,
+            conversion_factor: r.conversion_factor.and_then(|s| Decimal::from_str(&s).ok()),
             unit_price: Decimal::from_str(&r.unit_price).unwrap_or(Decimal::ZERO),
             line_total: Decimal::from_str(&r.line_total).unwrap_or(Decimal::ZERO),
             notes: r.notes,

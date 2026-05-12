@@ -48,8 +48,20 @@ export function MaterialTable({ materials, categories, loading, search, onEdit, 
       {
         id: "name",
         header: "اسم المادة",
-        accessor: "name",
-        className: "font-bold text-slate-800"
+        accessor: (m) => (
+          <div className="flex items-center gap-3">
+            {m.image_path && (
+              <div className="w-8 h-8 rounded border bg-slate-50 overflow-hidden flex-shrink-0">
+                <img src={m.image_path} alt={m.name} className="w-full h-full object-contain" />
+              </div>
+            )}
+            <div className="flex flex-col">
+              <span className="font-bold text-slate-800">{m.name}</span>
+              {m.name_en && <span className="text-[10px] text-slate-400 font-medium" dir="ltr">{m.name_en}</span>}
+            </div>
+          </div>
+        ),
+        className: "min-w-[200px]"
       },
       {
         id: "categories",
@@ -108,6 +120,30 @@ export function MaterialTable({ materials, categories, loading, search, onEdit, 
         accessor: (m) => parseFloat(m.total_available).toLocaleString(),
         align: "center",
         className: "tabular-nums font-bold text-slate-700"
+      },
+      {
+        id: "name_en",
+        header: "الاسم (EN)",
+        accessor: (m) => <span className="text-slate-500 font-medium" dir="ltr">{m.name_en || "—"}</span>,
+        className: "w-[150px]"
+      },
+      {
+        id: "default_purchase_unit",
+        header: "وحدة الشراء",
+        accessor: (m) => m.units.find(u => u.id === m.default_purchase_unit_id || u.name === m.default_purchase_unit_id)?.name || "—",
+        className: "w-[100px]"
+      },
+      {
+        id: "default_sale_unit",
+        header: "وحدة المبيع",
+        accessor: (m) => m.units.find(u => u.id === m.default_sale_unit_id || u.name === m.default_sale_unit_id)?.name || "—",
+        className: "w-[100px]"
+      },
+      {
+        id: "notes",
+        header: "ملاحظات",
+        accessor: (m) => <span className="text-[10px] text-slate-400 truncate max-w-[150px] inline-block">{m.notes || "—"}</span>,
+        className: "w-[150px]"
       },
     ];
 

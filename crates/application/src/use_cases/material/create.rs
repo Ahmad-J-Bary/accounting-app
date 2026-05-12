@@ -41,7 +41,7 @@ impl CreateMaterialUseCase {
             unit_defs.push((u.name, factor, u.barcode));
         }
 
-        let material = Material::new(
+        let mut material = Material::new(
             req.name,
             req.barcode.unwrap_or_default(),
             code,
@@ -49,6 +49,37 @@ impl CreateMaterialUseCase {
             unit_defs,
             category_ids,
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
+
+        material.name_en = req.name_en.unwrap_or_default();
+        material.notes = req.notes;
+        material.image_path = req.image_path;
+        material.default_purchase_unit_id = req.default_purchase_unit_id.and_then(|id| id.parse().ok().map(domain::shared::ids::MaterialUnitId));
+        material.default_sale_unit_id = req.default_sale_unit_id.and_then(|id| id.parse().ok().map(domain::shared::ids::MaterialUnitId));
+
+        let mut purchase_prices = vec![];
+        for p in req.purchase_prices {
+            purchase_prices.push(domain::inventory::material::MaterialPurchasePrice {
+                id: uuid::Uuid::new_v4().to_string(),
+                unit_id: material.units.iter().find(|u| u.name == p.unit_id).map(|u| u.id).or_else(|| p.unit_id.parse().ok().map(domain::shared::ids::MaterialUnitId)).ok_or_else(|| AppError::Invalid("وحدة غير موجودة في قائمة الوحدات".into()))?,
+                price_usd: p.price_usd.parse().unwrap_or_default(),
+                price_syp: p.price_syp.parse().unwrap_or_default(),
+            });
+        }
+        material.purchase_prices = purchase_prices;
+
+        let mut sale_prices = vec![];
+        for p in req.sale_prices {
+            sale_prices.push(domain::inventory::material::MaterialSalePrice {
+                id: uuid::Uuid::new_v4().to_string(),
+                unit_id: material.units.iter().find(|u| u.name == p.unit_id).map(|u| u.id).or_else(|| p.unit_id.parse().ok().map(domain::shared::ids::MaterialUnitId)).ok_or_else(|| AppError::Invalid("وحدة غير موجودة في قائمة الوحدات".into()))?,
+                tier: p.tier,
+                price_usd: p.price_usd.parse().unwrap_or_default(),
+                price_syp: p.price_syp.parse().unwrap_or_default(),
+                min_price_usd: p.min_price_usd.parse().unwrap_or_default(),
+                min_price_syp: p.min_price_syp.parse().unwrap_or_default(),
+            });
+        }
+        material.sale_prices = sale_prices;
 
         self.repo.save(&material).await?;
 

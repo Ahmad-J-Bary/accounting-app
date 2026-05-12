@@ -66,9 +66,6 @@ export default function OpeningBalance() {
   const { id } = useParams();
   const { closeTab, activeTabId } = useTabs();
   
-  const [header, setHeader] = useState<HeaderState>(defaultHeader());
-  const { lines, setLines, updateLine, removeLine, addLine, selectMaterial, totals } = useDocumentEditor({ priceField: "last_purchase_price" });
-  
   const [history, setHistory] = useState<InvoiceDto[]>([]);
   const [customers, setCustomers] = useState<CustomerDto[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
@@ -76,6 +73,12 @@ export default function OpeningBalance() {
   const [materials, setMaterials] = useState<MaterialDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  
+  const [header, setHeader] = useState<HeaderState>(defaultHeader());
+  const { lines, setLines, updateLine, removeLine, addLine, selectMaterial, totals } = useDocumentEditor({ 
+    priceField: "last_purchase_price",
+    materials
+  });
   
   const { formatAmount, formatMonetaryAmount, convertFromBase, convertBetween, currencies, baseCurrency } = useCurrencyContext();
 
@@ -170,8 +173,11 @@ export default function OpeningBalance() {
 
   const gridColumns = useMemo<DocumentColumn[]>(() => {
     const cols: DocumentColumn[] = [
-      { key: "material_name", header: "المادة / الصنف", width: "flex-[3]", align: "right", type: "material" },
-      { key: "quantity", header: "الكمية", width: "w-[90px]", align: "center", type: "number" },
+      { key: "unit_barcode", header: "الباركود", width: "w-[100px]", align: "center", type: "readonly" },
+      { key: "material_name", header: "الصنف (عربي)", width: "flex-[2]", align: "right", type: "material" },
+      { key: "name_en", header: "الصنف (EN)", width: "flex-[1.5]", align: "left", type: "readonly" },
+      { key: "quantity", header: "الكمية", width: "w-[80px]", align: "center", type: "number" },
+      { key: "unit_name", header: "الوحدة", width: "w-[70px]", align: "center", type: "unit_select" },
     ];
 
     currencies.forEach(curr => {
@@ -179,22 +185,21 @@ export default function OpeningBalance() {
       cols.push({ 
         key: curr.is_base ? "unit_price" : `unit_price_${curr.code}`, 
         header: `التكلفة (${s})`, 
-        width: "w-[110px]", 
+        width: "w-[100px]", 
         align: "left", 
         type: curr.is_base ? "number" : "readonly" 
       });
     });
 
-    cols.push({ key: "retail_price", header: "مفرق", width: "w-[100px]", align: "left", type: "number" });
-    cols.push({ key: "wholesale_price", header: "جملة", width: "w-[100px]", align: "left", type: "number" });
-    cols.push({ key: "minimum_stock", header: "حد الطلب", width: "w-[80px]", align: "center", type: "number" });
+    cols.push({ key: "retail_price", header: "مفرق", width: "w-[90px]", align: "left", type: "number" });
+    cols.push({ key: "wholesale_price", header: "جملة", width: "w-[90px]", align: "left", type: "number" });
 
     currencies.forEach(curr => {
       const s = curr.symbol || curr.code;
       cols.push({ 
         key: `line_total_${curr.code}`, 
         header: `القيمة (${s})`, 
-        width: "w-[120px]", 
+        width: "w-[110px]", 
         align: "left", 
         type: "readonly" 
       });
@@ -209,10 +214,6 @@ export default function OpeningBalance() {
       statusBadge={<DocumentStatusBadge status="Draft" />}
       toolbar={
         <>
-          <Button variant="outline" size="sm" onClick={() => navigate("/erp/accounting")} className="bg-white">
-            <ChevronRight className="w-4 h-4 ml-2" /> العودة للمحاسبة
-          </Button>
-          <div className="h-6 w-px bg-slate-200 mx-2" />
           <Button size="sm" onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
             <Save className="w-4 h-4 ml-2" /> {saving ? "جاري الحفظ..." : "حفظ وترحيل الرصيد"}
           </Button>

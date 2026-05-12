@@ -32,6 +32,8 @@ pub struct LineRow {
     pub invoice_id: String,
     pub material_id: String,
     pub quantity: String,
+    pub unit_id: Option<String>,
+    pub conversion_factor: Option<String>,
     pub unit_price: String,
     pub purchase_price: Option<String>,
     pub retail_price: Option<String>,

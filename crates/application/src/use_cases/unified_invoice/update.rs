@@ -161,6 +161,9 @@ impl UpdateInvoiceUseCase {
             let purchase_price_usd = to_usd(line_dto.purchase_price_usd.clone());
             let profit_amount_usd = to_usd(line_dto.profit_amount_usd.clone());
 
+            let conversion_factor = line_dto.conversion_factor.as_ref()
+                .and_then(|s| Decimal::from_str(s).ok());
+
             let line = InvoiceLine::new(
                 material_id,
                 quantity,
@@ -170,6 +173,8 @@ impl UpdateInvoiceUseCase {
                 wholesale_price,
                 semi_wholesale_price,
                 minimum_stock,
+                line_dto.unit_id,
+                conversion_factor,
                 line_dto.notes,
                 unit_price_usd,
                 purchase_price_usd,

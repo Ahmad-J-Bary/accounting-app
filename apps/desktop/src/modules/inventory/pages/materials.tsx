@@ -67,6 +67,10 @@ export default function Materials() {
       { id: "categories", label: "التصنيفات" },
       { id: "units", label: "الوحدات" },
       { id: "total_available", label: "المتوفر" },
+      { id: "default_purchase_unit", label: "الوحدة الافتراضية / شراء" },
+      { id: "default_sale_unit", label: "الوحدة الافتراضية / مبيع" },
+      { id: "name_en", label: "اسم بديل (EN)" },
+      { id: "notes", label: "ملاحظة" },
     ];
 
     // Multi-currency price columns grouped by type
@@ -264,7 +268,7 @@ export default function Materials() {
               onClose={() => setIsFormOpen(false)}
               material={editMaterial}
               categories={categories}
-              onSave={handleSave}
+              onSave={handleSave as any}
               saving={saving}
             />
           ) : managingUnitsMaterial ? (

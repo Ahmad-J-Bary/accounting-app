@@ -11,6 +11,7 @@ import { paymentService } from "@modules/payments/api/paymentService";
 import type { 
   AccountLedgerDto, 
   AccountLedgerLineDto, 
+  AccountDto,
   CustomerDto, 
   SupplierDto, 
   PartnerDto,
@@ -290,7 +291,16 @@ export default function AccountMovement() {
             )}
             {accountType === 'expense' && (
               <ExpenseVoucherForm 
-                expenseAccount={{ id: accountId!, name_ar: ledger?.account_name || "" } as any}
+                expenseAccount={{ 
+                  id: accountId!, 
+                  name_ar: ledger?.account_name || "",
+                  code: "", 
+                  parent_id: null,
+                  account_type: "Expense",
+                  is_system: false,
+                  balance_usd: "0",
+                  balance_syp: "0"
+                } as unknown as AccountDto}
                 onSave={handleSaveVoucher}
                 onClose={() => setIsVoucherOpen(false)}
                 saving={savingVoucher}
