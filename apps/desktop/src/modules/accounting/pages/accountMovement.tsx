@@ -1,24 +1,47 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useTabs } from "@app/providers/TabContext";
 import { Button } from "@shared/ui/button";
-import { ArrowRight, RefreshCw, FileText, Download, Printer, Filter, Calculator, Calendar } from "lucide-react";
+import { Download, Printer, PlusCircle, ShoppingCart} from "lucide-react";
 import { accountingService } from "@modules/accounting/api/accountingService";
-import type { AccountLedgerDto, AccountLedgerLineDto } from "@erp/shared-types";
+import { customerService } from "@modules/partners/api/customerService";
+import { supplierService } from "@modules/partners/api/supplierService";
+import { partnerService } from "@modules/partners/api/partnerService";
+import { paymentService } from "@modules/payments/api/paymentService";
+import type { 
+  AccountLedgerDto, 
+  AccountLedgerLineDto, 
+  CustomerDto, 
+  SupplierDto, 
+  PartnerDto,
+  CreatePaymentRequest
+} from "@erp/shared-types";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { AccountMovementTable } from "../components/AccountMovementTable";
 import { cn } from "@shared/lib/utils";
 import { useDataTable } from "@shared/hooks";
 import { JournalSummaryFooter } from "../components/JournalSummaryFooter";
+import { toast } from "sonner";
+
+// Forms
+import { CustomerReceiptForm } from "@modules/partners/components/CustomerReceiptForm";
+import { SupplierPaymentForm } from "@modules/partners/components/SupplierPaymentForm";
+import { ExpenseVoucherForm } from "@modules/accounting/components/ExpenseVoucherForm";
+import { PartnerDrawingsForm } from "@modules/partners/components/PartnerDrawingsForm";
 
 export default function AccountMovement() {
   const { accountId } = useParams<{ accountId: string }>();
-  const { closeTab, activeTabId } = useTabs();
+  const { openTab } = useTabs();
   const [ledger, setLedger] = useState<AccountLedgerDto | null>(null);
+  
+  // Entity Detection
+  const [accountType, setAccountType] = useState<'partner' | 'customer' | 'supplier' | 'expense' | 'other'>('other');
+  const [linkedEntity, setLinkedEntity] = useState<PartnerDto | CustomerDto | SupplierDto | null>(null);
+  const [isVoucherOpen, setIsVoucherOpen] = useState(false);
+  const [savingVoucher, setSavingVoucher] = useState(false);
 
   const {
     loading,
-    refreshing,
     refresh,
   } = useDataTable<AccountLedgerLineDto>({
     fetchData: async () => {
@@ -30,6 +53,45 @@ export default function AccountMovement() {
     dependencies: [accountId],
     searchFields: ["description", "entry_number", "opposite_account_name"]
   });
+
+  // Detect Account Type and Linked Entity
+  useEffect(() => {
+    const detectType = async () => {
+      if (!accountId) return;
+      
+      try {
+        const accounts = await accountingService.getChartOfAccounts();
+        const account = accounts.find(a => a.id === accountId);
+        
+        if (!account) return;
+
+        const partners = await partnerService.listPartners();
+        const partnerMatch = partners.find(p => p.drawings_account_id === accountId || p.linked_account_id === accountId);
+
+        if (partnerMatch) {
+          setLinkedEntity(partnerMatch);
+          setAccountType('partner');
+        } else if (account.linked_customer_id) {
+          const cust = await customerService.getCustomer(account.linked_customer_id);
+          setLinkedEntity(cust);
+          setAccountType('customer');
+        } else if (account.linked_supplier_id) {
+          const supp = await supplierService.getSupplier(account.linked_supplier_id);
+          setLinkedEntity(supp);
+          setAccountType('supplier');
+        } else if (account.code.startsWith('4')) {
+          setAccountType('expense');
+        } else {
+          setAccountType('other');
+          setLinkedEntity(null);
+        }
+      } catch (err) {
+        console.error("Failed to detect account type", err);
+      }
+    };
+
+    detectType();
+  }, [accountId]);
 
   const stats = useMemo(() => {
     if (!ledger) return null;
@@ -58,21 +120,108 @@ export default function AccountMovement() {
     ];
   }, [ledger]);
 
+  const handleSaveVoucher = async (payload: CreatePaymentRequest) => {
+    try {
+      setSavingVoucher(true);
+      await paymentService.createPayment(payload);
+      toast.success("تم تسجيل السند بنجاح");
+      setIsVoucherOpen(false);
+      refresh(true);
+    } catch (error) {
+      toast.error("فشل تسجيل السند: " + error);
+    } finally {
+      setSavingVoucher(false);
+    }
+  };
+
+  const toolbarButtons = useMemo(() => {
+    const commonExcel = (
+      <Button key="excel" variant="outline" size="sm" className="border-slate-200 text-slate-700 hover:bg-slate-50">
+        <Download className="w-4 h-4 ml-2 text-emerald-500" />
+        تصدير Excel
+      </Button>
+    );
+
+    const commonPrint = (
+      <Button key="print" variant="outline" size="sm" className="border-slate-200 text-slate-700 hover:bg-slate-50">
+        <Printer className="w-4 h-4 ml-2 text-blue-500" />
+        طباعة كشف حساب
+      </Button>
+    );
+
+    switch (accountType) {
+      case 'partner':
+        return [
+          <Button key="drawings" size="sm" onClick={() => setIsVoucherOpen(true)} className="bg-amber-600 hover:bg-amber-700 text-white">
+            <PlusCircle className="w-4 h-4 ml-2" />
+            إنشاء سند مسحوبات جديد
+          </Button>,
+          commonExcel
+        ];
+      case 'customer':
+        return [
+          <Button key="receipt" size="sm" onClick={() => setIsVoucherOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
+            <PlusCircle className="w-4 h-4 ml-2" />
+            إنشاء سند قبض جديد
+          </Button>,
+          commonPrint,
+          <Button key="sales" variant="outline" size="sm" onClick={() => {
+            openTab({
+              id: `sales-cust-${linkedEntity.id}`,
+              title: `مبيعات ${linkedEntity.name}`,
+              path: `/sales-invoices?customerId=${linkedEntity.id}`,
+              closable: true
+            });
+          }} className="border-slate-200 text-slate-700 hover:bg-slate-50">
+            <ShoppingCart className="w-4 h-4 ml-2 text-blue-500" />
+            المبيعات للعميل {linkedEntity.name}
+          </Button>,
+          commonExcel
+        ];
+      case 'supplier':
+        return [
+          <Button key="payment" size="sm" onClick={() => setIsVoucherOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+            <PlusCircle className="w-4 h-4 ml-2" />
+            إنشاء سند دفع جديد
+          </Button>,
+          commonPrint,
+          <Button key="purchases" variant="outline" size="sm" onClick={() => {
+            openTab({
+              id: `purchase-supp-${linkedEntity.id}`,
+              title: `مشتريات ${linkedEntity.name}`,
+              path: `/purchase-invoices?supplierId=${linkedEntity.id}`,
+              closable: true
+            });
+          }} className="border-slate-200 text-slate-700 hover:bg-slate-50">
+            <ShoppingCart className="w-4 h-4 ml-2 text-emerald-500" />
+            المشتريات للمورد {linkedEntity.name}
+          </Button>,
+          commonExcel
+        ];
+      case 'expense':
+        return [
+          <Button key="expense" size="sm" onClick={() => setIsVoucherOpen(true)} className="bg-red-600 hover:bg-red-700 text-white">
+            <PlusCircle className="w-4 h-4 ml-2" />
+            إنشاء سند صرف جديد
+          </Button>,
+          commonExcel
+        ];
+      default:
+        return [commonExcel];
+    }
+  }, [accountType, linkedEntity, openTab]);
+
   return (
     <OperationalTableTemplate
       title={`حركة اليومية للحساب: ${ledger?.account_name || "..."}`}
       toolbar={
         <div className="flex items-center gap-2">
-          <Button variant="default" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
-            <Download className="w-4 h-4 ml-2" />
-            تصدير Excel
-          </Button>
+          {toolbarButtons}
         </div>
       }
       filterBar={
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-4">
-             {/* Stats summary in filter bar area for high density */}
              {stats?.map((s, i) => (
                <div key={i} className="flex flex-col border-l last:border-0 border-slate-200 pl-4">
                  <span className="text-[10px] text-slate-500 font-bold">{s.label}</span>
@@ -87,6 +236,7 @@ export default function AccountMovement() {
           <AccountMovementTable
             lines={ledger?.lines || []}
             loading={loading}
+            accountName={ledger?.account_name || ""}
           />
         </div>
       }
@@ -111,8 +261,45 @@ export default function AccountMovement() {
           />
         )
       }
+      sidePanel={
+        isVoucherOpen && (
+          <div className="p-6 h-full overflow-y-auto">
+            {accountType === 'partner' && linkedEntity && (
+              <PartnerDrawingsForm 
+                partner={linkedEntity as PartnerDto}
+                onSave={handleSaveVoucher}
+                onClose={() => setIsVoucherOpen(false)}
+                saving={savingVoucher}
+              />
+            )}
+            {accountType === 'customer' && linkedEntity && (
+              <CustomerReceiptForm 
+                customer={linkedEntity as CustomerDto}
+                onSave={handleSaveVoucher}
+                onClose={() => setIsVoucherOpen(false)}
+                saving={savingVoucher}
+              />
+            )}
+            {accountType === 'supplier' && linkedEntity && (
+              <SupplierPaymentForm 
+                supplier={linkedEntity as SupplierDto}
+                onSave={handleSaveVoucher}
+                onClose={() => setIsVoucherOpen(false)}
+                saving={savingVoucher}
+              />
+            )}
+            {accountType === 'expense' && (
+              <ExpenseVoucherForm 
+                expenseAccount={{ id: accountId!, name_ar: ledger?.account_name || "" } as any}
+                onSave={handleSaveVoucher}
+                onClose={() => setIsVoucherOpen(false)}
+                saving={savingVoucher}
+              />
+            )}
+          </div>
+        )
+      }
+      isPanelOpen={isVoucherOpen}
     />
   );
 }
-
-

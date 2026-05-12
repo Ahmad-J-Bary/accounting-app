@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from '@shared/lib/utils';
 import { Button } from "@shared/ui/button";
+import pkg from "../../../package.json";
 
 interface NavItem {
   to: string;
@@ -23,23 +24,28 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     ],
   },
   {
-    title: "المحاسبة",
+    title: "المحاسبة العامة",
     items: [
       { to: "/accounting", label: "دليل الحسابات", icon: BookOpen },
-      { to: "/partners", label: "الشركاء ورأس المال", icon: Users },
       { to: "/journal", label: "القيود اليومية", icon: FileText },
       { to: "/assets", label: "إدارة الموجودات", icon: HardDrive },
     ],
   },
   {
-    title: "المبيعات والمشتريات",
+    title: "الجهات والعمليات المالية",
     items: [
+      { to: "/partners", label: "الشركاء ورأس المال", icon: Users },
       { to: "/customers", label: "العملاء", icon: Users },
       { to: "/suppliers", label: "الموردون", icon: Truck },
       { to: "/expenses", label: "بنود المصاريف", icon: DollarSign },
+      { to: "/payments", label: "المقبوضات والمدفوعات", icon: Wallet },
+    ],
+  },
+  {
+    title: "المبيعات والمشتريات",
+    items: [
       { to: "/sales-invoices", label: "فواتير المبيعات", icon: Receipt },
       { to: "/purchase-invoices", label: "فواتير المشتريات", icon: ShoppingCart },
-      { to: "/payments", label: "المقبوضات والمدفوعات", icon: Wallet },
     ],
   },
   {
@@ -158,7 +164,7 @@ export function Sidebar({ collapsed, onClose }: SidebarProps) {
 
       <div className="border-t border-white/5 p-4 flex items-center gap-2">
         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-        <span className="text-[10px] text-slate-500 font-medium tracking-wide">الإصدار 1.2.0 — نظام الألسنة</span>
+        <span className="text-[10px] text-slate-500 font-medium tracking-wide">الإصدار {pkg.version}</span>
       </div>
     </aside>
   );

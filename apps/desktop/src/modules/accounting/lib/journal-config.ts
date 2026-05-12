@@ -39,83 +39,40 @@ export const JOURNAL_REPORT_TYPES: JournalReportTypeOption[] = [
 ];
 
 export function getJournalColumnsByType(journalType?: JournalType): string[] {
+  // Unified order for all types as requested by user:
+  // رقم القيد, نوع الحركة, مدين $, مدين ل.س, دائن $, دائن ل.س, البيان, الدائن/المصدر, المدين/الوجهة, التاريخ
+  
+  const baseColumns = [
+    "entry_number",
+    "journal_type",
+    "total_debit_usd",
+    "total_debit_syp",
+    "total_credit_usd",
+    "total_credit_syp",
+    "description",
+    "credit_account",
+    "debit_account",
+    "entry_date",
+  ];
+
   switch (journalType) {
     case "CashJournal":
-      return [
-        "entry_date",
-        "entry_number",
-        "journal_type",
-        "description",
-        "debit_account",
-        "credit_account",
-        "total_debit_syp",
-        "total_credit_syp",
-      ];
-    case "CashSalesJournal":
-    case "CreditSalesJournal":
-      return [
-        "entry_date",
-        "entry_number",
-        "journal_type",
-        "description",
-        "debit_account",
-        "credit_account",
-        "total_debit_usd",
-        "total_credit_usd",
-        "total_debit_syp",
-        "total_credit_syp",
-      ];
     case "PurchaseJournal":
     case "PurchaseCostsJournal":
-      return [
-        "entry_date",
-        "entry_number",
-        "journal_type",
-        "description",
-        "debit_account",
-        "credit_account",
-        "total_debit_syp",
-        "total_credit_syp",
-      ];
     case "CashReceipt":
     case "CashPayment":
     case "ExpenseVoucher":
     case "DrawingsVoucher":
-      return [
-        "entry_date",
-        "entry_number",
-        "journal_type",
-        "description",
-        "debit_account",
-        "credit_account",
-        "total_debit_syp",
-        "total_credit_syp",
-      ];
     case "MaterialOpeningBalance":
-      return [
-        "entry_date",
-        "entry_number",
-        "journal_type",
-        "description",
-        "debit_account",
-        "credit_account",
-        "total_debit_syp",
-        "total_credit_syp",
-      ];
+      // For types that usually don't show USD in their specific reports, 
+      // but user requested a unified format, we keep the order but maybe filter?
+      // Actually the user said "متماثلين في القالب ونفس عناصر الجدول".
+      // So I'll return the same for all.
+      return baseColumns;
+    case "CashSalesJournal":
+    case "CreditSalesJournal":
     case "GeneralJournal":
     default:
-      return [
-        "entry_date",
-        "entry_number",
-        "journal_type",
-        "description",
-        "debit_account",
-        "credit_account",
-        "total_debit_usd",
-        "total_credit_usd",
-        "total_debit_syp",
-        "total_credit_syp",
-      ];
+      return baseColumns;
   }
 }
-
