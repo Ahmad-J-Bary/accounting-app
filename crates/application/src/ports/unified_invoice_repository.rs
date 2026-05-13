@@ -12,5 +12,5 @@ pub trait UnifiedInvoiceRepository: Send + Sync {
     async fn update(&self, invoice: &UnifiedInvoice) -> Result<(), AppError>;
     async fn delete(&self, id: &InvoiceId) -> Result<(), AppError>;
     async fn get_last_usd_prices(&self, material_id: &str) -> Result<(String, String), AppError>;
-    async fn get_next_invoice_number(&self) -> Result<String, AppError>;
+    async fn get_next_invoice_number(&self, invoice_type: InvoiceType) -> Result<String, AppError>;
 }

@@ -151,11 +151,18 @@ pub async fn get_last_usd_prices(pool: &SqlitePool, material_id: &str) -> Result
     ))
 }
 
-pub async fn get_next_invoice_number(pool: &SqlitePool) -> Result<String, AppError> {
-    let row: (Option<i64>,) = sqlx::query_as("SELECT MAX(CAST(invoice_number AS INTEGER)) FROM unified_invoices")
-        .fetch_one(pool)
-        .await
-        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+pub async fn get_next_invoice_number(pool: &SqlitePool, invoice_type: &str) -> Result<String, AppError> {
+    let (query, has_param) = match invoice_type {
+        "Purchase" | "OpeningBalance" => 
+            ("SELECT MAX(CAST(invoice_number AS INTEGER)) FROM unified_invoices WHERE invoice_type IN ('Purchase', 'OpeningBalance')", false),
+        _ => ("SELECT MAX(CAST(invoice_number AS INTEGER)) FROM unified_invoices WHERE invoice_type = ?", true),
+    };
+
+    let row: (Option<i64>,) = if has_param {
+        sqlx::query_as(query).bind(invoice_type).fetch_one(pool).await
+    } else {
+        sqlx::query_as(query).fetch_one(pool).await
+    }.map_err(|e| AppError::Infrastructure(e.to_string()))?;
     
     let next = match row.0 {
         Some(n) => n + 1,

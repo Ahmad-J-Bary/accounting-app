@@ -3,7 +3,7 @@ import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { useTabs } from '@app/providers/TabContext';
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Save, Send, Printer, ChevronRight, History, RefreshCw, Plus } from "lucide-react";
+import { Save, Send, Printer, ChevronRight, History, RefreshCw, Plus, Settings2 } from "lucide-react";
 import { invoiceService } from '@modules/invoicing/api/invoiceService';
 import { supplierService } from '@modules/partners/api/supplierService';
 import { materialService } from '@modules/inventory/api/materialService';
@@ -20,7 +20,7 @@ import { InvoicePartySelector } from "../components/InvoicePartySelector";
 import { DocumentStatusBadge } from "../components/DocumentStatusBadge";
 import { PurchaseInvoiceList } from "../components/PurchaseInvoiceList";
 import { useDocumentEditor } from "../hooks/useDocumentEditor";
-import { generateDocNumber, toBackendLines, type GridLine } from "../lib/invoiceUtils";
+import { toBackendLines, type GridLine } from "../lib/invoiceUtils";
 import { type DocumentStatus } from "../components/DocumentStatusBadge";
 
 type ViewMode = "list" | "editor";
@@ -43,7 +43,7 @@ interface HeaderState {
 }
 
 const defaultHeader = (): HeaderState => ({
-  invoice_number: generateDocNumber("PUR"),
+  invoice_number: "...",
   supplier_id: "",
   supplier_name: "مورد نقدي",
   issued_at: new Date().toISOString().split("T")[0],
@@ -89,7 +89,7 @@ export default function PurchaseInvoices() {
       else setRefreshing(true);
 
       const [invData, suppData, currData, matData] = await Promise.all([
-        invoiceService.listInvoicesByType("Purchase"),
+        invoiceService.listInvoicesByType(["Purchase", "OpeningBalance"]),
         supplierService.listSuppliers(),
         currencyService.listCurrencies(),
         materialService.listMaterials(),
@@ -111,6 +111,9 @@ export default function PurchaseInvoices() {
   useEffect(() => {
     if (isNew) {
       setHeaderState(defaultHeader());
+      invoiceService.getNextInvoiceNumber("Purchase").then(num => {
+        setHeaderState(s => ({ ...s, invoice_number: num }));
+      });
       setLines([]);
       setView("editor");
     } else if (id) {
@@ -142,6 +145,11 @@ export default function PurchaseInvoices() {
       setView("list");
     }
   }, [isNew, id, setLines]);
+
+  const isReadOnly = useMemo(() => {
+    const searchParams = new URLSearchParams(location.search);
+    return searchParams.get("mode") === "view";
+  }, [location.search]);
 
   const handleSave = async (isPosting = false) => {
     if (lines.length === 0 || !lines[0].material_id) {
@@ -189,7 +197,7 @@ export default function PurchaseInvoices() {
       }
 
       if (isNew) {
-        navigate(`/erp/purchase/${result.id}`);
+        navigate(`/purchase-invoices/${result.id}`);
         closeTab(activeTabId);
       } else {
         setHeaderState(s => ({ ...s, status: isPosting ? "Posted" : s.status, id: result.id }));
@@ -197,6 +205,37 @@ export default function PurchaseInvoices() {
       }
     } catch (e) {
       toast.error("فشل العملية: " + e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReopen = async () => {
+    if (!headerState.id) return;
+    setSaving(true);
+    try {
+      await invoiceService.reopenInvoice(headerState.id);
+      toast.success("تم إلغاء الترحيل بنجاح");
+      const inv = await invoiceService.getInvoiceById(headerState.id);
+      setHeaderState({
+        id: inv.id,
+        invoice_number: inv.invoice_number,
+        supplier_id: inv.supplier_id ?? "",
+        supplier_name: inv.supplier_name ?? "مورد نقدي",
+        issued_at: inv.issued_at.split("T")[0],
+        notes: inv.notes ?? "",
+        tax_amount: inv.tax_amount,
+        discount_amount: inv.discount_amount,
+        extra_costs: "0",
+        payment_method: inv.payment_method?.toLowerCase() || "cash",
+        status: inv.status,
+        currency_code: inv.currency_code || "USD",
+        exchange_rate: inv.exchange_rate || "1",
+        paid_amount: inv.amount_paid || "0",
+      });
+      loadData();
+    } catch (e) {
+      toast.error("فشل إلغاء الترحيل: " + e);
     } finally {
       setSaving(false);
     }
@@ -272,12 +311,42 @@ export default function PurchaseInvoices() {
         statusBadge={<DocumentStatusBadge status={headerState.status} />}
         toolbar={
           <>
-            <Button variant="outline" size="sm" onClick={() => handleSave(false)} disabled={saving} className="bg-white border-slate-200 text-slate-700">
-              <Save className="w-4 h-4 ml-2" /> {saving ? "جاري الحفظ..." : "حفظ مسودة"}
-            </Button>
-            <Button size="sm" onClick={() => handleSave(true)} disabled={saving} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
-              <Send className="w-4 h-4 ml-2" /> ترحيل الفاتورة
-            </Button>
+            {isReadOnly && (
+              <Button 
+                size="sm" 
+                onClick={() => {
+                  const searchParams = new URLSearchParams(location.search);
+                  searchParams.set("mode", "edit");
+                  navigate({ search: searchParams.toString() });
+                }}
+                className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100"
+              >
+                <Settings2 className="w-4 h-4 ml-2" /> تعديل الفاتورة
+              </Button>
+            )}
+            
+            {headerState.status === "Posted" && (
+              <Button variant="outline" size="sm" onClick={handleReopen} disabled={saving} className="bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100">
+                <RefreshCw className="w-4 h-4 ml-2" /> {saving ? "جاري المعالجة..." : "إلغاء الترحيل"}
+              </Button>
+            )}
+
+            {!isReadOnly && headerState.status === "Posted" && (
+              <Button size="sm" onClick={() => handleSave(true)} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-100">
+                <Save className="w-4 h-4 ml-2" /> {saving ? "جاري الحفظ..." : "حفظ وترحيل التعديلات"}
+              </Button>
+            )}
+
+            {!isReadOnly && headerState.status !== "Posted" && (
+              <>
+                <Button variant="outline" size="sm" onClick={() => handleSave(false)} disabled={saving} className="bg-white border-slate-200 text-slate-700">
+                  <Save className="w-4 h-4 ml-2" /> {saving ? "جاري الحفظ..." : "حفظ مسودة"}
+                </Button>
+                <Button size="sm" onClick={() => handleSave(true)} disabled={saving} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
+                  <Send className="w-4 h-4 ml-2" /> ترحيل الفاتورة
+                </Button>
+              </>
+            )}
             <Button variant="outline" size="sm" className="bg-white">
               <Printer className="w-4 h-4 ml-2" /> طباعة
             </Button>
@@ -291,11 +360,11 @@ export default function PurchaseInvoices() {
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase">تاريخ الإصدار</label>
-              <Input type="date" value={headerState.issued_at} onChange={e => setHeaderState(s => ({ ...s, issued_at: e.target.value }))} className="h-10 font-bold border-slate-200" />
+              <Input type="date" readOnly={isReadOnly} value={headerState.issued_at} onChange={e => setHeaderState(s => ({ ...s, issued_at: e.target.value }))} className="h-10 font-bold border-slate-200" />
             </div>
             <div className="md:col-span-2 space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase">ملاحظات المستند</label>
-              <Input placeholder="أدخل أي ملاحظات إضافية هنا..." value={headerState.notes} onChange={e => setHeaderState(s => ({ ...s, notes: e.target.value }))} className="h-10 border-slate-200" />
+              <Input placeholder="أدخل أي ملاحظات إضافية هنا..." readOnly={isReadOnly} value={headerState.notes} onChange={e => setHeaderState(s => ({ ...s, notes: e.target.value }))} className="h-10 border-slate-200" />
             </div>
           </>
         }
@@ -308,7 +377,7 @@ export default function PurchaseInvoices() {
             onAddLine={addLine}
             onSelectMaterial={selectMaterial}
             materials={Object.values(materials)} 
-            readOnly={headerState.status === "Posted"}
+            readOnly={isReadOnly}
             preferenceKey="purchase_invoice_grid"
           />
         }
@@ -334,6 +403,7 @@ export default function PurchaseInvoices() {
               <InvoicePartySelector
                 type="supplier"
                 parties={suppliers}
+                readOnly={isReadOnly}
                 selectedId={headerState.supplier_id}
                 selectedName={headerState.supplier_name}
                 onSelect={(id, name) => setHeaderState(s => ({ ...s, supplier_id: id, supplier_name: name }))}
@@ -349,6 +419,7 @@ export default function PurchaseInvoices() {
                 <select 
                   value={headerState.payment_method} 
                   onChange={e => {
+                    if (isReadOnly) return;
                     const method = e.target.value;
                     const net = totals.subtotal - parseFloat(headerState.discount_amount) + parseFloat(headerState.tax_amount) + parseFloat(headerState.extra_costs);
                     setHeaderState(s => ({ 
@@ -357,7 +428,8 @@ export default function PurchaseInvoices() {
                       paid_amount: method === "cash" ? net.toString() : (method === "credit" ? "0" : s.paid_amount)
                     }));
                   }}
-                  className="w-full h-10 px-3 rounded-lg border border-slate-200 bg-white font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  disabled={isReadOnly}
+                  className="w-full h-10 px-3 rounded-lg border border-slate-200 bg-white font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:opacity-70 disabled:bg-slate-50"
                 >
                   <option value="cash">نقداً (دفع كامل)</option>
                   <option value="credit">آجل (ذمم على الشركة)</option>
@@ -373,6 +445,7 @@ export default function PurchaseInvoices() {
                   </label>
                   <Input 
                     type="number" 
+                    readOnly={isReadOnly}
                     value={headerState.paid_amount} 
                     onChange={e => setHeaderState(s => ({ ...s, paid_amount: e.target.value }))}
                     className="h-10 font-black text-lg border-blue-200 focus:ring-blue-500 bg-blue-50/30"
@@ -388,8 +461,9 @@ export default function PurchaseInvoices() {
                 <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">العملة وسعر الصرف</label>
                 <select
                   value={headerState.currency_code}
+                  disabled={isReadOnly}
                   onChange={e => setHeaderState(s => ({ ...s, currency_code: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-md border border-slate-200 bg-slate-50 font-bold text-xs"
+                  className="w-full h-9 px-3 rounded-md border border-slate-200 bg-slate-50 font-bold text-xs disabled:opacity-70"
                 >
                   {currencies.map(c => (
                     <option key={c.code} value={c.code}>{c.name_ar} ({c.symbol || c.code})</option>
@@ -398,6 +472,7 @@ export default function PurchaseInvoices() {
                 {headerState.currency_code !== baseCurrency?.code && (
                   <Input
                     type="number"
+                    readOnly={isReadOnly}
                     value={headerState.exchange_rate}
                     onChange={e => setHeaderState(s => ({ ...s, exchange_rate: e.target.value }))}
                     className="mt-2 h-8 text-left font-mono font-bold text-xs"
@@ -436,12 +511,41 @@ export default function PurchaseInvoices() {
       onEdit={(inv) => {
         openTab({ 
           id: `/purchase-invoices/${inv.id}`, 
-          title: `فاتورة ${inv.invoice_number}`, 
-          path: `/purchase-invoices/${inv.id}`,
+          title: `تعديل فاتورة ${inv.invoice_number}`, 
+          path: `/purchase-invoices/${inv.id}?mode=edit`,
           closable: true
         });
       }}
-      onPost={(id) => invoiceService.postInvoice(id).then(() => loadData(false))}
+      onView={(inv) => {
+        openTab({ 
+          id: `/purchase-invoices/${inv.id}-view`, 
+          title: `عرض فاتورة ${inv.invoice_number}`, 
+          path: `/purchase-invoices/${inv.id}?mode=view`,
+          closable: true
+        });
+      }}
+      onPost={async (id) => {
+        await invoiceService.postInvoice(id);
+        loadData(false);
+      }}
+      onDelete={async (id) => {
+        try {
+          await invoiceService.deleteInvoice(id);
+          toast.success("تم حذف الفاتورة والقيود المرتبطة بها");
+          loadData(false);
+        } catch (e) {
+          toast.error("فشل الحذف: " + e);
+        }
+      }}
+      onReopen={async (id) => {
+        try {
+          await invoiceService.reopenInvoice(id);
+          toast.success("تم إلغاء الترحيل وإعادة الفاتورة لمسودة");
+          loadData(false);
+        } catch (e) {
+          toast.error("فشل العملية: " + e);
+        }
+      }}
       formatMonetaryAmount={formatMonetaryAmount}
     />
   );

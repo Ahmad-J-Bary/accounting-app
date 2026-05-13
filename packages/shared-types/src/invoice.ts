@@ -55,6 +55,12 @@ export interface InvoiceDto {
   currency_code: string;
   exchange_rate: string;
   notes?: string;
+  subtotal_amount: string;
+  subtotal_amount_v2?: MonetaryAmount;
+  extra_costs: string;
+  extra_costs_v2?: MonetaryAmount;
+  remaining_amount: string;
+  remaining_amount_v2?: MonetaryAmount;
   total_profit?: string;
   profit_percent?: string;
 }

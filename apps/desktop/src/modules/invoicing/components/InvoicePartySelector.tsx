@@ -16,6 +16,7 @@ interface InvoicePartySelectorProps {
   onSelect: (id: string, name: string) => void;
   onClear?: () => void;
   disabled?: boolean;
+  readOnly?: boolean;
   defaultName?: string;
   predictedBalance?: number;
 }
@@ -28,6 +29,7 @@ export function InvoicePartySelector({
   onSelect,
   onClear,
   disabled = false,
+  readOnly = false,
   defaultName,
   predictedBalance = 0,
 }: InvoicePartySelectorProps) {
@@ -107,11 +109,13 @@ export function InvoicePartySelector({
                     onSelect("", e.target.value); // Set as name by default
                     setOpen(true);
                 }}
-                onFocus={() => setOpen(true)}
+                onFocus={() => {
+                    if (!readOnly) setOpen(true);
+                }}
                 autoComplete="off"
             />
 
-            {(inputValue || selectedId) && !disabled && (
+            {(inputValue || selectedId) && !disabled && !readOnly && (
                 <button
                     onClick={() => {
                         setInputValue("");

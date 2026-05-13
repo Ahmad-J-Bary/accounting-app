@@ -60,9 +60,4 @@ export function calcLineTotal(line: GridLine): number {
   return subtotal - (subtotal * disc / 100);
 }
 
-/** Generate a unique invoice number */
-export function generateDocNumber(prefix: string): string {
-  const ts = Date.now().toString(36).toUpperCase();
-  const rnd = Math.random().toString(36).slice(2, 5).toUpperCase();
-  return `${prefix}-${ts}${rnd}`;
-}
+

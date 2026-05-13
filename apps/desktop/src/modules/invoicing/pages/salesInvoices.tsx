@@ -3,7 +3,7 @@ import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { useTabs } from '@app/providers/TabContext';
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Save, Send, Printer, RefreshCw, ChevronRight, History } from "lucide-react";
+import { Save, Send, Printer, RefreshCw, ChevronRight, History, Settings2 } from "lucide-react";
 import { invoiceService } from '@modules/invoicing/api/invoiceService';
 import { customerService } from '@modules/partners/api/customerService';
 import { materialService } from '@modules/inventory/api/materialService';
@@ -19,7 +19,7 @@ import { GenericDocumentGrid, DocumentColumn } from '@widgets/document-shell/Gen
 import { SummaryPanel } from '@widgets/document-shell/SummaryPanel';
 import { InvoicePartySelector } from '../components/InvoicePartySelector';
 import { useDocumentEditor } from '../hooks/useDocumentEditor';
-import { generateDocNumber, toBackendLines, type GridLine } from '../lib/invoiceUtils';
+import { toBackendLines, type GridLine } from '../lib/invoiceUtils';
 import { type DocumentStatus } from '../components/DocumentStatusBadge';
 
 type ViewMode = "list" | "editor";
@@ -41,7 +41,7 @@ interface EditorState {
 }
 
 const DEFAULT_EDITOR = (baseCurrencyCode: string): EditorState => ({
-  invoice_number: generateDocNumber("SAL"),
+  invoice_number: "...",
   customer_id: "",
   customer_name: "زبون نقدي",
   issued_at: new Date().toISOString().split("T")[0],
@@ -105,10 +105,18 @@ export default function SalesInvoices() {
 
   useEffect(() => { loadData(true); }, [loadData]);
 
+  const isReadOnly = useMemo(() => {
+    const searchParams = new URLSearchParams(location.search);
+    return searchParams.get("mode") === "view";
+  }, [location.search]);
+
   // Handle Route Changes
   useEffect(() => {
     if (isNew) {
       setHeaderState(DEFAULT_EDITOR(baseCurrency?.code || "USD"));
+      invoiceService.getNextInvoiceNumber("Sales").then(num => {
+        setHeaderState(s => ({ ...s, invoice_number: num, status: "Draft" }));
+      });
       setLines([]);
       setView("editor");
     } else if (id) {
@@ -190,25 +198,42 @@ export default function SalesInvoices() {
       if (andPost) {
         try {
           await invoiceService.postInvoice(saved.id);
-          toast.success("تم الحفظ والترحيل بنجاح");
+          toast.success(headerState.status === "Posted" ? "تم تحديث وإعادة ترحيل الفاتورة" : "تم الحفظ والترحيل بنجاح");
         } catch (postError) {
-          toast.error("تم حفظ الفاتورة كمسودة ولكن فشل الترحيل: " + postError);
+          toast.error("تم حفظ الفاتورة ولكن فشل الترحيل: " + postError);
           setSaving(false);
-          // Don't navigate away, let user fix it
           return;
         }
       } else {
         toast.success("تم حفظ الفاتورة كمسودة");
       }
 
-      if (isNew) {
-        navigate(`/erp/sales/${saved.id}`);
-        closeTab(activeTabId);
+      if (isNew || headerState.status !== "Posted") {
+        navigate(`/sales-invoices/${saved.id}?mode=view`);
+        setHeaderState(s => ({ ...s, status: andPost ? "Posted" : "Draft" }));
       } else {
         loadData();
+        navigate(`/sales-invoices/${saved.id}?mode=view`);
       }
     } catch (e) {
       toast.error("فشل العملية: " + e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReopen = async () => {
+    if (!headerState.id) return;
+    if (!window.confirm("هل أنت متأكد من إلغاء ترحيل الفاتورة؟ سيتم عكس القيود المحاسبية وحركات المخزون.")) return;
+    
+    try {
+      setSaving(true);
+      await invoiceService.reopenInvoice(headerState.id);
+      toast.success("تم إلغاء الترحيل بنجاح. الفاتورة الآن مسودة.");
+      setHeaderState(s => ({ ...s, status: "Draft" }));
+      navigate(`/sales-invoices/${headerState.id}`); // Edit mode
+    } catch (e) {
+      toast.error("فشل إلغاء الترحيل: " + e);
     } finally {
       setSaving(false);
     }
@@ -291,14 +316,59 @@ export default function SalesInvoices() {
         statusBadge={<DocumentStatusBadge status={headerState.status} />}
         toolbar={
           <>
-            <Button variant="outline" size="sm" onClick={() => handleSave(false)} disabled={saving} className="bg-white border-slate-200 text-slate-700">
-              <Save className="w-4 h-4 ml-2" /> {saving ? "جاري الحفظ..." : "حفظ مسودة"}
-            </Button>
-            <Button size="sm" onClick={() => handleSave(true)} disabled={saving} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
-              <Send className="w-4 h-4 ml-2" /> ترحيل الفاتورة
-            </Button>
-            <Button variant="outline" size="sm" className="bg-white">
-              <Printer className="w-4 h-4 ml-2" /> طباعة
+            {headerState.status === "Posted" ? (
+              <>
+                {isReadOnly ? (
+                  <>
+                    <Button 
+                      size="sm" 
+                      onClick={() => navigate(`/sales-invoices/${headerState.id}`)}
+                      className="bg-amber-500 hover:bg-amber-600 shadow-lg shadow-amber-100 font-bold"
+                    >
+                      <Settings2 className="w-4 h-4 ml-2" /> تعديل الفاتورة
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleReopen}
+                      className="border-rose-200 text-rose-600 hover:bg-rose-50 font-bold"
+                    >
+                      <History className="w-4 h-4 ml-2" /> إلغاء الترحيل
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button 
+                      size="sm" 
+                      onClick={() => handleSave(true)} 
+                      disabled={saving} 
+                      className="bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-100 font-bold"
+                    >
+                      <Send className="w-4 h-4 ml-2" /> حفظ وترحيل التعديلات
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleReopen}
+                      className="border-rose-200 text-rose-600 hover:bg-rose-50 font-bold"
+                    >
+                      <History className="w-4 h-4 ml-2" /> إلغاء الترحيل
+                    </Button>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <Button variant="outline" size="sm" onClick={() => handleSave(false)} disabled={saving} className="bg-white border-slate-200 text-slate-700 font-bold">
+                  <Save className="w-4 h-4 ml-2" /> {saving ? "جاري الحفظ..." : "حفظ مسودة"}
+                </Button>
+                <Button size="sm" onClick={() => handleSave(true)} disabled={saving} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold">
+                  <Send className="w-4 h-4 ml-2" /> ترحيل الفاتورة
+                </Button>
+              </>
+            )}
+            <Button variant="outline" size="sm" className="bg-white font-bold border-slate-200">
+              <Printer className="w-4 h-4 ml-2 text-slate-500" /> طباعة
             </Button>
           </>
         }
@@ -310,11 +380,11 @@ export default function SalesInvoices() {
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase">تاريخ الإصدار</label>
-              <Input type="date" value={headerState.issued_at} onChange={e => setHeaderState(s => ({ ...s, issued_at: e.target.value }))} className="h-10 font-bold border-slate-200" />
+              <Input type="date" readOnly={isReadOnly} value={headerState.issued_at} onChange={e => setHeaderState(s => ({ ...s, issued_at: e.target.value }))} className="h-10 font-bold border-slate-200 disabled:opacity-100" />
             </div>
             <div className="md:col-span-2 space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase">ملاحظات المستند</label>
-              <Input placeholder="أدخل أي ملاحظات إضافية هنا..." value={headerState.notes} onChange={e => setHeaderState(s => ({ ...s, notes: e.target.value }))} className="h-10 border-slate-200" />
+              <Input placeholder="أدخل أي ملاحظات إضافية هنا..." readOnly={isReadOnly} value={headerState.notes} onChange={e => setHeaderState(s => ({ ...s, notes: e.target.value }))} className="h-10 border-slate-200 disabled:opacity-100" />
             </div>
           </>
         }
@@ -327,8 +397,8 @@ export default function SalesInvoices() {
             onAddLine={addLine}
             onSelectMaterial={selectMaterial}
             materials={Object.values(materials)} 
-            readOnly={headerState.status === "Posted"}
-            preferenceKey="sales_invoice_grid"
+            readOnly={isReadOnly}
+            preferenceKey="sales_invoice_grid_v2"
           />
         }
         summaryPanel={
@@ -356,6 +426,7 @@ export default function SalesInvoices() {
                 selectedName={headerState.customer_name}
                 onSelect={(id, name) => setHeaderState(s => ({ ...s, customer_id: id, customer_name: name }))}
                 onClear={() => setHeaderState(s => ({ ...s, customer_id: "", customer_name: "زبون نقدي" }))}
+                readOnly={isReadOnly}
                 predictedBalance={
                   headerState.payment_method === "cash" 
                     ? 0 
@@ -454,12 +525,22 @@ export default function SalesInvoices() {
       onEdit={(inv) => {
         openTab({ 
           id: `/sales-invoices/${inv.id}`, 
-          title: `فاتورة ${inv.invoice_number}`, 
+          title: `تعديل ${inv.invoice_number}`, 
           path: `/sales-invoices/${inv.id}`,
           closable: true
         });
       }}
+      onView={(inv) => {
+        openTab({ 
+          id: `/sales-invoices/${inv.id}?mode=view`, 
+          title: `عرض ${inv.invoice_number}`, 
+          path: `/sales-invoices/${inv.id}?mode=view`,
+          closable: true
+        });
+      }}
       onPost={(id) => invoiceService.postInvoice(id).then(() => loadData(false))}
+      onDelete={(id) => invoiceService.deleteInvoice(id).then(() => loadData(false))}
+      onReopen={(id) => invoiceService.reopenInvoice(id).then(() => loadData(false))}
       formatMonetaryAmount={formatMonetaryAmount}
     />
   );

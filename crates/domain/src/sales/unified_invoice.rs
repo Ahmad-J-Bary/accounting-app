@@ -145,9 +145,19 @@ impl UnifiedInvoice {
         self.updated_at = Utc::now();
     }
 
+    pub fn subtotal(&self) -> MonetaryAmount {
+        let doc_currency = Currency::from_code(&self.currency_code);
+        self.lines
+            .iter()
+            .fold(MonetaryAmount::zero(doc_currency.clone()), |acc, line| {
+                (acc + line.line_total())
+                    .unwrap_or_else(|_| MonetaryAmount::zero(doc_currency.clone()))
+            })
+    }
+
     pub fn post(&mut self) -> Result<(), DomainError> {
-        if self.status != InvoiceStatus::Draft {
-            return Err(DomainError::Invalid("الفاتورة ليست في حالة مسودة".into()));
+        if self.status != InvoiceStatus::Draft && self.status != InvoiceStatus::Posted {
+            return Err(DomainError::Invalid("الحالة الحالية لا تسمح بالترحيل".into()));
         }
         if self.lines.is_empty() {
             return Err(DomainError::Invalid("لا يمكن ترحيل فاتورة فارغة".into()));
@@ -177,5 +187,9 @@ impl UnifiedInvoice {
         self.status = InvoiceStatus::Draft;
         self.updated_at = Utc::now();
         Ok(())
+    }
+
+    pub fn subtotal_amount(&self) -> String {
+        self.subtotal().original.amount().to_string()
     }
 }

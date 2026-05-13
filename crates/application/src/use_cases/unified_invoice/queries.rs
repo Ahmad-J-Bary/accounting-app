@@ -123,4 +123,15 @@ impl InvoiceQueries {
         }
         Ok(dtos)
     }
+
+    pub async fn get_next_invoice_number(&self, invoice_type: String) -> Result<String, AppError> {
+        let itype = match invoice_type.as_str() {
+            "Sales" => InvoiceType::Sales,
+            "Purchase" => InvoiceType::Purchase,
+            "PurchaseCosts" => InvoiceType::PurchaseCosts,
+            "OpeningBalance" => InvoiceType::OpeningBalance,
+            _ => return Err(AppError::Invalid("Invalid invoice type".into())),
+        };
+        self.repo.get_next_invoice_number(itype).await
+    }
 }

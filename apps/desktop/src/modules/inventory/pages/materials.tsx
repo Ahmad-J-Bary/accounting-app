@@ -268,7 +268,7 @@ export default function Materials() {
               onClose={() => setIsFormOpen(false)}
               material={editMaterial}
               categories={categories}
-              onSave={handleSave as any}
+              onSave={handleSave}
               saving={saving}
             />
           ) : managingUnitsMaterial ? (

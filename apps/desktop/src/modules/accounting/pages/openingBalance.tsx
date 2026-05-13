@@ -3,13 +3,10 @@ import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { useTabs } from '@app/providers/TabContext';
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Save, RefreshCw, History, Plus, ChevronRight, Calculator, User, Truck, Landmark, Package } from "lucide-react";
+import { Save, Package } from "lucide-react";
 import { invoiceService } from '@modules/invoicing/api/invoiceService';
-import { customerService } from '@modules/partners/api/customerService';
-import { supplierService } from '@modules/partners/api/supplierService';
-import { accountingService } from '@modules/accounting/api/accountingService';
 import { materialService } from '@modules/inventory/api/materialService';
-import type { InvoiceDto, CustomerDto, SupplierDto, AccountDto, MaterialDto } from "@erp/shared-types";
+import type { InvoiceDto, MaterialDto } from "@erp/shared-types";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
@@ -17,59 +14,30 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { FinancialDocumentTemplate } from "@widgets/templates/FinancialDocumentTemplate";
 import { GenericDocumentGrid, type DocumentColumn } from "@widgets/document-shell/GenericDocumentGrid";
 import { SummaryPanel } from "@widgets/document-shell/SummaryPanel";
-import { InvoicePartySelector } from "@modules/invoicing/components/InvoicePartySelector";
 import { DocumentStatusBadge } from "@modules/invoicing/components/DocumentStatusBadge";
 import { useDocumentEditor } from "@modules/invoicing/hooks/useDocumentEditor";
-import { generateDocNumber, toBackendLines, type GridLine } from "@modules/invoicing/lib/invoiceUtils";
-
-type BalanceType = "Inventory" | "Customer" | "Supplier" | "Account" | "Cash";
-
-const BALANCE_TYPE_OPTIONS = [
-  { value: "Inventory", label: "مخزون", icon: Package, color: "text-blue-600", bg: "bg-blue-50" },
-  { value: "Customer", label: "عملاء", icon: User, color: "text-emerald-600", bg: "bg-emerald-50" },
-  { value: "Supplier", label: "موردين", icon: Truck, color: "text-orange-600", bg: "bg-orange-50" },
-  { value: "Account", label: "حسابات", icon: Calculator, color: "text-purple-600", bg: "bg-purple-50" },
-  { value: "Cash", label: "نقدية", icon: Landmark, color: "text-rose-600", bg: "bg-rose-50" },
-] as const;
+import { toBackendLines, type GridLine } from "@modules/invoicing/lib/invoiceUtils";
 
 interface HeaderState {
-  balanceType: BalanceType;
   docNumber: string;
   issued_at: string;
   notes: string;
-  partyId: string;
-  partyName: string;
-  debitCredit: "debit" | "credit";
-  amount: string;
-  accountId: string;
   currencyCode: string;
   exchangeRate: string;
 }
 
 const defaultHeader = (): HeaderState => ({
-  balanceType: "Inventory",
-  docNumber: generateDocNumber("OPN"),
+  docNumber: "...",
   issued_at: new Date().toISOString().split("T")[0],
-  notes: "",
-  partyId: "",
-  partyName: "رصيد افتتاحي",
-  debitCredit: "debit",
-  amount: "0",
-  accountId: "",
+  notes: "مواد أول المدة- رصيد افتتاحي للمواد",
   currencyCode: "USD",
   exchangeRate: "1",
 });
 
 export default function OpeningBalance() {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { id } = useParams();
   const { closeTab, activeTabId } = useTabs();
   
-  const [history, setHistory] = useState<InvoiceDto[]>([]);
-  const [customers, setCustomers] = useState<CustomerDto[]>([]);
-  const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
-  const [accounts, setAccounts] = useState<AccountDto[]>([]);
   const [materials, setMaterials] = useState<MaterialDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -80,24 +48,17 @@ export default function OpeningBalance() {
     materials
   });
   
-  const { formatAmount, formatMonetaryAmount, convertFromBase, convertBetween, currencies, baseCurrency } = useCurrencyContext();
+  const { formatAmount, convertFromBase, currencies, baseCurrency } = useCurrencyContext();
 
-  const isNew = location.pathname.includes("/new");
+  const { id } = useParams();
+  const isNew = !id || location.pathname.includes("/new");
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [hist, custs, supps, accs, mats] = await Promise.all([
-        invoiceService.listInvoicesByType("OpeningBalance"),
-        customerService.listCustomers(),
-        supplierService.listSuppliers(),
-        accountingService.getChartOfAccounts(),
+      const [mats] = await Promise.all([
         materialService.listMaterials(),
       ]);
-      setHistory(hist);
-      setCustomers(custs);
-      setSuppliers(supps);
-      setAccounts(accs);
       setMaterials(mats);
     } catch (e: unknown) {
       toast.error("فشل تحميل البيانات: " + e);
@@ -106,10 +67,18 @@ export default function OpeningBalance() {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => { 
+    // Refresh data and get next invoice number on mount
+    loadData(); 
+    if (isNew) {
+      invoiceService.getNextInvoiceNumber("OpeningBalance").then(num => {
+        setHeader(s => ({ ...s, docNumber: num }));
+      });
+    }
+  }, [loadData, isNew]);
 
   const handleSave = async () => {
-    if (header.balanceType === "Inventory" && lines.length === 0) {
+    if (lines.length === 0) {
       toast.error("أضف صنفاً واحداً على الأقل");
       return;
     }
@@ -119,9 +88,7 @@ export default function OpeningBalance() {
       const payload = {
         invoice_number: header.docNumber,
         invoice_type: "OpeningBalance",
-        lines: header.balanceType === "Inventory" 
-          ? toBackendLines(lines)
-          : [{ material_id: "opening-balance", quantity: "1", unit_price: header.amount }],
+        lines: toBackendLines(lines),
         tax_amount: "0",
         discount_amount: "0",
         payment_method: "Deferred",
@@ -130,15 +97,11 @@ export default function OpeningBalance() {
         currency_code: header.currencyCode,
         exchange_rate: header.exchangeRate,
         notes: header.notes || undefined,
-        customer_id: header.balanceType === "Customer" ? header.partyId || undefined : undefined,
-        customer_name: header.balanceType === "Customer" && !header.partyId ? header.partyName : undefined,
-        supplier_id: header.balanceType === "Supplier" ? header.partyId || undefined : undefined,
-        supplier_name: header.balanceType === "Supplier" && !header.partyId ? header.partyName : undefined,
       };
 
       const result = await invoiceService.createInvoice(payload);
       await invoiceService.postInvoice(result.id);
-      toast.success("تم ترحيل الرصيد الافتتاحي بنجاح");
+      toast.success("تم ترحيل الرصيد الافتتاحي للمخزون بنجاح");
       
       if (isNew) {
         closeTab(activeTabId);
@@ -211,7 +174,7 @@ export default function OpeningBalance() {
 
   return (
     <FinancialDocumentTemplate
-      title="الأرصدة الافتتاحية"
+      title="بضاعة أول المدة"
       statusBadge={<DocumentStatusBadge status="Draft" />}
       toolbar={
         <>
@@ -222,24 +185,6 @@ export default function OpeningBalance() {
       }
       headerFields={
         <>
-          <div className="md:col-span-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-wrap gap-3">
-             {BALANCE_TYPE_OPTIONS.map(opt => {
-               const Icon = opt.icon;
-               const active = header.balanceType === opt.value;
-               return (
-                 <button
-                    key={opt.value}
-                    onClick={() => setHeader(s => ({ ...s, balanceType: opt.value }))}
-                    className={`flex items-center gap-3 px-4 py-2 rounded-lg font-bold text-sm transition-all border-2 ${
-                      active ? `border-blue-500 ${opt.bg} ${opt.color} shadow-sm` : "border-transparent bg-white text-slate-500 hover:border-slate-200"
-                    }`}
-                 >
-                   <Icon className="w-4 h-4" />
-                   {opt.label}
-                 </button>
-               );
-             })}
-          </div>
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase">رقم القيد</label>
             <Input value={header.docNumber} readOnly className="h-10 font-mono font-bold bg-slate-50 border-slate-200" />
@@ -255,7 +200,6 @@ export default function OpeningBalance() {
         </>
       }
       lineItemsGrid={
-        header.balanceType === "Inventory" ? (
           <GenericDocumentGrid
             columns={gridColumns}
             lines={enrichedLines}
@@ -266,61 +210,14 @@ export default function OpeningBalance() {
             materials={Object.values(materials)}
             preferenceKey="opening_balance_grid"
           />
-        ) : (
-          <div className="bg-white rounded-2xl border border-slate-200/70 p-8 flex flex-col items-center justify-center space-y-6">
-             <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">
-                <Calculator className="w-8 h-8 text-blue-600" />
-             </div>
-             <div className="text-center space-y-2">
-                <h3 className="text-lg font-black text-slate-800">إدخال رصيد مالي مباشر</h3>
-                <p className="text-sm text-slate-500 max-w-xs">يرجى تحديد المبلغ والجهة في لوحة الملخص الجانبية</p>
-             </div>
-             <div className="w-full max-w-sm space-y-4">
-                {(header.balanceType === "Customer" || header.balanceType === "Supplier") && (
-                   <InvoicePartySelector
-                    type={header.balanceType === "Customer" ? "customer" : "supplier"}
-                    parties={header.balanceType === "Customer" ? customers : suppliers}
-                    selectedId={header.partyId}
-                    selectedName={header.partyName}
-                    onSelect={(id, name) => setHeader(s => ({ ...s, partyId: id, partyName: name }))}
-                    onClear={() => setHeader(s => ({ ...s, partyId: "", partyName: "رصيد افتتاحي" }))}
-                  />
-                )}
-                {header.balanceType === "Account" && (
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase">الحساب المحاسبي</label>
-                    <select
-                      value={header.accountId}
-                      onChange={e => setHeader(s => ({ ...s, accountId: e.target.value }))}
-                      className="w-full h-10 px-3 rounded-lg border border-slate-200 bg-white font-bold text-sm"
-                    >
-                      <option value="">— اختر الحساب —</option>
-                      {accounts.map(a => (
-                        <option key={a.id} value={a.id}>{a.code} — {a.name_ar}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                <div className="space-y-2">
-                   <label className="text-[10px] font-black text-slate-400 uppercase">المبلغ الصافي</label>
-                   <Input 
-                      type="number" 
-                      value={header.amount} 
-                      onChange={e => setHeader(s => ({ ...s, amount: e.target.value }))}
-                      className="h-12 text-2xl font-black text-left tabular-nums border-2 border-slate-200 focus:border-blue-500"
-                    />
-                </div>
-             </div>
-          </div>
-        )
       }
       summaryPanel={
         <SummaryPanel
-          subtotal={header.balanceType === "Inventory" ? totals.subtotal : parseFloat(header.amount)}
+          subtotal={totals.subtotal}
           discount={0}
           tax={0}
           extraCosts={0}
-          net={header.balanceType === "Inventory" ? totals.subtotal : parseFloat(header.amount)}
+          net={totals.subtotal}
           currency={header.currencyCode}
           status="Draft"
           invoiceType="OpeningBalance"
@@ -354,4 +251,3 @@ export default function OpeningBalance() {
     />
   );
 }
-

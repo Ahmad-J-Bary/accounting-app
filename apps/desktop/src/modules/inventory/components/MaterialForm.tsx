@@ -14,7 +14,7 @@ import { FormPanel } from "@widgets/form-shell/FormPanel";
 import { toast } from "sonner";
 import { cn } from "@shared/lib/utils";
 import { Plus, Edit, Wand2, Hash, Barcode, Package, Layers, Shuffle, Check, Scale, Boxes, Package2, FileText, Globe, Image as ImageIcon, DollarSign, Tag, ShoppingCart, TrendingUp } from "lucide-react";
-import type { MaterialDto, CategoryDto } from "@erp/shared-types";
+import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest } from "@erp/shared-types";
 import { materialCodeService } from "@modules/inventory/api/materialCodeService";
 import { categoryService } from "@modules/inventory/api/categoryService";
 
@@ -33,8 +33,7 @@ interface MaterialFormProps {
   onClose: () => void;
   material: MaterialDto | null;
   categories: CategoryDto[];
-  // data is typed as any because it can be CreateMaterialRequest or UpdateMaterialRequest
-  onSave: (data: any) => Promise<void>;
+  onSave: (data: CreateMaterialRequest | UpdateMaterialRequest) => Promise<void>;
   saving: boolean;
 }
 

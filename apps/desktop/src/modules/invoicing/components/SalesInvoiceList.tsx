@@ -1,8 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Plus, Search, Eye, Send, Printer, MoreHorizontal, TrendingUp, Receipt, Settings2 } from "lucide-react";
+import { Plus, Search, Eye, Send, Printer, MoreHorizontal, ShoppingCart, Banknote, History, Settings2, FileText } from "lucide-react";
 import { formatDateTime } from "@shared/lib/format";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@shared/ui/dropdown-menu";
 import { InvoiceDto } from "@erp/shared-types";
@@ -10,6 +10,7 @@ import { DataTable, Column } from "@widgets/table-shell/DataTable";
 import { cn } from "@shared/lib/utils";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useColumnPreferences } from "@shared/hooks";
+import { DocumentStatusBadge } from "./DocumentStatusBadge";
 
 interface SalesInvoiceListProps {
   invoices: InvoiceDto[];
@@ -20,7 +21,10 @@ interface SalesInvoiceListProps {
   onRefresh: () => void;
   onCreate: () => void;
   onEdit: (inv: InvoiceDto) => void;
-  onPost: (id: string) => void;
+  onView: (inv: InvoiceDto) => void;
+  onPost: (id: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  onReopen: (id: string) => Promise<void>;
   formatMonetaryAmount: (amount: string | number | { base_amount?: string } | null | undefined, mode: string) => string;
 }
 
@@ -33,10 +37,19 @@ export function SalesInvoiceList({
   onRefresh,
   onCreate,
   onEdit,
+  onView,
   onPost,
+  onDelete,
+  onReopen,
   formatMonetaryAmount
 }: SalesInvoiceListProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  const selectedInvoice = useMemo(() => 
+    invoices.find(inv => inv.id === selectedId),
+  [invoices, selectedId]);
 
   const filtered = useMemo(() =>
     invoices.filter(inv => {
@@ -46,137 +59,99 @@ export function SalesInvoiceList({
         (inv.notes ?? "").includes(search);
       
       const matchesCustomer = !customerIdFilter || inv.customer_id === customerIdFilter;
+      const matchesStatus = statusFilter === "all" || inv.status === statusFilter;
       
-      return matchesSearch && matchesCustomer;
-    }), [invoices, search, customerIdFilter]);
+      return matchesSearch && matchesCustomer && matchesStatus;
+    }), [invoices, search, customerIdFilter, statusFilter]);
 
   const availableColumns = useMemo(() => {
-    const cols = [
-      { id: "invoice_number", label: "رقم الفاتورة" },
+    return [
+      { id: "invoice_number", label: "الرقم" },
+      { id: "notes", label: "التوصيف" },
+      { id: "customer_name", label: "الزبون" },
+      { id: "total_amount", label: "المجموع" },
+      { id: "amount_paid", label: "المبلغ المدفوع" },
+      { id: "remaining_amount", label: "المبلغ المتبقي" },
+      { id: "status", label: "الحالة" },
       { id: "issued_at", label: "التاريخ" },
-      { id: "customer_name", label: "العميل" },
     ];
+  }, []);
 
-    currencies.forEach(curr => {
-      const s = curr.symbol || curr.code;
-      cols.push({ id: `total_${curr.code}`, label: `الإجمالي (${s})` });
-    });
-    
-    currencies.forEach(curr => {
-      const s = curr.symbol || curr.code;
-      cols.push({ id: `profit_${curr.code}`, label: `الربح (${s})` });
-    });
+  const defaultVisibleColumns = useMemo(() => [
+    "invoice_number", "notes", "customer_name", "total_amount", "amount_paid", "remaining_amount", "status", "issued_at"
+  ], []);
 
-    return cols;
-  }, [currencies]);
-
-  const defaultVisibleColumns = useMemo(() => {
-    const base = ["invoice_number", "issued_at", "customer_name"];
-    currencies.forEach(curr => {
-      base.push(`total_${curr.code}`);
-      base.push(`profit_${curr.code}`);
-    });
-    return base;
-  }, [currencies]);
-
-  const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences("sales_invoices", defaultVisibleColumns);
+  const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences("sales_invoices_v2", defaultVisibleColumns);
 
   const columns = useMemo<Column<InvoiceDto>[]>(() => {
-    const cols: Column<InvoiceDto>[] = [
+    return [
       { 
         id: "invoice_number",
-        header: "رقم الفاتورة", 
+        header: "الرقم", 
         accessor: "invoice_number", 
-        className: "font-black text-blue-600 font-mono tracking-tighter" 
+        className: "font-black text-blue-600 font-mono" 
+      },
+      { 
+        id: "notes",
+        header: "التوصيف", 
+        accessor: (inv) => inv.notes || "-",
+        className: "text-slate-500 text-xs truncate max-w-[150px]"
+      },
+      { 
+        id: "customer_name",
+        header: "الزبون", 
+        accessor: (inv) => inv.customer_name || "زبون نقدي",
+        className: "font-bold text-slate-800"
+      },
+      { 
+        id: "total_amount",
+        header: "المجموع", 
+        accessor: (inv) => formatAmount(parseFloat(inv.total_amount || "0"), { currencyCode: inv.currency_code }),
+        align: "left",
+        className: "font-black tabular-nums text-slate-900"
+      },
+      { 
+        id: "amount_paid",
+        header: "المبلغ المدفوع", 
+        accessor: (inv) => formatAmount(parseFloat(inv.amount_paid || "0"), { currencyCode: inv.currency_code }),
+        align: "left",
+        className: "font-bold tabular-nums text-emerald-600"
+      },
+      { 
+        id: "remaining_amount",
+        header: "المبلغ المتبقي", 
+        accessor: (inv) => formatAmount(parseFloat(inv.remaining_amount || "0"), { currencyCode: inv.currency_code }),
+        align: "left",
+        className: "font-bold tabular-nums text-orange-600"
+      },
+      {
+        id: "status",
+        header: "الحالة",
+        accessor: (inv) => <DocumentStatusBadge status={inv.status} />,
+        className: "text-center"
       },
       { 
         id: "issued_at",
         header: "التاريخ", 
         accessor: (inv) => formatDateTime(inv.issued_at),
-        className: "text-slate-500 text-xs font-medium tabular-nums"
-      },
-      { 
-        id: "customer_name",
-        header: "العميل", 
-        accessor: (inv) => inv.customer_name || "زبون نقدي",
-        className: "font-bold text-slate-800"
-      },
+        className: "text-slate-500 text-xs tabular-nums"
+      }
     ];
-
-    // Total Amount columns grouped by currency
-    currencies.forEach(curr => {
-      cols.push({
-        id: `total_${curr.code}`,
-        header: `الإجمالي (${curr.symbol || curr.code})`,
-        accessor: (inv) => {
-          // total_amount is usually in the base currency for invoices in the backend
-          const val = parseFloat(inv.total_amount_v2?.base_amount || inv.total_amount || "0");
-          return formatAmount(val, { currencyCode: curr.code });
-        },
-        align: "left",
-        className: "font-black tabular-nums text-slate-900 text-[11px]"
-      });
-    });
-
-    // Profit columns grouped by currency
-    currencies.forEach(curr => {
-      cols.push({
-        id: `profit_${curr.code}`,
-        header: `الربح (${curr.symbol || curr.code})`,
-        accessor: (inv) => {
-          const val = parseFloat(inv.total_profit || "0");
-          return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "—";
-        },
-        align: "left",
-        className: "text-emerald-600 font-black tabular-nums text-[11px] bg-emerald-50/20"
-      });
-    });
-
-    cols.push({
-      id: "actions",
-      header: "",
-      accessor: (inv) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-white hover:shadow-sm border-transparent hover:border-slate-200 border">
-              <MoreHorizontal className="w-4 h-4 text-slate-400" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48 p-1">
-            <DropdownMenuItem onClick={() => onEdit(inv)} className="rounded-md gap-3 py-2 px-3">
-              <Eye className="w-4 h-4 text-slate-400" /> <span className="font-bold">عرض / تعديل</span>
-            </DropdownMenuItem>
-            {inv.status === "Draft" && (
-              <DropdownMenuItem onClick={() => onPost(inv.id)} className="rounded-md gap-3 py-2 px-3 text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50">
-                <Send className="w-4 h-4" /> <span className="font-bold">ترحيل الفاتورة</span>
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem className="rounded-md gap-3 py-2 px-3">
-              <Printer className="w-4 h-4 text-slate-400" /> <span className="font-bold">طباعة</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
-      className: "w-12"
-    });
-
-    return cols;
-  }, [onEdit, onPost, formatAmount, currencies]);
+  }, [formatAmount]);
 
   const filteredColumns = useMemo(() => {
     return columns.filter(col => {
-      if (!col.id || col.id === "actions") return true;
+      if (!col.id) return true;
       return visibleColumns.includes(col.id);
     });
   }, [columns, visibleColumns]);
 
   const stats = useMemo(() => {
     const total = filtered.reduce((acc, inv) => acc + parseFloat(inv.total_amount_v2?.base_amount || inv.total_amount || "0"), 0);
-    const profit = filtered.reduce((acc, inv) => acc + parseFloat(inv.total_profit || "0"), 0);
     return [
-      { label: "عدد الفواتير", value: filtered.length, icon: Receipt, color: "text-slate-900" },
-      { label: "إجمالي المبيعات", value: formatMonetaryAmount(total.toString(), "base"), icon: TrendingUp, color: "text-blue-600" },
-      { label: "إجمالي الأرباح", value: formatMonetaryAmount(profit.toString(), "base"), icon: TrendingUp, color: "text-emerald-600" },
+      { label: "عدد الفواتير", value: filtered.length, icon: FileText, color: "text-slate-900" },
+      { label: "إجمالي المبيعات", value: formatMonetaryAmount(total.toString(), "base"), icon: Banknote, color: "text-blue-600" },
+      { label: "فواتير معلقة", value: filtered.filter(i => i.status === 'Draft').length, icon: History, color: "text-amber-600" },
     ];
   }, [filtered, formatMonetaryAmount]);
 
@@ -184,9 +159,62 @@ export function SalesInvoiceList({
     <OperationalTableTemplate
       title="فواتير المبيعات"
       toolbar={
-        <div className="flex gap-2">
-          <Button size="sm" onClick={onCreate} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
+        <div className="flex gap-2 items-center">
+          <Button size="sm" onClick={onCreate} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 h-9 px-4">
             <Plus className="w-4 h-4 ml-2" />فاتورة جديدة
+          </Button>
+          
+          <div className="w-[1px] h-6 bg-slate-200 mx-1" />
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            disabled={!selectedId} 
+            onClick={() => selectedInvoice && onView(selectedInvoice)}
+            className="h-9 border-slate-200 hover:bg-slate-50 font-bold"
+          >
+            <Eye className="w-4 h-4 ml-2 text-blue-500" /> عرض
+          </Button>
+
+          <Button 
+            variant="outline" 
+            size="sm" 
+            disabled={!selectedId} 
+            onClick={() => selectedInvoice && onEdit(selectedInvoice)}
+            className="h-9 border-slate-200 hover:bg-slate-50 font-bold"
+          >
+            <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> تعديل
+          </Button>
+
+          <Button 
+            variant="outline" 
+            size="sm" 
+            disabled={!selectedId} 
+            onClick={() => {
+              if (selectedId && window.confirm("هل أنت متأكد من حذف هذه الفاتورة؟ سيتم حذف القيود المرتبطة بها أيضاً.")) {
+                onDelete(selectedId).then(() => setSelectedId(null));
+              }
+            }}
+            className="h-9 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 font-bold transition-all"
+          >
+            <History className="w-4 h-4 ml-2 text-rose-500" /> حذف
+          </Button>
+
+          <Button 
+            variant="outline" 
+            size="sm" 
+            disabled={!selectedId}
+            className="h-9 border-slate-200 hover:bg-slate-50 font-bold"
+          >
+            <Printer className="w-4 h-4 ml-2 text-slate-500" /> طباعة
+          </Button>
+
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="h-9 border-slate-200 hover:bg-slate-50 font-bold"
+          >
+            <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> تصدير إكسل
           </Button>
         </div>
       }
@@ -195,11 +223,32 @@ export function SalesInvoiceList({
           <div className="relative flex-1 max-w-md">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input 
-              placeholder="بحث برقم الفاتورة أو العميل..." 
+              placeholder="بحث برقم الفاتورة أو الزبون..." 
               className="pr-10 h-11 border-slate-200 focus:ring-2 focus:ring-blue-500 transition-all" 
               value={search} 
               onChange={(e) => onSearchChange(e.target.value)} 
             />
+          </div>
+
+          <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
+            <button 
+              onClick={() => setStatusFilter("all")}
+              className={cn("px-4 py-2 text-xs font-black rounded-lg transition-all", statusFilter === "all" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700")}
+            >
+              الكل
+            </button>
+            <button 
+              onClick={() => setStatusFilter("Posted")}
+              className={cn("px-4 py-2 text-xs font-black rounded-lg transition-all", statusFilter === "Posted" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500 hover:text-slate-700")}
+            >
+              مرحلة
+            </button>
+            <button 
+              onClick={() => setStatusFilter("Draft")}
+              className={cn("px-4 py-2 text-xs font-black rounded-lg transition-all", statusFilter === "Draft" ? "bg-white text-amber-600 shadow-sm" : "text-slate-500 hover:text-slate-700")}
+            >
+              مسودة
+            </button>
           </div>
 
           <DropdownMenu>
@@ -225,15 +274,18 @@ export function SalesInvoiceList({
           </DropdownMenu>
 
           <div className="flex items-center gap-6 mr-auto pl-2">
-            {stats.map((s, i) => (
-              <div key={i} className="flex flex-col items-start gap-1">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{s.label}</span>
-                <div className="flex items-center gap-2">
-                   <s.icon className={cn("w-4 h-4", s.color)} />
-                   <span className={cn("text-lg font-black tabular-nums", s.color)}>{s.value}</span>
+            {stats.map((s, i) => {
+              const Icon = s.icon;
+              return (
+                <div key={i} className="flex flex-col items-start gap-1">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{s.label}</span>
+                  <div className="flex items-center gap-2">
+                     <Icon className={cn("w-4 h-4", s.color)} />
+                     <span className={cn("text-lg font-black tabular-nums", s.color)}>{s.value}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
         </div>
@@ -244,7 +296,9 @@ export function SalesInvoiceList({
           columns={filteredColumns}
           loading={loading}
           emptyMessage={search ? "لا توجد نتائج للبحث" : "لا توجد فواتير مبيعات مسجّلة"}
-          onRowDoubleClick={onEdit}
+          onRowDoubleClick={onView}
+          onRowClick={(inv) => setSelectedId(inv.id)}
+          selectedId={selectedId || undefined}
         />
       }
     />

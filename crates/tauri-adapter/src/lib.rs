@@ -15,6 +15,8 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::unified_invoice::get_unified_invoice_by_id,
             commands::unified_invoice::list_all_unified_invoices,
             commands::unified_invoice::reopen_unified_invoice,
+            commands::unified_invoice::get_next_invoice_number,
+            commands::unified_invoice::delete_unified_invoice,
             // Invoices (Legacy/Sales)
             commands::invoice::create_invoice,
             commands::invoice::list_invoices,

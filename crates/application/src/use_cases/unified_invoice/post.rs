@@ -59,21 +59,35 @@ impl PostInvoiceUseCase {
         let mut invoice = self.repo.find_by_id(&invoice_id).await?
             .ok_or_else(|| AppError::NotFound("الفاتورة غير موجودة".into()))?;
 
+        // If already posted, we need to reverse existing impact before re-posting
+        if invoice.status == domain::sales::unified_invoice::InvoiceStatus::Posted {
+             let reopener = crate::use_cases::unified_invoice::ReopenInvoiceUseCase::new(
+                self.repo.clone(),
+                self.movement_repo.clone(),
+                self.journal_repo.clone(),
+                self.customer_repo.clone(),
+                self.supplier_repo.clone(),
+            );
+            reopener.execute(id.clone()).await?;
+            
+            // Re-fetch to get clean state
+            invoice = self.repo.find_by_id(&invoice_id).await?
+                .ok_or_else(|| AppError::NotFound("الفاتورة غير موجودة بعد التراجع".into()))?;
+        }
+
         invoice.post().map_err(|e| AppError::Invalid(e.to_string()))?;
 
         let movement_type = match invoice.invoice_type {
             InvoiceType::Sales => MovementType::Sale,
             InvoiceType::Purchase => MovementType::Purchase,
-            InvoiceType::PurchaseCosts => MovementType::Purchase, // Purchase costs increase value but same movement type logic
+            InvoiceType::PurchaseCosts => MovementType::Purchase, 
             InvoiceType::OpeningBalance => MovementType::OpeningBalance,
         };
 
         for line in &invoice.lines {
-            // Calculate effective quantity in base units
             let conversion_factor = line.conversion_factor.unwrap_or(Decimal::ONE);
             let effective_quantity = line.quantity * conversion_factor;
             
-            // For stock movements, we record unit_cost and total_cost in original currency if possible
             let unit_cost = line.unit_price.amount();
             let total_cost = line.line_total().amount();
 
@@ -92,7 +106,7 @@ impl PostInvoiceUseCase {
 
         self.repo.update(&invoice).await?;
 
-                                        // --- Accounting Logic ---
+        // --- Accounting Logic ---
         let mut journal_lines = Vec::new();
         let doc_currency = Currency::from_code(&invoice.currency_code);
         let fx_rate = invoice.exchange_rate;
@@ -101,20 +115,11 @@ impl PostInvoiceUseCase {
         let amount_paid = invoice.amount_paid.amount();
         let amount_deferred = total_amount - amount_paid;
 
-        // 1. Determine Revenue/Expense Account and Partner Account
-        let (main_account_code, _partner_account_id) = match invoice.invoice_type {
-            InvoiceType::Sales => {
-                ("311", ()) // 311 is Sales Revenue (Cash Sales)
-            },
-            InvoiceType::Purchase => {
-                ("41", ()) // 41 is Purchases
-            },
-            InvoiceType::PurchaseCosts => {
-                ("4101", ()) // 4101 is Purchase Additional Costs
-            },
-            InvoiceType::OpeningBalance => {
-                ("33", ()) // 33 is Opening Balance Equity
-            }
+        let (main_account_code, _) = match invoice.invoice_type {
+            InvoiceType::Sales => ("311", ()),
+            InvoiceType::Purchase => ("41", ()),
+            InvoiceType::PurchaseCosts => ("4101", ()),
+            InvoiceType::OpeningBalance => ("33", ()),
         };
 
         let main_account = self.account_repo.find_by_code(main_account_code).await?.ok_or_else(|| AppError::NotFound(format!("حساب الإيرادات/المصاريف غير موجود: {}", main_account_code)))?;
@@ -122,108 +127,98 @@ impl PostInvoiceUseCase {
 
         if total_amount > Decimal::ZERO {
             if invoice.invoice_type == InvoiceType::Sales {
-            // Sales: Credit Revenue, Debit Cash/Customer
-            journal_lines.push(JournalLine::new(
-                main_account.id, 
-                MonetaryAmount::zero(doc_currency.clone()), 
-                MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate), 
-                format!("إثبات مبيعات فاتورة رقم {}", invoice.invoice_number)
-            ));
-            
-            if amount_paid > Decimal::ZERO {
-                journal_lines.push(JournalLine::new(
-                    cash_account.id, 
-                    MonetaryAmount::new(Money::new(amount_paid, doc_currency.clone()), fx_rate), 
-                    MonetaryAmount::zero(doc_currency.clone()), 
-                    format!("دفعة نقدية - فاتورة رقم {}", invoice.invoice_number)
-                ));
-            }
-            
-            if amount_deferred > Decimal::ZERO {
-                if let Some(cid) = &invoice.customer_id {
-                    if let Some(customer) = self.customer_repo.find_by_id(cid).await? {
-                        if let Some(p_acc_id) = customer.account_id {
-                            journal_lines.push(JournalLine::new(
-                                p_acc_id, 
-                                MonetaryAmount::new(Money::new(amount_deferred, doc_currency.clone()), fx_rate), 
-                                MonetaryAmount::zero(doc_currency.clone()), 
-                                format!("ذمة مدينة - فاتورة رقم {}", invoice.invoice_number)
-                            ).with_partner(cid.0));
-                            
-                            // Update customer balance in subledger
-                            let mut updated_customer = customer;
-                            updated_customer.increase_debit(amount_deferred).map_err(|e| AppError::Invalid(e.to_string()))?;
-                            self.customer_repo.update(&updated_customer).await?;
-                        } else {
-                            return Err(AppError::Invalid(format!("العميل {} لا يملك حساباً محاسبياً مرتبطاً. لا يمكن إجراء عملية آجلة.", customer.name)));
-                        }
-                    }
-                } else {
-                    return Err(AppError::Invalid("يجب تحديد عميل للمبيعات الآجلة لضمان توازن القيد المحاسبي".into()));
-                }
-            }
-        } else if invoice.invoice_type == InvoiceType::Purchase || invoice.invoice_type == InvoiceType::PurchaseCosts {
-            // Purchase / Purchase Costs: Debit Expense, Credit Cash/Supplier
-            let desc = if invoice.invoice_type == InvoiceType::PurchaseCosts {
-                format!("إثبات تكاليف إضافية للمشتريات - فاتورة رقم {}", invoice.invoice_number)
-            } else {
-                format!("إثبات مشتريات فاتورة رقم {}", invoice.invoice_number)
-            };
-
-            journal_lines.push(JournalLine::new(
-                main_account.id, 
-                MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate), 
-                MonetaryAmount::zero(doc_currency.clone()), 
-                desc
-            ));
-            
-            if amount_paid > Decimal::ZERO {
-                journal_lines.push(JournalLine::new(
-                    cash_account.id, 
-                    MonetaryAmount::zero(doc_currency.clone()), 
-                    MonetaryAmount::new(Money::new(amount_paid, doc_currency.clone()), fx_rate), 
-                    format!("دفعة نقدية - فاتورة رقم {}", invoice.invoice_number)
-                ));
-            }
-            
-            if amount_deferred > Decimal::ZERO {
-                if let Some(sid) = &invoice.supplier_id {
-                    if let Some(supplier) = self.supplier_repo.find_by_id(sid).await? {
-                        if let Some(p_acc_id) = supplier.account_id {
-                            journal_lines.push(JournalLine::new(
-                                p_acc_id, 
-                                MonetaryAmount::zero(doc_currency.clone()), 
-                                MonetaryAmount::new(Money::new(amount_deferred, doc_currency.clone()), fx_rate), 
-                                format!("ذمة دائنة - فاتورة رقم {}", invoice.invoice_number)
-                            ).with_partner(sid.0));
-                            
-                            // Update supplier balance in subledger
-                            let mut updated_supplier = supplier;
-                            updated_supplier.increase_credit(amount_deferred).map_err(|e| AppError::Invalid(e.to_string()))?;
-                            self.supplier_repo.update(&updated_supplier).await?;
-                        }
-                    }
-                }
-            }
-        } else if invoice.invoice_type == InvoiceType::OpeningBalance {
-            // Opening Balance (Inventory): Debit Inventory, Credit Equity
-            let inv_account_opt = self.account_repo.find_by_code("124").await?;
-            if let Some(inv_account) = inv_account_opt {
-                journal_lines.push(JournalLine::new(
-                    inv_account.id, 
-                    MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate), 
-                    MonetaryAmount::zero(doc_currency.clone()), 
-                    format!("بضاعة أول المدة - فاتورة رقم {}", invoice.invoice_number)
-                ));
                 journal_lines.push(JournalLine::new(
                     main_account.id, 
                     MonetaryAmount::zero(doc_currency.clone()), 
                     MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate), 
-                    format!("رصيد افتتاحي لليومية - فاتورة رقم {}", invoice.invoice_number)
+                    format!("إثبات مبيعات فاتورة رقم {}", invoice.invoice_number)
                 ));
-            }
-        }
+                
+                if amount_paid > Decimal::ZERO {
+                    journal_lines.push(JournalLine::new(
+                        cash_account.id, 
+                        MonetaryAmount::new(Money::new(amount_paid, doc_currency.clone()), fx_rate), 
+                        MonetaryAmount::zero(doc_currency.clone()), 
+                        format!("دفعة نقدية - فاتورة رقم {}", invoice.invoice_number)
+                    ));
+                }
+                
+                if amount_deferred > Decimal::ZERO {
+                    if let Some(cid) = &invoice.customer_id {
+                        if let Some(customer) = self.customer_repo.find_by_id(cid).await? {
+                            if let Some(p_acc_id) = customer.account_id {
+                                journal_lines.push(JournalLine::new(
+                                    p_acc_id, 
+                                    MonetaryAmount::new(Money::new(amount_deferred, doc_currency.clone()), fx_rate), 
+                                    MonetaryAmount::zero(doc_currency.clone()), 
+                                    format!("ذمة مدينة - فاتورة رقم {}", invoice.invoice_number)
+                                ).with_partner(cid.0));
+                                
+                                let mut updated_customer = customer;
+                                updated_customer.increase_debit(amount_deferred).map_err(|e| AppError::Invalid(e.to_string()))?;
+                                self.customer_repo.update(&updated_customer).await?;
+                            }
+                        }
+                    }
+                }
+            } else if invoice.invoice_type == InvoiceType::Purchase || invoice.invoice_type == InvoiceType::PurchaseCosts {
+                let desc = if invoice.invoice_type == InvoiceType::PurchaseCosts {
+                    format!("إثبات تكاليف إضافية للمشتريات - فاتورة رقم {}", invoice.invoice_number)
+                } else {
+                    format!("إثبات مشتريات فاتورة رقم {}", invoice.invoice_number)
+                };
 
+                journal_lines.push(JournalLine::new(
+                    main_account.id, 
+                    MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate), 
+                    MonetaryAmount::zero(doc_currency.clone()), 
+                    desc
+                ));
+                
+                if amount_paid > Decimal::ZERO {
+                    journal_lines.push(JournalLine::new(
+                        cash_account.id, 
+                        MonetaryAmount::zero(doc_currency.clone()), 
+                        MonetaryAmount::new(Money::new(amount_paid, doc_currency.clone()), fx_rate), 
+                        format!("دفعة نقدية - فاتورة رقم {}", invoice.invoice_number)
+                    ));
+                }
+                
+                if amount_deferred > Decimal::ZERO {
+                    if let Some(sid) = &invoice.supplier_id {
+                        if let Some(supplier) = self.supplier_repo.find_by_id(sid).await? {
+                            if let Some(p_acc_id) = supplier.account_id {
+                                journal_lines.push(JournalLine::new(
+                                    p_acc_id, 
+                                    MonetaryAmount::zero(doc_currency.clone()), 
+                                    MonetaryAmount::new(Money::new(amount_deferred, doc_currency.clone()), fx_rate), 
+                                    format!("ذمة دائنة - فاتورة رقم {}", invoice.invoice_number)
+                                ).with_partner(sid.0));
+                                
+                                let mut updated_supplier = supplier;
+                                updated_supplier.increase_credit(amount_deferred).map_err(|e| AppError::Invalid(e.to_string()))?;
+                                self.supplier_repo.update(&updated_supplier).await?;
+                            }
+                        }
+                    }
+                }
+            } else if invoice.invoice_type == InvoiceType::OpeningBalance {
+                let inv_account_opt = self.account_repo.find_by_code("124").await?;
+                if let Some(inv_account) = inv_account_opt {
+                    journal_lines.push(JournalLine::new(
+                        inv_account.id, 
+                        MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate), 
+                        MonetaryAmount::zero(doc_currency.clone()), 
+                        format!("بضاعة أول المدة - فاتورة رقم {}", invoice.invoice_number)
+                    ));
+                    journal_lines.push(JournalLine::new(
+                        main_account.id, 
+                        MonetaryAmount::zero(doc_currency.clone()), 
+                        MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate), 
+                        format!("رصيد افتتاحي لليومية - فاتورة رقم {}", invoice.invoice_number)
+                    ));
+                }
+            }
         }
 
         if !journal_lines.is_empty() {
@@ -246,11 +241,10 @@ impl PostInvoiceUseCase {
                 Some(invoice.id.to_string()),
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
             
-            // Automatically post the journal entry
             journal_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-            
             self.journal_repo.save(&journal_entry).await?;
         }
+
         let dto = InvoiceDto::from(invoice);
         let queries = crate::use_cases::unified_invoice::InvoiceQueries::new(
             self.repo.clone(),
@@ -262,7 +256,3 @@ impl PostInvoiceUseCase {
         queries.populate_dto(dto).await
     }
 }
-
-
-
-

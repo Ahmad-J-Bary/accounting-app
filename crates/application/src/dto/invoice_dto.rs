@@ -72,6 +72,12 @@ pub struct InvoiceDto {
     pub currency_code: String,
     pub exchange_rate: String,
     pub notes: Option<String>,
+    pub subtotal_amount: String,
+    pub subtotal_amount_v2: Option<MonetaryAmountDto>,
+    pub extra_costs: String,
+    pub extra_costs_v2: Option<MonetaryAmountDto>,
+    pub remaining_amount: String,
+    pub remaining_amount_v2: Option<MonetaryAmountDto>,
     pub total_profit: Option<String>,
     pub profit_percent: Option<String>,
 }
@@ -111,7 +117,7 @@ pub struct UpdateInvoiceRequest {
 impl From<Invoice> for InvoiceDto {
     fn from(invoice: Invoice) -> Self {
         let status = if invoice.posted { "Posted" } else { "Draft" };
-        let _subtotal = invoice.subtotal();
+        let subtotal = invoice.subtotal();
         let total = invoice.total();
 
         Self {
@@ -124,12 +130,12 @@ impl From<Invoice> for InvoiceDto {
             supplier_name: None,
             lines: invoice.lines.into_iter().map(InvoiceLineDto::from).collect(),
             tax_amount: invoice.tax_amount.amount().to_string(),
-            tax_amount_v2: None, // Or construct if needed
+            tax_amount_v2: None,
             discount_amount: invoice.discount_amount.amount().to_string(),
             discount_amount_v2: None,
             total_amount: total.amount().to_string(),
             total_amount_v2: None,
-            payment_method: "Cash".to_string(), // Default for legacy
+            payment_method: "Cash".to_string(),
             amount_paid: total.amount().to_string(),
             amount_paid_v2: None,
             status: status.to_string(),
@@ -137,6 +143,12 @@ impl From<Invoice> for InvoiceDto {
             currency_code: invoice.tax_amount.currency().code.clone(),
             exchange_rate: "1".to_string(),
             notes: None,
+            subtotal_amount: subtotal.amount().to_string(),
+            subtotal_amount_v2: None,
+            extra_costs: "0".to_string(),
+            extra_costs_v2: None,
+            remaining_amount: "0".to_string(),
+            remaining_amount_v2: None,
             total_profit: None,
             profit_percent: None,
         }
@@ -158,6 +170,18 @@ impl From<UnifiedInvoice> for InvoiceDto {
             InvoiceStatus::Cancelled => "Cancelled",
             InvoiceStatus::Reversed => "Reversed",
         };
+
+        let subtotal = invoice.subtotal();
+        let total = invoice.total_amount.clone();
+        let tax = invoice.tax_amount.clone();
+        let disc = invoice.discount_amount.clone();
+        
+        // extra = total - (subtotal + tax - disc)
+        let extra = ((total.clone() - subtotal.clone()).unwrap_or_else(|_| MonetaryAmount::zero(domain::shared::currency::Currency::from_code(&invoice.currency_code))) - tax).unwrap_or_else(|_| MonetaryAmount::zero(domain::shared::currency::Currency::from_code(&invoice.currency_code))) + disc;
+        let extra = extra.unwrap_or_else(|_| MonetaryAmount::zero(domain::shared::currency::Currency::from_code(&invoice.currency_code)));
+
+        let amount_paid = invoice.amount_paid.clone();
+        let remaining = (total.clone() - amount_paid.clone()).unwrap_or_else(|_| MonetaryAmount::zero(domain::shared::currency::Currency::from_code(&invoice.currency_code)));
 
         Self {
             id: invoice.id.0.to_string(),
@@ -186,6 +210,12 @@ impl From<UnifiedInvoice> for InvoiceDto {
             currency_code: invoice.currency_code,
             exchange_rate: invoice.exchange_rate.to_string(),
             notes: invoice.notes,
+            subtotal_amount: subtotal.amount().to_string(),
+            subtotal_amount_v2: Some(MonetaryAmountDto::from(subtotal)),
+            extra_costs: extra.amount().to_string(),
+            extra_costs_v2: Some(MonetaryAmountDto::from(extra)),
+            remaining_amount: remaining.amount().to_string(),
+            remaining_amount_v2: Some(MonetaryAmountDto::from(remaining)),
             total_profit: None,
             profit_percent: None,
         }

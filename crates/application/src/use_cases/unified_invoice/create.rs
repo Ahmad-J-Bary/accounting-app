@@ -134,7 +134,7 @@ impl CreateInvoiceUseCase {
             .unwrap_or_else(|_| Utc::now());
 
         let invoice_number = if req.invoice_number.trim().is_empty() || req.invoice_number == "تلقائي" {
-            self.repo.get_next_invoice_number().await?
+            self.repo.get_next_invoice_number(invoice_type.clone()).await?
         } else {
             req.invoice_number
         };

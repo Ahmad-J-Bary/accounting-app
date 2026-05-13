@@ -14,7 +14,13 @@ export const invoiceService = {
     return await invoke<InvoiceDto>('update_unified_invoice', { request });
   },
 
-  async listInvoicesByType(invoiceType: "Sales" | "Purchase" | "OpeningBalance"): Promise<InvoiceDto[]> {
+  async listInvoicesByType(invoiceType: "Sales" | "Purchase" | "OpeningBalance" | ("Purchase" | "OpeningBalance")[]): Promise<InvoiceDto[]> {
+    if (Array.isArray(invoiceType)) {
+      const results = await Promise.all(
+        invoiceType.map(t => invoke<InvoiceDto[]>('list_unified_invoices_by_type', { invoiceType: t }))
+      );
+      return results.flat().sort((a, b) => new Date(b.issued_at).getTime() - new Date(a.issued_at).getTime());
+    }
     return await invoke<InvoiceDto[]>('list_unified_invoices_by_type', { invoiceType });
   },
 
@@ -32,5 +38,13 @@ export const invoiceService = {
 
   async reopenInvoice(id: string): Promise<InvoiceDto> {
     return await invoke<InvoiceDto>('reopen_unified_invoice', { id });
+  },
+
+  async getNextInvoiceNumber(invoiceType: "Sales" | "Purchase" | "OpeningBalance"): Promise<string> {
+    return await invoke<string>('get_next_invoice_number', { invoiceType });
+  },
+  
+  async deleteInvoice(id: string): Promise<void> {
+    return await invoke<void>('delete_unified_invoice', { id });
   },
 };
