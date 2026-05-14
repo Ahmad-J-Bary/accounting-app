@@ -120,7 +120,6 @@ export default function PurchaseInvoices() {
       if (rate) {
         setHeaderState(s => ({ ...s, exchange_rate: rate.toString() }));
       }
-      setLines([]);
       setView("editor");
     } else if (id) {
       invoiceService.getInvoiceById(id).then(inv => {
@@ -378,44 +377,17 @@ export default function PurchaseInvoices() {
             onCurrencyChange={setDisplayCurrency}
             exchangeRate={parseFloat(headerState.exchange_rate)}
             isReadOnly={isReadOnly}
-          >
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase whitespace-nowrap">طريقة الدفع:</label>
-                <select 
-                  value={headerState.payment_method} 
-                  onChange={e => {
-                    const method = e.target.value;
-                    setHeaderState(s => ({ 
-                      ...s, 
-                      payment_method: method,
-                      paid_amount: method === "cash" ? net.toString() : (method === "credit" ? "0" : s.paid_amount)
-                    }));
-                  }}
-                  disabled={isReadOnly}
-                  className="h-8 px-2 rounded border border-slate-200 bg-white font-bold text-[11px] outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70"
-                >
-                  <option value="cash">نقداً</option>
-                  <option value="credit">آجل</option>
-                  <option value="partial">جزئي</option>
-                </select>
-              </div>
-
-              {headerState.payment_method === "partial" && (
-                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-1 duration-200">
-                  <label className="text-[10px] font-black text-blue-500 uppercase whitespace-nowrap">المدفوع:</label>
-                  <Input 
-                    type="number" 
-                    readOnly={isReadOnly}
-                    value={headerState.paid_amount} 
-                    onChange={e => setHeaderState(s => ({ ...s, paid_amount: e.target.value }))}
-                    className="h-8 w-24 font-black text-xs border-blue-200 focus:ring-blue-500 bg-blue-50/30 py-0"
-                    placeholder="0.00"
-                  />
-                </div>
-              )}
-            </div>
-          </SummaryPanel>
+            paymentMethod={headerState.payment_method}
+            onPaymentMethodChange={(method) => {
+              setHeaderState(s => ({
+                ...s,
+                payment_method: method,
+                paid_amount: method === "cash" ? net.toString() : (method === "credit" ? "0" : s.paid_amount)
+              }));
+            }}
+            paidAmount={headerState.paid_amount}
+            onPaidAmountChange={(amount) => setHeaderState(s => ({ ...s, paid_amount: amount }))}
+          />
         }
         sidebar={null}
       />

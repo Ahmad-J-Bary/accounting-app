@@ -87,7 +87,7 @@ export function useDocumentEditor({
   }, [onLinesChange]);
 
   const selectMaterial = useCallback((index: number, material: MaterialDto) => {
-    const price = material[priceField]?.toString() || "0";
+    const price = material[priceField]?.toString() || "";
     const defaultUnitId = priceField === "last_purchase_price" ? material.default_purchase_unit_id : material.default_sale_unit_id;
     const defaultUnit = material.units.find(u => u.id === defaultUnitId) || material.units.find(u => u.is_base) || material.units[0];
 
@@ -99,13 +99,22 @@ export function useDocumentEditor({
       name_en: material.name_en,
       barcode: material.barcode,
       warehouse_qty: material.total_available,
+      quantity: "1",
       unit_name: defaultUnit?.name,
       unit_id: defaultUnit?.id,
       conversion_factor: defaultUnit?.conversion_factor.toString() || "1",
       unit_barcode: defaultUnit?.barcode || material.barcode,
       unit_price: price,
-      cost_price: material.average_cost_base || "0",
-      purchase_price: material.last_purchase_price?.toString() || "0",
+      cost_price: material.average_cost_base || "",
+      purchase_price: material.last_purchase_price?.toString() || "",
+    });
+
+    // If this was the last line, auto-add a new empty line
+    setLines(prev => {
+      if (index === prev.length - 1) {
+        return [...prev, newGridLine()];
+      }
+      return prev;
     });
   }, [updateLine, priceField]);
 

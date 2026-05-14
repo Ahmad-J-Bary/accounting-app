@@ -171,8 +171,10 @@ export function GenericDocumentGrid({
   }, [searchRow, editableCols.length, lines.length, onAddLine, onRemoveLine, readOnly]);
 
   const getCellValue = (line: GridLine, key: string): string => {
+    if (!line.material_id && !line.material_name) return "";
     if (key === "line_total") return formatCurrency(line.line_total ?? 0);
-    return String((line as unknown as Record<string, string | number>)[key] ?? "");
+    const val = (line as unknown as Record<string, string | number>)[key];
+    return val !== undefined ? String(val) : "";
   };
 
   const showSearchPanel = searchRow !== null;
@@ -305,7 +307,7 @@ export function GenericDocumentGrid({
                                         ? "bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 cursor-pointer" 
                                         : "bg-muted text-muted-foreground border-border cursor-default"
                                 )}>
-                                    {currentUnit || "اختر"}
+                                    {line.material_id ? (currentUnit || "اختر") : ""}
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="center" className="min-w-[100px] shadow-xl">
@@ -432,18 +434,7 @@ export function GenericDocumentGrid({
           );
         })}
 
-        {!readOnly && (
-          <div className="p-4 flex justify-center bg-muted/30">
-            <button 
-              onClick={onAddLine}
-              className="text-[11px] font-black text-blue-600 hover:text-blue-800 flex items-center gap-2 px-6 py-2 bg-blue-50 rounded-full transition-all hover:shadow-sm uppercase tracking-wider"
-            >
-              <span>+ إضافة سطر جديد (Enter)</span>
-            </button>
-          </div>
-        )}
       </div>
-
       <MaterialSearchPanel
         materials={materials}
         search={searchTerm}

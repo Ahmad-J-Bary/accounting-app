@@ -19,6 +19,10 @@ interface SummaryPanelProps {
   onCurrencyChange?: (code: string) => void;
   exchangeRate?: number;
   isReadOnly?: boolean;
+  paymentMethod?: string;
+  onPaymentMethodChange?: (method: string) => void;
+  paidAmount?: string;
+  onPaidAmountChange?: (amount: string) => void;
 }
 
 const STATUS_LABELS: Record<DocumentStatus, { label: string; color: string; bg: string }> = {
@@ -38,6 +42,7 @@ export function SummaryPanel({
   subtotal, discount = 0, tax = 0, extraCosts = 0, net, paid = 0,
   currency = "ل.س", status, compact = false, invoiceType, children,
   currencies, onCurrencyChange, exchangeRate = 1, isReadOnly = false,
+  paymentMethod, onPaymentMethodChange, paidAmount, onPaidAmountChange,
 }: SummaryPanelProps) {
   const displayCurrency = CURRENCY_MAP[currency] || currency;
   const remaining = Math.max(net - paid, 0);
@@ -79,32 +84,51 @@ export function SummaryPanel({
             )}
           </div>
 
+          {/* Payment Method, Partial Payment & Remaining */}
+          {(invoiceType === "Sales" || invoiceType === "Purchase") && onPaymentMethodChange && (
+            <div className="flex items-center gap-3 border-r border-border pr-4">
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase whitespace-nowrap">طريقة الدفع:</label>
+                <select
+                  value={paymentMethod || "cash"}
+                  onChange={e => {
+                    const method = e.target.value;
+                    onPaymentMethodChange(method);
+                  }}
+                  disabled={isReadOnly}
+                  className="h-8 px-2 rounded border border-slate-200 bg-white font-bold text-[11px] outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70"
+                >
+                  <option value="cash">نقداً</option>
+                  <option value="credit">آجل</option>
+                  <option value="partial">جزئي</option>
+                </select>
+              </div>
+
+              {paymentMethod === "partial" && onPaidAmountChange && (
+                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-1 duration-200">
+                  <label className="text-[10px] font-black text-blue-500 uppercase whitespace-nowrap">المدفوع:</label>
+                  <input
+                    type="number"
+                    readOnly={isReadOnly}
+                    value={paidAmount || "0"}
+                    onChange={e => onPaidAmountChange(e.target.value)}
+                    className="h-8 w-24 font-black text-xs border-blue-200 focus:ring-blue-500 bg-blue-50/30 py-0 px-2 rounded border outline-none tabular-nums"
+                    placeholder="0.00"
+                  />
+                </div>
+              )}
+
+              {paymentMethod === "partial" && (
+                <div className="flex items-center gap-2">
+                  <span className={cn("text-[10px] font-black uppercase whitespace-nowrap", remaining <= 0 ? "text-emerald-600" : "text-rose-600")}>المتبقي:</span>
+                  <span className={cn("text-xs font-black tabular-nums", remaining <= 0 ? "text-emerald-600" : "text-rose-600")}>{formatCurrency(remaining, displayCurrency)}</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {children && (
             <div className="flex items-center gap-3 border-r border-border pr-4">{children}</div>
-          )}
-        </div>
-
-        {/* Right Side: Paid & Grand Total */}
-        <div className="flex items-center gap-4 shrink-0">
-          {(invoiceType === "Sales" || invoiceType === "Purchase") && (paid > 0 || remaining > 0) && (
-            <div className="flex items-center gap-3 bg-muted px-3 py-1 rounded-md border border-border">
-              <div className="flex flex-col items-end">
-                <span className="text-[8px] font-bold text-muted-foreground leading-tight">المبلغ المدفوع</span>
-                <span className="text-xs font-black tabular-nums text-foreground leading-tight">{formatCurrency(paid, displayCurrency)}</span>
-              </div>
-              <div className="w-px h-5 bg-border" />
-              <div className="flex flex-col items-end">
-                <span className={cn("text-[8px] font-bold leading-tight", remaining <= 0 ? "text-emerald-600" : "text-rose-600")}>المبلغ المتبقي</span>
-                <span className={cn("text-xs font-black tabular-nums leading-tight", remaining <= 0 ? "text-emerald-600" : "text-rose-600")}>{formatCurrency(remaining, displayCurrency)}</span>
-              </div>
-            </div>
-          )}
-
-          {(invoiceType === "Purchase" || invoiceType === "Sales") && (
-            <div className="flex flex-col items-end bg-primary text-primary-foreground px-5 py-1.5 rounded-lg shadow-sm min-w-[140px]">
-              <span className="text-[9px] font-bold text-primary-foreground/60 uppercase tracking-tighter leading-none mb-1">المبلغ المطلوب</span>
-              <span className={cn("tabular-nums font-black leading-none", compact ? "text-lg" : "text-xl")}>{formatCurrency(net, displayCurrency)}</span>
-            </div>
           )}
         </div>
       </div>

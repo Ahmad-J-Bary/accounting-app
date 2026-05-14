@@ -43,9 +43,9 @@ export function newGridLine(): GridLine {
     _id: `ln_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     material_id: "",
     material_name: "",
-    quantity: "1",
-    unit_price: "0",
-    discount: "0",
+    quantity: "",
+    unit_price: "",
+    discount: "",
     notes: "",
     line_total: 0,
   };
