@@ -3,7 +3,8 @@ import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { useTabs } from '@app/providers/TabContext';
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Save, Send, Printer, RefreshCw, ChevronRight, History, Settings2 } from "lucide-react";
+import { Save, Send, Printer, History, Settings2 } from "lucide-react";
+import { useDocumentFinancials } from "@modules/invoicing/lib/useDocumentFinancials";
 import { invoiceService } from '@modules/invoicing/api/invoiceService';
 import { customerService } from '@modules/partners/api/customerService';
 import { materialService } from '@modules/inventory/api/materialService';
@@ -19,7 +20,7 @@ import { GenericDocumentGrid, DocumentColumn } from '@widgets/document-shell/Gen
 import { SummaryPanel } from '@widgets/document-shell/SummaryPanel';
 import { InvoicePartySelector } from '../components/InvoicePartySelector';
 import { useDocumentEditor } from '../hooks/useDocumentEditor';
-import { toBackendLines, type GridLine } from '../lib/invoiceUtils';
+import { toBackendLines, type GridLine, newGridLine } from '../lib/invoiceUtils';
 import { type DocumentStatus } from '../components/DocumentStatusBadge';
 
 type ViewMode = "list" | "editor";
@@ -32,12 +33,13 @@ interface EditorState {
   notes: string;
   tax_amount: string;
   discount_amount: string;
+  extra_costs: string;
   payment_method: string;
   currency_code: string;
   exchange_rate: string;
   status: string;
+  paid_amount: string;
   id?: string;
-  paid_amount?: string;
 }
 
 const DEFAULT_EDITOR = (baseCurrencyCode: string): EditorState => ({
@@ -48,6 +50,7 @@ const DEFAULT_EDITOR = (baseCurrencyCode: string): EditorState => ({
   notes: "",
   tax_amount: "0",
   discount_amount: "0",
+  extra_costs: "0",
   payment_method: "cash",
   currency_code: baseCurrencyCode || "USD",
   exchange_rate: "1",
@@ -59,8 +62,8 @@ export default function SalesInvoices() {
   const location = useLocation();
   const navigate = useNavigate();
   const { id } = useParams();
-  const { openTab, closeTab, activeTabId } = useTabs();
-  const { baseCurrency, getLatestRate, formatAmount, formatMonetaryAmount, convertBetween, hasTodayRate } = useCurrencyContext();
+  const { openTab } = useTabs();
+  const { baseCurrency, formatMonetaryAmount, rateMap } = useCurrencyContext();
 
   const [view, setView] = useState<ViewMode>("list");
   const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
@@ -117,6 +120,11 @@ export default function SalesInvoices() {
       invoiceService.getNextInvoiceNumber("Sales").then(num => {
         setHeaderState(s => ({ ...s, invoice_number: num, status: "Draft" }));
       });
+      // Use real exchange rate from rateMap
+      const rate = rateMap.get("SYP");
+      if (rate) {
+        setHeaderState(s => ({ ...s, exchange_rate: rate.toString() }));
+      }
       setLines([]);
       setView("editor");
     } else if (id) {
@@ -132,6 +140,7 @@ export default function SalesInvoices() {
             notes: inv.notes ?? "",
             tax_amount: inv.tax_amount,
             discount_amount: inv.discount_amount,
+            extra_costs: inv.extra_costs || "0",
             payment_method: inv.payment_method?.toLowerCase() || "cash",
             paid_amount: inv.amount_paid || "0",
             status: inv.status,
@@ -152,7 +161,7 @@ export default function SalesInvoices() {
     } else {
       setView("list");
     }
-  }, [isNew, id, baseCurrency, setLines]);
+  }, [isNew, id, baseCurrency, setLines, rateMap]);
 
   const handleSave = async (andPost = false) => {
     if (lines.length === 0) {
@@ -239,75 +248,32 @@ export default function SalesInvoices() {
     }
   };
 
-  const enrichedLines = useMemo(() => {
-    return lines.map((line: GridLine) => {
-      type EnrichedLine = GridLine & Record<string, string | number | undefined>;
-      const enriched = { ...line } as EnrichedLine;
-      
-      // The current unit_price and line_total are in the document's currency (headerState.currency_code)
-      const docPrice = parseFloat(line.unit_price || "0");
-      const docTotal = line.line_total || 0;
-      
-      // Calculate values for all currencies
-      currencies.forEach(curr => {
-        const price = convertBetween(docPrice, headerState.currency_code, curr.code);
-        const total = convertBetween(docTotal, headerState.currency_code, curr.code);
-        
-        enriched[`unit_price_${curr.code}`] = price.toFixed(2);
-        enriched[`line_total_${curr.code}`] = formatAmount(total, { currencyCode: curr.code, hideSymbol: true });
-      });
-      return enriched;
-    });
-  }, [lines, currencies, headerState.currency_code, convertBetween, formatAmount]);
+  const extraCols = useMemo<DocumentColumn[]>(() => [
+    { key: "cost_price", header: "التكلفة ($)", width: "w-[90px]", align: "left", type: "readonly" },
+    { key: "profit_amount", header: "الربح ($)", width: "w-[90px]", align: "left", type: "readonly" },
+    { key: "profit_percent", header: "الربح %", width: "w-[70px]", align: "center", type: "readonly" },
+    { key: "notes", header: "ملاحظات", width: "flex-[1]", align: "right", type: "text" }
+  ], []);
 
-  const gridColumns = useMemo<DocumentColumn[]>(() => {
-    const cols: DocumentColumn[] = [
-      { key: "material_image", header: "", width: "w-[40px]", align: "center", type: "image" },
-      { key: "material_code", header: "الكود", width: "w-[100px]", align: "center", type: "material_code" },
-      { key: "unit_barcode", header: "الباركود", width: "w-[120px]", align: "center", type: "material_barcode" },
-      { key: "material_name", header: "الصنف (عربي)", width: "flex-[2]", align: "right", type: "material" },
-      { key: "name_en", header: "الصنف (EN)", width: "flex-[1.5]", align: "left", type: "readonly" },
-      { key: "warehouse_qty", header: "المتوفر", width: "w-[70px]", align: "center", type: "readonly" },
-      { key: "quantity", header: "الكمية", width: "w-[80px]", align: "center", type: "number" },
-      { key: "unit_name", header: "الوحدة", width: "w-[70px]", align: "center", type: "unit_select" },
-    ];
+  const { 
+    enrichedLines, 
+    docSubtotal, 
+    subtotal,
+    net,
+    displayCurrency,
+    setDisplayCurrency,
+    gridColumns 
+  } = useDocumentFinancials({
+    lines,
+    setLines,
+    headerState,
+    setHeaderState,
+    currencies,
+    invoiceType: "Sales",
+    extraColumns: extraCols
+  });
 
-    // Add unit price for each currency
-    currencies.forEach(curr => {
-      const s = curr.symbol || curr.code;
-      const isDocCurr = curr.code === headerState.currency_code;
-      cols.push({ 
-        key: isDocCurr ? "unit_price" : `unit_price_${curr.code}`, 
-        header: `السعر (${s})`, 
-        width: "w-[100px]", 
-        align: "left", 
-        type: isDocCurr ? "number" : "readonly" 
-      });
-    });
-
-    cols.push({ key: "discount", header: "خصم %", width: "w-[70px]", align: "center", type: "number" });
-
-    // Add line total for each currency
-    currencies.forEach(curr => {
-      const s = curr.symbol || curr.code;
-      cols.push({ 
-        key: `line_total_${curr.code}`, 
-        header: `الإجمالي (${s})`, 
-        width: "w-[110px]", 
-        align: "left", 
-        type: "readonly" 
-      });
-    });
-
-    // Profit & Cost Columns (Readonly)
-    cols.push({ key: "cost_price", header: "التكلفة ($)", width: "w-[90px]", align: "left", type: "readonly" });
-    cols.push({ key: "profit_amount", header: "الربح ($)", width: "w-[90px]", align: "left", type: "readonly" });
-    cols.push({ key: "profit_percent", header: "الربح %", width: "w-[70px]", align: "center", type: "readonly" });
-
-    cols.push({ key: "notes", header: "ملاحظات", width: "flex-[1]", align: "right", type: "text" });
-
-    return cols;
-  }, [currencies, headerState.currency_code]);
+  // Removed duplicate state logic
 
   if (view === "editor") {
     return (
@@ -374,17 +340,31 @@ export default function SalesInvoices() {
         }
         headerFields={
           <>
-            <div className="space-y-2">
+            <div className="space-y-1">
               <label className="text-[10px] font-black text-slate-400 uppercase">رقم الفاتورة</label>
-              <Input value={headerState.invoice_number} readOnly className="h-10 font-mono font-bold bg-slate-50 border-slate-200" />
+              <Input value={headerState.invoice_number} readOnly className="h-9 font-mono font-bold bg-slate-50 border-slate-200" />
             </div>
-            <div className="space-y-2">
+
+            <div className="md:col-span-2 space-y-1">
+              <InvoicePartySelector
+                type="customer"
+                parties={customers}
+                selectedId={headerState.customer_id}
+                selectedName={headerState.customer_name}
+                onSelect={(id, name) => setHeaderState(s => ({ ...s, customer_id: id, customer_name: name }))}
+                onClear={() => setHeaderState(s => ({ ...s, customer_id: "", customer_name: "زبون نقدي" }))}
+                readOnly={isReadOnly}
+              />
+            </div>
+
+            <div className="space-y-1">
               <label className="text-[10px] font-black text-slate-400 uppercase">تاريخ الإصدار</label>
-              <Input type="date" readOnly={isReadOnly} value={headerState.issued_at} onChange={e => setHeaderState(s => ({ ...s, issued_at: e.target.value }))} className="h-10 font-bold border-slate-200 disabled:opacity-100" />
+              <Input type="date" readOnly={isReadOnly} value={headerState.issued_at} onChange={e => setHeaderState(s => ({ ...s, issued_at: e.target.value }))} className="h-9 font-bold border-slate-200 disabled:opacity-100" />
             </div>
-            <div className="md:col-span-2 space-y-2">
+
+            <div className="md:col-span-2 space-y-1">
               <label className="text-[10px] font-black text-slate-400 uppercase">ملاحظات المستند</label>
-              <Input placeholder="أدخل أي ملاحظات إضافية هنا..." readOnly={isReadOnly} value={headerState.notes} onChange={e => setHeaderState(s => ({ ...s, notes: e.target.value }))} className="h-10 border-slate-200 disabled:opacity-100" />
+              <Input placeholder="أدخل أي ملاحظات إضافية هنا..." readOnly={isReadOnly} value={headerState.notes} onChange={e => setHeaderState(s => ({ ...s, notes: e.target.value }))} className="h-9 border-slate-200 disabled:opacity-100" />
             </div>
           </>
         }
@@ -403,97 +383,54 @@ export default function SalesInvoices() {
         }
         summaryPanel={
           <SummaryPanel
-            subtotal={totals.subtotal}
+            subtotal={subtotal}
             discount={parseFloat(headerState.discount_amount)}
             tax={parseFloat(headerState.tax_amount)}
-            net={totals.total - (parseFloat(headerState.discount_amount) || 0) + (parseFloat(headerState.tax_amount) || 0)}
-            paid={
-              headerState.payment_method === "cash" 
-                ? (totals.total - (parseFloat(headerState.discount_amount) || 0) + (parseFloat(headerState.tax_amount) || 0)) 
-                : headerState.payment_method === "partial" 
-                  ? parseFloat(headerState.paid_amount || "0")
-                  : 0
-            }
-            currency={headerState.currency_code}
+            extraCosts={parseFloat(headerState.extra_costs || "0")}
+            net={net}
+            paid={parseFloat(headerState.paid_amount)}
+            currency={displayCurrency}
             status={headerState.status as DocumentStatus}
             invoiceType="Sales"
+            currencies={currencies}
+            onCurrencyChange={setDisplayCurrency}
+            exchangeRate={parseFloat(headerState.exchange_rate)}
+            isReadOnly={isReadOnly}
           >
-            <div className="space-y-4 pt-2">
-              <InvoicePartySelector
-                type="customer"
-                parties={customers}
-                selectedId={headerState.customer_id}
-                selectedName={headerState.customer_name}
-                onSelect={(id, name) => setHeaderState(s => ({ ...s, customer_id: id, customer_name: name }))}
-                onClear={() => setHeaderState(s => ({ ...s, customer_id: "", customer_name: "زبون نقدي" }))}
-                readOnly={isReadOnly}
-                predictedBalance={
-                  headerState.payment_method === "cash" 
-                    ? 0 
-                    : (totals.total - (parseFloat(headerState.discount_amount) || 0) + (parseFloat(headerState.tax_amount) || 0)) - (parseFloat(headerState.paid_amount) || 0)
-                }
-              />
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase">طريقة الدفع</label>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase whitespace-nowrap">طريقة الدفع:</label>
                 <select 
                   value={headerState.payment_method} 
                   onChange={e => {
                     const method = e.target.value;
-                    const net = totals.total - (parseFloat(headerState.discount_amount) || 0) + (parseFloat(headerState.tax_amount) || 0);
                     setHeaderState(s => ({ 
                       ...s, 
                       payment_method: method,
                       paid_amount: method === "cash" ? net.toString() : (method === "credit" ? "0" : s.paid_amount)
                     }));
                   }}
-                  className="w-full h-10 px-3 rounded-lg border border-slate-200 bg-white font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  className="h-8 px-2 rounded border border-slate-200 bg-white font-bold text-[11px] outline-none focus:ring-1 focus:ring-blue-500"
                 >
-                  <option value="cash">نقداً (دفع كامل)</option>
-                  <option value="credit">آجل (ذمم على العميل)</option>
-                  <option value="partial">دفع جزئي (مقدم + ذمم)</option>
+                  <option value="cash">نقداً</option>
+                  <option value="credit">آجل</option>
+                  <option value="partial">جزئي</option>
                 </select>
               </div>
 
               {headerState.payment_method === "partial" && (
-                <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                  <label className="text-[10px] font-black text-blue-500 uppercase flex items-center gap-2">
-                    المبلغ المدفوع الآن (نقداً)
-                    <div className="w-1 h-1 rounded-full bg-blue-500" />
-                  </label>
+                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-1 duration-200">
+                  <label className="text-[10px] font-black text-blue-500 uppercase whitespace-nowrap">المدفوع:</label>
                   <Input 
                     type="number" 
                     value={headerState.paid_amount} 
                     onChange={e => setHeaderState(s => ({ ...s, paid_amount: e.target.value }))}
-                    className="h-10 font-black text-lg border-blue-200 focus:ring-blue-500 bg-blue-50/30"
+                    className="h-8 w-24 font-black text-xs border-blue-200 focus:ring-blue-500 bg-blue-50/30 py-0"
                     placeholder="0.00"
                   />
-                  <div className="text-[10px] text-slate-400 font-bold px-1">
-                    المتبقي ذمة على العميل: {formatAmount((totals.total - (parseFloat(headerState.discount_amount) || 0) + (parseFloat(headerState.tax_amount) || 0)) - (parseFloat(headerState.paid_amount) || 0))}
-                  </div>
                 </div>
               )}
 
-              <div className="pt-2 border-t border-slate-100">
-                <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">العملة وسعر الصرف</label>
-                <select
-                  value={headerState.currency_code}
-                  onChange={e => setHeaderState(s => ({ ...s, currency_code: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-md border border-slate-200 bg-slate-50 font-bold text-xs"
-                >
-                  {currencies.map(c => (
-                    <option key={c.code} value={c.code}>{c.name_ar} ({c.symbol || c.code})</option>
-                  ))}
-                </select>
-                {headerState.currency_code !== baseCurrency?.code && (
-                  <Input
-                    type="number"
-                    value={headerState.exchange_rate}
-                    onChange={e => setHeaderState(s => ({ ...s, exchange_rate: e.target.value }))}
-                    className="mt-2 h-8 text-left font-mono font-bold text-xs"
-                    placeholder="سعر الصرف"
-                  />
-                )}
-              </div>
             </div>
           </SummaryPanel>
         }
@@ -545,4 +482,3 @@ export default function SalesInvoices() {
     />
   );
 }
-

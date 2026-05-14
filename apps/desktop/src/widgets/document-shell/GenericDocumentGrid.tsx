@@ -52,7 +52,7 @@ function MaterialSearchPanel({ materials, search, searchType, visible, onSelect,
       </div>
       <div className="max-h-44 overflow-y-auto" dir="rtl">
         {filtered.length === 0 ? (
-          <div className="py-4 text-center text-xs text-slate-400">لا توجد نتائج</div>
+          <div className="py-4 text-center text-xs text-muted-foreground">لا توجد نتائج</div>
         ) : (
           <table className="w-full text-xs font-sans">
             <thead className="bg-blue-50/80 sticky top-0">
@@ -178,18 +178,18 @@ export function GenericDocumentGrid({
   const showSearchPanel = searchRow !== null;
 
   return (
-    <div className="flex flex-col h-full bg-white font-mono text-[13px]" dir="rtl">
-      {/* Table Header */}
-      <div className="flex border-b border-slate-200 bg-slate-50 sticky top-0 z-10">
-        <div className="w-10 shrink-0 border-l border-slate-200 flex items-center justify-center">
+    <div className="flex flex-col h-full">
+      {/* Header row */}
+      <div className="flex border-b border-border bg-muted sticky top-0 z-10">
+        <div className="w-10 shrink-0 border-l border-border flex items-center justify-center">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-1 text-slate-300 hover:text-blue-500 transition-colors">
+              <button className="p-1 text-muted-foreground hover:text-primary transition-colors">
                 <Settings2 className="w-3.5 h-3.5" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-[180px] shadow-xl">
-              <DropdownMenuLabel className="text-right text-[10px] font-black uppercase text-slate-400">تخصيص الأعمدة</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-right text-[10px] font-black uppercase text-muted-foreground">تخصيص الأعمدة</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {columns.map((col) => (
                 <DropdownMenuCheckboxItem
@@ -207,7 +207,7 @@ export function GenericDocumentGrid({
         {filteredColumns.map((col) => (
           <div 
             key={col.key} 
-            className={cn("px-2 py-1.5 text-slate-500 font-black border-l border-slate-200 text-[10px] uppercase tracking-tighter", col.width)}
+            className={cn("px-2 py-1.5 text-muted-foreground font-black border-l border-border text-[10px] uppercase tracking-tighter", col.width)}
             style={{ textAlign: col.align || "right" }}
           >
             {col.header}
@@ -226,12 +226,12 @@ export function GenericDocumentGrid({
             <div 
               key={line._id} 
               className={cn(
-                "flex border-b border-slate-100 hover:bg-slate-50 transition-colors group",
-                isActiveRow ? "bg-blue-50/50" : rowIdx % 2 === 0 ? "bg-white" : "bg-slate-50/20"
+                "flex border-b border-border hover:bg-muted transition-colors group",
+                isActiveRow ? "bg-primary/5" : rowIdx % 2 === 0 ? "bg-card" : "bg-muted/20"
               )}
             >
               {/* Index */}
-              <div className="w-10 shrink-0 border-l border-slate-200 flex items-center justify-center text-[10px] text-slate-400 bg-slate-50/50">
+              <div className="w-10 shrink-0 border-l border-border flex items-center justify-center text-[10px] text-muted-foreground bg-muted/30">
                 {rowIdx + 1}
               </div>
 
@@ -246,7 +246,7 @@ export function GenericDocumentGrid({
                   return (
                     <div key={col.key}
                       className={cn(
-                        "flex items-center px-2 border-l border-slate-100 text-[11px] font-bold text-slate-600 truncate",
+                        "flex items-center px-2 border-l border-border text-[11px] font-bold text-foreground truncate",
                         col.width,
                         col.align === "left" ? "text-left" : col.align === "center" ? "text-center" : "text-right"
                       )}>
@@ -260,13 +260,13 @@ export function GenericDocumentGrid({
                     return (
                       <div key={col.key}
                         className={cn(
-                          "flex items-center justify-center p-1 border-l border-slate-100",
+                          "flex items-center justify-center p-1 border-l border-border",
                           col.width
                         )}>
                         {src ? (
-                            <img src={src} alt="" className="w-6 h-6 object-contain rounded bg-slate-50 border border-slate-100" />
+                            <img src={src} alt="" className="w-6 h-6 object-contain rounded bg-muted border border-border" />
                         ) : (
-                            <div className="w-6 h-6 rounded bg-slate-100 border border-dashed border-slate-200" />
+                            <div className="w-6 h-6 rounded bg-muted border border-dashed border-slate-200" />
                         )}
                       </div>
                     );
@@ -276,10 +276,10 @@ export function GenericDocumentGrid({
                     return (
                       <div key={col.key}
                         className={cn(
-                          "flex items-center justify-center px-1 border-l border-slate-100",
+                          "flex items-center justify-center px-1 border-l border-border",
                           col.width
                         )}>
-                        <span className="text-[9px] font-black bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 uppercase tracking-tighter">
+                        <span className="text-[9px] font-black bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20 uppercase tracking-tighter">
                             {getCellValue(line, col.key)}
                         </span>
                       </div>
@@ -294,7 +294,7 @@ export function GenericDocumentGrid({
                     return (
                       <div key={col.key}
                         className={cn(
-                          "flex items-center justify-center px-1 border-l border-slate-100",
+                          "flex items-center justify-center px-1 border-l border-border",
                           col.width
                         )}>
                         <DropdownMenu>
@@ -303,13 +303,13 @@ export function GenericDocumentGrid({
                                     "text-[9px] font-black px-2 py-0.5 rounded border uppercase tracking-tighter transition-all",
                                     line.material_id 
                                         ? "bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 cursor-pointer" 
-                                        : "bg-slate-50 text-slate-400 border-slate-100 cursor-default"
+                                        : "bg-muted text-muted-foreground border-border cursor-default"
                                 )}>
                                     {currentUnit || "اختر"}
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="center" className="min-w-[100px] shadow-xl">
-                                <DropdownMenuLabel className="text-right text-[9px] font-black text-slate-400 uppercase">الوحدات المتاحة</DropdownMenuLabel>
+                                <DropdownMenuLabel className="text-right text-[9px] font-black text-muted-foreground uppercase">الوحدات المتاحة</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 {units.map((u) => (
                                     <DropdownMenuCheckboxItem
@@ -340,7 +340,7 @@ export function GenericDocumentGrid({
                   return (
                     <div key={col.key}
                       className={cn(
-                        "relative border-l border-slate-100",
+                        "relative border-l border-border",
                         col.width,
                         isCellActive && "ring-inset ring-2 ring-blue-400 z-20"
                       )}>
@@ -352,7 +352,7 @@ export function GenericDocumentGrid({
                         disabled={readOnly}
                         className={cn(
                           "w-full h-8 px-2 text-[11px] bg-transparent border-none outline-none text-right font-bold text-blue-800",
-                          "placeholder:text-slate-300 focus:bg-white transition-colors",
+                          "placeholder:text-muted-foreground focus:bg-white transition-colors",
                           readOnly && "opacity-50"
                         )}
                         placeholder="البحث..."
@@ -389,7 +389,7 @@ export function GenericDocumentGrid({
                 return (
                   <div key={col.key}
                     className={cn(
-                      "border-l border-slate-100",
+                      "border-l border-border",
                       col.width,
                       isCellActive && "ring-inset ring-2 ring-blue-400"
                     )}>
@@ -421,7 +421,7 @@ export function GenericDocumentGrid({
                 {!readOnly && (
                   <button 
                     onClick={() => onRemoveLine(rowIdx)}
-                    className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                     title="حذف السطر (Ctrl+Del)"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -433,7 +433,7 @@ export function GenericDocumentGrid({
         })}
 
         {!readOnly && (
-          <div className="p-4 flex justify-center bg-slate-50/30">
+          <div className="p-4 flex justify-center bg-muted/30">
             <button 
               onClick={onAddLine}
               className="text-[11px] font-black text-blue-600 hover:text-blue-800 flex items-center gap-2 px-6 py-2 bg-blue-50 rounded-full transition-all hover:shadow-sm uppercase tracking-wider"
@@ -459,7 +459,7 @@ export function GenericDocumentGrid({
         onClose={() => { setSearchRow(null); setSearchTerm(""); }}
       />
 
-      <div className="flex items-center justify-between px-4 py-2 bg-slate-100/80 border-t border-slate-200 text-[10px] text-slate-400 font-bold">
+      <div className="flex items-center justify-between px-4 py-2 bg-muted/80 border-t border-slate-200 text-[10px] text-muted-foreground font-bold">
         <div className="flex items-center gap-4 uppercase tracking-widest">
           <div className="flex items-center gap-1">
             <kbd className="bg-slate-200 px-1 rounded text-slate-600">Tab/Enter</kbd> انتقال
