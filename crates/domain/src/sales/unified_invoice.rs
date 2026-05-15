@@ -45,6 +45,7 @@ pub struct UnifiedInvoice {
     pub lines: Vec<InvoiceLine>,
     pub tax_amount: MonetaryAmount,
     pub discount_amount: MonetaryAmount,
+    pub extra_costs: MonetaryAmount,
     pub total_amount: MonetaryAmount,
     pub payment_method: PaymentMethod,
     pub amount_paid: MonetaryAmount,
@@ -93,6 +94,7 @@ impl UnifiedInvoice {
             lines: vec![],
             tax_amount: MonetaryAmount::zero(doc_currency.clone()),
             discount_amount: MonetaryAmount::zero(doc_currency.clone()),
+            extra_costs: MonetaryAmount::zero(doc_currency.clone()),
             total_amount: MonetaryAmount::zero(doc_currency.clone()),
             payment_method,
             amount_paid: MonetaryAmount::new(amount_paid, exchange_rate),
@@ -133,8 +135,10 @@ impl UnifiedInvoice {
                 });
 
         // Convert to MonetaryAmount using the invoice's exchange rate
-        self.total_amount =
+        let before_extra =
             ((subtotal + self.tax_amount.clone()).unwrap() - self.discount_amount.clone()).unwrap();
+        self.total_amount =
+            (before_extra.clone() + self.extra_costs.clone()).unwrap_or(before_extra);
 
         if self.payment_method == PaymentMethod::Cash {
             self.amount_paid = self.total_amount.clone();

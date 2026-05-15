@@ -206,6 +206,7 @@ impl CreateInvoiceUseCase {
 
         invoice.tax_amount = MonetaryAmount::new(Money::from_amount_and_code(Decimal::from_str(&req.tax_amount).unwrap_or(Decimal::ZERO), &currency_code), exchange_rate);
         invoice.discount_amount = MonetaryAmount::new(Money::from_amount_and_code(Decimal::from_str(&req.discount_amount).unwrap_or(Decimal::ZERO), &currency_code), exchange_rate);
+        invoice.extra_costs = MonetaryAmount::new(Money::from_amount_and_code(Decimal::from_str(&req.extra_costs.clone().unwrap_or_default()).unwrap_or(Decimal::ZERO), &currency_code), exchange_rate);
         invoice.recalculate_totals();
 
         self.repo.save(&invoice).await?;

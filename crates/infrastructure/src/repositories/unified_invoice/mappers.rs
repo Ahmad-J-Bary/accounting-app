@@ -52,6 +52,11 @@ pub fn row_to_invoice(row: InvoiceRow, lines: Vec<InvoiceLine>) -> Result<Unifie
             base_amount: Decimal::from_str(&row.discount_amount_base).unwrap_or(Decimal::ZERO),
             fx_rate: Decimal::from_str(&row.exchange_rate).unwrap_or(Decimal::ONE),
         },
+        extra_costs: MonetaryAmount {
+            original: Money::from_amount_and_code(Decimal::from_str(&row.extra_costs).unwrap_or(Decimal::ZERO), &row.currency_code),
+            base_amount: Decimal::from_str(&row.extra_costs_base).unwrap_or(Decimal::ZERO),
+            fx_rate: Decimal::from_str(&row.exchange_rate).unwrap_or(Decimal::ONE),
+        },
         total_amount: MonetaryAmount {
             original: Money::from_amount_and_code(Decimal::from_str(&row.total_amount).unwrap_or(Decimal::ZERO), &row.currency_code),
             base_amount: Decimal::from_str(&row.total_amount_base).unwrap_or(Decimal::ZERO),

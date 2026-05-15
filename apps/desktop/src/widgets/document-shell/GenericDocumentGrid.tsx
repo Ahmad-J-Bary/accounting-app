@@ -94,6 +94,8 @@ interface GenericDocumentGridProps {
   materials: MaterialDto[];
   readOnly?: boolean;
   preferenceKey?: string;
+  docCurrency?: string;
+  exchangeRate?: string;
 }
 
 export function GenericDocumentGrid({
@@ -105,7 +107,9 @@ export function GenericDocumentGrid({
   onSelectMaterial,
   materials,
   readOnly = false,
-  preferenceKey = "generic_grid"
+  preferenceKey = "generic_grid",
+  docCurrency = "USD",
+  exchangeRate = "1"
 }: GenericDocumentGridProps) {
   const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -121,6 +125,18 @@ export function GenericDocumentGrid({
   }, [columns, visibleColumns]);
 
   const editableCols = filteredColumns.filter(c => c.type !== "readonly");
+  const isNavigableCol = (c: DocumentColumn) => c.type !== "unit_select" && c.type !== "image";
+
+  const findNextCol = useCallback((fromIdx: number, dir: 1 | -1): number => {
+    let idx = fromIdx + dir;
+    if (fromIdx < 0) idx = dir === 1 ? 0 : editableCols.length - 1;
+    if (fromIdx >= editableCols.length) idx = dir === 1 ? 0 : editableCols.length - 1;
+    while (idx >= 0 && idx < editableCols.length) {
+      if (isNavigableCol(editableCols[idx])) return idx;
+      idx += dir;
+    }
+    return fromIdx; // stay if no navigable found in that direction
+  }, [editableCols]);
 
   const handleKeyDown = useCallback((
     e: KeyboardEvent<HTMLInputElement>,
@@ -129,9 +145,14 @@ export function GenericDocumentGrid({
   ) => {
     if (readOnly) return;
 
-    if (searchRow === rowIdx && ["ArrowDown", "ArrowUp"].includes(e.key)) {
-      e.preventDefault(); return;
-    }
+    const moveTo = (nr: number, nc: number) => {
+      if (nr >= lines.length) {
+        onAddLine();
+        setTimeout(() => inputRefs.current.get(`${nr}-${nc}`)?.focus(), 60);
+      } else {
+        inputRefs.current.get(`${nr}-${nc}`)?.focus();
+      }
+    };
 
     switch (e.key) {
       case "Escape":
@@ -143,39 +164,92 @@ export function GenericDocumentGrid({
         e.preventDefault();
         setSearchRow(null);
         let nr = rowIdx, nc = colIdx + 1;
-        if (nc >= editableCols.length) { 
-          nc = 0; 
-          nr = rowIdx + 1; 
+        if (nc >= editableCols.length) {
+          nc = findNextCol(-1, 1);
+          nr = rowIdx + 1;
+          const hasMaterial = lines[rowIdx]?.material_id || lines[rowIdx]?.material_name;
+          if (!hasMaterial) nr = rowIdx;
         }
-        
-        if (nr >= lines.length) {
-          onAddLine();
-          setTimeout(() => inputRefs.current.get(`${nr}-0`)?.focus(), 60);
-        } else {
-          inputRefs.current.get(`${nr}-${nc}`)?.focus();
-        }
+        moveTo(nr, nc);
         break;
       }
+      case "ArrowRight":
+        e.preventDefault();
+        setSearchRow(null);
+        { let nc = findNextCol(colIdx, -1);
+          if (nc === colIdx) { nc = findNextCol(editableCols.length, -1); let nr = rowIdx - 1; if (nr < 0) nr = 0; inputRefs.current.get(`${nr}-${nc}`)?.focus(); }
+          else { inputRefs.current.get(`${rowIdx}-${nc}`)?.focus(); }
+        }
+        break;
+      case "ArrowLeft":
+        e.preventDefault();
+        setSearchRow(null);
+        { let nc = findNextCol(colIdx, 1);
+          if (nc === colIdx) {
+            nc = findNextCol(-1, 1);
+            const hasMaterial = lines[rowIdx]?.material_id || lines[rowIdx]?.material_name;
+            if (hasMaterial) {
+              const nr = rowIdx + 1;
+              moveTo(nr, nc);
+            } else {
+              inputRefs.current.get(`${rowIdx}-${nc}`)?.focus();
+            }
+          } else {
+            inputRefs.current.get(`${rowIdx}-${nc}`)?.focus();
+          }
+        }
+        break;
       case "ArrowDown":
         e.preventDefault();
+        setSearchRow(null);
         inputRefs.current.get(`${Math.min(rowIdx + 1, lines.length - 1)}-${colIdx}`)?.focus();
         break;
       case "ArrowUp":
         e.preventDefault();
+        setSearchRow(null);
         inputRefs.current.get(`${Math.max(rowIdx - 1, 0)}-${colIdx}`)?.focus();
         break;
       case "Delete":
         if (e.ctrlKey) { e.preventDefault(); onRemoveLine(rowIdx); }
         break;
     }
-  }, [searchRow, editableCols.length, lines.length, onAddLine, onRemoveLine, readOnly]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchRow, editableCols.length, lines.length, onAddLine, onRemoveLine, readOnly, findNextCol]);
 
   const getCellValue = (line: GridLine, key: string): string => {
     if (!line.material_id && !line.material_name) return "";
     if (key === "line_total") return formatCurrency(line.line_total ?? 0);
-    const val = (line as unknown as Record<string, string | number>)[key];
-    return val !== undefined ? String(val) : "";
+    const raw = (line as unknown as Record<string, string | number>)[key];
+    if (raw === undefined) return "";
+    let s = String(raw);
+    // Trim trailing zeros after decimal point for numeric-like values
+    if (s.includes(".")) s = s.replace(/\.?0+$/, "");
+    if (key === "profit_percent" && s && s !== "0") return `${s}%`;
+    return s;
   };
+
+  const handleCellChange = useCallback((rowIdx: number, colKey: string, value: string) => {
+    // Detect currency-specific fields: field_CCC (e.g. retail_price_SYP)
+    const currMatch = colKey.match(/^(.+)_([A-Z]{3})$/);
+    if (currMatch) {
+      const baseField = currMatch[1];
+      const currCode = currMatch[2];
+      let factor = 1;
+      if (docCurrency === "USD") {
+        factor = parseFloat(exchangeRate) || 1;
+      } else if (currCode === "USD") {
+        factor = 1 / (parseFloat(exchangeRate) || 1);
+      }
+      const otherPrice = parseFloat(value) || 0;
+      const docPrice = otherPrice / factor;
+      onUpdateLine(rowIdx, {
+        [baseField]: docPrice.toString(),
+        [colKey]: value
+      });
+    } else {
+      onUpdateLine(rowIdx, { [colKey]: value });
+    }
+  }, [docCurrency, exchangeRate, onUpdateLine]);
 
   const showSearchPanel = searchRow !== null;
 
@@ -406,12 +480,13 @@ export function GenericDocumentGrid({
                       disabled={readOnly}
                       className={cn(
                         "w-full h-8 px-2 text-[11px] bg-transparent border-none outline-none tabular-nums font-bold",
+                        "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
                         "focus:bg-white transition-colors",
                         col.align === "left" ? "text-left" : col.align === "center" ? "text-center" : "text-right",
                         readOnly && "opacity-50"
                       )}
-                      value={(line as unknown as Record<string, string | number>)[col.key] || ""}
-                      onChange={e => onUpdateLine(rowIdx, { [col.key]: e.target.value })}
+                      value={getCellValue(line, col.key)}
+                      onChange={e => handleCellChange(rowIdx, col.key, e.target.value)}
                       onFocus={() => setActiveCell({ row: rowIdx, col: editColIdx })}
                       onKeyDown={e => handleKeyDown(e, rowIdx, editColIdx)}
                     />

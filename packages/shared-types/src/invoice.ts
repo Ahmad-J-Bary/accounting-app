@@ -75,6 +75,7 @@ export interface CreateInvoiceRequest {
   lines: InvoiceLineDto[];
   tax_amount: string;
   discount_amount: string;
+  extra_costs?: string;
   payment_method: string;
   amount_paid: string;
   issued_at: string;
@@ -92,5 +93,6 @@ export interface UpdateInvoiceRequest {
   lines: InvoiceLineDto[];
   tax_amount: string;
   discount_amount: string;
+  extra_costs?: string;
   notes?: string;
 }

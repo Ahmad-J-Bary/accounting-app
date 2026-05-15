@@ -93,6 +93,7 @@ pub struct CreateInvoiceRequest {
     pub lines: Vec<InvoiceLineDto>,
     pub tax_amount: String,
     pub discount_amount: String,
+    pub extra_costs: Option<String>,
     pub payment_method: String,
     pub amount_paid: String,
     pub issued_at: String,
@@ -111,6 +112,7 @@ pub struct UpdateInvoiceRequest {
     pub lines: Vec<InvoiceLineDto>,
     pub tax_amount: String,
     pub discount_amount: String,
+    pub extra_costs: Option<String>,
     pub notes: Option<String>,
 }
 
@@ -173,12 +175,7 @@ impl From<UnifiedInvoice> for InvoiceDto {
 
         let subtotal = invoice.subtotal();
         let total = invoice.total_amount.clone();
-        let tax = invoice.tax_amount.clone();
-        let disc = invoice.discount_amount.clone();
-        
-        // extra = total - (subtotal + tax - disc)
-        let extra = ((total.clone() - subtotal.clone()).unwrap_or_else(|_| MonetaryAmount::zero(domain::shared::currency::Currency::from_code(&invoice.currency_code))) - tax).unwrap_or_else(|_| MonetaryAmount::zero(domain::shared::currency::Currency::from_code(&invoice.currency_code))) + disc;
-        let extra = extra.unwrap_or_else(|_| MonetaryAmount::zero(domain::shared::currency::Currency::from_code(&invoice.currency_code)));
+        let extra = invoice.extra_costs.clone();
 
         let amount_paid = invoice.amount_paid.clone();
         let remaining = (total.clone() - amount_paid.clone()).unwrap_or_else(|_| MonetaryAmount::zero(domain::shared::currency::Currency::from_code(&invoice.currency_code)));

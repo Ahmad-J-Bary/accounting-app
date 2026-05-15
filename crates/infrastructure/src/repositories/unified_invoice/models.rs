@@ -11,6 +11,8 @@ pub struct InvoiceRow {
     pub tax_amount_base: String,
     pub discount_amount: String,
     pub discount_amount_base: String,
+    pub extra_costs: String,
+    pub extra_costs_base: String,
     pub total_amount: String,
     pub total_amount_base: String,
     pub payment_method: String,

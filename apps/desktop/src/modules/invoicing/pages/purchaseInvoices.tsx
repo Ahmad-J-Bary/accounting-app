@@ -13,6 +13,7 @@ import type { InvoiceDto, SupplierDto, MaterialDto } from "@erp/shared-types";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
+
 // Unified Components
 import { FinancialDocumentTemplate } from "@widgets/templates/FinancialDocumentTemplate";
 import { GenericDocumentGrid, type DocumentColumn } from "@widgets/document-shell/GenericDocumentGrid";
@@ -35,6 +36,7 @@ interface HeaderState {
   tax_amount: string;
   discount_amount: string;
   extra_costs: string;
+  extra_paid_amount: string;
   payment_method: string;
   status: string;
   id?: string;
@@ -52,6 +54,7 @@ const defaultHeader = (): HeaderState => ({
   tax_amount: "0",
   discount_amount: "0",
   extra_costs: "0",
+  extra_paid_amount: "0",
   payment_method: "cash",
   status: "Draft",
   currency_code: "USD",
@@ -132,7 +135,8 @@ export default function PurchaseInvoices() {
           notes: inv.notes ?? "",
           tax_amount: inv.tax_amount,
           discount_amount: inv.discount_amount,
-          extra_costs: "0",
+          extra_costs: inv.extra_costs || "0",
+          extra_paid_amount: "0",
           payment_method: inv.payment_method?.toLowerCase() || "cash",
           status: inv.status,
           currency_code: inv.currency_code || "USD",
@@ -171,6 +175,12 @@ export default function PurchaseInvoices() {
 
       const finalTotal = totals.subtotal - parseFloat(headerState.discount_amount) + parseFloat(headerState.tax_amount) + parseFloat(headerState.extra_costs);
 
+      const totalPaid = headerState.payment_method === "cash"
+        ? finalTotal.toString()
+        : headerState.payment_method === "partial"
+          ? (parseFloat(headerState.paid_amount || "0") + parseFloat(headerState.extra_paid_amount || "0")).toString()
+          : "0";
+
       const payload = {
         invoice_number: headerState.invoice_number,
         invoice_type: "Purchase",
@@ -179,8 +189,9 @@ export default function PurchaseInvoices() {
         lines: toBackendLines(lines),
         tax_amount: headerState.tax_amount,
         discount_amount: headerState.discount_amount,
+        extra_costs: headerState.extra_costs,
         payment_method: paymentMethodMap[headerState.payment_method] || "Cash",
-        amount_paid: headerState.payment_method === "cash" ? finalTotal.toString() : (headerState.payment_method === "partial" ? headerState.paid_amount : "0"),
+        amount_paid: totalPaid,
         issued_at: new Date(headerState.issued_at).toISOString(),
         currency_code: headerState.currency_code,
         exchange_rate: headerState.exchange_rate,
@@ -231,7 +242,8 @@ export default function PurchaseInvoices() {
         notes: inv.notes ?? "",
         tax_amount: inv.tax_amount,
         discount_amount: inv.discount_amount,
-        extra_costs: "0",
+        extra_costs: inv.extra_costs || "0",
+        extra_paid_amount: "0",
         payment_method: inv.payment_method?.toLowerCase() || "cash",
         status: inv.status,
         currency_code: inv.currency_code || "USD",
@@ -247,7 +259,6 @@ export default function PurchaseInvoices() {
   };
 
   const extraCols = useMemo<DocumentColumn[]>(() => [
-    { key: "cost_price", header: "التكلفة ($)", width: "w-[90px]", align: "left", type: "readonly" },
     { key: "notes", header: "ملاحظات", width: "flex-[1]", align: "right", type: "text" }
   ], []);
 
@@ -266,6 +277,7 @@ export default function PurchaseInvoices() {
     setHeaderState,
     currencies,
     invoiceType: "Purchase",
+    priceLabel: "التكلفة",
     extraColumns: extraCols
   });
 
@@ -347,6 +359,7 @@ export default function PurchaseInvoices() {
               <label className="text-[10px] font-black text-slate-400 uppercase">ملاحظات المستند</label>
               <Input placeholder="أدخل أي ملاحظات إضافية هنا..." readOnly={isReadOnly} value={headerState.notes} onChange={e => setHeaderState(s => ({ ...s, notes: e.target.value }))} className="h-9 border-slate-200" />
             </div>
+
           </>
         }
         lineItemsGrid={
@@ -360,6 +373,8 @@ export default function PurchaseInvoices() {
             materials={Object.values(materials)} 
             readOnly={isReadOnly}
             preferenceKey="purchase_invoice_grid"
+            docCurrency={headerState.currency_code}
+            exchangeRate={headerState.exchange_rate}
           />
         }
         summaryPanel={
@@ -369,7 +384,7 @@ export default function PurchaseInvoices() {
             tax={parseFloat(headerState.tax_amount)}
             extraCosts={parseFloat(headerState.extra_costs)}
             net={net}
-            paid={parseFloat(headerState.paid_amount)}
+            paid={parseFloat(headerState.paid_amount) + parseFloat(headerState.extra_paid_amount || "0")}
             currency={displayCurrency}
             status={headerState.status as DocumentStatus}
             invoiceType="Purchase"
@@ -382,11 +397,15 @@ export default function PurchaseInvoices() {
               setHeaderState(s => ({
                 ...s,
                 payment_method: method,
-                paid_amount: method === "cash" ? net.toString() : (method === "credit" ? "0" : s.paid_amount)
+                paid_amount: method === "cash" ? net.toString() : (method === "credit" ? "0" : s.paid_amount),
+                extra_paid_amount: method === "cash" ? "0" : (method === "credit" ? "0" : s.extra_paid_amount)
               }));
             }}
             paidAmount={headerState.paid_amount}
             onPaidAmountChange={(amount) => setHeaderState(s => ({ ...s, paid_amount: amount }))}
+            onExtraCostsChange={(value) => setHeaderState(s => ({ ...s, extra_costs: value }))}
+            extraPaidAmount={headerState.extra_paid_amount}
+            onExtraPaidAmountChange={(amount) => setHeaderState(s => ({ ...s, extra_paid_amount: amount }))}
           />
         }
         sidebar={null}

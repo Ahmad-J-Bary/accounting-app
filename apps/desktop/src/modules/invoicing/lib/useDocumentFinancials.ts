@@ -77,10 +77,28 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
         // Accumulate totals per currency from the grid values
         totalsMap.set(curr.code, (totalsMap.get(curr.code) || 0) + t);
 
-        el[`unit_price_${curr.code}`] = p.toFixed(2);
+        // Preserve user-edited non-doc-currency prices, compute for doc currency
+        const priceKey = `unit_price_${curr.code}`;
+        const isDocCurr = curr.code === docCurrency;
+        if (!isDocCurr && el[priceKey] !== undefined && el[priceKey] !== "") {
+          // keep user's value
+        } else {
+          el[priceKey] = p.toFixed(2).replace(/\.?0+$/, "");
+        }
         el[`line_total_${curr.code}`] = curr.code === "SYP" 
           ? t.toFixed(0) 
           : formatAmount(t, { currencyCode: curr.code, hideSymbol: true });
+
+        // Compute SYP equivalents for monetary extra fields
+        if (curr.code === "SYP") {
+          const sypFactor = conversionMap.get("SYP") || 1;
+          ["cost_price", "profit_amount", "retail_price", "wholesale_price"].forEach(field => {
+            const val = parseFloat(el[field] as string || "0");
+            if (val) {
+              el[`${field}_SYP`] = (val * sypFactor).toFixed(0);
+            }
+          });
+        }
       });
       return el;
     });
@@ -134,7 +152,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
   // 3. Optimized grid columns
   const gridColumns = useMemo<DocumentColumn[]>(() => {
     const baseCols: DocumentColumn[] = [
-      { key: "material_image", header: "", width: "w-[40px]", align: "center", type: "image" },
+      { key: "material_image", header: "صورة", width: "w-[40px]", align: "center", type: "image" },
       { key: "material_code", header: "الكود", width: "w-[100px]", align: "center", type: "material_code" },
       { key: "unit_barcode", header: "الباركود", width: "w-[120px]", align: "center", type: "material_barcode" },
       { key: "material_name", header: "الصنف (عربي)", width: "flex-[2]", align: "right", type: "material" },
@@ -153,7 +171,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
         header: `${curr.code === "SYP" ? (invoiceType === "Purchase" || invoiceType === "OpeningBalance" ? "التكلفة" : "السعر") : priceLabel} (${s})`, 
         width: "w-[100px]", 
         align: "left", 
-        type: isDocCurr ? "number" : "readonly" 
+        type: "number" 
       });
     });
 

@@ -144,6 +144,7 @@ impl PostInvoiceUseCase {
                 }
                 
                 if amount_deferred > Decimal::ZERO {
+                    let mut deferred_handled = false;
                     if let Some(cid) = &invoice.customer_id {
                         if let Some(customer) = self.customer_repo.find_by_id(cid).await? {
                             if let Some(p_acc_id) = customer.account_id {
@@ -157,8 +158,17 @@ impl PostInvoiceUseCase {
                                 let mut updated_customer = customer;
                                 updated_customer.increase_debit(amount_deferred).map_err(|e| AppError::Invalid(e.to_string()))?;
                                 self.customer_repo.update(&updated_customer).await?;
+                                deferred_handled = true;
                             }
                         }
+                    }
+                    if !deferred_handled {
+                        journal_lines.push(JournalLine::new(
+                            cash_account.id, 
+                            MonetaryAmount::new(Money::new(amount_deferred, doc_currency.clone()), fx_rate), 
+                            MonetaryAmount::zero(doc_currency.clone()), 
+                            format!("ذمة نقدية (المبلغ المتبقي) - فاتورة رقم {}", invoice.invoice_number)
+                        ));
                     }
                 }
             } else if invoice.invoice_type == InvoiceType::Purchase || invoice.invoice_type == InvoiceType::PurchaseCosts {
@@ -185,6 +195,7 @@ impl PostInvoiceUseCase {
                 }
                 
                 if amount_deferred > Decimal::ZERO {
+                    let mut deferred_handled = false;
                     if let Some(sid) = &invoice.supplier_id {
                         if let Some(supplier) = self.supplier_repo.find_by_id(sid).await? {
                             if let Some(p_acc_id) = supplier.account_id {
@@ -198,8 +209,18 @@ impl PostInvoiceUseCase {
                                 let mut updated_supplier = supplier;
                                 updated_supplier.increase_credit(amount_deferred).map_err(|e| AppError::Invalid(e.to_string()))?;
                                 self.supplier_repo.update(&updated_supplier).await?;
+                                deferred_handled = true;
                             }
                         }
+                    }
+                    // Fallback: if no supplier account, credit cash to balance the journal
+                    if !deferred_handled {
+                        journal_lines.push(JournalLine::new(
+                            cash_account.id, 
+                            MonetaryAmount::zero(doc_currency.clone()), 
+                            MonetaryAmount::new(Money::new(amount_deferred, doc_currency.clone()), fx_rate), 
+                            format!("ذمة نقدية (المبلغ المتبقي) - فاتورة رقم {}", invoice.invoice_number)
+                        ));
                     }
                 }
             } else if invoice.invoice_type == InvoiceType::OpeningBalance {

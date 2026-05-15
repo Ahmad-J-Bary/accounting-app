@@ -103,7 +103,7 @@ export function PurchaseInvoiceList({
       { 
         id: "supplier_name",
         header: "المورد", 
-        accessor: (inv) => inv.supplier_name || "مورد نقدي",
+        accessor: (inv) => inv.invoice_type === "OpeningBalance" ? "-" : (inv.supplier_name || "مورد نقدي"),
         className: "font-bold text-slate-800"
       },
       { 

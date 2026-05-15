@@ -28,8 +28,8 @@ pub async fn save(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), App
     };
 
     sqlx::query(
-        "INSERT INTO unified_invoices (id, invoice_number, invoice_type, customer_id, customer_name, supplier_id, supplier_name, tax_amount, tax_amount_base, discount_amount, discount_amount_base, total_amount, total_amount_base, payment_method, amount_paid, amount_paid_base, status, issued_at, currency_code, exchange_rate, notes, created_at, updated_at) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO unified_invoices (id, invoice_number, invoice_type, customer_id, customer_name, supplier_id, supplier_name, tax_amount, tax_amount_base, discount_amount, discount_amount_base, extra_costs, extra_costs_base, total_amount, total_amount_base, payment_method, amount_paid, amount_paid_base, status, issued_at, currency_code, exchange_rate, notes, created_at, updated_at) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(invoice.id.to_string())
     .bind(&invoice.invoice_number)
@@ -42,6 +42,8 @@ pub async fn save(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), App
     .bind(invoice.tax_amount.base_amount.to_string())
     .bind(invoice.discount_amount.amount().to_string())
     .bind(invoice.discount_amount.base_amount.to_string())
+    .bind(invoice.extra_costs.amount().to_string())
+    .bind(invoice.extra_costs.base_amount.to_string())
     .bind(invoice.total_amount.amount().to_string())
     .bind(invoice.total_amount.base_amount.to_string())
     .bind(pmeth)
@@ -105,13 +107,15 @@ pub async fn update(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), A
     };
 
     sqlx::query(
-        "UPDATE unified_invoices SET status=?, tax_amount=?, tax_amount_base=?, discount_amount=?, discount_amount_base=?, total_amount=?, total_amount_base=?, payment_method=?, amount_paid=?, amount_paid_base=?, currency_code=?, exchange_rate=?, notes=?, updated_at=?, customer_id=?, customer_name=?, supplier_id=?, supplier_name=? WHERE id=?"
+        "UPDATE unified_invoices SET status=?, tax_amount=?, tax_amount_base=?, discount_amount=?, discount_amount_base=?, extra_costs=?, extra_costs_base=?, total_amount=?, total_amount_base=?, payment_method=?, amount_paid=?, amount_paid_base=?, currency_code=?, exchange_rate=?, notes=?, updated_at=?, customer_id=?, customer_name=?, supplier_id=?, supplier_name=? WHERE id=?"
     )
     .bind(istatus)
     .bind(invoice.tax_amount.amount().to_string())
     .bind(invoice.tax_amount.base_amount.to_string())
     .bind(invoice.discount_amount.amount().to_string())
     .bind(invoice.discount_amount.base_amount.to_string())
+    .bind(invoice.extra_costs.amount().to_string())
+    .bind(invoice.extra_costs.base_amount.to_string())
     .bind(invoice.total_amount.amount().to_string())
     .bind(invoice.total_amount.base_amount.to_string())
     .bind(pmeth)

@@ -249,7 +249,9 @@ export default function SalesInvoices() {
 
   const extraCols = useMemo<DocumentColumn[]>(() => [
     { key: "cost_price", header: "التكلفة ($)", width: "w-[90px]", align: "left", type: "readonly" },
+    { key: "cost_price_SYP", header: "التكلفة (ل.س)", width: "w-[90px]", align: "left", type: "readonly" },
     { key: "profit_amount", header: "الربح ($)", width: "w-[90px]", align: "left", type: "readonly" },
+    { key: "profit_amount_SYP", header: "الربح (ل.س)", width: "w-[90px]", align: "left", type: "readonly" },
     { key: "profit_percent", header: "الربح %", width: "w-[70px]", align: "center", type: "readonly" },
     { key: "notes", header: "ملاحظات", width: "flex-[1]", align: "right", type: "text" }
   ], []);
@@ -378,6 +380,8 @@ export default function SalesInvoices() {
             materials={Object.values(materials)} 
             readOnly={isReadOnly}
             preferenceKey="sales_invoice_grid_v2"
+            docCurrency={headerState.currency_code}
+            exchangeRate={headerState.exchange_rate}
           />
         }
         summaryPanel={

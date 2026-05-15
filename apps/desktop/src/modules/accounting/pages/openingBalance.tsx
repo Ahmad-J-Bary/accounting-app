@@ -123,9 +123,10 @@ export default function OpeningBalance() {
   };
 
   const extraCols = useMemo<DocumentColumn[]>(() => [
-    { key: "cost_price", header: "التكلفة ($)", width: "w-[90px]", align: "left", type: "readonly" },
-    { key: "retail_price", header: "مفرق", width: "w-[90px]", align: "left", type: "number" },
-    { key: "wholesale_price", header: "جملة", width: "w-[90px]", align: "left", type: "number" }
+    { key: "retail_price", header: "مفرق ($)", width: "w-[90px]", align: "left", type: "number" },
+    { key: "retail_price_SYP", header: "مفرق (ل.س)", width: "w-[90px]", align: "left", type: "number" },
+    { key: "wholesale_price", header: "جملة ($)", width: "w-[90px]", align: "left", type: "number" },
+    { key: "wholesale_price_SYP", header: "جملة (ل.س)", width: "w-[90px]", align: "left", type: "number" },
   ], []);
 
   // Adapt header for hook compatibility
@@ -196,6 +197,8 @@ export default function OpeningBalance() {
             onSelectMaterial={selectMaterial}
             materials={Object.values(materials)}
             preferenceKey="opening_balance_grid"
+            docCurrency={header.currency_code}
+            exchangeRate={header.exchange_rate}
           />
       }
       summaryPanel={
