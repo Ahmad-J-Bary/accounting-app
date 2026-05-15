@@ -2,6 +2,7 @@ import { formatCurrency } from '@shared/lib/format';
 import { cn } from '@shared/lib/utils';
 import { type Currency } from '@modules/core/api/currencyService';
 import { type DocumentStatus } from "@modules/invoicing/components/DocumentStatusBadge";
+import { STATUS_LABELS, resolveCurrencySymbol } from "@modules/invoicing/lib/constants";
 
 interface SummaryPanelProps {
   subtotal: number;
@@ -28,19 +29,6 @@ interface SummaryPanelProps {
   onExtraPaidAmountChange?: (amount: string) => void;
 }
 
-const STATUS_LABELS: Record<DocumentStatus, { label: string; color: string; bg: string }> = {
-  Draft:         { label: "مسودة",        color: "text-amber-700",  bg: "bg-amber-50 border-amber-200" },
-  Saved:         { label: "محفوظ",        color: "text-blue-700",  bg: "bg-blue-50 border-blue-200" },
-  Posted:        { label: "مرحّل",        color: "text-green-700",  bg: "bg-green-50 border-green-200" },
-  Cancelled:     { label: "ملغي",         color: "text-red-700",    bg: "bg-red-50 border-red-200" },
-  PartiallyPaid: { label: "مدفوع جزئياً", color: "text-blue-700",   bg: "bg-blue-50 border-blue-200" },
-  FullyPaid:     { label: "مدفوع بالكامل", color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200" },
-};
-
-const CURRENCY_MAP: Record<string, string> = {
-  "USD": "$", "SYP": "ل.س", "EUR": "€", "TRY": "₺",
-};
-
 export function SummaryPanel({
   subtotal, discount = 0, tax = 0, extraCosts, net, paid = 0,
   currency = "ل.س", status, compact = false, invoiceType, children,
@@ -49,7 +37,7 @@ export function SummaryPanel({
   extraPaidAmount, onExtraPaidAmountChange,
 }: SummaryPanelProps) {
   const safeExtra = Number.isFinite(extraCosts) ? (extraCosts as number) : 0;
-  const displayCurrency = CURRENCY_MAP[currency] || currency;
+  const displayCurrency = resolveCurrencySymbol(currency);
   const remaining = Math.max(net - paid, 0);
   const st = status ? STATUS_LABELS[status] : null;
 
@@ -71,7 +59,7 @@ export function SummaryPanel({
                 className="h-7 px-1 rounded border-none bg-transparent font-black text-primary text-[11px] outline-none focus:ring-0 cursor-pointer">
                 {currencies.map(c => (
                   <option key={c.code} value={c.code} className="text-foreground font-bold">
-                    {c.name_ar} ({CURRENCY_MAP[c.code] || c.code})
+                    {c.name_ar} ({resolveCurrencySymbol(c.code)})
                   </option>
                 ))}
               </select>

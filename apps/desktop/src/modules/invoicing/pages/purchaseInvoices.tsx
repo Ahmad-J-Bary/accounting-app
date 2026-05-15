@@ -20,7 +20,7 @@ import { GenericDocumentGrid, type DocumentColumn } from "@widgets/document-shel
 import { SummaryPanel } from "@widgets/document-shell/SummaryPanel";
 import { InvoicePartySelector } from "../components/InvoicePartySelector";
 import { DocumentStatusBadge } from "../components/DocumentStatusBadge";
-import { PurchaseInvoiceList } from "../components/PurchaseInvoiceList";
+import { InvoiceList } from "../components/InvoiceList";
 import { useDocumentEditor } from "../hooks/useDocumentEditor";
 import { toBackendLines, type GridLine, newGridLine } from "../lib/invoiceUtils";
 import { type DocumentStatus } from "../components/DocumentStatusBadge";
@@ -417,61 +417,43 @@ export default function PurchaseInvoices() {
   const supplierIdFilter = searchParams.get("supplierId") || undefined;
 
   return (
-    <PurchaseInvoiceList
+    <InvoiceList
       invoices={invoices}
       loading={loading || refreshing}
       search={search}
-      supplierIdFilter={supplierIdFilter}
+      partyIdFilter={supplierIdFilter}
       onSearchChange={setSearch}
       onRefresh={() => loadData(false)}
       onCreate={() => {
         const uniqueId = `/purchase-invoices/new-${Date.now()}`;
-        openTab({ 
-          id: uniqueId, 
-          title: "فاتورة مشتريات جديدة", 
-          path: uniqueId,
-          closable: true
-        });
+        openTab({ id: uniqueId, title: "فاتورة مشتريات جديدة", path: uniqueId, closable: true });
       }}
       onEdit={(inv) => {
-        openTab({ 
-          id: `/purchase-invoices/${inv.id}`, 
-          title: `تعديل فاتورة ${inv.invoice_number}`, 
-          path: `/purchase-invoices/${inv.id}?mode=edit`,
-          closable: true
-        });
+        openTab({ id: `/purchase-invoices/${inv.id}`, title: `تعديل فاتورة ${inv.invoice_number}`, path: `/purchase-invoices/${inv.id}?mode=edit`, closable: true });
       }}
       onView={(inv) => {
-        openTab({ 
-          id: `/purchase-invoices/${inv.id}-view`, 
-          title: `عرض فاتورة ${inv.invoice_number}`, 
-          path: `/purchase-invoices/${inv.id}?mode=view`,
-          closable: true
-        });
+        openTab({ id: `/purchase-invoices/${inv.id}-view`, title: `عرض فاتورة ${inv.invoice_number}`, path: `/purchase-invoices/${inv.id}?mode=view`, closable: true });
       }}
-      onPost={async (id) => {
-        await invoiceService.postInvoice(id);
-        loadData(false);
-      }}
+      onPost={async (id) => { await invoiceService.postInvoice(id); loadData(false); }}
       onDelete={async (id) => {
-        try {
-          await invoiceService.deleteInvoice(id);
-          toast.success("تم حذف الفاتورة والقيود المرتبطة بها");
-          loadData(false);
-        } catch (e) {
-          toast.error("فشل الحذف: " + e);
-        }
+        try { await invoiceService.deleteInvoice(id); toast.success("تم حذف الفاتورة والقيود المرتبطة بها"); loadData(false); }
+        catch (e) { toast.error("فشل الحذف: " + e); }
       }}
       onReopen={async (id) => {
-        try {
-          await invoiceService.reopenInvoice(id);
-          toast.success("تم إلغاء الترحيل وإعادة الفاتورة لمسودة");
-          loadData(false);
-        } catch (e) {
-          toast.error("فشل العملية: " + e);
-        }
+        try { await invoiceService.reopenInvoice(id); toast.success("تم إلغاء الترحيل وإعادة الفاتورة لمسودة"); loadData(false); }
+        catch (e) { toast.error("فشل العملية: " + e); }
       }}
       formatMonetaryAmount={formatMonetaryAmount}
+      partyType="supplier"
+      title="فواتير المشتريات"
+      createLabel="فاتورة جديدة"
+      searchPlaceholder="بحث برقم الفاتورة أو المورد..."
+      emptyMessage="لا توجد فواتير مشتريات مسجّلة"
+      statsLabel="إجمالي المشتريات"
+      statsColor="text-rose-600"
+      preferenceKey="purchase_invoices"
+      showSubtotal
+      showExtraCosts
     />
   );
 }

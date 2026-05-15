@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 import { FinancialDocumentTemplate } from '@widgets/templates/FinancialDocumentTemplate';
-import { SalesInvoiceList } from '../components/SalesInvoiceList';
+import { InvoiceList } from '../components/InvoiceList';
 import { DocumentStatusBadge } from '../components/DocumentStatusBadge';
 import { GenericDocumentGrid, DocumentColumn } from '@widgets/document-shell/GenericDocumentGrid';
 import { SummaryPanel } from '@widgets/document-shell/SummaryPanel';
@@ -420,42 +420,35 @@ export default function SalesInvoices() {
   const customerIdFilter = searchParams.get("customerId") || undefined;
 
   return (
-    <SalesInvoiceList
+    <InvoiceList
       invoices={invoices}
       loading={loading || refreshing}
       search={search}
-      customerIdFilter={customerIdFilter}
+      partyIdFilter={customerIdFilter}
       onSearchChange={setSearch}
       onRefresh={() => loadData(false)}
       onCreate={() => {
         const uniqueId = `/sales-invoices/new-${Date.now()}`;
-        openTab({ 
-          id: uniqueId, 
-          title: "فاتورة مبيعات جديدة", 
-          path: uniqueId,
-          closable: true
-        });
+        openTab({ id: uniqueId, title: "فاتورة مبيعات جديدة", path: uniqueId, closable: true });
       }}
       onEdit={(inv) => {
-        openTab({ 
-          id: `/sales-invoices/${inv.id}`, 
-          title: `تعديل ${inv.invoice_number}`, 
-          path: `/sales-invoices/${inv.id}`,
-          closable: true
-        });
+        openTab({ id: `/sales-invoices/${inv.id}`, title: `تعديل ${inv.invoice_number}`, path: `/sales-invoices/${inv.id}`, closable: true });
       }}
       onView={(inv) => {
-        openTab({ 
-          id: `/sales-invoices/${inv.id}?mode=view`, 
-          title: `عرض ${inv.invoice_number}`, 
-          path: `/sales-invoices/${inv.id}?mode=view`,
-          closable: true
-        });
+        openTab({ id: `/sales-invoices/${inv.id}?mode=view`, title: `عرض ${inv.invoice_number}`, path: `/sales-invoices/${inv.id}?mode=view`, closable: true });
       }}
       onPost={(id) => invoiceService.postInvoice(id).then(() => loadData(false))}
       onDelete={(id) => invoiceService.deleteInvoice(id).then(() => loadData(false))}
       onReopen={(id) => invoiceService.reopenInvoice(id).then(() => loadData(false))}
       formatMonetaryAmount={formatMonetaryAmount}
+      partyType="customer"
+      title="فواتير المبيعات"
+      createLabel="فاتورة جديدة"
+      searchPlaceholder="بحث برقم الفاتورة أو الزبون..."
+      emptyMessage="لا توجد فواتير مبيعات مسجّلة"
+      statsLabel="إجمالي المبيعات"
+      statsColor="text-blue-600"
+      preferenceKey="sales_invoices_v2"
     />
   );
 }

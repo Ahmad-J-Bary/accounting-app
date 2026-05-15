@@ -213,7 +213,6 @@ export function GenericDocumentGrid({
         if (e.ctrlKey) { e.preventDefault(); onRemoveLine(rowIdx); }
         break;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchRow, editableCols.length, lines.length, onAddLine, onRemoveLine, readOnly, findNextCol]);
 
   const getCellValue = (line: GridLine, key: string): string => {
