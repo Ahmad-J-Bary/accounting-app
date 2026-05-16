@@ -68,24 +68,21 @@ export default function Journal() {
     []
   );
 
-  // MaterialOpeningBalance only appears in GeneralJournal
   const displayEntries = useMemo(() => {
     const jt = filters.journal_type;
-    if (jt && jt !== 'GeneralJournal') {
-      const hiddenTypes = new Set<string>([
-        'MaterialOpeningBalance',
-      ]);
-      // Voucher/balance types are also hidden outside GeneralJournal & CashJournal
-      if (jt !== 'CashJournal') {
-        hiddenTypes.add('CashOpeningBalance');
-        hiddenTypes.add('AccountOpeningBalance');
-        hiddenTypes.add('DrawingsVoucher');
-        hiddenTypes.add('CashReceipt');
-        hiddenTypes.add('CashPayment');
-        hiddenTypes.add('ExpenseVoucher');
-      }
-      return entries.filter(e => !hiddenTypes.has(e.journal_type));
-    }
+    if (!jt || jt === 'GeneralJournal') return entries;
+
+    const ALLOWED: Record<string, Set<string>> = {
+      CashJournal:       new Set(['CashJournal', 'DrawingsVoucher','CashReceipt','CashPayment', 'ExpenseVoucher','CashOpeningBalance','AccountOpeningBalance']),
+      PurchaseJournal:   new Set(['PurchaseJournal','PurchaseCostsJournal']),
+      PurchaseCostsJournal: new Set(['PurchaseCostsJournal']),
+      CashSalesJournal:  new Set(['CashSalesJournal']),
+      CreditSalesJournal: new Set(['CreditSalesJournal']),
+    };
+
+    const allowed = ALLOWED[jt];
+    if (allowed) return entries.filter(e => allowed.has(e.journal_type));
+
     return entries;
   }, [entries, filters.journal_type]);
 

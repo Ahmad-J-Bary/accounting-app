@@ -58,7 +58,9 @@ impl ListJournalEntriesUseCase {
         //   CashJournal → no SQL filter, then post-filter for cash-related types
         //   All others → SQL filters by exact journal_type
         let repo_journal_type = match journal_type {
-            Some(JournalType::GeneralJournal) | Some(JournalType::CashJournal) | Some(JournalType::PurchaseJournal) | Some(JournalType::PurchaseCostsJournal) => None,
+            Some(JournalType::GeneralJournal) 
+            | Some(JournalType::CashJournal) 
+            | Some(JournalType::PurchaseJournal) => None,
             _ => journal_type,
         };
 
@@ -79,18 +81,12 @@ impl ListJournalEntriesUseCase {
                         | JournalType::CashOpeningBalance
                         | JournalType::AccountOpeningBalance
                 ),
-                Some(JournalType::PurchaseJournal) => {
-                    // PurchaseJournal filter shows both PurchaseJournal and PurchaseCostsJournal.
-                    entry.journal_type == JournalType::PurchaseJournal
-                        || entry.journal_type == JournalType::PurchaseCostsJournal
-                }
+                Some(JournalType::PurchaseJournal) => matches!(
+                    entry.journal_type,
+                    JournalType::PurchaseJournal | JournalType::PurchaseCostsJournal
+                ),
                 Some(JournalType::PurchaseCostsJournal) => {
-                    // Only PurchaseCostsJournal appears here, not PurchaseJournal.
                     entry.journal_type == JournalType::PurchaseCostsJournal
-                }
-                Some(JournalType::CashSalesJournal) | Some(JournalType::CreditSalesJournal) => {
-                    // Exact match only — purchase/cost entries never show here.
-                    entry.journal_type == journal_type.unwrap()
                 }
                 Some(jt) => entry.journal_type == jt,
                 None => true,
