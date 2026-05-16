@@ -14,8 +14,8 @@ export const JOURNAL_TYPES: JournalTypeOption[] = [
   { value: "CashJournal", label: "يومية الصندوق" },
   { value: "CashSalesJournal", label: "يومية المبيعات النقدية" },
   { value: "CreditSalesJournal", label: "يومية المبيعات الآجلة" },
-  { value: "PurchaseJournal", label: "يومية المشتريات" },
-  { value: "PurchaseCostsJournal", label: "يومية التكاليف الإضافية للمشتريات" },
+  { value: "PurchaseJournal", label: "مشتريات" },
+  { value: "PurchaseCostsJournal", label: "تكاليف إضافية للمشتريات" },
 ];
 
 /** Full mapping of every journal type to its Arabic display label (matches Rust Display impl) */
@@ -24,8 +24,8 @@ export const JOURNAL_TYPE_LABELS: Record<string, string> = {
   CashJournal: "يومية الصندوق",
   CashSalesJournal: "يومية المبيعات النقدية",
   CreditSalesJournal: "يومية المبيعات الآجلة",
-  PurchaseJournal: "يومية المشتريات",
-  PurchaseCostsJournal: "يومية التكاليف الإضافية للمشتريات",
+  PurchaseJournal: "مشتريات",
+  PurchaseCostsJournal: "تكاليف إضافية للمشتريات",
   CashReceipt: "سند قبض",
   CashPayment: "سند دفع",
   ExpenseVoucher: "سند مصاريف",
@@ -40,8 +40,8 @@ export const JOURNAL_REPORT_TYPES: JournalReportTypeOption[] = [
   { value: "CashJournal", label: "يومية الصندوق / الخزينة", desc: "كل القيود التي يظهر فيها حساب الصندوق" },
   { value: "CashSalesJournal", label: "يومية المبيعات النقدية", desc: "قيود المبيعات النقدية" },
   { value: "CreditSalesJournal", label: "يومية المبيعات الآجلة", desc: "قيود المبيعات الآجلة والذمم" },
-  { value: "PurchaseJournal", label: "يومية المشتريات", desc: "قيود المشتريات النقدية والآجلة" },
-  { value: "PurchaseCostsJournal", label: "يومية التكاليف الإضافية", desc: "قيود التكاليف الإضافية للمشتريات" },
+  { value: "PurchaseJournal", label: "مشتريات", desc: "قيود المشتريات النقدية والآجلة" },
+  { value: "PurchaseCostsJournal", label: "تكاليف إضافية للمشتريات", desc: "قيود التكاليف الإضافية للمشتريات" },
 ];
 
 // Unified column order for ALL journal types:

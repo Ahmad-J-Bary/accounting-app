@@ -38,8 +38,8 @@ impl std::fmt::Display for JournalType {
             Self::CashJournal => "يومية الصندوق",
             Self::CashSalesJournal => "يومية المبيعات النقدية",
             Self::CreditSalesJournal => "يومية المبيعات الآجلة",
-            Self::PurchaseJournal => "يومية المشتريات",
-            Self::PurchaseCostsJournal => "يومية التكاليف الإضافية للمشتريات",
+            Self::PurchaseJournal => "مشتريات",
+            Self::PurchaseCostsJournal => "تكاليف إضافية للمشتريات",
             Self::GeneralJournal => "اليومية العامة",
         };
         write!(f, "{}", s)

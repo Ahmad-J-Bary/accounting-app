@@ -6,7 +6,7 @@ export const FOCUS_PREFIX: Record<string, string> = {
   CashSalesJournal: '311',
   CreditSalesJournal: '312',
   PurchaseJournal: '41',
-  PurchaseCostsJournal: '221',
+  PurchaseCostsJournal: '41',
 };
 
 export interface JournalRow {
@@ -81,10 +81,21 @@ export function toJournalRow(entry: JournalEntryDto, journalType?: string): Jour
     const credits = entry.lines.filter(l => parseFloat(l.credit || "0") > 0);
 
     if (debits.length > 0 || credits.length > 0) {
-      dAcc = debits.length  === 1 ? (debits[0].account_name  || debits[0].account_id)
-          : debits.length   > 1 ? "حسابات متعددة" : "-";
-      cAcc = credits.length === 1 ? (credits[0].account_name || credits[0].account_id)
-          : credits.length  > 1 ? "حسابات متعددة" : "-";
+      if (entry.journal_type === 'PurchaseJournal' && credits.length > 1) {
+        const supplierLine = credits.find(l => !l.account_code?.startsWith('122'));
+        cAcc = supplierLine ? (supplierLine.account_name || supplierLine.account_id) : (credits[0].account_name || credits[0].account_id);
+      } else {
+        cAcc = credits.length === 1 ? (credits[0].account_name || credits[0].account_id)
+            : credits.length  > 1 ? "حسابات متعددة" : "-";
+      }
+
+      if ((entry.journal_type === 'CashSalesJournal' || entry.journal_type === 'CreditSalesJournal') && debits.length > 1) {
+        const customerLine = debits.find(l => !l.account_code?.startsWith('122'));
+        dAcc = customerLine ? (customerLine.account_name || customerLine.account_id) : (debits[0].account_name || debits[0].account_id);
+      } else {
+        dAcc = debits.length  === 1 ? (debits[0].account_name  || debits[0].account_id)
+            : debits.length   > 1 ? "حسابات متعددة" : "-";
+      }
     } else if (entry.lines.length >= 2) {
       dAcc = entry.lines[0].account_name || entry.lines[0].account_id;
       cAcc = entry.lines[1].account_name || entry.lines[1].account_id;
@@ -93,7 +104,9 @@ export function toJournalRow(entry: JournalEntryDto, journalType?: string): Jour
     // Show amounts on the side of the cash account if present,
     // otherwise show debit when both sides have amounts.
     const cashLine = entry.lines.find(l => l.account_code?.startsWith('122'));
-    if (cashLine && (parseFloat(cashLine.credit || "0") > 0 || parseFloat(cashLine.debit || "0") > 0)) {
+    if (entry.journal_type === 'PurchaseJournal' || entry.journal_type === 'PurchaseCostsJournal') {
+      activeSide = 'debit';
+    } else if (cashLine && (parseFloat(cashLine.credit || "0") > 0 || parseFloat(cashLine.debit || "0") > 0)) {
       activeSide = parseFloat(cashLine.credit || "0") > 0 ? 'credit' : 'debit';
     } else if (cUSD > 0 || cSYP > 0) {
       if (dUSD > 0 || dSYP > 0) {
@@ -111,6 +124,13 @@ export function toJournalRow(entry: JournalEntryDto, journalType?: string): Jour
       cAcc = "";
       dAcc = "بضاعة أول المدة";
     }
+  }
+
+  // PurchaseCostsJournal: fixed account names regardless of filter view
+  if (entry.journal_type === 'PurchaseCostsJournal') {
+    dAcc = "المشتريات";
+    cAcc = "تكاليف إضافية للمشترات";
+    activeSide = 'debit';
   }
 
   // Zero out the inactive side

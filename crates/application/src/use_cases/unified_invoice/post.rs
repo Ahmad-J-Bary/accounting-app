@@ -118,7 +118,7 @@ impl PostInvoiceUseCase {
         let (main_account_code, _) = match invoice.invoice_type {
             InvoiceType::Sales => ("311", ()),
             InvoiceType::Purchase => ("41", ()),
-            InvoiceType::PurchaseCosts => ("4101", ()),
+            InvoiceType::PurchaseCosts => ("41", ()),
             InvoiceType::OpeningBalance => ("33", ()),
         };
 
@@ -173,28 +173,48 @@ impl PostInvoiceUseCase {
                 }
             } else if invoice.invoice_type == InvoiceType::Purchase || invoice.invoice_type == InvoiceType::PurchaseCosts {
                 let desc = if invoice.invoice_type == InvoiceType::PurchaseCosts {
-                    format!("إثبات تكاليف إضافية للمشتريات - فاتورة رقم {}", invoice.invoice_number)
+                    format!("تكاليف إضافية مرتبطة بفاتورة المشتريات رقم {}", invoice.invoice_number)
                 } else {
-                    format!("إثبات مشتريات فاتورة رقم {}", invoice.invoice_number)
+                    format!("إنشاء فاتورة المشتريات رقم {}", invoice.invoice_number)
+                };
+
+                let extra_costs_val = invoice.extra_costs.amount();
+                let main_debit_amount = if invoice.invoice_type == InvoiceType::Purchase && extra_costs_val > Decimal::ZERO {
+                    total_amount - extra_costs_val
+                } else {
+                    total_amount
                 };
 
                 journal_lines.push(JournalLine::new(
                     main_account.id, 
-                    MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate), 
+                    MonetaryAmount::new(Money::new(main_debit_amount, doc_currency.clone()), fx_rate), 
                     MonetaryAmount::zero(doc_currency.clone()), 
                     desc
                 ));
                 
-                if amount_paid > Decimal::ZERO {
+                let mut pj_paid = amount_paid;
+                let mut pj_deferred = amount_deferred;
+                
+                if invoice.invoice_type == InvoiceType::Purchase && extra_costs_val > Decimal::ZERO {
+                    if amount_deferred >= extra_costs_val {
+                        pj_deferred = amount_deferred - extra_costs_val;
+                    } else {
+                        pj_deferred = Decimal::ZERO;
+                        let remaining = extra_costs_val - amount_deferred;
+                        pj_paid = amount_paid - remaining;
+                    }
+                }
+                
+                if pj_paid > Decimal::ZERO {
                     journal_lines.push(JournalLine::new(
                         cash_account.id, 
                         MonetaryAmount::zero(doc_currency.clone()), 
-                        MonetaryAmount::new(Money::new(amount_paid, doc_currency.clone()), fx_rate), 
+                        MonetaryAmount::new(Money::new(pj_paid, doc_currency.clone()), fx_rate), 
                         format!("دفعة نقدية - فاتورة رقم {}", invoice.invoice_number)
                     ));
                 }
                 
-                if amount_deferred > Decimal::ZERO {
+                if pj_deferred > Decimal::ZERO {
                     let mut deferred_handled = false;
                     if let Some(sid) = &invoice.supplier_id {
                         if let Some(supplier) = self.supplier_repo.find_by_id(sid).await? {
@@ -202,23 +222,22 @@ impl PostInvoiceUseCase {
                                 journal_lines.push(JournalLine::new(
                                     p_acc_id, 
                                     MonetaryAmount::zero(doc_currency.clone()), 
-                                    MonetaryAmount::new(Money::new(amount_deferred, doc_currency.clone()), fx_rate), 
+                                    MonetaryAmount::new(Money::new(pj_deferred, doc_currency.clone()), fx_rate), 
                                     format!("ذمة دائنة - فاتورة رقم {}", invoice.invoice_number)
                                 ).with_partner(sid.0));
                                 
                                 let mut updated_supplier = supplier;
-                                updated_supplier.increase_credit(amount_deferred).map_err(|e| AppError::Invalid(e.to_string()))?;
+                                updated_supplier.increase_credit(pj_deferred).map_err(|e| AppError::Invalid(e.to_string()))?;
                                 self.supplier_repo.update(&updated_supplier).await?;
                                 deferred_handled = true;
                             }
                         }
                     }
-                    // Fallback: if no supplier account, credit cash to balance the journal
                     if !deferred_handled {
                         journal_lines.push(JournalLine::new(
                             cash_account.id, 
                             MonetaryAmount::zero(doc_currency.clone()), 
-                            MonetaryAmount::new(Money::new(amount_deferred, doc_currency.clone()), fx_rate), 
+                            MonetaryAmount::new(Money::new(pj_deferred, doc_currency.clone()), fx_rate), 
                             format!("ذمة نقدية (المبلغ المتبقي) - فاتورة رقم {}", invoice.invoice_number)
                         ));
                     }
@@ -260,6 +279,8 @@ impl PostInvoiceUseCase {
                 Utc::now(),
                 match invoice.invoice_type {
                     InvoiceType::OpeningBalance => format!("إنشاء فاتورة أول المدة رقم {}", invoice.invoice_number),
+                    InvoiceType::PurchaseCosts => format!("تكاليف إضافية مرتبطة بفاتورة المشتريات رقم {}", invoice.invoice_number),
+                    InvoiceType::Purchase => format!("إنشاء فاتورة المشتريات رقم {}", invoice.invoice_number),
                     _ => format!("قيد آلي ناتج عن فاتورة رقم {}", invoice.invoice_number),
                 },
                 Some(invoice.id.to_string()),
@@ -267,6 +288,77 @@ impl PostInvoiceUseCase {
             
             journal_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
             self.journal_repo.save(&journal_entry).await?;
+        }
+
+        let extra_costs_val = invoice.extra_costs.amount();
+        if invoice.invoice_type == InvoiceType::Purchase && extra_costs_val > Decimal::ZERO {
+            let desc = format!("تكاليف إضافية مرتبطة بفاتورة المشتريات رقم {}", invoice.invoice_number);
+            
+            let (pcj_paid, pcj_deferred) = if amount_deferred >= extra_costs_val {
+                (Decimal::ZERO, extra_costs_val)
+            } else {
+                (extra_costs_val - amount_deferred, amount_deferred)
+            };
+
+            let mut extra_lines = vec![
+                JournalLine::new(
+                    main_account.id, 
+                    MonetaryAmount::new(Money::new(extra_costs_val, doc_currency.clone()), fx_rate), 
+                    MonetaryAmount::zero(doc_currency.clone()), 
+                    desc.clone()
+                ),
+            ];
+            
+            if pcj_paid > Decimal::ZERO {
+                extra_lines.push(JournalLine::new(
+                    cash_account.id,
+                    MonetaryAmount::zero(doc_currency.clone()),
+                    MonetaryAmount::new(Money::new(pcj_paid, doc_currency.clone()), fx_rate),
+                    format!("دفعة نقدية (تكاليف) - فاتورة رقم {}", invoice.invoice_number)
+                ));
+            }
+            
+            if pcj_deferred > Decimal::ZERO {
+                let mut cost_deferred_handled = false;
+                if let Some(sid) = &invoice.supplier_id {
+                    if let Some(supplier) = self.supplier_repo.find_by_id(sid).await? {
+                        if let Some(p_acc_id) = supplier.account_id {
+                            extra_lines.push(JournalLine::new(
+                                p_acc_id,
+                                MonetaryAmount::zero(doc_currency.clone()),
+                                MonetaryAmount::new(Money::new(pcj_deferred, doc_currency.clone()), fx_rate),
+                                format!("ذمة دائنة (تكاليف) - فاتورة رقم {}", invoice.invoice_number)
+                            ).with_partner(sid.0));
+                            
+                            let mut updated_supplier = supplier;
+                            updated_supplier.increase_credit(pcj_deferred).map_err(|e| AppError::Invalid(e.to_string()))?;
+                            self.supplier_repo.update(&updated_supplier).await?;
+                            cost_deferred_handled = true;
+                        }
+                    }
+                }
+                
+                if !cost_deferred_handled {
+                    extra_lines.push(JournalLine::new(
+                        cash_account.id,
+                        MonetaryAmount::zero(doc_currency.clone()),
+                        MonetaryAmount::new(Money::new(pcj_deferred, doc_currency.clone()), fx_rate),
+                        format!("ذمة نقدية (تكاليف) - فاتورة رقم {}", invoice.invoice_number)
+                    ));
+                }
+            }
+
+            let mut extra_entry = JournalEntry::new(
+                self.journal_repo.get_next_entry_number().await?,
+                domain::accounting::JournalType::PurchaseCostsJournal,
+                extra_lines,
+                Utc::now(),
+                desc,
+                Some(invoice.id.to_string()),
+            ).map_err(|e| AppError::Invalid(e.to_string()))?;
+            
+            extra_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
+            self.journal_repo.save(&extra_entry).await?;
         }
 
         let dto = InvoiceDto::from(invoice);

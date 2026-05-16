@@ -128,7 +128,11 @@ impl AccountQueries {
             } else if opposite_lines.is_empty() {
                 "-".to_string()
             } else {
-                "حسابات متعددة".to_string()
+                if let Some(partner_line) = opposite_lines.iter().find(|l| l.partner_id.is_some()) {
+                    account_name_map.get(&partner_line.account_id).cloned().unwrap_or_else(|| "-".to_string())
+                } else {
+                    "حسابات متعددة".to_string()
+                }
             };
 
             for line in account_lines {
