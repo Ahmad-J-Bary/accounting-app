@@ -56,10 +56,20 @@ pub async fn save(pool: &SqlitePool, entry: &JournalEntry) -> Result<(), AppErro
 }
 
 pub async fn delete(pool: &SqlitePool, id: &JournalEntryId) -> Result<(), AppError> {
-    sqlx::query("DELETE FROM journal_entries WHERE id = ?")
+    let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    sqlx::query("DELETE FROM journal_lines WHERE journal_entry_id = ?")
         .bind(id.0.to_string())
-        .execute(pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    sqlx::query("DELETE FROM journal_entries WHERE id = ?")
+        .bind(id.0.to_string())
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
 }

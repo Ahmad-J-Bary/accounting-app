@@ -34,7 +34,7 @@ impl DeleteAccountUseCase {
     }
 
     pub async fn delete(&self, id: AccountId) -> Result<(), AccountUseCaseError> {
-        let mut account = self
+        let account = self
             .account_repo
             .find_by_id(&id)
             .await
@@ -51,29 +51,28 @@ impl DeleteAccountUseCase {
             .iter()
             .any(|a| a.parent_id.as_ref() == Some(&id));
         
-        let usage = self.count_journal_usage(&id).await?;
         let is_root = account.parent_id.is_none();
 
-        if is_root || has_children || usage > 0 {
-            // Even when just deactivating, delete linked customer/supplier
-            if let Some(customer_id) = &account.linked_customer_id {
-                if let Some(ref customer_repo) = self.customer_repo {
-                    let _ = customer_repo.delete(customer_id).await;
-                }
-            }
-            if let Some(supplier_id) = &account.linked_supplier_id {
-                if let Some(ref supplier_repo) = self.supplier_repo {
-                    let _ = supplier_repo.delete(supplier_id).await;
-                }
-            }
-            
-            account.is_active = false;
-            account.updated_at = Utc::now();
-            self.account_repo
-                .save(&account)
+        if is_root {
+            return Err(AccountUseCaseError::Forbidden("لا يمكن حذف الحسابات الجذرية".into()));
+        }
+
+        if has_children {
+            return Err(AccountUseCaseError::Forbidden("لا يمكن حذف حساب لديه حسابات فرعية".into()));
+        }
+
+        // Cascade: delete all journal entries referencing this account
+        let entries = self
+            .journal_repo
+            .list_by_account(&id)
+            .await
+            .map_err(|e| AccountUseCaseError::JournalRepositoryError(e.to_string()))?;
+
+        for entry in &entries {
+            self.journal_repo
+                .delete(&entry.id)
                 .await
-                .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
-            return Ok(());
+                .map_err(|e| AccountUseCaseError::JournalRepositoryError(e.to_string()))?;
         }
 
         // Cascade: delete linked customer if any
@@ -170,12 +169,4 @@ impl DeleteAccountUseCase {
         Ok(())
     }
 
-    async fn count_journal_usage(&self, id: &AccountId) -> Result<usize, AccountUseCaseError> {
-        let entries = self
-            .journal_repo
-            .list_by_account(id)
-            .await
-            .map_err(|e| AccountUseCaseError::JournalRepositoryError(e.to_string()))?;
-        Ok(entries.len())
-    }
 }

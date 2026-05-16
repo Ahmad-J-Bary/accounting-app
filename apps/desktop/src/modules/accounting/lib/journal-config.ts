@@ -15,8 +15,25 @@ export const JOURNAL_TYPES: JournalTypeOption[] = [
   { value: "CashSalesJournal", label: "يومية المبيعات النقدية" },
   { value: "CreditSalesJournal", label: "يومية المبيعات الآجلة" },
   { value: "PurchaseJournal", label: "يومية المشتريات" },
-  { value: "PurchaseCostsJournal", label: "يومية تكاليف الشراء" },
+  { value: "PurchaseCostsJournal", label: "يومية التكاليف الإضافية للمشتريات" },
 ];
+
+/** Full mapping of every journal type to its Arabic display label (matches Rust Display impl) */
+export const JOURNAL_TYPE_LABELS: Record<string, string> = {
+  GeneralJournal: "اليومية العامة",
+  CashJournal: "يومية الصندوق",
+  CashSalesJournal: "يومية المبيعات النقدية",
+  CreditSalesJournal: "يومية المبيعات الآجلة",
+  PurchaseJournal: "يومية المشتريات",
+  PurchaseCostsJournal: "يومية التكاليف الإضافية للمشتريات",
+  CashReceipt: "سند قبض",
+  CashPayment: "سند دفع",
+  ExpenseVoucher: "سند مصاريف",
+  DrawingsVoucher: "سند مسحوبات",
+  CashOpeningBalance: "رصيد افتتاحي للخزينة",
+  AccountOpeningBalance: "رصيد افتتاحي لحساب",
+  MaterialOpeningBalance: "رصيد افتتاحي للمواد",
+};
 
 export const JOURNAL_REPORT_TYPES: JournalReportTypeOption[] = [
   { value: "GeneralJournal", label: "حركة اليومية العامة", desc: "سجل كامل للقيود اليومية" },

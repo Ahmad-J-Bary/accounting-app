@@ -57,8 +57,12 @@ pub async fn delete_customer(
     state: State<'_, AppState>,
     id: String,
 ) -> Result<(), String> {
-    DeleteCustomerUseCase::new(state.customer_repo.clone(), state.account_repo.clone())
-        .execute(id)
-        .await
-        .map_err(|e| e.to_string())
+    DeleteCustomerUseCase::new(
+        state.customer_repo.clone(),
+        state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
+    )
+    .execute(id)
+    .await
+    .map_err(|e| e.to_string())
 }

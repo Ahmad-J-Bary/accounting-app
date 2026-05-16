@@ -43,6 +43,12 @@ pub async fn update_supplier(
 
 #[tauri::command]
 pub async fn delete_supplier(id: String, state: State<'_, AppState>) -> Result<(), String> {
-    DeleteSupplierUseCase::new(state.supplier_repo.clone(), state.account_repo.clone())
-        .execute(id).await.map_err(|e| e.to_string())
+    DeleteSupplierUseCase::new(
+        state.supplier_repo.clone(),
+        state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
+    )
+    .execute(id)
+    .await
+    .map_err(|e| e.to_string())
 }

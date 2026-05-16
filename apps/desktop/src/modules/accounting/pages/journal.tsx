@@ -68,13 +68,15 @@ export default function Journal() {
     []
   );
 
-  // Opening balance entries should only appear in GeneralJournal or CashJournal
+  // Certain entry types should only appear in GeneralJournal or CashJournal
   const displayEntries = useMemo(() => {
     const jt = filters.journal_type;
     if (jt && jt !== 'GeneralJournal' && jt !== 'CashJournal') {
-      return entries.filter(
-        e => e.journal_type !== 'CashOpeningBalance' && e.journal_type !== 'AccountOpeningBalance'
-      );
+      const hiddenTypes = new Set([
+        'CashOpeningBalance', 'AccountOpeningBalance',
+        'DrawingsVoucher', 'CashReceipt', 'CashPayment', 'ExpenseVoucher',
+      ]);
+      return entries.filter(e => !hiddenTypes.has(e.journal_type));
     }
     return entries;
   }, [entries, filters.journal_type]);

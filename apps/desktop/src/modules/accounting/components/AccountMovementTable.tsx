@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import { DataTable, Column } from '@widgets/table-shell/DataTable';
 import { formatDateTime } from '@shared/lib/format';
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import type { AccountLedgerLineDto } from "@erp/shared-types";
-import { JOURNAL_TYPES } from "../lib/journal-config";
+import { JOURNAL_TYPE_LABELS } from "../lib/journal-config";
 
 interface AccountMovementTableProps {
   lines: AccountLedgerLineDto[];
@@ -12,9 +13,11 @@ interface AccountMovementTableProps {
 }
 
 export function AccountMovementTable({ lines, loading, visibleColumns, accountName }: AccountMovementTableProps) {
+  const { formatAmount } = useCurrencyContext();
+
   const tableData = useMemo(() => {
     return lines.map((line) => {
-      const typeLabel = JOURNAL_TYPES.find(t => t.value === line.journal_type)?.label || line.journal_type;
+      const typeLabel = JOURNAL_TYPE_LABELS[line.journal_type] || line.journal_type;
       
       const debitUSD = parseFloat(line.debit_usd);
       const debitSYP = parseFloat(line.debit_syp);
@@ -26,22 +29,8 @@ export function AccountMovementTable({ lines, loading, visibleColumns, accountNa
       return {
         ...line,
         typeLabel,
-        // Calculate Source/Destination based on movement
         source_account: isDebit ? line.opposite_account_name : accountName,
         destination_account: isDebit ? accountName : line.opposite_account_name,
-        
-        formatted_debit_usd: debitUSD > 0 
-          ? `${debitUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $` 
-          : "",
-        formatted_credit_usd: creditUSD > 0 
-          ? `${creditUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $` 
-          : "",
-        formatted_debit_syp: debitSYP > 0 
-          ? `${debitSYP.toLocaleString('en-US', { maximumFractionDigits: 0 })} ل.س` 
-          : "",
-        formatted_credit_syp: creditSYP > 0 
-          ? `${creditSYP.toLocaleString('en-US', { maximumFractionDigits: 0 })} ل.س` 
-          : "",
       };
     });
   }, [lines, accountName]);
@@ -58,7 +47,7 @@ export function AccountMovementTable({ lines, loading, visibleColumns, accountNa
         id: "journal_type",
         header: "نوع الحركة", 
         accessor: (l) => (
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter whitespace-nowrap">
             {l.typeLabel}
           </span>
         ),
@@ -66,28 +55,40 @@ export function AccountMovementTable({ lines, loading, visibleColumns, accountNa
       {
         id: "debit_usd",
         header: "عليه / مدين ($)",
-        accessor: (l) => l.formatted_debit_usd,
+        accessor: (l) => {
+          const usd = parseFloat(l.debit_usd);
+          return usd > 0 ? formatAmount(usd, { currencyCode: "USD" }) : "";
+        },
         align: "left",
         className: "tabular-nums font-black text-blue-700 text-[11px]"
       },
       {
         id: "debit_syp",
         header: "عليه / مدين (ل.س)",
-        accessor: (l) => l.formatted_debit_syp,
+        accessor: (l) => {
+          const usd = parseFloat(l.debit_usd);
+          return usd > 0 ? formatAmount(usd, { currencyCode: "SYP" }) : "";
+        },
         align: "left",
         className: "tabular-nums font-black text-blue-700 text-[11px]"
       },
       {
         id: "credit_usd",
         header: "له / دائن ($)",
-        accessor: (l) => l.formatted_credit_usd,
+        accessor: (l) => {
+          const usd = parseFloat(l.credit_usd);
+          return usd > 0 ? formatAmount(usd, { currencyCode: "USD" }) : "";
+        },
         align: "left",
         className: "tabular-nums font-black text-emerald-700 text-[11px]"
       },
       {
         id: "credit_syp",
         header: "له / دائن (ل.س)",
-        accessor: (l) => l.formatted_credit_syp,
+        accessor: (l) => {
+          const usd = parseFloat(l.credit_usd);
+          return usd > 0 ? formatAmount(usd, { currencyCode: "SYP" }) : "";
+        },
         align: "left",
         className: "tabular-nums font-black text-emerald-700 text-[11px]"
       },
@@ -116,7 +117,7 @@ export function AccountMovementTable({ lines, loading, visibleColumns, accountNa
         className: "text-slate-500 tabular-nums text-[10px]" 
       }
     ];
-  }, []);
+  }, [formatAmount]);
 
   const columns = useMemo(() => {
     if (!visibleColumns) return allColumns;

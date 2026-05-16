@@ -90,8 +90,12 @@ export function toJournalRow(entry: JournalEntryDto, journalType?: string): Jour
       cAcc = entry.lines[1].account_name || entry.lines[1].account_id;
     }
 
-    // Show amounts on only ONE side per row
-    if (cUSD > 0 || cSYP > 0) {
+    // Show amounts on the side of the cash account if present,
+    // otherwise show debit when both sides have amounts.
+    const cashLine = entry.lines.find(l => l.account_code?.startsWith('122'));
+    if (cashLine && (parseFloat(cashLine.credit || "0") > 0 || parseFloat(cashLine.debit || "0") > 0)) {
+      activeSide = parseFloat(cashLine.credit || "0") > 0 ? 'credit' : 'debit';
+    } else if (cUSD > 0 || cSYP > 0) {
       if (dUSD > 0 || dSYP > 0) {
         // Both sides have amounts → show debit, hide credit
         activeSide = 'debit';
