@@ -79,7 +79,8 @@ impl ListJournalEntriesUseCase {
                         | JournalType::CashOpeningBalance
                 ),
                 Some(JournalType::PurchaseJournal) => {
-                    entry.journal_type == JournalType::PurchaseJournal
+                    // PurchaseJournal filter shows PurchaseCostsJournal entries only.
+                    entry.journal_type == JournalType::PurchaseCostsJournal
                 }
                 Some(JournalType::PurchaseCostsJournal) => {
                     // Only PurchaseCostsJournal appears here, not PurchaseJournal.
