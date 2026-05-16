@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { cn } from "@shared/lib/utils";
 
 interface CurrencyTotal {
@@ -10,21 +10,16 @@ interface CurrencyTotal {
 
 interface JournalSummaryFooterProps {
   totals: CurrencyTotal[];
-  visibleColumns?: string[];
   className?: string;
 }
 
-export const JournalSummaryFooter: React.FC<JournalSummaryFooterProps> = ({ 
-  totals, 
-  className 
-}) => {
+export function JournalSummaryFooter({ totals, className }: JournalSummaryFooterProps) {
   const summaryItems = useMemo(() => {
     return totals.map(t => {
       const balance = t.debit - t.credit;
       const isDebit = balance > 0;
       const isCredit = balance < 0;
       const absBalance = Math.abs(balance);
-
       return {
         ...t,
         balance: absBalance,
@@ -36,17 +31,20 @@ export const JournalSummaryFooter: React.FC<JournalSummaryFooterProps> = ({
     });
   }, [totals]);
 
+  const usdTotal = totals.find(t => t.currencyCode === 'USD');
+  const sypTotal = totals.find(t => t.currencyCode === 'SYP');
+
   return (
     <div className={cn("w-full bg-white border border-slate-200 rounded-xl overflow-hidden shadow-lg", className)} dir="rtl">
-      <table className="w-full text-right border-collapse">
+      <table className="w-full text-right border-collapse" aria-label="ملخص اليومية">
         <thead className="bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest">
           <tr>
-            <th className="p-2 border-l border-slate-800">عليه / مدين ($)</th>
-            <th className="p-2 border-l border-slate-800">عليه / مدين (ل.س)</th>
-            <th className="p-2 border-l border-slate-800">له / دائن ($)</th>
-            <th className="p-2 border-l border-slate-800">له / دائن (ل.س)</th>
+            <th scope="col" className="p-2 border-l border-slate-800">عليه / مدين ($)</th>
+            <th scope="col" className="p-2 border-l border-slate-800">عليه / مدين (ل.س)</th>
+            <th scope="col" className="p-2 border-l border-slate-800">له / دائن ($)</th>
+            <th scope="col" className="p-2 border-l border-slate-800">له / دائن (ل.س)</th>
             {summaryItems.map(item => (
-              <th key={`head-bal-${item.currencyCode}`} className="p-2 border-l border-slate-800">
+              <th key={`head-bal-${item.currencyCode}`} scope="col" className="p-2 border-l border-slate-800">
                 {item.balanceLabel}
               </th>
             ))}
@@ -54,18 +52,10 @@ export const JournalSummaryFooter: React.FC<JournalSummaryFooterProps> = ({
         </thead>
         <tbody className="bg-slate-50/50 font-black tabular-nums text-slate-900">
           <tr className="divide-x divide-x-reverse divide-slate-200">
-            <td className="p-3 text-lg border-l">
-              {totals.find(t => t.currencyCode === 'USD')?.debit.toLocaleString() || "0"}
-            </td>
-            <td className="p-3 text-lg border-l">
-              {totals.find(t => t.currencyCode === 'SYP')?.debit.toLocaleString() || "0"}
-            </td>
-            <td className="p-3 text-lg border-l">
-              {totals.find(t => t.currencyCode === 'USD')?.credit.toLocaleString() || "0"}
-            </td>
-            <td className="p-3 text-lg border-l">
-              {totals.find(t => t.currencyCode === 'SYP')?.credit.toLocaleString() || "0"}
-            </td>
+            <td className="p-3 text-lg border-l">{usdTotal?.debit.toLocaleString() || "0"}</td>
+            <td className="p-3 text-lg border-l">{sypTotal?.debit.toLocaleString() || "0"}</td>
+            <td className="p-3 text-lg border-l">{usdTotal?.credit.toLocaleString() || "0"}</td>
+            <td className="p-3 text-lg border-l">{sypTotal?.credit.toLocaleString() || "0"}</td>
             {summaryItems.map(item => (
               <td key={`val-bal-${item.currencyCode}`} className={cn(
                 "p-3 text-xl border-l",
@@ -79,4 +69,4 @@ export const JournalSummaryFooter: React.FC<JournalSummaryFooterProps> = ({
       </table>
     </div>
   );
-};
+}

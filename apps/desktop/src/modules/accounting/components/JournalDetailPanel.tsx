@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@shared/ui/dialog";
 import { Button } from "@shared/ui/button";
-import { CheckCircle2, RotateCcw, Printer, FileText, Link as LinkIcon, ExternalLink } from "lucide-react";
-import { formatCurrency, formatDate, formatDateTime } from "@shared/lib/format";
+import { CheckCircle2, RotateCcw, Link as LinkIcon, ExternalLink } from "lucide-react";
+import { formatCurrency, formatDateTime } from "@shared/lib/format";
 import type { JournalEntryDto } from "@erp/shared-types";
 import { cn } from "@shared/lib/utils";
 
@@ -40,9 +40,6 @@ export function JournalDetailPanel({ entry, open, onOpenChange, onPost, onRevers
             </div>
             
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="h-9 gap-2">
-                <Printer className="w-4 h-4" />طباعة
-              </Button>
               {entry.source_id && (
                 <Button variant="outline" size="sm" className="h-9 gap-2 border-indigo-100 text-indigo-600 bg-indigo-50/30">
                   <LinkIcon className="w-4 h-4" />المستند المصدر
@@ -89,15 +86,16 @@ export function JournalDetailPanel({ entry, open, onOpenChange, onPost, onRevers
               <tbody className="divide-y divide-slate-100">
                 {entry.lines.map((l, i) => (
                   <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-4 py-4 text-slate-500 font-medium">{l.description}</td>
+                    <td className="px-4 py-4 text-slate-800 font-bold">{l.account_name || l.account_id || "—"}</td>
+                    <td className="px-4 py-4 text-slate-500">{l.description}</td>
                     <td className="px-4 py-4 text-left tabular-nums">
                        {parseFloat(l.debit) > 0 ? (
-                         <span className="font-black text-blue-700">{formatCurrency(parseFloat(l.debit))}</span>
+                         <span className="font-black text-blue-700">{formatCurrency(parseFloat(l.debit), "ل.س")}</span>
                        ) : "-"}
                     </td>
                     <td className="px-4 py-4 text-left tabular-nums">
                        {parseFloat(l.credit) > 0 ? (
-                         <span className="font-black text-emerald-700">{formatCurrency(parseFloat(l.credit))}</span>
+                         <span className="font-black text-emerald-700">{formatCurrency(parseFloat(l.credit), "ل.س")}</span>
                        ) : "-"}
                     </td>
                   </tr>

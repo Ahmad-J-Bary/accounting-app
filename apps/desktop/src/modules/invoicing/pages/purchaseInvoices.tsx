@@ -22,7 +22,7 @@ import { InvoicePartySelector } from "../components/InvoicePartySelector";
 import { DocumentStatusBadge } from "../components/DocumentStatusBadge";
 import { InvoiceList } from "../components/InvoiceList";
 import { useDocumentEditor } from "../hooks/useDocumentEditor";
-import { toBackendLines, type GridLine, newGridLine } from "../lib/invoiceUtils";
+import { toBackendLines, type GridLine } from "../lib/invoiceUtils";
 import { type DocumentStatus } from "../components/DocumentStatusBadge";
 
 type ViewMode = "list" | "editor";

@@ -15,6 +15,7 @@ export type JournalType =
 
 export interface JournalLineDto {
   account_id: string;
+  account_code?: string;
   account_name?: string;
   partner_id?: string;
   currency: string;

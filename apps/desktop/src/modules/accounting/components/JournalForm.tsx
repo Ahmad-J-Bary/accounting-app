@@ -10,6 +10,7 @@ import { formatCurrency } from '@shared/lib/format';
 import type { CreateJournalEntryRequest, JournalType } from "@erp/shared-types";
 import { cn } from "@shared/lib/utils";
 import { JOURNAL_TYPES } from "@modules/accounting/lib/journal-config";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 interface JournalFormProps {
   open: boolean;
@@ -19,7 +20,12 @@ interface JournalFormProps {
   inline?: boolean;
 }
 
+type Line = { account_id: string; partner_id: string; desc: string; currency: string; fx_rate: number; debit: number; credit: number };
+const emptyLine = (): Line => ({ account_id: "", partner_id: "", desc: "", currency: "SYP", fx_rate: 1, debit: 0, credit: 0 });
+
 export function JournalForm({ open, onOpenChange, onSave, saving, inline }: JournalFormProps) {
+  const { rateMap } = useCurrencyContext();
+  const sypRate = rateMap.get("SYP") || 1;
   const [form, setForm] = useState<Partial<CreateJournalEntryRequest>>({
     entry_number: "",
     entry_date: new Date().toISOString(),
@@ -27,7 +33,7 @@ export function JournalForm({ open, onOpenChange, onSave, saving, inline }: Jour
     journal_type: 'GeneralJournal',
   });
 
-  const [lines, setLines] = useState<{account_id: string, partner_id: string, desc: string, currency: string, fx_rate: number, debit: number, credit: number}[]>([]);
+  const [lines, setLines] = useState<Line[]>([]);
 
   useEffect(() => {
     if (open) {
@@ -37,10 +43,7 @@ export function JournalForm({ open, onOpenChange, onSave, saving, inline }: Jour
         description: "",
         journal_type: 'GeneralJournal',
       });
-      setLines([
-        { account_id: "", partner_id: "", desc: "", currency: "SYP", fx_rate: 1, debit: 0, credit: 0 },
-        { account_id: "", partner_id: "", desc: "", currency: "SYP", fx_rate: 1, debit: 0, credit: 0 },
-      ]);
+      setLines([emptyLine(), emptyLine()]);
     }
   }, [open]);
 
@@ -48,9 +51,11 @@ export function JournalForm({ open, onOpenChange, onSave, saving, inline }: Jour
   const totalBaseCredit = lines.reduce((s, l) => s + (l.credit * l.fx_rate), 0);
   const balanced = Math.abs(totalBaseDebit - totalBaseCredit) < 0.01 && (totalBaseDebit > 0 || totalBaseCredit > 0);
 
-  const handleAddLine = () => {
-    setLines([...lines, { account_id: "", partner_id: "", desc: "", currency: "SYP", fx_rate: 1, debit: 0, credit: 0 }]);
+  const updateLine = (index: number, updates: Partial<Line>) => {
+    setLines(prev => { const n = [...prev]; n[index] = { ...n[index], ...updates }; return n; });
   };
+
+  const handleAddLine = () => setLines([...lines, emptyLine()]);
 
   const handleRemoveLine = (index: number) => {
     if (lines.length <= 2) return;
@@ -147,44 +152,19 @@ export function JournalForm({ open, onOpenChange, onSave, saving, inline }: Jour
             {lines.map((l, i) => (
               <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                 <td className="px-3 py-2">
-                  <Input 
-                    value={l.account_id} 
-                    onChange={e => { 
-                      const newLines = [...lines]; 
-                      newLines[i].account_id = e.target.value; 
-                      setLines(newLines); 
-                    }} 
-                    placeholder="معرف الحساب"
-                    className="h-9 text-[11px] font-bold"
-                  />
+                  <Input value={l.account_id} onChange={e => updateLine(i, { account_id: e.target.value })}
+                    placeholder="معرف الحساب" className="h-9 text-[11px] font-bold" />
                 </td>
                 <td className="px-3 py-2">
-                  <Input 
-                    value={l.partner_id} 
-                    onChange={e => { 
-                      const newLines = [...lines]; 
-                      newLines[i].partner_id = e.target.value; 
-                      setLines(newLines); 
-                    }} 
-                    placeholder="معرف الطرف"
-                    className="h-9 text-[11px]"
-                  />
+                  <Input value={l.partner_id} onChange={e => updateLine(i, { partner_id: e.target.value })}
+                    placeholder="معرف الطرف" className="h-9 text-[11px]" />
                 </td>
                 <td className="px-3 py-2">
-                  <Input 
-                    value={l.desc} 
-                    onChange={e => { const newLines = [...lines]; newLines[i].desc = e.target.value; setLines(newLines); }} 
-                    placeholder="وصف الحركة" 
-                    className="h-9 text-[11px]" 
-                  />
+                  <Input value={l.desc} onChange={e => updateLine(i, { desc: e.target.value })}
+                    placeholder="وصف الحركة" className="h-9 text-[11px]" />
                 </td>
                 <td className="px-3 py-2">
-                  <Select value={l.currency} onValueChange={v => {
-                    const newLines = [...lines];
-                    newLines[i].currency = v;
-                    newLines[i].fx_rate = v === "USD" ? 15000 : 1;
-                    setLines(newLines);
-                  }}>
+                  <Select value={l.currency} onValueChange={v => updateLine(i, { currency: v, fx_rate: v === "USD" ? sypRate : 1 })}>
                     <SelectTrigger className="h-9 text-[11px] font-bold"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="SYP">SYP</SelectItem>
@@ -193,41 +173,20 @@ export function JournalForm({ open, onOpenChange, onSave, saving, inline }: Jour
                   </Select>
                 </td>
                 <td className="px-3 py-2">
-                  <Input type="number" value={l.fx_rate} onChange={e => {
-                    const newLines = [...lines];
-                    newLines[i].fx_rate = parseFloat(e.target.value) || 1;
-                    setLines(newLines);
-                  }} className="h-9 text-[11px] tabular-nums" disabled={l.currency === "SYP"} />
+                  <Input type="number" value={l.fx_rate} onChange={e => updateLine(i, { fx_rate: parseFloat(e.target.value) || 1 })}
+                    className="h-9 text-[11px] tabular-nums" disabled={l.currency === "SYP"} />
                 </td>
                 <td className="px-3 py-2">
-                  <Input 
-                    type="number" 
-                    value={l.debit || ""} 
-                    onChange={e => { 
-                      const newLines = [...lines]; 
-                      const val = parseFloat(e.target.value) || 0;
-                      newLines[i].debit = val; 
-                      if (val > 0) newLines[i].credit = 0;
-                      setLines(newLines); 
-                    }} 
+                  <Input type="number" value={l.debit || ""}
+                    onChange={e => { const val = parseFloat(e.target.value) || 0; updateLine(i, { debit: val, ...(val > 0 ? { credit: 0 } : {}) }); }}
                     disabled={l.credit > 0}
-                    className="h-9 text-left tabular-nums font-black text-blue-700 bg-blue-50/30" 
-                  />
+                    className="h-9 text-left tabular-nums font-black text-blue-700 bg-blue-50/30" />
                 </td>
                 <td className="px-3 py-2">
-                  <Input 
-                    type="number" 
-                    value={l.credit || ""} 
-                    onChange={e => { 
-                      const newLines = [...lines]; 
-                      const val = parseFloat(e.target.value) || 0;
-                      newLines[i].credit = val; 
-                      if (val > 0) newLines[i].debit = 0;
-                      setLines(newLines); 
-                    }} 
+                  <Input type="number" value={l.credit || ""}
+                    onChange={e => { const val = parseFloat(e.target.value) || 0; updateLine(i, { credit: val, ...(val > 0 ? { debit: 0 } : {}) }); }}
                     disabled={l.debit > 0}
-                    className="h-9 text-left tabular-nums font-black text-emerald-700 bg-emerald-50/30" 
-                  />
+                    className="h-9 text-left tabular-nums font-black text-emerald-700 bg-emerald-50/30" />
                 </td>
                 <td className="px-2">
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-500" onClick={() => handleRemoveLine(i)}>
@@ -264,28 +223,16 @@ export function JournalForm({ open, onOpenChange, onSave, saving, inline }: Jour
         </div>
       </div>
       
-      {inline ? (
-        <div className="mt-8 flex justify-end gap-3 pt-6 border-t border-slate-100">
-          <Button 
-            disabled={!balanced || saving} 
-            onClick={handleSave}
-            className="px-8 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-100 font-black h-11"
-          >
-            {saving ? "جاري الحفظ..." : "تسجيل وترحيل القيد"}
-          </Button>
-        </div>
-      ) : (
-        <DialogFooter className="mt-8 pt-6 border-t border-slate-100">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-slate-500 font-bold">إلغاء</Button>
-          <Button 
-            disabled={!balanced || saving} 
-            onClick={handleSave}
-            className="px-8 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-100 font-black h-11"
-          >
-            {saving ? "جاري الحفظ..." : "تسجيل وترحيل القيد"}
-          </Button>
-        </DialogFooter>
-      )}
+      <div className={cn("flex justify-end gap-3 pt-6 border-t border-slate-100", inline ? "" : "mt-8")}>
+        {!inline && <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-slate-500 font-bold">إلغاء</Button>}
+        <Button 
+          disabled={!balanced || saving} 
+          onClick={handleSave}
+          className="px-8 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-100 font-black h-11"
+        >
+          {saving ? "جاري الحفظ..." : "تسجيل وترحيل القيد"}
+        </Button>
+      </div>
     </div>
   );
 

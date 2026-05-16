@@ -2,11 +2,10 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Search, RefreshCw, FileText, Banknote, Filter } from "lucide-react";
+import { Search, FileText, Banknote, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { journalEntryService, type JournalFilters } from '@modules/accounting/api/journalEntryService';
 import type { JournalEntryDto, JournalType } from "@erp/shared-types";
-import { cn } from "@shared/lib/utils";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 
@@ -14,16 +13,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useDataTable } from '@shared/hooks';
 import { JournalTable } from '@modules/accounting/components/JournalTable';
 import { JournalDetailPanel } from '@modules/accounting/components/JournalDetailPanel';
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { JournalSummaryFooter } from "@modules/accounting/components/JournalSummaryFooter";
 import { JOURNAL_TYPES, getJournalColumnsByType } from "@modules/accounting/lib/journal-config";
+import { toJournalRow, aggregateTotals } from "@modules/accounting/lib/journal-view";
 
 export default function Journal() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const typeParam = searchParams.get('type') as JournalType | null;
 
-  const { currencies, baseCurrency } = useCurrencyContext();
+
   const [selectedEntry, setSelectedEntry] = useState<JournalEntryDto | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   
@@ -65,9 +64,18 @@ export default function Journal() {
   });
 
   const visibleColumns = useMemo(
-    () => getJournalColumnsByType(filters.journal_type as JournalType),
-    [filters.journal_type]
+    () => getJournalColumnsByType(),
+    []
   );
+
+  // CashOpeningBalance entries should only appear in GeneralJournal or CashJournal
+  const displayEntries = useMemo(() => {
+    const jt = filters.journal_type;
+    if (jt && jt !== 'GeneralJournal' && jt !== 'CashJournal') {
+      return entries.filter(e => e.journal_type !== 'CashOpeningBalance');
+    }
+    return entries;
+  }, [entries, filters.journal_type]);
 
   const isLoading = loading || refreshing;
 
@@ -108,34 +116,18 @@ export default function Journal() {
   };
 
   const stats = useMemo(() => [
-    { label: "إجمالي القيود", value: entries.length, icon: FileText, color: "text-slate-900" },
-    { label: "إجمالي الحركات", value: entries.reduce((s, e) => s + (e.lines?.length || 0), 0), icon: Banknote, color: "text-indigo-600" },
-  ], [entries]);
+    { label: "إجمالي القيود", value: displayEntries.length, icon: FileText, color: "text-slate-900" },
+    { label: "إجمالي الحركات", value: displayEntries.reduce((s, e) => s + (e.lines?.length || 0), 0), icon: Banknote, color: "text-indigo-600" },
+  ], [displayEntries]);
 
   const journalTotals = useMemo(() => {
-    let debitUSD = 0, creditUSD = 0;
-    let debitSYP = 0, creditSYP = 0;
-
-    entries.forEach(entry => {
-      entry.lines?.forEach(line => {
-        const d = parseFloat(line.debit || "0");
-        const c = parseFloat(line.credit || "0");
-        
-        if (line.currency === 'USD') {
-          debitUSD += d;
-          creditUSD += c;
-        } else if (line.currency === 'SYP') {
-          debitSYP += d;
-          creditSYP += c;
-        }
-      });
-    });
-
+    const rows = displayEntries.map(e => toJournalRow(e, filters.journal_type));
+    const t = aggregateTotals(rows);
     return [
-      { currencyCode: 'USD', currencySymbol: '$', debit: debitUSD, credit: creditUSD },
-      { currencyCode: 'SYP', currencySymbol: 'ل.س', debit: debitSYP, credit: creditSYP },
+      { currencyCode: 'USD', currencySymbol: '$', debit: t.debitUSD, credit: t.creditUSD },
+      { currencyCode: 'SYP', currencySymbol: 'ل.س', debit: t.debitSYP, credit: t.creditSYP },
     ];
-  }, [entries]);
+  }, [displayEntries, filters.journal_type]);
 
   const journalTitle = JOURNAL_TYPES.find(t => t.value === (filters.journal_type || 'GeneralJournal'))?.label || 'القيود اليومية';
 
@@ -143,7 +135,7 @@ export default function Journal() {
     <OperationalTableTemplate
       title={journalTitle}
       stats={stats}
-      toolbar={<div className="flex gap-2"></div>}
+      toolbar={<></>}
       filterBar={
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-[280px]">
@@ -176,7 +168,7 @@ export default function Journal() {
           <div className="flex-1 overflow-auto">
             <JournalTable
               key={`journal-table-${filters.journal_type || 'GeneralJournal'}`}
-              entries={entries}
+              entries={displayEntries}
               loading={loading}
               visibleColumns={visibleColumns}
               filters={filters as JournalFilters}
@@ -187,7 +179,6 @@ export default function Journal() {
       summaryContent={
         <JournalSummaryFooter 
           totals={journalTotals} 
-          visibleColumns={visibleColumns} 
           className="border-none shadow-none bg-transparent p-0"
         />
       }

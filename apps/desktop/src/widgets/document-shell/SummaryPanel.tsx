@@ -36,7 +36,7 @@ export function SummaryPanel({
   paymentMethod, onPaymentMethodChange, paidAmount, onPaidAmountChange, onExtraCostsChange,
   extraPaidAmount, onExtraPaidAmountChange,
 }: SummaryPanelProps) {
-  const safeExtra = Number.isFinite(extraCosts) ? (extraCosts as number) : 0;
+  const safeExtra = extraCosts ?? 0;
   const displayCurrency = resolveCurrencySymbol(currency);
   const remaining = Math.max(net - paid, 0);
   const st = status ? STATUS_LABELS[status] : null;

@@ -20,7 +20,7 @@ import { GenericDocumentGrid, DocumentColumn } from '@widgets/document-shell/Gen
 import { SummaryPanel } from '@widgets/document-shell/SummaryPanel';
 import { InvoicePartySelector } from '../components/InvoicePartySelector';
 import { useDocumentEditor } from '../hooks/useDocumentEditor';
-import { toBackendLines, type GridLine, newGridLine } from '../lib/invoiceUtils';
+import { toBackendLines } from '../lib/invoiceUtils';
 import { type DocumentStatus } from '../components/DocumentStatusBadge';
 
 type ViewMode = "list" | "editor";

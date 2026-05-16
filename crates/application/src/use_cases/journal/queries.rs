@@ -53,17 +53,13 @@ impl ListJournalEntriesUseCase {
             _ => None,
         });
 
-        let repo_journal_type = if matches!(
-            journal_type,
-            Some(JournalType::CashJournal)
-                | Some(JournalType::CashSalesJournal)
-                | Some(JournalType::CreditSalesJournal)
-                | Some(JournalType::PurchaseJournal)
-                | Some(JournalType::PurchaseCostsJournal)
-        ) {
-            None
-        } else {
-            journal_type
+        // Use journal_type as the filter key (not account prefix).
+        //   GeneralJournal → no SQL filter (show ALL entries, it's the general journal)
+        //   CashJournal → no SQL filter, then post-filter for cash-related types
+        //   All others → SQL filters by exact journal_type
+        let repo_journal_type = match journal_type {
+            Some(JournalType::GeneralJournal) | Some(JournalType::CashJournal) => None,
+            _ => journal_type,
         };
 
         let entries = self
@@ -74,21 +70,17 @@ impl ListJournalEntriesUseCase {
         let mut dtos = Vec::new();
         for entry in entries {
             let include = match journal_type {
-                Some(JournalType::CashJournal) => {
-                    self.entry_contains_account_prefix(&entry, "122").await?
-                }
-                Some(JournalType::CashSalesJournal) => {
-                    self.entry_contains_account_prefix(&entry, "311").await?
-                }
-                Some(JournalType::CreditSalesJournal) => {
-                    self.entry_contains_account_prefix(&entry, "312").await?
-                }
-                Some(JournalType::PurchaseJournal) => {
-                    self.entry_contains_account_prefix(&entry, "41").await?
-                }
-                Some(JournalType::PurchaseCostsJournal) => {
-                    self.entry_contains_account_prefix(&entry, "221").await?
-                }
+                Some(JournalType::CashJournal) => matches!(
+                    entry.journal_type,
+                    JournalType::CashJournal
+                        | JournalType::CashReceipt
+                        | JournalType::CashPayment
+                        | JournalType::CashOpeningBalance
+                ),
+                // For any non-GeneralJournal / non-CashJournal filter, only include
+                // entries whose journal_type matches exactly. This automatically
+                // excludes CashOpeningBalance from unrelated filters.
+                Some(jt) if jt != JournalType::GeneralJournal => entry.journal_type == jt,
                 _ => true,
             };
 
@@ -133,18 +125,4 @@ impl ListJournalEntriesUseCase {
         Ok(dto)
     }
 
-    async fn entry_contains_account_prefix(
-        &self,
-        entry: &domain::accounting::JournalEntry,
-        prefix: &str,
-    ) -> Result<bool, AppError> {
-        for line in &entry.lines {
-            if let Some(acc) = self.account_repo.find_by_id(&line.account_id).await? {
-                if acc.code.starts_with(prefix) {
-                    return Ok(true);
-                }
-            }
-        }
-        Ok(false)
-    }
 }

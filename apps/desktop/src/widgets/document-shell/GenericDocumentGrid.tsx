@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef, useCallback, KeyboardEvent, useMemo } from "react";
-import { Trash2, Copy, Search, Settings2 } from "lucide-react";
-import { materialService } from '@modules/inventory/api/materialService';
+import React, { useState, useRef, useCallback, type KeyboardEvent, useMemo } from "react";
+import { Trash2, Settings2 } from "lucide-react";
 import type { MaterialDto } from "@erp/shared-types";
 import { formatCurrency } from '@shared/lib/format';
 import { cn } from '@shared/lib/utils';
 import { GridLine } from "@modules/invoicing/lib/invoiceUtils";
 import { useColumnPreferences } from "@shared/hooks/useColumnPreferences";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@shared/ui/dropdown-menu";
+import { MaterialSearchPanel } from "./MaterialSearchPanel";
 
 export interface DocumentColumn {
   key: string;
@@ -14,74 +14,6 @@ export interface DocumentColumn {
   width: string;
   align?: "right" | "left" | "center";
   type: "text" | "number" | "material" | "material_code" | "material_barcode" | "readonly" | "image" | "badge" | "unit_select";
-}
-
-interface MaterialSearchPanelProps {
-  materials: MaterialDto[];
-  search: string;
-  searchType: "name" | "code" | "barcode";
-  visible: boolean;
-  onSelect: (m: MaterialDto) => void;
-  onClose: () => void;
-}
-
-function MaterialSearchPanel({ materials, search, searchType, visible, onSelect, onClose }: MaterialSearchPanelProps) {
-  const filtered = materials.filter(m => {
-    if (!search) return false;
-    const s = search.toLowerCase();
-    if (searchType === "code") {
-        return m.code.toLowerCase().includes(s);
-    } else if (searchType === "barcode") {
-        const materialBarcode = (m.barcode ?? "").toLowerCase().includes(s);
-        const unitBarcode = m.units.some(u => (u.barcode ?? "").toLowerCase().includes(s));
-        return materialBarcode || unitBarcode;
-    } else {
-        return m.name.toLowerCase().includes(s);
-    }
-  }).slice(0, 30);
-
-  if (!visible) return null;
-
-  return (
-    <div className="border-t border-blue-200 bg-blue-50/40">
-      <div className="flex items-center gap-3 px-3 py-1.5 bg-blue-50 border-b border-blue-100">
-        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">
-          نتائج البحث — {filtered.length} صنف
-        </span>
-        <button onClick={onClose} className="text-[10px] text-blue-400 hover:text-blue-600 mr-auto">إغلاق</button>
-      </div>
-      <div className="max-h-44 overflow-y-auto" dir="rtl">
-        {filtered.length === 0 ? (
-          <div className="py-4 text-center text-xs text-muted-foreground">لا توجد نتائج</div>
-        ) : (
-          <table className="w-full text-xs font-sans">
-            <thead className="bg-blue-50/80 sticky top-0">
-              <tr>
-                <th className="px-3 py-1.5 text-right font-bold text-slate-500 w-24">الكود</th>
-                <th className="px-3 py-1.5 text-right font-bold text-slate-500">اسم الصنف</th>
-                <th className="px-3 py-1.5 text-left font-bold text-slate-500 w-20">المخزون</th>
-                <th className="px-3 py-1.5 text-left font-bold text-slate-500 w-24">آخر تكلفة شراء</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-blue-50">
-              {filtered.map(m => (
-                <tr
-                  key={m.id}
-                  className="hover:bg-blue-100 cursor-pointer transition-colors"
-                  onMouseDown={() => onSelect(m)}
-                >
-                  <td className="px-3 py-1.5 font-mono text-slate-600">{m.code}</td>
-                  <td className="px-3 py-1.5 font-semibold text-slate-800">{m.name}</td>
-                  <td className="px-3 py-1.5 text-left tabular-nums text-slate-600">{m.total_available}</td>
-                  <td className="px-3 py-1.5 text-left tabular-nums text-slate-600">{m.last_purchase_price}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
-  );
 }
 
 interface GenericDocumentGridProps {

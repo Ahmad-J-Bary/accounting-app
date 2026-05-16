@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { SettingsLayout } from "@widgets/templates/SettingsLayout";
 import { Button } from "@shared/ui/button";
 import { JournalForm } from "@modules/accounting/components/JournalForm";
 import { journalEntryService } from "@modules/accounting/api/journalEntryService";
