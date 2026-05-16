@@ -47,6 +47,7 @@ pub async fn create_account(
 ) -> Result<AccountDto, String> {
     let account = CreateAccountUseCase::new(
         state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
         Some(state.customer_repo.clone()),
         Some(state.supplier_repo.clone()),
     )

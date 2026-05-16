@@ -12,7 +12,7 @@ use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
-use crate::constants::{RECEIVABLES_PARENT_ID, OPENING_EQUITY_ID};
+use crate::constants::RECEIVABLES_PARENT_ID;
 use std::str::FromStr;
 
 pub struct CreateCustomerUseCase {
@@ -114,66 +114,63 @@ impl CreateCustomerUseCase {
 
         // --- Accounting Integration: Opening Balance ---
         let total_opening = debit - credit;
-        if total_opening != Decimal::ZERO {
-            let equity_id = AccountId::from_str(OPENING_EQUITY_ID).unwrap();
-            let opening_equity = self
-                .account_repo
-                .find_by_id(&equity_id)
-                .await?
-                .ok_or_else(|| {
-                    AppError::NotFound("حساب رأس المال / رصيد افتتاحي غير موجود".into())
-                })?;
+        let cash_account = self
+            .account_repo
+            .find_by_code("122")
+            .await?
+            .ok_or_else(|| {
+                AppError::NotFound("حساب الصندوق غير موجود".into())
+            })?;
 
-            let amount_ma = MonetaryAmount::new(
-                Money::new(total_opening.abs(), currency.clone()),
-                Decimal::ONE,
-            );
-            let zero_ma = MonetaryAmount::zero(currency.clone());
+        let amount_ma = MonetaryAmount::new(
+            Money::new(total_opening.abs(), currency.clone()),
+            Decimal::ONE,
+        );
+        let zero_ma = MonetaryAmount::zero(currency.clone());
 
-            let mut lines = Vec::new();
-            if total_opening > Decimal::ZERO {
-                // Customer Debit, Equity Credit
-                lines.push(JournalLine::new(
-                    new_account_id,
-                    amount_ma.clone(),
-                    zero_ma.clone(),
-                    format!("رصيد افتتاحي مدين للعميل: {}", customer.name),
-                ));
-                lines.push(JournalLine::new(
-                    opening_equity.id,
-                    zero_ma,
-                    amount_ma,
-                    format!("رصيد افتتاحي للعميل: {}", customer.name),
-                ));
-            } else {
-                // Equity Debit, Customer Credit
-                lines.push(JournalLine::new(
-                    opening_equity.id,
-                    amount_ma.clone(),
-                    zero_ma.clone(),
-                    format!("رصيد افتتاحي دائن للعميل: {}", customer.name),
-                ));
-                lines.push(JournalLine::new(
-                    new_account_id,
-                    zero_ma,
-                    amount_ma,
-                    format!("رصيد افتتاحي للعميل: {}", customer.name),
-                ));
-            }
-
-            let mut entry = JournalEntry::new(
-                self.journal_repo.get_next_entry_number().await?,
-                JournalType::AccountOpeningBalance,
-                lines,
-                Utc::now(),
-                format!("قيد افتتاح رصيد العميل: {}", customer.name),
-                Some(customer.id.to_string()),
-            )
-            .map_err(|e| AppError::Invalid(e.to_string()))?;
-
-            entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-            self.journal_repo.save(&entry).await?;
+        let mut lines = Vec::new();
+        if total_opening > Decimal::ZERO {
+            // Customer Debit, Cash Credit
+            lines.push(JournalLine::new(
+                new_account_id,
+                amount_ma.clone(),
+                zero_ma.clone(),
+                format!("رصيد افتتاحي مدين للعميل: {}", customer.name),
+            ));
+            lines.push(JournalLine::new(
+                cash_account.id,
+                zero_ma,
+                amount_ma,
+                format!("رصيد افتتاحي للعميل: {}", customer.name),
+            ));
+        } else {
+            // Cash Debit, Customer Credit
+            lines.push(JournalLine::new(
+                cash_account.id,
+                amount_ma.clone(),
+                zero_ma.clone(),
+                format!("رصيد افتتاحي دائن للعميل: {}", customer.name),
+            ));
+            lines.push(JournalLine::new(
+                new_account_id,
+                zero_ma,
+                amount_ma,
+                format!("رصيد افتتاحي للعميل: {}", customer.name),
+            ));
         }
+
+        let mut entry = JournalEntry::new(
+            self.journal_repo.get_next_entry_number().await?,
+            JournalType::AccountOpeningBalance,
+            lines,
+            Utc::now(),
+            format!("قيد افتتاح رصيد العميل: {}", customer.name),
+            Some(customer.id.to_string()),
+        )
+        .map_err(|e| AppError::Invalid(e.to_string()))?;
+
+        entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
+        self.journal_repo.save(&entry).await?;
 
         Ok(CustomerDto::from(customer))
     }

@@ -15,7 +15,7 @@ import { JournalTable } from '@modules/accounting/components/JournalTable';
 import { JournalDetailPanel } from '@modules/accounting/components/JournalDetailPanel';
 import { JournalSummaryFooter } from "@modules/accounting/components/JournalSummaryFooter";
 import { JOURNAL_TYPES, getJournalColumnsByType } from "@modules/accounting/lib/journal-config";
-import { toJournalRow, aggregateTotals } from "@modules/accounting/lib/journal-view";
+import { toJournalRow, aggregateEntryTotals } from "@modules/accounting/lib/journal-view";
 
 export default function Journal() {
   const navigate = useNavigate();
@@ -68,11 +68,13 @@ export default function Journal() {
     []
   );
 
-  // CashOpeningBalance entries should only appear in GeneralJournal or CashJournal
+  // Opening balance entries should only appear in GeneralJournal or CashJournal
   const displayEntries = useMemo(() => {
     const jt = filters.journal_type;
     if (jt && jt !== 'GeneralJournal' && jt !== 'CashJournal') {
-      return entries.filter(e => e.journal_type !== 'CashOpeningBalance');
+      return entries.filter(
+        e => e.journal_type !== 'CashOpeningBalance' && e.journal_type !== 'AccountOpeningBalance'
+      );
     }
     return entries;
   }, [entries, filters.journal_type]);
@@ -121,13 +123,12 @@ export default function Journal() {
   ], [displayEntries]);
 
   const journalTotals = useMemo(() => {
-    const rows = displayEntries.map(e => toJournalRow(e, filters.journal_type));
-    const t = aggregateTotals(rows);
+    const t = aggregateEntryTotals(displayEntries);
     return [
       { currencyCode: 'USD', currencySymbol: '$', debit: t.debitUSD, credit: t.creditUSD },
-      { currencyCode: 'SYP', currencySymbol: 'ل.س', debit: t.debitSYP, credit: t.creditSYP },
+      { currencyCode: 'SYP', currencySymbol: 'ل.س', debit: t.debitUSD, credit: t.creditUSD },
     ];
-  }, [displayEntries, filters.journal_type]);
+  }, [displayEntries]);
 
   const journalTitle = JOURNAL_TYPES.find(t => t.value === (filters.journal_type || 'GeneralJournal'))?.label || 'القيود اليومية';
 

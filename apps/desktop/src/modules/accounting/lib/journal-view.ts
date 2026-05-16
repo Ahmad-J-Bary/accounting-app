@@ -20,53 +20,53 @@ export interface JournalRow {
   credit_syp: number;
   debit_account: string;
   credit_account: string;
+  /** Which side's amounts are visible — the other side is hidden */
+  active_side: 'debit' | 'credit';
 }
 
 /**
  * Transform a JournalEntryDto into a display row for the journal table.
  *
  * For specialized journals (CashJournal, PurchaseJournal, etc.), the focal
- * account is identified and its side alone is shown — the opposite column
- * is empty (no amount) and shows the counterparty account name.
+ * account is identified and its side alone is shown — the opposite side's
+ * amounts are hidden and the counterparty account name appears in the
+ * opposite column.
  *
- * For the general journal, all lines are aggregated.
+ * For the general journal, amounts appear on only ONE side per row
+ * (debit if any debit exists, otherwise credit). This avoids showing
+ * duplicated mirror amounts for balanced entries.
  */
 export function toJournalRow(entry: JournalEntryDto, journalType?: string): JournalRow {
   const prefix = journalType ? FOCUS_PREFIX[journalType] : null;
-  const isFocal = !!prefix;
 
   let dUSD = 0, cUSD = 0, dSYP = 0, cSYP = 0;
   let dAcc = "-", cAcc = "-";
+  let activeSide: 'debit' | 'credit' = 'debit';
 
-  if (isFocal) {
+  if (prefix) {
     // --- Specialised journal: only the focal account's side ---
     const focal = entry.lines.filter(l => l.account_code?.startsWith(prefix));
     const other = entry.lines.filter(l => !l.account_code?.startsWith(prefix));
 
-    const focalDebit  = focal.find(l => parseFloat(l.debit || "0")  > 0);
-    const focalCredit = focal.find(l => parseFloat(l.credit || "0") > 0);
-    const otherDebit  = other.find(l => parseFloat(l.debit || "0")  > 0);
-    const otherCredit = other.find(l => parseFloat(l.credit || "0") > 0);
+    // Aggregate all focal lines for determining amounts on that side
+    for (const l of focal) {
+      const d = parseFloat(l.debit || "0"), c = parseFloat(l.credit || "0");
+      const fx = parseFloat(l.fx_rate || "1");
+      const isUSD = l.currency === 'USD';
+      dUSD += isUSD ? d : 0;
+      dSYP += isUSD ? d * fx : d;
+      cUSD += isUSD ? c : 0;
+      cSYP += isUSD ? c * fx : c;
+    }
 
-    if (focalDebit) {
-      // Focal account is debtor → "عليه/مدين" gets the amount
-      const fx = parseFloat(focalDebit.fx_rate || "1");
-      dUSD = focalDebit.currency === 'USD' ? parseFloat(focalDebit.debit) : 0;
-      dSYP = parseFloat(focalDebit.debit || "0") * fx;
-      dAcc = focalDebit.account_name || focalDebit.account_id;
-      // The credit side shows the counterparty
-      cAcc = otherCredit?.account_name || otherCredit?.account_id || cAcc;
-    } else if (focalCredit) {
-      // Focal account is creditor → "له/دائن" gets the amount
-      const fx = parseFloat(focalCredit.fx_rate || "1");
-      cUSD = focalCredit.currency === 'USD' ? parseFloat(focalCredit.credit) : 0;
-      cSYP = parseFloat(focalCredit.credit || "0") * fx;
-      cAcc = focalCredit.account_name || focalCredit.account_id;
-      // The debit side shows the counterparty
-      dAcc = otherDebit?.account_name || otherDebit?.account_id || dAcc;
+    activeSide = cUSD > 0 || cSYP > 0 ? 'credit' : 'debit';
+
+    if (activeSide === 'credit') {
+      cAcc = focal.length ? (focal[0].account_name || focal[0].account_id) : cAcc;
+      dAcc = other.length ? (other[0].account_name || other[0].account_id) : dAcc;
     } else {
-      // Focal account not involved in this entry → show nothing
-      // (this shouldn't happen if backend filtering is correct)
+      dAcc = focal.length ? (focal[0].account_name || focal[0].account_id) : dAcc;
+      cAcc = other.length ? (other[0].account_name || other[0].account_id) : cAcc;
     }
   } else {
     // --- General journal: aggregate ALL lines ---
@@ -79,11 +79,33 @@ export function toJournalRow(entry: JournalEntryDto, journalType?: string): Jour
 
     const debits  = entry.lines.filter(l => parseFloat(l.debit || "0")  > 0);
     const credits = entry.lines.filter(l => parseFloat(l.credit || "0") > 0);
-    dAcc = debits.length  === 1 ? (debits[0].account_name  || debits[0].account_id)
-        : debits.length   > 1 ? "حسابات متعددة" : "-";
-    cAcc = credits.length === 1 ? (credits[0].account_name || credits[0].account_id)
-        : credits.length  > 1 ? "حسابات متعددة" : "-";
+
+    if (debits.length > 0 || credits.length > 0) {
+      dAcc = debits.length  === 1 ? (debits[0].account_name  || debits[0].account_id)
+          : debits.length   > 1 ? "حسابات متعددة" : "-";
+      cAcc = credits.length === 1 ? (credits[0].account_name || credits[0].account_id)
+          : credits.length  > 1 ? "حسابات متعددة" : "-";
+    } else if (entry.lines.length >= 2) {
+      dAcc = entry.lines[0].account_name || entry.lines[0].account_id;
+      cAcc = entry.lines[1].account_name || entry.lines[1].account_id;
+    }
+
+    // Show amounts on only ONE side per row
+    if (cUSD > 0 || cSYP > 0) {
+      if (dUSD > 0 || dSYP > 0) {
+        // Both sides have amounts → show debit, hide credit
+        activeSide = 'debit';
+      } else {
+        // Only credit has amounts
+        activeSide = 'credit';
+      }
+    }
+    // else both zero → default activeSide = 'debit' (shows 0 amounts)
   }
+
+  // Zero out the inactive side
+  if (activeSide === 'debit') { cUSD = 0; cSYP = 0; }
+  else { dUSD = 0; dSYP = 0; }
 
   return {
     entry_number: entry.entry_number,
@@ -94,10 +116,29 @@ export function toJournalRow(entry: JournalEntryDto, journalType?: string): Jour
     credit_usd: cUSD, credit_syp: cSYP,
     debit_account: dAcc,
     credit_account: cAcc,
+    active_side: activeSide,
   };
 }
 
-/** Aggregated totals helper */
+/** Aggregated totals from raw entry data (both sides, for the summary footer) */
+export function aggregateEntryTotals(entries: JournalEntryDto[]) {
+  const t = { debitUSD: 0, creditUSD: 0, debitSYP: 0, creditSYP: 0 };
+  entries.forEach(entry => {
+    entry.lines.forEach(l => {
+      const d = parseFloat(l.debit || "0"), c = parseFloat(l.credit || "0");
+      const fx = parseFloat(l.fx_rate || "1");
+      if (l.currency === 'USD') {
+        t.debitUSD += d; t.creditUSD += c;
+        t.debitSYP += d * fx; t.creditSYP += c * fx;
+      } else {
+        t.debitSYP += d; t.creditSYP += c;
+      }
+    });
+  });
+  return t;
+}
+
+/** Aggregated totals from row data (one-sided, for preview/scalar use) */
 export function aggregateTotals(rows: JournalRow[]) {
   const t = { debitUSD: 0, creditUSD: 0, debitSYP: 0, creditSYP: 0 };
   rows.forEach(r => {

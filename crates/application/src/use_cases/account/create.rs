@@ -3,13 +3,17 @@ use std::str::FromStr;
 use chrono::Utc;
 use rust_decimal::Decimal;
 use domain::accounting::account::Account;
+use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::shared::currency::Currency;
 use domain::shared::ids::{AccountId, CustomerId, SupplierId};
+use domain::shared::money::Money;
+use domain::shared::MonetaryAmount;
 use domain::customers::Customer;
 use domain::suppliers::Supplier;
 
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::customer_repository::CustomerRepository;
+use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::supplier_repository::SupplierRepository;
 use crate::constants::{RECEIVABLES_PARENT_ID, PAYABLES_PARENT_ID};
 
@@ -19,6 +23,7 @@ use super::validation::AccountValidation;
 
 pub struct CreateAccountUseCase {
     account_repo: Arc<dyn AccountRepository>,
+    journal_repo: Arc<dyn JournalEntryRepository>,
     customer_repo: Option<Arc<dyn CustomerRepository>>,
     supplier_repo: Option<Arc<dyn SupplierRepository>>,
 }
@@ -26,11 +31,13 @@ pub struct CreateAccountUseCase {
 impl CreateAccountUseCase {
     pub fn new(
         account_repo: Arc<dyn AccountRepository>,
+        journal_repo: Arc<dyn JournalEntryRepository>,
         customer_repo: Option<Arc<dyn CustomerRepository>>,
         supplier_repo: Option<Arc<dyn SupplierRepository>>,
     ) -> Self {
         Self {
             account_repo,
+            journal_repo,
             customer_repo,
             supplier_repo,
         }
@@ -98,6 +105,84 @@ impl CreateAccountUseCase {
         let currency = cmd.currency.as_deref()
             .map(|s| if s == "USD" { Currency::usd() } else { Currency::syp() })
             .unwrap_or(Currency::syp());
+
+        // Create AccountOpeningBalance journal entry for every new account
+        // (skip for auto-created customer/supplier accounts, their entries are handled separately)
+        let is_receivable_or_payable = cmd.parent_id.as_ref().map(|p| {
+            let pid = p.to_string();
+            pid == RECEIVABLES_PARENT_ID || pid == PAYABLES_PARENT_ID
+        }).unwrap_or(false);
+
+        let total_opening = debit - credit;
+
+        if !is_receivable_or_payable {
+            let amount_ma = MonetaryAmount::new(
+                Money::new(total_opening.abs(), currency.clone()),
+                Decimal::ONE,
+            );
+            let zero_ma = MonetaryAmount::zero(currency.clone());
+
+            let cash_account = self.account_repo
+                .find_by_code("122")
+                .await
+                .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?
+                .ok_or_else(|| AccountUseCaseError::Validation("حساب الصندوق غير موجود".into()))?;
+
+            let mut lines = Vec::new();
+
+            if total_opening > Decimal::ZERO {
+                // Debit the account, Credit cash
+                lines.push(JournalLine::new(
+                    account.id,
+                    amount_ma.clone(),
+                    zero_ma.clone(),
+                    format!("رصيد افتتاحي مدين للحساب: {}", account.name_ar),
+                ));
+                lines.push(JournalLine::new(
+                    cash_account.id,
+                    zero_ma,
+                    amount_ma,
+                    format!("رصيد افتتاحي للحساب: {}", account.name_ar),
+                ));
+            } else {
+                // Debit cash, Credit the account
+                lines.push(JournalLine::new(
+                    cash_account.id,
+                    amount_ma.clone(),
+                    zero_ma.clone(),
+                    format!("رصيد افتتاحي دائن للحساب: {}", account.name_ar),
+                ));
+                lines.push(JournalLine::new(
+                    account.id,
+                    zero_ma,
+                    amount_ma,
+                    format!("رصيد افتتاحي للحساب: {}", account.name_ar),
+                ));
+            }
+
+            let next_number = self.journal_repo
+                .get_next_entry_number()
+                .await
+                .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
+
+            let mut entry = JournalEntry::new(
+                next_number,
+                JournalType::AccountOpeningBalance,
+                lines,
+                Utc::now(),
+                format!("قيد افتتاح رصيد الحساب: {}", account.name_ar),
+                Some(account.id.to_string()),
+            )
+            .map_err(|e| AccountUseCaseError::Validation(e.to_string()))?;
+
+            entry.post()
+                .map_err(|e| AccountUseCaseError::Validation(e.to_string()))?;
+
+            self.journal_repo
+                .save(&entry)
+                .await
+                .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
+        }
 
         // Auto-create customer if account is under Receivables Parent
         let is_receivable = cmd.parent_id.as_ref().map(|p| p.to_string() == RECEIVABLES_PARENT_ID).unwrap_or(false);

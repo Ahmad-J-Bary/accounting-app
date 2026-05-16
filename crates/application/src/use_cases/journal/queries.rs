@@ -76,6 +76,7 @@ impl ListJournalEntriesUseCase {
                         | JournalType::CashReceipt
                         | JournalType::CashPayment
                         | JournalType::CashOpeningBalance
+                        | JournalType::AccountOpeningBalance
                 ),
                 // For any non-GeneralJournal / non-CashJournal filter, only include
                 // entries whose journal_type matches exactly. This automatically

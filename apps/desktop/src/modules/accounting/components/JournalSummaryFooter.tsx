@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { cn } from "@shared/lib/utils";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 interface CurrencyTotal {
   currencyCode: string;
@@ -14,6 +15,8 @@ interface JournalSummaryFooterProps {
 }
 
 export function JournalSummaryFooter({ totals, className }: JournalSummaryFooterProps) {
+  const { formatAmount } = useCurrencyContext();
+
   const summaryItems = useMemo(() => {
     return totals.map(t => {
       const balance = t.debit - t.credit;
@@ -52,16 +55,16 @@ export function JournalSummaryFooter({ totals, className }: JournalSummaryFooter
         </thead>
         <tbody className="bg-slate-50/50 font-black tabular-nums text-slate-900">
           <tr className="divide-x divide-x-reverse divide-slate-200">
-            <td className="p-3 text-lg border-l">{usdTotal?.debit.toLocaleString() || "0"}</td>
-            <td className="p-3 text-lg border-l">{sypTotal?.debit.toLocaleString() || "0"}</td>
-            <td className="p-3 text-lg border-l">{usdTotal?.credit.toLocaleString() || "0"}</td>
-            <td className="p-3 text-lg border-l">{sypTotal?.credit.toLocaleString() || "0"}</td>
+            <td className="p-3 text-lg border-l">{usdTotal ? formatAmount(usdTotal.debit, { currencyCode: "USD" }) : "0"}</td>
+            <td className="p-3 text-lg border-l">{sypTotal ? formatAmount(sypTotal.debit, { currencyCode: "SYP" }) : "0"}</td>
+            <td className="p-3 text-lg border-l">{usdTotal ? formatAmount(usdTotal.credit, { currencyCode: "USD" }) : "0"}</td>
+            <td className="p-3 text-lg border-l">{sypTotal ? formatAmount(sypTotal.credit, { currencyCode: "SYP" }) : "0"}</td>
             {summaryItems.map(item => (
               <td key={`val-bal-${item.currencyCode}`} className={cn(
                 "p-3 text-xl border-l",
                 item.isDebit ? "text-red-600 bg-red-50/30" : item.isCredit ? "text-emerald-600 bg-emerald-50/30" : "text-slate-400"
               )}>
-                {item.balance.toLocaleString()}
+                {formatAmount(item.balance, { currencyCode: item.currencyCode })}
               </td>
             ))}
           </tr>

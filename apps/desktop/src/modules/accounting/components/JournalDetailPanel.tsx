@@ -89,14 +89,10 @@ export function JournalDetailPanel({ entry, open, onOpenChange, onPost, onRevers
                     <td className="px-4 py-4 text-slate-800 font-bold">{l.account_name || l.account_id || "—"}</td>
                     <td className="px-4 py-4 text-slate-500">{l.description}</td>
                     <td className="px-4 py-4 text-left tabular-nums">
-                       {parseFloat(l.debit) > 0 ? (
-                         <span className="font-black text-blue-700">{formatCurrency(parseFloat(l.debit), "ل.س")}</span>
-                       ) : "-"}
+                       <span className="font-black text-blue-700">{formatCurrency(parseFloat(l.debit), "ل.س")}</span>
                     </td>
                     <td className="px-4 py-4 text-left tabular-nums">
-                       {parseFloat(l.credit) > 0 ? (
-                         <span className="font-black text-emerald-700">{formatCurrency(parseFloat(l.credit), "ل.س")}</span>
-                       ) : "-"}
+                       <span className="font-black text-emerald-700">{formatCurrency(parseFloat(l.credit), "ل.س")}</span>
                     </td>
                   </tr>
                 ))}

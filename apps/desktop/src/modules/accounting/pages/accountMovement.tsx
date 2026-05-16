@@ -254,8 +254,8 @@ export default function AccountMovement() {
               { 
                 currencyCode: 'SYP', 
                 currencySymbol: 'ل.س', 
-                debit: parseFloat(ledger.total_debit_syp), 
-                credit: parseFloat(ledger.total_credit_syp) 
+                debit: parseFloat(ledger.total_debit_usd), 
+                credit: parseFloat(ledger.total_credit_usd) 
               }
             ]} 
             className="border-none shadow-none bg-transparent p-0"

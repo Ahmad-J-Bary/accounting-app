@@ -137,9 +137,6 @@ impl JournalEntry {
             if has_debit && has_credit {
                 return Err(DomainError::Invalid("لا يمكن أن يكون السطر مديناً ودائناً في نفس الوقت. يجب تفصيل القيد المركب إلى سطور مستقلة.".into()));
             }
-            if !has_debit && !has_credit {
-                return Err(DomainError::Invalid("يجب أن يحتوي كل سطر على قيمة إما مدينة أو دائنة. لا يمكن أن يكون كلاهما صفراً.".into()));
-            }
         }
 
         if description.trim().is_empty() {
