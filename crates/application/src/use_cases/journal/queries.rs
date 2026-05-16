@@ -77,14 +77,20 @@ impl ListJournalEntriesUseCase {
                         | JournalType::CashReceipt
                         | JournalType::CashPayment
                         | JournalType::CashOpeningBalance
+                        | JournalType::AccountOpeningBalance
                 ),
                 Some(JournalType::PurchaseJournal) => {
-                    // PurchaseJournal filter shows PurchaseCostsJournal entries only.
-                    entry.journal_type == JournalType::PurchaseCostsJournal
+                    // PurchaseJournal filter shows both PurchaseJournal and PurchaseCostsJournal.
+                    entry.journal_type == JournalType::PurchaseJournal
+                        || entry.journal_type == JournalType::PurchaseCostsJournal
                 }
                 Some(JournalType::PurchaseCostsJournal) => {
                     // Only PurchaseCostsJournal appears here, not PurchaseJournal.
                     entry.journal_type == JournalType::PurchaseCostsJournal
+                }
+                Some(JournalType::CashSalesJournal) | Some(JournalType::CreditSalesJournal) => {
+                    // Exact match only — purchase/cost entries never show here.
+                    entry.journal_type == journal_type.unwrap()
                 }
                 Some(jt) => entry.journal_type == jt,
                 None => true,
