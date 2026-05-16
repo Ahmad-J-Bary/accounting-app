@@ -105,6 +105,12 @@ export function toJournalRow(entry: JournalEntryDto, journalType?: string): Jour
       }
     }
     // else both zero → default activeSide = 'debit' (shows 0 amounts)
+
+    // MaterialOpeningBalance: hide the credit account and show fixed debit account
+    if (entry.journal_type === 'MaterialOpeningBalance') {
+      cAcc = "";
+      dAcc = "بضاعة أول المدة";
+    }
   }
 
   // Zero out the inactive side

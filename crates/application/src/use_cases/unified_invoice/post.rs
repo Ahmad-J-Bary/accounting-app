@@ -230,13 +230,13 @@ impl PostInvoiceUseCase {
                         inv_account.id, 
                         MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate), 
                         MonetaryAmount::zero(doc_currency.clone()), 
-                        format!("بضاعة أول المدة - فاتورة رقم {}", invoice.invoice_number)
+                        format!("إنشاء فاتورة أول المدة رقم {}", invoice.invoice_number)
                     ));
                     journal_lines.push(JournalLine::new(
                         main_account.id, 
                         MonetaryAmount::zero(doc_currency.clone()), 
                         MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate), 
-                        format!("رصيد افتتاحي لليومية - فاتورة رقم {}", invoice.invoice_number)
+                        format!("إنشاء فاتورة أول المدة رقم {}", invoice.invoice_number)
                     ));
                 }
             }
@@ -250,7 +250,7 @@ impl PostInvoiceUseCase {
                 },
                 InvoiceType::Purchase => domain::accounting::JournalType::PurchaseJournal,
                 InvoiceType::PurchaseCosts => domain::accounting::JournalType::PurchaseCostsJournal,
-                InvoiceType::OpeningBalance => domain::accounting::JournalType::AccountOpeningBalance,
+                InvoiceType::OpeningBalance => domain::accounting::JournalType::MaterialOpeningBalance,
             };
 
             let mut journal_entry = JournalEntry::new(
@@ -258,7 +258,10 @@ impl PostInvoiceUseCase {
                 journal_type,
                 journal_lines,
                 Utc::now(),
-                format!("قيد آلي ناتج عن فاتورة رقم {}", invoice.invoice_number),
+                match invoice.invoice_type {
+                    InvoiceType::OpeningBalance => format!("إنشاء فاتورة أول المدة رقم {}", invoice.invoice_number),
+                    _ => format!("قيد آلي ناتج عن فاتورة رقم {}", invoice.invoice_number),
+                },
                 Some(invoice.id.to_string()),
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
             

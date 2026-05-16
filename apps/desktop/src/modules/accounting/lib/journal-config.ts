@@ -32,7 +32,7 @@ export const JOURNAL_TYPE_LABELS: Record<string, string> = {
   DrawingsVoucher: "سند مسحوبات",
   CashOpeningBalance: "رصيد افتتاحي للخزينة",
   AccountOpeningBalance: "رصيد افتتاحي لحساب",
-  MaterialOpeningBalance: "رصيد افتتاحي للمواد",
+  MaterialOpeningBalance: "رصيد افتتاحي للمواد / أول المدة",
 };
 
 export const JOURNAL_REPORT_TYPES: JournalReportTypeOption[] = [

@@ -112,13 +112,13 @@ impl RecordOpeningStockUseCase {
                 ),
             ];
 
+            let entry_number = self.journal_repo.get_next_entry_number().await?;
             let mut entry = JournalEntry::new(
-                self.journal_repo.get_next_entry_number().await?,
+                entry_number.clone(),
                 domain::accounting::JournalType::MaterialOpeningBalance,
                 lines,
                 entry_date,
-                req.notes
-                    .unwrap_or_else(|| "قيد بضاعة أول المدة".to_string()),
+                format!("إنشاء فاتورة أول المدة رقم {}", entry_number),
                 None,
             )
             .map_err(|e| AppError::Invalid(e.to_string()))?;

@@ -34,7 +34,7 @@ impl std::fmt::Display for JournalType {
             Self::DrawingsVoucher => "سند مسحوبات",
             Self::CashOpeningBalance => "رصيد افتتاحي للخزينة",
             Self::AccountOpeningBalance => "رصيد افتتاحي لحساب",
-            Self::MaterialOpeningBalance => "رصيد افتتاحي للمواد",
+            Self::MaterialOpeningBalance => "رصيد افتتاحي للمواد / أول المدة",
             Self::CashJournal => "يومية الصندوق",
             Self::CashSalesJournal => "يومية المبيعات النقدية",
             Self::CreditSalesJournal => "يومية المبيعات الآجلة",
