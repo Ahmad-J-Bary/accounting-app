@@ -70,6 +70,7 @@ impl ListJournalEntriesUseCase {
         let mut dtos = Vec::new();
         for entry in entries {
             let include = match journal_type {
+                Some(JournalType::GeneralJournal) => true,
                 Some(JournalType::CashJournal) => matches!(
                     entry.journal_type,
                     JournalType::CashJournal
@@ -78,17 +79,14 @@ impl ListJournalEntriesUseCase {
                         | JournalType::CashOpeningBalance
                 ),
                 Some(JournalType::PurchaseJournal) => {
-                    // Point 1: PurchaseCostsJournal appears here.
-                    // Point 2: PurchaseJournal DOES NOT appear here.
-                    entry.journal_type == JournalType::PurchaseCostsJournal
+                    entry.journal_type == JournalType::PurchaseJournal
                 }
                 Some(JournalType::PurchaseCostsJournal) => {
-                    // Both appear here.
-                    entry.journal_type == JournalType::PurchaseJournal
-                        || entry.journal_type == JournalType::PurchaseCostsJournal
+                    // Only PurchaseCostsJournal appears here, not PurchaseJournal.
+                    entry.journal_type == JournalType::PurchaseCostsJournal
                 }
-                Some(jt) if jt != JournalType::GeneralJournal => entry.journal_type == jt,
-                _ => true,
+                Some(jt) => entry.journal_type == jt,
+                None => true,
             };
 
             if include {
