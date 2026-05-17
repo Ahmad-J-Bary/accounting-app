@@ -6,7 +6,6 @@ import { Search, Activity, Shield } from "lucide-react";
 import { formatDateTime } from '@shared/lib/format';
 import { auditService } from '@modules/core/api/auditService';
 import type { AuditLog } from "@erp/shared-types";
-import { Button } from "@shared/ui/button";
 
 export default function AuditLog() {
   const [logs, setLogs] = useState<AuditLog[]>([]);

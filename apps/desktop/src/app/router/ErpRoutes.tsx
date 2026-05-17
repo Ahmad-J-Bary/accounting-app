@@ -2,7 +2,6 @@ import { Routes, Route } from 'react-router-dom';
 import Dashboard from '@modules/core/pages/dashboard';
 import Accounting from '@modules/accounting/pages/accounting';
 import Journal from '@modules/accounting/pages/journal';
-import JournalCreate from '@modules/accounting/pages/journalCreate';
 import Customers from '@modules/partners/pages/customers';
 import Suppliers from '@modules/partners/pages/suppliers';
 import SalesInvoices from '@modules/invoicing/pages/salesInvoices';
@@ -42,7 +41,6 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/accounting/reports/movements" element={<AccountMovementsReport />} />
       <Route path="/accounting/account-ledger/:accountId" element={<AccountMovement />} />
       <Route path="/journal" element={<Journal />} />
-      <Route path="/journal/new" element={<JournalCreate />} />
       <Route path="/customers" element={<Customers />} />
       <Route path="/partners/customer-statement/:id" element={<CustomerStatementPage />} />
       <Route path="/suppliers" element={<Suppliers />} />

@@ -23,10 +23,7 @@ export function PartnerDetailPanel({
   partner,
   onClose,
   onEdit,
-  onDelete,
-  invoices,
-  payments,
-  loadingDetails
+  onDelete
 }: PartnerDetailPanelProps) {
   const { currencies, baseCurrency } = useCurrencyContext();
   const { openTab } = useTabs();

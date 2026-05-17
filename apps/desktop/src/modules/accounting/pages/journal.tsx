@@ -1,9 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Search, FileText, Banknote, Filter } from "lucide-react";
-import { toast } from "sonner";
 import { journalEntryService, type JournalFilters } from '@modules/accounting/api/journalEntryService';
 import type { JournalEntryDto, JournalType } from "@erp/shared-types";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
@@ -12,19 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 // Refactored Components & Hooks
 import { useDataTable } from '@shared/hooks';
 import { JournalTable } from '@modules/accounting/components/JournalTable';
-import { JournalDetailPanel } from '@modules/accounting/components/JournalDetailPanel';
 import { JournalSummaryFooter } from "@modules/accounting/components/JournalSummaryFooter";
 import { JOURNAL_TYPES, getJournalColumnsByType } from "@modules/accounting/lib/journal-config";
-import { toJournalRow, aggregateEntryTotals } from "@modules/accounting/lib/journal-view";
+import { aggregateEntryTotals } from "@modules/accounting/lib/journal-view";
 
 export default function Journal() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const typeParam = searchParams.get('type') as JournalType | null;
-
-
-  const [selectedEntry, setSelectedEntry] = useState<JournalEntryDto | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
   
   const [filters, setFilters] = useState<JournalFilters>({
     journal_type: typeParam || 'GeneralJournal',
@@ -85,44 +78,6 @@ export default function Journal() {
 
     return entries;
   }, [entries, filters.journal_type]);
-
-  const isLoading = loading || refreshing;
-
-  const handlePost = async (id: string) => {
-    try {
-      await journalEntryService.postJournalEntry(id);
-      refresh(true);
-      if (detailOpen && selectedEntry?.id === id) {
-        handleView(id);
-      }
-      toast.success("تم ترحيل القيد بنجاح");
-    } catch (e: unknown) {
-      toast.error("فشل ترحيل القيد: " + String(e));
-    }
-  };
-
-  const handleReverse = async (id: string) => {
-    try {
-      await journalEntryService.reverseJournalEntry(id);
-      refresh(true);
-      if (detailOpen && selectedEntry?.id === id) {
-        handleView(id);
-      }
-      toast.success("تم عكس القيد بنجاح");
-    } catch (e: unknown) {
-      toast.error("فشل عكس القيد: " + String(e));
-    }
-  };
-
-  const handleView = async (id: string) => {
-    try {
-      const details = await journalEntryService.getJournalEntryDetails(id);
-      setSelectedEntry(details);
-      setDetailOpen(true);
-    } catch (e: unknown) {
-      toast.error("فشل تحميل تفاصيل القيد: " + String(e));
-    }
-  };
 
   const stats = useMemo(() => [
     { label: "إجمالي القيود", value: displayEntries.length, icon: FileText, color: "text-slate-900" },
@@ -191,13 +146,6 @@ export default function Journal() {
         />
       }
     >
-      <JournalDetailPanel
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
-        entry={selectedEntry}
-        onPost={handlePost}
-        onReverse={handleReverse}
-      />
     </OperationalTableTemplate>
   );
 }

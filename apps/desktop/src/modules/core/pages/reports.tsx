@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { 
-  BookOpen, FileBarChart, Scale, TrendingUp, Wallet, Clock, 
-  Receipt, ShoppingCart, Package, AlertTriangle, Users, Truck,
-  ChevronLeft, Search, Calendar, Filter, Download, FileText
+  BookOpen, Scale, TrendingUp, Wallet, Clock, Receipt, ShoppingCart, Package,
+  AlertTriangle, Users, Truck, ChevronLeft, Search, FileText
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from '@shared/lib/utils';
-import { Card } from "@shared/ui/card";
 import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
 
