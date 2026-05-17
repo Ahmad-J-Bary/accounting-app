@@ -127,50 +127,46 @@ impl PostInvoiceUseCase {
 
         if total_amount > Decimal::ZERO {
             if invoice.invoice_type == InvoiceType::Sales {
-                journal_lines.push(JournalLine::new(
-                    main_account.id, 
-                    MonetaryAmount::zero(doc_currency.clone()), 
-                    MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate), 
-                    format!("إثبات مبيعات فاتورة رقم {}", invoice.invoice_number)
-                ));
-                
-                if amount_paid > Decimal::ZERO {
-                    journal_lines.push(JournalLine::new(
-                        cash_account.id, 
-                        MonetaryAmount::new(Money::new(amount_paid, doc_currency.clone()), fx_rate), 
-                        MonetaryAmount::zero(doc_currency.clone()), 
-                        format!("دفعة نقدية - فاتورة رقم {}", invoice.invoice_number)
-                    ));
-                }
-                
-                if amount_deferred > Decimal::ZERO {
-                    let mut deferred_handled = false;
-                    if let Some(cid) = &invoice.customer_id {
-                        if let Some(customer) = self.customer_repo.find_by_id(cid).await? {
-                            if let Some(p_acc_id) = customer.account_id {
-                                journal_lines.push(JournalLine::new(
-                                    p_acc_id, 
-                                    MonetaryAmount::new(Money::new(amount_deferred, doc_currency.clone()), fx_rate), 
-                                    MonetaryAmount::zero(doc_currency.clone()), 
-                                    format!("ذمة مدينة - فاتورة رقم {}", invoice.invoice_number)
-                                ).with_partner(cid.0));
-                                
-                                let mut updated_customer = customer;
-                                updated_customer.increase_debit(amount_deferred).map_err(|e| AppError::Invalid(e.to_string()))?;
-                                self.customer_repo.update(&updated_customer).await?;
-                                deferred_handled = true;
-                            }
+                let sales_account = if amount_deferred > Decimal::ZERO {
+                    self.account_repo.find_by_code("312").await?
+                        .ok_or_else(|| AppError::NotFound("حساب المبيعات الآجلة غير موجود: 312".into()))?
+                } else {
+                    main_account.clone()
+                };
+
+                let mut customer_handled = false;
+                if let Some(cid) = &invoice.customer_id {
+                    if let Some(customer) = self.customer_repo.find_by_id(cid).await? {
+                        if let Some(p_acc_id) = customer.account_id {
+                            journal_lines.push(JournalLine::new(
+                                p_acc_id,
+                                MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate),
+                                MonetaryAmount::zero(doc_currency.clone()),
+                                format!("فاتورة مبيعات رقم {}", invoice.invoice_number)
+                            ).with_partner(cid.0));
+
+                            let mut updated_customer = customer;
+                            updated_customer.increase_debit(total_amount).map_err(|e| AppError::Invalid(e.to_string()))?;
+                            self.customer_repo.update(&updated_customer).await?;
+                            customer_handled = true;
                         }
                     }
-                    if !deferred_handled {
-                        journal_lines.push(JournalLine::new(
-                            cash_account.id, 
-                            MonetaryAmount::new(Money::new(amount_deferred, doc_currency.clone()), fx_rate), 
-                            MonetaryAmount::zero(doc_currency.clone()), 
-                            format!("ذمة نقدية (المبلغ المتبقي) - فاتورة رقم {}", invoice.invoice_number)
-                        ));
-                    }
                 }
+                if !customer_handled {
+                    journal_lines.push(JournalLine::new(
+                        cash_account.id,
+                        MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate),
+                        MonetaryAmount::zero(doc_currency.clone()),
+                        format!("ذمة نقدية (زبون غير مسجل) - فاتورة رقم {}", invoice.invoice_number)
+                    ));
+                }
+
+                journal_lines.push(JournalLine::new(
+                    sales_account.id,
+                    MonetaryAmount::zero(doc_currency.clone()),
+                    MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate),
+                    format!("إثبات مبيعات فاتورة رقم {}", invoice.invoice_number)
+                ));
             } else if invoice.invoice_type == InvoiceType::Purchase {
                 let extra_costs_val = invoice.extra_costs.amount();
                 let main_debit_amount = total_amount - extra_costs_val;
@@ -316,6 +312,58 @@ impl PostInvoiceUseCase {
             
             extra_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
             self.journal_repo.save(&extra_entry).await?;
+        }
+
+        // --- Create separate CashReceipt entry for sales payments received ---
+        if invoice.invoice_type == InvoiceType::Sales && amount_paid > Decimal::ZERO {
+            let mut receipt_lines = Vec::new();
+            receipt_lines.push(JournalLine::new(
+                cash_account.id,
+                MonetaryAmount::new(Money::new(amount_paid, doc_currency.clone()), fx_rate),
+                MonetaryAmount::zero(doc_currency.clone()),
+                format!("تحصيل نقدي - فاتورة مبيعات رقم {}", invoice.invoice_number)
+            ));
+
+            let mut cust_acc_for_receipt = None;
+            if let Some(cid) = &invoice.customer_id {
+                cust_acc_for_receipt = self.customer_repo.find_by_id(cid).await?
+                    .and_then(|c| c.account_id);
+            }
+
+            if let Some(cust_acc_id) = cust_acc_for_receipt {
+                receipt_lines.push(JournalLine::new(
+                    cust_acc_id,
+                    MonetaryAmount::zero(doc_currency.clone()),
+                    MonetaryAmount::new(Money::new(amount_paid, doc_currency.clone()), fx_rate),
+                    format!("تحصيل نقدي - فاتورة مبيعات رقم {}", invoice.invoice_number)
+                ).with_partner(invoice.customer_id.as_ref().unwrap().0));
+
+                if let Some(cid) = &invoice.customer_id {
+                    if let Some(mut customer) = self.customer_repo.find_by_id(cid).await? {
+                        customer.decrease_debit(amount_paid).map_err(|e| AppError::Invalid(e.to_string()))?;
+                        self.customer_repo.update(&customer).await?;
+                    }
+                }
+            } else {
+                receipt_lines.push(JournalLine::new(
+                    cash_account.id,
+                    MonetaryAmount::zero(doc_currency.clone()),
+                    MonetaryAmount::new(Money::new(amount_paid, doc_currency.clone()), fx_rate),
+                    format!("تحصيل نقدي (زبون غير مسجل) - فاتورة مبيعات رقم {}", invoice.invoice_number)
+                ));
+            }
+
+            let mut receipt_entry = JournalEntry::new(
+                self.journal_repo.get_next_entry_number().await?,
+                domain::accounting::JournalType::CashReceipt,
+                receipt_lines,
+                Utc::now(),
+                format!("تحصيل نقدي بموجب فاتورة مبيعات رقم {}", invoice.invoice_number),
+                Some(invoice.id.to_string()),
+            ).map_err(|e| AppError::Invalid(e.to_string()))?;
+
+            receipt_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
+            self.journal_repo.save(&receipt_entry).await?;
         }
 
         // --- Create separate CashPayment entry for main amount's initial payment only ---

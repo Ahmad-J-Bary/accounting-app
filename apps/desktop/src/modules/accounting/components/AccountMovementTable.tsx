@@ -17,7 +17,9 @@ export function AccountMovementTable({ lines, loading, visibleColumns, accountNa
 
   const tableData = useMemo(() => {
     return lines.map((line) => {
-      const typeLabel = JOURNAL_TYPE_LABELS[line.journal_type] || line.journal_type;
+      const typeLabel = (line.journal_type === 'CashSalesJournal' || line.journal_type === 'CreditSalesJournal')
+        ? 'مبيعات نقدية'
+        : (JOURNAL_TYPE_LABELS[line.journal_type] || line.journal_type);
       
       const debitUSD = parseFloat(line.debit_usd);
       const debitSYP = parseFloat(line.debit_syp);

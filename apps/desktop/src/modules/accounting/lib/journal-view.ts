@@ -42,6 +42,12 @@ export function toJournalRow(entry: JournalEntryDto, journalType?: string): Jour
   let dUSD = 0, cUSD = 0, dSYP = 0, cSYP = 0;
   let dAcc = "-", cAcc = "-";
   let activeSide: 'debit' | 'credit' = 'debit';
+  let journalTypeDisplay = entry.journal_type_display;
+
+  // Both CashSalesJournal and CreditSalesJournal display as "مبيعات نقدية" in the type column
+  if (entry.journal_type === 'CashSalesJournal' || entry.journal_type === 'CreditSalesJournal') {
+    journalTypeDisplay = 'مبيعات نقدية';
+  }
 
   if (prefix) {
     // --- Specialised journal: only the focal account's side ---
@@ -101,10 +107,12 @@ export function toJournalRow(entry: JournalEntryDto, journalType?: string): Jour
       cAcc = entry.lines[1].account_name || entry.lines[1].account_id;
     }
 
-    // Show amounts on the side of the cash account if present,
+    // Show amounts on the side of the focal account if present,
     // otherwise show debit when both sides have amounts.
     const cashLine = entry.lines.find(l => l.account_code?.startsWith('122'));
-    if (entry.journal_type === 'PurchaseJournal' || entry.journal_type === 'PurchaseCostsJournal') {
+    if (entry.journal_type === 'CashSalesJournal' || entry.journal_type === 'CreditSalesJournal') {
+      activeSide = 'credit';
+    } else if (entry.journal_type === 'PurchaseJournal' || entry.journal_type === 'PurchaseCostsJournal') {
       activeSide = 'debit';
     } else if (cashLine && (parseFloat(cashLine.credit || "0") > 0 || parseFloat(cashLine.debit || "0") > 0)) {
       activeSide = parseFloat(cashLine.credit || "0") > 0 ? 'credit' : 'debit';
@@ -139,7 +147,7 @@ export function toJournalRow(entry: JournalEntryDto, journalType?: string): Jour
 
   return {
     entry_number: entry.entry_number,
-    journal_type_display: entry.journal_type_display,
+    journal_type_display: journalTypeDisplay,
     description: entry.description,
     entry_date: entry.entry_date,
     debit_usd: dUSD, debit_syp: dSYP,
