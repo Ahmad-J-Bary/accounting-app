@@ -96,6 +96,15 @@ export default function AccountMovement() {
     detectType();
   }, [accountId]);
 
+  // Filter out PurchaseCostsJournal entries for supplier accounts
+  const filteredLines = useMemo(() => {
+    const lines = ledger?.lines || [];
+    if (accountType === 'supplier') {
+      return lines.filter(l => l.journal_type !== 'PurchaseCostsJournal');
+    }
+    return lines;
+  }, [ledger, accountType]);
+
   const stats = useMemo(() => {
     if (!ledger) return null;
     return [
@@ -237,7 +246,7 @@ export default function AccountMovement() {
       tableContent={
         <div className="p-4">
           <AccountMovementTable
-            lines={ledger?.lines || []}
+            lines={filteredLines}
             loading={loading}
             accountName={ledger?.account_name || ""}
           />

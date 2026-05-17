@@ -57,6 +57,23 @@ pub async fn find_by_source_id(pool: &SqlitePool, source_id: &str) -> Result<Opt
     }
 }
 
+pub async fn find_all_by_source_id(pool: &SqlitePool, source_id: &str) -> Result<Vec<JournalEntry>, AppError> {
+    let rows = sqlx::query_as::<_, JournalEntryRow>(
+        "SELECT id, entry_number, journal_type, source_id, entry_date, description, status, created_at, posted_at, updated_at FROM journal_entries WHERE source_id = ? ORDER BY created_at ASC"
+    )
+    .bind(source_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    let mut entries = Vec::new();
+    for row in rows {
+        let lines = load_lines(pool, &row.id).await?;
+        entries.push(row_to_entry(row, lines)?);
+    }
+    Ok(entries)
+}
+
 pub async fn list_all(pool: &SqlitePool) -> Result<Vec<JournalEntry>, AppError> {
     let rows = sqlx::query_as::<_, JournalEntryRow>(
         "SELECT id, entry_number, journal_type, source_id, entry_date, description, status, created_at, posted_at, updated_at FROM journal_entries ORDER BY entry_date DESC"

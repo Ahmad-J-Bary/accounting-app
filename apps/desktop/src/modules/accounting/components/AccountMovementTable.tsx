@@ -66,8 +66,8 @@ export function AccountMovementTable({ lines, loading, visibleColumns, accountNa
         id: "debit_syp",
         header: "عليه / مدين (ل.س)",
         accessor: (l) => {
-          const usd = parseFloat(l.debit_usd);
-          return usd > 0 ? formatAmount(usd, { currencyCode: "SYP" }) : "";
+          const syp = parseFloat(l.debit_syp);
+          return syp > 0 ? formatAmount(syp, { currencyCode: "SYP" }) : "";
         },
         align: "left",
         className: "tabular-nums font-black text-blue-700 text-[11px]"
@@ -86,8 +86,8 @@ export function AccountMovementTable({ lines, loading, visibleColumns, accountNa
         id: "credit_syp",
         header: "له / دائن (ل.س)",
         accessor: (l) => {
-          const usd = parseFloat(l.credit_usd);
-          return usd > 0 ? formatAmount(usd, { currencyCode: "SYP" }) : "";
+          const syp = parseFloat(l.credit_syp);
+          return syp > 0 ? formatAmount(syp, { currencyCode: "SYP" }) : "";
         },
         align: "left",
         className: "tabular-nums font-black text-emerald-700 text-[11px]"

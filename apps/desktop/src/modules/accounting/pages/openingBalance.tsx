@@ -37,7 +37,7 @@ const defaultHeader = (): HeaderState => ({
 
 export default function OpeningBalance() {
   const location = useLocation();
-  const { closeTab, activeTabId } = useTabs();
+  const { closeTab, activeTabId, openTab } = useTabs();
   
   const [materials, setMaterials] = useState<MaterialDto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -108,13 +108,13 @@ export default function OpeningBalance() {
       await invoiceService.postInvoice(result.id);
       toast.success("تم ترحيل الرصيد الافتتاحي للمخزون بنجاح");
       
-      if (isNew) {
-        closeTab(activeTabId);
-      } else {
-        setHeader(defaultHeader());
-        setLines([]);
-        loadData();
-      }
+      closeTab(activeTabId);
+      openTab({
+        id: 'purchase-invoices',
+        title: 'فواتير المشتريات',
+        path: '/purchase-invoices',
+        closable: true,
+      });
     } catch (e: unknown) {
       toast.error("فشل الحفظ: " + e);
     } finally {

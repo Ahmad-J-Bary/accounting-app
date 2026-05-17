@@ -60,8 +60,9 @@ impl DeleteInvoiceUseCase {
                 }
             }
 
-            // Delete Journal Entry
-            if let Some(entry) = self.journal_repo.find_by_source_id(&invoice.id.to_string()).await? {
+            // Delete all journal entries linked to this invoice
+            let entries = self.journal_repo.find_all_by_source_id(&invoice.id.to_string()).await?;
+            for entry in entries {
                 self.journal_repo.delete(&entry.id).await?;
             }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { useTabs } from '@app/providers/TabContext';
 import { Button } from "@shared/ui/button";
@@ -62,7 +62,7 @@ export default function SalesInvoices() {
   const location = useLocation();
   const navigate = useNavigate();
   const { id } = useParams();
-  const { openTab } = useTabs();
+  const { openTab, closeTab, activeTabId } = useTabs();
   const { baseCurrency, formatMonetaryAmount, rateMap } = useCurrencyContext();
 
   const [view, setView] = useState<ViewMode>("list");
@@ -106,7 +106,14 @@ export default function SalesInvoices() {
     }
   }, []);
 
+  const prevActiveTab = useRef(activeTabId);
   useEffect(() => { loadData(true); }, [loadData]);
+  useEffect(() => {
+    if (prevActiveTab.current !== 'sales-invoices' && activeTabId === 'sales-invoices') {
+      loadData();
+    }
+    prevActiveTab.current = activeTabId;
+  }, [activeTabId, loadData]);
 
   const isReadOnly = useMemo(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -216,9 +223,16 @@ export default function SalesInvoices() {
         toast.success("تم حفظ الفاتورة كمسودة");
       }
 
-      if (isNew || headerState.status !== "Posted") {
+      if (andPost) {
+        if (isNew) {
+          closeTab(activeTabId);
+        } else {
+          loadData();
+        }
+        openTab({ id: 'sales-invoices', title: 'فواتير المبيعات', path: '/sales-invoices', closable: true });
+      } else if (isNew) {
         navigate(`/sales-invoices/${saved.id}?mode=view`);
-        setHeaderState(s => ({ ...s, status: andPost ? "Posted" : "Draft" }));
+        setHeaderState(s => ({ ...s, status: "Draft" }));
       } else {
         loadData();
         navigate(`/sales-invoices/${saved.id}?mode=view`);

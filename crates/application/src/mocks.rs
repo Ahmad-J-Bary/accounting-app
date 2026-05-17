@@ -112,5 +112,9 @@ impl JournalEntryRepository for MockJournalRepository {
         let entries = self.entries.lock().unwrap();
         Ok(entries.iter().find(|e| e.source_id.as_deref() == Some(source_id)).cloned())
     }
+    async fn find_all_by_source_id(&self, source_id: &str) -> Result<Vec<JournalEntry>, AppError> {
+        let entries = self.entries.lock().unwrap();
+        Ok(entries.iter().filter(|e| e.source_id.as_deref() == Some(source_id)).cloned().collect())
+    }
     async fn delete(&self, _id: &JournalEntryId) -> Result<(), AppError> { Ok(()) }
 }

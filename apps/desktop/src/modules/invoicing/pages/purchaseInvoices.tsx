@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { useTabs } from '@app/providers/TabContext';
 import { Button } from "@shared/ui/button";
@@ -110,7 +110,14 @@ export default function PurchaseInvoices() {
     }
   }, []);
 
+  const prevActiveTab = useRef(activeTabId);
   useEffect(() => { loadData(true); }, [loadData]);
+  useEffect(() => {
+    if (prevActiveTab.current !== 'purchase-invoices' && activeTabId === 'purchase-invoices') {
+      loadData();
+    }
+    prevActiveTab.current = activeTabId;
+  }, [activeTabId, loadData]);
 
   useEffect(() => {
     if (isNew) {
@@ -212,7 +219,10 @@ export default function PurchaseInvoices() {
         toast.success("تم حفظ المسودة");
       }
 
-      if (isNew) {
+      if (isNew && isPosting) {
+        closeTab(activeTabId);
+        openTab({ id: 'purchase-invoices', title: 'فواتير المشتريات', path: '/purchase-invoices', closable: true });
+      } else if (isNew) {
         navigate(`/purchase-invoices/${result.id}`);
         closeTab(activeTabId);
       } else {

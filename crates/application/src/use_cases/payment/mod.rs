@@ -188,8 +188,8 @@ impl CreatePaymentUseCase {
                     payment.debit_account_id = Some(p_acc_id);
                     payment.credit_account_id = Some(credit_cash);
                     // Debit Supplier, Credit Cash
-                    journal_lines.push(JournalLine::new(p_acc_id, amount_ma.clone(), zero_ma.clone(), format!("دفع للمورد: {}", supplier.name)).with_partner(sid.0));
-                    journal_lines.push(JournalLine::new(credit_cash, zero_ma, amount_ma, format!("دفعة للمورد: {}", supplier.name)));
+                    journal_lines.push(JournalLine::new(p_acc_id, amount_ma.clone(), zero_ma.clone(), "دفعة على الحساب".to_string()).with_partner(sid.0));
+                    journal_lines.push(JournalLine::new(credit_cash, zero_ma, amount_ma, "دفعة على الحساب".to_string()));
                 }
             },
             PaymentType::ExpenseVoucher => {

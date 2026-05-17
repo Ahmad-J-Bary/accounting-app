@@ -22,5 +22,6 @@ pub trait JournalEntryRepository: Send + Sync {
     ) -> Result<Vec<JournalEntry>, AppError>;
     async fn get_next_entry_number(&self) -> Result<String, AppError>;
     async fn find_by_source_id(&self, source_id: &str) -> Result<Option<JournalEntry>, AppError>;
+    async fn find_all_by_source_id(&self, source_id: &str) -> Result<Vec<JournalEntry>, AppError>;
     async fn delete(&self, id: &JournalEntryId) -> Result<(), AppError>;
 }

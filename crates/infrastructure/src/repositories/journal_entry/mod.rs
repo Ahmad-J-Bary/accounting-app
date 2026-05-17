@@ -72,6 +72,10 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
         queries::find_by_source_id(&self.pool, source_id).await
     }
 
+    async fn find_all_by_source_id(&self, source_id: &str) -> Result<Vec<JournalEntry>, AppError> {
+        queries::find_all_by_source_id(&self.pool, source_id).await
+    }
+
     async fn delete(&self, id: &JournalEntryId) -> Result<(), AppError> {
         commands::delete(&self.pool, id).await
     }
