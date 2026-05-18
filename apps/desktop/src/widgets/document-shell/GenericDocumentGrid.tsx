@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, type KeyboardEvent, useMemo } from "react";
+import { useState, useRef, useCallback, type KeyboardEvent, useMemo } from "react";
 import { Trash2, Settings2 } from "lucide-react";
 import type { MaterialDto } from "@erp/shared-types";
 import { formatCurrency } from '@shared/lib/format';
@@ -145,7 +145,7 @@ export function GenericDocumentGrid({
         if (e.ctrlKey) { e.preventDefault(); onRemoveLine(rowIdx); }
         break;
     }
-  }, [searchRow, editableCols.length, lines.length, onAddLine, onRemoveLine, readOnly, findNextCol]);
+  }, [editableCols.length, lines, onAddLine, onRemoveLine, readOnly, findNextCol]);
 
   const getCellValue = (line: GridLine, key: string): string => {
     if (!line.material_id && !line.material_name) return "";
@@ -160,6 +160,7 @@ export function GenericDocumentGrid({
   };
 
   const handleCellChange = useCallback((rowIdx: number, colKey: string, value: string) => {
+    if (readOnly) return;
     // Detect currency-specific fields: field_CCC (e.g. retail_price_SYP)
     const currMatch = colKey.match(/^(.+)_([A-Z]{3})$/);
     if (currMatch) {
@@ -180,7 +181,7 @@ export function GenericDocumentGrid({
     } else {
       onUpdateLine(rowIdx, { [colKey]: value });
     }
-  }, [docCurrency, exchangeRate, onUpdateLine]);
+  }, [docCurrency, exchangeRate, onUpdateLine, readOnly]);
 
   const showSearchPanel = searchRow !== null;
 
@@ -344,6 +345,19 @@ export function GenericDocumentGrid({
                   if (isCodeSearch) displayValue = line.material_code || "";
                   if (isBarcodeSearch) displayValue = line.unit_barcode || "";
 
+                  if (readOnly) {
+                    return (
+                      <div key={col.key}
+                        className={cn(
+                          "flex items-center px-2 border-l border-border h-8 text-[11px] font-bold text-gray-800 truncate",
+                          col.width,
+                          col.align === "left" ? "text-left" : col.align === "center" ? "text-center" : "text-right"
+                        )}>
+                        {displayValue || "-"}
+                      </div>
+                    );
+                  }
+
                   return (
                     <div key={col.key}
                       className={cn(
@@ -356,11 +370,9 @@ export function GenericDocumentGrid({
                           if (el) inputRefs.current.set(refKey, el);
                           else inputRefs.current.delete(refKey);
                         }}
-                        disabled={readOnly}
                         className={cn(
                           "w-full h-8 px-2 text-[11px] bg-transparent border-none outline-none text-right font-bold text-blue-800",
-                          "placeholder:text-muted-foreground focus:bg-white transition-colors",
-                          readOnly && "opacity-50"
+                          "placeholder:text-muted-foreground focus:bg-white transition-colors"
                         )}
                         placeholder="البحث..."
                         value={displayValue}
@@ -393,6 +405,19 @@ export function GenericDocumentGrid({
                   );
                 }
 
+                if (readOnly) {
+                  return (
+                    <div key={col.key}
+                      className={cn(
+                        "flex items-center px-2 border-l border-border h-8 text-[11px] font-bold text-gray-800 truncate",
+                        col.width,
+                        col.align === "left" ? "text-left" : col.align === "center" ? "text-center" : "text-right"
+                      )}>
+                      {getCellValue(line, col.key) || "-"}
+                    </div>
+                  );
+                }
+
                 return (
                   <div key={col.key}
                     className={cn(
@@ -408,13 +433,11 @@ export function GenericDocumentGrid({
                       type={col.type === "number" ? "number" : "text"}
                       min={col.type === "number" ? "0" : undefined}
                       step={col.type === "number" ? "any" : undefined}
-                      disabled={readOnly}
                       className={cn(
                         "w-full h-8 px-2 text-[11px] bg-transparent border-none outline-none tabular-nums font-bold",
                         "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
                         "focus:bg-white transition-colors",
-                        col.align === "left" ? "text-left" : col.align === "center" ? "text-center" : "text-right",
-                        readOnly && "opacity-50"
+                        col.align === "left" ? "text-left" : col.align === "center" ? "text-center" : "text-right"
                       )}
                       value={getCellValue(line, col.key)}
                       onChange={e => handleCellChange(rowIdx, col.key, e.target.value)}
@@ -447,6 +470,7 @@ export function GenericDocumentGrid({
         searchType={searchType}
         visible={showSearchPanel}
         onSelect={m => {
+          if (readOnly) return;
           if (searchRow !== null) {
             onSelectMaterial(searchRow, m);
             setSearchRow(null);

@@ -94,13 +94,13 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
 
   // Sync tab with external URL changes
   useEffect(() => {
-    const currentPath = location.pathname;
-    const existingTab = tabs.find(t => t.path === currentPath);
+    const currentFullPath = location.pathname + location.search;
+    const existingTab = tabs.find(t => t.path === currentFullPath);
     if (existingTab && existingTab.id !== activeTabId) {
       setActiveTabId(existingTab.id);
       setTabs(prev => prev.map(t => ({ ...t, active: t.id === existingTab.id })));
     }
-  }, [location.pathname, tabs, activeTabId]);
+  }, [location.pathname, location.search, tabs, activeTabId]);
 
   // Keyboard Shortcuts
   useEffect(() => {

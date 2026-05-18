@@ -1,6 +1,7 @@
 /**
  * Simple CSV Export utility
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function exportToCSV(data: any[], columns: { id: string; label: string }[], filename: string) {
   if (!data || data.length === 0) return;
 

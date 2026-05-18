@@ -50,6 +50,20 @@ export function InvoicePartySelector({
     else if (!selectedId) setInputValue("");
   }, [selectedId, selectedName]);
 
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        inputRef.current && !inputRef.current.contains(e.target as Node) &&
+        dropdownRef.current && !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Fetch balance when partner changes
   useEffect(() => {
     const fetchBalance = async () => {
@@ -167,10 +181,6 @@ export function InvoicePartySelector({
                 <span className="text-sm text-slate-400 font-bold">اكتب اسماً جديداً للبدء</span>
               </div>
             )}
-          </div>
-          
-          <div className="p-2 bg-slate-50 border-t border-slate-100 text-[10px] text-slate-400 text-center font-bold">
-            انقر على الاسم للاختيار أو أكمل الكتابة للإضافة
           </div>
         </div>
       )}

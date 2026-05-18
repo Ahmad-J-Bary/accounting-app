@@ -96,7 +96,7 @@ export function InvoiceList({
   const partyField = partyType === "supplier" ? "supplier_name" : "customer_name";
   const defaultName = partyType === "supplier" ? "مورد نقدي" : "زبون نقدي";
 
-  const baseColumns: { id: string; label: string }[] = [
+  const baseColumns = useMemo<{ id: string; label: string }[]>(() => [
     { id: "invoice_number", label: "الرقم" },
     { id: "notes", label: "التوصيف" },
     { id: partyField, label: partyLabel },
@@ -108,7 +108,7 @@ export function InvoiceList({
     { id: "status", label: "الحالة" },
     { id: "issued_at", label: "التاريخ" },
     ...extraColumns.map(c => ({ id: c.key, label: c.label })),
-  ];
+  ], [partyField, partyLabel, showSubtotal, showExtraCosts, extraColumns]);
 
   const defaultVisible = useMemo(() => baseColumns.map(c => c.id), [baseColumns]);
 
@@ -223,13 +223,13 @@ export function InvoiceList({
             className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
             <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> تعديل
           </Button>
-          <Button variant="outline" size="sm" disabled={!selectedId}
+          <Button variant="outline" size="sm" disabled={!selectedId || selectedInvoice?.status === "Posted"}
             onClick={() => {
               if (selectedId && window.confirm("هل أنت متأكد من حذف هذه الفاتورة؟ سيتم حذف القيود المرتبطة بها أيضاً.")) {
                 onDelete(selectedId).then(() => setSelectedId(null));
               }
             }}
-            className="h-9 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 font-bold transition-all">
+            className="h-9 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 font-bold transition-all disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-slate-400">
             <History className="w-4 h-4 ml-2 text-rose-500" /> حذف
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}

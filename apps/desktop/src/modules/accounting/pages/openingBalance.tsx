@@ -1,22 +1,21 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { useTabs } from '@app/providers/TabContext';
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Save, Package } from "lucide-react";
+import { Save } from "lucide-react";
 import { invoiceService } from '@modules/invoicing/api/invoiceService';
 import { materialService } from '@modules/inventory/api/materialService';
-import type { InvoiceDto, MaterialDto } from "@erp/shared-types";
+import type { MaterialDto } from "@erp/shared-types";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
-// Unified Components
 import { FinancialDocumentTemplate } from "@widgets/templates/FinancialDocumentTemplate";
 import { GenericDocumentGrid, type DocumentColumn } from "@widgets/document-shell/GenericDocumentGrid";
 import { SummaryPanel } from "@widgets/document-shell/SummaryPanel";
 import { DocumentStatusBadge } from "@modules/invoicing/components/DocumentStatusBadge";
 import { useDocumentEditor } from "@modules/invoicing/hooks/useDocumentEditor";
-import { toBackendLines, type GridLine } from "@modules/invoicing/lib/invoiceUtils";
+import { toBackendLines } from "@modules/invoicing/lib/invoiceUtils";
 import { useDocumentFinancials } from "@modules/invoicing/lib/useDocumentFinancials";
 
 interface HeaderState {
@@ -51,15 +50,12 @@ export default function OpeningBalance() {
   
   const { currencies, rateMap } = useCurrencyContext();
 
-  const { id } = useParams();
-  const isNew = !id || location.pathname.includes("/new");
+  const isNew = location.pathname.includes("/new") || !location.pathname.includes("/edit");
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [mats] = await Promise.all([
-        materialService.listMaterials(),
-      ]);
+      const mats = await materialService.listMaterials();
       setMaterials(mats);
     } catch (e: unknown) {
       toast.error("فشل تحميل البيانات: " + e);
@@ -74,7 +70,6 @@ export default function OpeningBalance() {
       invoiceService.getNextInvoiceNumber("OpeningBalance").then(num => {
         setHeader(s => ({ ...s, docNumber: num }));
       });
-      // Use real exchange rate from rateMap instead of hardcoded "1"
       const rate = rateMap.get("SYP");
       if (rate) {
         setHeader(s => ({ ...s, exchange_rate: rate.toString() }));
@@ -129,7 +124,6 @@ export default function OpeningBalance() {
     { key: "wholesale_price_SYP", header: "جملة (ل.س)", width: "w-[90px]", align: "left", type: "number" },
   ], []);
 
-  // Adapt header for hook compatibility
   const headerShim = useMemo(() => ({
     currency_code: header.currency_code,
     exchange_rate: header.exchange_rate,
@@ -141,7 +135,6 @@ export default function OpeningBalance() {
 
   const { 
     enrichedLines, 
-    docSubtotal,
     subtotal,
     net,
     displayCurrency,
@@ -151,14 +144,12 @@ export default function OpeningBalance() {
     lines,
     setLines,
     headerState: headerShim,
-    setHeaderState: () => {}, // Not needed for opening balance yet
+    setHeaderState: () => {},
     currencies,
     invoiceType: "OpeningBalance",
     priceLabel: "التكلفة",
     extraColumns: extraCols
   });
-
-  // Removed duplicate state logic
 
   return (
     <FinancialDocumentTemplate
@@ -166,7 +157,7 @@ export default function OpeningBalance() {
       statusBadge={<DocumentStatusBadge status="Draft" />}
       toolbar={
         <>
-          <Button size="sm" onClick={handleSave} disabled={saving} className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
+          <Button size="sm" onClick={handleSave} disabled={saving || loading} className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
             <Save className="w-4 h-4 ml-2" /> {saving ? "جاري الحفظ..." : "حفظ وترحيل الرصيد"}
           </Button>
         </>
@@ -188,18 +179,18 @@ export default function OpeningBalance() {
         </>
       }
       lineItemsGrid={
-          <GenericDocumentGrid
-            columns={gridColumns}
-            lines={enrichedLines}
-            onUpdateLine={updateLine}
-            onRemoveLine={removeLine}
-            onAddLine={addLine}
-            onSelectMaterial={selectMaterial}
-            materials={Object.values(materials)}
-            preferenceKey="opening_balance_grid"
-            docCurrency={header.currency_code}
-            exchangeRate={header.exchange_rate}
-          />
+        <GenericDocumentGrid
+          columns={gridColumns}
+          lines={enrichedLines}
+          onUpdateLine={updateLine}
+          onRemoveLine={removeLine}
+          onAddLine={addLine}
+          onSelectMaterial={selectMaterial}
+          materials={Object.values(materials)}
+          preferenceKey="opening_balance_grid"
+          docCurrency={header.currency_code}
+          exchangeRate={header.exchange_rate}
+        />
       }
       summaryPanel={
         <SummaryPanel
@@ -209,13 +200,11 @@ export default function OpeningBalance() {
           extraCosts={0}
           net={net}
           currency={displayCurrency}
-          status="Draft"
           invoiceType="OpeningBalance"
           currencies={currencies}
           onCurrencyChange={setDisplayCurrency}
           exchangeRate={parseFloat(header.exchange_rate)}
-        >
-        </SummaryPanel>
+        />
       }
       sidebar={null}
     />
