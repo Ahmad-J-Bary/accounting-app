@@ -30,6 +30,8 @@ export default function AccountingJournalsReport() {
     }
   }, [searchParams, filters.journal_type]);
 
+  const [search, setSearch] = useState("");
+
   const {
     filtered: entries,
     loading,
@@ -148,7 +150,7 @@ export default function AccountingJournalsReport() {
         {/* Main Table */}
         <div className="flex-1 border border-slate-100 rounded-3xl overflow-hidden shadow-sm flex flex-col bg-white">
           <div className="flex-1 p-0 flex flex-col relative min-h-0">
-             <JournalTable entries={entries} loading={loading} filters={filters} />
+              <JournalTable entries={entries} loading={loading} search={search} onSearchChange={setSearch} filters={filters} />
           </div>
           
           <div className="bg-slate-50 p-6 border-t border-slate-100 flex justify-between items-center">

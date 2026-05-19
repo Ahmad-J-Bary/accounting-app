@@ -7,13 +7,19 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./apps/desktop/src/*"]
+      "@/*": ["./apps/desktop/src/*"],
+      "@app/*": ["./apps/desktop/src/app/*"],
+      "@shared/*": ["./apps/desktop/src/shared/*"],
+      "@widgets/*": ["./apps/desktop/src/widgets/*"],
+      "@modules/*": ["./apps/desktop/src/modules/*"]
     },
     "noImplicitAny": false,
     "noUnusedParameters": false,
     "skipLibCheck": true,
     "allowJs": true,
     "noUnusedLocals": false,
-    "strictNullChecks": false
+    "strictNullChecks": false,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "target": "ES2020"
   }
 }

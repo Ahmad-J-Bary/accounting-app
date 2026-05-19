@@ -7,6 +7,7 @@ import { GridLine } from "@modules/invoicing/lib/invoiceUtils";
 import { useColumnPreferences } from "@shared/hooks/useColumnPreferences";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@shared/ui/dropdown-menu";
 import { MaterialSearchPanel } from "./MaterialSearchPanel";
+import { useTableSettings } from "@shared/hooks";
 
 export interface DocumentColumn {
   key: string;
@@ -48,6 +49,7 @@ export function GenericDocumentGrid({
   const [searchType, setSearchType] = useState<"name" | "code" | "barcode">("name");
   const [searchRow, setSearchRow] = useState<number | null>(null);
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+  const { settings, getDensityPadding } = useTableSettings();
 
   const defaultVisible = useMemo(() => columns.map(c => c.key), [columns]);
   const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences(preferenceKey, defaultVisible);
@@ -186,18 +188,21 @@ export function GenericDocumentGrid({
   const showSearchPanel = searchRow !== null;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
       {/* Header row */}
-      <div className="flex border-b border-border bg-muted sticky top-0 z-10">
-        <div className="w-10 shrink-0 border-l border-border flex items-center justify-center">
+      <div className={cn(
+        "flex border-b border-slate-200 sticky top-0 z-10",
+        settings.headerColor
+      )}>
+        <div className="w-10 shrink-0 border-l border-slate-200 flex items-center justify-center bg-slate-100/30">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-1 text-muted-foreground hover:text-primary transition-colors">
+              <button className="p-1 text-slate-400 hover:text-blue-600 transition-colors">
                 <Settings2 className="w-3.5 h-3.5" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-[180px] shadow-xl">
-              <DropdownMenuLabel className="text-right text-[10px] font-black uppercase text-muted-foreground">تخصيص الأعمدة</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-right text-[10px] font-black uppercase text-slate-500 tracking-widest">تخصيص الأعمدة</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {columns.map((col) => (
                 <DropdownMenuCheckboxItem
@@ -215,8 +220,15 @@ export function GenericDocumentGrid({
         {filteredColumns.map((col) => (
           <div 
             key={col.key} 
-            className={cn("px-2 py-1.5 text-muted-foreground font-black border-l border-border text-[10px] uppercase tracking-tighter", col.width)}
-            style={{ textAlign: col.align || "right" }}
+            className={cn(
+              getDensityPadding(),
+              "text-slate-700 font-black border-l border-slate-200 uppercase tracking-tighter", 
+              col.width
+            )}
+            style={{ 
+              textAlign: col.align || "right",
+              fontSize: `${settings.fontSize}px`
+            }}
           >
             {col.header}
           </div>
@@ -225,7 +237,7 @@ export function GenericDocumentGrid({
       </div>
 
       {/* Table Body */}
-      <div className="flex-1 overflow-auto min-h-[300px]">
+      <div className="flex-1 overflow-auto min-h-[300px] custom-scrollbar">
         {lines.map((line, rowIdx) => {
           const isActiveRow = activeCell?.row === rowIdx;
           let editColCursor = 0;
@@ -234,12 +246,12 @@ export function GenericDocumentGrid({
             <div 
               key={line._id} 
               className={cn(
-                "flex border-b border-border hover:bg-muted transition-colors group",
-                isActiveRow ? "bg-primary/5" : rowIdx % 2 === 0 ? "bg-card" : "bg-muted/20"
+                "flex border-b border-slate-100 transition-colors group",
+                isActiveRow ? "bg-blue-50/50" : (settings.zebraRows && rowIdx % 2 === 1) ? "bg-slate-50/30" : "bg-white"
               )}
             >
               {/* Index */}
-              <div className="w-10 shrink-0 border-l border-border flex items-center justify-center text-[10px] text-muted-foreground bg-muted/30">
+              <div className="w-10 shrink-0 border-l border-slate-200 flex items-center justify-center text-[10px] text-slate-400 font-bold bg-slate-50/50">
                 {rowIdx + 1}
               </div>
 

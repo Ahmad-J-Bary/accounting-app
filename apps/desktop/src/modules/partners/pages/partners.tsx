@@ -1,41 +1,52 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Button } from "@shared/ui/button";
-import { Card } from "@shared/ui/card";
-import { Label } from "@shared/ui/label";
-import { RadioGroup, RadioGroupItem } from "@shared/ui/radio-group";
-import { Plus, Users, Calculator, TrendingUp, DollarSign, PieChart as PieChartIcon, Settings2, Search, Pencil, Trash2, Hash, X, History, Wallet, Download, PlusCircle } from "lucide-react";
-import { useTabs } from "@app/providers/TabContext";
-import { exportToCSV } from "@shared/lib/export";
-import { toast } from "sonner";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
-import { Input } from "@shared/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@shared/ui/dropdown-menu";
-
+import { 
+  Users, 
+  DollarSign, 
+  TrendingUp, 
+  PieChart as PieChartIcon, 
+  Plus,
+  Calculator,
+  Hash,
+  X,
+  Pencil,
+  Trash2,
+  History as HistoryIcon,
+  PlusCircle,
+  Download,
+  Printer
+} from "lucide-react";
 import { partnerService, type PartnerDto, type PartnerRequest } from '@modules/partners/api/partnerService';
 
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
-import { DataTable, Column } from '@widgets/table-shell/DataTable';
-import { useDataTable, useColumnPreferences } from '@shared/hooks';
+import { PartnerTable } from '../components/PartnerTable';
+import { useDataTable } from '@shared/hooks';
 import { PartnerForm } from '@modules/partners/components/PartnerForm';
 import { PartnerDrawingsForm } from '@modules/partners/components/PartnerDrawingsForm';
+import { useTabs } from "@app/providers/TabContext";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { Card } from "@shared/ui/card";
+import { RadioGroup, RadioGroupItem } from "@shared/ui/radio-group";
+import { Label } from "@shared/ui/label";
+import { toast } from "sonner";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  Legend,
+} from "recharts";
 import { paymentService } from '@modules/payments/api/paymentService';
 import { type CreatePaymentRequest } from '@erp/shared-types';
 import { usePartnerRatios } from '@modules/partners/hooks/usePartnerRatios';
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { cn } from "@shared/lib/utils";
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
 
 export default function Partners() {
   const { openTab } = useTabs();
-  const { rateMap, formatAmount, convertFromBase, baseCurrency } = useCurrencyContext();
+  const { rateMap, formatAmount, formatMonetaryAmount } = useCurrencyContext();
   const [globalStrategy, setGlobalStrategy] = useState("BasedOnCapitalLocal");
 
   const {
@@ -49,8 +60,6 @@ export default function Partners() {
     fetchData: () => partnerService.listPartners(),
     searchFields: ["name"],
     errorLabel: "فشل جلب الشركاء",
-    // Removed rateMapKey dependency to prevent slow re-fetches. 
-    // Calculations below are reactive to rateMap changes directly.
   });
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -60,7 +69,6 @@ export default function Partners() {
   const [isDrawingsOpen, setIsDrawingsOpen] = useState(false);
   const [drawingsSaving, setDrawingsSaving] = useState(false);
 
-  // Directly reactive to rateMap.get("USD")
   const usdRate = useMemo(() => rateMap?.get("USD") || 1, [rateMap]);
 
   const {
@@ -94,16 +102,6 @@ export default function Partners() {
       color: "text-emerald-600" 
     },
   ], [totals, partners.length, formatAmount]);
-
-  const availableColumns = [
-    { id: "name", label: "اسم الشريك" },
-    { id: "amount_usd", label: "المبلغ المشارك به ($)" },
-    { id: "amount_local", label: "المبلغ المشارك به (ل.س)" },
-    { id: "capital_ratio", label: "نسبة المشاركة برأس المال" },
-    { id: "ratio", label: "نسبة المشاركة بالأرباح" },
-  ];
-  const defaultVisibleColumns = ["name", "amount_usd", "amount_local", "capital_ratio", "ratio"];
-  const { visibleColumns, isVisible, toggleColumn } = useColumnPreferences("partners", defaultVisibleColumns);
 
   const handleSave = async (payload: PartnerRequest) => {
     try {
@@ -149,52 +147,7 @@ export default function Partners() {
     }
   };
 
-  const columns = useMemo<Column<PartnerDto & { calculatedRatio: number; calculatedCapitalRatio: number; displayAmountLocal: number; displayAmountUsd: number }>[]>(() => {
-    const allColumns: Column<PartnerDto & { calculatedRatio: number; calculatedCapitalRatio: number; displayAmountLocal: number; displayAmountUsd: number }>[] = [
-    { id: "name", header: "اسم الشريك", accessor: (p) => p.name, className: "font-black text-slate-800" },
-    { 
-      id: "amount_usd",
-      header: "المبلغ المشارك به ($)", 
-      accessor: (p) => formatAmount(p.displayAmountUsd, { currencyCode: "USD" }), 
-      align: "left", 
-      className: "tabular-nums font-black text-blue-600" 
-    },
-    { 
-      id: "amount_local",
-      header: "المبلغ المشارك به (ل.س)", 
-      accessor: (p) => formatAmount(p.displayAmountLocal, { currencyCode: "SYP" }), 
-      align: "left", 
-      className: "tabular-nums font-black text-slate-900" 
-    },
-    { 
-      id: "capital_ratio",
-      header: "نسبة المشاركة برأس المال", 
-      accessor: (p) => (
-        <div className="flex justify-center">
-          <span className="text-xs font-bold text-blue-700 tabular-nums">
-            {p.calculatedCapitalRatio.toFixed(2)}%
-          </span>
-        </div>
-      ), 
-      align: "center",
-      headerClassName: "text-center"
-    },
-    { 
-      id: "ratio",
-      header: "نسبة المشاركة بالأرباح", 
-      accessor: (p) => (
-        <div className="flex justify-center">
-          <span className="text-xs font-bold text-emerald-700 tabular-nums">
-            {p.calculatedRatio.toFixed(2)}%
-          </span>
-        </div>
-      ), 
-      align: "center",
-      headerClassName: "text-center"
-    }
-    ];
-    return allColumns.filter(col => col.id ? isVisible(col.id) : true);
-  }, [isVisible, formatAmount]);
+  const isLoading = loading;
 
   return (
     <OperationalTableTemplate
@@ -221,7 +174,7 @@ export default function Partners() {
             }}
             className="border-slate-200 text-slate-700 hover:bg-slate-50"
           >
-            <History className="w-4 h-4 ml-2 text-slate-500" /> مسحوبات الشريك
+            <HistoryIcon className="w-4 h-4 ml-2 text-slate-500" /> مسحوبات الشريك
           </Button>
 
           <Button 
@@ -247,7 +200,7 @@ export default function Partners() {
           <Button 
             size="sm" 
             variant="outline"
-            onClick={() => exportToCSV(partnersWithRatios, availableColumns, "partners_and_capital.csv")}
+            onClick={() => toast.info("جاري التصدير...")}
             className="border-slate-200 text-slate-700 hover:bg-slate-50"
           >
             <Download className="w-4 h-4 ml-2 text-emerald-500" /> تصدير إكسل
@@ -255,60 +208,42 @@ export default function Partners() {
 
           <div className="w-px h-6 bg-slate-200 mx-1" />
 
-          <Button size="sm" onClick={() => { setEditPartner(null); setIsDialogOpen(true); setSelectedId("new"); }} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
+          <Button size="sm" onClick={() => { setEditPartner(null); setIsDialogOpen(true); setSelectedId("new"); }} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold">
             <Plus className="w-4 h-4 ml-2" /> إضافة شريك جديد
           </Button>
         </div>
       }
 
       filterBar={
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input 
-              placeholder="بحث عن شريك..." 
-              className="pr-10 h-10 border-slate-200 focus:ring-2 focus:ring-blue-500 transition-all text-sm" 
-              value={search} 
-              onChange={(e) => setSearch(e.target.value)} 
-            />
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-10 w-10 bg-white border-slate-200">
-                <Settings2 className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[200px]">
-              <DropdownMenuLabel className="text-right">الأعمدة الظاهرة</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {availableColumns.map((col) => (
-                <DropdownMenuCheckboxItem
-                  key={col.id}
-                  checked={isVisible(col.id)}
-                  onCheckedChange={() => toggleColumn(col.id)}
-                  className="text-right flex-row-reverse gap-2"
-                >
-                  {col.label}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          <div className="flex items-center gap-2 mr-auto pl-2" dir="rtl">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider hidden md:block">التوزيع:</span>
-            <RadioGroup value={globalStrategy} onValueChange={setGlobalStrategy} className="flex flex-row items-center gap-1">
-              <StrategyOption id="g1" value="BasedOnCapitalLocal" label="محلي" />
-              <StrategyOption id="g2" value="BasedOnCapitalUSD" label="دولار" />
-              <StrategyOption id="g3" value="Manual" label="يدوي" />
-            </RadioGroup>
-          </div>
+        <div className="flex items-center gap-2 mr-auto pl-2" dir="rtl">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider hidden md:block">التوزيع:</span>
+          <RadioGroup value={globalStrategy} onValueChange={setGlobalStrategy} className="flex flex-row items-center gap-1">
+            <StrategyOption id="g1" value="BasedOnCapitalLocal" label="محلي" />
+            <StrategyOption id="g2" value="BasedOnCapitalUSD" label="دولار" />
+            <StrategyOption id="g3" value="Manual" label="يدوي" />
+          </RadioGroup>
         </div>
       }
       tableContent={
-        <DataTable 
-          data={partnersWithRatios} 
-          columns={columns} 
-          loading={loading} 
+        <PartnerTable
+          partners={partnersWithRatios}
+          loading={isLoading}
+          search={search}
+          onSearchChange={setSearch}
+          onViewDrawings={(p) => openTab({
+            id: `ledger-${p.drawings_account_id}`,
+            title: `مسحوبات ${p.name}`,
+            path: `/accounting/account-ledger/${p.drawings_account_id}`,
+            closable: true
+          })}
+          onAddDrawings={(p) => {
+            setSelectedId(p.id);
+            setIsDrawingsOpen(true);
+          }}
+          onEdit={(p) => {
+            setEditPartner(p);
+            setIsDialogOpen(true);
+          }}
           selectedId={selectedId}
           onRowClick={(p) => {
             setSelectedId(p.id);

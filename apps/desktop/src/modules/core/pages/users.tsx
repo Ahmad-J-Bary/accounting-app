@@ -2,24 +2,30 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { PageHeader } from '@widgets/page-header/PageHeader';
 import { Button } from "@shared/ui/button";
 import { Card } from "@shared/ui/card";
-import { Input } from "@shared/ui/input";
 import { StatusBadge } from '@widgets/stats/StatusBadge';
-import { Plus, Search, Users as UsersIcon, ShieldCheck, Shield } from "lucide-react";
+import { Plus, Users as UsersIcon, ShieldCheck, Shield, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { formatDateTime } from '@shared/lib/format';
 import { userService } from '@modules/core/api/userService';
 import type { User, Role, CreateUserRequest, CreateRoleRequest } from "@erp/shared-types";
 import { toast } from "sonner";
+import { cn } from "@shared/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@shared/ui/dropdown-menu";
 
 // Refactored Components & Hooks
-import { DataTable, Column } from '@widgets/table-shell/DataTable';
-import { TableActions } from '@widgets/table-shell/TableActions';
-import { useDataTable } from '@shared/hooks';
+import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
+import { TableShell } from '@widgets/table-shell/TableShell';
+import { useDataTable, useColumnPreferences } from '@shared/hooks';
 import { UserForm } from '@modules/core/components/UserForm';
 import { RoleTable } from '@modules/core/components/RoleTable';
 import { RoleForm } from '@modules/core/components/RoleForm';
 
-export default function Users() {
+export default function UsersPage() {
   const [activeTab, setActiveTab] = useState("users");
   
   const {
@@ -53,12 +59,81 @@ export default function Users() {
     }
   }, []);
 
-  useEffect(() => {
-    loadRoles();
-  }, [loadRoles]);
+  useEffect(() => { loadRoles(); }, [loadRoles]);
 
   const activeCount = useMemo(() => users.filter(u => u.is_active).length, [users]);
-  const adminCount = useMemo(() => users.filter(u => roles.find(r => r.id === u.role_id)?.permissions.includes("Admin")).length, [users, roles]);
+
+  const userColumns = useMemo<UnifiedColumn<User>[]>(() => [
+    { 
+      id: "full_name",
+      header: "الاسم الكامل", 
+      label: "الاسم الكامل", 
+      accessor: "full_name", 
+      className: "font-bold text-slate-800 min-w-[180px]" 
+    },
+    { 
+      id: "username",
+      header: "اسم المستخدم", 
+      label: "اسم المستخدم", 
+      accessor: "username", 
+      className: "text-slate-500 font-mono text-xs w-32" 
+    },
+    { 
+      id: "role",
+      header: "الصلاحية", 
+      label: "الدور/الصلاحية", 
+      accessor: (u) => {
+        const role = roles.find(r => r.id === u.role_id);
+        return (
+          <span className="bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
+            {role?.name ?? u.role_name ?? "غير محدد"}
+          </span>
+        );
+      },
+      className: "w-32"
+    },
+    { 
+      id: "last_login",
+      header: "آخر ظهور", 
+      label: "تاريخ آخر دخول", 
+      accessor: (u) => u.last_login ? formatDateTime(u.last_login) : "—",
+      className: "text-xs text-slate-400 tabular-nums w-44"
+    },
+    { 
+      id: "status",
+      header: "الحالة", 
+      label: "حالة الحساب", 
+      accessor: (u) => <StatusBadge status={u.is_active ? "active" : "inactive"} />, 
+      align: "center",
+      className: "w-28"
+    },
+    {
+      id: "actions",
+      header: "إجراءات",
+      label: "إجراءات",
+      accessor: (u) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600">
+              <MoreHorizontal className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-40">
+            <DropdownMenuItem onClick={() => toast.info("تعديل المستخدم قيد التطوير")} className="flex-row-reverse gap-2 text-blue-600 focus:text-blue-600">
+              <Edit className="w-4 h-4" /> تعديل
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => toast.warning("حذف المستخدم قيد التطوير")} className="flex-row-reverse gap-2 text-rose-600 focus:text-rose-600">
+              <Trash2 className="w-4 h-4" /> حذف
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+      align: "center",
+      className: "w-[80px]"
+    }
+  ], [roles]);
+
+  const { visibleColumns: userVisible, toggleColumn: toggleUserCol } = useColumnPreferences("users-unified", userColumns.map(c => c.id));
 
   const handleCreateUser = async (payload: CreateUserRequest) => {
     setSaving(true);
@@ -104,121 +179,69 @@ export default function Users() {
     }
   };
 
-  const userColumns = useMemo<Column<User>[]>(() => [
-    { 
-      header: "الاسم الكامل", 
-      accessor: "full_name", 
-      className: "font-bold text-slate-800" 
-    },
-    { 
-      header: "اسم المستخدم", 
-      accessor: "username", 
-      className: "text-slate-500 font-mono text-xs" 
-    },
-    { 
-      header: "الصلاحية", 
-      accessor: (u) => {
-        const role = roles.find(r => r.id === u.role_id);
-        return (
-          <span className="bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
-            {role?.name ?? u.role_name ?? "غير محدد"}
-          </span>
-        );
-      }
-    },
-    { 
-      header: "آخر ظهور", 
-      accessor: (u) => u.last_login ? formatDateTime(u.last_login) : "—",
-      className: "text-xs text-slate-400 tabular-nums"
-    },
-    { 
-      header: "الحالة", 
-      accessor: (u) => <StatusBadge status={u.is_active ? "active" : "inactive"} />, 
-      align: "center",
-      className: "w-[100px]"
-    },
-    {
-      header: "إجراءات",
-      accessor: (u) => (
-        <TableActions 
-          onEdit={() => toast.info("تعديل المستخدم قيد التطوير")}
-          onDelete={() => toast.warning("حذف المستخدم قيد التطوير")}
-        />
-      ),
-      align: "left",
-      className: "w-16"
-    }
-  ], [roles]);
-
-  const refreshAll = () => {
-    refreshUsers(true);
-    loadRoles();
-  };
-
   return (
-    <>
+    <div className="flex flex-col gap-6" dir="rtl">
       <PageHeader
         title="المستخدمون والصلاحيات"
         subtitle="إدارة حسابات المستخدمين وصلاحيات الوصول للنظام"
         breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "الإعدادات" }, { label: "المستخدمون" }]}
         actions={
-          <div className="flex gap-2">
-            <Button onClick={() => {
-              if (activeTab === "users") {
-                setShowUserDialog(true);
-              } else {
-                setSelectedRole(null);
-                setShowRoleDialog(true);
-              }
-            }}>
-              <Plus className="w-4 h-4 ml-2" />
-              {activeTab === "users" ? "مستخدم جديد" : "صلاحية جديدة"}
-            </Button>
-          </div>
+          <Button onClick={() => {
+            if (activeTab === "users") {
+              setShowUserDialog(true);
+            } else {
+              setSelectedRole(null);
+              setShowRoleDialog(true);
+            }
+          }} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold">
+            <Plus className="w-4 h-4 ml-2" />
+            {activeTab === "users" ? "مستخدم جديد" : "صلاحية جديدة"}
+          </Button>
         }
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatSummary label="إجمالي المستخدمين" value={users.length} icon={<UsersIcon />} />
-        <StatSummary label="مستخدم نشط" value={activeCount} icon={<ShieldCheck />} color="text-green-600" />
+        <StatSummary label="مستخدم نشط" value={activeCount} icon={<ShieldCheck />} color="text-emerald-600" />
         <StatSummary label="أدوار النظام" value={roles.length} icon={<Shield />} color="text-blue-600" />
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="bg-white border p-1 h-12 rounded-xl shadow-sm">
-          <TabsTrigger value="users" className="rounded-lg px-6 gap-2 data-[state=active]:bg-primary data-[state=active]:text-white transition-all">
+        <TabsList className="bg-white border border-slate-200 p-1 h-12 rounded-xl shadow-sm">
+          <TabsTrigger value="users" className="rounded-lg px-6 gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">
             <UsersIcon className="w-4 h-4" /> قائمة المستخدمين
           </TabsTrigger>
-          <TabsTrigger value="roles" className="rounded-lg px-6 gap-2 data-[state=active]:bg-primary data-[state=active]:text-white transition-all">
+          <TabsTrigger value="roles" className="rounded-lg px-6 gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">
             <Shield className="w-4 h-4" /> أدوار الوصول
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="users">
-          <Card className="p-5 border-none shadow-sm ring-1 ring-slate-100">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input 
-                  placeholder="بحث بالاسم أو اسم المستخدم..." 
-                  className="pr-10 border-slate-200 focus:ring-primary/20"
-                  value={search} 
-                  onChange={e => setSearch(e.target.value)} 
-                />
-              </div>
-            </div>
-
-            <DataTable
+          <TableShell
+            search={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="بحث بالاسم أو اسم المستخدم..."
+            columns={userColumns.map(c => ({
+              id: c.id,
+              label: c.label || (typeof c.header === 'string' ? c.header : c.id),
+              visible: userVisible.includes(c.id)
+            }))}
+            onColumnToggle={toggleUserCol}
+          >
+            <UnifiedTable
               data={users}
-              columns={userColumns}
+              columns={userColumns.map(col => ({
+                ...col,
+                visible: userVisible.includes(col.id)
+              }))}
               loading={usersLoading}
               emptyMessage={search ? "لا توجد نتائج للبحث" : "لا يوجد مستخدمين مضافين"}
             />
-          </Card>
+          </TableShell>
         </TabsContent>
 
         <TabsContent value="roles">
-          <Card className="p-5 border-none shadow-sm ring-1 ring-slate-100">
+          <Card className="p-1 border border-slate-200 rounded-xl overflow-hidden shadow-sm">
              <RoleTable 
                roles={roles}
                loading={loadingRoles}
@@ -244,18 +267,20 @@ export default function Users() {
         onSave={handleSaveRole}
         saving={saving}
       />
-    </>
+    </div>
   );
 }
 
 function StatSummary({ label, value, icon, color = "text-slate-900" }: { label: string, value: number, icon: React.ReactNode, color?: string }) {
   return (
-    <Card className="p-4 border-none shadow-sm ring-1 ring-slate-100">
-      <div className="text-xs text-slate-500 font-medium flex items-center gap-1.5 mb-1.5">
-        <span className="p-1 bg-slate-50 rounded-md text-slate-400">{icon}</span>
-        {label}
+    <Card className="p-4 border border-slate-100 shadow-sm flex items-center gap-4">
+      <div className={cn("p-3 rounded-xl bg-slate-50", color.replace("text-", "bg-").replace("600", "50"))}>
+        {icon}
       </div>
-      <div className={`text-2xl font-bold tabular-nums ${color}`}>{value}</div>
+      <div>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{label}</p>
+        <p className={cn("text-2xl font-black tabular-nums", color)}>{value}</p>
+      </div>
     </Card>
   );
 }

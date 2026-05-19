@@ -1,15 +1,26 @@
 import { useMemo, useState, useCallback } from "react";
-import { DataTable, Column } from '@widgets/table-shell/DataTable';
+import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
+import { TableShell } from '@widgets/table-shell/TableShell';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useColumnPreferences } from "@shared/hooks/useColumnPreferences";
 import type { SupplierDto } from "@erp/shared-types";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, Eye, MoreHorizontal, Pencil, Trash2, Truck } from "lucide-react";
+import { Button } from "@shared/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@shared/ui/dropdown-menu";
 
 interface SupplierTableProps {
   suppliers: SupplierDto[];
   loading: boolean;
   search: string;
-  visibleColumns: string[];
+  onSearchChange: (val: string) => void;
   onView: (s: SupplierDto) => void;
+  onEdit?: (s: SupplierDto) => void;
+  onDelete?: (id: string) => void;
   selectedId?: string | null;
 }
 
@@ -33,8 +44,8 @@ const SortableHeader = ({ field, label, currentField, direction, onSort }: Sorta
 
   return (
     <button 
-      onClick={() => onSort(field)}
-      className="flex items-center gap-1 hover:text-slate-700 transition-colors"
+      onClick={(e) => { e.stopPropagation(); onSort(field); }}
+      className="flex items-center gap-1 hover:text-slate-900 transition-colors"
     >
       {label}
       {getSortIcon(field)}
@@ -42,8 +53,8 @@ const SortableHeader = ({ field, label, currentField, direction, onSort }: Sorta
   );
 };
 
-export function SupplierTable({ suppliers, loading, search, visibleColumns, onView, selectedId }: SupplierTableProps) {
-  const { currencies, convertFromBase, formatAmount, baseCurrency } = useCurrencyContext();
+export function SupplierTable({ suppliers, loading, search, onSearchChange, onView, onEdit, onDelete, selectedId }: SupplierTableProps) {
+  const { currencies, formatAmount } = useCurrencyContext();
   const [sortField, setSortField] = useState<SortField>("code");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
@@ -60,98 +71,155 @@ export function SupplierTable({ suppliers, loading, search, visibleColumns, onVi
   const sortedSuppliers = useMemo(() => {
     const sorted = [...suppliers].sort((a, b) => {
       let comparison = 0;
-      
       switch (sortField) {
-        case "code":
-          comparison = (parseInt(a.code || "0", 10) || 0) - (parseInt(b.code || "0", 10) || 0);
-          break;
-        case "name":
-          comparison = (a.name || "").localeCompare(b.name || "", "ar");
-          break;
-        case "debit":
-          comparison = (Number(a.debit) || 0) - (Number(b.debit) || 0);
-          break;
-        case "credit":
-          comparison = (Number(a.credit) || 0) - (Number(b.credit) || 0);
-          break;
+        case "code": comparison = (parseInt(a.code || "0", 10) || 0) - (parseInt(b.code || "0", 10) || 0); break;
+        case "name": comparison = (a.name || "").localeCompare(b.name || "", "ar"); break;
+        case "debit": comparison = (Number(a.debit) || 0) - (Number(b.debit) || 0); break;
+        case "credit": comparison = (Number(a.credit) || 0) - (Number(b.credit) || 0); break;
       }
-      
       return sortDirection === "asc" ? comparison : -comparison;
     });
-    
     return sorted;
   }, [suppliers, sortField, sortDirection]);
 
-  const columns = useMemo<Column<SupplierDto>[]>(() => {
-    const cols: Column<SupplierDto>[] = [
+  const allColumns = useMemo<UnifiedColumn<SupplierDto>[]>(() => {
+    const cols: UnifiedColumn<SupplierDto>[] = [
       { 
-        id: "#",
+        id: "code",
         header: <SortableHeader field="code" label="#" currentField={sortField} direction={sortDirection} onSort={handleSort} />, 
-        accessor: (s) => s.code || "—",
-        className: "text-center font-black text-slate-500 w-14 cursor-pointer hover:bg-slate-50"
+        label: "رقم الحساب",
+        accessor: (s) => (
+          <span className="font-black text-slate-500">{s.code || "—"}</span>
+        ),
+        className: "w-16",
+        align: "center"
       },
       { 
         id: "name",
         header: <SortableHeader field="name" label="اسم المورد" currentField={sortField} direction={sortDirection} onSort={handleSort} />, 
-        accessor: "name", 
-        className: "font-bold text-slate-800 cursor-pointer hover:bg-slate-50" 
+        label: "اسم المورد",
+        accessor: (s) => (
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-600 shrink-0">
+              <Truck className="w-4 h-4" />
+            </div>
+            <span className="font-bold text-slate-800">{s.name}</span>
+          </div>
+        ),
+        className: "min-w-[200px]"
       },
       { 
         id: "phone",
         header: "رقم الهاتف", 
+        label: "رقم الهاتف",
         accessor: (s) => s.phone || "—", 
-        className: "tabular-nums text-slate-500" 
+        className: "tabular-nums text-slate-500 w-[140px]" 
       },
     ];
 
-    // 1. Debits
+    // Debits
     currencies.forEach(curr => {
       const symbol = curr.code === 'USD' ? '$' : curr.code === 'SYP' ? 'ل.س' : (curr.symbol || curr.code);
       cols.push({
         id: `debit_${curr.code}`,
         header: <SortableHeader field="debit" label={`مدين (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        label: `إجمالي المدين (${symbol})`,
         accessor: (s) => {
-          const val = convertFromBase(Number(s.debit || 0), curr.code);
-          return val > 0 ? formatAmount(Number(s.debit || 0), { currencyCode: curr.code }) : "—";
+          const val = Number(s.debit || 0);
+          return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "—";
         },
         align: "left",
-        className: "text-red-600 tabular-nums font-medium text-[11px] cursor-pointer hover:bg-slate-50"
+        className: "text-red-600 tabular-nums font-bold"
       });
     });
 
-    // 2. Credits
+    // Credits
     currencies.forEach(curr => {
       const symbol = curr.code === 'USD' ? '$' : curr.code === 'SYP' ? 'ل.س' : (curr.symbol || curr.code);
       cols.push({
         id: `credit_${curr.code}`,
         header: <SortableHeader field="credit" label={`دائن (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        label: `إجمالي الدائن (${symbol})`,
         accessor: (s) => {
-          const val = convertFromBase(Number(s.credit || 0), curr.code);
-          return val > 0 ? formatAmount(Number(s.credit || 0), { currencyCode: curr.code }) : "—";
+          const val = Number(s.credit || 0);
+          return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "—";
         },
         align: "left",
-        className: "text-green-600 tabular-nums font-medium text-[11px] cursor-pointer hover:bg-slate-50"
+        className: "text-emerald-600 tabular-nums font-bold"
       });
     });
 
-    return cols;
-  }, [currencies, convertFromBase, formatAmount, sortField, sortDirection, handleSort]);
-
-  const filteredColumns = useMemo(() => {
-    return columns.filter(col => {
-      if (!col.id || col.id === "actions") return true;
-      return visibleColumns.includes(col.id);
+    // Actions
+    cols.push({
+      id: "actions",
+      header: "إجراءات",
+      label: "إجراءات",
+      accessor: (s) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600">
+              <MoreHorizontal className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-40">
+            <DropdownMenuItem onClick={() => onView(s)} className="flex-row-reverse gap-2">
+              <Eye className="w-4 h-4" /> عرض الملف
+            </DropdownMenuItem>
+            {(onEdit || onDelete) && <div className="h-px bg-slate-100 my-1" />}
+            {onEdit && (
+              <DropdownMenuItem onClick={() => onEdit(s)} className="flex-row-reverse gap-2">
+                <Pencil className="w-4 h-4" /> تعديل البيانات
+              </DropdownMenuItem>
+            )}
+            {onDelete && (
+              <DropdownMenuItem onClick={() => onDelete(s.id)} className="flex-row-reverse gap-2 text-red-600">
+                <Trash2 className="w-4 h-4" /> حذف
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+      align: "center",
+      className: "w-[80px]"
     });
-  }, [columns, visibleColumns]);
+
+    return cols;
+  }, [currencies, formatAmount, sortField, sortDirection, handleSort, onView, onEdit, onDelete]);
+
+  const defaultVisible = ["code", "name", "phone", "debit_USD", "credit_USD", "actions"];
+  const { visibleColumns, toggleColumn } = useColumnPreferences("suppliers-unified", defaultVisible);
+
+  const enrichedColumns = useMemo(() => {
+    return allColumns.map(col => ({
+      ...col,
+      visible: visibleColumns.includes(col.id)
+    }));
+  }, [allColumns, visibleColumns]);
+
+  const toolbarColumns = useMemo(() => {
+    return allColumns.map(c => ({
+      id: c.id,
+      label: c.label || (typeof c.header === 'string' ? c.header : c.id),
+      visible: visibleColumns.includes(c.id)
+    }));
+  }, [allColumns, visibleColumns]);
 
   return (
-    <DataTable
-      data={sortedSuppliers}
-      columns={filteredColumns}
-      loading={loading}
-      onRowClick={onView}
-      selectedId={selectedId}
-      emptyMessage={search ? "لا توجد نتائج بحث تطابق استعلامك" : "قائمة الموردين فارغة حالياً"}
-    />
+    <TableShell
+      title="سجل الموردين"
+      search={search}
+      onSearchChange={onSearchChange}
+      columns={toolbarColumns}
+      onColumnToggle={toggleColumn}
+    >
+      <UnifiedTable
+        data={sortedSuppliers}
+        columns={enrichedColumns}
+        loading={loading}
+        onRowClick={onView}
+        selectedId={selectedId}
+        emptyMessage={search ? "لا توجد نتائج بحث تطابق استعلامك" : "قائمة الموردين فارغة حالياً"}
+      />
+    </TableShell>
   );
 }

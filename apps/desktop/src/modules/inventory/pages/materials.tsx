@@ -59,52 +59,6 @@ export default function Materials() {
 
   const isLoading = loading || refreshing;
 
-  const availableColumns = useMemo(() => {
-    const cols = [
-      { id: "code", label: "الكود" },
-      { id: "barcode", label: "الباركود" },
-      { id: "name", label: "اسم المادة" },
-      { id: "categories", label: "التصنيفات" },
-      { id: "units", label: "الوحدات" },
-      { id: "total_available", label: "المتوفر" },
-      { id: "default_purchase_unit", label: "الوحدة الافتراضية / شراء" },
-      { id: "default_sale_unit", label: "الوحدة الافتراضية / مبيع" },
-      { id: "name_en", label: "اسم بديل (EN)" },
-      { id: "notes", label: "ملاحظة" },
-    ];
-
-    // Multi-currency price columns grouped by type
-    currencies.forEach(curr => {
-      const s = curr.symbol || curr.code;
-      cols.push({ id: `average_cost_${curr.code}`, label: `التكلفة (${s})` });
-    });
-    currencies.forEach(curr => {
-      const s = curr.symbol || curr.code;
-      cols.push({ id: `last_purchase_${curr.code}`, label: `آخر شراء (${s})` });
-    });
-    currencies.forEach(curr => {
-      const s = curr.symbol || curr.code;
-      cols.push({ id: `last_sale_${curr.code}`, label: `آخر مبيع (${s})` });
-    });
-
-    return cols;
-  }, [currencies]);
-
-  const defaultVisibleColumns = useMemo(() => {
-    const base = ["code", "name", "units", "total_available"];
-    if (baseCurrency) {
-      base.push(`average_cost_${baseCurrency.code}`);
-    }
-    // Add other currency costs by default
-    currencies.forEach(c => {
-      if (baseCurrency && c.code === baseCurrency.code) return;
-      base.push(`average_cost_${c.code}`);
-    });
-    return base;
-  }, [currencies, baseCurrency]);
-
-  const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences("materials", defaultVisibleColumns);
-
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [managingUnitsMaterial, setManagingUnitsMaterial] = useState<MaterialDto | null>(null);
   const [showUnitsPanel, setShowUnitsPanel] = useState(false);
@@ -213,50 +167,19 @@ export default function Materials() {
           </>
         }
 
-        filterBar={
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input
-                placeholder="بحث بالاسم أو الكود أو الباركود..."
-                className="pr-10 h-10 border-slate-200 focus:ring-2 focus:ring-blue-500 transition-all text-sm"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-10 w-10 bg-white border-slate-200">
-                  <Settings2 className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[220px] max-h-[450px] overflow-y-auto shadow-xl">
-                <DropdownMenuLabel className="text-right text-xs font-black uppercase text-slate-400 tracking-widest">تخصيص الأعمدة</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {availableColumns.map((col) => (
-                  <DropdownMenuCheckboxItem
-                    key={col.id}
-                    checked={isVisible(col.id)}
-                    onCheckedChange={() => toggleColumn(col.id)}
-                    className="text-right flex-row-reverse gap-2 text-xs font-bold py-2"
-                  >
-                    {col.label}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        }
         tableContent={
           <MaterialTable 
             materials={materials}
             categories={categories}
-            loading={loading}
+            loading={isLoading}
             search={search}
+            onSearchChange={setSearch}
             onEdit={handleOpenEdit}
             onDelete={handleDelete}
-            onManageUnits={setManagingUnitsMaterial}
-            visibleColumns={visibleColumns}
+            onManageUnits={(m) => {
+              setManagingUnitsMaterial(m);
+              setShowUnitsPanel(true);
+            }}
             selectedId={selectedId}
             onRowClick={(m) => setSelectedId(m.id)}
           />

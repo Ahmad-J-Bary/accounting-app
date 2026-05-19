@@ -2,12 +2,15 @@ import { useState, useEffect } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Label } from "@shared/ui/label";
-import { Save, RefreshCw, Building, FileText, Settings as SettingsIcon, Globe, ShieldCheck, Mail, Phone, MapPin, DollarSign, Percent, CalendarDays } from "lucide-react";
+import { Save, RefreshCw, Building, FileText, Settings as SettingsIcon, Globe, ShieldCheck, Mail, Phone, MapPin, DollarSign, Percent, CalendarDays, Table2 } from "lucide-react";
 import { settingsService } from '@modules/core/api/settingsService';
 import type { CompanySettings, UpdateSettingsRequest } from "@erp/shared-types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { toast } from "sonner";
 import { cn } from "@shared/lib/utils";
+
+// Components
+import { TableSettingsManager } from "../components/TableSettingsManager";
 
 // Templates
 import { SettingsLayout, SettingsSection } from "@widgets/templates/SettingsLayout";
@@ -78,6 +81,7 @@ export default function Settings() {
     { id: "company", label: "بيانات الشركة", icon: Building },
     { id: "prefixes", label: "الأرقام التسلسلية", icon: FileText },
     { id: "financial", label: "الإعدادات المالية", icon: SettingsIcon },
+    { id: "tables", label: "مظهر الجداول", icon: Table2 },
     { id: "localization", label: "اللغة والمنطقة", icon: Globe },
     { id: "security", label: "الأمان والوصول", icon: ShieldCheck },
   ];
@@ -164,6 +168,15 @@ export default function Settings() {
               </div>
             </div>
           </div>
+        </SettingsSection>
+      )}
+
+      {activeNav === "tables" && (
+        <SettingsSection 
+          title="تخصيص مظهر الجداول" 
+          description="تحكم في كيفية عرض البيانات في جميع أقسام النظام بما يتناسب مع احتياجاتك."
+        >
+          <TableSettingsManager />
         </SettingsSection>
       )}
 

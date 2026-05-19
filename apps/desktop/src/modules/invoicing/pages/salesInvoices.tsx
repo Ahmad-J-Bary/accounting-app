@@ -12,7 +12,6 @@ import { GenericDocumentGrid } from '@widgets/document-shell/GenericDocumentGrid
 import { SummaryPanel } from '@widgets/document-shell/SummaryPanel';
 import { InvoicePartySelector } from '../components/InvoicePartySelector';
 import { useInvoiceLifecycle } from '../hooks/useInvoiceLifecycle';
-import { type DocumentStatus } from '../components/DocumentStatusBadge';
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 
 export default function SalesInvoices() {

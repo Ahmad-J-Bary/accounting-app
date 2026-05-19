@@ -101,15 +101,6 @@ export default function Journal() {
       toolbar={<></>}
       filterBar={
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[280px]">
-            <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <Input
-              placeholder="بحث في القيود (الرقم، البيان)..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-4 pr-10 h-10 w-full bg-white shadow-sm font-bold placeholder:font-medium border-slate-200"
-            />
-          </div>
           <Select 
             value={filters.journal_type} 
             onValueChange={(val) => setFilters(f => ({ ...f, journal_type: val as JournalType }))}
@@ -128,15 +119,14 @@ export default function Journal() {
       }
       tableContent={
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-full">
-          <div className="flex-1 overflow-auto">
-            <JournalTable
-              key={`journal-table-${filters.journal_type || 'GeneralJournal'}`}
-              entries={displayEntries}
-              loading={loading}
-              visibleColumns={visibleColumns}
-              filters={filters as JournalFilters}
-            />
-          </div>
+          <JournalTable
+            key={`journal-table-${filters.journal_type || 'GeneralJournal'}`}
+            entries={displayEntries}
+            loading={loading}
+            search={search}
+            onSearchChange={setSearch}
+            filters={filters as JournalFilters}
+          />
         </div>
       }
       summaryContent={

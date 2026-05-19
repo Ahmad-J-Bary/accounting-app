@@ -46,6 +46,8 @@ export default function AccountMovement() {
   const {
     loading,
     refresh,
+    search,
+    setSearch,
   } = useDataTable<AccountLedgerLineDto>({
     fetchData: async () => {
       if (!accountId) return [];
@@ -244,13 +246,13 @@ export default function AccountMovement() {
         </div>
       }
       tableContent={
-        <div className="p-4">
-          <AccountMovementTable
-            lines={filteredLines}
-            loading={loading}
-            accountName={ledger?.account_name || ""}
-          />
-        </div>
+        <AccountMovementTable
+          lines={filteredLines}
+          loading={loading}
+          search={search}
+          onSearchChange={setSearch}
+          accountName={ledger?.account_name || ""}
+        />
       }
       summaryContent={
         ledger && (

@@ -1,13 +1,15 @@
-import { useState, useEffect } from "react";
-import { PageHeader } from '@widgets/page-header/PageHeader';
+import { useState, useEffect, useMemo } from "react";
 import { Card } from "@shared/ui/card";
-import { Input } from "@shared/ui/input";
-import { Search, Activity, Shield } from "lucide-react";
+import { Activity, Shield } from "lucide-react";
 import { formatDateTime } from '@shared/lib/format';
 import { auditService } from '@modules/core/api/auditService';
 import type { AuditLog } from "@erp/shared-types";
+import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
+import { TableShell } from "@widgets/table-shell/TableShell";
+import { useColumnPreferences } from "@shared/hooks/useColumnPreferences";
+import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 
-export default function AuditLog() {
+export default function AuditLogPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -23,86 +25,104 @@ export default function AuditLog() {
   useEffect(() => { load(); }, []);
 
   const filtered = logs.filter(l =>
-    l.username.includes(search) || 
-    l.action.includes(search) || 
-    l.entity_type.includes(search) ||
-    (l.entity_id ?? "").includes(search)
+    l.username.toLowerCase().includes(search.toLowerCase()) || 
+    l.action.toLowerCase().includes(search.toLowerCase()) || 
+    l.entity_type.toLowerCase().includes(search.toLowerCase()) ||
+    (l.entity_id ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
+  const allColumns = useMemo<UnifiedColumn<AuditLog>[]>(() => [
+    {
+      id: "created_at",
+      header: "التاريخ والوقت",
+      label: "تاريخ ووقت العملية",
+      accessor: (l) => formatDateTime(l.created_at),
+      className: "w-44 tabular-nums text-slate-500 text-xs"
+    },
+    {
+      id: "username",
+      header: "المستخدم",
+      label: "اسم المستخدم",
+      accessor: (l) => (
+        <span className="font-bold text-slate-700">{l.username}</span>
+      ),
+      className: "w-32"
+    },
+    {
+      id: "action",
+      header: "العملية",
+      label: "نوع العملية",
+      accessor: (l) => (
+        <span className="px-2 py-1 rounded bg-blue-50 text-blue-700 font-bold text-[10px] uppercase">
+          {l.action}
+        </span>
+      ),
+      className: "w-24"
+    },
+    {
+      id: "entity_type",
+      header: "نوع الكيان",
+      label: "نوع الكيان المتأثر",
+      accessor: "entity_type",
+      className: "w-32 text-slate-600"
+    },
+    {
+      id: "entity_id",
+      header: "معرف الكيان",
+      label: "المعرف الفريد للكيان",
+      accessor: (l) => l.entity_id || "—",
+      className: "font-mono text-[10px] text-slate-400"
+    },
+    {
+      id: "ip_address",
+      header: "IP Address",
+      label: "عنوان IP",
+      accessor: (l) => l.ip_address || "—",
+      align: "left",
+      className: "font-mono text-[10px] text-slate-400 w-32"
+    }
+  ], []);
+
+  const { visibleColumns, toggleColumn } = useColumnPreferences("audit-log-unified", allColumns.map(c => c.id));
+
+  const enrichedColumns = useMemo(() => {
+    return allColumns.map(col => ({
+      ...col,
+      visible: visibleColumns.includes(col.id)
+    }));
+  }, [allColumns, visibleColumns]);
+
+  const toolbarColumns = useMemo(() => {
+    return allColumns.map(c => ({
+      id: c.id,
+      label: c.label || (typeof c.header === 'string' ? c.header : c.id),
+      visible: visibleColumns.includes(c.id)
+    }));
+  }, [allColumns, visibleColumns]);
+
   return (
-    <>
-      <PageHeader
-        title="سجل مراقبة النظام"
-        subtitle="تتبع كافة الإجراءات والعمليات المنفذة في النظام"
-        breadcrumbs={[{ label: "الرئيسية", to: "/dashboard" }, { label: "النظام" }, { label: "سجل العمليات" }]}
-        actions={<div />}
-      />
-
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
-          {error} <button className="mr-2 underline" onClick={() => setError(null)}>إغلاق</button>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <Card className="p-4">
-          <div className="text-sm text-muted-foreground flex items-center gap-1">
-            <Activity className="w-4 h-4 text-blue-500" /> إجمالي العمليات المسجلة
-          </div>
-          <div className="text-2xl font-bold tabular-nums mt-1">{logs.length} (آخر 500 عملية)</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-sm text-muted-foreground flex items-center gap-1">
-            <Shield className="w-4 h-4 text-primary" /> مستوى الأمان
-          </div>
-          <div className="text-2xl font-bold text-green-600 mt-1 flex items-center">
-            نشط <span className="text-sm text-muted-foreground mr-2 font-normal">(مراقبة شاملة)</span>
-          </div>
-        </Card>
-      </div>
-
-      <Card className="p-5">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="relative flex-1 min-w-[220px]">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="بحث بالمستخدم، نوع العملية، معرف الكيان..." className="pr-10"
-              value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="text-center py-12 text-muted-foreground">جاري التحميل...</div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">لا يوجد سجلات مطابقة للبحث</div>
-        ) : (
-          <div className="border border-border rounded-md overflow-x-auto">
-            <table className="w-full text-sm min-w-[800px]">
-              <thead className="bg-slate-50 border-b border-border">
-                <tr>
-                  <th className="text-right px-4 py-3 font-medium">التاريخ والوقت</th>
-                  <th className="text-right px-4 py-3 font-medium">المستخدم</th>
-                  <th className="text-right px-4 py-3 font-medium">العملية</th>
-                  <th className="text-right px-4 py-3 font-medium">نوع الكيان</th>
-                  <th className="text-right px-4 py-3 font-medium">معرف الكيان</th>
-                  <th className="text-left px-4 py-3 font-medium">IP Address</th>
-                </tr>
-              </thead>
-              <tbody className="font-mono text-xs">
-                {filtered.map(l => (
-                  <tr key={l.id} className="border-b border-border last:border-0 hover:bg-slate-50">
-                    <td className="px-4 py-3">{formatDateTime(l.created_at)}</td>
-                    <td className="px-4 py-3">{l.username}</td>
-                    <td className="px-4 py-3 text-blue-600 font-bold">{l.action}</td>
-                    <td className="px-4 py-3">{l.entity_type}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{l.entity_id ?? "—"}</td>
-                    <td className="px-4 py-3 text-left">{l.ip_address ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
-    </>
+    <OperationalTableTemplate
+      title="سجل مراقبة النظام"
+      stats={[
+        { label: "إجمالي العمليات", value: logs.length, icon: Activity, color: "text-blue-600" },
+        { label: "حالة الأمان", value: "نشط", icon: Shield, color: "text-emerald-600" }
+      ]}
+      tableContent={
+        <TableShell
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="بحث بالمستخدم، العملية، الكيان..."
+          columns={toolbarColumns}
+          onColumnToggle={toggleColumn}
+        >
+          <UnifiedTable
+            data={filtered}
+            columns={enrichedColumns}
+            loading={loading}
+            emptyMessage="لا توجد سجلات مراقبة حالياً"
+          />
+        </TableShell>
+      }
+    />
   );
 }

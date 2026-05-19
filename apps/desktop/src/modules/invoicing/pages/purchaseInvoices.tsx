@@ -12,7 +12,6 @@ import { InvoicePartySelector } from "../components/InvoicePartySelector";
 import { DocumentStatusBadge } from "../components/DocumentStatusBadge";
 import { InvoiceList } from "../components/InvoiceList";
 import { useInvoiceLifecycle } from "../hooks/useInvoiceLifecycle";
-import { type DocumentStatus } from "../components/DocumentStatusBadge";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 
 export default function PurchaseInvoices() {

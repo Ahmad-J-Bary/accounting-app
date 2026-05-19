@@ -1,14 +1,16 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@shared/ui/button";
-import { Input } from "@shared/ui/input";
-import { Plus, Search, Factory, CheckCircle, Clock, Banknote } from "lucide-react";
+import { Plus, Factory, CheckCircle, Clock, Banknote } from "lucide-react";
 import { formatCurrency, formatDateTime } from '@shared/lib/format';
 import { productionService } from '@modules/inventory/api/inventoryService';
 import type { ProductionOrder } from "@erp/shared-types";
 import { cn } from "@shared/lib/utils";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
-import { DataTable, Column } from '@widgets/table-shell/DataTable';
-import { useDataTable } from '@shared/hooks';
+
+// Refactored Components & Hooks
+import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
+import { TableShell } from '@widgets/table-shell/TableShell';
+import { useDataTable, useColumnPreferences } from '@shared/hooks';
 import { toast } from "sonner";
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
@@ -18,7 +20,7 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
   Cancelled: { label: "ملغي", cls: "bg-rose-50 text-rose-700 ring-rose-100" },
 };
 
-export default function Production() {
+export default function ProductionPage() {
   const {
     filtered: orders,
     loading,
@@ -30,47 +32,57 @@ export default function Production() {
     searchFields: ["order_number"],
   });
 
-  const completed = useMemo(() => orders.filter(o => o.status === "Completed").length, [orders]);
-  const inProgress = useMemo(() => orders.filter(o => o.status === "InProgress").length, [orders]);
-  const totalCost = useMemo(() => orders.reduce((s, o) => s + parseFloat(o.total_cost || "0"), 0), [orders]);
-
-  const columns = useMemo<Column<ProductionOrder>[]>(() => [
+  const allColumns = useMemo<UnifiedColumn<ProductionOrder>[]>(() => [
     { 
+      id: "order_number",
       header: "رقم الأمر", 
+      label: "رقم أمر الإنتاج", 
       accessor: "order_number", 
-      className: "font-black text-blue-600 font-mono" 
+      className: "font-black text-blue-600 font-mono w-28" 
     },
     { 
+      id: "production_date",
       header: "التاريخ", 
+      label: "تاريخ الإنتاج", 
       accessor: (o) => formatDateTime(o.production_date),
-      className: "tabular-nums text-slate-500 font-medium"
+      className: "tabular-nums text-slate-500 font-medium w-32"
     },
     { 
+      id: "materials_count",
       header: "المواد الخام", 
+      label: "عدد المواد الخام المستخدمة", 
       accessor: (o) => (
         <span className="inline-flex items-center gap-1.5 bg-slate-100 px-2 py-1 rounded text-slate-600 font-bold text-xs">
           {o.materials.length} أصناف
         </span>
       ),
-      align: "center"
+      align: "center",
+      className: "w-32"
     },
     { 
+      id: "outputs_count",
       header: "المنتجات التامة", 
+      label: "عدد المنتجات التامة الناتجة", 
       accessor: (o) => (
         <span className="inline-flex items-center gap-1.5 bg-blue-50 px-2 py-1 rounded text-blue-600 font-bold text-xs">
           {o.outputs.length} منتجات
         </span>
       ),
-      align: "center"
+      align: "center",
+      className: "w-32"
     },
     { 
+      id: "total_cost",
       header: "إجمالي التكلفة", 
+      label: "إجمالي تكلفة الإنتاج", 
       accessor: (o) => formatCurrency(parseFloat(o.total_cost)), 
       align: "left", 
-      className: "tabular-nums font-black text-slate-900" 
+      className: "tabular-nums font-black text-slate-900 w-32" 
     },
     { 
+      id: "status",
       header: "الحالة", 
+      label: "حالة الأمر", 
       accessor: (o) => {
         const st = STATUS_MAP[o.status] ?? { label: o.status, cls: "bg-slate-100 text-slate-700 ring-slate-200" };
         return (
@@ -82,60 +94,63 @@ export default function Production() {
           </span>
         );
       },
-      align: "center"
+      align: "center",
+      className: "w-28"
     }
   ], []);
+
+  const { visibleColumns, toggleColumn } = useColumnPreferences("production-orders-unified", allColumns.map(c => c.id));
+
+  const enrichedColumns = useMemo(() => {
+    return allColumns.map(col => ({
+      ...col,
+      visible: visibleColumns.includes(col.id)
+    }));
+  }, [allColumns, visibleColumns]);
+
+  const toolbarColumns = useMemo(() => {
+    return allColumns.map(c => ({
+      id: c.id,
+      label: c.label || (typeof c.header === 'string' ? c.header : c.id),
+      visible: visibleColumns.includes(c.id)
+    }));
+  }, [allColumns, visibleColumns]);
+
+  const completed = useMemo(() => orders.filter(o => o.status === "Completed").length, [orders]);
+  const inProgress = useMemo(() => orders.filter(o => o.status === "InProgress").length, [orders]);
+  const totalCost = useMemo(() => orders.reduce((s, o) => s + parseFloat(o.total_cost || "0"), 0), [orders]);
 
   const stats = useMemo(() => [
     { label: "إجمالي الأوامر", value: orders.length, icon: Factory, color: "text-slate-900" },
     { label: "جاري التنفيذ", value: inProgress, icon: Clock, color: "text-blue-600" },
     { label: "أوامر مكتملة", value: completed, icon: CheckCircle, color: "text-emerald-600" },
     { label: "إجمالي التكاليف", value: formatCurrency(totalCost), icon: Banknote, color: "text-indigo-600" },
-  ], [orders, inProgress, completed, totalCost]);
+  ], [orders.length, inProgress, completed, totalCost]);
 
   return (
     <OperationalTableTemplate
       title="أوامر الإنتاج"
+      stats={stats}
       toolbar={
-        <div className="flex gap-2">
-          <Button size="sm" onClick={() => toast.info("أمر إنتاج جديد قيد التطوير")} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
-            <Plus className="w-4 h-4 ml-2" />أمر إنتاج جديد
-          </Button>
-        </div>
-      }
-      filterBar={
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              placeholder="بحث برقم الأمر..."
-              className="pr-10 h-11 border-slate-200 focus:ring-2 focus:ring-blue-500 transition-all"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-
-          <div className="flex items-center gap-6 mr-auto pl-2">
-            {stats.map((s, i) => (
-              <div key={i} className="flex flex-col items-start gap-1">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{s.label}</span>
-                <div className="flex items-center gap-2">
-                   <s.icon className={cn("w-4 h-4", s.color)} />
-                   <span className={cn("text-lg font-black tabular-nums", s.color)}>{s.value}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-        </div>
+        <Button size="sm" onClick={() => toast.info("أمر إنتاج جديد قيد التطوير")} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold">
+          <Plus className="w-4 h-4 ml-2" /> أمر إنتاج جديد
+        </Button>
       }
       tableContent={
-        <DataTable
-          data={orders}
-          columns={columns}
-          loading={loading}
-          emptyMessage={search ? "لا توجد نتائج للبحث" : "لا توجد أوامر إنتاج مسجّلة"}
-        />
+        <TableShell
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="بحث برقم الأمر..."
+          columns={toolbarColumns}
+          onColumnToggle={toggleColumn}
+        >
+          <UnifiedTable
+            data={orders}
+            columns={enrichedColumns}
+            loading={loading}
+            emptyMessage={search ? "لا توجد نتائج للبحث" : "لا توجد أوامر إنتاج مسجّلة"}
+          />
+        </TableShell>
       }
     />
   );
