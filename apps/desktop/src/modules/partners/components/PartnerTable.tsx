@@ -1,17 +1,12 @@
 import { useMemo, useState, useCallback } from "react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
+import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useColumnPreferences } from "@shared/hooks/useColumnPreferences";
+import { useUnifiedColumns } from "@shared/hooks";
 import type { PartnerDto } from "@erp/shared-types";
-import { ArrowUpDown, Eye, MoreHorizontal, Users, History, PlusCircle } from "lucide-react";
-import { Button } from "@shared/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@shared/ui/dropdown-menu";
+import { ArrowUpDown, Eye, Pencil, Trash2, NotebookText, Receipt, Users } from "lucide-react";
+import { ActionsDropdown } from "@shared/ui/actions-dropdown";
 
 type PartnerWithRatios = PartnerDto & { 
   calculatedRatio: number; 
@@ -25,9 +20,11 @@ interface PartnerTableProps {
   loading: boolean;
   search: string;
   onSearchChange: (val: string) => void;
-  onViewDrawings: (p: PartnerDto) => void;
-  onAddDrawings: (p: PartnerDto) => void;
+  onView: (p: PartnerDto) => void;
   onEdit: (p: PartnerDto) => void;
+  onDelete: (id: string) => void;
+  onJournal: (p: PartnerDto) => void;
+  onDocument: (p: PartnerDto) => void;
   selectedId?: string | null;
   onRowClick?: (p: PartnerDto) => void;
 }
@@ -66,9 +63,11 @@ export function PartnerTable({
   loading, 
   search, 
   onSearchChange, 
-  onViewDrawings, 
-  onAddDrawings, 
+  onView,
   onEdit,
+  onDelete,
+  onJournal,
+  onDocument,
   selectedId, 
   onRowClick 
 }: PartnerTableProps) {
@@ -161,47 +160,50 @@ export function PartnerTable({
       header: "إجراءات",
       label: "إجراءات",
       accessor: (p: PartnerWithRatios) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600">
-              <MoreHorizontal className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48">
-            <DropdownMenuItem onClick={() => onViewDrawings(p)} className="flex-row-reverse gap-2">
-              <History className="w-4 h-4" /> مسحوبات الشريك
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onAddDrawings(p)} className="flex-row-reverse gap-2 text-amber-600 focus:text-amber-600">
-              <PlusCircle className="w-4 h-4" /> سند مسحوبات
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onEdit(p)} className="flex-row-reverse gap-2 text-blue-600 focus:text-blue-600">
-              <Eye className="w-4 h-4" /> تعديل البيانات
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <ActionsDropdown
+          actions={[
+            { label: "عرض الملف", icon: <Eye className="w-4 h-4" />, onClick: () => onView(p) },
+            { label: "تعديل البيانات", icon: <Pencil className="w-4 h-4" />, onClick: () => onEdit(p), className: "text-blue-600 focus:text-blue-600" },
+            { label: "حذف الشريك", icon: <Trash2 className="w-4 h-4" />, onClick: () => onDelete(p.id), className: "text-red-600 focus:text-red-600" },
+            { label: "اليومية", icon: <NotebookText className="w-4 h-4" />, onClick: () => onJournal(p) },
+            { label: "سند مسحوبات", icon: <Receipt className="w-4 h-4" />, onClick: () => onDocument(p) },
+          ]}
+        />
       ),
       align: "center",
       className: "w-[80px]"
     }
-  ], [formatAmount, sortField, sortDirection, handleSort, onViewDrawings, onAddDrawings, onEdit]);
+  ], [formatAmount, sortField, sortDirection, handleSort, onView, onEdit, onDelete, onJournal, onDocument]);
 
-  const defaultVisible = ["name", "amount_usd", "amount_local", "capital_ratio", "ratio", "actions"];
-  const { visibleColumns, toggleColumn } = useColumnPreferences("partners-unified", defaultVisible);
+  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+    tableId: "partners-unified",
+    columns: allColumns,
+    defaultVisible: ["name", "amount_usd", "amount_local", "capital_ratio", "ratio", "actions"],
+  });
 
-  const enrichedColumns = useMemo(() => {
-    return allColumns.map(col => ({
-      ...col,
-      visible: visibleColumns.includes(col.id)
-    }));
-  }, [allColumns, visibleColumns]);
-
-  const toolbarColumns = useMemo(() => {
-    return allColumns.map(c => ({
-      id: c.id,
-      label: c.label || (typeof c.header === 'string' ? c.header : c.id),
-      visible: visibleColumns.includes(c.id)
-    }));
-  }, [allColumns, visibleColumns]);
+  const summaryColumns = useMemo<SummaryColumn[]>(() => {
+    const totalUSD = sortedPartners.reduce((s, p) => s + p.displayAmountUsd, 0);
+    const totalSYP = sortedPartners.reduce((s, p) => s + p.displayAmountLocal, 0);
+    const totalCapitalRatio = sortedPartners.reduce((s, p) => s + p.calculatedCapitalRatio, 0);
+    const totalRatio = sortedPartners.reduce((s, p) => s + p.calculatedRatio, 0);
+    const colIds = enrichedColumns.map(c => c.id);
+    return colIds.map(id => {
+      switch (id) {
+        case 'name':
+          return { id: 'count', label: '', value: `${sortedPartners.length} شريك`, className: 'text-slate-500 font-medium' };
+        case 'amount_usd':
+          return { id: 'total_usd', label: 'الإجمالي', value: formatAmount(totalUSD, { currencyCode: "USD" }), align: 'left' as const, className: 'text-blue-600 font-black' };
+        case 'amount_local':
+          return { id: 'total_syp', label: 'الإجمالي', value: formatAmount(totalSYP, { currencyCode: "SYP" }), align: 'left' as const, className: 'text-slate-900 font-black' };
+        case 'capital_ratio':
+          return { id: 'total_capital_ratio', label: 'المجموع', value: `${totalCapitalRatio.toFixed(2)}%`, align: 'center' as const, className: 'text-blue-700 font-black' };
+        case 'ratio':
+          return { id: 'total_ratio', label: 'المجموع', value: `${totalRatio.toFixed(2)}%`, align: 'center' as const, className: 'text-emerald-700 font-black' };
+        default:
+          return { id: `${id}_spacer`, label: '', value: '' };
+      }
+    });
+  }, [sortedPartners, formatAmount, enrichedColumns]);
 
   return (
     <TableShell
@@ -218,6 +220,7 @@ export function PartnerTable({
         onRowClick={onRowClick}
         selectedId={selectedId}
         emptyMessage={search ? "لا توجد نتائج بحث تطابق استعلامك" : "لا يوجد شركاء مسجلون حالياً"}
+        summary={summaryColumns}
       />
     </TableShell>
   );

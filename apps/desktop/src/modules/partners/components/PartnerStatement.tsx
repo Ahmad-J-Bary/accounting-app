@@ -3,6 +3,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -13,7 +14,7 @@ import type { JournalEntryDto } from "@erp/shared-types";
 import { format } from "date-fns";
 import { Loader2, ArrowRightLeft, TrendingUp, TrendingDown } from "lucide-react";
 import { Button } from "@shared/ui/button";
-import { JournalSummaryFooter } from "@modules/accounting/components/JournalSummaryFooter";
+
 
 interface PartnerStatementProps {
   partnerId: string;
@@ -182,9 +183,16 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
             </TableBody>
           </Table>
         </div>
-        <div className="mt-4">
-          <JournalSummaryFooter totals={totals} />
-        </div>
+        <TableFooter>
+          <TableRow className="bg-slate-50 font-bold">
+            <TableCell className="text-slate-400 text-xs">الإجمالي</TableCell>
+            <TableCell />
+            <TableCell />
+            <TableCell className="text-left text-red-600">{totals.find(t => t.currencyCode === 'SYP')?.debit.toLocaleString() || '0'}</TableCell>
+            <TableCell className="text-left text-emerald-600">{totals.find(t => t.currencyCode === 'SYP')?.credit.toLocaleString() || '0'}</TableCell>
+            <TableCell className="text-left font-black text-slate-900">{( (totals.find(t => t.currencyCode === 'SYP')?.debit || 0) - (totals.find(t => t.currencyCode === 'SYP')?.credit || 0) ).toLocaleString()}</TableCell>
+          </TableRow>
+        </TableFooter>
       </CardContent>
     </Card>
   );

@@ -6,8 +6,9 @@ import { formatDateTime } from "@shared/lib/format";
 import { InvoiceDto } from "@erp/shared-types";
 import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import { TableShell } from "@widgets/table-shell/TableShell";
+import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useColumnPreferences } from "@shared/hooks";
+import { useUnifiedColumns } from "@shared/hooks";
 import { DocumentStatusBadge } from "./DocumentStatusBadge";
 import {
   DropdownMenu,
@@ -241,22 +242,11 @@ export function InvoiceList({
   }, [formatAmount, partyField, partyLabel, partyType, defaultName, showSubtotal, showExtraCosts, extraColumns, onView, onEdit, onPost, onReopen, onDelete]);
 
   const defaultVisible = useMemo(() => allColumns.filter(c => c.id !== 'notes').map(c => c.id), [allColumns]);
-  const { visibleColumns, toggleColumn } = useColumnPreferences(preferenceKey, defaultVisible);
-
-  const enrichedColumns = useMemo(() => {
-    return allColumns.map(col => ({
-      ...col,
-      visible: visibleColumns.includes(col.id)
-    }));
-  }, [allColumns, visibleColumns]);
-
-  const toolbarColumns = useMemo(() => {
-    return allColumns.map(c => ({
-      id: c.id,
-      label: c.label || (typeof c.header === 'string' ? c.header : c.id),
-      visible: visibleColumns.includes(c.id)
-    }));
-  }, [allColumns, visibleColumns]);
+  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+    tableId: preferenceKey,
+    columns: allColumns,
+    defaultVisible,
+  });
 
   const stats = useMemo(() => {
     const total = filtered.reduce((acc, inv) => acc + parseFloat(inv.total_amount_v2?.base_amount || inv.total_amount || "0"), 0);
@@ -266,6 +256,27 @@ export function InvoiceList({
       { label: "فواتير معلقة", value: filtered.filter(i => i.status === 'Draft').length, icon: History, color: "text-amber-600" },
     ];
   }, [filtered, formatMonetaryAmount, statsLabel, statsColor]);
+
+  const summaryColumns = useMemo<SummaryColumn[]>(() => {
+    const totalAmount = filtered.reduce((s, inv) => s + parseFloat(inv.total_amount || "0"), 0);
+    const totalPaid = filtered.reduce((s, inv) => s + parseFloat(inv.amount_paid || "0"), 0);
+    const totalRemaining = filtered.reduce((s, inv) => s + parseFloat(inv.remaining_amount || "0"), 0);
+    const colIds = enrichedColumns.map(c => c.id);
+    return colIds.map(id => {
+      switch (id) {
+        case 'invoice_number':
+          return { id: 'count', label: '', value: `${filtered.length} فاتورة`, className: 'text-slate-600 font-bold' };
+        case 'total_amount':
+          return { id: 'total_amount_summary', label: 'الإجمالي', value: formatAmount(totalAmount, { currencyCode: 'USD' }), align: 'left' as const, className: 'font-black text-slate-900' };
+        case 'amount_paid':
+          return { id: 'amount_paid_summary', label: 'المدفوع', value: formatAmount(totalPaid, { currencyCode: 'USD' }), align: 'left' as const, className: 'font-bold text-emerald-600' };
+        case 'remaining_amount':
+          return { id: 'remaining_summary', label: 'المتبقي', value: formatAmount(totalRemaining, { currencyCode: 'USD' }), align: 'left' as const, className: 'font-bold text-orange-600' };
+        default:
+          return { id: `${id}_spacer`, label: '', value: '' };
+      }
+    });
+  }, [filtered, enrichedColumns, formatAmount]);
 
   return (
     <OperationalTableTemplate
@@ -328,6 +339,7 @@ export function InvoiceList({
             onRowDoubleClick={onView}
             selectedId={selectedId}
             emptyMessage={emptyMessage}
+            summary={summaryColumns}
           />
         </TableShell>
       }

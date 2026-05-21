@@ -104,6 +104,8 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       if (!baseCurrency || targetCurrencyCode === baseCurrency.code) return amountInBase;
       const rate = rateMap.get(targetCurrencyCode);
       if (!rate || rate <= 0) return amountInBase;
+      // Under new standardized logic: 1 USD = rate units of targetCurrency.
+      // To convert base → target: multiply by rate.
       return amountInBase * rate;
     },
     [baseCurrency, rateMap]
@@ -118,6 +120,8 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       if (baseCurrency && fromCode !== baseCurrency.code) {
         const fromRate = rateMap.get(fromCode);
         if (fromRate && fromRate > 0) {
+          // Under new standardized logic: 1 USD = fromRate units of fromCode.
+          // To convert fromCode → base: divide by rate.
           amountInBase = amount / fromRate;
         }
       }

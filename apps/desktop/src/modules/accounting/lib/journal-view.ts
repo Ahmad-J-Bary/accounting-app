@@ -54,15 +54,14 @@ export function toJournalRow(entry: JournalEntryDto, journalType?: string): Jour
     const focal = entry.lines.filter(l => l.account_code?.startsWith(prefix));
     const other = entry.lines.filter(l => !l.account_code?.startsWith(prefix));
 
-    // Aggregate all focal lines for determining amounts on that side
+    // Aggregate all focal lines — compute base amounts using fx_rate
     for (const l of focal) {
-      const d = parseFloat(l.debit || "0"), c = parseFloat(l.credit || "0");
-      const fx = parseFloat(l.fx_rate || "1");
-      const isUSD = l.currency === 'USD';
-      dUSD += isUSD ? d : 0;
-      dSYP += isUSD ? d * fx : d;
-      cUSD += isUSD ? c : 0;
-      cSYP += isUSD ? c * fx : c;
+      const d = parseFloat(l.debit || "0");
+      const c = parseFloat(l.credit || "0");
+      const rate = parseFloat(l.fx_rate || "1");
+      dSYP += d * rate;
+      cSYP += c * rate;
+      if (l.currency === 'USD') { dUSD += d; cUSD += c; }
     }
 
     activeSide = cUSD > 0 || cSYP > 0 ? 'credit' : 'debit';
@@ -75,12 +74,14 @@ export function toJournalRow(entry: JournalEntryDto, journalType?: string): Jour
       cAcc = other.length ? (other[0].account_name || other[0].account_id) : cAcc;
     }
   } else {
-    // --- General journal: aggregate ALL lines ---
+    // --- General journal: aggregate ALL lines, accumulate base amounts ---
     entry.lines.forEach(l => {
-      const d = parseFloat(l.debit || "0"), c = parseFloat(l.credit || "0");
-      const fx = parseFloat(l.fx_rate || "1");
-      if (l.currency === 'USD') { dUSD += d; cUSD += c; dSYP += d * fx; cSYP += c * fx; }
-      else { dSYP += d; cSYP += c; }
+      const d = parseFloat(l.debit || "0");
+      const c = parseFloat(l.credit || "0");
+      const rate = parseFloat(l.fx_rate || "1");
+      dSYP += d * rate;
+      cSYP += c * rate;
+      if (l.currency === 'USD') { dUSD += d; cUSD += c; }
     });
 
     const debits  = entry.lines.filter(l => parseFloat(l.debit || "0")  > 0);
@@ -164,10 +165,8 @@ export function aggregateEntryTotals(entries: JournalEntryDto[]) {
   entries.forEach(entry => {
     entry.lines.forEach(l => {
       const d = parseFloat(l.debit || "0"), c = parseFloat(l.credit || "0");
-      const fx = parseFloat(l.fx_rate || "1");
       if (l.currency === 'USD') {
         t.debitUSD += d; t.creditUSD += c;
-        t.debitSYP += d * fx; t.creditSYP += c * fx;
       } else {
         t.debitSYP += d; t.creditSYP += c;
       }

@@ -10,9 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 // Refactored Components & Hooks
 import { useDataTable } from '@shared/hooks';
 import { JournalTable } from '@modules/accounting/components/JournalTable';
-import { JournalSummaryFooter } from "@modules/accounting/components/JournalSummaryFooter";
 import { JOURNAL_TYPES, getJournalColumnsByType } from "@modules/accounting/lib/journal-config";
-import { aggregateEntryTotals } from "@modules/accounting/lib/journal-view";
 
 export default function Journal() {
   const navigate = useNavigate();
@@ -84,14 +82,6 @@ export default function Journal() {
     { label: "إجمالي الحركات", value: displayEntries.reduce((s, e) => s + (e.lines?.length || 0), 0), icon: Banknote, color: "text-indigo-600" },
   ], [displayEntries]);
 
-  const journalTotals = useMemo(() => {
-    const t = aggregateEntryTotals(displayEntries);
-    return [
-      { currencyCode: 'USD', currencySymbol: '$', debit: t.debitUSD, credit: t.creditUSD },
-      { currencyCode: 'SYP', currencySymbol: 'ل.س', debit: t.debitUSD, credit: t.creditUSD },
-    ];
-  }, [displayEntries]);
-
   const journalTitle = JOURNAL_TYPES.find(t => t.value === (filters.journal_type || 'GeneralJournal'))?.label || 'القيود اليومية';
 
   return (
@@ -128,12 +118,6 @@ export default function Journal() {
             filters={filters as JournalFilters}
           />
         </div>
-      }
-      summaryContent={
-        <JournalSummaryFooter 
-          totals={journalTotals} 
-          className="border-none shadow-none bg-transparent p-0"
-        />
       }
     >
     </OperationalTableTemplate>

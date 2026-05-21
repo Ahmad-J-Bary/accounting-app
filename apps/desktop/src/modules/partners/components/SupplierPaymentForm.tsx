@@ -15,7 +15,7 @@ interface SupplierPaymentFormProps {
 }
 
 export function SupplierPaymentForm({ supplier, onSave, onClose, saving }: SupplierPaymentFormProps) {
-  const { currencies, baseCurrency } = useCurrencyContext();
+  const { currencies, baseCurrency, rateMap } = useCurrencyContext();
 
   const [form, setForm] = useState<Partial<CreatePaymentRequest>>({
     payment_type: "SupplierPayment",
@@ -26,6 +26,16 @@ export function SupplierPaymentForm({ supplier, onSave, onClose, saving }: Suppl
     supplier_id: supplier.id,
     notes: `سند دفع للمورد: ${supplier.name}`,
   });
+
+  const handleCurrencyChange = (val: string) => {
+    const isUSD = val === "USD" || val === baseCurrency?.code;
+    const rate = isUSD ? 1 : (rateMap.get(val) || 1);
+    setForm(p => ({
+      ...p,
+      currency_code: val,
+      exchange_rate: rate
+    }));
+  };
 
   const handleSave = async () => {
     if (!form.amount || !form.supplier_id) return;
@@ -59,7 +69,7 @@ export function SupplierPaymentForm({ supplier, onSave, onClose, saving }: Suppl
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs font-bold text-slate-600">العملة</Label>
-              <Select value={form.currency_code} onValueChange={val => setForm(p => ({ ...p, currency_code: val }))}>
+              <Select value={form.currency_code} onValueChange={handleCurrencyChange}>
                 <SelectTrigger className="h-9 font-bold bg-white"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {currencies.map(c => (

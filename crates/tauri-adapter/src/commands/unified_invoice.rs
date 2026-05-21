@@ -18,6 +18,7 @@ pub async fn create_unified_invoice(
         state.material_repo.clone(),
         state.category_repo.clone(),
         state.journal_entry_repo.clone(),
+        state.exchange_rate_repo.clone(),
     )
     .execute(request).await.map_err(|e| e.to_string())
 }
@@ -35,6 +36,7 @@ pub async fn update_unified_invoice(
         state.material_repo.clone(),
         state.category_repo.clone(),
         state.journal_entry_repo.clone(),
+        state.exchange_rate_repo.clone(),
     )
     .execute(request).await.map_err(|e| e.to_string())
 }

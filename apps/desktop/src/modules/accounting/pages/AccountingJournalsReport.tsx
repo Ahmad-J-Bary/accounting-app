@@ -12,10 +12,12 @@ import { formatCurrency } from "@shared/lib/format";
 import { cn } from "@shared/lib/utils";
 import { FileText, Calendar, Filter, ArrowUpRight, ArrowDownLeft, Printer, Download } from "lucide-react";
 import { JOURNAL_REPORT_TYPES } from "@modules/accounting/lib/journal-config";
-import { toJournalRow, aggregateTotals } from "@modules/accounting/lib/journal-view";
+import { toJournalRow } from "@modules/accounting/lib/journal-view";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { JournalTable } from "@modules/accounting/components/JournalTable";
 
 export default function AccountingJournalsReport() {
+  const { convertBetween } = useCurrencyContext();
   const [searchParams] = useSearchParams();
   const [filters, setFilters] = useState<JournalFilters>({
     journal_type: (searchParams.get('type') as JournalType) || 'GeneralJournal',
@@ -51,7 +53,16 @@ export default function AccountingJournalsReport() {
     [entries, filters.journal_type]
   );
 
-  const totals = useMemo(() => aggregateTotals(tableData), [tableData]);
+  const totals = useMemo(() => {
+    const t = { debitUSD: 0, creditUSD: 0, debitSYP: 0, creditSYP: 0 };
+    tableData.forEach(r => {
+      t.debitUSD += r.debit_usd;
+      t.creditUSD += r.credit_usd;
+      t.debitSYP += r.debit_usd > 0 ? convertBetween(r.debit_usd, "USD", "SYP") : r.debit_syp;
+      t.creditSYP += r.credit_usd > 0 ? convertBetween(r.credit_usd, "USD", "SYP") : r.credit_syp;
+    });
+    return t;
+  }, [tableData, convertBetween]);
 
   return (
     <ReportLayout

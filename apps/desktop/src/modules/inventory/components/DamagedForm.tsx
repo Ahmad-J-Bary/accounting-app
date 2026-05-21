@@ -1,66 +1,65 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Label } from "@shared/ui/label";
-import { FormPanel } from '@widgets/form-shell/FormPanel';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@shared/ui/dialog";
 import type { CreateDamagedItemRequest, MaterialDto } from "@erp/shared-types";
 
 interface DamagedFormProps {
   open: boolean;
-  onClose: () => void;
+  onOpenChange: (open: boolean) => void;
   products: MaterialDto[];
   onSave: (payload: CreateDamagedItemRequest) => Promise<void>;
   saving: boolean;
 }
 
-export function DamagedForm({ open, onClose, products, onSave, saving }: DamagedFormProps) {
+export function DamagedForm({ open, onOpenChange, products, onSave, saving }: DamagedFormProps) {
   const [form, setForm] = useState<Partial<CreateDamagedItemRequest>>({
     damage_date: new Date().toISOString(),
     quantity: 0,
     cost_impact: 0,
     reason: "",
-    product_id: "",
+    material_id: "",
   });
 
-  // Reset on open
-  useState(() => {
+  useEffect(() => {
     if (open) {
-      setForm({ damage_date: new Date().toISOString(), quantity: 0, cost_impact: 0, reason: "", product_id: "" });
+      setForm({ damage_date: new Date().toISOString(), quantity: 0, cost_impact: 0, reason: "", material_id: "" });
     }
-  });
+  }, [open]);
+
+  const handleOpenChange = (isOpen: boolean) => {
+    if (isOpen) {
+      setForm({ damage_date: new Date().toISOString(), quantity: 0, cost_impact: 0, reason: "", material_id: "" });
+    }
+    onOpenChange(isOpen);
+  };
 
   const handleSave = async () => {
-    if (!form.product_id || !form.reason || !form.quantity) return;
+    if (!form.material_id || !form.reason || !form.quantity) return;
     await onSave(form as CreateDamagedItemRequest);
   };
 
-  if (!open) return null;
-
   return (
-    <FormPanel
-      title="تسجيل مواد تالفة"
-      onClose={onClose}
-      onSave={handleSave}
-      isSaving={saving}
-      saveDisabled={!form.product_id || !form.reason || !form.quantity}
-      saveLabel="حفظ"
-    >
-      <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 mb-2 text-right">
-        <p className="text-xs text-blue-800">إضافة تقرير عن أصناف تالفة لخصمها من المخزون وتسجيل الخسائر.</p>
-      </div>
-      <div className="space-y-4 py-2 text-right">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-md" dir="rtl">
+        <DialogHeader>
+          <DialogTitle>تسجيل مواد تالفة</DialogTitle>
+          <DialogDescription>إضافة تقرير عن أصناف تالفة لخصمها من المخزون وتسجيل الخسائر.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
           <div className="space-y-1">
             <Label>المنتج *</Label>
-            <select 
+            <select
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              value={form.product_id ?? ""} 
+              value={form.material_id ?? ""}
               onChange={e => {
-                const pid = e.target.value;
-                const prod = products.find(p => p.id === pid);
-                setForm(p => ({ 
-                  ...p, 
-                  product_id: pid,
-                  cost_impact: prod ? parseFloat(prod.last_purchase_price || "0") * (p.quantity || 1) : p.cost_impact
+                const mid = e.target.value;
+                const prod = products.find(p => p.id === mid);
+                setForm(p => ({
+                  ...p,
+                  material_id: mid,
+                  cost_impact: prod ? parseFloat(prod.last_purchase_price || "0") * ((p.quantity as number) || 1) : p.cost_impact
                 }));
               }}
             >
@@ -76,9 +75,9 @@ export function DamagedForm({ open, onClose, products, onSave, saving }: Damaged
               value={form.quantity ?? ""}
               onChange={e => {
                 const qty = parseFloat(e.target.value) || 0;
-                const prod = products.find(p => p.id === form.product_id);
-                setForm(p => ({ 
-                  ...p, 
+                const prod = products.find(p => p.id === form.material_id);
+                setForm(p => ({
+                  ...p,
                   quantity: qty,
                   cost_impact: prod ? parseFloat(prod.last_purchase_price || "0") * qty : p.cost_impact
                 }));
@@ -101,6 +100,13 @@ export function DamagedForm({ open, onClose, products, onSave, saving }: Damaged
               onChange={e => setForm(p => ({ ...p, damage_date: new Date(e.target.value).toISOString() }))} />
           </div>
         </div>
-    </FormPanel>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
+          <Button onClick={handleSave} disabled={saving || !form.material_id || !form.reason || !form.quantity}>
+            {saving ? "جاري الحفظ..." : "حفظ"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

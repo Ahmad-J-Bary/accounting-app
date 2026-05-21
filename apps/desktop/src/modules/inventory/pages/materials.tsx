@@ -1,22 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@shared/ui/button";
-import { Input } from "@shared/ui/input";
-import { Plus, Search, RefreshCw, Settings2, Package, Layers, Barcode, ShoppingCart, TrendingUp, RotateCcw } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@shared/ui/dropdown-menu";
+import { Plus, RefreshCw, Package, Layers, Barcode, ShoppingCart, TrendingUp, RotateCcw } from "lucide-react";
 import { materialService } from '@modules/inventory/api/materialService';
 import { categoryService } from '@modules/inventory/api/categoryService';
 import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest } from "@erp/shared-types";
 import { cn } from '@shared/lib/utils';
 
 // Refactored Components & Hooks
-import { useColumnPreferences } from '@shared/hooks';
 import { useEntityList } from '@shared/hooks/useEntityList';
 import { MaterialForm } from '@modules/inventory/components/MaterialForm';
 import { MaterialTable } from '@modules/inventory/components/MaterialTable';

@@ -137,9 +137,9 @@ export default function Partners() {
     try {
       setDrawingsSaving(true);
       await paymentService.createPayment(payload);
+      await refresh(true);
       toast.success("تم تسجيل سند المسحوبات بنجاح");
       setIsDrawingsOpen(false);
-      refresh(true);
     } catch (error) {
       toast.error("فشل تسجيل السند: " + error);
     } finally {
@@ -230,19 +230,18 @@ export default function Partners() {
           loading={isLoading}
           search={search}
           onSearchChange={setSearch}
-          onViewDrawings={(p) => openTab({
+          onView={(p) => { setSelectedId(p.id); setIsDialogOpen(false); setIsDrawingsOpen(false); }}
+          onEdit={(p) => { setEditPartner(p); setIsDialogOpen(true); }}
+          onDelete={(id) => handleDelete(id)}
+          onJournal={(p) => p.drawings_account_id ? openTab({
             id: `ledger-${p.drawings_account_id}`,
             title: `مسحوبات ${p.name}`,
             path: `/accounting/account-ledger/${p.drawings_account_id}`,
             closable: true
-          })}
-          onAddDrawings={(p) => {
+          }) : toast.error("لا يوجد حساب مسحوبات مرتبط بهذا الشريك")}
+          onDocument={(p) => {
             setSelectedId(p.id);
             setIsDrawingsOpen(true);
-          }}
-          onEdit={(p) => {
-            setEditPartner(p);
-            setIsDialogOpen(true);
           }}
           selectedId={selectedId}
           onRowClick={(p) => {
@@ -254,30 +253,6 @@ export default function Partners() {
       }
       bottomWidgets={
         <div className="space-y-4">
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="text-center px-4 py-3 text-xs font-black text-slate-600 uppercase tracking-wider">رأس المال الأجمالي ($)</th>
-                  <th className="text-center px-4 py-3 text-xs font-black text-slate-600 uppercase tracking-wider">رأس المال الأجمالي (ل.س)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-slate-100">
-                  <td className="px-4 py-3 text-center">
-                    <span className="text-sm font-black text-blue-600 tabular-nums">
-                      {formatAmount(totals.usd, { currencyCode: "USD" })}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="text-sm font-black text-slate-900 tabular-nums">
-                      {formatAmount(totals.local, { currencyCode: "SYP" })}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
              <ChartCard title="حصص رأس المال" icon={PieChartIcon} data={chartCapitalData} formatter={(v) => formatAmount(v, { hideSymbol: false })} />
              <ChartCard title="توزيع الأرباح" icon={TrendingUp} data={chartProfitData} formatter={(v: number) => `${v.toFixed(2)}%`} />

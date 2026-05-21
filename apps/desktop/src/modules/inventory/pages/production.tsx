@@ -10,7 +10,7 @@ import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTem
 // Refactored Components & Hooks
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
-import { useDataTable, useColumnPreferences } from '@shared/hooks';
+import { useDataTable, useUnifiedColumns } from '@shared/hooks';
 import { toast } from "sonner";
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
@@ -99,22 +99,11 @@ export default function ProductionPage() {
     }
   ], []);
 
-  const { visibleColumns, toggleColumn } = useColumnPreferences("production-orders-unified", allColumns.map(c => c.id));
-
-  const enrichedColumns = useMemo(() => {
-    return allColumns.map(col => ({
-      ...col,
-      visible: visibleColumns.includes(col.id)
-    }));
-  }, [allColumns, visibleColumns]);
-
-  const toolbarColumns = useMemo(() => {
-    return allColumns.map(c => ({
-      id: c.id,
-      label: c.label || (typeof c.header === 'string' ? c.header : c.id),
-      visible: visibleColumns.includes(c.id)
-    }));
-  }, [allColumns, visibleColumns]);
+  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+    tableId: "production-orders-unified",
+    columns: allColumns,
+    defaultVisible: allColumns.map(c => c.id),
+  });
 
   const completed = useMemo(() => orders.filter(o => o.status === "Completed").length, [orders]);
   const inProgress = useMemo(() => orders.filter(o => o.status === "InProgress").length, [orders]);

@@ -1,7 +1,7 @@
 export interface DamagedItem {
   id: string;
-  product_id: string;
-  product_name?: string;
+  material_id: string;
+  material_name?: string;
   quantity: string;
   reason: string;
   damage_date: string;
@@ -11,7 +11,7 @@ export interface DamagedItem {
 }
 
 export interface CreateDamagedItemRequest {
-  product_id: string;
+  material_id: string;
   quantity: number;
   reason: string;
   damage_date: string;

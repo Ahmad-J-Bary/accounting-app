@@ -1,17 +1,12 @@
 import { useMemo, useState, useCallback } from "react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
+import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useColumnPreferences } from "@shared/hooks/useColumnPreferences";
+import { useUnifiedColumns } from "@shared/hooks";
 import type { SupplierDto } from "@erp/shared-types";
-import { ArrowUpDown, Eye, MoreHorizontal, Pencil, Trash2, Truck } from "lucide-react";
-import { Button } from "@shared/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@shared/ui/dropdown-menu";
+import { ArrowUpDown, Eye, Pencil, Trash2, NotebookText, Receipt, Truck } from "lucide-react";
+import { ActionsDropdown } from "@shared/ui/actions-dropdown";
 
 interface SupplierTableProps {
   suppliers: SupplierDto[];
@@ -19,12 +14,14 @@ interface SupplierTableProps {
   search: string;
   onSearchChange: (val: string) => void;
   onView: (s: SupplierDto) => void;
-  onEdit?: (s: SupplierDto) => void;
+  onEdit: (s: SupplierDto) => void;
   onDelete?: (id: string) => void;
+  onJournal?: (s: SupplierDto) => void;
+  onDocument?: (s: SupplierDto) => void;
   selectedId?: string | null;
 }
 
-type SortField = "code" | "name" | "debit" | "credit";
+type SortField = "code" | "name" | "balance";
 
 interface SortableHeaderProps {
   field: SortField;
@@ -53,7 +50,7 @@ const SortableHeader = ({ field, label, currentField, direction, onSort }: Sorta
   );
 };
 
-export function SupplierTable({ suppliers, loading, search, onSearchChange, onView, onEdit, onDelete, selectedId }: SupplierTableProps) {
+export function SupplierTable({ suppliers, loading, search, onSearchChange, onView, onEdit, onDelete, onJournal, onDocument, selectedId }: SupplierTableProps) {
   const { currencies, formatAmount } = useCurrencyContext();
   const [sortField, setSortField] = useState<SortField>("code");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -74,8 +71,7 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
       switch (sortField) {
         case "code": comparison = (parseInt(a.code || "0", 10) || 0) - (parseInt(b.code || "0", 10) || 0); break;
         case "name": comparison = (a.name || "").localeCompare(b.name || "", "ar"); break;
-        case "debit": comparison = (Number(a.debit) || 0) - (Number(b.debit) || 0); break;
-        case "credit": comparison = (Number(a.credit) || 0) - (Number(b.credit) || 0); break;
+        case "balance": comparison = (Number(a.balance) || 0) - (Number(b.balance) || 0); break;
       }
       return sortDirection === "asc" ? comparison : -comparison;
     });
@@ -117,35 +113,38 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
       },
     ];
 
-    // Debits
-    currencies.forEach(curr => {
-      const symbol = curr.code === 'USD' ? '$' : curr.code === 'SYP' ? 'ل.س' : (curr.symbol || curr.code);
-      cols.push({
-        id: `debit_${curr.code}`,
-        header: <SortableHeader field="debit" label={`مدين (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
-        label: `إجمالي المدين (${symbol})`,
-        accessor: (s) => {
-          const val = Number(s.debit || 0);
-          return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "—";
-        },
-        align: "left",
-        className: "text-red-600 tabular-nums font-bold"
-      });
+    // Account Status
+    cols.push({
+      id: "status",
+      header: <SortableHeader field="balance" label="حالة الحساب" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+      label: "حالة الحساب",
+      accessor: (s) => {
+        const bal = Number(s.balance || 0);
+        if (bal === 0) return <span className="text-slate-300">—</span>;
+        const isCredit = bal > 0;
+        return (
+          <span className={`font-bold ${isCredit ? "text-emerald-600" : "text-red-600"}`}>
+            {isCredit ? "دائن" : "مدين"}
+          </span>
+        );
+      },
+      align: "center",
+      className: "w-[90px]"
     });
 
-    // Credits
+    // Balances
     currencies.forEach(curr => {
       const symbol = curr.code === 'USD' ? '$' : curr.code === 'SYP' ? 'ل.س' : (curr.symbol || curr.code);
       cols.push({
-        id: `credit_${curr.code}`,
-        header: <SortableHeader field="credit" label={`دائن (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
-        label: `إجمالي الدائن (${symbol})`,
+        id: `balance_${curr.code}`,
+        header: <SortableHeader field="balance" label={`الرصيد (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        label: `الرصيد (${symbol})`,
         accessor: (s) => {
-          const val = Number(s.credit || 0);
-          return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "—";
+          const absBal = Math.abs(Number(s.balance || 0));
+          return absBal > 0 ? formatAmount(absBal, { currencyCode: curr.code }) : "—";
         },
         align: "left",
-        className: "text-emerald-600 tabular-nums font-bold"
+        className: "tabular-nums font-bold text-slate-800"
       });
     });
 
@@ -155,54 +154,56 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
       header: "إجراءات",
       label: "إجراءات",
       accessor: (s) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600">
-              <MoreHorizontal className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-40">
-            <DropdownMenuItem onClick={() => onView(s)} className="flex-row-reverse gap-2">
-              <Eye className="w-4 h-4" /> عرض الملف
-            </DropdownMenuItem>
-            {(onEdit || onDelete) && <div className="h-px bg-slate-100 my-1" />}
-            {onEdit && (
-              <DropdownMenuItem onClick={() => onEdit(s)} className="flex-row-reverse gap-2">
-                <Pencil className="w-4 h-4" /> تعديل البيانات
-              </DropdownMenuItem>
-            )}
-            {onDelete && (
-              <DropdownMenuItem onClick={() => onDelete(s.id)} className="flex-row-reverse gap-2 text-red-600">
-                <Trash2 className="w-4 h-4" /> حذف
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <ActionsDropdown
+          actions={[
+            { label: "عرض الملف", icon: <Eye className="w-4 h-4" />, onClick: () => onView(s) },
+            { label: "تعديل البيانات", icon: <Pencil className="w-4 h-4" />, onClick: () => onEdit(s), className: "text-blue-600 focus:text-blue-600" },
+            ...(onDelete ? [{ label: "حذف المورد", icon: <Trash2 className="w-4 h-4" />, onClick: () => onDelete(s.id), className: "text-red-600 focus:text-red-600" }] : []),
+            ...(onJournal ? [{ label: "اليومية", icon: <NotebookText className="w-4 h-4" />, onClick: () => onJournal(s) }] : []),
+            ...(onDocument ? [{ label: "سند دفع", icon: <Receipt className="w-4 h-4" />, onClick: () => onDocument(s) }] : []),
+          ]}
+        />
       ),
       align: "center",
       className: "w-[80px]"
     });
 
     return cols;
-  }, [currencies, formatAmount, sortField, sortDirection, handleSort, onView, onEdit, onDelete]);
+  }, [currencies, formatAmount, sortField, sortDirection, handleSort, onView, onEdit, onDelete, onJournal, onDocument]);
 
-  const defaultVisible = ["code", "name", "phone", "debit_USD", "credit_USD", "actions"];
-  const { visibleColumns, toggleColumn } = useColumnPreferences("suppliers-unified", defaultVisible);
+  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+    tableId: "suppliers-unified",
+    columns: allColumns,
+    defaultVisible: ["code", "name", "phone", "status", "balance_USD", "actions"],
+  });
 
-  const enrichedColumns = useMemo(() => {
-    return allColumns.map(col => ({
-      ...col,
-      visible: visibleColumns.includes(col.id)
-    }));
-  }, [allColumns, visibleColumns]);
+  const summaryColumns = useMemo<SummaryColumn[]>(() => {
+    const totalBal = sortedSuppliers.reduce((sum, s) => sum + Number(s.balance || 0), 0);
+    const absTotal = Math.abs(totalBal);
+    const overall = totalBal > 0 ? "دائن" : totalBal < 0 ? "مدين" : null;
+    const overallColor = totalBal > 0 ? 'text-emerald-600' : totalBal < 0 ? 'text-red-600' : 'text-slate-400';
 
-  const toolbarColumns = useMemo(() => {
-    return allColumns.map(c => ({
-      id: c.id,
-      label: c.label || (typeof c.header === 'string' ? c.header : c.id),
-      visible: visibleColumns.includes(c.id)
-    }));
-  }, [allColumns, visibleColumns]);
+    const colIds = enrichedColumns.map(c => c.id);
+    return colIds.map(id => {
+      if (id === 'name') return { id: 'count', label: '', value: `${sortedSuppliers.length} مورد`, className: 'text-slate-500 font-medium' };
+      if (id === 'code' || id === 'phone' || id === 'actions') return { id: `${id}_spacer`, label: '', value: '' };
+      if (id === 'status') {
+        return { id: 'status_summary', label: '', value: overall ? `الرصيد: ${overall}` : "—", className: `${overallColor} font-bold` };
+      }
+      const match = id.match(/^balance_(.+)$/);
+      if (match) {
+        const currCode = match[1];
+        return {
+          id: `${id}_summary`,
+          label: '',
+          value: absTotal > 0 ? formatAmount(absTotal, { currencyCode: currCode }) + ` (${overall})` : "—",
+          align: 'left' as const,
+          className: `${overallColor} font-bold`
+        };
+      }
+      return { id: `${id}_spacer`, label: '', value: '' };
+    });
+  }, [sortedSuppliers, currencies, formatAmount, enrichedColumns]);
 
   return (
     <TableShell
@@ -219,6 +220,7 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
         onRowClick={onView}
         selectedId={selectedId}
         emptyMessage={search ? "لا توجد نتائج بحث تطابق استعلامك" : "قائمة الموردين فارغة حالياً"}
+        summary={summaryColumns}
       />
     </TableShell>
   );

@@ -136,8 +136,8 @@ export function FloatingExchangeRateWidget({ isVisible, onClose }: FloatingExcha
           </div>
         </div>
 
-        <div className="text-[10px] text-slate-400 font-medium px-1">
-          1 {baseCurrency.code} = {selectedStatus?.rate ?? selectedStatus?.last_rate ?? "—"} {currentCode || "—"}
+        <div className="text-[10px] text-slate-400 font-bold px-1 text-right">
+          كل 1 {baseCurrency.symbol || "$"} يقابل {selectedStatus?.rate ?? selectedStatus?.last_rate ?? "—"} {currentCode === "SYP" ? "ل.س" : currentCode}
         </div>
 
         <div className="flex items-center gap-2 border-t border-slate-100 pt-2">

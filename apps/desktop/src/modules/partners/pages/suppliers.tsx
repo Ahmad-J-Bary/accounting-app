@@ -1,15 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@shared/ui/button";
-import { Input } from "@shared/ui/input";
-import { Plus, Search, Settings2, Truck, Wallet, History, ShoppingBag, Printer, DollarSign, Download } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@shared/ui/dropdown-menu";
+import { Plus, Truck, Wallet, History, ShoppingBag, Printer, DollarSign, Download } from "lucide-react";
 import { toast } from "sonner";
 
 import { supplierService } from '@modules/partners/api/supplierService';
@@ -18,7 +9,6 @@ import { invoiceService } from '@modules/invoicing/api/invoiceService';
 import { paymentService } from '@modules/payments/api/paymentService';
 import type { SupplierDto, AccountDto, InvoiceDto, Payment, CreateSupplierRequest, UpdateSupplierRequest, CreatePaymentRequest } from "@erp/shared-types";
 
-import { useColumnPreferences } from '@shared/hooks';
 import { useTabs } from "@app/providers/TabContext";
 import { useEntityList } from '@shared/hooks/useEntityList';
 import { SupplierTable } from '@modules/partners/components/SupplierTable';
@@ -75,9 +65,9 @@ export default function Suppliers() {
     try {
       setPaymentSaving(true);
       await paymentService.createPayment(payload);
+      await refresh(true);
       toast.success("تم تسجيل سند الدفع بنجاح");
       setIsPaymentOpen(false);
-      refresh(true);
     } catch (error) {
       toast.error("فشل تسجيل السند: " + error);
     } finally {
@@ -232,6 +222,13 @@ export default function Suppliers() {
             onView={(s) => setSelectedId(s.id)}
             onEdit={(s) => { loadAccounts(); handleOpenEdit(s); }}
             onDelete={(id) => { setSelectedId(null); handleDelete(id); }}
+            onJournal={(s) => s.account_id && openTab({
+              id: `ledger-${s.account_id}`,
+              title: `حركة: ${s.name}`,
+              path: `/accounting/account-ledger/${s.account_id}`,
+              closable: true
+            })}
+            onDocument={(s) => { setSelectedId(s.id); setIsPaymentOpen(true); setIsFormOpen(false); }}
             selectedId={selectedId}
           />
         }

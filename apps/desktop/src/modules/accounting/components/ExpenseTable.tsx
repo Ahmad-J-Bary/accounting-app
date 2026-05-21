@@ -1,17 +1,12 @@
 import { useMemo, useState, useCallback } from "react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
+import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useColumnPreferences } from "@shared/hooks/useColumnPreferences";
+import { useUnifiedColumns } from "@shared/hooks";
 import type { AccountDto } from "@erp/shared-types";
-import { ArrowUpDown, Eye, MoreHorizontal } from "lucide-react";
-import { Button } from "@shared/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@shared/ui/dropdown-menu";
+import { ArrowUpDown, Eye, Pencil, Trash2, NotebookText, Receipt } from "lucide-react";
+import { ActionsDropdown } from "@shared/ui/actions-dropdown";
 
 interface ExpenseTableProps {
   expenses: AccountDto[];
@@ -19,11 +14,15 @@ interface ExpenseTableProps {
   search: string;
   onSearchChange: (val: string) => void;
   onView: (e: AccountDto) => void;
+  onEdit: (e: AccountDto) => void;
+  onDelete?: (id: string) => void;
+  onJournal?: (e: AccountDto) => void;
+  onDocument?: (e: AccountDto) => void;
   selectedId?: string | null;
   parentCode?: string;
 }
 
-type SortField = "code" | "name" | "debit" | "credit";
+type SortField = "code" | "name" | "balance";
 
 const codeSuffix = (code: string, prefix?: string) => {
   if (prefix && code.startsWith(prefix)) return code.substring(prefix.length);
@@ -57,8 +56,8 @@ const SortableHeader = ({ field, label, currentField, direction, onSort }: Sorta
   );
 };
 
-export function ExpenseTable({ expenses, loading, search, onSearchChange, onView, selectedId, parentCode }: ExpenseTableProps) {
-  const { currencies, convertFromBase, formatAmount } = useCurrencyContext();
+export function ExpenseTable({ expenses, loading, search, onSearchChange, onView, onEdit, onDelete, onJournal, onDocument, selectedId, parentCode }: ExpenseTableProps) {
+  const { currencies, formatAmount } = useCurrencyContext();
   const [sortField, setSortField] = useState<SortField>("code");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
@@ -83,11 +82,8 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
         case "name":
           comparison = (a.name_ar || "").localeCompare(b.name_ar || "", "ar");
           break;
-        case "debit":
-          comparison = (Number(a.debit) || 0) - (Number(b.debit) || 0);
-          break;
-        case "credit":
-          comparison = (Number(a.credit) || 0) - (Number(b.credit) || 0);
+        case "balance":
+          comparison = (Number(a.balance) || 0) - (Number(b.balance) || 0);
           break;
       }
 
@@ -121,33 +117,38 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
       },
     ];
 
-    currencies.forEach(curr => {
-      const symbol = curr.code === 'USD' ? '$' : curr.code === 'SYP' ? 'ل.س' : (curr.symbol || curr.code);
-      cols.push({
-        id: `debit_${curr.code}`,
-        header: <SortableHeader field="debit" label={`مدين (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
-        label: `مدين (${symbol})`,
-        accessor: (c) => {
-          const val = convertFromBase(Number(c.debit || 0), curr.code);
-          return val > 0 ? formatAmount(Number(c.debit || 0), { currencyCode: curr.code }) : "—";
-        },
-        align: "left",
-        className: "text-red-600 tabular-nums font-medium text-[11px]"
-      });
+    // Account Status
+    cols.push({
+      id: "status",
+      header: <SortableHeader field="balance" label="حالة الحساب" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+      label: "حالة الحساب",
+      accessor: (c) => {
+        const bal = Number(c.balance || 0);
+        if (bal === 0) return <span className="text-slate-300">—</span>;
+        const isDebit = bal > 0;
+        return (
+          <span className={`font-bold ${isDebit ? "text-red-600" : "text-emerald-600"}`}>
+            {isDebit ? "مدين" : "دائن"}
+          </span>
+        );
+      },
+      align: "center",
+      className: "w-[90px]"
     });
 
+    // Balances
     currencies.forEach(curr => {
       const symbol = curr.code === 'USD' ? '$' : curr.code === 'SYP' ? 'ل.س' : (curr.symbol || curr.code);
       cols.push({
-        id: `credit_${curr.code}`,
-        header: <SortableHeader field="credit" label={`دائن (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
-        label: `دائن (${symbol})`,
+        id: `balance_${curr.code}`,
+        header: <SortableHeader field="balance" label={`الرصيد (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        label: `الرصيد (${symbol})`,
         accessor: (c) => {
-          const val = convertFromBase(Number(c.credit || 0), curr.code);
-          return val > 0 ? formatAmount(Number(c.credit || 0), { currencyCode: curr.code }) : "—";
+          const absBal = Math.abs(Number(c.balance || 0));
+          return absBal > 0 ? formatAmount(absBal, { currencyCode: curr.code }) : "—";
         },
         align: "left",
-        className: "text-green-600 tabular-nums font-medium text-[11px]"
+        className: "tabular-nums font-medium text-[11px] text-slate-800"
       });
     });
 
@@ -156,52 +157,74 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
       header: "إجراءات",
       label: "إجراءات",
       accessor: (e) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600">
-              <MoreHorizontal className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-40">
-            <DropdownMenuItem onClick={() => onView(e)} className="flex-row-reverse gap-2">
-              <Eye className="w-4 h-4" /> عرض التفاصيل
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <ActionsDropdown
+          actions={[
+            { label: "عرض التفاصيل", icon: <Eye className="w-4 h-4" />, onClick: () => onView(e) },
+            { label: "تعديل البيانات", icon: <Pencil className="w-4 h-4" />, onClick: () => onEdit(e), className: "text-blue-600 focus:text-blue-600" },
+            ...(onDelete ? [{ label: "حذف البند", icon: <Trash2 className="w-4 h-4" />, onClick: () => onDelete(e.id), className: "text-red-600 focus:text-red-600" }] : []),
+            ...(onJournal ? [{ label: "اليومية", icon: <NotebookText className="w-4 h-4" />, onClick: () => onJournal(e) }] : []),
+            ...(onDocument ? [{ label: "سند صرف", icon: <Receipt className="w-4 h-4" />, onClick: () => onDocument(e) }] : []),
+          ]}
+        />
       ),
       align: "center",
       className: "w-[80px]"
     });
 
     return cols;
-  }, [currencies, convertFromBase, formatAmount, sortField, sortDirection, handleSort, parentCode, onView]);
+  }, [currencies, formatAmount, sortField, sortDirection, handleSort, parentCode, onView, onEdit, onDelete, onJournal, onDocument]);
 
   const defaultVisible = useMemo(() => {
-    const def = ["#", "name"];
+    const def = ["#", "name", "status"];
     currencies.forEach(curr => {
-      def.push(`debit_${curr.code}`);
-      def.push(`credit_${curr.code}`);
+      def.push(`balance_${curr.code}`);
     });
     def.push("actions");
     return def;
   }, [currencies]);
 
-  const { visibleColumns, toggleColumn } = useColumnPreferences("expenses-table", defaultVisible);
+  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+    tableId: "expenses-table",
+    columns: allColumns,
+    defaultVisible,
+  });
 
-  const enrichedColumns = useMemo(() => {
-    return allColumns.map(col => ({
-      ...col,
-      visible: visibleColumns.includes(col.id)
-    }));
-  }, [allColumns, visibleColumns]);
+  const summaryColumns = useMemo<SummaryColumn[]>(() => {
+    const totalBal = sortedExpenses.reduce((sum, e) => sum + Number(e.balance || 0), 0);
+    const absTotal = Math.abs(totalBal);
 
-  const toolbarColumns = useMemo(() => {
-    return allColumns.map(c => ({
-      id: c.id,
-      label: c.label || (typeof c.header === 'string' ? c.header : c.id),
-      visible: visibleColumns.includes(c.id)
-    }));
-  }, [allColumns, visibleColumns]);
+    const colIds = enrichedColumns.map(c => c.id);
+    return colIds.map(id => {
+      if (id === 'name') {
+        return { id: 'name_summary', label: '', value: 'المجموع', className: 'text-slate-600 font-bold' };
+      }
+      if (id === '#' || id === 'actions') {
+        return { id: `${id}_spacer`, label: '', value: '' };
+      }
+      if (id === 'status') {
+        const statusLabel = totalBal > 0 ? 'الرصيد: مدين' : totalBal < 0 ? 'الرصيد: دائن' : '—';
+        const statusColor = totalBal > 0 ? 'text-red-600' : totalBal < 0 ? 'text-emerald-600' : 'text-slate-400';
+        return {
+          id: 'status_summary',
+          label: '',
+          value: statusLabel,
+          className: `${statusColor} font-bold`
+        };
+      }
+      const match = id.match(/^balance_(.+)$/);
+      if (match) {
+        const currCode = match[1];
+        return {
+          id: `${id}_summary`,
+          label: 'إجمالي',
+          value: absTotal > 0 ? formatAmount(absTotal, { currencyCode: currCode }) : "—",
+          align: 'left' as const,
+          className: `text-red-600 font-bold`
+        };
+      }
+      return { id: `${id}_spacer`, label: '', value: '' };
+    });
+  }, [sortedExpenses, currencies, formatAmount, enrichedColumns]);
 
   return (
     <TableShell
@@ -218,6 +241,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
         onRowClick={onView}
         selectedId={selectedId}
         emptyMessage={search ? "لا توجد نتائج بحث تطابق استعلامك" : "لا توجد بنود مصاريف مسجلة حالياً"}
+        summary={summaryColumns}
       />
     </TableShell>
   );

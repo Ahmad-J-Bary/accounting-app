@@ -6,7 +6,7 @@ import { auditService } from '@modules/core/api/auditService';
 import type { AuditLog } from "@erp/shared-types";
 import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import { TableShell } from "@widgets/table-shell/TableShell";
-import { useColumnPreferences } from "@shared/hooks/useColumnPreferences";
+import { useUnifiedColumns } from "@shared/hooks";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 
 export default function AuditLogPage() {
@@ -83,22 +83,11 @@ export default function AuditLogPage() {
     }
   ], []);
 
-  const { visibleColumns, toggleColumn } = useColumnPreferences("audit-log-unified", allColumns.map(c => c.id));
-
-  const enrichedColumns = useMemo(() => {
-    return allColumns.map(col => ({
-      ...col,
-      visible: visibleColumns.includes(col.id)
-    }));
-  }, [allColumns, visibleColumns]);
-
-  const toolbarColumns = useMemo(() => {
-    return allColumns.map(c => ({
-      id: c.id,
-      label: c.label || (typeof c.header === 'string' ? c.header : c.id),
-      visible: visibleColumns.includes(c.id)
-    }));
-  }, [allColumns, visibleColumns]);
+  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+    tableId: "audit-log-unified",
+    columns: allColumns,
+    defaultVisible: allColumns.map(c => c.id),
+  });
 
   return (
     <OperationalTableTemplate

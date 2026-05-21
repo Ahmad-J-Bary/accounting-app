@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useTableSettings } from '@shared/hooks';
 import { TableDensity, TableBorderStyle } from '@shared/types/table-settings';
 import { Label } from "@shared/ui/label";
@@ -8,11 +8,96 @@ import { Slider } from "@shared/ui/slider";
 import { 
   LayoutGrid, 
   Type, 
-  Monitor
+  Monitor,
+  Eye
 } from "lucide-react";
+import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
+
+interface PreviewRow {
+  id: string;
+  code: string;
+  name: string;
+  debit: number;
+  credit: number;
+  date: string;
+  status: string;
+}
+
+const PREVIEW_DATA: PreviewRow[] = [
+  { id: "1", code: "11001", name: "صندوق النقد", debit: 15000, credit: 0, date: "2026-01-15", status: "نشط" },
+  { id: "2", code: "12001", name: "بنك الشام", debit: 85000, credit: 0, date: "2026-01-20", status: "نشط" },
+  { id: "3", code: "21001", name: "موردين محليين", debit: 0, credit: 32000, date: "2026-02-01", status: "نشط" },
+  { id: "4", code: "31001", name: "رأس المال", debit: 0, credit: 100000, date: "2026-01-01", status: "نشط" },
+  { id: "5", code: "41001", name: "مبيعات", debit: 0, credit: 45000, date: "2026-02-10", status: "مقفل" },
+  { id: "6", code: "51001", name: "مصاريف إيجار", debit: 3000, credit: 0, date: "2026-02-05", status: "نشط" },
+  { id: "7", code: "51002", name: "رواتب", debit: 12000, credit: 0, date: "2026-02-28", status: "مقفل" },
+];
 
 export const TableSettingsManager: React.FC = () => {
   const { settings, updateSetting } = useTableSettings();
+
+  const previewColumns = useMemo<UnifiedColumn<PreviewRow>[]>(() => [
+    {
+      id: "code",
+      header: "الكود",
+      label: "الكود",
+      accessor: "code",
+      className: "tabular-nums font-mono text-xs w-20 text-center"
+    },
+    {
+      id: "name",
+      header: "اسم الحساب",
+      label: "اسم الحساب",
+      accessor: "name",
+      className: "font-bold text-slate-900 min-w-[130px]"
+    },
+    {
+      id: "debit",
+      header: "مدين ($)",
+      label: "مدين ($)",
+      accessor: (r) => r.debit > 0 ? r.debit.toLocaleString() : "—",
+      className: "tabular-nums text-red-600 font-bold",
+      align: "left"
+    },
+    {
+      id: "credit",
+      header: "دائن ($)",
+      label: "دائن ($)",
+      accessor: (r) => r.credit > 0 ? r.credit.toLocaleString() : "—",
+      className: "tabular-nums text-emerald-600 font-bold",
+      align: "left"
+    },
+    {
+      id: "date",
+      header: "التاريخ",
+      label: "التاريخ",
+      accessor: "date",
+      className: "tabular-nums text-slate-500 w-28"
+    },
+    {
+      id: "status",
+      header: "الحالة",
+      label: "الحالة",
+      accessor: (r) => (
+        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+          r.status === "نشط" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
+        }`}>
+          {r.status}
+        </span>
+      ),
+      align: "center",
+      className: "w-16"
+    },
+  ], []);
+
+  const summaryColumns = useMemo(() => [
+    { id: "spacer", label: "", value: "", className: "min-w-[130px]" },
+    { id: "spacer2", label: "", value: "", className: "w-20" },
+    { id: "debit_total", label: "الإجمالي", value: PREVIEW_DATA.reduce((s, r) => s + r.debit, 0).toLocaleString() + " $", className: "text-red-600", align: "left" as const },
+    { id: "credit_total", label: "الإجمالي", value: PREVIEW_DATA.reduce((s, r) => s + r.credit, 0).toLocaleString() + " $", className: "text-emerald-600", align: "left" as const },
+    { id: "spacer3", label: "", value: "", className: "w-28" },
+    { id: "spacer4", label: "", value: "", className: "w-16" },
+  ], []);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500" dir="rtl">
@@ -183,6 +268,27 @@ export const TableSettingsManager: React.FC = () => {
               onCheckedChange={(v) => updateSetting('showPagination', v)} 
             />
           </div>
+        </div>
+      </div>
+
+      {/* Live Preview */}
+      <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm space-y-6">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-2 bg-violet-50 rounded-xl">
+            <Eye className="w-5 h-5 text-violet-600" />
+          </div>
+          <h3 className="text-lg font-black text-slate-800">معاينة مباشرة</h3>
+          <p className="text-sm text-slate-400 mr-auto">تتغير المعاينة فوراً عند تعديل أي إعداد أعلاه</p>
+        </div>
+
+        <div className="border border-slate-100 rounded-2xl overflow-hidden" style={{ maxHeight: '350px' }}>
+          <UnifiedTable
+            data={PREVIEW_DATA}
+            columns={previewColumns}
+            summary={summaryColumns}
+            idKey="id"
+            emptyMessage="لا توجد بيانات للمعاينة"
+          />
         </div>
       </div>
     </div>

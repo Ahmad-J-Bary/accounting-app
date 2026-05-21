@@ -3,7 +3,7 @@ import { TableToolbar } from './TableToolbar';
 import { useTableSettings } from '@shared/hooks';
 import { cn } from '@shared/lib/utils';
 
-interface TableShellProps {
+export interface TableShellProps {
   title?: string;
   search?: string;
   onSearchChange?: (value: string) => void;

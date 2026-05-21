@@ -46,10 +46,7 @@ export default function CurrencySettings() {
     notes: ""
   });
 
-  const [newRate, setNewRate] = useState({
-    rate: "1",
-    type: "Middle"
-  });
+  const [newRates, setNewRates] = useState<Record<string, string>>({});
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -60,6 +57,13 @@ export default function CurrencySettings() {
       ]);
       setCurrencies(currList);
       setRateStatus(statusList);
+
+      // Initialize newRates state with current active values
+      const initialRates: Record<string, string> = {};
+      statusList.forEach(s => {
+        initialRates[s.currency_code] = s.rate || s.last_rate || "1";
+      });
+      setNewRates(initialRates);
       
       const nonBase = currList.find(c => !c.is_base);
       const base = currList.find(c => c.is_base);
@@ -115,12 +119,13 @@ export default function CurrencySettings() {
     const base = currencies.find(c => c.is_base);
     if (!base) return;
     
+    const rateToSet = newRates[from] || "1";
     try {
       await currencyService.setExchangeRate({
         from_currency: base.code,
         to_currency: from,
-        rate: newRate.rate,
-        rate_type: newRate.type
+        rate: rateToSet,
+        rate_type: "Middle"
       });
       toast.success("تم التحديث", { description: `تم تحديث سعر صرف ${from}` });
       loadData();
@@ -275,8 +280,8 @@ export default function CurrencySettings() {
                   <div className="relative flex-1">
                     <Input 
                       type="number" 
-                      defaultValue={status.rate || status.last_rate || "1"} 
-                      onChange={e => setNewRate({...newRate, rate: e.target.value})}
+                      value={newRates[status.currency_code] ?? ""} 
+                      onChange={e => setNewRates(prev => ({ ...prev, [status.currency_code]: e.target.value }))}
                       className="pl-12 text-left tabular-nums" 
                     />
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">

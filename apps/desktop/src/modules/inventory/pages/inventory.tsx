@@ -4,7 +4,7 @@ import { Input } from "@shared/ui/input";
 import { Plus, Download, Search, Warehouse, ArrowLeftRight, History, Package } from "lucide-react";
 import { formatNumber, formatCurrency, formatDateTime } from '@shared/lib/format';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
-import { DataTable, Column } from '@widgets/table-shell/DataTable';
+import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { useDataTable } from '@shared/hooks';
 import { inventoryService } from '@modules/inventory/api/inventoryService';
 import type { StockMovement } from "@erp/shared-types";
@@ -27,14 +27,14 @@ export default function Inventory() {
 
   const isLoading = movementsLoading || refreshing;
 
-  const movementColumns = useMemo<Column<StockMovement>[]>(() => [
+  const movementColumns = useMemo<UnifiedColumn<StockMovement>[]>(() => [
     { 
-      header: "التاريخ", 
+      id: "date", header: "التاريخ", label: "التاريخ",
       accessor: (m) => formatDateTime(m.date),
       className: "tabular-nums text-slate-500 font-medium" 
     },
     { 
-      header: "النوع", 
+      id: "type", header: "النوع", label: "النوع",
       accessor: (m) => {
         const typeMap: Record<string, string> = {
           'In': 'وارد',
@@ -57,12 +57,12 @@ export default function Inventory() {
       align: "center"
     },
     { 
-      header: "الصنف / المنتج", 
+      id: "product", header: "الصنف / المنتج", label: "الصنف / المنتج",
       accessor: "product_name",
       className: "font-bold text-slate-900" 
     },
     { 
-      header: "الكمية", 
+      id: "qty", header: "الكمية", label: "الكمية",
       accessor: (m) => (
         <span className={cn("tabular-nums font-black text-base", parseFloat(m.quantity) < 0 ? "text-rose-600" : "text-emerald-600")}>
           {parseFloat(m.quantity) > 0 ? "+" : ""}{formatNumber(parseFloat(m.quantity))}
@@ -71,12 +71,12 @@ export default function Inventory() {
       align: "left"
     },
     { 
-      header: "التكلفة (إجمالي)", 
+      id: "total_cost", header: "التكلفة (إجمالي)", label: "التكلفة (إجمالي)",
       accessor: (m) => m.total_cost ? formatCurrency(parseFloat(m.total_cost)) : "—",
       className: "tabular-nums text-slate-600 font-medium"
     },
     { 
-      header: "المرجع", 
+      id: "reference", header: "المرجع", label: "المرجع",
       accessor: "reference", 
       className: "text-blue-600 hover:text-blue-800 font-bold font-mono text-xs cursor-pointer bg-blue-50/50 px-2 py-1 rounded border border-blue-100 w-fit" 
     }
@@ -140,7 +140,7 @@ export default function Inventory() {
           </div>
 
           <TabsContent value="movements" className="flex-1 m-0 p-0 overflow-auto">
-            <DataTable
+            <UnifiedTable
               data={movements}
               columns={movementColumns}
               loading={movementsLoading}

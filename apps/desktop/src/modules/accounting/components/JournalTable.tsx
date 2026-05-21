@@ -2,9 +2,10 @@ import { useMemo, useState, useCallback } from "react";
 import { ArrowUpDown } from "lucide-react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
+import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { formatDateTime } from '@shared/lib/format';
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useColumnPreferences } from "@shared/hooks/useColumnPreferences";
+import { useCurrencyContext, formatWithLocale } from "@app/providers/CurrencyContext";
+import { useUnifiedColumns } from "@shared/hooks";
 import type { JournalEntryDto } from "@erp/shared-types";
 import type { JournalFilters } from "../api/journalEntryService";
 import { toJournalRow } from "../lib/journal-view";
@@ -17,7 +18,7 @@ interface JournalTableProps {
   filters?: JournalFilters;
 }
 
-type SortField = "entry_number" | "entry_date";
+type SortField = "entry_number" | "entry_date" | "debit_usd" | "debit_syp" | "credit_usd" | "credit_syp" | "journal_type" | "credit_account" | "debit_account";
 
 interface SortableHeaderProps {
   field: SortField;
@@ -76,6 +77,27 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
         case "entry_date":
           comparison = new Date(a.entry_date).getTime() - new Date(b.entry_date).getTime();
           break;
+        case "debit_usd":
+          comparison = (Number(a.debit_usd) || 0) - (Number(b.debit_usd) || 0);
+          break;
+        case "debit_syp":
+          comparison = (Number(a.debit_syp) || 0) - (Number(b.debit_syp) || 0);
+          break;
+        case "credit_usd":
+          comparison = (Number(a.credit_usd) || 0) - (Number(b.credit_usd) || 0);
+          break;
+        case "credit_syp":
+          comparison = (Number(a.credit_syp) || 0) - (Number(b.credit_syp) || 0);
+          break;
+        case "journal_type":
+          comparison = (a.journal_type_display || "").localeCompare(b.journal_type_display || "", "ar");
+          break;
+        case "credit_account":
+          comparison = (a.credit_account || "").localeCompare(b.credit_account || "", "ar");
+          break;
+        case "debit_account":
+          comparison = (a.debit_account || "").localeCompare(b.debit_account || "", "ar");
+          break;
       }
       return sortDirection === "asc" ? comparison : -comparison;
     });
@@ -92,40 +114,40 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
     },
     { 
       id: "journal_type",    
-      header: "نوع الحركة",           
+      header: <SortableHeader field="journal_type" label="نوع الحركة" currentField={sortField} direction={sortDirection} onSort={handleSort} />,           
       label: "نوع الحركة",           
       accessor: (e) => <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">{e.journal_type_display}</span>,
-      className: "w-24"
+      className: "w-32"
     },
     { 
       id: "total_debit_usd",  
-      header: "عليه / مدين ($)",      
+      header: <SortableHeader field="debit_usd" label="عليه / مدين ($)" currentField={sortField} direction={sortDirection} onSort={handleSort} />,      
       label: "عليه / مدين ($)",      
-      accessor: (e) => e.active_side === 'debit' ? formatAmount(e.debit_usd, { currencyCode: "USD" }) : "",    
+      accessor: (e) => e.active_side === 'debit' ? (e.debit_usd > 0 ? formatWithLocale(e.debit_usd, 2) + " $" : "—") : "",    
       align: "left", 
       className: "tabular-nums font-black text-blue-700" 
     },
     { 
       id: "total_debit_syp",  
-      header: "عليه / مدين (ل.س)",      
+      header: <SortableHeader field="debit_syp" label="عليه / مدين (ل.س)" currentField={sortField} direction={sortDirection} onSort={handleSort} />,      
       label: "عليه / مدين (ل.س)",      
-      accessor: (e) => e.active_side === 'debit' ? formatAmount(e.debit_syp, { currencyCode: "SYP" }) : "",    
+      accessor: (e) => e.active_side === 'debit' ? (e.debit_syp > 0 ? formatWithLocale(e.debit_syp, 0) + " ل.س" : "—") : "",    
       align: "left", 
       className: "tabular-nums font-bold text-blue-600" 
     },
     { 
       id: "total_credit_usd", 
-      header: "له / دائن ($)",        
+      header: <SortableHeader field="credit_usd" label="له / دائن ($)" currentField={sortField} direction={sortDirection} onSort={handleSort} />,        
       label: "له / دائن ($)",        
-      accessor: (e) => e.active_side === 'credit' ? formatAmount(e.credit_usd, { currencyCode: "USD" }) : "",  
+      accessor: (e) => e.active_side === 'credit' ? (e.credit_usd > 0 ? formatWithLocale(e.credit_usd, 2) + " $" : "—") : "",  
       align: "left", 
       className: "tabular-nums font-black text-emerald-700" 
     },
     { 
       id: "total_credit_syp", 
-      header: "له / دائن (ل.س)",        
+      header: <SortableHeader field="credit_syp" label="له / دائن (ل.س)" currentField={sortField} direction={sortDirection} onSort={handleSort} />,        
       label: "له / دائن (ل.س)",        
-      accessor: (e) => e.active_side === 'credit' ? formatAmount(e.credit_syp, { currencyCode: "SYP" }) : "",  
+      accessor: (e) => e.active_side === 'credit' ? (e.credit_syp > 0 ? formatWithLocale(e.credit_syp, 0) + " ل.س" : "—") : "",  
       align: "left", 
       className: "tabular-nums font-bold text-emerald-600" 
     },
@@ -138,14 +160,14 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
     },
     { 
       id: "credit_account",  
-      header: "الحساب الدائن / المصدر", 
+      header: <SortableHeader field="credit_account" label="الحساب الدائن / المصدر" currentField={sortField} direction={sortDirection} onSort={handleSort} />, 
       label: "الحساب الدائن / المصدر", 
       accessor: (e) => e.credit_account,          
       className: "text-emerald-600 font-bold" 
     },
     { 
       id: "debit_account",   
-      header: "الحساب المدين / الوجهة", 
+      header: <SortableHeader field="debit_account" label="الحساب المدين / الوجهة" currentField={sortField} direction={sortDirection} onSort={handleSort} />, 
       label: "الحساب المدين / الوجهة", 
       accessor: (e) => e.debit_account,           
       className: "text-blue-600 font-bold" 
@@ -159,23 +181,48 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
     },
   ], [formatAmount, sortField, sortDirection, handleSort]);
 
-  const defaultVisible = ["entry_number", "journal_type", "total_debit_usd", "total_credit_usd", "description", "entry_date"];
-  const { visibleColumns, toggleColumn } = useColumnPreferences("journal-unified", defaultVisible);
+  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+    tableId: "journal-unified",
+    columns: allColumns,
+    defaultVisible: ["entry_number", "journal_type", "total_debit_usd", "total_credit_usd", "description", "entry_date"],
+  });
 
-  const enrichedColumns = useMemo(() => {
-    return allColumns.map(col => ({
-      ...col,
-      visible: visibleColumns.includes(col.id)
-    }));
-  }, [allColumns, visibleColumns]);
+  const summaryColumns = useMemo<SummaryColumn[]>(() => {
+    const { totalDebitUSD, totalCreditUSD, totalDebitSYP, totalCreditSYP } = sortedData.reduce(
+      (acc, row) => ({
+        totalDebitUSD: acc.totalDebitUSD + (Number(row.debit_usd) || 0),
+        totalCreditUSD: acc.totalCreditUSD + (Number(row.credit_usd) || 0),
+        totalDebitSYP: acc.totalDebitSYP + (Number(row.debit_syp) || 0),
+        totalCreditSYP: acc.totalCreditSYP + (Number(row.credit_syp) || 0),
+      }),
+      { totalDebitUSD: 0, totalCreditUSD: 0, totalDebitSYP: 0, totalCreditSYP: 0 }
+    );
 
-  const toolbarColumns = useMemo(() => {
-    return allColumns.map(c => ({
-      id: c.id,
-      label: c.label || (typeof c.header === 'string' ? c.header : c.id),
-      visible: visibleColumns.includes(c.id)
-    }));
-  }, [allColumns, visibleColumns]);
+    const balanceUSD = totalDebitUSD - totalCreditUSD;
+    const balanceSYP = totalDebitSYP - totalCreditSYP;
+
+    const colIds = enrichedColumns.map(c => c.id);
+    return colIds.map(id => {
+      switch (id) {
+        case 'entry_number':
+          return { id: 'count', label: '', value: `${sortedData.length} قيد`, className: 'text-slate-500 font-medium' };
+        case 'journal_type':
+          return { id: 'journal_type_summary', label: '', value: 'المجموع', className: 'text-slate-600 font-bold', align: 'center' as const };
+        case 'total_debit_usd':
+          return { id: 'debit_usd_total', label: 'إجمالي', value: totalDebitUSD > 0 ? formatAmount(totalDebitUSD, { currencyCode: "USD" }) : "—", align: 'left' as const, className: 'text-blue-700 font-black' };
+        case 'total_debit_syp':
+          return { id: 'debit_syp_total', label: 'إجمالي', value: totalDebitSYP > 0 ? formatWithLocale(totalDebitSYP, 0) + " ل.س" : "—", align: 'left' as const, className: 'text-blue-600 font-bold' };
+        case 'total_credit_usd':
+          return { id: 'credit_usd_total', label: 'إجمالي', value: totalCreditUSD > 0 ? formatAmount(totalCreditUSD, { currencyCode: "USD" }) : "—", align: 'left' as const, className: 'text-emerald-700 font-black' };
+        case 'total_credit_syp':
+          return { id: 'credit_syp_total', label: 'إجمالي', value: totalCreditSYP > 0 ? formatWithLocale(totalCreditSYP, 0) + " ل.س" : "—", align: 'left' as const, className: 'text-emerald-600 font-bold' };
+        case 'description':
+          return { id: 'balance_summary', label: 'الرصيد', value: `${formatAmount(balanceUSD, { currencyCode: "USD" })} / ${formatWithLocale(balanceSYP, 0)} ل.س`, className: balanceUSD >= 0 ? 'text-slate-900 font-black' : 'text-rose-600 font-black' };
+        default:
+          return { id: `${id}_spacer`, label: '', value: '' };
+      }
+    });
+  }, [sortedData, formatAmount, enrichedColumns]);
 
   return (
     <TableShell
@@ -190,6 +237,7 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
         columns={enrichedColumns}
         loading={loading}
         emptyMessage="لا توجد قيود يومية مسجلة"
+        summary={summaryColumns}
       />
     </TableShell>
   );

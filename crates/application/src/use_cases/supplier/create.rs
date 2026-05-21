@@ -1,6 +1,7 @@
 use chrono::Utc;
 use domain::accounting::account::{Account, AccountCategory, AccountType};
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
+use domain::shared::exchange_rate::RateType;
 use domain::shared::ids::{AccountId, SupplierId};
 use domain::shared::{Currency, MonetaryAmount, Money};
 use domain::suppliers::Supplier;
@@ -10,6 +11,7 @@ use std::sync::Arc;
 use crate::dto::supplier_dto::{CreateSupplierRequest, SupplierDto};
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
+use crate::ports::exchange_rate_repository::ExchangeRateRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::supplier_repository::SupplierRepository;
 use crate::constants::PAYABLES_PARENT_ID;
@@ -19,6 +21,7 @@ pub struct CreateSupplierUseCase {
     supplier_repo: Arc<dyn SupplierRepository>,
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
+    rate_repo: Arc<dyn ExchangeRateRepository>,
 }
 
 impl CreateSupplierUseCase {
@@ -26,11 +29,13 @@ impl CreateSupplierUseCase {
         supplier_repo: Arc<dyn SupplierRepository>,
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
+        rate_repo: Arc<dyn ExchangeRateRepository>,
     ) -> Self {
         Self {
             supplier_repo,
             account_repo,
             journal_repo,
+            rate_repo,
         }
     }
 
@@ -46,7 +51,19 @@ impl CreateSupplierUseCase {
         let credit = crate::utils::parse_decimal(req.credit.as_deref(), "الدائن")?;
         let opening_balance =
             crate::utils::parse_decimal(req.opening_balance.as_deref(), "رصيد الافتتاح")?;
-        let currency = Currency::syp();
+
+        // Use currency from request, default to SYP
+        let is_usd = req.currency.as_deref() == Some("USD");
+        let currency = if is_usd { Currency::usd() } else { Currency::syp() };
+        let fx_rate = if !is_usd {
+            self.rate_repo
+                .find_latest("USD", "SYP", RateType::Middle)
+                .await?
+                .map(|r| r.rate)
+                .unwrap_or(Decimal::ONE)
+        } else {
+            Decimal::ONE
+        };
 
         let mut supplier = Supplier::new_with_id(
             supplier_id,
@@ -124,7 +141,7 @@ impl CreateSupplierUseCase {
 
         let amount_ma = MonetaryAmount::new(
             Money::new(total_opening.abs(), currency.clone()),
-            Decimal::ONE,
+            fx_rate,
         );
         let zero_ma = MonetaryAmount::zero(currency.clone());
 

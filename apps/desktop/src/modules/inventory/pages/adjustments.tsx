@@ -12,7 +12,7 @@ import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTem
 // Refactored Components & Hooks
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
-import { useDataTable, useColumnPreferences } from '@shared/hooks';
+import { useDataTable, useUnifiedColumns } from '@shared/hooks';
 import { AdjustmentForm } from '@modules/inventory/components/AdjustmentForm';
 
 export default function AdjustmentsPage() {
@@ -106,22 +106,11 @@ export default function AdjustmentsPage() {
     }
   ], []);
 
-  const { visibleColumns, toggleColumn } = useColumnPreferences("adjustments-unified", ["product_name", "adjustment_date", "difference", "reason"]);
-
-  const enrichedColumns = useMemo(() => {
-    return allColumns.map(col => ({
-      ...col,
-      visible: visibleColumns.includes(col.id)
-    }));
-  }, [allColumns, visibleColumns]);
-
-  const toolbarColumns = useMemo(() => {
-    return allColumns.map(c => ({
-      id: c.id,
-      label: c.label || (typeof c.header === 'string' ? c.header : c.id),
-      visible: visibleColumns.includes(c.id)
-    }));
-  }, [allColumns, visibleColumns]);
+  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+    tableId: "adjustments-unified",
+    columns: allColumns,
+    defaultVisible: ["product_name", "adjustment_date", "difference", "reason"],
+  });
 
   const surplusCount = useMemo(() => adjustments.filter((a: StockAdjustment) => parseFloat(a.difference) > 0).length, [adjustments]);
   const shortageCount = useMemo(() => adjustments.filter((a: StockAdjustment) => parseFloat(a.difference) < 0).length, [adjustments]);

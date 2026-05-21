@@ -7,7 +7,7 @@ import { Badge } from "@shared/ui/badge";
 import { Button } from "@shared/ui/button";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
-import { useColumnPreferences } from '@shared/hooks';
+import { useUnifiedColumns } from '@shared/hooks';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -372,22 +372,11 @@ export function MaterialTable({
     return cols;
   }, [categories, onManageUnits, formatAmount, currencies, onEdit, onDelete, onRowClick, sortField, sortDirection, handleSort]);
 
-  const { visibleColumns, toggleColumn } = useColumnPreferences("materials-unified", allColumns.map(c => c.id));
-
-  const enrichedColumns = useMemo(() => {
-    return allColumns.map(col => ({
-      ...col,
-      visible: visibleColumns.includes(col.id)
-    }));
-  }, [allColumns, visibleColumns]);
-
-  const toolbarColumns = useMemo(() => {
-    return allColumns.map(c => ({
-      id: c.id,
-      label: c.label || (typeof c.header === 'string' ? c.header : c.id),
-      visible: visibleColumns.includes(c.id)
-    }));
-  }, [allColumns, visibleColumns]);
+  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+    tableId: "materials-unified",
+    columns: allColumns,
+    defaultVisible: allColumns.map(c => c.id),
+  });
 
   return (
     <TableShell

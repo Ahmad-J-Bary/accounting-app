@@ -1,20 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@shared/ui/button";
-import { Input } from "@shared/ui/input";
-import { Plus, Search, Settings2, History, Download, Receipt, Wallet, ClipboardList, DollarSign, Eye } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@shared/ui/dropdown-menu";
+import { Plus, History, Download, Receipt, Wallet, ClipboardList, DollarSign } from "lucide-react";
 
 import { accountingService } from '@modules/accounting/api/accountingService';
 import { SYSTEM_ACCOUNT_IDS, type AccountDto, type SaveAccountCommand } from "@erp/shared-types";
 
-import { useColumnPreferences } from '@shared/hooks';
+
 import { useTabs } from "@app/providers/TabContext";
 import { useEntityList } from '@shared/hooks/useEntityList';
 import { ExpenseTable } from '@modules/accounting/components/ExpenseTable';
@@ -96,9 +87,9 @@ export default function Expenses() {
     try {
       setVoucherSaving(true);
       await paymentService.createPayment(payload);
+      await refresh(true);
       toastSonner.success("تم تسجيل سند الصرف بنجاح");
       setIsVoucherOpen(false);
-      refresh(true);
     } catch (error) {
       toastSonner.error("فشل تسجيل السند: " + error);
     } finally {
@@ -203,6 +194,15 @@ export default function Expenses() {
           search={search}
           onSearchChange={setSearch}
           onView={(acc) => setSelectedId(acc.id)}
+          onEdit={(acc) => handleOpenEdit(acc)}
+          onDelete={(id) => { setSelectedId(null); handleDelete(id); }}
+          onJournal={(acc) => acc.id && openTab({
+            id: `ledger-${acc.id}`,
+            title: `حركة: ${acc.name_ar}`,
+            path: `/accounting/account-ledger/${acc.id}`,
+            closable: true
+          })}
+          onDocument={(acc) => { setSelectedId(acc.id); setIsVoucherOpen(true); setIsFormOpen(false); }}
           selectedId={selectedId}
           parentCode={expensesParent?.code}
         />

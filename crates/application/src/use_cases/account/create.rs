@@ -5,6 +5,7 @@ use rust_decimal::Decimal;
 use domain::accounting::account::Account;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::shared::currency::Currency;
+use domain::shared::exchange_rate::RateType;
 use domain::shared::ids::{AccountId, CustomerId, SupplierId};
 use domain::shared::money::Money;
 use domain::shared::MonetaryAmount;
@@ -13,6 +14,7 @@ use domain::suppliers::Supplier;
 
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::customer_repository::CustomerRepository;
+use crate::ports::exchange_rate_repository::ExchangeRateRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::supplier_repository::SupplierRepository;
 use crate::constants::{RECEIVABLES_PARENT_ID, PAYABLES_PARENT_ID};
@@ -26,6 +28,7 @@ pub struct CreateAccountUseCase {
     journal_repo: Arc<dyn JournalEntryRepository>,
     customer_repo: Option<Arc<dyn CustomerRepository>>,
     supplier_repo: Option<Arc<dyn SupplierRepository>>,
+    rate_repo: Arc<dyn ExchangeRateRepository>,
 }
 
 impl CreateAccountUseCase {
@@ -34,12 +37,14 @@ impl CreateAccountUseCase {
         journal_repo: Arc<dyn JournalEntryRepository>,
         customer_repo: Option<Arc<dyn CustomerRepository>>,
         supplier_repo: Option<Arc<dyn SupplierRepository>>,
+        rate_repo: Arc<dyn ExchangeRateRepository>,
     ) -> Self {
         Self {
             account_repo,
             journal_repo,
             customer_repo,
             supplier_repo,
+            rate_repo,
         }
     }
 
@@ -116,9 +121,20 @@ impl CreateAccountUseCase {
         let total_opening = debit - credit;
 
         if !is_receivable_or_payable {
+            let is_usd = currency.code == "USD";
+            let fx_rate = if is_usd {
+                self.rate_repo
+                    .find_latest("USD", "SYP", RateType::Middle)
+                    .await
+                    .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?
+                    .map(|r| r.rate)
+                    .unwrap_or(Decimal::ONE)
+            } else {
+                Decimal::ONE
+            };
             let amount_ma = MonetaryAmount::new(
                 Money::new(total_opening.abs(), currency.clone()),
-                Decimal::ONE,
+                fx_rate,
             );
             let zero_ma = MonetaryAmount::zero(currency.clone());
 

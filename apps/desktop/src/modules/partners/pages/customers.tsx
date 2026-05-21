@@ -1,15 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { Button } from "@shared/ui/button";
-import { Input } from "@shared/ui/input";
-import { Plus, Search, Settings2, User, Users, Phone, DollarSign, Wallet, History, ShoppingBag, Printer, Receipt, Download } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@shared/ui/dropdown-menu";
+import { Plus, User, Users, DollarSign, Wallet, History, ShoppingBag, Printer, Receipt, Download } from "lucide-react";
 import { toast } from "sonner";
 
 import { customerService } from '@modules/partners/api/customerService';
@@ -18,7 +9,6 @@ import { invoiceService } from '@modules/invoicing/api/invoiceService';
 import { paymentService } from '@modules/payments/api/paymentService';
 import type { CustomerDto, AccountDto, InvoiceDto, Payment, CreateCustomerRequest, UpdateCustomerRequest, CreatePaymentRequest } from "@erp/shared-types";
 
-import { useColumnPreferences } from '@shared/hooks';
 import { useTabs } from "@app/providers/TabContext";
 import { useEntityList } from '@shared/hooks/useEntityList';
 import { CustomerTable } from '@modules/partners/components/CustomerTable';
@@ -75,9 +65,9 @@ export default function Customers() {
     try {
       setReceiptSaving(true);
       await paymentService.createPayment(payload);
+      await refresh(true);
       toast.success("تم تسجيل سند القبض بنجاح");
       setIsReceiptOpen(false);
-      refresh(true);
     } catch (error) {
       toast.error("فشل تسجيل السند: " + error);
     } finally {
@@ -230,6 +220,13 @@ export default function Customers() {
           onView={(c) => setSelectedId(c.id)}
           onEdit={(c) => { loadAccounts(); handleOpenEdit(c); }}
           onDelete={(id) => { setSelectedId(null); handleDelete(id); }}
+          onJournal={(c) => c.account_id && openTab({
+            id: `ledger-${c.account_id}`,
+            title: `حركة: ${c.name}`,
+            path: `/accounting/account-ledger/${c.account_id}`,
+            closable: true
+          })}
+          onDocument={(c) => { setSelectedId(c.id); setIsReceiptOpen(true); setIsFormOpen(false); }}
           selectedId={selectedId}
         />
       }

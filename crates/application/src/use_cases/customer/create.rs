@@ -2,6 +2,7 @@ use chrono::Utc;
 use domain::accounting::account::{Account, AccountCategory, AccountType};
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::customers::Customer;
+use domain::shared::exchange_rate::RateType;
 use domain::shared::ids::{AccountId, CustomerId};
 use domain::shared::{Currency, MonetaryAmount, Money};
 use rust_decimal::Decimal;
@@ -11,6 +12,7 @@ use crate::dto::customer_dto::{CreateCustomerRequest, CustomerDto};
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::customer_repository::CustomerRepository;
+use crate::ports::exchange_rate_repository::ExchangeRateRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::constants::RECEIVABLES_PARENT_ID;
 use std::str::FromStr;
@@ -19,6 +21,7 @@ pub struct CreateCustomerUseCase {
     customer_repo: Arc<dyn CustomerRepository>,
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
+    rate_repo: Arc<dyn ExchangeRateRepository>,
 }
 
 impl CreateCustomerUseCase {
@@ -26,11 +29,13 @@ impl CreateCustomerUseCase {
         customer_repo: Arc<dyn CustomerRepository>,
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
+        rate_repo: Arc<dyn ExchangeRateRepository>,
     ) -> Self {
         Self {
             customer_repo,
             account_repo,
             journal_repo,
+            rate_repo,
         }
     }
 
@@ -46,7 +51,19 @@ impl CreateCustomerUseCase {
         let credit = crate::utils::parse_decimal(req.credit.as_deref(), "الدائن")?;
         let opening_balance =
             crate::utils::parse_decimal(req.opening_balance.as_deref(), "رصيد الافتتاح")?;
-        let currency = Currency::syp(); // For now, assume SYP as base
+
+        // Use currency from request, default to SYP
+        let is_usd = req.currency.as_deref() == Some("USD");
+        let currency = if is_usd { Currency::usd() } else { Currency::syp() };
+        let fx_rate = if !is_usd {
+            self.rate_repo
+                .find_latest("USD", "SYP", RateType::Middle)
+                .await?
+                .map(|r| r.rate)
+                .unwrap_or(Decimal::ONE)
+        } else {
+            Decimal::ONE
+        };
 
         let mut customer = Customer::new_with_id(
             customer_id,
@@ -124,7 +141,7 @@ impl CreateCustomerUseCase {
 
         let amount_ma = MonetaryAmount::new(
             Money::new(total_opening.abs(), currency.clone()),
-            Decimal::ONE,
+            fx_rate,
         );
         let zero_ma = MonetaryAmount::zero(currency.clone());
 

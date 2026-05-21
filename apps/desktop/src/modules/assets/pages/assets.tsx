@@ -17,7 +17,7 @@ import type {
 } from "@erp/shared-types";
 import { toast } from "sonner";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
-import { DataTable, Column } from '@widgets/table-shell/DataTable';
+import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 
 // Components
 import { AssetForm } from '@modules/assets/components/AssetForm';
@@ -134,13 +134,13 @@ export default function Assets() {
     { label: "عدد الأصول", value: fixedAssets.length, icon: Package, color: "text-amber-600" },
   ], [totalFixedCost, totalDepreciation, netBookValue, fixedAssets.length]);
 
-  const fixedColumns = useMemo<Column<FixedAssetDto>[]>(() => [
-    { header: "الكود", accessor: "code", className: "tabular-nums font-mono text-xs" },
-    { header: "الاسم", accessor: "name", className: "font-black text-slate-900" },
-    { header: "التكلفة", accessor: (a) => formatCurrency(parseFloat(a.purchase_cost.amount)), className: "tabular-nums" },
-    { header: "صافي القيمة", accessor: (a) => formatCurrency(parseFloat(a.purchase_cost.amount) - parseFloat(a.accumulated_depreciation.amount)), className: "tabular-nums font-bold text-emerald-600" },
+  const fixedColumns = useMemo<UnifiedColumn<FixedAssetDto>[]>(() => [
+    { id: "code", header: "الكود", label: "الكود", accessor: "code", className: "tabular-nums font-mono text-xs" },
+    { id: "name", header: "الاسم", label: "الاسم", accessor: "name", className: "font-black text-slate-900" },
+    { id: "cost", header: "التكلفة", label: "التكلفة", accessor: (a) => formatCurrency(parseFloat(a.purchase_cost.amount)), className: "tabular-nums" },
+    { id: "net_value", header: "صافي القيمة", label: "صافي القيمة", accessor: (a) => formatCurrency(parseFloat(a.purchase_cost.amount) - parseFloat(a.accumulated_depreciation.amount)), className: "tabular-nums font-bold text-emerald-600" },
     { 
-      header: "الحالة", 
+      id: "status", header: "الحالة", label: "الحالة",
       accessor: (a) => (
         <span className={cn(
           "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ring-1 ring-inset",
@@ -152,7 +152,7 @@ export default function Assets() {
       align: "center"
     },
     {
-      header: "إجراءات",
+      id: "actions", header: "إجراءات", label: "إجراءات",
       accessor: (a) => (
         <Button variant="outline" size="sm" className="h-8 text-xs font-bold" onClick={async () => {
           try { 
@@ -168,15 +168,15 @@ export default function Assets() {
     }
   ], [loadData]);
 
-  const consumableColumns = useMemo<Column<ConsumableDto>[]>(() => [
-    { header: "الكود", accessor: "code", className: "tabular-nums font-mono text-xs" },
-    { header: "الاسم", accessor: "name", className: "font-black text-slate-900" },
-    { header: "الكمية", accessor: (c) => (
+  const consumableColumns = useMemo<UnifiedColumn<ConsumableDto>[]>(() => [
+    { id: "code", header: "الكود", label: "الكود", accessor: "code", className: "tabular-nums font-mono text-xs" },
+    { id: "name", header: "الاسم", label: "الاسم", accessor: "name", className: "font-black text-slate-900" },
+    { id: "qty", header: "الكمية", label: "الكمية", accessor: (c) => (
       <span className="font-black text-blue-600 tabular-nums text-lg">{c.quantity_on_hand}</span>
     ), align: "center" },
-    { header: "تكلفة الوحدة", accessor: (c) => formatCurrency(parseFloat(c.unit_cost.amount)), className: "tabular-nums" },
+    { id: "unit_cost", header: "تكلفة الوحدة", label: "تكلفة الوحدة", accessor: (c) => formatCurrency(parseFloat(c.unit_cost.amount)), className: "tabular-nums" },
     {
-      header: "إجراءات",
+      id: "actions", header: "إجراءات", label: "إجراءات",
       accessor: (c) => (
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="h-8 text-xs font-bold" onClick={() => { setSelectedConsumable(c); setIsIssuingConsumable(true); }}>صرف</Button>
@@ -190,10 +190,10 @@ export default function Assets() {
     }
   ], [loadData]);
 
-  const movementColumns = useMemo<Column<AssetMovement>[]>(() => [
-    { header: "التاريخ", accessor: (m) => formatDateTime(m.date), className: "tabular-nums text-slate-500 font-medium" },
+  const movementColumns = useMemo<UnifiedColumn<AssetMovement>[]>(() => [
+    { id: "date", header: "التاريخ", label: "التاريخ", accessor: (m) => formatDateTime(m.date), className: "tabular-nums text-slate-500 font-medium" },
     { 
-      header: "النوع", 
+      id: "type", header: "النوع", label: "النوع",
       accessor: (m) => (
         <span className={cn(
           "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ring-1 ring-inset",
@@ -204,9 +204,9 @@ export default function Assets() {
       ),
       align: "center"
     },
-    { header: "البيان", accessor: "description", className: "text-slate-500 text-xs italic" },
-    { header: "القيمة", accessor: (m) => formatCurrency(parseFloat(m.amount.amount)), className: "tabular-nums font-bold" },
-    { header: "الكمية", accessor: (m) => m.quantity || '-', className: "tabular-nums", align: "center" }
+    { id: "desc", header: "البيان", label: "البيان", accessor: "description", className: "text-slate-500 text-xs italic" },
+    { id: "amount", header: "القيمة", label: "القيمة", accessor: (m) => formatCurrency(parseFloat(m.amount.amount)), className: "tabular-nums font-bold" },
+    { id: "qty", header: "الكمية", label: "الكمية", accessor: (m) => m.quantity || '-', className: "tabular-nums", align: "center" }
   ], []);
 
   return (
@@ -271,15 +271,15 @@ export default function Assets() {
 
           <div className="flex-1 overflow-auto">
             <TabsContent value="fixed" className="m-0 p-0 h-full">
-              <DataTable data={filteredFixed} columns={fixedColumns} loading={loading} />
+              <UnifiedTable data={filteredFixed} columns={fixedColumns} loading={loading} />
             </TabsContent>
             
             <TabsContent value="consumables" className="m-0 p-0 h-full">
-              <DataTable data={filteredConsumables} columns={consumableColumns} loading={loading} />
+              <UnifiedTable data={filteredConsumables} columns={consumableColumns} loading={loading} />
             </TabsContent>
 
             <TabsContent value="movements" className="m-0 p-0 h-full">
-              <DataTable data={movements} columns={movementColumns} loading={loading} />
+              <UnifiedTable data={movements} columns={movementColumns} loading={loading} />
             </TabsContent>
             
             <TabsContent value="depreciation" className="m-0 p-8 h-full overflow-auto">

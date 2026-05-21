@@ -20,13 +20,14 @@ import {
 // Refactored Components & Hooks
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
-import { useDataTable, useColumnPreferences } from '@shared/hooks';
+import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
+import { useDataTable, useUnifiedColumns } from '@shared/hooks';
 import { PaymentForm, type PaymentFormPayload } from '@modules/payments/components/PaymentForm';
 import { PaymentDetailPanel } from '@modules/payments/components/PaymentDetailPanel';
 import { PAYMENT_TYPE_LABELS } from '@modules/payments/lib/constants';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
-type SortField = "journal_entry_number" | "amount_usd" | "amount_syp" | "payment_date";
+type SortField = "journal_entry_number" | "amount_usd" | "amount_syp" | "payment_date" | "payment_type" | "credit_account" | "debit_account";
 
 interface SortableHeaderProps {
   field: SortField;
@@ -138,11 +139,20 @@ export default function PaymentsPage() {
         case "payment_date":
           comparison = new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime();
           break;
+        case "payment_type":
+          comparison = (PAYMENT_TYPE_LABELS[a.payment_type as keyof typeof PAYMENT_TYPE_LABELS] || a.payment_type).localeCompare(PAYMENT_TYPE_LABELS[b.payment_type as keyof typeof PAYMENT_TYPE_LABELS] || b.payment_type, "ar");
+          break;
+        case "credit_account":
+          comparison = (accounts.find(acc => acc.id === a.credit_account_id)?.name_ar || "").localeCompare(accounts.find(acc => acc.id === b.credit_account_id)?.name_ar || "", "ar");
+          break;
+        case "debit_account":
+          comparison = (accounts.find(acc => acc.id === a.debit_account_id)?.name_ar || "").localeCompare(accounts.find(acc => acc.id === b.debit_account_id)?.name_ar || "", "ar");
+          break;
       }
       return sortDirection === "asc" ? comparison : -comparison;
     });
     return sorted;
-  }, [payments, sortField, sortDirection]);
+  }, [payments, sortField, sortDirection, accounts]);
 
   const filtered = useMemo(() => {
     return sortedFiltered.filter(p => typeFilter === "all" || p.payment_type === typeFilter);
@@ -171,7 +181,7 @@ export default function PaymentsPage() {
     },
     { 
       id: "payment_type",
-      header: "النوع",
+      header: <SortableHeader field="payment_type" label="النوع" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
       label: "النوع",
       accessor: (p) => (
         <div className="flex items-center gap-2">
@@ -222,7 +232,7 @@ export default function PaymentsPage() {
     },
     {
       id: "credit_account",
-      header: "الحساب الدائن / المصدر",
+      header: <SortableHeader field="credit_account" label="الحساب الدائن / المصدر" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
       label: "الحساب الدائن / المصدر",
       accessor: (p) => {
         if (p.credit_account_id) {
@@ -234,7 +244,7 @@ export default function PaymentsPage() {
     },
     {
       id: "debit_account",
-      header: "الحساب المدين / الوجهة",
+      header: <SortableHeader field="debit_account" label="الحساب المدين / الوجهة" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
       label: "الحساب المدين / الوجهة",
       accessor: (p) => {
         if (p.debit_account_id) {
@@ -280,22 +290,37 @@ export default function PaymentsPage() {
     }
   ], [formatAmount, accounts, handleDelete, sortField, sortDirection, handleSort]);
 
-  const { visibleColumns, toggleColumn } = useColumnPreferences("payments-unified", allColumns.map(c => c.id));
+  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+    tableId: "payments-unified",
+    columns: allColumns,
+    defaultVisible: allColumns.map(c => c.id),
+  });
 
-  const enrichedColumns = useMemo(() => {
-    return allColumns.map(col => ({
-      ...col,
-      visible: visibleColumns.includes(col.id)
-    }));
-  }, [allColumns, visibleColumns]);
-
-  const toolbarColumns = useMemo(() => {
-    return allColumns.map(c => ({
-      id: c.id,
-      label: c.label || (typeof c.header === 'string' ? c.header : c.id),
-      visible: visibleColumns.includes(c.id)
-    }));
-  }, [allColumns, visibleColumns]);
+  const summaryColumns = useMemo<SummaryColumn[]>(() => {
+    const totalUSD = filtered.reduce((s, p) => {
+      const amt = parseFloat(p.amount);
+      const rate = parseFloat(p.exchange_rate);
+      return s + (p.currency_code === "USD" ? amt : amt / rate);
+    }, 0);
+    const totalSYP = filtered.reduce((s, p) => {
+      const amt = parseFloat(p.amount);
+      const rate = parseFloat(p.exchange_rate);
+      return s + (p.currency_code === "SYP" ? amt : amt * rate);
+    }, 0);
+    const colIds = enrichedColumns.map(c => c.id);
+    return colIds.map(id => {
+      switch (id) {
+        case 'journal_entry_number':
+          return { id: 'count', label: '', value: `${filtered.length} سند`, className: 'text-slate-500 font-medium' };
+        case 'amount_usd':
+          return { id: 'amount_usd_summary', label: 'الإجمالي', value: formatAmount(totalUSD, { currencyCode: "USD" }), align: 'left' as const, className: 'text-slate-900 font-black' };
+        case 'amount_syp':
+          return { id: 'amount_syp_summary', label: 'الإجمالي', value: formatAmount(totalSYP, { currencyCode: "SYP" }), align: 'left' as const, className: 'text-slate-900 font-black' };
+        default:
+          return { id: `${id}_spacer`, label: '', value: '' };
+      }
+    });
+  }, [filtered, formatAmount, enrichedColumns]);
 
   const handleCreate = async (payload: CreatePaymentRequest) => {
     setSaving(true);
@@ -374,6 +399,7 @@ export default function PaymentsPage() {
             onRowClick={(p) => setSelectedPayment(p)}
             selectedId={selectedPayment?.id}
             emptyMessage="لا توجد سندات مالية مسجلة"
+            summary={summaryColumns}
           />
         </TableShell>
       }

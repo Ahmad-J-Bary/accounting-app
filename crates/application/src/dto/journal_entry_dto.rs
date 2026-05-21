@@ -67,13 +67,18 @@ impl From<JournalEntry> for JournalEntryDto {
 
 impl From<JournalLine> for JournalLineDto {
     fn from(line: JournalLine) -> Self {
+        let fx_rate = if line.debit.amount() > rust_decimal::Decimal::ZERO {
+            line.debit.fx_rate
+        } else {
+            line.credit.fx_rate
+        };
         Self {
             account_id: line.account_id.0.to_string(),
             account_code: None,
             account_name: None,
             partner_id: line.partner_id.map(|id| id.to_string()),
             currency: line.debit.currency().code.clone(),
-            fx_rate: line.debit.fx_rate.to_string(),
+            fx_rate: fx_rate.to_string(),
             debit: line.debit.amount().to_string(),
             credit: line.credit.amount().to_string(),
             description: line.description,

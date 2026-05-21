@@ -41,7 +41,13 @@ pub async fn delete_payment(
     id: String,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    DeletePaymentUseCase::new(state.payment_repo.clone(), state.journal_entry_repo.clone())
+    DeletePaymentUseCase::new(
+        state.payment_repo.clone(),
+        state.customer_repo.clone(),
+        state.supplier_repo.clone(),
+        state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
+    )
         .execute(id)
         .await
         .map_err(|e| e.to_string())

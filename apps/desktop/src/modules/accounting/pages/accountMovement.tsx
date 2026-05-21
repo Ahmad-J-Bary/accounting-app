@@ -21,7 +21,6 @@ import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTem
 import { AccountMovementTable } from "../components/AccountMovementTable";
 import { cn } from "@shared/lib/utils";
 import { useDataTable } from "@shared/hooks";
-import { JournalSummaryFooter } from "../components/JournalSummaryFooter";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { toast } from "sonner";
 
@@ -138,9 +137,9 @@ export default function AccountMovement() {
     try {
       setSavingVoucher(true);
       await paymentService.createPayment(payload);
+      await refresh(true);
       toast.success("تم تسجيل السند بنجاح");
       setIsVoucherOpen(false);
-      refresh(true);
     } catch (error) {
       toast.error("فشل تسجيل السند: " + error);
     } finally {
@@ -253,27 +252,6 @@ export default function AccountMovement() {
           onSearchChange={setSearch}
           accountName={ledger?.account_name || ""}
         />
-      }
-      summaryContent={
-        ledger && (
-          <JournalSummaryFooter 
-            totals={[
-              { 
-                currencyCode: 'USD', 
-                currencySymbol: '$', 
-                debit: parseFloat(ledger.total_debit_usd), 
-                credit: parseFloat(ledger.total_credit_usd) 
-              },
-              { 
-                currencyCode: 'SYP', 
-                currencySymbol: 'ل.س', 
-                debit: parseFloat(ledger.total_debit_usd), 
-                credit: parseFloat(ledger.total_credit_usd) 
-              }
-            ]} 
-            className="border-none shadow-none bg-transparent p-0"
-          />
-        )
       }
       sidePanel={
         isVoucherOpen && (
