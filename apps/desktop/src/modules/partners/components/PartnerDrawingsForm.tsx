@@ -21,7 +21,7 @@ export function PartnerDrawingsForm({ partner, onSave, onClose, saving }: Partne
     payment_type: "DrawingsVoucher",
     amount: 0,
     payment_date: new Date().toISOString(),
-    currency_code: baseCurrency?.code || "SYP",
+    currency_code: baseCurrency?.code || "",
     exchange_rate: 1,
     debit_account_id: partner.drawings_account_id || undefined,
     notes: `مسحوبات شريك: ${partner.name}`,
@@ -33,7 +33,7 @@ export function PartnerDrawingsForm({ partner, onSave, onClose, saving }: Partne
     await onSave({
       payment_type: "DrawingsVoucher",
       amount: form.amount,
-      currency_code: form.currency_code || "SYP",
+      currency_code: form.currency_code || baseCurrency?.code || "",
       exchange_rate: form.exchange_rate || 1,
       payment_date: form.payment_date || new Date().toISOString(),
       debit_account_id: form.debit_account_id,

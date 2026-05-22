@@ -1,6 +1,7 @@
 use tauri::State;
 use application::dto::currency_dto::{CreateCurrencyDto, UpdateCurrencyDto, SetExchangeRateDto, CurrencyDto, ExchangeRateDto, TodayRateStatusDto, CurrencyContextDto};
 use application::errors::AppError;
+use application::world_currencies::WorldCurrency;
 use crate::bootstrap::container::AppState;
 
 #[tauri::command]
@@ -87,4 +88,27 @@ pub async fn get_latest_exchange_rate(
     state: State<'_, AppState>,
 ) -> Result<Option<String>, String> {
     state.currency_queries.get_latest_rate(&from, &to).await.map_err(|e: AppError| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_world_currencies(
+    state: State<'_, AppState>,
+) -> Result<Vec<WorldCurrency>, String> {
+    Ok(state.currency_setup.get_world_currencies())
+}
+
+#[tauri::command]
+pub async fn is_setup_complete(
+    state: State<'_, AppState>,
+) -> Result<bool, String> {
+    state.currency_setup.is_setup_complete().await.map_err(|e: AppError| e.to_string())
+}
+
+#[tauri::command]
+pub async fn setup_currencies(
+    base_code: String,
+    secondary_code: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<CurrencyContextDto, String> {
+    state.currency_setup.setup_currencies(&base_code, secondary_code.as_deref()).await.map_err(|e: AppError| e.to_string())
 }

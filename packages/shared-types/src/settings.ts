@@ -26,8 +26,8 @@ export interface UpdateSettingsRequest {
   address?: string;
   phone?: string;
   email?: string;
-  currency: string;
-  currency_symbol: string;
+  currency?: string;
+  currency_symbol?: string;
   tax_rate: number;
   invoice_prefix: string;
   purchase_prefix: string;

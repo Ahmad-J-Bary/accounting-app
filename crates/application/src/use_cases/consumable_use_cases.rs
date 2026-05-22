@@ -169,7 +169,7 @@ mod tests {
             code: "C1".to_string(),
             name: "Ink".to_string(),
             category_id: Uuid::new_v4(),
-            unit_cost: Money::new(dec!(50), Currency::syp()),
+            unit_cost: Money::new(dec!(50), Currency::new("SYP", "SYP", "SYP", "", 2, false)),
             fx_rate: dec!(1),
             asset_account_id: Uuid::new_v4(),
             expense_account_id: Uuid::new_v4(),

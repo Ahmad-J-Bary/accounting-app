@@ -67,8 +67,8 @@ mod stock_movement_domain_tests {
 
 #[cfg(test)]
 mod accounting_domain_tests {
-    use crate::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
     use crate::shared::currency::Currency;
+    use crate::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
     use crate::shared::ids::AccountId;
     use crate::shared::monetary_amount::MonetaryAmount;
     use crate::shared::money::Money;
@@ -77,18 +77,23 @@ mod accounting_domain_tests {
     use rust_decimal_macros::dec;
     use uuid::Uuid;
 
+    fn test_currency() -> Currency {
+        Currency::new("SYP", "ليرة سورية", "Syrian Pound", "ل.س", 0, true)
+    }
+
     fn balanced_lines(amount: Decimal) -> Vec<JournalLine> {
+        let c = test_currency();
         vec![
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::new(Money::syp(amount), dec!(1)),
-                MonetaryAmount::zero(Currency::syp()),
+                MonetaryAmount::new(Money::new(amount, c.clone()), dec!(1)),
+                MonetaryAmount::zero(c.clone()),
                 "مدين".to_string(),
             ),
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::zero(Currency::syp()),
-                MonetaryAmount::new(Money::syp(amount), dec!(1)),
+                MonetaryAmount::zero(c.clone()),
+                MonetaryAmount::new(Money::new(amount, c.clone()), dec!(1)),
                 "دائن".to_string(),
             ),
         ]
@@ -110,10 +115,11 @@ mod accounting_domain_tests {
 
     #[test]
     fn unbalanced_journal_entry_post_fails() {
+        let c = test_currency();
         let lines = vec![JournalLine::new(
             AccountId(Uuid::new_v4()),
-            MonetaryAmount::new(Money::syp(dec!(100)), dec!(1)),
-            MonetaryAmount::zero(Currency::syp()),
+            MonetaryAmount::new(Money::new(dec!(100), c.clone()), dec!(1)),
+            MonetaryAmount::zero(c.clone()),
             "مدين غير متوازن".to_string(),
         )];
         let mut entry = JournalEntry::new(

@@ -113,4 +113,21 @@ export const currencyService = {
     
   getLatestExchangeRate: (from: string, to: string): Promise<string | null> => 
     invoke("get_latest_exchange_rate", { from, to }),
+
+  getWorldCurrencies: (): Promise<WorldCurrency[]> =>
+    invoke("get_world_currencies"),
+
+  isSetupComplete: (): Promise<boolean> =>
+    invoke("is_setup_complete"),
+
+  setupCurrencies: (baseCode: string, secondaryCode?: string): Promise<CurrencyContextDto> =>
+    invoke("setup_currencies", { baseCode, secondaryCode }),
 };
+
+export interface WorldCurrency {
+  code: string;
+  name_ar: string;
+  name_en: string;
+  symbol: string;
+  decimals: number;
+}

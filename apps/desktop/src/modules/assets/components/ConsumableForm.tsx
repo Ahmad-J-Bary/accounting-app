@@ -5,6 +5,7 @@ import { Input } from "@shared/ui/input";
 import { Label } from "@shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import type { AssetCategoryDto, AccountDto, CreateConsumableRequest } from "@erp/shared-types";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 interface ConsumableFormProps {
   open: boolean;
@@ -16,12 +17,13 @@ interface ConsumableFormProps {
 }
 
 export function ConsumableForm({ open, onOpenChange, categories, accounts, onSave, isSubmitting }: ConsumableFormProps) {
+  const { currencies, baseCurrency } = useCurrencyContext();
   const [form, setForm] = useState({
     code: "",
     name: "",
     categoryId: "",
     unitCost: "",
-    currency: "SYP",
+    currency: baseCurrency?.code || "",
     fxRate: "1.0",
     assetAccountId: "",
     expenseAccountId: "",
@@ -34,13 +36,13 @@ export function ConsumableForm({ open, onOpenChange, categories, accounts, onSav
         name: "",
         categoryId: "",
         unitCost: "",
-        currency: "SYP",
+        currency: baseCurrency?.code || "",
         fxRate: "1.0",
         assetAccountId: "",
         expenseAccountId: "",
       });
     }
-  }, [open]);
+  }, [open, baseCurrency]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -60,7 +62,7 @@ export function ConsumableForm({ open, onOpenChange, categories, accounts, onSav
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2"><Label>تكلفة الوحدة</Label><Input type="number" value={form.unitCost} onChange={e => setForm({...form, unitCost: e.target.value})}/></div>
-            <div className="space-y-2"><Label>العملة</Label><Select value={form.currency} onValueChange={v => setForm({...form, currency: v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="SYP">SYP</SelectItem><SelectItem value="USD">USD</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label>العملة</Label><Select value={form.currency} onValueChange={v => setForm({...form, currency: v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{currencies.filter(c => c.is_active).map(c => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}</SelectContent></Select></div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2"><Label>حساب الأصول</Label><Select value={form.assetAccountId} onValueChange={v => setForm({...form, assetAccountId: v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{accounts.filter(a => a.account_type === 'Assets').map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.code} - {acc.name_ar}</SelectItem>)}</SelectContent></Select></div>

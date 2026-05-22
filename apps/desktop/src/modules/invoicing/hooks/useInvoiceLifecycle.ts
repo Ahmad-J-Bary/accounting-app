@@ -43,7 +43,7 @@ const DEFAULT_HEADER = (invoiceType: "Sales" | "Purchase", baseCurrencyCode: str
   extra_costs: "0",
   payment_method: "cash",
   status: "Draft",
-  currency_code: baseCurrencyCode || "USD",
+  currency_code: baseCurrencyCode || "",
   exchange_rate: "1",
   paid_amount: "0",
   ...(invoiceType === "Sales"
@@ -79,7 +79,7 @@ export function useInvoiceLifecycle({
   const [search, setSearch] = useState("");
 
   const [headerState, setHeaderState] = useState<InvoiceHeaderState>(
-    DEFAULT_HEADER(invoiceType, baseCurrency?.code || "USD")
+    DEFAULT_HEADER(invoiceType, baseCurrency?.code || "")
   );
 
   const { lines, setLines, updateLine, removeLine, addLine, selectMaterial, totals } = useDocumentEditor({
@@ -147,12 +147,12 @@ export function useInvoiceLifecycle({
   // Synchronise state based on route parameter modifications (e.g. going from edit/view to list)
   useEffect(() => {
     if (isNew) {
-      setHeaderState(DEFAULT_HEADER(invoiceType, baseCurrency?.code || "USD"));
+      setHeaderState(DEFAULT_HEADER(invoiceType, baseCurrency?.code || ""));
       invoiceService.getNextInvoiceNumber(invoiceType).then(num => {
         setHeaderState(s => ({ ...s, invoice_number: num, status: "Draft" }));
       });
       // Set the default exchange rate from rateMap
-      const rate = rateMap.get("SYP");
+      const rate = rateMap.get(baseCurrency?.code);
       if (rate) {
         setHeaderState(s => ({ ...s, exchange_rate: rate.toString() }));
       }
@@ -213,17 +213,20 @@ export function useInvoiceLifecycle({
   // Financial document calculations and grid columns adaptation
   const extraCols = useMemo<DocumentColumn[]>(() => {
     if (invoiceType === "Sales") {
+      const foreignCurr = (contextCurrencies || []).find(c => c.code !== baseCurrency?.code);
+      const baseSym = baseCurrency?.symbol || baseCurrency?.code || "ل.س";
+      const foreignSym = foreignCurr?.symbol || foreignCurr?.code || "$";
       return [
-        { key: "retail_price", header: "مفرق ($)", width: "w-[90px]", align: "left", type: "readonly" },
-        { key: "retail_price_SYP", header: "مفرق (ل.س)", width: "w-[90px]", align: "left", type: "readonly" },
-        { key: "wholesale_price", header: "جملة ($)", width: "w-[90px]", align: "left", type: "readonly" },
-        { key: "wholesale_price_SYP", header: "جملة (ل.س)", width: "w-[90px]", align: "left", type: "readonly" },
+        { key: "retail_price", header: `مفرق (${foreignSym})`, width: "w-[90px]", align: "left", type: "readonly" },
+        { key: "retail_price_SYP", header: `مفرق (${baseSym})`, width: "w-[90px]", align: "left", type: "readonly" },
+        { key: "wholesale_price", header: `جملة (${foreignSym})`, width: "w-[90px]", align: "left", type: "readonly" },
+        { key: "wholesale_price_SYP", header: `جملة (${baseSym})`, width: "w-[90px]", align: "left", type: "readonly" },
       ];
     }
     return [
       { key: "notes", header: "ملاحظات", width: "flex-[1]", align: "right", type: "text" },
     ];
-  }, [invoiceType]);
+  }, [invoiceType, contextCurrencies, baseCurrency]);
 
   const {
     enrichedLines,

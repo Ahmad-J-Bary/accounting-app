@@ -30,10 +30,7 @@ pub async fn create_fixed_asset(
         .map_err(|e| e.to_string())?;
     
     let amount = Decimal::from_str(&purchase_cost).map_err(|e: rust_decimal::Error| e.to_string())?;
-    let curr = match currency.as_str() {
-        "USD" => domain::shared::Currency::usd(),
-        _ => domain::shared::Currency::syp(),
-    };
+    let curr = domain::shared::Currency::new(&currency, &currency, &currency, "", 2, false);
     let money = Money::new(amount, curr);
     let fx = Decimal::from_str(&fx_rate).map_err(|e: rust_decimal::Error| e.to_string())?;
     
@@ -83,10 +80,7 @@ pub async fn create_consumable(
 ) -> Result<String, String> {
     let category_uuid = Uuid::parse_str(&category_id).map_err(|e| e.to_string())?;
     let amount = Decimal::from_str(&unit_cost).map_err(|e: rust_decimal::Error| e.to_string())?;
-    let curr = match currency.as_str() {
-        "USD" => domain::shared::Currency::usd(),
-        _ => domain::shared::Currency::syp(),
-    };
+    let curr = domain::shared::Currency::new(&currency, &currency, &currency, "", 2, false);
     let money = Money::new(amount, curr);
     let fx = Decimal::from_str(&fx_rate).map_err(|e: rust_decimal::Error| e.to_string())?;
     let asset_acc = Uuid::parse_str(&asset_account_id).map_err(|e| e.to_string())?;

@@ -24,6 +24,7 @@ use application::ports::unit_of_work::UnitOfWork;
 use application::ports::user_repository::UserRepository;
 use application::use_cases::currency::commands::CurrencyCommands;
 use application::use_cases::currency::queries::CurrencyQueries;
+use application::use_cases::currency::setup::CurrencySetupUseCase;
 use application::use_cases::material::MaterialCodeUseCases;
 use infrastructure::{
     create_pool, run_migrations, SqliteAccountRepository, SqliteAssetRepository,
@@ -69,6 +70,7 @@ pub struct AppState {
     pub material_code_use_cases: Arc<MaterialCodeUseCases>,
     pub currency_commands: Arc<CurrencyCommands>,
     pub currency_queries: Arc<CurrencyQueries>,
+    pub currency_setup: Arc<CurrencySetupUseCase>,
 }
 
 pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
@@ -138,6 +140,10 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
             exchange_rate_repo.clone() as Arc<dyn ExchangeRateRepository>,
         )),
         currency_queries: Arc::new(CurrencyQueries::new(
+            currency_repo.clone() as Arc<dyn CurrencyRepository>,
+            exchange_rate_repo.clone() as Arc<dyn ExchangeRateRepository>,
+        )),
+        currency_setup: Arc::new(CurrencySetupUseCase::new(
             currency_repo.clone() as Arc<dyn CurrencyRepository>,
             exchange_rate_repo.clone() as Arc<dyn ExchangeRateRepository>,
         )),

@@ -1,5 +1,15 @@
 export const CURRENCY_SYMBOLS: Record<string, string> = {
-  "USD": "$", "SYP": "ل.س", "EUR": "€", "TRY": "₺",
+  "USD": "$", "EUR": "€", "GBP": "£", "TRY": "₺",
+  "SAR": "﷼", "AED": "د.إ", "QAR": "﷼", "KWD": "د.ك",
+  "BHD": "د.ب", "OMR": "﷼", "JOD": "د.ا",
+  "EGP": "ج.م", "MAD": "د.م", "DZD": "د.ج", "TND": "د.ت",
+  "LYD": "د.ل", "SDG": "ج.س", "IQD": "د.ع",
+  "SYP": "ل.س", "LBP": "ل.ل", "YER": "﷼",
+  "CNY": "¥", "JPY": "¥", "INR": "₹", "PKR": "₨",
+  "CHF": "Fr", "CAD": "C$", "AUD": "A$",
+  "SEK": "kr", "NOK": "kr", "DKK": "kr",
+  "PLN": "zł", "RUB": "₽", "BRL": "R$", "ZAR": "R",
+  "MYR": "RM", "SGD": "S$", "HKD": "HK$", "ILS": "₪",
 };
 
 export const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {

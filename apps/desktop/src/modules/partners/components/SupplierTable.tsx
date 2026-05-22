@@ -134,7 +134,7 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
 
     // Balances
     currencies.forEach(curr => {
-      const symbol = curr.code === 'USD' ? '$' : curr.code === 'SYP' ? 'ل.س' : (curr.symbol || curr.code);
+      const symbol = curr.symbol || curr.code;
       cols.push({
         id: `balance_${curr.code}`,
         header: <SortableHeader field="balance" label={`الرصيد (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
@@ -174,7 +174,7 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
   const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
     tableId: "suppliers-unified",
     columns: allColumns,
-    defaultVisible: ["code", "name", "phone", "status", "balance_USD", "actions"],
+    defaultVisible: ["code", "name", "phone", "status", ...currencies.map(c => `balance_${c.code}`), "actions"],
   });
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
@@ -203,7 +203,7 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
       }
       return { id: `${id}_spacer`, label: '', value: '' };
     });
-  }, [sortedSuppliers, currencies, formatAmount, enrichedColumns]);
+  }, [sortedSuppliers, formatAmount, enrichedColumns]);
 
   return (
     <TableShell

@@ -42,7 +42,7 @@ impl RecordOpeningStockUseCase {
             .map(|dt| dt.with_timezone(&Utc))
             .unwrap_or_else(|_| Utc::now());
         
-        let currency = Currency::from_code(&req.currency_code);
+        let currency = Currency::new(&req.currency_code, &req.currency_code, &req.currency_code, "", 2, false);
         let fx_rate = Decimal::from_str(&req.exchange_rate).unwrap_or(Decimal::ONE);
 
         // 1. Process items

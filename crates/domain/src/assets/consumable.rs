@@ -96,7 +96,7 @@ mod tests {
             "C1".to_string(),
             "Paper".to_string(),
             Uuid::new_v4(),
-            Money::new(Decimal::from(10), Currency::usd()),
+            Money::new(Decimal::from(10), Currency::new("USD", "US Dollar", "US Dollar", "$", 2, false)),
             Decimal::ONE,
             Uuid::new_v4(),
             Uuid::new_v4(),

@@ -295,8 +295,7 @@ export function MaterialTable({
         label: `التكلفة (${symbol})`,
         accessor: (m) => {
           const val = curr.is_base ? parseFloat(m.average_cost_base || "0") :
-                    curr.code === 'SYP' ? parseFloat(m.average_cost || "0") :
-                    parseFloat(m.average_cost_base || "0"); // Fallback to base
+                    parseFloat(m.average_cost || "0");
           return formatAmount(val, { currencyCode: curr.code });
         },
         align: "left",
@@ -312,8 +311,7 @@ export function MaterialTable({
         header: `آخر شراء (${symbol})`,
         label: `آخر شراء (${symbol})`,
         accessor: (m) => {
-          const val = curr.code === 'USD' ? parseFloat(m.last_purchase_price_usd || "0") :
-                    curr.is_base ? parseFloat(m.last_purchase_price_base || "0") :
+          const val = curr.is_base ? parseFloat(m.last_purchase_price_base || "0") :
                     parseFloat(m.last_purchase_price || "0");
           return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "—";
         },
@@ -330,8 +328,7 @@ export function MaterialTable({
         header: `آخر مبيع (${symbol})`,
         label: `آخر مبيع (${symbol})`,
         accessor: (m) => {
-          const val = curr.code === 'USD' ? parseFloat(m.last_sale_price_usd || "0") :
-                    curr.is_base ? parseFloat(m.last_sale_price_base || "0") :
+          const val = curr.is_base ? parseFloat(m.last_sale_price_base || "0") :
                     parseFloat(m.last_sale_price || "0");
           return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "—";
         },

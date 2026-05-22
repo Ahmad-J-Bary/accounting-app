@@ -7,6 +7,10 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use super::models::{AssetRow, AssetCategoryRow, AssetMovementRow, DepreciationScheduleRow};
 
+fn currency_from_code(code: &str) -> Currency {
+    Currency::new(code, code, code, "", 2, false)
+}
+
 pub fn row_to_asset(row: AssetRow) -> Result<FixedAsset, AppError> {
     Ok(FixedAsset {
         id: FixedAssetId(Uuid::parse_str(&row.id).map_err(|e| AppError::Infrastructure(e.to_string()))?),
@@ -14,11 +18,11 @@ pub fn row_to_asset(row: AssetRow) -> Result<FixedAsset, AppError> {
         name: row.name,
         category_id: Uuid::parse_str(&row.category_id).map_err(|e| AppError::Infrastructure(e.to_string()))?,
         purchase_date: DateTime::parse_from_rfc3339(&row.purchase_date).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
-        purchase_cost: Money::new(Decimal::from_str(&row.purchase_cost).unwrap_or_default(), if row.currency == "USD" { Currency::usd() } else { Currency::syp() }),
+        purchase_cost: Money::new(Decimal::from_str(&row.purchase_cost).unwrap_or_default(), currency_from_code(&row.currency)),
         fx_rate: Decimal::from_str(&row.fx_rate).unwrap_or(Decimal::ONE),
         useful_life_months: row.useful_life_months as u32,
-        salvage_value: row.salvage_value.and_then(|s| Decimal::from_str(&s).ok()).map(|d| Money::new(d, Currency::syp())),
-        accumulated_depreciation: Money::new(Decimal::from_str(&row.accumulated_depreciation).unwrap_or_default(), Currency::syp()),
+        salvage_value: row.salvage_value.and_then(|s| Decimal::from_str(&s).ok()).map(|d| Money::new(d, currency_from_code(&row.currency))),
+        accumulated_depreciation: Money::new(Decimal::from_str(&row.accumulated_depreciation).unwrap_or_default(), currency_from_code(&row.currency)),
         status: match row.status.as_str() {
             "Disposed" => AssetStatus::Disposed,
             "Sold" => AssetStatus::Sold,
@@ -64,7 +68,7 @@ pub fn row_to_movement(row: AssetMovementRow) -> AssetMovement {
         },
         date: DateTime::parse_from_rfc3339(&row.movement_date).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
         quantity: row.quantity.and_then(|s| Decimal::from_str(&s).ok()),
-        amount: Money::new(Decimal::from_str(&row.amount).unwrap_or_default(), row.currency.as_deref().map(|c| if c == "USD" { Currency::usd() } else { Currency::syp() }).unwrap_or(Currency::syp())),
+        amount: Money::new(Decimal::from_str(&row.amount).unwrap_or_default(), row.currency.as_deref().map(|c| currency_from_code(c)).unwrap_or_else(|| currency_from_code(""))),
         description: row.description.unwrap_or_default(),
         reference_no: Some(row.reference_no.unwrap_or_default()),
         journal_entry_id: row.journal_entry_id.and_then(|s| Uuid::parse_str(&s).ok()),
@@ -77,9 +81,9 @@ pub fn row_to_schedule(row: DepreciationScheduleRow) -> DepreciationSchedule {
         id: Uuid::parse_str(&row.id).unwrap_or_else(|_| Uuid::new_v4()),
         fixed_asset_id: Uuid::parse_str(&row.fixed_asset_id).unwrap_or_else(|_| Uuid::new_v4()),
         period_date: DateTime::parse_from_rfc3339(&row.period_date).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
-        depreciation_amount: Money::new(Decimal::from_str(&row.depreciation_amount).unwrap_or_default(), row.currency.as_deref().map(|c| if c == "USD" { Currency::usd() } else { Currency::syp() }).unwrap_or(Currency::syp())),
-        accumulated_depreciation: Money::new(Decimal::from_str(&row.accumulated_depreciation).unwrap_or_default(), row.currency.as_deref().map(|c| if c == "USD" { Currency::usd() } else { Currency::syp() }).unwrap_or(Currency::syp())),
-        remaining_value: Money::new(Decimal::from_str(&row.remaining_value).unwrap_or_default(), row.currency.as_deref().map(|c| if c == "USD" { Currency::usd() } else { Currency::syp() }).unwrap_or(Currency::syp())),
+        depreciation_amount: Money::new(Decimal::from_str(&row.depreciation_amount).unwrap_or_default(), row.currency.as_deref().map(|c| currency_from_code(c)).unwrap_or_else(|| currency_from_code(""))),
+        accumulated_depreciation: Money::new(Decimal::from_str(&row.accumulated_depreciation).unwrap_or_default(), row.currency.as_deref().map(|c| currency_from_code(c)).unwrap_or_else(|| currency_from_code(""))),
+        remaining_value: Money::new(Decimal::from_str(&row.remaining_value).unwrap_or_default(), row.currency.as_deref().map(|c| currency_from_code(c)).unwrap_or_else(|| currency_from_code(""))),
         status: match row.status.as_str() {
             "Posted" => DepreciationStatus::Posted,
             _ => DepreciationStatus::Pending,

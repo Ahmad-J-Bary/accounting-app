@@ -14,7 +14,6 @@ pub async fn create_supplier(
         state.supplier_repo.clone(), 
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
-        state.exchange_rate_repo.clone(),
     )
     .execute(request)
     .await

@@ -8,14 +8,17 @@ import type { CompanySettings, UpdateSettingsRequest } from "@erp/shared-types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { toast } from "sonner";
 import { cn } from "@shared/lib/utils";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 // Components
 import { TableSettingsManager } from "../components/TableSettingsManager";
+import CurrencySettings from "./currencySettings";
 
 // Templates
 import { SettingsLayout, SettingsSection } from "@widgets/templates/SettingsLayout";
 
 export default function Settings() {
+  const { baseCurrency } = useCurrencyContext();
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -48,8 +51,8 @@ export default function Settings() {
         address: settings.address,
         phone: settings.phone,
         email: settings.email,
-        currency: settings.currency,
-        currency_symbol: settings.currency_symbol,
+        currency: baseCurrency?.code || settings.currency,
+        currency_symbol: baseCurrency?.symbol || settings.currency_symbol,
         tax_rate: parseFloat(settings.tax_rate),
         invoice_prefix: settings.invoice_prefix,
         purchase_prefix: settings.purchase_prefix,
@@ -80,6 +83,7 @@ export default function Settings() {
   const sidebarItems = [
     { id: "company", label: "بيانات الشركة", icon: Building },
     { id: "prefixes", label: "الأرقام التسلسلية", icon: FileText },
+    { id: "currencies", label: "إدارة العملات", icon: DollarSign },
     { id: "financial", label: "الإعدادات المالية", icon: SettingsIcon },
     { id: "tables", label: "مظهر الجداول", icon: Table2 },
     { id: "localization", label: "اللغة والمنطقة", icon: Globe },
@@ -202,17 +206,16 @@ export default function Settings() {
         </SettingsSection>
       )}
 
+      {activeNav === "currencies" && (
+        <SettingsSection title="إدارة العملات" description="إضافة، تعديل، وحذف العملات — وإدارة أسعار الصرف.">
+          <CurrencySettings />
+        </SettingsSection>
+      )}
+
       {activeNav === "financial" && (
-        <SettingsSection title="القواعد والخيارات المالية" description="إعداد العملة الأساسية، الضرائب، ودورة السنة المالية.">
+        <SettingsSection title="القواعد والخيارات المالية" description="الضريبة ودورة السنة المالية.">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             <div className="space-y-6">
-              <div className="space-y-3">
-                <Label className="font-black text-slate-700 flex items-center gap-2"><DollarSign className="w-4 h-4 text-blue-600" /> العملة الأساسية</Label>
-                <div className="grid grid-cols-2 gap-4">
-                  <Input placeholder="الرمز (USD)" className="h-14 font-black text-center" value={settings.currency} onChange={e => handleChange("currency", e.target.value)} dir="ltr" />
-                  <Input placeholder="الإشارة ($)" className="h-14 font-black text-center" value={settings.currency_symbol} onChange={e => handleChange("currency_symbol", e.target.value)} />
-                </div>
-              </div>
               <div className="space-y-3">
                 <Label className="font-black text-slate-700 flex items-center gap-2"><Percent className="w-4 h-4 text-rose-600" /> ضريبة القيمة المضافة الافتراضية</Label>
                 <div className="relative">
@@ -221,7 +224,6 @@ export default function Settings() {
                 </div>
               </div>
             </div>
-            
             <div className="space-y-6">
                <div className="space-y-3">
                 <Label className="font-black text-slate-700 flex items-center gap-2"><CalendarDays className="w-4 h-4 text-indigo-600" /> شهر بداية السنة المالية</Label>

@@ -138,7 +138,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
 
     // Balances
     currencies.forEach(curr => {
-      const symbol = curr.code === 'USD' ? '$' : curr.code === 'SYP' ? 'ل.س' : (curr.symbol || curr.code);
+      const symbol = curr.symbol || curr.code;
       cols.push({
         id: `balance_${curr.code}`,
         header: <SortableHeader field="balance" label={`الرصيد (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
@@ -224,7 +224,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
       }
       return { id: `${id}_spacer`, label: '', value: '' };
     });
-  }, [sortedExpenses, currencies, formatAmount, enrichedColumns]);
+  }, [sortedExpenses, formatAmount, enrichedColumns]);
 
   return (
     <TableShell

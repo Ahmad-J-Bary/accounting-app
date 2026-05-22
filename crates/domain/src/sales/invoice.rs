@@ -62,9 +62,6 @@ impl Invoice {
     }
 
     pub fn subtotal(&self) -> Money {
-        if self.lines.is_empty() {
-            return Money::zero();
-        }
         let first_currency = self.lines[0].unit_price.currency().clone();
         self.lines
             .iter()
@@ -136,7 +133,17 @@ impl Invoice {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shared::currency::Currency;
+    use crate::shared::MonetaryAmount;
     use rust_decimal_macros::dec;
+
+    fn test_syp() -> Currency {
+        Currency::new("SYP", "ليرة سورية", "Syrian Pound", "ل.س", 0, true)
+    }
+
+    fn test_zero_syp() -> Money {
+        Money::new(Decimal::ZERO, test_syp())
+    }
 
     #[test]
     fn invoice_cannot_be_empty() {
@@ -144,19 +151,20 @@ mod tests {
             "INV-001".into(),
             CustomerId::new(),
             vec![],
-            Money::syp(Decimal::ZERO),
-            Money::syp(Decimal::ZERO),
+            test_zero_syp(),
+            test_zero_syp(),
         );
         assert!(result.is_err());
     }
 
     #[test]
     fn invoice_with_valid_lines_succeeds() {
+        let syp = test_syp();
         let customer_id = CustomerId::new();
         let lines = vec![InvoiceLine::new(
             MaterialId(Uuid::new_v4()),
             dec!(2),
-            crate::shared::monetary_amount::MonetaryAmount::from_base(dec!(50), crate::shared::currency::Currency::syp()),
+            MonetaryAmount::from_base(dec!(50), syp.clone()),
             None, None, None, None, None, None, None, None, None, None, None
         )];
 
@@ -164,26 +172,27 @@ mod tests {
             "INV-001".into(),
             customer_id,
             lines,
-            Money::syp(Decimal::ZERO),
-            Money::syp(Decimal::ZERO),
+            test_zero_syp(),
+            test_zero_syp(),
         );
         assert!(result.is_ok());
     }
 
     #[test]
     fn invoice_total_calculates_correctly() {
+        let syp = test_syp();
         let customer_id = CustomerId::new();
         let lines = vec![
             InvoiceLine::new(
                 MaterialId(Uuid::new_v4()),
                 dec!(2),
-                crate::shared::monetary_amount::MonetaryAmount::from_base(dec!(50), crate::shared::currency::Currency::syp()),
+                MonetaryAmount::from_base(dec!(50), syp.clone()),
                 None, None, None, None, None, None, None, None, None, None, None
             ),
             InvoiceLine::new(
                 MaterialId(Uuid::new_v4()),
                 dec!(3),
-                crate::shared::monetary_amount::MonetaryAmount::from_base(dec!(100), crate::shared::currency::Currency::syp()),
+                MonetaryAmount::from_base(dec!(100), syp.clone()),
                 None, None, None, None, None, None, None, None, None, None, None
             ),
         ];
@@ -192,8 +201,8 @@ mod tests {
             "INV-001".into(),
             customer_id,
             lines,
-            Money::syp(Decimal::ZERO),
-            Money::syp(Decimal::ZERO),
+            test_zero_syp(),
+            test_zero_syp(),
         )
         .unwrap();
         let total = invoice.total();
@@ -202,11 +211,12 @@ mod tests {
 
     #[test]
     fn posting_twice_is_rejected() {
+        let syp = test_syp();
         let customer_id = CustomerId::new();
         let lines = vec![InvoiceLine::new(
             MaterialId(Uuid::new_v4()),
             dec!(2),
-            crate::shared::monetary_amount::MonetaryAmount::from_base(dec!(50), crate::shared::currency::Currency::syp()),
+            MonetaryAmount::from_base(dec!(50), syp.clone()),
             None, None, None, None, None, None, None, None, None, None, None
         )];
 
@@ -214,8 +224,8 @@ mod tests {
             "INV-001".into(),
             customer_id,
             lines,
-            Money::syp(Decimal::ZERO),
-            Money::syp(Decimal::ZERO),
+            test_zero_syp(),
+            test_zero_syp(),
         )
         .unwrap();
         assert!(invoice.post().is_ok());
@@ -224,11 +234,12 @@ mod tests {
 
     #[test]
     fn cannot_add_line_to_posted_invoice() {
+        let syp = test_syp();
         let customer_id = CustomerId::new();
         let lines = vec![InvoiceLine::new(
             MaterialId(Uuid::new_v4()),
             dec!(2),
-            crate::shared::monetary_amount::MonetaryAmount::from_base(dec!(50), crate::shared::currency::Currency::syp()),
+            MonetaryAmount::from_base(dec!(50), syp.clone()),
             None, None, None, None, None, None, None, None, None, None, None
         )];
 
@@ -236,8 +247,8 @@ mod tests {
             "INV-001".into(),
             customer_id,
             lines,
-            Money::syp(Decimal::ZERO),
-            Money::syp(Decimal::ZERO),
+            test_zero_syp(),
+            test_zero_syp(),
         )
         .unwrap();
         invoice.post().unwrap();
@@ -245,7 +256,7 @@ mod tests {
         let new_line = InvoiceLine::new(
             MaterialId(Uuid::new_v4()),
             dec!(1),
-            crate::shared::monetary_amount::MonetaryAmount::from_base(dec!(30), crate::shared::currency::Currency::syp()),
+            MonetaryAmount::from_base(dec!(30), syp.clone()),
             None, None, None, None, None, None, None, None, None, None, None
         );
 
@@ -254,11 +265,12 @@ mod tests {
 
     #[test]
     fn cannot_remove_line_from_posted_invoice() {
+        let syp = test_syp();
         let customer_id = CustomerId::new();
         let lines = vec![InvoiceLine::new(
             MaterialId(Uuid::new_v4()),
             dec!(2),
-            crate::shared::monetary_amount::MonetaryAmount::from_base(dec!(50), crate::shared::currency::Currency::syp()),
+            MonetaryAmount::from_base(dec!(50), syp.clone()),
             None, None, None, None, None, None, None, None, None, None, None
         )];
 
@@ -266,8 +278,8 @@ mod tests {
             "INV-001".into(),
             customer_id,
             lines,
-            Money::syp(Decimal::ZERO),
-            Money::syp(Decimal::ZERO),
+            test_zero_syp(),
+            test_zero_syp(),
         )
         .unwrap();
         invoice.post().unwrap();
@@ -277,11 +289,12 @@ mod tests {
 
     #[test]
     fn negative_quantity_is_rejected() {
+        let syp = test_syp();
         let customer_id = CustomerId::new();
         let lines = vec![InvoiceLine::new(
             MaterialId(Uuid::new_v4()),
             dec!(-1),
-            crate::shared::monetary_amount::MonetaryAmount::from_base(dec!(50), crate::shared::currency::Currency::syp()),
+            MonetaryAmount::from_base(dec!(50), syp.clone()),
             None, None, None, None, None, None, None, None, None, None, None
         )];
 
@@ -289,19 +302,20 @@ mod tests {
             "INV-001".into(),
             customer_id,
             lines,
-            Money::syp(Decimal::ZERO),
-            Money::syp(Decimal::ZERO),
+            test_zero_syp(),
+            test_zero_syp(),
         );
         assert!(result.is_err());
     }
 
     #[test]
     fn negative_unit_price_is_rejected() {
+        let syp = test_syp();
         let customer_id = CustomerId::new();
         let lines = vec![InvoiceLine::new(
             MaterialId(Uuid::new_v4()),
             dec!(2),
-            crate::shared::monetary_amount::MonetaryAmount::from_base(dec!(-50), crate::shared::currency::Currency::syp()),
+            MonetaryAmount::from_base(dec!(-50), syp.clone()),
             None, None, None, None, None, None, None, None, None, None, None
         )];
 
@@ -309,8 +323,8 @@ mod tests {
             "INV-001".into(),
             customer_id,
             lines,
-            Money::syp(Decimal::ZERO),
-            Money::syp(Decimal::ZERO),
+            test_zero_syp(),
+            test_zero_syp(),
         );
         assert!(result.is_err());
     }

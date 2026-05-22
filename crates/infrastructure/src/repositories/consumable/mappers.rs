@@ -14,7 +14,7 @@ pub fn row_to_consumable(row: ConsumableRow) -> Result<Consumable, AppError> {
         name: row.name,
         category_id: Uuid::parse_str(&row.category_id).map_err(|e| AppError::Infrastructure(e.to_string()))?,
         quantity_on_hand: Decimal::from_str(&row.quantity_on_hand).unwrap_or_default(),
-        unit_cost: Money::new(Decimal::from_str(&row.unit_cost).unwrap_or_default(), if row.currency == "USD" { Currency::usd() } else { Currency::syp() }),
+        unit_cost: Money::new(Decimal::from_str(&row.unit_cost).unwrap_or_default(), Currency::new(&row.currency, &row.currency, &row.currency, "", 2, false)),
         fx_rate: Decimal::from_str(&row.fx_rate).unwrap_or(Decimal::ONE),
         status: match row.status.as_str() {
             "Exhausted" => ConsumableStatus::Exhausted,

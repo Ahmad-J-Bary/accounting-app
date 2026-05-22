@@ -77,7 +77,7 @@ export function InvoiceList({
   showExtraCosts = false,
   extraColumns = [],
 }: InvoiceListProps) {
-  const { formatAmount } = useCurrencyContext();
+  const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -135,46 +135,50 @@ export function InvoiceList({
         accessor: (inv) => inv.invoice_type === "OpeningBalance" ? "—" : (partyType === "supplier" ? (inv.supplier_name || defaultName) : (inv.customer_name || defaultName)),
         className: "font-bold text-slate-800"
       },
-      ...(showSubtotal ? [{
-        id: "subtotal_amount",
-        header: "مجموع الأسعار",
-        label: "مجموع الأسعار (قبل الإضافات)",
-        accessor: (inv: InvoiceDto) => formatAmount(parseFloat(inv.subtotal_amount || "0"), { currencyCode: inv.currency_code }),
+      ...(showSubtotal ? currencies.map(curr => ({
+        id: `subtotal_${curr.code}`,
+        header: `مجموع الأسعار (${curr.symbol || curr.code})`,
+        label: `مجموع الأسعار (${curr.symbol || curr.code})`,
+        accessor: (inv: InvoiceDto) => {
+          const val = parseFloat(inv.subtotal_amount || "0");
+          const converted = curr.code === (inv.currency_code || baseCurrency?.code) ? val : (val > 0 ? 0 : 0);
+          return formatAmount(converted || val, { currencyCode: curr.code });
+        },
         align: "left" as const,
         className: "font-bold tabular-nums text-slate-700"
-      }] : []),
-      ...(showExtraCosts ? [{
-        id: "extra_costs",
-        header: "تكاليف إضافية",
-        label: "التكاليف الإضافية",
-        accessor: (inv: InvoiceDto) => formatAmount(parseFloat(inv.extra_costs || "0"), { currencyCode: inv.currency_code }),
+      })) : []),
+      ...(showExtraCosts ? currencies.map(curr => ({
+        id: `extra_costs_${curr.code}`,
+        header: `تكاليف إضافية (${curr.symbol || curr.code})`,
+        label: `التكاليف الإضافية (${curr.symbol || curr.code})`,
+        accessor: (inv: InvoiceDto) => formatAmount(parseFloat(inv.extra_costs || "0"), { currencyCode: curr.code }),
         align: "left" as const,
         className: "font-bold tabular-nums text-rose-600"
-      }] : []),
-      {
-        id: "total_amount",
-        header: "المجموع الكلي",
-        label: "المجموع الكلي",
-        accessor: (inv) => formatAmount(parseFloat(inv.total_amount || "0"), { currencyCode: inv.currency_code }),
+      })) : []),
+      ...currencies.map(curr => ({
+        id: `total_${curr.code}`,
+        header: `المجموع الكلي (${curr.symbol || curr.code})`,
+        label: `المجموع الكلي (${curr.symbol || curr.code})`,
+        accessor: (inv) => formatAmount(parseFloat(inv.total_amount || "0"), { currencyCode: curr.code }),
         align: "left",
         className: "font-black tabular-nums text-slate-900"
-      },
-      {
-        id: "amount_paid",
-        header: "المدفوع",
-        label: "المبلغ المدفوع",
-        accessor: (inv) => formatAmount(parseFloat(inv.amount_paid || "0"), { currencyCode: inv.currency_code }),
+      })),
+      ...currencies.map(curr => ({
+        id: `paid_${curr.code}`,
+        header: `المدفوع (${curr.symbol || curr.code})`,
+        label: `المبلغ المدفوع (${curr.symbol || curr.code})`,
+        accessor: (inv) => formatAmount(parseFloat(inv.amount_paid || "0"), { currencyCode: curr.code }),
         align: "left",
         className: "font-bold tabular-nums text-emerald-600"
-      },
-      {
-        id: "remaining_amount",
-        header: "المتبقي",
-        label: "المبلغ المتبقي",
-        accessor: (inv) => formatAmount(parseFloat(inv.remaining_amount || "0"), { currencyCode: inv.currency_code }),
+      })),
+      ...currencies.map(curr => ({
+        id: `remaining_${curr.code}`,
+        header: `المتبقي (${curr.symbol || curr.code})`,
+        label: `المبلغ المتبقي (${curr.symbol || curr.code})`,
+        accessor: (inv) => formatAmount(parseFloat(inv.remaining_amount || "0"), { currencyCode: curr.code }),
         align: "left",
         className: "font-bold tabular-nums text-orange-600"
-      },
+      })),
       {
         id: "status",
         header: "الحالة",
@@ -239,7 +243,7 @@ export function InvoiceList({
       }
     ];
     return cols;
-  }, [formatAmount, partyField, partyLabel, partyType, defaultName, showSubtotal, showExtraCosts, extraColumns, onView, onEdit, onPost, onReopen, onDelete]);
+  }, [formatAmount, currencies, baseCurrency, partyField, partyLabel, partyType, defaultName, showSubtotal, showExtraCosts, extraColumns, onView, onEdit, onPost, onReopen, onDelete]);
 
   const defaultVisible = useMemo(() => allColumns.filter(c => c.id !== 'notes').map(c => c.id), [allColumns]);
   const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
@@ -258,25 +262,45 @@ export function InvoiceList({
   }, [filtered, formatMonetaryAmount, statsLabel, statsColor]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
-    const totalAmount = filtered.reduce((s, inv) => s + parseFloat(inv.total_amount || "0"), 0);
-    const totalPaid = filtered.reduce((s, inv) => s + parseFloat(inv.amount_paid || "0"), 0);
-    const totalRemaining = filtered.reduce((s, inv) => s + parseFloat(inv.remaining_amount || "0"), 0);
+    const totalsByCurrency: Record<string, { total: number; paid: number; remaining: number }> = {};
+    currencies.forEach(curr => {
+      totalsByCurrency[curr.code] = { total: 0, paid: 0, remaining: 0 };
+    });
+    filtered.forEach(inv => {
+      currencies.forEach(curr => {
+        const t = totalsByCurrency[curr.code];
+        if (!t) return;
+        t.total += parseFloat(inv.total_amount || "0");
+        t.paid += parseFloat(inv.amount_paid || "0");
+        t.remaining += parseFloat(inv.remaining_amount || "0");
+      });
+    });
     const colIds = enrichedColumns.map(c => c.id);
     return colIds.map(id => {
-      switch (id) {
-        case 'invoice_number':
-          return { id: 'count', label: '', value: `${filtered.length} فاتورة`, className: 'text-slate-600 font-bold' };
-        case 'total_amount':
-          return { id: 'total_amount_summary', label: 'الإجمالي', value: formatAmount(totalAmount, { currencyCode: 'USD' }), align: 'left' as const, className: 'font-black text-slate-900' };
-        case 'amount_paid':
-          return { id: 'amount_paid_summary', label: 'المدفوع', value: formatAmount(totalPaid, { currencyCode: 'USD' }), align: 'left' as const, className: 'font-bold text-emerald-600' };
-        case 'remaining_amount':
-          return { id: 'remaining_summary', label: 'المتبقي', value: formatAmount(totalRemaining, { currencyCode: 'USD' }), align: 'left' as const, className: 'font-bold text-orange-600' };
-        default:
-          return { id: `${id}_spacer`, label: '', value: '' };
+      if (id === 'invoice_number') {
+        return { id: 'count', label: '', value: `${filtered.length} فاتورة`, className: 'text-slate-600 font-bold' };
       }
+      const totalMatch = id.match(/^total_(.+)$/);
+      if (totalMatch) {
+        const currCode = totalMatch[1];
+        const t = totalsByCurrency[currCode];
+        return { id: `${id}_summary`, label: 'الإجمالي', value: t ? formatAmount(t.total, { currencyCode: currCode }) : "—", align: 'left' as const, className: 'font-black text-slate-900' };
+      }
+      const paidMatch = id.match(/^paid_(.+)$/);
+      if (paidMatch) {
+        const currCode = paidMatch[1];
+        const t = totalsByCurrency[currCode];
+        return { id: `${id}_summary`, label: 'المدفوع', value: t ? formatAmount(t.paid, { currencyCode: currCode }) : "—", align: 'left' as const, className: 'font-bold text-emerald-600' };
+      }
+      const remainingMatch = id.match(/^remaining_(.+)$/);
+      if (remainingMatch) {
+        const currCode = remainingMatch[1];
+        const t = totalsByCurrency[currCode];
+        return { id: `${id}_summary`, label: 'المتبقي', value: t ? formatAmount(t.remaining, { currencyCode: currCode }) : "—", align: 'left' as const, className: 'font-bold text-orange-600' };
+      }
+      return { id: `${id}_spacer`, label: '', value: '' };
     });
-  }, [filtered, enrichedColumns, formatAmount]);
+  }, [filtered, enrichedColumns, formatAmount, currencies]);
 
   return (
     <OperationalTableTemplate

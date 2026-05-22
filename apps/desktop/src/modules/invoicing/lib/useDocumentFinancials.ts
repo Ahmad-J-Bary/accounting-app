@@ -34,7 +34,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
   priceLabel = "السعر",
   extraColumns = []
 }: UseDocumentFinancialsProps<T>) {
-  const { formatAmount, convertBetween, rateMap } = useCurrencyContext();
+  const { formatAmount, convertBetween, rateMap, baseCurrency } = useCurrencyContext();
 
   // 1. Pre-calculate conversion factors and symbols once per render
   const financials = useMemo(() => {
@@ -48,10 +48,10 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
       let factor = 1;
       if (curr.code === docCurrency) {
         factor = 1;
-      } else if (docCurrency === "USD") {
-        factor = docRate; // rate is FROM USD TO something (usually SYP)
-      } else if (curr.code === "USD") {
-        factor = 1 / docRate; // rate is FROM USD TO docCurrency
+      } else if (docCurrency === baseCurrency?.code) {
+        factor = docRate;
+      } else if (curr.code === baseCurrency?.code) {
+        factor = 1 / docRate;
       } else {
         // Cross conversion
         factor = convertBetween(1, docCurrency, curr.code);
@@ -85,13 +85,13 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
         } else {
           el[priceKey] = p.toFixed(2).replace(/\.?0+$/, "");
         }
-        el[`line_total_${curr.code}`] = curr.code === "SYP" 
+        el[`line_total_${curr.code}`] = curr.code === baseCurrency?.code
           ? t.toFixed(0) 
           : formatAmount(t, { currencyCode: curr.code, hideSymbol: true });
 
         // Compute SYP equivalents for monetary extra fields
-        if (curr.code === "SYP") {
-          const sypFactor = conversionMap.get("SYP") || 1;
+        if (curr.code === baseCurrency?.code) {
+          const sypFactor = conversionMap.get(baseCurrency?.code || "") || 1;
           ["cost_price", "profit_amount", "retail_price", "wholesale_price"].forEach(field => {
             const val = parseFloat(el[field] as string || "0");
             if (val) {
@@ -128,8 +128,8 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
     const oldCode = headerState.currency_code;
     if (oldCode === newCode) return;
 
-    const oldRate = oldCode === "USD" ? 1 : (rateMap.get(oldCode) || 1);
-    const newRate = newCode === "USD" ? 1 : (rateMap.get(newCode) || 1);
+    const oldRate = oldCode === baseCurrency?.code ? 1 : (rateMap.get(oldCode) || 1);
+    const newRate = newCode === baseCurrency?.code ? 1 : (rateMap.get(newCode) || 1);
     const factor = newRate / oldRate;
 
     setHeaderState((s: T) => ({
@@ -168,7 +168,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
       const isDocCurr = curr.code === headerState.currency_code;
       priceCols.push({ 
         key: isDocCurr ? "unit_price" : `unit_price_${curr.code}`, 
-        header: `${curr.code === "SYP" ? (invoiceType === "Purchase" || invoiceType === "OpeningBalance" ? "التكلفة" : "السعر") : priceLabel} (${s})`, 
+        header: `${curr.code === baseCurrency?.code ? (invoiceType === "Purchase" || invoiceType === "OpeningBalance" ? "التكلفة" : "السعر") : priceLabel} (${s})`, 
         width: "w-[100px]", 
         align: "left", 
         type: "number" 
@@ -180,7 +180,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
       const s = curr.symbol || curr.code;
       totalCols.push({ 
         key: `line_total_${curr.code}`, 
-        header: `الإجمالي (${s === "SYP" ? "ل.س" : s})`, 
+        header: `الإجمالي (${s})`, 
         width: "w-[110px]", 
         align: "left", 
         type: "readonly" 

@@ -3,6 +3,7 @@ use std::str::FromStr;
 use rust_decimal::Decimal;
 use domain::sales::invoice_line::InvoiceLine;
 use domain::shared::ids::{InvoiceId, MaterialId, CustomerId, SupplierId};
+use domain::shared::currency::Currency;
 use domain::shared::money::Money;
 use domain::shared::monetary_amount::MonetaryAmount;
 use domain::sales::unified_invoice::InvoiceType;
@@ -14,7 +15,7 @@ use crate::ports::account_repository::AccountRepository;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::category_repository::CategoryRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
-use crate::ports::exchange_rate_repository::ExchangeRateRepository;
+
 use crate::dto::invoice_dto::{UpdateInvoiceRequest, InvoiceDto};
 use crate::dto::customer_dto::CreateCustomerRequest;
 use crate::dto::supplier_dto::CreateSupplierRequest;
@@ -30,7 +31,6 @@ pub struct UpdateInvoiceUseCase {
     material_repo: Arc<dyn MaterialRepository>,
     category_repo: Arc<dyn CategoryRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
-    rate_repo: Arc<dyn ExchangeRateRepository>,
 }
 
 impl UpdateInvoiceUseCase {
@@ -42,9 +42,8 @@ impl UpdateInvoiceUseCase {
         material_repo: Arc<dyn MaterialRepository>,
         category_repo: Arc<dyn CategoryRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
-        rate_repo: Arc<dyn ExchangeRateRepository>,
     ) -> Self {
-        Self { repo, customer_repo, supplier_repo, account_repo, material_repo, category_repo, journal_repo, rate_repo }
+        Self { repo, customer_repo, supplier_repo, account_repo, material_repo, category_repo, journal_repo }
     }
 
     pub async fn execute(&self, req: UpdateInvoiceRequest) -> Result<InvoiceDto, AppError> {
@@ -69,7 +68,6 @@ impl UpdateInvoiceUseCase {
                         self.customer_repo.clone(),
                         self.account_repo.clone(),
                         self.journal_repo.clone(),
-                        self.rate_repo.clone(),
                     );
                     let customer_dto = create_customer.execute(CreateCustomerRequest {
                         code: "".into(),
@@ -103,7 +101,6 @@ impl UpdateInvoiceUseCase {
                         self.supplier_repo.clone(),
                         self.account_repo.clone(),
                         self.journal_repo.clone(),
-                        self.rate_repo.clone(),
                     );
                     let supplier_dto = create_supplier.execute(CreateSupplierRequest {
                         code: "".into(),
@@ -141,15 +138,17 @@ impl UpdateInvoiceUseCase {
             let currency_code = invoice.currency_code.clone();
             let exchange_rate = invoice.exchange_rate;
 
+            let doc_currency = Currency::new(&currency_code, &currency_code, &currency_code, "", 2, false);
+            let usd_currency = Currency::new("USD", "USD", "USD", "", 2, false);
             let unit_price = MonetaryAmount::new(
-                Money::from_amount_and_code(Decimal::from_str(&line_dto.unit_price)
-                .map_err(|_| AppError::Invalid("سعر غير صالح".into()))?, &currency_code),
+                Money::new(Decimal::from_str(&line_dto.unit_price)
+                .map_err(|_| AppError::Invalid("سعر غير صالح".into()))?, doc_currency.clone()),
                 exchange_rate
             );
 
             let to_monetary = |s: Option<String>| s.and_then(|v| {
                 Decimal::from_str(&v).ok().map(|amt| {
-                    MonetaryAmount::new(Money::from_amount_and_code(amt, &currency_code), exchange_rate)
+                    MonetaryAmount::new(Money::new(amt, doc_currency.clone()), exchange_rate)
                 })
             });
 
@@ -158,9 +157,9 @@ impl UpdateInvoiceUseCase {
             let wholesale_price = to_monetary(line_dto.wholesale_price.clone());
             let semi_wholesale_price = to_monetary(line_dto.semi_wholesale_price.clone());
             let minimum_stock = line_dto.minimum_stock.as_ref().and_then(|s| Decimal::from_str(s).ok());
-            
+
             let to_usd = |s: Option<String>| s.and_then(|v| {
-                Decimal::from_str(&v).ok().map(|amt| Money::from_amount_and_code(amt, "USD"))
+                Decimal::from_str(&v).ok().map(|amt| Money::new(amt, usd_currency.clone()))
             });
             let unit_price_usd = to_usd(line_dto.unit_price_usd.clone());
             let purchase_price_usd = to_usd(line_dto.purchase_price_usd.clone());
@@ -188,16 +187,17 @@ impl UpdateInvoiceUseCase {
             invoice.add_line(line).map_err(|e| AppError::Invalid(e.to_string()))?;
         }
 
+        let doc_currency = Currency::new(&invoice.currency_code, &invoice.currency_code, &invoice.currency_code, "", 2, false);
         invoice.tax_amount = MonetaryAmount::new(
-            Money::from_amount_and_code(Decimal::from_str(&req.tax_amount).unwrap_or(Decimal::ZERO), &invoice.currency_code),
+            Money::new(Decimal::from_str(&req.tax_amount).unwrap_or(Decimal::ZERO), doc_currency.clone()),
             invoice.exchange_rate
         );
         invoice.discount_amount = MonetaryAmount::new(
-            Money::from_amount_and_code(Decimal::from_str(&req.discount_amount).unwrap_or(Decimal::ZERO), &invoice.currency_code),
+            Money::new(Decimal::from_str(&req.discount_amount).unwrap_or(Decimal::ZERO), doc_currency.clone()),
             invoice.exchange_rate
         );
         invoice.extra_costs = MonetaryAmount::new(
-            Money::from_amount_and_code(Decimal::from_str(&req.extra_costs.clone().unwrap_or_default()).unwrap_or(Decimal::ZERO), &invoice.currency_code),
+            Money::new(Decimal::from_str(&req.extra_costs.clone().unwrap_or_default()).unwrap_or(Decimal::ZERO), doc_currency),
             invoice.exchange_rate
         );
         invoice.recalculate_totals();

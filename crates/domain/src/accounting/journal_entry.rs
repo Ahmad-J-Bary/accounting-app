@@ -298,19 +298,28 @@ mod tests {
     use crate::shared::money::Money;
     use rust_decimal_macros::dec;
 
+    fn test_syp() -> Currency {
+        Currency::new("SYP", "ليرة سورية", "Syrian Pound", "ل.س", 0, true)
+    }
+
+    fn test_usd() -> Currency {
+        Currency::new("USD", "دولار أمريكي", "US Dollar", "$", 2, false)
+    }
+
     #[test]
     fn journal_entry_creation_with_valid_data_succeeds() {
+        let syp = test_syp();
         let lines = vec![
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::new(Money::syp(dec!(100)), Decimal::ONE),
-                MonetaryAmount::zero(Currency::syp()),
+                MonetaryAmount::new(Money::new(dec!(100), syp.clone()), Decimal::ONE),
+                MonetaryAmount::zero(syp.clone()),
                 "مدين".to_string(),
             ),
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::zero(Currency::syp()),
-                MonetaryAmount::new(Money::syp(dec!(100)), Decimal::ONE),
+                MonetaryAmount::zero(syp.clone()),
+                MonetaryAmount::new(Money::new(dec!(100), syp.clone()), Decimal::ONE),
                 "دائن".to_string(),
             ),
         ];
@@ -329,18 +338,19 @@ mod tests {
 
     #[test]
     fn multi_currency_balanced_entry_can_be_posted() {
-        let fx_rate = dec!(15000); // 1 USD = 15000 SYP
+        let (syp, usd) = (test_syp(), test_usd());
+        let fx_rate = dec!(15000);
         let lines = vec![
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::new(Money::usd(dec!(10)), fx_rate),
-                MonetaryAmount::zero(Currency::usd()),
+                MonetaryAmount::new(Money::new(dec!(10), usd.clone()), fx_rate),
+                MonetaryAmount::zero(usd.clone()),
                 "مدين بالدولار".to_string(),
             ),
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::zero(Currency::syp()),
-                MonetaryAmount::new(Money::syp(dec!(150000)), dec!(1)),
+                MonetaryAmount::zero(syp.clone()),
+                MonetaryAmount::new(Money::new(dec!(150000), syp.clone()), dec!(1)),
                 "دائن بالليرة".to_string(),
             ),
         ];
@@ -360,18 +370,19 @@ mod tests {
 
     #[test]
     fn unbalanced_multi_currency_is_rejected() {
+        let (syp, usd) = (test_syp(), test_usd());
         let fx_rate = dec!(15000);
         let lines = vec![
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::new(Money::usd(dec!(10)), fx_rate),
-                MonetaryAmount::zero(Currency::usd()),
+                MonetaryAmount::new(Money::new(dec!(10), usd.clone()), fx_rate),
+                MonetaryAmount::zero(usd.clone()),
                 "مدين".to_string(),
             ),
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::zero(Currency::syp()),
-                MonetaryAmount::new(Money::syp(dec!(140000)), dec!(1)),
+                MonetaryAmount::zero(syp.clone()),
+                MonetaryAmount::new(Money::new(dec!(140000), syp.clone()), dec!(1)),
                 "دائن".to_string(),
             ),
         ];
@@ -391,17 +402,18 @@ mod tests {
 
     #[test]
     fn total_base_debit_calculates_correctly() {
+        let (syp, usd) = (test_syp(), test_usd());
         let lines = vec![
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::new(Money::syp(dec!(100)), dec!(1)),
-                MonetaryAmount::zero(Currency::syp()),
+                MonetaryAmount::new(Money::new(dec!(100), syp.clone()), dec!(1)),
+                MonetaryAmount::zero(syp.clone()),
                 "مدين".to_string(),
             ),
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::new(Money::usd(dec!(10)), dec!(15000)),
-                MonetaryAmount::zero(Currency::usd()),
+                MonetaryAmount::new(Money::new(dec!(10), usd.clone()), dec!(15000)),
+                MonetaryAmount::zero(usd.clone()),
                 "مدين دولار".to_string(),
             ),
         ];

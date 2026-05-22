@@ -158,9 +158,9 @@ impl CreatePartnerUseCase {
 
             let fx_rate = if exchange_rate > Decimal::ZERO { exchange_rate } else { Decimal::ONE };
             let total_ma = if is_amount_in_usd || total_usd > Decimal::ZERO {
-                MonetaryAmount::new(Money::new(total_usd.abs(), Currency::usd()), fx_rate)
+                MonetaryAmount::new(Money::new(total_usd.abs(), Currency::new("USD", "USD", "USD", "", 2, false)), fx_rate)
             } else {
-                MonetaryAmount::new(Money::new(total_local.abs(), Currency::syp()), fx_rate)
+                MonetaryAmount::new(Money::new(total_local.abs(), Currency::new("SYP", "SYP", "SYP", "", 2, false)), fx_rate)
             };
             let zero_ma = MonetaryAmount::zero(total_ma.currency().clone());
 

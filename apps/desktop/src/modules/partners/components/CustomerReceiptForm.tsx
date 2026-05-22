@@ -21,14 +21,14 @@ export function CustomerReceiptForm({ customer, onSave, onClose, saving }: Custo
     payment_type: "Receipt",
     amount: 0,
     payment_date: new Date().toISOString(),
-    currency_code: baseCurrency?.code || "SYP",
+    currency_code: baseCurrency?.code || "",
     exchange_rate: 1,
     customer_id: customer.id,
     notes: `سند قبض من العميل: ${customer.name}`,
   });
 
   const handleCurrencyChange = (val: string) => {
-    const isUSD = val === "USD" || val === baseCurrency?.code;
+    const isUSD = val === baseCurrency?.code;
     const rate = isUSD ? 1 : (rateMap.get(val) || 1);
     setForm(p => ({
       ...p,
@@ -43,7 +43,7 @@ export function CustomerReceiptForm({ customer, onSave, onClose, saving }: Custo
     await onSave({
       payment_type: "Receipt",
       amount: form.amount,
-      currency_code: form.currency_code || "SYP",
+      currency_code: form.currency_code || baseCurrency?.code || "",
       exchange_rate: form.exchange_rate || 1,
       payment_date: form.payment_date || new Date().toISOString(),
       customer_id: form.customer_id,

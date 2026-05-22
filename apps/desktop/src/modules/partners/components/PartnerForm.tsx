@@ -23,7 +23,7 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
     code: "",
     name: "",
     amount: "0",
-    currency: "SYP",
+    currency: baseCurrency?.code || "",
     manualRatio: "",
   });
 
@@ -33,7 +33,7 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
         code: partner.code,
         name: partner.name,
         amount: partner.amount_local || "0",
-        currency: partner.currency || "SYP",
+        currency: partner.currency || baseCurrency?.code || "",
         manualRatio: partner.profit_sharing_ratio || "",
       });
     } else {
@@ -41,7 +41,7 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
         code: "",
         name: "",
         amount: "0",
-        currency: baseCurrency?.code || "SYP",
+        currency: baseCurrency?.code || "",
         manualRatio: "",
       });
     }
@@ -59,7 +59,7 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
       name: formData.name,
       exchangeRate: exchangeRate.toString(),
       amount: formData.amount,
-      isAmountInUsd: formData.currency === "USD",
+      isAmountInUsd: formData.currency === baseCurrency?.code,
       sharingType: "BasedOnCapitalLocal",
       manualRatio: formData.manualRatio || null,
     });

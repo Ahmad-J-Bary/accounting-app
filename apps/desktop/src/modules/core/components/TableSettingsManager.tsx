@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { useTableSettings } from '@shared/hooks';
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { TableDensity, TableBorderStyle } from '@shared/types/table-settings';
 import { Label } from "@shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
@@ -35,6 +36,8 @@ const PREVIEW_DATA: PreviewRow[] = [
 
 export const TableSettingsManager: React.FC = () => {
   const { settings, updateSetting } = useTableSettings();
+  const { baseCurrency } = useCurrencyContext();
+  const currSym = baseCurrency?.symbol || "$";
 
   const previewColumns = useMemo<UnifiedColumn<PreviewRow>[]>(() => [
     {
@@ -53,16 +56,16 @@ export const TableSettingsManager: React.FC = () => {
     },
     {
       id: "debit",
-      header: "مدين ($)",
-      label: "مدين ($)",
+      header: `مدين (${currSym})`,
+      label: `مدين (${currSym})`,
       accessor: (r) => r.debit > 0 ? r.debit.toLocaleString() : "—",
       className: "tabular-nums text-red-600 font-bold",
       align: "left"
     },
     {
       id: "credit",
-      header: "دائن ($)",
-      label: "دائن ($)",
+      header: `دائن (${currSym})`,
+      label: `دائن (${currSym})`,
       accessor: (r) => r.credit > 0 ? r.credit.toLocaleString() : "—",
       className: "tabular-nums text-emerald-600 font-bold",
       align: "left"
@@ -88,16 +91,16 @@ export const TableSettingsManager: React.FC = () => {
       align: "center",
       className: "w-16"
     },
-  ], []);
+  ], [currSym]);
 
   const summaryColumns = useMemo(() => [
     { id: "spacer", label: "", value: "", className: "min-w-[130px]" },
     { id: "spacer2", label: "", value: "", className: "w-20" },
-    { id: "debit_total", label: "الإجمالي", value: PREVIEW_DATA.reduce((s, r) => s + r.debit, 0).toLocaleString() + " $", className: "text-red-600", align: "left" as const },
-    { id: "credit_total", label: "الإجمالي", value: PREVIEW_DATA.reduce((s, r) => s + r.credit, 0).toLocaleString() + " $", className: "text-emerald-600", align: "left" as const },
+    { id: "debit_total", label: "الإجمالي", value: `${PREVIEW_DATA.reduce((s, r) => s + r.debit, 0).toLocaleString()} ${currSym}`, className: "text-red-600", align: "left" as const },
+    { id: "credit_total", label: "الإجمالي", value: `${PREVIEW_DATA.reduce((s, r) => s + r.credit, 0).toLocaleString()} ${currSym}`, className: "text-emerald-600", align: "left" as const },
     { id: "spacer3", label: "", value: "", className: "w-28" },
     { id: "spacer4", label: "", value: "", className: "w-16" },
-  ], []);
+  ], [currSym]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500" dir="rtl">

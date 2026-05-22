@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from '@modules/core/pages/dashboard';
 import Accounting from '@modules/accounting/pages/accounting';
 import Journal from '@modules/accounting/pages/journal';
@@ -25,7 +25,6 @@ import SupplierStatementPage from '@modules/partners/pages/supplierStatementPage
 
 import Expenses from '@modules/accounting/pages/expenses';
 
-import CurrencySettings from '@modules/core/pages/currencySettings';
 import AccountingJournalsReport from '@modules/accounting/pages/AccountingJournalsReport';
 import AccountMovementsReport from '@modules/accounting/pages/AccountMovementsReport';
 import AccountMovement from '@modules/accounting/pages/accountMovement';
@@ -67,7 +66,7 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/settings" element={<Settings />} />
       <Route path="/audit-log" element={<AuditLog />} />
       <Route path="/assets" element={<Assets />} />
-      <Route path="/currencies" element={<CurrencySettings />} />
+      <Route path="/currencies" element={<Navigate to="/settings" replace />} />
     </Routes>
   );
 }

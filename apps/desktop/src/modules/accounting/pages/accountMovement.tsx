@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { useTabs } from "@app/providers/TabContext";
 import { Button } from "@shared/ui/button";
@@ -33,7 +33,7 @@ import { PartnerDrawingsForm } from "@modules/partners/components/PartnerDrawing
 export default function AccountMovement() {
   const { accountId } = useParams<{ accountId: string }>();
   const { openTab } = useTabs();
-  const { formatAmount } = useCurrencyContext();
+  const { formatAmount, currencies } = useCurrencyContext();
   const [ledger, setLedger] = useState<AccountLedgerDto | null>(null);
   
   // Entity Detection
@@ -106,32 +106,39 @@ export default function AccountMovement() {
     return lines;
   }, [ledger, accountType]);
 
+  const formatMultiCurrency = useCallback((usdVal: string, sypVal: string) => {
+    return currencies.map(c => {
+      const val = c.is_base ? parseFloat(usdVal) : parseFloat(sypVal);
+      return formatAmount(val, { currencyCode: c.code });
+    }).join(' / ');
+  }, [currencies, formatAmount]);
+
   const stats = useMemo(() => {
     if (!ledger) return null;
     return [
       {
         label: "الرصيد الافتتاحي",
-        value: `${formatAmount(parseFloat(ledger.opening_balance_usd), { currencyCode: "USD" })} / ${formatAmount(parseFloat(ledger.opening_balance_usd), { currencyCode: "SYP" })}`,
+        value: formatMultiCurrency(ledger.opening_balance_usd, ledger.opening_balance_syp),
         color: "text-slate-600"
       },
       {
         label: "إجمالي مدين",
-        value: `${formatAmount(parseFloat(ledger.total_debit_usd), { currencyCode: "USD" })} / ${formatAmount(parseFloat(ledger.total_debit_usd), { currencyCode: "SYP" })}`,
+        value: formatMultiCurrency(ledger.total_debit_usd, ledger.total_debit_syp),
         color: "text-blue-600"
       },
       {
         label: "إجمالي دائن",
-        value: `${formatAmount(parseFloat(ledger.total_credit_usd), { currencyCode: "USD" })} / ${formatAmount(parseFloat(ledger.total_credit_usd), { currencyCode: "SYP" })}`,
+        value: formatMultiCurrency(ledger.total_credit_usd, ledger.total_credit_syp),
         color: "text-emerald-600"
       },
       {
         label: "الرصيد الحالي",
-        value: `${formatAmount(parseFloat(ledger.closing_balance_usd), { currencyCode: "USD" })} / ${formatAmount(parseFloat(ledger.closing_balance_usd), { currencyCode: "SYP" })}`,
+        value: formatMultiCurrency(ledger.closing_balance_usd, ledger.closing_balance_syp),
         color: "text-slate-900 font-black",
         highlight: true
       }
     ];
-  }, [ledger, formatAmount]);
+  }, [ledger, formatMultiCurrency]);
 
   const handleSaveVoucher = async (payload: CreatePaymentRequest) => {
     try {

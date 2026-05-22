@@ -2,10 +2,14 @@ import React from 'react';
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { 
+  Settings2, 
   Search, 
   Columns, 
   LayoutGrid, 
-  RotateCcw
+  Download, 
+  Printer, 
+  RotateCcw,
+  Check
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -20,6 +24,7 @@ import {
 } from "@shared/ui/dropdown-menu";
 import { useTableSettings } from '@shared/hooks';
 import { TableDensity } from '@shared/types/table-settings';
+import { cn } from '@shared/lib/utils';
 
 interface TableToolbarProps {
   title?: string;

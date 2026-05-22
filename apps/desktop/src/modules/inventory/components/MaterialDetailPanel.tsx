@@ -3,6 +3,7 @@ import { formatCurrency } from '@shared/lib/format';
 import { Hash, X, Package, Box, RefreshCw, ShoppingCart, TrendingUp, RotateCcw, Layers, Edit, Trash2 } from "lucide-react";
 import type { MaterialDto } from "@erp/shared-types";
 import { Button } from "@shared/ui/button";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 interface MaterialDetailPanelProps {
   material: MaterialDto | null;
@@ -19,6 +20,11 @@ export function MaterialDetailPanel({
   onDelete,
   loadingDetails = false
 }: MaterialDetailPanelProps) {
+  const { baseCurrency, currencies } = useCurrencyContext();
+  const foreignCurrency = currencies.find(c => c.code !== baseCurrency?.code);
+  const foreignSym = foreignCurrency?.symbol || "$";
+  const baseSym = baseCurrency?.symbol || "ل.س";
+
   if (!material) return null;
 
   return (
@@ -194,8 +200,8 @@ export function MaterialDetailPanel({
                          <div key={tier.id} className="bg-white p-3 flex justify-between items-center">
                            <span className="text-[11px] font-bold text-slate-500">{tier.label}</span>
                            <div className="flex flex-col items-end">
-                             <span className="text-[11px] font-bold text-emerald-600">${price?.price_usd || "0"}</span>
-                             <span className="text-[10px] text-blue-600">{parseFloat(price?.price_syp || "0").toLocaleString()} ل.س</span>
+                              <span className="text-[11px] font-bold text-emerald-600">{foreignSym}{price?.price_usd || "0"}</span>
+                              <span className="text-[10px] text-blue-600">{parseFloat(price?.price_syp || "0").toLocaleString()} {baseSym}</span>
                            </div>
                          </div>
                        );

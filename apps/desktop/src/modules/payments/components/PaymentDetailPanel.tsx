@@ -28,7 +28,7 @@ export function PaymentDetailPanel({
   onEdit,
   onDelete,
 }: PaymentDetailPanelProps) {
-  const { formatAmount } = useCurrencyContext();
+  const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
 
   const getAccountName = (id?: string) => accounts.find(a => a.id === id)?.name_ar || "-";
   const getCustomerName = (id?: string) => customers.find(c => c.id === id)?.name || "-";
@@ -38,14 +38,14 @@ export function PaymentDetailPanel({
     const amt = parseFloat(payment.amount) || 0;
     const rate = parseFloat(payment.exchange_rate) || 1;
     let syp = 0;
-    if (payment.currency_code === "SYP") {
+    if (payment.currency_code === baseCurrency?.code) {
       syp = amt;
     } else {
       syp = amt * rate;
     }
     return {
       displayAmount: formatAmount(amt, { currencyCode: payment.currency_code }),
-      amountInSyp: formatAmount(syp, { currencyCode: "SYP" })
+      amountInSyp: formatAmount(syp, { currencyCode: baseCurrency?.code || "" })
     };
   }, [payment, formatAmount]);
 
@@ -135,9 +135,9 @@ export function PaymentDetailPanel({
                     {displayAmount}
                   </div>
                 </div>
-                {payment.currency_code !== "SYP" && (
+                {payment.currency_code !== baseCurrency?.code && (
                   <div className="space-y-1 text-right">
-                    <Label className="text-xs font-medium text-slate-500">المبلغ (ل.س)</Label>
+                    <Label className="text-xs font-medium text-slate-500">{`المبلغ (${baseCurrency?.symbol || ""})`}</Label>
                     <div className="font-bold text-slate-800 text-lg">
                       {amountInSyp}
                     </div>

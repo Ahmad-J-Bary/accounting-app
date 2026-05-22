@@ -196,7 +196,7 @@ impl CreatePaymentUseCase {
         let exchange_rate = req.exchange_rate
             .and_then(|v| Decimal::try_from(v).ok())
             .unwrap_or(Decimal::ONE);
-        let currency_code = req.currency_code.unwrap_or_else(|| "SYP".to_string());
+        let currency_code = req.currency_code.unwrap_or_default();
 
         let payment_date = DateTime::parse_from_rfc3339(&req.payment_date)
             .map_err(|_| AppError::Invalid("التاريخ غير صالح".into()))?
@@ -249,7 +249,7 @@ impl CreatePaymentUseCase {
 
         // --- Accounting Integration ---
         let mut journal_lines = Vec::new();
-        let currency = Currency::from_code(&currency_code);
+        let currency = Currency::new(&currency_code, &currency_code, &currency_code, "", 2, false);
         let amount_ma = MonetaryAmount::new(
             Money::new(payment.amount, currency.clone()),
             exchange_rate,
@@ -587,7 +587,7 @@ impl UpdatePaymentUseCase {
         let exchange_rate = req.exchange_rate
             .and_then(|v| Decimal::try_from(v).ok())
             .unwrap_or(Decimal::ONE);
-        let currency_code = req.currency_code.unwrap_or_else(|| "SYP".to_string());
+        let currency_code = req.currency_code.unwrap_or_default();
 
         let payment_date = DateTime::parse_from_rfc3339(&req.payment_date)
             .map_err(|_| AppError::Invalid("التاريخ غير صالح".into()))?
@@ -634,7 +634,7 @@ impl UpdatePaymentUseCase {
 
         // --- Accounting Integration ---
         let mut journal_lines = Vec::new();
-        let currency = Currency::from_code(&currency_code);
+        let currency = Currency::new(&currency_code, &currency_code, &currency_code, "", 2, false);
         let amount_ma = MonetaryAmount::new(
             Money::new(updated_payment.amount, currency.clone()),
             exchange_rate,

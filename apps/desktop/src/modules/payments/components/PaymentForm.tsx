@@ -28,13 +28,13 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
     payment_type: "Receipt",
     amount: 0,
     payment_date: new Date().toISOString(),
-    currency_code: baseCurrency?.code || "SYP",
+    currency_code: baseCurrency?.code || "",
     exchange_rate: 1,
     ...initialValues
   });
 
   const handleCurrencyChange = (val: string) => {
-    const isUSD = val === "USD" || val === baseCurrency?.code;
+    const isUSD = val === baseCurrency?.code;
     const rate = isUSD ? 1 : (rateMap.get(val) || 1);
     setForm(p => ({
       ...p,
@@ -49,7 +49,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
       payment_type: form.payment_type as PaymentType,
       amount: form.amount || 0,
       voucher_number: form.voucher_number || undefined,
-      currency_code: form.currency_code || "SYP",
+      currency_code: form.currency_code || baseCurrency?.code || "",
       exchange_rate: form.exchange_rate || 1,
       payment_date: form.payment_date || new Date().toISOString(),
       debit_account_id: form.debit_account_id || undefined,

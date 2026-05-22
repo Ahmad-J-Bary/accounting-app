@@ -54,7 +54,7 @@ export function PartnerFormPanel({
   const [openingBalance, setOpeningBalance] = useState("0");
   const [debit, setDebit] = useState("0");
   const [credit, setCredit] = useState("0");
-  const [currency, setCurrency] = useState(baseCurrency?.code || "USD");
+  const [currency, setCurrency] = useState(baseCurrency?.code || "");
 
   const parentAccount = useMemo(() => {
     const parentId = isCustomer ? SYSTEM_ACCOUNT_IDS.CUSTOMERS : SYSTEM_ACCOUNT_IDS.SUPPLIERS;
@@ -72,13 +72,13 @@ export function PartnerFormPanel({
       setOpeningBalance(partner.opening_balance || "0");
       setDebit(partner.debit || "0");
       setCredit(partner.credit || "0");
-      setCurrency(partner.currency || baseCurrency?.code || "USD");
+      setCurrency(partner.currency || baseCurrency?.code || "");
     } else {
       setForm({ name: "", phone: "", address: "", notes: "" });
       setOpeningBalance("0");
       setDebit("0");
       setCredit("0");
-      setCurrency(baseCurrency?.code || "USD");
+      setCurrency(baseCurrency?.code || "");
     }
   }, [partner, baseCurrency]);
 

@@ -114,7 +114,7 @@ export function ExpenseDetailPanel({
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-slate-600">العملة</Label>
-                <Input value={baseCurrency?.code || "SYP"} disabled={isDisabled} className="h-9 bg-slate-50 font-bold" />
+                <Input value={baseCurrency?.code || ""} disabled={isDisabled} className="h-9 bg-slate-50 font-bold" />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-slate-600">مدين (حالي)</Label>

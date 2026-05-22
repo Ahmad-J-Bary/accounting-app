@@ -2,6 +2,7 @@ use application::errors::AppError;
 use domain::sales::unified_invoice::{UnifiedInvoice, InvoiceType, InvoiceStatus, PaymentMethod};
 use domain::sales::invoice_line::InvoiceLine;
 use domain::shared::ids::{InvoiceId, CustomerId, SupplierId};
+use domain::shared::currency::Currency;
 use domain::shared::money::Money;
 use domain::shared::monetary_amount::MonetaryAmount;
 use std::str::FromStr;
@@ -43,28 +44,28 @@ pub fn row_to_invoice(row: InvoiceRow, lines: Vec<InvoiceLine>) -> Result<Unifie
         supplier_name: row.supplier_name,
         lines,
         tax_amount: MonetaryAmount {
-            original: Money::from_amount_and_code(Decimal::from_str(&row.tax_amount).unwrap_or(Decimal::ZERO), &row.currency_code),
+            original: Money::new(Decimal::from_str(&row.tax_amount).unwrap_or(Decimal::ZERO), Currency::new(&row.currency_code, &row.currency_code, &row.currency_code, "", 2, false)),
             base_amount: Decimal::from_str(&row.tax_amount_base).unwrap_or(Decimal::ZERO),
             fx_rate: Decimal::from_str(&row.exchange_rate).unwrap_or(Decimal::ONE),
         },
         discount_amount: MonetaryAmount {
-            original: Money::from_amount_and_code(Decimal::from_str(&row.discount_amount).unwrap_or(Decimal::ZERO), &row.currency_code),
+            original: Money::new(Decimal::from_str(&row.discount_amount).unwrap_or(Decimal::ZERO), Currency::new(&row.currency_code, &row.currency_code, &row.currency_code, "", 2, false)),
             base_amount: Decimal::from_str(&row.discount_amount_base).unwrap_or(Decimal::ZERO),
             fx_rate: Decimal::from_str(&row.exchange_rate).unwrap_or(Decimal::ONE),
         },
         extra_costs: MonetaryAmount {
-            original: Money::from_amount_and_code(Decimal::from_str(&row.extra_costs).unwrap_or(Decimal::ZERO), &row.currency_code),
+            original: Money::new(Decimal::from_str(&row.extra_costs).unwrap_or(Decimal::ZERO), Currency::new(&row.currency_code, &row.currency_code, &row.currency_code, "", 2, false)),
             base_amount: Decimal::from_str(&row.extra_costs_base).unwrap_or(Decimal::ZERO),
             fx_rate: Decimal::from_str(&row.exchange_rate).unwrap_or(Decimal::ONE),
         },
         total_amount: MonetaryAmount {
-            original: Money::from_amount_and_code(Decimal::from_str(&row.total_amount).unwrap_or(Decimal::ZERO), &row.currency_code),
+            original: Money::new(Decimal::from_str(&row.total_amount).unwrap_or(Decimal::ZERO), Currency::new(&row.currency_code, &row.currency_code, &row.currency_code, "", 2, false)),
             base_amount: Decimal::from_str(&row.total_amount_base).unwrap_or(Decimal::ZERO),
             fx_rate: Decimal::from_str(&row.exchange_rate).unwrap_or(Decimal::ONE),
         },
         payment_method,
         amount_paid: MonetaryAmount {
-            original: Money::from_amount_and_code(Decimal::from_str(&row.amount_paid).unwrap_or(Decimal::ZERO), &row.currency_code),
+            original: Money::new(Decimal::from_str(&row.amount_paid).unwrap_or(Decimal::ZERO), Currency::new(&row.currency_code, &row.currency_code, &row.currency_code, "", 2, false)),
             base_amount: Decimal::from_str(&row.amount_paid_base).unwrap_or(Decimal::ZERO),
             fx_rate: Decimal::from_str(&row.exchange_rate).unwrap_or(Decimal::ONE),
         },

@@ -21,14 +21,14 @@ export function SupplierPaymentForm({ supplier, onSave, onClose, saving }: Suppl
     payment_type: "SupplierPayment",
     amount: 0,
     payment_date: new Date().toISOString(),
-    currency_code: baseCurrency?.code || "SYP",
+    currency_code: baseCurrency?.code || "",
     exchange_rate: 1,
     supplier_id: supplier.id,
     notes: `سند دفع للمورد: ${supplier.name}`,
   });
 
   const handleCurrencyChange = (val: string) => {
-    const isUSD = val === "USD" || val === baseCurrency?.code;
+    const isUSD = val === baseCurrency?.code;
     const rate = isUSD ? 1 : (rateMap.get(val) || 1);
     setForm(p => ({
       ...p,
@@ -43,7 +43,7 @@ export function SupplierPaymentForm({ supplier, onSave, onClose, saving }: Suppl
     await onSave({
       payment_type: "SupplierPayment",
       amount: form.amount,
-      currency_code: form.currency_code || "SYP",
+      currency_code: form.currency_code || baseCurrency?.code || "",
       exchange_rate: form.exchange_rate || 1,
       payment_date: form.payment_date || new Date().toISOString(),
       supplier_id: form.supplier_id,

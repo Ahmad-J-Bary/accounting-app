@@ -57,7 +57,8 @@ const SortableHeader = ({ field, label, currentField, direction, onSort }: Sorta
 };
 
 export default function PaymentsPage() {
-  const { formatAmount, formatMonetaryAmount } = useCurrencyContext();
+  const { formatAmount, formatMonetaryAmount, currencies, baseCurrency } = useCurrencyContext();
+  const otherCurrency = currencies.find(c => c.code !== baseCurrency.code) || baseCurrency;
   const {
     filtered: payments,
     loading: paymentsLoading,
@@ -123,16 +124,16 @@ export default function PaymentsPage() {
         case "amount_usd": {
           const rateA = parseFloat(a.exchange_rate || "1");
           const rateB = parseFloat(b.exchange_rate || "1");
-          const aVal = a.currency_code === "USD" ? parseFloat(a.amount) : parseFloat(a.amount) / rateA;
-          const bVal = b.currency_code === "USD" ? parseFloat(b.amount) : parseFloat(b.amount) / rateB;
+          const aVal = a.currency_code === baseCurrency.code ? parseFloat(a.amount) : parseFloat(a.amount) / rateA;
+          const bVal = b.currency_code === baseCurrency.code ? parseFloat(b.amount) : parseFloat(b.amount) / rateB;
           comparison = aVal - bVal;
           break;
         }
         case "amount_syp": {
           const rateA = parseFloat(a.exchange_rate || "1");
           const rateB = parseFloat(b.exchange_rate || "1");
-          const aVal = a.currency_code === "SYP" ? parseFloat(a.amount) : parseFloat(a.amount) * rateA;
-          const bVal = b.currency_code === "SYP" ? parseFloat(b.amount) : parseFloat(b.amount) * rateB;
+          const aVal = a.currency_code === otherCurrency.code ? parseFloat(a.amount) : parseFloat(a.amount) * rateA;
+          const bVal = b.currency_code === otherCurrency.code ? parseFloat(b.amount) : parseFloat(b.amount) * rateB;
           comparison = aVal - bVal;
           break;
         }
@@ -199,26 +200,26 @@ export default function PaymentsPage() {
     },
     {
       id: "amount_usd",
-      header: <SortableHeader field="amount_usd" label="المبلغ ($)" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
-      label: "المبلغ ($)",
+      header: <SortableHeader field="amount_usd" label={`المبلغ (${baseCurrency.symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+      label: `المبلغ (${baseCurrency.symbol})`,
       accessor: (p) => {
         const amt = parseFloat(p.amount);
         const rate = parseFloat(p.exchange_rate);
-        const val = p.currency_code === "USD" ? amt : amt / rate;
-        return formatAmount(val, { currencyCode: "USD" });
+        const val = p.currency_code === baseCurrency.code ? amt : amt / rate;
+        return formatAmount(val, { currencyCode: baseCurrency.code });
       },
       align: "left",
       className: "tabular-nums font-black text-slate-900 w-32"
     },
     {
       id: "amount_syp",
-      header: <SortableHeader field="amount_syp" label="المبلغ (ل.س)" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
-      label: "المبلغ (ل.س)",
+      header: <SortableHeader field="amount_syp" label={`المبلغ (${otherCurrency.symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+      label: `المبلغ (${otherCurrency.symbol})`,
       accessor: (p) => {
         const amt = parseFloat(p.amount);
         const rate = parseFloat(p.exchange_rate);
-        const val = p.currency_code === "SYP" ? amt : amt * rate;
-        return formatAmount(val, { currencyCode: "SYP" });
+        const val = p.currency_code === baseCurrency.code ? amt * rate : amt;
+        return formatAmount(val, { currencyCode: otherCurrency.code });
       },
       align: "left",
       className: "tabular-nums font-black text-slate-900 w-32"
@@ -288,7 +289,7 @@ export default function PaymentsPage() {
       align: "center",
       className: "w-[80px]"
     }
-  ], [formatAmount, accounts, handleDelete, sortField, sortDirection, handleSort]);
+  ], [formatAmount, accounts, handleDelete, sortField, sortDirection, handleSort, currencies, baseCurrency, otherCurrency]);
 
   const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
     tableId: "payments-unified",
@@ -297,15 +298,15 @@ export default function PaymentsPage() {
   });
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
-    const totalUSD = filtered.reduce((s, p) => {
+    const totalBase = filtered.reduce((s, p) => {
       const amt = parseFloat(p.amount);
       const rate = parseFloat(p.exchange_rate);
-      return s + (p.currency_code === "USD" ? amt : amt / rate);
+      return s + (p.currency_code === baseCurrency.code ? amt : amt / rate);
     }, 0);
-    const totalSYP = filtered.reduce((s, p) => {
+    const totalOther = filtered.reduce((s, p) => {
       const amt = parseFloat(p.amount);
       const rate = parseFloat(p.exchange_rate);
-      return s + (p.currency_code === "SYP" ? amt : amt * rate);
+      return s + (p.currency_code === baseCurrency.code ? amt * rate : amt);
     }, 0);
     const colIds = enrichedColumns.map(c => c.id);
     return colIds.map(id => {
@@ -313,14 +314,14 @@ export default function PaymentsPage() {
         case 'journal_entry_number':
           return { id: 'count', label: '', value: `${filtered.length} سند`, className: 'text-slate-500 font-medium' };
         case 'amount_usd':
-          return { id: 'amount_usd_summary', label: 'الإجمالي', value: formatAmount(totalUSD, { currencyCode: "USD" }), align: 'left' as const, className: 'text-slate-900 font-black' };
+          return { id: 'amount_usd_summary', label: 'الإجمالي', value: formatAmount(totalBase, { currencyCode: baseCurrency.code }), align: 'left' as const, className: 'text-slate-900 font-black' };
         case 'amount_syp':
-          return { id: 'amount_syp_summary', label: 'الإجمالي', value: formatAmount(totalSYP, { currencyCode: "SYP" }), align: 'left' as const, className: 'text-slate-900 font-black' };
+          return { id: 'amount_syp_summary', label: 'الإجمالي', value: formatAmount(totalOther, { currencyCode: otherCurrency.code }), align: 'left' as const, className: 'text-slate-900 font-black' };
         default:
           return { id: `${id}_spacer`, label: '', value: '' };
       }
     });
-  }, [filtered, formatAmount, enrichedColumns]);
+  }, [filtered, formatAmount, enrichedColumns, baseCurrency, otherCurrency]);
 
   const handleCreate = async (payload: CreatePaymentRequest) => {
     setSaving(true);

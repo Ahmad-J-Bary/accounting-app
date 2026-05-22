@@ -126,11 +126,11 @@ export function PartnerDetailPanel({
               <h3 className="text-sm font-bold text-slate-800 border-b pb-2">معلومات الاستثمار</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-600">المبلغ ($)</Label>
+                  <Label className="text-xs font-bold text-slate-600">المبلغ ({baseCurrency?.symbol || baseCurrency?.code || "$"})</Label>
                   <Input value={partner.amount_usd || "0"} disabled={isDisabled} className="h-9 bg-slate-50" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-600">المبلغ (ل.س)</Label>
+                  <Label className="text-xs font-bold text-slate-600">المبلغ (محلي)</Label>
                   <Input value={partner.amount_local || "0"} disabled={isDisabled} className="h-9 bg-slate-50" />
                 </div>
                 <div className="space-y-1.5">
@@ -191,7 +191,7 @@ export function PartnerDetailPanel({
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold text-slate-600">العملة</Label>
-                  <Select value={partner.currency || baseCurrency?.code || "SYP"} disabled={isDisabled}>
+                  <Select value={partner.currency || baseCurrency?.code || ""} disabled={isDisabled}>
                     <SelectTrigger className="h-9 font-bold bg-slate-50"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {currencies.map(c => (

@@ -5,7 +5,7 @@ use rust_decimal::Decimal;
 use domain::accounting::account::Account;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::shared::currency::Currency;
-use domain::shared::exchange_rate::RateType;
+
 use domain::shared::ids::{AccountId, CustomerId, SupplierId};
 use domain::shared::money::Money;
 use domain::shared::MonetaryAmount;
@@ -14,7 +14,7 @@ use domain::suppliers::Supplier;
 
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::customer_repository::CustomerRepository;
-use crate::ports::exchange_rate_repository::ExchangeRateRepository;
+
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::supplier_repository::SupplierRepository;
 use crate::constants::{RECEIVABLES_PARENT_ID, PAYABLES_PARENT_ID};
@@ -28,7 +28,6 @@ pub struct CreateAccountUseCase {
     journal_repo: Arc<dyn JournalEntryRepository>,
     customer_repo: Option<Arc<dyn CustomerRepository>>,
     supplier_repo: Option<Arc<dyn SupplierRepository>>,
-    rate_repo: Arc<dyn ExchangeRateRepository>,
 }
 
 impl CreateAccountUseCase {
@@ -37,14 +36,12 @@ impl CreateAccountUseCase {
         journal_repo: Arc<dyn JournalEntryRepository>,
         customer_repo: Option<Arc<dyn CustomerRepository>>,
         supplier_repo: Option<Arc<dyn SupplierRepository>>,
-        rate_repo: Arc<dyn ExchangeRateRepository>,
     ) -> Self {
         Self {
             account_repo,
             journal_repo,
             customer_repo,
             supplier_repo,
-            rate_repo,
         }
     }
 
@@ -107,9 +104,8 @@ impl CreateAccountUseCase {
         let credit = cmd.credit.as_deref()
             .and_then(|s| Decimal::from_str(s).ok())
             .unwrap_or(Decimal::ZERO);
-        let currency = cmd.currency.as_deref()
-            .map(|s| if s == "USD" { Currency::usd() } else { Currency::syp() })
-            .unwrap_or(Currency::syp());
+        let currency_code = cmd.currency.unwrap_or_default();
+        let currency = Currency::new(&currency_code, &currency_code, &currency_code, "", 2, false);
 
         // Create AccountOpeningBalance journal entry for every new account
         // (skip for auto-created customer/supplier accounts, their entries are handled separately)
@@ -121,14 +117,8 @@ impl CreateAccountUseCase {
         let total_opening = debit - credit;
 
         if !is_receivable_or_payable {
-            let is_usd = currency.code == "USD";
-            let fx_rate = if is_usd {
-                self.rate_repo
-                    .find_latest("USD", "SYP", RateType::Middle)
-                    .await
-                    .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?
-                    .map(|r| r.rate)
-                    .unwrap_or(Decimal::ONE)
+            let fx_rate = if currency.is_base {
+                Decimal::ONE
             } else {
                 Decimal::ONE
             };

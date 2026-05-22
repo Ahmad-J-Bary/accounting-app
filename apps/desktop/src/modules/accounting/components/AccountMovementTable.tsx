@@ -9,7 +9,7 @@ import type { AccountLedgerLineDto } from "@erp/shared-types";
 import { formatDateTime } from '@shared/lib/format';
 import { JOURNAL_TYPE_LABELS } from "../lib/journal-config";
 
-type SortField = "entry_number" | "date" | "debit_usd" | "debit_syp" | "credit_usd" | "credit_syp" | "journal_type" | "credit_account" | "debit_account";
+type SortField = "entry_number" | "date" | "journal_type" | "credit_account" | "debit_account";
 
 interface SortableHeaderProps {
   field: SortField;
@@ -53,8 +53,8 @@ export function AccountMovementTable({
   onSearchChange, 
   accountName 
 }: AccountMovementTableProps) {
-  const { formatAmount } = useCurrencyContext();
-  const [sortField, setSortField] = useState<SortField>("debit_usd");
+  const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
+  const [sortField, setSortField] = useState<SortField>("entry_number");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const handleSort = useCallback((field: SortField) => {
@@ -66,6 +66,11 @@ export function AccountMovementTable({
     });
     setSortField(field);
   }, [sortField]);
+
+  const sortedCurrencies = useMemo(() => {
+    if (!baseCurrency) return currencies;
+    return [baseCurrency, ...currencies.filter(c => c.code !== baseCurrency.code)];
+  }, [currencies, baseCurrency]);
 
   const tableData = useMemo(() => {
     return lines.map((line) => {
@@ -109,154 +114,194 @@ export function AccountMovementTable({
         case "debit_account":
           comparison = (a.destination_account || "").localeCompare(b.destination_account || "", "ar");
           break;
-        default: {
-          const aVal = parseFloat(a[sortField] as string || "0");
-          const bVal = parseFloat(b[sortField] as string || "0");
-          comparison = aVal - bVal;
-        }
       }
       return sortDirection === "asc" ? comparison : -comparison;
     });
   }, [tableData, sortField, sortDirection]);
 
-  const allColumns = useMemo<UnifiedColumn<typeof tableData[0]>[]>(() => [
-    { 
-      id: "entry_number",
-      header: <SortableHeader field="entry_number" label="رقم القيد" currentField={sortField} direction={sortDirection} onSort={handleSort} />, 
-      label: "رقم القيد", 
-      accessor: (l) => (
-        <span className="font-black text-indigo-700 font-mono text-xs">{l.entry_number}</span>
-      ),
-      className: "w-24",
-      align: "center"
-    },
-    { 
-      id: "journal_type",
-      header: <SortableHeader field="journal_type" label="نوع الحركة" currentField={sortField} direction={sortDirection} onSort={handleSort} />, 
-      label: "نوع الحركة", 
-      accessor: (l) => (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter ring-1 ring-slate-200/50">
-          {l.typeLabel}
-        </span>
-      ),
-      className: "w-32"
-    },
-    {
-      id: "debit_usd",
-      header: <SortableHeader field="debit_usd" label="عليه / مدين ($)" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
-      label: "عليه / مدين ($)",
-      accessor: (l) => {
-        const usd = parseFloat(l.debit_usd);
-        return usd > 0 ? formatWithLocale(usd, 2) + " $" : "—";
+  const fieldForCurrency = useCallback((currCode: string): "debit_usd" | "debit_syp" => {
+    if (baseCurrency && currCode === baseCurrency.code) return "debit_usd";
+    return "debit_syp";
+  }, [baseCurrency]);
+
+  const creditFieldForCurrency = useCallback((currCode: string): "credit_usd" | "credit_syp" => {
+    if (baseCurrency && currCode === baseCurrency.code) return "credit_usd";
+    return "credit_syp";
+  }, [baseCurrency]);
+
+  const allColumns = useMemo<UnifiedColumn<typeof tableData[0]>[]>(() => {
+    const cols: UnifiedColumn<typeof tableData[0]>[] = [
+      { 
+        id: "entry_number",
+        header: <SortableHeader field="entry_number" label="رقم القيد" currentField={sortField} direction={sortDirection} onSort={handleSort} />, 
+        label: "رقم القيد", 
+        accessor: (l) => (
+          <span className="font-black text-indigo-700 font-mono text-xs">{l.entry_number}</span>
+        ),
+        className: "w-24",
+        align: "center"
       },
-      align: "left",
-      className: "tabular-nums font-black text-blue-700 text-[11px]"
-    },
-    {
-      id: "debit_syp",
-      header: <SortableHeader field="debit_syp" label="عليه / مدين (ل.س)" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
-      label: "عليه / مدين (ل.س)",
-      accessor: (l) => {
-        const syp = parseFloat(l.debit_syp);
-        return syp > 0 ? formatWithLocale(syp, 0) + " ل.س" : "—";
+      { 
+        id: "journal_type",
+        header: <SortableHeader field="journal_type" label="نوع الحركة" currentField={sortField} direction={sortDirection} onSort={handleSort} />, 
+        label: "نوع الحركة", 
+        accessor: (l) => (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter ring-1 ring-slate-200/50">
+            {l.typeLabel}
+          </span>
+        ),
+        className: "w-32"
       },
-      align: "left",
-      className: "tabular-nums font-black text-blue-700 text-[11px]"
-    },
-    {
-      id: "credit_usd",
-      header: <SortableHeader field="credit_usd" label="له / دائن ($)" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
-      label: "له / دائن ($)",
-      accessor: (l) => {
-        const usd = parseFloat(l.credit_usd);
-        return usd > 0 ? formatWithLocale(usd, 2) + " $" : "—";
+    ];
+
+    sortedCurrencies.forEach(curr => {
+      const symbol = curr.symbol || curr.code;
+      const field = fieldForCurrency(curr.code);
+      cols.push({
+        id: `debit_${curr.code}`,
+        header: <SortableHeader field="entry_number" label={`عليه / مدين (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        label: `عليه / مدين (${symbol})`,
+        accessor: (l) => {
+          const val = parseFloat(l[field]);
+          return val > 0 ? formatWithLocale(val, curr.code === baseCurrency?.code ? 2 : 0) + ` ${symbol}` : "—";
+        },
+        align: "left",
+        className: "tabular-nums font-black text-blue-700 text-[11px]"
+      });
+    });
+
+    sortedCurrencies.forEach(curr => {
+      const symbol = curr.symbol || curr.code;
+      const field = creditFieldForCurrency(curr.code);
+      cols.push({
+        id: `credit_${curr.code}`,
+        header: <SortableHeader field="entry_number" label={`له / دائن (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        label: `له / دائن (${symbol})`,
+        accessor: (l) => {
+          const val = parseFloat(l[field]);
+          return val > 0 ? formatWithLocale(val, curr.code === baseCurrency?.code ? 2 : 0) + ` ${symbol}` : "—";
+        },
+        align: "left",
+        className: "tabular-nums font-black text-emerald-700 text-[11px]"
+      });
+    });
+
+    cols.push(
+      { 
+        id: "description",
+        header: "البيان", 
+        label: "البيان", 
+        accessor: "description", 
+        className: "min-w-[200px] text-slate-700 font-medium" 
       },
-      align: "left",
-      className: "tabular-nums font-black text-emerald-700 text-[11px]"
-    },
-    {
-      id: "credit_syp",
-      header: <SortableHeader field="credit_syp" label="له / دائن (ل.س)" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
-      label: "له / دائن (ل.س)",
-      accessor: (l) => {
-        const syp = parseFloat(l.credit_syp);
-        return syp > 0 ? formatWithLocale(syp, 0) + " ل.س" : "—";
+      {
+        id: "credit_account",
+        header: <SortableHeader field="credit_account" label="الحساب الدائن / المصدر" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        label: "الحساب الدائن / المصدر",
+        accessor: (l) => l.source_account,
+        className: "font-medium text-slate-800 text-sm"
       },
-      align: "left",
-      className: "tabular-nums font-black text-emerald-700 text-[11px]"
-    },
-    { 
-      id: "description",
-      header: "البيان", 
-      label: "البيان", 
-      accessor: "description", 
-      className: "min-w-[200px] text-slate-700 font-medium" 
-    },
-    {
-      id: "credit_account",
-      header: <SortableHeader field="credit_account" label="الحساب الدائن / المصدر" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
-      label: "الحساب الدائن / المصدر",
-      accessor: (l) => l.source_account,
-      className: "font-medium text-slate-800 text-sm"
-    },
-    {
-      id: "debit_account",
-      header: <SortableHeader field="debit_account" label="الحساب المدين / الوجهة" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
-      label: "الحساب المدين / الوجهة",
-      accessor: (l) => l.destination_account,
-      className: "font-medium text-slate-800 text-sm"
-    },
-    { 
-      id: "date",
-      header: <SortableHeader field="date" label="التاريخ" currentField={sortField} direction={sortDirection} onSort={handleSort} />, 
-      label: "التاريخ", 
-      accessor: (l) => formatDateTime(l.date),
-      className: "tabular-nums text-slate-500 text-[11px] w-32" 
-    },
-  ], [formatAmount, sortField, sortDirection, handleSort]);
+      {
+        id: "debit_account",
+        header: <SortableHeader field="debit_account" label="الحساب المدين / الوجهة" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        label: "الحساب المدين / الوجهة",
+        accessor: (l) => l.destination_account,
+        className: "font-medium text-slate-800 text-sm"
+      },
+      { 
+        id: "date",
+        header: <SortableHeader field="date" label="التاريخ" currentField={sortField} direction={sortDirection} onSort={handleSort} />, 
+        label: "التاريخ", 
+        accessor: (l) => formatDateTime(l.date),
+        className: "tabular-nums text-slate-500 text-[11px] w-32" 
+      },
+    );
+    return cols;
+  }, [sortField, sortDirection, handleSort, sortedCurrencies, baseCurrency, fieldForCurrency, creditFieldForCurrency]);
+
+  const defaultVisible = useMemo(() => {
+    const def = ["entry_number", "date", "journal_type", "description"];
+    sortedCurrencies.forEach(curr => {
+      def.push(`debit_${curr.code}`);
+    });
+    sortedCurrencies.forEach(curr => {
+      def.push(`credit_${curr.code}`);
+    });
+    return def;
+  }, [sortedCurrencies]);
 
   const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
     tableId: "account-movement-unified",
     columns: allColumns,
-    defaultVisible: ["entry_number", "date", "journal_type", "description", "debit_usd", "credit_usd"],
+    defaultVisible,
   });
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
-    const totalDebitUSD = tableData.reduce((s, l) => s + parseFloat(l.debit_usd || "0"), 0);
-    const totalCreditUSD = tableData.reduce((s, l) => s + parseFloat(l.credit_usd || "0"), 0);
-    const totalDebitSYP = tableData.reduce((s, l) => {
-      const syp = parseFloat(l.debit_syp || "0");
-      return s + syp;
-    }, 0);
-    const totalCreditSYP = tableData.reduce((s, l) => {
-      const syp = parseFloat(l.credit_syp || "0");
-      return s + syp;
-    }, 0);
-    const balanceUSD = totalDebitUSD - totalCreditUSD;
-    const balanceSYP = totalDebitSYP - totalCreditSYP;
+    const totals: Record<string, { debit: number; credit: number }> = {};
+    sortedCurrencies.forEach(curr => {
+      const fieldD = fieldForCurrency(curr.code);
+      const fieldC = creditFieldForCurrency(curr.code);
+      totals[curr.code] = {
+        debit: tableData.reduce((s, l) => s + parseFloat(l[fieldD] || "0"), 0),
+        credit: tableData.reduce((s, l) => s + parseFloat(l[fieldC] || "0"), 0),
+      };
+    });
 
     const colIds = enrichedColumns.map(c => c.id);
     return colIds.map(id => {
-      switch (id) {
-        case 'entry_number':
-          return { id: 'count', label: '', value: `${tableData.length} حركة`, className: 'text-slate-500 font-medium' };
-        case 'journal_type':
-          return { id: 'journal_type_summary', label: '', value: 'المجموع', className: 'text-slate-600 font-bold', align: 'center' as const };
-        case 'description':
-          return { id: 'balance_summary', label: 'الرصيد', value: `${formatAmount(balanceUSD, { currencyCode: "USD" })} / ${formatWithLocale(balanceSYP, 0)} ل.س`, className: balanceUSD >= 0 ? 'text-slate-900 font-black' : 'text-rose-600 font-black' };
-        case 'debit_usd':
-          return { id: 'debit_usd_total', label: 'إجمالي', value: totalDebitUSD > 0 ? formatAmount(totalDebitUSD, { currencyCode: "USD" }) : "—", align: 'left' as const, className: 'text-blue-700 font-black' };
-        case 'debit_syp':
-          return { id: 'debit_syp_total', label: 'إجمالي', value: totalDebitSYP > 0 ? formatWithLocale(totalDebitSYP, 0) + " ل.س" : "—", align: 'left' as const, className: 'text-blue-600 font-bold' };
-        case 'credit_usd':
-          return { id: 'credit_usd_total', label: 'إجمالي', value: totalCreditUSD > 0 ? formatAmount(totalCreditUSD, { currencyCode: "USD" }) : "—", align: 'left' as const, className: 'text-emerald-700 font-black' };
-        case 'credit_syp':
-          return { id: 'credit_syp_total', label: 'إجمالي', value: totalCreditSYP > 0 ? formatWithLocale(totalCreditSYP, 0) + " ل.س" : "—", align: 'left' as const, className: 'text-emerald-600 font-bold' };
-        default:
-          return { id: `${id}_spacer`, label: '', value: '' };
+      if (id === 'entry_number') {
+        return { id: 'count', label: '', value: `${tableData.length} حركة`, className: 'text-slate-500 font-medium' };
       }
+      if (id === 'journal_type') {
+        return { id: 'journal_type_summary', label: '', value: 'المجموع', className: 'text-slate-600 font-bold', align: 'center' as const };
+      }
+      if (id === 'description') {
+        const balanceParts: string[] = [];
+        sortedCurrencies.forEach(curr => {
+          const t = totals[curr.code];
+          if (t) {
+            const bal = t.debit - t.credit;
+            if (curr.code === baseCurrency?.code) {
+              balanceParts.push(formatAmount(bal, { currencyCode: curr.code }));
+            } else {
+              const symbol = curr.symbol || curr.code;
+              balanceParts.push(`${formatWithLocale(bal, 0)} ${symbol}`);
+            }
+          } else {
+            balanceParts.push(formatAmount(0, { currencyCode: curr.code }));
+          }
+        });
+        return {
+          id: 'balance_summary', label: 'الرصيد',
+          value: balanceParts.join(' / '),
+          className: 'text-slate-900 font-black'
+        };
+      }
+      const debitMatch = id.match(/^debit_(.+)$/);
+      if (debitMatch) {
+        const currCode = debitMatch[1];
+        const t = totals[currCode];
+        return {
+          id: `${id}_total`, label: 'إجمالي',
+          value: t && t.debit > 0 ? formatAmount(t.debit, { currencyCode: currCode }) : "—",
+          align: 'left' as const,
+          className: 'text-blue-700 font-black'
+        };
+      }
+      const creditMatch = id.match(/^credit_(.+)$/);
+      if (creditMatch) {
+        const currCode = creditMatch[1];
+        const t = totals[currCode];
+        return {
+          id: `${id}_total`, label: 'إجمالي',
+          value: t && t.credit > 0 ? formatAmount(t.credit, { currencyCode: currCode }) : "—",
+          align: 'left' as const,
+          className: 'text-emerald-700 font-black'
+        };
+      }
+      return { id: `${id}_spacer`, label: '', value: '' };
     });
-  }, [tableData, formatAmount, enrichedColumns]);
+  }, [tableData, formatAmount, enrichedColumns, sortedCurrencies, baseCurrency, fieldForCurrency, creditFieldForCurrency]);
 
   return (
     <TableShell

@@ -16,10 +16,7 @@ pub fn map_decimal(row: &sqlx::sqlite::SqliteRow, col: &str) -> Decimal {
 pub fn map_money(row: &sqlx::sqlite::SqliteRow, amount_col: &str, currency_col: &str) -> Money {
     let amount = map_decimal(row, amount_col);
     let currency_code: String = row.get(currency_col);
-    let currency = match currency_code.as_str() {
-        "USD" => Currency::usd(),
-        _ => Currency::syp(),
-    };
+    let currency = Currency::new(&currency_code, &currency_code, &currency_code, "", 2, false);
     Money::new(amount, currency)
 }
 

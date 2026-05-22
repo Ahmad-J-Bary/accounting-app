@@ -62,11 +62,12 @@ impl DeletePartnerUseCase {
                 self.account_repo.find_by_code("122").await,
                 self.account_repo.find_by_code("222").await,
             ) {
-                let (currency, amount) = if total_usd > total_local {
-                    (Currency::usd(), total_usd.abs())
+                let (code, amount) = if total_usd > total_local {
+                    ("USD", total_usd.abs())
                 } else {
-                    (Currency::syp(), total_local.abs())
+                    ("SYP", total_local.abs())
                 };
+                let currency = Currency::new(code, code, code, "", 2, false);
                 let total_ma = MonetaryAmount::new(Money::new(amount, currency), Decimal::ONE);
                 let zero_ma = MonetaryAmount::zero(total_ma.currency().clone());
 

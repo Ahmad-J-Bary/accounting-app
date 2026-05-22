@@ -8,7 +8,6 @@ import { Label } from "@shared/ui/label";
 import { useDataTable } from "@shared/hooks";
 import { journalEntryService, type JournalFilters } from "@modules/accounting/api/journalEntryService";
 import type { JournalEntryDto, JournalType } from "@erp/shared-types";
-import { formatCurrency } from "@shared/lib/format";
 import { cn } from "@shared/lib/utils";
 import { FileText, Calendar, Filter, ArrowUpRight, ArrowDownLeft, Printer, Download } from "lucide-react";
 import { JOURNAL_REPORT_TYPES } from "@modules/accounting/lib/journal-config";
@@ -17,7 +16,7 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { JournalTable } from "@modules/accounting/components/JournalTable";
 
 export default function AccountingJournalsReport() {
-  const { convertBetween } = useCurrencyContext();
+  const { convertBetween, currencies, baseCurrency, formatAmount } = useCurrencyContext();
   const [searchParams] = useSearchParams();
   const [filters, setFilters] = useState<JournalFilters>({
     journal_type: (searchParams.get('type') as JournalType) || 'GeneralJournal',
@@ -54,15 +53,24 @@ export default function AccountingJournalsReport() {
   );
 
   const totals = useMemo(() => {
-    const t = { debitUSD: 0, creditUSD: 0, debitSYP: 0, creditSYP: 0 };
+    const t: Record<string, { debit: number; credit: number }> = {};
+    const base = currencies.find(c => c.is_base);
+    currencies.forEach(curr => {
+      t[curr.code] = { debit: 0, credit: 0 };
+    });
     tableData.forEach(r => {
-      t.debitUSD += r.debit_usd;
-      t.creditUSD += r.credit_usd;
-      t.debitSYP += r.debit_usd > 0 ? convertBetween(r.debit_usd, "USD", "SYP") : r.debit_syp;
-      t.creditSYP += r.credit_usd > 0 ? convertBetween(r.credit_usd, "USD", "SYP") : r.credit_syp;
+      if (base && t[base.code]) {
+        t[base.code].debit += r.debit_usd;
+        t[base.code].credit += r.credit_usd;
+      }
+      currencies.filter(c => !c.is_base).forEach(curr => {
+        if (!t[curr.code]) return;
+        t[curr.code].debit += r.debit_usd > 0 && base ? convertBetween(r.debit_usd, base.code, curr.code) : r.debit_syp;
+        t[curr.code].credit += r.credit_usd > 0 && base ? convertBetween(r.credit_usd, base.code, curr.code) : r.credit_syp;
+      });
     });
     return t;
-  }, [tableData, convertBetween]);
+  }, [tableData, convertBetween, currencies]);
 
   return (
     <ReportLayout
@@ -132,8 +140,8 @@ export default function AccountingJournalsReport() {
                 <ArrowUpRight className="w-7 h-7" />
               </div>
               <div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">إجمالي المدين (ل.س)</span>
-                <div className="text-2xl font-black text-slate-900 tabular-nums">{formatCurrency(totals.debitSYP)}</div>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">إجمالي المدين ({baseCurrency?.symbol || baseCurrency?.code})</span>
+                <div className="text-2xl font-black text-slate-900 tabular-nums">{baseCurrency ? formatAmount((totals[baseCurrency.code]?.debit || 0), { mode: "base" }) : "—"}</div>
               </div>
            </div>
            
@@ -142,8 +150,8 @@ export default function AccountingJournalsReport() {
                 <ArrowDownLeft className="w-7 h-7" />
               </div>
               <div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">إجمالي الدائن (ل.س)</span>
-                <div className="text-2xl font-black text-slate-900 tabular-nums">{formatCurrency(totals.creditSYP)}</div>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">إجمالي الدائن ({baseCurrency?.symbol || baseCurrency?.code})</span>
+                <div className="text-2xl font-black text-slate-900 tabular-nums">{baseCurrency ? formatAmount((totals[baseCurrency.code]?.credit || 0), { mode: "base" }) : "—"}</div>
               </div>
            </div>
 
@@ -174,17 +182,22 @@ export default function AccountingJournalsReport() {
                 </Button>
              </div>
              
-             <div className="flex items-center gap-8">
-                <div className="text-right">
-                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">صافي الحركة (ل.س)</span>
-                   <span className={cn(
-                     "text-xl font-black tabular-nums",
-                     (totals.debitSYP - totals.creditSYP) >= 0 ? "text-blue-700" : "text-red-700"
-                   )}>
-                     {formatCurrency(Math.abs(totals.debitSYP - totals.creditSYP))}
-                   </span>
-                </div>
-             </div>
+              <div className="flex items-center gap-4">
+                {currencies.map(curr => {
+                  const net = (totals[curr.code]?.debit || 0) - (totals[curr.code]?.credit || 0);
+                  return (
+                    <div key={curr.code} className="text-right">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">صافي الحركة ({curr.symbol || curr.code})</span>
+                      <span className={cn(
+                        "text-xl font-black tabular-nums",
+                        net >= 0 ? "text-blue-700" : "text-red-700"
+                      )}>
+                        {formatAmount(Math.abs(net), { currencyCode: curr.code })}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
           </div>
         </div>
       </div>

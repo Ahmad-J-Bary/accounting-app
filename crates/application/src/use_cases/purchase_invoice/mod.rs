@@ -291,10 +291,7 @@ impl PostPurchaseInvoiceUseCase {
         let purchase_account = self.account_repo.find_by_code("124").await?
             .ok_or_else(|| AppError::NotFound("حساب المخزون/المشتريات (124) غير موجود".into()))?;
 
-        let currency = match invoice.currency_code.as_str() {
-            "USD" => Currency::usd(),
-            _ => Currency::syp(),
-        };
+        let currency = Currency::new(&invoice.currency_code, &invoice.currency_code, &invoice.currency_code, "", 2, false);
 
         // Calculate subtotal for the main purchase entry (excluding additional costs)
         let purchase_amount_ma = MonetaryAmount::new(

@@ -57,7 +57,7 @@ export function ExpenseFormPanel({
   const [openingBalance, setOpeningBalance] = useState("0");
   const [debit, setDebit] = useState("0");
   const [credit, setCredit] = useState("0");
-  const [currency, setCurrency] = useState(baseCurrency?.code || "SYP");
+  const [currency, setCurrency] = useState(baseCurrency?.code || "");
   const [notes, setNotes] = useState("");
 
   const suggestedSuffix = useMemo(
@@ -71,14 +71,14 @@ export function ExpenseFormPanel({
       setOpeningBalance(expense.opening_balance || "0");
       setDebit(expense.debit || "0");
       setCredit(expense.credit || "0");
-      setCurrency(baseCurrency?.code || "SYP");
+      setCurrency(baseCurrency?.code || "");
       setNotes(expense.notes || "");
     } else {
       setName("");
       setOpeningBalance("0");
       setDebit("0");
       setCredit("0");
-      setCurrency(baseCurrency?.code || "SYP");
+      setCurrency(baseCurrency?.code || "");
       setNotes("");
     }
   }, [expense, baseCurrency]);

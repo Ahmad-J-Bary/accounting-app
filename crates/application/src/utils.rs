@@ -16,10 +16,8 @@ pub fn parse_decimal(val: Option<&str>, field_name: &str) -> Result<Decimal, App
 
 /// ÙŠØ­ÙˆÙ„ Ù†Øµ Ø§Ù„Ø¹Ù…Ù„Ø© Ø¥Ù„Ù‰ Ø§Ù„Ù†ÙˆØ¹ Ø§Ù„Ù…Ø­Ø¯Ø¯ ÙÙŠ Ø§Ù„Ø¯ÙˆÙ…ÙŠÙ†
 pub fn parse_currency(val: Option<&str>) -> Currency {
-    match val {
-        Some("USD") => Currency::usd(),
-        _ => Currency::syp(),
-    }
+    let code = val.unwrap_or("");
+    Currency::new(code, code, code, "", 2, false)
 }
 
 /// ÙŠÙˆÙ„Ø¯ ÙƒÙˆØ¯Ø§Ù‹ Ø§ÙØªØ±Ø§Ø¶ÙŠØ§Ù‹ Ø¥Ø°Ø§ ÙƒØ§Ù† Ø§Ù„ÙƒÙˆØ¯ Ø§Ù„Ù…Ù‚Ø¯Ù… ÙØ§Ø±ØºØ§Ù‹

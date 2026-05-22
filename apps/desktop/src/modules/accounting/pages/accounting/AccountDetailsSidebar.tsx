@@ -10,6 +10,7 @@ import { supplierService } from '@modules/partners/api/supplierService';
 import { TreeSidebar } from '@widgets/tree-sidebar/TreeSidebar';
 import { BookOpen } from "lucide-react";
 import { useTabs } from "@app/providers/TabContext";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 interface AccountDetailsSidebarProps {
   selected: AccountDto | null;
@@ -43,7 +44,8 @@ export function AccountDetailsSidebar({
   const [openingBalance, setOpeningBalance] = useState("0");
   const [debit, setDebit] = useState("0");
   const [credit, setCredit] = useState("0");
-  const [currency, setCurrency] = useState("SYP");
+  const { currencies: activeCurrencies, baseCurrency } = useCurrencyContext();
+  const [currency, setCurrency] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -120,8 +122,8 @@ export function AccountDetailsSidebar({
     setOpeningBalance("0");
     setDebit("0");
     setCredit("0");
-    setCurrency("SYP");
-  }, [selected, suggestChildCode]);
+    setCurrency(baseCurrency?.code || "");
+  }, [selected, suggestChildCode, baseCurrency]);
 
   useEffect(() => {
     const handler = () => openCreateDialog();
@@ -403,8 +405,10 @@ export function AccountDetailsSidebar({
             <div className="space-y-1">
               <Label>العملة</Label>
               <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                <option value="SYP">SYP - ليرة سورية</option>
-                <option value="USD">USD - دولار أمريكي</option>
+                <option value="" disabled>اختر العملة</option>
+                {activeCurrencies.filter(c => c.is_active).map(c => (
+                  <option key={c.code} value={c.code}>{c.code} - {c.name_ar}</option>
+                ))}
               </select>
             </div>
           </div>

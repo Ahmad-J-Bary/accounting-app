@@ -3,6 +3,7 @@ use application::errors::AppError;
 use domain::sales::unified_invoice::{UnifiedInvoice, InvoiceType};
 use domain::sales::invoice_line::InvoiceLine;
 use domain::shared::ids::{InvoiceId, MaterialId};
+use domain::shared::currency::Currency;
 use domain::shared::money::Money;
 use domain::shared::MonetaryAmount;
 use std::str::FromStr;
@@ -85,12 +86,12 @@ pub async fn get_lines(pool: &SqlitePool, invoice_id: &str, currency_code: &str,
         
         let to_monetary = |amt_str: String| {
             let amt = Decimal::from_str(&amt_str).unwrap_or(Decimal::ZERO);
-            MonetaryAmount::new(Money::from_amount_and_code(amt, currency_code), fx_rate)
+            MonetaryAmount::new(Money::new(amt, Currency::new(currency_code, currency_code, currency_code, "", 2, false)), fx_rate)
         };
         
         let to_opt_monetary = |s: Option<String>| s.map(to_monetary);
         
-        let parse_money = |s: Option<String>| s.and_then(|v| Decimal::from_str(&v).ok().map(|amt| Money::from_amount_and_code(amt, currency_code)));
+        let parse_money = |s: Option<String>| s.and_then(|v| Decimal::from_str(&v).ok().map(|amt| Money::new(amt, Currency::new(currency_code, currency_code, currency_code, "", 2, false))));
         
         lines.push(InvoiceLine::new(
             material_id,

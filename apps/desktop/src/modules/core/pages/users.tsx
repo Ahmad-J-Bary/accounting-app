@@ -221,7 +221,7 @@ export default function UsersPage() {
             search={search}
             onSearchChange={setSearch}
             searchPlaceholder="بحث بالاسم أو اسم المستخدم..."
-            columns={userColumns.map(c => ({
+            columns={userColumns.filter(c => c.id !== 'actions').map(c => ({
               id: c.id,
               label: c.label || (typeof c.header === 'string' ? c.header : c.id),
               visible: userVisible.includes(c.id)

@@ -22,7 +22,7 @@ pub fn row_to_payment(row: PaymentRow) -> Result<Payment, AppError> {
         voucher_number: row.voucher_number.unwrap_or_else(|| row.id.clone()),
         payment_type,
         amount: Decimal::from_str(&row.amount).unwrap_or(Decimal::ZERO),
-        currency_code: row.currency_code.unwrap_or_else(|| "SYP".to_string()),
+        currency_code: row.currency_code.unwrap_or_default(),
         exchange_rate: row.exchange_rate
             .and_then(|s| Decimal::from_str(&s).ok())
             .unwrap_or(Decimal::ONE),

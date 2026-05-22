@@ -46,7 +46,7 @@ const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"
 
 export default function Partners() {
   const { openTab } = useTabs();
-  const { rateMap, formatAmount, formatMonetaryAmount } = useCurrencyContext();
+  const { rateMap, formatAmount, formatMonetaryAmount, baseCurrency, currencies } = useCurrencyContext();
   const [globalStrategy, setGlobalStrategy] = useState("BasedOnCapitalLocal");
 
   const {
@@ -69,7 +69,7 @@ export default function Partners() {
   const [isDrawingsOpen, setIsDrawingsOpen] = useState(false);
   const [drawingsSaving, setDrawingsSaving] = useState(false);
 
-  const usdRate = useMemo(() => rateMap?.get("USD") || 1, [rateMap]);
+  const usdRate = useMemo(() => rateMap?.get(baseCurrency?.code || "") || 1, [rateMap]);
 
   const {
     totals,
@@ -84,8 +84,8 @@ export default function Partners() {
 
   const stats = useMemo(() => [
     { 
-      label: "إجمالي رأس المال (ل.س)", 
-      value: formatAmount(totals.local, { currencyCode: "SYP", hideSymbol: false }), 
+      label: `إجمالي رأس المال (${baseCurrency?.symbol || ""})`, 
+      value: formatAmount(totals.local, { currencyCode: baseCurrency?.code || "", hideSymbol: false }), 
       icon: Calculator, 
       color: "text-slate-900" 
     },
@@ -96,8 +96,8 @@ export default function Partners() {
       color: "text-blue-600" 
     },
     { 
-      label: "رأس المال ($)", 
-      value: formatAmount(totals.usd, { currencyCode: "USD", hideSymbol: false }), 
+      label: `رأس المال (${baseCurrency?.symbol || ""})`, 
+      value: formatAmount(totals.usd, { currencyCode: baseCurrency?.code || "", hideSymbol: false }), 
       icon: DollarSign, 
       color: "text-emerald-600" 
     },
@@ -304,12 +304,12 @@ export default function Partners() {
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-4">معلومات الاستثمار</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 bg-white rounded-xl border border-slate-100">
-                    <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">المبلغ ($)</div>
-                    <div className="text-lg font-black text-blue-600 tabular-nums">{formatAmount(Number(partnersWithRatios.find(p => p.id === selectedId)?.amount_usd || 0), { currencyCode: "USD" })}</div>
+                    <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">{`المبلغ (${baseCurrency?.symbol || ""})`}</div>
+                    <div className="text-lg font-black text-blue-600 tabular-nums">{formatAmount(Number(partnersWithRatios.find(p => p.id === selectedId)?.amount_usd || 0), { currencyCode: baseCurrency?.code || "" })}</div>
                   </div>
                   <div className="p-3 bg-white rounded-xl border border-slate-100">
-                    <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">المبلغ (ل.س)</div>
-                    <div className="text-lg font-black text-slate-900 tabular-nums">{formatAmount(Number(partnersWithRatios.find(p => p.id === selectedId)?.displayAmountLocal || 0), { currencyCode: "SYP" })}</div>
+                    <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">{`المبلغ (${baseCurrency?.symbol || ""})`}</div>
+                    <div className="text-lg font-black text-slate-900 tabular-nums">{formatAmount(Number(partnersWithRatios.find(p => p.id === selectedId)?.displayAmountLocal || 0), { currencyCode: baseCurrency?.code || "" })}</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mt-4">

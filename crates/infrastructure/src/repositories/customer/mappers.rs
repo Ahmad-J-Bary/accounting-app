@@ -8,10 +8,7 @@ use chrono::DateTime;
 use super::models::CustomerRow;
 
 pub fn row_to_customer(row: CustomerRow) -> Result<Customer, AppError> {
-    let currency = match row.currency.as_str() {
-        "USD" => Currency::usd(),
-        _ => Currency::syp(),
-    };
+    let currency = Currency::new(&row.currency, &row.currency, &row.currency, "", 2, false);
 
     Ok(Customer {
         id: row.id.parse().map_err(|e| AppError::Infrastructure(format!("Invalid customer ID: {}", e)))?,

@@ -64,7 +64,6 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     title: "التقارير والإدارة",
     items: [
       { to: "/reports", label: "التقارير", icon: BarChart3 },
-      { to: "/currencies", label: "إدارة العملات", icon: DollarSign },
       { to: "/users", label: "المستخدمون والصلاحيات", icon: Shield },
       { to: "/settings", label: "الإعدادات", icon: Settings },
       { to: "/audit-log", label: "سجل النشاط", icon: History },

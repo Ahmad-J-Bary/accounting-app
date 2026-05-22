@@ -53,6 +53,7 @@ export function FloatingExchangeRateWidget({ isVisible, onClose }: FloatingExcha
   );
 
   const currentCode = selectedCode || nonBase[0]?.code || "";
+  const currentCurrency = currencies.find((c) => c.code === currentCode);
   const selectedStatus = todayStatus.find((s) => s.currency_code === currentCode);
   const hasRateToday = hasTodayRate(currentCode);
 
@@ -137,7 +138,7 @@ export function FloatingExchangeRateWidget({ isVisible, onClose }: FloatingExcha
         </div>
 
         <div className="text-[10px] text-slate-400 font-bold px-1 text-right">
-          كل 1 {baseCurrency.symbol || "$"} يقابل {selectedStatus?.rate ?? selectedStatus?.last_rate ?? "—"} {currentCode === "SYP" ? "ل.س" : currentCode}
+          كل 1 {baseCurrency.symbol || baseCurrency.code} يقابل {selectedStatus?.rate ?? selectedStatus?.last_rate ?? "—"} {currentCurrency?.symbol || currentCode}
         </div>
 
         <div className="flex items-center gap-2 border-t border-slate-100 pt-2">

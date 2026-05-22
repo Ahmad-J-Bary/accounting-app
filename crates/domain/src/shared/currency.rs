@@ -26,31 +26,6 @@ impl Currency {
             notes: None,
         }
     }
-
-    pub fn usd() -> Self {
-        Self::new("USD", "دولار أمريكي", "US Dollar", "$", 2, false)
-    }
-
-    pub fn syp() -> Self {
-        Self::new("SYP", "ليرة سورية", "Syrian Pound", "ل.س", 0, true)
-    }
-
-    pub fn from_code(code: &str) -> Self {
-        match code {
-            "USD" => Self::usd(),
-            "SYP" => Self::syp(),
-            _ => Self {
-                code: code.to_string(),
-                name_ar: code.to_string(),
-                name_en: code.to_string(),
-                symbol: "".to_string(),
-                decimals: 2,
-                is_base: code == "SYP",
-                is_active: true,
-                notes: None,
-            },
-        }
-    }
 }
 
 impl fmt::Display for Currency {

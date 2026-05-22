@@ -17,6 +17,7 @@ import { Plus, Edit, Wand2, Hash, Barcode, Package, Layers, Shuffle, Check, Scal
 import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest } from "@erp/shared-types";
 import { materialCodeService } from "@modules/inventory/api/materialCodeService";
 import { categoryService } from "@modules/inventory/api/categoryService";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 const DEFAULT_CATEGORY_NAME = "غير مصنف";
 
@@ -61,6 +62,8 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
   const [activeTab, setActiveTab] = useState("basic");
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
 
+  const { currencies, baseCurrency } = useCurrencyContext();
+  const activeCurrencies = useMemo(() => currencies.filter(c => c.is_active), [currencies]);
   const uncategorizedCat = useMemo(() => categories.find(c => c.name === DEFAULT_CATEGORY_NAME && !c.parent_id), [categories]);
   const mainCategories = useMemo(() => categories.filter(c => !c.parent_id && c.name !== DEFAULT_CATEGORY_NAME && !c.is_hybrid), [categories]);
 
@@ -447,36 +450,32 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                         <TableHeader className="bg-slate-50/80">
                             <TableRow className="border-b-slate-200">
                                 <TableHead className="w-48 font-bold text-slate-700">الوحدة</TableHead>
-                                <TableHead className="text-center font-bold text-slate-700">سعر الشراء ($)</TableHead>
-                                <TableHead className="text-center font-bold text-slate-700">سعر الشراء (ل.س)</TableHead>
+                                {activeCurrencies.map(c => (
+                                  <TableHead key={c.code} className="text-center font-bold text-slate-700">سعر الشراء ({c.symbol || c.code})</TableHead>
+                                ))}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {formData.units.map((unit, uIdx) => (
                                 <TableRow key={uIdx} className="hover:bg-slate-50/30">
                                     <TableCell className="font-bold text-slate-600 bg-slate-50/30">{unit.name || `وحدة ${uIdx+1}`}</TableCell>
-                                    <TableCell className="p-2">
-                                        <div className="relative">
-                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-emerald-600">$</span>
-                                            <Input 
-                                                type="number" 
-                                                value={getPurchasePrice(uIdx, 'price_usd')} 
-                                                onChange={e => updatePurchasePrice(uIdx, 'price_usd', e.target.value)}
-                                                className="h-9 pl-5 font-bold text-center border-slate-200 focus:border-blue-500"
+                                    {activeCurrencies.map(c => {
+                                      const field = c.is_base ? 'price_usd' : 'price_syp';
+                                      const sym = c.symbol || c.code;
+                                      return (
+                                        <TableCell key={c.code} className="p-2">
+                                          <div className="relative">
+                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500">{sym}</span>
+                                            <Input
+                                              type="number"
+                                              value={getPurchasePrice(uIdx, field as 'price_usd' | 'price_syp')}
+                                              onChange={e => updatePurchasePrice(uIdx, field, e.target.value)}
+                                              className="h-9 pl-6 font-bold text-center border-slate-200 focus:border-blue-500"
                                             />
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="p-2">
-                                        <div className="relative">
-                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-blue-600">ل.س</span>
-                                            <Input 
-                                                type="number" 
-                                                value={getPurchasePrice(uIdx, 'price_syp')} 
-                                                onChange={e => updatePurchasePrice(uIdx, 'price_syp', e.target.value)}
-                                                className="h-9 pl-8 font-bold text-center border-slate-200 focus:border-blue-500"
-                                            />
-                                        </div>
-                                    </TableCell>
+                                          </div>
+                                        </TableCell>
+                                      );
+                                    })}
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -510,48 +509,42 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                             <div className="space-y-2">
                               <div className="space-y-1">
                                 <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">سعر المبيع</span>
-                                <div className="grid grid-cols-2 gap-1">
-                                  <div className="relative">
-                                    <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-emerald-600">$</span>
-                                    <Input 
-                                      type="number" 
-                                      value={getSalePrice(uIdx, tier.id, 'price_usd')} 
-                                      onChange={e => updateSalePrice(uIdx, tier.id, 'price_usd', e.target.value)}
-                                      className="h-7 pl-3 text-[10px] font-bold text-center border-emerald-100 bg-emerald-50/20"
-                                    />
-                                  </div>
-                                  <div className="relative">
-                                    <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-blue-600">ل.س</span>
-                                    <Input 
-                                      type="number" 
-                                      value={getSalePrice(uIdx, tier.id, 'price_syp')} 
-                                      onChange={e => updateSalePrice(uIdx, tier.id, 'price_syp', e.target.value)}
-                                      className="h-7 pl-6 text-[10px] font-bold text-center border-blue-100 bg-blue-50/20"
-                                    />
-                                  </div>
+                                <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${activeCurrencies.length}, 1fr)` }}>
+                                  {activeCurrencies.map(c => {
+                                    const field = c.is_base ? 'price_usd' : 'price_syp';
+                                    const sym = c.symbol || c.code;
+                                    return (
+                                      <div key={c.code} className="relative">
+                                        <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-slate-500">{sym}</span>
+                                        <Input
+                                          type="number"
+                                          value={getSalePrice(uIdx, tier.id, field as 'price_usd' | 'price_syp')}
+                                          onChange={e => updateSalePrice(uIdx, tier.id, field, e.target.value)}
+                                          className="h-7 pl-4 text-[10px] font-bold text-center border-slate-100 bg-slate-50/20"
+                                        />
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               </div>
                               <div className="space-y-1 pt-1 border-t border-slate-50">
                                 <span className="text-[8px] font-black text-amber-500 uppercase tracking-tighter">الحد الأدنى</span>
-                                <div className="grid grid-cols-2 gap-1">
-                                  <div className="relative">
-                                    <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-emerald-600">$</span>
-                                    <Input 
-                                      type="number" 
-                                      value={getSalePrice(uIdx, tier.id, 'min_price_usd')} 
-                                      onChange={e => updateSalePrice(uIdx, tier.id, 'min_price_usd', e.target.value)}
-                                      className="h-7 pl-3 text-[10px] font-medium text-center border-amber-100 bg-amber-50/20"
-                                    />
-                                  </div>
-                                  <div className="relative">
-                                    <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-blue-600">ل.س</span>
-                                    <Input 
-                                      type="number" 
-                                      value={getSalePrice(uIdx, tier.id, 'min_price_syp')} 
-                                      onChange={e => updateSalePrice(uIdx, tier.id, 'min_price_syp', e.target.value)}
-                                      className="h-7 pl-6 text-[10px] font-medium text-center border-amber-100 bg-amber-50/20"
-                                    />
-                                  </div>
+                                <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${activeCurrencies.length}, 1fr)` }}>
+                                  {activeCurrencies.map(c => {
+                                    const field = c.is_base ? 'min_price_usd' : 'min_price_syp';
+                                    const sym = c.symbol || c.code;
+                                    return (
+                                      <div key={c.code} className="relative">
+                                        <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-slate-500">{sym}</span>
+                                        <Input
+                                          type="number"
+                                          value={getSalePrice(uIdx, tier.id, field as 'min_price_usd' | 'min_price_syp')}
+                                          onChange={e => updateSalePrice(uIdx, tier.id, field, e.target.value)}
+                                          className="h-7 pl-4 text-[10px] font-medium text-center border-amber-100 bg-amber-50/20"
+                                        />
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               </div>
                             </div>

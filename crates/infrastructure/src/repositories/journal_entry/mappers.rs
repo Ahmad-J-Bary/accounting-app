@@ -65,10 +65,7 @@ pub fn row_to_line(r: JournalLineRow) -> JournalLine {
     let account_id = AccountId(Uuid::parse_str(&r.account_id).unwrap_or_default());
     let partner_id = r.partner_id.and_then(|id| Uuid::parse_str(&id).ok());
     
-    let currency = match r.currency.as_str() {
-        "USD" => Currency::usd(),
-        _ => Currency::syp(),
-    };
+    let currency = Currency::new(&r.currency, &r.currency, &r.currency, "", 2, false);
     let fx_rate = Decimal::from_str(&r.fx_rate).unwrap_or(Decimal::ONE);
 
     let debit = MonetaryAmount {

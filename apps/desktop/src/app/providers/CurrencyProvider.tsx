@@ -162,7 +162,8 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
         return `${renderSingle(baseCurrency.code)} (${renderSingle(displayCurrencyCode)})`;
       }
 
-      const activeCode = opts?.currencyCode || (mode === "base" ? baseCurrency?.code : displayCurrencyCode) || baseCurrency?.code || "USD";
+      const activeCode = opts?.currencyCode || (mode === "base" ? baseCurrency?.code : displayCurrencyCode) || baseCurrency?.code || "";
+      if (!activeCode) return formatWithLocale(val, 2);
       return renderSingle(activeCode);
     },
     [displayMode, baseCurrency, displayCurrencyCode, currencies, convertFromBase]

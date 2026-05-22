@@ -16,6 +16,7 @@ import { Loader2, FileText, ArrowRightLeft, TrendingUp, TrendingDown } from "luc
 import { Button } from "@shared/ui/button";
 
 import { useMemo } from 'react';
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 interface CustomerStatementProps {
   partnerId: string;
@@ -26,6 +27,12 @@ export const CustomerStatement: React.FC<CustomerStatementProps> = ({ partnerId,
   const [entries, setEntries] = useState<JournalEntryDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { currencies, baseCurrency } = useCurrencyContext();
+
+  const sortedCurrencies = useMemo(() => {
+    if (!baseCurrency) return currencies;
+    return [baseCurrency, ...currencies.filter(c => c.code !== baseCurrency.code)];
+  }, [currencies, baseCurrency]);
 
   useEffect(() => {
     const fetchStatement = async () => {
@@ -49,29 +56,28 @@ export const CustomerStatement: React.FC<CustomerStatementProps> = ({ partnerId,
   }, [partnerId]);
 
   const totals = useMemo(() => {
-    let debitUSD = 0, creditUSD = 0;
-    let debitSYP = 0, creditSYP = 0;
+    const acc: Record<string, { debit: number; credit: number }> = {};
+    sortedCurrencies.forEach(c => { acc[c.code] = { debit: 0, credit: 0 }; });
 
     entries.forEach(entry => {
       const partnerLines = entry.lines.filter(l => l.partner_id === partnerId);
       partnerLines.forEach(line => {
         const d = parseFloat(line.debit || "0");
         const c = parseFloat(line.credit || "0");
-        if (line.currency === 'USD') {
-          debitUSD += d;
-          creditUSD += c;
-        } else if (line.currency === 'SYP') {
-          debitSYP += d;
-          creditSYP += c;
+        if (acc[line.currency]) {
+          acc[line.currency].debit += d;
+          acc[line.currency].credit += c;
         }
       });
     });
 
-    return [
-      { currencyCode: 'USD', currencySymbol: '$', debit: debitUSD, credit: creditUSD },
-      { currencyCode: 'SYP', currencySymbol: 'ل.س', debit: debitSYP, credit: creditSYP },
-    ];
-  }, [entries, partnerId]);
+    return sortedCurrencies.map(c => ({
+      currencyCode: c.code,
+      currencySymbol: c.symbol,
+      debit: acc[c.code]?.debit || 0,
+      credit: acc[c.code]?.credit || 0,
+    }));
+  }, [entries, partnerId, sortedCurrencies]);
 
   if (loading) {
     return (
@@ -86,7 +92,7 @@ export const CustomerStatement: React.FC<CustomerStatementProps> = ({ partnerId,
     return <div className="p-8 text-center text-red-500 font-bold">{error}</div>;
   }
 
-  let runningBalance = 0;
+  const runningBalances: Record<string, number> = {};
 
   return (
     <Card className="border-none shadow-none bg-transparent">
@@ -109,25 +115,32 @@ export const CustomerStatement: React.FC<CustomerStatementProps> = ({ partnerId,
                 <TableHead className="text-right font-bold w-[120px]">التاريخ</TableHead>
                 <TableHead className="text-right font-bold w-[100px]">رقم القيد</TableHead>
                 <TableHead className="text-right font-bold">البيان / الحركة</TableHead>
-                <TableHead className="text-left font-bold w-[120px]">مدين (عليه)</TableHead>
-                <TableHead className="text-left font-bold w-[120px]">دائن (له)</TableHead>
-                <TableHead className="text-left font-bold w-[140px]">الرصيد</TableHead>
+                {sortedCurrencies.map(c => (
+                  <React.Fragment key={c.code}>
+                    <TableHead className="text-left font-bold w-[100px]">مدين ({c.symbol})</TableHead>
+                    <TableHead className="text-left font-bold w-[100px]">دائن ({c.symbol})</TableHead>
+                    <TableHead className="text-left font-bold w-[110px]">الرصيد ({c.symbol})</TableHead>
+                  </React.Fragment>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
               {entries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-slate-400 font-medium italic">
+                  <TableCell colSpan={3 + sortedCurrencies.length * 3} className="text-center py-12 text-slate-400 font-medium italic">
                     لا توجد حركات مسجلة لهذا العميل حتى الآن.
                   </TableCell>
                 </TableRow>
               ) : (
                 entries.map((entry) => {
-                  // Filter lines for this partner
                   const partnerLines = entry.lines.filter(l => l.partner_id === partnerId);
-                  const debit = partnerLines.reduce((sum, l) => sum + parseFloat(l.debit), 0);
-                  const credit = partnerLines.reduce((sum, l) => sum + parseFloat(l.credit), 0);
-                  runningBalance += (debit - credit);
+                  const perCurrency = sortedCurrencies.map(c => {
+                    const lines = partnerLines.filter(l => l.currency === c.code);
+                    const d = lines.reduce((sum, l) => sum + parseFloat(l.debit), 0);
+                    const cr = lines.reduce((sum, l) => sum + parseFloat(l.credit), 0);
+                    runningBalances[c.code] = (runningBalances[c.code] || 0) + (d - cr);
+                    return { code: c.code, symbol: c.symbol, debit: d, credit: cr, balance: runningBalances[c.code] };
+                  });
 
                   return (
                     <TableRow key={entry.id} className="hover:bg-slate-50/30 transition-colors">
@@ -143,26 +156,30 @@ export const CustomerStatement: React.FC<CustomerStatementProps> = ({ partnerId,
                           <span className="text-xs text-slate-400">{entry.journal_type}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-left">
-                        {debit > 0 ? (
-                          <div className="flex items-center justify-end gap-1 text-red-600 font-bold">
-                            {debit.toLocaleString()}
-                            <TrendingUp className="w-3 h-3" />
-                          </div>
-                        ) : '-'}
-                      </TableCell>
-                      <TableCell className="text-left">
-                        {credit > 0 ? (
-                          <div className="flex items-center justify-end gap-1 text-emerald-600 font-bold">
-                            {credit.toLocaleString()}
-                            <TrendingDown className="w-3 h-3" />
-                          </div>
-                        ) : '-'}
-                      </TableCell>
-                      <TableCell className="text-left font-black text-slate-900 bg-slate-50/20">
-                        {runningBalance.toLocaleString()}
-                        <span className="text-[10px] mr-1 text-slate-400">ل.س</span>
-                      </TableCell>
+                      {perCurrency.map(({ code, symbol, debit, credit, balance }) => (
+                        <React.Fragment key={code}>
+                          <TableCell className="text-left">
+                            {debit > 0 ? (
+                              <div className="flex items-center justify-end gap-1 text-red-600 font-bold">
+                                {debit.toLocaleString()}
+                                <TrendingUp className="w-3 h-3" />
+                              </div>
+                            ) : '-'}
+                          </TableCell>
+                          <TableCell className="text-left">
+                            {credit > 0 ? (
+                              <div className="flex items-center justify-end gap-1 text-emerald-600 font-bold">
+                                {credit.toLocaleString()}
+                                <TrendingDown className="w-3 h-3" />
+                              </div>
+                            ) : '-'}
+                          </TableCell>
+                          <TableCell className="text-left font-black text-slate-900 bg-slate-50/20">
+                            {balance.toLocaleString()}
+                            <span className="text-[10px] mr-1 text-slate-400">{symbol}</span>
+                          </TableCell>
+                        </React.Fragment>
+                      ))}
                     </TableRow>
                   );
                 })
@@ -171,14 +188,32 @@ export const CustomerStatement: React.FC<CustomerStatementProps> = ({ partnerId,
           </Table>
         </div>
         <TableFooter>
-          <TableRow className="bg-slate-50 font-bold">
-            <TableCell className="text-slate-400 text-xs">الإجمالي</TableCell>
-            <TableCell />
-            <TableCell />
-            <TableCell className="text-left text-red-600">{totals.find(t => t.currencyCode === 'SYP')?.debit.toLocaleString() || '0'}</TableCell>
-            <TableCell className="text-left text-emerald-600">{totals.find(t => t.currencyCode === 'SYP')?.credit.toLocaleString() || '0'}</TableCell>
-            <TableCell className="text-left font-black text-slate-900">{( (totals.find(t => t.currencyCode === 'SYP')?.debit || 0) - (totals.find(t => t.currencyCode === 'SYP')?.credit || 0) ).toLocaleString()}</TableCell>
-          </TableRow>
+          {sortedCurrencies.map((targetCurr, targetIdx) => {
+            const t = totals.find(t => t.currencyCode === targetCurr.code);
+            if (!t) return null;
+            const bal = t.debit - t.credit;
+            return (
+              <TableRow key={targetCurr.code} className="bg-slate-50 font-bold">
+                <TableCell className="text-slate-400 text-xs" colSpan={3}>{`الإجمالي (${targetCurr.symbol})`}</TableCell>
+                {sortedCurrencies.map((_, idx) => {
+                  if (idx === targetIdx) {
+                    return (
+                      <React.Fragment key={targetCurr.code}>
+                        <TableCell className="text-left text-red-600">{t.debit.toLocaleString() || '0'}</TableCell>
+                        <TableCell className="text-left text-emerald-600">{t.credit.toLocaleString() || '0'}</TableCell>
+                        <TableCell className="text-left font-black text-slate-900">{bal.toLocaleString()}</TableCell>
+                      </React.Fragment>
+                    );
+                  }
+                  return (
+                    <React.Fragment key={`${idx}`}>
+                      <TableCell /><TableCell /><TableCell />
+                    </React.Fragment>
+                  );
+                })}
+              </TableRow>
+            );
+          })}
         </TableFooter>
       </CardContent>
     </Card>

@@ -108,7 +108,7 @@ impl PostInvoiceUseCase {
 
         // --- Accounting Logic ---
         let mut journal_lines = Vec::new();
-        let doc_currency = Currency::from_code(&invoice.currency_code);
+        let doc_currency = Currency::new(&invoice.currency_code, &invoice.currency_code, &invoice.currency_code, "", 2, false);
         let fx_rate = invoice.exchange_rate;
 
         let total_amount = invoice.total_amount.amount();

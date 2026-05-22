@@ -80,8 +80,7 @@ impl UnifiedInvoice {
         }
 
         let now = Utc::now();
-        let _base_currency = Currency::from_code("USD"); // System reference
-        let doc_currency = Currency::from_code(&currency_code);
+        let doc_currency = Currency::new(&currency_code, &currency_code, &currency_code, "", 2, false);
 
         Ok(Self {
             id: InvoiceId(Uuid::new_v4()),
@@ -124,7 +123,8 @@ impl UnifiedInvoice {
     }
 
     pub fn recalculate_totals(&mut self) {
-        let doc_currency = Currency::from_code(&self.currency_code);
+        let code = &self.currency_code;
+        let doc_currency = Currency::new(code, code, code, "", 2, self.exchange_rate == Decimal::ONE);
 
         let subtotal =
             self.lines
@@ -150,7 +150,8 @@ impl UnifiedInvoice {
     }
 
     pub fn subtotal(&self) -> MonetaryAmount {
-        let doc_currency = Currency::from_code(&self.currency_code);
+        let code = &self.currency_code;
+        let doc_currency = Currency::new(code, code, code, "", 2, self.exchange_rate == Decimal::ONE);
         self.lines
             .iter()
             .fold(MonetaryAmount::zero(doc_currency.clone()), |acc, line| {

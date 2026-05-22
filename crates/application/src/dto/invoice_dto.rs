@@ -178,7 +178,8 @@ impl From<UnifiedInvoice> for InvoiceDto {
         let extra = invoice.extra_costs.clone();
 
         let amount_paid = invoice.amount_paid.clone();
-        let remaining = (total.clone() - amount_paid.clone()).unwrap_or_else(|_| MonetaryAmount::zero(domain::shared::currency::Currency::from_code(&invoice.currency_code)));
+        let code = &invoice.currency_code;
+        let remaining = (total.clone() - amount_paid.clone()).unwrap_or_else(|_| MonetaryAmount::zero(domain::shared::currency::Currency::new(code, code, code, "", 2, false)));
 
         Self {
             id: invoice.id.0.to_string(),

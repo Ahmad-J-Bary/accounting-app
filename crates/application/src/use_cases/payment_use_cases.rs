@@ -104,8 +104,8 @@ impl CreatePaymentUseCase {
 
         // --- Accounting Integration ---
         let mut journal_lines = Vec::new();
-        let currency_code = req.currency_code.clone().unwrap_or_else(|| "SYP".to_string());
-        let currency = if currency_code.to_uppercase() == "USD" { Currency::usd() } else { Currency::syp() };
+        let currency_code = req.currency_code.clone().unwrap_or_default();
+        let currency = Currency::new(&currency_code, &currency_code, &currency_code, "", 2, false);
         let exchange_rate = req.exchange_rate.map(|r| Decimal::try_from(r).unwrap_or(Decimal::ONE)).unwrap_or(Decimal::ONE);
         
         let amount_ma = MonetaryAmount::new(Money::new(payment.amount, currency.clone()), exchange_rate);

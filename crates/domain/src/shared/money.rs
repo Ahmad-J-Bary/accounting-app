@@ -15,31 +15,10 @@ impl Money {
         Self { amount, currency }
     }
 
-    pub fn syp(amount: Decimal) -> Self {
-        Self {
-            amount,
-            currency: Currency::syp(),
-        }
-    }
-
-    pub fn usd(amount: Decimal) -> Self {
-        Self {
-            amount,
-            currency: Currency::usd(),
-        }
-    }
-
-    pub fn from_amount_and_code(amount: Decimal, code: &str) -> Self {
-        Self {
-            amount,
-            currency: crate::shared::currency::Currency::from_code(code),
-        }
-    }
-
-    pub fn zero() -> Self {
+    pub fn zero(currency: Currency) -> Self {
         Self {
             amount: Decimal::ZERO,
-            currency: Currency::usd(),
+            currency,
         }
     }
 

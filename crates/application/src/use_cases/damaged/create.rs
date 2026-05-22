@@ -105,14 +105,14 @@ impl CreateDamagedItemUseCase {
             let lines = vec![
                 JournalLine::new(
                     loss_account.id,
-                    MonetaryAmount::new(Money::syp(cost_impact), Decimal::ONE),
-                    MonetaryAmount::zero(Currency::syp()),
+                    MonetaryAmount::new(Money::new(cost_impact, Currency::new("SYP", "SYP", "SYP", "", 2, false)), Decimal::ONE),
+                    MonetaryAmount::zero(Currency::new("SYP", "SYP", "SYP", "", 2, false)),
                     format!("خسارة تلف: {} - {}", material.name, req.reason),
                 ),
                 JournalLine::new(
                     inventory_account.id,
-                    MonetaryAmount::zero(Currency::syp()),
-                    MonetaryAmount::new(Money::syp(cost_impact), Decimal::ONE),
+                    MonetaryAmount::zero(Currency::new("SYP", "SYP", "SYP", "", 2, false)),
+                    MonetaryAmount::new(Money::new(cost_impact, Currency::new("SYP", "SYP", "SYP", "", 2, false)), Decimal::ONE),
                     format!("تخفيض مخزون بسبب تلف: {}", material.name),
                 ),
             ];

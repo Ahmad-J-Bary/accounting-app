@@ -163,7 +163,7 @@ impl SqliteInvoiceRepository {
                 Decimal::from_str(&quantity_str).unwrap_or(Decimal::ZERO),
                 domain::shared::monetary_amount::MonetaryAmount::from_base(
                     Decimal::from_str(&price_str).unwrap_or(Decimal::ZERO),
-                    domain::shared::currency::Currency::syp()
+                    domain::shared::currency::Currency::new("SYP", "SYP", "SYP", "", 0, false)
                 ),
                 None, None, None, None, None, None, None, None, None, None, None
             ));
@@ -185,8 +185,8 @@ impl SqliteInvoiceRepository {
             invoice_number: num,
             customer_id: customer_id_str.parse::<CustomerId>().unwrap_or_default(),
             lines,
-            tax_amount: Money::syp(Decimal::from_str(&tax_str).unwrap_or(Decimal::ZERO)),
-            discount_amount: Money::syp(Decimal::from_str(&disc_str).unwrap_or(Decimal::ZERO)),
+            tax_amount: Money::new(Decimal::from_str(&tax_str).unwrap_or(Decimal::ZERO), domain::shared::currency::Currency::new("SYP", "SYP", "SYP", "", 0, false)),
+            discount_amount: Money::new(Decimal::from_str(&disc_str).unwrap_or(Decimal::ZERO), domain::shared::currency::Currency::new("SYP", "SYP", "SYP", "", 0, false)),
             issued_at: DateTime::from_str(&date_str).unwrap_or(Utc::now()),
             posted: status == "Posted",
         })

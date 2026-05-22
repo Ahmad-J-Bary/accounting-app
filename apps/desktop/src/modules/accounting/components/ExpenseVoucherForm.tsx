@@ -21,14 +21,14 @@ export function ExpenseVoucherForm({ expenseAccount, onSave, onClose, saving }: 
     payment_type: "ExpenseVoucher",
     amount: 0,
     payment_date: new Date().toISOString(),
-    currency_code: baseCurrency?.code || "SYP",
+    currency_code: baseCurrency?.code || "",
     exchange_rate: 1,
     debit_account_id: expenseAccount.id,
     notes: `سند صرف: ${expenseAccount.name_ar}`,
   });
 
   const handleCurrencyChange = (val: string) => {
-    const isUSD = val === "USD" || val === baseCurrency?.code;
+    const isUSD = val === baseCurrency?.code;
     const rate = isUSD ? 1 : (rateMap.get(val) || 1);
     setForm(p => ({
       ...p,
@@ -43,7 +43,7 @@ export function ExpenseVoucherForm({ expenseAccount, onSave, onClose, saving }: 
     await onSave({
       payment_type: "ExpenseVoucher",
       amount: form.amount,
-      currency_code: form.currency_code || "SYP",
+      currency_code: form.currency_code || baseCurrency?.code || "",
       exchange_rate: form.exchange_rate || 1,
       payment_date: form.payment_date || new Date().toISOString(),
       debit_account_id: form.debit_account_id,

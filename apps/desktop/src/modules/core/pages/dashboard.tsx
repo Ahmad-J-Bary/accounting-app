@@ -3,10 +3,10 @@ import { Button } from "@shared/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import {
-  TrendingUp, ShoppingCart, Wallet, Users, Truck, Package, Download, LayoutDashboard, Bell
+  TrendingUp, ShoppingCart, Wallet, Users, Truck, Package, Download, LayoutDashboard, Bell, DollarSign
 } from "lucide-react";
 import { revenueChartData, salesInvoices, payments } from '@shared/lib/mockData';
-import { formatCurrency, formatDate } from '@shared/lib/format';
+import { formatDate } from '@shared/lib/format';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, PieChart, Pie, Cell
@@ -29,6 +29,8 @@ import { accountingService } from '@modules/accounting/api/accountingService';
 // Types
 import type { InvoiceDto, JournalEntryDto, Payment, MaterialDto, ReceivablesPayablesSummary, CustomerDto, SupplierDto } from "@erp/shared-types";
 
+import { useCurrencyContext, type CurrencyDisplayMode } from "@app/providers/CurrencyContext";
+
 const pieData = [
   { name: "إلكترونيات", value: 45, color: "#2563eb" },
   { name: "أثاث", value: 25, color: "#10b981" },
@@ -37,6 +39,8 @@ const pieData = [
 ];
 
 export default function Dashboard() {
+  const { formatAmount, displayMode, setDisplayMode, baseCurrency, currencies } = useCurrencyContext();
+  const [localDisplayMode, setLocalDisplayMode] = useState<CurrencyDisplayMode | "both">(displayMode);
   const [recentJournals, setRecentJournals] = useState<JournalEntryDto[]>([]);
   const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
   const [purchaseInvoices, setPurchaseInvoices] = useState<InvoiceDto[]>([]);
@@ -108,6 +112,8 @@ export default function Dashboard() {
     { title: "المخزون", value: inventoryValue, icon: Package, color: "text-slate-600", bg: "bg-slate-50" },
   ], [postedSalesTotal, approvedPurchasesTotal, cashBalance, rpSummary, inventoryValue]);
 
+  const secondaryCurrencies = currencies.filter(c => !c.is_base);
+
   return (
     <DashboardLayout
       header={
@@ -122,6 +128,30 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <div className="flex bg-slate-100 p-1 rounded-xl">
+              <button
+                onClick={() => setLocalDisplayMode("base")}
+                className={`px-3 py-1.5 text-xs rounded-lg font-bold transition-all ${localDisplayMode === "base" ? "bg-white shadow-sm" : "text-slate-500"}`}
+              >
+                {baseCurrency?.symbol || baseCurrency?.code || "الأساسية"}
+              </button>
+              {secondaryCurrencies.map(c => (
+                <button
+                  key={c.code}
+                  onClick={() => setLocalDisplayMode("selected")}
+                  className={`px-3 py-1.5 text-xs rounded-lg font-bold transition-all ${localDisplayMode === "selected" ? "bg-white shadow-sm" : "text-slate-500"}`}
+                >
+                  {c.symbol || c.code}
+                </button>
+              ))}
+              <button
+                onClick={() => setLocalDisplayMode("both")}
+                className={`px-3 py-1.5 text-xs rounded-lg font-bold transition-all ${localDisplayMode === "both" ? "bg-white shadow-sm" : "text-slate-500"}`}
+              >
+                <DollarSign className="w-3 h-3 inline ml-1" />
+                كلاهما
+              </button>
+            </div>
             <Select defaultValue="this_month">
               <SelectTrigger className="w-[180px] h-12 bg-white rounded-xl border-slate-200 shadow-sm">
                 <SelectValue />
@@ -143,7 +173,7 @@ export default function Dashboard() {
           <div key={i} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between transition-all hover:shadow-xl hover:-translate-y-1 group">
             <div className="space-y-2">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{k.title}</span>
-              <div className={cn("text-xl font-black tabular-nums", k.color)}>{formatCurrency(k.value)}</div>
+              <div className={cn("text-xl font-black tabular-nums", k.color)}>{formatAmount(k.value, { mode: localDisplayMode })}</div>
             </div>
             <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-colors group-hover:scale-110 duration-300", k.bg, k.color)}>
               <k.icon className="w-6 h-6" />
@@ -264,7 +294,7 @@ export default function Dashboard() {
                     <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="py-4 font-black text-blue-600">{inv.number}</td>
                       <td className="py-4 font-bold text-slate-700">{inv.partyName}</td>
-                      <td className="py-4 text-left tabular-nums font-black">{formatCurrency(inv.total)}</td>
+                      <td className="py-4 text-left tabular-nums font-black">{formatAmount(inv.total, { mode: localDisplayMode })}</td>
                       <td className="py-4 text-left"><StatusBadge status={inv.status} /></td>
                     </tr>
                   ))}
@@ -289,7 +319,7 @@ export default function Dashboard() {
                     <tr key={j.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="py-4 font-black text-blue-600">{j.entry_number}</td>
                       <td className="py-4 font-bold text-slate-700 truncate max-w-[200px]">{j.description}</td>
-                      <td className="py-4 text-left tabular-nums font-black">{formatCurrency(parseFloat(j.total_base_debit))}</td>
+                      <td className="py-4 text-left tabular-nums font-black">{formatAmount(parseFloat(j.total_base_debit), { mode: localDisplayMode })}</td>
                       <td className="py-4 text-left"><StatusBadge status={j.status} /></td>
                     </tr>
                   ))}

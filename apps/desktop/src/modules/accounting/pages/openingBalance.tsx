@@ -26,11 +26,11 @@ interface HeaderState {
   exchange_rate: string;
 }
 
-const defaultHeader = (): HeaderState => ({
+const defaultHeader = (baseCode?: string): HeaderState => ({
   docNumber: "...",
   issued_at: new Date().toISOString().split("T")[0],
   notes: "مواد أول المدة- رصيد افتتاحي للمواد",
-  currency_code: "USD",
+  currency_code: baseCode || "",
   exchange_rate: "1",
 });
 
@@ -42,14 +42,13 @@ export default function OpeningBalance() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   
-  const [header, setHeader] = useState<HeaderState>(defaultHeader());
+  const { currencies, rateMap, baseCurrency } = useCurrencyContext();
+  const [header, setHeader] = useState<HeaderState>(defaultHeader(baseCurrency?.code));
   const { lines, setLines, updateLine, removeLine, addLine, selectMaterial, totals } = useDocumentEditor({ 
     priceField: "last_purchase_price",
     materials
   });
   
-  const { currencies, rateMap } = useCurrencyContext();
-
   const isNew = location.pathname.includes("/new") || !location.pathname.includes("/edit");
 
   const loadData = useCallback(async () => {
@@ -70,12 +69,12 @@ export default function OpeningBalance() {
       invoiceService.getNextInvoiceNumber("OpeningBalance").then(num => {
         setHeader(s => ({ ...s, docNumber: num }));
       });
-      const rate = rateMap.get("SYP");
+      const rate = rateMap.get(baseCurrency?.code);
       if (rate) {
         setHeader(s => ({ ...s, exchange_rate: rate.toString() }));
       }
     }
-  }, [loadData, isNew, rateMap]);
+  }, [loadData, isNew, rateMap, baseCurrency?.code]);
 
   const handleSave = async () => {
     if (lines.length === 0) {
@@ -117,12 +116,17 @@ export default function OpeningBalance() {
     }
   };
 
-  const extraCols = useMemo<DocumentColumn[]>(() => [
-    { key: "retail_price", header: "مفرق ($)", width: "w-[90px]", align: "left", type: "number" },
-    { key: "retail_price_SYP", header: "مفرق (ل.س)", width: "w-[90px]", align: "left", type: "number" },
-    { key: "wholesale_price", header: "جملة ($)", width: "w-[90px]", align: "left", type: "number" },
-    { key: "wholesale_price_SYP", header: "جملة (ل.س)", width: "w-[90px]", align: "left", type: "number" },
-  ], []);
+  const extraCols = useMemo<DocumentColumn[]>(() => {
+    const foreignCurr = (currencies || []).find(c => c.code !== baseCurrency?.code);
+    const baseSym = baseCurrency?.symbol || baseCurrency?.code || "ل.س";
+    const foreignSym = foreignCurr?.symbol || foreignCurr?.code || "$";
+    return [
+      { key: "retail_price", header: `مفرق (${foreignSym})`, width: "w-[90px]", align: "left", type: "number" },
+      { key: "retail_price_SYP", header: `مفرق (${baseSym})`, width: "w-[90px]", align: "left", type: "number" },
+      { key: "wholesale_price", header: `جملة (${foreignSym})`, width: "w-[90px]", align: "left", type: "number" },
+      { key: "wholesale_price_SYP", header: `جملة (${baseSym})`, width: "w-[90px]", align: "left", type: "number" },
+    ];
+  }, [currencies, baseCurrency]);
 
   const headerShim = useMemo(() => ({
     currency_code: header.currency_code,

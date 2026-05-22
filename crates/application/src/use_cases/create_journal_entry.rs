@@ -26,10 +26,7 @@ impl CreateJournalEntryUseCase {
                     Uuid::parse_str(&dto.account_id)
                         .map_err(|e| AppError::Invalid(format!("Invalid account ID: {}", e)))?
                 );
-                let currency = match dto.currency.as_str() {
-                    "USD" => domain::shared::currency::Currency::usd(),
-                    _ => domain::shared::currency::Currency::syp(),
-                };
+                let currency = domain::shared::currency::Currency::new(&dto.currency, &dto.currency, &dto.currency, "", 2, false);
                 let fx_rate = rust_decimal::Decimal::from_str(&dto.fx_rate)
                     .unwrap_or(rust_decimal::Decimal::ONE);
 
