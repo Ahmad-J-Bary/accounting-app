@@ -37,10 +37,10 @@ export function useDocumentEditor({
             // Find price for this unit
             if (priceField === "last_purchase_price") {
                 const pPrice = material.purchase_prices.find(p => p.unit_id === updates.unit_id);
-                if (pPrice) updatedLine.unit_price = pPrice.price_usd;
+                if (pPrice) updatedLine.unit_price = pPrice.price;
             } else {
                 const sPrice = material.sale_prices.find(p => p.unit_id === updates.unit_id && p.tier === 'consumer');
-                if (sPrice) updatedLine.unit_price = sPrice.price_usd;
+                if (sPrice) updatedLine.unit_price = sPrice.price;
             }
         }
       }

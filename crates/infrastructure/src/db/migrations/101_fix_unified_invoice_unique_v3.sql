@@ -22,8 +22,8 @@ CREATE TABLE IF NOT EXISTS unified_invoices_new (
     amount_paid_base TEXT NOT NULL DEFAULT '0',
     tax_amount_base TEXT NOT NULL DEFAULT '0',
     discount_amount_base TEXT NOT NULL DEFAULT '0',
-    currency_code TEXT DEFAULT 'USD',
-    exchange_rate TEXT DEFAULT '1.0',
+    currency_code TEXT NOT NULL DEFAULT '',
+    exchange_rate TEXT NOT NULL DEFAULT '1.0',
     FOREIGN KEY (customer_id) REFERENCES customers(id),
     FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
     UNIQUE(invoice_number, invoice_type)

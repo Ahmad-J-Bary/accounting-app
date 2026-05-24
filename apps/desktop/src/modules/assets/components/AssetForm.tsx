@@ -49,7 +49,7 @@ export function AssetForm({ open, onOpenChange, categories, accounts, onSave, is
         categoryId: "",
         purchaseDate: new Date().toISOString(),
         purchaseCost: "",
-        currency: baseCurrency?.code || "SYP",
+        currency: baseCurrency?.code || "",
         fxRate: "1.0",
         usefulLifeMonths: 60,
         assetAccountId: "",
@@ -58,7 +58,7 @@ export function AssetForm({ open, onOpenChange, categories, accounts, onSave, is
         paymentAccountId: "",
       });
     }
-  }, [open]);
+  }, [open, baseCurrency?.code]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

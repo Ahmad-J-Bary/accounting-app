@@ -19,9 +19,9 @@ pub struct InvoiceLine {
     pub conversion_factor: Option<Decimal>,
     pub notes: Option<String>,
 
-    pub unit_price_usd: Option<Money>, // Legacy, keep for now or refactor
-    pub purchase_price_usd: Option<Money>,
-    pub profit_amount_usd: Option<Money>,
+    pub unit_price_original: Option<Money>,
+    pub purchase_price_original: Option<Money>,
+    pub profit_amount_original: Option<Money>,
 }
 
 impl InvoiceLine {
@@ -37,9 +37,9 @@ impl InvoiceLine {
         unit_id: Option<String>,
         conversion_factor: Option<Decimal>,
         notes: Option<String>,
-        unit_price_usd: Option<Money>,
-        purchase_price_usd: Option<Money>,
-        profit_amount_usd: Option<Money>,
+        unit_price_original: Option<Money>,
+        purchase_price_original: Option<Money>,
+        profit_amount_original: Option<Money>,
     ) -> Self {
         Self {
             material_id,
@@ -53,9 +53,9 @@ impl InvoiceLine {
             unit_id,
             conversion_factor,
             notes,
-            unit_price_usd,
-            purchase_price_usd,
-            profit_amount_usd,
+            unit_price_original,
+            purchase_price_original,
+            profit_amount_original,
         }
     }
 

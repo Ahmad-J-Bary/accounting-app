@@ -189,6 +189,10 @@ mod tests {
     use domain::shared::Currency;
     use rust_decimal_macros::dec;
 
+    fn test_currency() -> Currency {
+        Currency::new("BASE", "عملة أساسية", "Base Currency", "B", 2, true)
+    }
+
     #[tokio::test]
     async fn test_asset_lifecycle() {
         println!("Starting test_asset_lifecycle");
@@ -197,7 +201,7 @@ mod tests {
         let use_cases = FixedAssetUseCases::new(asset_repo.clone(), journal_repo.clone());
 
         let purchase_date = Utc::now();
-        let cost = Money::new(dec!(12000), Currency::new("SYP", "SYP", "SYP", "", 2, false));
+        let cost = Money::new(dec!(12000), test_currency());
 
         println!("1. Creating asset...");
         let asset_id = use_cases

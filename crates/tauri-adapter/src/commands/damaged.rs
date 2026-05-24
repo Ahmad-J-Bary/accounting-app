@@ -14,6 +14,7 @@ pub async fn create_damaged_item(
         state.stock_movement_repo.clone(),
         state.journal_entry_repo.clone(),
         state.account_repo.clone(),
+        state.currency_repo.clone(),
     )
         .execute(request).await.map_err(|e| e.to_string())
 }

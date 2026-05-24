@@ -97,14 +97,14 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
     return sorted;
   }, [tableData, sortField, sortDirection]);
 
-  const fieldForCurrency = useCallback((currCode: string): "debit_usd" | "debit_syp" => {
-    if (baseCurrency && currCode === baseCurrency.code) return "debit_usd";
-    return "debit_syp";
+  const fieldForCurrency = useCallback((currCode: string): "debit_base" | "debit_original" => {
+    if (baseCurrency && currCode === baseCurrency.code) return "debit_base";
+    return "debit_original";
   }, [baseCurrency]);
 
-  const creditFieldForCurrency = useCallback((currCode: string): "credit_usd" | "credit_syp" => {
-    if (baseCurrency && currCode === baseCurrency.code) return "credit_usd";
-    return "credit_syp";
+  const creditFieldForCurrency = useCallback((currCode: string): "credit_base" | "credit_original" => {
+    if (baseCurrency && currCode === baseCurrency.code) return "credit_base";
+    return "credit_original";
   }, [baseCurrency]);
 
   const allColumns = useMemo<UnifiedColumn<typeof tableData[0]>[]>(() => {
@@ -213,8 +213,8 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
     const totals: Record<string, { debit: number; credit: number }> = {};
     sortedCurrencies.forEach(curr => {
       totals[curr.code] = {
-        debit: curr.code === baseCurrency?.code ? rawTotals.debitUSD : rawTotals.debitSYP,
-        credit: curr.code === baseCurrency?.code ? rawTotals.creditUSD : rawTotals.creditSYP,
+        debit: curr.code === baseCurrency?.code ? rawTotals.debitBase : rawTotals.debitOriginal,
+        credit: curr.code === baseCurrency?.code ? rawTotals.creditBase : rawTotals.creditOriginal,
       };
     });
 

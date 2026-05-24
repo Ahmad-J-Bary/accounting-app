@@ -1,12 +1,20 @@
 import { Input } from "@shared/ui/input";
 import { Label } from "@shared/ui/label";
 import { X, Pencil, Trash2, Receipt } from "lucide-react";
-import type { Payment, AccountDto, CustomerDto, SupplierDto } from "@erp/shared-types";
+import type {
+  Payment,
+  AccountDto,
+  CustomerDto,
+  SupplierDto,
+} from "@erp/shared-types";
 import { Button } from "@shared/ui/button";
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import {
+  formatWithLocale,
+  useCurrencyContext,
+} from "@app/providers/CurrencyContext";
+
 import { Textarea } from "@shared/ui/textarea";
 import { PAYMENT_TYPE_LABELS } from "../lib/constants";
-import { formatCurrency } from "@shared/lib/format";
 import { useMemo } from "react";
 
 interface PaymentDetailPanelProps {
@@ -28,26 +36,30 @@ export function PaymentDetailPanel({
   onEdit,
   onDelete,
 }: PaymentDetailPanelProps) {
-  const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
+  const { baseCurrency, convertBetween, currencies } = useCurrencyContext();
 
-  const getAccountName = (id?: string) => accounts.find(a => a.id === id)?.name_ar || "-";
-  const getCustomerName = (id?: string) => customers.find(c => c.id === id)?.name || "-";
-  const getSupplierName = (id?: string) => suppliers.find(s => s.id === id)?.name || "-";
+  const getAccountName = (id?: string) =>
+    accounts.find((a) => a.id === id)?.name_ar || "-";
+  const getCustomerName = (id?: string) =>
+    customers.find((c) => c.id === id)?.name || "-";
+  const getSupplierName = (id?: string) =>
+    suppliers.find((s) => s.id === id)?.name || "-";
 
-  const { displayAmount, amountInSyp } = useMemo(() => {
+  const { displayAmount, amountInBase } = useMemo(() => {
     const amt = parseFloat(payment.amount) || 0;
-    const rate = parseFloat(payment.exchange_rate) || 1;
-    let syp = 0;
-    if (payment.currency_code === baseCurrency?.code) {
-      syp = amt;
-    } else {
-      syp = amt * rate;
-    }
+    const paymentCurrency =
+      currencies.find((c) => c.code === payment.currency_code) || null;
+    const formatted = formatWithLocale(amt, paymentCurrency?.decimals ?? 2);
+    const baseValue = baseCurrency?.code
+      ? convertBetween(amt, payment.currency_code, baseCurrency.code)
+      : amt;
     return {
-      displayAmount: formatAmount(amt, { currencyCode: payment.currency_code }),
-      amountInSyp: formatAmount(syp, { currencyCode: baseCurrency?.code || "" })
+      displayAmount: `${formatted} ${paymentCurrency?.symbol || payment.currency_code}`,
+      amountInBase: baseCurrency
+        ? `${formatWithLocale(baseValue, baseCurrency.decimals)} ${baseCurrency.symbol || baseCurrency.code}`
+        : formatWithLocale(baseValue, 2),
     };
-  }, [payment, formatAmount]);
+  }, [payment, currencies, baseCurrency, convertBetween]);
 
   if (!payment) return null;
 
@@ -92,54 +104,66 @@ export function PaymentDetailPanel({
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-6 space-y-8">
-
           {/* Type & Amounts */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-slate-800 mb-4">
               <Receipt className="w-5 h-5 text-emerald-500" />
               <h3 className="font-semibold text-base">المعلومات الأساسية</h3>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5 text-right">
-                <Label className="text-xs font-medium text-slate-500">رقم السند</Label>
+                <Label className="text-xs font-medium text-slate-500">
+                  رقم السند
+                </Label>
                 <div className="font-medium text-slate-800 text-sm">
                   {payment.voucher_number || "-"}
                 </div>
               </div>
               <div className="space-y-1.5 text-right">
-                <Label className="text-xs font-medium text-slate-500">رقم القيد</Label>
+                <Label className="text-xs font-medium text-slate-500">
+                  رقم القيد
+                </Label>
                 <div className="font-medium text-slate-800 text-sm bg-slate-100 px-2 py-1 rounded inline-block">
                   {payment.journal_entry_number || "-"}
                 </div>
               </div>
               <div className="space-y-1.5 text-right">
-                <Label className="text-xs font-medium text-slate-500">نوع السند</Label>
+                <Label className="text-xs font-medium text-slate-500">
+                  نوع السند
+                </Label>
                 <div className="font-medium text-slate-800 text-sm">
-                  {PAYMENT_TYPE_LABELS[payment.payment_type as keyof typeof PAYMENT_TYPE_LABELS] || payment.payment_type}
+                  {PAYMENT_TYPE_LABELS[
+                    payment.payment_type as keyof typeof PAYMENT_TYPE_LABELS
+                  ] || payment.payment_type}
                 </div>
               </div>
               <div className="space-y-1.5 text-right">
-                <Label className="text-xs font-medium text-slate-500">تاريخ السند</Label>
+                <Label className="text-xs font-medium text-slate-500">
+                  تاريخ السند
+                </Label>
                 <div className="font-medium text-slate-800 text-sm">
                   {new Date(payment.payment_date).toLocaleDateString("ar-SA")}
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mt-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1 text-right">
-                  <Label className="text-xs font-medium text-slate-500">المبلغ ({payment.currency_code})</Label>
+                  <Label className="text-xs font-medium text-slate-500">
+                    المبلغ ({payment.currency_code})
+                  </Label>
                   <div className="font-bold text-slate-800 text-lg">
                     {displayAmount}
                   </div>
                 </div>
                 {payment.currency_code !== baseCurrency?.code && (
                   <div className="space-y-1 text-right">
-                    <Label className="text-xs font-medium text-slate-500">{`المبلغ (${baseCurrency?.symbol || ""})`}</Label>
+                    <Label className="text-xs font-medium text-slate-500">{`المبلغ (${baseCurrency?.symbol || baseCurrency?.code || ""})`}</Label>
+
                     <div className="font-bold text-slate-800 text-lg">
-                      {amountInSyp}
+                      {amountInBase}
                     </div>
                   </div>
                 )}
@@ -151,35 +175,43 @@ export function PaymentDetailPanel({
 
           {/* Accounts */}
           <div className="space-y-4 text-right">
-            <h3 className="font-semibold text-sm text-slate-800 mb-3">الحسابات</h3>
+            <h3 className="font-semibold text-sm text-slate-800 mb-3">
+              الحسابات
+            </h3>
             <div className="grid grid-cols-1 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-500">الحساب المدين / الوجهة</Label>
-                <Input 
-                  value={getAccountName(payment.debit_account_id)} 
-                  readOnly 
-                  className="bg-slate-50/50 border-slate-200 h-9 text-sm text-slate-700" 
+                <Label className="text-xs font-medium text-slate-500">
+                  الحساب المدين / الوجهة
+                </Label>
+                <Input
+                  value={getAccountName(payment.debit_account_id)}
+                  readOnly
+                  className="bg-slate-50/50 border-slate-200 h-9 text-sm text-slate-700"
                   dir="rtl"
                 />
               </div>
-              
+
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-500">الحساب الدائن / المصدر</Label>
-                <Input 
-                  value={getAccountName(payment.credit_account_id)} 
-                  readOnly 
-                  className="bg-slate-50/50 border-slate-200 h-9 text-sm text-slate-700" 
+                <Label className="text-xs font-medium text-slate-500">
+                  الحساب الدائن / المصدر
+                </Label>
+                <Input
+                  value={getAccountName(payment.credit_account_id)}
+                  readOnly
+                  className="bg-slate-50/50 border-slate-200 h-9 text-sm text-slate-700"
                   dir="rtl"
                 />
               </div>
 
               {payment.customer_id && (
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-500">العميل</Label>
-                  <Input 
-                    value={getCustomerName(payment.customer_id)} 
-                    readOnly 
-                    className="bg-slate-50/50 border-slate-200 h-9 text-sm text-slate-700" 
+                  <Label className="text-xs font-medium text-slate-500">
+                    العميل
+                  </Label>
+                  <Input
+                    value={getCustomerName(payment.customer_id)}
+                    readOnly
+                    className="bg-slate-50/50 border-slate-200 h-9 text-sm text-slate-700"
                     dir="rtl"
                   />
                 </div>
@@ -187,11 +219,13 @@ export function PaymentDetailPanel({
 
               {payment.supplier_id && (
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-500">المورد</Label>
-                  <Input 
-                    value={getSupplierName(payment.supplier_id)} 
-                    readOnly 
-                    className="bg-slate-50/50 border-slate-200 h-9 text-sm text-slate-700" 
+                  <Label className="text-xs font-medium text-slate-500">
+                    المورد
+                  </Label>
+                  <Input
+                    value={getSupplierName(payment.supplier_id)}
+                    readOnly
+                    className="bg-slate-50/50 border-slate-200 h-9 text-sm text-slate-700"
                     dir="rtl"
                   />
                 </div>
@@ -203,32 +237,37 @@ export function PaymentDetailPanel({
 
           {/* Details */}
           <div className="space-y-4 text-right pb-4">
-            <h3 className="font-semibold text-sm text-slate-800 mb-3">تفاصيل إضافية</h3>
+            <h3 className="font-semibold text-sm text-slate-800 mb-3">
+              تفاصيل إضافية
+            </h3>
             <div className="grid grid-cols-1 gap-4">
               {payment.reference && (
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-500">رقم المرجع</Label>
-                  <Input 
-                    value={payment.reference} 
-                    readOnly 
-                    className="bg-slate-50/50 border-slate-200 h-9 text-sm text-slate-700" 
+                  <Label className="text-xs font-medium text-slate-500">
+                    رقم المرجع
+                  </Label>
+                  <Input
+                    value={payment.reference}
+                    readOnly
+                    className="bg-slate-50/50 border-slate-200 h-9 text-sm text-slate-700"
                     dir="rtl"
                   />
                 </div>
               )}
-              
+
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-500">البيان</Label>
-                <Textarea 
-                  value={payment.notes || "-"} 
-                  readOnly 
-                  className="bg-slate-50/50 border-slate-200 resize-none text-sm text-slate-700 min-h-[80px]" 
+                <Label className="text-xs font-medium text-slate-500">
+                  البيان
+                </Label>
+                <Textarea
+                  value={payment.notes || "-"}
+                  readOnly
+                  className="bg-slate-50/50 border-slate-200 resize-none text-sm text-slate-700 min-h-[80px]"
                   dir="rtl"
                 />
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </div>

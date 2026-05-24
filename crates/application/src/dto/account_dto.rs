@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
-use domain::accounting::account::Account;
 use crate::use_cases::account::types::{AccountLedger, LedgerLine};
+use domain::accounting::account::Account;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AccountDto {
@@ -53,15 +53,15 @@ impl From<Account> for AccountDto {
 pub struct AccountLedgerDto {
     pub account_id: String,
     pub account_name: String,
-    pub opening_balance_syp: String,
-    pub opening_balance_usd: String,
+    pub opening_balance_base: String,
+    pub opening_balance_original: String,
     pub lines: Vec<AccountLedgerLineDto>,
-    pub total_debit_syp: String,
-    pub total_credit_syp: String,
-    pub closing_balance_syp: String,
-    pub total_debit_usd: String,
-    pub total_credit_usd: String,
-    pub closing_balance_usd: String,
+    pub total_debit_base: String,
+    pub total_credit_base: String,
+    pub closing_balance_base: String,
+    pub total_debit_original: String,
+    pub total_credit_original: String,
+    pub closing_balance_original: String,
 }
 
 impl From<AccountLedger> for AccountLedgerDto {
@@ -69,15 +69,19 @@ impl From<AccountLedger> for AccountLedgerDto {
         Self {
             account_id: ledger.account_id.0.to_string(),
             account_name: ledger.account_name,
-            opening_balance_syp: ledger.opening_balance_syp.to_string(),
-            opening_balance_usd: ledger.opening_balance_usd.to_string(),
-            lines: ledger.lines.into_iter().map(AccountLedgerLineDto::from).collect(),
-            total_debit_syp: ledger.total_debit_syp.to_string(),
-            total_credit_syp: ledger.total_credit_syp.to_string(),
-            closing_balance_syp: ledger.closing_balance_syp.to_string(),
-            total_debit_usd: ledger.total_debit_usd.to_string(),
-            total_credit_usd: ledger.total_credit_usd.to_string(),
-            closing_balance_usd: ledger.closing_balance_usd.to_string(),
+            opening_balance_base: ledger.opening_balance_base.to_string(),
+            opening_balance_original: ledger.opening_balance_original.to_string(),
+            lines: ledger
+                .lines
+                .into_iter()
+                .map(AccountLedgerLineDto::from)
+                .collect(),
+            total_debit_base: ledger.total_debit_base.to_string(),
+            total_credit_base: ledger.total_credit_base.to_string(),
+            closing_balance_base: ledger.closing_balance_base.to_string(),
+            total_debit_original: ledger.total_debit_original.to_string(),
+            total_credit_original: ledger.total_credit_original.to_string(),
+            closing_balance_original: ledger.closing_balance_original.to_string(),
         }
     }
 }
@@ -93,12 +97,12 @@ pub struct AccountLedgerLineDto {
     pub opposite_account_name: String,
     pub currency: String,
     pub fx_rate: String,
-    pub debit_syp: String,
-    pub credit_syp: String,
-    pub balance_syp: String,
-    pub debit_usd: String,
-    pub credit_usd: String,
-    pub balance_usd: String,
+    pub debit_base: String,
+    pub credit_base: String,
+    pub balance_base: String,
+    pub debit_original: String,
+    pub credit_original: String,
+    pub balance_original: String,
 }
 
 impl From<LedgerLine> for AccountLedgerLineDto {
@@ -113,12 +117,12 @@ impl From<LedgerLine> for AccountLedgerLineDto {
             opposite_account_name: line.opposite_account_name,
             currency: line.currency,
             fx_rate: line.fx_rate.to_string(),
-            debit_syp: line.debit_syp.to_string(),
-            credit_syp: line.credit_syp.to_string(),
-            balance_syp: line.balance_syp.to_string(),
-            debit_usd: line.debit_usd.to_string(),
-            credit_usd: line.credit_usd.to_string(),
-            balance_usd: line.balance_usd.to_string(),
+            debit_base: line.debit_base.to_string(),
+            credit_base: line.credit_base.to_string(),
+            balance_base: line.balance_base.to_string(),
+            debit_original: line.debit_original.to_string(),
+            credit_original: line.credit_original.to_string(),
+            balance_original: line.balance_original.to_string(),
         }
     }
 }

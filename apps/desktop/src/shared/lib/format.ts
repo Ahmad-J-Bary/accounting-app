@@ -1,9 +1,13 @@
-export const formatCurrency = (amount: number, currency = "ل.س"): string => {
+export const formatCurrency = (
+  amount: number,
+  currency?: string | null,
+  options?: { minimumFractionDigits?: number; maximumFractionDigits?: number }
+): string => {
   const formatted = new Intl.NumberFormat("ar-SY", {
-    minimumFractionDigits: 0, // SYP usually doesn't use decimals
-    maximumFractionDigits: 2,
+    minimumFractionDigits: options?.minimumFractionDigits ?? 0,
+    maximumFractionDigits: options?.maximumFractionDigits ?? 2,
   }).format(amount);
-  return `${formatted} ${currency}`;
+  return currency ? `${formatted} ${currency}` : formatted;
 };
 
 export const formatNumber = (n: number): string => {

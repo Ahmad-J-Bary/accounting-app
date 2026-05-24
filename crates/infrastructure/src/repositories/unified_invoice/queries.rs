@@ -105,22 +105,22 @@ pub async fn get_lines(pool: &SqlitePool, invoice_id: &str, currency_code: &str,
             r.unit_id,
             r.conversion_factor.and_then(|v| Decimal::from_str(&v).ok()),
             r.notes,
-            parse_money(r.unit_price_usd),
-            parse_money(r.purchase_price_usd),
-            parse_money(r.profit_amount_usd),
+            parse_money(r.unit_price_original),
+            parse_money(r.purchase_price_original),
+            parse_money(r.profit_amount_original),
         ));
     }
     Ok(lines)
 }
 
-pub async fn get_last_usd_prices(pool: &SqlitePool, material_id: &str) -> Result<(String, String), AppError> {
-    // Fetch last purchase USD price
+pub async fn get_last_original_prices(pool: &SqlitePool, material_id: &str) -> Result<(String, String), AppError> {
+    // Fetch last purchase original price
     let last_purchase: Option<String> = sqlx::query_scalar(
         r#"
-        SELECT l.unit_price_usd 
+        SELECT l.unit_price_original 
         FROM unified_invoice_lines l
         JOIN unified_invoices i ON l.invoice_id = i.id
-        WHERE l.material_id = ? AND i.invoice_type IN ('Purchase', 'OpeningBalance') AND l.unit_price_usd IS NOT NULL
+        WHERE l.material_id = ? AND i.invoice_type IN ('Purchase', 'OpeningBalance') AND l.unit_price_original IS NOT NULL
         ORDER BY i.issued_at DESC
         LIMIT 1
         "#
@@ -130,13 +130,13 @@ pub async fn get_last_usd_prices(pool: &SqlitePool, material_id: &str) -> Result
     .await
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-    // Fetch last sale USD price
+    // Fetch last sale original price
     let last_sale: Option<String> = sqlx::query_scalar(
         r#"
-        SELECT l.unit_price_usd 
+        SELECT l.unit_price_original 
         FROM unified_invoice_lines l
         JOIN unified_invoices i ON l.invoice_id = i.id
-        WHERE l.material_id = ? AND i.invoice_type = 'Sales' AND l.unit_price_usd IS NOT NULL
+        WHERE l.material_id = ? AND i.invoice_type = 'Sales' AND l.unit_price_original IS NOT NULL
         ORDER BY i.issued_at DESC
         LIMIT 1
         "#

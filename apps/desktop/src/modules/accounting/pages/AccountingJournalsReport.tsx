@@ -60,17 +60,17 @@ export default function AccountingJournalsReport() {
     });
     tableData.forEach(r => {
       if (base && t[base.code]) {
-        t[base.code].debit += r.debit_usd;
-        t[base.code].credit += r.credit_usd;
+        t[base.code].debit += r.debit_base;
+        t[base.code].credit += r.credit_base;
       }
       currencies.filter(c => !c.is_base).forEach(curr => {
         if (!t[curr.code]) return;
-        t[curr.code].debit += r.debit_usd > 0 && base ? convertBetween(r.debit_usd, base.code, curr.code) : r.debit_syp;
-        t[curr.code].credit += r.credit_usd > 0 && base ? convertBetween(r.credit_usd, base.code, curr.code) : r.credit_syp;
+        t[curr.code].debit += r.debit_original;
+        t[curr.code].credit += r.credit_original;
       });
     });
     return t;
-  }, [tableData, convertBetween, currencies]);
+  }, [tableData, currencies]);
 
   return (
     <ReportLayout

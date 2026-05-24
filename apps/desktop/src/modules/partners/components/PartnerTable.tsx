@@ -12,7 +12,7 @@ type PartnerWithRatios = PartnerDto & {
   calculatedRatio: number; 
   calculatedCapitalRatio: number; 
   displayAmountLocal: number; 
-  displayAmountUsd: number 
+  displayAmountOriginal: number 
 };
 
 interface PartnerTableProps {
@@ -93,10 +93,7 @@ export function PartnerTable({
         case "capital_ratio": comparison = a.calculatedCapitalRatio - b.calculatedCapitalRatio; break;
         case "ratio": comparison = a.calculatedRatio - b.calculatedRatio; break;
         default: {
-          const currCode = sortField.replace("amount_", "");
-          const aVal = currCode === "USD" ? a.displayAmountUsd : a.displayAmountLocal;
-          const bVal = currCode === "USD" ? b.displayAmountUsd : b.displayAmountLocal;
-          comparison = aVal - bVal;
+          comparison = a.displayAmountLocal - b.displayAmountLocal;
         }
       }
       return sortDirection === "asc" ? comparison : -comparison;
@@ -129,11 +126,10 @@ export function PartnerTable({
         header: <SortableHeader field={`amount_${curr.code}`} label={`رأس المال (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
         label: `رأس المال (${symbol})`,
         accessor: (p: PartnerWithRatios) => {
-          const amount = curr.code === "USD" ? p.displayAmountUsd : p.displayAmountLocal;
-          return formatAmount(amount, { currencyCode: curr.code });
+          return formatAmount(p.displayAmountLocal, { currencyCode: curr.code });
         },
         align: "left",
-        className: curr.code === "USD" ? "tabular-nums font-black text-blue-600" : "tabular-nums font-black text-slate-900"
+        className: "tabular-nums font-black text-slate-900"
       });
     });
 
@@ -208,14 +204,14 @@ export function PartnerTable({
           if (match) {
             const currCode = match[1];
             const total = sortedPartners.reduce((s, p) => {
-              return s + (currCode === "USD" ? p.displayAmountUsd : p.displayAmountLocal);
+              return s + p.displayAmountLocal;
             }, 0);
             return {
               id: `total_${id}`,
               label: 'الإجمالي',
               value: formatAmount(total, { currencyCode: currCode }),
               align: 'left' as const,
-              className: currCode === "USD" ? 'text-blue-600 font-black' : 'text-slate-900 font-black'
+              className: 'text-slate-900 font-black'
             };
           }
           return { id: `${id}_spacer`, label: '', value: '' };

@@ -12,7 +12,7 @@ pub struct MonetaryAmount {
     /// The amount in the original currency as entered by the user.
     pub original: Money,
     
-    /// The equivalent amount in the system's base currency (e.g., USD).
+    /// The equivalent amount in the system's base currency.
     pub base_amount: Decimal,
     
     /// The exchange rate used at the time of entry.

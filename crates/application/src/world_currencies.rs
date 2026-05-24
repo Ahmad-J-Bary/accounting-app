@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use domain::shared::currency::Currency;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorldCurrency {
@@ -51,3 +52,34 @@ pub fn get_world_currencies() -> Vec<WorldCurrency> {
         WorldCurrency { code: "HKD".into(), name_ar: "دولار هونغ كونغ".into(), name_en: "Hong Kong Dollar".into(), symbol: "HK$".into(), decimals: 2 },
     ]
 }
+
+pub fn find_world_currency(code: &str) -> Option<WorldCurrency> {
+    get_world_currencies()
+        .into_iter()
+        .find(|currency| currency.code.eq_ignore_ascii_case(code))
+}
+
+pub fn to_domain_currency(code: &str, is_base: bool) -> Currency {
+    if let Some(info) = find_world_currency(code) {
+        return Currency::new(
+            &info.code,
+            &info.name_ar,
+            &info.name_en,
+            &info.symbol,
+            info.decimals,
+            is_base,
+        );
+    }
+
+    Currency::new(code, code, code, code, 2, is_base)
+}
+
+pub fn base_currency_by_code(code: &str) -> Currency {
+    to_domain_currency(code, true)
+}
+
+pub fn secondary_currency_by_code(code: &str) -> Currency {
+    to_domain_currency(code, false)
+}
+
+

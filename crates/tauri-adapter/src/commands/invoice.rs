@@ -13,6 +13,7 @@ pub async fn create_invoice(
         state.invoice_repo.clone(),
         state.customer_repo.clone(),
         state.material_repo.clone(),
+        state.currency_repo.clone(),
     );
     let result: Result<InvoiceDto, AppError> = use_case.execute(request).await;
     result.map_err(|e| e.to_string())

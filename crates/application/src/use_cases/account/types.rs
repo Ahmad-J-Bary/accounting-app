@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
-use domain::accounting::account::{AccountType, AccountCategory};
+use domain::accounting::account::{AccountCategory, AccountType};
 use domain::shared::ids::AccountId;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct CreateAccountCommand {
@@ -26,19 +26,19 @@ pub struct CreateAccountCommand {
 pub struct AccountLedger {
     pub account_id: AccountId,
     pub account_name: String,
-    
-    pub opening_balance_syp: rust_decimal::Decimal,
-    pub opening_balance_usd: rust_decimal::Decimal,
-    
+
+    pub opening_balance_base: rust_decimal::Decimal,
+    pub opening_balance_original: rust_decimal::Decimal,
+
     pub lines: Vec<LedgerLine>,
-    
-    pub total_debit_syp: rust_decimal::Decimal,
-    pub total_credit_syp: rust_decimal::Decimal,
-    pub closing_balance_syp: rust_decimal::Decimal,
-    
-    pub total_debit_usd: rust_decimal::Decimal,
-    pub total_credit_usd: rust_decimal::Decimal,
-    pub closing_balance_usd: rust_decimal::Decimal,
+
+    pub total_debit_base: rust_decimal::Decimal,
+    pub total_credit_base: rust_decimal::Decimal,
+    pub closing_balance_base: rust_decimal::Decimal,
+
+    pub total_debit_original: rust_decimal::Decimal,
+    pub total_credit_original: rust_decimal::Decimal,
+    pub closing_balance_original: rust_decimal::Decimal,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -52,14 +52,12 @@ pub struct LedgerLine {
     pub opposite_account_name: String,
     pub currency: String,
     pub fx_rate: rust_decimal::Decimal,
-    
-    // SYP (Base) Amounts
-    pub debit_syp: rust_decimal::Decimal,
-    pub credit_syp: rust_decimal::Decimal,
-    pub balance_syp: rust_decimal::Decimal,
-    
-    // USD (Foreign) Amounts
-    pub debit_usd: rust_decimal::Decimal,
-    pub credit_usd: rust_decimal::Decimal,
-    pub balance_usd: rust_decimal::Decimal,
+
+    pub debit_base: rust_decimal::Decimal,
+    pub credit_base: rust_decimal::Decimal,
+    pub balance_base: rust_decimal::Decimal,
+
+    pub debit_original: rust_decimal::Decimal,
+    pub credit_original: rust_decimal::Decimal,
+    pub balance_original: rust_decimal::Decimal,
 }

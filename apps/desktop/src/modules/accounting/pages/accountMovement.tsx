@@ -106,9 +106,9 @@ export default function AccountMovement() {
     return lines;
   }, [ledger, accountType]);
 
-  const formatMultiCurrency = useCallback((usdVal: string, sypVal: string) => {
+  const formatMultiCurrency = useCallback((baseVal: string, originalVal: string) => {
     return currencies.map(c => {
-      const val = c.is_base ? parseFloat(usdVal) : parseFloat(sypVal);
+      const val = c.is_base ? parseFloat(baseVal) : parseFloat(originalVal);
       return formatAmount(val, { currencyCode: c.code });
     }).join(' / ');
   }, [currencies, formatAmount]);
@@ -118,22 +118,22 @@ export default function AccountMovement() {
     return [
       {
         label: "الرصيد الافتتاحي",
-        value: formatMultiCurrency(ledger.opening_balance_usd, ledger.opening_balance_syp),
+        value: formatMultiCurrency(ledger.opening_balance_base, ledger.opening_balance_original),
         color: "text-slate-600"
       },
       {
         label: "إجمالي مدين",
-        value: formatMultiCurrency(ledger.total_debit_usd, ledger.total_debit_syp),
+        value: formatMultiCurrency(ledger.total_debit_base, ledger.total_debit_original),
         color: "text-blue-600"
       },
       {
         label: "إجمالي دائن",
-        value: formatMultiCurrency(ledger.total_credit_usd, ledger.total_credit_syp),
+        value: formatMultiCurrency(ledger.total_credit_base, ledger.total_credit_original),
         color: "text-emerald-600"
       },
       {
         label: "الرصيد الحالي",
-        value: formatMultiCurrency(ledger.closing_balance_usd, ledger.closing_balance_syp),
+        value: formatMultiCurrency(ledger.closing_balance_base, ledger.closing_balance_original),
         color: "text-slate-900 font-black",
         highlight: true
       }
@@ -296,8 +296,8 @@ export default function AccountMovement() {
                   parent_id: null,
                   account_type: "Expense",
                   is_system: false,
-                  balance_usd: "0",
-                  balance_syp: "0"
+                  balance: "0",
+                  opening_balance: "0"
                 } as unknown as AccountDto}
                 onSave={handleSaveVoucher}
                 onClose={() => setIsVoucherOpen(false)}

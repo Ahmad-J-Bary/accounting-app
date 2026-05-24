@@ -61,8 +61,9 @@ impl CreateMaterialUseCase {
             purchase_prices.push(domain::inventory::material::MaterialPurchasePrice {
                 id: uuid::Uuid::new_v4().to_string(),
                 unit_id: material.units.iter().find(|u| u.name == p.unit_id).map(|u| u.id).or_else(|| p.unit_id.parse().ok().map(domain::shared::ids::MaterialUnitId)).ok_or_else(|| AppError::Invalid("وحدة غير موجودة في قائمة الوحدات".into()))?,
-                price_usd: p.price_usd.parse().unwrap_or_default(),
-                price_syp: p.price_syp.parse().unwrap_or_default(),
+                price: p.price.parse().unwrap_or_default(),
+                price_base: p.price_base.parse().unwrap_or_default(),
+                currency: p.currency,
             });
         }
         material.purchase_prices = purchase_prices;
@@ -73,10 +74,11 @@ impl CreateMaterialUseCase {
                 id: uuid::Uuid::new_v4().to_string(),
                 unit_id: material.units.iter().find(|u| u.name == p.unit_id).map(|u| u.id).or_else(|| p.unit_id.parse().ok().map(domain::shared::ids::MaterialUnitId)).ok_or_else(|| AppError::Invalid("وحدة غير موجودة في قائمة الوحدات".into()))?,
                 tier: p.tier,
-                price_usd: p.price_usd.parse().unwrap_or_default(),
-                price_syp: p.price_syp.parse().unwrap_or_default(),
-                min_price_usd: p.min_price_usd.parse().unwrap_or_default(),
-                min_price_syp: p.min_price_syp.parse().unwrap_or_default(),
+                price: p.price.parse().unwrap_or_default(),
+                price_base: p.price_base.parse().unwrap_or_default(),
+                min_price: p.min_price.parse().unwrap_or_default(),
+                min_price_base: p.min_price_base.parse().unwrap_or_default(),
+                currency: p.currency,
             });
         }
         material.sale_prices = sale_prices;

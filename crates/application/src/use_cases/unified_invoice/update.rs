@@ -139,7 +139,6 @@ impl UpdateInvoiceUseCase {
             let exchange_rate = invoice.exchange_rate;
 
             let doc_currency = Currency::new(&currency_code, &currency_code, &currency_code, "", 2, false);
-            let usd_currency = Currency::new("USD", "USD", "USD", "", 2, false);
             let unit_price = MonetaryAmount::new(
                 Money::new(Decimal::from_str(&line_dto.unit_price)
                 .map_err(|_| AppError::Invalid("سعر غير صالح".into()))?, doc_currency.clone()),
@@ -158,12 +157,9 @@ impl UpdateInvoiceUseCase {
             let semi_wholesale_price = to_monetary(line_dto.semi_wholesale_price.clone());
             let minimum_stock = line_dto.minimum_stock.as_ref().and_then(|s| Decimal::from_str(s).ok());
 
-            let to_usd = |s: Option<String>| s.and_then(|v| {
-                Decimal::from_str(&v).ok().map(|amt| Money::new(amt, usd_currency.clone()))
-            });
-            let unit_price_usd = to_usd(line_dto.unit_price_usd.clone());
-            let purchase_price_usd = to_usd(line_dto.purchase_price_usd.clone());
-            let profit_amount_usd = to_usd(line_dto.profit_amount_usd.clone());
+            let unit_price_original = line_dto.unit_price_original.clone().and_then(|s| Decimal::from_str(&s).ok().map(|amt| Money::new(amt, doc_currency.clone())));
+            let purchase_price_original = line_dto.purchase_price_original.clone().and_then(|s| Decimal::from_str(&s).ok().map(|amt| Money::new(amt, doc_currency.clone())));
+            let profit_amount_original = line_dto.profit_amount_original.clone().and_then(|s| Decimal::from_str(&s).ok().map(|amt| Money::new(amt, doc_currency)));
 
             let conversion_factor = line_dto.conversion_factor.as_ref()
                 .and_then(|s| Decimal::from_str(s).ok());
@@ -180,9 +176,9 @@ impl UpdateInvoiceUseCase {
                 line_dto.unit_id,
                 conversion_factor,
                 line_dto.notes,
-                unit_price_usd,
-                purchase_price_usd,
-                profit_amount_usd,
+                unit_price_original,
+                purchase_price_original,
+                profit_amount_original,
             );
             invoice.add_line(line).map_err(|e| AppError::Invalid(e.to_string()))?;
         }

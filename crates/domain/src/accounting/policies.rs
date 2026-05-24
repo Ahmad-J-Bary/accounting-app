@@ -48,7 +48,7 @@ impl DoubleEntryPolicy {
 pub fn validate_journal_entry_balance(debit: Decimal, credit: Decimal) -> Result<(), DomainError> {
     if debit != credit {
         return Err(DomainError::Invalid(format!(
-            "القيد غير متوازن بالقيمة الأساسية (USD). مدين: {} ، دائن: {}",
+            "القيد غير متوازن بالقيمة الأساسية. مدين: {} ، دائن: {}",
             debit, credit
         )));
     }

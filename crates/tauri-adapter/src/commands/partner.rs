@@ -12,7 +12,7 @@ pub async fn add_partner(
     name: String,
     exchange_rate: String,
     amount: String,
-    is_amount_in_usd: bool,
+    is_amount_in_original: bool,
     sharing_type: String,
     manual_ratio: Option<String>,
 ) -> Result<String, String> {
@@ -25,11 +25,12 @@ pub async fn add_partner(
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
         state.uow.clone(),
+        state.currency_repo.clone(),
     ).execute(
         name,
         rate,
         amt,
-        is_amount_in_usd,
+        is_amount_in_original,
         sharing_type,
         ratio
     ).await.map_err(|e| e.to_string())
@@ -55,6 +56,7 @@ pub async fn delete_partner(
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
         state.uow.clone(),
+        state.currency_repo.clone(),
     ).execute(id).await.map_err(|e| e.to_string())
 }
 
@@ -66,7 +68,7 @@ pub async fn update_partner(
     name: String,
     exchange_rate: String,
     amount: String,
-    is_amount_in_usd: bool,
+    is_amount_in_original: bool,
     sharing_type: String,
     manual_ratio: Option<String>,
 ) -> Result<(), String> {
@@ -79,12 +81,13 @@ pub async fn update_partner(
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
         state.uow.clone(),
+        state.currency_repo.clone(),
     ).execute(UpdatePartnerRequest {
         id,
         name,
         exchange_rate: rate,
         amount: amt,
-        is_amount_in_usd,
+        is_amount_in_original,
         sharing_type,
         manual_ratio: ratio,
     }).await.map_err(|e| e.to_string())

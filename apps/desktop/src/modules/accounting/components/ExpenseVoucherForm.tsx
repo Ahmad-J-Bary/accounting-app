@@ -28,8 +28,8 @@ export function ExpenseVoucherForm({ expenseAccount, onSave, onClose, saving }: 
   });
 
   const handleCurrencyChange = (val: string) => {
-    const isUSD = val === baseCurrency?.code;
-    const rate = isUSD ? 1 : (rateMap.get(val) || 1);
+    const isBase = val === baseCurrency?.code;
+    const rate = isBase ? 1 : (rateMap.get(val) || 1);
     setForm(p => ({
       ...p,
       currency_code: val,

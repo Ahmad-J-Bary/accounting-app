@@ -1,16 +1,25 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
-import { useTabs } from '@app/providers/TabContext';
-import { invoiceService } from '@modules/invoicing/api/invoiceService';
-import { customerService } from '@modules/partners/api/customerService';
-import { supplierService } from '@modules/partners/api/supplierService';
-import { materialService } from '@modules/inventory/api/materialService';
-import { currencyService, type Currency } from '@modules/core/api/currencyService';
-import type { InvoiceDto, CustomerDto, SupplierDto, MaterialDto } from "@erp/shared-types";
+import { useTabs } from "@app/providers/TabContext";
+import { invoiceService } from "@modules/invoicing/api/invoiceService";
+import { customerService } from "@modules/partners/api/customerService";
+import { supplierService } from "@modules/partners/api/supplierService";
+import { materialService } from "@modules/inventory/api/materialService";
+import { currencyService } from "@modules/core/api/currencyService";
+import type {
+  InvoiceDto,
+  CustomerDto,
+  SupplierDto,
+  MaterialDto,
+} from "@erp/shared-types";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useDocumentEditor } from "./useDocumentEditor";
-import { toBackendLines, newGridLine, type GridLine } from "../lib/invoiceUtils";
+import {
+  toBackendLines,
+  newGridLine,
+  type GridLine,
+} from "../lib/invoiceUtils";
 import { useDocumentFinancials } from "../lib/useDocumentFinancials";
 import { type DocumentColumn } from "@widgets/document-shell/GenericDocumentGrid";
 
@@ -34,7 +43,9 @@ export interface InvoiceHeaderState {
   paid_amount: string;
 }
 
-const DEFAULT_HEADER = (invoiceType: "Sales" | "Purchase", baseCurrencyCode: string): InvoiceHeaderState => ({
+const DEFAULT_HEADER = (
+  invoiceType: "Sales" | "Purchase",
+): InvoiceHeaderState => ({
   invoice_number: "...",
   issued_at: new Date().toISOString().split("T")[0],
   notes: "",
@@ -43,7 +54,8 @@ const DEFAULT_HEADER = (invoiceType: "Sales" | "Purchase", baseCurrencyCode: str
   extra_costs: "0",
   payment_method: "cash",
   status: "Draft",
-  currency_code: baseCurrencyCode || "",
+  currency_code: "",
+
   exchange_rate: "1",
   paid_amount: "0",
   ...(invoiceType === "Sales"
@@ -66,12 +78,16 @@ export function useInvoiceLifecycle({
   const navigate = useNavigate();
   const { id } = useParams();
   const { openTab, closeTab, activeTabId } = useTabs();
-  const { baseCurrency, formatMonetaryAmount, rateMap, currencies: contextCurrencies } = useCurrencyContext();
+  const {
+    baseCurrency,
+    formatMonetaryAmount,
+    rateMap,
+    currencies,
+  } = useCurrencyContext();
 
   const [view, setView] = useState<"list" | "editor">("list");
   const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
   const [parties, setParties] = useState<Array<CustomerDto | SupplierDto>>([]);
-  const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [materials, setMaterials] = useState<MaterialDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -79,10 +95,18 @@ export function useInvoiceLifecycle({
   const [search, setSearch] = useState("");
 
   const [headerState, setHeaderState] = useState<InvoiceHeaderState>(
-    DEFAULT_HEADER(invoiceType, baseCurrency?.code || "")
+    DEFAULT_HEADER(invoiceType),
   );
 
-  const { lines, setLines, updateLine, removeLine, addLine, selectMaterial, totals } = useDocumentEditor({
+  const {
+    lines,
+    setLines,
+    updateLine,
+    removeLine,
+    addLine,
+    selectMaterial,
+    totals,
+  } = useDocumentEditor({
     priceField,
     materials,
   });
@@ -90,39 +114,40 @@ export function useInvoiceLifecycle({
   const isNew = location.pathname.includes("/new");
 
   // Fetch all necessary lookup and list data
-  const loadData = useCallback(async (isInitial = false) => {
-    try {
-      if (isInitial) setLoading(true);
-      else setRefreshing(true);
+  const loadData = useCallback(
+    async (isInitial = false) => {
+      try {
+        if (isInitial) setLoading(true);
+        else setRefreshing(true);
 
-      const listInvoicesPromise =
-        invoiceType === "Sales"
-          ? invoiceService.listInvoicesByType("Sales")
-          : invoiceService.listInvoicesByType(["Purchase", "OpeningBalance"]);
+        const listInvoicesPromise =
+          invoiceType === "Sales"
+            ? invoiceService.listInvoicesByType("Sales")
+            : invoiceService.listInvoicesByType(["Purchase", "OpeningBalance"]);
 
-      const listPartiesPromise =
-        partyType === "customer"
-          ? customerService.listCustomers()
-          : supplierService.listSuppliers();
+        const listPartiesPromise =
+          partyType === "customer"
+            ? customerService.listCustomers()
+            : supplierService.listSuppliers();
 
-      const [invData, partyData, currData, matData] = await Promise.all([
-        listInvoicesPromise,
-        listPartiesPromise,
-        currencyService.listCurrencies(),
-        materialService.listMaterials(),
-      ]);
+        const [invData, partyData, matData] = await Promise.all([
+          listInvoicesPromise,
+          listPartiesPromise,
+          materialService.listMaterials(),
+        ]);
 
-      setInvoices(invData);
-      setParties(partyData);
-      setCurrencies(currData);
-      setMaterials(matData);
-    } catch (e) {
-      toast.error("فشل تحميل البيانات: " + e);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [invoiceType, partyType]);
+        setInvoices(invData);
+        setParties(partyData);
+        setMaterials(matData);
+      } catch (e) {
+        toast.error("فشل تحميل البيانات: " + e);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [invoiceType, partyType],
+  );
 
   const prevActiveTab = useRef(activeTabId);
   useEffect(() => {
@@ -131,7 +156,8 @@ export function useInvoiceLifecycle({
 
   // Reload data if switching tabs back to this module
   useEffect(() => {
-    const tabName = invoiceType === "Sales" ? "sales-invoices" : "purchase-invoices";
+    const tabName =
+      invoiceType === "Sales" ? "sales-invoices" : "purchase-invoices";
     if (prevActiveTab.current !== tabName && activeTabId === tabName) {
       loadData();
     }
@@ -147,15 +173,13 @@ export function useInvoiceLifecycle({
   // Synchronise state based on route parameter modifications (e.g. going from edit/view to list)
   useEffect(() => {
     if (isNew) {
-      setHeaderState(DEFAULT_HEADER(invoiceType, baseCurrency?.code || ""));
-      invoiceService.getNextInvoiceNumber(invoiceType).then(num => {
-        setHeaderState(s => ({ ...s, invoice_number: num, status: "Draft" }));
+      setHeaderState(DEFAULT_HEADER(invoiceType));
+
+      invoiceService.getNextInvoiceNumber(invoiceType).then((num) => {
+        setHeaderState((s) => ({ ...s, invoice_number: num, status: "Draft" }));
       });
-      // Set the default exchange rate from rateMap
-      const rate = rateMap.get(baseCurrency?.code);
-      if (rate) {
-        setHeaderState(s => ({ ...s, exchange_rate: rate.toString() }));
-      }
+      setHeaderState((s) => ({ ...s, exchange_rate: "1" }));
+
       setView("editor");
     } else if (id) {
       const loadInvoice = async () => {
@@ -172,7 +196,8 @@ export function useInvoiceLifecycle({
             extra_paid_amount: "0",
             payment_method: inv.payment_method?.toLowerCase() || "cash",
             status: inv.status,
-            currency_code: inv.currency_code || "USD",
+            currency_code: inv.currency_code || "",
+
             exchange_rate: inv.exchange_rate || "1",
             paid_amount: inv.amount_paid || "0",
             ...(invoiceType === "Sales"
@@ -185,7 +210,7 @@ export function useInvoiceLifecycle({
                   supplier_name: inv.supplier_name ?? "مورد نقدي",
                 }),
           });
-          const loadedLines: GridLine[] = (inv.lines ?? []).map(l => ({
+          const loadedLines: GridLine[] = (inv.lines ?? []).map((l) => ({
             ...l,
             _id: `line_${Math.random()}`,
             line_total: parseFloat(l.quantity) * parseFloat(l.unit_price),
@@ -208,25 +233,54 @@ export function useInvoiceLifecycle({
     } else {
       setView("list");
     }
-  }, [isNew, id, invoiceType, baseCurrency, setLines, rateMap, isReadOnly]);
+  }, [
+    isNew,
+    id,
+    invoiceType,
+    baseCurrency,
+    setLines,
+    rateMap,
+    isReadOnly,
+    currencies,
+  ]);
 
   // Financial document calculations and grid columns adaptation
   const extraCols = useMemo<DocumentColumn[]>(() => {
     if (invoiceType === "Sales") {
-      const foreignCurr = (contextCurrencies || []).find(c => c.code !== baseCurrency?.code);
-      const baseSym = baseCurrency?.symbol || baseCurrency?.code || "ل.س";
-      const foreignSym = foreignCurr?.symbol || foreignCurr?.code || "$";
-      return [
-        { key: "retail_price", header: `مفرق (${foreignSym})`, width: "w-[90px]", align: "left", type: "readonly" },
-        { key: "retail_price_SYP", header: `مفرق (${baseSym})`, width: "w-[90px]", align: "left", type: "readonly" },
-        { key: "wholesale_price", header: `جملة (${foreignSym})`, width: "w-[90px]", align: "left", type: "readonly" },
-        { key: "wholesale_price_SYP", header: `جملة (${baseSym})`, width: "w-[90px]", align: "left", type: "readonly" },
-      ];
+      const sortedCurrencies = baseCurrency
+        ? [
+            baseCurrency,
+            ...currencies.filter((c) => c.code !== baseCurrency.code),
+          ]
+        : currencies;
+      return sortedCurrencies
+        .map((curr) => ({
+          key: `retail_price_${curr.code}`,
+          header: `مفرق (${curr.symbol || curr.code})`,
+          width: "w-[90px]",
+          align: "left" as const,
+          type: "readonly" as const,
+        }))
+        .concat(
+          sortedCurrencies.map((curr) => ({
+            key: `wholesale_price_${curr.code}`,
+            header: `جملة (${curr.symbol || curr.code})`,
+            width: "w-[90px]",
+            align: "left" as const,
+            type: "readonly" as const,
+          })),
+        );
     }
     return [
-      { key: "notes", header: "ملاحظات", width: "flex-[1]", align: "right", type: "text" },
+      {
+        key: "notes",
+        header: "ملاحظات",
+        width: "flex-[1]",
+        align: "right",
+        type: "text",
+      },
     ];
-  }, [invoiceType, contextCurrencies, baseCurrency]);
+  }, [invoiceType, currencies, baseCurrency]);
 
   const {
     enrichedLines,
@@ -234,7 +288,7 @@ export function useInvoiceLifecycle({
     subtotal,
     net,
     displayCurrency,
-    setDisplayCurrency,
+    onCurrencyChange,
     gridColumns,
   } = useDocumentFinancials({
     lines,
@@ -249,7 +303,15 @@ export function useInvoiceLifecycle({
 
   // Action handlers
   const handleSave = async (andPost = false) => {
-    if (lines.length === 0 || (invoiceType === "Purchase" && !lines[0].material_id)) {
+    if (!headerState.currency_code) {
+      toast.error("الرجاء اختيار العملات أولاً من إعدادات العملات");
+      return;
+    }
+
+    if (
+      lines.length === 0 ||
+      (invoiceType === "Purchase" && !lines[0].material_id)
+    ) {
       toast.error("يجب إضافة صنف واحد على الأقل");
       return;
     }
@@ -260,7 +322,9 @@ export function useInvoiceLifecycle({
       !headerState.customer_id &&
       headerState.customer_name === "زبون نقدي"
     ) {
-      toast.error("المبيعات الآجلة أو الجزئية تتطلب اختيار عميل محدد. 'زبون نقدي' مخصص للبيع النقدي فقط.");
+      toast.error(
+        "المبيعات الآجلة أو الجزئية تتطلب اختيار عميل محدد. 'زبون نقدي' مخصص للبيع النقدي فقط.",
+      );
       return;
     }
 
@@ -270,7 +334,9 @@ export function useInvoiceLifecycle({
       !headerState.supplier_id &&
       headerState.supplier_name === "مورد نقدي"
     ) {
-      toast.error("المشتريات الآجلة أو الجزئية تتطلب اختيار مورد محدد. 'مورد نقدي' مخصص للشراء النقدي فقط.");
+      toast.error(
+        "المشتريات الآجلة أو الجزئية تتطلب اختيار مورد محدد. 'مورد نقدي' مخصص للشراء النقدي فقط.",
+      );
       return;
     }
 
@@ -292,11 +358,13 @@ export function useInvoiceLifecycle({
         headerState.payment_method === "cash"
           ? finalTotal.toString()
           : headerState.payment_method === "partial"
-          ? (
-              parseFloat(headerState.paid_amount || "0") +
-              (invoiceType === "Purchase" ? parseFloat(headerState.extra_paid_amount || "0") : 0)
-            ).toString()
-          : "0";
+            ? (
+                parseFloat(headerState.paid_amount || "0") +
+                (invoiceType === "Purchase"
+                  ? parseFloat(headerState.extra_paid_amount || "0")
+                  : 0)
+              ).toString()
+            : "0";
 
       const payload = {
         invoice_number: headerState.invoice_number,
@@ -304,7 +372,8 @@ export function useInvoiceLifecycle({
         lines: toBackendLines(lines),
         tax_amount: headerState.tax_amount,
         discount_amount: headerState.discount_amount,
-        extra_costs: invoiceType === "Purchase" ? headerState.extra_costs : undefined,
+        extra_costs:
+          invoiceType === "Purchase" ? headerState.extra_costs : undefined,
         payment_method: paymentMethodMap[headerState.payment_method] || "Cash",
         amount_paid: totalPaid,
         issued_at: new Date(headerState.issued_at).toISOString(),
@@ -314,17 +383,24 @@ export function useInvoiceLifecycle({
         ...(invoiceType === "Sales"
           ? {
               customer_id: headerState.customer_id || undefined,
-              customer_name: !headerState.customer_id ? headerState.customer_name : undefined,
+              customer_name: !headerState.customer_id
+                ? headerState.customer_name
+                : undefined,
             }
           : {
               supplier_id: headerState.supplier_id || undefined,
-              supplier_name: !headerState.supplier_id ? headerState.supplier_name : undefined,
+              supplier_name: !headerState.supplier_id
+                ? headerState.supplier_name
+                : undefined,
             }),
       };
 
       let result: InvoiceDto;
       if (headerState.id) {
-        result = await invoiceService.updateInvoice({ ...payload, id: headerState.id });
+        result = await invoiceService.updateInvoice({
+          ...payload,
+          id: headerState.id,
+        });
       } else {
         result = await invoiceService.createInvoice(payload);
       }
@@ -336,7 +412,8 @@ export function useInvoiceLifecycle({
         toast.success("تم حفظ المسودة");
       }
 
-      const listTabId = invoiceType === "Sales" ? "sales-invoices" : "purchase-invoices";
+      const listTabId =
+        invoiceType === "Sales" ? "sales-invoices" : "purchase-invoices";
       closeTab(activeTabId);
       openTab({
         id: listTabId,
@@ -357,8 +434,12 @@ export function useInvoiceLifecycle({
     try {
       await invoiceService.reopenInvoice(headerState.id);
       toast.success("تم إلغاء الترحيل بنجاح. الفاتورة الآن مسودة.");
-      setHeaderState(s => ({ ...s, status: "Draft" }));
-      navigate(invoiceType === "Sales" ? `/sales-invoices/${headerState.id}` : `/purchase-invoices/${headerState.id}`);
+      setHeaderState((s) => ({ ...s, status: "Draft" }));
+      navigate(
+        invoiceType === "Sales"
+          ? `/sales-invoices/${headerState.id}`
+          : `/purchase-invoices/${headerState.id}`,
+      );
     } catch (e) {
       toast.error("فشل إلغاء الترحيل: " + e);
     } finally {
@@ -397,8 +478,9 @@ export function useInvoiceLifecycle({
     subtotal,
     net,
     displayCurrency,
-    setDisplayCurrency,
+    setDisplayCurrency: onCurrencyChange,
     gridColumns,
+
     formatMonetaryAmount,
     openTab,
     closeTab,

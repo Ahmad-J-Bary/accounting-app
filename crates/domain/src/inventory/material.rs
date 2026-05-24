@@ -17,8 +17,9 @@ pub struct MaterialUnit {
 pub struct MaterialPurchasePrice {
     pub id: String,
     pub unit_id: MaterialUnitId,
-    pub price_usd: rust_decimal::Decimal,
-    pub price_syp: rust_decimal::Decimal,
+    pub price: rust_decimal::Decimal,
+    pub price_base: rust_decimal::Decimal,
+    pub currency: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,10 +27,11 @@ pub struct MaterialSalePrice {
     pub id: String,
     pub unit_id: MaterialUnitId,
     pub tier: String,
-    pub price_usd: rust_decimal::Decimal,
-    pub price_syp: rust_decimal::Decimal,
-    pub min_price_usd: rust_decimal::Decimal,
-    pub min_price_syp: rust_decimal::Decimal,
+    pub price: rust_decimal::Decimal,
+    pub price_base: rust_decimal::Decimal,
+    pub min_price: rust_decimal::Decimal,
+    pub min_price_base: rust_decimal::Decimal,
+    pub currency: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -78,12 +78,12 @@ export function AccountMovementTable({
         ? 'مبيعات نقدية'
         : (JOURNAL_TYPE_LABELS[line.journal_type] || line.journal_type);
       
-      const debitUSD = parseFloat(line.debit_usd);
-      const debitSYP = parseFloat(line.debit_syp);
-      const creditUSD = parseFloat(line.credit_usd);
-      const creditSYP = parseFloat(line.credit_syp);
+      const debitBase = parseFloat(line.debit_base);
+      const debitOrig = parseFloat(line.debit_original);
+      const creditBase = parseFloat(line.credit_base);
+      const creditOrig = parseFloat(line.credit_original);
 
-      const isDebit = debitUSD > 0 || debitSYP > 0;
+      const isDebit = debitBase > 0 || debitOrig > 0;
 
       return {
         ...line,
@@ -119,14 +119,14 @@ export function AccountMovementTable({
     });
   }, [tableData, sortField, sortDirection]);
 
-  const fieldForCurrency = useCallback((currCode: string): "debit_usd" | "debit_syp" => {
-    if (baseCurrency && currCode === baseCurrency.code) return "debit_usd";
-    return "debit_syp";
+  const fieldForCurrency = useCallback((currCode: string): "debit_base" | "debit_original" => {
+    if (baseCurrency && currCode === baseCurrency.code) return "debit_base";
+    return "debit_original";
   }, [baseCurrency]);
 
-  const creditFieldForCurrency = useCallback((currCode: string): "credit_usd" | "credit_syp" => {
-    if (baseCurrency && currCode === baseCurrency.code) return "credit_usd";
-    return "credit_syp";
+  const creditFieldForCurrency = useCallback((currCode: string): "credit_base" | "credit_original" => {
+    if (baseCurrency && currCode === baseCurrency.code) return "credit_base";
+    return "credit_original";
   }, [baseCurrency]);
 
   const allColumns = useMemo<UnifiedColumn<typeof tableData[0]>[]>(() => {

@@ -53,8 +53,8 @@ const EMPTY_FORM = {
     { name: "قطعة", conversion_factor: "1", barcode: "" }
   ],
   selectedCategoryIds: [] as string[],
-  purchase_prices: [] as { unit_id: string; price_usd: string; price_syp: string }[],
-  sale_prices: [] as { unit_id: string; tier: string; price_usd: string; price_syp: string; min_price_usd: string; min_price_syp: string }[],
+  purchase_prices: [] as { unit_id: string; price: string; price_base: string; currency: string }[],
+  sale_prices: [] as { unit_id: string; tier: string; price: string; price_base: string; min_price: string; min_price_base: string; currency: string }[],
 };
 
 export function MaterialForm({ open, onClose, material, categories, onSave, saving }: MaterialFormProps) {
@@ -89,16 +89,18 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
           selectedCategoryIds: material.category_ids,
           purchase_prices: material.purchase_prices.map(p => ({
             unit_id: p.unit_id,
-            price_usd: p.price_usd,
-            price_syp: p.price_syp
+            price: p.price,
+            price_base: p.price_base,
+            currency: p.currency
           })),
           sale_prices: material.sale_prices.map(p => ({
             unit_id: p.unit_id,
             tier: p.tier,
-            price_usd: p.price_usd,
-            price_syp: p.price_syp,
-            min_price_usd: p.min_price_usd,
-            min_price_syp: p.min_price_syp
+            price: p.price,
+            price_base: p.price_base,
+            min_price: p.min_price,
+            min_price_base: p.min_price_base,
+            currency: p.currency
           })),
         });
       } else {
@@ -214,7 +216,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
         if (idx >= 0) {
             nextPrices[idx] = { ...nextPrices[idx], [field]: value };
         } else {
-            nextPrices.push({ unit_id: unitId, price_usd: "0", price_syp: "0", [field]: value });
+            nextPrices.push({ unit_id: unitId, price: "0", price_base: "0", currency: "", [field]: value });
         }
         return { ...prev, purchase_prices: nextPrices };
     });
@@ -233,10 +235,11 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
             nextPrices.push({ 
                 unit_id: unitId, 
                 tier, 
-                price_usd: "0", 
-                price_syp: "0", 
-                min_price_usd: "0", 
-                min_price_syp: "0",
+                price: "0", 
+                price_base: "0", 
+                min_price: "0", 
+                min_price_base: "0",
+                currency: "",
                 [field]: value 
             });
         }
@@ -244,7 +247,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
     });
   };
 
-  const getPurchasePrice = (unitIdx: number, field: 'price_usd' | 'price_syp') => {
+  const getPurchasePrice = (unitIdx: number, field: 'price' | 'price_base') => {
       const unitId = material ? material.units[unitIdx]?.id : formData.units[unitIdx].name;
       return formData.purchase_prices.find(p => p.unit_id === unitId)?.[field] || "0";
   };
@@ -459,8 +462,8 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                             {formData.units.map((unit, uIdx) => (
                                 <TableRow key={uIdx} className="hover:bg-slate-50/30">
                                     <TableCell className="font-bold text-slate-600 bg-slate-50/30">{unit.name || `وحدة ${uIdx+1}`}</TableCell>
-                                    {activeCurrencies.map(c => {
-                                      const field = c.is_base ? 'price_usd' : 'price_syp';
+                                        {activeCurrencies.map(c => {
+                                      const field = c.is_base ? 'price' : 'price_base';
                                       const sym = c.symbol || c.code;
                                       return (
                                         <TableCell key={c.code} className="p-2">
@@ -468,7 +471,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                                             <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500">{sym}</span>
                                             <Input
                                               type="number"
-                                              value={getPurchasePrice(uIdx, field as 'price_usd' | 'price_syp')}
+                                              value={getPurchasePrice(uIdx, field as 'price' | 'price_base')}
                                               onChange={e => updatePurchasePrice(uIdx, field, e.target.value)}
                                               className="h-9 pl-6 font-bold text-center border-slate-200 focus:border-blue-500"
                                             />
@@ -511,14 +514,14 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                                 <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">سعر المبيع</span>
                                 <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${activeCurrencies.length}, 1fr)` }}>
                                   {activeCurrencies.map(c => {
-                                    const field = c.is_base ? 'price_usd' : 'price_syp';
+                                    const field = c.is_base ? 'price' : 'price_base';
                                     const sym = c.symbol || c.code;
                                     return (
                                       <div key={c.code} className="relative">
                                         <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-slate-500">{sym}</span>
                                         <Input
                                           type="number"
-                                          value={getSalePrice(uIdx, tier.id, field as 'price_usd' | 'price_syp')}
+                                          value={getSalePrice(uIdx, tier.id, field as 'price' | 'price_base')}
                                           onChange={e => updateSalePrice(uIdx, tier.id, field, e.target.value)}
                                           className="h-7 pl-4 text-[10px] font-bold text-center border-slate-100 bg-slate-50/20"
                                         />
@@ -531,14 +534,14 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                                 <span className="text-[8px] font-black text-amber-500 uppercase tracking-tighter">الحد الأدنى</span>
                                 <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${activeCurrencies.length}, 1fr)` }}>
                                   {activeCurrencies.map(c => {
-                                    const field = c.is_base ? 'min_price_usd' : 'min_price_syp';
+                                    const field = c.is_base ? 'min_price' : 'min_price_base';
                                     const sym = c.symbol || c.code;
                                     return (
                                       <div key={c.code} className="relative">
                                         <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-slate-500">{sym}</span>
                                         <Input
                                           type="number"
-                                          value={getSalePrice(uIdx, tier.id, field as 'min_price_usd' | 'min_price_syp')}
+                                          value={getSalePrice(uIdx, tier.id, field as 'min_price' | 'min_price_base')}
                                           onChange={e => updateSalePrice(uIdx, tier.id, field, e.target.value)}
                                           className="h-7 pl-4 text-[10px] font-medium text-center border-amber-100 bg-amber-50/20"
                                         />

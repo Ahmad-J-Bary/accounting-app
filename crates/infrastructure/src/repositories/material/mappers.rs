@@ -39,8 +39,9 @@ pub fn row_to_purchase_price(row: MaterialPurchasePriceRow) -> Result<MaterialPu
     Ok(MaterialPurchasePrice {
         id: row.id,
         unit_id: MaterialUnitId(Uuid::parse_str(&row.unit_id).map_err(|e| AppError::Infrastructure(e.to_string()))?),
-        price_usd: Decimal::from_f64_retain(row.price_usd).unwrap_or_default(),
-        price_syp: Decimal::from_f64_retain(row.price_syp).unwrap_or_default(),
+        price: Decimal::from_f64_retain(row.price).unwrap_or_default(),
+        price_base: Decimal::from_f64_retain(row.price_base).unwrap_or_default(),
+        currency: row.currency,
     })
 }
 
@@ -49,10 +50,11 @@ pub fn row_to_sale_price(row: MaterialSalePriceRow) -> Result<MaterialSalePrice,
         id: row.id,
         unit_id: MaterialUnitId(Uuid::parse_str(&row.unit_id).map_err(|e| AppError::Infrastructure(e.to_string()))?),
         tier: row.tier,
-        price_usd: Decimal::from_f64_retain(row.price_usd).unwrap_or_default(),
-        price_syp: Decimal::from_f64_retain(row.price_syp).unwrap_or_default(),
-        min_price_usd: Decimal::from_f64_retain(row.min_price_usd).unwrap_or_default(),
-        min_price_syp: Decimal::from_f64_retain(row.min_price_syp).unwrap_or_default(),
+        price: Decimal::from_f64_retain(row.price).unwrap_or_default(),
+        price_base: Decimal::from_f64_retain(row.price_base).unwrap_or_default(),
+        min_price: Decimal::from_f64_retain(row.min_price).unwrap_or_default(),
+        min_price_base: Decimal::from_f64_retain(row.min_price_base).unwrap_or_default(),
+        currency: row.currency,
     })
 }
 

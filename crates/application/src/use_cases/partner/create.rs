@@ -4,8 +4,9 @@ use chrono::Utc;
 use domain::accounting::partner::{Partner, ProfitSharingType};
 use domain::accounting::account::{Account, AccountType, AccountCategory};
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
-use domain::shared::{Currency, Money, MonetaryAmount};
+use domain::shared::{Money, MonetaryAmount};
 
+use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::partner_repository::PartnerRepository;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
@@ -17,6 +18,7 @@ pub struct CreatePartnerUseCase {
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
     uow: Arc<dyn UnitOfWork>,
+    currency_repo: Arc<dyn CurrencyRepository>,
 }
 
 impl CreatePartnerUseCase {
@@ -25,8 +27,9 @@ impl CreatePartnerUseCase {
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
         uow: Arc<dyn UnitOfWork>,
+        currency_repo: Arc<dyn CurrencyRepository>,
     ) -> Self {
-        Self { repo, account_repo, journal_repo, uow }
+        Self { repo, account_repo, journal_repo, uow, currency_repo }
     }
 
     pub async fn execute(
@@ -34,13 +37,13 @@ impl CreatePartnerUseCase {
         name: String,
         exchange_rate: Decimal,
         amount: Decimal,
-        is_amount_in_usd: bool,
+        is_amount_in_original: bool,
         sharing_type: String,
         manual_ratio: Option<Decimal>,
     ) -> Result<String, AppError> {
         let sharing_enum = match sharing_type.as_str() {
             "BasedOnCapitalLocal" => ProfitSharingType::BasedOnCapitalLocal,
-            "BasedOnCapitalUSD" => ProfitSharingType::BasedOnCapitalUSD,
+            "BasedOnCapitalOriginal" => ProfitSharingType::BasedOnCapitalOriginal,
             "Manual" => ProfitSharingType::Manual,
             _ => return Err(AppError::Invalid("نوع تقاسم أرباح غير صالح".into())),
         };
@@ -60,7 +63,7 @@ impl CreatePartnerUseCase {
             name.clone(),
             exchange_rate,
             amount,
-            is_amount_in_usd,
+            is_amount_in_original,
             sharing_enum,
             manual_ratio,
         ).map_err(AppError::Domain)?;
@@ -143,24 +146,26 @@ impl CreatePartnerUseCase {
         // Compute total capital from ALL partners
         let all_partners = self.repo.list_all(true).await?;
         let mut total_local = Decimal::ZERO;
-        let mut total_usd = Decimal::ZERO;
+        let mut total_original = Decimal::ZERO;
         for p in &all_partners {
             total_local += p.amount_local;
-            total_usd += p.amount_usd;
+            total_original += p.amount_original;
         }
 
-        if total_local > Decimal::ZERO || total_usd > Decimal::ZERO {
+        if total_local > Decimal::ZERO || total_original > Decimal::ZERO {
             let cash_account = self.account_repo.find_by_code("122").await?
                 .ok_or_else(|| AppError::NotFound("حساب الصندوق (الخزينة) (122) غير موجود".into()))?;
 
             let capital_parent = self.account_repo.find_by_code("222").await?
                 .ok_or_else(|| AppError::Invalid("حساب رأس المال العام (222) غير موجود".into()))?;
 
+            let base_currency = self.currency_repo.get_base_currency().await?
+                .ok_or_else(|| AppError::Invalid("لم يتم تعيين العملة الأساسية".into()))?;
             let fx_rate = if exchange_rate > Decimal::ZERO { exchange_rate } else { Decimal::ONE };
-            let total_ma = if is_amount_in_usd || total_usd > Decimal::ZERO {
-                MonetaryAmount::new(Money::new(total_usd.abs(), Currency::new("USD", "USD", "USD", "", 2, false)), fx_rate)
+            let total_ma = if is_amount_in_original || total_original > Decimal::ZERO {
+                MonetaryAmount::new(Money::new(total_original.abs(), base_currency.clone()), fx_rate)
             } else {
-                MonetaryAmount::new(Money::new(total_local.abs(), Currency::new("SYP", "SYP", "SYP", "", 2, false)), fx_rate)
+                MonetaryAmount::new(Money::new(total_local.abs(), base_currency), fx_rate)
             };
             let zero_ma = MonetaryAmount::zero(total_ma.currency().clone());
 

@@ -48,7 +48,7 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
   }, [partner, open, baseCurrency]);
 
   const exchangeRate = rateMap.get(formData.currency) || 1;
-  const amountInUsd = (parseFloat(formData.amount) / exchangeRate).toFixed(2);
+  const amountInOriginal = (parseFloat(formData.amount) / exchangeRate).toFixed(2);
 
   const handleSubmit = () => {
     if (!formData.name || !formData.amount) return;
@@ -59,7 +59,7 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
       name: formData.name,
       exchangeRate: exchangeRate.toString(),
       amount: formData.amount,
-      isAmountInUsd: formData.currency === baseCurrency?.code,
+      isAmountInOriginal: formData.currency === baseCurrency?.code,
       sharingType: "BasedOnCapitalLocal",
       manualRatio: formData.manualRatio || null,
     });

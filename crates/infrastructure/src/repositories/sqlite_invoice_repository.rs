@@ -4,10 +4,28 @@ use application::errors::AppError;
 use application::ports::invoice_repository::InvoiceRepository;
 use domain::sales::{Invoice, InvoiceLine};
 use domain::shared::{InvoiceId, CustomerId, MaterialId, Money};
+use domain::shared::currency::Currency;
 use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use std::str::FromStr;
+
+async fn get_base_currency_from_db(pool: &SqlitePool) -> Result<Currency, AppError> {
+    let code: Option<String> = sqlx::query_scalar(
+        "SELECT code FROM currencies WHERE is_base = 1 LIMIT 1"
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    let code = code.unwrap_or_default();
+    let info = application::world_currencies::find_world_currency(&code);
+    if let Some(info) = info {
+        Ok(Currency::new(&info.code, &info.name_ar, &info.name_en, &info.symbol, info.decimals, true))
+    } else {
+        Ok(Currency::new(&code, &code, &code, &code, 2, true))
+    }
+}
 
 pub struct SqliteInvoiceRepository {
     pool: Arc<SqlitePool>,
@@ -25,7 +43,6 @@ impl InvoiceRepository for SqliteInvoiceRepository {
         let mut tx = self.pool.begin().await
             .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-        // 1. Save or Update Header
         sqlx::query(
             r#"
             INSERT INTO sales_invoices (
@@ -53,14 +70,12 @@ impl InvoiceRepository for SqliteInvoiceRepository {
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-        // 2. Clear existing lines if any (for updates)
         sqlx::query("DELETE FROM sales_invoice_items WHERE sales_invoice_id = ?")
             .bind(invoice.id.0.to_string())
             .execute(&mut *tx)
             .await
             .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-        // 3. Save Lines
         for line in &invoice.lines {
             sqlx::query(
                 r#"
@@ -95,7 +110,8 @@ impl InvoiceRepository for SqliteInvoiceRepository {
 
         if let Some(row) = header {
             let lines = self.get_lines_for_invoice(id).await?;
-            Ok(Some(self.map_row_to_invoice(row, lines)?))
+            let base_currency = get_base_currency_from_db(&self.pool).await?;
+            Ok(Some(self.map_row_to_invoice(row, lines, &base_currency)?))
         } else {
             Ok(None)
         }
@@ -109,11 +125,12 @@ impl InvoiceRepository for SqliteInvoiceRepository {
             .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
         let mut invoices = Vec::new();
+        let base_currency = get_base_currency_from_db(&self.pool).await?;
         for row in rows {
             let id_str: String = row.get("id");
             let id = InvoiceId(uuid::Uuid::parse_str(&id_str).unwrap());
             let lines = self.get_lines_for_invoice(&id).await?;
-            invoices.push(self.map_row_to_invoice(row, lines)?);
+            invoices.push(self.map_row_to_invoice(row, lines, &base_currency)?);
         }
         Ok(invoices)
     }
@@ -125,11 +142,12 @@ impl InvoiceRepository for SqliteInvoiceRepository {
             .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
         let mut invoices = Vec::new();
+        let base_currency = get_base_currency_from_db(&self.pool).await?;
         for row in rows {
             let id_str: String = row.get("id");
             let id = InvoiceId(uuid::Uuid::parse_str(&id_str).unwrap());
             let lines = self.get_lines_for_invoice(&id).await?;
-            invoices.push(self.map_row_to_invoice(row, lines)?);
+            invoices.push(self.map_row_to_invoice(row, lines, &base_currency)?);
         }
         Ok(invoices)
     }
@@ -153,6 +171,7 @@ impl SqliteInvoiceRepository {
             .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
         let mut lines = Vec::new();
+        let base_currency = get_base_currency_from_db(&self.pool).await?;
         for row in rows {
             let material_id_str: String = row.get("material_id");
             let quantity_str: String = row.get("quantity");
@@ -163,7 +182,7 @@ impl SqliteInvoiceRepository {
                 Decimal::from_str(&quantity_str).unwrap_or(Decimal::ZERO),
                 domain::shared::monetary_amount::MonetaryAmount::from_base(
                     Decimal::from_str(&price_str).unwrap_or(Decimal::ZERO),
-                    domain::shared::currency::Currency::new("SYP", "SYP", "SYP", "", 0, false)
+                    base_currency.clone()
                 ),
                 None, None, None, None, None, None, None, None, None, None, None
             ));
@@ -171,7 +190,7 @@ impl SqliteInvoiceRepository {
         Ok(lines)
     }
 
-    fn map_row_to_invoice(&self, row: sqlx::sqlite::SqliteRow, lines: Vec<InvoiceLine>) -> Result<Invoice, AppError> {
+    fn map_row_to_invoice(&self, row: sqlx::sqlite::SqliteRow, lines: Vec<InvoiceLine>, base_currency: &Currency) -> Result<Invoice, AppError> {
         let id_str: String = row.get("id");
         let num: String = row.get("invoice_number");
         let customer_id_str: String = row.get("customer_id");
@@ -185,8 +204,8 @@ impl SqliteInvoiceRepository {
             invoice_number: num,
             customer_id: customer_id_str.parse::<CustomerId>().unwrap_or_default(),
             lines,
-            tax_amount: Money::new(Decimal::from_str(&tax_str).unwrap_or(Decimal::ZERO), domain::shared::currency::Currency::new("SYP", "SYP", "SYP", "", 0, false)),
-            discount_amount: Money::new(Decimal::from_str(&disc_str).unwrap_or(Decimal::ZERO), domain::shared::currency::Currency::new("SYP", "SYP", "SYP", "", 0, false)),
+            tax_amount: Money::new(Decimal::from_str(&tax_str).unwrap_or(Decimal::ZERO), base_currency.clone()),
+            discount_amount: Money::new(Decimal::from_str(&disc_str).unwrap_or(Decimal::ZERO), base_currency.clone()),
             issued_at: DateTime::from_str(&date_str).unwrap_or(Utc::now()),
             posted: status == "Posted",
         })

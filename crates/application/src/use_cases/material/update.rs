@@ -44,8 +44,9 @@ impl UpdateMaterialUseCase {
             purchase_prices.push(domain::inventory::material::MaterialPurchasePrice {
                 id: uuid::Uuid::new_v4().to_string(),
                 unit_id: p.unit_id.parse().map_err(|_| AppError::Invalid("معرف وحدة غير صالح".into()))?,
-                price_usd: p.price_usd.parse().unwrap_or_default(),
-                price_syp: p.price_syp.parse().unwrap_or_default(),
+                price: p.price.parse().unwrap_or_default(),
+                price_base: p.price_base.parse().unwrap_or_default(),
+                currency: p.currency,
             });
         }
         material.purchase_prices = purchase_prices;
@@ -56,10 +57,11 @@ impl UpdateMaterialUseCase {
                 id: uuid::Uuid::new_v4().to_string(),
                 unit_id: p.unit_id.parse().map_err(|_| AppError::Invalid("معرف وحدة غير صالح".into()))?,
                 tier: p.tier,
-                price_usd: p.price_usd.parse().unwrap_or_default(),
-                price_syp: p.price_syp.parse().unwrap_or_default(),
-                min_price_usd: p.min_price_usd.parse().unwrap_or_default(),
-                min_price_syp: p.min_price_syp.parse().unwrap_or_default(),
+                price: p.price.parse().unwrap_or_default(),
+                price_base: p.price_base.parse().unwrap_or_default(),
+                min_price: p.min_price.parse().unwrap_or_default(),
+                min_price_base: p.min_price_base.parse().unwrap_or_default(),
+                currency: p.currency,
             });
         }
         material.sale_prices = sale_prices;

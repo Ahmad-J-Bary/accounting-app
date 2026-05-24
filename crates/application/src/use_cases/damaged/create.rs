@@ -3,13 +3,13 @@ use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::damaged_item_repository::DamagedItemRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
+use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
 use chrono::{DateTime, Utc};
 use domain::accounting::journal_entry::{JournalEntry, JournalLine};
 use domain::inventory::stock_movement::{MovementType, StockMovement};
 use domain::inventory::DamagedItem;
-use domain::shared::currency::Currency;
 use domain::shared::ids::MaterialId;
 use domain::shared::monetary_amount::MonetaryAmount;
 use domain::shared::money::Money;
@@ -22,6 +22,7 @@ pub struct CreateDamagedItemUseCase {
     movement_repo: Arc<dyn StockMovementRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
     account_repo: Arc<dyn AccountRepository>,
+    currency_repo: Arc<dyn CurrencyRepository>,
 }
 
 impl CreateDamagedItemUseCase {
@@ -31,6 +32,7 @@ impl CreateDamagedItemUseCase {
         movement_repo: Arc<dyn StockMovementRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
         account_repo: Arc<dyn AccountRepository>,
+        currency_repo: Arc<dyn CurrencyRepository>,
     ) -> Self {
         Self {
             repo,
@@ -38,6 +40,7 @@ impl CreateDamagedItemUseCase {
             movement_repo,
             journal_repo,
             account_repo,
+            currency_repo,
         }
     }
 
@@ -91,6 +94,8 @@ impl CreateDamagedItemUseCase {
         self.movement_repo.save(&movement).await?;
 
         if cost_impact > Decimal::ZERO {
+            let base_currency = self.currency_repo.get_base_currency().await?
+                .ok_or_else(|| AppError::Invalid("لم يتم تعيين العملة الأساسية".into()))?;
             let loss_account = self.account_repo.find_by_code("43").await?.ok_or_else(|| {
                 AppError::NotFound("حساب مصاريف أخرى (43) غير موجود".into())
             })?;
@@ -105,14 +110,14 @@ impl CreateDamagedItemUseCase {
             let lines = vec![
                 JournalLine::new(
                     loss_account.id,
-                    MonetaryAmount::new(Money::new(cost_impact, Currency::new("SYP", "SYP", "SYP", "", 2, false)), Decimal::ONE),
-                    MonetaryAmount::zero(Currency::new("SYP", "SYP", "SYP", "", 2, false)),
+                    MonetaryAmount::new(Money::new(cost_impact, base_currency.clone()), Decimal::ONE),
+                    MonetaryAmount::zero(base_currency.clone()),
                     format!("خسارة تلف: {} - {}", material.name, req.reason),
                 ),
                 JournalLine::new(
                     inventory_account.id,
-                    MonetaryAmount::zero(Currency::new("SYP", "SYP", "SYP", "", 2, false)),
-                    MonetaryAmount::new(Money::new(cost_impact, Currency::new("SYP", "SYP", "SYP", "", 2, false)), Decimal::ONE),
+                    MonetaryAmount::zero(base_currency.clone()),
+                    MonetaryAmount::new(Money::new(cost_impact, base_currency), Decimal::ONE),
                     format!("تخفيض مخزون بسبب تلف: {}", material.name),
                 ),
             ];

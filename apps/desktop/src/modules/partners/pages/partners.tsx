@@ -69,7 +69,7 @@ export default function Partners() {
   const [isDrawingsOpen, setIsDrawingsOpen] = useState(false);
   const [drawingsSaving, setDrawingsSaving] = useState(false);
 
-  const usdRate = useMemo(() => rateMap?.get(baseCurrency?.code || "") || 1, [rateMap]);
+  const defaultRate = useMemo(() => rateMap?.get(baseCurrency?.code || "") || 1, [rateMap]);
 
   const {
     totals,
@@ -79,7 +79,7 @@ export default function Partners() {
   } = usePartnerRatios({ 
     partners, 
     strategy: globalStrategy, 
-    exchangeRate: usdRate 
+    exchangeRate: defaultRate 
   });
 
   const stats = useMemo(() => [
@@ -97,7 +97,7 @@ export default function Partners() {
     },
     { 
       label: `رأس المال (${baseCurrency?.symbol || ""})`, 
-      value: formatAmount(totals.usd, { currencyCode: baseCurrency?.code || "", hideSymbol: false }), 
+      value: formatAmount(totals.original, { currencyCode: baseCurrency?.code || "", hideSymbol: false }), 
       icon: DollarSign, 
       color: "text-emerald-600" 
     },
@@ -219,7 +219,7 @@ export default function Partners() {
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider hidden md:block">التوزيع:</span>
           <RadioGroup value={globalStrategy} onValueChange={setGlobalStrategy} className="flex flex-row items-center gap-1">
             <StrategyOption id="g1" value="BasedOnCapitalLocal" label="محلي" />
-            <StrategyOption id="g2" value="BasedOnCapitalUSD" label="دولار" />
+            <StrategyOption id="g2" value="BasedOnCapitalOriginal" label="أصلي" />
             <StrategyOption id="g3" value="Manual" label="يدوي" />
           </RadioGroup>
         </div>
@@ -305,7 +305,7 @@ export default function Partners() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 bg-white rounded-xl border border-slate-100">
                     <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">{`المبلغ (${baseCurrency?.symbol || ""})`}</div>
-                    <div className="text-lg font-black text-blue-600 tabular-nums">{formatAmount(Number(partnersWithRatios.find(p => p.id === selectedId)?.amount_usd || 0), { currencyCode: baseCurrency?.code || "" })}</div>
+                    <div className="text-lg font-black text-blue-600 tabular-nums">{formatAmount(Number(partnersWithRatios.find(p => p.id === selectedId)?.amount_original || 0), { currencyCode: baseCurrency?.code || "" })}</div>
                   </div>
                   <div className="p-3 bg-white rounded-xl border border-slate-100">
                     <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">{`المبلغ (${baseCurrency?.symbol || ""})`}</div>

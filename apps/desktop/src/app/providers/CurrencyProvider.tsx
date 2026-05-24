@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { currencyService, type Currency, type TodayRateStatus } from '@modules/core/api/currencyService';
+import { useNavigate } from "react-router-dom";
 import { 
   CurrencyContext, 
   type CurrencyContextValue, 
@@ -8,6 +9,7 @@ import {
 } from "./CurrencyContext";
 
 export function CurrencyProvider({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [todayStatus, setTodayStatus] = useState<TodayRateStatus[]>([]);
@@ -20,6 +22,11 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       const context = await currencyService.getCurrencyContext();
       setCurrencies(context.active_currencies);
       setTodayStatus(context.today_status);
+
+      if (!context.base_currency_code || context.active_currencies.length === 0) {
+        setDisplayCurrencyCodeState(null);
+        return;
+      }
 
       const baseCode = context.base_currency_code;
       const storedCode = localStorage.getItem("currency-display-code");
@@ -39,6 +46,12 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!loading && currencies.length === 0) {
+      navigate("/setup", { replace: true });
+    }
+  }, [loading, currencies.length, navigate]);
 
   const baseCurrency = useMemo(
     () => currencies.find((c) => c.is_base) ?? null,
@@ -104,7 +117,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       if (!baseCurrency || targetCurrencyCode === baseCurrency.code) return amountInBase;
       const rate = rateMap.get(targetCurrencyCode);
       if (!rate || rate <= 0) return amountInBase;
-      // Under new standardized logic: 1 USD = rate units of targetCurrency.
+      // 1 base currency = rate units of targetCurrency.
       // To convert base → target: multiply by rate.
       return amountInBase * rate;
     },
@@ -120,7 +133,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       if (baseCurrency && fromCode !== baseCurrency.code) {
         const fromRate = rateMap.get(fromCode);
         if (fromRate && fromRate > 0) {
-          // Under new standardized logic: 1 USD = fromRate units of fromCode.
+          // 1 fromCode = ? units of base: reciprocal of rate.
           // To convert fromCode → base: divide by rate.
           amountInBase = amount / fromRate;
         }

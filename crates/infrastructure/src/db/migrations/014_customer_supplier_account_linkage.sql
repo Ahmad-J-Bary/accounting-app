@@ -7,7 +7,7 @@ ALTER TABLE customers ADD COLUMN account_id TEXT;
 ALTER TABLE customers ADD COLUMN debit TEXT NOT NULL DEFAULT '0';
 ALTER TABLE customers ADD COLUMN credit TEXT NOT NULL DEFAULT '0';
 ALTER TABLE customers ADD COLUMN opening_balance TEXT NOT NULL DEFAULT '0';
-ALTER TABLE customers ADD COLUMN currency TEXT NOT NULL DEFAULT 'SYP';
+ALTER TABLE customers ADD COLUMN currency TEXT NOT NULL DEFAULT '';
 ALTER TABLE customers ADD COLUMN notes TEXT;
 
 -- Add accounting columns to suppliers
@@ -16,7 +16,7 @@ ALTER TABLE suppliers ADD COLUMN account_id TEXT;
 ALTER TABLE suppliers ADD COLUMN debit TEXT NOT NULL DEFAULT '0';
 ALTER TABLE suppliers ADD COLUMN credit TEXT NOT NULL DEFAULT '0';
 ALTER TABLE suppliers ADD COLUMN opening_balance TEXT NOT NULL DEFAULT '0';
-ALTER TABLE suppliers ADD COLUMN currency TEXT NOT NULL DEFAULT 'SYP';
+ALTER TABLE suppliers ADD COLUMN currency TEXT NOT NULL DEFAULT '';
 ALTER TABLE suppliers ADD COLUMN notes TEXT;
 
 -- Add linkage columns to accounts

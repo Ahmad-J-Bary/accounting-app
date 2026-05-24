@@ -13,8 +13,8 @@ export interface PartnerDto {
   is_active: boolean;
   exchange_rate: string;
   amount_local: string;
-  amount_usd: string;
-  is_amount_in_usd: boolean;
+  amount_original: string;
+  is_amount_in_original: boolean;
   profit_sharing_ratio: string | null;
   profit_sharing_type: string;
   linked_account_id: string | null;
@@ -28,7 +28,7 @@ export interface PartnerRequest {
   name: string;
   exchangeRate: string;
   amount: string;
-  isAmountInUsd: boolean;
+  isAmountInOriginal: boolean;
   sharingType: string;
   manualRatio: string | null;
 }

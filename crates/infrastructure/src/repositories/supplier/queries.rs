@@ -3,6 +3,7 @@ use application::errors::AppError;
 use domain::suppliers::Supplier;
 use domain::shared::ids::SupplierId;
 use domain::shared::AccountId;
+
 use super::models::SupplierRow;
 use super::mappers::row_to_supplier;
 
@@ -15,7 +16,7 @@ pub async fn find_by_id(pool: &SqlitePool, id: &SupplierId) -> Result<Option<Sup
             a.id, 
             CASE WHEN a.code LIKE '223%' THEN SUBSTR(a.code, 4) ELSE a.code END as code,
             a.name_ar as name, '' as phone, '' as address, a.id as account_id,
-            '0' as debit, '0' as credit, a.opening_balance, a.balance, 'SYP' as currency,
+            '0' as debit, '0' as credit,             a.opening_balance, a.balance, COALESCE((SELECT code FROM currencies WHERE is_base = 1 LIMIT 1), '') as currency,
             'تلقائي من دليل الحسابات' as notes, a.is_active, a.created_at, a.updated_at
          FROM accounts a
          WHERE a.id = ? AND a.code LIKE '223%' AND a.category = 'Detail'
@@ -39,7 +40,7 @@ pub async fn find_by_account_id(pool: &SqlitePool, account_id: &AccountId) -> Re
             a.id, 
             CASE WHEN a.code LIKE '223%' THEN SUBSTR(a.code, 4) ELSE a.code END as code,
             a.name_ar as name, '' as phone, '' as address, a.id as account_id,
-            '0' as debit, '0' as credit, a.opening_balance, a.balance, 'SYP' as currency,
+            '0' as debit, '0' as credit,             a.opening_balance, a.balance, COALESCE((SELECT code FROM currencies WHERE is_base = 1 LIMIT 1), '') as currency,
             'تلقائي من دليل الحسابات' as notes, a.is_active, a.created_at, a.updated_at
          FROM accounts a
          WHERE a.id = ? AND a.code LIKE '223%' AND a.category = 'Detail'
@@ -76,7 +77,7 @@ pub async fn list_all(pool: &SqlitePool) -> Result<Vec<Supplier>, AppError> {
             a.id, 
             CASE WHEN a.code LIKE '223%' THEN SUBSTR(a.code, 4) ELSE a.code END as code,
             a.name_ar as name, '' as phone, '' as address, a.id as account_id,
-            '0' as debit, '0' as credit, a.opening_balance, a.balance, 'SYP' as currency,
+            '0' as debit, '0' as credit,             a.opening_balance, a.balance, COALESCE((SELECT code FROM currencies WHERE is_base = 1 LIMIT 1), '') as currency,
             'تلقائي من دليل الحسابات' as notes, a.is_active, a.created_at, a.updated_at
          FROM accounts a
          WHERE a.code LIKE '223%' AND a.category = 'Detail'

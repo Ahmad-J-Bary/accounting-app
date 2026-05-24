@@ -31,7 +31,7 @@ export function PartnerDetailPanel({
   if (!partner) return null;
 
   const isCustomer = type === "customer";
-  const isPartner = "amount_usd" in partner;
+  const isPartner = "amount_original" in partner;
   const hasAccountId = (p: typeof partner): p is CustomerDto | SupplierDto => "account_id" in p;
   const partnerAccountId = hasAccountId(partner) ? partner.account_id : null;
   const isDisabled = true;
@@ -126,8 +126,8 @@ export function PartnerDetailPanel({
               <h3 className="text-sm font-bold text-slate-800 border-b pb-2">معلومات الاستثمار</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-600">المبلغ ({baseCurrency?.symbol || baseCurrency?.code || "$"})</Label>
-                  <Input value={partner.amount_usd || "0"} disabled={isDisabled} className="h-9 bg-slate-50" />
+                  <Label className="text-xs font-bold text-slate-600">المبلغ ({baseCurrency?.symbol || baseCurrency?.code || ""})</Label>
+                  <Input value={partner.amount_original || "0"} disabled={isDisabled} className="h-9 bg-slate-50" />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold text-slate-600">المبلغ (محلي)</Label>
@@ -143,7 +143,7 @@ export function PartnerDetailPanel({
                     <SelectTrigger className="h-9 font-bold bg-slate-50"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="BasedOnCapitalLocal">على أساس رأس المال المحلي</SelectItem>
-                      <SelectItem value="BasedOnCapitalUSD">على أساس رأس المال دولار</SelectItem>
+                      <SelectItem value="BasedOnCapitalOriginal">على أساس رأس المال الأصلي</SelectItem>
                       <SelectItem value="Manual">يدوي</SelectItem>
                     </SelectContent>
                   </Select>

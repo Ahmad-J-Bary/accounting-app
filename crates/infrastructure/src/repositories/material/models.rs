@@ -23,8 +23,9 @@ pub struct MaterialPurchasePriceRow {
     pub id: String,
     pub material_id: String,
     pub unit_id: String,
-    pub price_usd: f64,
-    pub price_syp: f64,
+    pub price: f64,
+    pub price_base: f64,
+    pub currency: String,
     pub updated_at: String,
 }
 
@@ -35,10 +36,11 @@ pub struct MaterialSalePriceRow {
     pub material_id: String,
     pub unit_id: String,
     pub tier: String,
-    pub price_usd: f64,
-    pub price_syp: f64,
-    pub min_price_usd: f64,
-    pub min_price_syp: f64,
+    pub price: f64,
+    pub price_base: f64,
+    pub min_price: f64,
+    pub min_price_base: f64,
+    pub currency: String,
     pub updated_at: String,
 }
 

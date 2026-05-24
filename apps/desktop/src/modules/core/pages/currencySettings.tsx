@@ -51,7 +51,7 @@ export default function CurrencySettings() {
     setLoading(true);
     try {
       const [currList, statusList, worldList] = await Promise.all([
-        currencyService.listCurrencies(),
+        currencyService.listActiveCurrencies(),
         currencyService.getTodayRatesStatus(),
         currencyService.getWorldCurrencies(),
       ]);
@@ -149,15 +149,20 @@ export default function CurrencySettings() {
 
   const handleDeleteCurrency = async (code: string) => {
     if (!confirm(`هل أنت متأكد من حذف هذه العملة؟`)) return;
+    // Remove from local state immediately so the table updates right away
+    setCurrencies(prev => prev.filter(c => c.code !== code));
+    setRateStatus(prev => prev.filter(s => s.currency_code !== code));
+    setHistory([]);
+    setSelectedCurrencyForHistory(null);
     try {
       await currencyService.deleteCurrency(code);
       toast.success("تم الحذف", { description: "تم حذف العملة بنجاح" });
-      setHistory([]);
-      setSelectedCurrencyForHistory(null);
-      await Promise.all([loadData(), refreshContext()]);
     } catch (e) {
+      // Revert on failure by reloading from server
       toast.error("خطأ", { description: String(e) });
     }
+    await loadData();
+    await refreshContext();
   };
 
   const handleSetBase = async (code: string) => {

@@ -3,7 +3,8 @@ use rust_decimal::Decimal;
 use chrono::Utc;
 use domain::shared::ids::PartnerId;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
-use domain::shared::{Currency, Money, MonetaryAmount};
+use domain::shared::{Money, MonetaryAmount};
+use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::partner_repository::PartnerRepository;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
@@ -15,6 +16,7 @@ pub struct DeletePartnerUseCase {
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
     uow: Arc<dyn UnitOfWork>,
+    currency_repo: Arc<dyn CurrencyRepository>,
 }
 
 impl DeletePartnerUseCase {
@@ -23,8 +25,9 @@ impl DeletePartnerUseCase {
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
         uow: Arc<dyn UnitOfWork>,
+        currency_repo: Arc<dyn CurrencyRepository>,
     ) -> Self {
-        Self { repo, account_repo, journal_repo, uow }
+        Self { repo, account_repo, journal_repo, uow, currency_repo }
     }
 
     pub async fn execute(&self, id: String) -> Result<(), AppError> {
@@ -51,23 +54,24 @@ impl DeletePartnerUseCase {
 
         let remaining = self.repo.list_all(true).await?;
         let mut total_local = Decimal::ZERO;
-        let mut total_usd = Decimal::ZERO;
+        let mut total_original = Decimal::ZERO;
         for p in &remaining {
             total_local += p.amount_local;
-            total_usd += p.amount_usd;
+            total_original += p.amount_original;
         }
 
-        if total_local > Decimal::ZERO || total_usd > Decimal::ZERO {
+        if total_local > Decimal::ZERO || total_original > Decimal::ZERO {
             if let (Ok(Some(cash_account)), Ok(Some(capital_parent))) = (
                 self.account_repo.find_by_code("122").await,
                 self.account_repo.find_by_code("222").await,
             ) {
-                let (code, amount) = if total_usd > total_local {
-                    ("USD", total_usd.abs())
+                let base_currency = self.currency_repo.get_base_currency().await?
+                    .ok_or_else(|| AppError::Invalid("لم يتم تعيين العملة الأساسية".into()))?;
+                let (currency, amount) = if total_original > total_local {
+                    (base_currency.clone(), total_local.abs())
                 } else {
-                    ("SYP", total_local.abs())
+                    (base_currency, total_local.abs())
                 };
-                let currency = Currency::new(code, code, code, "", 2, false);
                 let total_ma = MonetaryAmount::new(Money::new(amount, currency), Decimal::ONE);
                 let zero_ma = MonetaryAmount::zero(total_ma.currency().clone());
 

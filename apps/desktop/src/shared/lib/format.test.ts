@@ -2,25 +2,25 @@ import { describe, it, expect } from "vitest";
 import { formatCurrency, formatNumber, formatDate, formatDateTime } from "./format";
 
 describe("formatCurrency", () => {
-  it("formats with default currency", () => {
+  it("formats without forcing a default currency", () => {
     const result = formatCurrency(1234.5);
-    expect(result).toContain("ل.س");
+    expect(result).not.toContain(" ");
     expect(result.length).toBeGreaterThan(5);
   });
 
-  it("formats with USD symbol", () => {
-    const result = formatCurrency(5000, "$");
-    expect(result).toContain("$");
+  it("formats with a provided currency symbol", () => {
+    const result = formatCurrency(5000, "EUR");
+    expect(result).toContain("EUR");
   });
 
   it("handles zero", () => {
-    const result = formatCurrency(0, "$");
-    expect(result).toContain("$");
+    const result = formatCurrency(0, "TRY");
+    expect(result).toContain("TRY");
   });
 
   it("handles negative values", () => {
-    const result = formatCurrency(-100, "USD");
-    expect(result).toContain("USD");
+    const result = formatCurrency(-100, "BASE");
+    expect(result).toContain("BASE");
     expect(result).toContain("-");
   });
 });

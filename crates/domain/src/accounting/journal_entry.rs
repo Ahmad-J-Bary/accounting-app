@@ -189,7 +189,7 @@ impl JournalEntry {
 
         if !self.is_balanced() {
             return Err(DomainError::Invalid(format!(
-                "القيد غير متوازن بالليرة السورية. مدين: {} ، دائن: {}",
+                "القيد غير متوازن. مدين: {} ، دائن: {}",
                 self.total_base_debit(),
                 self.total_base_credit()
             )));
@@ -298,28 +298,28 @@ mod tests {
     use crate::shared::money::Money;
     use rust_decimal_macros::dec;
 
-    fn test_syp() -> Currency {
-        Currency::new("SYP", "ليرة سورية", "Syrian Pound", "ل.س", 0, true)
+    fn test_base_currency() -> Currency {
+        Currency::new("BASE", "عملة أساسية", "Base Currency", "B", 2, true)
     }
 
-    fn test_usd() -> Currency {
-        Currency::new("USD", "دولار أمريكي", "US Dollar", "$", 2, false)
+    fn test_secondary_currency() -> Currency {
+        Currency::new("ALT", "عملة ثانوية", "Secondary Currency", "A", 2, false)
     }
 
     #[test]
     fn journal_entry_creation_with_valid_data_succeeds() {
-        let syp = test_syp();
+        let base_currency = test_base_currency();
         let lines = vec![
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::new(Money::new(dec!(100), syp.clone()), Decimal::ONE),
-                MonetaryAmount::zero(syp.clone()),
+                MonetaryAmount::new(Money::new(dec!(100), base_currency.clone()), Decimal::ONE),
+                MonetaryAmount::zero(base_currency.clone()),
                 "مدين".to_string(),
             ),
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::zero(syp.clone()),
-                MonetaryAmount::new(Money::new(dec!(100), syp.clone()), Decimal::ONE),
+                MonetaryAmount::zero(base_currency.clone()),
+                MonetaryAmount::new(Money::new(dec!(100), base_currency.clone()), Decimal::ONE),
                 "دائن".to_string(),
             ),
         ];
@@ -338,20 +338,20 @@ mod tests {
 
     #[test]
     fn multi_currency_balanced_entry_can_be_posted() {
-        let (syp, usd) = (test_syp(), test_usd());
+        let (base_currency, secondary_currency) = (test_base_currency(), test_secondary_currency());
         let fx_rate = dec!(15000);
         let lines = vec![
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::new(Money::new(dec!(10), usd.clone()), fx_rate),
-                MonetaryAmount::zero(usd.clone()),
-                "مدين بالدولار".to_string(),
+                MonetaryAmount::new(Money::new(dec!(10), secondary_currency.clone()), fx_rate),
+                MonetaryAmount::zero(secondary_currency.clone()),
+                "مدين بعملة ثانوية".to_string(),
             ),
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::zero(syp.clone()),
-                MonetaryAmount::new(Money::new(dec!(150000), syp.clone()), dec!(1)),
-                "دائن بالليرة".to_string(),
+                MonetaryAmount::zero(base_currency.clone()),
+                MonetaryAmount::new(Money::new(dec!(150000), base_currency.clone()), dec!(1)),
+                "دائن بعملة أساسية".to_string(),
             ),
         ];
 
@@ -370,19 +370,19 @@ mod tests {
 
     #[test]
     fn unbalanced_multi_currency_is_rejected() {
-        let (syp, usd) = (test_syp(), test_usd());
+        let (base_currency, secondary_currency) = (test_base_currency(), test_secondary_currency());
         let fx_rate = dec!(15000);
         let lines = vec![
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::new(Money::new(dec!(10), usd.clone()), fx_rate),
-                MonetaryAmount::zero(usd.clone()),
+                MonetaryAmount::new(Money::new(dec!(10), secondary_currency.clone()), fx_rate),
+                MonetaryAmount::zero(secondary_currency.clone()),
                 "مدين".to_string(),
             ),
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::zero(syp.clone()),
-                MonetaryAmount::new(Money::new(dec!(140000), syp.clone()), dec!(1)),
+                MonetaryAmount::zero(base_currency.clone()),
+                MonetaryAmount::new(Money::new(dec!(140000), base_currency.clone()), dec!(1)),
                 "دائن".to_string(),
             ),
         ];
@@ -402,19 +402,19 @@ mod tests {
 
     #[test]
     fn total_base_debit_calculates_correctly() {
-        let (syp, usd) = (test_syp(), test_usd());
+        let (base_currency, secondary_currency) = (test_base_currency(), test_secondary_currency());
         let lines = vec![
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::new(Money::new(dec!(100), syp.clone()), dec!(1)),
-                MonetaryAmount::zero(syp.clone()),
+                MonetaryAmount::new(Money::new(dec!(100), base_currency.clone()), dec!(1)),
+                MonetaryAmount::zero(base_currency.clone()),
                 "مدين".to_string(),
             ),
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::new(Money::new(dec!(10), usd.clone()), dec!(15000)),
-                MonetaryAmount::zero(usd.clone()),
-                "مدين دولار".to_string(),
+                MonetaryAmount::new(Money::new(dec!(10), secondary_currency.clone()), dec!(15000)),
+                MonetaryAmount::zero(secondary_currency.clone()),
+                "مدين بعملة ثانوية".to_string(),
             ),
         ];
 

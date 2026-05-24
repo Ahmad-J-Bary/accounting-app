@@ -48,26 +48,26 @@ export interface AccountLedgerLineDto {
   opposite_account_name: string;
   currency: string;
   fx_rate: string;
-  debit_syp: string;
-  credit_syp: string;
-  balance_syp: string;
-  debit_usd: string;
-  credit_usd: string;
-  balance_usd: string;
+  debit_base: string;
+  credit_base: string;
+  balance_base: string;
+  debit_original: string;
+  credit_original: string;
+  balance_original: string;
 }
 
 export interface AccountLedgerDto {
   account_id: string;
   account_name: string;
-  opening_balance_syp: string;
-  opening_balance_usd: string;
+  opening_balance_base: string;
+  opening_balance_original: string;
   lines: AccountLedgerLineDto[];
-  total_debit_syp: string;
-  total_credit_syp: string;
-  closing_balance_syp: string;
-  total_debit_usd: string;
-  total_credit_usd: string;
-  closing_balance_usd: string;
+  total_debit_base: string;
+  total_credit_base: string;
+  closing_balance_base: string;
+  total_debit_original: string;
+  total_credit_original: string;
+  closing_balance_original: string;
 }
 
 export interface ReceivablesPayablesSummary {

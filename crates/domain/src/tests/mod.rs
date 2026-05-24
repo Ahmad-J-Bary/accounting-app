@@ -78,7 +78,7 @@ mod accounting_domain_tests {
     use uuid::Uuid;
 
     fn test_currency() -> Currency {
-        Currency::new("SYP", "ليرة سورية", "Syrian Pound", "ل.س", 0, true)
+        Currency::new("BASE", "عملة أساسية", "Base Currency", "B", 2, true)
     }
 
     fn balanced_lines(amount: Decimal) -> Vec<JournalLine> {

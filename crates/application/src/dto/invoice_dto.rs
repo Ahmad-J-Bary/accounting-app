@@ -43,9 +43,9 @@ pub struct InvoiceLineDto {
     pub semi_wholesale_price_v2: Option<MonetaryAmountDto>,
     pub minimum_stock: Option<String>,
     pub notes: Option<String>,
-    pub unit_price_usd: Option<String>,
-    pub purchase_price_usd: Option<String>,
-    pub profit_amount_usd: Option<String>,
+    pub unit_price_original: Option<String>,
+    pub purchase_price_original: Option<String>,
+    pub profit_amount_original: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -243,9 +243,9 @@ impl From<InvoiceLine> for InvoiceLineDto {
             semi_wholesale_price_v2: line.semi_wholesale_price.map(MonetaryAmountDto::from),
             minimum_stock: line.minimum_stock.map(|s| s.to_string()),
             notes: line.notes,
-            unit_price_usd: line.unit_price_usd.map(|m| m.amount().to_string()),
-            purchase_price_usd: line.purchase_price_usd.map(|m| m.amount().to_string()),
-            profit_amount_usd: line.profit_amount_usd.map(|m| m.amount().to_string()),
+            unit_price_original: line.unit_price_original.map(|m| m.amount().to_string()),
+            purchase_price_original: line.purchase_price_original.map(|m| m.amount().to_string()),
+            profit_amount_original: line.profit_amount_original.map(|m| m.amount().to_string()),
         }
     }
 }

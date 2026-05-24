@@ -135,6 +135,10 @@ mod tests {
     use domain::shared::Currency;
     use rust_decimal_macros::dec;
 
+    fn test_currency() -> Currency {
+        Currency::new("BASE", "عملة أساسية", "Base Currency", "B", 2, true)
+    }
+
     pub struct MockConsumableRepo {
         pub items: std::sync::Mutex<Vec<Consumable>>,
     }
@@ -169,7 +173,7 @@ mod tests {
             code: "C1".to_string(),
             name: "Ink".to_string(),
             category_id: Uuid::new_v4(),
-            unit_cost: Money::new(dec!(50), Currency::new("SYP", "SYP", "SYP", "", 2, false)),
+            unit_cost: Money::new(dec!(50), test_currency()),
             fx_rate: dec!(1),
             asset_account_id: Uuid::new_v4(),
             expense_account_id: Uuid::new_v4(),

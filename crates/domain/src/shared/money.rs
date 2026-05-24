@@ -31,7 +31,7 @@ impl Money {
     }
 
     /// Calculates the value in the system's reference base currency using the provided exchange rate.
-    /// Under the standardized standard: 1 base currency (USD) = `fx_rate` units of secondary currency.
+    /// 1 base currency = `fx_rate` units of secondary currency.
     /// If this currency IS the base currency, the rate is ignored (treated as 1).
     pub fn to_base(&self, fx_rate: Decimal) -> Decimal {
         if self.currency.is_base {

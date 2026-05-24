@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ProfitSharingType {
     BasedOnCapitalLocal, // نسبة المشاركة بالأرباح = نسبة المشاركة برأس المال
-    BasedOnCapitalUSD,   // نسبة المشاركة بالأرباح = نسبة المشاركة برأس المال بالدولار
+    BasedOnCapitalOriginal,   // نسبة المشاركة بالأرباح = نسبة المشاركة برأس المال الأصلي
     Manual,              // تحديد نسبة المشاركة بالأرباح بشكل يدوي
 }
 
@@ -19,8 +19,8 @@ pub struct Partner {
     pub name: String,
     pub exchange_rate: Decimal,
     pub amount_local: Decimal,
-    pub amount_usd: Decimal,
-    pub is_amount_in_usd: bool,
+    pub amount_original: Decimal,
+    pub is_amount_in_original: bool,
     pub profit_sharing_ratio: Option<Decimal>,
     pub profit_sharing_type: ProfitSharingType,
     pub linked_account_id: Option<AccountId>,
@@ -35,7 +35,7 @@ impl Partner {
         name: String,
         exchange_rate: Decimal,
         amount: Decimal,
-        is_amount_in_usd: bool,
+        is_amount_in_original: bool,
         profit_sharing_type: ProfitSharingType,
         profit_sharing_ratio: Option<Decimal>,
     ) -> Result<Self, DomainError> {
@@ -51,7 +51,7 @@ impl Partner {
             ));
         }
 
-        let (amount_local, amount_usd) = if is_amount_in_usd {
+        let (amount_local, amount_original) = if is_amount_in_original {
             (amount * exchange_rate, amount)
         } else {
             (amount, amount / exchange_rate)
@@ -65,8 +65,8 @@ impl Partner {
             name,
             exchange_rate,
             amount_local,
-            amount_usd,
-            is_amount_in_usd,
+            amount_original,
+            is_amount_in_original,
             profit_sharing_ratio,
             profit_sharing_type,
             linked_account_id: None,
@@ -82,7 +82,7 @@ impl Partner {
         name: String,
         exchange_rate: Decimal,
         amount: Decimal,
-        is_amount_in_usd: bool,
+        is_amount_in_original: bool,
         profit_sharing_type: ProfitSharingType,
         profit_sharing_ratio: Option<Decimal>,
     ) -> Result<(), DomainError> {
@@ -95,16 +95,16 @@ impl Partner {
         self.code = code;
         self.name = name;
         self.exchange_rate = exchange_rate;
-        self.is_amount_in_usd = is_amount_in_usd;
+        self.is_amount_in_original = is_amount_in_original;
 
-        let (amount_local, amount_usd) = if is_amount_in_usd {
+        let (amount_local, amount_original) = if is_amount_in_original {
             (amount * exchange_rate, amount)
         } else {
             (amount, amount / exchange_rate)
         };
 
         self.amount_local = amount_local;
-        self.amount_usd = amount_usd;
+        self.amount_original = amount_original;
         self.profit_sharing_type = profit_sharing_type;
         self.profit_sharing_ratio = profit_sharing_ratio;
         self.updated_at = Utc::now();

@@ -2,7 +2,7 @@
 -- Adds voucher metadata and direct link to generated journal entry number.
 
 ALTER TABLE payments ADD COLUMN voucher_number TEXT;
-ALTER TABLE payments ADD COLUMN currency_code TEXT NOT NULL DEFAULT 'SYP';
+ALTER TABLE payments ADD COLUMN currency_code TEXT NOT NULL DEFAULT '';
 ALTER TABLE payments ADD COLUMN exchange_rate TEXT NOT NULL DEFAULT '1';
 ALTER TABLE payments ADD COLUMN debit_account_id TEXT;
 ALTER TABLE payments ADD COLUMN credit_account_id TEXT;

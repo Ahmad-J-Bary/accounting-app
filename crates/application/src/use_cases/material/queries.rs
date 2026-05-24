@@ -38,9 +38,9 @@ impl MaterialQueries {
             dto.average_cost = summary.average_cost.to_string();
             dto.average_cost_base = summary.average_cost_base.to_string();
 
-            let (last_p_usd, last_s_usd) = self.invoice_repo.get_last_usd_prices(&mid.to_string()).await?;
-            dto.last_purchase_price_usd = last_p_usd;
-            dto.last_sale_price_usd = last_s_usd;
+            let (last_p_orig, last_s_orig) = self.invoice_repo.get_last_original_prices(&mid.to_string()).await?;
+            dto.last_purchase_price_original = last_p_orig;
+            dto.last_sale_price_original = last_s_orig;
 
             dtos.push(dto);
         }
@@ -65,9 +65,9 @@ impl MaterialQueries {
         dto.average_cost = summary.average_cost.to_string();
         dto.average_cost_base = summary.average_cost_base.to_string();
 
-        let (last_p_usd, last_s_usd) = self.invoice_repo.get_last_usd_prices(&mid.to_string()).await?;
-        dto.last_purchase_price_usd = last_p_usd;
-        dto.last_sale_price_usd = last_s_usd;
+        let (last_p_orig, last_s_orig) = self.invoice_repo.get_last_original_prices(&mid.to_string()).await?;
+        dto.last_purchase_price_original = last_p_orig;
+        dto.last_sale_price_original = last_s_orig;
 
         Ok(dto)
     }

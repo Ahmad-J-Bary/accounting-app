@@ -27,21 +27,14 @@ CREATE TABLE IF NOT EXISTS exchange_rates (
     FOREIGN KEY (to_currency) REFERENCES currencies(code)
 );
 
--- 3. Insert default currencies
--- Base currency is USD as requested
-INSERT OR IGNORE INTO currencies (code, name_ar, name_en, symbol, decimals, is_base) 
-VALUES ('USD', 'دولار أمريكي', 'US Dollar', '$', 2, 1);
-
-INSERT OR IGNORE INTO currencies (code, name_ar, name_en, symbol, decimals, is_active) 
-VALUES ('SYP', 'ليرة سورية', 'Syrian Pound', 'ل.س', 0, 1);
-
+-- 3. No default currencies — user adds them from settings
 -- 4. Update settings table to reference dynamic currency
-ALTER TABLE settings ADD COLUMN base_currency_code TEXT DEFAULT 'USD';
+ALTER TABLE settings ADD COLUMN base_currency_code TEXT DEFAULT '';
 
 -- 5. Add multi-currency fields to unified_invoices
-ALTER TABLE unified_invoices ADD COLUMN currency_code TEXT DEFAULT 'USD';
-ALTER TABLE unified_invoices ADD COLUMN exchange_rate TEXT DEFAULT '1.0';
+ALTER TABLE unified_invoices ADD COLUMN currency_code TEXT NOT NULL DEFAULT '';
+ALTER TABLE unified_invoices ADD COLUMN exchange_rate TEXT NOT NULL DEFAULT '1.0';
 
 -- 6. Add multi-currency fields to journal_entries
-ALTER TABLE journal_entries ADD COLUMN currency_code TEXT DEFAULT 'USD';
-ALTER TABLE journal_entries ADD COLUMN exchange_rate TEXT DEFAULT '1.0';
+ALTER TABLE journal_entries ADD COLUMN currency_code TEXT NOT NULL DEFAULT '';
+ALTER TABLE journal_entries ADD COLUMN exchange_rate TEXT NOT NULL DEFAULT '1.0';

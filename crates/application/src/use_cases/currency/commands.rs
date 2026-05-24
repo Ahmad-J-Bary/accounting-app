@@ -23,14 +23,31 @@ impl CurrencyCommands {
     }
 
     pub async fn create_currency(&self, dto: CreateCurrencyDto) -> Result<CurrencyDto, AppError> {
-        // Validate no duplicate
-        if let Some(_existing) = self.currency_repo.find_by_code(&dto.code).await? {
-            return Err(AppError::Invalid(format!("العملة {} موجودة بالفعل", dto.code)));
-        }
-
         let normalized_code = dto.code.trim().to_uppercase();
         if normalized_code.len() < 3 {
             return Err(AppError::Invalid("رمز العملة يجب أن يكون 3 أحرف على الأقل".to_string()));
+        }
+
+        // If a soft-deleted currency exists, reactivate it
+        if let Some(existing) = self.currency_repo.find_by_code(&normalized_code).await? {
+            if existing.is_active {
+                return Err(AppError::Invalid(format!("العملة {} موجودة بالفعل", dto.code)));
+            }
+            let updated = Currency {
+                code: normalized_code.clone(),
+                name_ar: dto.name_ar.trim().to_string(),
+                name_en: dto.name_en.trim().to_string(),
+                symbol: dto.symbol.trim().to_string(),
+                decimals: dto.decimals,
+                is_base: dto.is_base,
+                is_active: true,
+                notes: dto.notes.clone(),
+            };
+            if updated.is_base {
+                self.currency_repo.set_base_currency(&normalized_code).await?;
+            }
+            self.currency_repo.save(&updated).await?;
+            return self.to_currency_dto(updated);
         }
 
         let mut currency = Currency::new(

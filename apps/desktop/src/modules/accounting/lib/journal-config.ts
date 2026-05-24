@@ -45,14 +45,14 @@ export const JOURNAL_REPORT_TYPES: JournalReportTypeOption[] = [
 ];
 
 // Unified column order for ALL journal types:
-// رقم القيد, نوع الحركة, مدين $, مدين ل.س, دائن $, دائن ل.س, البيان, الدائن/المصدر, المدين/الوجهة, التاريخ
+// رقم القيد, نوع الحركة, مدين (أساسي), مدين (أصلي), دائن (أساسي), دائن (أصلي), البيان, الدائن/المصدر, المدين/الوجهة, التاريخ
 export const JOURNAL_COLUMNS = [
   "entry_number",
   "journal_type",
-  "total_debit_usd",
-  "total_debit_syp",
-  "total_credit_usd",
-  "total_credit_syp",
+  "total_debit_base",
+  "total_debit_original",
+  "total_credit_base",
+  "total_credit_original",
   "description",
   "credit_account",
   "debit_account",

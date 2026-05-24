@@ -22,8 +22,8 @@ export function MaterialDetailPanel({
 }: MaterialDetailPanelProps) {
   const { baseCurrency, currencies } = useCurrencyContext();
   const foreignCurrency = currencies.find(c => c.code !== baseCurrency?.code);
-  const foreignSym = foreignCurrency?.symbol || "$";
-  const baseSym = baseCurrency?.symbol || "ل.س";
+  const foreignSym = foreignCurrency?.symbol || foreignCurrency?.code || "";
+  const baseSym = baseCurrency?.symbol || baseCurrency?.code || "";
 
   if (!material) return null;
 
@@ -94,7 +94,7 @@ export function MaterialDetailPanel({
           <div className="p-4 border border-border rounded-xl bg-slate-50/50 shadow-sm">
             <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">متوسط التكلفة</div>
             <div className="font-bold tabular-nums text-xl text-blue-600">
-              {formatCurrency(parseFloat(material.average_cost))}
+              {formatCurrency(parseFloat(material.average_cost), baseSym || undefined)}
             </div>
           </div>
         </div>
@@ -200,8 +200,8 @@ export function MaterialDetailPanel({
                          <div key={tier.id} className="bg-white p-3 flex justify-between items-center">
                            <span className="text-[11px] font-bold text-slate-500">{tier.label}</span>
                            <div className="flex flex-col items-end">
-                              <span className="text-[11px] font-bold text-emerald-600">{foreignSym}{price?.price_usd || "0"}</span>
-                              <span className="text-[10px] text-blue-600">{parseFloat(price?.price_syp || "0").toLocaleString()} {baseSym}</span>
+                               <span className="text-[11px] font-bold text-emerald-600">{foreignSym}{price?.price || "0"}</span>
+                               <span className="text-[10px] text-blue-600">{formatCurrency(parseFloat(price?.price_base || "0"), baseSym || undefined)}</span>
                            </div>
                          </div>
                        );

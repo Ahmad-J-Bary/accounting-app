@@ -33,18 +33,20 @@ export interface StockMovementDetailDto {
 export interface MaterialPurchasePriceDto {
   id: string;
   unit_id: string;
-  price_usd: string;
-  price_syp: string;
+  price: string;
+  price_base: string;
+  currency: string;
 }
 
 export interface MaterialSalePriceDto {
   id: string;
   unit_id: string;
   tier: string;
-  price_usd: string;
-  price_syp: string;
-  min_price_usd: string;
-  min_price_syp: string;
+  price: string;
+  price_base: string;
+  min_price: string;
+  min_price_base: string;
+  currency: string;
 }
 
 export interface MaterialDto {
@@ -69,10 +71,8 @@ export interface MaterialDto {
   total_damaged: string;
   last_purchase_price: string;
   last_purchase_price_base: string;
-  last_purchase_price_usd: string;
   last_sale_price: string;
   last_sale_price_base: string;
-  last_sale_price_usd: string;
   average_cost: string;
   average_cost_base: string;
   units: MaterialUnitDto[];
@@ -86,17 +86,19 @@ export interface CreateMaterialUnitRequest {
 
 export interface CreateMaterialPriceRequest {
   unit_id: string;
-  price_usd: string;
-  price_syp: string;
+  price: string;
+  price_base: string;
+  currency: string;
 }
 
 export interface CreateMaterialSalePriceRequest {
   unit_id: string;
   tier: string;
-  price_usd: string;
-  price_syp: string;
-  min_price_usd: string;
-  min_price_syp: string;
+  price: string;
+  price_base: string;
+  min_price: string;
+  min_price_base: string;
+  currency: string;
 }
 
 export interface CreateMaterialRequest {

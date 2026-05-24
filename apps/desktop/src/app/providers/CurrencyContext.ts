@@ -1,5 +1,8 @@
 import { createContext, useContext, type ReactNode } from "react";
-import { type Currency, type TodayRateStatus } from '@modules/core/api/currencyService';
+import {
+  type Currency,
+  type TodayRateStatus,
+} from "@modules/core/api/currencyService";
 
 export type CurrencyDisplayMode = "base" | "selected";
 
@@ -11,15 +14,32 @@ export type CurrencyContextValue = {
   currencies: Currency[];
   todayStatus: TodayRateStatus[];
   rateMap: Map<string, number>;
-  setDisplayCurrencyCode: (code: string) => void;
+  setDisplayCurrencyCode: (code: string | null) => void;
+
   setDisplayMode: (mode: CurrencyDisplayMode) => void;
   refresh: () => Promise<void>;
-  setRateForToday: (params: { toCurrency: string; rate: string; rateType?: string; source?: string }) => Promise<void>;
+  setRateForToday: (params: {
+    toCurrency: string;
+    rate: string;
+    rateType?: string;
+    source?: string;
+  }) => Promise<void>;
   getLatestRate: (toCurrency: string) => Promise<string | null>;
   convertFromBase: (amountInBase: number, targetCurrencyCode: string) => number;
   convertBetween: (amount: number, fromCode: string, toCode: string) => number;
-  formatAmount: (amountInBase: number | null | undefined, opts?: { currencyCode?: string; withCode?: boolean; hideSymbol?: boolean; mode?: CurrencyDisplayMode | "both" }) => string;
-  formatMonetaryAmount: (amount: string | number | { base_amount?: string } | null | undefined, mode?: CurrencyDisplayMode | "both") => string;
+  formatAmount: (
+    amountInBase: number | null | undefined,
+    opts?: {
+      currencyCode?: string;
+      withCode?: boolean;
+      hideSymbol?: boolean;
+      mode?: CurrencyDisplayMode | "both";
+    },
+  ) => string;
+  formatMonetaryAmount: (
+    amount: string | number | { base_amount?: string } | null | undefined,
+    mode?: CurrencyDisplayMode | "both",
+  ) => string;
   hasTodayRate: (currencyCode: string) => boolean;
 };
 

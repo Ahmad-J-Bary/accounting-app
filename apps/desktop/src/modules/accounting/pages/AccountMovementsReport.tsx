@@ -7,12 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@shared/ui/label";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import type { AccountDto, AccountLedgerDto } from "@erp/shared-types";
-import { formatCurrency, formatDate, formatDateTime } from "@shared/lib/format";
+import { formatCurrency, formatDateTime } from "@shared/lib/format";
 import { cn } from "@shared/lib/utils";
 import { FileText, Calendar, Filter, ArrowUpRight, ArrowDownLeft, Printer, Download, BookOpen, Search } from "lucide-react";
 import { toast } from "sonner";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 export default function AccountMovementsReport() {
+  const { baseCurrency } = useCurrencyContext();
   const [searchParams] = useSearchParams();
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>(searchParams.get('accountId') || '');
@@ -63,8 +65,8 @@ export default function AccountMovementsReport() {
 
   const totals = useMemo(() => {
     return filteredLines.reduce((acc, curr) => {
-      acc.debit += parseFloat(curr.debit_syp);
-      acc.credit += parseFloat(curr.credit_syp);
+      acc.debit += parseFloat(curr.debit_base);
+      acc.credit += parseFloat(curr.credit_base);
       return acc;
     }, { debit: 0, credit: 0 });
   }, [filteredLines]);
@@ -137,7 +139,7 @@ export default function AccountMovementsReport() {
               </div>
               <div>
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">إجمالي المدين</span>
-                <div className="text-xl font-black text-slate-900 tabular-nums">{formatCurrency(totals.debit)}</div>
+                <div className="text-xl font-black text-slate-900 tabular-nums">{formatCurrency(totals.debit, baseCurrency?.symbol || baseCurrency?.code)}</div>
               </div>
            </div>
            
@@ -147,7 +149,7 @@ export default function AccountMovementsReport() {
               </div>
               <div>
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">إجمالي الدائن</span>
-                <div className="text-xl font-black text-slate-900 tabular-nums">{formatCurrency(totals.credit)}</div>
+                <div className="text-xl font-black text-slate-900 tabular-nums">{formatCurrency(totals.credit, baseCurrency?.symbol || baseCurrency?.code)}</div>
               </div>
            </div>
 
@@ -157,7 +159,7 @@ export default function AccountMovementsReport() {
               </div>
               <div>
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">الرصيد النهائي</span>
-                <div className="text-xl font-black text-slate-900 tabular-nums">{formatCurrency(parseFloat(ledger?.closing_balance_syp || "0"))}</div>
+                <div className="text-xl font-black text-slate-900 tabular-nums">{formatCurrency(parseFloat(ledger?.closing_balance_base || "0"), baseCurrency?.symbol || baseCurrency?.code)}</div>
               </div>
            </div>
 
@@ -213,13 +215,13 @@ export default function AccountMovementsReport() {
                          <span className="font-bold text-slate-700 text-xs">{l.description}</span>
                       </td>
                       <td className="px-6 py-5 text-left tabular-nums font-bold text-blue-700">
-                        {parseFloat(l.debit_syp) > 0 ? formatCurrency(parseFloat(l.debit_syp)) : "-"}
+                        {parseFloat(l.debit_base) > 0 ? formatCurrency(parseFloat(l.debit_base), baseCurrency?.symbol || baseCurrency?.code) : "-"}
                       </td>
                       <td className="px-6 py-5 text-left tabular-nums font-bold text-emerald-700">
-                        {parseFloat(l.credit_syp) > 0 ? formatCurrency(parseFloat(l.credit_syp)) : "-"}
+                        {parseFloat(l.credit_base) > 0 ? formatCurrency(parseFloat(l.credit_base), baseCurrency?.symbol || baseCurrency?.code) : "-"}
                       </td>
                       <td className="px-6 py-5 text-left tabular-nums font-black text-slate-900 bg-slate-50/30">
-                        {formatCurrency(parseFloat(l.balance_syp))}
+                        {formatCurrency(parseFloat(l.balance_base), baseCurrency?.symbol || baseCurrency?.code)}
                       </td>
                     </tr>
                   ))
@@ -245,7 +247,7 @@ export default function AccountMovementsReport() {
                      "text-xl font-black tabular-nums",
                      (totals.debit - totals.credit) >= 0 ? "text-blue-700" : "text-red-700"
                    )}>
-                     {formatCurrency(totals.debit - totals.credit)}
+                     {formatCurrency(totals.debit - totals.credit, baseCurrency?.symbol || baseCurrency?.code)}
                    </span>
                 </div>
              </div>

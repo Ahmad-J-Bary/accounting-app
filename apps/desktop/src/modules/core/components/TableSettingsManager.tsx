@@ -37,7 +37,7 @@ const PREVIEW_DATA: PreviewRow[] = [
 export const TableSettingsManager: React.FC = () => {
   const { settings, updateSetting } = useTableSettings();
   const { baseCurrency } = useCurrencyContext();
-  const currSym = baseCurrency?.symbol || "$";
+  const currSym = baseCurrency?.symbol || baseCurrency?.code || "";
 
   const previewColumns = useMemo<UnifiedColumn<PreviewRow>[]>(() => [
     {

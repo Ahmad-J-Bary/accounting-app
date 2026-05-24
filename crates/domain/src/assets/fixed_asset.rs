@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn test_calculate_depreciation() {
-        let cost = Money::new(Decimal::from(1200), Currency::new("USD", "US Dollar", "US Dollar", "$", 2, false));
+        let cost = Money::new(Decimal::from(1200), Currency::new("XUS", "TestDollar", "TestDollar", "X$", 2, false));
         let mut asset = FixedAsset::new(
             "CODE".to_string(),
             "NAME".to_string(),

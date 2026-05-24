@@ -1,13 +1,13 @@
-use std::sync::Arc;
-use std::collections::HashMap;
-use rust_decimal::Decimal;
-use domain::accounting::account::Account;
-use domain::shared::ids::{AccountId};
-use crate::ports::account_repository::AccountRepository;
-use crate::ports::journal_entry_repository::JournalEntryRepository;
-use crate::dto::account_dto::AccountDto;
 use super::error::AccountUseCaseError;
 use super::types::{AccountLedger, LedgerLine};
+use crate::dto::account_dto::AccountDto;
+use crate::ports::account_repository::AccountRepository;
+use crate::ports::journal_entry_repository::JournalEntryRepository;
+use domain::accounting::account::Account;
+use domain::shared::ids::AccountId;
+use rust_decimal::Decimal;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 pub struct AccountQueries {
     account_repo: Arc<dyn AccountRepository>,
@@ -26,7 +26,8 @@ impl AccountQueries {
     }
 
     pub async fn get_chart_of_accounts(&self) -> Result<Vec<AccountDto>, AccountUseCaseError> {
-        let accounts = self.account_repo
+        let accounts = self
+            .account_repo
             .list_all()
             .await
             .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
@@ -62,8 +63,11 @@ impl AccountQueries {
                     return sum;
                 }
             }
-            
-            account_map.get(node_id).map(|a| a.balance).unwrap_or(Decimal::ZERO)
+
+            account_map
+                .get(node_id)
+                .map(|a| a.balance)
+                .unwrap_or(Decimal::ZERO)
         }
 
         for root_id in &roots {
@@ -77,74 +81,111 @@ impl AccountQueries {
     }
 
     pub async fn list_all(&self) -> Result<Vec<AccountDto>, AccountUseCaseError> {
-        let accounts = self.account_repo
+        let accounts = self
+            .account_repo
             .list_all()
             .await
             .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
         Ok(accounts.into_iter().map(AccountDto::from).collect())
     }
 
-    pub async fn find_by_id(&self, id: &AccountId) -> Result<Option<AccountDto>, AccountUseCaseError> {
-        let account = self.account_repo
+    pub async fn find_by_id(
+        &self,
+        id: &AccountId,
+    ) -> Result<Option<AccountDto>, AccountUseCaseError> {
+        let account = self
+            .account_repo
             .find_by_id(id)
             .await
             .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
         Ok(account.map(AccountDto::from))
     }
 
-    pub async fn get_ledger(&self, account_id: &AccountId) -> Result<AccountLedger, AccountUseCaseError> {
-        let account = self.account_repo
+    pub async fn get_ledger(
+        &self,
+        account_id: &AccountId,
+    ) -> Result<AccountLedger, AccountUseCaseError> {
+        let account = self
+            .account_repo
             .find_by_id(account_id)
             .await
             .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?
             .ok_or(AccountUseCaseError::AccountNotFound)?;
 
-        let all_accounts = self.account_repo.list_all().await
+        let all_accounts = self
+            .account_repo
+            .list_all()
+            .await
             .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
         let mut account_name_map: HashMap<AccountId, String> = HashMap::new();
         for acc in all_accounts {
             account_name_map.insert(acc.id, acc.name_ar);
         }
 
-        let journal_entries = self.journal_repo
+        let journal_entries = self
+            .journal_repo
             .list_by_account(account_id)
             .await
             .map_err(|e| AccountUseCaseError::JournalRepositoryError(e.to_string()))?;
 
         let mut lines = Vec::new();
-        let mut running_balance_syp = account.opening_balance;
-        let mut running_balance_usd = Decimal::ZERO;
+        let mut running_balance_base = account.opening_balance;
+        let mut running_balance_original = Decimal::ZERO;
 
         let mut sorted_entries = journal_entries;
         sorted_entries.sort_by_key(|a| a.created_at);
 
         for entry in sorted_entries {
-            let account_lines: Vec<_> = entry.lines.iter().filter(|l| l.account_id == *account_id).collect();
-            if account_lines.is_empty() { continue; }
+            let account_lines: Vec<_> = entry
+                .lines
+                .iter()
+                .filter(|l| l.account_id == *account_id)
+                .collect();
+            if account_lines.is_empty() {
+                continue;
+            }
 
-            let opposite_lines: Vec<_> = entry.lines.iter().filter(|l| l.account_id != *account_id).collect();
+            let opposite_lines: Vec<_> = entry
+                .lines
+                .iter()
+                .filter(|l| l.account_id != *account_id)
+                .collect();
             let opposite_account_name = if opposite_lines.len() == 1 {
-                account_name_map.get(&opposite_lines[0].account_id).cloned().unwrap_or_else(|| "-".to_string())
+                account_name_map
+                    .get(&opposite_lines[0].account_id)
+                    .cloned()
+                    .unwrap_or_else(|| "-".to_string())
             } else if opposite_lines.is_empty() {
                 "-".to_string()
             } else {
                 if let Some(partner_line) = opposite_lines.iter().find(|l| l.partner_id.is_some()) {
-                    account_name_map.get(&partner_line.account_id).cloned().unwrap_or_else(|| "-".to_string())
+                    account_name_map
+                        .get(&partner_line.account_id)
+                        .cloned()
+                        .unwrap_or_else(|| "-".to_string())
                 } else {
                     "حسابات متعددة".to_string()
                 }
             };
 
             for line in account_lines {
-                let debit_syp = line.base_debit();
-                let credit_syp = line.base_credit();
-                
-                let debit_usd = if line.debit.currency().code.to_uppercase() == "USD" { line.debit.amount() } else { Decimal::ZERO };
-                let credit_usd = if line.credit.currency().code.to_uppercase() == "USD" { line.credit.amount() } else { Decimal::ZERO };
+                let debit_base = line.base_debit();
+                let credit_base = line.base_credit();
 
-                running_balance_syp += debit_syp - credit_syp;
-                running_balance_usd += debit_usd - credit_usd;
-                
+                let debit_original = if line.debit.fx_rate != Decimal::ONE {
+                    line.debit.amount()
+                } else {
+                    Decimal::ZERO
+                };
+                let credit_original = if line.credit.fx_rate != Decimal::ONE {
+                    line.credit.amount()
+                } else {
+                    Decimal::ZERO
+                };
+
+                running_balance_base += debit_base - credit_base;
+                running_balance_original += debit_original - credit_original;
+
                 let (currency, fx_rate) = if line.debit.amount() > Decimal::ZERO {
                     (line.debit.currency().code.clone(), line.debit.fx_rate)
                 } else {
@@ -161,38 +202,39 @@ impl AccountQueries {
                     opposite_account_name: opposite_account_name.clone(),
                     currency,
                     fx_rate,
-                    debit_syp,
-                    credit_syp,
-                    balance_syp: running_balance_syp,
-                    debit_usd,
-                    credit_usd,
-                    balance_usd: running_balance_usd,
+                    debit_base,
+                    credit_base,
+                    balance_base: running_balance_base,
+                    debit_original,
+                    credit_original,
+                    balance_original: running_balance_original,
                 });
             }
         }
 
-        let total_debit_syp = lines.iter().map(|l| l.debit_syp).sum();
-        let total_credit_syp = lines.iter().map(|l| l.credit_syp).sum();
-        let total_debit_usd = lines.iter().map(|l| l.debit_usd).sum();
-        let total_credit_usd = lines.iter().map(|l| l.credit_usd).sum();
+        let total_debit_base = lines.iter().map(|l| l.debit_base).sum();
+        let total_credit_base = lines.iter().map(|l| l.credit_base).sum();
+        let total_debit_original = lines.iter().map(|l| l.debit_original).sum();
+        let total_credit_original = lines.iter().map(|l| l.credit_original).sum();
 
         Ok(AccountLedger {
             account_id: account.id,
             account_name: account.name_ar,
-            opening_balance_syp: account.opening_balance,
-            opening_balance_usd: Decimal::ZERO, // Note: Global accounts only store SYP opening balance
+            opening_balance_base: account.opening_balance,
+            opening_balance_original: Decimal::ZERO,
             lines,
-            total_debit_syp,
-            total_credit_syp,
-            closing_balance_syp: running_balance_syp,
-            total_debit_usd,
-            total_credit_usd,
-            closing_balance_usd: running_balance_usd,
+            total_debit_base,
+            total_credit_base,
+            closing_balance_base: running_balance_base,
+            total_debit_original,
+            total_credit_original,
+            closing_balance_original: running_balance_original,
         })
     }
 
     pub async fn get_expense_items(&self) -> Result<Vec<AccountDto>, AccountUseCaseError> {
-        let accounts = self.account_repo
+        let accounts = self
+            .account_repo
             .list_all()
             .await
             .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
@@ -200,9 +242,15 @@ impl AccountQueries {
         // Filter for "Other Expenses" children
         // EXPENSES_PARENT_ID = "00000000-0000-0000-0000-000000000043"
         let parent_id_str = crate::constants::EXPENSES_PARENT_ID;
-        
-        let mut expense_items: Vec<AccountDto> = accounts.into_iter()
-            .filter(|a| a.parent_id.as_ref().map(|id| id.0.to_string() == parent_id_str).unwrap_or(false))
+
+        let mut expense_items: Vec<AccountDto> = accounts
+            .into_iter()
+            .filter(|a| {
+                a.parent_id
+                    .as_ref()
+                    .map(|id| id.0.to_string() == parent_id_str)
+                    .unwrap_or(false)
+            })
             .map(AccountDto::from)
             .collect();
 

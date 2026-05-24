@@ -16,6 +16,21 @@ export function useColumnPreferences(tableId: string, defaultVisibleColumns: str
   const [visibleColumns, setVisibleColumns] = useState<string[]>(getStoredPreferences);
 
   useEffect(() => {
+    setVisibleColumns(prev => {
+      const defaultSet = new Set(defaultVisibleColumns);
+
+      const filtered = prev.filter(id => defaultSet.has(id));
+
+      const currentSet = new Set(filtered);
+      const added = defaultVisibleColumns.filter(id => !currentSet.has(id));
+
+      return added.length > 0 || filtered.length !== prev.length
+        ? [...filtered, ...added]
+        : prev;
+    });
+  }, [defaultVisibleColumns]);
+
+  useEffect(() => {
     try {
       localStorage.setItem(`table-cols-${tableId}`, JSON.stringify(visibleColumns));
     } catch (e) {
