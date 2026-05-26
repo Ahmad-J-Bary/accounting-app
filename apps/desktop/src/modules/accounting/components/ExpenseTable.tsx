@@ -196,16 +196,17 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
     const colIds = enrichedColumns.map(c => c.id);
     return colIds.map(id => {
       if (id === 'name') {
-        return { id: 'name_summary', label: '', value: 'المجموع', className: 'text-slate-600 font-bold' };
+        return { id: 'name_summary', columnId: 'name', label: '', value: 'المجموع', className: 'text-slate-600 font-bold' };
       }
       if (id === '#' || id === 'actions') {
-        return { id: `${id}_spacer`, label: '', value: '' };
+        return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
       }
       if (id === 'status') {
         const statusLabel = totalBal > 0 ? 'الرصيد: مدين' : totalBal < 0 ? 'الرصيد: دائن' : '—';
         const statusColor = totalBal > 0 ? 'text-red-600' : totalBal < 0 ? 'text-emerald-600' : 'text-slate-400';
         return {
           id: 'status_summary',
+          columnId: 'status',
           label: '',
           value: statusLabel,
           className: `${statusColor} font-bold`
@@ -216,13 +217,14 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
         const currCode = match[1];
         return {
           id: `${id}_summary`,
+          columnId: id,
           label: 'إجمالي',
           value: absTotal > 0 ? formatAmount(absTotal, { currencyCode: currCode }) : "—",
           align: 'left' as const,
           className: `text-red-600 font-bold`
         };
       }
-      return { id: `${id}_spacer`, label: '', value: '' };
+      return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
     });
   }, [sortedExpenses, formatAmount, enrichedColumns]);
 

@@ -6,6 +6,7 @@ import { type CreatePaymentRequest, type CustomerDto } from "@erp/shared-types";
 import { FormPanel } from "@widgets/form-shell/FormPanel";
 import { Receipt } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { getExchangeRate } from "@shared/lib/currency-strategy";
 
 interface CustomerReceiptFormProps {
   customer: CustomerDto;
@@ -17,19 +18,19 @@ interface CustomerReceiptFormProps {
 export function CustomerReceiptForm({ customer, onSave, onClose, saving }: CustomerReceiptFormProps) {
   const { currencies, baseCurrency, rateMap } = useCurrencyContext();
 
+  const defaultCurrency = customer.currency || baseCurrency?.code || "";
   const [form, setForm] = useState<Partial<CreatePaymentRequest>>({
     payment_type: "Receipt",
     amount: 0,
     payment_date: new Date().toISOString(),
-    currency_code: baseCurrency?.code || "",
-    exchange_rate: 1,
+    currency_code: defaultCurrency,
+    exchange_rate: getExchangeRate(defaultCurrency, rateMap, baseCurrency?.code),
     customer_id: customer.id,
     notes: `سند قبض من العميل: ${customer.name}`,
   });
 
   const handleCurrencyChange = (val: string) => {
-    const isBase = val === baseCurrency?.code;
-    const rate = isBase ? 1 : (rateMap.get(val) || 1);
+    const rate = getExchangeRate(val, rateMap, baseCurrency?.code);
     setForm(p => ({
       ...p,
       currency_code: val,

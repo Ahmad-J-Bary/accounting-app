@@ -34,6 +34,7 @@ export interface SaveAccountCommand {
   debit?: string;
   credit?: string;
   currency?: string;
+  exchange_rate?: string;
   linked_customer_id?: string | null;
   linked_supplier_id?: string | null;
 }

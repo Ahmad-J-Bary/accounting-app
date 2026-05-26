@@ -71,7 +71,7 @@ export function PartnerTable({
   selectedId, 
   onRowClick 
 }: PartnerTableProps) {
-  const { currencies, formatAmount } = useCurrencyContext();
+  const { currencies, formatAmount, toBase } = useCurrencyContext();
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
@@ -126,7 +126,10 @@ export function PartnerTable({
         header: <SortableHeader field={`amount_${curr.code}`} label={`رأس المال (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
         label: `رأس المال (${symbol})`,
         accessor: (p: PartnerWithRatios) => {
-          return formatAmount(p.displayAmountLocal, { currencyCode: curr.code });
+          const amount = p.displayAmountOriginal || 0;
+          if (amount === 0) return "—";
+          const baseAmount = toBase(amount, p.currency);
+          return formatAmount(baseAmount, { currencyCode: curr.code });
         },
         align: "left",
         className: "tabular-nums font-black text-slate-900"
@@ -179,7 +182,7 @@ export function PartnerTable({
     );
 
     return cols;
-  }, [currencies, formatAmount, sortField, sortDirection, handleSort, onView, onEdit, onDelete, onJournal, onDocument]);
+  }, [currencies, formatAmount, toBase, sortField, sortDirection, handleSort, onView, onEdit, onDelete, onJournal, onDocument]);
 
   const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
     tableId: "partners-unified",
@@ -190,35 +193,40 @@ export function PartnerTable({
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     const totalCapitalRatio = sortedPartners.reduce((s, p) => s + p.calculatedCapitalRatio, 0);
     const totalRatio = sortedPartners.reduce((s, p) => s + p.calculatedRatio, 0);
+
+    const baseTotal = sortedPartners.reduce((sum, p) => {
+      const amount = p.displayAmountOriginal || 0;
+      if (amount === 0) return sum;
+      return sum + toBase(amount, p.currency);
+    }, 0);
+
     const colIds = enrichedColumns.map(c => c.id);
     return colIds.map(id => {
       switch (id) {
         case 'name':
-          return { id: 'count', label: '', value: `${sortedPartners.length} شريك`, className: 'text-slate-500 font-medium' };
+          return { id: 'count', columnId: 'name', label: '', value: `${sortedPartners.length} شريك`, className: 'text-slate-500 font-medium' };
         case 'capital_ratio':
-          return { id: 'total_capital_ratio', label: 'المجموع', value: `${totalCapitalRatio.toFixed(2)}%`, align: 'center' as const, className: 'text-blue-700 font-black' };
+          return { id: 'total_capital_ratio', columnId: 'capital_ratio', label: 'المجموع', value: `${totalCapitalRatio.toFixed(2)}%`, align: 'center' as const, className: 'text-blue-700 font-black' };
         case 'ratio':
-          return { id: 'total_ratio', label: 'المجموع', value: `${totalRatio.toFixed(2)}%`, align: 'center' as const, className: 'text-emerald-700 font-black' };
+          return { id: 'total_ratio', columnId: 'ratio', label: 'المجموع', value: `${totalRatio.toFixed(2)}%`, align: 'center' as const, className: 'text-emerald-700 font-black' };
         default: {
           const match = id.match(/^amount_(.+)$/);
           if (match) {
             const currCode = match[1];
-            const total = sortedPartners.reduce((s, p) => {
-              return s + p.displayAmountLocal;
-            }, 0);
             return {
               id: `total_${id}`,
+              columnId: id,
               label: 'الإجمالي',
-              value: formatAmount(total, { currencyCode: currCode }),
+              value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
               align: 'left' as const,
               className: 'text-slate-900 font-black'
             };
           }
-          return { id: `${id}_spacer`, label: '', value: '' };
+          return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
         }
       }
     });
-  }, [sortedPartners, formatAmount, enrichedColumns]);
+  }, [sortedPartners, formatAmount, toBase, enrichedColumns]);
 
   return (
     <TableShell

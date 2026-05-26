@@ -31,6 +31,7 @@ pub struct CreateCustomerRequest {
     pub credit: Option<String>,
     pub opening_balance: Option<String>,
     pub currency: Option<String>,
+    pub exchange_rate: Option<String>,
     pub notes: Option<String>,
 }
 

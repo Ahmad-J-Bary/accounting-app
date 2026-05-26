@@ -14,6 +14,7 @@ import { TreeSidebar } from "@widgets/tree-sidebar/TreeSidebar";
 import { BookOpen } from "lucide-react";
 import { useTabs } from "@app/providers/TabContext";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { getExchangeRate } from "@shared/lib/currency-strategy";
 
 interface AccountDetailsSidebarProps {
   selected: AccountDto | null;
@@ -47,7 +48,7 @@ export function AccountDetailsSidebar({
   const [openingBalance, setOpeningBalance] = useState("0");
   const [debit, setDebit] = useState("0");
   const [credit, setCredit] = useState("0");
-  const { currencies: activeCurrencies } = useCurrencyContext();
+  const { currencies: activeCurrencies, rateMap, baseCurrency } = useCurrencyContext();
 
   const [currency, setCurrency] = useState("");
   const [saving, setSaving] = useState(false);
@@ -283,6 +284,7 @@ export function AccountDetailsSidebar({
           debit: debit || "0",
           credit: credit || "0",
           currency: currency,
+          exchange_rate: getExchangeRate(currency, rateMap, baseCurrency?.code).toString(),
         };
         await accountingService.updateAccount(selected.id, payload);
       } else {
@@ -310,6 +312,7 @@ export function AccountDetailsSidebar({
           debit: debit || "0",
           credit: credit || "0",
           currency: currency,
+          exchange_rate: getExchangeRate(currency, rateMap, baseCurrency?.code).toString(),
         };
         await accountingService.createAccount(payload);
       }

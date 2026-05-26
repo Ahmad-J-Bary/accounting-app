@@ -22,6 +22,8 @@ export interface JournalLineDto {
   fx_rate: string;
   debit: string;
   credit: string;
+  debit_base?: string;
+  credit_base?: string;
   description: string;
 }
 

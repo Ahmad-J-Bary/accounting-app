@@ -26,6 +26,7 @@ export interface PartnerRequest {
   id?: string;
   code: string;
   name: string;
+  currency: string;
   exchangeRate: string;
   amount: string;
   isAmountInOriginal: boolean;

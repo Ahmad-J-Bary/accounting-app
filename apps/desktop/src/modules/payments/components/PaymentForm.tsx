@@ -7,6 +7,7 @@ import { SYSTEM_ACCOUNT_IDS, type CreatePaymentRequest, type CustomerDto, type S
 import { FormPanel } from "@widgets/form-shell/FormPanel";
 import { Receipt } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { getExchangeRate } from "@shared/lib/currency-strategy";
 import { PAYMENT_TYPE_LABELS } from "../lib/constants";
 
 export type PaymentFormPayload = CreatePaymentRequest & { id?: string };
@@ -34,8 +35,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
   });
 
   const handleCurrencyChange = (val: string) => {
-    const isBase = val === baseCurrency?.code;
-    const rate = isBase ? 1 : (rateMap.get(val) || 1);
+    const rate = getExchangeRate(val, rateMap, baseCurrency?.code);
     setForm(p => ({
       ...p,
       currency_code: val,

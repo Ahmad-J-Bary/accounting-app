@@ -26,7 +26,7 @@ import {
 } from "recharts";
 
 export default function CurrencySettings() {
-  const { refresh: refreshContext } = useCurrencyContext();
+  const { refresh: refreshContext, updateRate } = useCurrencyContext();
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [rateStatus, setRateStatus] = useState<TodayRateStatus[]>([]);
   const [worldCurrencies, setWorldCurrencies] = useState<WorldCurrency[]>([]);
@@ -48,7 +48,7 @@ export default function CurrencySettings() {
   });
 
   const loadData = useCallback(async () => {
-    setLoading(true);
+    setRefreshing(true);
     try {
       const [currList, statusList, worldList] = await Promise.all([
         currencyService.listActiveCurrencies(),
@@ -95,6 +95,8 @@ export default function CurrencySettings() {
 
   const handleAddCurrency = async (wc: WorldCurrency) => {
     const isFirst = currencies.length === 0;
+    setIsAddDialogOpen(false);
+    setWorldSearch("");
     try {
       await currencyService.createCurrency({
         code: wc.code,
@@ -106,12 +108,11 @@ export default function CurrencySettings() {
         is_active: true,
       });
       toast.success("تمت الإضافة", { description: `تمت إضافة ${wc.name_ar} (${wc.code})` });
-      setIsAddDialogOpen(false);
-      setWorldSearch("");
       await loadData();
       await refreshContext();
     } catch (e) {
       toast.error("خطأ", { description: String(e) });
+      setIsAddDialogOpen(true);
     }
   };
 
@@ -128,6 +129,10 @@ export default function CurrencySettings() {
 
   const handleEditCurrency = async () => {
     if (!editingCurrency) return;
+    const updated: Currency = { ...editingCurrency, ...editForm, is_active: true };
+    setCurrencies(prev => prev.map(c => c.code === editingCurrency.code ? updated : c));
+    setIsEditDialogOpen(false);
+    setEditingCurrency(null);
     try {
       await currencyService.updateCurrency({
         code: editingCurrency.code,
@@ -138,12 +143,12 @@ export default function CurrencySettings() {
         is_active: true,
       });
       toast.success("تم التعديل", { description: `تم تعديل ${editingCurrency.name_ar}` });
-      setIsEditDialogOpen(false);
-      setEditingCurrency(null);
       await loadData();
       await refreshContext();
     } catch (e) {
       toast.error("خطأ", { description: String(e) });
+      await loadData();
+      await refreshContext();
     }
   };
 
@@ -166,6 +171,7 @@ export default function CurrencySettings() {
   };
 
   const handleSetBase = async (code: string) => {
+    setCurrencies(prev => prev.map(c => ({ ...c, is_base: c.code === code })));
     try {
       await currencyService.setBaseCurrency(code);
       toast.success("تم التحديث", { description: `تم تعيين ${code} كعملة أساسية` });
@@ -173,6 +179,8 @@ export default function CurrencySettings() {
       await refreshContext();
     } catch (e) {
       toast.error("خطأ", { description: String(e) });
+      await loadData();
+      await refreshContext();
     }
   };
 
@@ -180,6 +188,14 @@ export default function CurrencySettings() {
     const base = currencies.find(c => c.is_base);
     if (!base) return;
     const rateToSet = newRates[from] || "1";
+
+    updateRate(from, rateToSet);
+    setRateStatus(prev => prev.map(s =>
+      s.currency_code === from
+        ? { ...s, rate: rateToSet, has_rate_today: true, last_rate_date: new Date().toISOString() }
+        : s
+    ));
+
     try {
       await currencyService.setExchangeRate({
         from_currency: base.code,
@@ -189,8 +205,11 @@ export default function CurrencySettings() {
       });
       toast.success("تم التحديث", { description: `تم تحديث سعر صرف ${from}` });
       await loadData();
+      await refreshContext();
     } catch (e) {
       toast.error("خطأ", { description: String(e) });
+      await loadData();
+      await refreshContext();
     }
   };
 

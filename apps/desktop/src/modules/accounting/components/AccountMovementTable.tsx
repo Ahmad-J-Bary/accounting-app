@@ -3,7 +3,7 @@ import { ArrowUpDown } from "lucide-react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
-import { useCurrencyContext, formatWithLocale } from "@app/providers/CurrencyContext";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns } from "@shared/hooks";
 import type { AccountLedgerLineDto } from "@erp/shared-types";
 import { formatDateTime } from '@shared/lib/format';
@@ -53,7 +53,7 @@ export function AccountMovementTable({
   onSearchChange, 
   accountName 
 }: AccountMovementTableProps) {
-  const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
+  const { currencies, baseCurrency, formatAmount, toBase } = useCurrencyContext();
   const [sortField, setSortField] = useState<SortField>("entry_number");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
@@ -119,16 +119,6 @@ export function AccountMovementTable({
     });
   }, [tableData, sortField, sortDirection]);
 
-  const fieldForCurrency = useCallback((currCode: string): "debit_base" | "debit_original" => {
-    if (baseCurrency && currCode === baseCurrency.code) return "debit_base";
-    return "debit_original";
-  }, [baseCurrency]);
-
-  const creditFieldForCurrency = useCallback((currCode: string): "credit_base" | "credit_original" => {
-    if (baseCurrency && currCode === baseCurrency.code) return "credit_base";
-    return "credit_original";
-  }, [baseCurrency]);
-
   const allColumns = useMemo<UnifiedColumn<typeof tableData[0]>[]>(() => {
     const cols: UnifiedColumn<typeof tableData[0]>[] = [
       { 
@@ -156,14 +146,13 @@ export function AccountMovementTable({
 
     sortedCurrencies.forEach(curr => {
       const symbol = curr.symbol || curr.code;
-      const field = fieldForCurrency(curr.code);
       cols.push({
         id: `debit_${curr.code}`,
         header: <SortableHeader field="entry_number" label={`عليه / مدين (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
         label: `عليه / مدين (${symbol})`,
         accessor: (l) => {
-          const val = parseFloat(l[field]);
-          return val > 0 ? formatWithLocale(val, curr.code === baseCurrency?.code ? 2 : 0) + ` ${symbol}` : "—";
+          const baseVal = parseFloat(l.debit_base);
+          return baseVal > 0 ? formatAmount(baseVal, { currencyCode: curr.code }) : "—";
         },
         align: "left",
         className: "tabular-nums font-black text-blue-700 text-[11px]"
@@ -172,14 +161,13 @@ export function AccountMovementTable({
 
     sortedCurrencies.forEach(curr => {
       const symbol = curr.symbol || curr.code;
-      const field = creditFieldForCurrency(curr.code);
       cols.push({
         id: `credit_${curr.code}`,
         header: <SortableHeader field="entry_number" label={`له / دائن (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
         label: `له / دائن (${symbol})`,
         accessor: (l) => {
-          const val = parseFloat(l[field]);
-          return val > 0 ? formatWithLocale(val, curr.code === baseCurrency?.code ? 2 : 0) + ` ${symbol}` : "—";
+          const baseVal = parseFloat(l.credit_base);
+          return baseVal > 0 ? formatAmount(baseVal, { currencyCode: curr.code }) : "—";
         },
         align: "left",
         className: "tabular-nums font-black text-emerald-700 text-[11px]"
@@ -217,7 +205,7 @@ export function AccountMovementTable({
       },
     );
     return cols;
-  }, [sortField, sortDirection, handleSort, sortedCurrencies, baseCurrency, fieldForCurrency, creditFieldForCurrency]);
+  }, [sortField, sortDirection, handleSort, sortedCurrencies, baseCurrency, formatAmount]);
 
   const defaultVisible = useMemo(() => {
     const def = ["entry_number", "date", "journal_type", "description"];
@@ -237,42 +225,25 @@ export function AccountMovementTable({
   });
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
-    const totals: Record<string, { debit: number; credit: number }> = {};
-    sortedCurrencies.forEach(curr => {
-      const fieldD = fieldForCurrency(curr.code);
-      const fieldC = creditFieldForCurrency(curr.code);
-      totals[curr.code] = {
-        debit: tableData.reduce((s, l) => s + parseFloat(l[fieldD] || "0"), 0),
-        credit: tableData.reduce((s, l) => s + parseFloat(l[fieldC] || "0"), 0),
-      };
-    });
+    const baseDebitTotal = tableData.reduce((s, l) => s + parseFloat(l.debit_base || "0"), 0);
+    const baseCreditTotal = tableData.reduce((s, l) => s + parseFloat(l.credit_base || "0"), 0);
 
     const colIds = enrichedColumns.map(c => c.id);
     return colIds.map(id => {
       if (id === 'entry_number') {
-        return { id: 'count', label: '', value: `${tableData.length} حركة`, className: 'text-slate-500 font-medium' };
+        return { id: 'count', columnId: 'entry_number', label: '', value: `${tableData.length} حركة`, className: 'text-slate-500 font-medium' };
       }
       if (id === 'journal_type') {
-        return { id: 'journal_type_summary', label: '', value: 'المجموع', className: 'text-slate-600 font-bold', align: 'center' as const };
+        return { id: 'journal_type_summary', columnId: 'journal_type', label: '', value: 'المجموع', className: 'text-slate-600 font-bold', align: 'center' as const };
       }
       if (id === 'description') {
         const balanceParts: string[] = [];
         sortedCurrencies.forEach(curr => {
-          const t = totals[curr.code];
-          if (t) {
-            const bal = t.debit - t.credit;
-            if (curr.code === baseCurrency?.code) {
-              balanceParts.push(formatAmount(bal, { currencyCode: curr.code }));
-            } else {
-              const symbol = curr.symbol || curr.code;
-              balanceParts.push(`${formatWithLocale(bal, 0)} ${symbol}`);
-            }
-          } else {
-            balanceParts.push(formatAmount(0, { currencyCode: curr.code }));
-          }
+          const bal = baseDebitTotal - baseCreditTotal;
+          balanceParts.push(formatAmount(bal, { currencyCode: curr.code }));
         });
         return {
-          id: 'balance_summary', label: 'الرصيد',
+          id: 'balance_summary', columnId: 'description', label: 'الرصيد',
           value: balanceParts.join(' / '),
           className: 'text-slate-900 font-black'
         };
@@ -280,10 +251,9 @@ export function AccountMovementTable({
       const debitMatch = id.match(/^debit_(.+)$/);
       if (debitMatch) {
         const currCode = debitMatch[1];
-        const t = totals[currCode];
         return {
-          id: `${id}_total`, label: 'إجمالي',
-          value: t && t.debit > 0 ? formatAmount(t.debit, { currencyCode: currCode }) : "—",
+          id: `${id}_total`, columnId: id, label: 'إجمالي',
+          value: baseDebitTotal > 0 ? formatAmount(baseDebitTotal, { currencyCode: currCode }) : "—",
           align: 'left' as const,
           className: 'text-blue-700 font-black'
         };
@@ -291,17 +261,16 @@ export function AccountMovementTable({
       const creditMatch = id.match(/^credit_(.+)$/);
       if (creditMatch) {
         const currCode = creditMatch[1];
-        const t = totals[currCode];
         return {
-          id: `${id}_total`, label: 'إجمالي',
-          value: t && t.credit > 0 ? formatAmount(t.credit, { currencyCode: currCode }) : "—",
+          id: `${id}_total`, columnId: id, label: 'إجمالي',
+          value: baseCreditTotal > 0 ? formatAmount(baseCreditTotal, { currencyCode: currCode }) : "—",
           align: 'left' as const,
           className: 'text-emerald-700 font-black'
         };
       }
-      return { id: `${id}_spacer`, label: '', value: '' };
+      return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
     });
-  }, [tableData, formatAmount, enrichedColumns, sortedCurrencies, baseCurrency, fieldForCurrency, creditFieldForCurrency]);
+  }, [tableData, formatAmount, enrichedColumns, sortedCurrencies]);
 
   return (
     <TableShell

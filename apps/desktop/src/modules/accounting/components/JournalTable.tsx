@@ -4,7 +4,7 @@ import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTa
 import { TableShell } from '@widgets/table-shell/TableShell';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { formatDateTime } from '@shared/lib/format';
-import { useCurrencyContext, formatWithLocale } from "@app/providers/CurrencyContext";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns } from "@shared/hooks";
 import type { JournalEntryDto } from "@erp/shared-types";
 import type { JournalFilters } from "../api/journalEntryService";
@@ -97,16 +97,6 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
     return sorted;
   }, [tableData, sortField, sortDirection]);
 
-  const fieldForCurrency = useCallback((currCode: string): "debit_base" | "debit_original" => {
-    if (baseCurrency && currCode === baseCurrency.code) return "debit_base";
-    return "debit_original";
-  }, [baseCurrency]);
-
-  const creditFieldForCurrency = useCallback((currCode: string): "credit_base" | "credit_original" => {
-    if (baseCurrency && currCode === baseCurrency.code) return "credit_base";
-    return "credit_original";
-  }, [baseCurrency]);
-
   const allColumns = useMemo<UnifiedColumn<typeof tableData[0]>[]>(() => {
     const cols: UnifiedColumn<typeof tableData[0]>[] = [
       { 
@@ -127,33 +117,31 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
 
     sortedCurrencies.forEach(curr => {
       const symbol = curr.symbol || curr.code;
-      const dField = fieldForCurrency(curr.code);
       cols.push({
         id: `debit_${curr.code}`,
         header: <SortableHeader field="entry_number" label={`عليه / مدين (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
         label: `عليه / مدين (${symbol})`,
         accessor: (e) => {
-          const val = e.active_side === 'debit' ? e[dField] : 0;
-          return val > 0 ? formatWithLocale(val, curr.code === baseCurrency?.code ? 2 : 0) + ` ${symbol}` : "";
+          if (e.active_side !== 'debit') return "";
+          return e.debit_base > 0 ? formatAmount(e.debit_base, { currencyCode: curr.code }) : "";
         },
         align: "left",
-        className: `tabular-nums font-black ${curr.code === baseCurrency?.code ? 'text-blue-700' : 'text-blue-600'}`
+        className: "tabular-nums font-black text-blue-700"
       });
     });
 
     sortedCurrencies.forEach(curr => {
       const symbol = curr.symbol || curr.code;
-      const cField = creditFieldForCurrency(curr.code);
       cols.push({
         id: `credit_${curr.code}`,
         header: <SortableHeader field="entry_number" label={`له / دائن (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
         label: `له / دائن (${symbol})`,
         accessor: (e) => {
-          const val = e.active_side === 'credit' ? e[cField] : 0;
-          return val > 0 ? formatWithLocale(val, curr.code === baseCurrency?.code ? 2 : 0) + ` ${symbol}` : "";
+          if (e.active_side !== 'credit') return "";
+          return e.credit_base > 0 ? formatAmount(e.credit_base, { currencyCode: curr.code }) : "";
         },
         align: "left",
-        className: `tabular-nums font-black ${curr.code === baseCurrency?.code ? 'text-emerald-700' : 'text-emerald-600'}`
+        className: "tabular-nums font-black text-emerald-700"
       });
     });
 
@@ -188,7 +176,7 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
       },
     );
     return cols;
-  }, [sortField, sortDirection, handleSort, sortedCurrencies, baseCurrency, fieldForCurrency, creditFieldForCurrency]);
+  }, [sortField, sortDirection, handleSort, sortedCurrencies, formatAmount]);
 
   const defaultVisible = useMemo(() => {
     const def = ["entry_number", "journal_type"];
@@ -209,36 +197,25 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
   });
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
-    const rawTotals = aggregateEntryTotals(entries);
-    const totals: Record<string, { debit: number; credit: number }> = {};
-    sortedCurrencies.forEach(curr => {
-      totals[curr.code] = {
-        debit: curr.code === baseCurrency?.code ? rawTotals.debitBase : rawTotals.debitOriginal,
-        credit: curr.code === baseCurrency?.code ? rawTotals.creditBase : rawTotals.creditOriginal,
-      };
-    });
+    const baseDebitTotal = tableData.reduce((s, e) => s + e.debit_base, 0);
+    const baseCreditTotal = tableData.reduce((s, e) => s + e.credit_base, 0);
 
     const colIds = enrichedColumns.map(c => c.id);
     return colIds.map(id => {
       if (id === 'entry_number') {
-        return { id: 'count', label: '', value: `${sortedData.length} قيد`, className: 'text-slate-500 font-medium' };
+        return { id: 'count', columnId: 'entry_number', label: '', value: `${sortedData.length} قيد`, className: 'text-slate-500 font-medium' };
       }
       if (id === 'journal_type') {
-        return { id: 'journal_type_summary', label: '', value: 'المجموع', className: 'text-slate-600 font-bold', align: 'center' as const };
+        return { id: 'journal_type_summary', columnId: 'journal_type', label: '', value: 'المجموع', className: 'text-slate-600 font-bold', align: 'center' as const };
       }
       if (id === 'description') {
         const balanceParts: string[] = [];
         sortedCurrencies.forEach(curr => {
-          const t = totals[curr.code];
-          if (t) {
-            const bal = t.debit - t.credit;
-            balanceParts.push(formatAmount(bal, { currencyCode: curr.code }));
-          } else {
-            balanceParts.push(formatAmount(0, { currencyCode: curr.code }));
-          }
+          const bal = baseDebitTotal - baseCreditTotal;
+          balanceParts.push(formatAmount(bal, { currencyCode: curr.code }));
         });
         return {
-          id: 'balance_summary', label: 'الرصيد',
+          id: 'balance_summary', columnId: 'description', label: 'الرصيد',
           value: balanceParts.join(' / '),
           className: 'text-slate-900 font-black'
         };
@@ -246,10 +223,9 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
       const debitMatch = id.match(/^debit_(.+)$/);
       if (debitMatch) {
         const currCode = debitMatch[1];
-        const t = totals[currCode];
         return {
-          id: `${id}_total`, label: 'إجمالي',
-          value: t && t.debit > 0 ? formatAmount(t.debit, { currencyCode: currCode }) : "—",
+          id: `${id}_total`, columnId: id, label: 'إجمالي',
+          value: baseDebitTotal > 0 ? formatAmount(baseDebitTotal, { currencyCode: currCode }) : "—",
           align: 'left' as const,
           className: 'text-blue-700 font-black'
         };
@@ -257,17 +233,16 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
       const creditMatch = id.match(/^credit_(.+)$/);
       if (creditMatch) {
         const currCode = creditMatch[1];
-        const t = totals[currCode];
         return {
-          id: `${id}_total`, label: 'إجمالي',
-          value: t && t.credit > 0 ? formatAmount(t.credit, { currencyCode: currCode }) : "—",
+          id: `${id}_total`, columnId: id, label: 'إجمالي',
+          value: baseCreditTotal > 0 ? formatAmount(baseCreditTotal, { currencyCode: currCode }) : "—",
           align: 'left' as const,
           className: 'text-emerald-700 font-black'
         };
       }
-      return { id: `${id}_spacer`, label: '', value: '' };
+      return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
     });
-  }, [sortedData, entries, formatAmount, enrichedColumns, sortedCurrencies, baseCurrency]);
+  }, [tableData, sortedData, formatAmount, enrichedColumns, sortedCurrencies]);
 
   return (
     <TableShell

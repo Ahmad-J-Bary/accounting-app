@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { FormPanel } from '@widgets/form-shell/FormPanel';
-import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Label } from "@shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { TrendingUp } from "lucide-react";
 import type { PartnerDto, PartnerRequest } from '@modules/partners/api/partnerService';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { getExchangeRate } from "@shared/lib/currency-strategy";
 
 interface PartnerFormProps {
   open: boolean;
@@ -32,7 +32,7 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
       setFormData({
         code: partner.code,
         name: partner.name,
-        amount: partner.amount_local || "0",
+        amount: partner.is_amount_in_original ? (partner.amount_original || "0") : (partner.amount_local || "0"),
         currency: partner.currency || baseCurrency?.code || "",
         manualRatio: partner.profit_sharing_ratio || "",
       });
@@ -47,20 +47,29 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
     }
   }, [partner, open, baseCurrency]);
 
-  const exchangeRate = rateMap.get(formData.currency) || 1;
-  const amountInOriginal = (parseFloat(formData.amount) / exchangeRate).toFixed(2);
-
   const handleSubmit = () => {
     if (!formData.name || !formData.amount) return;
+
+    // When editing, use the partner's stored exchange rate so capital doesn't
+    // change due to market rate fluctuations.  When creating, use the current rate.
+    const exchangeRate = partner
+      ? partner.exchange_rate
+      : getExchangeRate(formData.currency, rateMap, baseCurrency?.code).toString();
+
+    // Preserve the partner's stored sharing type on edit.
+    const sharingType = partner
+      ? partner.profit_sharing_type
+      : "BasedOnCapitalLocal";
 
     onSave({
       id: partner?.id,
       code: formData.code || formData.name.slice(0, 4).toUpperCase().replace(/\s+/g, "") || "P000",
       name: formData.name,
-      exchangeRate: exchangeRate.toString(),
+      currency: formData.currency,
+      exchangeRate,
       amount: formData.amount,
-      isAmountInOriginal: formData.currency === baseCurrency?.code,
-      sharingType: "BasedOnCapitalLocal",
+      isAmountInOriginal: formData.currency !== baseCurrency?.code,
+      sharingType,
       manualRatio: formData.manualRatio || null,
     });
   };

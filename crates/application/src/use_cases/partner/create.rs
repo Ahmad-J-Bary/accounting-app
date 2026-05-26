@@ -35,6 +35,7 @@ impl CreatePartnerUseCase {
     pub async fn execute(
         &self,
         name: String,
+        currency_code: String,
         exchange_rate: Decimal,
         amount: Decimal,
         is_amount_in_original: bool,
@@ -58,9 +59,19 @@ impl CreatePartnerUseCase {
 
         let code = format!("P{}", numeric_part);
 
+        let base_currency = self.currency_repo.get_base_currency().await?
+            .ok_or_else(|| AppError::Invalid("لم يتم تعيين العملة الأساسية".into()))?;
+        let partner_currency = if is_amount_in_original {
+            self.currency_repo.find_by_code(&currency_code).await?
+                .ok_or_else(|| AppError::Invalid(format!("العملة {} غير موجودة", currency_code)))?
+        } else {
+            base_currency.clone()
+        };
+
         let mut partner = Partner::new(
             code.clone(),
             name.clone(),
+            partner_currency,
             exchange_rate,
             amount,
             is_amount_in_original,

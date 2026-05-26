@@ -52,8 +52,7 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 type SortField =
   | "journal_entry_number"
-  | "amount_base"
-  | "amount_original"
+  | "amount"
   | "payment_date"
   | "payment_type"
   | "credit_account"
@@ -105,6 +104,7 @@ export default function PaymentsPage() {
     formatMonetaryAmount,
     currencies,
     baseCurrency,
+    toBase,
   } = useCurrencyContext();
 
   const {
@@ -148,6 +148,11 @@ export default function PaymentsPage() {
     [sortField],
   );
 
+  const sortedCurrencies = useMemo(() => {
+    if (!baseCurrency) return currencies;
+    return [baseCurrency, ...currencies.filter(c => c.code !== baseCurrency.code)];
+  }, [currencies, baseCurrency]);
+
   const loadExtras = useCallback(async () => {
     try {
       const [cData, sData, aData] = await Promise.all([
@@ -176,23 +181,12 @@ export default function PaymentsPage() {
             (parseInt(a.journal_entry_number || "0", 10) || 0) -
             (parseInt(b.journal_entry_number || "0", 10) || 0);
           break;
-        case "amount_base": {
+        case "amount": {
           const aAmt = parseFloat(a.amount) || 0;
           const bAmt = parseFloat(b.amount) || 0;
-          const aVal = baseCurrency?.code
-            ? convertBetween(aAmt, a.currency_code, baseCurrency.code)
-            : aAmt;
-          const bVal = baseCurrency?.code
-            ? convertBetween(bAmt, b.currency_code, baseCurrency.code)
-            : bAmt;
-          comparison = aVal - bVal;
+          comparison = aAmt - bAmt;
           break;
         }
-
-        case "amount_original":
-          comparison =
-            (parseFloat(a.amount) || 0) - (parseFloat(b.amount) || 0);
-          break;
 
         case "payment_date":
           comparison =
@@ -263,7 +257,8 @@ export default function PaymentsPage() {
   );
 
   const allColumns = useMemo<UnifiedColumn<Payment>[]>(
-    () => [
+    () => {
+      const cols: UnifiedColumn<Payment>[] = [
       {
         id: "journal_entry_number",
         header: (
@@ -307,52 +302,30 @@ export default function PaymentsPage() {
           </div>
         ),
         className: "w-32",
-      },
-      {
-        id: "amount_base",
-        header: (
-          <SortableHeader
-            field="amount_base"
-            label={`المبلغ الأساسي (${baseCurrency?.symbol || baseCurrency?.code || ""})`}
-            currentField={sortField}
-            direction={sortDirection}
-            onSort={handleSort}
-          />
-        ),
-        label: `المبلغ الأساسي (${baseCurrency?.symbol || baseCurrency?.code || ""})`,
-        accessor: (p) => {
-          const amt = parseFloat(p.amount) || 0;
-          const val = baseCurrency?.code
-            ? convertBetween(amt, p.currency_code, baseCurrency.code)
-            : amt;
-          return formatAmount(val, { currencyCode: baseCurrency?.code || "" });
-        },
-
-        align: "left",
-        className: "tabular-nums font-black text-slate-900 w-32",
-      },
-      {
-        id: "amount_original",
-        header: (
-          <SortableHeader
-            field="amount_original"
-            label="المبلغ الأصلي"
-            currentField={sortField}
-            direction={sortDirection}
-            onSort={handleSort}
-          />
-        ),
-        label: "المبلغ الأصلي",
-        accessor: (p) => {
-          const currencyMeta = currencies.find(
-            (c) => c.code === p.currency_code,
-          );
-          const amount = parseFloat(p.amount) || 0;
-          return `${amount.toLocaleString("ar-SY", { maximumFractionDigits: currencyMeta?.decimals ?? 2 })} ${currencyMeta?.symbol || p.currency_code}`;
-        },
-        align: "left",
-        className: "tabular-nums font-black text-slate-900 w-32",
-      },
+      },...sortedCurrencies.map(curr => {
+        const symbol = curr.symbol || curr.code;
+        return {
+          id: `amount_${curr.code}`,
+          header: (
+            <SortableHeader
+              field="amount"
+              label={`المبلغ (${symbol})`}
+              currentField={sortField}
+              direction={sortDirection}
+              onSort={handleSort}
+            />
+          ),
+          label: `المبلغ (${symbol})`,
+          accessor: (p: Payment) => {
+            const amount = parseFloat(p.amount) || 0;
+            if (amount === 0) return "—";
+            const baseAmount = toBase(amount, p.currency_code);
+            return formatAmount(baseAmount, { currencyCode: curr.code });
+          },
+          align: "left" as const,
+          className: "tabular-nums font-black text-slate-900 w-32",
+        };
+      }),
 
       {
         id: "notes",
@@ -463,17 +436,16 @@ export default function PaymentsPage() {
         align: "center",
         className: "w-[80px]",
       },
-    ],
+    ];
+    return cols;
+    },
     [
-      formatAmount,
-      accounts,
-      handleDelete,
       sortField,
       sortDirection,
       handleSort,
-      currencies,
-      baseCurrency,
-      convertBetween,
+      sortedCurrencies,
+      formatAmount,
+      toBase,
     ],
   );
 
@@ -484,50 +456,40 @@ export default function PaymentsPage() {
   });
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
-    const totalBase = filtered.reduce((s, p) => {
+    const baseTotal = filtered.reduce((sum, p) => {
       const amt = parseFloat(p.amount) || 0;
-      return (
-        s +
-        (baseCurrency?.code
-          ? convertBetween(amt, p.currency_code, baseCurrency.code)
-          : amt)
-      );
+      if (amt === 0) return sum;
+      return sum + toBase(amt, p.currency_code);
     }, 0);
 
     const colIds = enrichedColumns.map((c) => c.id);
     return colIds.map((id) => {
-      switch (id) {
-        case "journal_entry_number":
-          return {
-            id: "count",
-            label: "",
-            value: `${filtered.length} سند`,
-            className: "text-slate-500 font-medium",
-          };
-        case "amount_base":
-          return {
-            id: "amount_base_summary",
-            label: "الإجمالي",
-            value: formatAmount(totalBase, {
-              currencyCode: baseCurrency?.code || "",
-            }),
-            align: "left" as const,
-            className: "text-slate-900 font-black",
-          };
-        case "amount_original":
-          return {
-            id: "amount_original_summary",
-            label: "",
-            value: "حسب العملة",
-            align: "left" as const,
-            className: "text-slate-500 font-medium",
-          };
-
-        default:
-          return { id: `${id}_spacer`, label: "", value: "" };
+      if (id === "journal_entry_number") {
+        return {
+          id: "count",
+          columnId: "journal_entry_number",
+          label: "",
+          value: `${filtered.length} سند`,
+          className: "text-slate-500 font-medium",
+        };
       }
+      const amountMatch = id.match(/^amount_(.+)$/);
+      if (amountMatch) {
+        const currCode = amountMatch[1];
+        return {
+          id: `${id}_summary`,
+          columnId: id,
+          label: "الإجمالي",
+          value: baseTotal > 0
+            ? formatAmount(baseTotal, { currencyCode: currCode })
+            : "—",
+          align: "left" as const,
+          className: "text-slate-900 font-black",
+        };
+      }
+      return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [filtered, formatAmount, enrichedColumns, baseCurrency, convertBetween]);
+  }, [filtered, enrichedColumns, sortedCurrencies, formatAmount, toBase]);
 
   const handleCreate = async (payload: CreatePaymentRequest) => {
     setSaving(true);

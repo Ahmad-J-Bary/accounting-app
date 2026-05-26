@@ -120,7 +120,11 @@ impl CreateAccountUseCase {
             let fx_rate = if currency.is_base {
                 Decimal::ONE
             } else {
-                Decimal::ONE
+                cmd.exchange_rate
+                    .as_deref()
+                    .and_then(|s| Decimal::from_str(s).ok())
+                    .filter(|r| *r > Decimal::ZERO)
+                    .unwrap_or(Decimal::ONE)
             };
             let amount_ma = MonetaryAmount::new(
                 Money::new(total_opening.abs(), currency.clone()),

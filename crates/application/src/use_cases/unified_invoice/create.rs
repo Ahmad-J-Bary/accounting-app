@@ -80,6 +80,7 @@ impl CreateInvoiceUseCase {
                         credit: None,
                         opening_balance: None,
                         currency: None,
+                        exchange_rate: None,
                         notes: Some("تم إنشاؤه تلقائياً من فاتورة مبيعات".into()),
                     }).await?;
                     customer_id = Some(CustomerId::from_str(&customer_dto.id).unwrap());
@@ -113,6 +114,7 @@ impl CreateInvoiceUseCase {
                         credit: None,
                         opening_balance: None,
                         currency: None,
+                        exchange_rate: None,
                         notes: Some("تم إنشاؤه تلقائياً من فاتورة مشتريات".into()),
                     }).await?;
                     supplier_id = Some(SupplierId::from_str(&supplier_dto.id).unwrap());

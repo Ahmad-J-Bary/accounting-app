@@ -6,6 +6,7 @@ import { type CreatePaymentRequest, type AccountDto } from "@erp/shared-types";
 import { FormPanel } from "@widgets/form-shell/FormPanel";
 import { Receipt } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { getExchangeRate } from "@shared/lib/currency-strategy";
 
 interface ExpenseVoucherFormProps {
   expenseAccount: AccountDto;
@@ -28,8 +29,7 @@ export function ExpenseVoucherForm({ expenseAccount, onSave, onClose, saving }: 
   });
 
   const handleCurrencyChange = (val: string) => {
-    const isBase = val === baseCurrency?.code;
-    const rate = isBase ? 1 : (rateMap.get(val) || 1);
+    const rate = getExchangeRate(val, rateMap, baseCurrency?.code);
     setForm(p => ({
       ...p,
       currency_code: val,

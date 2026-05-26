@@ -62,24 +62,18 @@ export default function Partners() {
     errorLabel: "فشل جلب الشركاء",
   });
 
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [activePanel, setActivePanel] = useState<"edit" | "drawings" | "view" | null>(null);
   const [editPartner, setEditPartner] = useState<PartnerDto | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [isDrawingsOpen, setIsDrawingsOpen] = useState(false);
   const [drawingsSaving, setDrawingsSaving] = useState(false);
-
-  const defaultRate = useMemo(() => rateMap?.get(baseCurrency?.code || "") || 1, [rateMap]);
 
   const {
     totals,
     partnersWithRatios,
-    chartCapitalData,
-    chartProfitData
   } = usePartnerRatios({ 
     partners, 
     strategy: globalStrategy, 
-    exchangeRate: defaultRate 
   });
 
   const stats = useMemo(() => [
@@ -101,7 +95,7 @@ export default function Partners() {
       icon: DollarSign, 
       color: "text-emerald-600" 
     },
-  ], [totals, partners.length, formatAmount]);
+  ], [totals, partners.length, formatAmount, baseCurrency]);
 
   const handleSave = async (payload: PartnerRequest) => {
     try {
@@ -113,7 +107,7 @@ export default function Partners() {
         await partnerService.addPartner(payload);
         toast.success("تم الإضافة بنجاح");
       }
-      setIsDialogOpen(false);
+      setActivePanel(null);
       refresh(true);
     } catch (error) {
       toast.error("خطأ: " + error);
@@ -138,8 +132,8 @@ export default function Partners() {
       setDrawingsSaving(true);
       await paymentService.createPayment(payload);
       await refresh(true);
+      setActivePanel(null);
       toast.success("تم تسجيل سند المسحوبات بنجاح");
-      setIsDrawingsOpen(false);
     } catch (error) {
       toast.error("فشل تسجيل السند: " + error);
     } finally {
@@ -185,8 +179,7 @@ export default function Partners() {
               const p = partnersWithRatios.find(p => p.id === selectedId);
               if (p) {
                 if (p.drawings_account_id) {
-                  setIsDrawingsOpen(true);
-                  setIsDialogOpen(false);
+                  setActivePanel("drawings");
                 } else {
                   toast.error("لا يوجد حساب مسحوبات مرتبط بهذا الشريك");
                 }
@@ -208,7 +201,7 @@ export default function Partners() {
 
           <div className="w-px h-6 bg-slate-200 mx-1" />
 
-          <Button size="sm" onClick={() => { setEditPartner(null); setIsDialogOpen(true); setSelectedId("new"); }} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold">
+          <Button size="sm" onClick={() => { setEditPartner(null); setActivePanel("edit"); setSelectedId("new"); }} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold">
             <Plus className="w-4 h-4 ml-2" /> إضافة شريك جديد
           </Button>
         </div>
@@ -230,8 +223,8 @@ export default function Partners() {
           loading={isLoading}
           search={search}
           onSearchChange={setSearch}
-          onView={(p) => { setSelectedId(p.id); setIsDialogOpen(false); setIsDrawingsOpen(false); }}
-          onEdit={(p) => { setEditPartner(p); setIsDialogOpen(true); }}
+          onView={(p) => { setSelectedId(p.id); setActivePanel("view"); }}
+          onEdit={(p) => { setEditPartner(p); setSelectedId(p.id); setActivePanel("edit"); }}
           onDelete={(id) => handleDelete(id)}
           onJournal={(p) => p.drawings_account_id ? openTab({
             id: `ledger-${p.drawings_account_id}`,
@@ -241,31 +234,30 @@ export default function Partners() {
           }) : toast.error("لا يوجد حساب مسحوبات مرتبط بهذا الشريك")}
           onDocument={(p) => {
             setSelectedId(p.id);
-            setIsDrawingsOpen(true);
+            setActivePanel("drawings");
           }}
           selectedId={selectedId}
           onRowClick={(p) => {
             setSelectedId(p.id);
-            setIsDialogOpen(false);
-            setIsDrawingsOpen(false);
+            setActivePanel("view");
           }}
         />
       }
       bottomWidgets={
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <ChartCard title="حصص رأس المال" icon={PieChartIcon} data={chartCapitalData} formatter={(v) => formatAmount(v, { hideSymbol: false })} />
-             <ChartCard title="توزيع الأرباح" icon={TrendingUp} data={chartProfitData} formatter={(v: number) => `${v.toFixed(2)}%`} />
-          </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <ChartCard title="حصص رأس المال" icon={PieChartIcon} data={partnersWithRatios.map(p => ({ name: p.name, value: p.calculatedCapitalRatio }))} formatter={(v: number) => `${v.toFixed(2)}%`} />
+                  <ChartCard title="توزيع الأرباح" icon={TrendingUp} data={partnersWithRatios.map(p => ({ name: p.name, value: p.calculatedRatio }))} formatter={(v: number) => `${v.toFixed(2)}%`} />
+              </div>
         </div>
       }
       sidePanel={
-        isDialogOpen ? (
+        activePanel === "edit" ? (
           <div className="p-6">
              <PartnerForm 
-                open={isDialogOpen}
+                open={activePanel === "edit"}
                 onClose={() => {
-                  setIsDialogOpen(false);
+                  setActivePanel(null);
                   setSelectedId(null);
                   setEditPartner(null);
                 }}
@@ -274,16 +266,16 @@ export default function Partners() {
                 saving={saving}
               />
           </div>
-        ) : isDrawingsOpen && selectedId ? (
+        ) : activePanel === "drawings" && selectedId ? (
           <div className="p-6">
             <PartnerDrawingsForm 
               partner={partnersWithRatios.find(p => p.id === selectedId)!}
               onSave={handleSaveDrawings}
-              onClose={() => setIsDrawingsOpen(false)}
+              onClose={() => setActivePanel(null)}
               saving={drawingsSaving}
             />
           </div>
-        ) : selectedId && partnersWithRatios.find(p => p.id === selectedId) ? (
+        ) : activePanel === "view" && selectedId && partnersWithRatios.find(p => p.id === selectedId) ? (
           <div className="flex flex-col h-full bg-white" dir="rtl">
             <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-slate-50/50 shrink-0">
               <div className="flex flex-col gap-1 text-right">
@@ -295,7 +287,7 @@ export default function Partners() {
                 </h2>
                 <span className="text-xs text-muted-foreground">ملف الشريك</span>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setSelectedId(null)} className="rounded-full text-slate-400 hover:text-slate-600">
+              <Button variant="ghost" size="icon" onClick={() => { setSelectedId(null); setActivePanel(null); }} className="rounded-full text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </Button>
             </div>
@@ -304,8 +296,16 @@ export default function Partners() {
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-4">معلومات الاستثمار</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 bg-white rounded-xl border border-slate-100">
-                    <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">{`المبلغ (${baseCurrency?.symbol || ""})`}</div>
-                    <div className="text-lg font-black text-blue-600 tabular-nums">{formatAmount(Number(partnersWithRatios.find(p => p.id === selectedId)?.amount_original || 0), { currencyCode: baseCurrency?.code || "" })}</div>
+                    <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">{`المبلغ الأصلي (${partnersWithRatios.find(p => p.id === selectedId)?.currency || baseCurrency?.code || ""})`}</div>
+                    <div className="text-lg font-black text-blue-600 tabular-nums">
+                      {(() => {
+                        const p = partnersWithRatios.find(p => p.id === selectedId);
+                        if (!p) return "0";
+                        const amt = Number(p.amount_original || 0);
+                        const curr = currencies.find(c => c.code === p.currency) || baseCurrency;
+                        return `${amt.toLocaleString("ar-SA", { maximumFractionDigits: curr?.decimals ?? 2 })} ${curr?.symbol || p.currency || ""}`;
+                      })()}
+                    </div>
                   </div>
                   <div className="p-3 bg-white rounded-xl border border-slate-100">
                     <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">{`المبلغ (${baseCurrency?.symbol || ""})`}</div>
@@ -333,7 +333,7 @@ export default function Partners() {
                     const p = partnersWithRatios.find(p => p.id === selectedId);
                     if (p) {
                       setEditPartner(p);
-                      setIsDialogOpen(true);
+                      setActivePanel("edit");
                     }
                   }}
                 >
@@ -347,6 +347,7 @@ export default function Partners() {
                     if (confirm("هل أنت متأكد من حذف هذا الشريك؟")) {
                       handleDelete(selectedId);
                       setSelectedId(null);
+                      setActivePanel(null);
                     }
                   }}
                 >
@@ -358,7 +359,7 @@ export default function Partners() {
           </div>
         ) : null
       }
-      isPanelOpen={isDialogOpen || isDrawingsOpen || !!selectedId}
+      isPanelOpen={activePanel === "edit" || activePanel === "drawings" || activePanel === "view"}
     />
   );
 }

@@ -51,7 +51,15 @@ impl CreateSupplierUseCase {
         // Use currency from request
         let currency_code = req.currency.clone().unwrap_or_default();
         let currency = Currency::new(&currency_code, &currency_code, &currency_code, "", 2, false);
-        let fx_rate = Decimal::ONE;
+        let fx_rate = if currency.is_base {
+            Decimal::ONE
+        } else {
+            req.exchange_rate
+                .as_deref()
+                .and_then(|s| Decimal::from_str(s).ok())
+                .filter(|r| *r > Decimal::ZERO)
+                .unwrap_or(Decimal::ONE)
+        };
 
         let mut supplier = Supplier::new_with_id(
             supplier_id,

@@ -7,6 +7,11 @@ import {
   type CurrencyDisplayMode,
   formatWithLocale 
 } from "./CurrencyContext";
+import {
+  toBase as strategyToBase,
+  fromBase as strategyFromBase,
+  convertBetween as strategyConvertBetween,
+} from "@shared/lib/currency-strategy";
 
 export function CurrencyProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
@@ -17,7 +22,6 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   const [displayMode, setDisplayModeState] = useState<CurrencyDisplayMode>("selected");
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       const context = await currencyService.getCurrencyContext();
       setCurrencies(context.active_currencies);
@@ -76,6 +80,14 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     [baseCurrency]
   );
 
+  const updateRate = useCallback((currencyCode: string, rate: string) => {
+    setTodayStatus((prev) =>
+      prev.map((s) =>
+        s.currency_code === currencyCode ? { ...s, rate, has_rate_today: true } : s
+      )
+    );
+  }, []);
+
   const setRateForToday = useCallback(
     async ({
       toCurrency,
@@ -112,37 +124,25 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     return map;
   }, [todayStatus]);
 
+  const toBaseFn = useCallback(
+    (amount: number, currencyCode: string) => {
+      return strategyToBase(amount, currencyCode, rateMap, baseCurrency?.code ?? null);
+    },
+    [baseCurrency, rateMap]
+  );
+
   const convertFromBase = useCallback(
     (amountInBase: number, targetCurrencyCode: string) => {
-      if (!baseCurrency || targetCurrencyCode === baseCurrency.code) return amountInBase;
-      const rate = rateMap.get(targetCurrencyCode);
-      if (!rate || rate <= 0) return amountInBase;
-      // 1 base currency = rate units of targetCurrency.
-      // To convert base → target: multiply by rate.
-      return amountInBase * rate;
+      return strategyFromBase(amountInBase, targetCurrencyCode, rateMap, baseCurrency?.code ?? null);
     },
     [baseCurrency, rateMap]
   );
 
   const convertBetween = useCallback(
     (amount: number, fromCode: string, toCode: string) => {
-      if (fromCode === toCode) return amount;
-      
-      // Convert to base first
-      let amountInBase = amount;
-      if (baseCurrency && fromCode !== baseCurrency.code) {
-        const fromRate = rateMap.get(fromCode);
-        if (fromRate && fromRate > 0) {
-          // 1 fromCode = ? units of base: reciprocal of rate.
-          // To convert fromCode → base: divide by rate.
-          amountInBase = amount / fromRate;
-        }
-      }
-
-      // Then convert to target
-      return convertFromBase(amountInBase, toCode);
+      return strategyConvertBetween(amount, fromCode, toCode, rateMap, baseCurrency?.code ?? null);
     },
-    [baseCurrency, rateMap, convertFromBase]
+    [baseCurrency, rateMap]
   );
 
   const hasTodayRate = useCallback(
@@ -207,8 +207,10 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       setDisplayCurrencyCode,
       setDisplayMode,
       refresh: load,
+      updateRate,
       setRateForToday,
       getLatestRate,
+      toBase: toBaseFn,
       convertFromBase,
       convertBetween,
       formatAmount,
@@ -226,8 +228,10 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       setDisplayCurrencyCode,
       setDisplayMode,
       load,
+      updateRate,
       setRateForToday,
       getLatestRate,
+      toBaseFn,
       convertFromBase,
       convertBetween,
       formatAmount,

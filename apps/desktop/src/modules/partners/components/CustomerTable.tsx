@@ -51,7 +51,7 @@ const SortableHeader = ({ field, label, currentField, direction, onSort }: Sorta
 };
 
 export function CustomerTable({ customers, loading, search, onSearchChange, onView, onEdit, onDelete, onJournal, onDocument, selectedId }: CustomerTableProps) {
-  const { currencies, formatAmount } = useCurrencyContext();
+  const { currencies, formatAmount, toBase } = useCurrencyContext();
   const [sortField, setSortField] = useState<SortField>("code");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
@@ -141,7 +141,9 @@ export function CustomerTable({ customers, loading, search, onSearchChange, onVi
         label: `الرصيد (${symbol})`,
         accessor: (c) => {
           const absBal = Math.abs(Number(c.balance || 0));
-          return absBal > 0 ? formatAmount(absBal, { currencyCode: curr.code }) : "—";
+          if (absBal === 0) return "—";
+          const baseAmount = toBase(absBal, c.currency);
+          return formatAmount(baseAmount, { currencyCode: curr.code });
         },
         align: "left",
         className: "tabular-nums font-bold text-slate-800"
@@ -169,7 +171,7 @@ export function CustomerTable({ customers, loading, search, onSearchChange, onVi
     });
 
     return cols;
-  }, [currencies, formatAmount, sortField, sortDirection, handleSort, onView, onEdit, onDelete, onJournal, onDocument]);
+  }, [currencies, formatAmount, toBase, sortField, sortDirection, handleSort, onView, onEdit, onDelete, onJournal, onDocument]);
 
   const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
     tableId: "customers-unified",
@@ -179,31 +181,37 @@ export function CustomerTable({ customers, loading, search, onSearchChange, onVi
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     const totalBal = sortedCustomers.reduce((sum, c) => sum + Number(c.balance || 0), 0);
-    const absTotal = Math.abs(totalBal);
     const overall = totalBal > 0 ? "مدين" : totalBal < 0 ? "دائن" : null;
     const overallColor = totalBal > 0 ? 'text-red-600' : totalBal < 0 ? 'text-emerald-600' : 'text-slate-400';
 
+    const baseTotal = sortedCustomers.reduce((sum, c) => {
+      const bal = Math.abs(Number(c.balance || 0));
+      if (bal === 0) return sum;
+      return sum + toBase(bal, c.currency);
+    }, 0);
+
     const colIds = enrichedColumns.map(c => c.id);
     return colIds.map(id => {
-      if (id === 'name') return { id: 'count', label: '', value: `${sortedCustomers.length} عميل`, className: 'text-slate-500 font-medium' };
-      if (id === 'code' || id === 'phone' || id === 'actions') return { id: `${id}_spacer`, label: '', value: '' };
+      if (id === 'name') return { id: 'count', columnId: 'name', label: '', value: `${sortedCustomers.length} عميل`, className: 'text-slate-500 font-medium' };
+      if (id === 'code' || id === 'phone' || id === 'actions') return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
       if (id === 'status') {
-        return { id: 'status_summary', label: '', value: overall ? `الرصيد: ${overall}` : "—", className: `${overallColor} font-bold` };
+        return { id: 'status_summary', columnId: 'status', label: '', value: overall ? `الرصيد: ${overall}` : "—", className: `${overallColor} font-bold` };
       }
       const match = id.match(/^balance_(.+)$/);
       if (match) {
         const currCode = match[1];
         return {
           id: `${id}_summary`,
+          columnId: id,
           label: '',
-          value: absTotal > 0 ? formatAmount(absTotal, { currencyCode: currCode }) + ` (${overall})` : "—",
+          value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
           align: 'left' as const,
           className: `${overallColor} font-bold`
         };
       }
       return { id: `${id}_spacer`, label: '', value: '' };
     });
-  }, [sortedCustomers, formatAmount, enrichedColumns]);
+  }, [sortedCustomers, formatAmount, toBase, enrichedColumns]);
 
   return (
     <TableShell

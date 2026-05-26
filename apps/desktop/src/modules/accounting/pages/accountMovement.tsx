@@ -33,7 +33,7 @@ import { PartnerDrawingsForm } from "@modules/partners/components/PartnerDrawing
 export default function AccountMovement() {
   const { accountId } = useParams<{ accountId: string }>();
   const { openTab } = useTabs();
-  const { formatAmount, currencies } = useCurrencyContext();
+  const { formatAmount, currencies, baseCurrency } = useCurrencyContext();
   const [ledger, setLedger] = useState<AccountLedgerDto | null>(null);
   
   // Entity Detection
@@ -108,10 +108,12 @@ export default function AccountMovement() {
 
   const formatMultiCurrency = useCallback((baseVal: string, originalVal: string) => {
     return currencies.map(c => {
-      const val = c.is_base ? parseFloat(baseVal) : parseFloat(originalVal);
-      return formatAmount(val, { currencyCode: c.code });
+      if (c.code === baseCurrency?.code) {
+        return formatAmount(parseFloat(baseVal), { currencyCode: c.code });
+      }
+      return formatAmount(parseFloat(originalVal), { currencyCode: c.code });
     }).join(' / ');
-  }, [currencies, formatAmount]);
+  }, [currencies, baseCurrency, formatAmount]);
 
   const stats = useMemo(() => {
     if (!ledger) return null;

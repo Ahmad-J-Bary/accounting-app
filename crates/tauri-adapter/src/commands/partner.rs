@@ -10,6 +10,7 @@ use std::str::FromStr;
 pub async fn add_partner(
     state: State<'_, AppState>,
     name: String,
+    currency: String,
     exchange_rate: String,
     amount: String,
     is_amount_in_original: bool,
@@ -28,6 +29,7 @@ pub async fn add_partner(
         state.currency_repo.clone(),
     ).execute(
         name,
+        currency,
         rate,
         amt,
         is_amount_in_original,
@@ -66,6 +68,7 @@ pub async fn update_partner(
     state: State<'_, AppState>,
     id: String,
     name: String,
+    currency: String,
     exchange_rate: String,
     amount: String,
     is_amount_in_original: bool,
@@ -85,6 +88,7 @@ pub async fn update_partner(
     ).execute(UpdatePartnerRequest {
         id,
         name,
+        currency_code: currency,
         exchange_rate: rate,
         amount: amt,
         is_amount_in_original,

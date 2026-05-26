@@ -3,6 +3,7 @@ pub struct PartnerRow {
     pub id: String,
     pub code: String,
     pub name: String,
+    pub currency: String,
     pub exchange_rate: String,
     pub amount_local: String,
     pub amount_original: String,

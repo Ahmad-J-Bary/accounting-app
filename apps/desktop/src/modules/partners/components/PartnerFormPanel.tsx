@@ -6,6 +6,7 @@ import { SYSTEM_ACCOUNT_IDS, type AccountDto, type CustomerDto, type SupplierDto
 import { FormPanel } from '@widgets/form-shell/FormPanel';
 import { User, Building2 } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { getExchangeRate } from "@shared/lib/currency-strategy";
 import { formatCurrency } from "@shared/lib/format";
 
 export interface PartnerFormPayload {
@@ -19,6 +20,7 @@ export interface PartnerFormPayload {
   debit: string;
   credit: string;
   currency: string;
+  exchange_rate: string;
   account_id: string | null;
   is_active: boolean;
 }
@@ -85,6 +87,8 @@ export function PartnerFormPanel({
   const handleSubmit = () => {
     if (!form.name) return;
 
+    const exchangeRate = getExchangeRate(currency, rateMap, baseCurrency?.code);
+
     const payload = {
       ...form,
       phone: form.phone || null,
@@ -94,6 +98,7 @@ export function PartnerFormPanel({
       debit,
       credit,
       currency,
+      exchange_rate: exchangeRate.toString(),
     };
 
     if (partner) {

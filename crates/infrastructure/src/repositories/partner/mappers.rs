@@ -1,5 +1,6 @@
 use application::errors::AppError;
 use domain::accounting::partner::{Partner, ProfitSharingType};
+use domain::shared::Currency;
 use domain::shared::ids::{PartnerId, AccountId};
 use rust_decimal::Decimal;
 use std::str::FromStr;
@@ -14,10 +15,13 @@ pub fn row_to_partner(row: PartnerRow) -> Result<Partner, AppError> {
         _ => ProfitSharingType::Manual,
     };
 
+    let currency = Currency::new(&row.currency, &row.currency, &row.currency, "", 2, false);
+
     Ok(Partner {
-        id: row.id.parse::<PartnerId>().map_err(|e| AppError::Infrastructure(e.to_string()))?,
+            id: row.id.parse::<PartnerId>().map_err(|e| AppError::Infrastructure(e.to_string()))?,
         code: row.code,
         name: row.name,
+        currency,
         exchange_rate: Decimal::from_str(&row.exchange_rate).unwrap_or_default(),
         amount_local: Decimal::from_str(&row.amount_local).unwrap_or_default(),
         amount_original: Decimal::from_str(&row.amount_original).unwrap_or_default(),

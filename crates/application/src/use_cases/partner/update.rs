@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use rust_decimal::Decimal;
 use chrono::Utc;
-use domain::accounting::partner::{ProfitSharingType};
+use domain::accounting::partner::ProfitSharingType;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::shared::{Money, MonetaryAmount};
 use domain::shared::ids::PartnerId;
@@ -24,6 +24,7 @@ pub struct UpdatePartnerUseCase {
 pub struct UpdatePartnerRequest {
     pub id: String,
     pub name: String,
+    pub currency_code: String,
     pub exchange_rate: Decimal,
     pub amount: Decimal,
     pub is_amount_in_original: bool,
@@ -59,8 +60,21 @@ impl UpdatePartnerUseCase {
 
         let old_name = partner.name.clone();
 
+        // If the currency changed, look up the new Currency entity.
+        if req.currency_code != partner.currency.code {
+            let base_currency = self.currency_repo.get_base_currency().await?
+                .ok_or_else(|| AppError::Invalid("لم يتم تعيين العملة الأساسية".into()))?;
+            let new_currency = if req.is_amount_in_original {
+                self.currency_repo.find_by_code(&req.currency_code).await?
+                    .ok_or_else(|| AppError::Invalid(format!("العملة {} غير موجودة", req.currency_code)))?
+            } else {
+                base_currency
+            };
+            partner.currency = new_currency;
+        }
+
         partner.update_info(
-            partner.code.clone(), // Keep same code for now
+            partner.code.clone(),
             req.name.clone(),
             req.exchange_rate,
             req.amount,

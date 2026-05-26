@@ -186,22 +186,37 @@ export function UnifiedTable<T>({
             {summary && summary.length > 0 && settings.showSummary && (
             <tfoot className="sticky bottom-0 z-10">
               <tr className="border-t-2 border-slate-300">
-                {summary.map((col) => (
-                  <td
-                    key={col.id}
-                    className={cn(
-                      getDensityPadding(),
-                      cellBorderClass,
-                      "font-bold text-slate-800 bg-slate-50/80",
-                      getAlignmentClass(col.align),
-                      col.className
-                    )}
-                    style={{ fontSize: `${settings.fontSize}px`, fontFamily: settings.fontFamily }}
-                  >
-                    <span className="text-xs text-slate-400 ml-1">{col.label}:</span>
-                    {col.value}
-                  </td>
-                ))}
+                {(() => {
+                  // Build a map from columnId → summary entry for proper alignment with visible columns
+                  const summaryMap = new Map<string, SummaryColumn>();
+                  summary.forEach(s => {
+                    if (s.columnId) {
+                      summaryMap.set(s.columnId, s);
+                    }
+                  });
+                  return visibleColumns.map(col => {
+                    const entry = (col.id && summaryMap.has(col.id))
+                      ? summaryMap.get(col.id)!
+                      : summary.find(s => s.id === col.id || s.id === `${col.id}_summary` || s.id === `${col.id}_spacer`);
+                    if (!entry) return <td key={col.id} className={cn(getDensityPadding(), cellBorderClass, "bg-slate-50/80")} />;
+                    return (
+                      <td
+                        key={entry.id}
+                        className={cn(
+                          getDensityPadding(),
+                          cellBorderClass,
+                          "font-bold text-slate-800 bg-slate-50/80",
+                          getAlignmentClass(entry.align),
+                          entry.className
+                        )}
+                        style={{ fontSize: `${settings.fontSize}px`, fontFamily: settings.fontFamily }}
+                      >
+                        <span className="text-xs text-slate-400 ml-1">{entry.label}:</span>
+                        {entry.value}
+                      </td>
+                    );
+                  });
+                })()}
                 {summaryColSpan && summary.length < visibleColumns.length && (
                   <td
                     className={cn(getDensityPadding(), cellBorderClass, "bg-slate-50/80")}

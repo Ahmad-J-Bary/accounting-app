@@ -1,4 +1,5 @@
 ﻿#![allow(clippy::too_many_arguments)]
+use crate::shared::currency::Currency;
 use crate::shared::errors::DomainError;
 use crate::shared::ids::{AccountId, PartnerId};
 use chrono::{DateTime, Utc};
@@ -17,6 +18,7 @@ pub struct Partner {
     pub id: PartnerId,
     pub code: String,
     pub name: String,
+    pub currency: Currency,
     pub exchange_rate: Decimal,
     pub amount_local: Decimal,
     pub amount_original: Decimal,
@@ -33,6 +35,7 @@ impl Partner {
     pub fn new(
         code: String,
         name: String,
+        currency: Currency,
         exchange_rate: Decimal,
         amount: Decimal,
         is_amount_in_original: bool,
@@ -63,6 +66,7 @@ impl Partner {
             id: PartnerId::new(),
             code,
             name,
+            currency,
             exchange_rate,
             amount_local,
             amount_original,

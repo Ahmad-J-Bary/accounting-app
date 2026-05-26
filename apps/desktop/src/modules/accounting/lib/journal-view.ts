@@ -26,6 +26,8 @@ export interface JournalRow {
   debit_account: string;
   credit_account: string;
   active_side: "debit" | "credit";
+  /** Original currency if all original-amount lines share the same non-base currency. */
+  currency?: string;
 }
 
 export function toJournalRow(
@@ -60,8 +62,8 @@ export function toJournalRow(
       const d = parseFloat(l.debit || "0");
       const c = parseFloat(l.credit || "0");
       const rate = parseFloat(l.fx_rate || "1");
-      dBase += d * rate;
-      cBase += c * rate;
+      dBase += l.debit_base !== undefined ? parseFloat(l.debit_base) : (rate > 0 ? d / rate : d);
+      cBase += l.credit_base !== undefined ? parseFloat(l.credit_base) : (rate > 0 ? c / rate : c);
       if (isOriginalAmount(l.currency, l.fx_rate)) {
         dOriginal += d;
         cOriginal += c;
@@ -82,8 +84,8 @@ export function toJournalRow(
       const d = parseFloat(l.debit || "0");
       const c = parseFloat(l.credit || "0");
       const rate = parseFloat(l.fx_rate || "1");
-      dBase += d * rate;
-      cBase += c * rate;
+      dBase += l.debit_base !== undefined ? parseFloat(l.debit_base) : (rate > 0 ? d / rate : d);
+      cBase += l.credit_base !== undefined ? parseFloat(l.credit_base) : (rate > 0 ? c / rate : c);
       if (isOriginalAmount(l.currency, l.fx_rate)) {
         dOriginal += d;
         cOriginal += c;
@@ -175,6 +177,16 @@ export function toJournalRow(
     dBase = 0;
   }
 
+  // Determine original currency (if all original-amount lines share one non-base currency)
+  const lineCurrencies = new Set<string>();
+  entry.lines.forEach(l => {
+    if (l.currency && isOriginalAmount(l.currency, l.fx_rate)) {
+      lineCurrencies.add(l.currency);
+    }
+  });
+  const origCurrencies = Array.from(lineCurrencies);
+  const currency = origCurrencies.length === 1 ? origCurrencies[0] : undefined;
+
   return {
     entry_number: entry.entry_number,
     journal_type_display: journalTypeDisplay,
@@ -187,6 +199,7 @@ export function toJournalRow(
     debit_account: dAcc,
     credit_account: cAcc,
     active_side: activeSide,
+    currency,
   };
 }
 
@@ -202,8 +215,8 @@ export function aggregateEntryTotals(entries: JournalEntryDto[]) {
       const d = parseFloat(l.debit || "0");
       const c = parseFloat(l.credit || "0");
       const rate = parseFloat(l.fx_rate || "1");
-      totals.debitBase += d * rate;
-      totals.creditBase += c * rate;
+      totals.debitBase += l.debit_base !== undefined ? parseFloat(l.debit_base) : (rate > 0 ? d / rate : d);
+      totals.creditBase += l.credit_base !== undefined ? parseFloat(l.credit_base) : (rate > 0 ? c / rate : c);
       if (isOriginalAmount(l.currency, l.fx_rate)) {
         totals.debitOriginal += d;
         totals.creditOriginal += c;

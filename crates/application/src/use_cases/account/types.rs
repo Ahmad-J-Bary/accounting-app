@@ -20,6 +20,7 @@ pub struct CreateAccountCommand {
     pub debit: Option<String>,
     pub credit: Option<String>,
     pub currency: Option<String>,
+    pub exchange_rate: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]

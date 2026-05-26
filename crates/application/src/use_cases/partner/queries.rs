@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 pub struct PartnerDto {
     pub id: String,
     pub name: String,
+    pub currency: String,
     pub exchange_rate: String,
     pub amount_local: String,
     pub amount_original: String,
@@ -23,6 +24,7 @@ impl From<Partner> for PartnerDto {
         Self {
             id: p.id.to_string(),
             name: p.name,
+            currency: p.currency.code.clone(),
             exchange_rate: p.exchange_rate.to_string(),
             amount_local: p.amount_local.to_string(),
             amount_original: p.amount_original.to_string(),

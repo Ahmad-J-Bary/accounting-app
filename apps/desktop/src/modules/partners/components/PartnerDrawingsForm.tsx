@@ -6,6 +6,7 @@ import { type CreatePaymentRequest, type PartnerDto } from "@erp/shared-types";
 import { FormPanel } from "@widgets/form-shell/FormPanel";
 import { Receipt } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { getExchangeRate } from "@shared/lib/currency-strategy";
 
 interface PartnerDrawingsFormProps {
   partner: PartnerDto;
@@ -15,17 +16,23 @@ interface PartnerDrawingsFormProps {
 }
 
 export function PartnerDrawingsForm({ partner, onSave, onClose, saving }: PartnerDrawingsFormProps) {
-  const { currencies, baseCurrency } = useCurrencyContext();
+  const { currencies, baseCurrency, rateMap } = useCurrencyContext();
 
+  const defaultCurrency = partner.currency || baseCurrency?.code || "";
   const [form, setForm] = useState<Partial<CreatePaymentRequest>>({
     payment_type: "DrawingsVoucher",
     amount: 0,
     payment_date: new Date().toISOString(),
-    currency_code: baseCurrency?.code || "",
-    exchange_rate: 1,
+    currency_code: defaultCurrency,
+    exchange_rate: getExchangeRate(defaultCurrency, rateMap, baseCurrency?.code),
     debit_account_id: partner.drawings_account_id || undefined,
     notes: `مسحوبات شريك: ${partner.name}`,
   });
+
+  const handleCurrencyChange = (val: string) => {
+    const rate = getExchangeRate(val, rateMap, baseCurrency?.code);
+    setForm(p => ({ ...p, currency_code: val, exchange_rate: rate }));
+  };
 
   const handleSave = async () => {
     if (!form.amount || !form.debit_account_id) return;
@@ -59,7 +66,7 @@ export function PartnerDrawingsForm({ partner, onSave, onClose, saving }: Partne
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs font-bold text-slate-600">العملة</Label>
-              <Select value={form.currency_code} onValueChange={val => setForm(p => ({ ...p, currency_code: val }))}>
+              <Select value={form.currency_code} onValueChange={handleCurrencyChange}>
                 <SelectTrigger className="h-9 font-bold bg-white"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {currencies.map(c => (

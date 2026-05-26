@@ -8,6 +8,8 @@ export interface SummaryColumn {
   value: React.ReactNode;
   align?: "right" | "left" | "center";
   className?: string;
+  /** If this summary entry corresponds to a table column, set its id here for proper alignment when columns are toggled. */
+  columnId?: string;
 }
 
 interface TableSummaryProps {

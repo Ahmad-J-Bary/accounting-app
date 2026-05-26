@@ -11,6 +11,8 @@ pub struct JournalLineDto {
     pub fx_rate: String,
     pub debit: String,
     pub credit: String,
+    pub debit_base: Option<String>,
+    pub credit_base: Option<String>,
     pub description: String,
 }
 
@@ -81,6 +83,8 @@ impl From<JournalLine> for JournalLineDto {
             fx_rate: fx_rate.to_string(),
             debit: line.debit.amount().to_string(),
             credit: line.credit.amount().to_string(),
+            debit_base: Some(line.debit.base_amount.to_string()),
+            credit_base: Some(line.credit.base_amount.to_string()),
             description: line.description,
         }
     }

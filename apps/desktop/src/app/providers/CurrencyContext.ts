@@ -18,6 +18,7 @@ export type CurrencyContextValue = {
 
   setDisplayMode: (mode: CurrencyDisplayMode) => void;
   refresh: () => Promise<void>;
+  updateRate: (currencyCode: string, rate: string) => void;
   setRateForToday: (params: {
     toCurrency: string;
     rate: string;
@@ -25,6 +26,7 @@ export type CurrencyContextValue = {
     source?: string;
   }) => Promise<void>;
   getLatestRate: (toCurrency: string) => Promise<string | null>;
+  toBase: (amount: number, currencyCode: string) => number;
   convertFromBase: (amountInBase: number, targetCurrencyCode: string) => number;
   convertBetween: (amount: number, fromCode: string, toCode: string) => number;
   formatAmount: (
