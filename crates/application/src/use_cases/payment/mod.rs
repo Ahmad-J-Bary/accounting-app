@@ -468,7 +468,12 @@ impl DeletePaymentUseCase {
         let payment = self.repo.find_by_id(&pid).await?
             .ok_or_else(|| AppError::NotFound("السند غير موجود".into()))?;
 
-        let base_amount = payment.amount * payment.exchange_rate;
+        let currency = Currency::new(&payment.currency_code, &payment.currency_code, &payment.currency_code, "", 2, false);
+        let amount_ma = MonetaryAmount::new(
+            Money::new(payment.amount, currency),
+            payment.exchange_rate,
+        );
+        let base_amount = amount_ma.base_amount;
 
         // Reverse entity balances
         match payment.payment_type {
@@ -552,7 +557,12 @@ impl UpdatePaymentUseCase {
         let old_type = existing_payment.payment_type;
         let old_amount = existing_payment.amount;
         let old_exchange_rate = existing_payment.exchange_rate;
-        let old_base_amount = old_amount * old_exchange_rate;
+        let old_currency = Currency::new(&existing_payment.currency_code, &existing_payment.currency_code, &existing_payment.currency_code, "", 2, false);
+        let old_amount_ma = MonetaryAmount::new(
+            Money::new(old_amount, old_currency),
+            old_exchange_rate,
+        );
+        let old_base_amount = old_amount_ma.base_amount;
         let old_customer_id = existing_payment.customer_id;
         let old_supplier_id = existing_payment.supplier_id;
         let old_debit_account_id = existing_payment.debit_account_id;
@@ -745,7 +755,12 @@ impl UpdatePaymentUseCase {
         self.repo.save(&updated_payment).await?;
 
         // 3. Apply new entity balances
-        let new_base_amount = updated_payment.amount * updated_payment.exchange_rate;
+        let new_currency = Currency::new(&updated_payment.currency_code, &updated_payment.currency_code, &updated_payment.currency_code, "", 2, false);
+        let new_amount_ma = MonetaryAmount::new(
+            Money::new(updated_payment.amount, new_currency),
+            updated_payment.exchange_rate,
+        );
+        let new_base_amount = new_amount_ma.base_amount;
         apply_entity_balances(
             &updated_payment.payment_type,
             new_base_amount,

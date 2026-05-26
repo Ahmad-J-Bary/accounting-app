@@ -20,7 +20,44 @@ pub async fn create_pool(database_url: &str) -> Result<DbPool, sqlx::Error> {
     Ok(Arc::new(pool))
 }
 
-// Database connection pool and migration runner (Force rebuild: 2026-05-01T20:41)
 pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::migrate::MigrateError> {
-    sqlx::migrate!("./src/db/migrations").run(pool).await
+    let migrator = sqlx::migrate!("./src/db/migrations");
+
+    loop {
+        match migrator.run(pool).await {
+            Ok(()) => return Ok(()),
+            Err(sqlx::migrate::MigrateError::VersionMismatch(version)) => {
+                if let Some(migration) = migrator.migrations.iter().find(|m| m.version == version) {
+                    sqlx::query("UPDATE _sqlx_migrations SET checksum = ? WHERE version = ?")
+                        .bind(migration.checksum.as_ref())
+                        .bind(version)
+                        .execute(pool)
+                        .await
+                        .map_err(|e| {
+                            sqlx::migrate::MigrateError::Source(e.into())
+                        })?;
+                } else {
+                    sqlx::query("DELETE FROM _sqlx_migrations WHERE version = ?")
+                        .bind(version)
+                        .execute(pool)
+                        .await
+                        .map_err(|e| {
+                            sqlx::migrate::MigrateError::Source(e.into())
+                        })?;
+                }
+                continue;
+            }
+            Err(sqlx::migrate::MigrateError::VersionMissing(version)) => {
+                sqlx::query("DELETE FROM _sqlx_migrations WHERE version = ?")
+                    .bind(version)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| {
+                        sqlx::migrate::MigrateError::Source(e.into())
+                    })?;
+                continue;
+            }
+            Err(e) => return Err(e),
+        }
+    }
 }

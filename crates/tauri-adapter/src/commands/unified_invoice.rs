@@ -53,6 +53,8 @@ pub async fn post_unified_invoice(
         supplier_repo: state.supplier_repo.clone(),
         material_repo: state.material_repo.clone(),
         category_repo: state.category_repo.clone(),
+        currency_repo: state.currency_repo.clone(),
+        exchange_rate_repo: state.exchange_rate_repo.clone(),
     })
     .execute(id).await.map_err(|e| e.to_string())
 }
@@ -109,6 +111,8 @@ pub async fn reopen_unified_invoice(
         state.journal_entry_repo.clone(),
         state.customer_repo.clone(),
         state.supplier_repo.clone(),
+        state.currency_repo.clone(),
+        state.exchange_rate_repo.clone(),
     )
     .execute(id).await.map_err(|e| e.to_string())
 }
@@ -138,6 +142,8 @@ pub async fn delete_unified_invoice(
         state.journal_entry_repo.clone(),
         state.customer_repo.clone(),
         state.supplier_repo.clone(),
+        state.currency_repo.clone(),
+        state.exchange_rate_repo.clone(),
     )
     .execute(id).await.map_err(|e| e.to_string())
 }

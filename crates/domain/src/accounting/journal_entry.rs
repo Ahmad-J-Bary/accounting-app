@@ -343,14 +343,14 @@ mod tests {
         let lines = vec![
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::new(Money::new(dec!(10), secondary_currency.clone()), fx_rate),
+                MonetaryAmount::new(Money::new(dec!(150000), secondary_currency.clone()), fx_rate),
                 MonetaryAmount::zero(secondary_currency.clone()),
                 "مدين بعملة ثانوية".to_string(),
             ),
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
                 MonetaryAmount::zero(base_currency.clone()),
-                MonetaryAmount::new(Money::new(dec!(150000), base_currency.clone()), dec!(1)),
+                MonetaryAmount::new(Money::new(dec!(10), base_currency.clone()), dec!(1)),
                 "دائن بعملة أساسية".to_string(),
             ),
         ];
@@ -375,14 +375,14 @@ mod tests {
         let lines = vec![
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::new(Money::new(dec!(10), secondary_currency.clone()), fx_rate),
+                MonetaryAmount::new(Money::new(dec!(150000), secondary_currency.clone()), fx_rate),
                 MonetaryAmount::zero(secondary_currency.clone()),
                 "مدين".to_string(),
             ),
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
                 MonetaryAmount::zero(base_currency.clone()),
-                MonetaryAmount::new(Money::new(dec!(140000), base_currency.clone()), dec!(1)),
+                MonetaryAmount::new(Money::new(dec!(9), base_currency.clone()), dec!(1)),
                 "دائن".to_string(),
             ),
         ];
@@ -412,7 +412,7 @@ mod tests {
             ),
             JournalLine::new(
                 AccountId(Uuid::new_v4()),
-                MonetaryAmount::new(Money::new(dec!(10), secondary_currency.clone()), dec!(15000)),
+                MonetaryAmount::new(Money::new(dec!(150000), secondary_currency.clone()), dec!(15000)),
                 MonetaryAmount::zero(secondary_currency.clone()),
                 "مدين بعملة ثانوية".to_string(),
             ),
@@ -428,6 +428,6 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(entry.total_base_debit().normalize(), dec!(150100).normalize());
+        assert_eq!(entry.total_base_debit().normalize(), dec!(110).normalize());
     }
 }

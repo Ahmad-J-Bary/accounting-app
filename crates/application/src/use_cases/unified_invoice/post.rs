@@ -12,6 +12,8 @@ use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::supplier_repository::SupplierRepository;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::category_repository::CategoryRepository;
+use crate::ports::currency_repository::CurrencyRepository;
+use crate::ports::exchange_rate_repository::ExchangeRateRepository;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine};
 use domain::shared::{Currency, Money, MonetaryAmount};
 use rust_decimal::Decimal;
@@ -27,6 +29,8 @@ pub struct PostInvoiceUseCase {
     supplier_repo: Arc<dyn SupplierRepository>,
     material_repo: Arc<dyn MaterialRepository>,
     category_repo: Arc<dyn CategoryRepository>,
+    currency_repo: Arc<dyn CurrencyRepository>,
+    exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
 }
 
 pub struct PostInvoiceDependencies {
@@ -38,6 +42,8 @@ pub struct PostInvoiceDependencies {
     pub supplier_repo: Arc<dyn SupplierRepository>,
     pub material_repo: Arc<dyn MaterialRepository>,
     pub category_repo: Arc<dyn CategoryRepository>,
+    pub currency_repo: Arc<dyn CurrencyRepository>,
+    pub exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
 }
 
 impl PostInvoiceUseCase {
@@ -51,6 +57,8 @@ impl PostInvoiceUseCase {
             supplier_repo: deps.supplier_repo,
             material_repo: deps.material_repo,
             category_repo: deps.category_repo,
+            currency_repo: deps.currency_repo,
+            exchange_rate_repo: deps.exchange_rate_repo,
         }
     }
 
@@ -67,6 +75,8 @@ impl PostInvoiceUseCase {
                 self.journal_repo.clone(),
                 self.customer_repo.clone(),
                 self.supplier_repo.clone(),
+                self.currency_repo.clone(),
+                self.exchange_rate_repo.clone(),
             );
             reopener.execute(id.clone()).await?;
             
@@ -145,8 +155,16 @@ impl PostInvoiceUseCase {
                                 format!("فاتورة مبيعات رقم {}", invoice.invoice_number)
                             ).with_partner(cid.0));
 
+                            let converted_total = convert_to_partner_currency(
+                                total_amount,
+                                &invoice.currency_code,
+                                fx_rate,
+                                &customer.currency.code,
+                                &self.currency_repo,
+                                &self.exchange_rate_repo,
+                            ).await?;
                             let mut updated_customer = customer;
-                            updated_customer.increase_debit(total_amount).map_err(|e| AppError::Invalid(e.to_string()))?;
+                            updated_customer.increase_debit(converted_total).map_err(|e| AppError::Invalid(e.to_string()))?;
                             self.customer_repo.update(&updated_customer).await?;
                             customer_handled = true;
                         }
@@ -194,8 +212,16 @@ impl PostInvoiceUseCase {
                             ).with_partner(supplier_id.0));
                         }
 
+                        let converted_debit = convert_to_partner_currency(
+                            main_debit_amount,
+                            &invoice.currency_code,
+                            fx_rate,
+                            &supplier.currency.code,
+                            &self.currency_repo,
+                            &self.exchange_rate_repo,
+                        ).await?;
                         let mut updated_supplier = supplier.clone();
-                        updated_supplier.increase_credit(main_debit_amount).map_err(|e| AppError::Invalid(e.to_string()))?;
+                        updated_supplier.increase_credit(converted_debit).map_err(|e| AppError::Invalid(e.to_string()))?;
                         self.supplier_repo.update(&updated_supplier).await?;
                     }
                 } else {
@@ -340,7 +366,15 @@ impl PostInvoiceUseCase {
 
                 if let Some(cid) = &invoice.customer_id {
                     if let Some(mut customer) = self.customer_repo.find_by_id(cid).await? {
-                        customer.decrease_debit(amount_paid).map_err(|e| AppError::Invalid(e.to_string()))?;
+                        let converted_paid = convert_to_partner_currency(
+                            amount_paid,
+                            &invoice.currency_code,
+                            fx_rate,
+                            &customer.currency.code,
+                            &self.currency_repo,
+                            &self.exchange_rate_repo,
+                        ).await?;
+                        customer.decrease_debit(converted_paid).map_err(|e| AppError::Invalid(e.to_string()))?;
                         self.customer_repo.update(&customer).await?;
                     }
                 }
@@ -407,8 +441,16 @@ impl PostInvoiceUseCase {
                     cp_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
                     self.journal_repo.save(&cp_entry).await?;
 
+                    let converted_main_paid = convert_to_partner_currency(
+                        main_paid,
+                        &invoice.currency_code,
+                        fx_rate,
+                        &supplier.currency.code,
+                        &self.currency_repo,
+                        &self.exchange_rate_repo,
+                    ).await?;
                     let mut updated_supplier = supplier.clone();
-                    updated_supplier.decrease_credit(main_paid).map_err(|e| AppError::Invalid(e.to_string()))?;
+                    updated_supplier.decrease_credit(converted_main_paid).map_err(|e| AppError::Invalid(e.to_string()))?;
                     self.supplier_repo.update(&updated_supplier).await?;
                 }
             }
@@ -423,5 +465,47 @@ impl PostInvoiceUseCase {
             self.category_repo.clone(),
         );
         queries.populate_dto(dto).await
+    }
+}
+
+pub async fn convert_to_partner_currency(
+    amount: Decimal,
+    invoice_currency: &str,
+    invoice_exchange_rate: Decimal,
+    partner_currency: &str,
+    currency_repo: &Arc<dyn CurrencyRepository>,
+    exchange_rate_repo: &Arc<dyn ExchangeRateRepository>,
+) -> Result<Decimal, AppError> {
+    if invoice_currency == partner_currency {
+        return Ok(amount);
+    }
+
+    let base_currency = currency_repo
+        .get_base_currency()
+        .await?
+        .ok_or_else(|| AppError::NotFound("العملة الأساسية غير معرفة".into()))?;
+
+    // Step 1: convert amount to base currency (divide by invoice exchange rate)
+    let base_amount = if invoice_currency == base_currency.code || invoice_exchange_rate.is_zero() {
+        amount
+    } else {
+        amount / invoice_exchange_rate
+    };
+
+    if partner_currency == base_currency.code {
+        return Ok(base_amount);
+    }
+
+    // Step 2: convert base currency to partner currency (multiply by rate)
+    let rate_opt = exchange_rate_repo
+        .find_latest(&base_currency.code, partner_currency, domain::shared::exchange_rate::RateType::Middle)
+        .await?;
+
+    match rate_opt {
+        Some(rate) => Ok(base_amount * rate.rate),
+        None => Err(AppError::NotFound(format!(
+            "لم يتم العثور على سعر صرف من {} إلى {}",
+            base_currency.code, partner_currency
+        ))),
     }
 }
