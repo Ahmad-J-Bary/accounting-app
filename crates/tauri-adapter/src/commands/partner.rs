@@ -7,6 +7,7 @@ use tauri::State;
 use std::str::FromStr;
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn add_partner(
     state: State<'_, AppState>,
     name: String,

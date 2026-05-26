@@ -8,6 +8,7 @@ import { useTabs } from '@app/providers/TabContext';
 import { cn } from '@shared/lib/utils';
 import { useKeyboardShortcuts } from '@shared/hooks/useKeyboardShortcuts';
 import { FloatingExchangeRateWidget } from '@modules/core/components/FloatingExchangeRateWidget';
+import { UpdateBanner } from '@modules/core/components/UpdateBanner';
 
 interface AppLayoutProps {
   title?: string;
@@ -119,6 +120,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
               </div>
             ))}
             <FloatingExchangeRateWidget isVisible={isExchangeVisible} onClose={() => toggleExchange()} />
+            <UpdateBanner />
           </main>
         </div>
       </div>
