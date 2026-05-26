@@ -39,6 +39,7 @@ export default function PurchaseInvoices() {
     handleSave,
     handleReopen,
     enrichedLines,
+    docSubtotal,
     subtotal,
     net,
     displayCurrency,
@@ -173,6 +174,8 @@ export default function PurchaseInvoices() {
             currencies={currencies}
             onCurrencyChange={setDisplayCurrency}
             exchangeRate={parseFloat(headerState.exchange_rate)}
+            docCurrency={headerState.currency_code}
+            docSubtotal={docSubtotal}
             isReadOnly={isReadOnly}
             paymentMethod={headerState.payment_method}
             onPaymentMethodChange={(method) => {

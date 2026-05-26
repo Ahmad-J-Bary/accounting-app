@@ -28,7 +28,7 @@ impl CurrencySetupUseCase {
 
     pub async fn is_setup_complete(&self) -> Result<bool, AppError> {
         let active = self.currency_repo.list_active().await?;
-        Ok(active.len() >= 1)
+        Ok(!active.is_empty())
     }
 
     pub async fn setup_currencies(
@@ -47,7 +47,7 @@ impl CurrencySetupUseCase {
 
         let existing = self.currency_repo.list_all().await?;
         for c in existing {
-            if c.code != code && secondary_code.as_ref().map_or(true, |s| c.code != s.trim().to_uppercase()) {
+            if c.code != code && secondary_code.as_ref().is_none_or(|s| c.code != s.trim().to_uppercase()) {
                 self.currency_repo.delete(&c.code).await?;
             }
         }

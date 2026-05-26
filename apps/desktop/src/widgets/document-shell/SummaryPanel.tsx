@@ -21,6 +21,8 @@ interface SummaryPanelProps {
   currencies?: Currency[];
   onCurrencyChange?: (code: string) => void;
   exchangeRate?: number;
+  docCurrency?: string;
+  docSubtotal?: number;
   isReadOnly?: boolean;
   paymentMethod?: string;
   onPaymentMethodChange?: (method: string) => void;

@@ -24,6 +24,26 @@ interface ExtraColumn {
   className?: string;
 }
 
+const getInvoiceBaseAmount = (
+  originalAmount: string | number | null | undefined,
+  v2Amount?: { base_amount?: string },
+  currencyCode?: string,
+  exchangeRate?: string,
+  baseCurrencyCode?: string | null
+): number => {
+  if (v2Amount?.base_amount) {
+    return parseFloat(v2Amount.base_amount) || 0;
+  }
+  const amt = typeof originalAmount === "string" ? parseFloat(originalAmount) : (originalAmount ?? 0);
+  if (!amt) return 0;
+  if (currencyCode && baseCurrencyCode && currencyCode === baseCurrencyCode) {
+    return amt;
+  }
+  const rate = parseFloat(exchangeRate || "1") || 1;
+  return amt / rate;
+};
+
+
 interface InvoiceListProps {
   invoices: InvoiceDto[];
   loading: boolean;
@@ -140,9 +160,15 @@ export function InvoiceList({
         header: `مجموع الأسعار (${curr.symbol || curr.code})`,
         label: `مجموع الأسعار (${curr.symbol || curr.code})`,
         accessor: (inv: InvoiceDto) => {
-          const val = parseFloat(inv.subtotal_amount || "0");
-          const converted = curr.code === (inv.currency_code || baseCurrency?.code) ? val : (val > 0 ? 0 : 0);
-          return formatAmount(converted || val, { currencyCode: curr.code });
+          const baseAmt = getInvoiceBaseAmount(
+            inv.subtotal_amount,
+            inv.subtotal_amount_v2,
+            inv.currency_code,
+            inv.exchange_rate,
+            baseCurrency?.code
+          );
+          if (baseAmt === 0) return "—";
+          return formatAmount(baseAmt, { currencyCode: curr.code });
         },
         align: "left" as const,
         className: "font-bold tabular-nums text-slate-700"
@@ -151,7 +177,17 @@ export function InvoiceList({
         id: `extra_costs_${curr.code}`,
         header: `تكاليف إضافية (${curr.symbol || curr.code})`,
         label: `التكاليف الإضافية (${curr.symbol || curr.code})`,
-        accessor: (inv: InvoiceDto) => formatAmount(parseFloat(inv.extra_costs || "0"), { currencyCode: curr.code }),
+        accessor: (inv: InvoiceDto) => {
+          const baseAmt = getInvoiceBaseAmount(
+            inv.extra_costs,
+            inv.extra_costs_v2,
+            inv.currency_code,
+            inv.exchange_rate,
+            baseCurrency?.code
+          );
+          if (baseAmt === 0) return "—";
+          return formatAmount(baseAmt, { currencyCode: curr.code });
+        },
         align: "left" as const,
         className: "font-bold tabular-nums text-rose-600"
       })) : []),
@@ -159,24 +195,54 @@ export function InvoiceList({
         id: `total_${curr.code}`,
         header: `المجموع الكلي (${curr.symbol || curr.code})`,
         label: `المجموع الكلي (${curr.symbol || curr.code})`,
-        accessor: (inv) => formatAmount(parseFloat(inv.total_amount || "0"), { currencyCode: curr.code }),
-        align: "left",
+        accessor: (inv: InvoiceDto) => {
+          const baseAmt = getInvoiceBaseAmount(
+            inv.total_amount,
+            inv.total_amount_v2,
+            inv.currency_code,
+            inv.exchange_rate,
+            baseCurrency?.code
+          );
+          if (baseAmt === 0) return "—";
+          return formatAmount(baseAmt, { currencyCode: curr.code });
+        },
+        align: "left" as const,
         className: "font-black tabular-nums text-slate-900"
       })),
       ...currencies.map(curr => ({
         id: `paid_${curr.code}`,
         header: `المدفوع (${curr.symbol || curr.code})`,
         label: `المبلغ المدفوع (${curr.symbol || curr.code})`,
-        accessor: (inv) => formatAmount(parseFloat(inv.amount_paid || "0"), { currencyCode: curr.code }),
-        align: "left",
+        accessor: (inv: InvoiceDto) => {
+          const baseAmt = getInvoiceBaseAmount(
+            inv.amount_paid,
+            inv.amount_paid_v2,
+            inv.currency_code,
+            inv.exchange_rate,
+            baseCurrency?.code
+          );
+          if (baseAmt === 0) return "—";
+          return formatAmount(baseAmt, { currencyCode: curr.code });
+        },
+        align: "left" as const,
         className: "font-bold tabular-nums text-emerald-600"
       })),
       ...currencies.map(curr => ({
         id: `remaining_${curr.code}`,
         header: `المتبقي (${curr.symbol || curr.code})`,
         label: `المبلغ المتبقي (${curr.symbol || curr.code})`,
-        accessor: (inv) => formatAmount(parseFloat(inv.remaining_amount || "0"), { currencyCode: curr.code }),
-        align: "left",
+        accessor: (inv: InvoiceDto) => {
+          const baseAmt = getInvoiceBaseAmount(
+            inv.remaining_amount,
+            inv.remaining_amount_v2,
+            inv.currency_code,
+            inv.exchange_rate,
+            baseCurrency?.code
+          );
+          if (baseAmt === 0) return "—";
+          return formatAmount(baseAmt, { currencyCode: curr.code });
+        },
+        align: "left" as const,
         className: "font-bold tabular-nums text-orange-600"
       })),
       {
@@ -253,54 +319,112 @@ export function InvoiceList({
   });
 
   const stats = useMemo(() => {
-    const total = filtered.reduce((acc, inv) => acc + parseFloat(inv.total_amount_v2?.base_amount || inv.total_amount || "0"), 0);
+    const total = filtered.reduce((acc, inv) => {
+      const baseAmt = getInvoiceBaseAmount(
+        inv.total_amount,
+        inv.total_amount_v2,
+        inv.currency_code,
+        inv.exchange_rate,
+        baseCurrency?.code
+      );
+      return acc + baseAmt;
+    }, 0);
     return [
       { label: "عدد الفواتير", value: filtered.length, icon: ShoppingCart, color: "text-slate-900" },
       { label: statsLabel, value: formatMonetaryAmount(total.toString(), "base"), icon: Banknote, color: statsColor },
       { label: "فواتير معلقة", value: filtered.filter(i => i.status === 'Draft').length, icon: History, color: "text-amber-600" },
     ];
-  }, [filtered, formatMonetaryAmount, statsLabel, statsColor]);
+  }, [filtered, formatMonetaryAmount, statsLabel, statsColor, baseCurrency]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
-    const totalsByCurrency: Record<string, { total: number; paid: number; remaining: number }> = {};
-    currencies.forEach(curr => {
-      totalsByCurrency[curr.code] = { total: 0, paid: 0, remaining: 0 };
-    });
+    let baseSubtotalTotal = 0;
+    let baseExtraCostsTotal = 0;
+    let baseTotalTotal = 0;
+    let basePaidTotal = 0;
+    let baseRemainingTotal = 0;
+
     filtered.forEach(inv => {
-      currencies.forEach(curr => {
-        const t = totalsByCurrency[curr.code];
-        if (!t) return;
-        t.total += parseFloat(inv.total_amount || "0");
-        t.paid += parseFloat(inv.amount_paid || "0");
-        t.remaining += parseFloat(inv.remaining_amount || "0");
-      });
+      baseSubtotalTotal += getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+      baseExtraCostsTotal += getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+      baseTotalTotal += getInvoiceBaseAmount(inv.total_amount, inv.total_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+      basePaidTotal += getInvoiceBaseAmount(inv.amount_paid, inv.amount_paid_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+      baseRemainingTotal += getInvoiceBaseAmount(inv.remaining_amount, inv.remaining_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
     });
+
     const colIds = enrichedColumns.map(c => c.id);
     return colIds.map(id => {
       if (id === 'invoice_number') {
-        return { id: 'count', label: '', value: `${filtered.length} فاتورة`, className: 'text-slate-600 font-bold' };
+        return { id: 'count', columnId: 'invoice_number', label: '', value: `${filtered.length} فاتورة`, className: 'text-slate-600 font-bold' };
       }
+      
+      const subtotalMatch = id.match(/^subtotal_(.+)$/);
+      if (subtotalMatch) {
+        const currCode = subtotalMatch[1];
+        return {
+          id: `${id}_summary`,
+          columnId: id,
+          label: 'الإجمالي الفرعي',
+          value: baseSubtotalTotal > 0 ? formatAmount(baseSubtotalTotal, { currencyCode: currCode }) : "—",
+          align: 'left' as const,
+          className: 'font-bold text-slate-700'
+        };
+      }
+      
+      const extraCostsMatch = id.match(/^extra_costs_(.+)$/);
+      if (extraCostsMatch) {
+        const currCode = extraCostsMatch[1];
+        return {
+          id: `${id}_summary`,
+          columnId: id,
+          label: 'التكاليف الإضافية',
+          value: baseExtraCostsTotal > 0 ? formatAmount(baseExtraCostsTotal, { currencyCode: currCode }) : "—",
+          align: 'left' as const,
+          className: 'font-bold text-rose-600'
+        };
+      }
+
       const totalMatch = id.match(/^total_(.+)$/);
       if (totalMatch) {
         const currCode = totalMatch[1];
-        const t = totalsByCurrency[currCode];
-        return { id: `${id}_summary`, label: 'الإجمالي', value: t ? formatAmount(t.total, { currencyCode: currCode }) : "—", align: 'left' as const, className: 'font-black text-slate-900' };
+        return {
+          id: `${id}_summary`,
+          columnId: id,
+          label: 'الإجمالي',
+          value: baseTotalTotal > 0 ? formatAmount(baseTotalTotal, { currencyCode: currCode }) : "—",
+          align: 'left' as const,
+          className: 'font-black text-slate-900'
+        };
       }
+      
       const paidMatch = id.match(/^paid_(.+)$/);
       if (paidMatch) {
         const currCode = paidMatch[1];
-        const t = totalsByCurrency[currCode];
-        return { id: `${id}_summary`, label: 'المدفوع', value: t ? formatAmount(t.paid, { currencyCode: currCode }) : "—", align: 'left' as const, className: 'font-bold text-emerald-600' };
+        return {
+          id: `${id}_summary`,
+          columnId: id,
+          label: 'المدفوع',
+          value: basePaidTotal > 0 ? formatAmount(basePaidTotal, { currencyCode: currCode }) : "—",
+          align: 'left' as const,
+          className: 'font-bold text-emerald-600'
+        };
       }
+      
       const remainingMatch = id.match(/^remaining_(.+)$/);
       if (remainingMatch) {
         const currCode = remainingMatch[1];
-        const t = totalsByCurrency[currCode];
-        return { id: `${id}_summary`, label: 'المتبقي', value: t ? formatAmount(t.remaining, { currencyCode: currCode }) : "—", align: 'left' as const, className: 'font-bold text-orange-600' };
+        return {
+          id: `${id}_summary`,
+          columnId: id,
+          label: 'المتبقي',
+          value: baseRemainingTotal > 0 ? formatAmount(baseRemainingTotal, { currencyCode: currCode }) : "—",
+          align: 'left' as const,
+          className: 'font-bold text-orange-600'
+        };
       }
-      return { id: `${id}_spacer`, label: '', value: '' };
+      
+      return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
     });
-  }, [filtered, enrichedColumns, formatAmount, currencies]);
+  }, [filtered, enrichedColumns, formatAmount, baseCurrency]);
 
   return (
     <OperationalTableTemplate

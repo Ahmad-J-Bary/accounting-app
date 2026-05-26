@@ -140,7 +140,6 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
     headerState.discount_amount,
     headerState.tax_amount,
     headerState.extra_costs,
-    convertBetween,
     baseCurrency?.code,
     rateMap,
   ]);
@@ -312,7 +311,6 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
   }, [
     currencies,
     headerState.currency_code,
-    invoiceType,
     priceLabel,
     extraColumns,
   ]);

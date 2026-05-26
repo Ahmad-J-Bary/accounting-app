@@ -53,6 +53,7 @@ async fn enrich_payment(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn reverse_entity_balances(
     payment_type: &PaymentType,
     base_amount: Decimal,
@@ -107,6 +108,7 @@ async fn reverse_entity_balances(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn apply_entity_balances(
     payment_type: &PaymentType,
     base_amount: Decimal,
@@ -551,8 +553,8 @@ impl UpdatePaymentUseCase {
         let old_amount = existing_payment.amount;
         let old_exchange_rate = existing_payment.exchange_rate;
         let old_base_amount = old_amount * old_exchange_rate;
-        let old_customer_id = existing_payment.customer_id.clone();
-        let old_supplier_id = existing_payment.supplier_id.clone();
+        let old_customer_id = existing_payment.customer_id;
+        let old_supplier_id = existing_payment.supplier_id;
         let old_debit_account_id = existing_payment.debit_account_id;
 
         // 1. Reverse old entity balances

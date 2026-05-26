@@ -32,6 +32,7 @@ impl CreatePartnerUseCase {
         Self { repo, account_repo, journal_repo, uow, currency_repo }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn execute(
         &self,
         name: String,
@@ -182,9 +183,9 @@ impl CreatePartnerUseCase {
 
             let lines = vec![
                 JournalLine::new(cash_account.id, total_ma.clone(), zero_ma.clone(),
-                    format!("إيداع رأس المال بالصندوق")),
+                    "إيداع رأس المال بالصندوق".to_string()),
                 JournalLine::new(capital_parent.id, zero_ma, total_ma,
-                    format!("إجمالي رأس مال الشركاء")),
+                    "إجمالي رأس مال الشركاء".to_string()),
             ];
 
             let mut entry = JournalEntry::new(
@@ -192,7 +193,7 @@ impl CreatePartnerUseCase {
                 JournalType::CashOpeningBalance,
                 lines,
                 Utc::now(),
-                format!("إيداع رأس المال بالصندوق — إجمالي رأس مال الشركاء"),
+                "إيداع رأس المال بالصندوق — إجمالي رأس مال الشركاء".to_string(),
                 Some("consolidated_capital".to_string()),
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
