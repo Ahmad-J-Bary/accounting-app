@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@shared/lib/invoke";
 
 export const materialCodeService = {
   async generateCode(categoryId: string): Promise<string> {

@@ -1,3 +1,10 @@
 packages:
   - 'packages/*'
   - 'apps/*'
+
+# pnpm v11: allow native postinstall scripts for these dependencies
+allowBuilds:
+  esbuild: true
+  '@swc/core': true
+  '@metagptx/vite-plugin-source-locator': true
+  simple-git-hooks: true

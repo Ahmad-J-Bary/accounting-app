@@ -1,0 +1,52 @@
+# Auto-detect text files and ensure LF line endings on checkout
+* text=auto
+
+# Shell scripts must stay LF (Windows Git for Bash requires this)
+*.sh text eol=lf
+
+# PowerShell scripts – OK as LF (pwsh handles both)
+*.ps1 text eol=lf
+
+# Batch files need CRLF on Windows
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Rust / Cargo
+*.rs text eol=lf
+*.toml text eol=lf
+Cargo.lock -text
+
+# JavaScript / TypeScript
+*.js text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.jsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.json text eol=lf
+
+# Web
+*.html text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.svg text eol=lf
+
+# Config
+*.yaml text eol=lf
+*.yml text eol=lf
+*.conf text eol=lf
+
+# Markdown / docs
+*.md text eol=lf
+
+# Binary files – don't touch
+*.png binary
+*.ico binary
+*.icns binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.db binary
+*.db-journal binary
+*.db-shm binary
+*.db-wal binary

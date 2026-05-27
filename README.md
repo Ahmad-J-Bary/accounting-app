@@ -1,73 +1,77 @@
-# React + TypeScript + Vite
+# المواكب (Almowakeb) - ERP Accounting & Inventory System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+نظام متكامل للمحاسبة والمخزون
 
-Currently, two official plugins are available:
+## Prerequisites
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### Windows
+- **PowerShell 5.1+** (built-in on Windows 10/11)
+- **Visual Studio Build Tools** (or Visual Studio with "Desktop development with C++") - [Download](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+- **Node.js** 18+ (with npm)
+- **Rust** (via rustup) - installed automatically by `setup-windows.ps1`
 
-## React Compiler
+### Linux (Ubuntu/Debian)
+- **Node.js** 18+
+- **Rust** (via rustup) - installed automatically by `setup-linux.sh`
+- **System packages**: `libgtk-3-dev`, `libwebkit2gtk-4.1-dev`, `libsoup-3.0-dev`, etc.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Quick Start
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Windows
+```powershell
+.\scripts\setup-windows.ps1
+pnpm tauri:dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Linux
+```bash
+sudo ./scripts/setup-linux.sh
+pnpm tauri:dev
 ```
+
+## Development
+
+```bash
+# Start dev server with hot reload
+pnpm tauri:dev
+
+# Run frontend only (browser)
+pnpm dev
+
+# Lint
+pnpm lint
+
+# Run tests
+pnpm --filter desktop test
+
+# Build for production
+pnpm build
+```
+
+## Tech Stack
+- **Frontend**: React, TypeScript, Vite, Tailwind CSS, shadcn/ui
+- **Backend**: Rust, Tauri 2, SQLite (via sqlx)
+- **Package Manager**: pnpm 11
+- **Monorepo**: pnpm workspace + Turborepo
+
+## Project Structure
+```
+accounting-app/
+├── apps/desktop/          # Tauri desktop application
+│   ├── src/               # React frontend
+│   └── src-tauri/         # Tauri/Rust backend
+├── crates/                # Rust crates
+│   ├── domain/            # Domain logic
+│   ├── application/       # Application services
+│   ├── infrastructure/    # Database/repository implementations
+│   ├── ports/             # Port/trait definitions
+│   └── tauri-adapter/     # Tauri command handlers
+├── packages/              # Shared packages
+│   └── shared-types/      # TypeScript type definitions
+└── scripts/               # Build and setup scripts
+```
+
+## CI/CD
+The project includes GitHub Actions workflows for:
+- **CI**: Lint, type-check, test, and cross-platform Rust checks
+- **Release**: Build desktop bundles for Windows (.msi, .nsis), Linux (.deb, .rpm, .AppImage), and macOS (.dmg, .app)

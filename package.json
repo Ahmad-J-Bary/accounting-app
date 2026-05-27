@@ -7,11 +7,12 @@
     "dev": "pnpm --filter desktop dev",
     "build": "pnpm --filter desktop build",
     "tauri": "pnpm --filter desktop tauri",
-    "tauri:dev": "pnpm --filter desktop tauri dev",
-    "lint": "pnpm --filter desktop lint"
+    "tauri:dev": "pnpm --filter desktop tauri:dev",
+    "lint": "pnpm --filter desktop lint",
+    "clean": "node scripts/clean.js"
   },
   "devDependencies": {
     "typescript": "^5.5.3"
   },
-  "packageManager": "pnpm@10.29.2"
+  "packageManager": "pnpm@11.3.0"
 }

@@ -25,6 +25,7 @@ target/
 # Tauri
 src-tauri/target
 src-tauri/gen
+src-tauri/WebView2Loader.dll
 **/dist
 
 # Workspace

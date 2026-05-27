@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@shared/lib/invoke";
 import type { PartnerDto, PartnerRequest } from "@erp/shared-types";
 
 export type { PartnerDto, PartnerRequest };

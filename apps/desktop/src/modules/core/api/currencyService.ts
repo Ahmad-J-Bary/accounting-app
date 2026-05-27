@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@shared/lib/invoke";
 
 export interface Currency {
   code: string;

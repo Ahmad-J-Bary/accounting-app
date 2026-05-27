@@ -11,7 +11,7 @@
     "deploy": "vite build && gh-pages -d dist",
     "postinstall": "echo 'Dependencies installed successfully'",
     "tauri": "pnpm exec tauri",
-    "tauri:dev": "pnpm exec tauri dev",
+    "tauri:dev": "node ../../scripts/dev.js",
     "test": "vitest run",
     "test:watch": "vitest"
   },

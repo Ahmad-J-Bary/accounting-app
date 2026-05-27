@@ -1,0 +1,29 @@
+# ─────────────────────────────────────────────────────────────────
+# Cargo workspace configuration – cross-platform (Linux / Windows)
+# ─────────────────────────────────────────────────────────────────
+# Linux (local toolchain via scripts/env-local-deps.sh):
+#   The linker and env‑vars below assume a user‑local prefix at
+#   ~/.local/linux-build-prefix (extracted via scripts/extract-local-deps.sh).
+#   Activate the full environment: `source scripts/env-local-deps.sh`.
+#
+# Windows:
+#   The GNU/MinGW toolchain is used (no VS / MSVC required).
+#   These env‑vars are already scoped below to [target.x86_64-unknown-linux-gnu]
+#   so they have no effect on Windows builds.
+# ─────────────────────────────────────────────────────────────────
+
+[target.x86_64-unknown-linux-gnu]
+# The linker path is NOT set here because Cargo does not expand
+# environment variables in the `linker` field.  Instead, source
+# scripts/env-local-deps.sh which exports
+# CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER.  On a normal dev
+# machine the system cc/gcc from PATH is used automatically.
+
+[target.x86_64-unknown-linux-gnu.env]
+PKG_CONFIG_PATH = "${HOME}/.local/linux-build-prefix/usr/lib/x86_64-linux-gnu/pkgconfig:${HOME}/.local/linux-build-prefix/usr/share/pkgconfig"
+LIBRARY_PATH = "${HOME}/.local/linux-build-prefix/usr/lib/x86_64-linux-gnu:${HOME}/.local/linux-build-prefix/lib/x86_64-linux-gnu"
+# Explicitly override LD_LIBRARY_PATH to "" so the user's shell
+# environment (snap, conda, etc.) does not leak into the Cargo build.
+LD_LIBRARY_PATH = ""
+C_INCLUDE_PATH = "${HOME}/.local/linux-build-prefix/usr/include"
+

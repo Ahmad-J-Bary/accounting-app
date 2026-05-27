@@ -16,6 +16,10 @@ tokio = { version = "1", features = ["full"] }
 
 tauri-adapter = { path = "../../../crates/tauri-adapter" }
 
+# Required on Linux for gdk-pixbuf workaround (see main.rs)
+[target.'cfg(target_os = "linux")'.dependencies]
+glib = "0.18"
+
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
