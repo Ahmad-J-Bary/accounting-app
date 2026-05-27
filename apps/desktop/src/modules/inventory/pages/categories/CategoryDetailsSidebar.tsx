@@ -7,7 +7,7 @@ import { categoryService } from '@modules/inventory/api/categoryService';
 import { materialService } from '@modules/inventory/api/materialService';
 import { materialCodeService } from '@modules/inventory/api/materialCodeService';
 import { TreeSidebar } from '@widgets/tree-sidebar/TreeSidebar';
-import { FieldLabel } from '@widgets/sidebar/FieldLabel';
+import { FieldLabel } from '@widgets/sidebar-shell/FieldLabel';
 import { toast } from "sonner";
 import { cn } from '@shared/lib/utils';
 

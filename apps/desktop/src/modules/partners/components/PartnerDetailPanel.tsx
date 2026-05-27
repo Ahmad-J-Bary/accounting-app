@@ -1,10 +1,21 @@
-import { X, Pencil, Trash2, BookOpen, FileText } from "lucide-react";
-import { DetailPanel, ActionButton } from "@widgets/sidebar";
-import { SidebarSection } from "@widgets/sidebar/SidebarSection";
-import { FieldLabel } from "@widgets/sidebar/FieldLabel";
-import { Input } from "@shared/ui/input";
-import type { PartnerDto, CustomerDto, SupplierDto } from "@erp/shared-types";
+import { Pencil, Trash2, BookOpen, FileText } from "lucide-react";
+import type { InvoiceDto, Payment, CustomerDto, SupplierDto, PartnerDto } from "@erp/shared-types";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useTabs } from "@app/providers/TabContext";
+import {
+  SidebarShell,
+  SidebarHeader,
+  SidebarActionBar,
+  SidebarBody,
+  SidebarDetailGrid,
+  type SidebarAction,
+} from "@widgets/sidebar-shell";
+
+const PROFIT_TYPE_LABELS: Record<string, string> = {
+  BasedOnCapitalLocal: "على أساس رأس المال المحلي",
+  BasedOnCapitalOriginal: "على أساس رأس المال الأصلي",
+  Manual: "يدوي",
+};
 
 interface PartnerDetailPanelProps {
   type: "customer" | "supplier";
@@ -12,6 +23,9 @@ interface PartnerDetailPanelProps {
   onClose: () => void;
   onEdit: (partner: CustomerDto | SupplierDto | PartnerDto) => void;
   onDelete: (id: string, name: string) => void;
+  invoices: InvoiceDto[];
+  payments: Payment[];
+  loadingDetails: boolean;
 }
 
 export function PartnerDetailPanel({
@@ -21,6 +35,7 @@ export function PartnerDetailPanel({
   onEdit,
   onDelete,
 }: PartnerDetailPanelProps) {
+  const { currencies, baseCurrency } = useCurrencyContext();
   const { openTab } = useTabs();
 
   if (!partner) return null;
@@ -29,140 +44,124 @@ export function PartnerDetailPanel({
   const isPartner = "amount_original" in partner;
   const hasAccountId = (p: typeof partner): p is CustomerDto | SupplierDto => "account_id" in p;
   const partnerAccountId = hasAccountId(partner) ? partner.account_id : null;
-  const isDisabled = true;
 
-  const actions = (
-    <>
-      <ActionButton icon={<Pencil className="w-3.5 h-3.5" />} label="تعديل" color="amber" onClick={() => onEdit(partner)} />
-      <ActionButton icon={<Trash2 className="w-3.5 h-3.5" />} label="حذف" color="red" onClick={() => { if (confirm(`هل أنت متأكد من حذف "${partner.name}"؟`)) onDelete(partner.id, partner.name); }} />
-      {!isPartner && partnerAccountId && (
-        <>
-          <ActionButton icon={<BookOpen className="w-3.5 h-3.5" />} label="اليومية" color="blue" onClick={() => openTab({
-            id: `ledger-${partnerAccountId}`,
-            title: `حركة: ${partner.name}`,
-            path: `/accounting/account-ledger/${partnerAccountId}`,
-            closable: true,
-          })} />
-          <ActionButton icon={<FileText className="w-3.5 h-3.5" />} label="الكشف" color="emerald" onClick={() => openTab({
-            id: `statement-${partner.id}`,
-            title: `كشف: ${partner.name}`,
-            path: `/partners/customer-statement/${partner.id}`,
-            closable: true,
-          })} />
-        </>
-      )}
-    </>
+  const title = isPartner
+    ? "بيانات الشريك"
+    : isCustomer
+    ? "بيانات العميل"
+    : "بيانات المورد";
+
+  const statementPath = isCustomer
+    ? `/partners/customer-statement/${partner.id}`
+    : `/partners/supplier-statement/${partner.id}`;
+
+  const actions: SidebarAction[] = [
+    {
+      label: "تعديل",
+      icon: <Pencil className="w-4 h-4" />,
+      variant: "warning",
+      onClick: () => onEdit(partner),
+    },
+    {
+      label: "حذف",
+      icon: <Trash2 className="w-4 h-4" />,
+      variant: "danger",
+      onClick: () => {
+        if (confirm(`هل أنت متأكد من حذف "${partner.name}"؟`)) {
+          onDelete(partner.id, partner.name);
+        }
+      },
+    },
+    {
+      label: "اليومية",
+      icon: <BookOpen className="w-4 h-4" />,
+      variant: "primary",
+      hidden: isPartner || !partnerAccountId,
+      onClick: () =>
+        openTab({
+          id: `ledger-${partnerAccountId}`,
+          title: `حركة: ${partner.name}`,
+          path: `/accounting/account-ledger/${partnerAccountId}`,
+          closable: true,
+        }),
+    },
+    {
+      label: "الكشف",
+      icon: <FileText className="w-4 h-4" />,
+      variant: "success",
+      hidden: isPartner || !partnerAccountId,
+      onClick: () =>
+        openTab({
+          id: `statement-${partner.id}`,
+          title: `كشف: ${partner.name}`,
+          path: statementPath,
+          closable: true,
+        }),
+    },
+  ];
+
+  const currencyName = currencies.find(
+    (c) => c.code === (partner.currency || baseCurrency?.code)
   );
 
-  if (isPartner) {
-    return (
-      <DetailPanel
-        title="بيانات الشريك"
-        actions={actions}
-        onClose={onClose}
-      >
-        <SidebarSection title="المعلومات الأساسية">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <FieldLabel>رقم الحساب</FieldLabel>
-              <Input value={partner.code || ""} disabled className="h-9 bg-slate-50" />
-            </div>
-            <div className="space-y-1.5">
-              <FieldLabel>الاسم</FieldLabel>
-              <Input value={partner.name} disabled className="h-9 bg-slate-50" />
-            </div>
+  return (
+    <SidebarShell isOpen={true} onClose={onClose}>
+      <SidebarHeader title={title} onClose={onClose} />
+      <SidebarActionBar actions={actions} />
+      <SidebarBody>
+        {isPartner ? (
+          <div className="space-y-4 text-right">
+            <SidebarDetailGrid
+              columns={2}
+              fields={[
+                { label: "رقم الحساب", value: partner.code || "" },
+                { label: "الاسم", value: partner.name },
+              ]}
+            />
+            <SidebarDetailGrid
+              columns={2}
+              fields={[
+                { label: `المبلغ (${baseCurrency?.symbol || baseCurrency?.code || ""})`, value: partner.amount_original || "0" },
+                { label: "المبلغ (محلي)", value: partner.amount_local || "0" },
+                { label: "نسبة الأرباح (%)", value: partner.profit_sharing_ratio || "تلقائي" },
+                { label: "طريقة التوزيع", value: PROFIT_TYPE_LABELS[partner.profit_sharing_type || "BasedOnCapitalLocal"] },
+              ]}
+            />
+            {partner.notes && (
+              <SidebarDetailGrid
+                fields={[{ label: "ملاحظات", value: partner.notes }]}
+              />
+            )}
           </div>
-        </SidebarSection>
-
-        <SidebarSection title="معلومات الاستثمار">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <FieldLabel>المبلغ (الأصلي)</FieldLabel>
-              <Input value={partner.amount_original || "0"} disabled className="h-9 bg-slate-50" />
-            </div>
-            <div className="space-y-1.5">
-              <FieldLabel>المبلغ (محلي)</FieldLabel>
-              <Input value={partner.amount_local || "0"} disabled className="h-9 bg-slate-50" />
-            </div>
-            <div className="space-y-1.5">
-              <FieldLabel>نسبة الأرباح (%)</FieldLabel>
-              <Input value={partner.profit_sharing_ratio || ""} disabled className="h-9 bg-slate-50" />
-            </div>
-            <div className="space-y-1.5">
-              <FieldLabel>طريقة التوزيع</FieldLabel>
-              <Input value={partner.profit_sharing_type || ""} disabled className="h-9 bg-slate-50" />
-            </div>
-          </div>
-        </SidebarSection>
-
-        {partner.notes && (
-          <div className="space-y-1.5">
-            <FieldLabel>ملاحظات</FieldLabel>
-            <Input value={partner.notes || ""} disabled className="h-9 bg-slate-50" />
+        ) : (
+          <div className="space-y-4 text-right">
+            <SidebarDetailGrid
+              columns={2}
+              fields={[
+                { label: "رقم الحساب", value: partner.code || "" },
+                { label: isCustomer ? "اسم العميل" : "اسم المورد", value: partner.name },
+                { label: "رقم الهاتف", value: partner.phone || "—" },
+                { label: "العنوان", value: partner.address || "—" },
+              ]}
+            />
+            <SidebarDetailGrid
+              columns={2}
+              fields={[
+                { label: "الرصيد الافتتاحي", value: partner.opening_balance || "0" },
+                { label: "العملة", value: currencyName ? `${currencyName.code} - ${currencyName.name_ar}` : baseCurrency?.code || "" },
+                { label: "مدين (حالي)", value: partner.debit || "0" },
+                { label: "دائن (حالي)", value: partner.credit || "0" },
+                { label: "الرصيد الحالي", value: partner.balance || "0" },
+              ]}
+            />
+            {partner.notes && (
+              <SidebarDetailGrid
+                fields={[{ label: "ملاحظات", value: partner.notes }]}
+              />
+            )}
           </div>
         )}
-      </DetailPanel>
-    );
-  }
-
-  return (
-    <DetailPanel
-      title={isCustomer ? "بيانات العميل" : "بيانات المورد"}
-      actions={actions}
-      onClose={onClose}
-    >
-      <SidebarSection title="المعلومات الأساسية">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <FieldLabel>رقم الحساب</FieldLabel>
-            <Input value={partner.code || ""} disabled className="h-9 bg-slate-50" />
-          </div>
-          <div className="space-y-1.5">
-            <FieldLabel>{isCustomer ? "اسم العميل" : "اسم المورد"}</FieldLabel>
-            <Input value={partner.name} disabled className="h-9 bg-slate-50" />
-          </div>
-          <div className="space-y-1.5">
-            <FieldLabel>رقم الهاتف</FieldLabel>
-            <Input value={partner.phone || ""} disabled placeholder="—" className="h-9 bg-slate-50" />
-          </div>
-          <div className="space-y-1.5">
-            <FieldLabel>العنوان</FieldLabel>
-            <Input value={partner.address || ""} disabled placeholder="—" className="h-9 bg-slate-50" />
-          </div>
-        </div>
-      </SidebarSection>
-
-      <SidebarSection title="البيانات المالية">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <FieldLabel>الرصيد الافتتاحي</FieldLabel>
-            <Input value={partner.opening_balance || "0"} disabled className="h-9 bg-slate-50" />
-          </div>
-          <div className="space-y-1.5">
-            <FieldLabel>العملة</FieldLabel>
-            <Input value={partner.currency || ""} disabled className="h-9 bg-slate-50" />
-          </div>
-          <div className="space-y-1.5">
-            <FieldLabel>مدين (حالي)</FieldLabel>
-            <Input value={partner.debit || "0"} disabled className="h-9 bg-slate-50" />
-          </div>
-          <div className="space-y-1.5">
-            <FieldLabel>دائن (حالي)</FieldLabel>
-            <Input value={partner.credit || "0"} disabled className="h-9 bg-slate-50" />
-          </div>
-          <div className="space-y-1.5 col-span-2">
-            <FieldLabel>الرصيد الحالي</FieldLabel>
-            <Input value={partner.balance || "0"} disabled className="h-9 bg-slate-50 font-bold" />
-          </div>
-        </div>
-      </SidebarSection>
-
-      {partner.notes && (
-        <div className="space-y-1.5">
-          <FieldLabel>ملاحظات</FieldLabel>
-          <Input value={partner.notes || ""} disabled className="h-9 bg-slate-50" />
-        </div>
-      )}
-    </DetailPanel>
+      </SidebarBody>
+    </SidebarShell>
   );
 }

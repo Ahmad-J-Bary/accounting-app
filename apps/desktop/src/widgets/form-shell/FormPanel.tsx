@@ -1,8 +1,8 @@
 import { ReactNode } from "react";
-import { SidebarShell } from "@widgets/sidebar/SidebarShell";
-import { SidebarHeader } from "@widgets/sidebar/SidebarHeader";
-import { SidebarFooter } from "@widgets/sidebar/SidebarFooter";
-import type { SidebarWidth } from "@widgets/sidebar/types";
+import { SidebarShell } from "@widgets/sidebar-shell/SidebarShell";
+import { SidebarHeader } from "@widgets/sidebar-shell/SidebarHeader";
+import { SidebarFooter } from "@widgets/sidebar-shell/SidebarFooter";
+import type { SidebarWidth } from "@widgets/sidebar-shell/types";
 
 interface FormPanelProps {
   title: string;

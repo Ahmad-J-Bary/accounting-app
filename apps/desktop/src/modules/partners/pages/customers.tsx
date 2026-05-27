@@ -241,14 +241,12 @@ export default function Customers() {
             saving={saving}
           />
         ) : isReceiptOpen && selectedCustomer ? (
-          <div className="p-6">
-            <CustomerReceiptForm 
-              customer={selectedCustomer}
-              onSave={handleSaveReceipt}
-              onClose={() => setIsReceiptOpen(false)}
-              saving={receiptSaving}
-            />
-          </div>
+          <CustomerReceiptForm
+            customer={selectedCustomer}
+            onSave={handleSaveReceipt}
+            onClose={() => setIsReceiptOpen(false)}
+            saving={receiptSaving}
+          />
         ) : (
           <PartnerDetailPanel 
             type="customer"

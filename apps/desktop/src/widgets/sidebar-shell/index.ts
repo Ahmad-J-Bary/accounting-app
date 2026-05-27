@@ -3,24 +3,30 @@ export { SidebarHeader } from "./SidebarHeader";
 export { SidebarBody } from "./SidebarBody";
 export { SidebarFooter } from "./SidebarFooter";
 export { SidebarSection } from "./SidebarSection";
-export { FieldLabel } from "./FieldLabel";
-export { DetailPanel } from "./DetailPanel";
-export { DialogForm } from "./DialogForm";
-export { ActionButton } from "./ActionButton";
 export { SidebarActionBar } from "./SidebarActionBar";
-export type { SidebarAction } from "./SidebarActionBar";
 export { SidebarDetailField } from "./SidebarDetailField";
-export type { SidebarDetailFieldProps } from "./SidebarDetailField";
 export { SidebarDetailGrid } from "./SidebarDetailGrid";
 export { SidebarFieldGroup } from "./SidebarFieldGroup";
 export { SidebarEmptyState } from "./SidebarEmptyState";
 export { SidebarValidationSummary } from "./SidebarValidationSummary";
+export { ActionButton } from "./ActionButton";
+export { DialogForm } from "./DialogForm";
+export { FieldLabel } from "./FieldLabel";
+export { DetailPanel } from "./DetailPanel";
+
 export type {
-  SidebarDensity,
   SidebarWidth,
   SidebarShellProps,
   SidebarHeaderProps,
+  SidebarAction,
+  SidebarActionBarProps,
+  SidebarBodyProps,
+  SidebarDetailFieldProps,
+  SidebarDetailGridProps,
   SidebarFooterProps,
   SidebarSectionProps,
+  SidebarFieldGroupProps,
+  SidebarEmptyStateProps,
+  SidebarValidationSummaryProps,
   FieldLabelProps,
 } from "./types";

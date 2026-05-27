@@ -67,13 +67,27 @@ export const SidebarSettingsProvider: React.FC<{ children: ReactNode }> = ({ chi
   });
 
   useEffect(() => {
-    try { localStorage.setItem('erp_sidebar_settings', JSON.stringify(settings)); } catch {}
+    try { localStorage.setItem('erp_sidebar_settings', JSON.stringify(settings)); } catch { /* ignore storage errors */ }
   }, [settings]);
 
   useEffect(() => {
     const vars = DENSITY_VARS[settings.density];
     const root = document.documentElement;
+    const body = document.body;
+    
+    // Update CSS variables
     Object.entries(vars).forEach(([key, val]) => root.style.setProperty(key, val));
+    
+    // Update body density class
+    const densities: SidebarDensity[] = ['compact', 'comfortable', 'spacious'];
+    densities.forEach(d => {
+      const className = `sidebar-density-${d}`;
+      if (d === settings.density) {
+        body.classList.add(className);
+      } else {
+        body.classList.remove(className);
+      }
+    });
   }, [settings.density]);
 
   const updateSetting = <K extends keyof SidebarSettings>(key: K, value: SidebarSettings[K]) => {

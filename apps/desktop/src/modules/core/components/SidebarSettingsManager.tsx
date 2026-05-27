@@ -7,7 +7,7 @@ import { Switch } from "@shared/ui/switch";
 import { Slider } from "@shared/ui/slider";
 import { Button } from "@shared/ui/button";
 import { LayoutGrid, Type, Monitor, Eye, RotateCcw, PanelRightOpen, PanelRightClose } from "lucide-react";
-import { SidebarShell, SidebarHeader, SidebarBody, SidebarFooter, SidebarSection, SidebarFieldGroup } from '@widgets/sidebar';
+import { SidebarShell, SidebarHeader, SidebarBody, SidebarFooter, SidebarSection, SidebarFieldGroup } from '@widgets/sidebar-shell';
 
 export const SidebarSettingsManager: React.FC = () => {
   const { settings, updateSetting, resetSettings } = useSidebarSettings();

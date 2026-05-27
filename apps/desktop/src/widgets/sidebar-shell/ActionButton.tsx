@@ -17,7 +17,13 @@ const COLOR_MAP = {
   rose: "bg-rose-500 hover:bg-rose-600 shadow-rose-100",
 };
 
-export function ActionButton({ icon, label, onClick, color = "amber", disabled }: ActionButtonProps) {
+export function ActionButton({
+  icon,
+  label,
+  onClick,
+  color = "amber",
+  disabled,
+}: ActionButtonProps) {
   return (
     <Button
       variant="outline"

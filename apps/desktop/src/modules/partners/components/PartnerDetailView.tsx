@@ -9,7 +9,7 @@ import {
   SidebarDetailField,
   SidebarDetailGrid,
   type SidebarAction,
-} from "@widgets/sidebar";
+} from "@widgets/sidebar-shell";
 
 type PartnerWithRatios = PartnerDto & {
   calculatedRatio: number;

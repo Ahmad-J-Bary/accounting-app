@@ -3,9 +3,9 @@ import { Input } from "@shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import type { AssetCategoryDto, AccountDto, CreateConsumableRequest } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { DialogForm } from "@widgets/sidebar/DialogForm";
-import { SidebarSection } from "@widgets/sidebar/SidebarSection";
-import { FieldLabel } from "@widgets/sidebar/FieldLabel";
+import { DialogForm } from "@widgets/sidebar-shell/DialogForm";
+import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
+import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 
 interface ConsumableFormProps {
   open: boolean;

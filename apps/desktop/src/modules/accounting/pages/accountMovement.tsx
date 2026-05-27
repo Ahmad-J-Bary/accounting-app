@@ -264,7 +264,7 @@ export default function AccountMovement() {
       }
       sidePanel={
         isVoucherOpen && (
-          <div className="p-6 h-full overflow-y-auto">
+          <>
             {accountType === 'partner' && linkedEntity && (
               <PartnerDrawingsForm 
                 partner={linkedEntity as PartnerDto}
@@ -306,7 +306,7 @@ export default function AccountMovement() {
                 saving={savingVoucher}
               />
             )}
-          </div>
+          </>
         )
       }
       isPanelOpen={isVoucherOpen}

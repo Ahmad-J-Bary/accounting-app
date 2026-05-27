@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { FieldLabel } from "@widgets/sidebar/FieldLabel";
+import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import type { AccountDto } from "@erp/shared-types";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import type {

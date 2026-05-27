@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { SidebarShell } from "./SidebarShell";
 import { SidebarHeader } from "./SidebarHeader";
-import { cn } from '@shared/lib/utils';
+import { cn } from "@shared/lib/utils";
 import type { SidebarWidth } from "./types";
 
 interface DetailPanelProps {
@@ -26,7 +26,7 @@ export function DetailPanel({
   width,
 }: DetailPanelProps) {
   return (
-    <SidebarShell width={width} onClose={onClose}>
+    <SidebarShell onClose={onClose} width={width}>
       <SidebarHeader
         title={title}
         subtitle={subtitle}
@@ -34,13 +34,15 @@ export function DetailPanel({
         actions={actions}
         onClose={onClose}
       />
-      <div className={cn("flex-1 overflow-y-auto", className)}
+      <div
+        className={cn("flex-1 overflow-y-auto", className)}
         style={{
           padding: "var(--sidebar-container-py) var(--sidebar-container-px)",
           display: "flex",
           flexDirection: "column",
           gap: "var(--sidebar-content-gap)",
-        }}>
+        }}
+      >
         {children}
       </div>
     </SidebarShell>

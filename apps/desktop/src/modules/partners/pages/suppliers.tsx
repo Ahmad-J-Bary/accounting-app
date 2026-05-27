@@ -243,14 +243,12 @@ export default function Suppliers() {
             saving={saving}
           />
         ) : isPaymentOpen && selectedSupplier ? (
-          <div className="p-6">
-            <SupplierPaymentForm 
-              supplier={selectedSupplier}
-              onSave={handleSavePayment}
-              onClose={() => setIsPaymentOpen(false)}
-              saving={paymentSaving}
-            />
-          </div>
+          <SupplierPaymentForm
+            supplier={selectedSupplier}
+            onSave={handleSavePayment}
+            onClose={() => setIsPaymentOpen(false)}
+            saving={paymentSaving}
+          />
         ) : (
           <PartnerDetailPanel 
             type="supplier"

@@ -218,14 +218,12 @@ export default function Expenses() {
             saving={saving}
           />
         ) : isVoucherOpen && selectedExpense ? (
-          <div className="p-6">
-            <ExpenseVoucherForm 
-              expenseAccount={selectedExpense}
-              onSave={handleSaveVoucher}
-              onClose={() => setIsVoucherOpen(false)}
-              saving={voucherSaving}
-            />
-          </div>
+          <ExpenseVoucherForm
+            expenseAccount={selectedExpense}
+            onSave={handleSaveVoucher}
+            onClose={() => setIsVoucherOpen(false)}
+            saving={voucherSaving}
+          />
         ) : (
           <ExpenseDetailPanel
             expense={selectedExpense!}

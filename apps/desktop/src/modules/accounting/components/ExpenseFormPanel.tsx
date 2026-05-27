@@ -3,8 +3,8 @@ import { Input } from "@shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import type { AccountDto } from "@erp/shared-types";
 import { FormPanel } from '@widgets/form-shell/FormPanel';
-import { FieldLabel } from '@widgets/sidebar/FieldLabel';
-import { SidebarSection } from '@widgets/sidebar/SidebarSection';
+import { FieldLabel } from '@widgets/sidebar-shell/FieldLabel';
+import { SidebarSection } from '@widgets/sidebar-shell/SidebarSection';
 import { Receipt } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 

@@ -7,8 +7,8 @@ import {
 import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
 import { FormPanel } from "@widgets/form-shell/FormPanel";
-import { SidebarSection } from "@widgets/sidebar/SidebarSection";
-import { FieldLabel } from "@widgets/sidebar/FieldLabel";
+import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
+import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { toast } from "sonner";
 import { cn } from "@shared/lib/utils";
 import { Plus, Edit, Wand2, Hash, Barcode, Package, Layers, Shuffle, Check, Scale, Boxes, Package2, FileText, Globe, Image as ImageIcon, DollarSign, Tag, ShoppingCart, TrendingUp } from "lucide-react";

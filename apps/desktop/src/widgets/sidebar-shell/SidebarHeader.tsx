@@ -1,32 +1,49 @@
-import { X } from "lucide-react";
+import React, { ReactNode } from "react";
+import { useSidebarSettings } from "@shared/hooks/useSidebarSettings";
+import { cn } from "@shared/lib/utils";
 import { Button } from "@shared/ui/button";
-import { useSidebarSettings } from '@shared/hooks/useSidebarSettings';
-import { cn } from '@shared/lib/utils';
+import { X } from "lucide-react";
 import type { SidebarHeaderProps } from "./types";
 
-export function SidebarHeader({ title, subtitle, icon, actions, onClose }: SidebarHeaderProps) {
+export function SidebarHeader({
+  title,
+  subtitle,
+  icon,
+  onClose,
+  actions,
+  className,
+}: SidebarHeaderProps) {
   const { settings } = useSidebarSettings();
-
-  const isOverlayMode = settings.overlayVsInline === 'overlay';
 
   return (
     <div
       className={cn(
         "flex items-center justify-between border-b border-slate-200/60 bg-slate-50/50 shrink-0",
-        settings.paddingPreset === 'compact' ? 'px-4 py-3' : settings.paddingPreset === 'spacious' ? 'px-8 py-5' : 'px-6 py-4',
+        settings.paddingPreset === "compact"
+          ? "px-4 py-3"
+          : settings.paddingPreset === "spacious"
+          ? "px-8 py-5"
+          : "px-6 py-4",
+        className
       )}
     >
       <div className="flex items-center gap-3 text-right">
         {icon && <div className="text-slate-500 shrink-0">{icon}</div>}
         <div className="flex flex-col">
-          <h2 className="text-base font-bold text-slate-800 leading-tight">{title}</h2>
-          {subtitle && <p className="text-[10px] text-slate-400 font-medium mt-0.5">{subtitle}</p>}
+          <h2 className="text-base font-bold text-slate-800 leading-tight">
+            {title}
+          </h2>
+          {subtitle && (
+            <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+              {subtitle}
+            </p>
+          )}
         </div>
       </div>
 
       <div className="flex items-center gap-2">
         {actions && <div className="flex items-center gap-1.5">{actions}</div>}
-        {(isOverlayMode || settings.closeButtonVisibility) && onClose && (
+        {settings.closeButtonVisibility && (
           <Button
             type="button"
             variant="ghost"
