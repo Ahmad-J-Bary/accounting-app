@@ -6,6 +6,7 @@ import { AppLayout } from '@app/shell/AppLayout';
 import { TabProvider } from '@app/providers/TabProvider';
 import { CurrencyProvider } from '@app/providers/CurrencyProvider';
 import { TableSettingsProvider } from '@app/providers/TableSettingsProvider';
+import { SidebarSettingsProvider } from '@app/providers/SidebarSettingsProvider';
 import { ErpRoutes } from '@app/router/ErpRoutes';
 import AuthCallback from '@modules/core/pages/authCallback';
 import AuthError from '@modules/core/pages/authError';
@@ -29,9 +30,11 @@ const App = () => (
           <Route path="/*" element={
             <CurrencyProvider>
               <TableSettingsProvider>
-                <TabProvider>
-                  <AppLayout />
-                </TabProvider>
+                <SidebarSettingsProvider>
+                  <TabProvider>
+                    <AppLayout />
+                  </TabProvider>
+                </SidebarSettingsProvider>
               </TableSettingsProvider>
             </CurrencyProvider>
           } />

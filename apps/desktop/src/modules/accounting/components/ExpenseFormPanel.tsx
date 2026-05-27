@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { Input } from "@shared/ui/input";
-import { Label } from "@shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import type { AccountDto } from "@erp/shared-types";
 import { FormPanel } from '@widgets/form-shell/FormPanel';
+import { FieldLabel } from '@widgets/sidebar/FieldLabel';
+import { SidebarSection } from '@widgets/sidebar/SidebarSection';
 import { Receipt } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
@@ -119,12 +120,10 @@ export function ExpenseFormPanel({
       saveDisabled={!name.trim()}
     >
       <div className="space-y-6 text-right">
-        {/* Basic Info */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-800 border-b pb-2">المعلومات الأساسية</h3>
+        <SidebarSection title="المعلومات الأساسية">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-600">العملة الافتراضية</Label>
+              <FieldLabel>العملة الافتراضية</FieldLabel>
               <Select value={currency} onValueChange={setCurrency}>
                 <SelectTrigger className="h-9 font-bold"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -136,7 +135,7 @@ export function ExpenseFormPanel({
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-slate-600">اسم البند *</Label>
+            <FieldLabel required>اسم البند</FieldLabel>
             <Input
               required
               value={name}
@@ -145,14 +144,12 @@ export function ExpenseFormPanel({
               className="h-9"
             />
           </div>
-        </div>
+        </SidebarSection>
 
-        {/* Financial Info */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-800 border-b pb-2">البيانات المالية</h3>
+        <SidebarSection title="البيانات المالية">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5 col-span-2">
-              <Label className="text-xs font-bold text-slate-600">الرصيد الافتتاحي</Label>
+              <FieldLabel>الرصيد الافتتاحي</FieldLabel>
               <Input
                 type="number"
                 step="any"
@@ -162,7 +159,7 @@ export function ExpenseFormPanel({
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-600">مدين (حالي)</Label>
+              <FieldLabel>مدين (حالي)</FieldLabel>
               <Input
                 type="number"
                 step="any"
@@ -172,7 +169,7 @@ export function ExpenseFormPanel({
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-600">دائن (حالي)</Label>
+              <FieldLabel>دائن (حالي)</FieldLabel>
               <Input
                 type="number"
                 step="any"
@@ -182,10 +179,10 @@ export function ExpenseFormPanel({
               />
             </div>
           </div>
-        </div>
+        </SidebarSection>
 
         <div className="space-y-1.5">
-          <Label className="text-xs font-bold text-slate-600">ملاحظات</Label>
+          <FieldLabel>ملاحظات</FieldLabel>
           <Input
             value={notes}
             onChange={e => setNotes(e.target.value)}

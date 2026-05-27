@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Input } from "@shared/ui/input";
-import { Label } from "@shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { type CreatePaymentRequest, type CustomerDto } from "@erp/shared-types";
 import { FormPanel } from "@widgets/form-shell/FormPanel";
+import { FieldLabel } from '@widgets/sidebar/FieldLabel';
+import { SidebarSection } from '@widgets/sidebar/SidebarSection';
 import { Receipt } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
@@ -65,11 +66,10 @@ export function CustomerReceiptForm({ customer, onSave, onClose, saving }: Custo
       saveLabel="حفظ السند"
     >
       <div className="space-y-6 text-right">
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-800 border-b pb-2">تفاصيل السند</h3>
+        <SidebarSection title="تفاصيل السند">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-600">العملة</Label>
+              <FieldLabel>العملة</FieldLabel>
               <Select value={form.currency_code} onValueChange={handleCurrencyChange}>
                 <SelectTrigger className="h-9 font-bold bg-white"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -81,7 +81,7 @@ export function CustomerReceiptForm({ customer, onSave, onClose, saving }: Custo
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-600">المبلغ <span className="text-red-500">*</span></Label>
+              <FieldLabel required>المبلغ</FieldLabel>
               <Input 
                 type="number" 
                 min="0" 
@@ -94,17 +94,17 @@ export function CustomerReceiptForm({ customer, onSave, onClose, saving }: Custo
 
             <div className="col-span-2 grid grid-cols-2 gap-4 p-3 bg-slate-50/50 rounded-lg border border-slate-100">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-600">من الحساب الدائن (العميل)</Label>
+                <FieldLabel>من الحساب الدائن (العميل)</FieldLabel>
                 <Input value={customer.name} disabled className="h-9 bg-slate-50 text-slate-500 font-bold" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-600">إلى الحساب المدين</Label>
+                <FieldLabel>إلى الحساب المدين</FieldLabel>
                 <Input value="الخزينة (الصندوق)" disabled className="h-9 bg-slate-50 text-slate-500 font-bold" />
               </div>
             </div>
 
             <div className="space-y-1.5 col-span-2">
-              <Label className="text-xs font-bold text-slate-600">البيان / ملاحظات</Label>
+              <FieldLabel>البيان / ملاحظات</FieldLabel>
               <Input 
                 value={form.notes ?? ""} 
                 onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} 
@@ -114,7 +114,7 @@ export function CustomerReceiptForm({ customer, onSave, onClose, saving }: Custo
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-600">التاريخ</Label>
+              <FieldLabel>التاريخ</FieldLabel>
               <Input 
                 type="date"
                 value={form.payment_date?.slice(0, 10) ?? ""}
@@ -123,7 +123,7 @@ export function CustomerReceiptForm({ customer, onSave, onClose, saving }: Custo
               />
             </div>
           </div>
-        </div>
+        </SidebarSection>
       </div>
     </FormPanel>
   );

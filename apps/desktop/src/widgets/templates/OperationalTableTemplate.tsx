@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { cn } from "@shared/lib/utils";
+import { useSidebarSettings } from "@shared/hooks/useSidebarSettings";
 
 interface TableStat {
   label: string;
@@ -53,6 +54,8 @@ export function OperationalTableTemplate({
   className,
   children
 }: OperationalTableTemplateProps) {
+  const { getSidebarWidth, settings } = useSidebarSettings();
+
   return (
     <div className={cn("flex flex-col h-full w-full bg-[#f8fafc]", className)} dir="rtl">
       {/* 1. Page Header - Optimized for Density */}
@@ -132,9 +135,9 @@ export function OperationalTableTemplate({
         {sidePanel && (
           <aside className={cn(
             "bg-white rounded-xl border border-slate-200/70 shadow-xl flex flex-col overflow-hidden transition-all duration-300 shrink-0",
-            isPanelOpen ? "w-[500px] opacity-100" : "w-0 opacity-0 border-none p-0 overflow-hidden"
-          )}>
-            <div className="flex-1 overflow-auto min-w-[500px] custom-scrollbar">
+            isPanelOpen ? "opacity-100" : "w-0 opacity-0 border-none p-0 overflow-hidden"
+          )} style={{ width: isPanelOpen ? getSidebarWidth() : '0px', transitionProperty: "width, opacity" }}>
+            <div className="flex-1 overflow-auto custom-scrollbar" style={{ minWidth: settings.customWidth + 'px' }}>
               {sidePanel}
             </div>
           </aside>

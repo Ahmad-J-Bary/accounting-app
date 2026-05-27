@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Label } from "@shared/ui/label";
+import { FieldLabel } from "@widgets/sidebar/FieldLabel";
 import type { AccountDto } from "@erp/shared-types";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import type {
@@ -381,7 +381,7 @@ export function AccountDetailsSidebar({
       )}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
-          <Label>رقم الحساب</Label>
+          <FieldLabel>رقم الحساب</FieldLabel>
           {codeSuffix ? (
             <div className="flex gap-1">
               <Input
@@ -407,7 +407,7 @@ export function AccountDetailsSidebar({
           )}
         </div>
         <div className="space-y-1">
-          <Label>اسم الحساب</Label>
+          <FieldLabel>اسم الحساب</FieldLabel>
           <Input
             value={nameAr}
             onChange={(e) => setNameAr(e.target.value)}
@@ -417,7 +417,7 @@ export function AccountDetailsSidebar({
         </div>
       </div>
       <div className="space-y-1">
-        <Label>فرعي من</Label>
+        <FieldLabel>فرعي من</FieldLabel>
         <div className="rounded-md border border-input bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
           {parentId === "null"
             ? "-- مستوى أول --"
@@ -434,7 +434,7 @@ export function AccountDetailsSidebar({
           </p>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label>رقم الهاتف</Label>
+              <FieldLabel>رقم الهاتف</FieldLabel>
               <Input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -443,7 +443,7 @@ export function AccountDetailsSidebar({
               />
             </div>
             <div className="space-y-1">
-              <Label>العنوان</Label>
+              <FieldLabel>العنوان</FieldLabel>
               <Input
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
@@ -454,7 +454,7 @@ export function AccountDetailsSidebar({
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1">
-              <Label>مدين</Label>
+              <FieldLabel>مدين</FieldLabel>
               <Input
                 type="number"
                 value={debit}
@@ -463,7 +463,7 @@ export function AccountDetailsSidebar({
               />
             </div>
             <div className="space-y-1">
-              <Label>دائن</Label>
+              <FieldLabel>دائن</FieldLabel>
               <Input
                 type="number"
                 value={credit}
@@ -472,7 +472,7 @@ export function AccountDetailsSidebar({
               />
             </div>
             <div className="space-y-1">
-              <Label>العملة</Label>
+              <FieldLabel>العملة</FieldLabel>
               <select
                 className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 value={currency}
@@ -495,7 +495,7 @@ export function AccountDetailsSidebar({
       )}
       <div className="pt-2 space-y-3 border-t border-primary/10">
         <div className="space-y-1">
-          <Label>الرصيد الافتتاحي</Label>
+          <FieldLabel>الرصيد الافتتاحي</FieldLabel>
           <Input
             type="number"
             value={openingBalance}
@@ -504,7 +504,7 @@ export function AccountDetailsSidebar({
           />
         </div>
         <div className="space-y-1">
-          <Label>ملاحظات</Label>
+          <FieldLabel>ملاحظات</FieldLabel>
           <textarea
             className="flex min-h-[60px] w-full rounded-md border border-input bg-white px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={notes}

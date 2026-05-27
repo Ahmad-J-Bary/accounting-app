@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { Input } from "@shared/ui/input";
-import { Label } from "@shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { SYSTEM_ACCOUNT_IDS, type AccountDto, type CustomerDto, type SupplierDto, type PartnerDto } from "@erp/shared-types";
 import { FormPanel } from '@widgets/form-shell/FormPanel';
+import { FieldLabel } from '@widgets/sidebar/FieldLabel';
+import { SidebarSection } from '@widgets/sidebar/SidebarSection';
 import { User, Building2 } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
-import { formatCurrency } from "@shared/lib/format";
 
 export interface PartnerFormPayload {
   id?: string;
@@ -128,35 +128,31 @@ export function PartnerFormPanel({
       isSaving={saving}
     >
       <div className="space-y-6 text-right">
-        {/* Basic Info */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-800 border-b pb-2">المعلومات الأساسية</h3>
+        <SidebarSection title="المعلومات الأساسية">
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-600">{labelName}</Label>
+              <FieldLabel>{labelName}</FieldLabel>
               <Input required value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} placeholder={placeholderName} className="h-9" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-600">رقم الهاتف</Label>
+              <FieldLabel>رقم الهاتف</FieldLabel>
               <Input value={form.phone} onChange={(e) => setForm({...form, phone: e.target.value})} placeholder="09xxxxxxx" className="h-9" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-600">العنوان</Label>
+              <FieldLabel>العنوان</FieldLabel>
               <Input value={form.address} onChange={(e) => setForm({...form, address: e.target.value})} placeholder="المدينة، الشارع..." className="h-9" />
             </div>
           </div>
-        </div>
+        </SidebarSection>
 
-        {/* Financial Info */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-800 border-b pb-2">البيانات المالية</h3>
+        <SidebarSection title="البيانات المالية">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5 col-span-2 sm:col-span-1">
-              <Label className="text-xs font-bold text-slate-600">الرصيد الافتتاحي</Label>
+              <FieldLabel>الرصيد الافتتاحي</FieldLabel>
               <Input type="number" step="any" value={openingBalance} onChange={e => setOpeningBalance(e.target.value)} className="h-9 tabular-nums" />
             </div>
             <div className="space-y-1.5 col-span-2 sm:col-span-1">
-              <Label className="text-xs font-bold text-slate-600">العملة الافتراضية</Label>
+              <FieldLabel>العملة الافتراضية</FieldLabel>
               <Select value={currency} onValueChange={setCurrency}>
                 <SelectTrigger className="h-9 font-bold"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -167,18 +163,18 @@ export function PartnerFormPanel({
               </Select>
             </div>
             <div className="space-y-1.5 col-span-2 sm:col-span-1">
-              <Label className="text-xs font-bold text-slate-600">مدين (حالي)</Label>
+              <FieldLabel>مدين (حالي)</FieldLabel>
               <Input type="number" step="any" value={debit} onChange={e => setDebit(e.target.value)} className="h-9 tabular-nums" />
             </div>
             <div className="space-y-1.5 col-span-2 sm:col-span-1">
-              <Label className="text-xs font-bold text-slate-600">دائن (حالي)</Label>
+              <FieldLabel>دائن (حالي)</FieldLabel>
               <Input type="number" step="any" value={credit} onChange={e => setCredit(e.target.value)} className="h-9 tabular-nums" />
             </div>
           </div>
-        </div>
+        </SidebarSection>
 
         <div className="space-y-1.5">
-          <Label className="text-xs font-bold text-slate-600">ملاحظات</Label>
+          <FieldLabel>ملاحظات</FieldLabel>
           <Input value={form.notes} onChange={(e) => setForm({...form, notes: e.target.value})} className="h-9" />
         </div>
       </div>

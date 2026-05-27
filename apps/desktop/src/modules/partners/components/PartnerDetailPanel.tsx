@@ -1,10 +1,9 @@
-import { Input } from "@shared/ui/input";
-import { Label } from "@shared/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { X, Pencil, Trash2, BookOpen, FileText } from "lucide-react";
-import type { InvoiceDto, Payment, CustomerDto, SupplierDto, PartnerDto } from "@erp/shared-types";
-import { Button } from "@shared/ui/button";
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { DetailPanel, ActionButton } from "@widgets/sidebar";
+import { SidebarSection } from "@widgets/sidebar/SidebarSection";
+import { FieldLabel } from "@widgets/sidebar/FieldLabel";
+import { Input } from "@shared/ui/input";
+import type { PartnerDto, CustomerDto, SupplierDto } from "@erp/shared-types";
 import { useTabs } from "@app/providers/TabContext";
 
 interface PartnerDetailPanelProps {
@@ -13,9 +12,6 @@ interface PartnerDetailPanelProps {
   onClose: () => void;
   onEdit: (partner: CustomerDto | SupplierDto | PartnerDto) => void;
   onDelete: (id: string, name: string) => void;
-  invoices: InvoiceDto[];
-  payments: Payment[];
-  loadingDetails: boolean;
 }
 
 export function PartnerDetailPanel({
@@ -23,11 +19,10 @@ export function PartnerDetailPanel({
   partner,
   onClose,
   onEdit,
-  onDelete
+  onDelete,
 }: PartnerDetailPanelProps) {
-  const { currencies, baseCurrency } = useCurrencyContext();
   const { openTab } = useTabs();
-  
+
   if (!partner) return null;
 
   const isCustomer = type === "customer";
@@ -36,194 +31,138 @@ export function PartnerDetailPanel({
   const partnerAccountId = hasAccountId(partner) ? partner.account_id : null;
   const isDisabled = true;
 
-  return (
-    <div className="flex flex-col h-full bg-white" dir="rtl">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-slate-50/50 shrink-0">
-        <div className="flex flex-col gap-1 text-right">
-          <h2 className="text-lg font-bold text-slate-800">
-            {isPartner ? "بيانات الشريك" : (isCustomer ? "بيانات العميل" : "بيانات المورد")}
-          </h2>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="bg-amber-500 text-white hover:bg-amber-600 border-none h-8 px-3 rounded-lg"
-            onClick={() => onEdit(partner)}
-          >
-            <Pencil className="w-3.5 h-3.5 ml-1.5" />
-            تعديل
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="bg-red-500 text-white hover:bg-red-600 border-none h-8 px-3 rounded-lg"
-            onClick={() => {
-              if (confirm(`هل أنت متأكد من حذف "${partner.name}"؟`)) {
-                onDelete(partner.id, partner.name);
-              }
-            }}
-          >
-            <Trash2 className="w-3.5 h-3.5 ml-1.5" />
-            حذف
-          </Button>
-          {!isPartner && partnerAccountId && (
-            <div className="flex flex-col gap-1.5">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="bg-blue-600 text-white hover:bg-blue-700 border-none h-8 px-3 rounded-lg w-full"
-                onClick={() => openTab({
-                  id: `ledger-${partnerAccountId}`,
-                  title: `حركة: ${partner.name}`,
-                  path: `/accounting/account-ledger/${partnerAccountId}`,
-                  closable: true
-                })}
-              >
-                <BookOpen className="w-3.5 h-3.5 ml-1.5" />
-                اليومية
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="bg-emerald-600 text-white hover:bg-emerald-700 border-none h-8 px-3 rounded-lg w-full"
-                onClick={() => openTab({
-                  id: `statement-${partner.id}`,
-                  title: `كشف: ${partner.name}`,
-                  path: `/partners/customer-statement/${partner.id}`,
-                  closable: true
-                })}
-              >
-                <FileText className="w-3.5 h-3.5 ml-1.5" />
-                الكشف
-              </Button>
-            </div>
-          )}
-          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full text-slate-400 hover:text-slate-600">
-            <X className="w-5 h-5" />
-          </Button>
-        </div>
-      </div>
+  const actions = (
+    <>
+      <ActionButton icon={<Pencil className="w-3.5 h-3.5" />} label="تعديل" color="amber" onClick={() => onEdit(partner)} />
+      <ActionButton icon={<Trash2 className="w-3.5 h-3.5" />} label="حذف" color="red" onClick={() => { if (confirm(`هل أنت متأكد من حذف "${partner.name}"؟`)) onDelete(partner.id, partner.name); }} />
+      {!isPartner && partnerAccountId && (
+        <>
+          <ActionButton icon={<BookOpen className="w-3.5 h-3.5" />} label="اليومية" color="blue" onClick={() => openTab({
+            id: `ledger-${partnerAccountId}`,
+            title: `حركة: ${partner.name}`,
+            path: `/accounting/account-ledger/${partnerAccountId}`,
+            closable: true,
+          })} />
+          <ActionButton icon={<FileText className="w-3.5 h-3.5" />} label="الكشف" color="emerald" onClick={() => openTab({
+            id: `statement-${partner.id}`,
+            title: `كشف: ${partner.name}`,
+            path: `/partners/customer-statement/${partner.id}`,
+            closable: true,
+          })} />
+        </>
+      )}
+    </>
+  );
 
-      <div className="flex-1 overflow-y-auto p-6">
-        {isPartner ? (
-          <div className="space-y-6 text-right">
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 border-b pb-2">المعلومات الأساسية</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-600">رقم الحساب</Label>
-                  <Input value={partner.code || ""} disabled={isDisabled} className="h-9 bg-slate-50" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-600">الاسم</Label>
-                  <Input value={partner.name} disabled={isDisabled} className="h-9 bg-slate-50" />
-                </div>
-              </div>
+  if (isPartner) {
+    return (
+      <DetailPanel
+        title="بيانات الشريك"
+        actions={actions}
+        onClose={onClose}
+      >
+        <SidebarSection title="المعلومات الأساسية">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <FieldLabel>رقم الحساب</FieldLabel>
+              <Input value={partner.code || ""} disabled className="h-9 bg-slate-50" />
             </div>
-
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 border-b pb-2">معلومات الاستثمار</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-600">المبلغ ({baseCurrency?.symbol || baseCurrency?.code || ""})</Label>
-                  <Input value={partner.amount_original || "0"} disabled={isDisabled} className="h-9 bg-slate-50" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-600">المبلغ (محلي)</Label>
-                  <Input value={partner.amount_local || "0"} disabled={isDisabled} className="h-9 bg-slate-50" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-600">نسبة الأرباح (%)</Label>
-                  <Input value={partner.profit_sharing_ratio || ""} disabled={isDisabled} placeholder="تلقائي" className="h-9 bg-slate-50" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-600">طريقة التوزيع</Label>
-                  <Select value={partner.profit_sharing_type || "BasedOnCapitalLocal"} disabled={isDisabled}>
-                    <SelectTrigger className="h-9 font-bold bg-slate-50"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="BasedOnCapitalLocal">على أساس رأس المال المحلي</SelectItem>
-                      <SelectItem value="BasedOnCapitalOriginal">على أساس رأس المال الأصلي</SelectItem>
-                      <SelectItem value="Manual">يدوي</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+            <div className="space-y-1.5">
+              <FieldLabel>الاسم</FieldLabel>
+              <Input value={partner.name} disabled className="h-9 bg-slate-50" />
             </div>
-
-            {partner.notes && (
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-600">ملاحظات</Label>
-                <Input value={partner.notes || ""} disabled={isDisabled} className="h-9 bg-slate-50" />
-              </div>
-            )}
           </div>
-        ) : (
-          <div className="space-y-6 text-right">
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 border-b pb-2">المعلومات الأساسية</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-600">رقم الحساب</Label>
-                  <Input value={partner.code || ""} disabled={isDisabled} className="h-9 bg-slate-50" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-600">{isCustomer ? "اسم العميل" : "اسم المورد"}</Label>
-                  <Input value={partner.name} disabled={isDisabled} className="h-9 bg-slate-50" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-600">رقم الهاتف</Label>
-                  <Input value={partner.phone || ""} disabled={isDisabled} placeholder="—" className="h-9 bg-slate-50" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-600">العنوان</Label>
-                  <Input value={partner.address || ""} disabled={isDisabled} placeholder="—" className="h-9 bg-slate-50" />
-                </div>
-              </div>
-            </div>
+        </SidebarSection>
 
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 border-b pb-2">البيانات المالية</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-600">الرصيد الافتتاحي</Label>
-                  <Input value={partner.opening_balance || "0"} disabled={isDisabled} className="h-9 bg-slate-50" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-600">العملة</Label>
-                  <Select value={partner.currency || baseCurrency?.code || ""} disabled={isDisabled}>
-                    <SelectTrigger className="h-9 font-bold bg-slate-50"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {currencies.map(c => (
-                        <SelectItem key={c.code} value={c.code}>{c.code} - {c.name_ar}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-600">مدين (حالي)</Label>
-                  <Input value={partner.debit || "0"} disabled={isDisabled} className="h-9 bg-slate-50" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-600">دائن (حالي)</Label>
-                  <Input value={partner.credit || "0"} disabled={isDisabled} className="h-9 bg-slate-50" />
-                </div>
-                <div className="space-y-1.5 col-span-2">
-                  <Label className="text-xs font-bold text-slate-600">الرصيد الحالي</Label>
-                  <Input value={partner.balance || "0"} disabled={isDisabled} className="h-9 bg-slate-50 font-bold" />
-                </div>
-              </div>
+        <SidebarSection title="معلومات الاستثمار">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <FieldLabel>المبلغ (الأصلي)</FieldLabel>
+              <Input value={partner.amount_original || "0"} disabled className="h-9 bg-slate-50" />
             </div>
+            <div className="space-y-1.5">
+              <FieldLabel>المبلغ (محلي)</FieldLabel>
+              <Input value={partner.amount_local || "0"} disabled className="h-9 bg-slate-50" />
+            </div>
+            <div className="space-y-1.5">
+              <FieldLabel>نسبة الأرباح (%)</FieldLabel>
+              <Input value={partner.profit_sharing_ratio || ""} disabled className="h-9 bg-slate-50" />
+            </div>
+            <div className="space-y-1.5">
+              <FieldLabel>طريقة التوزيع</FieldLabel>
+              <Input value={partner.profit_sharing_type || ""} disabled className="h-9 bg-slate-50" />
+            </div>
+          </div>
+        </SidebarSection>
 
-            {partner.notes && (
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-600">ملاحظات</Label>
-                <Input value={partner.notes || ""} disabled={isDisabled} className="h-9 bg-slate-50" />
-              </div>
-            )}
+        {partner.notes && (
+          <div className="space-y-1.5">
+            <FieldLabel>ملاحظات</FieldLabel>
+            <Input value={partner.notes || ""} disabled className="h-9 bg-slate-50" />
           </div>
         )}
-      </div>
-    </div>
+      </DetailPanel>
+    );
+  }
+
+  return (
+    <DetailPanel
+      title={isCustomer ? "بيانات العميل" : "بيانات المورد"}
+      actions={actions}
+      onClose={onClose}
+    >
+      <SidebarSection title="المعلومات الأساسية">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <FieldLabel>رقم الحساب</FieldLabel>
+            <Input value={partner.code || ""} disabled className="h-9 bg-slate-50" />
+          </div>
+          <div className="space-y-1.5">
+            <FieldLabel>{isCustomer ? "اسم العميل" : "اسم المورد"}</FieldLabel>
+            <Input value={partner.name} disabled className="h-9 bg-slate-50" />
+          </div>
+          <div className="space-y-1.5">
+            <FieldLabel>رقم الهاتف</FieldLabel>
+            <Input value={partner.phone || ""} disabled placeholder="—" className="h-9 bg-slate-50" />
+          </div>
+          <div className="space-y-1.5">
+            <FieldLabel>العنوان</FieldLabel>
+            <Input value={partner.address || ""} disabled placeholder="—" className="h-9 bg-slate-50" />
+          </div>
+        </div>
+      </SidebarSection>
+
+      <SidebarSection title="البيانات المالية">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <FieldLabel>الرصيد الافتتاحي</FieldLabel>
+            <Input value={partner.opening_balance || "0"} disabled className="h-9 bg-slate-50" />
+          </div>
+          <div className="space-y-1.5">
+            <FieldLabel>العملة</FieldLabel>
+            <Input value={partner.currency || ""} disabled className="h-9 bg-slate-50" />
+          </div>
+          <div className="space-y-1.5">
+            <FieldLabel>مدين (حالي)</FieldLabel>
+            <Input value={partner.debit || "0"} disabled className="h-9 bg-slate-50" />
+          </div>
+          <div className="space-y-1.5">
+            <FieldLabel>دائن (حالي)</FieldLabel>
+            <Input value={partner.credit || "0"} disabled className="h-9 bg-slate-50" />
+          </div>
+          <div className="space-y-1.5 col-span-2">
+            <FieldLabel>الرصيد الحالي</FieldLabel>
+            <Input value={partner.balance || "0"} disabled className="h-9 bg-slate-50 font-bold" />
+          </div>
+        </div>
+      </SidebarSection>
+
+      {partner.notes && (
+        <div className="space-y-1.5">
+          <FieldLabel>ملاحظات</FieldLabel>
+          <Input value={partner.notes || ""} disabled className="h-9 bg-slate-50" />
+        </div>
+      )}
+    </DetailPanel>
   );
 }

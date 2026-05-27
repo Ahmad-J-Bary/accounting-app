@@ -159,3 +159,120 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* ==========================================
+   Dynamic Sidebar Spacing & Density
+   ========================================== */
+
+/* 1. Body-level density variables definition */
+body.sidebar-density-compact {
+  --sidebar-field-gap: 0.25rem;
+  --sidebar-section-gap: 0.75rem;
+  --sidebar-content-gap: 1rem;
+  --sidebar-container-py: 0.75rem;
+  --sidebar-container-px: 1rem;
+  --sidebar-label-size: 0.65rem;
+  --sidebar-field-py: 0.25rem;
+}
+
+body.sidebar-density-comfortable {
+  --sidebar-field-gap: 0.5rem;
+  --sidebar-section-gap: 1rem;
+  --sidebar-content-gap: 1.5rem;
+  --sidebar-container-py: 1rem;
+  --sidebar-container-px: 1.5rem;
+  --sidebar-label-size: 0.75rem;
+  --sidebar-field-py: 0.375rem;
+}
+
+body.sidebar-density-spacious {
+  --sidebar-field-gap: 0.75rem;
+  --sidebar-section-gap: 1.5rem;
+  --sidebar-content-gap: 2rem;
+  --sidebar-container-py: 1.25rem;
+  --sidebar-container-px: 2rem;
+  --sidebar-label-size: 0.8125rem;
+  --sidebar-field-py: 0.5rem;
+}
+
+/* 2. Global selectors that dynamically hook into these variables when in a sidebar, dialog, or form panel */
+
+/* Override input heights and vertical paddings */
+body.sidebar-density-compact aside input,
+body.sidebar-density-comfortable aside input,
+body.sidebar-density-spacious aside input,
+body.sidebar-density-compact [role="dialog"] input,
+body.sidebar-density-comfortable [role="dialog"] input,
+body.sidebar-density-spacious [role="dialog"] input,
+body.sidebar-density-compact aside select,
+body.sidebar-density-comfortable aside select,
+body.sidebar-density-spacious aside select,
+body.sidebar-density-compact [role="dialog"] select,
+body.sidebar-density-comfortable [role="dialog"] select,
+body.sidebar-density-spacious [role="dialog"] select,
+body.sidebar-density-compact aside .select-trigger,
+body.sidebar-density-comfortable aside .select-trigger,
+body.sidebar-density-spacious aside .select-trigger,
+body.sidebar-density-compact [role="dialog"] .select-trigger,
+body.sidebar-density-comfortable [role="dialog"] .select-trigger,
+body.sidebar-density-spacious [role="dialog"] .select-trigger {
+  padding-top: var(--sidebar-field-py) !important;
+  padding-bottom: var(--sidebar-field-py) !important;
+  height: auto !important;
+  min-height: 0px !important;
+}
+
+/* Override labels and field sizes */
+body.sidebar-density-compact aside label,
+body.sidebar-density-comfortable aside label,
+body.sidebar-density-spacious aside label,
+body.sidebar-density-compact [role="dialog"] label,
+body.sidebar-density-comfortable [role="dialog"] label,
+body.sidebar-density-spacious [role="dialog"] label {
+  font-size: var(--sidebar-label-size) !important;
+}
+
+/* Override field wrappers space-y-2 (Tailwind margin-top on siblings) */
+body.sidebar-density-compact aside .space-y-2 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-comfortable aside .space-y-2 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-spacious aside .space-y-2 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-compact [role="dialog"] .space-y-2 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-comfortable [role="dialog"] .space-y-2 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-spacious [role="dialog"] .space-y-2 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(var(--sidebar-field-gap) * calc(1 - var(--tw-space-y-reverse))) !important;
+  margin-bottom: calc(var(--sidebar-field-gap) * var(--tw-space-y-reverse)) !important;
+}
+
+/* Override section spacing (Tailwind margin-top on siblings for space-y-4/5/6/8 inside sidebars/dialogs) */
+body.sidebar-density-compact aside .space-y-4 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-comfortable aside .space-y-4 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-spacious aside .space-y-4 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-compact [role="dialog"] .space-y-4 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-comfortable [role="dialog"] .space-y-4 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-spacious [role="dialog"] .space-y-4 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-compact aside .space-y-5 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-comfortable aside .space-y-5 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-spacious aside .space-y-5 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-compact [role="dialog"] .space-y-5 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-comfortable [role="dialog"] .space-y-5 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-spacious [role="dialog"] .space-y-5 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-compact aside .space-y-6 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-comfortable aside .space-y-6 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-spacious aside .space-y-6 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-compact [role="dialog"] .space-y-6 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-comfortable [role="dialog"] .space-y-6 > :not([hidden]) ~ :not([hidden]),
+body.sidebar-density-spacious [role="dialog"] .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(var(--sidebar-section-gap) * calc(1 - var(--tw-space-y-reverse))) !important;
+  margin-bottom: calc(var(--sidebar-section-gap) * var(--tw-space-y-reverse)) !important;
+}
+
+/* Ensure padding on DetailPanel and FormPanel matches dynamic variables inside sidebars and dialogs */
+aside [style*="padding: var(--sidebar-container-py) var(--sidebar-container-px)"],
+[role="dialog"] [style*="padding: var(--sidebar-container-py) var(--sidebar-container-px)"],
+aside [style*="padding:var(--sidebar-container-py) var(--sidebar-container-px)"],
+[role="dialog"] [style*="padding:var(--sidebar-container-py) var(--sidebar-container-px)"] {
+  padding: var(--sidebar-container-py) var(--sidebar-container-px) !important;
+  gap: var(--sidebar-content-gap) !important;
+}

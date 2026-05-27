@@ -1,13 +1,13 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Label } from "@shared/ui/label";
 import { AlertCircle, Shuffle, Package, Hash, Barcode, Layers, Wand2, Scale, Boxes } from "lucide-react";
 import type { CategoryDto, MaterialDto } from "@erp/shared-types";
 import { categoryService } from '@modules/inventory/api/categoryService';
 import { materialService } from '@modules/inventory/api/materialService';
 import { materialCodeService } from '@modules/inventory/api/materialCodeService';
 import { TreeSidebar } from '@widgets/tree-sidebar/TreeSidebar';
+import { FieldLabel } from '@widgets/sidebar/FieldLabel';
 import { toast } from "sonner";
 import { cn } from '@shared/lib/utils';
 
@@ -328,29 +328,29 @@ export function CategoryDetailsSidebar({
       {(formMode === "create_mat" || formMode === "edit_mat") ? (
         <>
           <div className="space-y-1">
-            <Label>اسم المادة <span className="text-red-500">*</span></Label>
+            <FieldLabel required>اسم المادة</FieldLabel>
             <Input value={name} onChange={e => setName(e.target.value)} placeholder="اسم المادة" className="bg-white" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label>الكود</Label>
+              <FieldLabel>الكود</FieldLabel>
               <div className="relative group">
                 <Input value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="توليد تلقائي" className="bg-white font-mono text-xs pr-10" dir="ltr" />
                 <Button size="icon" variant="ghost" onClick={handleGenerateAutoCode} disabled={isGeneratingCode} className="absolute right-1 top-1 h-8 w-8 text-blue-500 hover:bg-blue-50"><Wand2 className={cn("w-4 h-4", isGeneratingCode && "animate-spin")} /></Button>
               </div>
             </div>
             <div className="space-y-1">
-              <Label>الباركود</Label>
+              <FieldLabel>الباركود</FieldLabel>
               <Input value={barcode} onChange={e => setBarcode(e.target.value)} placeholder="000000" className="bg-white font-mono text-xs" dir="ltr" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label className="flex items-center gap-1.5"><Scale className="w-3.5 h-3.5 text-slate-400" /> الوحدة الأساسية</Label>
+              <FieldLabel className="flex items-center gap-1.5"><Scale className="w-3.5 h-3.5 text-slate-400" /> الوحدة الأساسية</FieldLabel>
               <Input value={baseUnitName} onChange={e => setBaseUnitName(e.target.value)} placeholder="قطعة" className="bg-white" disabled={formMode === "edit_mat"} />
             </div>
             <div className="space-y-1">
-              <Label>الحد الأدنى</Label>
+              <FieldLabel>الحد الأدنى</FieldLabel>
               <Input type="number" value={minimumStock} onChange={e => setMinimumStock(e.target.value)} className="bg-white" />
             </div>
           </div>
@@ -358,16 +358,16 @@ export function CategoryDetailsSidebar({
       ) : formMode === "create_unit" ? (
         <>
           <div className="space-y-1">
-            <Label>اسم الوحدة <span className="text-red-500">*</span></Label>
+            <FieldLabel required>اسم الوحدة</FieldLabel>
             <Input value={unitName} onChange={e => setUnitName(e.target.value)} placeholder="مثلاً: طرد، كرتونة..." className="bg-white" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label>معامل التعبئة <span className="text-red-500">*</span></Label>
+              <FieldLabel required>معامل التعبئة</FieldLabel>
               <Input type="number" value={unitFactor} onChange={e => setUnitFactor(e.target.value)} placeholder="مثلاً: 12" className="bg-white font-bold" min="0.000001" step="any" />
             </div>
             <div className="space-y-1">
-              <Label>الباركود</Label>
+              <FieldLabel>الباركود</FieldLabel>
               <Input value={unitBarcode} onChange={e => setUnitBarcode(e.target.value)} placeholder="اختياري" className="bg-white font-mono text-xs" dir="ltr" />
             </div>
           </div>
@@ -382,11 +382,11 @@ export function CategoryDetailsSidebar({
       ) : (
         <>
           <div className="space-y-1">
-            <Label>اسم التصنيف</Label>
+            <FieldLabel>اسم التصنيف</FieldLabel>
             <Input value={name} onChange={e => setName(e.target.value)} placeholder="مثال: ساعات" className="bg-white" disabled={isUncategorized && formMode === "edit_cat"} />
           </div>
           <div className="space-y-1">
-            <Label>{!parentId || isRoot ? "بادئة التصنيف الفرعي العام" : "بادئة الكود"}</Label>
+            <FieldLabel>{!parentId || isRoot ? "بادئة التصنيف الفرعي العام" : "بادئة الكود"}</FieldLabel>
             <div className="flex gap-2">
               <Input value={codePrefix} onChange={e => setCodePrefix(e.target.value.slice(0, 1).toUpperCase())} placeholder="A" className="bg-white font-mono text-center" maxLength={1} />
               <Button variant="outline" size="icon" onClick={() => setCodePrefix(suggestPrefix())} title="اقتراح بادئة"><Shuffle className="w-4 h-4" /></Button>

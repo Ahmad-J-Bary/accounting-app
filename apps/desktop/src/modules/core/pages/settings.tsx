@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Label } from "@shared/ui/label";
-import { Save, RefreshCw, Building, FileText, Settings as SettingsIcon, Globe, ShieldCheck, Mail, Phone, MapPin, DollarSign, Percent, CalendarDays, Table2, Download, Info, ExternalLink } from "lucide-react";
+import { Save, RefreshCw, Building, FileText, Settings as SettingsIcon, Globe, ShieldCheck, Mail, Phone, MapPin, DollarSign, Percent, CalendarDays, Table2, PanelRightOpen, Download, Info, ExternalLink } from "lucide-react";
 import { settingsService } from '@modules/core/api/settingsService';
 import type { CompanySettings, UpdateSettingsRequest } from "@erp/shared-types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
@@ -12,6 +12,7 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 // Components
 import { TableSettingsManager } from "../components/TableSettingsManager";
+import { SidebarSettingsManager } from "../components/SidebarSettingsManager";
 import CurrencySettings from "./currencySettings";
 import { updateService } from "../api/updateService";
 import type { UpdateInfo } from "../api/updateService";
@@ -91,6 +92,7 @@ export default function Settings() {
     { id: "currencies", label: "إدارة العملات", icon: DollarSign },
     { id: "financial", label: "الإعدادات المالية", icon: SettingsIcon },
     { id: "tables", label: "مظهر الجداول", icon: Table2 },
+    { id: "sidebar", label: "مظهر السايد بار", icon: PanelRightOpen },
     { id: "localization", label: "اللغة والمنطقة", icon: Globe },
     { id: "security", label: "الأمان والوصول", icon: ShieldCheck },
     { id: "about", label: "حول التطبيق", icon: Info },
@@ -187,6 +189,15 @@ export default function Settings() {
           description="تحكم في كيفية عرض البيانات في جميع أقسام النظام بما يتناسب مع احتياجاتك."
         >
           <TableSettingsManager />
+        </SettingsSection>
+      )}
+
+      {activeNav === "sidebar" && (
+        <SettingsSection
+          title="تخصيص مظهر السايد بار"
+          description="تحكم في عرض وكثافة الألواح الجانبية في جميع أقسام النظام."
+        >
+          <SidebarSettingsManager />
         </SettingsSection>
       )}
 

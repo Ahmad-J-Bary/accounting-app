@@ -86,14 +86,17 @@ export default function DamagedPage() {
           onSearchChange={setSearch}
         />
       }
-    >
-      <DamagedForm
-        open={showDialog}
-        onOpenChange={setShowDialog}
-        products={products}
-        onSave={handleCreate}
-        saving={saving}
-      />
-    </OperationalTableTemplate>
+      sidePanel={
+        showDialog ? (
+          <DamagedForm
+            onClose={() => setShowDialog(false)}
+            products={products}
+            onSave={handleCreate}
+            saving={saving}
+          />
+        ) : null
+      }
+      isPanelOpen={showDialog}
+    />
   );
 }

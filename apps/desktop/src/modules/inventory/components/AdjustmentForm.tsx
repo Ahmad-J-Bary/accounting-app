@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { Button } from "@shared/ui/button";
+import { useState, useEffect } from "react";
 import { Input } from "@shared/ui/input";
-import { Label } from "@shared/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@shared/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import type { CreateStockAdjustmentRequest, MaterialDto } from "@erp/shared-types";
+import { DialogForm } from "@widgets/sidebar/DialogForm";
+import { SidebarSection } from "@widgets/sidebar/SidebarSection";
+import { FieldLabel } from "@widgets/sidebar/FieldLabel";
 
 interface AdjustmentFormProps {
   open: boolean;
@@ -20,12 +21,11 @@ export function AdjustmentForm({ open, onOpenChange, products, onSave, saving }:
     product_id: "",
   });
 
-  const handleOpenChange = (isOpen: boolean) => {
-    if (isOpen) {
+  useEffect(() => {
+    if (open) {
       setForm({ adjustment_date: new Date().toISOString(), actual_quantity: 0, product_id: "" });
     }
-    onOpenChange(isOpen);
-  };
+  }, [open]);
 
   const handleSave = async () => {
     if (!form.product_id || form.actual_quantity === undefined || !form.adjustment_date) return;
@@ -33,50 +33,44 @@ export function AdjustmentForm({ open, onOpenChange, products, onSave, saving }:
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md" dir="rtl">
-        <DialogHeader>
-          <DialogTitle>تسوية جرد جديدة</DialogTitle>
-          <DialogDescription>تحديث كمية المخزون الفعلي لتتناسب مع الكمية الموجودة في المستودع.</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-2">
-          <div className="space-y-1">
-            <Label>المنتج *</Label>
-            <select 
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              value={form.product_id ?? ""} 
-              onChange={e => setForm(p => ({ ...p, product_id: e.target.value }))}
-            >
-              <option value="">اختر المنتج...</option>
+    <DialogForm
+      open={open}
+      onOpenChange={onOpenChange}
+      title="تسوية جرد جديدة"
+      description="تحديث كمية المخزون الفعلي لتتناسب مع الكمية الموجودة في المستودع."
+      onSave={handleSave}
+      isSaving={saving}
+      saveDisabled={!form.product_id || form.actual_quantity === undefined || form.actual_quantity === null}
+    >
+      <SidebarSection title="بيانات التسوية">
+        <div className="space-y-2">
+          <FieldLabel required>المنتج</FieldLabel>
+          <Select value={form.product_id ?? ""} onValueChange={val => setForm(p => ({ ...p, product_id: val }))}>
+            <SelectTrigger><SelectValue placeholder="اختر المنتج..." /></SelectTrigger>
+            <SelectContent>
               {products.map(p => (
-                <option key={p.id} value={p.id}>{p.name} ({p.code})</option>
+                <SelectItem key={p.id} value={p.id}>{p.name} ({p.code})</SelectItem>
               ))}
-            </select>
-          </div>
-          <div className="space-y-1">
-            <Label>الكمية الفعلية المعدودة *</Label>
-            <Input type="number" min="0" step="1"
-              value={form.actual_quantity ?? ""}
-              onChange={e => setForm(p => ({ ...p, actual_quantity: parseFloat(e.target.value) }))} />
-          </div>
-          <div className="space-y-1">
-            <Label>سبب التسوية</Label>
-            <Input value={form.reason ?? ""} onChange={e => setForm(p => ({ ...p, reason: e.target.value }))} placeholder="جرد دوري، خطأ إدخال..." />
-          </div>
-          <div className="space-y-1">
-            <Label>تاريخ التسوية</Label>
-            <Input type="date"
-              value={form.adjustment_date?.slice(0, 10) ?? ""}
-              onChange={e => setForm(p => ({ ...p, adjustment_date: new Date(e.target.value).toISOString() }))} />
-          </div>
+            </SelectContent>
+          </Select>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
-          <Button onClick={handleSave} disabled={saving || !form.product_id || form.actual_quantity === undefined || form.actual_quantity === null}>
-            {saving ? "جاري الحفظ..." : "حفظ"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <div className="space-y-2">
+          <FieldLabel required>الكمية الفعلية المعدودة</FieldLabel>
+          <Input type="number" min="0" step="1"
+            value={form.actual_quantity ?? ""}
+            onChange={e => setForm(p => ({ ...p, actual_quantity: parseFloat(e.target.value) }))} />
+        </div>
+        <div className="space-y-2">
+          <FieldLabel>سبب التسوية</FieldLabel>
+          <Input value={form.reason ?? ""} onChange={e => setForm(p => ({ ...p, reason: e.target.value }))} placeholder="جرد دوري، خطأ إدخال..." />
+        </div>
+        <div className="space-y-2">
+          <FieldLabel>تاريخ التسوية</FieldLabel>
+          <Input type="date"
+            value={form.adjustment_date?.slice(0, 10) ?? ""}
+            onChange={e => setForm(p => ({ ...p, adjustment_date: new Date(e.target.value).toISOString() }))} />
+        </div>
+      </SidebarSection>
+    </DialogForm>
   );
 }

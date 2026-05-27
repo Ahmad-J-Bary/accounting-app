@@ -1,10 +1,11 @@
 import { useState, useMemo } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Label } from "@shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { SYSTEM_ACCOUNT_IDS, type CreatePaymentRequest, type CustomerDto, type SupplierDto, type PaymentType, type AccountDto } from "@erp/shared-types";
 import { FormPanel } from "@widgets/form-shell/FormPanel";
+import { FieldLabel } from '@widgets/sidebar/FieldLabel';
+import { SidebarSection } from '@widgets/sidebar/SidebarSection';
 import { Receipt } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
@@ -103,7 +104,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
     if (form.payment_type === "Receipt") {
       return (
         <div className="space-y-1.5">
-          <Label className="text-xs font-bold text-slate-600">من الحساب الدائن (العميل) <span className="text-red-500">*</span></Label>
+          <FieldLabel required>من الحساب الدائن (العميل)</FieldLabel>
           <Select value={form.customer_id} onValueChange={val => setForm(p => ({ ...p, customer_id: val }))}>
             <SelectTrigger className="h-9 font-bold bg-white"><SelectValue placeholder="اختر العميل" /></SelectTrigger>
             <SelectContent>
@@ -115,7 +116,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
     }
     return (
       <div className="space-y-1.5">
-        <Label className="text-xs font-bold text-slate-600">من الحساب الدائن</Label>
+        <FieldLabel>من الحساب الدائن</FieldLabel>
         <Input value="الخزينة (الصندوق)" disabled className="h-9 bg-slate-50 text-slate-500 font-bold" />
       </div>
     );
@@ -125,7 +126,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
     if (form.payment_type === "SupplierPayment") {
       return (
         <div className="space-y-1.5">
-          <Label className="text-xs font-bold text-slate-600">إلى الحساب المدين (المورد) <span className="text-red-500">*</span></Label>
+          <FieldLabel required>إلى الحساب المدين (المورد)</FieldLabel>
           <Select value={form.supplier_id} onValueChange={val => setForm(p => ({ ...p, supplier_id: val }))}>
             <SelectTrigger className="h-9 font-bold bg-white"><SelectValue placeholder="اختر المورد" /></SelectTrigger>
             <SelectContent>
@@ -138,7 +139,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
     if (form.payment_type === "ExpenseVoucher") {
       return (
         <div className="space-y-1.5">
-          <Label className="text-xs font-bold text-slate-600">إلى الحساب المدين (المصروف) <span className="text-red-500">*</span></Label>
+          <FieldLabel required>إلى الحساب المدين (المصروف)</FieldLabel>
           <Select value={form.debit_account_id} onValueChange={val => setForm(p => ({ ...p, debit_account_id: val }))}>
             <SelectTrigger className="h-9 font-bold bg-white"><SelectValue placeholder="اختر حساب المصروف" /></SelectTrigger>
             <SelectContent>
@@ -151,7 +152,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
     if (form.payment_type === "DrawingsVoucher") {
       return (
         <div className="space-y-1.5">
-          <Label className="text-xs font-bold text-slate-600">إلى الحساب المدين (مسحوبات) <span className="text-red-500">*</span></Label>
+          <FieldLabel required>إلى الحساب المدين (مسحوبات)</FieldLabel>
           <Select value={form.debit_account_id} onValueChange={val => setForm(p => ({ ...p, debit_account_id: val }))}>
             <SelectTrigger className="h-9 font-bold bg-white"><SelectValue placeholder="اختر حساب المسحوبات" /></SelectTrigger>
             <SelectContent>
@@ -164,7 +165,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
     if (form.payment_type === "Receipt") {
       return (
         <div className="space-y-1.5">
-          <Label className="text-xs font-bold text-slate-600">إلى الحساب المدين</Label>
+          <FieldLabel>إلى الحساب المدين</FieldLabel>
           <Input value="الخزينة (الصندوق)" disabled className="h-9 bg-slate-50 text-slate-500 font-bold" />
         </div>
       );
@@ -183,11 +184,10 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
       saveLabel="حفظ السند"
     >
       <div className="space-y-6 text-right">
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-800 border-b pb-2">تفاصيل السند</h3>
+        <SidebarSection title="تفاصيل السند">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5 col-span-2">
-              <Label className="text-xs font-bold text-slate-600">نوع السند</Label>
+              <FieldLabel>نوع السند</FieldLabel>
               <Select 
                 value={form.payment_type} 
                 onValueChange={v => setForm(p => ({ 
@@ -209,7 +209,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-600">العملة الافتراضية</Label>
+              <FieldLabel>العملة الافتراضية</FieldLabel>
               <Select value={form.currency_code} onValueChange={handleCurrencyChange}>
                 <SelectTrigger className="h-9 font-bold bg-white"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -221,7 +221,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-600">المبلغ <span className="text-red-500">*</span></Label>
+              <FieldLabel required>المبلغ</FieldLabel>
               <Input 
                 type="number" 
                 min="0" 
@@ -238,7 +238,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
             </div>
 
             <div className="space-y-1.5 col-span-2">
-              <Label className="text-xs font-bold text-slate-600">البيان / ملاحظات</Label>
+              <FieldLabel>البيان / ملاحظات</FieldLabel>
               <Input 
                 value={form.notes ?? ""} 
                 onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} 
@@ -248,7 +248,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-600">التاريخ</Label>
+              <FieldLabel>التاريخ</FieldLabel>
               <Input 
                 type="date"
                 value={form.payment_date?.slice(0, 10) ?? ""}
@@ -257,7 +257,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
               />
             </div>
           </div>
-        </div>
+        </SidebarSection>
       </div>
     </FormPanel>
   );
