@@ -10,8 +10,8 @@ pub async fn save(pool: &SqlitePool, account: &Account) -> Result<(), AppError> 
     };
 
     sqlx::query(
-        "INSERT INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, debit, credit, notes, is_active, is_default, is_final, linked_customer_id, linked_supplier_id, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        "INSERT INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, debit, credit, notes, is_active, is_default, is_final, linked_customer_id, linked_supplier_id, currency_code, exchange_rate, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
             code = excluded.code,
             name_ar = excluded.name_ar,
@@ -30,6 +30,8 @@ pub async fn save(pool: &SqlitePool, account: &Account) -> Result<(), AppError> 
             is_final = excluded.is_final,
             linked_customer_id = excluded.linked_customer_id,
             linked_supplier_id = excluded.linked_supplier_id,
+            currency_code = excluded.currency_code,
+            exchange_rate = excluded.exchange_rate,
             updated_at = excluded.updated_at"
     )
     .bind(account.id.0.to_string())
@@ -50,6 +52,8 @@ pub async fn save(pool: &SqlitePool, account: &Account) -> Result<(), AppError> 
     .bind(account.is_final)
     .bind(account.linked_customer_id.as_ref().map(|id| id.0.to_string()))
     .bind(account.linked_supplier_id.as_ref().map(|id| id.0.to_string()))
+    .bind(&account.currency.code)
+    .bind(account.exchange_rate.to_string())
     .bind(account.created_at)
     .bind(account.updated_at)
     .execute(pool)

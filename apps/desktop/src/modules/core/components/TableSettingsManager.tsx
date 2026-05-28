@@ -13,6 +13,7 @@ import {
   Eye
 } from "lucide-react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
+import { SettingsManagerLayout, SettingsGroup } from '@widgets/templates/SettingsManagerLayout';
 
 interface PreviewRow {
   id: string;
@@ -35,7 +36,7 @@ const PREVIEW_DATA: PreviewRow[] = [
 ];
 
 export const TableSettingsManager: React.FC = () => {
-  const { settings, updateSetting } = useTableSettings();
+  const { settings, updateSetting, resetSettings } = useTableSettings();
   const { baseCurrency } = useCurrencyContext();
   const currSym = baseCurrency?.symbol || baseCurrency?.code || "";
 
@@ -103,68 +104,52 @@ export const TableSettingsManager: React.FC = () => {
   ], [currSym]);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500" dir="rtl">
+    <SettingsManagerLayout resetAction={resetSettings}>
       {/* Visual Appearance */}
-      <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm space-y-6">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-blue-50 rounded-xl">
-            <LayoutGrid className="w-5 h-5 text-blue-600" />
-          </div>
-          <h3 className="text-lg font-black text-slate-800">مظهر الجداول</h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="space-y-3">
-            <Label className="text-slate-500 font-bold">كثافة الصفوف</Label>
+      <SettingsGroup title="مظهر الجداول" icon={LayoutGrid}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label className="text-slate-600 font-semibold">كثافة الصفوف</Label>
             <Select 
               value={settings.density} 
               onValueChange={(v) => updateSetting('density', v as TableDensity)}
             >
-              <SelectTrigger className="h-12 rounded-2xl border-slate-200">
+              <SelectTrigger className="h-10 rounded-lg border-slate-200">
                 <SelectValue placeholder="اختر الكثافة" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="compact">مختصر (Compact)</SelectItem>
-                <SelectItem value="comfortable">مريح (Comfortable)</SelectItem>
-                <SelectItem value="spacious">واسع (Spacious)</SelectItem>
+                <SelectItem value="compact">مختصر</SelectItem>
+                <SelectItem value="comfortable">مريح</SelectItem>
+                <SelectItem value="spacious">واسع</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-[11px] text-slate-400">تحدد هذه الخاصية مقدار التباعد والارتفاع للصفوف في جميع الجداول.</p>
           </div>
 
-          <div className="space-y-3">
-            <Label className="text-slate-500 font-bold">نمط الحدود</Label>
+          <div className="space-y-2">
+            <Label className="text-slate-600 font-semibold">نمط الحدود</Label>
             <Select 
               value={settings.borderStyle} 
               onValueChange={(v) => updateSetting('borderStyle', v as TableBorderStyle)}
             >
-              <SelectTrigger className="h-12 rounded-2xl border-slate-200">
+              <SelectTrigger className="h-10 rounded-lg border-slate-200">
                 <SelectValue placeholder="اختر نمط الحدود" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="full">حدود كاملة (Grid)</SelectItem>
+                <SelectItem value="full">حدود كاملة</SelectItem>
                 <SelectItem value="horizontal">حدود أفقية فقط</SelectItem>
                 <SelectItem value="none">بدون حدود</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-[11px] text-slate-400">كيفية ظهور الخطوط الفاصلة بين الخلايا والصفوف.</p>
           </div>
         </div>
-      </div>
+      </SettingsGroup>
 
       {/* Typography */}
-      <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm space-y-6">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-amber-50 rounded-xl">
-            <Type className="w-5 h-5 text-amber-600" />
-          </div>
-          <h3 className="text-lg font-black text-slate-800">الخطوط والنصوص</h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="space-y-4">
+      <SettingsGroup title="الخطوط والنصوص" icon={Type} color="text-amber-600">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <Label className="text-slate-500 font-bold">حجم الخط ({settings.fontSize}px)</Label>
+              <Label className="text-slate-600 font-semibold">حجم الخط ({settings.fontSize}px)</Label>
             </div>
             <Slider
               value={[settings.fontSize]}
@@ -172,44 +157,36 @@ export const TableSettingsManager: React.FC = () => {
               max={18}
               step={1}
               onValueChange={(v) => updateSetting('fontSize', v[0])}
-              className="py-4"
+              className="py-2"
             />
           </div>
 
-          <div className="space-y-3">
-            <Label className="text-slate-500 font-bold">نوع الخط</Label>
+          <div className="space-y-2">
+            <Label className="text-slate-600 font-semibold">نوع الخط</Label>
             <Select 
               value={settings.fontFamily} 
               onValueChange={(v) => updateSetting('fontFamily', v)}
             >
-              <SelectTrigger className="h-12 rounded-2xl border-slate-200 font-mono">
+              <SelectTrigger className="h-10 rounded-lg border-slate-200 font-mono">
                 <SelectValue placeholder="اختر الخط" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Inter, system-ui, sans-serif">Inter (Default)</SelectItem>
-                <SelectItem value="'Cairo', sans-serif">Cairo (عربي)</SelectItem>
-                <SelectItem value="'Tajawal', sans-serif">Tajawal (عربي)</SelectItem>
+                <SelectItem value="Inter, system-ui, sans-serif">Inter</SelectItem>
+                <SelectItem value="'Cairo', sans-serif">Cairo</SelectItem>
+                <SelectItem value="'Tajawal', sans-serif">Tajawal</SelectItem>
                 <SelectItem value="monospace">Monospace</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
-      </div>
+      </SettingsGroup>
 
       {/* Behavior */}
-      <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm space-y-6">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-emerald-50 rounded-xl">
-            <Monitor className="w-5 h-5 text-emerald-600" />
-          </div>
-          <h3 className="text-lg font-black text-slate-800">سلوك التفاعل</h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-50 bg-slate-50/30">
+      <SettingsGroup title="سلوك التفاعل" icon={Monitor} color="text-emerald-600">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
             <div className="space-y-0.5">
-              <Label className="text-slate-700 font-bold">تظليل الصف النشط</Label>
-              <p className="text-[10px] text-slate-400">تمييز الصف عند مرور الفأرة.</p>
+              <Label className="text-slate-700 font-semibold">تظليل الصف النشط</Label>
             </div>
             <Switch 
               checked={settings.rowHoverEffect} 
@@ -217,10 +194,9 @@ export const TableSettingsManager: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-50 bg-slate-50/30">
+          <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
             <div className="space-y-0.5">
-              <Label className="text-slate-700 font-bold">صفوف Zebra</Label>
-              <p className="text-[10px] text-slate-400">تبديل ألوان الصفوف لتسهيل القراءة.</p>
+              <Label className="text-slate-700 font-semibold">صفوف Zebra</Label>
             </div>
             <Switch 
               checked={settings.zebraRows} 
@@ -228,10 +204,9 @@ export const TableSettingsManager: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-50 bg-slate-50/30">
+          <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
             <div className="space-y-0.5">
-              <Label className="text-slate-700 font-bold">تثبيت الهيدر</Label>
-              <p className="text-[10px] text-slate-400">بقاء العناوين ظاهرة عند التمرير.</p>
+              <Label className="text-slate-700 font-semibold">تثبيت الهيدر</Label>
             </div>
             <Switch 
               checked={settings.stickyHeader} 
@@ -239,10 +214,9 @@ export const TableSettingsManager: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-50 bg-slate-50/30">
+          <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
             <div className="space-y-0.5">
-              <Label className="text-slate-700 font-bold">شريط الأدوات</Label>
-              <p className="text-[10px] text-slate-400">إظهار خيارات البحث والتصفية.</p>
+              <Label className="text-slate-700 font-semibold">شريط الأدوات</Label>
             </div>
             <Switch 
               checked={settings.showToolbar} 
@@ -250,10 +224,9 @@ export const TableSettingsManager: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-50 bg-slate-50/30">
+          <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
             <div className="space-y-0.5">
-              <Label className="text-slate-700 font-bold">منطقة الملخص</Label>
-              <p className="text-[10px] text-slate-400">إظهار الإجماليات في أسفل الجدول.</p>
+              <Label className="text-slate-700 font-semibold">منطقة الملخص</Label>
             </div>
             <Switch 
               checked={settings.showSummary} 
@@ -261,10 +234,9 @@ export const TableSettingsManager: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-50 bg-slate-50/30">
+          <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
             <div className="space-y-0.5">
-              <Label className="text-slate-700 font-bold">الترقيم التلقائي</Label>
-              <p className="text-[10px] text-slate-400">إظهار أزرار التنقل بين الصفحات.</p>
+              <Label className="text-slate-700 font-semibold">الترقيم التلقائي</Label>
             </div>
             <Switch 
               checked={settings.showPagination} 
@@ -272,19 +244,11 @@ export const TableSettingsManager: React.FC = () => {
             />
           </div>
         </div>
-      </div>
+      </SettingsGroup>
 
       {/* Live Preview */}
-      <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm space-y-6">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-violet-50 rounded-xl">
-            <Eye className="w-5 h-5 text-violet-600" />
-          </div>
-          <h3 className="text-lg font-black text-slate-800">معاينة مباشرة</h3>
-          <p className="text-sm text-slate-400 mr-auto">تتغير المعاينة فوراً عند تعديل أي إعداد أعلاه</p>
-        </div>
-
-        <div className="border border-slate-100 rounded-2xl overflow-hidden" style={{ maxHeight: '350px' }}>
+      <SettingsGroup title="معاينة مباشرة" icon={Eye} color="text-violet-600">
+        <div className="border border-slate-200 rounded-xl overflow-hidden" style={{ maxHeight: '300px' }}>
           <UnifiedTable
             data={PREVIEW_DATA}
             columns={previewColumns}
@@ -293,7 +257,7 @@ export const TableSettingsManager: React.FC = () => {
             emptyMessage="لا توجد بيانات للمعاينة"
           />
         </div>
-      </div>
-    </div>
+      </SettingsGroup>
+    </SettingsManagerLayout>
   );
 };

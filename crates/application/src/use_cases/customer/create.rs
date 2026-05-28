@@ -107,6 +107,8 @@ impl CreateCustomerUseCase {
             balance: debit - credit,
             debit,
             credit,
+            currency: currency.clone(),
+            exchange_rate: fx_rate,
             notes: None,
             is_active: true,
             is_default: false,

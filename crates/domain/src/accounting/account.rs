@@ -1,6 +1,7 @@
 #![allow(clippy::too_many_arguments)]
 use crate::shared::errors::DomainError;
 use crate::shared::ids::{AccountId, CustomerId, SupplierId};
+use crate::shared::currency::Currency;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -41,6 +42,8 @@ pub struct Account {
     pub linked_supplier_id: Option<SupplierId>,
     pub debit: Decimal,
     pub credit: Decimal,
+    pub currency: Currency,
+    pub exchange_rate: Decimal,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -55,6 +58,10 @@ impl Account {
         category: AccountCategory,
         level: i32,
         opening_balance: Decimal,
+        debit: Decimal,
+        credit: Decimal,
+        currency: Currency,
+        exchange_rate: Decimal,
         notes: Option<String>,
     ) -> Result<Self, DomainError> {
         if code.trim().is_empty() {
@@ -82,6 +89,7 @@ impl Account {
         }
 
         let now = Utc::now();
+        let balance = opening_balance + debit - credit;
 
         Ok(Self {
             id: AccountId(Uuid::new_v4()),
@@ -93,9 +101,11 @@ impl Account {
             category,
             level,
             opening_balance,
-            balance: opening_balance,
-            debit: Decimal::ZERO,
-            credit: Decimal::ZERO,
+            balance,
+            debit,
+            credit,
+            currency,
+            exchange_rate,
             notes,
             is_active: true,
             is_default: false,
@@ -208,6 +218,7 @@ mod tests {
         name_en: &str,
         acc_type: AccountType,
     ) -> Result<Account, DomainError> {
+        let base_currency = Currency::new("USD", "US Dollar", "US Dollar", "$", 2, true);
         Account::new(
             code.to_string(),
             name_ar.to_string(),
@@ -217,6 +228,10 @@ mod tests {
             AccountCategory::Detail,
             1,
             Decimal::ZERO,
+            Decimal::ZERO,
+            Decimal::ZERO,
+            base_currency,
+            Decimal::ONE,
             None,
         )
     }

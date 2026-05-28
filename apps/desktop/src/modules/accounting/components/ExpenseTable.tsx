@@ -57,7 +57,7 @@ const SortableHeader = ({ field, label, currentField, direction, onSort }: Sorta
 };
 
 export function ExpenseTable({ expenses, loading, search, onSearchChange, onView, onEdit, onDelete, onJournal, onDocument, selectedId, parentCode }: ExpenseTableProps) {
-  const { currencies, formatAmount } = useCurrencyContext();
+  const { currencies, formatAmount, toBase } = useCurrencyContext();
   const [sortField, setSortField] = useState<SortField>("code");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
@@ -145,10 +145,12 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
         label: `الرصيد (${symbol})`,
         accessor: (c) => {
           const absBal = Math.abs(Number(c.balance || 0));
-          return absBal > 0 ? formatAmount(absBal, { currencyCode: curr.code }) : "—";
+          if (absBal === 0) return "—";
+          const baseAmount = toBase(absBal, c.currency);
+          return formatAmount(baseAmount, { currencyCode: curr.code });
         },
         align: "left",
-        className: "tabular-nums font-medium text-[11px] text-slate-800"
+        className: "tabular-nums font-bold text-slate-800"
       });
     });
 
@@ -172,7 +174,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
     });
 
     return cols;
-  }, [currencies, formatAmount, sortField, sortDirection, handleSort, parentCode, onView, onEdit, onDelete, onJournal, onDocument]);
+  }, [currencies, formatAmount, toBase, sortField, sortDirection, handleSort, parentCode, onView, onEdit, onDelete, onJournal, onDocument]);
 
   const defaultVisible = useMemo(() => {
     const def = ["#", "name", "status"];
@@ -191,7 +193,14 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     const totalBal = sortedExpenses.reduce((sum, e) => sum + Number(e.balance || 0), 0);
-    const absTotal = Math.abs(totalBal);
+    const overall = totalBal > 0 ? "مدين" : totalBal < 0 ? "دائن" : null;
+    const overallColor = totalBal > 0 ? 'text-red-600' : totalBal < 0 ? 'text-emerald-600' : 'text-slate-400';
+
+    const baseTotal = sortedExpenses.reduce((sum, e) => {
+      const bal = Math.abs(Number(e.balance || 0));
+      if (bal === 0) return sum;
+      return sum + toBase(bal, e.currency);
+    }, 0);
 
     const colIds = enrichedColumns.map(c => c.id);
     return colIds.map(id => {
@@ -202,14 +211,12 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
         return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
       }
       if (id === 'status') {
-        const statusLabel = totalBal > 0 ? 'الرصيد: مدين' : totalBal < 0 ? 'الرصيد: دائن' : '—';
-        const statusColor = totalBal > 0 ? 'text-red-600' : totalBal < 0 ? 'text-emerald-600' : 'text-slate-400';
         return {
           id: 'status_summary',
           columnId: 'status',
           label: '',
-          value: statusLabel,
-          className: `${statusColor} font-bold`
+          value: overall ? `الرصيد: ${overall}` : "—",
+          className: `${overallColor} font-bold`
         };
       }
       const match = id.match(/^balance_(.+)$/);
@@ -218,15 +225,15 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: 'إجمالي',
-          value: absTotal > 0 ? formatAmount(absTotal, { currencyCode: currCode }) : "—",
+          label: '',
+          value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
           align: 'left' as const,
-          className: `text-red-600 font-bold`
+          className: `${overallColor} font-bold`
         };
       }
       return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
     });
-  }, [sortedExpenses, formatAmount, enrichedColumns]);
+  }, [sortedExpenses, formatAmount, toBase, enrichedColumns]);
 
   return (
     <TableShell

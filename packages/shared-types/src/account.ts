@@ -17,6 +17,8 @@ export interface AccountDto {
   linked_supplier_id: string | null;
   debit: string;
   credit: string;
+  currency?: string;
+  exchange_rate?: string;
 }
 
 export interface SaveAccountCommand {

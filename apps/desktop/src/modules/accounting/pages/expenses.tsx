@@ -19,7 +19,7 @@ import { type CreatePaymentRequest } from "@erp/shared-types";
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { exportToCSV } from "@shared/lib/export";
-// import { toast } from "sonner"; // Assuming toast is available via shared types or similar, wait, shared-types might not have toast.
+import { getExchangeRate } from "@shared/lib/currency-strategy";
 import { toast as toastSonner } from "sonner";
 
 // The "مصاريف أخرى" parent account ID in the chart of accounts
@@ -105,6 +105,7 @@ export default function Expenses() {
 
   // Map ExpenseFormPayload → ExpenseSavePayload and call handleSave
   const handleExpenseSave = useCallback(async (payload: ExpenseFormPayload) => {
+    const exchangeRate = getExchangeRate(payload.currency, rateMap, baseCurrency?.code);
     const cmd: ExpenseSavePayload = {
       _id: payload.id,
       code: payload.code,
@@ -121,9 +122,10 @@ export default function Expenses() {
       debit: payload.debit,
       credit: payload.credit,
       currency: payload.currency,
+      exchange_rate: exchangeRate.toString(),
     };
     await handleSave(cmd);
-  }, [expensesParent, handleSave]);
+  }, [expensesParent, handleSave, baseCurrency, rateMap]);
 
   const stats = useMemo(() => {
     const totalDebit = expenses.reduce((acc, e) => acc + parseFloat(e.debit || "0"), 0);

@@ -18,6 +18,8 @@ pub struct AccountRow {
     pub linked_supplier_id: Option<String>,
     pub debit: String,
     pub credit: String,
+    pub currency_code: Option<String>,
+    pub exchange_rate: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }

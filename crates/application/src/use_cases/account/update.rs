@@ -7,6 +7,7 @@ use domain::shared::currency::Currency;
 use domain::shared::ids::{AccountId, CustomerId, SupplierId};
 
 use crate::ports::account_repository::AccountRepository;
+use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::supplier_repository::SupplierRepository;
 
@@ -18,6 +19,7 @@ pub struct UpdateAccountUseCase {
     account_repo: Arc<dyn AccountRepository>,
     customer_repo: Option<Arc<dyn CustomerRepository>>,
     supplier_repo: Option<Arc<dyn SupplierRepository>>,
+    currency_repo: Arc<dyn CurrencyRepository>,
 }
 
 impl UpdateAccountUseCase {
@@ -25,11 +27,13 @@ impl UpdateAccountUseCase {
         account_repo: Arc<dyn AccountRepository>,
         customer_repo: Option<Arc<dyn CustomerRepository>>,
         supplier_repo: Option<Arc<dyn SupplierRepository>>,
+        currency_repo: Arc<dyn CurrencyRepository>,
     ) -> Self {
         Self {
             account_repo,
             customer_repo,
             supplier_repo,
+            currency_repo,
         }
     }
 
@@ -59,6 +63,22 @@ impl UpdateAccountUseCase {
         // Root safety
         AccountValidation::protect_root_policy_on_update(&account, &cmd, was_root)?;
 
+        // Update currency and exchange rate if provided
+        if let Some(currency_code) = &cmd.currency {
+            let new_currency = self.currency_repo.find_by_code(currency_code).await
+                .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?
+                .unwrap_or_else(|| Currency::new(currency_code, currency_code, currency_code, "", 2, false));
+            account.currency = new_currency;
+        }
+
+        if let Some(er_str) = &cmd.exchange_rate {
+            if let Ok(new_er) = Decimal::from_str(er_str) {
+                if new_er > Decimal::ZERO {
+                    account.exchange_rate = new_er;
+                }
+            }
+        }
+
         account.code = cmd.code.trim().to_string();
         account.name_ar = cmd.name_ar.trim().to_string();
         account.name_en = cmd.name_en.trim().to_string();
@@ -76,6 +96,7 @@ impl UpdateAccountUseCase {
             .and_then(|s| s.parse::<SupplierId>().ok());
         account.debit = cmd.debit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(account.debit);
         account.credit = cmd.credit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(account.credit);
+        account.balance = account.opening_balance + account.debit - account.credit; // Recalculate balance!
         account.updated_at = Utc::now();
 
         self.account_repo

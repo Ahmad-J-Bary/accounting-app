@@ -1,5 +1,6 @@
-import type { PartnerDto } from "@erp/shared-types";
+import type { PartnerDto, CreatePaymentRequest } from "@erp/shared-types";
 import type { Currency } from "@modules/core/api/currencyService";
+import type { PartnerRequest } from "@modules/partners/api/partnerService";
 import { PartnerForm } from '@modules/partners/components/PartnerForm';
 import { PartnerDrawingsForm } from '@modules/partners/components/PartnerDrawingsForm';
 import { PartnerDetailView } from '@modules/partners/components/PartnerDetailView';
@@ -7,8 +8,7 @@ import { PartnerDetailView } from '@modules/partners/components/PartnerDetailVie
 type PartnerWithRatios = PartnerDto & {
   calculatedRatio: number;
   calculatedCapitalRatio: number;
-  displayAmountLocal: number;
-  displayAmountOriginal: number;
+  displayAmountBase: number;
 };
 
 interface PartnersSidePanelProps {
@@ -23,8 +23,8 @@ interface PartnersSidePanelProps {
   onEdit: (partner: PartnerDto) => void;
   onDelete: (id: string) => void;
   onClose: () => void;
-  onSaveForm: (payload: any) => Promise<void>;
-  onSaveDrawings: (payload: any) => Promise<void>;
+  onSaveForm: (payload: PartnerRequest) => Promise<void>;
+  onSaveDrawings: (payload: CreatePaymentRequest) => Promise<void>;
 }
 
 export function PartnersSidePanel({

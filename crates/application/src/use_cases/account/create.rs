@@ -6,7 +6,7 @@ use domain::accounting::account::Account;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::shared::currency::Currency;
 
-use domain::shared::ids::{AccountId, CustomerId, SupplierId};
+use domain::shared::ids::{CustomerId, SupplierId};
 use domain::shared::money::Money;
 use domain::shared::MonetaryAmount;
 use domain::customers::Customer;
@@ -14,6 +14,7 @@ use domain::suppliers::Supplier;
 
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::customer_repository::CustomerRepository;
+use crate::ports::currency_repository::CurrencyRepository;
 
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::supplier_repository::SupplierRepository;
@@ -28,6 +29,7 @@ pub struct CreateAccountUseCase {
     journal_repo: Arc<dyn JournalEntryRepository>,
     customer_repo: Option<Arc<dyn CustomerRepository>>,
     supplier_repo: Option<Arc<dyn SupplierRepository>>,
+    currency_repo: Arc<dyn CurrencyRepository>,
 }
 
 impl CreateAccountUseCase {
@@ -36,12 +38,14 @@ impl CreateAccountUseCase {
         journal_repo: Arc<dyn JournalEntryRepository>,
         customer_repo: Option<Arc<dyn CustomerRepository>>,
         supplier_repo: Option<Arc<dyn SupplierRepository>>,
+        currency_repo: Arc<dyn CurrencyRepository>,
     ) -> Self {
         Self {
             account_repo,
             journal_repo,
             customer_repo,
             supplier_repo,
+            currency_repo,
         }
     }
 
@@ -58,40 +62,55 @@ impl CreateAccountUseCase {
         AccountValidation::validate_type_hierarchy(&*self.account_repo, &cmd).await?;
         AccountValidation::protect_root_policy_on_create(&cmd)?;
 
-        let linked_customer_id = cmd.linked_customer_id
+        let _linked_customer_id = cmd.linked_customer_id
             .as_deref()
             .and_then(|s| s.parse::<CustomerId>().ok());
 
-        let linked_supplier_id = cmd.linked_supplier_id
+        let _linked_supplier_id = cmd.linked_supplier_id
             .as_deref()
             .and_then(|s| s.parse::<SupplierId>().ok());
 
         let final_name_ar = cmd.name_ar.trim().to_string();
 
-        let is_final = cmd.category == domain::accounting::account::AccountCategory::Detail;
-
-        let account = Account {
-            id: AccountId::new(),
-            code: cmd.code.trim().to_string(),
-            name_ar: final_name_ar,
-            name_en: cmd.name_en.trim().to_string(),
-            account_type: cmd.account_type,
-            parent_id: cmd.parent_id,
-            category: cmd.category,
-            level: cmd.level,
-            opening_balance,
-            balance: opening_balance,
-            notes: cmd.notes.as_ref().map(|n| n.trim().to_string()),
-            is_active: true,
-            is_default: false,
-            is_final,
-            linked_customer_id,
-            linked_supplier_id,
-            debit: cmd.debit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(Decimal::ZERO),
-            credit: cmd.credit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(Decimal::ZERO),
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
+        // Get currency and exchange rate
+        let base_currency = self.currency_repo.get_base_currency().await
+            .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?
+            .unwrap_or(Currency::new("USD", "دولار أمريكي", "US Dollar", "$", 2, true));
+        
+        let currency_code = cmd.currency.as_deref().unwrap_or(&base_currency.code);
+        let currency = if currency_code == base_currency.code {
+            base_currency
+        } else {
+            self.currency_repo.find_by_code(currency_code).await
+                .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?
+                .unwrap_or(Currency::new(currency_code, currency_code, currency_code, "", 2, false))
         };
+
+        let exchange_rate = cmd.exchange_rate.as_deref()
+            .and_then(|s| Decimal::from_str(s).ok())
+            .filter(|r| *r > Decimal::ZERO)
+            .unwrap_or(if currency.is_base { Decimal::ONE } else { Decimal::ONE });
+
+        let debit = cmd.debit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(Decimal::ZERO);
+        let credit = cmd.credit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(Decimal::ZERO);
+
+        let _is_final = cmd.category == domain::accounting::account::AccountCategory::Detail;
+
+        let account = Account::new(
+            cmd.code.trim().to_string(),
+            final_name_ar,
+            cmd.name_en.trim().to_string(),
+            cmd.account_type,
+            cmd.parent_id,
+            cmd.category,
+            cmd.level,
+            opening_balance,
+            debit,
+            credit,
+            currency,
+            exchange_rate,
+            cmd.notes.as_ref().map(|n| n.trim().to_string()),
+        ).map_err(AccountUseCaseError::from)?;
 
         self.account_repo
             .save(&account)

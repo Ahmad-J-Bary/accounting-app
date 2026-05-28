@@ -1,14 +1,12 @@
 import { useState, useEffect } from "react";
-import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Label } from "@shared/ui/label";
-import { Save, RefreshCw, Building, FileText, Settings as SettingsIcon, Globe, ShieldCheck, Mail, Phone, MapPin, DollarSign, Percent, CalendarDays, Table2, PanelRightOpen, Download, Info, ExternalLink } from "lucide-react";
+import { Button } from "@shared/ui/button";
+import { RefreshCw, Building, FileText, Settings as SettingsIcon, Globe, ShieldCheck, Mail, Phone, MapPin, DollarSign, Percent, CalendarDays, Table2, PanelRightOpen, Download, Info, ExternalLink, Palette, ChevronDown, ChevronUp } from "lucide-react";
 import { settingsService } from '@modules/core/api/settingsService';
-import type { CompanySettings, UpdateSettingsRequest } from "@erp/shared-types";
+import type { CompanySettings } from "@erp/shared-types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
-import { toast } from "sonner";
 import { cn } from "@shared/lib/utils";
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 // Components
 import { TableSettingsManager } from "../components/TableSettingsManager";
@@ -22,11 +20,10 @@ import pkg from "../../../../package.json";
 import { SettingsLayout, SettingsSection } from "@widgets/templates/SettingsLayout";
 
 export default function Settings() {
-  const { baseCurrency } = useCurrencyContext();
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [activeNav, setActiveNav] = useState("company");
+  const [appearanceExpanded, setAppearanceExpanded] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [updateLoading, setUpdateLoading] = useState(false);
 
@@ -42,36 +39,6 @@ export default function Settings() {
   const handleChange = (key: keyof CompanySettings, value: string | number | boolean) => {
     if (settings) {
       setSettings({ ...settings, [key]: value });
-    }
-  };
-
-  const handleSave = async () => {
-    if (!settings) return;
-    setSaving(true);
-    try {
-      const request: UpdateSettingsRequest = {
-        company_name: settings.company_name,
-        company_name_en: settings.company_name_en,
-        tax_number: settings.tax_number,
-        commercial_register: settings.commercial_register,
-        address: settings.address,
-        phone: settings.phone,
-        email: settings.email,
-        currency: baseCurrency?.code || settings.currency,
-        currency_symbol: baseCurrency?.symbol || settings.currency_symbol,
-        tax_rate: parseFloat(settings.tax_rate),
-        invoice_prefix: settings.invoice_prefix,
-        purchase_prefix: settings.purchase_prefix,
-        journal_prefix: settings.journal_prefix,
-        fiscal_year_start_month: settings.fiscal_year_start_month,
-      };
-      const updated = await settingsService.updateSettings(request);
-      setSettings(updated);
-      toast.success("تم تحديث إعدادات النظام بنجاح");
-    } catch (e) {
-      toast.error("فشل الحفظ: " + e);
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -91,11 +58,14 @@ export default function Settings() {
     { id: "prefixes", label: "الأرقام التسلسلية", icon: FileText },
     { id: "currencies", label: "إدارة العملات", icon: DollarSign },
     { id: "financial", label: "الإعدادات المالية", icon: SettingsIcon },
-    { id: "tables", label: "مظهر الجداول", icon: Table2 },
-    { id: "sidebar", label: "مظهر السايد بار", icon: PanelRightOpen },
     { id: "localization", label: "اللغة والمنطقة", icon: Globe },
     { id: "security", label: "الأمان والوصول", icon: ShieldCheck },
     { id: "about", label: "حول التطبيق", icon: Info },
+  ];
+
+  const appearanceItems = [
+    { id: "tables", label: "مظهر الجداول", icon: Table2 },
+    { id: "sidebar", label: "مظهر السايد بار", icon: PanelRightOpen },
   ];
 
   return (
@@ -109,74 +79,97 @@ export default function Settings() {
               key={item.id}
               onClick={() => setActiveNav(item.id)}
               className={cn(
-                "w-full flex items-center gap-3 px-6 py-4 rounded-2xl font-black transition-all",
-                activeNav === item.id 
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-100" 
+                "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all",
+                activeNav === item.id
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-100"
                   : "text-slate-500 hover:bg-slate-100"
               )}
             >
-              <item.icon className="w-5 h-5" />
+              <item.icon className="w-4.5 h-4.5" />
               {item.label}
             </button>
           ))}
+          
+          {/* Appearance Category */}
+          <div className="space-y-1">
+            <button
+              onClick={() => setAppearanceExpanded(!appearanceExpanded)}
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl font-bold transition-all text-slate-500 hover:bg-slate-100"
+            >
+              <div className="flex items-center gap-3">
+                <Palette className="w-4.5 h-4.5" />
+                <span>المظهر</span>
+              </div>
+              {appearanceExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+            
+            {appearanceExpanded && (
+              <div className="mr-6 space-y-1">
+                {appearanceItems.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveNav(item.id)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-medium transition-all",
+                      activeNav === item.id
+                        ? "bg-blue-600 text-white shadow-md shadow-blue-100"
+                        : "text-slate-500 hover:bg-slate-100"
+                    )}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </nav>
-      }
-      actions={
-        <Button 
-          size="lg" 
-          onClick={handleSave} 
-          disabled={saving}
-          className="bg-slate-900 hover:bg-slate-800 text-white px-8 rounded-2xl font-black h-14 shadow-xl shadow-slate-200"
-        >
-          {saving ? <RefreshCw className="w-5 h-5 ml-2 animate-spin" /> : <Save className="w-5 h-5 ml-2" />}
-          {saving ? "جاري الحفظ..." : "حفظ الإعدادات"}
-        </Button>
       }
     >
       {activeNav === "company" && (
         <SettingsSection title="الهوية الأساسية للشركة" description="هذه البيانات ستظهر في ترويسة الفواتير والتقارير الرسمية.">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-3">
-              <Label className="font-black text-slate-700">اسم الشركة (عربي) *</Label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label className="font-bold text-slate-700">اسم الشركة (عربي) *</Label>
               <div className="relative">
-                <Building className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <Input className="pr-12 h-14 rounded-xl border-slate-200 focus:ring-blue-500" value={settings.company_name} onChange={e => handleChange("company_name", e.target.value)} />
+                <Building className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                <Input className="pr-11 h-12 rounded-lg border-slate-200 focus:ring-blue-500" value={settings.company_name} onChange={e => handleChange("company_name", e.target.value)} />
               </div>
             </div>
-            <div className="space-y-3">
-              <Label className="font-black text-slate-700">Company Name (English)</Label>
+            <div className="space-y-2">
+              <Label className="font-bold text-slate-700">Company Name (English)</Label>
               <div className="relative">
-                <Globe className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <Input className="pr-12 h-14 rounded-xl border-slate-200 focus:ring-blue-500" dir="ltr" value={settings.company_name_en ?? ""} onChange={e => handleChange("company_name_en", e.target.value)} />
+                <Globe className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                <Input className="pr-11 h-12 rounded-lg border-slate-200 focus:ring-blue-500" dir="ltr" value={settings.company_name_en ?? ""} onChange={e => handleChange("company_name_en", e.target.value)} />
               </div>
             </div>
-            <div className="space-y-3">
-              <Label className="font-black text-slate-700">الرقم الضريبي</Label>
-              <Input className="h-14 rounded-xl border-slate-200" value={settings.tax_number ?? ""} onChange={e => handleChange("tax_number", e.target.value)} />
+            <div className="space-y-2">
+              <Label className="font-bold text-slate-700">الرقم الضريبي</Label>
+              <Input className="h-12 rounded-lg border-slate-200" value={settings.tax_number ?? ""} onChange={e => handleChange("tax_number", e.target.value)} />
             </div>
-            <div className="space-y-3">
-              <Label className="font-black text-slate-700">السجل التجاري</Label>
-              <Input className="h-14 rounded-xl border-slate-200" value={settings.commercial_register ?? ""} onChange={e => handleChange("commercial_register", e.target.value)} />
+            <div className="space-y-2">
+              <Label className="font-bold text-slate-700">السجل التجاري</Label>
+              <Input className="h-12 rounded-lg border-slate-200" value={settings.commercial_register ?? ""} onChange={e => handleChange("commercial_register", e.target.value)} />
             </div>
-            <div className="space-y-3 md:col-span-2">
-              <Label className="font-black text-slate-700">العنوان بالتفصيل</Label>
+            <div className="space-y-2 md:col-span-2">
+              <Label className="font-bold text-slate-700">العنوان بالتفصيل</Label>
               <div className="relative">
-                <MapPin className="absolute right-4 top-14 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <Input className="pr-12 h-14 rounded-xl border-slate-200" value={settings.address ?? ""} onChange={e => handleChange("address", e.target.value)} />
+                <MapPin className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                <Input className="pr-11 h-12 rounded-lg border-slate-200" value={settings.address ?? ""} onChange={e => handleChange("address", e.target.value)} />
               </div>
             </div>
-            <div className="space-y-3">
-              <Label className="font-black text-slate-700">الهاتف المعتمد</Label>
+            <div className="space-y-2">
+              <Label className="font-bold text-slate-700">الهاتف المعتمد</Label>
               <div className="relative">
-                <Phone className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <Input className="pr-12 h-14 rounded-xl border-slate-200 font-mono" dir="ltr" value={settings.phone ?? ""} onChange={e => handleChange("phone", e.target.value)} />
+                <Phone className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                <Input className="pr-11 h-12 rounded-lg border-slate-200 font-mono" dir="ltr" value={settings.phone ?? ""} onChange={e => handleChange("phone", e.target.value)} />
               </div>
             </div>
-            <div className="space-y-3">
-              <Label className="font-black text-slate-700">البريد الإلكتروني الرسمي</Label>
+            <div className="space-y-2">
+              <Label className="font-bold text-slate-700">البريد الإلكتروني الرسمي</Label>
               <div className="relative">
-                <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <Input className="pr-12 h-14 rounded-xl border-slate-200 font-mono" dir="ltr" value={settings.email ?? ""} onChange={e => handleChange("email", e.target.value)} />
+                <Mail className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                <Input className="pr-11 h-12 rounded-lg border-slate-200 font-mono" dir="ltr" value={settings.email ?? ""} onChange={e => handleChange("email", e.target.value)} />
               </div>
             </div>
           </div>

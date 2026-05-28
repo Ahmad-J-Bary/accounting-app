@@ -22,6 +22,8 @@ pub struct AccountDto {
     pub linked_supplier_id: Option<String>,
     pub debit: String,
     pub credit: String,
+    pub currency: String,
+    pub exchange_rate: String,
 }
 
 impl From<Account> for AccountDto {
@@ -45,6 +47,8 @@ impl From<Account> for AccountDto {
             linked_supplier_id: account.linked_supplier_id.map(|id| id.0.to_string()),
             debit: account.debit.to_string(),
             credit: account.credit.to_string(),
+            currency: account.currency.code,
+            exchange_rate: account.exchange_rate.to_string(),
         }
     }
 }

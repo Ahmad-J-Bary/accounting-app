@@ -11,8 +11,7 @@ import { ActionsDropdown } from "@shared/ui/actions-dropdown";
 type PartnerWithRatios = PartnerDto & { 
   calculatedRatio: number; 
   calculatedCapitalRatio: number; 
-  displayAmountLocal: number; 
-  displayAmountOriginal: number 
+  displayAmountBase: number 
 };
 
 interface PartnerTableProps {
@@ -93,7 +92,8 @@ export function PartnerTable({
         case "capital_ratio": comparison = a.calculatedCapitalRatio - b.calculatedCapitalRatio; break;
         case "ratio": comparison = a.calculatedRatio - b.calculatedRatio; break;
         default: {
-          comparison = a.displayAmountLocal - b.displayAmountLocal;
+          // Check if sortField starts with amount_ and use base amount
+          comparison = a.displayAmountBase - b.displayAmountBase;
         }
       }
       return sortDirection === "asc" ? comparison : -comparison;
@@ -126,10 +126,8 @@ export function PartnerTable({
         header: <SortableHeader field={`amount_${curr.code}`} label={`رأس المال (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
         label: `رأس المال (${symbol})`,
         accessor: (p: PartnerWithRatios) => {
-          const amount = p.displayAmountOriginal || 0;
-          if (amount === 0) return "—";
-          const baseAmount = toBase(amount, p.currency);
-          return formatAmount(baseAmount, { currencyCode: curr.code });
+          if (p.displayAmountBase === 0) return "—";
+          return formatAmount(p.displayAmountBase, { currencyCode: curr.code });
         },
         align: "left",
         className: "tabular-nums font-black text-slate-900"
@@ -182,7 +180,7 @@ export function PartnerTable({
     );
 
     return cols;
-  }, [currencies, formatAmount, toBase, sortField, sortDirection, handleSort, onView, onEdit, onDelete, onJournal, onDocument]);
+  }, [currencies, formatAmount, sortField, sortDirection, handleSort, onView, onEdit, onDelete, onJournal, onDocument]);
 
   const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
     tableId: "partners-unified",
@@ -194,11 +192,7 @@ export function PartnerTable({
     const totalCapitalRatio = sortedPartners.reduce((s, p) => s + p.calculatedCapitalRatio, 0);
     const totalRatio = sortedPartners.reduce((s, p) => s + p.calculatedRatio, 0);
 
-    const baseTotal = sortedPartners.reduce((sum, p) => {
-      const amount = p.displayAmountOriginal || 0;
-      if (amount === 0) return sum;
-      return sum + toBase(amount, p.currency);
-    }, 0);
+    const baseTotal = sortedPartners.reduce((sum, p) => sum + p.displayAmountBase, 0);
 
     const colIds = enrichedColumns.map(c => c.id);
     return colIds.map(id => {
@@ -226,7 +220,7 @@ export function PartnerTable({
         }
       }
     });
-  }, [sortedPartners, formatAmount, toBase, enrichedColumns]);
+  }, [sortedPartners, formatAmount, enrichedColumns]);
 
   return (
     <TableShell

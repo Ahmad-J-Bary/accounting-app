@@ -50,6 +50,7 @@ pub async fn create_account(
         state.journal_entry_repo.clone(),
         Some(state.customer_repo.clone()),
         Some(state.supplier_repo.clone()),
+        state.currency_repo.clone(),
     )
     .execute(cmd)
     .await
@@ -70,6 +71,7 @@ pub async fn update_account(
         state.account_repo.clone(),
         Some(state.customer_repo.clone()),
         Some(state.supplier_repo.clone()),
+        state.currency_repo.clone(),
     )
     .execute(account_id, cmd)
     .await

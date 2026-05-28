@@ -1,7 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { 
   Users,
-  DollarSign,
   TrendingUp,
   PieChart as PieChartIcon,
   Calculator,
@@ -26,7 +25,7 @@ import { usePartnerRatios } from '@modules/partners/hooks/usePartnerRatios';
 export default function Partners() {
   const { openTab } = useTabs();
   const { formatAmount, baseCurrency, currencies } = useCurrencyContext();
-  const [globalStrategy, setGlobalStrategy] = useState("BasedOnCapitalLocal");
+  const [globalStrategy, setGlobalStrategy] = useState("BasedOnCapital");
 
   const {
     filtered: partners,
@@ -63,7 +62,7 @@ export default function Partners() {
   const stats = useMemo(() => [
     { 
       label: `إجمالي رأس المال (${baseCurrency?.symbol || ""})`, 
-      value: formatAmount(totals.local, { currencyCode: baseCurrency?.code || "", hideSymbol: false }), 
+      value: formatAmount(totals.base, { currencyCode: baseCurrency?.code || "", hideSymbol: false }), 
       icon: Calculator, 
       color: "text-slate-900" 
     },
@@ -72,12 +71,6 @@ export default function Partners() {
       value: partners.length.toString(), 
       icon: Users, 
       color: "text-blue-600" 
-    },
-    { 
-      label: `رأس المال (${baseCurrency?.symbol || ""})`, 
-      value: formatAmount(totals.original, { currencyCode: baseCurrency?.code || "", hideSymbol: false }), 
-      icon: DollarSign, 
-      color: "text-emerald-600" 
     },
   ], [totals, partners.length, formatAmount, baseCurrency]);
 
@@ -151,8 +144,7 @@ export default function Partners() {
         <div className="flex items-center gap-2 mr-auto pl-2" dir="rtl">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider hidden md:block">التوزيع:</span>
           <RadioGroup value={globalStrategy} onValueChange={setGlobalStrategy} className="flex flex-row items-center gap-1">
-            <StrategyOption id="g1" value="BasedOnCapitalLocal" label="محلي" />
-            <StrategyOption id="g2" value="BasedOnCapitalOriginal" label="أصلي" />
+            <StrategyOption id="g1" value="BasedOnCapital" label="تلقائي" />
             <StrategyOption id="g3" value="Manual" label="يدوي" />
           </RadioGroup>
         </div>

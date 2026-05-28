@@ -6,16 +6,14 @@ import {
   SidebarHeader,
   SidebarActionBar,
   SidebarBody,
-  SidebarDetailField,
-  SidebarDetailGrid,
   type SidebarAction,
 } from "@widgets/sidebar-shell";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 type PartnerWithRatios = PartnerDto & {
   calculatedRatio: number;
   calculatedCapitalRatio: number;
-  displayAmountLocal: number;
-  displayAmountOriginal: number;
+  displayAmountBase: number;
 };
 
 interface PartnerDetailViewProps {
@@ -32,11 +30,11 @@ export function PartnerDetailView({
   partner,
   baseCurrency,
   currencies,
-  formatAmount,
   onEdit,
   onDelete,
   onClose,
 }: PartnerDetailViewProps) {
+  const { formatAmount } = useCurrencyContext();
   const actions: SidebarAction[] = [
     ...(onEdit
       ? [
@@ -64,12 +62,6 @@ export function PartnerDetailView({
       : []),
   ];
 
-  const amountOriginal = Number(partner.amount_original || 0);
-  const curr = currencies.find((c) => c.code === partner.currency) || baseCurrency;
-  const formattedOriginal = `${amountOriginal.toLocaleString("ar-SA", {
-    maximumFractionDigits: curr?.decimals ?? 2,
-  })} ${curr?.symbol || partner.currency || ""}`;
-
   return (
     <SidebarShell isOpen={true} onClose={onClose}>
       <SidebarHeader
@@ -84,27 +76,19 @@ export function PartnerDetailView({
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-4">
               معلومات الاستثمار
             </h4>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-3 bg-white rounded-xl border border-slate-100">
-                <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
-                  {`المبلغ الأصلي (${partner.currency || baseCurrency?.code || ""})`}
+            <div className="grid grid-cols-2 gap-3">
+              {currencies.map(curr => (
+                <div key={curr.code} className="p-3 bg-white rounded-xl border border-slate-100">
+                  <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
+                    {`المبلغ (${curr.symbol || curr.code})`}
+                  </div>
+                  <div className="text-lg font-black text-slate-900 tabular-nums">
+                    {formatAmount(partner.displayAmountBase, { currencyCode: curr.code })}
+                  </div>
                 </div>
-                <div className="text-lg font-black text-blue-600 tabular-nums">
-                  {formattedOriginal}
-                </div>
-              </div>
-              <div className="p-3 bg-white rounded-xl border border-slate-100">
-                <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
-                  {`المبلغ (${baseCurrency?.symbol || ""})`}
-                </div>
-                <div className="text-lg font-black text-slate-900 tabular-nums">
-                  {formatAmount(Number(partner.displayAmountLocal || 0), {
-                    currencyCode: baseCurrency?.code || "",
-                  })}
-                </div>
-              </div>
+              ))}
             </div>
-            <div className="grid grid-cols-2 gap-4 mt-4">
+            <div className="grid grid-cols-2 gap-3 mt-4">
               <div className="p-3 bg-white rounded-xl border border-slate-100">
                 <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
                   نسبة رأس المال

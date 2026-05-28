@@ -1,4 +1,5 @@
 use thiserror::Error;
+use domain::shared::errors::DomainError;
 
 #[derive(Error, Debug)]
 pub enum AccountUseCaseError {
@@ -25,4 +26,7 @@ pub enum AccountUseCaseError {
 
     #[error("Forbidden operation: {0}")]
     Forbidden(String),
+
+    #[error("Domain error: {0}")]
+    Domain(#[from] DomainError),
 }

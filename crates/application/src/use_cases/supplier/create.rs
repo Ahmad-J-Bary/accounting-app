@@ -107,6 +107,8 @@ impl CreateSupplierUseCase {
             balance: credit - debit,
             debit,
             credit,
+            currency: currency.clone(),
+            exchange_rate: fx_rate,
             notes: None,
             is_active: true,
             is_default: false,

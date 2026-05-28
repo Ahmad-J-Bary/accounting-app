@@ -1,5 +1,6 @@
 use application::errors::AppError;
 use domain::accounting::account::{Account, AccountType, AccountCategory};
+use domain::shared::currency::Currency;
 use domain::shared::ids::{AccountId, CustomerId, SupplierId};
 use rust_decimal::Decimal;
 use std::str::FromStr;
@@ -22,6 +23,11 @@ pub fn row_to_account(row: AccountRow) -> Result<Account, AppError> {
         _ => AccountCategory::Detail,
     };
 
+    let currency_code = row.currency_code.unwrap_or("USD".to_string());
+    let currency = Currency::new(&currency_code, &currency_code, &currency_code, "", 2, currency_code == "USD");
+
+    let exchange_rate = Decimal::from_str(&row.exchange_rate.unwrap_or("1".to_string())).unwrap_or(Decimal::ONE);
+
     Ok(Account {
         id: AccountId(Uuid::parse_str(&row.id).map_err(|e| AppError::Infrastructure(e.to_string()))?),
         code: row.code,
@@ -41,6 +47,8 @@ pub fn row_to_account(row: AccountRow) -> Result<Account, AppError> {
         linked_supplier_id: row.linked_supplier_id.and_then(|s| s.parse::<SupplierId>().ok()),
         debit: Decimal::from_str(&row.debit).unwrap_or(Decimal::ZERO),
         credit: Decimal::from_str(&row.credit).unwrap_or(Decimal::ZERO),
+        currency,
+        exchange_rate,
         created_at: DateTime::parse_from_rfc3339(&row.created_at).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
         updated_at: DateTime::parse_from_rfc3339(&row.updated_at).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
     })
