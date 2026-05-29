@@ -3,10 +3,11 @@ import { useLocation } from "react-router-dom";
 import { useTabs } from "@app/providers/TabContext";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Save } from "lucide-react";
+import { Save, Plus } from "lucide-react";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { materialService } from "@modules/inventory/api/materialService";
-import type { MaterialDto } from "@erp/shared-types";
+import { categoryService } from "@modules/inventory/api/categoryService";
+import type { MaterialDto, CategoryDto, CreateMaterialRequest } from "@erp/shared-types";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
@@ -20,6 +21,7 @@ import { DocumentStatusBadge } from "@modules/invoicing/components/DocumentStatu
 import { useDocumentEditor } from "@modules/invoicing/hooks/useDocumentEditor";
 import { toBackendLines } from "@modules/invoicing/lib/invoiceUtils";
 import { useDocumentFinancials } from "@modules/invoicing/lib/useDocumentFinancials";
+import { MaterialForm } from "@modules/inventory/components/MaterialForm";
 
 interface HeaderState {
   docNumber: string;
@@ -27,6 +29,12 @@ interface HeaderState {
   notes: string;
   currency_code: string;
   exchange_rate: string;
+  discount_amount: string;
+  tax_amount: string;
+  extra_costs: string;
+  paid_amount: string;
+  extra_paid_amount: string;
+  payment_method: string;
 }
 
 const defaultHeader = (): HeaderState => ({
@@ -34,8 +42,13 @@ const defaultHeader = (): HeaderState => ({
   issued_at: new Date().toISOString().split("T")[0],
   notes: "مواد أول المدة- رصيد افتتاحي للمواد",
   currency_code: "",
-
   exchange_rate: "1",
+  discount_amount: "0",
+  tax_amount: "0",
+  extra_costs: "0",
+  paid_amount: "0",
+  extra_paid_amount: "0",
+  payment_method: "Deferred",
 });
 
 export default function OpeningBalance() {
@@ -45,6 +58,9 @@ export default function OpeningBalance() {
   const [materials, setMaterials] = useState<MaterialDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [materialFormOpen, setMaterialFormOpen] = useState(false);
+  const [savingMaterial, setSavingMaterial] = useState(false);
 
   const { currencies, rateMap, baseCurrency } = useCurrencyContext();
   const [header, setHeader] = useState<HeaderState>(defaultHeader());
@@ -87,6 +103,24 @@ export default function OpeningBalance() {
     }
   }, [loadData, isNew, rateMap, baseCurrency?.code]);
 
+  useEffect(() => {
+    categoryService.listCategories().then(setCategories).catch(() => {});
+  }, []);
+
+  const handleSaveMaterial = useCallback(async (data: CreateMaterialRequest) => {
+    setSavingMaterial(true);
+    try {
+      await materialService.createMaterial(data);
+      toast.success("تم إضافة المادة بنجاح");
+      setMaterialFormOpen(false);
+      loadData();
+    } catch (e) {
+      toast.error("فشل إضافة المادة: " + e);
+    } finally {
+      setSavingMaterial(false);
+    }
+  }, [loadData]);
+
   const handleSave = async () => {
     if (!header.currency_code) {
       toast.error("الرجاء اختيار العملات أولاً من إعدادات العملات");
@@ -103,10 +137,11 @@ export default function OpeningBalance() {
         invoice_number: header.docNumber,
         invoice_type: "OpeningBalance",
         lines: toBackendLines(lines),
-        tax_amount: "0",
-        discount_amount: "0",
-        payment_method: "Deferred",
-        amount_paid: "0",
+        tax_amount: header.tax_amount || "0",
+        discount_amount: header.discount_amount || "0",
+        extra_costs: header.extra_costs || "0",
+        payment_method: header.payment_method || "Deferred",
+        amount_paid: header.paid_amount || "0",
         issued_at: new Date(header.issued_at).toISOString(),
         currency_code: header.currency_code,
         exchange_rate: header.exchange_rate,
@@ -157,20 +192,9 @@ export default function OpeningBalance() {
       );
   }, [currencies, baseCurrency]);
 
-  const headerShim = useMemo(
-    () => ({
-      currency_code: header.currency_code,
-      exchange_rate: header.exchange_rate,
-      discount_amount: "0",
-      tax_amount: "0",
-      extra_costs: "0",
-      paid_amount: "0",
-    }),
-    [header.currency_code, header.exchange_rate],
-  );
-
   const {
     enrichedLines,
+    docSubtotal,
     subtotal,
     net,
     displayCurrency,
@@ -179,8 +203,8 @@ export default function OpeningBalance() {
   } = useDocumentFinancials({
     lines,
     setLines,
-    headerState: headerShim,
-    setHeaderState: () => {},
+    headerState: header,
+    setHeaderState: setHeader,
     currencies,
     invoiceType: "OpeningBalance",
     priceLabel: "التكلفة",
@@ -192,7 +216,15 @@ export default function OpeningBalance() {
       title="بضاعة أول المدة"
       statusBadge={<DocumentStatusBadge status="Draft" />}
       toolbar={
-        <>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setMaterialFormOpen(true)}
+            className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+          >
+            <Plus className="w-4 h-4 ml-2" /> مادة جديدة
+          </Button>
           <Button
             size="sm"
             onClick={handleSave}
@@ -202,7 +234,7 @@ export default function OpeningBalance() {
             <Save className="w-4 h-4 ml-2" />{" "}
             {saving ? "جاري الحفظ..." : "حفظ وترحيل الرصيد"}
           </Button>
-        </>
+        </div>
       }
       headerFields={
         <>
@@ -261,18 +293,42 @@ export default function OpeningBalance() {
       summaryPanel={
         <SummaryPanel
           subtotal={subtotal}
-          discount={0}
-          tax={0}
-          extraCosts={0}
+          discount={parseFloat(header.discount_amount)}
+          tax={parseFloat(header.tax_amount)}
+          extraCosts={parseFloat(header.extra_costs)}
           net={net}
+          paid={parseFloat(header.paid_amount) + parseFloat(header.extra_paid_amount || "0")}
           currency={displayCurrency}
           invoiceType="OpeningBalance"
           currencies={currencies}
           onCurrencyChange={onCurrencyChange}
           exchangeRate={parseFloat(header.exchange_rate)}
+          docCurrency={header.currency_code}
+          docSubtotal={docSubtotal}
+          paymentMethod={header.payment_method}
+          onPaymentMethodChange={(method) => {
+            setHeader((s) => ({ ...s, payment_method: method }));
+          }}
+          paidAmount={header.paid_amount}
+          onPaidAmountChange={(amount) => setHeader((s) => ({ ...s, paid_amount: amount }))}
+          onExtraCostsChange={(value) => setHeader((s) => ({ ...s, extra_costs: value }))}
+          extraPaidAmount={header.extra_paid_amount}
+          onExtraPaidAmountChange={(amount) => setHeader((s) => ({ ...s, extra_paid_amount: amount }))}
         />
       }
-      sidebar={null}
+      sidebar={
+        materialFormOpen ? (
+          <MaterialForm
+            open={materialFormOpen}
+            onClose={() => setMaterialFormOpen(false)}
+            material={null}
+            categories={categories}
+            onSave={handleSaveMaterial}
+            saving={savingMaterial}
+          />
+        ) : null
+      }
+      isSidebarOpen={materialFormOpen}
     />
   );
 }

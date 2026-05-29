@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { cn } from "@shared/lib/utils";
+import { useSidebarSettings } from "@shared/hooks/useSidebarSettings";
 
 interface FinancialDocumentTemplateProps {
   title: string;
@@ -10,14 +11,17 @@ interface FinancialDocumentTemplateProps {
   lineItemsGrid: ReactNode;
   summaryPanel: ReactNode;
   sidebar?: ReactNode;
+  isSidebarOpen?: boolean;
   footer?: ReactNode;
   className?: string;
 }
 
 export function FinancialDocumentTemplate({
   title, subtitle, statusBadge, toolbar, headerFields,
-  lineItemsGrid, summaryPanel, sidebar, footer, className
+  lineItemsGrid, summaryPanel, sidebar, isSidebarOpen = false, footer, className
 }: FinancialDocumentTemplateProps) {
+  const { getSidebarWidth } = useSidebarSettings();
+
   return (
     <div className={cn("flex flex-col h-full w-full bg-muted/30", className)} dir="rtl">
       <header className="flex items-center justify-between px-4 md:px-6 py-3 bg-background border-b border-border shrink-0 sticky top-0 z-20">
@@ -48,7 +52,12 @@ export function FinancialDocumentTemplate({
         </div>
 
         {sidebar && (
-          <aside className="w-64 flex flex-col gap-2 shrink-0 overflow-auto">{sidebar}</aside>
+          <aside className={cn(
+            "flex flex-col overflow-hidden transition-all duration-300 shrink-0 rounded-xl border border-border bg-card shadow-lg",
+            isSidebarOpen ? "opacity-100" : "w-0 opacity-0 border-none p-0 overflow-hidden"
+          )} style={{ width: isSidebarOpen ? getSidebarWidth() : '0px', minWidth: isSidebarOpen ? getSidebarWidth() : '0px' }}>
+            <div className="flex-1 overflow-auto">{sidebar}</div>
+          </aside>
         )}
       </div>
     </div>

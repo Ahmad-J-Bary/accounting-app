@@ -1,8 +1,12 @@
+import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Save, Send, Printer, History, Settings2 } from "lucide-react";
-import type { SupplierDto } from "@erp/shared-types";
+import { Save, Send, Printer, History, Settings2, Plus } from "lucide-react";
+import type { SupplierDto, CategoryDto, CreateMaterialRequest } from "@erp/shared-types";
+import { materialService } from "@modules/inventory/api/materialService";
+import { categoryService } from "@modules/inventory/api/categoryService";
+import { MaterialForm } from "@modules/inventory/components/MaterialForm";
 import { toast } from "sonner";
 
 import { FinancialDocumentTemplate } from "@widgets/templates/FinancialDocumentTemplate";
@@ -57,13 +61,43 @@ export default function PurchaseInvoices() {
 
   const suppliers = parties as SupplierDto[];
 
+  const [materialFormOpen, setMaterialFormOpen] = useState(false);
+  const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [savingMaterial, setSavingMaterial] = useState(false);
+
+  useEffect(() => {
+    categoryService.listCategories().then(setCategories).catch(() => {});
+  }, []);
+
+  const handleSaveMaterial = async (data: CreateMaterialRequest) => {
+    setSavingMaterial(true);
+    try {
+      await materialService.createMaterial(data);
+      toast.success("تم إضافة المادة بنجاح");
+      setMaterialFormOpen(false);
+      loadData(false);
+    } catch (e) {
+      toast.error("فشل إضافة المادة: " + e);
+    } finally {
+      setSavingMaterial(false);
+    }
+  };
+
   if (view === "editor") {
     return (
       <FinancialDocumentTemplate
         title="فاتورة مشتريات"
         statusBadge={<DocumentStatusBadge status={headerState.status} />}
         toolbar={
-          <>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setMaterialFormOpen(true)}
+              className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+            >
+              <Plus className="w-4 h-4 ml-2" /> مادة جديدة
+            </Button>
             {isReadOnly && (
               <Button 
                 size="sm" 
@@ -114,7 +148,7 @@ export default function PurchaseInvoices() {
             <Button variant="outline" size="sm" onClick={() => window.print()} className="bg-white">
               <Printer className="w-4 h-4 ml-2" /> طباعة
             </Button>
-          </>
+          </div>
         }
         headerFields={
           <>
@@ -188,7 +222,19 @@ export default function PurchaseInvoices() {
             onExtraPaidAmountChange={(amount) => setHeaderState(s => ({ ...s, extra_paid_amount: amount }))}
           />
         }
-        sidebar={null}
+        sidebar={
+          materialFormOpen ? (
+            <MaterialForm
+              open={materialFormOpen}
+              onClose={() => setMaterialFormOpen(false)}
+              material={null}
+              categories={categories}
+              onSave={handleSaveMaterial}
+              saving={savingMaterial}
+            />
+          ) : null
+        }
+        isSidebarOpen={materialFormOpen}
       />
     );
   }
