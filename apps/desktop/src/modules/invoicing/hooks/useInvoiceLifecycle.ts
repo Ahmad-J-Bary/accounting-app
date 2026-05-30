@@ -210,13 +210,19 @@ export function useInvoiceLifecycle({
                   supplier_name: inv.supplier_name ?? "مورد نقدي",
                 }),
           });
-          const loadedLines: GridLine[] = (inv.lines ?? []).map((l) => ({
-            ...l,
-            _id: `line_${Math.random()}`,
-            line_total: parseFloat(l.quantity) * parseFloat(l.unit_price),
-            material_code: l.code,
-            unit_barcode: l.barcode,
-          }));
+          const loadedLines: GridLine[] = (inv.lines ?? []).map((l) => {
+            const rate = parseFloat(inv.exchange_rate || "1");
+            const docPrice = parseFloat(l.unit_price || "0");
+            const basePrice = rate > 0 ? docPrice / rate : docPrice;
+            return {
+              ...l,
+              unit_price: Number.isFinite(basePrice) ? basePrice.toFixed(2).replace(/\.?0+$/, "") : l.unit_price,
+              _id: `line_${Math.random()}`,
+              line_total: parseFloat(l.quantity) * basePrice,
+              material_code: l.code,
+              unit_barcode: l.barcode,
+            };
+          });
 
           // If the invoice is opened in edit mode (not view-only), append a blank row at the end
           if (!isReadOnly) {
@@ -301,6 +307,14 @@ export function useInvoiceLifecycle({
     extraColumns: extraCols,
   });
 
+  // Auto-set default currency to base currency for new documents
+  useEffect(() => {
+    if (isNew && !headerState.currency_code && baseCurrency) {
+      const rate = rateMap.get(baseCurrency.code) || 1;
+      setHeaderState((s) => ({ ...s, currency_code: baseCurrency.code, exchange_rate: rate.toString() }));
+    }
+  }, [isNew, baseCurrency, rateMap, headerState.currency_code]);
+
   // Action handlers
   const handleSave = async (andPost = false) => {
     if (!headerState.currency_code) {
@@ -342,39 +356,25 @@ export function useInvoiceLifecycle({
 
     setSaving(true);
     try {
-      const paymentMethodMap: Record<string, string> = {
-        cash: "Cash",
-        credit: "Deferred",
-        partial: "Partial",
-      };
-
-      const finalTotal =
-        totals.subtotal -
-        parseFloat(headerState.discount_amount) +
-        parseFloat(headerState.tax_amount) +
-        (invoiceType === "Purchase" ? parseFloat(headerState.extra_costs) : 0);
-
-      const totalPaid =
-        headerState.payment_method === "cash"
-          ? finalTotal.toString()
-          : headerState.payment_method === "partial"
-            ? (
-                parseFloat(headerState.paid_amount || "0") +
-                (invoiceType === "Purchase"
-                  ? parseFloat(headerState.extra_paid_amount || "0")
-                  : 0)
-              ).toString()
-            : "0";
+      const totalPaid = (
+        (parseFloat(headerState.paid_amount || "0") || 0) +
+        (invoiceType === "Purchase"
+          ? (parseFloat(headerState.extra_paid_amount || "0") || 0)
+          : 0)
+      ).toFixed(2);
 
       const payload = {
         invoice_number: headerState.invoice_number,
         invoice_type: invoiceType,
-        lines: toBackendLines(lines),
+        lines: toBackendLines(lines, headerState.exchange_rate),
         tax_amount: headerState.tax_amount,
         discount_amount: headerState.discount_amount,
         extra_costs:
           invoiceType === "Purchase" ? headerState.extra_costs : undefined,
-        payment_method: paymentMethodMap[headerState.payment_method] || "Cash",
+        payment_method: 
+          headerState.payment_method === "cash" ? "Cash" : 
+          headerState.payment_method === "credit" ? "Deferred" : 
+          headerState.payment_method === "partial" ? "Partial" : "Cash",
         amount_paid: totalPaid,
         issued_at: new Date(headerState.issued_at).toISOString(),
         currency_code: headerState.currency_code,

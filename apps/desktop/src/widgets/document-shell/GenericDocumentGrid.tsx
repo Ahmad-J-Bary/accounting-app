@@ -250,25 +250,27 @@ export function GenericDocumentGrid({
       if (currMatch) {
         const baseField = currMatch[1];
         const currCode = currMatch[2];
-        if (!docCurrency || currCode === docCurrency) {
+        const baseCode = baseCurrency?.code;
+        // If the cell is in base currency, update the base field directly
+        if (!baseCode || currCode === baseCode) {
           onUpdateLine(rowIdx, {
             [baseField]: value,
             [colKey]: value,
           });
           return;
         }
-
+        // Convert from the cell's currency TO base currency
         const otherPrice = parseFloat(value) || 0;
-        const docPrice = convertBetween(otherPrice, currCode, docCurrency);
+        const basePrice = convertBetween(otherPrice, currCode, baseCode);
         onUpdateLine(rowIdx, {
-          [baseField]: Number.isFinite(docPrice) ? docPrice.toString() : value,
+          [baseField]: Number.isFinite(basePrice) ? basePrice.toString() : value,
           [colKey]: value,
         });
       } else {
         onUpdateLine(rowIdx, { [colKey]: value });
       }
     },
-    [convertBetween, docCurrency, onUpdateLine, readOnly],
+    [convertBetween, baseCurrency?.code, onUpdateLine, readOnly],
   );
 
   const showSearchPanel = searchRow !== null;

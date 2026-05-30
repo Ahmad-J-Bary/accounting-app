@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useEffect } from "react";
 import { cn } from "@shared/lib/utils";
 import { type Currency } from "@modules/core/api/currencyService";
 import { resolveCurrencySymbol } from "@modules/invoicing/lib/constants";
@@ -55,19 +55,45 @@ export function SummaryPanel({
   onExtraCostsChange,
   extraPaidAmount,
   onExtraPaidAmountChange,
+  docCurrency,
 }: SummaryPanelProps) {
-  const { baseCurrency, currencies: contextCurrencies } = useCurrencyContext();
+  const { baseCurrency, currencies: contextCurrencies, convertBetween } = useCurrencyContext();
   const safeExtra = extraCosts ?? 0;
   const availableCurrencies = currencies ?? contextCurrencies;
+  const safeCurrency = currency || baseCurrency?.code || (availableCurrencies[0]?.code ?? "");
+
+  // The document currency — this is what paid_amount is ALWAYS stored in on the backend.
+  // The display currency (safeCurrency) may differ (e.g. user chose secondary currency for viewing).
+  const safeDocCurrency = docCurrency || safeCurrency;
+
+  // Are we currently showing amounts in a different currency than the document currency?
+  const isDisplayDifferentFromDoc = safeDocCurrency !== safeCurrency && !!convertBetween;
+
   const resolveCurrencyMeta = (code?: string) =>
-    availableCurrencies.find((c) => c.code === code) ||
+    availableCurrencies.find((c) => c.code === (code || safeCurrency)) ||
     (code === baseCurrency?.code ? baseCurrency : null);
   const formatRawAmount = (amount: number, code?: string) => {
-    const currencyMeta = resolveCurrencyMeta(code);
+    const effectiveCode = code || safeCurrency;
+    const currencyMeta = availableCurrencies.find((c) => c.code === effectiveCode) ||
+      (effectiveCode === baseCurrency?.code ? baseCurrency : null);
     const formatted = formatWithLocale(amount, currencyMeta?.decimals ?? 2);
     return currencyMeta
       ? `${formatted} ${currencyMeta.symbol || currencyMeta.code}`
       : formatted;
+  };
+
+  // --- CURRENCY CONVERSION HELPERS ---
+  // Convert a value FROM document currency TO display currency (for showing to user)
+  const docToDisplay = (amount: number): number => {
+    if (!isDisplayDifferentFromDoc) return amount;
+    return convertBetween!(amount, safeDocCurrency, safeCurrency);
+  };
+
+  // Convert a value FROM display currency BACK TO document currency (for saving)
+  // CRITICAL: paid_amount must always be stored in document currency
+  const displayToDoc = (amount: number): number => {
+    if (!isDisplayDifferentFromDoc) return amount;
+    return convertBetween!(amount, safeCurrency, safeDocCurrency);
   };
 
   const clamp = (val: number, min: number, max: number) =>
@@ -78,88 +104,123 @@ export function SummaryPanel({
     return Number.isFinite(clamped) ? clamped.toString() : "0";
   };
 
-  // Independent selection state for each dropdown (not derived from overall paymentMethod)
-  const [selInvoiceMethod, setSelInvoiceMethod] = useState<string>(() => {
-    if (paymentMethod === "cash") return "cash";
-    if (paymentMethod === "credit") return "credit";
-    const pAmt = parseFloat(paidAmount || "0") || 0;
-    if (pAmt === subtotal && subtotal > 0) return "cash";
-    if (pAmt === 0) return "credit";
-    return "partial";
-  });
+  // invoiceMax: The maximum payable amount
+  // - In DISPLAY currency (for UI display and method detection)
+  // - net/subtotal already come in display currency from useDocumentFinancials
+  const invoiceMaxDisplay = useMemo(() => {
+    if (invoiceType === "Purchase" && safeExtra > 0) return subtotal;
+    return net;
+  }, [invoiceType, safeExtra, subtotal, net]);
 
-  const [selExtraMethod, setSelExtraMethod] = useState<string>(() => {
-    if (paymentMethod === "cash") return "cash";
-    if (paymentMethod === "credit") return "credit";
-    const exPaid = parseFloat(extraPaidAmount || "0") || 0;
-    if (exPaid === safeExtra && safeExtra > 0) return "cash";
-    if (exPaid === 0) return "credit";
-    return "partial";
-  });
+  // invoiceMax in DOC currency — what we actually SAVE to the backend
+  const invoiceMaxDoc = useMemo(() => {
+    return displayToDoc(invoiceMaxDisplay);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoiceMaxDisplay, safeCurrency, safeDocCurrency]);
 
-  // Handlers for split payment methods
+  // safeExtra in DOC currency (extra_costs is stored in doc currency already, convert to display for UI)
+  const safeExtraDisplay = docToDisplay(safeExtra);
+
+  // Derived branch methods from paid amounts.
+  // IMPORTANT: paidAmount is in DOC currency, invoiceMaxDisplay is in DISPLAY currency.
+  // We must convert paidAmount to display currency for comparison.
+  const derivedInvoiceMethod = useMemo(() => {
+    const pAmtDoc = parseFloat(paidAmount || "0") || 0;
+    const pAmtDisplay = docToDisplay(pAmtDoc);
+    if (pAmtDisplay <= 0) return "credit";
+    if (pAmtDisplay >= invoiceMaxDisplay && invoiceMaxDisplay > 0) return "cash";
+    return "partial";
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paidAmount, invoiceMaxDisplay, safeCurrency, safeDocCurrency]);
+
+  const derivedExtraMethod = useMemo(() => {
+    const exPaidDoc = parseFloat(extraPaidAmount || "0") || 0;
+    const exPaidDisplay = docToDisplay(exPaidDoc);
+    if (exPaidDisplay <= 0) return "credit";
+    if (exPaidDisplay >= safeExtraDisplay && safeExtraDisplay > 0) return "cash";
+    return "partial";
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extraPaidAmount, safeExtraDisplay, safeCurrency, safeDocCurrency]);
+
+  // Overall payment method derived from both branches
+  const currentOverallMethod = useMemo(() => {
+    if (derivedInvoiceMethod === "cash" && derivedExtraMethod === "cash") return "cash";
+    if (derivedInvoiceMethod === "credit" && derivedExtraMethod === "credit") return "credit";
+    return "partial";
+  }, [derivedInvoiceMethod, derivedExtraMethod]);
+
+  // Sync overall method to parent when it changes (only from split view)
+  useEffect(() => {
+    if (safeExtra > 0 && invoiceType === "Purchase" && paymentMethod !== currentOverallMethod) {
+      onPaymentMethodChange?.(currentOverallMethod);
+    }
+  }, [currentOverallMethod, safeExtra, invoiceType, paymentMethod, onPaymentMethodChange]);
+
+  // Handler for invoice branch
+  // CRITICAL: onPaidAmountChange MUST receive a value in DOC currency, not display currency
   const handleInvoicePaymentMethodChange = (method: string) => {
-    setSelInvoiceMethod(method);
-    if (!onPaymentMethodChange || !onPaidAmountChange) return;
+    if (!onPaidAmountChange || !onPaymentMethodChange) return;
 
-    let newPaidAmount: string;
+    let newPaidAmountDoc: string;
     if (method === "cash") {
-      newPaidAmount = subtotal.toString();
+      // invoiceMaxDoc is already in doc currency
+      newPaidAmountDoc = invoiceMaxDoc.toFixed(2);
     } else if (method === "credit") {
-      newPaidAmount = "0";
+      newPaidAmountDoc = "0";
     } else {
-      newPaidAmount = clampPaidSafe(paidAmount || "0", subtotal);
+      // Switching to partial — use current paidAmount (already in doc currency) or half of max
+      const currentDoc = parseFloat(paidAmount || "0") || 0;
+      const halfMaxDoc = invoiceMaxDoc / 2;
+      newPaidAmountDoc = (currentDoc > 0 && currentDoc < invoiceMaxDoc)
+        ? currentDoc.toFixed(2)
+        : halfMaxDoc.toFixed(2);
     }
+    // Clamp in DOC currency
+    const maxDoc = invoiceMaxDoc;
+    const clamped = clamp(parseFloat(newPaidAmountDoc) || 0, 0, maxDoc);
+    onPaidAmountChange(clamped.toFixed(2));
 
-    onPaidAmountChange(newPaidAmount);
-
-    let overallMethod = "partial";
-    if (method === "cash" && selExtraMethod === "cash") {
-      overallMethod = "cash";
-    } else if (method === "credit" && selExtraMethod === "credit") {
-      overallMethod = "credit";
+    // For simple view (no extra costs), directly update overall method
+    if (safeExtra <= 0 || invoiceType !== "Purchase") {
+      onPaymentMethodChange(method);
     }
-
-    onPaymentMethodChange(overallMethod);
   };
 
+  // Handler for extra costs branch
+  // CRITICAL: onExtraPaidAmountChange MUST receive a value in DOC currency
   const handleExtraPaymentMethodChange = (method: string) => {
-    setSelExtraMethod(method);
-    if (!onPaymentMethodChange || !onExtraPaidAmountChange) return;
+    if (!onExtraPaidAmountChange || !onPaymentMethodChange) return;
 
-    let newExtraPaid: string;
+    let newExtraPaidDoc: string;
     if (method === "cash") {
-      newExtraPaid = safeExtra.toString();
+      // safeExtra is already in doc currency (passed directly from headerState.extra_costs)
+      newExtraPaidDoc = safeExtra.toFixed(2);
     } else if (method === "credit") {
-      newExtraPaid = "0";
+      newExtraPaidDoc = "0";
     } else {
-      newExtraPaid = clampPaidSafe(extraPaidAmount || "0", safeExtra);
+      const currentDoc = parseFloat(extraPaidAmount || "0") || 0;
+      const halfDoc = safeExtra / 2;
+      newExtraPaidDoc = (currentDoc > 0 && currentDoc < safeExtra)
+        ? currentDoc.toFixed(2)
+        : halfDoc.toFixed(2);
     }
-
-    onExtraPaidAmountChange(newExtraPaid);
-
-    let overallMethod = "partial";
-    if (selInvoiceMethod === "cash" && method === "cash") {
-      overallMethod = "cash";
-    } else if (selInvoiceMethod === "credit" && method === "credit") {
-      overallMethod = "credit";
-    }
-
-    onPaymentMethodChange(overallMethod);
+    const clamped = clamp(parseFloat(newExtraPaidDoc) || 0, 0, safeExtra);
+    onExtraPaidAmountChange(clamped.toFixed(2));
   };
 
+  // totalPaid: actual sum of paid amounts, converted to display currency
   const totalPaid = useMemo(() => {
-    if (paymentMethod === "cash") {
-      return net;
-    }
-    if (paymentMethod === "credit") {
-      return 0;
-    }
     const basePaid = parseFloat(paidAmount || "0") || 0;
     const extraPaid =
       invoiceType === "Purchase" ? parseFloat(extraPaidAmount || "0") || 0 : 0;
-    return basePaid + extraPaid;
-  }, [paymentMethod, net, paidAmount, extraPaidAmount, invoiceType]);
+    const rawTotal = basePaid + extraPaid;
+    if (rawTotal === 0) return 0;
+    // paidAmount/extraPaidAmount are in doc currency, convert to display currency
+    if (docCurrency && safeCurrency && docCurrency !== safeCurrency && convertBetween) {
+      return convertBetween(rawTotal, docCurrency, safeCurrency);
+    }
+    return rawTotal;
+  }, [paidAmount, extraPaidAmount, invoiceType, docCurrency, safeCurrency, convertBetween]);
 
   const remaining = Math.max(net - totalPaid, 0);
 
@@ -178,14 +239,11 @@ export function SummaryPanel({
             </span>
             {onCurrencyChange && currencies ? (
               <select
-                value={currency ?? ""}
+                value={safeCurrency}
                 disabled={isReadOnly}
                 onChange={(e) => onCurrencyChange(e.target.value)}
                 className="h-7 px-1 rounded border-none bg-transparent font-black text-primary text-[11px] outline-none focus:ring-0 cursor-pointer"
               >
-                <option value="" className="text-foreground font-bold">
-                  اختر العملة
-                </option>
                 {currencies.map((c) => (
                   <option
                     key={c.code}
@@ -198,9 +256,7 @@ export function SummaryPanel({
               </select>
             ) : (
               <span className="text-xs font-black text-primary">
-                {currency
-                  ? resolveCurrencyMeta(currency)?.symbol || currency
-                  : "اختر العملة"}
+                {resolveCurrencyMeta(safeCurrency)?.symbol || safeCurrency}
               </span>
             )}
           </div>
@@ -256,7 +312,7 @@ export function SummaryPanel({
                   المبلغ كاملاً
                 </span>
                 <span className="text-xs font-black tabular-nums">
-                  {formatRawAmount(subtotal + safeExtra, currency)}
+                  {formatRawAmount(net, currency)}
                 </span>
               </div>
 
@@ -303,7 +359,7 @@ export function SummaryPanel({
                             دفع الفاتورة:
                           </span>
                           <select
-                            value={selInvoiceMethod}
+                            value={derivedInvoiceMethod}
                             onChange={(e) =>
                               handleInvoicePaymentMethodChange(e.target.value)
                             }
@@ -314,26 +370,27 @@ export function SummaryPanel({
                             <option value="credit">آجل</option>
                             <option value="partial">جزئي</option>
                           </select>
-                          {selInvoiceMethod === "partial" &&
+                          {derivedInvoiceMethod === "partial" &&
                           onPaidAmountChange &&
                           !isReadOnly ? (
                             <input
                               type="number"
                               min={0}
-                              max={subtotal}
-                              value={paidAmount || "0"}
-                              onChange={(e) =>
-                                onPaidAmountChange(
-                                  clampPaidSafe(e.target.value, subtotal),
-                                )
-                              }
+                              max={invoiceMaxDisplay}
+                              value={docToDisplay(parseFloat(paidAmount || "0") || 0)}
+                              onChange={(e) => {
+                                const valDisplay = parseFloat(e.target.value) || 0;
+                                const clampedDisplay = clamp(valDisplay, 0, invoiceMaxDisplay);
+                                const valDoc = displayToDoc(clampedDisplay);
+                                onPaidAmountChange(valDoc.toFixed(2));
+                              }}
                               className="h-4.5 w-14 font-black text-[10px] border-blue-200 focus:ring-blue-500 bg-white py-0 px-1 rounded border outline-none text-center"
                             />
                           ) : (
                             <span className="font-black text-[10px] tabular-nums text-blue-800">
                               {formatRawAmount(
-                                selInvoiceMethod === "cash" ? subtotal : 0,
-                                currency,
+                                derivedInvoiceMethod === "cash" ? invoiceMaxDisplay : 0,
+                                safeCurrency,
                               )}
                             </span>
                           )}
@@ -346,7 +403,7 @@ export function SummaryPanel({
                             دفع التكاليف:
                           </span>
                           <select
-                            value={selExtraMethod}
+                            value={derivedExtraMethod}
                             onChange={(e) =>
                               handleExtraPaymentMethodChange(e.target.value)
                             }
@@ -357,26 +414,27 @@ export function SummaryPanel({
                             <option value="credit">آجل</option>
                             <option value="partial">جزئي</option>
                           </select>
-                          {selExtraMethod === "partial" &&
+                          {derivedExtraMethod === "partial" &&
                           onExtraPaidAmountChange &&
                           !isReadOnly ? (
                             <input
                               type="number"
                               min={0}
-                              max={safeExtra}
-                              value={extraPaidAmount || "0"}
-                              onChange={(e) =>
-                                onExtraPaidAmountChange(
-                                  clampPaidSafe(e.target.value, safeExtra),
-                                )
-                              }
+                              max={safeExtraDisplay}
+                              value={docToDisplay(parseFloat(extraPaidAmount || "0") || 0)}
+                              onChange={(e) => {
+                                const valDisplay = parseFloat(e.target.value) || 0;
+                                const clampedDisplay = clamp(valDisplay, 0, safeExtraDisplay);
+                                const valDoc = displayToDoc(clampedDisplay);
+                                onExtraPaidAmountChange(valDoc.toFixed(2));
+                              }}
                               className="h-4.5 w-14 font-black text-[10px] border-violet-200 focus:ring-violet-500 bg-white py-0 px-1 rounded border outline-none text-violet-600 text-center"
                             />
                           ) : (
                             <span className="font-black text-[10px] tabular-nums text-violet-800">
                               {formatRawAmount(
-                                selExtraMethod === "cash" ? safeExtra : 0,
-                                currency,
+                                derivedExtraMethod === "cash" ? safeExtraDisplay : 0,
+                                safeCurrency,
                               )}
                             </span>
                           )}
@@ -408,7 +466,7 @@ export function SummaryPanel({
                           طريقة دفع الفاتورة
                         </span>
                         <select
-                          value={selInvoiceMethod}
+                          value={derivedInvoiceMethod}
                           onChange={(e) =>
                             handleInvoicePaymentMethodChange(e.target.value)
                           }
@@ -419,36 +477,37 @@ export function SummaryPanel({
                           <option value="credit">آجل</option>
                           <option value="partial">جزئي</option>
                         </select>
-                        {selInvoiceMethod === "partial" &&
-                        onPaidAmountChange &&
-                        !isReadOnly ? (
-                          <input
-                            type="number"
-                            min={0}
-                            max={subtotal}
-                            value={paidAmount || "0"}
-                            onChange={(e) =>
-                              onPaidAmountChange(
-                                clampPaidSafe(e.target.value, subtotal),
-                              )
-                            }
-                            className="h-5 w-16 font-black text-[11px] border-blue-200 focus:ring-blue-500 bg-white py-0 px-1 rounded border outline-none text-center"
-                          />
-                        ) : (
-                          <span className="font-black text-xs tabular-nums text-blue-800 px-1">
-                            {formatRawAmount(
-                              selInvoiceMethod === "cash" ? subtotal : 0,
-                              currency,
-                            )}
-                          </span>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </>
-              )}
-            </div>
-          )}
+                          {derivedInvoiceMethod === "partial" &&
+                          onPaidAmountChange &&
+                          !isReadOnly ? (
+                            <input
+                              type="number"
+                              min={0}
+                              max={invoiceMaxDisplay}
+                              value={docToDisplay(parseFloat(paidAmount || "0") || 0)}
+                              onChange={(e) => {
+                                const valDisplay = parseFloat(e.target.value) || 0;
+                                const clampedDisplay = clamp(valDisplay, 0, invoiceMaxDisplay);
+                                const valDoc = displayToDoc(clampedDisplay);
+                                onPaidAmountChange(valDoc.toFixed(2));
+                              }}
+                              className="h-4.5 w-14 font-black text-[10px] border-blue-200 focus:ring-blue-500 bg-white py-0 px-1 rounded border outline-none text-center"
+                            />
+                          ) : (
+                            <span className="font-black text-[10px] tabular-nums text-blue-800">
+                              {formatRawAmount(
+                                derivedInvoiceMethod === "cash" ? invoiceMaxDisplay : 0,
+                                safeCurrency,
+                              )}
+                            </span>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
 
           {/* SALES INVOICE & OPENING BALANCE STREAMLINED FLOW */}
           {(invoiceType === "Sales" || invoiceType === "OpeningBalance") && (
@@ -458,7 +517,7 @@ export function SummaryPanel({
                 <span className="w-1 h-1 rounded-full bg-slate-400" />
                 <span>المبلغ كاملاً:</span>
                 <span className="font-black text-slate-800 tabular-nums">
-                  {formatRawAmount(subtotal, currency)}
+                  {formatRawAmount(net, currency)}
                 </span>
               </div>
 
@@ -515,21 +574,18 @@ export function SummaryPanel({
                       <input
                         type="number"
                         min={0}
-                        max={subtotal}
+                        max={net}
                         value={paidAmount || "0"}
                         onChange={(e) =>
                           onPaidAmountChange(
-                            clampPaidSafe(e.target.value, subtotal),
+                            clampPaidSafe(e.target.value, net),
                           )
                         }
                         className="h-5 w-16 font-black text-[11px] border-blue-200 focus:ring-blue-500 bg-white py-0 px-1 rounded border outline-none text-center"
                       />
                     ) : (
                       <span className="font-black tabular-nums">
-                        {formatRawAmount(
-                          paymentMethod === "cash" ? subtotal : 0,
-                          currency,
-                        )}
+                        {formatRawAmount(totalPaid, currency)}
                       </span>
                     )}
                   </div>

@@ -42,27 +42,19 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
 
   // 1. Pre-calculate conversion factors and symbols once per render
   const financials = useMemo(() => {
-    const docRate = parseFloat(headerState.exchange_rate) || 1;
+    const baseCode = baseCurrency?.code;
     const docCurrency = headerState.currency_code;
 
-    // Create a map of factors: Factor = (Value in Target Currency) / (Value in Document Currency)
+    // Create a map of factors: Factor = (Value in Target Currency) / (Value in Base Currency)
     const conversionMap = new Map<string, number>();
 
     currencies.forEach((curr) => {
       let factor = 1;
-      if (!docCurrency || curr.code === docCurrency) {
+      if (!baseCode || curr.code === baseCode) {
         factor = 1;
-      } else if (docCurrency === baseCurrency?.code) {
-        factor =
-          curr.code === baseCurrency?.code
-            ? 1
-            : rateMap.get(curr.code) || docRate || 1;
-      } else if (curr.code === baseCurrency?.code) {
-        factor = 1 / docRate;
       } else {
-        factor = convertBetween(1, docCurrency, curr.code);
+        factor = rateMap.get(curr.code) || 1;
       }
-
       conversionMap.set(curr.code, factor);
     });
 
@@ -73,22 +65,22 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
     const enriched = lines.map((line) => {
       const el = { ...line } as GridLine & Record<string, string | number>;
       const qty = parseFloat(line.quantity || "0");
-      const unitPrice = parseFloat(line.unit_price || "0");
-      const lineTotal = line.line_total || 0;
+      const unitPrice = parseFloat(line.unit_price || "0"); // always in base currency
+      const lineTotal = line.line_total || 0; // always in base currency
 
       currencies.forEach((curr) => {
         const factor = conversionMap.get(curr.code) || 1;
         const p = unitPrice * factor;
         const t = lineTotal * factor;
 
-        // Accumulate totals per currency from the grid values
+        // Accumulate totals per currency
         totalsMap.set(curr.code, (totalsMap.get(curr.code) || 0) + t);
 
-        // Preserve user-edited non-doc-currency prices, compute for doc currency
-        const priceKey = `unit_price_${curr.code}`;
-        const isDocCurr = curr.code === docCurrency;
-        if (!isDocCurr && el[priceKey] !== undefined && el[priceKey] !== "") {
-          // keep user's value
+        // Base currency column key = "unit_price", others = "unit_price_<CODE>"
+        const isBase = curr.code === baseCode;
+        const priceKey = isBase ? "unit_price" : `unit_price_${curr.code}`;
+        if (!isBase && el[priceKey] !== undefined && el[priceKey] !== "") {
+          // keep user's manually entered value
         } else {
           el[priceKey] = p.toFixed(2).replace(/\.?0+$/, "");
         }
@@ -110,7 +102,8 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
       return el;
     });
 
-    const docSubtotal = totalsMap.get(docCurrency) || 0;
+    const baseSubtotal = totalsMap.get(baseCode || "") || 0;
+    const docSubtotal = docCurrency ? totalsMap.get(docCurrency) || 0 : baseSubtotal;
 
     // Calculate net totals for all currencies
     const financialsByCurrency = new Map<
@@ -119,14 +112,18 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
     >();
     currencies.forEach((curr) => {
       const sub = totalsMap.get(curr.code) || 0;
-      const factor = conversionMap.get(curr.code) || 1;
 
-      // Calculate net using currency-specific totals and converted modifiers
+      // Header amounts (discount, tax, extra_costs) are in DOC currency, not base currency.
+      // Convert from doc currency to the target currency.
+      const headerFactor = docCurrency && baseCode && curr.code !== docCurrency
+        ? convertBetween(1, docCurrency, curr.code)
+        : 1;
+
       const net =
         sub -
-        parseFloat(headerState.discount_amount || "0") * factor +
-        parseFloat(headerState.tax_amount || "0") * factor +
-        parseFloat(headerState.extra_costs || "0") * factor;
+        parseFloat(headerState.discount_amount || "0") * headerFactor +
+        parseFloat(headerState.tax_amount || "0") * headerFactor +
+        parseFloat(headerState.extra_costs || "0") * headerFactor;
 
       financialsByCurrency.set(curr.code, { subtotal: sub, net });
     });
@@ -136,15 +133,16 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
     lines,
     currencies,
     headerState.currency_code,
-    headerState.exchange_rate,
     headerState.discount_amount,
     headerState.tax_amount,
     headerState.extra_costs,
     baseCurrency?.code,
     rateMap,
+    convertBetween,
   ]);
 
-  // 2. Stable currency change handler
+  // 2. Stable currency change handler — only affects header-level amounts,
+  // NOT line-level prices (which are always in base currency)
   const onCurrencyChange = useCallback(
     (newCode: string) => {
       const oldCode = headerState.currency_code;
@@ -160,7 +158,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
         return;
       }
 
-      if (!oldCode) {
+      if (!oldCode || !baseCurrency?.code) {
         const nextRate =
           newCode === baseCurrency?.code ? 1 : rateMap.get(newCode) || 1;
         setDisplayCurrency(newCode);
@@ -172,7 +170,14 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
         return;
       }
 
-      const factor = convertBetween(1, oldCode, newCode);
+      // Convert header amounts from old doc currency to new doc currency
+      // via the FACTOR that converts from old → new
+      const factor = oldCode === baseCurrency.code
+        ? (rateMap.get(newCode) || 1)
+        : newCode === baseCurrency.code
+          ? (1 / (rateMap.get(oldCode) || 1))
+          : convertBetween(1, oldCode, newCode);
+
       const newRate =
         newCode === baseCurrency?.code ? 1 : rateMap.get(newCode) || 1;
 
@@ -189,27 +194,23 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
         paid_amount: s.paid_amount
           ? (parseFloat(s.paid_amount) * factor).toFixed(2)
           : "0",
+        extra_paid_amount: (s as unknown as Record<string, string | undefined>).extra_paid_amount
+          ? (parseFloat((s as unknown as Record<string, string>).extra_paid_amount) * factor).toFixed(2)
+          : undefined,
       }));
 
-      setLines((prev: GridLine[]) =>
-        prev.map((ln) => ({
-          ...ln,
-          unit_price: (parseFloat(ln.unit_price || "0") * factor).toFixed(2),
-          line_total: (ln.line_total || 0) * factor,
-        })),
-      );
+      // Line-level prices stay in base currency — no conversion needed
     },
     [
       headerState.currency_code,
       rateMap,
       setHeaderState,
-      setLines,
       convertBetween,
       baseCurrency?.code,
     ],
   );
 
-  // 3. Optimized grid columns
+  // 3. Optimized grid columns — Base-currency-anchored column keys
   const gridColumns = useMemo<DocumentColumn[]>(() => {
     const baseCols: DocumentColumn[] = [
       {
@@ -270,12 +271,13 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
       },
     ];
 
+    const baseCode = baseCurrency?.code;
     const priceCols: DocumentColumn[] = [];
     currencies.forEach((curr) => {
       const s = curr.symbol || curr.code;
-      const isDocCurr = curr.code === headerState.currency_code;
+      const isBase = curr.code === baseCode;
       priceCols.push({
-        key: isDocCurr ? "unit_price" : `unit_price_${curr.code}`,
+        key: isBase ? "unit_price" : `unit_price_${curr.code}`,
         header: `${priceLabel} (${s})`,
         width: "w-[100px]",
         align: "left",
@@ -310,7 +312,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
     ];
   }, [
     currencies,
-    headerState.currency_code,
+    baseCurrency?.code,
     priceLabel,
     extraColumns,
   ]);

@@ -234,11 +234,9 @@ export function MaterialDetailPanel({
                     </div>
                     <div className="grid grid-cols-2 gap-px bg-slate-100">
                       {[
-                        { id: "consumer", label: "مستهلك" },
                         { id: "retail", label: "مفرق" },
                         { id: "wholesale", label: "جملة" },
                         { id: "semi_wholesale", label: "نصف جملة" },
-                        { id: "special", label: "خاص" },
                       ].map((tier) => {
                         const price = material.sale_prices.find(
                           (p) =>

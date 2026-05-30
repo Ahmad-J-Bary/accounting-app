@@ -25,7 +25,8 @@ export interface GridLine extends InvoiceLineDto {
 }
 
 /** Strip local-only fields before sending to backend */
-export function toBackendLines(lines: GridLine[]): InvoiceLineDto[] {
+export function toBackendLines(lines: GridLine[], exchangeRate: string = "1"): InvoiceLineDto[] {
+  const rate = parseFloat(exchangeRate) || 1;
   return lines
     .filter(l => l.material_id || l.material_name) // skip truly empty rows
     .map(({ 
@@ -34,7 +35,15 @@ export function toBackendLines(lines: GridLine[]): InvoiceLineDto[] {
       cost_price, current_cost_price,
       profit_amount, profit_percent, 
       ...rest 
-    }) => ({ ...rest, unit_name })); // Include unit_name as it might be helpful
+    }) => {
+      const basePrice = parseFloat(rest.unit_price || "0");
+      const docPrice = basePrice * rate;
+      return { 
+        ...rest, 
+        unit_price: Number.isFinite(docPrice) ? docPrice.toFixed(2).replace(/\.?0+$/, "") : rest.unit_price,
+        unit_name 
+      };
+    });
 }
 
 /** Create a fresh empty local line */

@@ -20,11 +20,9 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 const DEFAULT_CATEGORY_NAME = "غير مصنف";
 
 const SALE_TIERS = [
-  { id: 'consumer', label: 'مستهلك' },
   { id: 'retail', label: 'مفرق' },
   { id: 'wholesale', label: 'جملة' },
   { id: 'semi_wholesale', label: 'نصف جملة' },
-  { id: 'special', label: 'خاص' },
 ];
 
 interface MaterialFormProps {
@@ -182,7 +180,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
   const addUnit = () => {
     setFormData(prev => ({
       ...prev,
-      units: [...prev.units, { name: "", conversion_factor: "", barcode: "" }]
+      units: [...prev.units, { name: `وحدة ${prev.units.length + 1}`, conversion_factor: "1", barcode: "" }]
     }));
   };
 
@@ -457,9 +455,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
               <h3 className="text-sm font-bold text-slate-800">إدارة الوحدات</h3>
               <p className="text-[10px] text-slate-400 italic">عرّف وحدات البيع والشراء لهذه المادة.</p>
             </div>
-            {!material && (
-              <Button type="button" size="sm" onClick={addUnit} className="bg-blue-600 hover:bg-blue-700 gap-1.5 h-8 text-xs font-bold rounded-lg shadow-sm"><Plus className="w-3.5 h-3.5" /> إضافة وحدة</Button>
-            )}
+            <Button type="button" size="sm" onClick={addUnit} className="bg-blue-600 hover:bg-blue-700 gap-1.5 h-8 text-xs font-bold rounded-lg shadow-sm"><Plus className="w-3.5 h-3.5" /> إضافة وحدة</Button>
           </div>
 
           <div className="space-y-3">
@@ -468,7 +464,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                 "p-4 rounded-2xl border relative transition-all shadow-sm space-y-3 text-right bg-white",
                 idx === 0 ? "border-blue-200 bg-blue-50/20" : "border-slate-200/80"
               )}>
-                {idx > 0 && !material && (
+                {idx > 0 && (
                   <Button 
                     type="button"
                     variant="ghost" 
@@ -486,19 +482,19 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                   </div>
                   <div className="flex-1">
                     <FieldLabel className="text-[10px] font-bold text-slate-500 block mb-1">اسم الوحدة {idx === 0 && <span className="text-blue-600 font-bold">(أساسية)</span>}</FieldLabel>
-                    <Input value={unit.name} onChange={e => updateUnit(idx, "name", e.target.value)} className="h-8 font-bold bg-white" placeholder="مثلاً: قطعة" disabled={!!material} />
+                    <Input value={unit.name} onChange={e => updateUnit(idx, "name", e.target.value)} className="h-8 font-bold bg-white" placeholder="مثلاً: قطعة" disabled={!!(material && idx < material.units.length)} />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <FieldLabel>معامل التعبئة</FieldLabel>
-                    <Input type="number" value={unit.conversion_factor} onChange={e => updateUnit(idx, "conversion_factor", e.target.value)} className="h-8 font-mono bg-white" disabled={idx === 0 || !!material} min="0" step="any" />
+                    <Input type="number" value={unit.conversion_factor} onChange={e => updateUnit(idx, "conversion_factor", e.target.value)} className="h-8 font-mono bg-white" disabled={idx === 0 || !!(material && idx < material.units.length)} min="0" step="any" />
                     {idx === 0 && <p className="text-[8px] text-blue-500 font-bold mt-0.5">دائماً 1 للوحدة الأساسية</p>}
                   </div>
                   <div className="space-y-1.5">
                     <FieldLabel>باركود الوحدة</FieldLabel>
-                    <Input value={unit.barcode} onChange={e => updateUnit(idx, "barcode", e.target.value)} className="h-8 font-mono text-xs bg-white" placeholder="اختياري" dir="ltr" disabled={!!material} />
+                    <Input value={unit.barcode} onChange={e => updateUnit(idx, "barcode", e.target.value)} className="h-8 font-mono text-xs bg-white" placeholder="اختياري" dir="ltr" disabled={!!(material && idx < material.units.length)} />
                   </div>
                 </div>
               </div>
