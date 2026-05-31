@@ -1,7 +1,10 @@
+import { useState, useEffect, useMemo } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
-import { formatCurrency } from '@shared/lib/format';
-import { Package, TrendingUp, RefreshCw, Box, Pencil, Trash2, Barcode, Hash } from "lucide-react";
-import type { MaterialDto } from "@erp/shared-types";
+import { Badge } from "@shared/ui/badge";
+import { formatCurrency, formatDate } from '@shared/lib/format';
+import { Package, TrendingUp, RefreshCw, Pencil, Trash2, Barcode, Hash, ArrowDown, ArrowUp } from "lucide-react";
+import type { MaterialDto, StockMovementDetailDto } from "@erp/shared-types";
+import { materialService } from '@modules/inventory/api/materialService';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import {
   SidebarShell,
@@ -39,6 +42,35 @@ export function MaterialDetailPanel({
   const foreignCurrency = currencies.find(c => c.code !== baseCurrency?.code);
   const foreignSym = foreignCurrency?.symbol || foreignCurrency?.code || "";
   const baseSym = baseCurrency?.symbol || baseCurrency?.code || "";
+  const [movements, setMovements] = useState<StockMovementDetailDto[]>([]);
+  const [movementsLoading, setMovementsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!material) return;
+    setMovementsLoading(true);
+    materialService.listMovementsByMaterial(material.id)
+      .then(setMovements)
+      .catch(() => {})
+      .finally(() => setMovementsLoading(false));
+  }, [material]);
+
+  const displayMovements = useMemo(() => {
+    const groups = new Map<string, StockMovementDetailDto>();
+    movements.forEach(m => {
+      const qty = parseFloat(m.quantity).toFixed(4);
+      const cost = parseFloat(m.unit_cost).toFixed(4);
+      const date = m.movement_date?.slice(0, 10) ?? "";
+      const key = `${m.movement_type}|${qty}|${cost}|${date}`;
+      if (groups.has(key)) {
+        const g = groups.get(key)!;
+        if (m.party_name && !g.party_name) g.party_name = m.party_name;
+        if (m.notes && !g.notes) g.notes = m.notes;
+      } else {
+        groups.set(key, { ...m });
+      }
+    });
+    return Array.from(groups.values());
+  }, [movements]);
 
   if (!material) return null;
 
@@ -275,9 +307,49 @@ export function MaterialDetailPanel({
               value="movement"
               className="mt-4 focus-visible:outline-none"
             >
-              <div className="text-center py-10 border-2 border-dashed rounded-xl text-muted-foreground bg-slate-50/50">
-                <Box className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                <span className="text-xs">سجل الحركة سيتم إضافته قريباً</span>
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {movementsLoading ? (
+                  <div className="text-center py-8 text-muted-foreground text-xs">
+                    جاري التحميل...
+                  </div>
+                ) : displayMovements.length === 0 ? (
+                  <div className="text-center py-10 border-2 border-dashed rounded-xl text-muted-foreground bg-slate-50/50">
+                    <RefreshCw className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                    <span className="text-xs">لا توجد حركات</span>
+                  </div>
+                ) : (
+                  displayMovements.map((m, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 border border-slate-100 rounded-lg bg-white text-xs space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                          {m.is_inflow ? (
+                            <ArrowDown className="w-3 h-3 text-emerald-600" />
+                          ) : (
+                            <ArrowUp className="w-3 h-3 text-red-600" />
+                          )}
+                          {m.movement_type_label || (m.is_inflow ? 'وارد' : 'منصرف')}
+                        </span>
+                        <Badge variant="outline" className="text-[9px]">
+                          {formatDate(m.movement_date)}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-slate-500">
+                        <span>
+                          الكمية: <span className="font-bold text-slate-700">{parseFloat(m.quantity).toLocaleString()}</span>
+                        </span>
+                        <span>
+                          {formatCurrency(parseFloat(m.is_inflow ? m.unit_cost : m.total_cost), baseSym || undefined)}
+                        </span>
+                      </div>
+                      {m.notes && (
+                        <div className="text-slate-400 text-[9px] line-clamp-1">{m.notes}</div>
+                      )}
+                    </div>
+                  ))
+                )}
               </div>
             </TabsContent>
           </Tabs>

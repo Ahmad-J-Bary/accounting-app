@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@shared/ui/button";
-import { Plus, RefreshCw, Package, Layers, Barcode, ShoppingCart, TrendingUp, RotateCcw, AlertTriangle } from "lucide-react";
+import { Plus, RefreshCw, Package, Layers, Barcode, ShoppingCart, TrendingUp, AlertTriangle } from "lucide-react";
 import { materialService } from '@modules/inventory/api/materialService';
 import { categoryService } from '@modules/inventory/api/categoryService';
 import { damagedService } from '@modules/inventory/api/inventoryService';
@@ -119,7 +119,7 @@ export default function Materials() {
               disabled={!selectedId}
               onClick={() => selectedMaterial && openTab({
                 id: `purchases-${selectedId}`,
-                title: `مشتريات: ${selectedMaterial?.name}`,
+                title: `مشتريات: ${selectedMaterial.name}`,
                 path: `/inventory/purchases/${selectedId}`,
                 closable: true,
               })}
@@ -135,29 +135,13 @@ export default function Materials() {
               disabled={!selectedId}
               onClick={() => selectedMaterial && openTab({
                 id: `sales-${selectedId}`,
-                title: `مبيعات: ${selectedMaterial?.name}`,
+                title: `مبيعات: ${selectedMaterial.name}`,
                 path: `/inventory/sales/${selectedId}`,
                 closable: true,
               })}
             >
               <TrendingUp className="w-4 h-4 ml-2 text-blue-600" />
               مبيعات المادة
-            </Button>
-
-            <Button
-              size="sm"
-              variant="outline"
-              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
-              disabled={!selectedId}
-              onClick={() => selectedMaterial && openTab({
-                id: `returns-${selectedId}`,
-                title: `مرتجعات: ${selectedMaterial?.name}`,
-                path: `/inventory/returns/${selectedId}`,
-                closable: true,
-              })}
-            >
-              <RotateCcw className="w-4 h-4 ml-2 text-amber-600" />
-              مرتجعات المادة
             </Button>
 
             <Button
