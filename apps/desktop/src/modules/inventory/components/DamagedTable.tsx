@@ -1,10 +1,10 @@
 import { useMemo, useState, useCallback } from "react";
-import { ArrowUpDown, AlertTriangle, PackageOpen, Banknote } from "lucide-react";
+import { ArrowUpDown } from "lucide-react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { formatDateTime } from '@shared/lib/format';
-import { useCurrencyContext, formatWithLocale } from "@app/providers/CurrencyContext";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns } from "@shared/hooks";
 import type { DamagedItem } from "@erp/shared-types";
 
@@ -110,7 +110,7 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
         header: <SortableHeader field="quantity" label="الكمية" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
         label: "الكمية التالفة",
         accessor: (i) => (
-          <span className="tabular-nums font-bold text-amber-600">{parseFloat(i.quantity).toFixed(2)}</span>
+          <span className="tabular-nums font-bold text-amber-600">{Math.round(parseFloat(i.quantity))}</span>
         ),
         align: "left",
         className: "w-24"
@@ -135,32 +135,58 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
     return cols;
   }, [formatAmount, currencies, sortField, sortDirection, handleSort]);
 
+  // FIX: include dynamic cost columns in defaultVisible so they show on first load
+  const defaultVisible = useMemo(() => [
+    "material_name",
+    "reason",
+    "damage_date",
+    "quantity",
+    ...currencies.map(c => `cost_${c.code}`),
+  ], [currencies]);
+
   const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
     tableId: "damaged-items-table",
     columns: allColumns,
-    defaultVisible: ["material_name", "damage_date", "quantity"],
+    defaultVisible,
   });
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     const totalCost = sortedItems.reduce((s, i) => s + parseFloat(i.cost_impact || "0"), 0);
     const totalQty = sortedItems.reduce((s, i) => s + parseFloat(i.quantity || "0"), 0);
 
-    const colIds = enrichedColumns.map(c => c.id);
-    return colIds.map(id => {
-      if (id === 'material_name') return { id: 'count', label: '', value: `${sortedItems.length} سجل`, className: 'text-slate-500 font-medium' };
-      if (id === 'quantity') return { id: 'qty_summary', label: '', value: totalQty.toFixed(2), align: 'left' as const, className: 'text-amber-600 font-bold' };
-      const match = id.match(/^cost_(.+)$/);
+    // FIX: IDs must follow the pattern UnifiedTable expects:
+    //   col.id === s.id  OR  `${col.id}_summary`  OR  `${col.id}_spacer`
+    return enrichedColumns.map(col => {
+      if (col.id === 'material_name') {
+        return {
+          id: 'material_name',        // matches col.id directly
+          label: '',
+          value: `${sortedItems.length} سجل`,
+          className: 'text-slate-500 font-medium'
+        };
+      }
+      if (col.id === 'quantity') {
+        return {
+          id: 'quantity_summary',     // matches `${col.id}_summary`
+          label: '',
+          value: Math.round(totalQty).toString(),
+          align: 'left' as const,
+          className: 'text-amber-600 font-bold'
+        };
+      }
+      const match = col.id.match(/^cost_(.+)$/);
       if (match) {
         const currCode = match[1];
         return {
-          id: `${id}_summary`,
+          id: `${col.id}_summary`,    // matches `${col.id}_summary`
           label: '',
           value: totalCost > 0 ? formatAmount(totalCost, { currencyCode: currCode }) : "—",
           align: 'left' as const,
           className: 'text-rose-600 font-bold'
         };
       }
-      return { id: `${id}_spacer`, label: '', value: '' };
+      // spacer for all other columns (reason, damage_date, notes, etc.)
+      return { id: `${col.id}_spacer`, label: '', value: '' };
     });
   }, [sortedItems, enrichedColumns, formatAmount]);
 

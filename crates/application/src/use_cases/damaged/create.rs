@@ -96,15 +96,15 @@ impl CreateDamagedItemUseCase {
         if cost_impact > Decimal::ZERO {
             let base_currency = self.currency_repo.get_base_currency().await?
                 .ok_or_else(|| AppError::Invalid("لم يتم تعيين العملة الأساسية".into()))?;
-            let loss_account = self.account_repo.find_by_code("43").await?.ok_or_else(|| {
-                AppError::NotFound("حساب مصاريف أخرى (43) غير موجود".into())
+            let loss_account = self.account_repo.find_by_code("433").await?.ok_or_else(|| {
+                AppError::NotFound("حساب خسائر المواد التالفة (433) غير موجود".into())
             })?;
             let inventory_account =
                 self.account_repo
-                    .find_by_code("1204")
+                    .find_by_code("1241")
                     .await?
                     .ok_or_else(|| {
-                        AppError::NotFound("حساب المخزون (1204) غير موجود".into())
+                        AppError::NotFound("حساب بضاعة آخر المدة (1241) غير موجود".into())
                     })?;
 
             let lines = vec![

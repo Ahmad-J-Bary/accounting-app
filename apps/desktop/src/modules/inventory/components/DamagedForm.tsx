@@ -12,26 +12,31 @@ interface DamagedFormProps {
   products: MaterialDto[];
   onSave: (payload: CreateDamagedItemRequest) => Promise<void>;
   saving: boolean;
+  initialMaterialId?: string;
 }
 
-export function DamagedForm({ onClose, products, onSave, saving }: DamagedFormProps) {
-  const [form, setForm] = useState<Partial<CreateDamagedItemRequest>>({
-    damage_date: new Date().toISOString(),
-    quantity: 0,
-    cost_impact: 0,
-    reason: "",
-    material_id: "",
+export function DamagedForm({ onClose, products, onSave, saving, initialMaterialId }: DamagedFormProps) {
+  const [form, setForm] = useState<Partial<CreateDamagedItemRequest>>(() => {
+    const prod = products.find(p => p.id === initialMaterialId);
+    return {
+      damage_date: new Date().toISOString(),
+      quantity: 0,
+      cost_impact: prod ? parseFloat(prod.last_purchase_price || "0") : 0,
+      reason: "",
+      material_id: initialMaterialId ?? "",
+    };
   });
 
   useEffect(() => {
+    const prod = products.find(p => p.id === initialMaterialId);
     setForm({
       damage_date: new Date().toISOString(),
       quantity: 0,
-      cost_impact: 0,
+      cost_impact: prod ? parseFloat(prod.last_purchase_price || "0") : 0,
       reason: "",
-      material_id: "",
+      material_id: initialMaterialId ?? "",
     });
-  }, []);
+  }, [initialMaterialId, products]);
 
   const handleSave = async () => {
     if (!form.material_id || !form.reason || !form.quantity) return;

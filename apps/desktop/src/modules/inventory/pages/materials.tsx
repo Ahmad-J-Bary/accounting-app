@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@shared/ui/button";
-import { Plus, RefreshCw, Package, Layers, Barcode, ShoppingCart, TrendingUp, RotateCcw } from "lucide-react";
+import { Plus, RefreshCw, Package, Layers, Barcode, ShoppingCart, TrendingUp, RotateCcw, AlertTriangle } from "lucide-react";
 import { materialService } from '@modules/inventory/api/materialService';
 import { categoryService } from '@modules/inventory/api/categoryService';
-import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest } from "@erp/shared-types";
+import { damagedService } from '@modules/inventory/api/inventoryService';
+import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest, CreateDamagedItemRequest } from "@erp/shared-types";
 import { cn } from '@shared/lib/utils';
+import { toast } from 'sonner';
 
 // Refactored Components & Hooks
 import { useEntityList } from '@shared/hooks/useEntityList';
@@ -13,6 +15,7 @@ import { MaterialTable } from '@modules/inventory/components/MaterialTable';
 import { MaterialUnitsManager } from '@modules/inventory/components/MaterialUnitsManager';
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { MaterialDetailPanel } from '@modules/inventory/components/MaterialDetailPanel';
+import { DamagedForm } from '@modules/inventory/components/DamagedForm';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useTabs } from "@app/providers/TabContext";
 
@@ -52,6 +55,8 @@ export default function Materials() {
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [managingUnitsMaterial, setManagingUnitsMaterial] = useState<MaterialDto | null>(null);
   const [showUnitsPanel, setShowUnitsPanel] = useState(false);
+  const [showDamagedPanel, setShowDamagedPanel] = useState(false);
+  const [savingDamaged, setSavingDamaged] = useState(false);
 
   const loadCategories = useCallback(async () => {
     try {
@@ -59,6 +64,20 @@ export default function Materials() {
       setCategories(cats);
     } catch (e) { console.error(e); }
   }, []);
+
+  const handleCreateDamaged = useCallback(async (payload: CreateDamagedItemRequest) => {
+    setSavingDamaged(true);
+    try {
+      await damagedService.createDamagedItem(payload);
+      setShowDamagedPanel(false);
+      refresh();
+      toast.success(`تم تسجيل التالف للمادة بنجاح`);
+    } catch (e: unknown) {
+      toast.error("فشل تسجيل التالف: " + e);
+    } finally {
+      setSavingDamaged(false);
+    }
+  }, [refresh]);
 
   useEffect(() => { loadCategories(); }, [loadCategories]);
 
@@ -154,6 +173,21 @@ export default function Materials() {
               <Layers className="w-4 h-4 ml-2 text-purple-600" />
               الوحدات
             </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-white border-rose-200 text-rose-700 hover:bg-rose-50"
+              disabled={!selectedId}
+              onClick={() => {
+                setShowDamagedPanel(true);
+                setIsFormOpen(false);
+                setManagingUnitsMaterial(null);
+              }}
+            >
+              <AlertTriangle className="w-4 h-4 ml-2 text-rose-600" />
+              تسجيل تالف
+            </Button>
           </>
         }
 
@@ -190,6 +224,14 @@ export default function Materials() {
               onClose={() => setManagingUnitsMaterial(null)}
               onUnitsUpdated={refresh}
             />
+          ) : showDamagedPanel ? (
+            <DamagedForm
+              onClose={() => setShowDamagedPanel(false)}
+              products={materials}
+              onSave={handleCreateDamaged}
+              saving={savingDamaged}
+              initialMaterialId={selectedId ?? undefined}
+            />
           ) : (
             <MaterialDetailPanel 
               material={selectedMaterial}
@@ -199,7 +241,7 @@ export default function Materials() {
             />
           )
         }
-        isPanelOpen={isFormOpen || !!selectedId || !!managingUnitsMaterial}
+        isPanelOpen={isFormOpen || !!selectedId || !!managingUnitsMaterial || showDamagedPanel}
       />
     </>
   );
