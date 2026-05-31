@@ -33,18 +33,20 @@ pub async fn download_and_install_update(
     let total_size = response.content_length();
     
     // 3. Determine file name and temp path
-    let filename = if url.ends_with(".msi") {
-        "almowakeb_update.msi"
-    } else if url.ends_with(".exe") {
-        "almowakeb_update.exe"
-    } else if url.contains(".msi") {
-        "almowakeb_update.msi"
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+
+    let is_msi = url.ends_with(".msi") || url.contains(".msi");
+    let filename = if is_msi {
+        format!("almowakeb_update_{}.msi", timestamp)
     } else {
-        "almowakeb_update.exe"
+        format!("almowakeb_update_{}.exe", timestamp)
     };
     
     let temp_dir = std::env::temp_dir();
-    let file_path = temp_dir.join(filename);
+    let file_path = temp_dir.join(&filename);
     
     // 4. Download file with progress reporting
     let mut file = File::create(&file_path)

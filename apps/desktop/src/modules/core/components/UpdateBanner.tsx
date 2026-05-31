@@ -72,9 +72,12 @@ export function UpdateBanner() {
                 {updateInfo.release_name}
               </p>
               <p className="text-xs text-slate-500">
-                الإصدار الحالي: <span className="font-mono font-bold" dir="ltr">{updateInfo.current_version}</span>
-                {" → "}
-                <span className="font-mono font-bold text-blue-600" dir="ltr">{updateInfo.latest_version}</span>
+                الإصدار الحالي:{" "}
+                <span className="inline-flex items-center gap-1 font-mono font-bold text-slate-700" dir="ltr">
+                  <span>{updateInfo.current_version}</span>
+                  <span className="text-slate-400 mx-0.5">→</span>
+                  <span className="text-blue-600">{updateInfo.latest_version}</span>
+                </span>
               </p>
             </div>
           </div>
