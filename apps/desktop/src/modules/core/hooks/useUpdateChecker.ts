@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { updateService, type UpdateInfo } from "../api/updateService";
 import pkg from "../../../../package.json";
 
@@ -9,6 +11,8 @@ export function useUpdateChecker() {
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updateProgress, setUpdateProgress] = useState<{ downloaded: number; total: number } | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const check = useCallback(async () => {
@@ -29,6 +33,31 @@ export function useUpdateChecker() {
       setLoading(false);
     }
   }, []);
+
+  const installUpdate = useCallback(async () => {
+    if (!updateInfo || !updateInfo.download_url) return;
+    setIsUpdating(true);
+    setUpdateProgress(null);
+    setError(null);
+    try {
+      const unlisten = await listen<{ downloaded: number; total: number | null }>(
+        "update-progress",
+        (event) => {
+          setUpdateProgress({
+            downloaded: event.payload.downloaded,
+            total: event.payload.total || 0,
+          });
+        }
+      );
+
+      await invoke("download_and_install_update", { url: updateInfo.download_url });
+      
+      unlisten();
+    } catch (e) {
+      setError(String(e));
+      setIsUpdating(false);
+    }
+  }, [updateInfo]);
 
   const dismiss = useCallback(() => {
     if (updateInfo) {
@@ -52,5 +81,5 @@ export function useUpdateChecker() {
     };
   }, [check]);
 
-  return { updateInfo, loading, error, check, dismiss, dismissAll };
+  return { updateInfo, loading, error, isUpdating, updateProgress, check, installUpdate, dismiss, dismissAll };
 }

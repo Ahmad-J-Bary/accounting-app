@@ -89,7 +89,7 @@ impl CreateAccountUseCase {
         let exchange_rate = cmd.exchange_rate.as_deref()
             .and_then(|s| Decimal::from_str(s).ok())
             .filter(|r| *r > Decimal::ZERO)
-            .unwrap_or(if currency.is_base { Decimal::ONE } else { Decimal::ONE });
+            .unwrap_or(Decimal::ONE);
 
         let debit = cmd.debit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(Decimal::ZERO);
         let credit = cmd.credit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(Decimal::ZERO);

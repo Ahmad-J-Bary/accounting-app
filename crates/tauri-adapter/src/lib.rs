@@ -127,6 +127,8 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::currency::get_world_currencies,
             commands::currency::is_setup_complete,
             commands::currency::setup_currencies,
+            // Update command
+            commands::update::download_and_install_update,
         ])
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir().expect("Failed to get app data directory");

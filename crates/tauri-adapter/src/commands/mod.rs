@@ -21,3 +21,4 @@ pub mod material_code;
 pub mod invoice;
 pub mod purchase;
 pub mod currency;
+pub mod update;

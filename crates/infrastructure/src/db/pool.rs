@@ -127,7 +127,7 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::migrate::Migr
                             .unwrap_or_default();
 
                     for migration in migrator.migrations.iter() {
-                        let v = migration.version as i64;
+                        let v = migration.version;
                         if !applied_versions.contains(&v) {
                             sqlx::query(
                                 "INSERT OR IGNORE INTO _sqlx_migrations (version, description, checksum, success) VALUES (?1, ?2, ?3, 1)",
