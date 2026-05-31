@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Input } from "@shared/ui/input";
 import { Label } from "@shared/ui/label";
 import { Button } from "@shared/ui/button";
-import { RefreshCw, Building, FileText, Settings as SettingsIcon, Globe, ShieldCheck, Mail, Phone, MapPin, DollarSign, Percent, CalendarDays, Table2, PanelRightOpen, Download, Info, ExternalLink, Palette, ChevronDown, ChevronUp } from "lucide-react";
+import { RefreshCw, Building, FileText, Settings as SettingsIcon, Globe, ShieldCheck, Mail, Phone, MapPin, DollarSign, Percent, CalendarDays, Table2, PanelRightOpen, Download, Info, ExternalLink, Palette, ChevronDown, ChevronUp, Save } from "lucide-react";
+import { toast } from "sonner";
 import { settingsService } from '@modules/core/api/settingsService';
 import type { CompanySettings } from "@erp/shared-types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
@@ -45,6 +46,32 @@ export default function Settings() {
   const handleChange = (key: keyof CompanySettings, value: string | number | boolean) => {
     if (settings) {
       setSettings({ ...settings, [key]: value });
+    }
+  };
+
+  const handleSaveCompany = async () => {
+    if (!settings) return;
+    try {
+      await settingsService.updateSettings({
+        company_name: settings.company_name,
+        company_name_en: settings.company_name_en,
+        tax_number: settings.tax_number,
+        commercial_register: settings.commercial_register,
+        address: settings.address,
+        phone: settings.phone,
+        email: settings.email,
+        currency: settings.currency,
+        currency_symbol: settings.currency_symbol,
+        tax_rate: Number(settings.tax_rate),
+        invoice_prefix: settings.invoice_prefix,
+        purchase_prefix: settings.purchase_prefix,
+        journal_prefix: settings.journal_prefix,
+        fiscal_year_start_month: settings.fiscal_year_start_month,
+      });
+      window.dispatchEvent(new CustomEvent("erp:settings-updated"));
+      toast.success("تم الحفظ", { description: "تم حفظ بيانات الشركة بنجاح" });
+    } catch (e) {
+      toast.error("خطأ في الحفظ", { description: String(e) });
     }
   };
 
@@ -178,6 +205,12 @@ export default function Settings() {
                 <Input className="pr-11 h-12 rounded-lg border-slate-200 font-mono" dir="ltr" value={settings.email ?? ""} onChange={e => handleChange("email", e.target.value)} />
               </div>
             </div>
+          </div>
+          <div className="flex justify-end mt-6 pt-6 border-t border-slate-100">
+            <Button onClick={handleSaveCompany} className="gap-2 h-11 px-6">
+              <Save className="w-4 h-4" />
+              حفظ التعديلات
+            </Button>
           </div>
         </SettingsSection>
       )}

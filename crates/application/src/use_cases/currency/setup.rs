@@ -3,6 +3,7 @@ use crate::dto::currency_dto::{CurrencyDto, CurrencyContextDto};
 use crate::errors::AppError;
 use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::exchange_rate_repository::ExchangeRateRepository;
+use crate::ports::settings_repository::SettingsRepository;
 use crate::world_currencies::{self, WorldCurrency};
 use domain::shared::currency::Currency;
 use domain::shared::exchange_rate::{ExchangeRate, RateType};
@@ -12,14 +13,16 @@ use rust_decimal::Decimal;
 pub struct CurrencySetupUseCase {
     currency_repo: Arc<dyn CurrencyRepository>,
     rate_repo: Arc<dyn ExchangeRateRepository>,
+    settings_repo: Arc<dyn SettingsRepository>,
 }
 
 impl CurrencySetupUseCase {
     pub fn new(
         currency_repo: Arc<dyn CurrencyRepository>,
         rate_repo: Arc<dyn ExchangeRateRepository>,
+        settings_repo: Arc<dyn SettingsRepository>,
     ) -> Self {
-        Self { currency_repo, rate_repo }
+        Self { currency_repo, rate_repo, settings_repo }
     }
 
     pub fn get_world_currencies(&self) -> Vec<WorldCurrency> {
@@ -28,7 +31,15 @@ impl CurrencySetupUseCase {
 
     pub async fn is_setup_complete(&self) -> Result<bool, AppError> {
         let active = self.currency_repo.list_active().await?;
-        Ok(!active.is_empty())
+        if active.is_empty() {
+            return Ok(false);
+        }
+        if let Ok(settings) = self.settings_repo.get().await {
+            if settings.company_name.trim().is_empty() {
+                return Ok(false);
+            }
+        }
+        Ok(true)
     }
 
     pub async fn setup_currencies(

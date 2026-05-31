@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { currencyService } from '@modules/core/api/currencyService';
+import { settingsService } from '@modules/core/api/settingsService';
 
 export default function Index() {
   const navigate = useNavigate();
@@ -8,8 +9,12 @@ export default function Index() {
   useEffect(() => {
     (async () => {
       try {
-        const done = await currencyService.isSetupComplete();
-        navigate(done ? '/dashboard' : '/setup', { replace: true });
+        const [setupDone, settings] = await Promise.all([
+          currencyService.isSetupComplete(),
+          settingsService.getSettings(),
+        ]);
+        const needsCompanyConfig = !settings.company_name || settings.company_name === 'شركتي';
+        navigate(setupDone && !needsCompanyConfig ? '/dashboard' : '/setup', { replace: true });
       } catch {
         navigate('/dashboard', { replace: true });
       }

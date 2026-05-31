@@ -96,6 +96,7 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
     let exchange_rate_repo = Arc::new(SqliteExchangeRateRepository::new(pool.clone()));
     let invoice_repo = Arc::new(SqliteInvoiceRepository::new(pool.clone()));
     let purchase_invoice_repo = Arc::new(SqlitePurchaseInvoiceRepository::new(pool.clone()));
+    let settings_repo = Arc::new(SqliteSettingsRepository::new(pool.clone()));
 
     Ok(AppState {
         customer_repo: customer_repo.clone() as Arc<dyn CustomerRepository>,
@@ -111,8 +112,7 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
             as Arc<dyn DamagedItemRepository>,
         adjustment_repo: Arc::new(SqliteStockAdjustmentRepository::new(pool.clone()))
             as Arc<dyn StockAdjustmentRepository>,
-        settings_repo: Arc::new(SqliteSettingsRepository::new(pool.clone()))
-            as Arc<dyn SettingsRepository>,
+        settings_repo: settings_repo.clone() as Arc<dyn SettingsRepository>,
         audit_repo: Arc::new(SqliteAuditLogRepository::new(pool.clone()))
             as Arc<dyn AuditLogRepository>,
         user_repo: Arc::new(SqliteUserRepository::new(pool.clone())) as Arc<dyn UserRepository>,
@@ -146,6 +146,7 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
         currency_setup: Arc::new(CurrencySetupUseCase::new(
             currency_repo.clone() as Arc<dyn CurrencyRepository>,
             exchange_rate_repo.clone() as Arc<dyn ExchangeRateRepository>,
+            settings_repo.clone() as Arc<dyn SettingsRepository>,
         )),
     })
 }

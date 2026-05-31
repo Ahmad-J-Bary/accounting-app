@@ -1,15 +1,18 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { currencyService, type WorldCurrency } from '@modules/core/api/currencyService';
+import { settingsService } from '@modules/core/api/settingsService';
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@shared/ui/card";
 import { Badge } from "@shared/ui/badge";
-import { CheckCircle2, Search, Loader2, ArrowRight } from "lucide-react";
+import { CheckCircle2, Search, Loader2, ArrowRight, Building2 } from "lucide-react";
 
 export default function SetupWizard() {
   const navigate = useNavigate();
   const [step, setStep] = useState<"loading" | "welcome" | "pick" | "done">("loading");
+  const [companyName, setCompanyName] = useState("");
+  const [currenciesReady, setCurrenciesReady] = useState(false);
   const [worldCurrencies, setWorldCurrencies] = useState<WorldCurrency[]>([]);
   const [search, setSearch] = useState("");
   const [baseCode, setBaseCode] = useState<string | null>(null);
@@ -19,9 +22,18 @@ export default function SetupWizard() {
   useEffect(() => {
     (async () => {
       try {
-        const done = await currencyService.isSetupComplete();
-        if (done) {
+        const [setupDone, settings] = await Promise.all([
+          currencyService.isSetupComplete(),
+          settingsService.getSettings().catch(() => null),
+        ]);
+        const needsCompany = !settings?.company_name || settings.company_name === 'شركتي';
+        if (setupDone && !needsCompany) {
           navigate("/dashboard", { replace: true });
+          return;
+        }
+        if (setupDone) {
+          setCurrenciesReady(true);
+          setStep("welcome");
           return;
         }
         const list = await currencyService.getWorldCurrencies();
@@ -66,11 +78,43 @@ export default function SetupWizard() {
     }
   };
 
+  const saveCompanySettings = async (currencyCode: string) => {
+    if (!companyName.trim()) return;
+    const baseCurrency = worldCurrencies.find(w => w.code === currencyCode);
+    await settingsService.updateSettings({
+      company_name: companyName.trim(),
+      currency: currencyCode,
+      currency_symbol: baseCurrency?.symbol || currencyCode,
+      tax_rate: 0,
+      invoice_prefix: "INV",
+      purchase_prefix: "PUR",
+      journal_prefix: "JRN",
+      fiscal_year_start_month: 1,
+    });
+  };
+
+  const handleSaveCompanyOnly = async () => {
+    if (!companyName.trim()) return;
+    setSaving(true);
+    try {
+      await settingsService.getSettings().then(s => saveCompanySettings(s.currency));
+      window.dispatchEvent(new CustomEvent("erp:settings-updated"));
+      setStep("done");
+      setTimeout(() => navigate("/dashboard", { replace: true }), 1500);
+    } catch (e) {
+      console.error("Setup failed:", e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleFinish = async () => {
     if (!baseCode) return;
     setSaving(true);
     try {
       await currencyService.setupCurrencies(baseCode, secondaryCode ?? undefined);
+      await saveCompanySettings(baseCode);
+      window.dispatchEvent(new CustomEvent("erp:settings-updated"));
       setStep("done");
       setTimeout(() => navigate("/dashboard", { replace: true }), 1500);
     } catch (e) {
@@ -109,18 +153,41 @@ export default function SetupWizard() {
           <CardHeader>
             <CardTitle className="text-3xl">مرحباً بك في نظام المحاسبة</CardTitle>
             <CardDescription className="text-base mt-2">
-              لنبدأ بإعداد العملات. اختر العملة الأساسية لنظامك، ويمكنك إضافة عملة ثانوية اختيارياً.
+              {currenciesReady
+                ? "أدخل اسم المنشأة لإكمال الإعداد."
+                : " لنبدأ بإعداد المنشأة والعملات. أدخل اسم المنشأة ثم اختر العملة الأساسية."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-right text-sm text-amber-800">
-              <p className="font-bold mb-1">العملة الأساسية</p>
-              <p>هي العملة التي تُسجل بها جميع المعاملات المالية في النظام. يمكنك تحويلها إلى أي عملة أخرى لاحقاً.</p>
+            <div className="text-right">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">اسم المنشأة</label>
+              <div className="relative">
+                <Building2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="أدخل اسم المنشأة"
+                  className="pr-10 h-11 text-base"
+                />
+              </div>
             </div>
-            <Button size="lg" className="w-full text-lg" onClick={handleStart}>
-             开始 الإعداد
-              <ArrowRight className="w-5 h-5 mr-2" />
-            </Button>
+            {!currenciesReady && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-right text-sm text-amber-800">
+                <p className="font-bold mb-1">العملة الأساسية</p>
+                <p>هي العملة التي تُسجل بها جميع المعاملات المالية في النظام. يمكنك تحويلها إلى أي عملة أخرى لاحقاً.</p>
+              </div>
+            )}
+            {currenciesReady ? (
+              <Button size="lg" className="w-full text-lg" onClick={handleSaveCompanyOnly} disabled={!companyName.trim() || saving}>
+                {saving ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : null}
+                حفظ
+              </Button>
+            ) : (
+              <Button size="lg" className="w-full text-lg" onClick={handleStart} disabled={!companyName.trim()}>
+                بدء الإعداد
+                <ArrowRight className="w-5 h-5 mr-2" />
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>

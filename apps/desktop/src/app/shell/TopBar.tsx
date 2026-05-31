@@ -1,8 +1,7 @@
-import { useState } from "react";
-import { Bell, Search, Plus, ChevronDown, PanelLeft, Building2, GitBranch, LogOut, User, Settings as SettingsIcon, DollarSign } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Bell, Search, Plus, ChevronDown, PanelLeft, Building2, LogOut, User, Settings as SettingsIcon, DollarSign } from "lucide-react";
 import { cn } from '@shared/lib/utils';
 import { Button } from "@shared/ui/button";
-import { Input } from "@shared/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,8 +14,9 @@ import { Avatar, AvatarFallback } from "@shared/ui/avatar";
 import { useNavigate } from "react-router-dom";
 import { NotificationsPanel } from '@app/shell/NotificationsPanel';
 import { GlobalSearch } from '@app/shell/GlobalSearch';
-
 import { useTabs } from '@app/providers/TabContext';
+import { settingsService } from '@modules/core/api/settingsService';
+import type { CompanySettings } from "@erp/shared-types";
 
 interface TopBarProps {
   onToggleSidebar?: () => void;
@@ -33,8 +33,22 @@ export function TopBar({
 }: TopBarProps) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [settings, setSettings] = useState<CompanySettings | null>(null);
   const { openTab } = useTabs();
   const navigate = useNavigate();
+
+  const loadSettings = () => {
+    settingsService.getSettings()
+      .then(setSettings)
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadSettings();
+    const handler = () => loadSettings();
+    window.addEventListener("erp:settings-updated", handler);
+    return () => window.removeEventListener("erp:settings-updated", handler);
+  }, []);
 
   const handleNewInvoice = () => {
     const id = `/sales-invoices/new-${Date.now()}`;
@@ -60,7 +74,7 @@ export function TopBar({
     openTab({ 
       id: `/customers/new-${Date.now()}`, 
       title: "عميل جديد", 
-      path: "/customers", // Customers currently use a modal for new, so we navigate to list
+      path: "/customers",
       closable: true
     });
     setTimeout(() => {
@@ -112,39 +126,13 @@ export function TopBar({
 
         <div className="flex-1" />
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2 hidden md:flex">
-              <Building2 className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm">شركة النجاح التجارية</span>
-              <ChevronDown className="w-3.5 h-3.5 opacity-60" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>تبديل الشركة</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>شركة بردى للصناعة</DropdownMenuItem>
-            <DropdownMenuItem>شركة الشام للتجارة</DropdownMenuItem>
-            <DropdownMenuItem>مؤسسة قاسيون</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2 hidden lg:flex">
-              <GitBranch className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm">فرع دمشق</span>
-              <ChevronDown className="w-3.5 h-3.5 opacity-60" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel>تبديل الفرع</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>فرع دمشق</DropdownMenuItem>
-            <DropdownMenuItem>فرع حلب</DropdownMenuItem>
-            <DropdownMenuItem>فرع حمص</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Company Name */}
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-100 hidden md:flex">
+          <Building2 className="w-4 h-4 text-slate-400" />
+          <span className="text-sm font-bold text-slate-700">
+            {settings?.company_name || "المنشأة"}
+          </span>
+        </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -185,19 +173,20 @@ export function TopBar({
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-2 hover:bg-slate-100 rounded-md px-2 py-1.5 transition">
               <Avatar className="w-8 h-8">
-                <AvatarFallback className="bg-primary text-primary-foreground text-xs">أم</AvatarFallback>
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs">أ</AvatarFallback>
               </Avatar>
               <div className="text-right hidden md:block">
-                <div className="text-sm font-medium leading-tight">أحمد محمد</div>
-                <div className="text-xs text-muted-foreground">مدير عام</div>
+                <div className="text-sm font-medium leading-tight">المستخدم</div>
+                <div className="text-xs text-muted-foreground">النظام المحاسبي</div>
               </div>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>الحساب الشخصي</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem><User className="w-4 h-4 ml-2" />الملف الشخصي</DropdownMenuItem>
-            <DropdownMenuItem><SettingsIcon className="w-4 h-4 ml-2" />الإعدادات</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => openTab({ id: '/settings', title: 'الإعدادات', path: '/settings', closable: true })}>
+              <SettingsIcon className="w-4 h-4 ml-2" />الإعدادات
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-red-600"><LogOut className="w-4 h-4 ml-2" />تسجيل الخروج</DropdownMenuItem>
           </DropdownMenuContent>
