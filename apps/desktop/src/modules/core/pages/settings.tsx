@@ -1,39 +1,25 @@
 import { useState, useEffect } from "react";
-import { Input } from "@shared/ui/input";
-import { Label } from "@shared/ui/label";
-import { Button } from "@shared/ui/button";
-import { RefreshCw, Building, FileText, Settings as SettingsIcon, Globe, ShieldCheck, Mail, Phone, MapPin, DollarSign, Percent, CalendarDays, Table2, PanelRightOpen, Download, Info, ExternalLink, Palette, ChevronDown, ChevronUp, Save } from "lucide-react";
-import { toast } from "sonner";
+import { Building, FileText, DollarSign, Palette, ChevronDown, ChevronUp, Table2, PanelRightOpen, Settings as SettingsIcon, Globe, ShieldCheck } from "lucide-react";
 import { settingsService } from '@modules/core/api/settingsService';
-import type { CompanySettings } from "@erp/shared-types";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
+import type { CompanySettings as CompanySettingsType } from "@erp/shared-types";
 import { cn } from "@shared/lib/utils";
 
-// Components
 import { TableSettingsManager } from "../components/TableSettingsManager";
 import { SidebarSettingsManager } from "../components/SidebarSettingsManager";
 import CurrencySettings from "./currencySettings";
-import { useUpdateChecker } from "../hooks/useUpdateChecker";
-import pkg from "../../../../package.json";
+import { CompanySettings } from "../components/settings/CompanySettings";
+import { PrefixSettings } from "../components/settings/PrefixSettings";
+import { FinancialSettings } from "../components/settings/FinancialSettings";
+import { AboutSettings } from "../components/settings/AboutSettings";
+import { UnderDevelopmentSection } from "../components/settings/UnderDevelopmentSection";
 
-// Templates
-import { SettingsLayout, SettingsSection } from "@widgets/templates/SettingsLayout";
+import { SettingsLayout } from "@widgets/templates/SettingsLayout";
 
 export default function Settings() {
-  const [settings, setSettings] = useState<CompanySettings | null>(null);
+  const [settings, setSettings] = useState<CompanySettingsType | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeNav, setActiveNav] = useState("company");
   const [appearanceExpanded, setAppearanceExpanded] = useState(false);
-  const {
-    updateInfo,
-    loading: updateLoading,
-    isUpdating,
-    updateSuccess,
-    updateProgress,
-    error: updateError,
-    check: handleCheckUpdate,
-    installUpdate,
-  } = useUpdateChecker();
 
   const load = async () => {
     setLoading(true);
@@ -44,35 +30,9 @@ export default function Settings() {
 
   useEffect(() => { load(); }, []);
 
-  const handleChange = (key: keyof CompanySettings, value: string | number | boolean) => {
+  const handleChange = (key: keyof CompanySettingsType, value: string | number | boolean) => {
     if (settings) {
       setSettings({ ...settings, [key]: value });
-    }
-  };
-
-  const handleSaveCompany = async () => {
-    if (!settings) return;
-    try {
-      await settingsService.updateSettings({
-        company_name: settings.company_name,
-        company_name_en: settings.company_name_en,
-        tax_number: settings.tax_number,
-        commercial_register: settings.commercial_register,
-        address: settings.address,
-        phone: settings.phone,
-        email: settings.email,
-        currency: settings.currency,
-        currency_symbol: settings.currency_symbol,
-        tax_rate: Number(settings.tax_rate),
-        invoice_prefix: settings.invoice_prefix,
-        purchase_prefix: settings.purchase_prefix,
-        journal_prefix: settings.journal_prefix,
-        fiscal_year_start_month: settings.fiscal_year_start_month,
-      });
-      window.dispatchEvent(new CustomEvent("erp:settings-updated"));
-      toast.success("تم الحفظ", { description: "تم حفظ بيانات الشركة بنجاح" });
-    } catch (e) {
-      toast.error("خطأ في الحفظ", { description: String(e) });
     }
   };
 
@@ -94,13 +54,36 @@ export default function Settings() {
     { id: "financial", label: "الإعدادات المالية", icon: SettingsIcon },
     { id: "localization", label: "اللغة والمنطقة", icon: Globe },
     { id: "security", label: "الأمان والوصول", icon: ShieldCheck },
-    { id: "about", label: "حول التطبيق", icon: Info },
+    { id: "about", label: "حول التطبيق", icon: SettingsIcon },
   ];
 
   const appearanceItems = [
     { id: "tables", label: "مظهر الجداول", icon: Table2 },
     { id: "sidebar", label: "مظهر السايد بار", icon: PanelRightOpen },
   ];
+
+  const renderSection = () => {
+    switch (activeNav) {
+      case "company":
+        return <CompanySettings settings={settings} onChange={handleChange} />;
+      case "prefixes":
+        return <PrefixSettings settings={settings} onChange={handleChange} />;
+      case "currencies":
+        return <CurrencySettings />;
+      case "financial":
+        return <FinancialSettings settings={settings} onChange={handleChange} />;
+      case "tables":
+        return <TableSettingsManager />;
+      case "sidebar":
+        return <SidebarSettingsManager />;
+      case "about":
+        return <AboutSettings />;
+      case "localization":
+      case "security":
+      default:
+        return <UnderDevelopmentSection />;
+    }
+  };
 
   return (
     <SettingsLayout
@@ -123,7 +106,7 @@ export default function Settings() {
               {item.label}
             </button>
           ))}
-          
+
           {/* Appearance Category */}
           <div className="space-y-1">
             <button
@@ -136,7 +119,7 @@ export default function Settings() {
               </div>
               {appearanceExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
-            
+
             {appearanceExpanded && (
               <div className="mr-6 space-y-1">
                 {appearanceItems.map(item => (
@@ -160,280 +143,7 @@ export default function Settings() {
         </nav>
       }
     >
-      {activeNav === "company" && (
-        <SettingsSection title="الهوية الأساسية للشركة" description="هذه البيانات ستظهر في ترويسة الفواتير والتقارير الرسمية.">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label className="font-bold text-slate-700">اسم الشركة (عربي) *</Label>
-              <div className="relative">
-                <Building className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
-                <Input className="pr-11 h-12 rounded-lg border-slate-200 focus:ring-blue-500" value={settings.company_name} onChange={e => handleChange("company_name", e.target.value)} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="font-bold text-slate-700">Company Name (English)</Label>
-              <div className="relative">
-                <Globe className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
-                <Input className="pr-11 h-12 rounded-lg border-slate-200 focus:ring-blue-500" dir="ltr" value={settings.company_name_en ?? ""} onChange={e => handleChange("company_name_en", e.target.value)} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="font-bold text-slate-700">الرقم الضريبي</Label>
-              <Input className="h-12 rounded-lg border-slate-200" value={settings.tax_number ?? ""} onChange={e => handleChange("tax_number", e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label className="font-bold text-slate-700">السجل التجاري</Label>
-              <Input className="h-12 rounded-lg border-slate-200" value={settings.commercial_register ?? ""} onChange={e => handleChange("commercial_register", e.target.value)} />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label className="font-bold text-slate-700">العنوان بالتفصيل</Label>
-              <div className="relative">
-                <MapPin className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
-                <Input className="pr-11 h-12 rounded-lg border-slate-200" value={settings.address ?? ""} onChange={e => handleChange("address", e.target.value)} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="font-bold text-slate-700">الهاتف المعتمد</Label>
-              <div className="relative">
-                <Phone className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
-                <Input className="pr-11 h-12 rounded-lg border-slate-200 font-mono" dir="ltr" value={settings.phone ?? ""} onChange={e => handleChange("phone", e.target.value)} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="font-bold text-slate-700">البريد الإلكتروني الرسمي</Label>
-              <div className="relative">
-                <Mail className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
-                <Input className="pr-11 h-12 rounded-lg border-slate-200 font-mono" dir="ltr" value={settings.email ?? ""} onChange={e => handleChange("email", e.target.value)} />
-              </div>
-            </div>
-          </div>
-          <div className="flex justify-end mt-6 pt-6 border-t border-slate-100">
-            <Button onClick={handleSaveCompany} className="gap-2 h-11 px-6">
-              <Save className="w-4 h-4" />
-              حفظ التعديلات
-            </Button>
-          </div>
-        </SettingsSection>
-      )}
-
-      {activeNav === "tables" && (
-        <SettingsSection 
-          title="تخصيص مظهر الجداول" 
-          description="تحكم في كيفية عرض البيانات في جميع أقسام النظام بما يتناسب مع احتياجاتك."
-        >
-          <TableSettingsManager />
-        </SettingsSection>
-      )}
-
-      {activeNav === "sidebar" && (
-        <SettingsSection
-          title="تخصيص مظهر السايد بار"
-          description="تحكم في عرض وكثافة الألواح الجانبية في جميع أقسام النظام."
-        >
-          <SidebarSettingsManager />
-        </SettingsSection>
-      )}
-
-      {activeNav === "prefixes" && (
-        <SettingsSection title="تخصيص تسلسل الوثائق" description="حدد البادئات التي يستخدمها النظام لتوليد الأرقام التسلسلية للفواتير والقيود.">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="space-y-3 p-6 rounded-2xl bg-slate-50 border border-slate-100">
-              <Label className="font-black text-slate-700">مبيعات</Label>
-              <Input className="h-12 rounded-lg font-mono font-bold text-center" value={settings.invoice_prefix} onChange={e => handleChange("invoice_prefix", e.target.value)} dir="ltr" />
-              <p className="text-[10px] text-slate-400 font-bold text-center">مثال: {settings.invoice_prefix}0001</p>
-            </div>
-            <div className="space-y-3 p-6 rounded-2xl bg-slate-50 border border-slate-100">
-              <Label className="font-black text-slate-700">مشتريات</Label>
-              <Input className="h-12 rounded-lg font-mono font-bold text-center" value={settings.purchase_prefix} onChange={e => handleChange("purchase_prefix", e.target.value)} dir="ltr" />
-              <p className="text-[10px] text-slate-400 font-bold text-center">مثال: {settings.purchase_prefix}0001</p>
-            </div>
-            <div className="space-y-3 p-6 rounded-2xl bg-slate-50 border border-slate-100">
-              <Label className="font-black text-slate-700">قيود يومية</Label>
-              <Input className="h-12 rounded-lg font-mono font-bold text-center" value={settings.journal_prefix} onChange={e => handleChange("journal_prefix", e.target.value)} dir="ltr" />
-              <p className="text-[10px] text-slate-400 font-bold text-center">مثال: {settings.journal_prefix}0001</p>
-            </div>
-          </div>
-        </SettingsSection>
-      )}
-
-      {activeNav === "currencies" && (
-        <SettingsSection title="إدارة العملات" description="إضافة، تعديل، وحذف العملات — وإدارة أسعار الصرف.">
-          <CurrencySettings />
-        </SettingsSection>
-      )}
-
-      {activeNav === "financial" && (
-        <SettingsSection title="القواعد والخيارات المالية" description="الضريبة ودورة السنة المالية.">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <Label className="font-black text-slate-700 flex items-center gap-2"><Percent className="w-4 h-4 text-rose-600" /> ضريبة القيمة المضافة الافتراضية</Label>
-                <div className="relative">
-                  <Input type="number" step="0.01" className="h-14 font-black pr-6 pl-14" value={settings.tax_rate} onChange={e => handleChange("tax_rate", e.target.value)} />
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-400">%</span>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-6">
-               <div className="space-y-3">
-                <Label className="font-black text-slate-700 flex items-center gap-2"><CalendarDays className="w-4 h-4 text-indigo-600" /> شهر بداية السنة المالية</Label>
-                <Select value={settings.fiscal_year_start_month.toString()} onValueChange={v => handleChange("fiscal_year_start_month", parseInt(v))}>
-                  <SelectTrigger className="h-14 rounded-xl border-slate-200 font-bold">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 12 }).map((_, i) => (
-                      <SelectItem key={i + 1} value={(i + 1).toString()} className="font-bold">الشهر {(i + 1)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-slate-400 font-medium italic">يستخدم هذا التاريخ لحساب إغلاق الحسابات وتوليد الميزانية الافتتاحية.</p>
-              </div>
-            </div>
-          </div>
-        </SettingsSection>
-      )}
-
-      {activeNav === "about" && (
-        <SettingsSection title="حول التطبيق" description="معلومات الإصدار والتحقق من التحديثات.">
-          <div className="space-y-6">
-            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center">
-                  <Info className="w-8 h-8 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black text-slate-800">المواكب</h3>
-                  <p className="text-sm text-slate-500">نظام إدارة المنشآت</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="space-y-1">
-                  <span className="text-slate-400 font-medium">الإصدار الحالي</span>
-                  <p className="font-black text-slate-800 font-mono" dir="ltr">{pkg.version}</p>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-slate-400 font-medium">آخر إصدار متاح</span>
-                  <p className="font-black text-slate-800 font-mono" dir="ltr">
-                    {updateInfo?.latest_version === "فشل الاتصال" ? "—" : (updateInfo?.latest_version || "—")}
-                  </p>
-                </div>
-              </div>
-
-              {updateSuccess && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center">
-                  <p className="text-sm font-bold text-emerald-700">✅ تم تثبيت التحديث بنجاح</p>
-                  <p className="text-xs text-emerald-600 mt-1">سيتم تطبيق التغييرات بعد إعادة تشغيل التطبيق</p>
-                </div>
-              )}
-
-              {updateError && (
-                <div className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-xl p-3.5 font-bold">
-                  خطأ في التحديث: {updateError}
-                </div>
-              )}
-
-              {!isUpdating && !updateSuccess && (
-                <Button
-                  size="sm"
-                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-10 text-sm font-bold gap-2"
-                  onClick={handleCheckUpdate}
-                  disabled={updateLoading}
-                >
-                  {updateLoading ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Download className="w-4 h-4" />
-                  )}
-                  {updateLoading ? "جاري التحقق..." : "التحقق من وجود تحديث"}
-                </Button>
-              )}
-
-              {isUpdating && (
-                <div className="space-y-2.5 bg-blue-50/50 border border-blue-100 rounded-xl p-4">
-                  <div className="flex justify-between text-xs font-bold text-blue-600">
-                    <span className="flex items-center gap-1.5">
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      جاري تنزيل وتثبيت التحديث...
-                    </span>
-                    <span>
-                      {updateProgress && updateProgress.total > 0
-                        ? `${Math.round((updateProgress.downloaded / updateProgress.total) * 100)}%`
-                        : "..."}
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
-                    <div
-                      className="bg-blue-600 h-full transition-all duration-300 rounded-full"
-                      style={{
-                        width:
-                          updateProgress && updateProgress.total > 0
-                            ? `${(updateProgress.downloaded / updateProgress.total) * 100}%`
-                            : "0%",
-                      }}
-                    />
-                  </div>
-                  {updateProgress && updateProgress.total > 0 && (
-                    <div className="text-[10px] text-slate-400 font-mono text-left" dir="ltr">
-                      {(updateProgress.downloaded / (1024 * 1024)).toFixed(2)} MB / {(updateProgress.total / (1024 * 1024)).toFixed(2)} MB
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {updateInfo && updateInfo.has_update && !isUpdating && !updateSuccess && (
-                <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-3">
-                  <p className="text-sm font-bold text-green-800 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    يتوفر تحديث جديد! ({updateInfo.latest_version})
-                  </p>
-                  {updateInfo.release_body && (
-                    <div className="text-xs text-green-700 bg-white rounded-lg p-3 max-h-32 overflow-y-auto whitespace-pre-wrap font-mono">
-                      {updateInfo.release_body}
-                    </div>
-                  )}
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700 text-white rounded-xl h-9 text-xs font-bold gap-1.5"
-                      onClick={installUpdate}
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      تحديث الآن
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="rounded-xl h-9 text-xs text-slate-500"
-                      onClick={() => window.open("https://github.com/Ahmad-J-Bary/accounting-app/releases", "_blank")}
-                    >
-                      كل الإصدارات
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {updateInfo && !updateInfo.has_update && !isUpdating && updateInfo.latest_version !== "فشل الاتصال" && (
-                <div className="bg-slate-100 rounded-xl p-4">
-                  <p className="text-sm font-bold text-slate-600">أنت تستخدم أحدث إصدار ✅</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </SettingsSection>
-      )}
-
-      {["localization", "security"].includes(activeNav) && (
-        <div className="flex flex-col items-center justify-center p-20 bg-slate-50/50 rounded-[2rem] border border-dashed border-slate-200 text-slate-400 text-center space-y-4">
-          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
-            <RefreshCw className="w-8 h-8" />
-          </div>
-          <div className="space-y-1">
-            <h3 className="font-black text-slate-600">هذا القسم قيد التطوير</h3>
-            <p className="text-sm font-medium">سيتم توفير خيارات إضافية في التحديثات القادمة.</p>
-          </div>
-        </div>
-      )}
+      {renderSection()}
     </SettingsLayout>
   );
 }

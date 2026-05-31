@@ -3,6 +3,7 @@ import { ExternalLink, X, RefreshCw, Download, ChevronDown, ChevronUp } from "lu
 import { Button } from "@shared/ui/button";
 import { useUpdateChecker } from "../hooks/useUpdateChecker";
 import { cn } from "@shared/lib/utils";
+import { UpdateProgress } from "./UpdateProgress";
 
 export function UpdateBanner() {
   const { updateInfo, check, dismiss, dismissAll, isUpdating, updateProgress, installUpdate, error } = useUpdateChecker();
@@ -105,35 +106,7 @@ export function UpdateBanner() {
           )}
 
           {isUpdating ? (
-            <div className="space-y-2 pt-2">
-              <div className="flex justify-between text-xs font-bold text-blue-600">
-                <span className="flex items-center gap-1.5">
-                  <RefreshCw className="w-3 h-3 animate-spin" />
-                  جاري تنزيل وتثبيت التحديث...
-                </span>
-                <span>
-                  {updateProgress && updateProgress.total > 0
-                    ? `${Math.round((updateProgress.downloaded / updateProgress.total) * 100)}%`
-                    : "..."}
-                </span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                <div
-                  className="bg-blue-600 h-full transition-all duration-300 rounded-full"
-                  style={{
-                    width:
-                      updateProgress && updateProgress.total > 0
-                        ? `${(updateProgress.downloaded / updateProgress.total) * 100}%`
-                        : "0%",
-                  }}
-                />
-              </div>
-              {updateProgress && updateProgress.total > 0 && (
-                <div className="text-[10px] text-slate-400 font-mono text-left" dir="ltr">
-                  {(updateProgress.downloaded / (1024 * 1024)).toFixed(2)} MB / {(updateProgress.total / (1024 * 1024)).toFixed(2)} MB
-                </div>
-              )}
-            </div>
+            <UpdateProgress progress={updateProgress} />
           ) : (
             <div className="flex items-center gap-2 pt-1">
               <Button
