@@ -1,6 +1,6 @@
 {
   "productName": "Almowakeb",
-  "version": "0.8.3",
+  "version": "0.8.4",
   "identifier": "com.almowakeb.erp",
   "build": {
     "frontendDist": "../../apps/desktop/dist",
