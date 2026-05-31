@@ -105,6 +105,9 @@ pub async fn download_and_install_update(
             .map_err(|e| format!("Failed to open package: {}", e))?;
     }
 
-    // 6. Exit the application to release process lock on files and allow installer to proceed
+    // 6. Notify frontend that the update has been installed, then exit
+    let _ = app.emit("update-installed", ());
+    // Small delay to let the event flush before the process exits
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
     std::process::exit(0);
 }

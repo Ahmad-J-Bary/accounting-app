@@ -1,12 +1,12 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo } from "react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
-import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns } from "@shared/hooks";
+import { useUnifiedColumns, useSortable, useTableColumns } from "@shared/hooks";
 import type { SupplierDto } from "@erp/shared-types";
-import { ArrowUpDown, Eye, Pencil, Trash2, NotebookText, Receipt, Truck } from "lucide-react";
+import { Eye, Pencil, Trash2, NotebookText, Receipt, Truck } from "lucide-react";
 import { ActionsDropdown } from "@shared/ui/actions-dropdown";
+import { SortableHeader } from "@shared/ui/sortable-header";
 
 interface SupplierTableProps {
   suppliers: SupplierDto[];
@@ -23,66 +23,29 @@ interface SupplierTableProps {
 
 type SortField = "code" | "name" | "balance";
 
-interface SortableHeaderProps {
-  field: SortField;
-  label: string;
-  currentField: SortField;
-  direction: "asc" | "desc";
-  onSort: (field: SortField) => void;
-}
-
-const SortableHeader = ({ field, label, currentField, direction, onSort }: SortableHeaderProps) => {
-  const getSortIcon = (f: SortField) => {
-    if (currentField !== f) return <ArrowUpDown className="w-3 h-3 opacity-30" />;
-    return direction === "asc" 
-      ? <ArrowUpDown className="w-3 h-3 rotate-180" /> 
-      : <ArrowUpDown className="w-3 h-3" />;
-  };
-
-  return (
-    <button 
-      onClick={(e) => { e.stopPropagation(); onSort(field); }}
-      className="flex items-center gap-1 hover:text-slate-900 transition-colors"
-    >
-      {label}
-      {getSortIcon(field)}
-    </button>
-  );
-};
-
 export function SupplierTable({ suppliers, loading, search, onSearchChange, onView, onEdit, onDelete, onJournal, onDocument, selectedId }: SupplierTableProps) {
-  const { currencies, formatAmount, toBase } = useCurrencyContext();
-  const [sortField, setSortField] = useState<SortField>("code");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-
-  const handleSort = useCallback((field: SortField) => {
-    setSortDirection(prev => {
-      if (sortField === field) {
-        return prev === "asc" ? "desc" : "asc";
-      }
-      return "asc";
-    });
-    setSortField(field);
-  }, [sortField]);
-
-  const sortedSuppliers = useMemo(() => {
-    const sorted = [...suppliers].sort((a, b) => {
+  const { currencies } = useCurrencyContext();
+  const { getAccountStatusColumn, getBalanceColumns, getSummaryColumns } = useTableColumns();
+  
+  const { sortedData: sortedSuppliers, sortField, sortDirection, handleSort } = useSortable({
+    data: suppliers,
+    defaultField: "code" as SortField,
+    sortFn: (a, b, field, direction) => {
       let comparison = 0;
-      switch (sortField) {
+      switch (field) {
         case "code": comparison = (parseInt(a.code || "0", 10) || 0) - (parseInt(b.code || "0", 10) || 0); break;
         case "name": comparison = (a.name || "").localeCompare(b.name || "", "ar"); break;
         case "balance": comparison = (Number(a.balance) || 0) - (Number(b.balance) || 0); break;
       }
-      return sortDirection === "asc" ? comparison : -comparison;
-    });
-    return sorted;
-  }, [suppliers, sortField, sortDirection]);
+      return direction === "asc" ? comparison : -comparison;
+    }
+  });
 
   const allColumns = useMemo<UnifiedColumn<SupplierDto>[]>(() => {
     const cols: UnifiedColumn<SupplierDto>[] = [
       { 
         id: "code",
-        header: <SortableHeader field="code" label="#" currentField={sortField} direction={sortDirection} onSort={handleSort} />, 
+        header: <SortableHeader field="code" label="#" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />, 
         label: "رقم الحساب",
         accessor: (s) => (
           <span className="font-black text-slate-500">{s.code || "—"}</span>
@@ -92,7 +55,7 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
       },
       { 
         id: "name",
-        header: <SortableHeader field="name" label="اسم المورد" currentField={sortField} direction={sortDirection} onSort={handleSort} />, 
+        header: <SortableHeader field="name" label="اسم المورد" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />, 
         label: "اسم المورد",
         accessor: (s) => (
           <div className="flex items-center gap-3">
@@ -114,41 +77,15 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
     ];
 
     // Account Status
-    cols.push({
-      id: "status",
-      header: <SortableHeader field="balance" label="حالة الحساب" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
-      label: "حالة الحساب",
-      accessor: (s) => {
-        const bal = Number(s.balance || 0);
-        if (bal === 0) return <span className="text-slate-300">—</span>;
-        const isCredit = bal > 0;
-        return (
-          <span className={`font-bold ${isCredit ? "text-emerald-600" : "text-red-600"}`}>
-            {isCredit ? "دائن" : "مدين"}
-          </span>
-        );
-      },
-      align: "center",
-      className: "w-[90px]"
-    });
+    cols.push(getAccountStatusColumn(
+      <SortableHeader field="balance" label="حالة الحساب" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
+      { isCreditFirst: true }
+    ));
 
     // Balances
-    currencies.forEach(curr => {
-      const symbol = curr.symbol || curr.code;
-      cols.push({
-        id: `balance_${curr.code}`,
-        header: <SortableHeader field="balance" label={`الرصيد (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
-        label: `الرصيد (${symbol})`,
-        accessor: (s) => {
-          const absBal = Math.abs(Number(s.balance || 0));
-          if (absBal === 0) return "—";
-          const baseAmount = toBase(absBal, s.currency);
-          return formatAmount(baseAmount, { currencyCode: curr.code });
-        },
-        align: "left",
-        className: "tabular-nums font-bold text-slate-800"
-      });
-    });
+    cols.push(...getBalanceColumns(
+      <SortableHeader field="balance" label="الرصيد" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />
+    ));
 
     // Actions
     cols.push({
@@ -171,7 +108,7 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
     });
 
     return cols;
-  }, [currencies, formatAmount, toBase, sortField, sortDirection, handleSort, onView, onEdit, onDelete, onJournal, onDocument]);
+  }, [sortField, sortDirection, handleSort, onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, getBalanceColumns]);
 
   const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
     tableId: "suppliers-unified",
@@ -179,39 +116,7 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
     defaultVisible: ["code", "name", "phone", "status", ...currencies.map(c => `balance_${c.code}`), "actions"],
   });
 
-  const summaryColumns = useMemo<SummaryColumn[]>(() => {
-    const totalBal = sortedSuppliers.reduce((sum, s) => sum + Number(s.balance || 0), 0);
-    const overall = totalBal > 0 ? "دائن" : totalBal < 0 ? "مدين" : null;
-    const overallColor = totalBal > 0 ? 'text-emerald-600' : totalBal < 0 ? 'text-red-600' : 'text-slate-400';
-
-    const baseTotal = sortedSuppliers.reduce((sum, s) => {
-      const bal = Math.abs(Number(s.balance || 0));
-      if (bal === 0) return sum;
-      return sum + toBase(bal, s.currency);
-    }, 0);
-
-    const colIds = enrichedColumns.map(c => c.id);
-    return colIds.map(id => {
-      if (id === 'name') return { id: 'count', columnId: 'name', label: '', value: `${sortedSuppliers.length} مورد`, className: 'text-slate-500 font-medium' };
-      if (id === 'code' || id === 'phone' || id === 'actions') return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
-      if (id === 'status') {
-        return { id: 'status_summary', columnId: 'status', label: '', value: overall ? `الرصيد: ${overall}` : "—", className: `${overallColor} font-bold` };
-      }
-      const match = id.match(/^balance_(.+)$/);
-      if (match) {
-        const currCode = match[1];
-        return {
-          id: `${id}_summary`,
-          columnId: id,
-          label: '',
-          value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
-          align: 'left' as const,
-          className: `${overallColor} font-bold`
-        };
-      }
-      return { id: `${id}_spacer`, label: '', value: '' };
-    });
-  }, [sortedSuppliers, formatAmount, toBase, enrichedColumns]);
+  const summaryColumns = getSummaryColumns(enrichedColumns, sortedSuppliers, "مورد", { isCreditFirst: true });
 
   return (
     <TableShell

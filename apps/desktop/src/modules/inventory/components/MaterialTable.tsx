@@ -1,5 +1,5 @@
-import { useMemo, useState, useCallback } from "react";
-import { Plus, Shuffle, Eye, Edit, Trash2, MoreHorizontal, ArrowUpDown } from "lucide-react";
+import { useMemo } from "react";
+import { Plus, Shuffle, Eye, Edit, Trash2, MoreHorizontal } from "lucide-react";
 import { cn } from '@shared/lib/utils';
 import type { MaterialDto, CategoryDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
@@ -7,13 +7,14 @@ import { Badge } from "@shared/ui/badge";
 import { Button } from "@shared/ui/button";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
-import { useUnifiedColumns } from '@shared/hooks';
+import { useUnifiedColumns, useSortable } from '@shared/hooks';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@shared/ui/dropdown-menu";
+import { SortableHeader } from "@shared/ui/sortable-header";
 
 interface MaterialTableProps {
   materials: MaterialDto[];
@@ -30,33 +31,6 @@ interface MaterialTableProps {
 
 type SortField = "code" | "name" | "total_available" | "total_received" | "total_sold" | "minimum_stock" | "average_cost";
 
-interface SortableHeaderProps {
-  field: SortField;
-  label: string;
-  currentField: SortField;
-  direction: "asc" | "desc";
-  onSort: (field: SortField) => void;
-}
-
-const SortableHeader = ({ field, label, currentField, direction, onSort }: SortableHeaderProps) => {
-  const getSortIcon = (f: SortField) => {
-    if (currentField !== f) return <ArrowUpDown className="w-3 h-3 opacity-30" />;
-    return direction === "asc"
-      ? <ArrowUpDown className="w-3 h-3 rotate-180" />
-      : <ArrowUpDown className="w-3 h-3" />;
-  };
-
-  return (
-    <button
-      onClick={(e) => { e.stopPropagation(); onSort(field); }}
-      className="flex items-center gap-1 hover:text-slate-900 transition-colors"
-    >
-      {label}
-      {getSortIcon(field)}
-    </button>
-  );
-};
-
 export function MaterialTable({ 
   materials, 
   categories, 
@@ -70,55 +44,30 @@ export function MaterialTable({
   onRowClick 
 }: MaterialTableProps) {
   const { formatAmount, currencies } = useCurrencyContext();
-  const [sortField, setSortField] = useState<SortField>("code");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-
-  const handleSort = useCallback((field: SortField) => {
-    setSortDirection(prev => {
-      if (sortField === field) {
-        return prev === "asc" ? "desc" : "asc";
-      }
-      return "asc";
-    });
-    setSortField(field);
-  }, [sortField]);
-
-  const sortedMaterials = useMemo(() => {
-    const sorted = [...materials].sort((a, b) => {
+  
+  const { sortedData: sortedMaterials, sortField, sortDirection, handleSort } = useSortable({
+    data: materials,
+    defaultField: "code" as SortField,
+    sortFn: (a, b, field, direction) => {
       let comparison = 0;
-      switch (sortField) {
-        case "code":
-          comparison = (a.code || "").localeCompare(b.code || "", "ar");
-          break;
-        case "name":
-          comparison = (a.name || "").localeCompare(b.name || "", "ar");
-          break;
-        case "total_available":
-          comparison = parseFloat(a.total_available) - parseFloat(b.total_available);
-          break;
-        case "total_received":
-          comparison = parseFloat(a.total_received || "0") - parseFloat(b.total_received || "0");
-          break;
-        case "total_sold":
-          comparison = parseFloat(a.total_sold || "0") - parseFloat(b.total_sold || "0");
-          break;
-        case "minimum_stock":
-          comparison = parseFloat(a.minimum_stock) - parseFloat(b.minimum_stock);
-          break;
-        case "average_cost":
-          comparison = parseFloat(a.average_cost_base || "0") - parseFloat(b.average_cost_base || "0");
-          break;
+      switch (field) {
+        case "code": comparison = (a.code || "").localeCompare(b.code || "", "ar"); break;
+        case "name": comparison = (a.name || "").localeCompare(b.name || "", "ar"); break;
+        case "total_available": comparison = parseFloat(a.total_available) - parseFloat(b.total_available); break;
+        case "total_received": comparison = parseFloat(a.total_received || "0") - parseFloat(b.total_received || "0"); break;
+        case "total_sold": comparison = parseFloat(a.total_sold || "0") - parseFloat(b.total_sold || "0"); break;
+        case "minimum_stock": comparison = parseFloat(a.minimum_stock) - parseFloat(b.minimum_stock); break;
+        case "average_cost": comparison = parseFloat(a.average_cost_base || "0") - parseFloat(b.average_cost_base || "0"); break;
       }
-      return sortDirection === "asc" ? comparison : -comparison;
-    });
-    return sorted;
-  }, [materials, sortField, sortDirection]);
+      return direction === "asc" ? comparison : -comparison;
+    }
+  });
 
   const allColumns = useMemo<UnifiedColumn<MaterialDto>[]>(() => {
     const cols: UnifiedColumn<MaterialDto>[] = [
       {
         id: "code",
-        header: <SortableHeader field="code" label="الكود" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: <SortableHeader field="code" label="الكود" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
         label: "الكود",
         accessor: (m) => (
           <span className="font-mono text-[11px] bg-slate-100 text-slate-700 px-2 py-1 rounded-md font-bold ring-1 ring-slate-200/50">
@@ -140,7 +89,7 @@ export function MaterialTable({
       },
       {
         id: "name",
-        header: <SortableHeader field="name" label="اسم المادة" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: <SortableHeader field="name" label="اسم المادة" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
         label: "اسم المادة",
         accessor: (m) => (
           <div className="flex items-center gap-3">
@@ -212,7 +161,7 @@ export function MaterialTable({
       },
       {
         id: "total_available",
-        header: <SortableHeader field="total_available" label="المتوفر" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: <SortableHeader field="total_available" label="المتوفر" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
         label: "المتوفر",
         accessor: (m) => parseFloat(m.total_available).toLocaleString(),
         align: "center",
@@ -220,7 +169,7 @@ export function MaterialTable({
       },
       {
         id: "total_received",
-        header: <SortableHeader field="total_received" label="إجمالي الوارد" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: <SortableHeader field="total_received" label="إجمالي الوارد" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
         label: "إجمالي الوارد",
         accessor: (m) => parseFloat(m.total_received || "0").toLocaleString(),
         align: "center",
@@ -228,7 +177,7 @@ export function MaterialTable({
       },
       {
         id: "total_sold",
-        header: <SortableHeader field="total_sold" label="إجمالي المبيع" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: <SortableHeader field="total_sold" label="إجمالي المبيع" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
         label: "إجمالي المبيع",
         accessor: (m) => parseFloat(m.total_sold || "0").toLocaleString(),
         align: "center",
@@ -244,7 +193,7 @@ export function MaterialTable({
       },
       {
         id: "minimum_stock",
-        header: <SortableHeader field="minimum_stock" label="حد الطلب" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: <SortableHeader field="minimum_stock" label="حد الطلب" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
         label: "حد الطلب",
         accessor: (m) => (
           <span className={cn(

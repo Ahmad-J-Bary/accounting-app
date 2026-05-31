@@ -6,3 +6,5 @@ export * from './useColumnPreferences';
 export * from './useTableSettings';
 export * from './useUnifiedColumns';
 export * from './useSidebarSettings';
+export * from './useSortable';
+export * from './useTableColumns';

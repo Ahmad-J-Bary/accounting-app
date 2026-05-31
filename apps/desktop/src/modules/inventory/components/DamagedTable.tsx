@@ -1,11 +1,11 @@
-import { useMemo, useState, useCallback } from "react";
-import { ArrowUpDown } from "lucide-react";
+import { useMemo } from "react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { formatDateTime } from '@shared/lib/format';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns } from "@shared/hooks";
+import { useUnifiedColumns, useSortable } from "@shared/hooks";
+import { SortableHeader } from "@shared/ui/sortable-header";
 import type { DamagedItem } from "@erp/shared-types";
 
 interface DamagedTableProps {
@@ -17,50 +17,16 @@ interface DamagedTableProps {
 
 type SortField = "material_name" | "quantity" | "damage_date" | "cost_impact";
 
-interface SortableHeaderProps {
-  field: SortField;
-  label: string;
-  currentField: SortField;
-  direction: "asc" | "desc";
-  onSort: (field: SortField) => void;
-}
-
-const SortableHeader = ({ field, label, currentField, direction, onSort }: SortableHeaderProps) => {
-  const getSortIcon = (f: SortField) => {
-    if (currentField !== f) return <ArrowUpDown className="w-3 h-3 opacity-30" />;
-    return direction === "asc"
-      ? <ArrowUpDown className="w-3 h-3 rotate-180" />
-      : <ArrowUpDown className="w-3 h-3" />;
-  };
-
-  return (
-    <button
-      onClick={(e) => { e.stopPropagation(); onSort(field); }}
-      className="flex items-center gap-1 hover:text-slate-900 transition-colors"
-    >
-      {label}
-      {getSortIcon(field)}
-    </button>
-  );
-};
-
 export function DamagedTable({ items, loading, search, onSearchChange }: DamagedTableProps) {
   const { formatAmount, currencies } = useCurrencyContext();
-  const [sortField, setSortField] = useState<SortField>("damage_date");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
-  const handleSort = useCallback((field: SortField) => {
-    setSortDirection(prev => {
-      if (sortField === field) return prev === "asc" ? "desc" : "asc";
-      return "asc";
-    });
-    setSortField(field);
-  }, [sortField]);
-
-  const sortedItems = useMemo(() => {
-    return [...items].sort((a, b) => {
+  const { sortedData: sortedItems, sortField, sortDirection, handleSort } = useSortable({
+    data: items,
+    defaultField: "damage_date" as SortField,
+    defaultDirection: "desc",
+    sortFn: (a, b, field, direction) => {
       let comparison = 0;
-      switch (sortField) {
+      switch (field) {
         case "material_name":
           comparison = (a.material_name || a.material_id || "").localeCompare(b.material_name || b.material_id || "", "ar");
           break;
@@ -74,15 +40,15 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
           comparison = parseFloat(a.cost_impact || "0") - parseFloat(b.cost_impact || "0");
           break;
       }
-      return sortDirection === "asc" ? comparison : -comparison;
-    });
-  }, [items, sortField, sortDirection]);
+      return direction === "asc" ? comparison : -comparison;
+    }
+  });
 
   const allColumns = useMemo<UnifiedColumn<DamagedItem>[]>(() => {
     const cols: UnifiedColumn<DamagedItem>[] = [
       {
         id: "material_name",
-        header: <SortableHeader field="material_name" label="المنتج / الصنف" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: <SortableHeader field="material_name" label="المنتج / الصنف" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
         label: "اسم المنتج",
         accessor: (i) => (
           <span className="font-bold text-slate-900">{i.material_name ?? i.material_id}</span>
@@ -100,14 +66,14 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
       },
       {
         id: "damage_date",
-        header: <SortableHeader field="damage_date" label="التاريخ" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: <SortableHeader field="damage_date" label="التاريخ" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
         label: "تاريخ التسجيل",
         accessor: (i) => formatDateTime(i.damage_date),
         className: "tabular-nums text-slate-500 font-medium w-32"
       },
       {
         id: "quantity",
-        header: <SortableHeader field="quantity" label="الكمية" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: <SortableHeader field="quantity" label="الكمية" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
         label: "الكمية التالفة",
         accessor: (i) => (
           <span className="tabular-nums font-bold text-amber-600">{Math.round(parseFloat(i.quantity))}</span>
@@ -121,7 +87,7 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
     currencies.forEach(curr => {
       cols.push({
         id: `cost_${curr.code}`,
-        header: <SortableHeader field="cost_impact" label={`الخسارة (${curr.symbol || curr.code})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: <SortableHeader field="cost_impact" label={`الخسارة (${curr.symbol || curr.code})`} currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
         label: `مبلغ الخسارة (${curr.symbol || curr.code})`,
         accessor: (i) => {
           const val = parseFloat(i.cost_impact || "0");

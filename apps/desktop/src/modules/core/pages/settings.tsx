@@ -28,6 +28,7 @@ export default function Settings() {
     updateInfo,
     loading: updateLoading,
     isUpdating,
+    updateSuccess,
     updateProgress,
     error: updateError,
     check: handleCheckUpdate,
@@ -319,13 +320,20 @@ export default function Settings() {
                 </div>
               </div>
 
+              {updateSuccess && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center">
+                  <p className="text-sm font-bold text-emerald-700">✅ تم تثبيت التحديث بنجاح</p>
+                  <p className="text-xs text-emerald-600 mt-1">سيتم تطبيق التغييرات بعد إعادة تشغيل التطبيق</p>
+                </div>
+              )}
+
               {updateError && (
                 <div className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-xl p-3.5 font-bold">
                   خطأ في التحديث: {updateError}
                 </div>
               )}
 
-              {!isUpdating && (
+              {!isUpdating && !updateSuccess && (
                 <Button
                   size="sm"
                   className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-10 text-sm font-bold gap-2"
@@ -373,7 +381,7 @@ export default function Settings() {
                 </div>
               )}
 
-              {updateInfo && updateInfo.has_update && !isUpdating && (
+              {updateInfo && updateInfo.has_update && !isUpdating && !updateSuccess && (
                 <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-3">
                   <p className="text-sm font-bold text-green-800 flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />

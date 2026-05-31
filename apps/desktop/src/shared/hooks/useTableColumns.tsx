@@ -1,0 +1,119 @@
+import React, { useCallback } from "react";
+import type { UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
+import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
+
+export function useTableColumns() {
+  const { currencies, formatAmount, toBase } = useCurrencyContext();
+
+  const getAccountStatusColumn = useCallback(<T extends { balance?: number | string }>(
+    sortableHeader: React.ReactNode,
+    options?: { isCreditFirst?: boolean }
+  ): UnifiedColumn<T> => {
+    const isCreditFirst = options?.isCreditFirst ?? false;
+    return {
+      id: "status",
+      header: sortableHeader,
+      label: "حالة الحساب",
+      accessor: (item) => {
+        const bal = Number(item.balance || 0);
+        if (bal === 0) return <span className="text-slate-300">—</span>;
+        const isPositive = bal > 0;
+        const isDebit = isCreditFirst ? !isPositive : isPositive;
+        return (
+          <span className={`font-bold ${isDebit ? "text-red-600" : "text-emerald-600"}`}>
+            {isDebit ? "مدين" : "دائن"}
+          </span>
+        );
+      },
+      align: "center",
+      className: "w-[90px]"
+    };
+  }, []);
+
+  const getBalanceColumns = useCallback(<T extends { balance?: number | string; currency?: string }>(
+    sortableHeader: React.ReactNode
+  ): UnifiedColumn<T>[] => {
+    return currencies.map(curr => {
+      const symbol = curr.symbol || curr.code;
+      return {
+        id: `balance_${curr.code}`,
+        header: sortableHeader,
+        label: `الرصيد (${symbol})`,
+        accessor: (item) => {
+          const absBal = Math.abs(Number(item.balance || 0));
+          if (absBal === 0) return "—";
+          const baseAmount = toBase(absBal, item.currency);
+          return formatAmount(baseAmount, { currencyCode: curr.code });
+        },
+        align: "left",
+        className: "tabular-nums font-bold text-slate-800"
+      };
+    });
+  }, [currencies, formatAmount, toBase]);
+
+  const getSummaryColumns = useCallback(<T extends { balance?: number | string; currency?: string }>(
+    enrichedColumns: UnifiedColumn<T>[],
+    items: T[],
+    countLabel: string,
+    options?: { isCreditFirst?: boolean }
+  ): SummaryColumn[] => {
+    const isCreditFirst = options?.isCreditFirst ?? false;
+    const totalBal = items.reduce((sum, item) => sum + Number(item.balance || 0), 0);
+    const isPositive = totalBal > 0;
+    const overallIsDebit = isCreditFirst ? !isPositive : isPositive;
+    const overall = totalBal !== 0 ? (overallIsDebit ? "مدين" : "دائن") : null;
+    const overallColor = overallIsDebit ? 'text-red-600' : (totalBal !== 0 ? 'text-emerald-600' : 'text-slate-400');
+
+    const baseTotal = items.reduce((sum, item) => {
+      const bal = Math.abs(Number(item.balance || 0));
+      if (bal === 0) return sum;
+      return sum + toBase(bal, item.currency);
+    }, 0);
+
+    const colIds = enrichedColumns.map(c => c.id);
+    return colIds.map(id => {
+      if (id === 'name') return { 
+        id: 'count', 
+        columnId: 'name', 
+        label: '', 
+        value: `${items.length} ${countLabel}`, 
+        className: 'text-slate-500 font-medium' 
+      };
+      if (['code', 'phone', 'actions'].includes(id)) return { 
+        id: `${id}_spacer`, 
+        columnId: id, 
+        label: '', 
+        value: '' 
+      };
+      if (id === 'status') {
+        return { 
+          id: 'status_summary', 
+          columnId: 'status', 
+          label: '', 
+          value: overall ? `الرصيد: ${overall}` : "—", 
+          className: `${overallColor} font-bold` 
+        };
+      }
+      const match = id.match(/^balance_(.+)$/);
+      if (match) {
+        const currCode = match[1];
+        return {
+          id: `${id}_summary`,
+          columnId: id,
+          label: '',
+          value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
+          align: 'left' as const,
+          className: `${overallColor} font-bold`
+        };
+      }
+      return { id: `${id}_spacer`, label: '', value: '' };
+    });
+  }, [formatAmount, toBase]);
+
+  return {
+    getAccountStatusColumn,
+    getBalanceColumns,
+    getSummaryColumns
+  };
+}

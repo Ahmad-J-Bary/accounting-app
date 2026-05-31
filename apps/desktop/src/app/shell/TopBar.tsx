@@ -127,7 +127,7 @@ export function TopBar({
         <div className="flex-1" />
 
         {/* Company Name */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-100 hidden md:flex">
+        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-100">
           <Building2 className="w-4 h-4 text-slate-400" />
           <span className="text-sm font-bold text-slate-700">
             {settings?.company_name || "المنشأة"}

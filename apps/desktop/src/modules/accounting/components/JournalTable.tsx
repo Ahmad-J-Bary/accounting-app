@@ -1,11 +1,11 @@
-import { useMemo, useState, useCallback } from "react";
-import { ArrowUpDown } from "lucide-react";
+import { useMemo } from "react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { formatDateTime } from '@shared/lib/format';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns } from "@shared/hooks";
+import { useUnifiedColumns, useSortable } from "@shared/hooks";
+import { SortableHeader } from "@shared/ui/sortable-header";
 import type { JournalEntryDto } from "@erp/shared-types";
 import type { JournalFilters } from "../api/journalEntryService";
 import { toJournalRow, aggregateEntryTotals } from "../lib/journal-view";
@@ -20,47 +20,8 @@ interface JournalTableProps {
 
 type SortField = "entry_number" | "entry_date" | "journal_type" | "credit_account" | "debit_account";
 
-interface SortableHeaderProps {
-  field: SortField;
-  label: string;
-  currentField: SortField;
-  direction: "asc" | "desc";
-  onSort: (field: SortField) => void;
-}
-
-const SortableHeader = ({ field, label, currentField, direction, onSort }: SortableHeaderProps) => {
-  const getSortIcon = (f: SortField) => {
-    if (currentField !== f) return <ArrowUpDown className="w-3 h-3 opacity-30" />;
-    return direction === "asc"
-      ? <ArrowUpDown className="w-3 h-3 rotate-180" />
-      : <ArrowUpDown className="w-3 h-3" />;
-  };
-
-  return (
-    <button
-      onClick={(e) => { e.stopPropagation(); onSort(field); }}
-      className="flex items-center gap-1 hover:text-slate-900 transition-colors"
-    >
-      {label}
-      {getSortIcon(field)}
-    </button>
-  );
-};
-
 export function JournalTable({ entries, loading, search, onSearchChange, filters }: JournalTableProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
-  const [sortField, setSortField] = useState<SortField>("entry_date");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-
-  const handleSort = useCallback((field: SortField) => {
-    setSortDirection(prev => {
-      if (sortField === field) {
-        return prev === "asc" ? "desc" : "asc";
-      }
-      return "asc";
-    });
-    setSortField(field);
-  }, [sortField]);
 
   const sortedCurrencies = useMemo(() => {
     if (!baseCurrency) return currencies;
@@ -72,10 +33,13 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
     [entries, filters?.journal_type]
   );
 
-  const sortedData = useMemo(() => {
-    const sorted = [...tableData].sort((a, b) => {
+  const { sortedData, sortField, sortDirection, handleSort } = useSortable({
+    data: tableData,
+    defaultField: "entry_date" as SortField,
+    defaultDirection: "desc",
+    sortFn: (a, b, field, direction) => {
       let comparison = 0;
-      switch (sortField) {
+      switch (field) {
         case "entry_number":
           comparison = (parseInt(a.entry_number || "0", 10) || 0) - (parseInt(b.entry_number || "0", 10) || 0);
           break;
@@ -92,23 +56,22 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
           comparison = (a.debit_account || "").localeCompare(b.debit_account || "", "ar");
           break;
       }
-      return sortDirection === "asc" ? comparison : -comparison;
-    });
-    return sorted;
-  }, [tableData, sortField, sortDirection]);
+      return direction === "asc" ? comparison : -comparison;
+    }
+  });
 
   const allColumns = useMemo<UnifiedColumn<typeof tableData[0]>[]>(() => {
     const cols: UnifiedColumn<typeof tableData[0]>[] = [
       { 
         id: "entry_number",    
-        header: <SortableHeader field="entry_number" label="رقم القيد" currentField={sortField} direction={sortDirection} onSort={handleSort} />,            
+        header: <SortableHeader field="entry_number" label="رقم القيد" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,            
         label: "رقم القيد",            
         accessor: (e) => e.entry_number,            
         className: "font-black text-slate-900 text-center w-20" 
       },
       { 
         id: "journal_type",    
-        header: <SortableHeader field="journal_type" label="نوع الحركة" currentField={sortField} direction={sortDirection} onSort={handleSort} />,           
+        header: <SortableHeader field="journal_type" label="نوع الحركة" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,           
         label: "نوع الحركة",           
         accessor: (e) => <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">{e.journal_type_display}</span>,
         className: "w-32"
@@ -119,7 +82,7 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
       const symbol = curr.symbol || curr.code;
       cols.push({
         id: `debit_${curr.code}`,
-        header: <SortableHeader field="entry_number" label={`عليه / مدين (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: <SortableHeader field="entry_number" label={`عليه / مدين (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
         label: `عليه / مدين (${symbol})`,
         accessor: (e) => {
           if (e.active_side !== 'debit') return "";
@@ -134,7 +97,7 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
       const symbol = curr.symbol || curr.code;
       cols.push({
         id: `credit_${curr.code}`,
-        header: <SortableHeader field="entry_number" label={`له / دائن (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: <SortableHeader field="entry_number" label={`له / دائن (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
         label: `له / دائن (${symbol})`,
         accessor: (e) => {
           if (e.active_side !== 'credit') return "";
@@ -155,21 +118,21 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
       },
       { 
         id: "credit_account",  
-        header: <SortableHeader field="credit_account" label="الحساب الدائن / المصدر" currentField={sortField} direction={sortDirection} onSort={handleSort} />, 
+        header: <SortableHeader field="credit_account" label="الحساب الدائن / المصدر" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />, 
         label: "الحساب الدائن / المصدر", 
         accessor: (e) => e.credit_account,          
         className: "text-emerald-600 font-bold" 
       },
       { 
         id: "debit_account",   
-        header: <SortableHeader field="debit_account" label="الحساب المدين / الوجهة" currentField={sortField} direction={sortDirection} onSort={handleSort} />, 
+        header: <SortableHeader field="debit_account" label="الحساب المدين / الوجهة" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />, 
         label: "الحساب المدين / الوجهة", 
         accessor: (e) => e.debit_account,           
         className: "text-blue-600 font-bold" 
       },
       { 
         id: "entry_date",      
-        header: <SortableHeader field="entry_date" label="التاريخ" currentField={sortField} direction={sortDirection} onSort={handleSort} />,              
+        header: <SortableHeader field="entry_date" label="التاريخ" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,              
         label: "التاريخ",              
         accessor: (e) => formatDateTime(e.entry_date), 
         className: "text-slate-500 tabular-nums w-32" 

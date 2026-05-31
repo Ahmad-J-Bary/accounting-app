@@ -1,12 +1,13 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo } from "react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns } from "@shared/hooks";
+import { useUnifiedColumns, useSortable, useTableColumns } from "@shared/hooks";
 import type { AccountDto } from "@erp/shared-types";
-import { ArrowUpDown, Eye, Pencil, Trash2, NotebookText, Receipt } from "lucide-react";
+import { Eye, Pencil, Trash2, NotebookText, Receipt } from "lucide-react";
 import { ActionsDropdown } from "@shared/ui/actions-dropdown";
+import { SortableHeader } from "@shared/ui/sortable-header";
 
 interface ExpenseTableProps {
   expenses: AccountDto[];
@@ -29,75 +30,29 @@ const codeSuffix = (code: string, prefix?: string) => {
   return code;
 };
 
-interface SortableHeaderProps {
-  field: SortField;
-  label: string;
-  currentField: SortField;
-  direction: "asc" | "desc";
-  onSort: (field: SortField) => void;
-}
-
-const SortableHeader = ({ field, label, currentField, direction, onSort }: SortableHeaderProps) => {
-  const getSortIcon = (f: SortField) => {
-    if (currentField !== f) return <ArrowUpDown className="w-3 h-3 opacity-30" />;
-    return direction === "asc"
-      ? <ArrowUpDown className="w-3 h-3 rotate-180" />
-      : <ArrowUpDown className="w-3 h-3" />;
-  };
-
-  return (
-    <button
-      onClick={() => onSort(field)}
-      className="flex items-center gap-1 hover:text-slate-700 transition-colors"
-    >
-      {label}
-      {getSortIcon(field)}
-    </button>
-  );
-};
-
 export function ExpenseTable({ expenses, loading, search, onSearchChange, onView, onEdit, onDelete, onJournal, onDocument, selectedId, parentCode }: ExpenseTableProps) {
   const { currencies, formatAmount, toBase } = useCurrencyContext();
-  const [sortField, setSortField] = useState<SortField>("code");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-
-  const handleSort = useCallback((field: SortField) => {
-    setSortDirection(prev => {
-      if (sortField === field) {
-        return prev === "asc" ? "desc" : "asc";
-      }
-      return "asc";
-    });
-    setSortField(field);
-  }, [sortField]);
-
-  const sortedExpenses = useMemo(() => {
-    const sorted = [...expenses].sort((a, b) => {
+  const { getAccountStatusColumn, getBalanceColumns, getSummaryColumns } = useTableColumns();
+  
+  const { sortedData: sortedExpenses, sortField, sortDirection, handleSort } = useSortable({
+    data: expenses,
+    defaultField: "code" as SortField,
+    sortFn: (a, b, field, direction) => {
       let comparison = 0;
-
-      switch (sortField) {
-        case "code":
-          comparison = (parseInt(codeSuffix(a.code || "0", parentCode), 10) || 0) - (parseInt(codeSuffix(b.code || "0", parentCode), 10) || 0);
-          break;
-        case "name":
-          comparison = (a.name_ar || "").localeCompare(b.name_ar || "", "ar");
-          break;
-        case "balance":
-          comparison = (Number(a.balance) || 0) - (Number(b.balance) || 0);
-          break;
+      switch (field) {
+        case "code": comparison = (parseInt(codeSuffix(a.code || "0", parentCode), 10) || 0) - (parseInt(codeSuffix(b.code || "0", parentCode), 10) || 0); break;
+        case "name": comparison = (a.name_ar || "").localeCompare(b.name_ar || "", "ar"); break;
+        case "balance": comparison = (Number(a.balance) || 0) - (Number(b.balance) || 0); break;
       }
-
-      return sortDirection === "asc" ? comparison : -comparison;
-    });
-
-    return sorted;
-  }, [expenses, sortField, sortDirection, parentCode]);
+      return direction === "asc" ? comparison : -comparison;
+    }
+  });
 
   const allColumns = useMemo<UnifiedColumn<AccountDto>[]>(() => {
     const cols: UnifiedColumn<AccountDto>[] = [
       {
         id: "#",
-        header: <SortableHeader field="code" label="#" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: <SortableHeader field="code" label="#" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
         label: "كود الحساب",
         accessor: (c) => {
           const code = c.code || "";
@@ -110,7 +65,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
       },
       {
         id: "name",
-        header: <SortableHeader field="name" label="اسم البند" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: <SortableHeader field="name" label="اسم البند" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
         label: "اسم البند",
         accessor: "name_ar",
         className: "font-bold text-slate-800"
@@ -118,30 +73,16 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
     ];
 
     // Account Status
-    cols.push({
-      id: "status",
-      header: <SortableHeader field="balance" label="حالة الحساب" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
-      label: "حالة الحساب",
-      accessor: (c) => {
-        const bal = Number(c.balance || 0);
-        if (bal === 0) return <span className="text-slate-300">—</span>;
-        const isDebit = bal > 0;
-        return (
-          <span className={`font-bold ${isDebit ? "text-red-600" : "text-emerald-600"}`}>
-            {isDebit ? "مدين" : "دائن"}
-          </span>
-        );
-      },
-      align: "center",
-      className: "w-[90px]"
-    });
+    cols.push(getAccountStatusColumn(
+      <SortableHeader field="balance" label="حالة الحساب" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />
+    ));
 
     // Balances
     currencies.forEach(curr => {
       const symbol = curr.symbol || curr.code;
       cols.push({
         id: `balance_${curr.code}`,
-        header: <SortableHeader field="balance" label={`الرصيد (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: <SortableHeader field="balance" label={`الرصيد (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
         label: `الرصيد (${symbol})`,
         accessor: (c) => {
           const absBal = Math.abs(Number(c.balance || 0));
@@ -174,7 +115,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
     });
 
     return cols;
-  }, [currencies, formatAmount, toBase, sortField, sortDirection, handleSort, parentCode, onView, onEdit, onDelete, onJournal, onDocument]);
+  }, [currencies, formatAmount, toBase, sortField, sortDirection, handleSort, parentCode, onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn]);
 
   const defaultVisible = useMemo(() => {
     const def = ["#", "name", "status"];

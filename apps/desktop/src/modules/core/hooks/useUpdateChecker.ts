@@ -12,12 +12,14 @@ export function useUpdateChecker() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [updateSuccess, setUpdateSuccess] = useState(false);
   const [updateProgress, setUpdateProgress] = useState<{ downloaded: number; total: number } | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const check = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setUpdateSuccess(false);
     try {
       const info = await updateService.checkForUpdates(pkg.version);
       const dismissed = localStorage.getItem(STORAGE_KEY);
@@ -37,10 +39,16 @@ export function useUpdateChecker() {
   const installUpdate = useCallback(async () => {
     if (!updateInfo || !updateInfo.download_url) return;
     setIsUpdating(true);
+    setUpdateSuccess(false);
     setUpdateProgress(null);
     setError(null);
+
+    let installed = false;
+    let unlistenProgress: () => void = () => {};
+    let unlistenComplete: () => void = () => {};
+
     try {
-      const unlisten = await listen<{ downloaded: number; total: number | null }>(
+      unlistenProgress = await listen<{ downloaded: number; total: number | null }>(
         "update-progress",
         (event) => {
           setUpdateProgress({
@@ -50,12 +58,22 @@ export function useUpdateChecker() {
         }
       );
 
+      unlistenComplete = await listen<never>("update-installed", () => {
+        installed = true;
+      });
+
       await invoke("download_and_install_update", { url: updateInfo.download_url });
-      
-      unlisten();
-    } catch (e) {
-      setError(String(e));
+    } catch {
+      if (!installed) {
+        setError("فشل التحديث: تعذر الاتصال بخادم التحديث");
+      }
+    } finally {
+      unlistenComplete();
+      unlistenProgress();
       setIsUpdating(false);
+      if (installed) {
+        setUpdateSuccess(true);
+      }
     }
   }, [updateInfo]);
 
@@ -81,5 +99,5 @@ export function useUpdateChecker() {
     };
   }, [check]);
 
-  return { updateInfo, loading, error, isUpdating, updateProgress, check, installUpdate, dismiss, dismissAll };
+  return { updateInfo, loading, error, isUpdating, updateSuccess, updateProgress, check, installUpdate, dismiss, dismissAll };
 }
