@@ -27,5 +27,7 @@ pub use repositories::SqliteCurrencyRepository;
 pub use repositories::SqliteExchangeRateRepository;
 pub use repositories::SqliteInvoiceRepository;
 pub use repositories::SqlitePurchaseInvoiceRepository;
+pub use repositories::SqliteSalesReturnRepository;
+pub use repositories::SqlitePurchaseReturnRepository;
 
 

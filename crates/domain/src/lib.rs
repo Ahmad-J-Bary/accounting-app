@@ -11,6 +11,7 @@ pub mod auth;
 pub mod settings;
 pub mod audit;
 pub mod assets;
+pub mod returns;
 
 #[cfg(test)]
 mod tests;

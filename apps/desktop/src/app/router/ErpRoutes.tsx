@@ -6,6 +6,8 @@ import Customers from '@modules/partners/pages/customers';
 import Suppliers from '@modules/partners/pages/suppliers';
 import SalesInvoices from '@modules/invoicing/pages/salesInvoices';
 import PurchaseInvoices from '@modules/invoicing/pages/purchaseInvoices';
+import SalesReturns from '@modules/invoicing/pages/salesReturns';
+import PurchaseReturns from '@modules/invoicing/pages/purchaseReturns';
 import Payments from '@modules/payments/pages/payments';
 import Materials from '@modules/inventory/pages/materials';
 import Categories from '@modules/inventory/pages/categories';
@@ -52,6 +54,8 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/purchase-invoices" element={<PurchaseInvoices />} />
       <Route path="/purchase-invoices/new/*" element={<PurchaseInvoices />} />
       <Route path="/purchase-invoices/:id" element={<PurchaseInvoices />} />
+      <Route path="/sales-returns" element={<SalesReturns />} />
+      <Route path="/purchase-returns" element={<PurchaseReturns />} />
       <Route path="/payments" element={<Payments />} />
       <Route path="/materials" element={<Materials />} />
       <Route path="/categories" element={<Categories />} />

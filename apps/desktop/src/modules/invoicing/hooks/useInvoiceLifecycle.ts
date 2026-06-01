@@ -408,6 +408,69 @@ export function useInvoiceLifecycle({
       if (andPost) {
         await invoiceService.postInvoice(result.id);
         toast.success("تم الحفظ والترحيل بنجاح");
+
+        // After posting a Purchase invoice, check if prices differ from stored material prices
+        if (invoiceType === "Purchase") {
+          const exchangeRate = parseFloat(headerState.exchange_rate || "1");
+          const docCurrency = headerState.currency_code || baseCurrency?.code || "";
+          for (const line of lines) {
+            if (!line.material_id || !line.unit_id) continue;
+            const mat = materials.find(m => m.id === line.material_id);
+            if (!mat) continue;
+            const basePrice = parseFloat(line.unit_price || "0"); // line.unit_price is base currency
+            const docPrice = basePrice * exchangeRate;
+            const storedEntry = mat.purchase_prices?.find(p => p.unit_id === line.unit_id);
+            const storedBasePrice = parseFloat(storedEntry?.price_base || "0");
+            
+            if (basePrice > 0 && storedBasePrice > 0 && Math.abs(basePrice - storedBasePrice) > 0.001) {
+              const unitName = mat.units?.find(u => u.id === line.unit_id)?.name || "";
+              toast(`${mat.name} (${unitName})`, {
+                description: `سعر الشراء المحفوظ: ${storedBasePrice.toFixed(4)} — السعر الجديد: ${basePrice.toFixed(4)}`,
+                action: {
+                  label: "تحديث",
+                  onClick: async () => {
+                    try {
+                      const existingPrices = mat.purchase_prices || [];
+                      const updatedPrices = existingPrices.some(p => p.unit_id === line.unit_id)
+                        ? existingPrices.map(p => p.unit_id === line.unit_id ? { 
+                            ...p, 
+                            price: docPrice.toFixed(4), 
+                            price_base: basePrice.toFixed(4), 
+                            currency: docCurrency || p.currency 
+                          } : p)
+                        : [...existingPrices, { 
+                            unit_id: line.unit_id!, 
+                            price: docPrice.toFixed(4), 
+                            price_base: basePrice.toFixed(4), 
+                            currency: docCurrency || baseCurrency?.code || "" 
+                          }];
+                          
+                      await materialService.updateMaterial({ 
+                        id: mat.id, 
+                        name: mat.name, 
+                        name_en: mat.name_en || "", 
+                        barcode: mat.barcode || "", 
+                        code: mat.code || "", 
+                        minimum_stock: mat.minimum_stock, 
+                        is_active: mat.is_active, 
+                        category_ids: mat.category_ids, 
+                        notes: mat.notes || null, 
+                        image_path: mat.image_path || null, 
+                        default_purchase_unit_id: mat.default_purchase_unit_id || null, 
+                        default_sale_unit_id: mat.default_sale_unit_id || null, 
+                        purchase_prices: updatedPrices, 
+                        sale_prices: mat.sale_prices || [] 
+                      });
+                      toast.success(`تم تحديث سعر شراء ${mat.name}`);
+                    } catch (e) { 
+                      toast.error("فشل تحديث السعر: " + e); 
+                    }
+                  },
+                },
+              });
+            }
+          }
+        }
       } else {
         toast.success("تم حفظ المسودة");
       }

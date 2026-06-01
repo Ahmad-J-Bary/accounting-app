@@ -36,11 +36,11 @@ export function useDocumentEditor({
             const unit = material.units.find(u => u.id === updates.unit_id);
             if (unit) updatedLine.conversion_factor = unit.conversion_factor.toString();
 
-            // Find price for this unit — price_base holds the base-currency value
+            // Purchase documents always work internally in base currency.
             if (priceField === "last_purchase_price") {
                 const pPrice = material.purchase_prices.find(p => p.unit_id === updates.unit_id);
                 if (pPrice) {
-                    updatedLine.unit_price = pPrice.price_base || pPrice.price;
+                    updatedLine.unit_price = pPrice.price_base || "0";
                     updatedLine.cost_price = updatedLine.unit_price;
                 }
             } else {
@@ -130,7 +130,7 @@ export function useDocumentEditor({
       const purchasePrice = material.purchase_prices?.find(
         p => p.unit_id === defaultUnit?.id
       );
-      price = purchasePrice?.price_base || purchasePrice?.price || material.last_purchase_price_base || "0";
+      price = purchasePrice?.price_base || material.last_purchase_price_base || "0";
       costPrice = price;
     }
 

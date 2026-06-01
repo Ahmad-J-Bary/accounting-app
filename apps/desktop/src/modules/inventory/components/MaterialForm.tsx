@@ -58,7 +58,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
   const [activeTab, setActiveTab] = useState("basic");
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
 
-  const { currencies, baseCurrency } = useCurrencyContext();
+  const { currencies, baseCurrency, rateMap } = useCurrencyContext();
   const activeCurrencies = useMemo(() => currencies.filter(c => c.is_active), [currencies]);
   const uncategorizedCat = useMemo(() => categories.find(c => c.name === DEFAULT_CATEGORY_NAME && !c.parent_id), [categories]);
   const mainCategories = useMemo(() => categories.filter(c => !c.parent_id && c.name !== DEFAULT_CATEGORY_NAME && !c.is_hybrid), [categories]);
@@ -214,6 +214,46 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
       }
       return { ...prev, purchase_prices: nextPrices };
     });
+  };
+
+  const getPurchaseRate = (currencyCode: string) => {
+    if (!baseCurrency || !currencyCode || currencyCode === baseCurrency.code) return 1;
+    return rateMap.get(currencyCode) || 1;
+  };
+
+  const getPurchasePriceEntry = (unitIdx: number) => {
+    const unitId = material ? material.units[unitIdx]?.id : formData.units[unitIdx].name;
+    return formData.purchase_prices.find(p => p.unit_id === unitId);
+  };
+
+  const getPurchaseCurrency = (unitIdx: number) => {
+    return (
+      getPurchasePriceEntry(unitIdx)?.currency ||
+      baseCurrency?.code ||
+      activeCurrencies[0]?.code ||
+      ""
+    );
+  };
+
+  const handlePurchaseCurrencyChange = (unitIdx: number, currencyCode: string) => {
+    const currentBasePrice = parseFloat(getPurchasePrice(unitIdx, "price_base") || "0") || 0;
+    const rate = getPurchaseRate(currencyCode);
+    updatePurchasePrice(unitIdx, "currency", currencyCode);
+    updatePurchasePrice(unitIdx, "price", currentBasePrice > 0 ? (currentBasePrice * rate).toFixed(4) : "0");
+  };
+
+  const handlePurchaseOriginalPriceChange = (unitIdx: number, value: string) => {
+    const rate = getPurchaseRate(getPurchaseCurrency(unitIdx));
+    const originalPrice = parseFloat(value || "0") || 0;
+    updatePurchasePrice(unitIdx, "price", value);
+    updatePurchasePrice(unitIdx, "price_base", rate > 0 ? (originalPrice / rate).toFixed(4) : "0");
+  };
+
+  const handlePurchaseBasePriceChange = (unitIdx: number, value: string) => {
+    const basePrice = parseFloat(value || "0") || 0;
+    const rate = getPurchaseRate(getPurchaseCurrency(unitIdx));
+    updatePurchasePrice(unitIdx, "price_base", value);
+    updatePurchasePrice(unitIdx, "price", (basePrice * rate).toFixed(4));
   };
 
   const updateSalePrice = (unitIdx: number, tier: string, field: string, value: string) => {
@@ -512,33 +552,53 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
         {/* Tab 3: الأسعار */}
         <TabsContent value="prices" className="space-y-4">
           {/* أسعار الشراء */}
-          <SidebarSection title="أسعار الشراء حسب العملة" defaultOpen={true}>
+          <SidebarSection title="أسعار الشراء" defaultOpen={true}>
             <div className="space-y-3">
               {formData.units.map((unit, uIdx) => (
                 <div key={uIdx} className="p-3 border border-slate-200/80 rounded-2xl bg-white shadow-sm space-y-2 text-right">
                   <div className="border-b pb-1.5 flex justify-between items-center">
                     <span className="font-bold text-[11px] text-slate-700">شراء: <span className="text-blue-600">{unit.name || `وحدة ${uIdx+1}`}</span></span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {activeCurrencies.map(c => {
-                      const field = c.is_base ? 'price' : 'price_base';
-                      const sym = c.symbol || c.code;
-                      return (
-                        <div key={c.code} className="space-y-1">
-                          <span className="text-[9px] font-bold text-slate-400 block">سعر الشراء ({sym})</span>
-                          <div className="relative">
-                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-500">{sym}</span>
-                            <Input
-                              type="number"
-                              value={getPurchasePrice(uIdx, field as 'price' | 'price_base')}
-                              onChange={e => updatePurchasePrice(uIdx, field, e.target.value)}
-                              className="h-8 pl-6 font-bold text-center bg-white border-slate-200"
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div className="grid grid-cols-[1fr_120px_1fr] gap-3">
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-bold text-slate-400 block">سعر الشراء الأصلي</span>
+                      <Input
+                        type="number"
+                        value={getPurchasePrice(uIdx, "price")}
+                        onChange={e => handlePurchaseOriginalPriceChange(uIdx, e.target.value)}
+                        className="h-8 font-bold text-center bg-white border-slate-200"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-bold text-slate-400 block">العملة</span>
+                      <Select value={getPurchaseCurrency(uIdx)} onValueChange={value => handlePurchaseCurrencyChange(uIdx, value)}>
+                        <SelectTrigger className="h-8 bg-white border-slate-200 text-xs font-bold">
+                          <SelectValue placeholder="العملة" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {activeCurrencies.map(c => (
+                            <SelectItem key={c.code} value={c.code}>
+                              {c.name} ({c.symbol || c.code})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-bold text-slate-400 block">
+                        السعر الأساسي ({baseCurrency?.symbol || baseCurrency?.code || "Base"})
+                      </span>
+                      <Input
+                        type="number"
+                        value={getPurchasePrice(uIdx, "price_base")}
+                        onChange={e => handlePurchaseBasePriceChange(uIdx, e.target.value)}
+                        className="h-8 font-bold text-center bg-white border-slate-200"
+                      />
+                    </div>
                   </div>
+                  <p className="text-[9px] text-slate-500 leading-relaxed">
+                    يُحفظ لكل وحدة سعر شراء أصلي بعملة واحدة مع قيمته المكافئة بالعملة الأساسية، وهو السعر الذي تعتمد عليه تكلفة فاتورة الشراء والمخزون.
+                  </p>
                 </div>
               ))}
             </div>

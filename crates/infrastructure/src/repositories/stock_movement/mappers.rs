@@ -17,6 +17,8 @@ pub fn row_to_movement(row: StockMovementRow) -> Result<StockMovement, AppError>
         "Damaged" | "MovementType::Damaged" => MovementType::Damaged,
         "Sale" | "MovementType::Sale" => MovementType::Sale,
         "Purchase" | "MovementType::Purchase" => MovementType::Purchase,
+        "SalesReturn" | "MovementType::SalesReturn" => MovementType::SalesReturn,
+        "PurchaseReturn" | "MovementType::PurchaseReturn" => MovementType::PurchaseReturn,
         _ => MovementType::Adjustment,
     };
 

@@ -13,3 +13,4 @@ export * from './audit';
 export * from './account';
 export * from './assets';
 export * from './partner';
+export * from './returns';

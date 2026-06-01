@@ -52,3 +52,5 @@ define_id!(StockAdjustmentId);
 define_id!(UserId);
 define_id!(RoleId);
 define_id!(AuditLogId);
+define_id!(SalesReturnId);
+define_id!(PurchaseReturnId);

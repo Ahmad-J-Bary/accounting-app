@@ -16,6 +16,8 @@ pub enum MovementType {
     Damaged,        // تالف وهدر
     Sale,           // مبيعات
     Purchase,       // مشتريات
+    SalesReturn,    // مرتجع مبيعات (إضافة إلى المخزون)
+    PurchaseReturn, // مرتجع مشتريات (إخراج من المخزون)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -84,6 +86,7 @@ impl StockMovement {
                 | MovementType::Transfer
                 | MovementType::OpeningBalance
                 | MovementType::Purchase
+                | MovementType::SalesReturn
         )
     }
 
@@ -95,6 +98,7 @@ impl StockMovement {
                 | MovementType::Damaged
                 | MovementType::Sale
                 | MovementType::Adjustment
+                | MovementType::PurchaseReturn
         )
     }
 }

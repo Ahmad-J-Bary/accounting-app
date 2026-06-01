@@ -162,6 +162,8 @@ fn movement_type_label(t: &str) -> String {
         "Damaged"  | "MovementType::Damaged"  => "تالف".to_string(),
         "Adjustment"| "MovementType::Adjustment" => "تسوية".to_string(),
         "Transfer" | "MovementType::Transfer" => "تحويل".to_string(),
+        "SalesReturn" | "MovementType::SalesReturn" => "مرتجع مبيعات".to_string(),
+        "PurchaseReturn" | "MovementType::PurchaseReturn" => "مرتجع مشتريات".to_string(),
         _ => t.to_string(),
     }
 }
@@ -170,7 +172,8 @@ fn movement_type_is_inflow(t: &str) -> bool {
     matches!(t, "Purchase" | "MovementType::Purchase"
              | "In" | "MovementType::In"
              | "OpeningBalance" | "MovementType::OpeningBalance"
-             | "Transfer" | "MovementType::Transfer")
+             | "Transfer" | "MovementType::Transfer"
+             | "SalesReturn" | "MovementType::SalesReturn")
 }
 
 pub async fn list_detailed_by_material(

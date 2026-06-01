@@ -45,3 +45,7 @@ pub mod sqlite_invoice_repository;
 pub use sqlite_invoice_repository::SqliteInvoiceRepository;
 pub mod sqlite_purchase_invoice_repository;
 pub use sqlite_purchase_invoice_repository::SqlitePurchaseInvoiceRepository;
+pub mod sales_return;
+pub use sales_return::SqliteSalesReturnRepository;
+pub mod purchase_return;
+pub use purchase_return::SqlitePurchaseReturnRepository;

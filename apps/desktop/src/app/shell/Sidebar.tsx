@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import {
   LayoutDashboard, BookOpen, FileText, Users, Truck, Receipt,
   ShoppingCart, Wallet, Package, Warehouse, AlertTriangle,
-  Factory, ClipboardCheck, BarChart3, Shield, Settings, History, Layers, X, HardDrive, Folders, DollarSign, Plus
+  Factory, ClipboardCheck, BarChart3, Shield, Settings, History, Layers, X, HardDrive, Folders, DollarSign, Plus, Undo2
 } from "lucide-react";
 import { cn } from '@shared/lib/utils';
 import { Button } from "@shared/ui/button";
@@ -46,6 +46,8 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     items: [
       { to: "/sales-invoices", label: "فواتير المبيعات", icon: Receipt },
       { to: "/purchase-invoices", label: "فواتير المشتريات", icon: ShoppingCart },
+      { to: "/sales-returns", label: "مرتجعات المبيعات", icon: Undo2 },
+      { to: "/purchase-returns", label: "مرتجعات المشتريات", icon: Undo2 },
     ],
   },
   {
