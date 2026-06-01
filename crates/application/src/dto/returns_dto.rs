@@ -61,6 +61,7 @@ impl From<SalesReturn> for SalesReturnDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateSalesReturnRequest {
+    pub id: Option<String>,
     pub return_number: String,
     pub customer_id: String,
     pub customer_name: Option<String>,
@@ -127,6 +128,7 @@ impl From<PurchaseReturn> for PurchaseReturnDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreatePurchaseReturnRequest {
+    pub id: Option<String>,
     pub return_number: String,
     pub supplier_id: String,
     pub supplier_name: Option<String>,

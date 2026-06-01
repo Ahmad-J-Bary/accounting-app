@@ -17,6 +17,7 @@ pub async fn create_sales_return(
         state.sales_return_repo.clone(),
         state.customer_repo.clone(),
         state.material_repo.clone(),
+        state.stock_movement_repo.clone(),
     )
     .execute(request).await.map_err(|e| e.to_string())
 }
@@ -73,6 +74,7 @@ pub async fn create_purchase_return(
         state.purchase_return_repo.clone(),
         state.supplier_repo.clone(),
         state.material_repo.clone(),
+        state.stock_movement_repo.clone(),
     )
     .execute(request).await.map_err(|e| e.to_string())
 }

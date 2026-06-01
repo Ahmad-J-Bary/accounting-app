@@ -22,6 +22,7 @@ export interface SalesReturnDto {
 }
 
 export interface CreateSalesReturnRequest {
+  id?: string;
   return_number: string;
   customer_id: string;
   customer_name?: string;
@@ -54,6 +55,7 @@ export interface PurchaseReturnDto {
 }
 
 export interface CreatePurchaseReturnRequest {
+  id?: string;
   return_number: string;
   supplier_id: string;
   supplier_name?: string;

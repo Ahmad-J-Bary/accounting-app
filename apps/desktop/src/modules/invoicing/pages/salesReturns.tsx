@@ -18,6 +18,7 @@ export default function SalesReturnsPage() {
   const [materials, setMaterials] = useState<MaterialDto[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingInfo, setEditingInfo] = useState<{id: string; returnNumber: string} | null>(null);
   const [form, setForm] = useState<ReturnsFormState>({
     customer_id: "",
     supplier_id: "",
@@ -40,6 +41,7 @@ export default function SalesReturnsPage() {
       const safeData = Array.isArray(data) ? data : [];
       return safeData.flatMap(r =>
         (Array.isArray(r.lines) ? r.lines : []).map(l => ({
+          return_id: r.id,
           return_number: r.return_number,
           material_name: l.material_name,
           material_id: l.material_id,
@@ -69,23 +71,53 @@ export default function SalesReturnsPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const handleEdit = useCallback(async (returnId: string) => {
+    try {
+      const ret = await returnService.getSalesReturn(returnId);
+      setForm({
+        customer_id: ret.customer_id,
+        supplier_id: "",
+        return_date: ret.return_date.slice(0, 10),
+        notes: ret.notes || "",
+        purchase_invoice_id: "",
+        lines: ret.lines.map(l => ({
+          material_id: l.material_id,
+          quantity: l.quantity,
+          unit_price: l.unit_price,
+          unit_id: l.unit_id || "",
+          notes: l.notes || "",
+          line_total: l.line_total,
+        })),
+      });
+      setEditingInfo({ id: returnId, returnNumber: ret.return_number });
+      setShowForm(true);
+    } catch (e) { toast.error("فشل تحميل بيانات المرتجع: " + e); }
+  }, []);
+
+  const handleCloseForm = useCallback(() => {
+    setShowForm(false);
+    setEditingInfo(null);
+    setForm({
+      customer_id: "", supplier_id: "", return_date: new Date().toISOString().slice(0, 10),
+      notes: "", purchase_invoice_id: "", lines: [{ material_id: "", quantity: "1", unit_price: "0", unit_id: "", notes: "", line_total: "0" }],
+    });
+  }, []);
+
   const handleSave = async (lines: ReturnLineForm[]) => {
     setSaving(true);
     try {
+      const isEditing = !!editingInfo;
       await returnService.createSalesReturn({
-        return_number: "تلقائي",
+        id: editingInfo?.id ?? undefined,
+        return_number: editingInfo?.returnNumber ?? "تلقائي",
         customer_id: form.customer_id,
         return_date: new Date(form.return_date).toISOString(),
         lines: lines.map(l => ({ ...l, id: "" })),
         notes: form.notes || undefined,
       });
-      setShowForm(false);
-      setForm({
-        customer_id: "", supplier_id: "", return_date: new Date().toISOString().slice(0, 10),
-        notes: "", purchase_invoice_id: "", lines: [{ material_id: "", quantity: "1", unit_price: "0", unit_id: "", notes: "", line_total: "0" }],
-      });
+      handleCloseForm();
       refresh(true);
-      toast.success("تم تسجيل مرتجع المبيعات بنجاح");
+      toast.success(isEditing ? "تم تحديث مرتجع المبيعات بنجاح" : "تم تسجيل مرتجع المبيعات بنجاح");
     } catch (e) { toast.error("فشل الحفظ: " + e); }
     finally { setSaving(false); }
   };
@@ -117,13 +149,14 @@ export default function SalesReturnsPage() {
           materials={materials}
           partnerLabel="العميل"
           emptyMessage="لا توجد مرتجعات مبيعات"
+          onEdit={handleEdit}
         />
       }
       sidePanel={
         showForm ? (
           <ReturnsForm
             type="sales"
-            onClose={() => setShowForm(false)}
+            onClose={handleCloseForm}
             onSave={handleSave}
             saving={saving}
             customers={customers}

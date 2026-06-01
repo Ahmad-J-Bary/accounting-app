@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import { Edit } from "lucide-react";
+import { Button } from "@shared/ui/button";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
 import { formatDateTime } from '@shared/lib/format';
@@ -7,6 +9,7 @@ import { useUnifiedColumns } from "@shared/hooks";
 import type { MaterialDto } from "@erp/shared-types";
 
 export type ReturnLineRow = {
+  return_id?: string;
   return_number: string;
   material_name?: string;
   material_id?: string;
@@ -27,13 +30,30 @@ interface ReturnsTableProps {
   materials: MaterialDto[];
   partnerLabel: string;
   emptyMessage?: string;
+  onEdit?: (returnId: string) => void;
 }
 
-export function ReturnsTable({ items, loading, search, onSearchChange, materials, partnerLabel, emptyMessage }: ReturnsTableProps) {
+export function ReturnsTable({ items, loading, search, onSearchChange, materials, partnerLabel, emptyMessage, onEdit }: ReturnsTableProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
 
   const allColumns = useMemo<UnifiedColumn<ReturnLineRow>[]>(() => {
     const cols: UnifiedColumn<ReturnLineRow>[] = [
+      {
+        id: "actions",
+        header: "",
+        label: "إجراءات",
+        accessor: (i) => i.return_id ? (
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+            onClick={(e) => { e.stopPropagation(); onEdit?.(i.return_id!); }}
+          >
+            <Edit className="w-3.5 h-3.5" />
+          </Button>
+        ) : null,
+        className: "w-10 text-center",
+      },
       {
         id: "index",
         header: "الرقم",
@@ -113,11 +133,12 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
       },
     ];
     return cols;
-  }, [currencies, formatAmount, partnerLabel, materials]);
+  }, [currencies, formatAmount, partnerLabel, materials, onEdit]);
 
   const defaultVisible = useMemo(() => {
     const baseCode = baseCurrency?.code;
     return [
+      "actions",
       "index",
       "material_name",
       "partner_name",

@@ -74,10 +74,15 @@ pub async fn get_material_summary(pool: &SqlitePool, material_id: &MaterialId) -
 
     for m in &movements {
         if m.is_inflow() {
-            total_available += m.quantity;
-            total_received += m.quantity;
-            total_inflow_cost += m.total_cost;
-            total_inflow_cost_base += m.total_cost_base;
+            if matches!(m.movement_type, domain::inventory::stock_movement::MovementType::SalesReturn) {
+                // SalesReturn increases physical stock but NOT received/purchased quantity
+                total_available += m.quantity;
+            } else {
+                total_available += m.quantity;
+                total_received += m.quantity;
+                total_inflow_cost += m.total_cost;
+                total_inflow_cost_base += m.total_cost_base;
+            }
             
             if !found_last_purchase && (
                 matches!(m.movement_type, domain::inventory::stock_movement::MovementType::Purchase) || 
@@ -100,6 +105,11 @@ pub async fn get_material_summary(pool: &SqlitePool, material_id: &MaterialId) -
                 }
             } else if matches!(m.movement_type, domain::inventory::stock_movement::MovementType::Damaged) {
                 total_damaged += m.quantity;
+            } else if matches!(m.movement_type, domain::inventory::stock_movement::MovementType::PurchaseReturn) {
+                // PurchaseReturn: goods returned to supplier, reduce received count & costs
+                total_received -= m.quantity;
+                total_inflow_cost -= m.total_cost;
+                total_inflow_cost_base -= m.total_cost_base;
             }
         }
     }

@@ -19,6 +19,7 @@ import { ReceivablesPayablesCard } from '@widgets/dashboard/ReceivablesPayablesC
 
 import { journalEntryService } from '@modules/accounting/api/journalEntryService';
 import { invoiceService } from '@modules/invoicing/api/invoiceService';
+import { returnService } from '@modules/invoicing/api/returnService';
 import { paymentService } from '@modules/payments/api/paymentService';
 import { materialService } from '@modules/inventory/api/materialService';
 import { categoryService } from '@modules/inventory/api/categoryService';
@@ -43,6 +44,8 @@ export default function Dashboard() {
   const [productItems, setProductItems] = useState<MaterialDto[]>([]);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [rpSummary, setRpSummary] = useState<ReceivablesPayablesSummary | null>(null);
+  const [totalSalesReturns, setTotalSalesReturns] = useState(0);
+  const [totalPurchaseReturns, setTotalPurchaseReturns] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const toNumber = (value?: string | null) => {
@@ -60,8 +63,10 @@ export default function Dashboard() {
       materialService.listMaterials(),
       categoryService.listCategories(),
       accountingService.getReceivablesPayablesSummary(),
+      returnService.listSalesReturns(),
+      returnService.listPurchaseReturns(),
     ])
-      .then(([entries, salesData, purchaseData, paymentData, productData, catData, rpData]) => {
+      .then(([entries, salesData, purchaseData, paymentData, productData, catData, rpData, salesReturns, purchaseReturns]) => {
         setRecentJournals(entries.slice(0, 5));
         setInvoices(salesData);
         setPurchaseInvoices(purchaseData);
@@ -69,6 +74,10 @@ export default function Dashboard() {
         setProductItems(productData);
         setCategories(catData);
         setRpSummary(rpData);
+        const totalSalesReturns = (salesReturns as { total_amount: string }[]).reduce((s, r) => s + toNumber(r.total_amount), 0);
+        const totalPurchaseReturns = (purchaseReturns as { total_amount: string }[]).reduce((s, r) => s + toNumber(r.total_amount), 0);
+        setTotalSalesReturns(totalSalesReturns);
+        setTotalPurchaseReturns(totalPurchaseReturns);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -77,11 +86,11 @@ export default function Dashboard() {
   // === KPI Computations ===
   const postedSalesTotal = useMemo(() => invoices
     .filter((i) => i.status === "Posted")
-    .reduce((sum, i) => sum + toNumber(i.total_amount), 0), [invoices]);
+    .reduce((sum, i) => sum + toNumber(i.total_amount), 0) - totalSalesReturns, [invoices, totalSalesReturns]);
 
   const approvedPurchasesTotal = useMemo(() => purchaseInvoices
     .filter((i) => i.status !== "Draft" && i.status !== "Cancelled")
-    .reduce((sum, i) => sum + toNumber(i.total_amount), 0), [purchaseInvoices]);
+    .reduce((sum, i) => sum + toNumber(i.total_amount), 0) - totalPurchaseReturns, [purchaseInvoices, totalPurchaseReturns]);
 
   const totalCashIn = useMemo(() => paymentEntries
     .filter((p) => ["Receipt", "CashIn"].includes(p.payment_type))

@@ -212,10 +212,22 @@ export function ReturnsForm({
                 unitPrice = formatMoney(invoiceLine ? getInvoiceBasePrice(invoiceLine) : 0);
               } else if (isSales) {
                 const sp = mat.sale_prices?.find(p => p.unit_id === value);
-                unitPrice = sp?.price_base || sp?.price || mat.last_sale_price_base || mat.last_sale_price || "0";
+                if (sp?.price_base || sp?.price) {
+                  unitPrice = sp.price_base || sp.price;
+                } else {
+                  const factor = parseFloat(unit.conversion_factor) || 1;
+                  const basePrice = parseFloat(mat.last_sale_price_base || mat.last_sale_price || "0") || 0;
+                  unitPrice = formatMoney(basePrice * factor);
+                }
               } else {
                 const pp = mat.purchase_prices?.find(p => p.unit_id === value);
-                unitPrice = pp?.price_base || pp?.price || mat.last_purchase_price_base || mat.last_purchase_price || "0";
+                if (pp?.price_base || pp?.price) {
+                  unitPrice = pp.price_base || pp.price;
+                } else {
+                  const factor = parseFloat(unit.conversion_factor) || 1;
+                  const basePrice = parseFloat(mat.last_purchase_price_base || mat.last_purchase_price || "0") || 0;
+                  unitPrice = formatMoney(basePrice * factor);
+                }
               }
               updated.unit_price = formatMoney(parseFloat(unitPrice) * currencyRate);
               const q = parseFloat(updated.quantity) || 1;
@@ -227,7 +239,7 @@ export function ReturnsForm({
 
         if (field === "quantity") {
           const mat = safeMaterials.find(m => m.id === line.material_id);
-          if (mat && !isSales) {
+          if (mat) {
             const unit = mat.units.find(u => u.id === line.unit_id) || mat.units.find(u => u.is_base);
             const factor = parseFloat(unit?.conversion_factor || "1") || 1;
             const effectiveQty = (parseFloat(value) || 0) * factor;
