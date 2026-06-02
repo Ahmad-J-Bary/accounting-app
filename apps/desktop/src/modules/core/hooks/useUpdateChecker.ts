@@ -63,9 +63,9 @@ export function useUpdateChecker() {
       });
 
       await invoke("download_and_install_update", { url: updateInfo.download_url });
-    } catch {
+    } catch (err) {
       if (!installed) {
-        setError("فشل التحديث: تعذر الاتصال بخادم التحديث");
+        setError(typeof err === "string" ? `فشل التحديث: ${err}` : "فشل التحديث: حدث خطأ غير معروف");
       }
     } finally {
       unlistenComplete();

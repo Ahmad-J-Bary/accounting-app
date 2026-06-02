@@ -53,6 +53,7 @@ pub async fn download_and_install_update(
         .map_err(|e| format!("Failed to create temp file: {}", e))?;
         
     let mut downloaded: u64 = 0;
+    let mut last_emit = std::time::Instant::now();
     let mut stream = response.bytes_stream();
     
     while let Some(item) = stream.next().await {
@@ -61,15 +62,19 @@ pub async fn download_and_install_update(
             .map_err(|e| format!("Failed to write to file: {}", e))?;
         downloaded += chunk.len() as u64;
         
-        // Emit progress event to frontend
-        let _ = app.emit("update-progress", DownloadProgress {
-            downloaded,
-            total: total_size,
-        });
+        // Emit progress event to frontend, throttled to prevent UI freeze
+        let total = total_size.unwrap_or(0);
+        if last_emit.elapsed().as_millis() >= 50 || downloaded == total {
+            let _ = app.emit("update-progress", DownloadProgress {
+                downloaded,
+                total: total_size,
+            });
+            last_emit = std::time::Instant::now();
+        }
     }
     
-    // Explicitly flush and drop file to release lock
-    file.flush().map_err(|e| format!("Failed to flush file: {}", e))?;
+    // Explicitly flush to disk and drop file to release lock
+    file.sync_all().map_err(|e| format!("Failed to sync file to disk: {}", e))?;
     drop(file);
     
     // 5. Execute the installer
@@ -83,7 +88,12 @@ pub async fn download_and_install_update(
                 .spawn()
                 .map_err(|e| format!("Failed to run MSI installer: {}", e))?;
         } else {
-            std::process::Command::new(&file_path)
+            // For EXEs, we use `cmd /C start ""` to invoke ShellExecute, which properly handles UAC elevation
+            std::process::Command::new("cmd")
+                .arg("/C")
+                .arg("start")
+                .arg("")
+                .arg(&file_path)
                 .spawn()
                 .map_err(|e| format!("Failed to run EXE installer: {}", e))?;
         }

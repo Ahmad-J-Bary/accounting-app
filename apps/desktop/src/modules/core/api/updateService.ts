@@ -49,10 +49,19 @@ export const updateService = {
     const latestVersion = release.tag_name;
     const hasUpdate = compareVersions(currentVersion, latestVersion);
 
-    const asset = (release.assets || []).find(
-      (a: { name: string; browser_download_url: string }) =>
-        a.name.endsWith(".exe") || a.name.endsWith(".msi") || a.name.endsWith(".dmg")
-    );
+    const ua = navigator.userAgent.toLowerCase();
+    const isWindows = ua.includes("win");
+    const isMac = ua.includes("mac");
+
+    const asset = (release.assets || []).find((a: { name: string; browser_download_url: string }) => {
+      if (isWindows) {
+        return a.name.endsWith(".exe") || a.name.endsWith(".msi");
+      } else if (isMac) {
+        return a.name.endsWith(".dmg");
+      } else {
+        return a.name.endsWith(".AppImage") || a.name.endsWith(".deb") || a.name.endsWith(".rpm");
+      }
+    });
 
     return {
       has_update: hasUpdate,
