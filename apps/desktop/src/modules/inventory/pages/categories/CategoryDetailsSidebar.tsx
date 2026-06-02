@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { AlertCircle, Shuffle, Package, Hash, Barcode, Layers, Wand2, Scale, Boxes } from "lucide-react";
+import { AlertCircle, Shuffle, Package, Hash, Barcode, Layers, Scale, Boxes } from "lucide-react";
 import type { CategoryDto, MaterialDto } from "@erp/shared-types";
 import { categoryService } from '@modules/inventory/api/categoryService';
 import { materialService } from '@modules/inventory/api/materialService';
@@ -56,8 +56,6 @@ export function CategoryDetailsSidebar({
   const [code, setCode] = useState("");
   const [minimumStock, setMinimumStock] = useState("0");
   const [baseUnitName, setBaseUnitName] = useState("قطعة");
-  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
-
   // Unit fields
   const [unitName, setUnitName] = useState("");
   const [unitFactor, setUnitFactor] = useState("");
@@ -110,20 +108,15 @@ export function CategoryDetailsSidebar({
     return "X"; 
   }, [allCategories]);
 
-  const handleGenerateAutoCode = async () => {
-    const categoryId = selected?.id;
-    if (!categoryId || isMaterial) return;
-    try {
-      setIsGeneratingCode(true);
-      const generated = await materialCodeService.generateCode(categoryId);
-      setCode(generated);
-      toast.success("تم توليد الكود");
-    } catch (err) {
-      toast.error("فشل التوليد: " + err);
-    } finally {
-      setIsGeneratingCode(false);
+  useEffect(() => {
+    if (formMode === "create_mat" && selected?.id) {
+      let cancelled = false;
+      materialCodeService.previewCode(selected.id)
+        .then(generated => { if (!cancelled) setCode(generated); })
+        .catch(() => {});
+      return () => { cancelled = true; };
     }
-  };
+  }, [formMode, selected?.id]);
 
   const openCreate = useCallback(() => {
     if (isMaterial) {
@@ -173,9 +166,11 @@ export function CategoryDetailsSidebar({
     try {
       if (formMode === "create_mat" || formMode === "edit_mat") {
         let finalCode = code.trim();
-        // Zero-waste generation if empty on save
-        if (formMode === "create_mat" && !finalCode && selected?.id) {
-          finalCode = await materialCodeService.generateCode(selected.id);
+        // Reserve the sequence on save (preview didn't increment)
+        if (formMode === "create_mat" && selected?.id) {
+          try {
+            finalCode = await materialCodeService.generateCode(selected.id);
+          } catch { /* keep preview or empty */ }
         }
 
         if (formMode === "edit_mat" && materialData) {
@@ -334,10 +329,7 @@ export function CategoryDetailsSidebar({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <FieldLabel>الكود</FieldLabel>
-              <div className="relative group">
-                <Input value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="توليد تلقائي" className="bg-white font-mono text-xs pr-10" dir="ltr" />
-                <Button size="icon" variant="ghost" onClick={handleGenerateAutoCode} disabled={isGeneratingCode} className="absolute right-1 top-1 h-8 w-8 text-blue-500 hover:bg-blue-50"><Wand2 className={cn("w-4 h-4", isGeneratingCode && "animate-spin")} /></Button>
-              </div>
+              <Input value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="توليد تلقائي" className="bg-white font-mono text-xs" dir="ltr" />
             </div>
             <div className="space-y-1">
               <FieldLabel>الباركود</FieldLabel>

@@ -24,4 +24,8 @@ impl CodePrefixRepository for SqliteCodePrefixRepository {
     async fn get_next_sequence(&self, category_id: &str) -> Result<u64, AppError> {
         commands::get_next_sequence(&self.pool, category_id).await
     }
+
+    async fn preview_next_sequence(&self, category_id: &str) -> Result<u64, AppError> {
+        commands::preview_next_sequence(&self.pool, category_id).await
+    }
 }

@@ -11,7 +11,7 @@ import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { toast } from "sonner";
 import { cn } from "@shared/lib/utils";
-import { Plus, Edit, Wand2, Hash, Barcode, Package, Layers, Shuffle, Check, Scale, Boxes, Package2, FileText, Globe, Image as ImageIcon, DollarSign, Tag, ShoppingCart, TrendingUp } from "lucide-react";
+import { Plus, Edit, Hash, Barcode, Package, Layers, Shuffle, Check, Scale, Boxes, Package2, FileText, Globe, Image as ImageIcon, DollarSign, Tag, ShoppingCart, TrendingUp } from "lucide-react";
 import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest } from "@erp/shared-types";
 import { materialCodeService } from "@modules/inventory/api/materialCodeService";
 import { categoryService } from "@modules/inventory/api/categoryService";
@@ -56,7 +56,6 @@ const EMPTY_FORM = {
 export function MaterialForm({ open, onClose, material, categories, onSave, saving }: MaterialFormProps) {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [activeTab, setActiveTab] = useState("basic");
-  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
 
   const { currencies, baseCurrency, rateMap } = useCurrencyContext();
   const activeCurrencies = useMemo(() => currencies.filter(c => c.is_active), [currencies]);
@@ -149,29 +148,60 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
     });
   };
 
-  const handleGenerateAutoCode = async () => {
+  useEffect(() => {
+    if (material) return;
     if (formData.selectedCategoryIds.length === 0) return;
-    try {
-      setIsGeneratingCode(true);
-      if (formData.selectedCategoryIds.length > 1) {
-        const prefixes = categories.filter(c => formData.selectedCategoryIds.includes(c.id)).map(c => c.code_prefix).filter(Boolean) as string[];
-        if (prefixes.length === 0) { toast.error("التصنيفات المختارة لا تملك بادئات كود."); return; }
-        const hybridCat = await categoryService.getOrCreateHybridCategory(prefixes);
-        const code = await materialCodeService.generateCode(hybridCat.id);
-        setFormData(prev => ({ ...prev, code }));
-      } else {
-        const code = await materialCodeService.generateCode(formData.selectedCategoryIds[0]);
-        setFormData(prev => ({ ...prev, code }));
-      }
-      toast.success("تم توليد الكود بنجاح");
-    } catch (error) { toast.error("فشل توليد الكود: " + error); }
-    finally { setIsGeneratingCode(false); }
-  };
+
+    let cancelled = false;
+
+    const preview = async () => {
+      try {
+        let code;
+        if (formData.selectedCategoryIds.length > 1) {
+          const prefixes = categories
+            .filter(c => formData.selectedCategoryIds.includes(c.id))
+            .map(c => c.code_prefix)
+            .filter(Boolean) as string[];
+          if (prefixes.length === 0) return;
+          const hybridCat = await categoryService.getOrCreateHybridCategory(prefixes);
+          code = await materialCodeService.previewCode(hybridCat.id);
+        } else {
+          code = await materialCodeService.previewCode(formData.selectedCategoryIds[0]);
+        }
+        if (!cancelled) setFormData(prev => ({ ...prev, code }));
+      } catch { /* user can type manually */ }
+    };
+
+    preview();
+    return () => { cancelled = true; };
+  }, [formData.selectedCategoryIds, material, categories]);
 
   const handleSave = async () => {
     if (!formData.name.trim()) { toast.error("اسم المادة مطلوب"); return; }
+
+    let finalCode = formData.code;
+
+    // Reserve the sequence on save (preview didn't increment)
+    if (!material && formData.selectedCategoryIds.length > 0) {
+      try {
+        if (formData.selectedCategoryIds.length > 1) {
+          const prefixes = categories
+            .filter(c => formData.selectedCategoryIds.includes(c.id))
+            .map(c => c.code_prefix)
+            .filter(Boolean) as string[];
+          if (prefixes.length > 0) {
+            const hybridCat = await categoryService.getOrCreateHybridCategory(prefixes);
+            finalCode = await materialCodeService.generateCode(hybridCat.id);
+          }
+        } else {
+          finalCode = await materialCodeService.generateCode(formData.selectedCategoryIds[0]);
+        }
+      } catch { /* save without code */ }
+    }
+
     await onSave({
       ...formData,
+      code: finalCode,
       id: material?.id,
       category_ids: formData.selectedCategoryIds,
     });
@@ -200,20 +230,9 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
     });
   };
 
-  const updatePurchasePrice = (unitIdx: number, field: string, value: string) => {
-    setFormData(prev => {
-      const unit = prev.units[unitIdx];
-      const unitId = material ? material.units[unitIdx]?.id : unit.name;
-      const nextPrices = [...prev.purchase_prices];
-      const idx = nextPrices.findIndex(p => p.unit_id === unitId);
-      
-      if (idx >= 0) {
-        nextPrices[idx] = { ...nextPrices[idx], [field]: value };
-      } else {
-        nextPrices.push({ unit_id: unitId, price: "0", price_base: "0", currency: "", [field]: value });
-      }
-      return { ...prev, purchase_prices: nextPrices };
-    });
+  const formatPrice = (n: number) => {
+    const s = n.toFixed(4);
+    return parseFloat(s).toString();
   };
 
   const getPurchaseRate = (currencyCode: string) => {
@@ -221,75 +240,93 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
     return rateMap.get(currencyCode) || 1;
   };
 
-  const getPurchasePriceEntry = (unitIdx: number) => {
+  const getPurchasePrice = (unitIdx: number, currencyCode: string) => {
     const unitId = material ? material.units[unitIdx]?.id : formData.units[unitIdx].name;
-    return formData.purchase_prices.find(p => p.unit_id === unitId);
+    return formData.purchase_prices.find(p => p.unit_id === unitId && p.currency === currencyCode)?.price || "0";
   };
 
-  const getPurchaseCurrency = (unitIdx: number) => {
-    return (
-      getPurchasePriceEntry(unitIdx)?.currency ||
-      baseCurrency?.code ||
-      activeCurrencies[0]?.code ||
-      ""
-    );
-  };
-
-  const handlePurchaseCurrencyChange = (unitIdx: number, currencyCode: string) => {
-    const currentBasePrice = parseFloat(getPurchasePrice(unitIdx, "price_base") || "0") || 0;
-    const rate = getPurchaseRate(currencyCode);
-    updatePurchasePrice(unitIdx, "currency", currencyCode);
-    updatePurchasePrice(unitIdx, "price", currentBasePrice > 0 ? (currentBasePrice * rate).toFixed(4) : "0");
-  };
-
-  const handlePurchaseOriginalPriceChange = (unitIdx: number, value: string) => {
-    const rate = getPurchaseRate(getPurchaseCurrency(unitIdx));
-    const originalPrice = parseFloat(value || "0") || 0;
-    updatePurchasePrice(unitIdx, "price", value);
-    updatePurchasePrice(unitIdx, "price_base", rate > 0 ? (originalPrice / rate).toFixed(4) : "0");
-  };
-
-  const handlePurchaseBasePriceChange = (unitIdx: number, value: string) => {
-    const basePrice = parseFloat(value || "0") || 0;
-    const rate = getPurchaseRate(getPurchaseCurrency(unitIdx));
-    updatePurchasePrice(unitIdx, "price_base", value);
-    updatePurchasePrice(unitIdx, "price", (basePrice * rate).toFixed(4));
-  };
-
-  const updateSalePrice = (unitIdx: number, tier: string, field: string, value: string) => {
+  const handlePurchasePriceChange = (unitIdx: number, currencyCode: string, value: string) => {
     setFormData(prev => {
       const unit = prev.units[unitIdx];
       const unitId = material ? material.units[unitIdx]?.id : unit.name;
-      const nextPrices = [...prev.sale_prices];
-      const idx = nextPrices.findIndex(p => p.unit_id === unitId && p.tier === tier);
-      
-      if (idx >= 0) {
-        nextPrices[idx] = { ...nextPrices[idx], [field]: value };
-      } else {
-        nextPrices.push({ 
-          unit_id: unitId, 
-          tier, 
-          price: "0", 
-          price_base: "0", 
-          min_price: "0", 
-          min_price_base: "0",
-          currency: "",
-          [field]: value 
-        });
-      }
-      return { ...prev, sale_prices: nextPrices };
+      const sourceRate = getPurchaseRate(currencyCode);
+      const sourcePrice = parseFloat(value || "0") || 0;
+      const baseValue = sourceRate > 0 ? sourcePrice / sourceRate : 0;
+
+      const updatedPrices = activeCurrencies.map(c => {
+        const rate = getPurchaseRate(c.code);
+        return {
+          unit_id: unitId,
+          currency: c.code,
+          price: formatPrice(baseValue * rate),
+          price_base: formatPrice(baseValue),
+        };
+      });
+
+      const inactivePrices = prev.purchase_prices.filter(
+        p => p.unit_id !== unitId || !activeCurrencies.some(c => c.code === p.currency)
+      );
+
+      return { ...prev, purchase_prices: [...inactivePrices, ...updatedPrices] };
     });
   };
 
-  const getPurchasePrice = (unitIdx: number, field: 'price' | 'price_base') => {
+  const getSalePrice = (unitIdx: number, tier: string, currencyCode: string) => {
     const unitId = material ? material.units[unitIdx]?.id : formData.units[unitIdx].name;
-    return formData.purchase_prices.find(p => p.unit_id === unitId)?.[field] || "0";
+    return formData.sale_prices.find(p => p.unit_id === unitId && p.tier === tier && p.currency === currencyCode)?.price || "0";
   };
 
-  const getSalePrice = (unitIdx: number, tier: string, field: string) => {
+  const getSaleMinPrice = (unitIdx: number, tier: string, currencyCode: string) => {
     const unitId = material ? material.units[unitIdx]?.id : formData.units[unitIdx].name;
-    const price = formData.sale_prices.find(p => p.unit_id === unitId && p.tier === tier);
-    return (price as Record<string, string>)?.[field] || "0";
+    return formData.sale_prices.find(p => p.unit_id === unitId && p.tier === tier && p.currency === currencyCode)?.min_price || "0";
+  };
+
+  const handleSalePriceChange = (unitIdx: number, tier: string, currencyCode: string, field: 'price' | 'min_price', value: string) => {
+    setFormData(prev => {
+      const unit = prev.units[unitIdx];
+      const unitId = material ? material.units[unitIdx]?.id : unit.name;
+      const sourceRate = getPurchaseRate(currencyCode);
+      const sourcePrice = parseFloat(value || "0") || 0;
+      const baseValue = sourceRate > 0 ? sourcePrice / sourceRate : 0;
+
+      const updatedPrices = activeCurrencies.map(c => {
+        const rate = getPurchaseRate(c.code);
+        const priceVal = formatPrice(baseValue * rate);
+        const baseVal = formatPrice(baseValue);
+
+        const existing = prev.sale_prices.find(
+          p => p.unit_id === unitId && p.tier === tier && p.currency === c.code
+        );
+
+        if (field === 'price') {
+          return {
+            unit_id: unitId,
+            tier,
+            currency: c.code,
+            price: priceVal,
+            price_base: baseVal,
+            min_price: existing?.min_price || "0",
+            min_price_base: existing?.min_price_base || "0",
+          };
+        }
+
+        return {
+          unit_id: unitId,
+          tier,
+          currency: c.code,
+          price: existing?.price || "0",
+          price_base: existing?.price_base || "0",
+          min_price: priceVal,
+          min_price_base: baseVal,
+        };
+      });
+
+      const inactivePrices = prev.sale_prices.filter(
+        p => p.unit_id !== unitId || p.tier !== tier || !activeCurrencies.some(c => c.code === p.currency)
+      );
+
+      return { ...prev, sale_prices: [...inactivePrices, ...updatedPrices] };
+    });
   };
 
   if (!open) return null;
@@ -343,25 +380,13 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <FieldLabel className="flex items-center gap-1.5"><Hash className="w-3.5 h-3.5 text-slate-400" /> الكود</FieldLabel>
-                  <div className="relative group">
-                    <Input 
-                      value={formData.code} 
-                      onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })} 
-                      className="font-mono text-xs pr-10 bg-white border-slate-200" 
-                      placeholder="الكود" 
-                      dir="ltr" 
-                    />
-                    <Button 
-                      type="button"
-                      size="icon" 
-                      variant="ghost" 
-                      onClick={handleGenerateAutoCode} 
-                      disabled={isGeneratingCode || formData.selectedCategoryIds.length === 0} 
-                      className="absolute right-1 top-1 h-8 w-8 text-blue-500"
-                    >
-                      <Wand2 className={cn("w-4 h-4", isGeneratingCode && "animate-spin")} />
-                    </Button>
-                  </div>
+                  <Input 
+                    value={formData.code} 
+                    onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })} 
+                    className="font-mono text-xs bg-white border-slate-200" 
+                    placeholder="الكود" 
+                    dir="ltr" 
+                  />
                 </div>
                 <div className="space-y-2">
                   <FieldLabel className="flex items-center gap-1.5"><Barcode className="w-3.5 h-3.5 text-slate-400" /> الباركود العام</FieldLabel>
@@ -559,45 +584,24 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                   <div className="border-b pb-1.5 flex justify-between items-center">
                     <span className="font-bold text-[11px] text-slate-700">شراء: <span className="text-blue-600">{unit.name || `وحدة ${uIdx+1}`}</span></span>
                   </div>
-                  <div className="grid grid-cols-[1fr_120px_1fr] gap-3">
-                    <div className="space-y-1">
-                      <span className="text-[9px] font-bold text-slate-400 block">سعر الشراء الأصلي</span>
-                      <Input
-                        type="number"
-                        value={getPurchasePrice(uIdx, "price")}
-                        onChange={e => handlePurchaseOriginalPriceChange(uIdx, e.target.value)}
-                        className="h-8 font-bold text-center bg-white border-slate-200"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-[9px] font-bold text-slate-400 block">العملة</span>
-                      <Select value={getPurchaseCurrency(uIdx)} onValueChange={value => handlePurchaseCurrencyChange(uIdx, value)}>
-                        <SelectTrigger className="h-8 bg-white border-slate-200 text-xs font-bold">
-                          <SelectValue placeholder="العملة" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {activeCurrencies.map(c => (
-                            <SelectItem key={c.code} value={c.code}>
-                              {c.name} ({c.symbol || c.code})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-[9px] font-bold text-slate-400 block">
-                        السعر الأساسي ({baseCurrency?.symbol || baseCurrency?.code || "Base"})
-                      </span>
-                      <Input
-                        type="number"
-                        value={getPurchasePrice(uIdx, "price_base")}
-                        onChange={e => handlePurchaseBasePriceChange(uIdx, e.target.value)}
-                        className="h-8 font-bold text-center bg-white border-slate-200"
-                      />
-                    </div>
+                  <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${activeCurrencies.length}, 1fr)` }}>
+                    {activeCurrencies.map(c => {
+                      const sym = c.symbol || c.code;
+                      return (
+                        <div key={c.code} className="relative">
+                          <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-slate-400">{sym}</span>
+                          <Input
+                            type="number"
+                            value={getPurchasePrice(uIdx, c.code)}
+                            onChange={e => handlePurchasePriceChange(uIdx, c.code, e.target.value)}
+                            className="h-8 pl-4 text-xs font-bold text-center bg-white border-slate-200"
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
                   <p className="text-[9px] text-slate-500 leading-relaxed">
-                    يُحفظ لكل وحدة سعر شراء أصلي بعملة واحدة مع قيمته المكافئة بالعملة الأساسية، وهو السعر الذي تعتمد عليه تكلفة فاتورة الشراء والمخزون.
+                    يُحفظ لكل وحدة سعر شراء بكل عملة مع التحديث التلقائي لبقية العملات عند تغيير أي سعر.
                   </p>
                 </div>
               ))}
@@ -625,15 +629,14 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                           <span className="text-[8px] font-black text-slate-400 block uppercase">سعر المبيع</span>
                           <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${activeCurrencies.length}, 1fr)` }}>
                             {activeCurrencies.map(c => {
-                              const field = c.is_base ? 'price' : 'price_base';
                               const sym = c.symbol || c.code;
                               return (
                                 <div key={c.code} className="relative">
                                   <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-slate-400">{sym}</span>
                                   <Input
                                     type="number"
-                                    value={getSalePrice(uIdx, tier.id, field as 'price' | 'price_base')}
-                                    onChange={e => updateSalePrice(uIdx, tier.id, field, e.target.value)}
+                                    value={getSalePrice(uIdx, tier.id, c.code)}
+                                    onChange={e => handleSalePriceChange(uIdx, tier.id, c.code, 'price', e.target.value)}
                                     className="h-8 pl-4 text-xs font-bold text-center bg-white border-slate-200"
                                   />
                                 </div>
@@ -646,15 +649,14 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                           <span className="text-[8px] font-black text-amber-500 block uppercase">الحد الأدنى</span>
                           <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${activeCurrencies.length}, 1fr)` }}>
                             {activeCurrencies.map(c => {
-                              const field = c.is_base ? 'min_price' : 'min_price_base';
                               const sym = c.symbol || c.code;
                               return (
                                 <div key={c.code} className="relative">
                                   <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-slate-400">{sym}</span>
                                   <Input
                                     type="number"
-                                    value={getSalePrice(uIdx, tier.id, field as 'min_price' | 'min_price_base')}
-                                    onChange={e => updateSalePrice(uIdx, tier.id, field, e.target.value)}
+                                    value={getSaleMinPrice(uIdx, tier.id, c.code)}
+                                    onChange={e => handleSalePriceChange(uIdx, tier.id, c.code, 'min_price', e.target.value)}
                                     className="h-8 pl-4 text-xs font-bold text-center bg-amber-50/15 border-amber-100 text-amber-800"
                                   />
                                 </div>

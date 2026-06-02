@@ -27,7 +27,7 @@ pub async fn get_next_sequence(pool: &SqlitePool, category_id: &str) -> Result<u
 
         let prefix = prefix_row
             .map(|r| r.0)
-            .ok_or_else(|| AppError::Invalid("لا يملك هذا التصنيف بادئة كود".into()))?;
+            .unwrap_or_else(|| "غ".to_string());
 
         let id = uuid::Uuid::new_v4().to_string();
         sqlx::query(
@@ -56,4 +56,16 @@ pub async fn get_next_sequence(pool: &SqlitePool, category_id: &str) -> Result<u
 
     tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(seq as u64)
+}
+
+pub async fn preview_next_sequence(pool: &SqlitePool, category_id: &str) -> Result<u64, AppError> {
+    let row: Option<(i64,)> = sqlx::query_as(
+        "SELECT next_seq FROM category_code_prefixes WHERE category_id = ?"
+    )
+    .bind(category_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    Ok(row.map(|r| r.0 as u64).unwrap_or(0))
 }
