@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@shared/ui/button";
-import { Plus, RefreshCw, Package, Layers, Barcode, ShoppingCart, TrendingUp, AlertTriangle } from "lucide-react";
+import { Plus, RefreshCw, Package, Layers, Barcode, ShoppingCart, TrendingUp, AlertTriangle, Undo2 } from "lucide-react";
 import { materialService } from '@modules/inventory/api/materialService';
 import { categoryService } from '@modules/inventory/api/categoryService';
 import { damagedService } from '@modules/inventory/api/inventoryService';
@@ -16,6 +16,12 @@ import { MaterialUnitsManager } from '@modules/inventory/components/MaterialUnit
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { MaterialDetailPanel } from '@modules/inventory/components/MaterialDetailPanel';
 import { DamagedForm } from '@modules/inventory/components/DamagedForm';
+import { ReturnsForm, type ReturnsFormState } from '@modules/invoicing/components/ReturnsForm';
+import { customerService } from '@modules/partners/api/customerService';
+import { supplierService } from '@modules/partners/api/supplierService';
+import { invoiceService } from '@modules/invoicing/api/invoiceService';
+import { returnService } from '@modules/invoicing/api/returnService';
+import type { CustomerDto, SupplierDto, InvoiceDto, CreatePurchaseReturnRequest } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useTabs } from "@app/providers/TabContext";
 
@@ -57,6 +63,15 @@ export default function Materials() {
   const [showUnitsPanel, setShowUnitsPanel] = useState(false);
   const [showDamagedPanel, setShowDamagedPanel] = useState(false);
   const [savingDamaged, setSavingDamaged] = useState(false);
+  const [isReturnOpen, setIsReturnOpen] = useState(false);
+  const [returnSaving, setReturnSaving] = useState(false);
+  const [returnForm, setReturnForm] = useState<ReturnsFormState>({
+    customer_id: "", supplier_id: "", return_date: new Date().toISOString().slice(0, 10),
+    notes: "", purchase_invoice_id: "", lines: [],
+  });
+  const [returnCustomers, setReturnCustomers] = useState<CustomerDto[]>([]);
+  const [returnSuppliers, setReturnSuppliers] = useState<SupplierDto[]>([]);
+  const [returnInvoices, setReturnInvoices] = useState<InvoiceDto[]>([]);
 
   const loadCategories = useCallback(async () => {
     try {
@@ -92,6 +107,69 @@ export default function Materials() {
       setIsFormOpen(false);
     }
   }, [selectedId, setIsFormOpen]);
+
+  useEffect(() => {
+    if (isReturnOpen) {
+      customerService.listCustomers().then(setReturnCustomers).catch(() => {});
+      supplierService.listSuppliers().then(setReturnSuppliers).catch(() => {});
+      invoiceService.listInvoicesByType("Purchase").then(setReturnInvoices).catch(() => {});
+    }
+  }, [isReturnOpen]);
+
+  const handleSaveReturn = async (lines: ReturnsFormState["lines"]) => {
+    if (!selectedMaterial || !returnForm.supplier_id) {
+      toast.error("الرجاء اختيار المورد");
+      return;
+    }
+    setReturnSaving(true);
+    try {
+      const supplier = returnSuppliers.find(s => s.id === returnForm.supplier_id);
+      const payload: CreatePurchaseReturnRequest = {
+        return_number: `PR-${Date.now()}`,
+        supplier_id: returnForm.supplier_id,
+        supplier_name: supplier?.name,
+        return_date: returnForm.return_date || new Date().toISOString().slice(0, 10),
+        lines: lines.map(l => ({
+          id: "",
+          material_id: l.material_id,
+          quantity: l.quantity,
+          unit_price: l.unit_price,
+          unit_id: l.unit_id,
+          line_total: l.line_total,
+          notes: l.notes,
+        })),
+        notes: returnForm.notes || undefined,
+      };
+      await returnService.createPurchaseReturn(payload);
+      await refresh();
+      toast.success("تم تسجيل المرتجع بنجاح");
+      setIsReturnOpen(false);
+    } catch (err) {
+      toast.error("فشل تسجيل المرتجع: " + err);
+    } finally {
+      setReturnSaving(false);
+    }
+  };
+
+  const handleOpenReturn = () => {
+    if (!selectedMaterial) return;
+    setReturnForm(f => ({
+      ...f,
+      supplier_id: "",
+      lines: [{
+        material_id: selectedMaterial.id,
+        quantity: "1",
+        unit_price: "0",
+        unit_id: selectedMaterial.units.find(u => u.is_base)?.id || selectedMaterial.units[0]?.id || "",
+        notes: "",
+        line_total: "0",
+      }],
+    }));
+    setIsReturnOpen(true);
+    setIsFormOpen(false);
+    setShowDamagedPanel(false);
+    setManagingUnitsMaterial(null);
+  };
 
   const stats = useMemo(() => [
     { label: "إجمالي المواد", value: materials.length, icon: Package, color: "text-slate-900" },
@@ -142,6 +220,17 @@ export default function Materials() {
             >
               <TrendingUp className="w-4 h-4 ml-2 text-blue-600" />
               مبيعات المادة
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+              disabled={!selectedId}
+              onClick={handleOpenReturn}
+            >
+              <Undo2 className="w-4 h-4 ml-2 text-amber-500" />
+              مرتجع
             </Button>
 
             <Button
@@ -208,6 +297,19 @@ export default function Materials() {
               onClose={() => setManagingUnitsMaterial(null)}
               onUnitsUpdated={refresh}
             />
+          ) : isReturnOpen && selectedMaterial ? (
+            <ReturnsForm
+              type="purchase"
+              onClose={() => setIsReturnOpen(false)}
+              onSave={handleSaveReturn}
+              saving={returnSaving}
+              customers={returnCustomers}
+              suppliers={returnSuppliers}
+              invoices={returnInvoices}
+              materials={materials}
+              form={returnForm}
+              setForm={setReturnForm}
+            />
           ) : showDamagedPanel ? (
             <DamagedForm
               onClose={() => setShowDamagedPanel(false)}
@@ -225,7 +327,7 @@ export default function Materials() {
             />
           )
         }
-        isPanelOpen={isFormOpen || !!selectedId || !!managingUnitsMaterial || showDamagedPanel}
+        isPanelOpen={isFormOpen || isReturnOpen || !!selectedId || !!managingUnitsMaterial || showDamagedPanel}
       />
     </>
   );

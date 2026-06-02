@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { Button } from "@shared/ui/button";
-import { Plus, User, Users, DollarSign, Wallet, History, ShoppingBag, Printer, Receipt, Download } from "lucide-react";
+import { Plus, User, Users, DollarSign, Wallet, History, ShoppingBag, Printer, Receipt, Download, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { customerService } from '@modules/partners/api/customerService';
@@ -13,6 +13,10 @@ import { useTabs } from "@app/providers/TabContext";
 import { useEntityList } from '@shared/hooks/useEntityList';
 import { CustomerTable } from '@modules/partners/components/CustomerTable';
 import { CustomerReceiptForm } from '@modules/partners/components/CustomerReceiptForm';
+import { ReturnsForm, type ReturnsFormState } from '@modules/invoicing/components/ReturnsForm';
+import { materialService } from '@modules/inventory/api/materialService';
+import { returnService } from '@modules/invoicing/api/returnService';
+import type { MaterialDto, CreateSalesReturnRequest } from "@erp/shared-types";
 
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { PartnerDetailPanel } from '@modules/partners/components/PartnerDetailPanel';
@@ -60,6 +64,13 @@ export default function Customers() {
 
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   const [receiptSaving, setReceiptSaving] = useState(false);
+  const [isReturnOpen, setIsReturnOpen] = useState(false);
+  const [returnSaving, setReturnSaving] = useState(false);
+  const [returnForm, setReturnForm] = useState<ReturnsFormState>({
+    customer_id: "", supplier_id: "", return_date: new Date().toISOString().slice(0, 10),
+    notes: "", purchase_invoice_id: "", lines: [],
+  });
+  const [returnMaterials, setReturnMaterials] = useState<MaterialDto[]>([]);
 
   const handleSaveReceipt = async (payload: CreatePaymentRequest) => {
     try {
@@ -72,6 +83,43 @@ export default function Customers() {
       toast.error("فشل تسجيل السند: " + error);
     } finally {
       setReceiptSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isReturnOpen) {
+      materialService.listMaterials().then(setReturnMaterials).catch(() => {});
+    }
+  }, [isReturnOpen]);
+
+  const handleSaveReturn = async (lines: ReturnsFormState["lines"]) => {
+    if (!selectedCustomer) return;
+    setReturnSaving(true);
+    try {
+      const payload: CreateSalesReturnRequest = {
+        return_number: `SR-${Date.now()}`,
+        customer_id: selectedCustomer.id,
+        customer_name: selectedCustomer.name,
+        return_date: returnForm.return_date || new Date().toISOString().slice(0, 10),
+        lines: lines.map(l => ({
+          id: "",
+          material_id: l.material_id,
+          quantity: l.quantity,
+          unit_price: l.unit_price,
+          unit_id: l.unit_id,
+          line_total: l.line_total,
+          notes: l.notes,
+        })),
+        notes: returnForm.notes || undefined,
+      };
+      await returnService.createSalesReturn(payload);
+      await refresh(true);
+      toast.success("تم تسجيل مرتجع المبيعات بنجاح");
+      setIsReturnOpen(false);
+    } catch (err) {
+      toast.error("فشل تسجيل المرتجع: " + err);
+    } finally {
+      setReturnSaving(false);
     }
   };
 
@@ -185,6 +233,21 @@ export default function Customers() {
             className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
             disabled={!selectedId}
             onClick={() => {
+              setReturnForm(f => ({ ...f, customer_id: selectedCustomer?.id || "", lines: [] }));
+              setIsReturnOpen(true);
+              setIsFormOpen(false);
+              setIsReceiptOpen(false);
+            }}
+          >
+            <Undo2 className="w-4 h-4 ml-2 text-blue-500" /> مرتجع مبيعات
+          </Button>
+
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            disabled={!selectedId}
+            onClick={() => {
               setIsReceiptOpen(true);
               setIsFormOpen(false);
             }}
@@ -240,6 +303,17 @@ export default function Customers() {
             onClose={() => setIsFormOpen(false)}
             saving={saving}
           />
+        ) : isReturnOpen && selectedCustomer ? (
+          <ReturnsForm
+            type="sales"
+            onClose={() => setIsReturnOpen(false)}
+            onSave={handleSaveReturn}
+            saving={returnSaving}
+            customers={customers}
+            materials={returnMaterials}
+            form={returnForm}
+            setForm={setReturnForm}
+          />
         ) : isReceiptOpen && selectedCustomer ? (
           <CustomerReceiptForm
             customer={selectedCustomer}
@@ -260,7 +334,7 @@ export default function Customers() {
           />
         )
       }
-      isPanelOpen={isFormOpen || isReceiptOpen || !!selectedId}
+      isPanelOpen={isFormOpen || isReturnOpen || isReceiptOpen || !!selectedId}
     />
   );
 }
