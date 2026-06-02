@@ -97,7 +97,7 @@ export default function Customers() {
     setReturnSaving(true);
     try {
       const payload: CreateSalesReturnRequest = {
-        return_number: `SR-${Date.now()}`,
+        return_number: "",
         customer_id: selectedCustomer.id,
         customer_name: selectedCustomer.name,
         return_date: returnForm.return_date || new Date().toISOString().slice(0, 10),

@@ -1,4 +1,5 @@
 use tauri::State;
+use std::str::FromStr;
 use crate::bootstrap::container::AppState;
 use application::dto::returns_dto::*;
 use application::use_cases::sales_return::{
@@ -7,6 +8,27 @@ use application::use_cases::sales_return::{
 use application::use_cases::purchase_return::{
     CreatePurchaseReturnUseCase, PurchaseReturnQueries, PostPurchaseReturnUseCase,
 };
+use domain::shared::ids::{SalesReturnId, PurchaseReturnId};
+
+#[tauri::command]
+pub async fn delete_sales_return(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<(), String> {
+    let rid = SalesReturnId::from_str(&id)
+        .map_err(|_| format!("معرف المرتجع غير صالح"))?;
+    state.sales_return_repo.delete(&rid).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn delete_purchase_return(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<(), String> {
+    let rid = PurchaseReturnId::from_str(&id)
+        .map_err(|_| format!("معرف المرتجع غير صالح"))?;
+    state.purchase_return_repo.delete(&rid).await.map_err(|e| e.to_string())
+}
 
 #[tauri::command]
 pub async fn create_sales_return(

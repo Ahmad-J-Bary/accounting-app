@@ -96,7 +96,7 @@ export default function Suppliers() {
     setReturnSaving(true);
     try {
       const payload: CreatePurchaseReturnRequest = {
-        return_number: `PR-${Date.now()}`,
+        return_number: "",
         supplier_id: selectedSupplier.id,
         supplier_name: selectedSupplier.name,
         return_date: returnForm.return_date || new Date().toISOString().slice(0, 10),

@@ -57,8 +57,8 @@ export function MaterialDetailPanel({
   const displayMovements = useMemo(() => {
     const groups = new Map<string, StockMovementDetailDto>();
     movements.forEach(m => {
-      const qty = parseFloat(m.quantity).toFixed(4);
-      const cost = parseFloat(m.unit_cost).toFixed(4);
+      const qty = parseFloat(m.quantity).toFixed(2);
+      const cost = parseFloat(m.unit_cost).toFixed(2);
       const date = m.movement_date?.slice(0, 10) ?? "";
       const key = `${m.movement_type}|${qty}|${cost}|${date}`;
       if (groups.has(key)) {

@@ -231,7 +231,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
   };
 
   const formatPrice = (n: number) => {
-    const s = n.toFixed(4);
+    const s = n.toFixed(2);
     return parseFloat(s).toString();
   };
 

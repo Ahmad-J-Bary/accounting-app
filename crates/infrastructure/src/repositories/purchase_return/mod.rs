@@ -35,6 +35,10 @@ impl PurchaseReturnRepository for SqlitePurchaseReturnRepository {
         queries::list_all(&self.pool).await
     }
 
+    async fn delete(&self, id: &PurchaseReturnId) -> Result<(), AppError> {
+        commands::delete(&self.pool, id).await
+    }
+
     async fn get_next_return_number(&self) -> Result<String, AppError> {
         let row: Option<(String,)> = sqlx::query_as(
             "SELECT return_number FROM purchase_returns ORDER BY created_at DESC LIMIT 1"
@@ -45,10 +49,10 @@ impl PurchaseReturnRepository for SqlitePurchaseReturnRepository {
 
         match row {
             Some((last,)) => {
-                let num: u64 = last.trim_start_matches("PR-").parse().unwrap_or(0);
-                Ok(format!("PR-{}", num + 1))
+                let num: u64 = last.chars().skip_while(|c| !c.is_ascii_digit()).collect::<String>().parse().unwrap_or(0);
+                Ok((num + 1).to_string())
             }
-            None => Ok("PR-1".to_string()),
+            None => Ok("1".to_string()),
         }
     }
 }

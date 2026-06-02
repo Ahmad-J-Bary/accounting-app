@@ -139,6 +139,8 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::returns::list_purchase_returns,
             commands::returns::get_purchase_return,
             commands::returns::post_purchase_return,
+            commands::returns::delete_sales_return,
+            commands::returns::delete_purchase_return,
         ])
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir().expect("Failed to get app data directory");

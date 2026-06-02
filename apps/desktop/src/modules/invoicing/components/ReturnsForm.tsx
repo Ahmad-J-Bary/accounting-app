@@ -73,7 +73,10 @@ export function ReturnsForm({
     return filteredInvoices.find(inv => inv.id === form.purchase_invoice_id) || null;
   }, [filteredInvoices, form.purchase_invoice_id, isSales]);
 
-  const formatMoney = (value: number) => value.toFixed(4);
+  const formatMoney = (value: number) => {
+    const s = value.toFixed(2);
+    return parseFloat(s).toString();
+  };
 
   const getInvoiceBasePrice = (invoiceLine: InvoiceDto["lines"][number]) => {
     if (invoiceLine.unit_price_v2?.base_amount) {
@@ -162,7 +165,7 @@ export function ReturnsForm({
 
   const toBase = (value: string): string => {
     if (currencyRate === 1) return value;
-    return (parseFloat(value || "0") / currencyRate).toFixed(4);
+    return (parseFloat(value || "0") / currencyRate).toFixed(2);
   };
 
   const handleAddLine = () => {

@@ -425,7 +425,7 @@ export function useInvoiceLifecycle({
             if (basePrice > 0 && storedBasePrice > 0 && Math.abs(basePrice - storedBasePrice) > 0.001) {
               const unitName = mat.units?.find(u => u.id === line.unit_id)?.name || "";
               toast(`${mat.name} (${unitName})`, {
-                description: `سعر الشراء المحفوظ: ${storedBasePrice.toFixed(4)} — السعر الجديد: ${basePrice.toFixed(4)}`,
+                description: `سعر الشراء المحفوظ: ${storedBasePrice.toFixed(2)} — السعر الجديد: ${basePrice.toFixed(2)}`,
                 action: {
                   label: "تحديث",
                   onClick: async () => {
@@ -434,14 +434,14 @@ export function useInvoiceLifecycle({
                       const updatedPrices = existingPrices.some(p => p.unit_id === line.unit_id)
                         ? existingPrices.map(p => p.unit_id === line.unit_id ? { 
                             ...p, 
-                            price: docPrice.toFixed(4), 
-                            price_base: basePrice.toFixed(4), 
+                            price: docPrice.toFixed(2), 
+                            price_base: basePrice.toFixed(2), 
                             currency: docCurrency || p.currency 
                           } : p)
                         : [...existingPrices, { 
                             unit_id: line.unit_id!, 
-                            price: docPrice.toFixed(4), 
-                            price_base: basePrice.toFixed(4), 
+                            price: docPrice.toFixed(2), 
+                            price_base: basePrice.toFixed(2), 
                             currency: docCurrency || baseCurrency?.code || "" 
                           }];
                           

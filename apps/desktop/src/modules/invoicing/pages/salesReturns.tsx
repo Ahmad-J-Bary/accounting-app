@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@shared/ui/button";
-import { Plus, Undo2, DollarSign } from "lucide-react";
+import { Plus, Undo2, DollarSign, Eye, Settings2, Trash2, RefreshCw } from "lucide-react";
 import { returnService } from '@modules/invoicing/api/returnService';
 import { customerService } from '@modules/partners/api/customerService';
 import { materialService } from '@modules/inventory/api/materialService';
@@ -19,6 +19,7 @@ export default function SalesReturnsPage() {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingInfo, setEditingInfo] = useState<{id: string; returnNumber: string} | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [form, setForm] = useState<ReturnsFormState>({
     customer_id: "",
     supplier_id: "",
@@ -71,6 +72,39 @@ export default function SalesReturnsPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const handleView = useCallback(async (returnId: string) => {
+    try {
+      const ret = await returnService.getSalesReturn(returnId);
+      setForm({
+        customer_id: ret.customer_id,
+        supplier_id: "",
+        return_date: ret.return_date.slice(0, 10),
+        notes: ret.notes || "",
+        purchase_invoice_id: "",
+        lines: ret.lines.map(l => ({
+          material_id: l.material_id,
+          quantity: l.quantity,
+          unit_price: l.unit_price,
+          unit_id: l.unit_id || "",
+          notes: l.notes || "",
+          line_total: l.line_total,
+        })),
+      });
+      setEditingInfo({ id: returnId, returnNumber: ret.return_number });
+      setShowForm(true);
+    } catch (e) { toast.error("فشل تحميل المرتجع: " + e); }
+  }, []);
+
+  const handleDelete = useCallback(async (returnId: string) => {
+    if (!window.confirm("هل أنت متأكد من حذف هذا المرتجع؟")) return;
+    try {
+      await returnService.deleteSalesReturn(returnId);
+      toast.success("تم حذف المرتجع بنجاح");
+      setSelectedId(null);
+      refresh(true);
+    } catch (e) { toast.error("فشل الحذف: " + e); }
+  }, [refresh]);
+
   const handleEdit = useCallback(async (returnId: string) => {
     try {
       const ret = await returnService.getSalesReturn(returnId);
@@ -109,7 +143,7 @@ export default function SalesReturnsPage() {
       const isEditing = !!editingInfo;
       await returnService.createSalesReturn({
         id: editingInfo?.id ?? undefined,
-        return_number: editingInfo?.returnNumber ?? "تلقائي",
+        return_number: editingInfo?.returnNumber ?? "",
         customer_id: form.customer_id,
         return_date: new Date(form.return_date).toISOString(),
         lines: lines.map(l => ({ ...l, id: "" })),
@@ -136,9 +170,33 @@ export default function SalesReturnsPage() {
       title="مرتجعات المبيعات"
       stats={stats}
       toolbar={
-        <Button size="sm" onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700 font-bold">
-          <Plus className="w-4 h-4 ml-2" /> مرتجع مبيعات جديد
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700 font-bold">
+            <Plus className="w-4 h-4 ml-2" /> مرتجع مبيعات جديد
+          </Button>
+          <div className="h-6 w-px bg-slate-200 mx-1" />
+          <Button variant="outline" size="sm" disabled={!selectedId}
+            onClick={() => selectedId && handleView(selectedId)}
+            className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
+            <Eye className="w-4 h-4 ml-2 text-blue-500" /> عرض
+          </Button>
+          <Button variant="outline" size="sm" disabled={!selectedId}
+            onClick={() => selectedId && handleEdit(selectedId)}
+            className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
+            <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> تعديل
+          </Button>
+          <Button variant="outline" size="sm" disabled={!selectedId}
+            onClick={() => selectedId && handleDelete(selectedId)}
+            className="h-9 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 font-bold transition-all">
+            <Trash2 className="w-4 h-4 ml-2 text-rose-500" /> حذف
+          </Button>
+          <div className="h-6 w-px bg-slate-200 mx-1" />
+          <Button variant="outline" size="sm"
+            onClick={() => refresh(true)}
+            className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
+            <RefreshCw className="w-4 h-4 ml-2 text-slate-500" /> تحديث
+          </Button>
+        </div>
       }
       tableContent={
         <ReturnsTable
@@ -149,7 +207,11 @@ export default function SalesReturnsPage() {
           materials={materials}
           partnerLabel="العميل"
           emptyMessage="لا توجد مرتجعات مبيعات"
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          onView={handleView}
           onEdit={handleEdit}
+          onDelete={handleDelete}
         />
       }
       sidePanel={

@@ -88,7 +88,7 @@ export function useDocumentEditor({
         const totalProfit = profitPerUnit * qty;
         
         updatedLine.profit_amount = totalProfit.toFixed(2);
-        updatedLine.profit_percent = cost > 0 ? ((profitPerUnit / cost) * 100).toFixed(1) : "0";
+        updatedLine.profit_percent = cost > 0 ? ((profitPerUnit / cost) * 100).toFixed(2) : "0";
       }
       
       next[index] = updatedLine;

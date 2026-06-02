@@ -107,6 +107,12 @@ export default function OpeningBalance() {
     categoryService.listCategories().then(setCategories).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (baseCurrency?.code && !header.currency_code) {
+      setHeader(s => ({ ...s, currency_code: baseCurrency.code || "" }));
+    }
+  }, [baseCurrency, header.currency_code]);
+
   const handleSaveMaterial = useCallback(async (data: CreateMaterialRequest) => {
     setSavingMaterial(true);
     try {

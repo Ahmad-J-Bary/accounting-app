@@ -1,8 +1,9 @@
 import { useMemo } from "react";
-import { Edit } from "lucide-react";
-import { Button } from "@shared/ui/button";
+import { Eye, Pencil, Trash2 } from "lucide-react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
+import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
+import { ActionsDropdown } from "@shared/ui/actions-dropdown";
 import { formatDateTime } from '@shared/lib/format';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns } from "@shared/hooks";
@@ -30,36 +31,24 @@ interface ReturnsTableProps {
   materials: MaterialDto[];
   partnerLabel: string;
   emptyMessage?: string;
+  selectedId?: string | null;
+  onSelect?: (id: string | null) => void;
+  onView?: (returnId: string) => void;
   onEdit?: (returnId: string) => void;
+  onDelete?: (returnId: string) => void;
 }
 
-export function ReturnsTable({ items, loading, search, onSearchChange, materials, partnerLabel, emptyMessage, onEdit }: ReturnsTableProps) {
+export function ReturnsTable({ items, loading, search, onSearchChange, materials, partnerLabel, emptyMessage, selectedId, onSelect, onView, onEdit, onDelete }: ReturnsTableProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
 
   const allColumns = useMemo<UnifiedColumn<ReturnLineRow>[]>(() => {
     const cols: UnifiedColumn<ReturnLineRow>[] = [
       {
-        id: "actions",
-        header: "",
-        label: "إجراءات",
-        accessor: (i) => i.return_id ? (
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7 text-slate-400 hover:text-blue-600 hover:bg-blue-50"
-            onClick={(e) => { e.stopPropagation(); onEdit?.(i.return_id!); }}
-          >
-            <Edit className="w-3.5 h-3.5" />
-          </Button>
-        ) : null,
-        className: "w-10 text-center",
-      },
-      {
-        id: "index",
+        id: "return_number",
         header: "الرقم",
         label: "الرقم",
-        accessor: (_, idx) => <span className="font-bold text-slate-400">{idx + 1}</span>,
-        className: "w-12 text-center",
+        accessor: (i) => <span className="font-bold text-slate-500 font-mono">{i.return_number}</span>,
+        className: "w-28 text-center",
       },
       {
         id: "material_name",
@@ -131,15 +120,30 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
         accessor: (i) => <span className="text-slate-400 text-xs">{i.notes || "-"}</span>,
         className: "min-w-[100px]",
       },
+      {
+        id: "actions",
+        header: "إجراءات",
+        label: "إجراءات",
+        accessor: (i) => i.return_id ? (
+          <ActionsDropdown
+            actions={[
+              ...(onView ? [{ label: "عرض", icon: <Eye className="w-4 h-4" />, onClick: () => onView(i.return_id!) }] : []),
+              ...(onEdit ? [{ label: "تعديل", icon: <Pencil className="w-4 h-4" />, onClick: () => onEdit(i.return_id!), className: "text-blue-600 focus:text-blue-600" }] : []),
+              ...(onDelete ? [{ label: "حذف", icon: <Trash2 className="w-4 h-4" />, onClick: () => onDelete(i.return_id!), className: "text-red-600 focus:text-red-600" }] : []),
+            ]}
+          />
+        ) : null,
+        align: "center",
+        className: "w-[80px]",
+      },
     ];
     return cols;
-  }, [currencies, formatAmount, partnerLabel, materials, onEdit]);
+  }, [currencies, formatAmount, partnerLabel, materials, onView, onEdit, onDelete]);
 
   const defaultVisible = useMemo(() => {
     const baseCode = baseCurrency?.code;
     return [
-      "actions",
-      "index",
+      "return_number",
       "material_name",
       "partner_name",
       ...(baseCode ? [`unit_price_${baseCode}`] : []),
@@ -157,6 +161,22 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
     defaultVisible,
   });
 
+  const baseTotal = useMemo(() =>
+    items.reduce((s, i) => s + (parseFloat(i.line_total || "0") || 0), 0),
+  [items]);
+
+  const summaryColumns = useMemo<SummaryColumn[]>(() => {
+    const colIds = enrichedColumns.map(c => c.id);
+    return colIds.map(id => {
+      const match = id.match(/^line_total_(.+)$/);
+      if (match) {
+        const currCode = match[1];
+        return { id: `${id}_summary`, columnId: id, label: "الإجمالي", value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—", align: "left" as const, className: "font-black text-slate-900" };
+      }
+      return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
+    });
+  }, [enrichedColumns, baseTotal, formatAmount]);
+
   return (
     <TableShell
       search={search}
@@ -170,6 +190,9 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
         data={items}
         columns={enrichedColumns}
         loading={loading}
+        onRowClick={(i) => onSelect?.(i.return_id || null)}
+        selectedId={selectedId}
+        summary={summaryColumns}
         emptyMessage={emptyMessage ?? "لا توجد بيانات"}
       />
     </TableShell>

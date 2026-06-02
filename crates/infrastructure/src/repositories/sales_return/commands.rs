@@ -54,7 +54,6 @@ pub async fn save(pool: &SqlitePool, ret: &SalesReturn) -> Result<(), AppError> 
     Ok(())
 }
 
-#[allow(dead_code)]
 pub async fn delete(pool: &SqlitePool, id: &SalesReturnId) -> Result<(), AppError> {
     sqlx::query("DELETE FROM sales_returns WHERE id = ?")
         .bind(id.0.to_string())

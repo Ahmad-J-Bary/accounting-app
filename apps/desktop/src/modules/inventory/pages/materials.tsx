@@ -125,7 +125,7 @@ export default function Materials() {
     try {
       const supplier = returnSuppliers.find(s => s.id === returnForm.supplier_id);
       const payload: CreatePurchaseReturnRequest = {
-        return_number: `PR-${Date.now()}`,
+        return_number: "",
         supplier_id: returnForm.supplier_id,
         supplier_name: supplier?.name,
         return_date: returnForm.return_date || new Date().toISOString().slice(0, 10),
