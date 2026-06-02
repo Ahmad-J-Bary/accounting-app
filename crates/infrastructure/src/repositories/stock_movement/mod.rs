@@ -69,7 +69,7 @@ impl StockMovementRepository for SqliteStockMovementRepository {
         queries::list_detailed_by_material(&self.pool, material_id).await
     }
 
-    async fn delete_by_reference(&self, reference: &str) -> Result<(), AppError> {
-        commands::delete_by_reference(&self.pool, reference).await
+    async fn delete_by_reference(&self, reference: &str, movement_type: &str) -> Result<(), AppError> {
+        commands::delete_by_reference(&self.pool, reference, movement_type).await
     }
 }

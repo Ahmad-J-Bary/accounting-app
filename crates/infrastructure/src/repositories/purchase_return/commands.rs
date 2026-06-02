@@ -54,6 +54,11 @@ pub async fn save(pool: &SqlitePool, ret: &PurchaseReturn) -> Result<(), AppErro
 }
 
 pub async fn delete(pool: &SqlitePool, id: &PurchaseReturnId) -> Result<(), AppError> {
+    sqlx::query("DELETE FROM purchase_return_lines WHERE purchase_return_id = ?")
+        .bind(id.0.to_string())
+        .execute(pool)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     sqlx::query("DELETE FROM purchase_returns WHERE id = ?")
         .bind(id.0.to_string())
         .execute(pool)

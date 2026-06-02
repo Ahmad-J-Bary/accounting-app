@@ -27,6 +27,7 @@ pub struct PostPurchaseReturnUseCase {
     supplier_repo: Arc<dyn SupplierRepository>,
     material_repo: Arc<dyn MaterialRepository>,
     currency_repo: Arc<dyn CurrencyRepository>,
+    exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
 }
 
 impl PostPurchaseReturnUseCase {
@@ -39,9 +40,9 @@ impl PostPurchaseReturnUseCase {
         supplier_repo: Arc<dyn SupplierRepository>,
         material_repo: Arc<dyn MaterialRepository>,
         currency_repo: Arc<dyn CurrencyRepository>,
-        _exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
+        exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
     ) -> Self {
-        Self { repo, movement_repo, journal_repo, account_repo, supplier_repo, material_repo, currency_repo }
+        Self { repo, movement_repo, journal_repo, account_repo, supplier_repo, material_repo, currency_repo, exchange_rate_repo }
     }
 
     pub async fn execute(&self, id: String) -> Result<PurchaseReturnDto, AppError> {
@@ -73,15 +74,16 @@ impl PostPurchaseReturnUseCase {
             
             let effective_quantity = line.quantity * conversion_factor;
             
-            // Calculate unit cost and total cost in base units
-            let unit_cost = if line.quantity > Decimal::ZERO {
-                line.line_total / line.quantity
+            let total_cost = line.line_total;
+            let unit_cost = if effective_quantity > Decimal::ZERO {
+                total_cost / effective_quantity
             } else {
                 Decimal::ZERO
             };
-            let total_cost = unit_cost * effective_quantity;
-            
-            let movement = StockMovement::new(
+            let unit_cost_base = unit_cost;
+            let total_cost_base = total_cost;
+
+            let mut movement = StockMovement::new(
                 line.material_id,
                 MovementType::PurchaseReturn,
                 effective_quantity,
@@ -93,6 +95,8 @@ impl PostPurchaseReturnUseCase {
                     line.notes.as_deref().unwrap_or("")),
                 Utc::now(),
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
+            movement.unit_cost_base = unit_cost_base;
+            movement.total_cost_base = total_cost_base;
             self.movement_repo.save(&movement).await?;
         }
 
@@ -103,7 +107,7 @@ impl PostPurchaseReturnUseCase {
         let purchase_return_account = self.account_repo.find_by_code("32").await?
             .ok_or_else(|| AppError::NotFound("حساب مرتجع المشتريات غير موجود: 32".into()))?;
 
-        // Debit: Supplier account
+        // Debit: Supplier account & update Supplier subledger
         if let Some(supplier) = self.supplier_repo.find_by_id(&ret.supplier_id).await? {
             if let Some(acc_id) = supplier.account_id {
                 journal_lines.push(JournalLine::new(
@@ -113,6 +117,19 @@ impl PostPurchaseReturnUseCase {
                     format!("مرتجع مشتريات رقم {}", ret.return_number),
                 ).with_partner(ret.supplier_id.0));
             }
+
+            // Decrease supplier's credit balance (reversing the outstanding balance)
+            let converted_total = crate::use_cases::unified_invoice::post::convert_to_partner_currency(
+                total,
+                &base_currency.code,
+                Decimal::ONE,
+                &supplier.currency.code,
+                &self.currency_repo,
+                &self.exchange_rate_repo,
+            ).await?;
+            let mut updated_supplier = supplier;
+            updated_supplier.decrease_credit(converted_total).map_err(|e| AppError::Invalid(e.to_string()))?;
+            self.supplier_repo.update(&updated_supplier).await?;
         }
 
         // Credit: Purchase Returns account (revenue - reduces COGS)

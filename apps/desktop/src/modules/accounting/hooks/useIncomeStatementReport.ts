@@ -78,6 +78,7 @@ export function useIncomeStatementReport() {
         expenseAccounts: expenseAccounts ?? [],
         expenseLedgers,
         stockMovementsByMaterial,
+        materials,
       });
 
       hasLoadedOnceRef.current = true;

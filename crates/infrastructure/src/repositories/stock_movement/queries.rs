@@ -208,12 +208,20 @@ pub async fn list_detailed_by_material(
             sm.movement_date,
             ui.invoice_number,
             ui.invoice_type,
-            c.name  AS customer_name,
-            s.name  AS supplier_name
+            COALESCE(c.name, cr.name) AS customer_name,
+            COALESCE(s.name, sr2.name) AS supplier_name
         FROM stock_movements sm
-        LEFT JOIN unified_invoices ui ON sm.reference = ui.invoice_number
+        LEFT JOIN unified_invoices ui ON sm.reference = ui.invoice_number AND (
+            (sm.movement_type = 'Purchase' AND ui.invoice_type IN ('Purchase', 'PurchaseCosts')) OR
+            (sm.movement_type = 'Sale' AND ui.invoice_type = 'Sales') OR
+            (sm.movement_type = 'OpeningBalance' AND ui.invoice_type = 'OpeningBalance')
+        )
         LEFT JOIN customers c         ON ui.customer_id  = c.id
         LEFT JOIN suppliers s         ON ui.supplier_id  = s.id
+        LEFT JOIN sales_returns sr    ON sm.reference = sr.return_number AND sm.movement_type = 'SalesReturn'
+        LEFT JOIN customers cr        ON sr.customer_id = cr.id
+        LEFT JOIN purchase_returns pr ON sm.reference = pr.return_number AND sm.movement_type = 'PurchaseReturn'
+        LEFT JOIN suppliers sr2       ON pr.supplier_id = sr2.id
         WHERE sm.material_id = ?
         ORDER BY sm.movement_date ASC, sm.created_at ASC
         "#

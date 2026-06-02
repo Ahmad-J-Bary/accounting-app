@@ -4,19 +4,14 @@ use chrono::Utc;
 use rust_decimal::Decimal;
 use domain::returns::{PurchaseReturn};
 use domain::returns::purchase_return::PurchaseReturnLine;
-use domain::inventory::stock_movement::{StockMovement, MovementType};
 use domain::shared::ids::{MaterialId, SupplierId, PurchaseReturnId};
 use crate::ports::purchase_return_repository::PurchaseReturnRepository;
-use crate::ports::stock_movement_repository::StockMovementRepository;
 use crate::ports::supplier_repository::SupplierRepository;
-use crate::ports::material_repository::MaterialRepository;
 use crate::dto::returns_dto::{CreatePurchaseReturnRequest, PurchaseReturnDto};
 use crate::errors::AppError;
 
 pub struct CreatePurchaseReturnUseCase {
     repo: Arc<dyn PurchaseReturnRepository>,
-    movement_repo: Arc<dyn StockMovementRepository>,
-    material_repo: Arc<dyn MaterialRepository>,
     supplier_repo: Arc<dyn SupplierRepository>,
 }
 
@@ -24,10 +19,8 @@ impl CreatePurchaseReturnUseCase {
     pub fn new(
         repo: Arc<dyn PurchaseReturnRepository>,
         supplier_repo: Arc<dyn SupplierRepository>,
-        material_repo: Arc<dyn MaterialRepository>,
-        movement_repo: Arc<dyn StockMovementRepository>,
     ) -> Self {
-        Self { repo, movement_repo, material_repo, supplier_repo }
+        Self { repo, supplier_repo }
     }
 
     pub async fn execute(&self, req: CreatePurchaseReturnRequest) -> Result<PurchaseReturnDto, AppError> {
@@ -51,11 +44,10 @@ impl CreatePurchaseReturnUseCase {
             req.notes,
         ).map_err(|e: domain::shared::errors::DomainError| AppError::Invalid(e.to_string()))?;
 
-        // If editing (id provided), reuse existing ID and delete old stock movements
+        // If editing (id provided), reuse existing ID
         if let Some(ref edit_id) = req.id {
             ret.id = PurchaseReturnId::from_str(edit_id)
                 .map_err(|_| AppError::Invalid("معرف المرتجع غير صالح".into()))?;
-            self.movement_repo.delete_by_reference(&return_number).await?;
         }
 
         for line_dto in req.lines {
@@ -77,42 +69,6 @@ impl CreatePurchaseReturnUseCase {
         }
 
         self.repo.save(&ret).await?;
-
-        // Create stock movements (OUTFLOW - goods returned to supplier)
-        for line in &ret.lines {
-            let material = self.material_repo.find_by_id(&line.material_id).await?
-                .ok_or_else(|| AppError::NotFound(format!("المادة مع المعرف {} غير موجودة", line.material_id)))?;
-
-            let conversion_factor = if let Some(ref unit_id) = line.unit_id {
-                material.units.iter()
-                    .find(|u| u.id.to_string() == *unit_id)
-                    .map(|u| u.conversion_factor)
-                    .unwrap_or(Decimal::ONE)
-            } else {
-                Decimal::ONE
-            };
-
-            let effective_quantity = line.quantity * conversion_factor;
-            let unit_cost = if effective_quantity > Decimal::ZERO {
-                line.line_total / effective_quantity
-            } else {
-                Decimal::ZERO
-            };
-
-            let movement = StockMovement::new(
-                line.material_id,
-                MovementType::PurchaseReturn,
-                effective_quantity,
-                unit_cost,
-                line.line_total,
-                ret.return_number.clone(),
-                format!("مرتجع مشتريات رقم {} - {}",
-                    ret.return_number,
-                    line.notes.as_deref().unwrap_or("")),
-                Utc::now(),
-            ).map_err(|e| AppError::Invalid(e.to_string()))?;
-            self.movement_repo.save(&movement).await?;
-        }
 
         let mut dto = PurchaseReturnDto::from(ret);
         if let Ok(id) = SupplierId::from_str(&dto.supplier_id) {

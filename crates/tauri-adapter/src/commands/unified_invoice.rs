@@ -27,6 +27,42 @@ pub async fn update_unified_invoice(
     state: State<'_, AppState>,
     request: UpdateInvoiceRequest,
 ) -> Result<InvoiceDto, String> {
+    use std::str::FromStr;
+    use domain::shared::ids::InvoiceId;
+    use domain::sales::unified_invoice::InvoiceStatus;
+
+    // CRITICAL FIX: If the invoice is currently Posted, we MUST reopen it first
+    // (while the DB still holds the original amounts) before writing new data.
+    //
+    // Without this, UpdateInvoiceUseCase writes new amounts while status stays "Posted".
+    // Then when postInvoice() is called next, PostInvoiceUseCase calls ReopenInvoiceUseCase
+    // which reads the UPDATED (wrong) amounts to reverse, corrupting partner balances.
+    //
+    // Correct order: reopen (reverse original) → update data → re-post (apply new amounts)
+    let invoice_id = InvoiceId::from_str(&request.id)
+        .map_err(|_| "معرف فاتورة غير صالح".to_string())?;
+
+    if let Some(existing) = state.unified_invoice_repo
+        .find_by_id(&invoice_id)
+        .await
+        .map_err(|e| e.to_string())?
+    {
+        if existing.status == InvoiceStatus::Posted {
+            application::use_cases::unified_invoice::ReopenInvoiceUseCase::new(
+                state.unified_invoice_repo.clone(),
+                state.stock_movement_repo.clone(),
+                state.journal_entry_repo.clone(),
+                state.customer_repo.clone(),
+                state.supplier_repo.clone(),
+                state.currency_repo.clone(),
+                state.exchange_rate_repo.clone(),
+            )
+            .execute(request.id.clone())
+            .await
+            .map_err(|e| e.to_string())?;
+        }
+    }
+
     UpdateInvoiceUseCase::new(
         state.unified_invoice_repo.clone(),
         state.customer_repo.clone(),

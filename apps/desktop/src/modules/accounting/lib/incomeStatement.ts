@@ -2,6 +2,7 @@ import type {
   AccountDto,
   AccountLedgerDto,
   InvoiceDto,
+  MaterialDto,
   PurchaseReturnDto,
   SalesReturnDto,
   StockMovementDetailDto,
@@ -20,6 +21,7 @@ export type LoadedIncomeStatementData = {
   expenseAccounts: AccountDto[];
   expenseLedgers: Map<string, AccountLedgerDto>;
   stockMovementsByMaterial: Map<string, StockMovementDetailDto[]>;
+  materials: MaterialDto[];
 };
 
 export type IncomeStatementRow = {
@@ -64,6 +66,7 @@ export const emptyIncomeStatementData: LoadedIncomeStatementData = {
   expenseAccounts: [],
   expenseLedgers: new Map(),
   stockMovementsByMaterial: new Map(),
+  materials: [],
 };
 
 export function parseNumber(value?: string | number | null) {
@@ -103,7 +106,9 @@ function getReturnBaseTotal(document: PurchaseReturnDto | SalesReturnDto) {
 
 function getSignedMovementValue(movement: StockMovementDetailDto) {
   if (movement.movement_type === "Transfer") return 0;
-  const value = parseNumber(movement.total_cost_base || movement.total_cost);
+  const base = parseNumber(movement.total_cost_base);
+  const orig = parseNumber(movement.total_cost);
+  const value = base !== 0 ? base : orig;
   return movement.is_inflow ? value : -value;
 }
 
@@ -141,15 +146,11 @@ export function computeIncomeStatement(
     return sum + movementTotal;
   }, 0);
 
-  const closingInventory = Array.from(data.stockMovementsByMaterial.values()).reduce((sum, movements) => {
-    const movementTotal = movements.reduce((materialSum, movement) => {
-      const movementTs = new Date(movement.movement_date).getTime();
-      if (!Number.isFinite(movementTs) || movementTs > toTs) {
-        return materialSum;
-      }
-      return materialSum + getSignedMovementValue(movement);
-    }, 0);
-    return sum + movementTotal;
+  const closingInventory = data.materials.reduce((sum, material) => {
+    const available = parseNumber(material.total_available);
+    if (available <= 0) return sum;
+    const price = parseNumber(material.average_cost_base) || parseNumber(material.last_purchase_price_base);
+    return sum + available * price;
   }, 0);
 
   const totalExpenses = data.expenseAccounts.reduce((sum, account) => {

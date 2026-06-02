@@ -27,6 +27,7 @@ pub struct PostSalesReturnUseCase {
     customer_repo: Arc<dyn CustomerRepository>,
     material_repo: Arc<dyn MaterialRepository>,
     currency_repo: Arc<dyn CurrencyRepository>,
+    exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
 }
 
 impl PostSalesReturnUseCase {
@@ -39,9 +40,9 @@ impl PostSalesReturnUseCase {
         customer_repo: Arc<dyn CustomerRepository>,
         material_repo: Arc<dyn MaterialRepository>,
         currency_repo: Arc<dyn CurrencyRepository>,
-        _exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
+        exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
     ) -> Self {
-        Self { repo, movement_repo, journal_repo, account_repo, customer_repo, material_repo, currency_repo }
+        Self { repo, movement_repo, journal_repo, account_repo, customer_repo, material_repo, currency_repo, exchange_rate_repo }
     }
 
     pub async fn execute(&self, id: String) -> Result<SalesReturnDto, AppError> {
@@ -73,15 +74,29 @@ impl PostSalesReturnUseCase {
             
             let effective_quantity = line.quantity * conversion_factor;
             
-            // Calculate unit cost and total cost in base units
-            let unit_cost = if line.quantity > Decimal::ZERO {
-                line.line_total / line.quantity
-            } else {
-                Decimal::ZERO
-            };
+            // For SalesReturn, the stock movement cost MUST reflect the INVENTORY COST (average cost),
+            // NOT the sale/refund price. Returned goods re-enter inventory at their original
+            // purchase cost so that Ending Inventory is correctly valued.
+            let summary = self.movement_repo.get_material_summary(&line.material_id).await
+                .unwrap_or_else(|_| crate::ports::stock_movement_repository::MaterialInventorySummary {
+                    total_received: Decimal::ZERO,
+                    total_sold: Decimal::ZERO,
+                    total_available: Decimal::ZERO,
+                    total_damaged: Decimal::ZERO,
+                    last_purchase_price: Decimal::ZERO,
+                    last_purchase_price_base: Decimal::ZERO,
+                    last_sale_price: Decimal::ZERO,
+                    last_sale_price_base: Decimal::ZERO,
+                    average_cost: Decimal::ZERO,
+                    average_cost_base: Decimal::ZERO,
+                });
+
+            let unit_cost = summary.average_cost;
             let total_cost = unit_cost * effective_quantity;
+            let unit_cost_base = summary.average_cost_base;
+            let total_cost_base = unit_cost_base * effective_quantity;
             
-            let movement = StockMovement::new(
+            let mut movement = StockMovement::new(
                 line.material_id,
                 MovementType::SalesReturn,
                 effective_quantity,
@@ -93,6 +108,8 @@ impl PostSalesReturnUseCase {
                     line.notes.as_deref().unwrap_or("")),
                 Utc::now(),
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
+            movement.unit_cost_base = unit_cost_base;
+            movement.total_cost_base = total_cost_base;
             self.movement_repo.save(&movement).await?;
         }
 
@@ -111,7 +128,7 @@ impl PostSalesReturnUseCase {
             format!("مرتجع مبيعات رقم {}", ret.return_number),
         ));
 
-        // Credit: Customer account
+        // Credit: Customer account & update Customer subledger
         if let Some(customer) = self.customer_repo.find_by_id(&ret.customer_id).await? {
             if let Some(acc_id) = customer.account_id {
                 journal_lines.push(JournalLine::new(
@@ -121,6 +138,19 @@ impl PostSalesReturnUseCase {
                     format!("مرتجع مبيعات رقم {}", ret.return_number),
                 ).with_partner(ret.customer_id.0));
             }
+
+            // Decrease customer's debit balance (reversing the outstanding balance)
+            let converted_total = crate::use_cases::unified_invoice::post::convert_to_partner_currency(
+                total,
+                &base_currency.code,
+                Decimal::ONE,
+                &customer.currency.code,
+                &self.currency_repo,
+                &self.exchange_rate_repo,
+            ).await?;
+            let mut updated_customer = customer;
+            updated_customer.decrease_debit(converted_total).map_err(|e| AppError::Invalid(e.to_string()))?;
+            self.customer_repo.update(&updated_customer).await?;
         }
 
         if !journal_lines.is_empty() {

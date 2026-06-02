@@ -148,6 +148,27 @@ impl PostInvoiceUseCase {
                     &mut remaining_extra_base,
                     is_last_line,
                 );
+            } else if invoice.invoice_type == InvoiceType::Sales {
+                // For Sales invoices, the stock movement cost must reflect the
+                // INVENTORY COST (average cost), NOT the sale price.
+                // This is critical for correct Ending Inventory calculation in Income Statement.
+                let summary = self.movement_repo.get_material_summary(&line.material_id).await
+                    .unwrap_or_else(|_| crate::ports::stock_movement_repository::MaterialInventorySummary {
+                        total_received: Decimal::ZERO,
+                        total_sold: Decimal::ZERO,
+                        total_available: Decimal::ZERO,
+                        total_damaged: Decimal::ZERO,
+                        last_purchase_price: Decimal::ZERO,
+                        last_purchase_price_base: Decimal::ZERO,
+                        last_sale_price: Decimal::ZERO,
+                        last_sale_price_base: Decimal::ZERO,
+                        average_cost: Decimal::ZERO,
+                        average_cost_base: Decimal::ZERO,
+                    });
+                let avg_unit_cost_base = summary.average_cost_base;
+                let avg_unit_cost = summary.average_cost;
+                total_cost = avg_unit_cost * effective_quantity;
+                total_cost_base = avg_unit_cost_base * effective_quantity;
             }
 
             let unit_cost = if effective_quantity > Decimal::ZERO {
@@ -542,6 +563,18 @@ pub async fn convert_to_partner_currency(
     currency_repo: &Arc<dyn CurrencyRepository>,
     exchange_rate_repo: &Arc<dyn ExchangeRateRepository>,
 ) -> Result<Decimal, AppError> {
+    // If partner has no currency assigned, treat it as base currency
+    if partner_currency.is_empty() {
+        let base_currency = currency_repo
+            .get_base_currency()
+            .await?
+            .ok_or_else(|| AppError::NotFound("العملة الأساسية غير معرفة".into()))?;
+        if invoice_currency == base_currency.code || invoice_exchange_rate.is_zero() {
+            return Ok(amount);
+        }
+        return Ok(amount / invoice_exchange_rate);
+    }
+
     if invoice_currency == partner_currency {
         return Ok(amount);
     }

@@ -27,5 +27,5 @@ pub trait StockMovementRepository: Send + Sync {
     async fn get_stock_balance(&self, material_id: &MaterialId) -> Result<Decimal, AppError>;
     async fn get_material_summary(&self, material_id: &MaterialId) -> Result<MaterialInventorySummary, AppError>;
     async fn list_detailed_by_material(&self, material_id: &MaterialId) -> Result<Vec<StockMovementDetailDto>, AppError>;
-    async fn delete_by_reference(&self, reference: &str) -> Result<(), AppError>;
+    async fn delete_by_reference(&self, reference: &str, movement_type: &str) -> Result<(), AppError>;
 }
