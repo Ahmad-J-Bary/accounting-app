@@ -5,6 +5,7 @@ use crate::ports::material_repository::MaterialRepository;
 use crate::ports::category_repository::CategoryRepository;
 use crate::dto::material_dto::{CreateMaterialRequest, MaterialDto};
 use crate::errors::AppError;
+use super::pricing::{build_purchase_prices, build_sale_prices, resolve_default_unit_id};
 
 pub struct CreateMaterialUseCase {
     repo: Arc<dyn MaterialRepository>,
@@ -53,35 +54,10 @@ impl CreateMaterialUseCase {
         material.name_en = req.name_en.unwrap_or_default();
         material.notes = req.notes;
         material.image_path = req.image_path;
-        material.default_purchase_unit_id = req.default_purchase_unit_id.and_then(|id| id.parse().ok().map(domain::shared::ids::MaterialUnitId));
-        material.default_sale_unit_id = req.default_sale_unit_id.and_then(|id| id.parse().ok().map(domain::shared::ids::MaterialUnitId));
-
-        let mut purchase_prices = vec![];
-        for p in req.purchase_prices {
-            purchase_prices.push(domain::inventory::material::MaterialPurchasePrice {
-                id: uuid::Uuid::new_v4().to_string(),
-                unit_id: material.units.iter().find(|u| u.name == p.unit_id).map(|u| u.id).or_else(|| p.unit_id.parse().ok().map(domain::shared::ids::MaterialUnitId)).ok_or_else(|| AppError::Invalid("وحدة غير موجودة في قائمة الوحدات".into()))?,
-                price: p.price.parse().unwrap_or_default(),
-                price_base: p.price_base.parse().unwrap_or_default(),
-                currency: p.currency,
-            });
-        }
-        material.purchase_prices = purchase_prices;
-
-        let mut sale_prices = vec![];
-        for p in req.sale_prices {
-            sale_prices.push(domain::inventory::material::MaterialSalePrice {
-                id: uuid::Uuid::new_v4().to_string(),
-                unit_id: material.units.iter().find(|u| u.name == p.unit_id).map(|u| u.id).or_else(|| p.unit_id.parse().ok().map(domain::shared::ids::MaterialUnitId)).ok_or_else(|| AppError::Invalid("وحدة غير موجودة في قائمة الوحدات".into()))?,
-                tier: p.tier,
-                price: p.price.parse().unwrap_or_default(),
-                price_base: p.price_base.parse().unwrap_or_default(),
-                min_price: p.min_price.parse().unwrap_or_default(),
-                min_price_base: p.min_price_base.parse().unwrap_or_default(),
-                currency: p.currency,
-            });
-        }
-        material.sale_prices = sale_prices;
+        material.default_purchase_unit_id = resolve_default_unit_id(req.default_purchase_unit_id, &material.units)?;
+        material.default_sale_unit_id = resolve_default_unit_id(req.default_sale_unit_id, &material.units)?;
+        material.purchase_prices = build_purchase_prices(req.purchase_prices, &material.units)?;
+        material.sale_prices = build_sale_prices(req.sale_prices, &material.units)?;
 
         self.repo.save(&material).await?;
 

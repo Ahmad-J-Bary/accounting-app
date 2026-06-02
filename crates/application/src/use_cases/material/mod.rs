@@ -3,6 +3,7 @@ pub mod update;
 pub mod delete;
 pub mod queries;
 pub mod generate_code;
+mod pricing;
 
 pub use create::CreateMaterialUseCase;
 pub use update::UpdateMaterialUseCase;

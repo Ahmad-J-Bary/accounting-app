@@ -46,6 +46,28 @@ pub struct PostInvoiceDependencies {
     pub exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
 }
 
+fn allocate_extra_cost(
+    line_total: Decimal,
+    subtotal: Decimal,
+    total_extra: Decimal,
+    remaining_extra: &mut Decimal,
+    is_last_line: bool,
+) -> Decimal {
+    if total_extra <= Decimal::ZERO || subtotal <= Decimal::ZERO {
+        return Decimal::ZERO;
+    }
+
+    if is_last_line {
+        let allocated = *remaining_extra;
+        *remaining_extra = Decimal::ZERO;
+        return allocated;
+    }
+
+    let allocated = (total_extra * line_total) / subtotal;
+    *remaining_extra -= allocated;
+    allocated
+}
+
 impl PostInvoiceUseCase {
     pub fn new(deps: PostInvoiceDependencies) -> Self {
         Self {
@@ -94,14 +116,52 @@ impl PostInvoiceUseCase {
             InvoiceType::OpeningBalance => MovementType::OpeningBalance,
         };
 
-        for line in &invoice.lines {
+        let purchase_subtotal = invoice.subtotal();
+        let purchase_subtotal_doc = purchase_subtotal.amount();
+        let purchase_subtotal_base = purchase_subtotal.base_amount;
+        let purchase_extra_doc = invoice.extra_costs.amount();
+        let purchase_extra_base = invoice.extra_costs.base_amount;
+        let mut remaining_extra_doc = purchase_extra_doc;
+        let mut remaining_extra_base = purchase_extra_base;
+
+        for (index, line) in invoice.lines.iter().enumerate() {
             let conversion_factor = line.conversion_factor.unwrap_or(Decimal::ONE);
             let effective_quantity = line.quantity * conversion_factor;
             
-            let unit_cost = line.unit_price.amount();
-            let total_cost = line.line_total().amount();
+            let line_total = line.line_total();
+            let mut total_cost = line_total.amount();
+            let mut total_cost_base = line_total.base_amount;
 
-            let movement = StockMovement::new(
+            if invoice.invoice_type == InvoiceType::Purchase {
+                let is_last_line = index + 1 == invoice.lines.len();
+                total_cost += allocate_extra_cost(
+                    line_total.amount(),
+                    purchase_subtotal_doc,
+                    purchase_extra_doc,
+                    &mut remaining_extra_doc,
+                    is_last_line,
+                );
+                total_cost_base += allocate_extra_cost(
+                    line_total.base_amount,
+                    purchase_subtotal_base,
+                    purchase_extra_base,
+                    &mut remaining_extra_base,
+                    is_last_line,
+                );
+            }
+
+            let unit_cost = if effective_quantity > Decimal::ZERO {
+                total_cost / effective_quantity
+            } else {
+                Decimal::ZERO
+            };
+            let unit_cost_base = if effective_quantity > Decimal::ZERO {
+                total_cost_base / effective_quantity
+            } else {
+                Decimal::ZERO
+            };
+
+            let mut movement = StockMovement::new(
                 line.material_id,
                 movement_type.clone(),
                 effective_quantity,
@@ -111,6 +171,12 @@ impl PostInvoiceUseCase {
                 format!("{:?} بموجب فاتورة رقم {} ({} x {})", invoice.invoice_type, invoice.invoice_number, line.quantity, conversion_factor),
                 Utc::now(),
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
+            movement.unit_cost = unit_cost;
+            movement.unit_cost_base = unit_cost_base;
+            movement.total_cost = total_cost;
+            movement.total_cost_base = total_cost_base;
+            movement.original_currency = Some(invoice.currency_code.clone());
+            movement.fx_rate = invoice.exchange_rate;
             self.movement_repo.save(&movement).await?;
         }
 

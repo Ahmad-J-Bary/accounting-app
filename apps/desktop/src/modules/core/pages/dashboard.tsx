@@ -103,7 +103,7 @@ export default function Dashboard() {
   const cashBalance = totalCashIn - totalCashOut;
 
   const inventoryValue = useMemo(() => productItems.reduce((sum, p) => {
-    const price = toNumber(p.average_cost) || toNumber(p.last_purchase_price);
+    const price = toNumber(p.average_cost_base) || toNumber(p.last_purchase_price_base);
     return sum + (toNumber(p.total_available) * price);
   }, 0), [productItems]);
 

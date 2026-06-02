@@ -16,7 +16,7 @@ pub async fn delete_sales_return(
     id: String,
 ) -> Result<(), String> {
     let rid = SalesReturnId::from_str(&id)
-        .map_err(|_| format!("معرف المرتجع غير صالح"))?;
+        .map_err(|_| "معرف المرتجع غير صالح".to_string())?;
     state.sales_return_repo.delete(&rid).await.map_err(|e| e.to_string())
 }
 
@@ -26,7 +26,7 @@ pub async fn delete_purchase_return(
     id: String,
 ) -> Result<(), String> {
     let rid = PurchaseReturnId::from_str(&id)
-        .map_err(|_| format!("معرف المرتجع غير صالح"))?;
+        .map_err(|_| "معرف المرتجع غير صالح".to_string())?;
     state.purchase_return_repo.delete(&rid).await.map_err(|e| e.to_string())
 }
 
