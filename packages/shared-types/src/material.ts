@@ -75,6 +75,7 @@ export interface MaterialDto {
   last_sale_price_base: string;
   average_cost: string;
   average_cost_base: string;
+  average_raw_price_base: string;
   units: MaterialUnitDto[];
 }
 

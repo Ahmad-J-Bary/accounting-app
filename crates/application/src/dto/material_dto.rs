@@ -61,6 +61,7 @@ pub struct MaterialDto {
     pub last_sale_price_original: String,
     pub average_cost: String,
     pub average_cost_base: String,
+    pub average_raw_price_base: String,
     pub units: Vec<MaterialUnitDto>,
 }
 
@@ -142,6 +143,7 @@ impl From<Material> for MaterialDto {
             last_sale_price_original: "0".to_string(),
             average_cost: "0".to_string(),
             average_cost_base: "0".to_string(),
+            average_raw_price_base: "0".to_string(),
             units: material.units.into_iter().map(MaterialUnitDto::from).collect(),
         }
     }

@@ -89,6 +89,7 @@ impl PostSalesReturnUseCase {
                     last_sale_price_base: Decimal::ZERO,
                     average_cost: Decimal::ZERO,
                     average_cost_base: Decimal::ZERO,
+                    average_raw_price_base: Decimal::ZERO,
                 });
 
             let unit_cost = summary.average_cost;

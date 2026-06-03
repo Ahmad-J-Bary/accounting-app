@@ -110,10 +110,14 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
     return cols;
   }, [sortField, sortDirection, handleSort, onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, getBalanceColumns]);
 
+  const defaultVisible = useMemo(() =>
+    ["code", "name", "phone", "status", ...currencies.map(c => `balance_${c.code}`), "actions"],
+  [currencies]);
+
   const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
     tableId: "suppliers-unified",
     columns: allColumns,
-    defaultVisible: ["code", "name", "phone", "status", ...currencies.map(c => `balance_${c.code}`), "actions"],
+    defaultVisible,
   });
 
   const summaryColumns = getSummaryColumns(enrichedColumns, sortedSuppliers, "مورد", { isCreditFirst: true });

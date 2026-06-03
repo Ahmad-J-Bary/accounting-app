@@ -81,8 +81,8 @@ export function useTableColumns() {
         className: 'text-slate-500 font-medium' 
       };
       if (['code', 'phone', 'actions'].includes(id)) return { 
-        id: `${id}_spacer`, 
-        columnId: id, 
+        id: `${id}_spacer`,
+        columnId: id,
         label: '', 
         value: '' 
       };
@@ -107,7 +107,7 @@ export function useTableColumns() {
           className: `${overallColor} font-bold`
         };
       }
-      return { id: `${id}_spacer`, label: '', value: '' };
+      return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
     });
   }, [formatAmount, toBase]);
 

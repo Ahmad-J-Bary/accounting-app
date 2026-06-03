@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export function useColumnPreferences(tableId: string, defaultVisibleColumns: string[]) {
+  const defaultKey = JSON.stringify(defaultVisibleColumns);
   const getStoredPreferences = () => {
     try {
       const stored = localStorage.getItem(`table-cols-${tableId}`);
@@ -28,7 +29,7 @@ export function useColumnPreferences(tableId: string, defaultVisibleColumns: str
         ? [...filtered, ...added]
         : prev;
     });
-  }, [defaultVisibleColumns]);
+  }, [defaultKey, defaultVisibleColumns]);
 
   useEffect(() => {
     try {

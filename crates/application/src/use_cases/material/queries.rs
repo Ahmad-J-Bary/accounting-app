@@ -37,6 +37,7 @@ impl MaterialQueries {
             dto.last_sale_price_base = summary.last_sale_price_base.to_string();
             dto.average_cost = summary.average_cost.to_string();
             dto.average_cost_base = summary.average_cost_base.to_string();
+            dto.average_raw_price_base = summary.average_raw_price_base.to_string();
 
             let (last_p_orig, last_s_orig) = self.invoice_repo.get_last_original_prices(&mid.to_string()).await?;
             dto.last_purchase_price_original = last_p_orig;
@@ -64,6 +65,7 @@ impl MaterialQueries {
         dto.last_sale_price_base = summary.last_sale_price_base.to_string();
         dto.average_cost = summary.average_cost.to_string();
         dto.average_cost_base = summary.average_cost_base.to_string();
+        dto.average_raw_price_base = summary.average_raw_price_base.to_string();
 
         let (last_p_orig, last_s_orig) = self.invoice_repo.get_last_original_prices(&mid.to_string()).await?;
         dto.last_purchase_price_original = last_p_orig;

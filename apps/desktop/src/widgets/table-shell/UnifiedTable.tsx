@@ -1,4 +1,4 @@
-import React, { ReactNode } from "react";
+import React, { ReactNode, useCallback, useRef } from "react";
 import { cn } from '@shared/lib/utils';
 import { Skeleton } from "@shared/ui/skeleton";
 import { useTableSettings } from "@shared/hooks";
@@ -18,6 +18,7 @@ export interface UnifiedColumn<T> {
   align?: "right" | "left" | "center";
   visible?: boolean;
   width?: string;
+  onHeaderClick?: (id: string) => void;
 }
 
 interface UnifiedTableProps<T> {
@@ -66,7 +67,30 @@ export function UnifiedTable<T>({
   enableResize = false,
 }: UnifiedTableProps<T>) {
   const { settings, getDensityPadding } = useTableSettings();
-  const { columnWidths, handleResizeStart, getColumnStyle } = useColumnResize(columns, enableResize ? `unified_${idKey as string}` : "");
+  const { columnWidths, handleResizeStart, setColumnWidths } = useColumnResize(columns, enableResize ? `unified_${idKey as string}` : "");
+  const tableBodyRef = useRef<HTMLDivElement>(null);
+
+  const handleAutoFit = useCallback((colId: string) => {
+    if (!tableBodyRef.current) return;
+    const headerEl = tableBodyRef.current.querySelector<HTMLElement>(`th[data-col-id="${colId}"]`);
+    const cells = tableBodyRef.current.querySelectorAll<HTMLElement>(`td[data-col-id="${colId}"]`);
+    let maxWidth = 0;
+    if (headerEl) {
+      const origOverflow = headerEl.style.overflow;
+      headerEl.style.overflow = 'visible';
+      maxWidth = headerEl.scrollWidth;
+      headerEl.style.overflow = origOverflow;
+    }
+    cells.forEach(cell => {
+      const origOverflow = cell.style.overflow;
+      cell.style.overflow = 'visible';
+      if (cell.scrollWidth > maxWidth) maxWidth = cell.scrollWidth;
+      cell.style.overflow = origOverflow;
+    });
+    if (maxWidth > 0) {
+      setColumnWidths(prev => ({ ...prev, [colId]: Math.max(50, Math.min(600, maxWidth + 16)) }));
+    }
+  }, [setColumnWidths]);
 
   const visibleColumns = columns.filter(col => col.visible !== false);
 
@@ -119,9 +143,10 @@ export function UnifiedTable<T>({
           onDoubleClick={() => onRowDoubleClick?.(row)}
         >
           {visibleColumns.map((col, colIdx) => (
-            <td
-              key={colIdx}
-              className={cn(
+              <td
+                  key={colIdx}
+                  data-col-id={col.id}
+                  className={cn(
                 getDensityPadding(),
                 cellBorderClass,
                 "text-slate-600 transition-colors group-hover:text-slate-900",
@@ -132,6 +157,7 @@ export function UnifiedTable<T>({
               style={{
                 fontSize: `${settings.fontSize}px`,
                 fontFamily: settings.fontFamily,
+                ...(enableResize ? { minWidth: 0, overflow: 'hidden' as const, textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const } : {}),
                 ...(enableResize && columnWidths[col.id] ? { width: `${columnWidths[col.id]}px` } : {}),
               }}
             >
@@ -147,8 +173,8 @@ export function UnifiedTable<T>({
 
   return (
     <div className={cn("w-full h-full flex flex-col", className)}>
-      <div className="flex-1 overflow-auto relative custom-scrollbar">
-        <table className="w-full border-collapse" dir="rtl" style={{ minWidth }}>
+      <div ref={tableBodyRef} className="flex-1 overflow-auto relative custom-scrollbar">
+        <table className="w-full border-collapse" dir="rtl" style={{ minWidth, ...(enableResize ? { tableLayout: 'fixed' as const, width: '100%' } : {}) }}>
           <thead className={cn(
             settings.headerColor,
             settings.borderStyle !== 'none' && "border-b border-slate-200",
@@ -158,16 +184,25 @@ export function UnifiedTable<T>({
               {visibleColumns.map((col) => (
                 <th
                   key={col.id}
+                  data-col-id={col.id}
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target.closest('.cursor-col-resize')) return;
+                    col.onHeaderClick?.(col.id);
+                    if (col.onHeaderClick) handleAutoFit(col.id);
+                  }}
                   className={cn(
                     getDensityPadding(),
                     headerBorderClass,
-                    "relative text-slate-700 font-black uppercase tracking-wider select-none",
+                    "relative text-slate-700 font-black uppercase tracking-wider select-text",
                     getAlignmentClass(col.align),
                     col.headerClassName,
                     !columnWidths[col.id] && col.width,
+                    col.onHeaderClick && "cursor-pointer",
                   )}
                   style={{
                     fontSize: `${settings.fontSize - 2}px`,
+                    ...(enableResize ? { minWidth: 0, overflow: 'hidden' as const, textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const } : {}),
                     ...(enableResize && columnWidths[col.id] ? { width: `${columnWidths[col.id]}px` } : {}),
                   }}
                 >
@@ -176,7 +211,8 @@ export function UnifiedTable<T>({
                     <div
                       className="absolute top-0 bottom-0 w-2 cursor-col-resize z-20 hover:bg-blue-500/10 active:bg-blue-500/20 transition-colors flex items-center justify-center group/resize"
                       style={{ left: -4 }}
-                      onMouseDown={(e) => handleResizeStart(e, col.id)}
+                      onMouseDown={(e) => { e.stopPropagation(); handleResizeStart(e, col.id); }}
+                      onDoubleClick={() => handleAutoFit(col.id)}
                     >
                       <div className="w-[1px] h-3 bg-slate-200 group-hover/resize:bg-blue-400 group-active/resize:bg-blue-600 rounded-full transition-colors" />
                     </div>
@@ -202,7 +238,7 @@ export function UnifiedTable<T>({
                     const entry = (col.id && summaryMap.has(col.id))
                       ? summaryMap.get(col.id)!
                       : summary.find(s => s.id === col.id || s.id === `${col.id}_summary` || s.id === `${col.id}_spacer`);
-                    if (!entry) return <td key={col.id} className={cn(getDensityPadding(), cellBorderClass, "bg-slate-50/80")} />;
+                    if (!entry) return <td key={col.id} data-col-id={col.id} className={cn(getDensityPadding(), cellBorderClass, "bg-slate-50/80")} />;
                     return (
                       <td
                         key={entry.id}
@@ -217,6 +253,7 @@ export function UnifiedTable<T>({
                         style={{
                           fontSize: `${settings.fontSize}px`,
                           fontFamily: settings.fontFamily,
+                          ...(enableResize ? { minWidth: 0, overflow: 'hidden' as const, whiteSpace: 'nowrap' as const } : {}),
                           ...(enableResize && columnWidths[col.id] ? { width: `${columnWidths[col.id]}px` } : {}),
                         }}
                       >

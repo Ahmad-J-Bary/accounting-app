@@ -31,6 +31,7 @@ pub fn row_to_movement(row: StockMovementRow) -> Result<StockMovement, AppError>
         unit_cost_base: Decimal::from_str(&row.unit_cost_base).unwrap_or(Decimal::ZERO),
         total_cost: Decimal::from_str(&row.total_cost).unwrap_or(Decimal::ZERO),
         total_cost_base: Decimal::from_str(&row.total_cost_base).unwrap_or(Decimal::ZERO),
+        raw_total_cost_base: row.raw_total_cost_base.and_then(|v| Decimal::from_str(&v).ok()).unwrap_or(Decimal::ZERO),
         original_currency: row.original_currency,
         fx_rate: Decimal::from_str(&row.fx_rate).unwrap_or(Decimal::ONE),
         reference: row.reference.unwrap_or_default(),

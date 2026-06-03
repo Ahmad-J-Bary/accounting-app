@@ -164,6 +164,7 @@ impl PostInvoiceUseCase {
                         last_sale_price_base: Decimal::ZERO,
                         average_cost: Decimal::ZERO,
                         average_cost_base: Decimal::ZERO,
+                        average_raw_price_base: Decimal::ZERO,
                     });
                 let avg_unit_cost_base = summary.average_cost_base;
                 let avg_unit_cost = summary.average_cost;
@@ -196,6 +197,7 @@ impl PostInvoiceUseCase {
             movement.unit_cost_base = unit_cost_base;
             movement.total_cost = total_cost;
             movement.total_cost_base = total_cost_base;
+            movement.raw_total_cost_base = line_total.base_amount; // raw cost before extras allocation
             movement.original_currency = Some(invoice.currency_code.clone());
             movement.fx_rate = invoice.exchange_rate;
             self.movement_repo.save(&movement).await?;

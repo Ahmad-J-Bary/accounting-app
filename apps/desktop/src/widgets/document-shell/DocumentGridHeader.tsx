@@ -81,7 +81,7 @@ export function DocumentGridHeader({
           key={col.key}
           className={cn(
             getDensityPadding(),
-            "relative text-slate-700 font-black uppercase tracking-wider select-none",
+            "relative text-slate-700 font-black uppercase tracking-wider select-text",
             getLeftBorderClass(borderStyle),
             !columnWidths[col.key] && col.width,
           )}

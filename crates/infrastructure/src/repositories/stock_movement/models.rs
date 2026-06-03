@@ -7,6 +7,7 @@ pub struct StockMovementRow {
     pub unit_cost_base: String,
     pub total_cost: String,
     pub total_cost_base: String,
+    pub raw_total_cost_base: Option<String>,
     pub original_currency: Option<String>,
     pub fx_rate: String,
     pub movement_type: String,

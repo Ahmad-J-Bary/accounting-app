@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 
 interface UseSortableOptions<T, F extends string> {
   data: T[];
@@ -24,16 +24,18 @@ export function useSortable<T, F extends string>({
 }: UseSortableOptions<T, F>): UseSortableReturn<T, F> {
   const [sortField, setSortField] = useState<F>(defaultField);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">(defaultDirection);
+  const sortFieldRef = useRef(sortField);
+  useEffect(() => { sortFieldRef.current = sortField; }, [sortField]);
 
   const handleSort = useCallback((field: F) => {
     setSortDirection(prev => {
-      if (sortField === field) {
+      if (sortFieldRef.current === field) {
         return prev === "asc" ? "desc" : "asc";
       }
       return "asc";
     });
     setSortField(field);
-  }, [sortField]);
+  }, []);
 
   const sortedData = useMemo(() => {
     const sorted = [...data];

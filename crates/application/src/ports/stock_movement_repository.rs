@@ -16,6 +16,7 @@ pub struct MaterialInventorySummary {
     pub last_sale_price_base: Decimal,
     pub average_cost: Decimal,
     pub average_cost_base: Decimal,
+    pub average_raw_price_base: Decimal,
 }
 
 #[async_trait]

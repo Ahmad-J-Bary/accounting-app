@@ -26,13 +26,14 @@ pub struct StockMovement {
     pub material_id: MaterialId,
     pub movement_type: MovementType,
     pub quantity: Decimal,
-    pub unit_cost: Decimal,       // Original currency
-    pub unit_cost_base: Decimal,  // Base currency
-    pub total_cost: Decimal,      // Original currency
-    pub total_cost_base: Decimal, // Base currency
+    pub unit_cost: Decimal,            // Original currency (incl. extras)
+    pub unit_cost_base: Decimal,       // Base currency (incl. extras)
+    pub total_cost: Decimal,           // Original currency (incl. extras)
+    pub total_cost_base: Decimal,      // Base currency (incl. extras)
+    pub raw_total_cost_base: Decimal,  // Base currency (EXCL. extras, for purchase calc)
     pub original_currency: Option<String>,
     pub fx_rate: Decimal,
-    pub reference: String, // رقم الفاتورة أو المستند
+    pub reference: String,
     pub notes: String,
     pub movement_date: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
@@ -70,6 +71,7 @@ impl StockMovement {
             unit_cost_base: total_cost / quantity, // Simplified, ideally passed
             total_cost,
             total_cost_base: total_cost, // Simplified
+            raw_total_cost_base: total_cost, // Default: same as total (overridden for purchases)
             original_currency: None,
             fx_rate: Decimal::ONE,
             reference,
