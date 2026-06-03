@@ -8,3 +8,4 @@ export * from './useUnifiedColumns';
 export * from './useSidebarSettings';
 export * from './useSortable';
 export * from './useTableColumns';
+export * from './useColumnResize';

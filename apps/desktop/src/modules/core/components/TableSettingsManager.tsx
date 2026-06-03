@@ -46,14 +46,16 @@ export const TableSettingsManager: React.FC = () => {
       header: "الكود",
       label: "الكود",
       accessor: "code",
-      className: "tabular-nums font-mono text-xs w-20 text-center"
+      className: "tabular-nums font-mono text-xs w-20 text-center",
+      width: "w-[80px]"
     },
     {
       id: "name",
       header: "اسم الحساب",
       label: "اسم الحساب",
       accessor: "name",
-      className: "font-bold text-slate-900 min-w-[130px]"
+      className: "font-bold text-slate-900 min-w-[130px]",
+      width: "w-[150px]"
     },
     {
       id: "debit",
@@ -255,6 +257,7 @@ export const TableSettingsManager: React.FC = () => {
             summary={summaryColumns}
             idKey="id"
             emptyMessage="لا توجد بيانات للمعاينة"
+            enableResize
           />
         </div>
       </SettingsGroup>

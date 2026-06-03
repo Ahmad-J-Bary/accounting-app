@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { cn } from '@shared/lib/utils';
+import { getAlignmentClass } from "@shared/lib/table-utils";
 import { Skeleton } from "@shared/ui/skeleton";
 
 export interface Column<T> {
@@ -41,10 +42,6 @@ export function DataTable<T>({
     if (colIdx === 0) return "right";
     if (colIdx === columns.length - 1) return "left";
     return "center";
-  };
-
-  const getTextAlignment = (align: "right" | "left" | "center") => {
-    return align === "left" ? "text-left" : align === "center" ? "text-center" : "text-right";
   };
 
   const renderContent = () => {
@@ -106,8 +103,8 @@ export function DataTable<T>({
           <td
             key={colIdx}
             className={cn(
-              "px-4 py-4 text-slate-600 transition-colors group-hover:text-slate-900",
-              getTextAlignment(align),
+                "px-4 py-4 text-slate-600 transition-colors group-hover:text-slate-900",
+                getAlignmentClass(align),
               col.className
             )}
           >
@@ -135,7 +132,7 @@ export function DataTable<T>({
                   key={idx}
                   className={cn(
                     "px-4 py-4 font-bold text-slate-700 tracking-tight",
-                    getTextAlignment(align),
+                    getAlignmentClass(align),
                     col.headerClassName
                   )}
                 >

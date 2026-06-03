@@ -1,14 +1,13 @@
 import React from 'react';
 import { cn } from '@shared/lib/utils';
 import { useTableSettings } from '@shared/hooks';
-
+import { getAlignmentClass } from "@shared/lib/table-utils";
 export interface SummaryColumn {
   id: string;
   label: string;
   value: React.ReactNode;
   align?: "right" | "left" | "center";
   className?: string;
-  /** If this summary entry corresponds to a table column, set its id here for proper alignment when columns are toggled. */
   columnId?: string;
 }
 
@@ -16,45 +15,56 @@ interface TableSummaryProps {
   columns: SummaryColumn[];
   colSpan?: number;
   className?: string;
+  columnWidths?: Record<string, number>;
+  sticky?: boolean;
+  beforeContent?: React.ReactNode;
+  afterContent?: React.ReactNode;
 }
 
 export const TableSummary: React.FC<TableSummaryProps> = ({
   columns,
   colSpan,
   className,
+  columnWidths,
+  sticky,
+  beforeContent,
+  afterContent,
 }) => {
   const { settings, getDensityPadding } = useTableSettings();
 
   if (!settings.showSummary) return null;
 
-  const getAlignmentClass = (align?: "right" | "left" | "center") => {
-    switch (align) {
-      case "left": return "text-left";
-      case "center": return "text-center";
-      case "right":
-      default: return "text-right";
-    }
-  };
-
   return (
     <div className={cn(
       "border-t-2 border-slate-200 bg-slate-50/50",
+      sticky && "sticky bottom-0 z-10",
       className
     )}>
       <div className="flex items-center" style={{ gap: '0' }}>
+        {beforeContent}
         {columns.map((col) => (
           <div
             key={col.id}
             className={cn(
               getDensityPadding(),
-              "font-bold text-slate-800",
+              "font-bold text-slate-800 tabular-nums",
               getAlignmentClass(col.align),
-              col.className
+              col.className,
             )}
-            style={{ flex: 1, fontSize: `${settings.fontSize}px`, fontFamily: settings.fontFamily }}
+            style={{
+              flex: columnWidths && col.columnId && columnWidths[col.columnId]
+                ? `0 0 ${columnWidths[col.columnId]}px`
+                : 1,
+              fontSize: `${settings.fontSize}px`,
+              fontFamily: settings.fontFamily,
+            }}
           >
-            <span className="text-xs text-slate-400 ml-1">{col.label}:</span>
-            {col.value}
+            {col.value && (
+              <>
+                <span className="text-xs text-slate-400 ml-1">{col.label}:</span>
+                {col.value}
+              </>
+            )}
           </div>
         ))}
         {colSpan && columns.length < colSpan && (
@@ -63,6 +73,7 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
             style={{ flex: colSpan - columns.length }}
           />
         )}
+        {afterContent}
       </div>
     </div>
   );

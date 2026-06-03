@@ -2,6 +2,8 @@ import React, { ReactNode } from "react";
 import { cn } from '@shared/lib/utils';
 import { Skeleton } from "@shared/ui/skeleton";
 import { useTableSettings } from "@shared/hooks";
+import { useColumnResize } from "@shared/hooks";
+import { getAlignmentClass, getCellBorderClass, getHeaderBorderClass, getRowBackgroundClass } from "@shared/lib/table-utils";
 import type { SummaryColumn } from './TableSummary';
 import { TablePagination } from './TablePagination';
 import { EmptyState } from './EmptyState';
@@ -15,6 +17,7 @@ export interface UnifiedColumn<T> {
   headerClassName?: string;
   align?: "right" | "left" | "center";
   visible?: boolean;
+  width?: string;
 }
 
 interface UnifiedTableProps<T> {
@@ -40,6 +43,7 @@ interface UnifiedTableProps<T> {
     pageSize?: number;
   };
   minWidth?: string;
+  enableResize?: boolean;
 }
 
 export function UnifiedTable<T>({
@@ -59,31 +63,15 @@ export function UnifiedTable<T>({
   summaryColSpan,
   pagination,
   minWidth = "auto",
+  enableResize = false,
 }: UnifiedTableProps<T>) {
   const { settings, getDensityPadding } = useTableSettings();
+  const { columnWidths, handleResizeStart, getColumnStyle } = useColumnResize(columns, enableResize ? `unified_${idKey as string}` : "");
 
   const visibleColumns = columns.filter(col => col.visible !== false);
 
-  const getAlignmentClass = (align?: "right" | "left" | "center") => {
-    switch (align) {
-      case "left": return "text-left";
-      case "center": return "text-center";
-      case "right":
-      default: return "text-right";
-    }
-  };
-
-  const cellBorderClass = cn(
-    settings.borderStyle === 'full' && "border border-slate-200",
-    settings.borderStyle === 'horizontal' && "border-b border-slate-200",
-    settings.borderStyle === 'none' && "border-0"
-  );
-
-  const headerBorderClass = cn(
-    settings.borderStyle === 'full' && "border border-slate-200",
-    settings.borderStyle === 'horizontal' && "border-b border-slate-200",
-    settings.borderStyle === 'none' && "border-0"
-  );
+  const cellBorderClass = getCellBorderClass(settings.borderStyle);
+  const headerBorderClass = getHeaderBorderClass(settings.borderStyle);
 
   const renderContent = () => {
     if (loading) {
@@ -125,8 +113,7 @@ export function UnifiedTable<T>({
           className={cn(
             "group transition-all duration-75",
             onRowClick ? "cursor-pointer" : "",
-            isSelected ? "bg-blue-50/80" : settings.rowHoverEffect ? "hover:bg-slate-50/80" : "",
-            settings.zebraRows && rowIdx % 2 === 1 && !isSelected ? "bg-slate-100/60" : ""
+            getRowBackgroundClass(isSelected, rowIdx, settings.zebraRows, settings.rowHoverEffect),
           )}
           onClick={() => onRowClick?.(row)}
           onDoubleClick={() => onRowDoubleClick?.(row)}
@@ -139,9 +126,14 @@ export function UnifiedTable<T>({
                 cellBorderClass,
                 "text-slate-600 transition-colors group-hover:text-slate-900",
                 getAlignmentClass(col.align),
-                col.className
+                col.className,
+                !columnWidths[col.id] && col.width,
               )}
-              style={{ fontSize: `${settings.fontSize}px`, fontFamily: settings.fontFamily }}
+              style={{
+                fontSize: `${settings.fontSize}px`,
+                fontFamily: settings.fontFamily,
+                ...(enableResize && columnWidths[col.id] ? { width: `${columnWidths[col.id]}px` } : {}),
+              }}
             >
               {typeof col.accessor === "function"
                 ? col.accessor(row, rowIdx)
@@ -163,19 +155,32 @@ export function UnifiedTable<T>({
             settings.stickyHeader && "sticky top-0 z-10 backdrop-blur-sm shadow-sm"
           )}>
             <tr>
-              {visibleColumns.map((col, idx) => (
+              {visibleColumns.map((col) => (
                 <th
                   key={col.id}
                   className={cn(
                     getDensityPadding(),
                     headerBorderClass,
-                    "font-black text-slate-700 uppercase tracking-wider",
+                    "relative text-slate-700 font-black uppercase tracking-wider select-none",
                     getAlignmentClass(col.align),
-                    col.headerClassName
+                    col.headerClassName,
+                    !columnWidths[col.id] && col.width,
                   )}
-                  style={{ fontSize: `${settings.fontSize - 2}px` }}
+                  style={{
+                    fontSize: `${settings.fontSize - 2}px`,
+                    ...(enableResize && columnWidths[col.id] ? { width: `${columnWidths[col.id]}px` } : {}),
+                  }}
                 >
                   {col.header}
+                  {enableResize && (
+                    <div
+                      className="absolute top-0 bottom-0 w-2 cursor-col-resize z-20 hover:bg-blue-500/10 active:bg-blue-500/20 transition-colors flex items-center justify-center group/resize"
+                      style={{ left: -4 }}
+                      onMouseDown={(e) => handleResizeStart(e, col.id)}
+                    >
+                      <div className="w-[1px] h-3 bg-slate-200 group-hover/resize:bg-blue-400 group-active/resize:bg-blue-600 rounded-full transition-colors" />
+                    </div>
+                  )}
                 </th>
               ))}
             </tr>
@@ -187,7 +192,6 @@ export function UnifiedTable<T>({
             <tfoot className="sticky bottom-0 z-10">
               <tr className="border-t-2 border-slate-300">
                 {(() => {
-                  // Build a map from columnId → summary entry for proper alignment with visible columns
                   const summaryMap = new Map<string, SummaryColumn>();
                   summary.forEach(s => {
                     if (s.columnId) {
@@ -207,11 +211,16 @@ export function UnifiedTable<T>({
                           cellBorderClass,
                           "font-bold text-slate-800 bg-slate-50/80",
                           getAlignmentClass(entry.align),
-                          entry.className
+                          entry.className,
+                          !columnWidths[col.id] && col.width,
                         )}
-                        style={{ fontSize: `${settings.fontSize}px`, fontFamily: settings.fontFamily }}
+                        style={{
+                          fontSize: `${settings.fontSize}px`,
+                          fontFamily: settings.fontFamily,
+                          ...(enableResize && columnWidths[col.id] ? { width: `${columnWidths[col.id]}px` } : {}),
+                        }}
                       >
-                        <span className="text-xs text-slate-400 ml-1">{entry.label}:</span>
+                        {entry.value && <span className="text-xs text-slate-400 ml-1">{entry.label}:</span>}
                         {entry.value}
                       </td>
                     );

@@ -5,8 +5,9 @@ import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns } from "@shared/hooks";
 import type { PartnerDto } from "@erp/shared-types";
-import { ArrowUpDown, Eye, Pencil, Trash2, NotebookText, Receipt, Users } from "lucide-react";
+import { Eye, Pencil, Trash2, NotebookText, Receipt, Users } from "lucide-react";
 import { ActionsDropdown } from "@shared/ui/actions-dropdown";
+import { SortableHeader } from "@shared/ui/sortable-header";
 
 type PartnerWithRatios = PartnerDto & { 
   calculatedRatio: number; 
@@ -29,33 +30,6 @@ interface PartnerTableProps {
 }
 
 type SortField = string;
-
-interface SortableHeaderProps {
-  field: SortField;
-  label: string;
-  currentField: SortField;
-  direction: "asc" | "desc";
-  onSort: (field: SortField) => void;
-}
-
-const SortableHeader = ({ field, label, currentField, direction, onSort }: SortableHeaderProps) => {
-  const getSortIcon = (f: SortField) => {
-    if (currentField !== f) return <ArrowUpDown className="w-3 h-3 opacity-30" />;
-    return direction === "asc" 
-      ? <ArrowUpDown className="w-3 h-3 rotate-180" /> 
-      : <ArrowUpDown className="w-3 h-3" />;
-  };
-
-  return (
-    <button 
-      onClick={(e) => { e.stopPropagation(); onSort(field); }}
-      className="flex items-center gap-1 hover:text-slate-900 transition-colors"
-    >
-      {label}
-      {getSortIcon(field)}
-    </button>
-  );
-};
 
 export function PartnerTable({ 
   partners, 
