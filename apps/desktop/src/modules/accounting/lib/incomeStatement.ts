@@ -32,7 +32,6 @@ export type IncomeStatementRow = {
 export type IncomeStatementSection = {
   id: "revenues" | "liabilities" | "trading" | "profit-loss";
   title: string;
-  formula: string;
   totalLabel: string;
   totalValue: number;
   rows: IncomeStatementRow[];
@@ -56,7 +55,7 @@ export type IncomeStatementComputed = {
   sections: IncomeStatementSection[];
 };
 
-export type IncomeStatementStyle = "ledger" | "table" | "cards" | "compact";
+export type IncomeStatementStyle = "cards";
 
 export const emptyIncomeStatementData: LoadedIncomeStatementData = {
   salesInvoices: [],
@@ -135,23 +134,32 @@ export function computeIncomeStatement(
     .filter((document) => isWithinRange(document.return_date, fromTs, toTs))
     .reduce((sum, document) => sum + getReturnBaseTotal(document), 0);
 
+  // OpeningBalance movements always count toward opening inventory (regardless of date)
   const openingInventory = Array.from(data.stockMovementsByMaterial.values()).reduce((sum, movements) => {
+    return sum + movements.reduce((materialSum, movement) => {
+      const movementTs = new Date(movement.movement_date).getTime();
+      if (!Number.isFinite(movementTs) || movementTs > toTs) return materialSum;
+      if (movement.movement_type === "OpeningBalance") {
+        return materialSum + getSignedMovementValue(movement);
+      }
+      if (movementTs >= fromTs) return materialSum;
+      return materialSum + getSignedMovementValue(movement);
+    }, 0);
+  }, 0);
+
+  const periodMovements = Array.from(data.stockMovementsByMaterial.values()).reduce((sum, movements) => {
     const movementTotal = movements.reduce((materialSum, movement) => {
       const movementTs = new Date(movement.movement_date).getTime();
-      if (!Number.isFinite(movementTs) || movementTs >= fromTs) {
+      if (!Number.isFinite(movementTs) || movementTs < fromTs || movementTs > toTs) {
         return materialSum;
       }
+      if (movement.movement_type === "OpeningBalance") return materialSum;
       return materialSum + getSignedMovementValue(movement);
     }, 0);
     return sum + movementTotal;
   }, 0);
 
-  const closingInventory = data.materials.reduce((sum, material) => {
-    const available = parseNumber(material.total_available);
-    if (available <= 0) return sum;
-    const price = parseNumber(material.average_cost_base) || parseNumber(material.last_purchase_price_base);
-    return sum + available * price;
-  }, 0);
+  const closingInventory = openingInventory + periodMovements;
 
   const totalExpenses = data.expenseAccounts.reduce((sum, account) => {
     const ledger = data.expenseLedgers.get(account.id);
@@ -172,7 +180,6 @@ export function computeIncomeStatement(
     {
       id: "revenues",
       title: "الإيرادات",
-      formula: "إجمالي الإيرادات = المبيعات + بضاعة آخر المدة + مرتجعات المشتريات",
       totalLabel: "إجمالي الإيرادات",
       totalValue: totalRevenue,
       rows: [
@@ -184,7 +191,6 @@ export function computeIncomeStatement(
     {
       id: "liabilities",
       title: "الخصوم",
-      formula: "إجمالي الخصوم = بضاعة أول المدة + المشتريات + مرتجعات المبيعات",
       totalLabel: "إجمالي الخصوم",
       totalValue: totalLiabilities,
       rows: [
@@ -196,7 +202,6 @@ export function computeIncomeStatement(
     {
       id: "trading",
       title: "حساب المتاجرة",
-      formula: "إجمالي الأرباح = إجمالي الإيرادات - إجمالي الخصوم",
       totalLabel: "إجمالي الأرباح",
       totalValue: grossProfit,
       rows: [
@@ -207,12 +212,11 @@ export function computeIncomeStatement(
     {
       id: "profit-loss",
       title: "حساب الأرباح والخسائر",
-      formula: "صافي الأرباح = إجمالي الأرباح - إجمالي المصاريف",
       totalLabel: "صافي الأرباح",
       totalValue: netProfit,
       rows: [
         { label: "إجمالي الأرباح", value: grossProfit },
-        { label: `إجمالي المصاريف (${data.expenseLedgers.size} حساباً له حركات)`, value: totalExpenses },
+        { label: `إجمالي المصاريف`, value: totalExpenses },
       ],
     },
   ];

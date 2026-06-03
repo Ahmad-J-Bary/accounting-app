@@ -6,12 +6,10 @@ import { Label } from "@shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { Calendar, RefreshCw } from "lucide-react";
-import { IncomeStatementStylePicker } from "@modules/accounting/components/income-statement/IncomeStatementStylePicker";
 import { IncomeStatementView } from "@modules/accounting/components/income-statement/IncomeStatementView";
 import {
   computeIncomeStatement,
   type IncomeStatementFilters,
-  type IncomeStatementStyle,
 } from "@modules/accounting/lib/incomeStatement";
 import { useIncomeStatementReport } from "@modules/accounting/hooks/useIncomeStatementReport";
 
@@ -43,11 +41,6 @@ function DateField({
 export default function IncomeStatementReport() {
   const { baseCurrency, currencies, formatAmount } = useCurrencyContext();
   const [selectedCurrency, setSelectedCurrency] = useState("");
-  const [style, setStyle] = useState<IncomeStatementStyle>(() => {
-    if (typeof window === "undefined") return "ledger";
-    const savedStyle = window.localStorage.getItem("erp_income_statement_style");
-    return (savedStyle as IncomeStatementStyle) || "ledger";
-  });
   const [filters, setFilters] = useState<IncomeStatementFilters>(() => {
     const now = new Date();
     return {
@@ -62,12 +55,6 @@ export default function IncomeStatementReport() {
       setSelectedCurrency(baseCurrency.code);
     }
   }, [baseCurrency, selectedCurrency]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("erp_income_statement_style", style);
-    }
-  }, [style]);
 
   const computed = useMemo(() => {
     return computeIncomeStatement(filters, reportData);
@@ -90,8 +77,6 @@ export default function IncomeStatementReport() {
   return (
     <ReportLayout
       title="قائمة الدخل"
-      subtitle="ملخص الأرباح والخسائر والنشاط التشغيلي اعتماداً على فواتير المبيعات والمشتريات والمرتجعات والمصاريف وحركات المخزون."
-      actions={<IncomeStatementStylePicker value={style} onValueChange={setStyle} />}
       filters={
         <>
           <div className="space-y-2">
@@ -149,7 +134,6 @@ export default function IncomeStatementReport() {
         ) : (
           <IncomeStatementView
             computed={computed}
-            style={style}
             filters={filters}
             selectedCurrencyLabel={selectedCurrencyLabel}
             lastLoadedAt={lastLoadedAt}

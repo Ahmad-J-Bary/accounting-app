@@ -78,7 +78,7 @@ impl PostSalesReturnUseCase {
             // NOT the sale/refund price. Returned goods re-enter inventory at their original
             // purchase cost so that Ending Inventory is correctly valued.
             let summary = self.movement_repo.get_material_summary(&line.material_id).await
-                .unwrap_or_else(|_| crate::ports::stock_movement_repository::MaterialInventorySummary {
+                .unwrap_or(crate::ports::stock_movement_repository::MaterialInventorySummary {
                     total_received: Decimal::ZERO,
                     total_sold: Decimal::ZERO,
                     total_available: Decimal::ZERO,

@@ -153,7 +153,7 @@ impl PostInvoiceUseCase {
                 // INVENTORY COST (average cost), NOT the sale price.
                 // This is critical for correct Ending Inventory calculation in Income Statement.
                 let summary = self.movement_repo.get_material_summary(&line.material_id).await
-                    .unwrap_or_else(|_| crate::ports::stock_movement_repository::MaterialInventorySummary {
+                    .unwrap_or(crate::ports::stock_movement_repository::MaterialInventorySummary {
                         total_received: Decimal::ZERO,
                         total_sold: Decimal::ZERO,
                         total_available: Decimal::ZERO,
