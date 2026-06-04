@@ -24,7 +24,7 @@ export function RoleTable({ roles, loading, onEdit, onDelete }: RoleTableProps) 
       header: "اسم الصلاحية", 
       label: "اسم الصلاحية/الدور", 
       accessor: "name", 
-      className: "font-bold text-slate-800 min-w-[150px]" 
+      className: "font-bold text-slate-800" 
     },
     { 
       id: "description",
@@ -44,7 +44,7 @@ export function RoleTable({ roles, loading, onEdit, onDelete }: RoleTableProps) 
         </div>
       ),
       align: "center",
-      className: "w-32"
+      className: ""
     },
     { 
       id: "is_system_role",
@@ -60,7 +60,7 @@ export function RoleTable({ roles, loading, onEdit, onDelete }: RoleTableProps) 
         </span>
       ),
       align: "center",
-      className: "w-28"
+      className: ""
     },
     {
       id: "actions",
@@ -95,6 +95,8 @@ export function RoleTable({ roles, loading, onEdit, onDelete }: RoleTableProps) 
       data={roles}
       columns={columns}
       loading={loading}
+      enableResize
+      tableId="roles"
       emptyMessage="لا توجد أدوار مضافة"
     />
   );

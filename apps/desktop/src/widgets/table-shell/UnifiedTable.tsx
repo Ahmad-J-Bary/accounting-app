@@ -1,22 +1,37 @@
-import React, { ReactNode, useCallback, useRef } from "react";
+import React, { ReactNode, useCallback, useMemo } from "react";
 import { cn } from '@shared/lib/utils';
 import { Skeleton } from "@shared/ui/skeleton";
-import { useTableSettings } from "@shared/hooks";
-import { useColumnResize } from "@shared/hooks";
-import { getAlignmentClass, getCellBorderClass, getHeaderBorderClass, getRowBackgroundClass } from "@shared/lib/table-utils";
+import { useTableSettings, useColumnResize } from "@shared/hooks";
+import {
+  getRowBackgroundClass,
+  getRowBorderClass,
+  getLeftBorderClass,
+  parseWidthFromClassName,
+} from "@shared/lib/table-utils";
 import type { SummaryColumn } from './TableSummary';
+import { TableSummary } from './TableSummary';
 import { TablePagination } from './TablePagination';
 import { EmptyState } from './EmptyState';
+import { GridHeader, type GridHeaderColumn } from './GridHeader';
+import type { AutoFitColumnOptions } from "@shared/hooks/useColumnResize";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────────────────────
 
 export interface UnifiedColumn<T> {
   id: string;
   header: ReactNode;
+  /** Plain-text label for dropdowns / auto-fit measurement */
   label?: string;
   accessor: keyof T | ((row: T, index: number) => ReactNode);
+  /** Extra CSS classes applied to body cells (Tailwind width classes are parsed
+   *  for flex layout and should still be included – inline style wins). */
   className?: string;
   headerClassName?: string;
   align?: "right" | "left" | "center";
   visible?: boolean;
+  /** Tailwind width class, e.g. "w-[80px]" – parsed for initial column width */
   width?: string;
   onHeaderClick?: (id: string) => void;
 }
@@ -34,7 +49,9 @@ interface UnifiedTableProps<T> {
   idKey?: keyof T;
   skeletonRows?: number;
   selectedId?: string | number | null;
+  /** Summary row data – one entry per visible column (empty value = spacer) */
   summary?: SummaryColumn[];
+  /** @deprecated – not used in flex layout (TableSummary handles its own layout) */
   summaryColSpan?: number;
   pagination?: {
     currentPage: number;
@@ -43,10 +60,52 @@ interface UnifiedTableProps<T> {
     totalItems?: number;
     pageSize?: number;
   };
+  /** Minimum horizontal width of the table content area */
   minWidth?: string;
+  /** Enable per-column drag resize + click-to-fit */
   enableResize?: boolean;
+  onHeaderClick?: (col: UnifiedColumn<T>) => void;
+  /** Unique key for persisting column widths in localStorage */
+  tableId?: string;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+function getHeaderText<T>(col: UnifiedColumn<T>): string {
+  if (typeof col.header === "string") return col.header;
+  if (typeof col.label === "string") return col.label;
+  return col.id;
+}
+
+function getPrimitiveCellValue(value: ReactNode): string {
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  if (typeof value === "boolean") return value ? "true" : "false";
+  return "";
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Component
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * UnifiedTable – The single table primitive for the desktop app.
+ *
+ * Layout: pure CSS Flex (no <table> element).
+ * - Header: <GridHeader> (Flex, sticky, resize handles)
+ * - Rows:   Flex <div> rows
+ * - Summary: <TableSummary> (sticky bottom inside scroll area)
+ * - Pagination: outside scroll area
+ *
+ * Column widths are resolved by getFlexColumnStyle (useColumnResize):
+ *   1. User resize override (inline px)
+ *   2. col.width Tailwind class (e.g. "w-[80px]")
+ *   3. col.className Tailwind class
+ *   4. flex: 1 (share remaining space)
+ *
+ * Because header and body rows use the same column style function, alignment is guaranteed.
+ */
 export function UnifiedTable<T>({
   data,
   columns,
@@ -61,222 +120,238 @@ export function UnifiedTable<T>({
   skeletonRows = 5,
   selectedId,
   summary,
-  summaryColSpan,
   pagination,
-  minWidth = "auto",
+  minWidth,
   enableResize = false,
+  onHeaderClick,
+  tableId,
 }: UnifiedTableProps<T>) {
   const { settings, getDensityPadding } = useTableSettings();
-  const { columnWidths, handleResizeStart, setColumnWidths } = useColumnResize(columns, enableResize ? `unified_${idKey as string}` : "");
-  const tableBodyRef = useRef<HTMLDivElement>(null);
 
-  const handleAutoFit = useCallback((colId: string) => {
-    if (!tableBodyRef.current) return;
-    const headerEl = tableBodyRef.current.querySelector<HTMLElement>(`th[data-col-id="${colId}"]`);
-    const cells = tableBodyRef.current.querySelectorAll<HTMLElement>(`td[data-col-id="${colId}"]`);
-    let maxWidth = 0;
-    if (headerEl) {
-      const origOverflow = headerEl.style.overflow;
-      headerEl.style.overflow = 'visible';
-      maxWidth = headerEl.scrollWidth;
-      headerEl.style.overflow = origOverflow;
-    }
-    cells.forEach(cell => {
-      const origOverflow = cell.style.overflow;
-      cell.style.overflow = 'visible';
-      if (cell.scrollWidth > maxWidth) maxWidth = cell.scrollWidth;
-      cell.style.overflow = origOverflow;
+  const visibleColumns = useMemo(
+    () => columns.filter(c => c.visible !== false),
+    [columns],
+  );
+
+  const preferenceKey = enableResize && tableId
+    ? `unified_${tableId}`
+    : enableResize
+    ? `unified_${String(idKey)}`
+    : "";
+
+  const { columnWidths, handleResizeStart, getFlexColumnStyle, autoFitColumn } =
+    useColumnResize(visibleColumns, preferenceKey);
+
+  const cellBorderClass = getLeftBorderClass(settings.borderStyle);
+
+  // Effective widths = resize overrides ∪ Tailwind-class-parsed widths.
+  // Passed to TableSummary so summary cells align with body cells.
+  const effectiveWidths = useMemo<Record<string, number>>(() => {
+    const result: Record<string, number> = { ...columnWidths };
+    visibleColumns.forEach(col => {
+      if (!result[col.id]) {
+        const w =
+          parseWidthFromClassName(col.width) ||
+          parseWidthFromClassName(col.className);
+        if (w) result[col.id] = w;
+      }
     });
-    if (maxWidth > 0) {
-      setColumnWidths(prev => ({ ...prev, [colId]: Math.max(50, Math.min(600, maxWidth + 16)) }));
-    }
-  }, [setColumnWidths]);
+    return result;
+  }, [columnWidths, visibleColumns]);
 
-  const visibleColumns = columns.filter(col => col.visible !== false);
+  // ── Sample values for full-content auto-fit (double-click resize handle) ──
+  const getColumnSampleValues = useCallback(
+    (col: UnifiedColumn<T>): string[] =>
+      data
+        .slice(0, 30)
+        .map((row, rowIdx) =>
+          typeof col.accessor === "function"
+            ? getPrimitiveCellValue(col.accessor(row, rowIdx))
+            : getPrimitiveCellValue(row[col.accessor] as ReactNode),
+        )
+        .filter(Boolean),
+    [data],
+  );
 
-  const cellBorderClass = getCellBorderClass(settings.borderStyle);
-  const headerBorderClass = getHeaderBorderClass(settings.borderStyle);
+  // ── Double-click on resize handle → full auto-fit (header + data) ──
+  const handleAutoFit = useCallback(
+    (colId: string, _options?: AutoFitColumnOptions) => {
+      const col = visibleColumns.find(c => c.id === colId);
+      if (!col) return;
+      autoFitColumn(colId, {
+        headerText: getHeaderText(col),
+        sampleValues: getColumnSampleValues(col),
+      });
+    },
+    [visibleColumns, autoFitColumn, getColumnSampleValues],
+  );
 
-  const renderContent = () => {
+  // ── GridHeader columns with pre-computed flex styles ──
+  const gridHeaderColumns = useMemo<GridHeaderColumn[]>(
+    () =>
+      visibleColumns.map(col => ({
+        id: col.id,
+        header: col.header,
+        label: col.label || getHeaderText(col),
+        align: col.align,
+        width: col.width,
+      })),
+    [visibleColumns],
+  );
+
+  // ── All columns list (for the settings dropdown inside GridHeader) ──
+  const allColumnsForSettings = useMemo(
+    () =>
+      columns.map(col => ({
+        id: col.id,
+        label: col.label || getHeaderText(col),
+        visible: col.visible !== false,
+      })),
+    [columns],
+  );
+
+  // ── Row renderer ──
+  const renderRows = () => {
     if (loading) {
       return Array.from({ length: skeletonRows }).map((_, idx) => (
-        <tr key={`skeleton-${idx}`} className="animate-pulse">
-          {visibleColumns.map((col, colIdx) => (
-            <td key={colIdx} className={cn(getDensityPadding(), cellBorderClass)}>
-              <Skeleton className={cn(
-                "h-4 w-full rounded",
-                col.align === "left" ? "mr-auto ml-0" : col.align === "center" ? "mx-auto" : "ml-auto mr-0",
-              )} />
-            </td>
+        <div
+          key={`skeleton-${idx}`}
+          className={cn("flex animate-pulse", getRowBorderClass(settings.borderStyle))}
+          dir="rtl"
+        >
+          {visibleColumns.map(col => (
+            <div
+              key={col.id}
+              className={cn(getDensityPadding(), cellBorderClass)}
+              style={getFlexColumnStyle(col)}
+            >
+              <Skeleton
+                className={cn(
+                  "h-3.5 rounded",
+                  col.align === "left"
+                    ? "mr-auto ml-0 w-3/4"
+                    : col.align === "center"
+                    ? "mx-auto w-1/2"
+                    : "ml-auto mr-0 w-3/4",
+                )}
+              />
+            </div>
           ))}
-        </tr>
+        </div>
       ));
     }
 
     if (data.length === 0) {
       return (
-        <tr>
-          <td colSpan={visibleColumns.length} className={cellBorderClass}>
-            <EmptyState
-              message={emptyMessage}
-              suggestion={emptySuggestion}
-              icon={emptyIcon}
-            />
-          </td>
-        </tr>
+        <EmptyState
+          message={emptyMessage}
+          suggestion={emptySuggestion}
+          icon={emptyIcon}
+        />
       );
     }
 
     return data.map((row, rowIdx) => {
-      const rowId = String(row[idKey] || rowIdx);
-      const isSelected = selectedId && String(selectedId) === rowId;
+      const rowId = String(row[idKey] ?? rowIdx);
+      const isSelected = !!(selectedId && String(selectedId) === rowId);
 
       return (
-        <tr
+        <div
           key={rowId}
+          dir="rtl"
           className={cn(
-            "group transition-all duration-75",
-            onRowClick ? "cursor-pointer" : "",
-            getRowBackgroundClass(isSelected, rowIdx, settings.zebraRows, settings.rowHoverEffect),
+            "flex group transition-all duration-75",
+            getRowBorderClass(settings.borderStyle),
+            onRowClick && "cursor-pointer",
+            getRowBackgroundClass(
+              isSelected,
+              rowIdx,
+              settings.zebraRows,
+              settings.rowHoverEffect,
+            ),
           )}
           onClick={() => onRowClick?.(row)}
           onDoubleClick={() => onRowDoubleClick?.(row)}
         >
-          {visibleColumns.map((col, colIdx) => (
-              <td
-                  key={colIdx}
-                  data-col-id={col.id}
-                  className={cn(
+          {visibleColumns.map(col => (
+            <div
+              key={col.id}
+              data-col-id={col.id}
+              className={cn(
                 getDensityPadding(),
                 cellBorderClass,
-                "text-slate-600 transition-colors group-hover:text-slate-900",
-                getAlignmentClass(col.align),
+                "text-slate-600 transition-colors group-hover:text-slate-900 overflow-hidden",
                 col.className,
-                !columnWidths[col.id] && col.width,
               )}
               style={{
                 fontSize: `${settings.fontSize}px`,
                 fontFamily: settings.fontFamily,
-                ...(enableResize ? { minWidth: 0, overflow: 'hidden' as const, textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const } : {}),
-                ...(enableResize && columnWidths[col.id] ? { width: `${columnWidths[col.id]}px` } : {}),
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                ...getFlexColumnStyle(col),
               }}
             >
               {typeof col.accessor === "function"
                 ? col.accessor(row, rowIdx)
                 : (row[col.accessor] as ReactNode) || "—"}
-            </td>
+            </div>
           ))}
-        </tr>
+        </div>
       );
     });
   };
 
+  const showSummary = !!(summary?.length && settings.showSummary && data.length > 0);
+
   return (
     <div className={cn("w-full h-full flex flex-col", className)}>
-      <div ref={tableBodyRef} className="flex-1 overflow-auto relative custom-scrollbar">
-        <table className="w-full border-collapse" dir="rtl" style={{ minWidth, ...(enableResize ? { tableLayout: 'fixed' as const, width: '100%' } : {}) }}>
-          <thead className={cn(
-            settings.headerColor,
-            settings.borderStyle !== 'none' && "border-b border-slate-200",
-            settings.stickyHeader && "sticky top-0 z-10 backdrop-blur-sm shadow-sm"
-          )}>
-            <tr>
-              {visibleColumns.map((col) => (
-                <th
-                  key={col.id}
-                  data-col-id={col.id}
-                  onClick={(e) => {
-                    const target = e.target as HTMLElement;
-                    if (target.closest('.cursor-col-resize')) return;
-                    col.onHeaderClick?.(col.id);
-                    if (col.onHeaderClick) handleAutoFit(col.id);
-                  }}
-                  className={cn(
-                    getDensityPadding(),
-                    headerBorderClass,
-                    "relative text-slate-700 font-black uppercase tracking-wider select-text",
-                    getAlignmentClass(col.align),
-                    col.headerClassName,
-                    !columnWidths[col.id] && col.width,
-                    col.onHeaderClick && "cursor-pointer",
-                  )}
-                  style={{
-                    fontSize: `${settings.fontSize - 2}px`,
-                    ...(enableResize ? { minWidth: 0, overflow: 'hidden' as const, textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const } : {}),
-                    ...(enableResize && columnWidths[col.id] ? { width: `${columnWidths[col.id]}px` } : {}),
-                  }}
-                >
-                  {col.header}
-                  {enableResize && (
-                    <div
-                      className="absolute top-0 bottom-0 w-2 cursor-col-resize z-20 hover:bg-blue-500/10 active:bg-blue-500/20 transition-colors flex items-center justify-center group/resize"
-                      style={{ left: -4 }}
-                      onMouseDown={(e) => { e.stopPropagation(); handleResizeStart(e, col.id); }}
-                      onDoubleClick={() => handleAutoFit(col.id)}
-                    >
-                      <div className="w-[1px] h-3 bg-slate-200 group-hover/resize:bg-blue-400 group-active/resize:bg-blue-600 rounded-full transition-colors" />
-                    </div>
-                  )}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y-0">
-            {renderContent()}
-          </tbody>
-            {summary && summary.length > 0 && settings.showSummary && (
-            <tfoot className="sticky bottom-0 z-10">
-              <tr className="border-t-2 border-slate-300">
-                {(() => {
-                  const summaryMap = new Map<string, SummaryColumn>();
-                  summary.forEach(s => {
-                    if (s.columnId) {
-                      summaryMap.set(s.columnId, s);
-                    }
-                  });
-                  return visibleColumns.map(col => {
-                    const entry = (col.id && summaryMap.has(col.id))
-                      ? summaryMap.get(col.id)!
-                      : summary.find(s => s.id === col.id || s.id === `${col.id}_summary` || s.id === `${col.id}_spacer`);
-                    if (!entry) return <td key={col.id} data-col-id={col.id} className={cn(getDensityPadding(), cellBorderClass, "bg-slate-50/80")} />;
-                    return (
-                      <td
-                        key={entry.id}
-                        className={cn(
-                          getDensityPadding(),
-                          cellBorderClass,
-                          "font-bold text-slate-800 bg-slate-50/80",
-                          getAlignmentClass(entry.align),
-                          entry.className,
-                          !columnWidths[col.id] && col.width,
-                        )}
-                        style={{
-                          fontSize: `${settings.fontSize}px`,
-                          fontFamily: settings.fontFamily,
-                          ...(enableResize ? { minWidth: 0, overflow: 'hidden' as const, whiteSpace: 'nowrap' as const } : {}),
-                          ...(enableResize && columnWidths[col.id] ? { width: `${columnWidths[col.id]}px` } : {}),
-                        }}
-                      >
-                        {entry.value && <span className="text-xs text-slate-400 ml-1">{entry.label}:</span>}
-                        {entry.value}
-                      </td>
-                    );
-                  });
-                })()}
-                {summaryColSpan && summary.length < visibleColumns.length && (
-                  <td
-                    className={cn(getDensityPadding(), cellBorderClass, "bg-slate-50/80")}
-                    colSpan={visibleColumns.length - summary.length}
-                  />
-                )}
-              </tr>
-            </tfoot>
+      {/*
+       * Single scroll container.
+       * The GridHeader is sticky top-0 INSIDE this container, so:
+       *   – vertical scroll: header sticks at top ✓
+       *   – horizontal scroll: header moves with body ✓
+       */}
+      <div className="flex-1 overflow-auto relative custom-scrollbar">
+        <div style={minWidth ? { minWidth } : undefined}>
+          {/* ── Flex Grid Header (replaces <thead>) ── */}
+          <GridHeader
+            columns={gridHeaderColumns}
+            allColumns={allColumnsForSettings}
+            onColumnToggle={() => {/* column toggling handled by TableShell toolbar */}}
+            getDensityPadding={getDensityPadding}
+            fontSize={settings.fontSize}
+            headerColor={settings.headerColor}
+            stickyHeader={settings.stickyHeader}
+            borderStyle={settings.borderStyle}
+            enableResize={enableResize}
+            onResizeStart={enableResize ? handleResizeStart : undefined}
+            onAutoFit={enableResize ? handleAutoFit : undefined}
+            columnWidths={columnWidths}
+            getColumnStyle={getFlexColumnStyle}
+          />
+
+          {/* ── Body rows ── */}
+          {renderRows()}
+
+          {/*
+           * Summary row.
+           * Placed INSIDE the scroll container so it scrolls horizontally
+           * with the body. sticky=true makes it stick to the bottom of the
+           * visible scroll area when the user scrolls vertically.
+           */}
+          {showSummary && (
+            <TableSummary
+              columns={summary!}
+              columnWidths={effectiveWidths}
+              sticky
+            />
           )}
-        </table>
+        </div>
       </div>
 
+      {/* Pagination – outside scroll, fixed at bottom */}
       {pagination && settings.showPagination && (
-        <div className="border-t border-slate-100 bg-slate-50/30 px-4 py-2">
+        <div className="shrink-0 border-t border-slate-100 bg-slate-50/30 px-4 py-2">
           <TablePagination
             currentPage={pagination.currentPage}
             totalPages={pagination.totalPages}

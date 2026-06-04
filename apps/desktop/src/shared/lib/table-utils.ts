@@ -49,12 +49,33 @@ export interface ColumnWidthDef {
   key?: string;
   id?: string;
   width?: string;
+  className?: string;
   align?: Align;
+}
+
+/**
+ * Parses a pixel width from a Tailwind CSS class string.
+ * Supports: w-[Xpx], w-[X], min-w-[Xpx], w-X (tailwind scale units × 4px)
+ */
+export function parseWidthFromClassName(className?: string): number | undefined {
+  if (!className) return undefined;
+  // w-[Xpx] or w-[X]
+  const pxMatch = className.match(/\bw-\[(\d+)(?:px)?\]/);
+  if (pxMatch) return parseInt(pxMatch[1], 10);
+  // min-w-[Xpx]
+  const minPxMatch = className.match(/\bmin-w-\[(\d+)(?:px)?\]/);
+  if (minPxMatch) return parseInt(minPxMatch[1], 10);
+  // w-X (tailwind scale: w-24 = 24 × 4 = 96px)
+  const tailwindMatch = className.match(/\bw-(\d+)\b/);
+  if (tailwindMatch) return parseInt(tailwindMatch[1], 10) * 4;
+  return undefined;
 }
 
 export function parsePixelWidth(width?: string): number {
   if (!width) return 100;
-  const pxMatch = width.match(/w-\[(\d+)px\]/);
+  const parsed = parseWidthFromClassName(width);
+  if (parsed) return parsed;
+  const pxMatch = width.match(/^(\d+)px$/);
   if (pxMatch) return parseInt(pxMatch[1]);
   const flexMatch = width.match(/flex-\[([\d.]+)\]/);
   if (flexMatch) return Math.round(parseFloat(flexMatch[1]) * 90);

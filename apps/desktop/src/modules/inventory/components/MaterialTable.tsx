@@ -5,10 +5,9 @@ import type { MaterialDto, CategoryDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { Badge } from "@shared/ui/badge";
 import { Button } from "@shared/ui/button";
-import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
-import { TableShell } from '@widgets/table-shell/TableShell';
-import { useUnifiedColumns, useSortable } from '@shared/hooks';
+import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';import { TableShell } from '@widgets/table-shell/TableShell';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
+import { useUnifiedColumns, useSortable } from '@shared/hooks';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -497,6 +496,7 @@ export function MaterialTable({
         emptyMessage={search ? "لا توجد مواد تطابق معايير البحث" : "قائمة المواد فارغة"}
         summary={summaryColumns}
         enableResize
+        tableId="materials"
       />
     </TableShell>
   );

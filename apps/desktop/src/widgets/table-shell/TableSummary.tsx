@@ -16,6 +16,7 @@ interface TableSummaryProps {
   colSpan?: number;
   className?: string;
   columnWidths?: Record<string, number>;
+  gridTemplate?: string;
   sticky?: boolean;
   beforeContent?: React.ReactNode;
   afterContent?: React.ReactNode;
@@ -26,6 +27,7 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
   colSpan,
   className,
   columnWidths,
+  gridTemplate,
   sticky,
   beforeContent,
   afterContent,
@@ -40,7 +42,10 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
       sticky && "sticky bottom-0 z-10",
       className
     )}>
-      <div className="flex items-center" style={{ gap: '0' }}>
+      <div
+        className={cn("items-center", gridTemplate ? "grid" : "flex")}
+        style={gridTemplate ? { gridTemplateColumns: gridTemplate } : { gap: 0 }}
+      >
         {beforeContent}
         {columns.map((col) => (
           <div
@@ -48,16 +53,21 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
             className={cn(
               getDensityPadding(),
               "font-bold text-slate-800 tabular-nums",
+              gridTemplate ? "overflow-hidden whitespace-nowrap" : "",
               getAlignmentClass(col.align),
               col.className,
             )}
-            style={{
-              flex: columnWidths && col.columnId && columnWidths[col.columnId]
-                ? `0 0 ${columnWidths[col.columnId]}px`
-                : 1,
-              fontSize: `${settings.fontSize}px`,
-              fontFamily: settings.fontFamily,
-            }}
+            style={
+              gridTemplate
+                ? { fontSize: `${settings.fontSize}px`, fontFamily: settings.fontFamily, minWidth: 0 }
+                : {
+                    flex: columnWidths && col.columnId && columnWidths[col.columnId]
+                      ? `0 0 ${columnWidths[col.columnId]}px`
+                      : 1,
+                    fontSize: `${settings.fontSize}px`,
+                    fontFamily: settings.fontFamily,
+                  }
+            }
           >
             {col.value && (
               <>
@@ -67,7 +77,7 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
             )}
           </div>
         ))}
-        {colSpan && columns.length < colSpan && (
+        {!gridTemplate && colSpan && columns.length < colSpan && (
           <div
             className={getDensityPadding()}
             style={{ flex: colSpan - columns.length }}

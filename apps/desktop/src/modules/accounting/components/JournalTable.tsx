@@ -1,14 +1,14 @@
 import { useMemo } from "react";
-import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
-import { TableShell } from '@widgets/table-shell/TableShell';
-import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
-import { formatDateTime } from '@shared/lib/format';
+import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
+import { TableShell } from "@widgets/table-shell/TableShell";
+import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
+import { formatDateTime } from "@shared/lib/format";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable } from "@shared/hooks";
-import { SortableHeader } from "@shared/ui/sortable-header";
+
 import type { JournalEntryDto } from "@erp/shared-types";
 import type { JournalFilters } from "../api/journalEntryService";
-import { toJournalRow, aggregateEntryTotals } from "../lib/journal-view";
+import { toJournalRow } from "../lib/journal-view";
 
 interface JournalTableProps {
   entries: JournalEntryDto[];
@@ -33,7 +33,7 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
     [entries, filters?.journal_type]
   );
 
-  const { sortedData, sortField, sortDirection, handleSort } = useSortable({
+  const { sortedData, handleSort } = useSortable({
     data: tableData,
     defaultField: "entry_date" as SortField,
     defaultDirection: "desc",
@@ -62,19 +62,18 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
 
   const allColumns = useMemo<UnifiedColumn<typeof tableData[0]>[]>(() => {
     const cols: UnifiedColumn<typeof tableData[0]>[] = [
-      { 
-        id: "entry_number",    
-        header: <SortableHeader field="entry_number" label="رقم القيد" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,            
-        label: "رقم القيد",            
-        accessor: (e) => e.entry_number,            
-        className: "font-black text-slate-900 text-center w-20" 
+      {
+        id: "entry_number",
+        header: "رقم القيد",
+        label: "رقم القيد",
+        accessor: (e) => e.entry_number,
+        className: "font-black text-slate-900 text-center"
       },
-      { 
-        id: "journal_type",    
-        header: <SortableHeader field="journal_type" label="نوع الحركة" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,           
-        label: "نوع الحركة",           
+      {
+        id: "journal_type",
+        header: "نوع الحركة",
+        label: "نوع الحركة",
         accessor: (e) => <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">{e.journal_type_display}</span>,
-        className: "w-32"
       },
     ];
 
@@ -82,10 +81,10 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
       const symbol = curr.symbol || curr.code;
       cols.push({
         id: `debit_${curr.code}`,
-        header: <SortableHeader field="entry_number" label={`عليه / مدين (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
+        header: `عليه / مدين (${symbol})`,
         label: `عليه / مدين (${symbol})`,
         accessor: (e) => {
-          if (e.active_side !== 'debit') return "";
+          if (e.active_side !== "debit") return "";
           return e.debit_base > 0 ? formatAmount(e.debit_base, { currencyCode: curr.code }) : "";
         },
         align: "left",
@@ -97,10 +96,10 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
       const symbol = curr.symbol || curr.code;
       cols.push({
         id: `credit_${curr.code}`,
-        header: <SortableHeader field="entry_number" label={`له / دائن (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
+        header: `له / دائن (${symbol})`,
         label: `له / دائن (${symbol})`,
         accessor: (e) => {
-          if (e.active_side !== 'credit') return "";
+          if (e.active_side !== "credit") return "";
           return e.credit_base > 0 ? formatAmount(e.credit_base, { currencyCode: curr.code }) : "";
         },
         align: "left",
@@ -109,37 +108,37 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
     });
 
     cols.push(
-      { 
-        id: "description",     
-        header: "البيان",               
-        label: "البيان",               
-        accessor: (e) => e.description,              
-        className: "max-w-[200px] truncate font-bold text-slate-700" 
+      {
+        id: "description",
+        header: "البيان",
+        label: "البيان",
+        accessor: (e) => e.description,
+        className: "max-w-[200px] truncate font-bold text-slate-700"
       },
-      { 
-        id: "credit_account",  
-        header: <SortableHeader field="credit_account" label="الحساب الدائن / المصدر" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />, 
-        label: "الحساب الدائن / المصدر", 
-        accessor: (e) => e.credit_account,          
-        className: "text-emerald-600 font-bold" 
+      {
+        id: "credit_account",
+        header: "الحساب الدائن / المصدر",
+        label: "الحساب الدائن / المصدر",
+        accessor: (e) => e.credit_account,
+        className: "text-emerald-600 font-bold"
       },
-      { 
-        id: "debit_account",   
-        header: <SortableHeader field="debit_account" label="الحساب المدين / الوجهة" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />, 
-        label: "الحساب المدين / الوجهة", 
-        accessor: (e) => e.debit_account,           
-        className: "text-blue-600 font-bold" 
+      {
+        id: "debit_account",
+        header: "الحساب المدين / الوجهة",
+        label: "الحساب المدين / الوجهة",
+        accessor: (e) => e.debit_account,
+        className: "text-blue-600 font-bold"
       },
-      { 
-        id: "entry_date",      
-        header: <SortableHeader field="entry_date" label="التاريخ" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,              
-        label: "التاريخ",              
-        accessor: (e) => formatDateTime(e.entry_date), 
-        className: "text-slate-500 tabular-nums w-32" 
+      {
+        id: "entry_date",
+        header: "التاريخ",
+        label: "التاريخ",
+        accessor: (e) => formatDateTime(e.entry_date),
+        className: "text-slate-500 tabular-nums"
       },
     );
     return cols;
-  }, [sortField, sortDirection, handleSort, sortedCurrencies, formatAmount]);
+  }, [sortedCurrencies, formatAmount]);
 
   const defaultVisible = useMemo(() => {
     const def = ["entry_number", "journal_type"];
@@ -163,47 +162,53 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
     const baseDebitTotal = tableData.reduce((s, e) => s + e.debit_base, 0);
     const baseCreditTotal = tableData.reduce((s, e) => s + e.credit_base, 0);
 
-    const colIds = enrichedColumns.map(c => c.id);
-    return colIds.map(id => {
-      if (id === 'entry_number') {
-        return { id: 'count', columnId: 'entry_number', label: '', value: `${sortedData.length} قيد`, className: 'text-slate-500 font-medium' };
+    return enrichedColumns.map((col) => {
+      const id = col.id;
+      if (id === "entry_number") {
+        return { id: "count", columnId: "entry_number", label: "", value: `${sortedData.length} قيد`, className: "text-slate-500 font-medium" };
       }
-      if (id === 'journal_type') {
-        return { id: 'journal_type_summary', columnId: 'journal_type', label: '', value: 'المجموع', className: 'text-slate-600 font-bold', align: 'center' as const };
+      if (id === "journal_type") {
+        return { id: "journal_type_summary", columnId: "journal_type", label: "", value: "المجموع", className: "text-slate-600 font-bold", align: "center" as const };
       }
-      if (id === 'description') {
+      if (id === "description") {
         const balanceParts: string[] = [];
         sortedCurrencies.forEach(curr => {
           const bal = baseDebitTotal - baseCreditTotal;
           balanceParts.push(formatAmount(bal, { currencyCode: curr.code }));
         });
         return {
-          id: 'balance_summary', columnId: 'description', label: 'الرصيد',
-          value: balanceParts.join(' / '),
-          className: 'text-slate-900 font-black'
+          id: "balance_summary",
+          columnId: "description",
+          label: "الرصيد",
+          value: balanceParts.join(" / "),
+          className: "text-slate-900 font-black"
         };
       }
       const debitMatch = id.match(/^debit_(.+)$/);
       if (debitMatch) {
         const currCode = debitMatch[1];
         return {
-          id: `${id}_total`, columnId: id, label: 'إجمالي',
+          id: `${id}_total`,
+          columnId: id,
+          label: "إجمالي",
           value: baseDebitTotal > 0 ? formatAmount(baseDebitTotal, { currencyCode: currCode }) : "—",
-          align: 'left' as const,
-          className: 'text-blue-700 font-black'
+          align: "left" as const,
+          className: "text-blue-700 font-black"
         };
       }
       const creditMatch = id.match(/^credit_(.+)$/);
       if (creditMatch) {
         const currCode = creditMatch[1];
         return {
-          id: `${id}_total`, columnId: id, label: 'إجمالي',
+          id: `${id}_total`,
+          columnId: id,
+          label: "إجمالي",
           value: baseCreditTotal > 0 ? formatAmount(baseCreditTotal, { currencyCode: currCode }) : "—",
-          align: 'left' as const,
-          className: 'text-emerald-700 font-black'
+          align: "left" as const,
+          className: "text-emerald-700 font-black"
         };
       }
-      return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
+      return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
   }, [tableData, sortedData, formatAmount, enrichedColumns, sortedCurrencies]);
 
@@ -219,6 +224,13 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
         data={sortedData}
         columns={enrichedColumns}
         loading={loading}
+        enableResize
+        tableId="journal"
+        onHeaderClick={(col) => {
+          if (col.id === "entry_number" || col.id === "journal_type" || col.id === "credit_account" || col.id === "debit_account" || col.id === "entry_date") {
+            handleSort(col.id as SortField);
+          }
+        }}
         emptyMessage="لا توجد قيود يومية مسجلة"
         summary={summaryColumns}
       />

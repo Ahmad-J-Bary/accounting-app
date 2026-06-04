@@ -6,10 +6,9 @@ import type { CustomerDto } from "@erp/shared-types";
 import { toast } from "sonner";
 
 import { FinancialDocumentTemplate } from '@widgets/templates/FinancialDocumentTemplate';
+import { GenericDocumentGrid, SummaryPanel } from "@widgets/unified-grid";
 import { InvoiceList } from '../components/InvoiceList';
 import { DocumentStatusBadge } from '../components/DocumentStatusBadge';
-import { GenericDocumentGrid } from '@widgets/document-shell/GenericDocumentGrid';
-import { SummaryPanel } from '@widgets/document-shell/SummaryPanel';
 import { InvoicePartySelector } from '../components/InvoicePartySelector';
 import { useInvoiceLifecycle } from '../hooks/useInvoiceLifecycle';
 import { invoiceService } from "@modules/invoicing/api/invoiceService";

@@ -1,12 +1,11 @@
 import { useMemo } from "react";
-import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
-import { TableShell } from '@widgets/table-shell/TableShell';
+import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
+import { TableShell } from "@widgets/table-shell/TableShell";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable, useTableColumns } from "@shared/hooks";
 import type { SupplierDto } from "@erp/shared-types";
 import { Eye, Pencil, Trash2, NotebookText, Receipt, Truck } from "lucide-react";
 import { ActionsDropdown } from "@shared/ui/actions-dropdown";
-import { SortableHeader } from "@shared/ui/sortable-header";
 
 interface SupplierTableProps {
   suppliers: SupplierDto[];
@@ -26,8 +25,8 @@ type SortField = "code" | "name" | "balance";
 export function SupplierTable({ suppliers, loading, search, onSearchChange, onView, onEdit, onDelete, onJournal, onDocument, selectedId }: SupplierTableProps) {
   const { currencies } = useCurrencyContext();
   const { getAccountStatusColumn, getBalanceColumns, getSummaryColumns } = useTableColumns();
-  
-  const { sortedData: sortedSuppliers, sortField, sortDirection, handleSort } = useSortable({
+
+  const { sortedData: sortedSuppliers, handleSort } = useSortable({
     data: suppliers,
     defaultField: "code" as SortField,
     sortFn: (a, b, field, direction) => {
@@ -43,19 +42,18 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
 
   const allColumns = useMemo<UnifiedColumn<SupplierDto>[]>(() => {
     const cols: UnifiedColumn<SupplierDto>[] = [
-      { 
+      {
         id: "code",
-        header: <SortableHeader field="code" label="#" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />, 
+        header: "#",
         label: "رقم الحساب",
         accessor: (s) => (
           <span className="font-black text-slate-500">{s.code || "—"}</span>
         ),
-        className: "w-16",
         align: "center"
       },
-      { 
+      {
         id: "name",
-        header: <SortableHeader field="name" label="اسم المورد" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />, 
+        header: "اسم المورد",
         label: "اسم المورد",
         accessor: (s) => (
           <div className="flex items-center gap-3">
@@ -64,30 +62,20 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
             </div>
             <span className="font-bold text-slate-800">{s.name}</span>
           </div>
-        ),
-        className: "min-w-[200px]"
+        )
       },
-      { 
+      {
         id: "phone",
-        header: "رقم الهاتف", 
+        header: "رقم الهاتف",
         label: "رقم الهاتف",
-        accessor: (s) => s.phone || "—", 
-        className: "tabular-nums text-slate-500 w-[140px]" 
+        accessor: (s) => s.phone || "—",
+        className: "tabular-nums text-slate-500"
       },
     ];
 
-    // Account Status
-    cols.push(getAccountStatusColumn(
-      <SortableHeader field="balance" label="حالة الحساب" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
-      { isCreditFirst: true }
-    ));
+    cols.push(getAccountStatusColumn("حالة الحساب", { isCreditFirst: true }));
+    cols.push(...getBalanceColumns("الرصيد"));
 
-    // Balances
-    cols.push(...getBalanceColumns(
-      <SortableHeader field="balance" label="الرصيد" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />
-    ));
-
-    // Actions
     cols.push({
       id: "actions",
       header: "إجراءات",
@@ -108,7 +96,7 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
     });
 
     return cols;
-  }, [sortField, sortDirection, handleSort, onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, getBalanceColumns]);
+  }, [onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, getBalanceColumns]);
 
   const defaultVisible = useMemo(() =>
     ["code", "name", "phone", "status", ...currencies.map(c => `balance_${c.code}`), "actions"],
@@ -134,6 +122,16 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
         data={sortedSuppliers}
         columns={enrichedColumns}
         loading={loading}
+        enableResize
+        tableId="suppliers"
+        onHeaderClick={(col) => {
+          if (col.id === "#" || col.id === "name") {
+            handleSort(col.id === "#" ? "code" : "name");
+          }
+          if (col.id === "status" || col.id?.startsWith("balance_")) {
+            handleSort("balance");
+          }
+        }}
         onRowClick={onView}
         selectedId={selectedId}
         emptyMessage={search ? "لا توجد نتائج بحث تطابق استعلامك" : "قائمة الموردين فارغة حالياً"}

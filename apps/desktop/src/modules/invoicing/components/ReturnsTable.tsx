@@ -48,21 +48,21 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
         header: "الرقم",
         label: "الرقم",
         accessor: (i) => <span className="font-bold text-slate-500 font-mono">{i.return_number}</span>,
-        className: "w-28 text-center",
+        className: "text-center",
       },
       {
         id: "material_name",
         header: "المادة",
         label: "المادة",
         accessor: (i) => <span className="font-medium text-slate-800">{i.material_name ?? "—"}</span>,
-        className: "min-w-[140px]",
+        className: "",
       },
       {
         id: "partner_name",
         header: partnerLabel,
         label: partnerLabel,
         accessor: (i) => <span className="font-medium text-slate-700">{i.partner_name || "—"}</span>,
-        className: "min-w-[120px]",
+        className: "",
       },
       ...currencies.map(curr => ({
         id: `unit_price_${curr.code}`,
@@ -74,7 +74,7 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
           return formatAmount(val, { currencyCode: curr.code });
         },
         align: "left" as const,
-        className: "tabular-nums w-24",
+        className: "tabular-nums",
       })),
       {
         id: "quantity",
@@ -82,7 +82,7 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
         label: "الكمية المرتجعة",
         accessor: (i) => <span className="tabular-nums font-bold">{Math.round(parseFloat(i.quantity))}</span>,
         align: "left",
-        className: "w-20",
+        className: "",
       },
       {
         id: "unit_id",
@@ -92,7 +92,7 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
           const unitName = materials.find(m => m.id === i.material_id)?.units.find(u => u.id === i.unit_id)?.name;
           return <span className="text-slate-500">{unitName || "—"}</span>;
         },
-        className: "w-20",
+        className: "",
       },
       ...currencies.map(curr => ({
         id: `line_total_${curr.code}`,
@@ -104,21 +104,21 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
           return formatAmount(val, { currencyCode: curr.code });
         },
         align: "left" as const,
-        className: "tabular-nums font-bold w-28",
+        className: "tabular-nums font-bold",
       })),
       {
         id: "return_date",
         header: "التاريخ",
         label: "التاريخ",
         accessor: (i) => formatDateTime(i.return_date),
-        className: "w-28",
+        className: "",
       },
       {
         id: "notes",
         header: "ملاحظة",
         label: "ملاحظة",
         accessor: (i) => <span className="text-slate-400 text-xs">{i.notes || "-"}</span>,
-        className: "min-w-[100px]",
+        className: "",
       },
       {
         id: "actions",
@@ -190,6 +190,8 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
         data={items}
         columns={enrichedColumns}
         loading={loading}
+        enableResize
+        tableId="returns"
         onRowClick={(i) => onSelect?.(i.return_id || null)}
         selectedId={selectedId}
         summary={summaryColumns}

@@ -22,7 +22,7 @@ interface PaymentsTableProps {
   payments: Payment[];
   accounts: AccountDto[];
   currencies: { code: string; symbol?: string }[];
-  baseCurrency?: { code: string };
+  baseCurrency?: { code: string; symbol?: string };
   formatAmount: (amount: number, opts: { currencyCode: string }) => string;
   toBase: (amount: number, from: string) => number;
   loading: boolean;
@@ -414,6 +414,8 @@ export function PaymentsTable({
         selectedId={selectedId}
         emptyMessage="لا توجد سندات مالية مسجلة"
         summary={summaryColumns}
+        tableId="payments"
+        enableResize
       />
     </TableShell>
   );

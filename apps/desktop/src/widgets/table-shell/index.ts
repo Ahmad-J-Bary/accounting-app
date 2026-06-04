@@ -1,6 +1,9 @@
 export { UnifiedTable } from './UnifiedTable';
 export type { UnifiedColumn } from './UnifiedTable';
 
+export { GridHeader } from './GridHeader';
+export type { GridHeaderColumn } from './GridHeader';
+
 export { TableShell } from './TableShell';
 export type { TableShellProps } from './TableShell';
 

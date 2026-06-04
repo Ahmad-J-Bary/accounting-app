@@ -1,18 +1,17 @@
 import { useMemo, useState, useCallback } from "react";
-import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
-import { TableShell } from '@widgets/table-shell/TableShell';
-import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
+import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
+import { TableShell } from "@widgets/table-shell/TableShell";
+import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns } from "@shared/hooks";
 import type { PartnerDto } from "@erp/shared-types";
 import { Eye, Pencil, Trash2, NotebookText, Receipt, Users } from "lucide-react";
 import { ActionsDropdown } from "@shared/ui/actions-dropdown";
-import { SortableHeader } from "@shared/ui/sortable-header";
 
-type PartnerWithRatios = PartnerDto & { 
-  calculatedRatio: number; 
-  calculatedCapitalRatio: number; 
-  displayAmountBase: number 
+type PartnerWithRatios = PartnerDto & {
+  calculatedRatio: number;
+  calculatedCapitalRatio: number;
+  displayAmountBase: number;
 };
 
 interface PartnerTableProps {
@@ -31,20 +30,20 @@ interface PartnerTableProps {
 
 type SortField = string;
 
-export function PartnerTable({ 
-  partners, 
-  loading, 
-  search, 
-  onSearchChange, 
+export function PartnerTable({
+  partners,
+  loading,
+  search,
+  onSearchChange,
   onView,
   onEdit,
   onDelete,
   onJournal,
   onDocument,
-  selectedId, 
-  onRowClick 
+  selectedId,
+  onRowClick
 }: PartnerTableProps) {
-  const { currencies, formatAmount, toBase } = useCurrencyContext();
+  const { currencies, formatAmount } = useCurrencyContext();
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
@@ -66,7 +65,6 @@ export function PartnerTable({
         case "capital_ratio": comparison = a.calculatedCapitalRatio - b.calculatedCapitalRatio; break;
         case "ratio": comparison = a.calculatedRatio - b.calculatedRatio; break;
         default: {
-          // Check if sortField starts with amount_ and use base amount
           comparison = a.displayAmountBase - b.displayAmountBase;
         }
       }
@@ -77,9 +75,9 @@ export function PartnerTable({
 
   const allColumns = useMemo<UnifiedColumn<PartnerWithRatios>[]>(() => {
     const cols: UnifiedColumn<PartnerWithRatios>[] = [
-      { 
+      {
         id: "name",
-        header: <SortableHeader field="name" label="اسم الشريك" currentField={sortField} direction={sortDirection} onSort={handleSort} />, 
+        header: "اسم الشريك",
         label: "اسم الشريك",
         accessor: (p: PartnerWithRatios) => (
           <div className="flex items-center gap-3">
@@ -88,8 +86,7 @@ export function PartnerTable({
             </div>
             <span className="font-bold text-slate-800">{p.name}</span>
           </div>
-        ),
-        className: "min-w-[200px]"
+        )
       },
     ];
 
@@ -97,7 +94,7 @@ export function PartnerTable({
       const symbol = curr.symbol || curr.code;
       cols.push({
         id: `amount_${curr.code}`,
-        header: <SortableHeader field={`amount_${curr.code}`} label={`رأس المال (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: `رأس المال (${symbol})`,
         label: `رأس المال (${symbol})`,
         accessor: (p: PartnerWithRatios) => {
           if (p.displayAmountBase === 0) return "—";
@@ -109,29 +106,27 @@ export function PartnerTable({
     });
 
     cols.push(
-      { 
+      {
         id: "capital_ratio",
-        header: <SortableHeader field="capital_ratio" label="نسبة رأس المال" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: "نسبة رأس المال",
         label: "نسبة المساهمة في رأس المال",
         accessor: (p: PartnerWithRatios) => (
           <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-black tabular-nums">
             {p.calculatedCapitalRatio.toFixed(2)}%
           </span>
         ),
-        align: "center",
-        className: "w-28"
+        align: "center"
       },
-      { 
+      {
         id: "ratio",
-        header: <SortableHeader field="ratio" label="نسبة الأرباح" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: "نسبة الأرباح",
         label: "نسبة توزيع الأرباح",
         accessor: (p: PartnerWithRatios) => (
           <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black tabular-nums">
             {p.calculatedRatio.toFixed(2)}%
           </span>
         ),
-        align: "center",
-        className: "w-28"
+        align: "center"
       },
       {
         id: "actions",
@@ -154,7 +149,7 @@ export function PartnerTable({
     );
 
     return cols;
-  }, [currencies, formatAmount, sortField, sortDirection, handleSort, onView, onEdit, onDelete, onJournal, onDocument]);
+  }, [currencies, formatAmount, onView, onEdit, onDelete, onJournal, onDocument]);
 
   const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
     tableId: "partners-unified",
@@ -165,18 +160,17 @@ export function PartnerTable({
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     const totalCapitalRatio = sortedPartners.reduce((s, p) => s + p.calculatedCapitalRatio, 0);
     const totalRatio = sortedPartners.reduce((s, p) => s + p.calculatedRatio, 0);
-
     const baseTotal = sortedPartners.reduce((sum, p) => sum + p.displayAmountBase, 0);
 
-    const colIds = enrichedColumns.map(c => c.id);
-    return colIds.map(id => {
+    return enrichedColumns.map((col) => {
+      const id = col.id;
       switch (id) {
-        case 'name':
-          return { id: 'count', columnId: 'name', label: '', value: `${sortedPartners.length} شريك`, className: 'text-slate-500 font-medium' };
-        case 'capital_ratio':
-          return { id: 'total_capital_ratio', columnId: 'capital_ratio', label: 'المجموع', value: `${totalCapitalRatio.toFixed(2)}%`, align: 'center' as const, className: 'text-blue-700 font-black' };
-        case 'ratio':
-          return { id: 'total_ratio', columnId: 'ratio', label: 'المجموع', value: `${totalRatio.toFixed(2)}%`, align: 'center' as const, className: 'text-emerald-700 font-black' };
+        case "name":
+          return { id: "count", columnId: "name", label: "", value: `${sortedPartners.length} شريك`, className: "text-slate-500 font-medium" };
+        case "capital_ratio":
+          return { id: "total_capital_ratio", columnId: "capital_ratio", label: "المجموع", value: `${totalCapitalRatio.toFixed(2)}%`, align: "center" as const, className: "text-blue-700 font-black" };
+        case "ratio":
+          return { id: "total_ratio", columnId: "ratio", label: "المجموع", value: `${totalRatio.toFixed(2)}%`, align: "center" as const, className: "text-emerald-700 font-black" };
         default: {
           const match = id.match(/^amount_(.+)$/);
           if (match) {
@@ -184,13 +178,13 @@ export function PartnerTable({
             return {
               id: `total_${id}`,
               columnId: id,
-              label: 'الإجمالي',
+              label: "الإجمالي",
               value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
-              align: 'left' as const,
-              className: 'text-slate-900 font-black'
+              align: "left" as const,
+              className: "text-slate-900 font-black"
             };
           }
-          return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
+          return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
         }
       }
     });
@@ -208,6 +202,13 @@ export function PartnerTable({
         data={sortedPartners}
         columns={enrichedColumns}
         loading={loading}
+        enableResize
+        tableId="partners"
+        onHeaderClick={(col) => {
+          if (col.id === "name" || col.id === "capital_ratio" || col.id === "ratio" || col.id?.startsWith("amount_")) {
+            handleSort(col.id);
+          }
+        }}
         onRowClick={onRowClick}
         selectedId={selectedId}
         emptyMessage={search ? "لا توجد نتائج بحث تطابق استعلامك" : "لا يوجد شركاء مسجلون حالياً"}
