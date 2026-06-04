@@ -1,15 +1,6 @@
 import React, { ReactNode } from 'react';
 import { cn } from '@shared/lib/utils';
 import { getLeftBorderClass } from '@shared/lib/table-utils';
-import { Settings2 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuCheckboxItem,
-} from '@shared/ui/dropdown-menu';
 import type { AutoFitColumnOptions } from '@shared/hooks/useColumnResize';
 
 export interface GridHeaderColumn {
@@ -57,9 +48,6 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
   onHeaderCellClick,
   onResizeStart,
   onAutoFit,
-  allColumns,
-  onColumnToggle,
-  prefixSlot,
   suffixSlot,
   columnWidths = {},
   getColumnStyle,
@@ -73,33 +61,6 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
         stickyHeader && 'sticky top-0 z-10 backdrop-blur-sm shadow-sm',
       )}
     >
-      {prefixSlot ?? (allColumns && (
-        <div className={cn('w-10 shrink-0 flex items-center justify-center bg-slate-100/30', getLeftBorderClass(borderStyle))}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className='p-1 text-slate-400 hover:text-blue-600 transition-colors'>
-                <Settings2 className='w-3.5 h-3.5' />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align='start' className='w-[180px] shadow-xl'>
-              <DropdownMenuLabel className='text-right text-[10px] font-black uppercase text-slate-500 tracking-widest'>
-                تخصيص الأعمدة
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {allColumns.map((col) => (
-                <DropdownMenuCheckboxItem
-                  key={col.id}
-                  checked={col.visible}
-                  onCheckedChange={() => onColumnToggle?.(col.id)}
-                  className='text-right flex-row-reverse gap-2 text-[11px] font-bold py-1.5'
-                >
-                  {col.label}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      ))}
 
       {columns.map((col) => (
         <div

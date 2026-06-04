@@ -105,7 +105,7 @@ export default function PaymentsPage() {
     [refresh],
   );
 
-  const handleCreate = async (payload: CreatePaymentRequest) => {
+  const handleCreate = useCallback(async (payload: CreatePaymentRequest) => {
     setSaving(true);
     try {
       await paymentService.createPayment(payload);
@@ -117,9 +117,9 @@ export default function PaymentsPage() {
     } finally {
       setSaving(false);
     }
-  };
+  }, [refresh]);
 
-  const handleUpdate = async (payload: PaymentFormPayload) => {
+  const handleUpdate = useCallback(async (payload: PaymentFormPayload) => {
     setSaving(true);
     try {
       if (payload.id) {
@@ -137,7 +137,16 @@ export default function PaymentsPage() {
     } finally {
       setSaving(false);
     }
-  };
+  }, [refresh, handleCreate]);
+
+  const handleRowClick = useCallback((p: Payment) => {
+    setSelectedPayment(p);
+  }, []);
+
+  const handleEditClick = useCallback((p: Payment) => {
+    setSelectedPayment(p);
+    setShowDialog(true);
+  }, []);
 
   const totalIn = useMemo(
     () =>
@@ -227,8 +236,8 @@ export default function PaymentsPage() {
           typeFilter={typeFilter}
           onTypeFilterChange={setTypeFilter}
           selectedId={selectedPayment?.id}
-          onRowClick={(p) => setSelectedPayment(p)}
-          onEdit={(p) => { setSelectedPayment(p); setShowDialog(true); }}
+          onRowClick={handleRowClick}
+          onEdit={handleEditClick}
           onDelete={handleDelete}
         />
       }

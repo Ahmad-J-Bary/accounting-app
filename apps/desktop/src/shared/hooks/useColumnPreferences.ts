@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 
 export function useColumnPreferences(tableId: string, defaultVisibleColumns: string[]) {
-  const defaultKey = JSON.stringify(defaultVisibleColumns);
   const getStoredPreferences = () => {
     try {
       const stored = localStorage.getItem(`table-cols-${tableId}`);
@@ -16,20 +15,30 @@ export function useColumnPreferences(tableId: string, defaultVisibleColumns: str
 
   const [visibleColumns, setVisibleColumns] = useState<string[]>(getStoredPreferences);
 
+  // Only add new columns that are in defaultVisibleColumns but not in current visibleColumns
+  // DO NOT overwrite existing user preferences!
   useEffect(() => {
     setVisibleColumns(prev => {
       const defaultSet = new Set(defaultVisibleColumns);
-
-      const filtered = prev.filter(id => defaultSet.has(id));
-
-      const currentSet = new Set(filtered);
-      const added = defaultVisibleColumns.filter(id => !currentSet.has(id));
-
-      return added.length > 0 || filtered.length !== prev.length
-        ? [...filtered, ...added]
-        : prev;
+      const currentSet = new Set(prev);
+      
+      // Keep only valid columns (still in default set)
+      const validColumns = prev.filter(id => defaultSet.has(id));
+      
+      // Add any new columns from default that aren't already in validColumns
+      const newColumns = defaultVisibleColumns.filter(id => !currentSet.has(id));
+      
+      // If nothing changed, return previous to avoid unnecessary re-renders
+      const newVisible = [...validColumns, ...newColumns];
+      
+      if (newVisible.length === prev.length && 
+          newVisible.every((id, i) => id === prev[i])) {
+        return prev;
+      }
+      
+      return newVisible;
     });
-  }, [defaultKey, defaultVisibleColumns]);
+  }, [defaultVisibleColumns]);
 
   useEffect(() => {
     try {

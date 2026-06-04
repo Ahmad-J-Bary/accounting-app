@@ -20,10 +20,10 @@ export function SortableHeader({
   className = ""
 }: SortableHeaderProps) {
   const getSortIcon = (f: string) => {
-    if (currentField !== f) return <ArrowUpDown className="w-3 h-3 opacity-30" />;
+    if (currentField !== f) return null;
     return direction === "asc" 
-      ? <ArrowUpDown className="w-3 h-3 rotate-180" /> 
-      : <ArrowUpDown className="w-3 h-3" />;
+      ? <ArrowUpDown className="w-3 h-3 rotate-180 ml-1" /> 
+      : <ArrowUpDown className="w-3 h-3 ml-1" />;
   };
 
   return (
@@ -32,7 +32,7 @@ export function SortableHeader({
         if (stopPropagation) e.stopPropagation(); 
         onSort(field); 
       }}
-      className={`flex items-center gap-1 hover:text-slate-900 transition-colors ${className}`}
+      className={`w-full h-full flex items-center justify-center hover:text-slate-900 transition-colors cursor-pointer ${className}`}
     >
       {label}
       {getSortIcon(field)}

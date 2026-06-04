@@ -3,10 +3,9 @@ import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Save, Send, Printer, History, Settings2 } from "lucide-react";
 import type { CustomerDto } from "@erp/shared-types";
-import { toast } from "sonner";
 
 import { FinancialDocumentTemplate } from '@widgets/templates/FinancialDocumentTemplate';
-import { GenericDocumentGrid, SummaryPanel } from "@widgets/unified-grid";
+import { GenericDocumentGrid, SummaryPanel } from "@widgets/document-shell";
 import { InvoiceList } from '../components/InvoiceList';
 import { DocumentStatusBadge } from '../components/DocumentStatusBadge';
 import { InvoicePartySelector } from '../components/InvoicePartySelector';
