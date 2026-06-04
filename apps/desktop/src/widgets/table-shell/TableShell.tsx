@@ -48,7 +48,7 @@ export const TableShell: React.FC<TableShellProps> = ({
         </div>
       )}
       
-      <div className="flex-1 overflow-auto relative custom-scrollbar">
+      <div className="flex-1 overflow-x-hidden overflow-y-auto relative custom-scrollbar">
         {children}
       </div>
 

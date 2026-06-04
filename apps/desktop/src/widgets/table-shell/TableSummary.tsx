@@ -52,14 +52,20 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
             key={col.id}
             className={cn(
               getDensityPadding(),
-              "font-bold text-slate-800 tabular-nums",
-              gridTemplate ? "overflow-hidden whitespace-nowrap" : "",
-              getAlignmentClass(col.align),
+              "font-bold text-slate-800 tabular-nums flex items-center justify-center",
               col.className,
             )}
             style={
               gridTemplate
-                ? { fontSize: `${settings.fontSize}px`, fontFamily: settings.fontFamily, minWidth: 0 }
+                ? {
+                    fontSize: `${settings.fontSize}px`,
+                    fontFamily: settings.fontFamily,
+                    minWidth: 0,
+                    textAlign: "center",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }
                 : {
                     flex: columnWidths && col.columnId && columnWidths[col.columnId]
                       ? `0 0 ${columnWidths[col.columnId]}px`
@@ -70,10 +76,10 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
             }
           >
             {col.value && (
-              <>
-                <span className="text-xs text-slate-400 ml-1">{col.label}:</span>
-                {col.value}
-              </>
+              <div className='flex items-center justify-center gap-1 whitespace-nowrap'>
+                <span className="text-xs text-slate-400">{col.label}:</span>
+                <span>{col.value}</span>
+              </div>
             )}
           </div>
         ))}

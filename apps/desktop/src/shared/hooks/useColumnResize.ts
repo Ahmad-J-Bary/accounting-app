@@ -9,6 +9,18 @@ const MAX_AUTO_FIT_WIDTH = 560;
 const AUTO_FIT_PADDING = 40;
 const AUTO_FIT_FONT =
   '600 12px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+const HEADER_MEASURE_FONT =
+  '900 11px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
+function getHeaderText(col: ColumnWidthDef): string {
+  if (!col) return "";
+  const c = col as unknown as { header?: unknown; label?: unknown; id?: unknown; key?: unknown };
+  if (typeof c.header === "string") return c.header;
+  if (typeof c.label === "string") return c.label;
+  if (typeof c.id === "string") return c.id;
+  if (typeof c.key === "string") return c.key;
+  return "";
+}
 
 export interface AutoFitColumnOptions {
   headerText?: string;
@@ -69,8 +81,28 @@ export function useColumnResize(columns: ColumnWidthDef[], preferenceKey: string
       e.preventDefault();
       e.stopPropagation();
       const col = columns.find((c) => getColumnId(c) === colId);
+
+      // Find the actual rendered column header element to measure its current width
+      // and to read its true content for measurement.
+      const headerEl = (e.currentTarget as HTMLElement | null)
+        ?.closest('[data-col-id]') as HTMLElement | null;
+      const currentRenderedWidth = headerEl ? headerEl.getBoundingClientRect().width : 0;
+
+      // Measure header text width (using plain-text label/id if header is a ReactNode)
+      const headerText = col ? getHeaderText(col) : colId;
+      const measuredHeaderWidth = measureTextWidth(headerText, HEADER_MEASURE_FONT);
+
+      // Determine starting width:
+      // 1. Resize override if user already resized
+      // 2. Otherwise: max of (current rendered width, header text + padding)
+      //    so the column opens up to show the full header instead of clipping.
+      const padding = AUTO_FIT_PADDING;
+      const minContentWidth = Math.max(MIN_AUTO_FIT_WIDTH, Math.ceil(measuredHeaderWidth + padding));
       const startWidth =
-        columnWidths[colId] || (col ? parsePixelWidth(col.width) : DEFAULT_COLUMN_WIDTH);
+        columnWidths[colId] ||
+        (col ? parsePixelWidth(col.width) : DEFAULT_COLUMN_WIDTH) ||
+        Math.max(currentRenderedWidth, minContentWidth);
+
       resizeRef.current = { colId, startX: e.clientX, startWidth };
 
       const handleMouseMove = (me: MouseEvent) => {
@@ -138,8 +170,8 @@ export function useColumnResize(columns: ColumnWidthDef[], preferenceKey: string
   const getFlexColumnStyle = useCallback(
     (col: ColumnWidthDef): React.CSSProperties => {
       const colId = getColumnId(col);
-      const textAlign = (col.align || "right") as React.CSSProperties["textAlign"];
-      const base: React.CSSProperties = { textAlign, overflow: "hidden", minWidth: 0 };
+      const textAlign = "center" as React.CSSProperties["textAlign"];
+      const base: React.CSSProperties = { textAlign };
 
       // 1. User-resize override
       if (columnWidths[colId]) {
@@ -155,8 +187,8 @@ export function useColumnResize(columns: ColumnWidthDef[], preferenceKey: string
       if (widthFromClass) {
         return { ...base, width: `${widthFromClass}px`, flex: "none" };
       }
-      // 4. No explicit width → distribute remaining space equally
-      return { ...base, flex: 1 };
+      // 4. No explicit width → fill remaining space
+      return { ...base, flex: "1 1 auto", minWidth: "0" };
     },
     [columnWidths],
   );
@@ -164,14 +196,23 @@ export function useColumnResize(columns: ColumnWidthDef[], preferenceKey: string
   /**
    * Build a CSS grid-template-columns value from visible columns.
    * Each column gets either a fixed pixel width (resize override or Tailwind class)
-   * or 1fr if no explicit width.
+   * or minmax(0, 1fr) to fill remaining space.
+   *
+   * When bookend is true, the first and last columns use 'auto' (content-sized,
+   * no expansion) while middle columns use minmax(0, 1fr) to fill remaining space.
+   * This creates symmetrical first/last column behavior.
    */
   const buildGridTemplate = useCallback(
-    (visibleCols: ColumnWidthDef[], extras?: { prefix?: string; suffix?: string }): string => {
+    (visibleCols: ColumnWidthDef[], extras?: { prefix?: string; suffix?: string; bookend?: boolean }): string => {
       const parts: string[] = [];
       if (extras?.prefix) parts.push(extras.prefix);
 
-      for (const col of visibleCols) {
+      for (let i = 0; i < visibleCols.length; i++) {
+        const col = visibleCols[i];
+        const isFirst = i === 0;
+        const isLast = i === visibleCols.length - 1;
+        const isBookend = extras?.bookend && (isFirst || isLast);
+
         const colId = getColumnId(col);
         const override = columnWidths[colId];
         if (override) {
@@ -183,7 +224,9 @@ export function useColumnResize(columns: ColumnWidthDef[], preferenceKey: string
           parts.push(`${parsed}px`);
           continue;
         }
-        parts.push("1fr");
+
+        // bookend: first/last size to content, middle columns fill remaining space
+        parts.push(isBookend ? "auto" : "minmax(0, 1fr)");
       }
 
       if (extras?.suffix) parts.push(extras.suffix);

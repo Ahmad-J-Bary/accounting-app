@@ -9,3 +9,4 @@ export * from './useSidebarSettings';
 export * from './useSortable';
 export * from './useTableColumns';
 export * from './useColumnResize';
+export * from './useGridResize';

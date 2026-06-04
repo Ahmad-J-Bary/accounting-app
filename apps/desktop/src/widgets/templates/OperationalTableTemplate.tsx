@@ -111,7 +111,7 @@ export function OperationalTableTemplate({
 
           {/* Table Container */}
           <div className="flex-1 flex flex-col bg-white rounded-xl border border-slate-200/70 shadow-sm overflow-hidden transition-all hover:shadow-md">
-            <div className="flex-1 overflow-auto relative custom-scrollbar">
+            <div className="flex-1 overflow-x-hidden overflow-y-auto relative custom-scrollbar">
               {tableContent}
             </div>
           </div>

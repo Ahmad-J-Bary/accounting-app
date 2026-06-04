@@ -1,18 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
+import { TableActions } from '@widgets/table-shell/TableActions';
+import { Button } from "@shared/ui/button";
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useUnifiedColumns, useSortable } from "@shared/hooks";
 import { formatDate } from "@shared/lib/format";
 import { PAYMENT_TYPE_LABELS } from "@modules/payments/lib/constants";
-import { ArrowDownCircle, ArrowUpCircle, MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react";
-import { Button } from "@shared/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@shared/ui/dropdown-menu";
+import { ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import type { Payment, AccountDto } from "@erp/shared-types";
 
 type SortField = "journal_entry_number" | "payment_date" | "payment_type" | "credit_account" | "debit_account";
@@ -125,7 +120,7 @@ export function PaymentsTable({
         header: "رقم القيد",
         label: "رقم القيد",
         accessor: (p) => p.journal_entry_number ?? "—",
-        className: "font-black text-indigo-700 tabular-nums w-24",
+        className: "font-black text-indigo-700 tabular-nums",
         align: "center",
       },
       {
@@ -146,7 +141,6 @@ export function PaymentsTable({
             </span>
           </div>
         ),
-        className: "w-32",
       },
       ...sortedCurrencies.map(curr => {
         const symbol = curr.symbol || curr.code;
@@ -161,7 +155,7 @@ export function PaymentsTable({
             return formatAmount(baseAmount, { currencyCode: curr.code });
           },
           align: "left" as const,
-          className: "tabular-nums font-black text-slate-900 w-32",
+          className: "tabular-nums font-black text-slate-900",
         };
       }),
       {
@@ -169,7 +163,7 @@ export function PaymentsTable({
         header: "البيان",
         label: "البيان",
         accessor: (p) => p.notes || "—",
-        className: "min-w-[200px] text-slate-500 italic",
+        className: "text-slate-500 italic",
       },
       {
         id: "credit_account",
@@ -204,47 +198,20 @@ export function PaymentsTable({
         header: "التاريخ",
         label: "التاريخ",
         accessor: (p) => formatDate(p.payment_date),
-        className: "w-28 tabular-nums text-slate-500",
+        className: "tabular-nums text-slate-500",
       },
       {
         id: "actions",
         header: "إجراءات",
         label: "إجراءات",
         accessor: (p) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-slate-400 hover:text-slate-600"
-              >
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-40">
-              <DropdownMenuItem
-                onClick={() => onRowClick(p)}
-                className="flex-row-reverse gap-2"
-              >
-                <Eye className="w-4 h-4" /> عرض التفاصيل
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onEdit(p)}
-                className="flex-row-reverse gap-2 text-blue-600 focus:text-blue-600"
-              >
-                <Edit className="w-4 h-4" /> تعديل
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onDelete(p.id)}
-                className="flex-row-reverse gap-2 text-rose-600 focus:text-rose-600"
-              >
-                <Trash2 className="w-4 h-4" /> حذف السند
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <TableActions
+            onView={() => onRowClick(p)}
+            onEdit={() => onEdit(p)}
+            onDelete={() => onDelete(p.id)}
+          />
         ),
         align: "center",
-        className: "w-[80px]",
       },
     ];
     return cols;
@@ -254,12 +221,20 @@ export function PaymentsTable({
       formatAmount,
       toBase,
       accounts,
+      onRowClick,
+      onEdit,
+      onDelete,
     ],
   );
 
   const defaultVisible = useMemo(() => {
-    return allColumns.map(c => c.id);
-  }, [sortedCurrencies]); // Only depend on sortedCurrencies, same as JournalTable!
+    const def = ["journal_entry_number", "payment_type"];
+    sortedCurrencies.forEach(curr => {
+      def.push(`amount_${curr.code}`);
+    });
+    def.push("notes", "credit_account", "debit_account", "payment_date", "actions");
+    return def;
+  }, [sortedCurrencies]);
 
   const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
     tableId: "payments-unified",
@@ -310,6 +285,7 @@ export function PaymentsTable({
       searchPlaceholder="بحث بالمستخدم، الحساب، البيان..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      showToolbar={true}
       actions={
         <div className="flex items-center gap-2">
           <Button
@@ -345,12 +321,8 @@ export function PaymentsTable({
         data={sortedData}
         columns={enrichedColumns}
         loading={loading}
-        onRowClick={(p) => onRowClick(p)}
-        selectedId={selectedId}
-        emptyMessage="لا توجد سندات مالية مسجلة"
-        summary={summaryColumns}
-        tableId="payments"
         enableResize
+        tableId="payments"
         onHeaderClick={(col) => {
           if (
             col.id === "journal_entry_number" ||
@@ -362,6 +334,10 @@ export function PaymentsTable({
             handleSort(col.id as SortField);
           }
         }}
+        onRowClick={(p) => onRowClick(p)}
+        selectedId={selectedId}
+        emptyMessage="لا توجد سندات مالية مسجلة"
+        summary={summaryColumns}
       />
     </TableShell>
   );
