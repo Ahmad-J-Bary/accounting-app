@@ -87,48 +87,39 @@ export function MaterialTable({
           <div className="w-9 h-9 rounded-md bg-slate-100 flex items-center justify-center">
             <Image className="w-4 h-4 text-slate-300" />
           </div>
-        ),
-        className: "w-[60px]"
+        )
       },
       // 2. الكود
       {
         id: "code",
         header: "الكود",
         label: "الكود",
-        accessor: (m) => (
-          <span className="font-mono text-[11px] bg-slate-100 text-slate-700 px-2 py-1 rounded-md font-bold ring-1 ring-slate-200/50">
-            {m.code || "—"}
-          </span>
-        ),
-        className: "w-[80px]",
+        accessor: (m) => m.code || "",
+        className: "font-black text-slate-900 text-center"
       },
       // 3. الباركود
       {
         id: "barcode",
         header: "الباركود",
         label: "الباركود",
-        accessor: (m) => (
-          <span className="font-mono text-[11px] bg-slate-50 text-slate-600 px-2 py-1 rounded-md border border-slate-200">
-            {m.barcode || "—"}
-          </span>
-        ),
-        className: "w-[90px]"
+        accessor: (m) => m.barcode || "",
+        className: "font-mono font-medium text-slate-500"
       },
       // 4. اسم المادة
       {
         id: "name",
         header: "اسم المادة",
         label: "اسم المادة",
-        accessor: (m) => <span className="font-bold text-slate-800">{m.name}</span>,
+        accessor: (m) => m.name,
+        className: "font-bold text-slate-800"
       },
       // 5. الاسم (EN)
       {
         id: "name_en",
         header: "الاسم (EN)",
         label: "الاسم (EN)",
-        accessor: (m) => m.name_en ? (
-          <span className="text-[11px] text-slate-400 font-medium" dir="ltr">{m.name_en}</span>
-        ) : <span className="text-slate-200">—</span>,
+        accessor: (m) => m.name_en || "",
+        className: "text-slate-500 italic"
       },
       // 6. التصنيفات
       {
@@ -169,9 +160,9 @@ export function MaterialTable({
         label: `السعر الإفرادي (${sym})`,
         accessor: (m) => {
           const raw = rawPriceBase(m);
-          return raw > 0 ? formatAmount(raw, { currencyCode: curr.code }) : "—";
+          return raw > 0 ? formatAmount(raw, { currencyCode: curr.code }) : "";
         },
-        className: "tabular-nums font-bold text-slate-700 text-[11px]"
+        className: "tabular-nums font-black text-slate-900"
       });
     });
 
@@ -184,9 +175,9 @@ export function MaterialTable({
         label: `تكاليف إضافية (${sym})`,
         accessor: (m) => {
           const extra = extraCostBase(m);
-          return extra > 0 ? formatAmount(extra, { currencyCode: curr.code }) : "—";
+          return extra > 0 ? formatAmount(extra, { currencyCode: curr.code }) : "";
         },
-        className: "tabular-nums text-amber-600 text-[11px]"
+        className: "tabular-nums font-bold text-amber-600"
       });
     });
 
@@ -199,7 +190,7 @@ export function MaterialTable({
         label: `تكلفة الوحدة (${sym})`,
         accessor: (m) => {
           const val = unitCostBase(m);
-          if (val <= 0) return "—";
+          if (val <= 0) return "";
           const raw = rawPriceBase(m);
           if (raw > 0) {
             const extra = extraCostBase(m);
@@ -208,7 +199,7 @@ export function MaterialTable({
           }
           return <>{formatAmount(val, { currencyCode: curr.code })}</>;
         },
-        className: "tabular-nums font-bold text-amber-600 text-[11px]"
+        className: "tabular-nums font-bold text-amber-600"
       });
     });
 
@@ -221,9 +212,9 @@ export function MaterialTable({
         label: `المجموع (${sym})`,
         accessor: (m) => {
           const val = totalReceived(m) * unitCostBase(m);
-          return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "—";
+          return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "";
         },
-        className: "tabular-nums font-black text-slate-900 text-[11px]"
+        className: "tabular-nums font-black text-slate-900"
       });
     });
 
@@ -233,7 +224,7 @@ export function MaterialTable({
       header: "الكمية الكلية",
       label: "الكمية الكلية",
       accessor: (m) => parseFloat(m.total_received || "0").toLocaleString(),
-      className: "tabular-nums text-emerald-600 font-bold",
+      className: "tabular-nums text-emerald-600 font-bold"
     });
 
     // 12. الكمية المباعة
@@ -242,7 +233,7 @@ export function MaterialTable({
       header: "الكمية المباعة",
       label: "الكمية المباعة",
       accessor: (m) => parseFloat(m.total_sold || "0").toLocaleString(),
-      className: "tabular-nums text-blue-600 font-bold",
+      className: "tabular-nums text-blue-600 font-bold"
     });
 
     // 13. الكمية التالفة
@@ -260,7 +251,7 @@ export function MaterialTable({
       header: "الكمية المتوفرة",
       label: "الكمية المتوفرة",
       accessor: (m) => parseFloat(m.total_available).toLocaleString(),
-      className: "tabular-nums font-bold text-slate-700",
+      className: "tabular-nums font-bold text-slate-700"
     });
 
     // 15. المجموع للمتوفر (per currency): total_available * unit_cost
@@ -272,9 +263,9 @@ export function MaterialTable({
         label: `المجموع للمتوفر (${sym})`,
         accessor: (m) => {
           const val = totalAvailable(m) * unitCostBase(m);
-          return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "—";
+          return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "";
         },
-        className: "tabular-nums font-black text-indigo-700 text-[11px]"
+        className: "tabular-nums font-black text-indigo-700"
       });
     });
 
@@ -287,9 +278,9 @@ export function MaterialTable({
         label: `سعر المبيع (${sym})`,
         accessor: (m) => {
           const val = salePriceBase(m);
-          return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "—";
+          return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "";
         },
-        className: "tabular-nums font-bold text-emerald-600 text-[11px]"
+        className: "tabular-nums font-bold text-emerald-600"
       });
     });
 
@@ -317,7 +308,7 @@ export function MaterialTable({
             <Plus className="w-3 h-3" />
           </Button>
         </div>
-      ),
+      )
     });
 
     // 18. حد الطلب
@@ -325,15 +316,13 @@ export function MaterialTable({
       id: "minimum_stock",
       header: "حد الطلب",
       label: "حد الطلب",
-
-      accessor: (m) => (
-        <span className={cn(
-          "tabular-nums font-medium",
-          parseFloat(m.total_available) <= parseFloat(m.minimum_stock) ? "text-rose-600 font-bold" : "text-slate-500"
-        )}>
-          {parseFloat(m.minimum_stock).toLocaleString()}
-        </span>
-      )
+      accessor: (m) => {
+        const min = parseFloat(m.minimum_stock);
+        const avail = parseFloat(m.total_available);
+        const isLow = avail <= min;
+        return <span className={cn("tabular-nums", isLow ? "text-rose-600 font-bold" : "text-slate-500 font-medium")}>{min.toLocaleString()}</span>;
+      },
+      className: "tabular-nums"
     });
 
     // 19. وحدة الشراء الافتراضية
@@ -341,7 +330,8 @@ export function MaterialTable({
       id: "default_purchase_unit",
       header: "وحدة الشراء",
       label: "وحدة الشراء الافتراضية",
-      accessor: (m) => m.units?.find(u => u.id === m.default_purchase_unit_id)?.name || "—",
+      accessor: (m) => m.units?.find(u => u.id === m.default_purchase_unit_id)?.name || "",
+      className: "text-slate-500"
     });
 
     // 20. وحدة المبيع الافتراضية
@@ -349,7 +339,8 @@ export function MaterialTable({
       id: "default_sale_unit",
       header: "وحدة المبيع",
       label: "وحدة المبيع الافتراضية",
-      accessor: (m) => m.units?.find(u => u.id === m.default_sale_unit_id)?.name || "—",
+      accessor: (m) => m.units?.find(u => u.id === m.default_sale_unit_id)?.name || "",
+      className: "text-slate-500"
     });
 
     // 21. ملاحظة
@@ -357,7 +348,8 @@ export function MaterialTable({
       id: "notes",
       header: "ملاحظة",
       label: "ملاحظات",
-      accessor: (m) => m.notes || "—",
+      accessor: (m) => m.notes || "",
+      className: "text-slate-500 italic"
     });
 
     // 22. إجراءات
@@ -371,8 +363,7 @@ export function MaterialTable({
           onEdit={() => onEdit(m)}
           onDelete={() => onDelete(m.id, m.name)}
         />
-      ),
-      className: "w-[80px]"
+      )
     });
 
     return cols;

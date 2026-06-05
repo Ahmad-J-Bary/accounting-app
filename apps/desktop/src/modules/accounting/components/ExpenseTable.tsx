@@ -51,7 +51,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
   const allColumns = useMemo<UnifiedColumn<AccountDto>[]>(() => {
     const cols: UnifiedColumn<AccountDto>[] = [
       {
-        id: "#",
+        id: "code",
         header: "#",
         label: "كود الحساب",
         accessor: (c) => {
@@ -59,9 +59,9 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
           const suffix = parentCode && code.startsWith(parentCode)
             ? code.substring(parentCode.length)
             : code;
-          return suffix || "—";
+          return suffix || "";
         },
-        className: "font-black text-slate-500"
+        className: "font-black text-slate-900 text-center"
       },
       {
         id: "name",
@@ -84,11 +84,11 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
         label: `الرصيد (${symbol})`,
         accessor: (c) => {
           const absBal = Math.abs(Number(c.balance || 0));
-          if (absBal === 0) return "—";
+          if (absBal === 0) return "";
           const baseAmount = toBase(absBal, c.currency);
           return formatAmount(baseAmount, { currencyCode: curr.code });
         },
-        className: "tabular-nums font-bold text-slate-800"
+        className: "tabular-nums font-black text-slate-900"
       });
     });
 
@@ -106,15 +106,14 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
             ...(onDocument ? [{ label: "سند صرف", icon: Receipt, onClick: () => onDocument(e) }] : []),
           ]}
         />
-      ),
-      className: "w-[80px]"
+      )
     });
 
     return cols;
   }, [currencies, formatAmount, toBase, parentCode, onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn]);
 
   const defaultVisible = useMemo(() => {
-    const def = ["#", "name", "status"];
+    const def = ["code", "name", "status"];
     currencies.forEach(curr => {
       def.push(`balance_${curr.code}`);
     });
@@ -144,7 +143,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
       if (id === 'name') {
         return { id: 'name_summary', columnId: 'name', label: '', value: 'المجموع', className: 'text-slate-600 font-bold' };
       }
-      if (id === '#' || id === 'actions') {
+      if (id === 'code' || id === 'actions') {
         return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
       }
       if (id === 'status') {
@@ -191,7 +190,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
         onRowClick={onView}
         selectedId={selectedId}
         onHeaderClick={(col) => {
-          if (col.id === "#") handleSort("code");
+          if (col.id === "code") handleSort("code");
           else if (col.id === "name") handleSort("name");
           else if (col.id === "status" || col.id?.startsWith("balance_")) handleSort("balance");
         }}

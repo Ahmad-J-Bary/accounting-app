@@ -5,7 +5,7 @@ import { cn } from "@shared/lib/utils";
 import type { StockAdjustment } from "@erp/shared-types";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
-import { useUnifiedColumns } from '@shared/hooks';
+import { useUnifiedColumns, useSortable } from '@shared/hooks';
 
 interface AdjustmentsTableProps {
   data: StockAdjustment[];
@@ -71,6 +71,8 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange }: Adju
     }
   ], []);
 
+  type SortField = "product_name" | "adjustment_date" | "system_quantity" | "actual_quantity" | "difference" | "reason";
+
   const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
     tableId: "adjustments-unified",
     columns: allColumns,
@@ -86,6 +88,39 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange }: Adju
     [data, search]
   );
 
+  const { sortedData, sortField, sortDirection, handleSort } = useSortable({
+    data: filtered,
+    defaultField: "adjustment_date" as SortField,
+    defaultDirection: "desc",
+    sortFn: (a, b, field, direction) => {
+      let comparison = 0;
+      switch (field) {
+        case "product_name": {
+          const nameA = a.product_name ?? a.product_id ?? "";
+          const nameB = b.product_name ?? b.product_id ?? "";
+          comparison = nameA.localeCompare(nameB, "ar");
+          break;
+        }
+        case "adjustment_date":
+          comparison = new Date(a.adjustment_date).getTime() - new Date(b.adjustment_date).getTime();
+          break;
+        case "system_quantity":
+          comparison = parseFloat(a.system_quantity) - parseFloat(b.system_quantity);
+          break;
+        case "actual_quantity":
+          comparison = parseFloat(a.actual_quantity) - parseFloat(b.actual_quantity);
+          break;
+        case "difference":
+          comparison = parseFloat(a.difference) - parseFloat(b.difference);
+          break;
+        case "reason":
+          comparison = (a.reason || "").localeCompare(b.reason || "", "ar");
+          break;
+      }
+      return direction === "asc" ? comparison : -comparison;
+    }
+  });
+
   return (
     <TableShell
       search={search}
@@ -96,11 +131,19 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange }: Adju
       showToolbar={true}
     >
       <UnifiedTable
-        data={filtered}
+        data={sortedData}
         columns={enrichedColumns}
         loading={loading}
         enableResize
         tableId="adjustments"
+        sortField={sortField}
+        sortDirection={sortDirection}
+        onHeaderClick={(col) => {
+          const sortableFields: SortField[] = ["product_name", "adjustment_date", "system_quantity", "actual_quantity", "difference", "reason"];
+          if (sortableFields.includes(col.id as SortField)) {
+            handleSort(col.id as SortField);
+          }
+        }}
         emptyMessage={search ? "لا توجد نتائج للبحث" : "لا توجد تسويات مسجّلة"}
       />
     </TableShell>

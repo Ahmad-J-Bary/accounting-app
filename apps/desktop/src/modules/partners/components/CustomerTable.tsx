@@ -43,18 +43,16 @@ export function CustomerTable({ customers, loading, search, onSearchChange, onVi
 
   const allColumns = useMemo<UnifiedColumn<CustomerDto>[]>(() => {
     const cols: UnifiedColumn<CustomerDto>[] = [
-      { 
+      {
         id: "code",
-        header: "#", 
+        header: "#",
         label: "رقم الحساب",
-        accessor: (c) => (
-          <span className="font-black text-slate-500">{c.code || "—"}</span>
-        ),
-        className: "w-16",
+        accessor: (c) => c.code || "",
+        className: "font-black text-slate-900 text-center",
       },
-      { 
+      {
         id: "name",
-        header: "اسم العميل", 
+        header: "اسم العميل",
         label: "اسم العميل",
         accessor: (c) => (
           <div className="flex items-center gap-3">
@@ -63,15 +61,14 @@ export function CustomerTable({ customers, loading, search, onSearchChange, onVi
             </div>
             <span className="font-bold text-slate-800">{c.name}</span>
           </div>
-        ),
-        className: "min-w-[200px]"
+        )
       },
-      { 
+      {
         id: "phone",
-        header: "رقم الهاتف", 
+        header: "رقم الهاتف",
         label: "رقم الهاتف",
-        accessor: (c) => c.phone || "—", 
-        className: "tabular-nums text-slate-500 w-[140px]" 
+        accessor: (c) => c.phone || "",
+        className: "tabular-nums text-slate-500"
       },
     ];
 
@@ -96,8 +93,7 @@ export function CustomerTable({ customers, loading, search, onSearchChange, onVi
             ...(onDocument ? [{ label: "سند قبض", icon: Receipt, onClick: () => onDocument(c) }] : []),
           ]}
         />
-      ),
-      className: "w-[80px]"
+      )
     });
 
     return cols;

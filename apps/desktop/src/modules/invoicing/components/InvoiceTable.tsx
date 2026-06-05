@@ -3,18 +3,13 @@ import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTa
 import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns } from "@shared/hooks";
+import { useUnifiedColumns, useSortable } from "@shared/hooks";
 import { formatDateTime } from "@shared/lib/format";
 import { Button } from "@shared/ui/button";
 import type { InvoiceDto } from "@erp/shared-types";
 import { DocumentStatusBadge } from "./DocumentStatusBadge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@shared/ui/dropdown-menu";
-import { Eye, Settings2, CheckCircle2, History, Trash2, MoreHorizontal } from "lucide-react";
+import { TableActions } from "@widgets/table-shell/TableActions";
+import { CheckCircle2, History } from "lucide-react";
 
 interface ExtraColumn {
   key: string;
@@ -100,24 +95,22 @@ export function InvoiceTable({
         id: "invoice_number",
         header: "الرقم",
         label: "رقم الفاتورة",
-        accessor: (inv) => (
-          <span className="font-black text-blue-600 font-mono">{inv.invoice_number}</span>
-        ),
+        accessor: (inv) => inv.invoice_number,
+        className: "font-black text-slate-900 text-center"
       },
       {
         id: "notes",
         header: "التوصيف",
         label: "البيان/الملاحظات",
-        accessor: (inv) => (
-          <span className="text-slate-500 text-xs">{inv.notes || "—"}</span>
-        ),
+        accessor: (inv) => inv.notes || "",
+        className: "text-slate-500 italic"
       },
       {
         id: partyField,
         header: partyLabel,
         label: partyLabel,
-        accessor: (inv) => inv.invoice_type === "OpeningBalance" ? "—" : (partyType === "supplier" ? (inv.supplier_name || defaultName) : (inv.customer_name || defaultName)),
-        className: "font-bold text-slate-800",
+        accessor: (inv) => inv.invoice_type === "OpeningBalance" ? "" : (partyType === "supplier" ? (inv.supplier_name || defaultName) : (inv.customer_name || defaultName)),
+        className: "font-bold text-slate-800"
       },
       ...(showSubtotal ? currencies.map(curr => ({
         id: `subtotal_${curr.code}`,
@@ -131,10 +124,10 @@ export function InvoiceTable({
             inv.exchange_rate,
             baseCurrency?.code
           );
-          if (baseAmt === 0) return "—";
+          if (baseAmt === 0) return "";
           return formatAmount(baseAmt, { currencyCode: curr.code });
         },
-        className: "font-bold tabular-nums text-slate-700",
+        className: "font-bold tabular-nums text-slate-700"
       })) : []),
       ...(showExtraCosts ? currencies.map(curr => ({
         id: `extra_costs_${curr.code}`,
@@ -148,10 +141,10 @@ export function InvoiceTable({
             inv.exchange_rate,
             baseCurrency?.code
           );
-          if (baseAmt === 0) return "—";
+          if (baseAmt === 0) return "";
           return formatAmount(baseAmt, { currencyCode: curr.code });
         },
-        className: "font-bold tabular-nums text-rose-600",
+        className: "font-bold tabular-nums text-rose-600"
       })) : []),
       ...currencies.map(curr => ({
         id: `total_${curr.code}`,
@@ -165,10 +158,10 @@ export function InvoiceTable({
             inv.exchange_rate,
             baseCurrency?.code
           );
-          if (baseAmt === 0) return "—";
+          if (baseAmt === 0) return "";
           return formatAmount(baseAmt, { currencyCode: curr.code });
         },
-        className: "font-black tabular-nums text-slate-900",
+        className: "font-black tabular-nums text-slate-900"
       })),
       ...currencies.map(curr => ({
         id: `paid_${curr.code}`,
@@ -182,10 +175,10 @@ export function InvoiceTable({
             inv.exchange_rate,
             baseCurrency?.code
           );
-          if (baseAmt === 0) return "—";
+          if (baseAmt === 0) return "";
           return formatAmount(baseAmt, { currencyCode: curr.code });
         },
-        className: "font-bold tabular-nums text-emerald-600",
+        className: "font-bold tabular-nums text-emerald-600"
       })),
       ...currencies.map(curr => ({
         id: `remaining_${curr.code}`,
@@ -199,77 +192,145 @@ export function InvoiceTable({
             inv.exchange_rate,
             baseCurrency?.code
           );
-          if (baseAmt === 0) return "—";
+          if (baseAmt === 0) return "";
           return formatAmount(baseAmt, { currencyCode: curr.code });
         },
-        className: "font-bold tabular-nums text-orange-600",
+        className: "font-bold tabular-nums text-orange-600"
       })),
       {
         id: "status",
         header: "الحالة",
         label: "حالة الفاتورة",
-        accessor: (inv) => <DocumentStatusBadge status={inv.status} />,
-        className: "text-center",
+        accessor: (inv) => <DocumentStatusBadge status={inv.status} />
       },
       {
         id: "issued_at",
         header: "التاريخ",
         label: "تاريخ الفاتورة",
         accessor: (inv) => formatDateTime(inv.issued_at),
-        className: "text-slate-500 text-xs tabular-nums",
+        className: "text-slate-500 tabular-nums"
       },
       ...extraColumns.map(c => ({
         id: c.key,
         header: c.label,
         label: c.label,
         accessor: c.accessor,
-        className: c.className || "text-slate-500 text-xs",
+        className: c.className || "text-slate-500"
       })),
       {
         id: "actions",
         header: "إجراءات",
         label: "إجراءات",
-        accessor: (inv) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600">
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-44">
-              <DropdownMenuItem onClick={() => onView(inv)} className="flex-row-reverse gap-2">
-                <Eye className="w-4 h-4" /> عرض الفاتورة
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEdit(inv)} className="flex-row-reverse gap-2 text-amber-600 focus:text-amber-600">
-                <Settings2 className="w-4 h-4" /> تعديل
-              </DropdownMenuItem>
-              {inv.status === 'Draft' && (
-                <DropdownMenuItem onClick={() => onPost(inv.id)} className="flex-row-reverse gap-2 text-emerald-600 focus:text-emerald-600">
-                  <CheckCircle2 className="w-4 h-4" /> ترحيل الآن
-                </DropdownMenuItem>
-              )}
-              {inv.status === 'Posted' && (
-                <DropdownMenuItem onClick={() => onReopen(inv.id)} className="flex-row-reverse gap-2 text-blue-600 focus:text-blue-600">
-                  <History className="w-4 h-4" /> إلغاء الترحيل
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem onClick={() => {
+        accessor: (inv) => {
+          const extraActions = [];
+          if (inv.status === "Draft") {
+            extraActions.push({
+              label: "ترحيل الآن",
+              icon: CheckCircle2,
+              onClick: () => onPost(inv.id),
+            });
+          } else if (inv.status === "Posted") {
+            extraActions.push({
+              label: "إلغاء الترحيل",
+              icon: History,
+              onClick: () => onReopen(inv.id),
+            });
+          }
+          return (
+            <TableActions
+              onView={() => onView(inv)}
+              onEdit={() => onEdit(inv)}
+              onDelete={() => {
                 if (window.confirm("هل أنت متأكد من حذف هذه الفاتورة؟")) {
                   onDelete(inv.id);
                 }
-              }} className="flex-row-reverse gap-2 text-rose-600 focus:text-rose-600">
-                <Trash2 className="w-4 h-4" /> حذف الفاتورة
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ),
-        className: "w-[80px]",
+              }}
+              extraActions={extraActions}
+              align="start"
+            />
+          );
+        }
       },
     ];
     return cols;
   }, [formatAmount, currencies, baseCurrency, partyField, partyLabel, partyType, defaultName, showSubtotal, showExtraCosts, extraColumns, onView, onEdit, onPost, onReopen, onDelete]);
 
   const defaultVisible = useMemo(() => allColumns.filter(c => c.id !== 'notes').map(c => c.id), [allColumns]);
+
+  type SortField =
+    | "invoice_number"
+    | "notes"
+    | "supplier_name"
+    | "customer_name"
+    | "subtotal_amount"
+    | "extra_costs"
+    | "total_amount"
+    | "amount_paid"
+    | "remaining_amount"
+    | "status"
+    | "issued_at";
+
+  const { sortedData, sortField, sortDirection, handleSort } = useSortable({
+    data,
+    defaultField: "issued_at" as SortField,
+    defaultDirection: "desc",
+    sortFn: (a, b, field, direction) => {
+      let comparison = 0;
+      switch (field) {
+        case "invoice_number":
+          comparison = (a.invoice_number || "").localeCompare(b.invoice_number || "", "ar", { numeric: true });
+          break;
+        case "notes":
+          comparison = (a.notes || "").localeCompare(b.notes || "", "ar");
+          break;
+        case "supplier_name":
+        case "customer_name": {
+          const valA = a.invoice_type === "OpeningBalance" ? "" : (partyType === "supplier" ? (a.supplier_name || defaultName) : (a.customer_name || defaultName));
+          const valB = b.invoice_type === "OpeningBalance" ? "" : (partyType === "supplier" ? (b.supplier_name || defaultName) : (b.customer_name || defaultName));
+          comparison = valA.localeCompare(valB, "ar");
+          break;
+        }
+        case "subtotal_amount": {
+          const baseAmtA = getInvoiceBaseAmount(a.subtotal_amount, a.subtotal_amount_v2, a.currency_code, a.exchange_rate, baseCurrency?.code);
+          const baseAmtB = getInvoiceBaseAmount(b.subtotal_amount, b.subtotal_amount_v2, b.currency_code, b.exchange_rate, baseCurrency?.code);
+          comparison = baseAmtA - baseAmtB;
+          break;
+        }
+        case "extra_costs": {
+          const baseAmtA = getInvoiceBaseAmount(a.extra_costs, a.extra_costs_v2, a.currency_code, a.exchange_rate, baseCurrency?.code);
+          const baseAmtB = getInvoiceBaseAmount(b.extra_costs, b.extra_costs_v2, b.currency_code, b.exchange_rate, baseCurrency?.code);
+          comparison = baseAmtA - baseAmtB;
+          break;
+        }
+        case "total_amount": {
+          const baseAmtA = getInvoiceBaseAmount(a.total_amount, a.total_amount_v2, a.currency_code, a.exchange_rate, baseCurrency?.code);
+          const baseAmtB = getInvoiceBaseAmount(b.total_amount, b.total_amount_v2, b.currency_code, b.exchange_rate, baseCurrency?.code);
+          comparison = baseAmtA - baseAmtB;
+          break;
+        }
+        case "amount_paid": {
+          const baseAmtA = getInvoiceBaseAmount(a.amount_paid, a.amount_paid_v2, a.currency_code, a.exchange_rate, baseCurrency?.code);
+          const baseAmtB = getInvoiceBaseAmount(b.amount_paid, b.amount_paid_v2, b.currency_code, b.exchange_rate, baseCurrency?.code);
+          comparison = baseAmtA - baseAmtB;
+          break;
+        }
+        case "remaining_amount": {
+          const baseAmtA = getInvoiceBaseAmount(a.remaining_amount, a.remaining_amount_v2, a.currency_code, a.exchange_rate, baseCurrency?.code);
+          const baseAmtB = getInvoiceBaseAmount(b.remaining_amount, b.remaining_amount_v2, b.currency_code, b.exchange_rate, baseCurrency?.code);
+          comparison = baseAmtA - baseAmtB;
+          break;
+        }
+        case "status":
+          comparison = (a.status || "").localeCompare(b.status || "", "ar");
+          break;
+        case "issued_at":
+          comparison = new Date(a.issued_at).getTime() - new Date(b.issued_at).getTime();
+          break;
+      }
+      return direction === "asc" ? comparison : -comparison;
+    }
+  });
+
   const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
     tableId: "invoices-unified",
     columns: allColumns,
@@ -378,11 +439,25 @@ export function InvoiceTable({
       }
     >
       <UnifiedTable
-        data={data}
+        data={sortedData}
         columns={enrichedColumns}
         loading={loading}
         enableResize
         tableId="invoices"
+        sortField={sortField}
+        sortDirection={sortDirection}
+        onHeaderClick={(col) => {
+          if (col.id === "invoice_number") handleSort("invoice_number");
+          else if (col.id === "issued_at") handleSort("issued_at");
+          else if (col.id === "status") handleSort("status");
+          else if (col.id === "notes") handleSort("notes");
+          else if (col.id === partyField) handleSort(partyField as SortField);
+          else if (col.id.startsWith("total_")) handleSort("total_amount");
+          else if (col.id.startsWith("paid_")) handleSort("amount_paid");
+          else if (col.id.startsWith("remaining_")) handleSort("remaining_amount");
+          else if (col.id.startsWith("subtotal_")) handleSort("subtotal_amount");
+          else if (col.id.startsWith("extra_costs_")) handleSort("extra_costs");
+        }}
         onRowClick={(inv) => onSelect(inv.id)}
         onRowDoubleClick={onView}
         selectedId={selectedId}

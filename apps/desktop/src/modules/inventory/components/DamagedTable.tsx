@@ -50,35 +50,29 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
         id: "material_name",
         header: "المنتج / الصنف",
         label: "اسم المنتج",
-        accessor: (i) => (
-          <span className="font-bold text-slate-900">{i.material_name ?? i.material_id}</span>
-        ),
-        className: "min-w-[180px]"
+        accessor: (i) => i.material_name || i.material_id || "",
+        className: "font-bold text-slate-800"
       },
       {
         id: "reason",
         header: "السبب",
         label: "سبب التلف",
-        accessor: (i) => (
-          <span className="text-slate-500 text-xs font-medium italic">{i.reason || "—"}</span>
-        ),
-        className: "min-w-[150px]"
+        accessor: (i) => i.reason || "",
+        className: "text-slate-500 italic"
       },
       {
         id: "damage_date",
         header: "التاريخ",
         label: "تاريخ التسجيل",
         accessor: (i) => formatDateTime(i.damage_date),
-        className: "tabular-nums text-slate-500 font-medium w-32"
+        className: "text-slate-500 tabular-nums"
       },
       {
         id: "quantity",
         header: "الكمية",
         label: "الكمية التالفة",
-        accessor: (i) => (
-          <span className="tabular-nums font-bold text-amber-600">{Math.round(parseFloat(i.quantity))}</span>
-        ),
-        className: "w-24"
+        accessor: (i) => Math.round(parseFloat(i.quantity || "0")).toString(),
+        className: "tabular-nums font-black text-amber-600"
       },
     ];
 
@@ -90,9 +84,9 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
         label: `مبلغ الخسارة (${curr.symbol || curr.code})`,
         accessor: (i) => {
           const val = parseFloat(i.cost_impact || "0");
-          return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "—";
+          return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "";
         },
-        className: "tabular-nums font-black text-rose-600 text-[11px]"
+        className: "tabular-nums font-black text-rose-600"
       });
     });
 
@@ -118,12 +112,11 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
     const totalCost = sortedItems.reduce((s, i) => s + parseFloat(i.cost_impact || "0"), 0);
     const totalQty = sortedItems.reduce((s, i) => s + parseFloat(i.quantity || "0"), 0);
 
-    // FIX: IDs must follow the pattern UnifiedTable expects:
-    //   col.id === s.id  OR  `${col.id}_summary`  OR  `${col.id}_spacer`
     return enrichedColumns.map(col => {
       if (col.id === 'material_name') {
         return {
-          id: 'material_name',        // matches col.id directly
+          id: 'count',
+          columnId: 'material_name',
           label: '',
           value: `${sortedItems.length} سجل`,
           className: 'text-slate-500 font-medium'
@@ -131,24 +124,25 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
       }
       if (col.id === 'quantity') {
         return {
-          id: 'quantity_summary',     // matches `${col.id}_summary`
-          label: '',
+          id: 'quantity_summary',
+          columnId: 'quantity',
+          label: 'المجموع',
           value: Math.round(totalQty).toString(),
-          className: 'text-amber-600 font-bold'
+          className: 'text-amber-600 font-black'
         };
       }
       const match = col.id.match(/^cost_(.+)$/);
       if (match) {
         const currCode = match[1];
         return {
-          id: `${col.id}_summary`,    // matches `${col.id}_summary`
-          label: '',
+          id: `${col.id}_summary`,
+          columnId: col.id,
+          label: 'إجمالي الخسارة',
           value: totalCost > 0 ? formatAmount(totalCost, { currencyCode: currCode }) : "—",
-          className: 'text-rose-600 font-bold'
+          className: 'text-rose-600 font-black'
         };
       }
-      // spacer for all other columns (reason, damage_date, notes, etc.)
-      return { id: `${col.id}_spacer`, label: '', value: '' };
+      return { id: `${col.id}_spacer`, columnId: col.id, label: '', value: '' };
     });
   }, [sortedItems, enrichedColumns, formatAmount]);
 

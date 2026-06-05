@@ -1,14 +1,9 @@
 import { useMemo } from "react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import type { Role } from "@erp/shared-types";
-import { Shield, ShieldAlert, MoreHorizontal, Edit, Trash2 } from "lucide-react";
-import { Button } from "@shared/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@shared/ui/dropdown-menu";
+import { Shield, ShieldAlert } from "lucide-react";
+import { useUnifiedColumns, useSortable } from "@shared/hooks";
+import { TableActions } from "@widgets/table-shell/TableActions";
 
 interface RoleTableProps {
   roles: Role[];
@@ -65,35 +60,59 @@ export function RoleTable({ roles, loading, onEdit, onDelete }: RoleTableProps) 
       header: "إجراءات",
       label: "إجراءات",
       accessor: (r) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600">
-              <MoreHorizontal className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-40">
-            <DropdownMenuItem onClick={() => onEdit?.(r)} className="flex-row-reverse gap-2 text-blue-600 focus:text-blue-600">
-              <Edit className="w-4 h-4" /> تعديل
-            </DropdownMenuItem>
-            {!r.is_system_role && (
-              <DropdownMenuItem onClick={() => onDelete?.(r.id)} className="flex-row-reverse gap-2 text-rose-600 focus:text-rose-600">
-                <Trash2 className="w-4 h-4" /> حذف
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <TableActions
+          onEdit={onEdit ? () => onEdit(r) : undefined}
+          onDelete={!r.is_system_role && onDelete ? () => onDelete(r.id) : undefined}
+          align="start"
+        />
       ),
       className: "w-[80px]"
     }
   ], [onEdit, onDelete]);
 
+  type SortField = "name" | "permissions_count" | "is_system_role";
+
+  const { sortedData, sortField, sortDirection, handleSort } = useSortable({
+    data: roles,
+    defaultField: "name" as SortField,
+    sortFn: (a, b, field, direction) => {
+      let comparison = 0;
+      switch (field) {
+        case "name":
+          comparison = (a.name || "").localeCompare(b.name || "", "ar");
+          break;
+        case "permissions_count":
+          comparison = a.permissions.length - b.permissions.length;
+          break;
+        case "is_system_role":
+          comparison = (a.is_system_role ? 1 : 0) - (b.is_system_role ? 1 : 0);
+          break;
+      }
+      return direction === "asc" ? comparison : -comparison;
+    }
+  });
+
+  const { enrichedColumns } = useUnifiedColumns({
+    tableId: "roles-unified",
+    columns,
+    defaultVisible: columns.map(c => c.id),
+  });
+
   return (
     <UnifiedTable
-      data={roles}
-      columns={columns}
+      data={sortedData}
+      columns={enrichedColumns}
       loading={loading}
       enableResize
       tableId="roles"
+      sortField={sortField}
+      sortDirection={sortDirection}
+      onHeaderClick={(col) => {
+        const sortableFields: SortField[] = ["name", "permissions_count", "is_system_role"];
+        if (sortableFields.includes(col.id as SortField)) {
+          handleSort(col.id as SortField);
+        }
+      }}
       emptyMessage="لا توجد أدوار مضافة"
     />
   );

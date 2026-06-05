@@ -127,8 +127,7 @@ export function PartnerTable({
               { label: "سند مسحوبات", icon: Receipt, onClick: () => onDocument(p) },
             ]}
           />
-        ),
-        className: "w-[80px]"
+        )
       }
     );
 

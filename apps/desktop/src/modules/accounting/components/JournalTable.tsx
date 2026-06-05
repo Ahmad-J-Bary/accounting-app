@@ -192,7 +192,7 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [tableData, sortedData, formatAmount, enrichedColumns, sortedCurrencies]);
+  }, [tableData, sortedData, formatAmount, enrichedColumns]);
 
   return (
     <TableShell

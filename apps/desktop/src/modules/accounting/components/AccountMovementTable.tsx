@@ -212,7 +212,7 @@ export function AccountMovementTable({
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [tableData, sortedData, formatAmount, enrichedColumns, sortedCurrencies]);
+  }, [tableData, sortedData, formatAmount, enrichedColumns]);
 
   return (
     <TableShell

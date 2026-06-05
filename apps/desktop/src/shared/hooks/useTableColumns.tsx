@@ -25,9 +25,7 @@ export function useTableColumns() {
             {isDebit ? "مدين" : "دائن"}
           </span>
         );
-      },
-      align: "center",
-      className: "w-[90px]"
+      }
     };
   }, []);
 
@@ -42,12 +40,11 @@ export function useTableColumns() {
         label: `الرصيد (${symbol})`,
         accessor: (item) => {
           const absBal = Math.abs(Number(item.balance || 0));
-          if (absBal === 0) return "—";
+          if (absBal === 0) return "";
           const baseAmount = toBase(absBal, item.currency);
           return formatAmount(baseAmount, { currencyCode: curr.code });
         },
-        align: "left",
-        className: "tabular-nums font-bold text-slate-800"
+        className: "tabular-nums font-black text-slate-900"
       };
     });
   }, [currencies, formatAmount, toBase]);
@@ -73,18 +70,18 @@ export function useTableColumns() {
 
     const colIds = enrichedColumns.map(c => c.id);
     return colIds.map(id => {
-      if (id === 'name') return { 
-        id: 'count', 
-        columnId: 'name', 
-        label: '', 
-        value: `${items.length} ${countLabel}`, 
-        className: 'text-slate-500 font-medium' 
+      if (id === 'name') return {
+        id: 'count',
+        columnId: 'name',
+        label: '',
+        value: `${items.length} ${countLabel}`,
+        className: 'text-slate-500 font-medium'
       };
-      if (['code', 'phone', 'actions'].includes(id)) return { 
+      if (['code', 'phone', 'actions'].includes(id)) return {
         id: `${id}_spacer`,
         columnId: id,
-        label: '', 
-        value: '' 
+        label: '',
+        value: ''
       };
       if (id === 'status') {
         return { 

@@ -3,7 +3,7 @@ import { formatDateTime } from '@shared/lib/format';
 import type { AuditLog } from "@erp/shared-types";
 import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import { TableShell } from "@widgets/table-shell/TableShell";
-import { useUnifiedColumns } from "@shared/hooks";
+import { useUnifiedColumns, useSortable } from "@shared/hooks";
 
 interface AuditTableProps {
   data: AuditLog[];
@@ -64,6 +64,8 @@ export function AuditTable({ data, loading, search, onSearchChange }: AuditTable
     }
   ], []);
 
+  type SortField = "created_at" | "username" | "action" | "entity_type" | "entity_id" | "ip_address";
+
   const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
     tableId: "audit-log-unified",
     columns: allColumns,
@@ -80,6 +82,36 @@ export function AuditTable({ data, loading, search, onSearchChange }: AuditTable
     [data, search]
   );
 
+  const { sortedData, sortField, sortDirection, handleSort } = useSortable({
+    data: filtered,
+    defaultField: "created_at" as SortField,
+    defaultDirection: "desc",
+    sortFn: (a, b, field, direction) => {
+      let comparison = 0;
+      switch (field) {
+        case "created_at":
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
+        case "username":
+          comparison = (a.username || "").localeCompare(b.username || "", "ar");
+          break;
+        case "action":
+          comparison = (a.action || "").localeCompare(b.action || "", "ar");
+          break;
+        case "entity_type":
+          comparison = (a.entity_type || "").localeCompare(b.entity_type || "", "ar");
+          break;
+        case "entity_id":
+          comparison = (a.entity_id || "").localeCompare(b.entity_id || "", "ar");
+          break;
+        case "ip_address":
+          comparison = (a.ip_address || "").localeCompare(b.ip_address || "", "ar");
+          break;
+      }
+      return direction === "asc" ? comparison : -comparison;
+    }
+  });
+
   return (
     <TableShell
       search={search}
@@ -90,11 +122,19 @@ export function AuditTable({ data, loading, search, onSearchChange }: AuditTable
       showToolbar={true}
     >
       <UnifiedTable
-        data={filtered}
+        data={sortedData}
         columns={enrichedColumns}
         loading={loading}
         enableResize
         tableId="audit-log"
+        sortField={sortField}
+        sortDirection={sortDirection}
+        onHeaderClick={(col) => {
+          const sortableFields: SortField[] = ["created_at", "username", "action", "entity_type", "entity_id", "ip_address"];
+          if (sortableFields.includes(col.id as SortField)) {
+            handleSort(col.id as SortField);
+          }
+        }}
         emptyMessage="لا توجد سجلات مراقبة حالياً"
       />
     </TableShell>

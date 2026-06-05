@@ -46,9 +46,8 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
         id: "code",
         header: "#",
         label: "رقم الحساب",
-        accessor: (s) => (
-          <span className="font-black text-slate-500">{s.code || "—"}</span>
-        ),
+        accessor: (s) => s.code || "",
+        className: "font-black text-slate-900 text-center",
       },
       {
         id: "name",
@@ -67,7 +66,7 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
         id: "phone",
         header: "رقم الهاتف",
         label: "رقم الهاتف",
-        accessor: (s) => s.phone || "—",
+        accessor: (s) => s.phone || "",
         className: "tabular-nums text-slate-500"
       },
     ];
@@ -89,8 +88,7 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
             ...(onDocument ? [{ label: "سند دفع", icon: Receipt, onClick: () => onDocument(s) }] : []),
           ]}
         />
-      ),
-      className: "w-[80px]"
+      )
     });
 
     return cols;

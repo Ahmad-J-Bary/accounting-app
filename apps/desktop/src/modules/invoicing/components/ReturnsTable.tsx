@@ -5,7 +5,7 @@ import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { TableActions } from "@widgets/table-shell/TableActions";
 import { formatDateTime } from '@shared/lib/format';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns } from "@shared/hooks";
+import { useUnifiedColumns, useSortable } from "@shared/hooks";
 import type { MaterialDto } from "@erp/shared-types";
 
 export type ReturnLineRow = {
@@ -46,22 +46,22 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
         id: "return_number",
         header: "الرقم",
         label: "الرقم",
-        accessor: (i) => <span className="font-bold text-slate-500 font-mono">{i.return_number}</span>,
-        className: "text-center",
+        accessor: (i) => i.return_number,
+        className: "font-black text-slate-900 text-center"
       },
       {
         id: "material_name",
         header: "المادة",
         label: "المادة",
-        accessor: (i) => <span className="font-medium text-slate-800">{i.material_name ?? "—"}</span>,
-        className: "",
+        accessor: (i) => i.material_name ?? "",
+        className: "font-bold text-slate-800"
       },
       {
         id: "partner_name",
         header: partnerLabel,
         label: partnerLabel,
-        accessor: (i) => <span className="font-medium text-slate-700">{i.partner_name || "—"}</span>,
-        className: "",
+        accessor: (i) => i.partner_name || "",
+        className: "font-bold text-slate-700"
       },
       ...currencies.map(curr => ({
         id: `unit_price_${curr.code}`,
@@ -69,17 +69,17 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
         label: `السعر الفردي (${curr.symbol || curr.code})`,
         accessor: (i: ReturnLineRow) => {
           const val = parseFloat(i.unit_price || "0");
-          if (val === 0) return "—";
+          if (val === 0) return "";
           return formatAmount(val, { currencyCode: curr.code });
         },
-        className: "tabular-nums",
+        className: "tabular-nums font-black text-slate-900"
       })),
       {
         id: "quantity",
         header: "الكمية",
         label: "الكمية المرتجعة",
-        accessor: (i) => <span className="tabular-nums font-bold">{Math.round(parseFloat(i.quantity))}</span>,
-        className: "",
+        accessor: (i) => Math.round(parseFloat(i.quantity || "0")).toString(),
+        className: "tabular-nums font-black text-slate-900"
       },
       {
         id: "unit_id",
@@ -87,9 +87,9 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
         label: "الوحدة",
         accessor: (i) => {
           const unitName = materials.find(m => m.id === i.material_id)?.units.find(u => u.id === i.unit_id)?.name;
-          return <span className="text-slate-500">{unitName || "—"}</span>;
+          return unitName || "";
         },
-        className: "",
+        className: "text-slate-500"
       },
       ...currencies.map(curr => ({
         id: `line_total_${curr.code}`,
@@ -97,24 +97,24 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
         label: `المجموع (${curr.symbol || curr.code})`,
         accessor: (i: ReturnLineRow) => {
           const val = parseFloat(i.line_total || "0");
-          if (val === 0) return "—";
+          if (val === 0) return "";
           return formatAmount(val, { currencyCode: curr.code });
         },
-        className: "tabular-nums font-bold",
+        className: "tabular-nums font-black text-slate-900"
       })),
       {
         id: "return_date",
         header: "التاريخ",
         label: "التاريخ",
         accessor: (i) => formatDateTime(i.return_date),
-        className: "",
+        className: "text-slate-500 tabular-nums"
       },
       {
         id: "notes",
         header: "ملاحظة",
         label: "ملاحظة",
-        accessor: (i) => <span className="text-slate-400 text-xs">{i.notes || "-"}</span>,
-        className: "",
+        accessor: (i) => i.notes || "",
+        className: "text-slate-500 italic"
       },
       {
         id: "actions",
@@ -126,8 +126,7 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
             onEdit={onEdit ? () => onEdit(i.return_id!) : undefined}
             onDelete={onDelete ? () => onDelete(i.return_id!) : undefined}
           />
-        ) : null,
-        className: "w-[80px]",
+        ) : null
       },
     ];
     return cols;
@@ -148,6 +147,44 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
     ];
   }, [baseCurrency]);
 
+  type SortField = "return_number" | "material_name" | "partner_name" | "unit_price" | "quantity" | "line_total" | "return_date" | "notes";
+
+  const { sortedData, sortField, sortDirection, handleSort } = useSortable({
+    data: items,
+    defaultField: "return_date" as SortField,
+    defaultDirection: "desc",
+    sortFn: (a, b, field, direction) => {
+      let comparison = 0;
+      switch (field) {
+        case "return_number":
+          comparison = (a.return_number || "").localeCompare(b.return_number || "", "ar", { numeric: true });
+          break;
+        case "material_name":
+          comparison = (a.material_name || "").localeCompare(b.material_name || "", "ar");
+          break;
+        case "partner_name":
+          comparison = (a.partner_name || "").localeCompare(b.partner_name || "", "ar");
+          break;
+        case "unit_price":
+          comparison = parseFloat(a.unit_price || "0") - parseFloat(b.unit_price || "0");
+          break;
+        case "quantity":
+          comparison = parseFloat(a.quantity || "0") - parseFloat(b.quantity || "0");
+          break;
+        case "line_total":
+          comparison = parseFloat(a.line_total || "0") - parseFloat(b.line_total || "0");
+          break;
+        case "return_date":
+          comparison = new Date(a.return_date).getTime() - new Date(b.return_date).getTime();
+          break;
+        case "notes":
+          comparison = (a.notes || "").localeCompare(b.notes || "", "ar");
+          break;
+      }
+      return direction === "asc" ? comparison : -comparison;
+    }
+  });
+
   const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
     tableId: "returns-unified",
     columns: allColumns,
@@ -161,6 +198,9 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     const colIds = enrichedColumns.map(c => c.id);
     return colIds.map(id => {
+      if (id === "return_number") {
+        return { id: "count", columnId: "return_number", label: "", value: `${sortedData.length} مرتجع`, className: "text-slate-500 font-medium" };
+      }
       const match = id.match(/^line_total_(.+)$/);
       if (match) {
         const currCode = match[1];
@@ -168,7 +208,7 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [enrichedColumns, baseTotal, formatAmount]);
+  }, [enrichedColumns, baseTotal, formatAmount, sortedData]);
 
   return (
     <TableShell
@@ -180,11 +220,23 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
       showToolbar={true}
     >
       <UnifiedTable
-        data={items}
+        data={sortedData}
         columns={enrichedColumns}
         loading={loading}
         enableResize
         tableId="returns"
+        sortField={sortField}
+        sortDirection={sortDirection}
+        onHeaderClick={(col) => {
+          if (col.id === "return_number") handleSort("return_number");
+          else if (col.id === "material_name") handleSort("material_name");
+          else if (col.id === "partner_name") handleSort("partner_name");
+          else if (col.id === "quantity") handleSort("quantity");
+          else if (col.id === "return_date") handleSort("return_date");
+          else if (col.id === "notes") handleSort("notes");
+          else if (col.id.startsWith("line_total_")) handleSort("line_total");
+          else if (col.id.startsWith("unit_price_")) handleSort("unit_price");
+        }}
         onRowClick={(i) => onSelect?.(i.return_id || null)}
         selectedId={selectedId}
         summary={summaryColumns}
