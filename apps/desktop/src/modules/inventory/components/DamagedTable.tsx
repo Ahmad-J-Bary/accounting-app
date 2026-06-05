@@ -5,7 +5,7 @@ import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { formatDateTime } from '@shared/lib/format';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable } from "@shared/hooks";
-import { SortableHeader } from "@shared/ui/sortable-header";
+
 import type { DamagedItem } from "@erp/shared-types";
 
 interface DamagedTableProps {
@@ -48,7 +48,7 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
     const cols: UnifiedColumn<DamagedItem>[] = [
       {
         id: "material_name",
-        header: <SortableHeader field="material_name" label="المنتج / الصنف" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
+        header: "المنتج / الصنف",
         label: "اسم المنتج",
         accessor: (i) => (
           <span className="font-bold text-slate-900">{i.material_name ?? i.material_id}</span>
@@ -66,14 +66,14 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
       },
       {
         id: "damage_date",
-        header: <SortableHeader field="damage_date" label="التاريخ" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
+        header: "التاريخ",
         label: "تاريخ التسجيل",
         accessor: (i) => formatDateTime(i.damage_date),
         className: "tabular-nums text-slate-500 font-medium w-32"
       },
       {
         id: "quantity",
-        header: <SortableHeader field="quantity" label="الكمية" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
+        header: "الكمية",
         label: "الكمية التالفة",
         accessor: (i) => (
           <span className="tabular-nums font-bold text-amber-600">{Math.round(parseFloat(i.quantity))}</span>
@@ -87,7 +87,7 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
     currencies.forEach(curr => {
       cols.push({
         id: `cost_${curr.code}`,
-        header: <SortableHeader field="cost_impact" label={`الخسارة (${curr.symbol || curr.code})`} currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
+        header: `الخسارة (${curr.symbol || curr.code})`,
         label: `مبلغ الخسارة (${curr.symbol || curr.code})`,
         accessor: (i) => {
           const val = parseFloat(i.cost_impact || "0");
@@ -99,7 +99,7 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
     });
 
     return cols;
-  }, [formatAmount, currencies, sortField, sortDirection, handleSort]);
+  }, [formatAmount, currencies]);
 
   // FIX: include dynamic cost columns in defaultVisible so they show on first load
   const defaultVisible = useMemo(() => [
@@ -170,6 +170,14 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
         loading={loading}
         enableResize
         tableId="damaged"
+        sortField={sortField}
+        sortDirection={sortDirection}
+        onHeaderClick={(col) => {
+          if (col.id === "material_name") handleSort("material_name");
+          else if (col.id === "damage_date") handleSort("damage_date");
+          else if (col.id === "quantity") handleSort("quantity");
+          else if (col.id?.startsWith("cost_")) handleSort("cost_impact");
+        }}
         summary={summaryColumns}
         emptyMessage={search ? "لا توجد نتائج للبحث" : "لا توجد سجلات تالف"}
       />

@@ -1,18 +1,11 @@
 import { useMemo } from "react";
 import { formatDateTime } from '@shared/lib/format';
-import { Button } from "@shared/ui/button";
 import { StatusBadge } from '@widgets/stats/StatusBadge';
-import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@shared/ui/dropdown-menu";
 import { toast } from "sonner";
 import type { User, Role } from "@erp/shared-types";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
+import { TableActions } from '@widgets/table-shell/TableActions';
 import { useUnifiedColumns } from '@shared/hooks';
 
 interface UsersTableProps {
@@ -73,21 +66,10 @@ export function UsersTable({ data, loading, search, onSearchChange, roles }: Use
       header: "إجراءات",
       label: "إجراءات",
       accessor: (u) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600">
-              <MoreHorizontal className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-40">
-            <DropdownMenuItem onClick={() => toast.info("تعديل المستخدم قيد التطوير")} className="flex-row-reverse gap-2 text-blue-600 focus:text-blue-600">
-              <Edit className="w-4 h-4" /> تعديل
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => toast.warning("حذف المستخدم قيد التطوير")} className="flex-row-reverse gap-2 text-rose-600 focus:text-rose-600">
-              <Trash2 className="w-4 h-4" /> حذف
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <TableActions
+          onEdit={() => toast.info("تعديل المستخدم قيد التطوير")}
+          onDelete={() => toast.warning("حذف المستخدم قيد التطوير")}
+        />
       ),
       align: "center",
       className: "w-[80px]"

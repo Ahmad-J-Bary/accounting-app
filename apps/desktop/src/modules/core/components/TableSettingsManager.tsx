@@ -96,14 +96,17 @@ export const TableSettingsManager: React.FC = () => {
     },
   ], [currSym]);
 
-  const summaryColumns = useMemo(() => [
-    { id: "spacer", label: "", value: "", className: "min-w-[130px]" },
-    { id: "spacer2", label: "", value: "", className: "w-20" },
-    { id: "debit_total", label: "الإجمالي", value: `${PREVIEW_DATA.reduce((s, r) => s + r.debit, 0).toLocaleString()} ${currSym}`, className: "text-red-600", align: "left" as const },
-    { id: "credit_total", label: "الإجمالي", value: `${PREVIEW_DATA.reduce((s, r) => s + r.credit, 0).toLocaleString()} ${currSym}`, className: "text-emerald-600", align: "left" as const },
-    { id: "spacer3", label: "", value: "", className: "w-28" },
-    { id: "spacer4", label: "", value: "", className: "w-16" },
-  ], [currSym]);
+  const previewColumnIds = useMemo(() => previewColumns.map(c => c.id), [previewColumns]);
+
+  const summaryColumns = useMemo(() => {
+    const colIds = previewColumnIds;
+    return colIds.map(id => {
+      if (id === "debit") return { id: "debit_total", columnId: "debit", label: "الإجمالي", value: `${PREVIEW_DATA.reduce((s, r) => s + r.debit, 0).toLocaleString()} ${currSym}`, className: "text-red-600", align: "left" as const };
+      if (id === "credit") return { id: "credit_total", columnId: "credit", label: "الإجمالي", value: `${PREVIEW_DATA.reduce((s, r) => s + r.credit, 0).toLocaleString()} ${currSym}`, className: "text-emerald-600", align: "left" as const };
+      if (id === "code") return { id: "code_count", columnId: "code", label: "", value: `${PREVIEW_DATA.length} حسابات`, className: "text-slate-500 font-medium" };
+      return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
+    });
+  }, [currSym, previewColumnIds]);
 
   return (
     <SettingsManagerLayout resetAction={resetSettings}>
@@ -256,6 +259,7 @@ export const TableSettingsManager: React.FC = () => {
             columns={previewColumns}
             summary={summaryColumns}
             idKey="id"
+            tableId="table-settings-preview"
             emptyMessage="لا توجد بيانات للمعاينة"
             enableResize
           />

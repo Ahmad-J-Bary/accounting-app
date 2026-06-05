@@ -1,19 +1,15 @@
 import { useMemo, useCallback } from "react";
-import { Plus, Shuffle, Eye, Edit, Trash2, MoreHorizontal, Image } from "lucide-react";
+import { Plus, Shuffle, Image } from "lucide-react";
 import { cn } from '@shared/lib/utils';
 import type { MaterialDto, CategoryDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { Badge } from "@shared/ui/badge";
 import { Button } from "@shared/ui/button";
-import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';import { TableShell } from '@widgets/table-shell/TableShell';
+import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
+import { TableShell } from '@widgets/table-shell/TableShell';
+import { TableActions } from '@widgets/table-shell/TableActions';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useUnifiedColumns, useSortable } from '@shared/hooks';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@shared/ui/dropdown-menu";
 
 interface MaterialTableProps {
   materials: MaterialDto[];
@@ -105,8 +101,6 @@ export function MaterialTable({
           </span>
         ),
         className: "w-[80px]",
-        onHeaderClick: () => handleSort("code"),
-        headerClassName: "cursor-pointer",
       },
       // 3. الباركود
       {
@@ -126,8 +120,6 @@ export function MaterialTable({
         header: "اسم المادة",
         label: "اسم المادة",
         accessor: (m) => <span className="font-bold text-slate-800">{m.name}</span>,
-        onHeaderClick: () => handleSort("name"),
-        headerClassName: "cursor-pointer",
       },
       // 5. الاسم (EN)
       {
@@ -247,8 +239,6 @@ export function MaterialTable({
       accessor: (m) => parseFloat(m.total_received || "0").toLocaleString(),
       align: "center",
       className: "tabular-nums text-emerald-600 font-bold",
-      onHeaderClick: () => handleSort("total_received"),
-      headerClassName: "cursor-pointer",
     });
 
     // 12. الكمية المباعة
@@ -259,8 +249,6 @@ export function MaterialTable({
       accessor: (m) => parseFloat(m.total_sold || "0").toLocaleString(),
       align: "center",
       className: "tabular-nums text-blue-600 font-bold",
-      onHeaderClick: () => handleSort("total_sold"),
-      headerClassName: "cursor-pointer",
     });
 
     // 13. الكمية التالفة
@@ -281,8 +269,6 @@ export function MaterialTable({
       accessor: (m) => parseFloat(m.total_available).toLocaleString(),
       align: "center",
       className: "tabular-nums font-bold text-slate-700",
-      onHeaderClick: () => handleSort("total_available"),
-      headerClassName: "cursor-pointer",
     });
 
     // 15. المجموع للمتوفر (per currency): total_available * unit_cost
@@ -349,8 +335,7 @@ export function MaterialTable({
       id: "minimum_stock",
       header: "حد الطلب",
       label: "حد الطلب",
-      onHeaderClick: () => handleSort("minimum_stock"),
-      headerClassName: "cursor-pointer",
+
       accessor: (m) => (
         <span className={cn(
           "tabular-nums font-medium",
@@ -392,31 +377,18 @@ export function MaterialTable({
       header: "إجراءات",
       label: "إجراءات",
       accessor: (m) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600">
-              <MoreHorizontal className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-40">
-            <DropdownMenuItem onClick={() => onRowClick?.(m)} className="flex-row-reverse gap-2">
-              <Eye className="w-4 h-4" /> عرض التفاصيل
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onEdit(m)} className="flex-row-reverse gap-2 text-blue-600 focus:text-blue-600">
-              <Edit className="w-4 h-4" /> تعديل
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onDelete(m.id, m.name)} className="flex-row-reverse gap-2 text-rose-600 focus:text-rose-600">
-              <Trash2 className="w-4 h-4" /> حذف
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <TableActions
+          onView={() => onRowClick?.(m)}
+          onEdit={() => onEdit(m)}
+          onDelete={() => onDelete(m.id, m.name)}
+        />
       ),
       align: "center",
       className: "w-[80px]"
     });
 
     return cols;
-  }, [categories, onManageUnits, formatAmount, currencies, onEdit, onDelete, onRowClick, handleSort, rawPriceBase, unitCostBase, extraCostBase, salePriceBase, totalReceived, totalAvailable]);
+  }, [categories, onManageUnits, formatAmount, currencies, onEdit, onDelete, onRowClick, rawPriceBase, unitCostBase, extraCostBase, salePriceBase, totalReceived, totalAvailable]);
 
   const defaultVisible = useMemo(() => {
     const ids = [
@@ -491,8 +463,16 @@ export function MaterialTable({
         data={sortedMaterials}
         columns={enrichedColumns}
         loading={loading}
+        sortField={sortField}
+        sortDirection={sortDirection}
         onRowClick={onRowClick}
         selectedId={selectedId}
+        onHeaderClick={(col) => {
+          const sortableFields: SortField[] = ["code", "name", "total_received", "total_sold", "total_available", "minimum_stock"];
+          if (sortableFields.includes(col.id as SortField)) {
+            handleSort(col.id as SortField);
+          }
+        }}
         emptyMessage={search ? "لا توجد مواد تطابق معايير البحث" : "قائمة المواد فارغة"}
         summary={summaryColumns}
         enableResize

@@ -55,7 +55,7 @@ export function AccountMovementTable({
     });
   }, [lines, accountName]);
 
-  const { sortedData, handleSort } = useSortable({
+  const { sortedData, sortField, sortDirection, handleSort } = useSortable({
     data: tableData,
     defaultField: "entry_number" as SortField,
     defaultDirection: "asc",
@@ -250,6 +250,8 @@ export function AccountMovementTable({
         loading={loading}
         enableResize
         tableId="account-movement"
+        sortField={sortField}
+        sortDirection={sortDirection}
         onHeaderClick={(col) => {
           if (col.id === "entry_number" || col.id === "journal_type" || col.id === "credit_account" || col.id === "debit_account" || col.id === "date") {
             handleSort(col.id as SortField);

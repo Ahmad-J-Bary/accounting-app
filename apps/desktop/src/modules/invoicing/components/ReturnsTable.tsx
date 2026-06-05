@@ -1,9 +1,8 @@
 import { useMemo } from "react";
-import { Eye, Pencil, Trash2 } from "lucide-react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
-import { ActionsDropdown } from "@shared/ui/actions-dropdown";
+import { TableActions } from "@widgets/table-shell/TableActions";
 import { formatDateTime } from '@shared/lib/format';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns } from "@shared/hooks";
@@ -125,12 +124,10 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
         header: "إجراءات",
         label: "إجراءات",
         accessor: (i) => i.return_id ? (
-          <ActionsDropdown
-            actions={[
-              ...(onView ? [{ label: "عرض", icon: <Eye className="w-4 h-4" />, onClick: () => onView(i.return_id!) }] : []),
-              ...(onEdit ? [{ label: "تعديل", icon: <Pencil className="w-4 h-4" />, onClick: () => onEdit(i.return_id!), className: "text-blue-600 focus:text-blue-600" }] : []),
-              ...(onDelete ? [{ label: "حذف", icon: <Trash2 className="w-4 h-4" />, onClick: () => onDelete(i.return_id!), className: "text-red-600 focus:text-red-600" }] : []),
-            ]}
+          <TableActions
+            onView={onView ? () => onView(i.return_id!) : undefined}
+            onEdit={onEdit ? () => onEdit(i.return_id!) : undefined}
+            onDelete={onDelete ? () => onDelete(i.return_id!) : undefined}
           />
         ) : null,
         align: "center",

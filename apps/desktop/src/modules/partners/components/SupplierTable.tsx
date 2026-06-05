@@ -4,8 +4,8 @@ import { TableShell } from "@widgets/table-shell/TableShell";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable, useTableColumns } from "@shared/hooks";
 import type { SupplierDto } from "@erp/shared-types";
-import { Eye, Pencil, Trash2, NotebookText, Receipt, Truck } from "lucide-react";
-import { ActionsDropdown } from "@shared/ui/actions-dropdown";
+import { NotebookText, Receipt, Truck } from "lucide-react";
+import { TableActions } from "@widgets/table-shell/TableActions";
 
 interface SupplierTableProps {
   suppliers: SupplierDto[];
@@ -26,7 +26,7 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
   const { currencies } = useCurrencyContext();
   const { getAccountStatusColumn, getBalanceColumns, getSummaryColumns } = useTableColumns();
 
-  const { sortedData: sortedSuppliers, handleSort } = useSortable({
+  const { sortedData: sortedSuppliers, sortField, sortDirection, handleSort } = useSortable({
     data: suppliers,
     defaultField: "code" as SortField,
     sortFn: (a, b, field, direction) => {
@@ -81,13 +81,13 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
       header: "إجراءات",
       label: "إجراءات",
       accessor: (s) => (
-        <ActionsDropdown
-          actions={[
-            { label: "عرض الملف", icon: <Eye className="w-4 h-4" />, onClick: () => onView(s) },
-            { label: "تعديل البيانات", icon: <Pencil className="w-4 h-4" />, onClick: () => onEdit(s), className: "text-blue-600 focus:text-blue-600" },
-            ...(onDelete ? [{ label: "حذف المورد", icon: <Trash2 className="w-4 h-4" />, onClick: () => onDelete(s.id), className: "text-red-600 focus:text-red-600" }] : []),
-            ...(onJournal ? [{ label: "اليومية", icon: <NotebookText className="w-4 h-4" />, onClick: () => onJournal(s) }] : []),
-            ...(onDocument ? [{ label: "سند دفع", icon: <Receipt className="w-4 h-4" />, onClick: () => onDocument(s) }] : []),
+        <TableActions
+          onView={() => onView(s)}
+          onEdit={() => onEdit(s)}
+          onDelete={onDelete ? () => onDelete(s.id) : undefined}
+          extraActions={[
+            ...(onJournal ? [{ label: "اليومية", icon: NotebookText, onClick: () => onJournal(s) }] : []),
+            ...(onDocument ? [{ label: "سند دفع", icon: Receipt, onClick: () => onDocument(s) }] : []),
           ]}
         />
       ),
@@ -124,6 +124,8 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
         loading={loading}
         enableResize
         tableId="suppliers"
+        sortField={sortField}
+        sortDirection={sortDirection}
         onHeaderClick={(col) => {
           if (col.id === "#" || col.id === "name") {
             handleSort(col.id === "#" ? "code" : "name");

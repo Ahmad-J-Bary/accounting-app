@@ -5,8 +5,8 @@ import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable } from "@shared/hooks";
 import type { PartnerDto } from "@erp/shared-types";
-import { Eye, Pencil, Trash2, NotebookText, Receipt, Users } from "lucide-react";
-import { ActionsDropdown } from "@shared/ui/actions-dropdown";
+import { NotebookText, Receipt, Users } from "lucide-react";
+import { TableActions } from "@widgets/table-shell/TableActions";
 
 type PartnerWithRatios = PartnerDto & {
   calculatedRatio: number;
@@ -44,7 +44,7 @@ export function PartnerTable({
   onRowClick
 }: PartnerTableProps) {
   const { currencies, formatAmount } = useCurrencyContext();
-  const { sortedData: sortedPartners, handleSort } = useSortable({
+  const { sortedData: sortedPartners, sortField, sortDirection, handleSort } = useSortable({
     data: partners,
     defaultField: "name" as SortField,
     sortFn: (a, b, field, direction) => {
@@ -121,13 +121,13 @@ export function PartnerTable({
         header: "إجراءات",
         label: "إجراءات",
         accessor: (p: PartnerWithRatios) => (
-          <ActionsDropdown
-            actions={[
-              { label: "عرض الملف", icon: <Eye className="w-4 h-4" />, onClick: () => onView(p) },
-              { label: "تعديل البيانات", icon: <Pencil className="w-4 h-4" />, onClick: () => onEdit(p), className: "text-blue-600 focus:text-blue-600" },
-              { label: "حذف الشريك", icon: <Trash2 className="w-4 h-4" />, onClick: () => onDelete(p.id), className: "text-red-600 focus:text-red-600" },
-              { label: "اليومية", icon: <NotebookText className="w-4 h-4" />, onClick: () => onJournal(p) },
-              { label: "سند مسحوبات", icon: <Receipt className="w-4 h-4" />, onClick: () => onDocument(p) },
+          <TableActions
+            onView={() => onView(p)}
+            onEdit={() => onEdit(p)}
+            onDelete={() => onDelete(p.id)}
+            extraActions={[
+              { label: "اليومية", icon: NotebookText, onClick: () => onJournal(p) },
+              { label: "سند مسحوبات", icon: Receipt, onClick: () => onDocument(p) },
             ]}
           />
         ),
@@ -192,6 +192,8 @@ export function PartnerTable({
         loading={loading}
         enableResize
         tableId="partners"
+        sortField={sortField}
+        sortDirection={sortDirection}
         onHeaderClick={(col) => {
           if (col.id === "name" || col.id === "capital_ratio" || col.id === "ratio" || col.id?.startsWith("amount_")) {
             handleSort(col.id);

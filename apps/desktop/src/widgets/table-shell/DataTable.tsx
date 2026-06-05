@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { cn } from '@shared/lib/utils';
 import { getAlignmentClass } from "@shared/lib/table-utils";
 import { Skeleton } from "@shared/ui/skeleton";
+import { EmptyState } from './EmptyState';
 
 export interface Column<T> {
   id?: string;
@@ -67,16 +68,8 @@ export function DataTable<T>({
     if (data.length === 0) {
       return (
         <tr>
-          <td colSpan={columns.length} className="py-24">
-            <div className="flex flex-col items-center justify-center text-muted-foreground">
-              <div className="bg-slate-50 p-4 rounded-full mb-3 border border-slate-100/50">
-                <svg className="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                </svg>
-              </div>
-              <p className="text-sm font-medium tracking-tight">{emptyMessage}</p>
-              <p className="text-xs mt-1 opacity-60 italic">تأكد من إدخال البيانات بشكل صحيح</p>
-            </div>
+          <td colSpan={columns.length} className="py-20">
+            <EmptyState message={emptyMessage} />
           </td>
         </tr>
       );

@@ -59,7 +59,7 @@ export function PaymentsTable({
     );
   }, [payments, typeFilter]);
 
-  const { sortedData, handleSort } = useSortable({
+  const { sortedData, sortField, sortDirection, handleSort } = useSortable({
     data: filtered,
     defaultField: "payment_date" as SortField,
     defaultDirection: "desc",
@@ -323,6 +323,8 @@ export function PaymentsTable({
         loading={loading}
         enableResize
         tableId="payments"
+        sortField={sortField}
+        sortDirection={sortDirection}
         onHeaderClick={(col) => {
           if (
             col.id === "journal_entry_number" ||

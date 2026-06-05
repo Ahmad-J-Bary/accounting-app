@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import { cn } from '@shared/lib/utils';
-import { getLeftBorderClass } from '@shared/lib/table-utils';
+import { ChevronUp, ChevronDown } from 'lucide-react';
+import { getLeftBorderClass, getRowBorderClass } from '@shared/lib/table-utils';
 
 import type { GridResizeOptions } from '@shared/hooks/useGridResize';
 
@@ -22,13 +23,14 @@ interface GridHeaderProps {
   columns: GridHeaderColumn[];
   getDensityPadding: () => string;
   fontSize: number;
+  fontFamily?: string;
   headerColor?: string;
   stickyHeader?: boolean;
   borderStyle?: string;
 
   // ── Resize ──────────────────────────────────────────────────────────────
   enableResize?: boolean;
-  /** Called on single-click (title-fit) */
+  /** Called on single-click (sorting only, does NOT auto-fit) */
   onHeaderCellClick?: (colId: string) => void;
   /** Called when drag-resize starts on the handle */
   onResizeStart?: (e: React.MouseEvent, colId: string) => void;
@@ -52,6 +54,11 @@ interface GridHeaderProps {
    * When absent, falls back to flex layout.
    */
   gridTemplate?: string;
+
+  /** Currently sorted column id (shows ↑/↓ indicator) */
+  sortField?: string;
+  /** Current sort direction */
+  sortDirection?: 'asc' | 'desc';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -85,7 +92,7 @@ function getTextAlign(
  * - When `gridTemplate` is absent: renders as a flex row (legacy/document-shell mode).
  * - N-1 resize handles: the handle is rendered only for columns where
  *   `index < columns.length - 1`, so there is no handle after the last column.
- * - Single-click → onHeaderCellClick (title-fit, handled by UnifiedTable)
+ * - Single-click → onHeaderCellClick (sorting only, handled by UnifiedTable)
  * - Double-click on resize handle → onAutoFit (full data-fit)
  *
  * RTL: fully supported — resize handles use `left: -4` which places them
@@ -95,6 +102,7 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
   columns,
   getDensityPadding,
   fontSize,
+  fontFamily,
   headerColor,
   stickyHeader,
   borderStyle,
@@ -107,6 +115,8 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
   prefixSlot,
   suffixSlot,
   gridTemplate,
+  sortField,
+  sortDirection,
 }) => {
   const useGrid = !!gridTemplate;
 
@@ -116,7 +126,7 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
         'transition-colors',
         useGrid ? 'grid' : 'flex',
         headerColor || 'bg-slate-50/50 backdrop-blur-md',
-        borderStyle !== 'none' && 'border-b border-slate-200',
+        getRowBorderClass(borderStyle),
         stickyHeader && 'sticky top-0 z-10 backdrop-blur-sm shadow-sm',
       )}
       style={useGrid ? { gridTemplateColumns: gridTemplate } : undefined}
@@ -129,24 +139,38 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
           data-col-id={col.id}
           className={cn(
             getDensityPadding(),
-            'relative text-slate-700 font-black uppercase tracking-wider select-text flex items-center justify-center',
+            'relative text-slate-700 font-black uppercase tracking-wider select-text flex items-center',
+            'justify-center',
             getLeftBorderClass(borderStyle),
             !useGrid && !columnWidths[col.id] && col.width,
           )}
           style={{
             ...(getColumnStyle ? getColumnStyle(col) : {}),
-            fontSize: `${fontSize - 2}px`,
+            fontSize: `${fontSize}px`,
+            fontFamily: fontFamily || 'inherit',
             ...(useGrid ? { minWidth: 0 } : {}),
             textAlign: 'center',
           }}
           onClick={() => onHeaderCellClick?.(col.id)}
         >
           <div
-            className='w-full text-center whitespace-normal break-words leading-tight hyphens-auto'
-            style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', overflow: 'visible' }}
+            className={cn(
+              'flex-1 min-w-0 whitespace-normal break-words leading-tight hyphens-auto text-center',
+            )}
+            style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
           >
             {col.header}
           </div>
+
+          {col.id === sortField && (
+            <span className="shrink-0 mr-1">
+              {sortDirection === 'asc' ? (
+                <ChevronUp className="w-3.5 h-3.5 text-blue-500" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 text-blue-500" />
+              )}
+            </span>
+          )}
 
           {enableResize && onResizeStart && idx < columns.length - 1 && (
             <div

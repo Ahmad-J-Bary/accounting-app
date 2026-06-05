@@ -76,10 +76,10 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
                     fontSize: `${settings.fontSize}px`,
                     fontFamily: settings.fontFamily,
                     minWidth: 0,
-                    textAlign: "center",
+                    textAlign: 'center',
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
+                    justifyContent: 'center',
                   }
                 : {
                     flex: columnWidths && col.columnId && columnWidths[col.columnId]

@@ -61,6 +61,10 @@ interface UnifiedTableProps<T> {
   onHeaderClick?: (col: UnifiedColumn<T>) => void;
   /** Unique key for persisting column widths in localStorage */
   tableId?: string;
+  /** Currently sorted column id (shows ↑/↓ indicator) */
+  sortField?: string;
+  /** Current sort direction */
+  sortDirection?: 'asc' | 'desc';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -88,16 +92,21 @@ function getPrimitiveCellValue(value: ReactNode): string {
  * Layout: CSS Grid (no <table> element).
  *
  * Key behaviors:
- * - Header and every body row share the same `gridTemplateColumns`, so
- *   column alignment is guaranteed without a <table>.
- * - All columns together always fill 100% of the container width (no
- *   horizontal scroll, no trailing empty space).
- * - Resizing a column proportionally shrinks the adjacent column so the
- *   total width stays constant.
- * - N-1 resize handles: handles appear BETWEEN columns only, not after
- *   the last column.
- * - Single-click header → expand column to fit header label text.
- * - Double-click resize handle → full auto-fit (header + sample data).
+ * - All visible columns together always fill 100% of the container width
+ *   (no horizontal scroll, no trailing empty space).
+ * - Header and body rows share the same `gridTemplateColumns` string for
+ *   guaranteed pixel-perfect column alignment.
+ * - Column widths only change via user drag-resize or double-click on the
+ *   resize handle. Sorting (single-click on header) NEVER changes column
+ *   width.
+ * - Resizing one column shrinks the adjacent column proportionally, keeping
+ *   the total width constant (N-1 resize handles).
+ * - Single-click on a header cell → calls `onHeaderClick` (sorting only).
+ *   Does NOT auto-fit.
+ * - Double-click on a resize handle → full auto-fit of the column (header
+ *   text + sample data values).
+ * - Sort indicators (↑ / ↓) appear on the header cell that matches
+ *   `sortField` / `sortDirection` props.
  */
 export function UnifiedTable<T>({
   data,
@@ -117,6 +126,8 @@ export function UnifiedTable<T>({
   enableResize = false,
   onHeaderClick,
   tableId,
+  sortField,
+  sortDirection,
 }: UnifiedTableProps<T>) {
   const { settings, getDensityPadding } = useTableSettings();
 
@@ -174,18 +185,15 @@ export function UnifiedTable<T>({
 
   const cellBorderClass = getLeftBorderClass(settings.borderStyle);
 
-  // ── Single click on header → title-fit ───────────────────────────────────
+  // ── Single click on header → SORT ONLY (never auto-fit) ──────────────────
   const handleHeaderCellClick = useCallback(
     (colId: string) => {
       const col = visibleColumns.find(c => c.id === colId);
       if (!col) return;
       col.onHeaderClick?.(colId);
       onHeaderClick?.(col);
-      if (enableResize) {
-        autoFitColumn(colId, { headerText: getHeaderText(col) });
-      }
     },
-    [visibleColumns, onHeaderClick, enableResize, autoFitColumn],
+    [visibleColumns, onHeaderClick],
   );
 
   // ── Double-click handle → full auto-fit (header + data) ──────────────────
@@ -214,9 +222,9 @@ export function UnifiedTable<T>({
   );
 
   // ── Row cell style — centered, no ellipsis. The grid column widens to
-  //    fit the content (text or icon); neighboring columns absorb the
-  //    remaining change so total width stays constant.
-  const getCellStyle = (col: UnifiedColumn<T>): React.CSSProperties => ({
+  //    fit the content; neighboring columns absorb the remaining change
+  //    so total width stays constant.
+  const getCellStyle = (): React.CSSProperties => ({
     minWidth: 0,
     display: "flex",
     alignItems: "center",
@@ -296,7 +304,7 @@ export function UnifiedTable<T>({
                 "text-slate-600 transition-colors group-hover:text-slate-900",
                 col.className,
               )}
-              style={getCellStyle(col)}
+              style={getCellStyle()}
             >
               {typeof col.accessor === "function"
                 ? col.accessor(row, rowIdx)
@@ -326,6 +334,7 @@ export function UnifiedTable<T>({
           columns={gridHeaderColumns}
           getDensityPadding={getDensityPadding}
           fontSize={settings.fontSize}
+          fontFamily={settings.fontFamily}
           headerColor={settings.headerColor}
           stickyHeader={settings.stickyHeader}
           borderStyle={settings.borderStyle}
@@ -334,6 +343,8 @@ export function UnifiedTable<T>({
           onResizeStart={enableResize ? handleResizeStart : undefined}
           onAutoFit={enableResize ? handleAutoFit : undefined}
           gridTemplate={gridTemplateColumns}
+          sortField={sortField}
+          sortDirection={sortDirection}
         />
 
         {/* ── Body rows ── */}

@@ -5,9 +5,9 @@ import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable, useTableColumns } from "@shared/hooks";
 import type { AccountDto } from "@erp/shared-types";
-import { Eye, Pencil, Trash2, NotebookText, Receipt } from "lucide-react";
-import { ActionsDropdown } from "@shared/ui/actions-dropdown";
-import { SortableHeader } from "@shared/ui/sortable-header";
+import { NotebookText, Receipt } from "lucide-react";
+import { TableActions } from "@widgets/table-shell/TableActions";
+
 
 interface ExpenseTableProps {
   expenses: AccountDto[];
@@ -52,7 +52,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
     const cols: UnifiedColumn<AccountDto>[] = [
       {
         id: "#",
-        header: <SortableHeader field="code" label="#" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
+        header: "#",
         label: "كود الحساب",
         accessor: (c) => {
           const code = c.code || "";
@@ -61,11 +61,12 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
             : code;
           return suffix || "—";
         },
-        className: "text-center font-black text-slate-500 w-14"
+        align: "center",
+        className: "font-black text-slate-500"
       },
       {
         id: "name",
-        header: <SortableHeader field="name" label="اسم البند" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
+        header: "اسم البند",
         label: "اسم البند",
         accessor: "name_ar",
         className: "font-bold text-slate-800"
@@ -73,16 +74,14 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
     ];
 
     // Account Status
-    cols.push(getAccountStatusColumn(
-      <SortableHeader field="balance" label="حالة الحساب" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />
-    ));
+    cols.push(getAccountStatusColumn("حالة الحساب"));
 
     // Balances
     currencies.forEach(curr => {
       const symbol = curr.symbol || curr.code;
       cols.push({
         id: `balance_${curr.code}`,
-        header: <SortableHeader field="balance" label={`الرصيد (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />,
+        header: `الرصيد (${symbol})`,
         label: `الرصيد (${symbol})`,
         accessor: (c) => {
           const absBal = Math.abs(Number(c.balance || 0));
@@ -100,13 +99,13 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
       header: "إجراءات",
       label: "إجراءات",
       accessor: (e) => (
-        <ActionsDropdown
-          actions={[
-            { label: "عرض التفاصيل", icon: <Eye className="w-4 h-4" />, onClick: () => onView(e) },
-            { label: "تعديل البيانات", icon: <Pencil className="w-4 h-4" />, onClick: () => onEdit(e), className: "text-blue-600 focus:text-blue-600" },
-            ...(onDelete ? [{ label: "حذف البند", icon: <Trash2 className="w-4 h-4" />, onClick: () => onDelete(e.id), className: "text-red-600 focus:text-red-600" }] : []),
-            ...(onJournal ? [{ label: "اليومية", icon: <NotebookText className="w-4 h-4" />, onClick: () => onJournal(e) }] : []),
-            ...(onDocument ? [{ label: "سند صرف", icon: <Receipt className="w-4 h-4" />, onClick: () => onDocument(e) }] : []),
+        <TableActions
+          onView={() => onView(e)}
+          onEdit={() => onEdit(e)}
+          onDelete={onDelete ? () => onDelete(e.id) : undefined}
+          extraActions={[
+            ...(onJournal ? [{ label: "اليومية", icon: NotebookText, onClick: () => onJournal(e) }] : []),
+            ...(onDocument ? [{ label: "سند صرف", icon: Receipt, onClick: () => onDocument(e) }] : []),
           ]}
         />
       ),
@@ -115,7 +114,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
     });
 
     return cols;
-  }, [currencies, formatAmount, toBase, sortField, sortDirection, handleSort, parentCode, onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn]);
+  }, [currencies, formatAmount, toBase, parentCode, onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn]);
 
   const defaultVisible = useMemo(() => {
     const def = ["#", "name", "status"];
@@ -190,8 +189,15 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
         loading={loading}
         enableResize
         tableId="expenses"
+        sortField={sortField}
+        sortDirection={sortDirection}
         onRowClick={onView}
         selectedId={selectedId}
+        onHeaderClick={(col) => {
+          if (col.id === "#") handleSort("code");
+          else if (col.id === "name") handleSort("name");
+          else if (col.id === "status" || col.id?.startsWith("balance_")) handleSort("balance");
+        }}
         emptyMessage={search ? "لا توجد نتائج بحث تطابق استعلامك" : "لا توجد بنود مصاريف مسجلة حالياً"}
         summary={summaryColumns}
       />

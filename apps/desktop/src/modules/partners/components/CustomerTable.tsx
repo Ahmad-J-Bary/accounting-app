@@ -4,9 +4,9 @@ import { TableShell } from '@widgets/table-shell/TableShell';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable, useTableColumns } from "@shared/hooks";
 import type { CustomerDto } from "@erp/shared-types";
-import { Eye, Pencil, Trash2, NotebookText, Receipt, User } from "lucide-react";
-import { ActionsDropdown } from "@shared/ui/actions-dropdown";
-import { SortableHeader } from "@shared/ui/sortable-header";
+import { NotebookText, Receipt, User } from "lucide-react";
+import { TableActions } from "@widgets/table-shell/TableActions";
+
 
 interface CustomerTableProps {
   customers: CustomerDto[];
@@ -45,7 +45,7 @@ export function CustomerTable({ customers, loading, search, onSearchChange, onVi
     const cols: UnifiedColumn<CustomerDto>[] = [
       { 
         id: "code",
-        header: <SortableHeader field="code" label="#" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />, 
+        header: "#", 
         label: "رقم الحساب",
         accessor: (c) => (
           <span className="font-black text-slate-500">{c.code || "—"}</span>
@@ -55,7 +55,7 @@ export function CustomerTable({ customers, loading, search, onSearchChange, onVi
       },
       { 
         id: "name",
-        header: <SortableHeader field="name" label="اسم العميل" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />, 
+        header: "اسم العميل", 
         label: "اسم العميل",
         accessor: (c) => (
           <div className="flex items-center gap-3">
@@ -77,14 +77,10 @@ export function CustomerTable({ customers, loading, search, onSearchChange, onVi
     ];
 
     // Account Status
-    cols.push(getAccountStatusColumn(
-      <SortableHeader field="balance" label="حالة الحساب" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />
-    ));
+    cols.push(getAccountStatusColumn("حالة الحساب"));
 
     // Balances
-    cols.push(...getBalanceColumns(
-      <SortableHeader field="balance" label="الرصيد" currentField={sortField} direction={sortDirection} onSort={handleSort} stopPropagation />
-    ));
+    cols.push(...getBalanceColumns("الرصيد"));
 
     // Actions
     cols.push({
@@ -92,13 +88,13 @@ export function CustomerTable({ customers, loading, search, onSearchChange, onVi
       header: "إجراءات",
       label: "إجراءات",
       accessor: (c) => (
-        <ActionsDropdown
-          actions={[
-            { label: "عرض الملف", icon: <Eye className="w-4 h-4" />, onClick: () => onView(c) },
-            { label: "تعديل البيانات", icon: <Pencil className="w-4 h-4" />, onClick: () => onEdit(c), className: "text-blue-600 focus:text-blue-600" },
-            ...(onDelete ? [{ label: "حذف العميل", icon: <Trash2 className="w-4 h-4" />, onClick: () => onDelete(c.id), className: "text-red-600 focus:text-red-600" }] : []),
-            ...(onJournal ? [{ label: "اليومية", icon: <NotebookText className="w-4 h-4" />, onClick: () => onJournal(c) }] : []),
-            ...(onDocument ? [{ label: "سند قبض", icon: <Receipt className="w-4 h-4" />, onClick: () => onDocument(c) }] : []),
+        <TableActions
+          onView={() => onView(c)}
+          onEdit={() => onEdit(c)}
+          onDelete={onDelete ? () => onDelete(c.id) : undefined}
+          extraActions={[
+            ...(onJournal ? [{ label: "اليومية", icon: NotebookText, onClick: () => onJournal(c) }] : []),
+            ...(onDocument ? [{ label: "سند قبض", icon: Receipt, onClick: () => onDocument(c) }] : []),
           ]}
         />
       ),
@@ -107,7 +103,7 @@ export function CustomerTable({ customers, loading, search, onSearchChange, onVi
     });
 
     return cols;
-  }, [sortField, sortDirection, handleSort, onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, getBalanceColumns]);
+  }, [onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, getBalanceColumns]);
 
   const defaultVisible = useMemo(() =>
     ["code", "name", "phone", "status", ...currencies.map(c => `balance_${c.code}`), "actions"],
@@ -135,8 +131,15 @@ export function CustomerTable({ customers, loading, search, onSearchChange, onVi
         loading={loading}
         enableResize
         tableId="customers"
+        sortField={sortField}
+        sortDirection={sortDirection}
         onRowClick={onView}
         selectedId={selectedId}
+        onHeaderClick={(col) => {
+          if (col.id === "code") handleSort("code");
+          else if (col.id === "name") handleSort("name");
+          else if (col.id === "status" || col.id?.startsWith("balance_")) handleSort("balance");
+        }}
         emptyMessage={search ? "لا توجد نتائج بحث تطابق استعلامك" : "لا يوجد عملاء مسجلون حالياً"}
         summary={summaryColumns}
       />

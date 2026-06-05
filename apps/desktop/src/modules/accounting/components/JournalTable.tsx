@@ -33,7 +33,7 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
     [entries, filters?.journal_type]
   );
 
-  const { sortedData, handleSort } = useSortable({
+  const { sortedData, sortField, sortDirection, handleSort } = useSortable({
     data: tableData,
     defaultField: "entry_date" as SortField,
     defaultDirection: "desc",
@@ -113,6 +113,7 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
         header: "البيان",
         label: "البيان",
         accessor: (e) => e.description,
+        align: "right",
         className: "max-w-[200px] truncate font-bold text-slate-700"
       },
       {
@@ -226,6 +227,8 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
         loading={loading}
         enableResize
         tableId="journal"
+        sortField={sortField}
+        sortDirection={sortDirection}
         onHeaderClick={(col) => {
           if (col.id === "entry_number" || col.id === "journal_type" || col.id === "credit_account" || col.id === "debit_account" || col.id === "entry_date") {
             handleSort(col.id as SortField);

@@ -22,8 +22,8 @@ export function SortableHeader({
   const getSortIcon = (f: string) => {
     if (currentField !== f) return null;
     return direction === "asc" 
-      ? <ArrowUpDown className="w-3 h-3 rotate-180 ml-1" /> 
-      : <ArrowUpDown className="w-3 h-3 ml-1" />;
+      ? <ArrowUpDown className="w-2.5 h-2.5 rotate-180 mr-0.5 text-slate-400" /> 
+      : <ArrowUpDown className="w-2.5 h-2.5 mr-0.5 text-slate-400" />;
   };
 
   return (
