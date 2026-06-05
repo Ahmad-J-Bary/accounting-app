@@ -4,7 +4,7 @@ import { TableShell } from '@widgets/table-shell/TableShell';
 import { TableActions } from '@widgets/table-shell/TableActions';
 import { Button } from "@shared/ui/button";
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
-import { useUnifiedColumns, useSortable } from "@shared/hooks";
+import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
 import { formatDate } from "@shared/lib/format";
 import { PAYMENT_TYPE_LABELS } from "@modules/payments/lib/constants";
 import { ArrowDownCircle, ArrowUpCircle } from "lucide-react";
@@ -48,6 +48,7 @@ export function PaymentsTable({
   onDelete,
 }: PaymentsTableProps) {
 
+  const { isBaseCurrency } = useBaseCurrencyColumns();
   const sortedCurrencies = useMemo(() => {
     if (!baseCurrency) return currencies;
     return [baseCurrency, ...currencies.filter(c => c.code !== baseCurrency.code)];
@@ -119,7 +120,7 @@ export function PaymentsTable({
         id: "journal_entry_number",
         header: "رقم القيد",
         label: "رقم القيد",
-        accessor: (p) => p.journal_entry_number ?? "—",
+        accessor: (p) => p.journal_entry_number ?? "",
         className: "font-black text-indigo-700 tabular-nums",
       },
       {
@@ -143,24 +144,27 @@ export function PaymentsTable({
       },
       ...sortedCurrencies.map(curr => {
         const symbol = curr.symbol || curr.code;
+        const isBase = isBaseCurrency(curr.code);
         return {
           id: `amount_${curr.code}`,
           header: `المبلغ (${symbol})`,
           label: `المبلغ (${symbol})`,
           accessor: (p: Payment) => {
             const amount = parseFloat(p.amount) || 0;
-            if (amount === 0) return "—";
+            if (amount === 0) return "";
             const baseAmount = toBase(amount, p.currency_code);
             return formatAmount(baseAmount, { currencyCode: curr.code });
           },
-          className: "tabular-nums font-black text-slate-900",
+          className: isBase
+            ? "tabular-nums font-black text-slate-900"
+            : "tabular-nums font-medium text-slate-400"
         };
       }),
       {
         id: "notes",
         header: "البيان",
         label: "البيان",
-        accessor: (p) => p.notes || "—",
+        accessor: (p) => p.notes || "",
         className: "text-slate-500 italic",
       },
       {
@@ -170,10 +174,10 @@ export function PaymentsTable({
         accessor: (p) => {
           if (p.credit_account_id) {
             return (
-              accounts.find((a) => a.id === p.credit_account_id)?.name_ar || "—"
+              accounts.find((a) => a.id === p.credit_account_id)?.name_ar || ""
             );
           }
-          return "—";
+          return "";
         },
         className: "font-medium text-slate-800 text-sm",
       },
@@ -184,10 +188,10 @@ export function PaymentsTable({
         accessor: (p) => {
           if (p.debit_account_id) {
             return (
-              accounts.find((a) => a.id === p.debit_account_id)?.name_ar || "—"
+              accounts.find((a) => a.id === p.debit_account_id)?.name_ar || ""
             );
           }
-          return "—";
+          return "";
         },
         className: "font-medium text-slate-800 text-sm",
       },
@@ -221,19 +225,23 @@ export function PaymentsTable({
       onRowClick,
       onEdit,
       onDelete,
+      isBaseCurrency,
     ],
   );
 
+  // Default visible: only base currency's amount column is shown.
   const defaultVisible = useMemo(() => {
-    const def = ["journal_entry_number", "payment_type"];
+    const def: string[] = ["journal_entry_number", "payment_type"];
     sortedCurrencies.forEach(curr => {
-      def.push(`amount_${curr.code}`);
+      if (isBaseCurrency(curr.code)) {
+        def.push(`amount_${curr.code}`);
+      }
     });
     def.push("notes", "credit_account", "debit_account", "payment_date", "actions");
     return def;
-  }, [sortedCurrencies]);
+  }, [sortedCurrencies, isBaseCurrency]);
 
-  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "payments-unified",
     columns: allColumns,
     defaultVisible,
@@ -260,6 +268,7 @@ export function PaymentsTable({
       const amountMatch = id.match(/^amount_(.+)$/);
       if (amountMatch) {
         const currCode = amountMatch[1];
+        const isBase = isBaseCurrency(currCode);
         return {
           id: `${id}_summary`,
           columnId: id,
@@ -267,12 +276,14 @@ export function PaymentsTable({
           value: baseTotal > 0
             ? formatAmount(baseTotal, { currencyCode: currCode })
             : "—",
-          className: "text-slate-900 font-black",
+          className: isBase
+            ? "text-slate-900 font-black"
+            : "text-slate-500 font-extrabold",
         };
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [sortedData, enrichedColumns, formatAmount, toBase]);
+  }, [sortedData, enrichedColumns, formatAmount, toBase, isBaseCurrency]);
 
   return (
     <TableShell
@@ -281,6 +292,8 @@ export function PaymentsTable({
       searchPlaceholder="بحث بالمستخدم، الحساب، البيان..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      onColumnsReset={resetToDefault}
+      columnsModified={isModified}
       showToolbar={true}
       actions={
         <div className="flex items-center gap-2">

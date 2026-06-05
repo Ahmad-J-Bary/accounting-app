@@ -1,13 +1,13 @@
 import React from 'react';
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { 
-  Settings2, 
-  Search, 
-  Columns, 
-  LayoutGrid, 
-  Download, 
-  Printer, 
+import {
+  Settings2,
+  Search,
+  Columns,
+  LayoutGrid,
+  Download,
+  Printer,
   RotateCcw,
   Check
 } from "lucide-react";
@@ -26,13 +26,21 @@ import { useTableSettings } from '@shared/hooks';
 import { TableDensity } from '@shared/types/table-settings';
 import { cn } from '@shared/lib/utils';
 
+export interface ToolbarColumn {
+  id: string;
+  label: string;
+  visible: boolean;
+}
+
 interface TableToolbarProps {
   title?: string;
   search?: string;
   onSearchChange?: (value: string) => void;
   searchPlaceholder?: string;
-  columns: { id: string; label: string; visible: boolean }[];
+  columns: ToolbarColumn[];
   onColumnToggle: (id: string) => void;
+  onColumnsReset?: () => void;
+  columnsModified?: boolean;
   actions?: React.ReactNode;
   showViewOptions?: boolean;
 }
@@ -44,10 +52,15 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
   searchPlaceholder = "بحث...",
   columns,
   onColumnToggle,
+  onColumnsReset,
+  columnsModified = false,
   actions,
   showViewOptions = true,
 }) => {
   const { settings, updateSetting, resetSettings } = useTableSettings();
+  const visibleCount = columns.filter((c) => c.visible).length;
+  const totalCount = columns.length;
+  const hasColumns = columns.length > 0;
 
   return (
     <div className="flex flex-col gap-4 mb-4" dir="rtl">
@@ -55,7 +68,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
         {title && <h2 className="text-lg font-bold text-slate-800">{title}</h2>}
         <div className="flex items-center gap-2 mr-auto">
           {actions}
-          
+
           {showViewOptions && (
             <>
               <DropdownMenu>
@@ -67,8 +80,8 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-56">
                   <DropdownMenuLabel className="text-right">كثافة الجدول</DropdownMenuLabel>
-                  <DropdownMenuRadioGroup 
-                    value={settings.density} 
+                  <DropdownMenuRadioGroup
+                    value={settings.density}
                     onValueChange={(v) => updateSetting('density', v as TableDensity)}
                   >
                     <DropdownMenuRadioItem value="compact" className="flex-row-reverse">مختصر</DropdownMenuRadioItem>
@@ -101,13 +114,37 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-9 border-slate-200 bg-white text-slate-600">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "h-9 border-slate-200 bg-white text-slate-600",
+                      columnsModified && "border-amber-300 bg-amber-50 text-amber-700"
+                    )}
+                  >
                     <Columns className="w-4 h-4 ml-2" />
                     الأعمدة
+                    {hasColumns && (
+                      <span className={cn(
+                        "mr-2 text-[10px] font-bold px-1.5 py-0.5 rounded tabular-nums",
+                        columnsModified
+                          ? "bg-amber-200 text-amber-800"
+                          : "bg-slate-100 text-slate-600"
+                      )}>
+                        {visibleCount}/{totalCount}
+                      </span>
+                    )}
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56 max-h-[400px] overflow-y-auto">
-                  <DropdownMenuLabel className="text-right">إظهار/إخفاء الأعمدة</DropdownMenuLabel>
+                <DropdownMenuContent align="start" className="w-64 max-h-[420px] overflow-y-auto">
+                  <DropdownMenuLabel className="flex items-center justify-between text-right gap-2">
+                    <span>إظهار/إخفاء الأعمدة</span>
+                    {hasColumns && (
+                      <span className="text-[10px] tabular-nums text-slate-500 font-medium">
+                        {visibleCount} / {totalCount}
+                      </span>
+                    )}
+                  </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {columns.map((col) => (
                     <DropdownMenuCheckboxItem
@@ -116,9 +153,22 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                       onCheckedChange={() => onColumnToggle(col.id)}
                       className="flex-row-reverse"
                     >
-                      {col.label}
+                      <span>{col.label}</span>
                     </DropdownMenuCheckboxItem>
                   ))}
+                  {onColumnsReset && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={onColumnsReset}
+                        disabled={!columnsModified}
+                        className="flex-row-reverse text-blue-600 focus:text-blue-600 disabled:text-slate-400 disabled:opacity-50"
+                      >
+                        <RotateCcw className="w-4 h-4 ml-2" />
+                        استعادة الأعمدة الافتراضية
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </>

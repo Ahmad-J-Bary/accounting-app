@@ -19,7 +19,7 @@ export function AuditTable({ data, loading, search, onSearchChange }: AuditTable
       header: "التاريخ والوقت",
       label: "تاريخ ووقت العملية",
       accessor: (l) => formatDateTime(l.created_at),
-      className: "w-44 tabular-nums text-slate-500 text-xs"
+      className: "tabular-nums text-slate-500"
     },
     {
       id: "username",
@@ -28,7 +28,6 @@ export function AuditTable({ data, loading, search, onSearchChange }: AuditTable
       accessor: (l) => (
         <span className="font-bold text-slate-700">{l.username}</span>
       ),
-      className: "w-32"
     },
     {
       id: "action",
@@ -39,34 +38,33 @@ export function AuditTable({ data, loading, search, onSearchChange }: AuditTable
           {l.action}
         </span>
       ),
-      className: "w-24"
     },
     {
       id: "entity_type",
       header: "نوع الكيان",
       label: "نوع الكيان المتأثر",
       accessor: "entity_type",
-      className: "w-32 text-slate-600"
+      className: "text-slate-600"
     },
     {
       id: "entity_id",
       header: "معرف الكيان",
       label: "المعرف الفريد للكيان",
-      accessor: (l) => l.entity_id || "—",
-      className: "font-mono text-[10px] text-slate-400"
+      accessor: (l) => l.entity_id || "",
+      className: "font-mono text-slate-500"
     },
     {
       id: "ip_address",
       header: "IP Address",
       label: "عنوان IP",
-      accessor: (l) => l.ip_address || "—",
-      className: "font-mono text-[10px] text-slate-400 w-32"
+      accessor: (l) => l.ip_address || "",
+      className: "font-mono text-slate-500"
     }
   ], []);
 
   type SortField = "created_at" | "username" | "action" | "entity_type" | "entity_id" | "ip_address";
 
-  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "audit-log-unified",
     columns: allColumns,
     defaultVisible: allColumns.map(c => c.id),
@@ -119,6 +117,8 @@ export function AuditTable({ data, loading, search, onSearchChange }: AuditTable
       searchPlaceholder="بحث بالمستخدم، العملية، الكيان..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      onColumnsReset={resetToDefault}
+      columnsModified={isModified}
       showToolbar={true}
     >
       <UnifiedTable

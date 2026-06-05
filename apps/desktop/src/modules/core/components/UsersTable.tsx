@@ -23,14 +23,14 @@ export function UsersTable({ data, loading, search, onSearchChange, roles }: Use
       header: "الاسم الكامل",
       label: "الاسم الكامل",
       accessor: "full_name",
-      className: "font-bold text-slate-800 min-w-[180px]"
+      className: "font-bold text-slate-800"
     },
     {
       id: "username",
       header: "اسم المستخدم",
       label: "اسم المستخدم",
       accessor: "username",
-      className: "text-slate-500 font-mono text-xs w-32"
+      className: "font-mono font-medium text-slate-500"
     },
     {
       id: "role",
@@ -44,21 +44,19 @@ export function UsersTable({ data, loading, search, onSearchChange, roles }: Use
           </span>
         );
       },
-      className: "w-32"
     },
     {
       id: "last_login",
       header: "آخر ظهور",
       label: "تاريخ آخر دخول",
-      accessor: (u) => u.last_login ? formatDateTime(u.last_login) : "—",
-      className: "text-xs text-slate-400 tabular-nums w-44"
+      accessor: (u) => u.last_login ? formatDateTime(u.last_login) : "",
+      className: "text-slate-500 tabular-nums"
     },
     {
       id: "status",
       header: "الحالة",
       label: "حالة الحساب",
       accessor: (u) => <StatusBadge status={u.is_active ? "active" : "inactive"} />,
-      className: "w-28"
     },
     {
       id: "actions",
@@ -70,7 +68,6 @@ export function UsersTable({ data, loading, search, onSearchChange, roles }: Use
           onDelete={() => toast.warning("حذف المستخدم قيد التطوير")}
         />
       ),
-      className: "w-[80px]"
     }
   ], [roles]);
 
@@ -108,7 +105,7 @@ export function UsersTable({ data, loading, search, onSearchChange, roles }: Use
     }
   });
 
-  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "users-unified",
     columns,
     defaultVisible: columns.map(c => c.id),
@@ -121,6 +118,8 @@ export function UsersTable({ data, loading, search, onSearchChange, roles }: Use
       searchPlaceholder="بحث بالاسم أو اسم المستخدم..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      onColumnsReset={resetToDefault}
+      columnsModified={isModified}
       showToolbar={true}
     >
       <UnifiedTable

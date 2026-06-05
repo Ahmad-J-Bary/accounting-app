@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns, useSortable, useTableColumns } from "@shared/hooks";
+import { useUnifiedColumns, useSortable, useTableColumns, useBaseCurrencyColumns } from "@shared/hooks";
 import type { CustomerDto } from "@erp/shared-types";
 import { NotebookText, Receipt, User } from "lucide-react";
 import { TableActions } from "@widgets/table-shell/TableActions";
@@ -25,8 +25,9 @@ type SortField = "code" | "name" | "balance";
 
 export function CustomerTable({ customers, loading, search, onSearchChange, onView, onEdit, onDelete, onJournal, onDocument, selectedId }: CustomerTableProps) {
   const { currencies } = useCurrencyContext();
+  const { isBaseCurrency } = useBaseCurrencyColumns();
   const { getAccountStatusColumn, getBalanceColumns, getSummaryColumns } = useTableColumns();
-  
+
   const { sortedData: sortedCustomers, sortField, sortDirection, handleSort } = useSortable({
     data: customers,
     defaultField: "code" as SortField,
@@ -72,13 +73,22 @@ export function CustomerTable({ customers, loading, search, onSearchChange, onVi
       },
     ];
 
-    // Account Status
     cols.push(getAccountStatusColumn("حالة الحساب"));
 
-    // Balances
-    cols.push(...getBalanceColumns("الرصيد"));
+    // Wrap the balance column factory so secondary currency columns are visually de-emphasized.
+    const balanceCols = getBalanceColumns("الرصيد").map((c) => {
+      const m = c.id.match(/^balance_(.+)$/);
+      if (m && !isBaseCurrency(m[1])) {
+        return {
+          ...c,
+          className: "tabular-nums font-medium text-slate-400",
+          label: `${c.label}`,
+        };
+      }
+      return c;
+    });
+    cols.push(...balanceCols);
 
-    // Actions
     cols.push({
       id: "actions",
       header: "إجراءات",
@@ -97,13 +107,21 @@ export function CustomerTable({ customers, loading, search, onSearchChange, onVi
     });
 
     return cols;
-  }, [onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, getBalanceColumns]);
+  }, [onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, getBalanceColumns, isBaseCurrency]);
 
-  const defaultVisible = useMemo(() =>
-    ["code", "name", "phone", "status", ...currencies.map(c => `balance_${c.code}`), "actions"],
-  [currencies]);
+  // Default visible: only base currency's balance is shown; secondary balances are hidden.
+  const defaultVisible = useMemo(() => {
+    const ids: string[] = ["code", "name", "phone", "status"];
+    currencies.forEach(curr => {
+      if (isBaseCurrency(curr.code)) {
+        ids.push(`balance_${curr.code}`);
+      }
+    });
+    ids.push("actions");
+    return ids;
+  }, [currencies, isBaseCurrency]);
 
-  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "customers-unified",
     columns: allColumns,
     defaultVisible,
@@ -119,6 +137,8 @@ export function CustomerTable({ customers, loading, search, onSearchChange, onVi
       searchPlaceholder="بحث باسم العميل أو الرقم..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      onColumnsReset={resetToDefault}
+      columnsModified={isModified}
       showToolbar={true}
     >
       <UnifiedTable

@@ -4,7 +4,7 @@ import { TableShell } from '@widgets/table-shell/TableShell';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { formatDateTime } from '@shared/lib/format';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns, useSortable } from "@shared/hooks";
+import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
 
 import type { DamagedItem } from "@erp/shared-types";
 
@@ -19,6 +19,7 @@ type SortField = "material_name" | "quantity" | "damage_date" | "cost_impact";
 
 export function DamagedTable({ items, loading, search, onSearchChange }: DamagedTableProps) {
   const { formatAmount, currencies } = useCurrencyContext();
+  const { isBaseCurrency } = useBaseCurrencyColumns();
 
   const { sortedData: sortedItems, sortField, sortDirection, handleSort } = useSortable({
     data: items,
@@ -76,8 +77,8 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
       },
     ];
 
-    // Multi-currency cost columns
     currencies.forEach(curr => {
+      const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `cost_${curr.code}`,
         header: `الخسارة (${curr.symbol || curr.code})`,
@@ -86,23 +87,27 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
           const val = parseFloat(i.cost_impact || "0");
           return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "";
         },
-        className: "tabular-nums font-black text-rose-600"
+        className: isBase
+          ? "tabular-nums font-black text-rose-600"
+          : "tabular-nums font-medium text-rose-300"
       });
     });
 
     return cols;
-  }, [formatAmount, currencies]);
+  }, [formatAmount, currencies, isBaseCurrency]);
 
-  // FIX: include dynamic cost columns in defaultVisible so they show on first load
-  const defaultVisible = useMemo(() => [
-    "material_name",
-    "reason",
-    "damage_date",
-    "quantity",
-    ...currencies.map(c => `cost_${c.code}`),
-  ], [currencies]);
+  // Default visible: only base currency's loss column is shown.
+  const defaultVisible = useMemo(() => {
+    const ids: string[] = ["material_name", "reason", "damage_date", "quantity"];
+    currencies.forEach(curr => {
+      if (isBaseCurrency(curr.code)) {
+        ids.push(`cost_${curr.code}`);
+      }
+    });
+    return ids;
+  }, [currencies, isBaseCurrency]);
 
-  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "damaged-items-table",
     columns: allColumns,
     defaultVisible,
@@ -134,17 +139,20 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
       const match = col.id.match(/^cost_(.+)$/);
       if (match) {
         const currCode = match[1];
+        const isBase = isBaseCurrency(currCode);
         return {
           id: `${col.id}_summary`,
           columnId: col.id,
           label: 'إجمالي الخسارة',
           value: totalCost > 0 ? formatAmount(totalCost, { currencyCode: currCode }) : "—",
-          className: 'text-rose-600 font-black'
+          className: isBase
+            ? 'text-rose-600 font-black'
+            : 'text-rose-300 font-extrabold'
         };
       }
       return { id: `${col.id}_spacer`, columnId: col.id, label: '', value: '' };
     });
-  }, [sortedItems, enrichedColumns, formatAmount]);
+  }, [sortedItems, enrichedColumns, formatAmount, isBaseCurrency]);
 
   return (
     <TableShell
@@ -153,6 +161,8 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
       searchPlaceholder="بحث بالمنتج أو السبب..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      onColumnsReset={resetToDefault}
+      columnsModified={isModified}
       showToolbar={true}
     >
       <UnifiedTable

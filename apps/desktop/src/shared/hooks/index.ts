@@ -10,3 +10,4 @@ export * from './useSortable';
 export * from './useTableColumns';
 export * from './useColumnResize';
 export * from './useGridResize';
+export * from './useBaseCurrencyColumns';

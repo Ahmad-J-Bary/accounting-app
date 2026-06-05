@@ -5,7 +5,7 @@ import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { TableActions } from "@widgets/table-shell/TableActions";
 import { formatDateTime } from '@shared/lib/format';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns, useSortable } from "@shared/hooks";
+import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
 import type { MaterialDto } from "@erp/shared-types";
 
 export type ReturnLineRow = {
@@ -39,6 +39,7 @@ interface ReturnsTableProps {
 
 export function ReturnsTable({ items, loading, search, onSearchChange, materials, partnerLabel, emptyMessage, selectedId, onSelect, onView, onEdit, onDelete }: ReturnsTableProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
+  const { isBaseCurrency } = useBaseCurrencyColumns();
 
   const allColumns = useMemo<UnifiedColumn<ReturnLineRow>[]>(() => {
     const cols: UnifiedColumn<ReturnLineRow>[] = [
@@ -63,17 +64,22 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
         accessor: (i) => i.partner_name || "",
         className: "font-bold text-slate-700"
       },
-      ...currencies.map(curr => ({
-        id: `unit_price_${curr.code}`,
-        header: `السعر (${curr.symbol || curr.code})`,
-        label: `السعر الفردي (${curr.symbol || curr.code})`,
-        accessor: (i: ReturnLineRow) => {
-          const val = parseFloat(i.unit_price || "0");
-          if (val === 0) return "";
-          return formatAmount(val, { currencyCode: curr.code });
-        },
-        className: "tabular-nums font-black text-slate-900"
-      })),
+      ...currencies.map(curr => {
+        const isBase = isBaseCurrency(curr.code);
+        return {
+          id: `unit_price_${curr.code}`,
+          header: `السعر (${curr.symbol || curr.code})`,
+          label: `السعر الفردي (${curr.symbol || curr.code})`,
+          accessor: (i: ReturnLineRow) => {
+            const val = parseFloat(i.unit_price || "0");
+            if (val === 0) return "";
+            return formatAmount(val, { currencyCode: curr.code });
+          },
+          className: isBase
+            ? "tabular-nums font-black text-slate-900"
+            : "tabular-nums font-medium text-slate-400"
+        };
+      }),
       {
         id: "quantity",
         header: "الكمية",
@@ -91,17 +97,22 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
         },
         className: "text-slate-500"
       },
-      ...currencies.map(curr => ({
-        id: `line_total_${curr.code}`,
-        header: `المجموع (${curr.symbol || curr.code})`,
-        label: `المجموع (${curr.symbol || curr.code})`,
-        accessor: (i: ReturnLineRow) => {
-          const val = parseFloat(i.line_total || "0");
-          if (val === 0) return "";
-          return formatAmount(val, { currencyCode: curr.code });
-        },
-        className: "tabular-nums font-black text-slate-900"
-      })),
+      ...currencies.map(curr => {
+        const isBase = isBaseCurrency(curr.code);
+        return {
+          id: `line_total_${curr.code}`,
+          header: `المجموع (${curr.symbol || curr.code})`,
+          label: `المجموع (${curr.symbol || curr.code})`,
+          accessor: (i: ReturnLineRow) => {
+            const val = parseFloat(i.line_total || "0");
+            if (val === 0) return "";
+            return formatAmount(val, { currencyCode: curr.code });
+          },
+          className: isBase
+            ? "tabular-nums font-black text-slate-900"
+            : "tabular-nums font-medium text-slate-400"
+        };
+      }),
       {
         id: "return_date",
         header: "التاريخ",
@@ -130,8 +141,9 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
       },
     ];
     return cols;
-  }, [currencies, formatAmount, partnerLabel, materials, onView, onEdit, onDelete]);
+  }, [currencies, formatAmount, partnerLabel, materials, onView, onEdit, onDelete, isBaseCurrency]);
 
+  // Default visible: only base currency's price and total columns are shown.
   const defaultVisible = useMemo(() => {
     const baseCode = baseCurrency?.code;
     return [
@@ -185,7 +197,7 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
     }
   });
 
-  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "returns-unified",
     columns: allColumns,
     defaultVisible,
@@ -204,11 +216,20 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
       const match = id.match(/^line_total_(.+)$/);
       if (match) {
         const currCode = match[1];
-        return { id: `${id}_summary`, columnId: id, label: "الإجمالي", value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—", className: "font-black text-slate-900" };
+        const isBase = isBaseCurrency(currCode);
+        return {
+          id: `${id}_summary`,
+          columnId: id,
+          label: "الإجمالي",
+          value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
+          className: isBase
+            ? "font-black text-slate-900"
+            : "font-extrabold text-slate-500"
+        };
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [enrichedColumns, baseTotal, formatAmount, sortedData]);
+  }, [enrichedColumns, baseTotal, formatAmount, sortedData, isBaseCurrency]);
 
   return (
     <TableShell
@@ -217,6 +238,8 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
       searchPlaceholder="بحث بالرقم أو المادة..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      onColumnsReset={resetToDefault}
+      columnsModified={isModified}
       showToolbar={true}
     >
       <UnifiedTable

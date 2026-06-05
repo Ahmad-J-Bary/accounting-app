@@ -3,7 +3,7 @@ import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTa
 import { TableShell } from '@widgets/table-shell/TableShell';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns, useSortable, useTableColumns } from "@shared/hooks";
+import { useUnifiedColumns, useSortable, useTableColumns, useBaseCurrencyColumns } from "@shared/hooks";
 import type { AccountDto } from "@erp/shared-types";
 import { NotebookText, Receipt } from "lucide-react";
 import { TableActions } from "@widgets/table-shell/TableActions";
@@ -31,9 +31,10 @@ const codeSuffix = (code: string, prefix?: string) => {
 };
 
 export function ExpenseTable({ expenses, loading, search, onSearchChange, onView, onEdit, onDelete, onJournal, onDocument, selectedId, parentCode }: ExpenseTableProps) {
-  const { currencies, formatAmount, toBase } = useCurrencyContext();
+  const { currencies, baseCurrency, formatAmount, toBase } = useCurrencyContext();
+  const { baseCurrencyCode, isBaseCurrency } = useBaseCurrencyColumns();
   const { getAccountStatusColumn, getBalanceColumns, getSummaryColumns } = useTableColumns();
-  
+
   const { sortedData: sortedExpenses, sortField, sortDirection, handleSort } = useSortable({
     data: expenses,
     defaultField: "code" as SortField,
@@ -72,12 +73,11 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
       },
     ];
 
-    // Account Status
     cols.push(getAccountStatusColumn("حالة الحساب"));
 
-    // Balances
     currencies.forEach(curr => {
       const symbol = curr.symbol || curr.code;
+      const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `balance_${curr.code}`,
         header: `الرصيد (${symbol})`,
@@ -88,7 +88,9 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
           const baseAmount = toBase(absBal, c.currency);
           return formatAmount(baseAmount, { currencyCode: curr.code });
         },
-        className: "tabular-nums font-black text-slate-900"
+        className: isBase
+          ? "tabular-nums font-black text-slate-900"
+          : "tabular-nums font-medium text-slate-400"
       });
     });
 
@@ -110,18 +112,22 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
     });
 
     return cols;
-  }, [currencies, formatAmount, toBase, parentCode, onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn]);
+  }, [currencies, formatAmount, toBase, parentCode, onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, isBaseCurrency]);
 
+  // Default visible: only base currency's balance column is visible.
+  // Secondary currency balances are hidden by default (user can toggle on).
   const defaultVisible = useMemo(() => {
-    const def = ["code", "name", "status"];
+    const def: string[] = ["code", "name", "status"];
     currencies.forEach(curr => {
-      def.push(`balance_${curr.code}`);
+      if (isBaseCurrency(curr.code)) {
+        def.push(`balance_${curr.code}`);
+      }
     });
     def.push("actions");
     return def;
-  }, [currencies]);
+  }, [currencies, isBaseCurrency]);
 
-  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "expenses-table",
     columns: allColumns,
     defaultVisible,
@@ -138,10 +144,10 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
       return sum + toBase(bal, e.currency);
     }, 0);
 
-    const colIds = enrichedColumns.map(c => c.id);
-    return colIds.map(id => {
+    return enrichedColumns.map((col) => {
+      const id = col.id;
       if (id === 'name') {
-        return { id: 'name_summary', columnId: 'name', label: '', value: 'المجموع', className: 'text-slate-600 font-bold' };
+        return { id: 'name_summary', columnId: 'name', label: '', value: `${sortedExpenses.length} بند`, className: 'text-slate-600 font-medium' };
       }
       if (id === 'code' || id === 'actions') {
         return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
@@ -158,17 +164,20 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
       const match = id.match(/^balance_(.+)$/);
       if (match) {
         const currCode = match[1];
+        const isBase = isBaseCurrency(currCode);
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: '',
+          label: 'الإجمالي',
           value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
-          className: `${overallColor} font-bold`
+          className: isBase
+            ? `${overallColor} font-black`
+            : 'text-slate-500 font-extrabold',
         };
       }
       return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
     });
-  }, [sortedExpenses, formatAmount, toBase, enrichedColumns]);
+  }, [sortedExpenses, formatAmount, toBase, enrichedColumns, isBaseCurrency]);
 
   return (
     <TableShell
@@ -177,6 +186,8 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
       searchPlaceholder="بحث باسم البند أو الكود..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      onColumnsReset={resetToDefault}
+      columnsModified={isModified}
       showToolbar={true}
     >
       <UnifiedTable

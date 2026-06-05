@@ -27,14 +27,14 @@ export function ProductionTable({ data, loading, search, onSearchChange }: Produ
       header: "رقم الأمر",
       label: "رقم أمر الإنتاج",
       accessor: "order_number",
-      className: "font-black text-blue-600 font-mono w-28"
+      className: "font-black text-blue-600 font-mono"
     },
     {
       id: "production_date",
       header: "التاريخ",
       label: "تاريخ الإنتاج",
       accessor: (o) => formatDateTime(o.production_date),
-      className: "tabular-nums text-slate-500 font-medium w-32"
+      className: "tabular-nums text-slate-500"
     },
     {
       id: "materials_count",
@@ -45,7 +45,6 @@ export function ProductionTable({ data, loading, search, onSearchChange }: Produ
           {o.materials.length} أصناف
         </span>
       ),
-      className: "w-32"
     },
     {
       id: "outputs_count",
@@ -56,14 +55,13 @@ export function ProductionTable({ data, loading, search, onSearchChange }: Produ
           {o.outputs.length} منتجات
         </span>
       ),
-      className: "w-32"
     },
     {
       id: "total_cost",
       header: "إجمالي التكلفة",
       label: "إجمالي تكلفة الإنتاج",
       accessor: (o) => formatCurrency(parseFloat(o.total_cost)),
-      className: "tabular-nums font-black text-slate-900 w-32"
+      className: "tabular-nums font-black text-slate-900"
     },
     {
       id: "status",
@@ -80,13 +78,12 @@ export function ProductionTable({ data, loading, search, onSearchChange }: Produ
           </span>
         );
       },
-      className: "w-28"
     }
   ], []);
 
   type SortField = "order_number" | "production_date" | "materials_count" | "outputs_count" | "total_cost" | "status";
 
-  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "production-orders-unified",
     columns: allColumns,
     defaultVisible: allColumns.map(c => c.id),
@@ -136,6 +133,8 @@ export function ProductionTable({ data, loading, search, onSearchChange }: Produ
       searchPlaceholder="بحث برقم الأمر..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      onColumnsReset={resetToDefault}
+      columnsModified={isModified}
       showToolbar={true}
     >
       <UnifiedTable

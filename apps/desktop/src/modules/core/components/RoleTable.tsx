@@ -14,24 +14,24 @@ interface RoleTableProps {
 
 export function RoleTable({ roles, loading, onEdit, onDelete }: RoleTableProps) {
   const columns = useMemo<UnifiedColumn<Role>[]>(() => [
-    { 
+    {
       id: "name",
-      header: "اسم الصلاحية", 
-      label: "اسم الصلاحية/الدور", 
-      accessor: "name", 
-      className: "font-bold text-slate-800" 
+      header: "اسم الصلاحية",
+      label: "اسم الصلاحية/الدور",
+      accessor: "name",
+      className: "font-bold text-slate-800"
     },
-    { 
+    {
       id: "description",
-      header: "الوصف", 
-      label: "الوصف", 
-      accessor: (r) => r.description || "—",
-      className: "text-slate-500 text-sm max-w-[250px] truncate" 
+      header: "الوصف",
+      label: "الوصف",
+      accessor: (r) => r.description || "",
+      className: "text-slate-500"
     },
-    { 
+    {
       id: "permissions_count",
-      header: "عدد الأذونات", 
-      label: "عدد الصلاحيات الممنوحة", 
+      header: "عدد الأذونات",
+      label: "عدد الصلاحيات الممنوحة",
       accessor: (r) => (
         <div className="flex items-center gap-2">
           <Shield className="w-3 h-3 text-blue-600" />
@@ -40,10 +40,10 @@ export function RoleTable({ roles, loading, onEdit, onDelete }: RoleTableProps) 
       ),
       className: ""
     },
-    { 
+    {
       id: "is_system_role",
-      header: "نوع النظام", 
-      label: "نوع الدور (نظامي/مخصص)", 
+      header: "نوع النظام",
+      label: "نوع الدور (نظامي/مخصص)",
       accessor: (r) => r.is_system_role ? (
         <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold ring-1 ring-amber-100">
           <ShieldAlert className="w-3 h-3" /> نظامي
@@ -66,7 +66,6 @@ export function RoleTable({ roles, loading, onEdit, onDelete }: RoleTableProps) 
           align="start"
         />
       ),
-      className: "w-[80px]"
     }
   ], [onEdit, onDelete]);
 

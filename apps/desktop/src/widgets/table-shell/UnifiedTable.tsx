@@ -316,7 +316,22 @@ export function UnifiedTable<T>({
     });
   };
 
-  const showSummary = !!(summary?.length && settings.showSummary && data.length > 0);
+  const visibleColumnIds = useMemo(
+    () => new Set(visibleColumns.map(c => c.id)),
+    [visibleColumns],
+  );
+
+  const filteredSummary = useMemo(() => {
+    if (!summary?.length) return undefined;
+    return summary.filter(s => {
+      if (!s.columnId) return true;
+      return visibleColumnIds.has(s.columnId);
+    });
+  }, [summary, visibleColumnIds]);
+
+  const showSummary = !!(
+    filteredSummary?.length && settings.showSummary && data.length > 0
+  );
 
   return (
     <div className={cn("w-full h-full flex flex-col", className)}>
@@ -327,8 +342,18 @@ export function UnifiedTable<T>({
        *   – horizontal scroll: header scrolls with body ✓  (same container)
        * The body and header both use `gridTemplateColumns`, guaranteeing
        * perfect column alignment across all rows.
+       *
+       * `scrollbar-gutter: stable` reserves the inline-end gutter for the
+       * scrollbar even when no scroll is needed. That keeps the body's
+       * content area width constant, so the page-footer summary below
+       * (which sits outside the scroll container, full parent width) can
+       * match it with `padding-inline-end` and stay perfectly aligned.
        */}
-      <div ref={containerRef} className="flex-1 overflow-auto relative custom-scrollbar">
+      <div
+        ref={containerRef}
+        className="flex-1 overflow-auto relative custom-scrollbar"
+        style={{ scrollbarGutter: "stable" }}
+      >
         {/* ── Flex Grid Header (sticky, CSS Grid, N-1 resize handles) ── */}
         <GridHeader
           columns={gridHeaderColumns}
@@ -349,19 +374,24 @@ export function UnifiedTable<T>({
 
         {/* ── Body rows ── */}
         {renderRows()}
-
-        {/*
-         * Summary row – inside the scroll container so it scrolls
-         * horizontally with the body and sticks to the bottom vertically.
-         */}
-        {showSummary && (
-          <TableSummary
-            columns={summary!}
-            gridTemplate={gridTemplateColumns}
-            sticky
-          />
-        )}
       </div>
+
+      {/*
+       * Page-footer summary – lives OUTSIDE the scroll container so it
+       * always sits at the very bottom of the table (never scrolls with
+       * the body). The inline-end padding compensates for the scrollbar
+       * gutter reserved above, so the summary's content width exactly
+       * matches the body's content width and every column aligns.
+       */}
+      {showSummary && (
+        <div style={{ paddingInlineEnd: 8 }}>
+          <TableSummary
+            columns={filteredSummary!}
+            gridTemplate={gridTemplateColumns}
+            asPageFooter
+          />
+        </div>
+      )}
 
       {/* Pagination – outside scroll, fixed at bottom */}
       {pagination && settings.showPagination && (

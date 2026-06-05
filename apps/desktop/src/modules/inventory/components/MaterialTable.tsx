@@ -9,7 +9,7 @@ import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTa
 import { TableShell } from '@widgets/table-shell/TableShell';
 import { TableActions } from '@widgets/table-shell/TableActions';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
-import { useUnifiedColumns, useSortable } from '@shared/hooks';
+import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from '@shared/hooks';
 
 interface MaterialTableProps {
   materials: MaterialDto[];
@@ -26,20 +26,21 @@ interface MaterialTableProps {
 
 type SortField = "code" | "name" | "total_available" | "total_received" | "total_sold" | "minimum_stock" | "average_cost" | "unit_price" | "sale_price";
 
-export function MaterialTable({ 
-  materials, 
-  categories, 
-  loading, 
-  search, 
+export function MaterialTable({
+  materials,
+  categories,
+  loading,
+  search,
   onSearchChange,
-  onEdit, 
-  onDelete, 
-  onManageUnits, 
-  selectedId, 
-  onRowClick 
+  onEdit,
+  onDelete,
+  onManageUnits,
+  selectedId,
+  onRowClick
 }: MaterialTableProps) {
   const { formatAmount, currencies } = useCurrencyContext();
-  
+  const { isBaseCurrency } = useBaseCurrencyColumns();
+
   const { sortedData: sortedMaterials, sortField, sortDirection, handleSort } = useSortable({
     data: materials,
     defaultField: "code" as SortField,
@@ -74,7 +75,6 @@ export function MaterialTable({
 
   const allColumns = useMemo<UnifiedColumn<MaterialDto>[]>(() => {
     const cols: UnifiedColumn<MaterialDto>[] = [
-      // 1. صورة
       {
         id: "image",
         header: "صورة",
@@ -89,7 +89,6 @@ export function MaterialTable({
           </div>
         )
       },
-      // 2. الكود
       {
         id: "code",
         header: "الكود",
@@ -97,7 +96,6 @@ export function MaterialTable({
         accessor: (m) => m.code || "",
         className: "font-black text-slate-900 text-center"
       },
-      // 3. الباركود
       {
         id: "barcode",
         header: "الباركود",
@@ -105,7 +103,6 @@ export function MaterialTable({
         accessor: (m) => m.barcode || "",
         className: "font-mono font-medium text-slate-500"
       },
-      // 4. اسم المادة
       {
         id: "name",
         header: "اسم المادة",
@@ -113,7 +110,6 @@ export function MaterialTable({
         accessor: (m) => m.name,
         className: "font-bold text-slate-800"
       },
-      // 5. الاسم (EN)
       {
         id: "name_en",
         header: "الاسم (EN)",
@@ -121,7 +117,6 @@ export function MaterialTable({
         accessor: (m) => m.name_en || "",
         className: "text-slate-500 italic"
       },
-      // 6. التصنيفات
       {
         id: "categories",
         header: "التصنيف",
@@ -151,9 +146,9 @@ export function MaterialTable({
       },
     ];
 
-    // 7. السعر الإفرادي (per currency)
     currencies.forEach(curr => {
       const sym = curr.symbol || curr.code;
+      const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `unit_price_${curr.code}`,
         header: `السعر الإفرادي (${sym})`,
@@ -162,13 +157,15 @@ export function MaterialTable({
           const raw = rawPriceBase(m);
           return raw > 0 ? formatAmount(raw, { currencyCode: curr.code }) : "";
         },
-        className: "tabular-nums font-black text-slate-900"
+        className: isBase
+          ? "tabular-nums font-black text-slate-900"
+          : "tabular-nums font-medium text-slate-400"
       });
     });
 
-    // 8. تكاليف إضافية (per currency)
     currencies.forEach(curr => {
       const sym = curr.symbol || curr.code;
+      const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `extra_costs_${curr.code}`,
         header: `تكاليف إضافية (${sym})`,
@@ -177,13 +174,15 @@ export function MaterialTable({
           const extra = extraCostBase(m);
           return extra > 0 ? formatAmount(extra, { currencyCode: curr.code }) : "";
         },
-        className: "tabular-nums font-bold text-amber-600"
+        className: isBase
+          ? "tabular-nums font-bold text-amber-600"
+          : "tabular-nums font-medium text-amber-300"
       });
     });
 
-    // 9. تكلفة الوحدة (per currency)
     currencies.forEach(curr => {
       const sym = curr.symbol || curr.code;
+      const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `average_cost_${curr.code}`,
         header: `تكلفة الوحدة (${sym})`,
@@ -199,13 +198,15 @@ export function MaterialTable({
           }
           return <>{formatAmount(val, { currencyCode: curr.code })}</>;
         },
-        className: "tabular-nums font-bold text-amber-600"
+        className: isBase
+          ? "tabular-nums font-bold text-amber-600"
+          : "tabular-nums font-medium text-amber-300"
       });
     });
 
-    // 10. المجموع (per currency): total_received * unit_cost
     currencies.forEach(curr => {
       const sym = curr.symbol || curr.code;
+      const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `total_value_${curr.code}`,
         header: `المجموع (${sym})`,
@@ -214,11 +215,12 @@ export function MaterialTable({
           const val = totalReceived(m) * unitCostBase(m);
           return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "";
         },
-        className: "tabular-nums font-black text-slate-900"
+        className: isBase
+          ? "tabular-nums font-black text-slate-900"
+          : "tabular-nums font-medium text-slate-400"
       });
     });
 
-    // 11. الكمية الكلية
     cols.push({
       id: "total_received",
       header: "الكمية الكلية",
@@ -227,7 +229,6 @@ export function MaterialTable({
       className: "tabular-nums text-emerald-600 font-bold"
     });
 
-    // 12. الكمية المباعة
     cols.push({
       id: "total_sold",
       header: "الكمية المباعة",
@@ -236,7 +237,6 @@ export function MaterialTable({
       className: "tabular-nums text-blue-600 font-bold"
     });
 
-    // 13. الكمية التالفة
     cols.push({
       id: "total_damaged",
       header: "الكمية التالفة",
@@ -245,7 +245,6 @@ export function MaterialTable({
       className: "tabular-nums text-rose-600 font-bold"
     });
 
-    // 14. الكمية المتوفرة
     cols.push({
       id: "total_available",
       header: "الكمية المتوفرة",
@@ -254,9 +253,9 @@ export function MaterialTable({
       className: "tabular-nums font-bold text-slate-700"
     });
 
-    // 15. المجموع للمتوفر (per currency): total_available * unit_cost
     currencies.forEach(curr => {
       const sym = curr.symbol || curr.code;
+      const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `available_value_${curr.code}`,
         header: `المجموع للمتوفر (${sym})`,
@@ -265,13 +264,15 @@ export function MaterialTable({
           const val = totalAvailable(m) * unitCostBase(m);
           return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "";
         },
-        className: "tabular-nums font-black text-indigo-700"
+        className: isBase
+          ? "tabular-nums font-black text-indigo-700"
+          : "tabular-nums font-medium text-indigo-300"
       });
     });
 
-    // 16. سعر المبيع (per currency)
     currencies.forEach(curr => {
       const sym = curr.symbol || curr.code;
+      const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `sale_price_${curr.code}`,
         header: `سعر المبيع (${sym})`,
@@ -280,11 +281,12 @@ export function MaterialTable({
           const val = salePriceBase(m);
           return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "";
         },
-        className: "tabular-nums font-bold text-emerald-600"
+        className: isBase
+          ? "tabular-nums font-bold text-emerald-600"
+          : "tabular-nums font-medium text-emerald-300"
       });
     });
 
-    // 17. الوحدات
     cols.push({
       id: "units",
       header: "الوحدات",
@@ -311,7 +313,6 @@ export function MaterialTable({
       )
     });
 
-    // 18. حد الطلب
     cols.push({
       id: "minimum_stock",
       header: "حد الطلب",
@@ -325,7 +326,6 @@ export function MaterialTable({
       className: "tabular-nums"
     });
 
-    // 19. وحدة الشراء الافتراضية
     cols.push({
       id: "default_purchase_unit",
       header: "وحدة الشراء",
@@ -334,7 +334,6 @@ export function MaterialTable({
       className: "text-slate-500"
     });
 
-    // 20. وحدة المبيع الافتراضية
     cols.push({
       id: "default_sale_unit",
       header: "وحدة المبيع",
@@ -343,7 +342,6 @@ export function MaterialTable({
       className: "text-slate-500"
     });
 
-    // 21. ملاحظة
     cols.push({
       id: "notes",
       header: "ملاحظة",
@@ -352,7 +350,6 @@ export function MaterialTable({
       className: "text-slate-500 italic"
     });
 
-    // 22. إجراءات
     cols.push({
       id: "actions",
       header: "إجراءات",
@@ -367,33 +364,40 @@ export function MaterialTable({
     });
 
     return cols;
-  }, [categories, onManageUnits, formatAmount, currencies, onEdit, onDelete, onRowClick, rawPriceBase, unitCostBase, extraCostBase, salePriceBase, totalReceived, totalAvailable]);
+  }, [categories, onManageUnits, formatAmount, currencies, onEdit, onDelete, onRowClick, rawPriceBase, unitCostBase, extraCostBase, salePriceBase, totalReceived, totalAvailable, isBaseCurrency]);
 
+  // Default visible: only base currency's money columns are shown.
   const defaultVisible = useMemo(() => {
-    const ids = [
+    const ids: string[] = [
       "image",
       "code",
       "barcode",
       "name",
       "name_en",
       "categories",
-      ...currencies.map(c => `unit_price_${c.code}`),
-      ...currencies.map(c => `average_cost_${c.code}`),
+    ];
+    currencies.forEach(curr => {
+      if (isBaseCurrency(curr.code)) {
+        ids.push(`unit_price_${curr.code}`);
+        ids.push(`average_cost_${curr.code}`);
+        ids.push(`available_value_${curr.code}`);
+        ids.push(`sale_price_${curr.code}`);
+      }
+    });
+    ids.push(
       "total_received",
       "total_sold",
       "total_damaged",
       "total_available",
-      ...currencies.map(c => `available_value_${c.code}`),
-      ...currencies.map(c => `sale_price_${c.code}`),
       "units",
       "minimum_stock",
       "notes",
       "actions",
-    ];
+    );
     return ids;
-  }, [currencies]);
+  }, [currencies, isBaseCurrency]);
 
-  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "materials-unified",
     columns: allColumns,
     defaultVisible,
@@ -410,23 +414,31 @@ export function MaterialTable({
       }
       const totalMatch = id.match(/^total_value_(.+)$/);
       if (totalMatch) {
+        const currCode = totalMatch[1];
+        const isBase = isBaseCurrency(currCode);
         return {
           id: `${id}_summary`, columnId: id, label: "المجموع",
-          value: totalValueBase > 0 ? formatAmount(totalValueBase, { currencyCode: totalMatch[1] }) : "—",
-          className: "text-slate-900 font-black",
+          value: totalValueBase > 0 ? formatAmount(totalValueBase, { currencyCode: currCode }) : "—",
+          className: isBase
+            ? "text-slate-900 font-black"
+            : "text-slate-500 font-extrabold",
         };
       }
       const availMatch = id.match(/^available_value_(.+)$/);
       if (availMatch) {
+        const currCode = availMatch[1];
+        const isBase = isBaseCurrency(currCode);
         return {
           id: `${id}_summary`, columnId: id, label: "المجموع للمتوفر",
-          value: availableValueBase > 0 ? formatAmount(availableValueBase, { currencyCode: availMatch[1] }) : "—",
-          className: "text-indigo-700 font-black",
+          value: availableValueBase > 0 ? formatAmount(availableValueBase, { currencyCode: currCode }) : "—",
+          className: isBase
+            ? "text-indigo-700 font-black"
+            : "text-indigo-300 font-extrabold",
         };
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [sortedMaterials, enrichedColumns, formatAmount, unitCostBase, totalReceived, totalAvailable]);
+  }, [sortedMaterials, enrichedColumns, formatAmount, unitCostBase, totalReceived, totalAvailable, isBaseCurrency]);
 
   return (
     <TableShell
@@ -436,6 +448,8 @@ export function MaterialTable({
       searchPlaceholder="بحث بالاسم أو الكود أو الباركود..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      onColumnsReset={resetToDefault}
+      columnsModified={isModified}
       showToolbar={true}
     >
       <UnifiedTable

@@ -74,7 +74,12 @@ export function GenericDocumentGrid({
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 
   const defaultVisible = useMemo(() => columns.map((c) => c.key), [columns]);
-  const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences(preferenceKey, defaultVisible);
+  const allColumnIds = useMemo(() => columns.map((c) => c.key), [columns]);
+  const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences({
+    tableId: preferenceKey,
+    allColumnIds,
+    defaultVisibleColumns: defaultVisible,
+  });
 
   const filteredColumns = useMemo(
     () => columns.filter((c) => visibleColumns.includes(c.key)),

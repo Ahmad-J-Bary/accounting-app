@@ -3,7 +3,7 @@ import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTa
 import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns, useSortable } from "@shared/hooks";
+import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
 import type { PartnerDto } from "@erp/shared-types";
 import { NotebookText, Receipt, Users } from "lucide-react";
 import { TableActions } from "@widgets/table-shell/TableActions";
@@ -44,6 +44,7 @@ export function PartnerTable({
   onRowClick
 }: PartnerTableProps) {
   const { currencies, formatAmount } = useCurrencyContext();
+  const { isBaseCurrency } = useBaseCurrencyColumns();
   const { sortedData: sortedPartners, sortField, sortDirection, handleSort } = useSortable({
     data: partners,
     defaultField: "name" as SortField,
@@ -80,15 +81,18 @@ export function PartnerTable({
 
     currencies.forEach(curr => {
       const symbol = curr.symbol || curr.code;
+      const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `amount_${curr.code}`,
         header: `رأس المال (${symbol})`,
         label: `رأس المال (${symbol})`,
         accessor: (p: PartnerWithRatios) => {
-          if (p.displayAmountBase === 0) return "—";
+          if (p.displayAmountBase === 0) return "";
           return formatAmount(p.displayAmountBase, { currencyCode: curr.code });
         },
-        className: "tabular-nums font-black text-slate-900"
+        className: isBase
+          ? "tabular-nums font-black text-slate-900"
+          : "tabular-nums font-medium text-slate-400"
       });
     });
 
@@ -132,12 +136,24 @@ export function PartnerTable({
     );
 
     return cols;
-  }, [currencies, formatAmount, onView, onEdit, onDelete, onJournal, onDocument]);
+  }, [currencies, formatAmount, onView, onEdit, onDelete, onJournal, onDocument, isBaseCurrency]);
 
-  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+  // Default visible: only base currency's amount column is shown; secondary amounts are hidden.
+  const defaultVisible = useMemo(() => {
+    const ids: string[] = ["name"];
+    currencies.forEach(curr => {
+      if (isBaseCurrency(curr.code)) {
+        ids.push(`amount_${curr.code}`);
+      }
+    });
+    ids.push("capital_ratio", "ratio", "actions");
+    return ids;
+  }, [currencies, isBaseCurrency]);
+
+  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "partners-unified",
     columns: allColumns,
-    defaultVisible: ["name", ...currencies.map(c => `amount_${c.code}`), "capital_ratio", "ratio", "actions"],
+    defaultVisible,
   });
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
@@ -158,19 +174,22 @@ export function PartnerTable({
           const match = id.match(/^amount_(.+)$/);
           if (match) {
             const currCode = match[1];
+            const isBase = isBaseCurrency(currCode);
             return {
               id: `total_${id}`,
               columnId: id,
               label: "الإجمالي",
               value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
-              className: "text-slate-900 font-black"
+              className: isBase
+                ? "text-slate-900 font-black"
+                : "text-slate-500 font-extrabold"
             };
           }
           return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
         }
       }
     });
-  }, [sortedPartners, formatAmount, enrichedColumns]);
+  }, [sortedPartners, formatAmount, enrichedColumns, isBaseCurrency]);
 
   return (
     <TableShell
@@ -180,6 +199,8 @@ export function PartnerTable({
       searchPlaceholder="بحث باسم الشريك..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      onColumnsReset={resetToDefault}
+      columnsModified={isModified}
       showToolbar={true}
     >
       <UnifiedTable<PartnerWithRatios>

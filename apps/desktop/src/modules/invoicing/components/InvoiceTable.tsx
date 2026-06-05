@@ -3,7 +3,7 @@ import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTa
 import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns, useSortable } from "@shared/hooks";
+import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
 import { formatDateTime } from "@shared/lib/format";
 import { Button } from "@shared/ui/button";
 import type { InvoiceDto } from "@erp/shared-types";
@@ -86,6 +86,7 @@ export function InvoiceTable({
   onStatusFilterChange,
 }: InvoiceTableProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
+  const { isBaseCurrency } = useBaseCurrencyColumns();
 
   const partyField = partyType === "supplier" ? "supplier_name" : "customer_name";
 
@@ -112,91 +113,116 @@ export function InvoiceTable({
         accessor: (inv) => inv.invoice_type === "OpeningBalance" ? "" : (partyType === "supplier" ? (inv.supplier_name || defaultName) : (inv.customer_name || defaultName)),
         className: "font-bold text-slate-800"
       },
-      ...(showSubtotal ? currencies.map(curr => ({
-        id: `subtotal_${curr.code}`,
-        header: `مجموع الأسعار (${curr.symbol || curr.code})`,
-        label: `مجموع الأسعار (${curr.symbol || curr.code})`,
-        accessor: (inv: InvoiceDto) => {
-          const baseAmt = getInvoiceBaseAmount(
-            inv.subtotal_amount,
-            inv.subtotal_amount_v2,
-            inv.currency_code,
-            inv.exchange_rate,
-            baseCurrency?.code
-          );
-          if (baseAmt === 0) return "";
-          return formatAmount(baseAmt, { currencyCode: curr.code });
-        },
-        className: "font-bold tabular-nums text-slate-700"
-      })) : []),
-      ...(showExtraCosts ? currencies.map(curr => ({
-        id: `extra_costs_${curr.code}`,
-        header: `تكاليف إضافية (${curr.symbol || curr.code})`,
-        label: `التكاليف الإضافية (${curr.symbol || curr.code})`,
-        accessor: (inv: InvoiceDto) => {
-          const baseAmt = getInvoiceBaseAmount(
-            inv.extra_costs,
-            inv.extra_costs_v2,
-            inv.currency_code,
-            inv.exchange_rate,
-            baseCurrency?.code
-          );
-          if (baseAmt === 0) return "";
-          return formatAmount(baseAmt, { currencyCode: curr.code });
-        },
-        className: "font-bold tabular-nums text-rose-600"
-      })) : []),
-      ...currencies.map(curr => ({
-        id: `total_${curr.code}`,
-        header: `المجموع الكلي (${curr.symbol || curr.code})`,
-        label: `المجموع الكلي (${curr.symbol || curr.code})`,
-        accessor: (inv: InvoiceDto) => {
-          const baseAmt = getInvoiceBaseAmount(
-            inv.total_amount,
-            inv.total_amount_v2,
-            inv.currency_code,
-            inv.exchange_rate,
-            baseCurrency?.code
-          );
-          if (baseAmt === 0) return "";
-          return formatAmount(baseAmt, { currencyCode: curr.code });
-        },
-        className: "font-black tabular-nums text-slate-900"
-      })),
-      ...currencies.map(curr => ({
-        id: `paid_${curr.code}`,
-        header: `المدفوع (${curr.symbol || curr.code})`,
-        label: `المبلغ المدفوع (${curr.symbol || curr.code})`,
-        accessor: (inv: InvoiceDto) => {
-          const baseAmt = getInvoiceBaseAmount(
-            inv.amount_paid,
-            inv.amount_paid_v2,
-            inv.currency_code,
-            inv.exchange_rate,
-            baseCurrency?.code
-          );
-          if (baseAmt === 0) return "";
-          return formatAmount(baseAmt, { currencyCode: curr.code });
-        },
-        className: "font-bold tabular-nums text-emerald-600"
-      })),
-      ...currencies.map(curr => ({
-        id: `remaining_${curr.code}`,
-        header: `المتبقي (${curr.symbol || curr.code})`,
-        label: `المبلغ المتبقي (${curr.symbol || curr.code})`,
-        accessor: (inv: InvoiceDto) => {
-          const baseAmt = getInvoiceBaseAmount(
-            inv.remaining_amount,
-            inv.remaining_amount_v2,
-            inv.currency_code,
-            inv.exchange_rate,
-            baseCurrency?.code
-          );
-          if (baseAmt === 0) return "";
-          return formatAmount(baseAmt, { currencyCode: curr.code });
-        },
-        className: "font-bold tabular-nums text-orange-600"
-      })),
+      ...(showSubtotal ? currencies.map(curr => {
+        const isBase = isBaseCurrency(curr.code);
+        return {
+          id: `subtotal_${curr.code}`,
+          header: `مجموع الأسعار (${curr.symbol || curr.code})`,
+          label: `مجموع الأسعار (${curr.symbol || curr.code})`,
+          accessor: (inv: InvoiceDto) => {
+            const baseAmt = getInvoiceBaseAmount(
+              inv.subtotal_amount,
+              inv.subtotal_amount_v2,
+              inv.currency_code,
+              inv.exchange_rate,
+              baseCurrency?.code
+            );
+            if (baseAmt === 0) return "";
+            return formatAmount(baseAmt, { currencyCode: curr.code });
+          },
+          className: isBase
+            ? "font-bold tabular-nums text-slate-700"
+            : "font-medium tabular-nums text-slate-400"
+        };
+      }) : []),
+      ...(showExtraCosts ? currencies.map(curr => {
+        const isBase = isBaseCurrency(curr.code);
+        return {
+          id: `extra_costs_${curr.code}`,
+          header: `تكاليف إضافية (${curr.symbol || curr.code})`,
+          label: `التكاليف الإضافية (${curr.symbol || curr.code})`,
+          accessor: (inv: InvoiceDto) => {
+            const baseAmt = getInvoiceBaseAmount(
+              inv.extra_costs,
+              inv.extra_costs_v2,
+              inv.currency_code,
+              inv.exchange_rate,
+              baseCurrency?.code
+            );
+            if (baseAmt === 0) return "";
+            return formatAmount(baseAmt, { currencyCode: curr.code });
+          },
+          className: isBase
+            ? "font-bold tabular-nums text-rose-600"
+            : "font-medium tabular-nums text-rose-300"
+        };
+      }) : []),
+      ...currencies.map(curr => {
+        const isBase = isBaseCurrency(curr.code);
+        return {
+          id: `total_${curr.code}`,
+          header: `المجموع الكلي (${curr.symbol || curr.code})`,
+          label: `المجموع الكلي (${curr.symbol || curr.code})`,
+          accessor: (inv: InvoiceDto) => {
+            const baseAmt = getInvoiceBaseAmount(
+              inv.total_amount,
+              inv.total_amount_v2,
+              inv.currency_code,
+              inv.exchange_rate,
+              baseCurrency?.code
+            );
+            if (baseAmt === 0) return "";
+            return formatAmount(baseAmt, { currencyCode: curr.code });
+          },
+          className: isBase
+            ? "font-black tabular-nums text-slate-900"
+            : "font-medium tabular-nums text-slate-400"
+        };
+      }),
+      ...currencies.map(curr => {
+        const isBase = isBaseCurrency(curr.code);
+        return {
+          id: `paid_${curr.code}`,
+          header: `المدفوع (${curr.symbol || curr.code})`,
+          label: `المبلغ المدفوع (${curr.symbol || curr.code})`,
+          accessor: (inv: InvoiceDto) => {
+            const baseAmt = getInvoiceBaseAmount(
+              inv.amount_paid,
+              inv.amount_paid_v2,
+              inv.currency_code,
+              inv.exchange_rate,
+              baseCurrency?.code
+            );
+            if (baseAmt === 0) return "";
+            return formatAmount(baseAmt, { currencyCode: curr.code });
+          },
+          className: isBase
+            ? "font-bold tabular-nums text-emerald-600"
+            : "font-medium tabular-nums text-emerald-300"
+        };
+      }),
+      ...currencies.map(curr => {
+        const isBase = isBaseCurrency(curr.code);
+        return {
+          id: `remaining_${curr.code}`,
+          header: `المتبقي (${curr.symbol || curr.code})`,
+          label: `المبلغ المتبقي (${curr.symbol || curr.code})`,
+          accessor: (inv: InvoiceDto) => {
+            const baseAmt = getInvoiceBaseAmount(
+              inv.remaining_amount,
+              inv.remaining_amount_v2,
+              inv.currency_code,
+              inv.exchange_rate,
+              baseCurrency?.code
+            );
+            if (baseAmt === 0) return "";
+            return formatAmount(baseAmt, { currencyCode: curr.code });
+          },
+          className: isBase
+            ? "font-bold tabular-nums text-orange-600"
+            : "font-medium tabular-nums text-orange-300"
+        };
+      }),
       {
         id: "status",
         header: "الحالة",
@@ -253,9 +279,24 @@ export function InvoiceTable({
       },
     ];
     return cols;
-  }, [formatAmount, currencies, baseCurrency, partyField, partyLabel, partyType, defaultName, showSubtotal, showExtraCosts, extraColumns, onView, onEdit, onPost, onReopen, onDelete]);
+  }, [formatAmount, currencies, baseCurrency, partyField, partyLabel, partyType, defaultName, showSubtotal, showExtraCosts, extraColumns, onView, onEdit, onPost, onReopen, onDelete, isBaseCurrency]);
 
-  const defaultVisible = useMemo(() => allColumns.filter(c => c.id !== 'notes').map(c => c.id), [allColumns]);
+  // Default visible: hide secondary currency columns and notes by default.
+  // User can toggle them on.
+  const defaultVisible = useMemo(() => {
+    const baseCode = baseCurrency?.code;
+    return allColumns
+      .filter((c) => {
+        if (c.id === 'notes') return false;
+        // For per-currency columns, only include the base currency
+        const m = c.id.match(/^([a-z]+)_(.+)$/);
+        if (m && currencies.some(curr => curr.code === m[2])) {
+          return m[2] === baseCode;
+        }
+        return true;
+      })
+      .map((c) => c.id);
+  }, [allColumns, baseCurrency, currencies]);
 
   type SortField =
     | "invoice_number"
@@ -331,7 +372,7 @@ export function InvoiceTable({
     }
   });
 
-  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "invoices-unified",
     columns: allColumns,
     defaultVisible,
@@ -361,66 +402,81 @@ export function InvoiceTable({
       const subtotalMatch = id.match(/^subtotal_(.+)$/);
       if (subtotalMatch) {
         const currCode = subtotalMatch[1];
+        const isBase = isBaseCurrency(currCode);
         return {
           id: `${id}_summary`,
           columnId: id,
           label: 'الإجمالي الفرعي',
           value: baseSubtotalTotal > 0 ? formatAmount(baseSubtotalTotal, { currencyCode: currCode }) : "—",
-          className: 'font-bold text-slate-700',
+          className: isBase
+            ? 'font-bold text-slate-700'
+            : 'font-extrabold text-slate-400',
         };
       }
 
       const extraCostsMatch = id.match(/^extra_costs_(.+)$/);
       if (extraCostsMatch) {
         const currCode = extraCostsMatch[1];
+        const isBase = isBaseCurrency(currCode);
         return {
           id: `${id}_summary`,
           columnId: id,
           label: 'التكاليف الإضافية',
           value: baseExtraCostsTotal > 0 ? formatAmount(baseExtraCostsTotal, { currencyCode: currCode }) : "—",
-          className: 'font-bold text-rose-600',
+          className: isBase
+            ? 'font-bold text-rose-600'
+            : 'font-extrabold text-rose-300',
         };
       }
 
       const totalMatch = id.match(/^total_(.+)$/);
       if (totalMatch) {
         const currCode = totalMatch[1];
+        const isBase = isBaseCurrency(currCode);
         return {
           id: `${id}_summary`,
           columnId: id,
           label: 'الإجمالي',
           value: baseTotalTotal > 0 ? formatAmount(baseTotalTotal, { currencyCode: currCode }) : "—",
-          className: 'font-black text-slate-900',
+          className: isBase
+            ? 'font-black text-slate-900'
+            : 'font-extrabold text-slate-500',
         };
       }
 
       const paidMatch = id.match(/^paid_(.+)$/);
       if (paidMatch) {
         const currCode = paidMatch[1];
+        const isBase = isBaseCurrency(currCode);
         return {
           id: `${id}_summary`,
           columnId: id,
           label: 'المدفوع',
           value: basePaidTotal > 0 ? formatAmount(basePaidTotal, { currencyCode: currCode }) : "—",
-          className: 'font-bold text-emerald-600',
+          className: isBase
+            ? 'font-bold text-emerald-600'
+            : 'font-extrabold text-emerald-300',
         };
       }
 
       const remainingMatch = id.match(/^remaining_(.+)$/);
       if (remainingMatch) {
         const currCode = remainingMatch[1];
+        const isBase = isBaseCurrency(currCode);
         return {
           id: `${id}_summary`,
           columnId: id,
           label: 'المتبقي',
           value: baseRemainingTotal > 0 ? formatAmount(baseRemainingTotal, { currencyCode: currCode }) : "—",
-          className: 'font-bold text-orange-600',
+          className: isBase
+            ? 'font-bold text-orange-600'
+            : 'font-extrabold text-orange-300',
         };
       }
 
       return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
     });
-  }, [data, enrichedColumns, formatAmount, baseCurrency]);
+  }, [data, enrichedColumns, formatAmount, baseCurrency, isBaseCurrency]);
 
   return (
     <TableShell
@@ -429,6 +485,8 @@ export function InvoiceTable({
       searchPlaceholder={searchPlaceholder}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      onColumnsReset={resetToDefault}
+      columnsModified={isModified}
       showToolbar={true}
       actions={
         <div className="flex items-center gap-2">

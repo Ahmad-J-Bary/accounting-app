@@ -4,7 +4,7 @@ import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { formatDateTime } from "@shared/lib/format";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns, useSortable } from "@shared/hooks";
+import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
 
 import type { JournalEntryDto } from "@erp/shared-types";
 import type { JournalFilters } from "../api/journalEntryService";
@@ -22,6 +22,7 @@ type SortField = "entry_number" | "entry_date" | "journal_type" | "credit_accoun
 
 export function JournalTable({ entries, loading, search, onSearchChange, filters }: JournalTableProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
+  const { isBaseCurrency } = useBaseCurrencyColumns();
 
   const sortedCurrencies = useMemo(() => {
     if (!baseCurrency) return currencies;
@@ -79,6 +80,7 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
 
     sortedCurrencies.forEach(curr => {
       const symbol = curr.symbol || curr.code;
+      const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `debit_${curr.code}`,
         header: `عليه / مدين (${symbol})`,
@@ -87,12 +89,15 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
           if (e.active_side !== "debit") return "";
           return e.debit_base > 0 ? formatAmount(e.debit_base, { currencyCode: curr.code }) : "";
         },
-        className: "tabular-nums font-black text-blue-700"
+        className: isBase
+          ? "tabular-nums font-black text-blue-700"
+          : "tabular-nums font-medium text-blue-300"
       });
     });
 
     sortedCurrencies.forEach(curr => {
       const symbol = curr.symbol || curr.code;
+      const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `credit_${curr.code}`,
         header: `له / دائن (${symbol})`,
@@ -101,7 +106,9 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
           if (e.active_side !== "credit") return "";
           return e.credit_base > 0 ? formatAmount(e.credit_base, { currencyCode: curr.code }) : "";
         },
-        className: "tabular-nums font-black text-emerald-700"
+        className: isBase
+          ? "tabular-nums font-black text-emerald-700"
+          : "tabular-nums font-medium text-emerald-300"
       });
     });
 
@@ -136,21 +143,26 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
       },
     );
     return cols;
-  }, [sortedCurrencies, formatAmount]);
+  }, [sortedCurrencies, formatAmount, isBaseCurrency]);
 
+  // Default visible: only base currency's debit/credit columns are shown.
   const defaultVisible = useMemo(() => {
-    const def = ["entry_number", "journal_type"];
+    const def: string[] = ["entry_number", "journal_type"];
     sortedCurrencies.forEach(curr => {
-      def.push(`debit_${curr.code}`);
+      if (isBaseCurrency(curr.code)) {
+        def.push(`debit_${curr.code}`);
+      }
     });
     sortedCurrencies.forEach(curr => {
-      def.push(`credit_${curr.code}`);
+      if (isBaseCurrency(curr.code)) {
+        def.push(`credit_${curr.code}`);
+      }
     });
     def.push("description", "entry_date");
     return def;
-  }, [sortedCurrencies]);
+  }, [sortedCurrencies, isBaseCurrency]);
 
-  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "journal-unified",
     columns: allColumns,
     defaultVisible,
@@ -171,28 +183,34 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
       const debitMatch = id.match(/^debit_(.+)$/);
       if (debitMatch) {
         const currCode = debitMatch[1];
+        const isBase = isBaseCurrency(currCode);
         return {
           id: `${id}_total`,
           columnId: id,
-          label: "إجمالي",
+          label: "إجمالي مدين",
           value: baseDebitTotal > 0 ? formatAmount(baseDebitTotal, { currencyCode: currCode }) : "—",
-          className: "text-blue-700 font-black"
+          className: isBase
+            ? "text-blue-700 font-black"
+            : "text-blue-300 font-extrabold"
         };
       }
       const creditMatch = id.match(/^credit_(.+)$/);
       if (creditMatch) {
         const currCode = creditMatch[1];
+        const isBase = isBaseCurrency(currCode);
         return {
           id: `${id}_total`,
           columnId: id,
-          label: "إجمالي",
+          label: "إجمالي دائن",
           value: baseCreditTotal > 0 ? formatAmount(baseCreditTotal, { currencyCode: currCode }) : "—",
-          className: "text-emerald-700 font-black"
+          className: isBase
+            ? "text-emerald-700 font-black"
+            : "text-emerald-300 font-extrabold"
         };
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [tableData, sortedData, formatAmount, enrichedColumns]);
+  }, [tableData, sortedData, formatAmount, enrichedColumns, isBaseCurrency]);
 
   return (
     <TableShell
@@ -201,6 +219,8 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
       searchPlaceholder="بحث برقم القيد أو البيان..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      onColumnsReset={resetToDefault}
+      columnsModified={isModified}
       showToolbar={true}
     >
       <UnifiedTable

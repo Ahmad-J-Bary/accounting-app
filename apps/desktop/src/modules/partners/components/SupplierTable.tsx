@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import { TableShell } from "@widgets/table-shell/TableShell";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns, useSortable, useTableColumns } from "@shared/hooks";
+import { useUnifiedColumns, useSortable, useTableColumns, useBaseCurrencyColumns } from "@shared/hooks";
 import type { SupplierDto } from "@erp/shared-types";
 import { NotebookText, Receipt, Truck } from "lucide-react";
 import { TableActions } from "@widgets/table-shell/TableActions";
@@ -24,6 +24,7 @@ type SortField = "code" | "name" | "balance";
 
 export function SupplierTable({ suppliers, loading, search, onSearchChange, onView, onEdit, onDelete, onJournal, onDocument, selectedId }: SupplierTableProps) {
   const { currencies } = useCurrencyContext();
+  const { isBaseCurrency } = useBaseCurrencyColumns();
   const { getAccountStatusColumn, getBalanceColumns, getSummaryColumns } = useTableColumns();
 
   const { sortedData: sortedSuppliers, sortField, sortDirection, handleSort } = useSortable({
@@ -72,7 +73,19 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
     ];
 
     cols.push(getAccountStatusColumn("حالة الحساب", { isCreditFirst: true }));
-    cols.push(...getBalanceColumns("الرصيد"));
+
+    const balanceCols = getBalanceColumns("الرصيد").map((c) => {
+      const m = c.id.match(/^balance_(.+)$/);
+      if (m && !isBaseCurrency(m[1])) {
+        return {
+          ...c,
+          className: "tabular-nums font-medium text-slate-400",
+          label: `${c.label}`,
+        };
+      }
+      return c;
+    });
+    cols.push(...balanceCols);
 
     cols.push({
       id: "actions",
@@ -92,13 +105,20 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
     });
 
     return cols;
-  }, [onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, getBalanceColumns]);
+  }, [onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, getBalanceColumns, isBaseCurrency]);
 
-  const defaultVisible = useMemo(() =>
-    ["code", "name", "phone", "status", ...currencies.map(c => `balance_${c.code}`), "actions"],
-  [currencies]);
+  const defaultVisible = useMemo(() => {
+    const ids: string[] = ["code", "name", "phone", "status"];
+    currencies.forEach(curr => {
+      if (isBaseCurrency(curr.code)) {
+        ids.push(`balance_${curr.code}`);
+      }
+    });
+    ids.push("actions");
+    return ids;
+  }, [currencies, isBaseCurrency]);
 
-  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "suppliers-unified",
     columns: allColumns,
     defaultVisible,
@@ -114,6 +134,8 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
       searchPlaceholder="بحث باسم المورد أو الرقم..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      onColumnsReset={resetToDefault}
+      columnsModified={isModified}
       showToolbar={true}
     >
       <UnifiedTable
@@ -124,6 +146,8 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
         tableId="suppliers"
         sortField={sortField}
         sortDirection={sortDirection}
+        onRowClick={onView}
+        selectedId={selectedId}
         onHeaderClick={(col) => {
           if (col.id === "code" || col.id === "name") {
             handleSort(col.id === "code" ? "code" : "name");
@@ -132,8 +156,6 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
             handleSort("balance");
           }
         }}
-        onRowClick={onView}
-        selectedId={selectedId}
         emptyMessage={search ? "لا توجد نتائج بحث تطابق استعلامك" : "قائمة الموردين فارغة حالياً"}
         summary={summaryColumns}
       />

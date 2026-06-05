@@ -4,7 +4,7 @@ import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 export function useTableColumns() {
-  const { currencies, formatAmount, toBase } = useCurrencyContext();
+  const { currencies, baseCurrency, formatAmount, toBase } = useCurrencyContext();
 
   const getAccountStatusColumn = useCallback(<T extends { balance?: number | string }>(
     sortableHeader: React.ReactNode,
@@ -84,29 +84,32 @@ export function useTableColumns() {
         value: ''
       };
       if (id === 'status') {
-        return { 
-          id: 'status_summary', 
-          columnId: 'status', 
-          label: '', 
-          value: overall ? `الرصيد: ${overall}` : "—", 
-          className: `${overallColor} font-bold` 
+        return {
+          id: 'status_summary',
+          columnId: 'status',
+          label: '',
+          value: overall ? `الرصيد: ${overall}` : "—",
+          className: `${overallColor} font-bold`
         };
       }
       const match = id.match(/^balance_(.+)$/);
       if (match) {
         const currCode = match[1];
+        const isBaseColumn = baseCurrency?.code === currCode;
+        const valueClass = isBaseColumn
+          ? `${overallColor} font-black`
+          : 'text-slate-500 font-extrabold';
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: '',
+          label: 'الإجمالي',
           value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
-          align: 'left' as const,
-          className: `${overallColor} font-bold`
+          className: valueClass,
         };
       }
       return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
     });
-  }, [formatAmount, toBase]);
+  }, [formatAmount, toBase, baseCurrency]);
 
   return {
     getAccountStatusColumn,

@@ -3,13 +3,21 @@ import { TableToolbar } from './TableToolbar';
 import { useTableSettings } from '@shared/hooks';
 import { cn } from '@shared/lib/utils';
 
+export interface TableShellColumn {
+  id: string;
+  label: string;
+  visible: boolean;
+}
+
 export interface TableShellProps {
   title?: string;
   search?: string;
   onSearchChange?: (value: string) => void;
   searchPlaceholder?: string;
-  columns: { id: string; label: string; visible: boolean }[];
+  columns: TableShellColumn[];
   onColumnToggle: (id: string) => void;
+  onColumnsReset?: () => void;
+  columnsModified?: boolean;
   actions?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
@@ -24,6 +32,8 @@ export const TableShell: React.FC<TableShellProps> = ({
   searchPlaceholder,
   columns,
   onColumnToggle,
+  onColumnsReset,
+  columnsModified = false,
   actions,
   children,
   footer,
@@ -43,11 +53,13 @@ export const TableShell: React.FC<TableShellProps> = ({
             searchPlaceholder={searchPlaceholder}
             columns={columns}
             onColumnToggle={onColumnToggle}
+            onColumnsReset={onColumnsReset}
+            columnsModified={columnsModified}
             actions={actions}
           />
         </div>
       )}
-      
+
       <div className="flex-1 overflow-hidden relative">
         {children}
       </div>

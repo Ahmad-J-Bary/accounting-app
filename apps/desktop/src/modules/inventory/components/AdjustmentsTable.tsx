@@ -21,28 +21,28 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange }: Adju
       header: "المنتج / الصنف",
       label: "اسم المنتج",
       accessor: (a) => a.product_name ?? a.product_id,
-      className: "font-black text-slate-900 min-w-[180px]"
+      className: "font-black text-slate-900"
     },
     {
       id: "adjustment_date",
       header: "التاريخ",
       label: "تاريخ التسوية",
       accessor: (a) => formatDateTime(a.adjustment_date),
-      className: "tabular-nums text-slate-500 font-medium w-32"
+      className: "tabular-nums text-slate-500"
     },
     {
       id: "system_quantity",
       header: "كمية النظام",
       label: "كمية النظام (قبل التسوية)",
       accessor: (a) => parseFloat(a.system_quantity).toFixed(2),
-      className: "tabular-nums text-slate-600 w-24"
+      className: "tabular-nums text-slate-600"
     },
     {
       id: "actual_quantity",
       header: "الكمية الفعلية",
       label: "الكمية الفعلية (الموجودة)",
       accessor: (a) => parseFloat(a.actual_quantity).toFixed(2),
-      className: "tabular-nums font-bold text-slate-800 w-24"
+      className: "tabular-nums font-bold text-slate-800"
     },
     {
       id: "difference",
@@ -52,7 +52,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange }: Adju
         const diff = parseFloat(a.difference);
         return (
           <span className={cn(
-            "inline-flex items-center gap-1.5 font-black tabular-nums text-base",
+            "inline-flex items-center gap-1.5 font-black tabular-nums",
             diff > 0 ? "text-emerald-600" : diff < 0 ? "text-rose-600" : "text-slate-400"
           )}>
             {diff > 0 ? <ArrowUpCircle className="w-4 h-4" /> : diff < 0 ? <ArrowDownCircle className="w-4 h-4" /> : null}
@@ -60,20 +60,19 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange }: Adju
           </span>
         );
       },
-      className: "w-32"
     },
     {
       id: "reason",
       header: "السبب",
       label: "سبب التسوية",
-      accessor: (a) => a.reason ?? "—",
-      className: "text-slate-500 text-xs font-medium italic min-w-[150px]"
+      accessor: (a) => a.reason ?? "",
+      className: "text-slate-500 font-medium italic"
     }
   ], []);
 
   type SortField = "product_name" | "adjustment_date" | "system_quantity" | "actual_quantity" | "difference" | "reason";
 
-  const { enrichedColumns, toolbarColumns, toggleColumn } = useUnifiedColumns({
+  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "adjustments-unified",
     columns: allColumns,
     defaultVisible: ["product_name", "adjustment_date", "difference", "reason"],
@@ -128,6 +127,8 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange }: Adju
       searchPlaceholder="بحث بالمنتج أو السبب..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      onColumnsReset={resetToDefault}
+      columnsModified={isModified}
       showToolbar={true}
     >
       <UnifiedTable
