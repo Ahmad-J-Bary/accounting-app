@@ -578,7 +578,7 @@ export function SummaryPanel({
                 remaining <= 0 ? "text-emerald-600" : "text-rose-600",
               )}
             >
-              المتبقي
+              المبلغ المتبقي
             </span>
             <span
               className={cn(

@@ -84,7 +84,7 @@ export function InvoiceTable({
       {
         id: "notes",
         header: "التوصيف",
-        label: "البيان/الملاحظات",
+        label: "التوصيف",
         accessor: (inv) => inv.notes || "",
         className: "text-slate-500 italic"
       },
@@ -165,7 +165,7 @@ export function InvoiceTable({
         const isBase = isBaseCurrency(curr.code);
         return {
           id: `paid_${curr.code}`,
-          header: `المدفوع (${curr.symbol || curr.code})`,
+          header: `المبلغ المدفوع (${curr.symbol || curr.code})`,
           label: `المبلغ المدفوع (${curr.symbol || curr.code})`,
           accessor: (inv: InvoiceDto) => {
             const baseAmt = getInvoiceBaseAmount(
@@ -187,7 +187,7 @@ export function InvoiceTable({
         const isBase = isBaseCurrency(curr.code);
         return {
           id: `remaining_${curr.code}`,
-          header: `المتبقي (${curr.symbol || curr.code})`,
+          header: `المبلغ المتبقي (${curr.symbol || curr.code})`,
           label: `المبلغ المتبقي (${curr.symbol || curr.code})`,
           accessor: (inv: InvoiceDto) => {
             const baseAmt = getInvoiceBaseAmount(
@@ -263,15 +263,14 @@ export function InvoiceTable({
     return cols;
   }, [formatAmount, currencies, baseCurrency, partyField, partyLabel, partyType, defaultName, showSubtotal, showExtraCosts, extraColumns, onView, onEdit, onPost, onReopen, onDelete, isBaseCurrency]);
 
-  // Default visible: hide secondary currency columns and notes by default.
+  // Default visible: hide secondary currency columns by default.
   // User can toggle them on.
   const defaultVisible = useMemo(() => {
     const baseCode = baseCurrency?.code;
     return allColumns
       .filter((c) => {
-        if (c.id === 'notes') return false;
         // For per-currency columns, only include the base currency
-        const m = c.id.match(/^([a-z]+)_(.+)$/);
+        const m = c.id.match(/^(.+)_([A-Za-z0-9]+)$/);
         if (m && currencies.some(curr => curr.code === m[2])) {
           return m[2] === baseCode;
         }
@@ -385,10 +384,11 @@ export function InvoiceTable({
       if (subtotalMatch) {
         const currCode = subtotalMatch[1];
         const isBase = isBaseCurrency(currCode);
+        const sym = currencies.find(c => c.code === currCode)?.symbol || currCode;
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: 'الإجمالي الفرعي',
+          label: `مجموع الأسعار (${sym})`,
           value: baseSubtotalTotal > 0 ? formatAmount(baseSubtotalTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-bold text-slate-700'
@@ -400,10 +400,11 @@ export function InvoiceTable({
       if (extraCostsMatch) {
         const currCode = extraCostsMatch[1];
         const isBase = isBaseCurrency(currCode);
+        const sym = currencies.find(c => c.code === currCode)?.symbol || currCode;
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: 'التكاليف الإضافية',
+          label: `تكاليف إضافية (${sym})`,
           value: baseExtraCostsTotal > 0 ? formatAmount(baseExtraCostsTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-bold text-rose-600'
@@ -415,10 +416,11 @@ export function InvoiceTable({
       if (totalMatch) {
         const currCode = totalMatch[1];
         const isBase = isBaseCurrency(currCode);
+        const sym = currencies.find(c => c.code === currCode)?.symbol || currCode;
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: 'الإجمالي',
+          label: `المجموع الكلي (${sym})`,
           value: baseTotalTotal > 0 ? formatAmount(baseTotalTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-black text-slate-900'
@@ -430,10 +432,11 @@ export function InvoiceTable({
       if (paidMatch) {
         const currCode = paidMatch[1];
         const isBase = isBaseCurrency(currCode);
+        const sym = currencies.find(c => c.code === currCode)?.symbol || currCode;
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: 'المدفوع',
+          label: `المبلغ المدفوع (${sym})`,
           value: basePaidTotal > 0 ? formatAmount(basePaidTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-bold text-emerald-600'
@@ -445,10 +448,11 @@ export function InvoiceTable({
       if (remainingMatch) {
         const currCode = remainingMatch[1];
         const isBase = isBaseCurrency(currCode);
+        const sym = currencies.find(c => c.code === currCode)?.symbol || currCode;
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: 'المتبقي',
+          label: `المبلغ المتبقي (${sym})`,
           value: baseRemainingTotal > 0 ? formatAmount(baseRemainingTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-bold text-orange-600'
@@ -458,7 +462,7 @@ export function InvoiceTable({
 
       return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
     });
-  }, [data, enrichedColumns, formatAmount, baseCurrency, isBaseCurrency]);
+  }, [data, enrichedColumns, formatAmount, baseCurrency, isBaseCurrency, currencies]);
 
   return (
     <TableShell
