@@ -168,6 +168,8 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
         data={sortedItems}
         columns={enrichedColumns}
         loading={loading}
+        enableResize
+        tableId="damaged"
         summary={summaryColumns}
         emptyMessage={search ? "لا توجد نتائج للبحث" : "لا توجد سجلات تالف"}
       />

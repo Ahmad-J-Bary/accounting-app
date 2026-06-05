@@ -169,6 +169,7 @@ export function UnifiedTable<T>({
     preferenceKey,
     containerRef,
     contentByColumn,
+    settings.fontSize,
   );
 
   const cellBorderClass = getLeftBorderClass(settings.borderStyle);

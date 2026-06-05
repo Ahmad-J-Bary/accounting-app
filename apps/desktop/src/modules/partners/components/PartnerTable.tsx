@@ -1,9 +1,9 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo } from "react";
 import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns } from "@shared/hooks";
+import { useUnifiedColumns, useSortable } from "@shared/hooks";
 import type { PartnerDto } from "@erp/shared-types";
 import { Eye, Pencil, Trash2, NotebookText, Receipt, Users } from "lucide-react";
 import { ActionsDropdown } from "@shared/ui/actions-dropdown";
@@ -44,23 +44,12 @@ export function PartnerTable({
   onRowClick
 }: PartnerTableProps) {
   const { currencies, formatAmount } = useCurrencyContext();
-  const [sortField, setSortField] = useState<SortField>("name");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-
-  const handleSort = useCallback((field: SortField) => {
-    setSortDirection(prev => {
-      if (sortField === field) {
-        return prev === "asc" ? "desc" : "asc";
-      }
-      return "asc";
-    });
-    setSortField(field);
-  }, [sortField]);
-
-  const sortedPartners = useMemo(() => {
-    const sorted = [...partners].sort((a, b) => {
+  const { sortedData: sortedPartners, handleSort } = useSortable({
+    data: partners,
+    defaultField: "name" as SortField,
+    sortFn: (a, b, field, direction) => {
       let comparison = 0;
-      switch (sortField) {
+      switch (field) {
         case "name": comparison = (a.name || "").localeCompare(b.name || "", "ar"); break;
         case "capital_ratio": comparison = a.calculatedCapitalRatio - b.calculatedCapitalRatio; break;
         case "ratio": comparison = a.calculatedRatio - b.calculatedRatio; break;
@@ -68,10 +57,9 @@ export function PartnerTable({
           comparison = a.displayAmountBase - b.displayAmountBase;
         }
       }
-      return sortDirection === "asc" ? comparison : -comparison;
-    });
-    return sorted;
-  }, [partners, sortField, sortDirection]);
+      return direction === "asc" ? comparison : -comparison;
+    }
+  });
 
   const allColumns = useMemo<UnifiedColumn<PartnerWithRatios>[]>(() => {
     const cols: UnifiedColumn<PartnerWithRatios>[] = [

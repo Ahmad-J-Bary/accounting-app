@@ -1,15 +1,7 @@
 import React, { ReactNode } from 'react';
 import { cn } from '@shared/lib/utils';
 import { getLeftBorderClass } from '@shared/lib/table-utils';
-import { Settings2 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuCheckboxItem,
-} from '@shared/ui/dropdown-menu';
+
 import type { GridResizeOptions } from '@shared/hooks/useGridResize';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -42,10 +34,6 @@ interface GridHeaderProps {
   onResizeStart?: (e: React.MouseEvent, colId: string) => void;
   /** Called on double-click on handle (full auto-fit) */
   onAutoFit?: (colId: string, options?: GridResizeOptions) => void;
-
-  // ── Optional column visibility dropdown ─────────────────────────────────
-  allColumns?: { id: string; label: string; visible: boolean }[];
-  onColumnToggle?: (id: string) => void;
 
   // ── Flex mode ────────────────────────────────────────────────────────────
   /** Column widths map (flex mode only) */
@@ -99,7 +87,6 @@ function getTextAlign(
  *   `index < columns.length - 1`, so there is no handle after the last column.
  * - Single-click → onHeaderCellClick (title-fit, handled by UnifiedTable)
  * - Double-click on resize handle → onAutoFit (full data-fit)
- * - Optional Settings2 dropdown for column visibility management.
  *
  * RTL: fully supported — resize handles use `left: -4` which places them
  * between adjacent columns in both LTR and RTL flex/grid flows.
@@ -115,8 +102,6 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
   onHeaderCellClick,
   onResizeStart,
   onAutoFit,
-  allColumns,
-  onColumnToggle,
   columnWidths = {},
   getColumnStyle,
   prefixSlot,
@@ -136,41 +121,6 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
       )}
       style={useGrid ? { gridTemplateColumns: gridTemplate } : undefined}
     >
-      {/* Optional column-visibility settings dropdown */}
-      {allColumns && onColumnToggle && (
-        <div
-          className="shrink-0 flex items-center justify-center bg-slate-100/30"
-          style={{ width: 32 }}
-        >
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className="p-1 text-slate-400 hover:text-blue-600 transition-colors rounded"
-                title="تخصيص الأعمدة"
-              >
-                <Settings2 className="w-3 h-3" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[180px] shadow-xl">
-              <DropdownMenuLabel className="text-right text-[10px] font-black uppercase text-slate-500 tracking-widest">
-                تخصيص الأعمدة
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {allColumns.map((c) => (
-                <DropdownMenuCheckboxItem
-                  key={c.id}
-                  checked={c.visible}
-                  onCheckedChange={() => onColumnToggle(c.id)}
-                  className="text-right flex-row-reverse gap-2 text-[11px] font-bold py-1.5"
-                >
-                  {c.label}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      )}
-
       {prefixSlot}
 
       {columns.map((col, idx) => (
@@ -191,7 +141,10 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
           }}
           onClick={() => onHeaderCellClick?.(col.id)}
         >
-          <div className='flex items-center justify-center w-full text-center whitespace-nowrap'>
+          <div
+            className='w-full text-center whitespace-normal break-words leading-tight hyphens-auto'
+            style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', overflow: 'visible' }}
+          >
             {col.header}
           </div>
 

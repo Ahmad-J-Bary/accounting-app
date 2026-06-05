@@ -108,16 +108,14 @@ export default function Journal() {
         </div>
       }
       tableContent={
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-full">
-          <JournalTable
-            key={`journal-table-${filters.journal_type || 'GeneralJournal'}`}
-            entries={displayEntries}
-            loading={loading}
-            search={search}
-            onSearchChange={setSearch}
-            filters={filters as JournalFilters}
-          />
-        </div>
+        <JournalTable
+          key={`journal-table-${filters.journal_type || 'GeneralJournal'}`}
+          entries={displayEntries}
+          loading={loading}
+          search={search}
+          onSearchChange={setSearch}
+          filters={filters as JournalFilters}
+        />
       }
     >
     </OperationalTableTemplate>

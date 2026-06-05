@@ -6,27 +6,38 @@ import type { ColumnWidthDef } from '@shared/lib/table-utils';
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-const MIN_COL_PX = 40;
-const AUTO_FIT_FONT =
-  '600 12px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-const AUTO_FIT_PADDING = 40;
+const MIN_COL_PX = 48;
+/** Base font-family used for canvas text measurement. Font size is injected
+ *  dynamically based on the table's fontSize setting so the measured width
+ *  matches the actual rendered width of headers and data cells. */
+const AUTO_FIT_FONT_FAMILY =
+  'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+/** Small padding around the measured text — just enough to keep the cell from
+ *  hugging the glyphs. The column will still allow the header to wrap to
+ *  2 lines when the container is narrower than the sum of min widths. */
+const AUTO_FIT_PADDING = 16;
 
-/** Extra padding that gets baked into every column's minimum width so that
- *  when the user resizes the window or data refreshes, the column still
- *  has headroom to grow without immediately clipping the content. */
-const COLUMN_MIN_HEADROOM = 24;
+/** Extra headroom baked into every column's minimum width. Kept small (8px)
+ *  so the column can actually reach a width where the header text needs
+ *  to wrap to 2 lines — instead of always having so much padding that the
+ *  text fits on a single line forever. */
+const COLUMN_MIN_HEADROOM = 8;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-function measureText(text: string, font: string): number {
+function buildFontString(fontSizePx: number): string {
+  return `600 ${fontSizePx}px ${AUTO_FIT_FONT_FAMILY}`;
+}
+
+function measureText(text: string, fontSizePx: number): number {
   if (!text) return 0;
-  if (typeof document === 'undefined') return text.length * 9.5;
+  if (typeof document === 'undefined') return text.length * fontSizePx * 0.6;
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
-  if (!ctx) return text.length * 9.5;
-  ctx.font = font;
+  if (!ctx) return text.length * fontSizePx * 0.6;
+  ctx.font = buildFontString(fontSizePx);
   return Math.ceil(ctx.measureText(text).width);
 }
 
@@ -118,7 +129,15 @@ export function useGridResize(
    * itself expands to show the full text.
    */
   contentByColumn?: Record<string, GridResizeContent>,
+  /**
+   * Font size (in px) used for canvas text measurement.
+   * Defaults to 12. Should match the table's actual font size for accurate
+   * minimum-width calculation. A value of `settings.fontSize` works well
+   * since headers render at ~fontSize-2 and body at fontSize.
+   */
+  fontSize?: number,
 ) {
+  const measurePx = fontSize || 12;
   // fr values per column id (pixel-based ratios, persisted).
   // Empty = all columns equal (1fr each).
   const [fractions, setFractions] = useState<Record<string, number>>(() => {
@@ -141,9 +160,19 @@ export function useGridResize(
   }, [fractions, preferenceKey]);
 
   // ── Compute the minimum content width (in px) for each column ───────────
-  // Used as a floor in minmax(minPx, Xfr) so the column always expands
-  // enough to show its widest piece of content instead of clipping with
-  // "...". Falls back to MIN_COL_PX when no content is supplied.
+  // Used as a floor in minmax(minPx, Xfr). The min is deliberately set to
+  // ~half the widest piece of content (with a hard floor of MIN_COL_PX) so
+  // the column is allowed to compress to a width where the header text
+  // *must* wrap to 2 lines to show fully — instead of always having so
+  // much padding that the text always fits on a single line.
+  //
+  // Behavior:
+  //   - Column at min     → header wraps to 2 lines (full text visible)
+  //   - Column at content → header fits on 1 line (no wrapping)
+  //   - User drags between min and content → smooth wrap/un-wrap transition
+  //
+  // The auto-fit (single click) still sets the column to the full content
+  // width so the header returns to 1 line.
   const minContentPx = useMemo<Record<string, number>>(() => {
     const out: Record<string, number> = {};
     for (const col of columns) {
@@ -164,12 +193,17 @@ export function useGridResize(
         continue;
       }
       const maxTextWidth = texts.reduce(
-        (max, t) => Math.max(max, measureText(t, AUTO_FIT_FONT)),
+        (max, t) => Math.max(max, measureText(t, measurePx)),
         0,
       );
+      // Floor = ~half the content width → forces the header to wrap to
+      // 2 lines when the column is compressed to its min, so the full
+      // text remains visible (no "..." clipping).
+      // The line-height (leading-tight ≈ 1.25) is accounted for: at
+      // half-width, ~2 lines can fit the full text.
       out[colId] = Math.max(
         MIN_COL_PX,
-        Math.ceil(maxTextWidth + AUTO_FIT_PADDING + COLUMN_MIN_HEADROOM),
+        Math.ceil(maxTextWidth * 0.5 + AUTO_FIT_PADDING),
       );
     }
     return out;
@@ -300,7 +334,7 @@ export function useGridResize(
       ].filter(Boolean);
 
       const maxTextWidth = texts.reduce(
-        (max, t) => Math.max(max, measureText(t, AUTO_FIT_FONT)),
+        (max, t) => Math.max(max, measureText(t, measurePx)),
         0,
       );
       const measuredTarget = Math.max(

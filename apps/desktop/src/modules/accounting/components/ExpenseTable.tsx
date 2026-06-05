@@ -188,6 +188,8 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
         data={sortedExpenses}
         columns={enrichedColumns}
         loading={loading}
+        enableResize
+        tableId="expenses"
         onRowClick={onView}
         selectedId={selectedId}
         emptyMessage={search ? "لا توجد نتائج بحث تطابق استعلامك" : "لا توجد بنود مصاريف مسجلة حالياً"}

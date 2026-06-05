@@ -133,6 +133,8 @@ export function CustomerTable({ customers, loading, search, onSearchChange, onVi
         data={sortedCustomers}
         columns={enrichedColumns}
         loading={loading}
+        enableResize
+        tableId="customers"
         onRowClick={onView}
         selectedId={selectedId}
         emptyMessage={search ? "لا توجد نتائج بحث تطابق استعلامك" : "لا يوجد عملاء مسجلون حالياً"}

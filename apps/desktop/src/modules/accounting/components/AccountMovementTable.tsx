@@ -1,42 +1,16 @@
-import { useMemo, useState, useCallback } from "react";
-import { ArrowUpDown } from "lucide-react";
+import { useMemo } from "react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns } from "@shared/hooks";
+import { useUnifiedColumns, useSortable } from "@shared/hooks";
 import type { AccountLedgerLineDto } from "@erp/shared-types";
 import { formatDateTime } from '@shared/lib/format';
 import { JOURNAL_TYPE_LABELS } from "../lib/journal-config";
 
 type SortField = "entry_number" | "date" | "journal_type" | "credit_account" | "debit_account";
 
-interface SortableHeaderProps {
-  field: SortField;
-  label: string;
-  currentField: SortField;
-  direction: "asc" | "desc";
-  onSort: (field: SortField) => void;
-}
 
-const SortableHeader = ({ field, label, currentField, direction, onSort }: SortableHeaderProps) => {
-  const getSortIcon = (f: SortField) => {
-    if (currentField !== f) return <ArrowUpDown className="w-3 h-3 opacity-30" />;
-    return direction === "asc"
-      ? <ArrowUpDown className="w-3 h-3 rotate-180" />
-      : <ArrowUpDown className="w-3 h-3" />;
-  };
-
-  return (
-    <button
-      onClick={(e) => { e.stopPropagation(); onSort(field); }}
-      className="flex items-center gap-1 hover:text-slate-900 transition-colors"
-    >
-      {label}
-      {getSortIcon(field)}
-    </button>
-  );
-};
 
 interface AccountMovementTableProps {
   lines: AccountLedgerLineDto[];
@@ -54,19 +28,6 @@ export function AccountMovementTable({
   accountName 
 }: AccountMovementTableProps) {
   const { currencies, baseCurrency, formatAmount, toBase } = useCurrencyContext();
-  const [sortField, setSortField] = useState<SortField>("entry_number");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-
-  const handleSort = useCallback((field: SortField) => {
-    setSortDirection(prev => {
-      if (sortField === field) {
-        return prev === "asc" ? "desc" : "asc";
-      }
-      return "asc";
-    });
-    setSortField(field);
-  }, [sortField]);
-
   const sortedCurrencies = useMemo(() => {
     if (!baseCurrency) return currencies;
     return [baseCurrency, ...currencies.filter(c => c.code !== baseCurrency.code)];
@@ -94,11 +55,13 @@ export function AccountMovementTable({
     });
   }, [lines, accountName]);
 
-  const sortedData = useMemo(() => {
-    if (!sortField) return tableData;
-    return [...tableData].sort((a, b) => {
+  const { sortedData, handleSort } = useSortable({
+    data: tableData,
+    defaultField: "entry_number" as SortField,
+    defaultDirection: "asc",
+    sortFn: (a, b, field, direction) => {
       let comparison = 0;
-      switch (sortField) {
+      switch (field) {
         case "entry_number":
           comparison = (a.entry_number || "").localeCompare(b.entry_number || "", "ar", { numeric: true });
           break;
@@ -115,15 +78,15 @@ export function AccountMovementTable({
           comparison = (a.destination_account || "").localeCompare(b.destination_account || "", "ar");
           break;
       }
-      return sortDirection === "asc" ? comparison : -comparison;
-    });
-  }, [tableData, sortField, sortDirection]);
+      return direction === "asc" ? comparison : -comparison;
+    }
+  });
 
   const allColumns = useMemo<UnifiedColumn<typeof tableData[0]>[]>(() => {
     const cols: UnifiedColumn<typeof tableData[0]>[] = [
       { 
         id: "entry_number",
-        header: <SortableHeader field="entry_number" label="رقم القيد" currentField={sortField} direction={sortDirection} onSort={handleSort} />, 
+        header: "رقم القيد", 
         label: "رقم القيد", 
         accessor: (l) => (
           <span className="font-black text-indigo-700 font-mono text-xs">{l.entry_number}</span>
@@ -133,7 +96,7 @@ export function AccountMovementTable({
       },
       { 
         id: "journal_type",
-        header: <SortableHeader field="journal_type" label="نوع الحركة" currentField={sortField} direction={sortDirection} onSort={handleSort} />, 
+        header: "نوع الحركة", 
         label: "نوع الحركة", 
         accessor: (l) => (
           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter ring-1 ring-slate-200/50">
@@ -148,7 +111,7 @@ export function AccountMovementTable({
       const symbol = curr.symbol || curr.code;
       cols.push({
         id: `debit_${curr.code}`,
-        header: <SortableHeader field="entry_number" label={`عليه / مدين (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: `عليه / مدين (${symbol})`,
         label: `عليه / مدين (${symbol})`,
         accessor: (l) => {
           const baseVal = parseFloat(l.debit_base);
@@ -163,7 +126,7 @@ export function AccountMovementTable({
       const symbol = curr.symbol || curr.code;
       cols.push({
         id: `credit_${curr.code}`,
-        header: <SortableHeader field="entry_number" label={`له / دائن (${symbol})`} currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: `له / دائن (${symbol})`,
         label: `له / دائن (${symbol})`,
         accessor: (l) => {
           const baseVal = parseFloat(l.credit_base);
@@ -184,28 +147,28 @@ export function AccountMovementTable({
       },
       {
         id: "credit_account",
-        header: <SortableHeader field="credit_account" label="الحساب الدائن / المصدر" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: "الحساب الدائن / المصدر",
         label: "الحساب الدائن / المصدر",
         accessor: (l) => l.source_account,
         className: "font-medium text-slate-800 text-sm"
       },
       {
         id: "debit_account",
-        header: <SortableHeader field="debit_account" label="الحساب المدين / الوجهة" currentField={sortField} direction={sortDirection} onSort={handleSort} />,
+        header: "الحساب المدين / الوجهة",
         label: "الحساب المدين / الوجهة",
         accessor: (l) => l.destination_account,
         className: "font-medium text-slate-800 text-sm"
       },
       { 
         id: "date",
-        header: <SortableHeader field="date" label="التاريخ" currentField={sortField} direction={sortDirection} onSort={handleSort} />, 
+        header: "التاريخ", 
         label: "التاريخ", 
         accessor: (l) => formatDateTime(l.date),
         className: "tabular-nums text-slate-500 text-[11px] w-32" 
       },
     );
     return cols;
-  }, [sortField, sortDirection, handleSort, sortedCurrencies, baseCurrency, formatAmount]);
+  }, [sortedCurrencies, formatAmount]);
 
   const defaultVisible = useMemo(() => {
     const def = ["entry_number", "date", "journal_type", "description"];
@@ -279,11 +242,19 @@ export function AccountMovementTable({
       onSearchChange={onSearchChange}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      showToolbar={true}
     >
       <UnifiedTable
         data={sortedData}
         columns={enrichedColumns}
         loading={loading}
+        enableResize
+        tableId="account-movement"
+        onHeaderClick={(col) => {
+          if (col.id === "entry_number" || col.id === "journal_type" || col.id === "credit_account" || col.id === "debit_account" || col.id === "date") {
+            handleSort(col.id as SortField);
+          }
+        }}
         emptyMessage={search ? "لا توجد حركات تطابق معايير البحث" : "لا توجد حركات مسجلة لهذا الحساب"}
         summary={summaryColumns}
       />
