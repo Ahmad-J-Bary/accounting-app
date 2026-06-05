@@ -45,7 +45,6 @@ export function ProductionTable({ data, loading, search, onSearchChange }: Produ
           {o.materials.length} أصناف
         </span>
       ),
-      align: "center",
       className: "w-32"
     },
     {
@@ -57,7 +56,6 @@ export function ProductionTable({ data, loading, search, onSearchChange }: Produ
           {o.outputs.length} منتجات
         </span>
       ),
-      align: "center",
       className: "w-32"
     },
     {
@@ -65,7 +63,6 @@ export function ProductionTable({ data, loading, search, onSearchChange }: Produ
       header: "إجمالي التكلفة",
       label: "إجمالي تكلفة الإنتاج",
       accessor: (o) => formatCurrency(parseFloat(o.total_cost)),
-      align: "left",
       className: "tabular-nums font-black text-slate-900 w-32"
     },
     {
@@ -83,7 +80,6 @@ export function ProductionTable({ data, loading, search, onSearchChange }: Produ
           </span>
         );
       },
-      align: "center",
       className: "w-28"
     }
   ], []);
@@ -108,6 +104,7 @@ export function ProductionTable({ data, loading, search, onSearchChange }: Produ
       searchPlaceholder="بحث برقم الأمر..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      showToolbar={true}
     >
       <UnifiedTable
         data={filtered}

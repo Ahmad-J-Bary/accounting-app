@@ -63,7 +63,6 @@ export const TableSettingsManager: React.FC = () => {
       label: `مدين (${currSym})`,
       accessor: (r) => r.debit > 0 ? r.debit.toLocaleString() : "—",
       className: "tabular-nums text-red-600 font-bold",
-      align: "left"
     },
     {
       id: "credit",
@@ -71,7 +70,6 @@ export const TableSettingsManager: React.FC = () => {
       label: `دائن (${currSym})`,
       accessor: (r) => r.credit > 0 ? r.credit.toLocaleString() : "—",
       className: "tabular-nums text-emerald-600 font-bold",
-      align: "left"
     },
     {
       id: "date",
@@ -91,7 +89,6 @@ export const TableSettingsManager: React.FC = () => {
           {r.status}
         </span>
       ),
-      align: "center",
       className: "w-16"
     },
   ], [currSym]);
@@ -101,8 +98,8 @@ export const TableSettingsManager: React.FC = () => {
   const summaryColumns = useMemo(() => {
     const colIds = previewColumnIds;
     return colIds.map(id => {
-      if (id === "debit") return { id: "debit_total", columnId: "debit", label: "الإجمالي", value: `${PREVIEW_DATA.reduce((s, r) => s + r.debit, 0).toLocaleString()} ${currSym}`, className: "text-red-600", align: "left" as const };
-      if (id === "credit") return { id: "credit_total", columnId: "credit", label: "الإجمالي", value: `${PREVIEW_DATA.reduce((s, r) => s + r.credit, 0).toLocaleString()} ${currSym}`, className: "text-emerald-600", align: "left" as const };
+      if (id === "debit") return { id: "debit_total", columnId: "debit", label: "الإجمالي", value: `${PREVIEW_DATA.reduce((s, r) => s + r.debit, 0).toLocaleString()} ${currSym}`, className: "text-red-600" };
+      if (id === "credit") return { id: "credit_total", columnId: "credit", label: "الإجمالي", value: `${PREVIEW_DATA.reduce((s, r) => s + r.credit, 0).toLocaleString()} ${currSym}`, className: "text-emerald-600" };
       if (id === "code") return { id: "code_count", columnId: "code", label: "", value: `${PREVIEW_DATA.length} حسابات`, className: "text-slate-500 font-medium" };
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });

@@ -35,7 +35,6 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange }: Adju
       header: "كمية النظام",
       label: "كمية النظام (قبل التسوية)",
       accessor: (a) => parseFloat(a.system_quantity).toFixed(2),
-      align: "left",
       className: "tabular-nums text-slate-600 w-24"
     },
     {
@@ -43,7 +42,6 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange }: Adju
       header: "الكمية الفعلية",
       label: "الكمية الفعلية (الموجودة)",
       accessor: (a) => parseFloat(a.actual_quantity).toFixed(2),
-      align: "left",
       className: "tabular-nums font-bold text-slate-800 w-24"
     },
     {
@@ -62,7 +60,6 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange }: Adju
           </span>
         );
       },
-      align: "left",
       className: "w-32"
     },
     {
@@ -96,6 +93,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange }: Adju
       searchPlaceholder="بحث بالمنتج أو السبب..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      showToolbar={true}
     >
       <UnifiedTable
         data={filtered}

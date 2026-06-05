@@ -88,7 +88,6 @@ export function PartnerTable({
           if (p.displayAmountBase === 0) return "—";
           return formatAmount(p.displayAmountBase, { currencyCode: curr.code });
         },
-        align: "left",
         className: "tabular-nums font-black text-slate-900"
       });
     });
@@ -103,7 +102,6 @@ export function PartnerTable({
             {p.calculatedCapitalRatio.toFixed(2)}%
           </span>
         ),
-        align: "center"
       },
       {
         id: "ratio",
@@ -114,7 +112,6 @@ export function PartnerTable({
             {p.calculatedRatio.toFixed(2)}%
           </span>
         ),
-        align: "center"
       },
       {
         id: "actions",
@@ -131,7 +128,6 @@ export function PartnerTable({
             ]}
           />
         ),
-        align: "center",
         className: "w-[80px]"
       }
     );
@@ -156,9 +152,9 @@ export function PartnerTable({
         case "name":
           return { id: "count", columnId: "name", label: "", value: `${sortedPartners.length} شريك`, className: "text-slate-500 font-medium" };
         case "capital_ratio":
-          return { id: "total_capital_ratio", columnId: "capital_ratio", label: "المجموع", value: `${totalCapitalRatio.toFixed(2)}%`, align: "center" as const, className: "text-blue-700 font-black" };
+          return { id: "total_capital_ratio", columnId: "capital_ratio", label: "المجموع", value: `${totalCapitalRatio.toFixed(2)}%`, className: "text-blue-700 font-black" };
         case "ratio":
-          return { id: "total_ratio", columnId: "ratio", label: "المجموع", value: `${totalRatio.toFixed(2)}%`, align: "center" as const, className: "text-emerald-700 font-black" };
+          return { id: "total_ratio", columnId: "ratio", label: "المجموع", value: `${totalRatio.toFixed(2)}%`, className: "text-emerald-700 font-black" };
         default: {
           const match = id.match(/^amount_(.+)$/);
           if (match) {
@@ -168,7 +164,6 @@ export function PartnerTable({
               columnId: id,
               label: "الإجمالي",
               value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
-              align: "left" as const,
               className: "text-slate-900 font-black"
             };
           }
@@ -183,8 +178,10 @@ export function PartnerTable({
       title="سجل الشركاء"
       search={search}
       onSearchChange={onSearchChange}
+      searchPlaceholder="بحث باسم الشريك..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      showToolbar={true}
     >
       <UnifiedTable<PartnerWithRatios>
         data={sortedPartners}

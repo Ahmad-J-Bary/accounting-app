@@ -10,8 +10,6 @@ import { JOURNAL_TYPE_LABELS } from "../lib/journal-config";
 
 type SortField = "entry_number" | "date" | "journal_type" | "credit_account" | "debit_account";
 
-
-
 interface AccountMovementTableProps {
   lines: AccountLedgerLineDto[];
   loading: boolean;
@@ -20,14 +18,14 @@ interface AccountMovementTableProps {
   accountName: string;
 }
 
-export function AccountMovementTable({ 
-  lines, 
-  loading, 
-  search, 
-  onSearchChange, 
-  accountName 
+export function AccountMovementTable({
+  lines,
+  loading,
+  search,
+  onSearchChange,
+  accountName
 }: AccountMovementTableProps) {
-  const { currencies, baseCurrency, formatAmount, toBase } = useCurrencyContext();
+  const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
   const sortedCurrencies = useMemo(() => {
     if (!baseCurrency) return currencies;
     return [baseCurrency, ...currencies.filter(c => c.code !== baseCurrency.code)];
@@ -38,7 +36,7 @@ export function AccountMovementTable({
       const typeLabel = (line.journal_type === 'CashSalesJournal' || line.journal_type === 'CreditSalesJournal')
         ? 'مبيعات نقدية'
         : (JOURNAL_TYPE_LABELS[line.journal_type] || line.journal_type);
-      
+
       const debitBase = parseFloat(line.debit_base);
       const debitOrig = parseFloat(line.debit_original);
       const creditBase = parseFloat(line.credit_base);
@@ -84,26 +82,18 @@ export function AccountMovementTable({
 
   const allColumns = useMemo<UnifiedColumn<typeof tableData[0]>[]>(() => {
     const cols: UnifiedColumn<typeof tableData[0]>[] = [
-      { 
+      {
         id: "entry_number",
-        header: "رقم القيد", 
-        label: "رقم القيد", 
-        accessor: (l) => (
-          <span className="font-black text-indigo-700 font-mono text-xs">{l.entry_number}</span>
-        ),
-        className: "w-24",
-        align: "center"
+        header: "رقم القيد",
+        label: "رقم القيد",
+        accessor: (l) => l.entry_number,
+        className: "font-black text-slate-900 text-center"
       },
-      { 
+      {
         id: "journal_type",
-        header: "نوع الحركة", 
-        label: "نوع الحركة", 
-        accessor: (l) => (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter ring-1 ring-slate-200/50">
-            {l.typeLabel}
-          </span>
-        ),
-        className: "w-32"
+        header: "نوع الحركة",
+        label: "نوع الحركة",
+        accessor: (l) => <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">{l.typeLabel}</span>,
       },
     ];
 
@@ -115,10 +105,9 @@ export function AccountMovementTable({
         label: `عليه / مدين (${symbol})`,
         accessor: (l) => {
           const baseVal = parseFloat(l.debit_base);
-          return baseVal > 0 ? formatAmount(baseVal, { currencyCode: curr.code }) : "—";
+          return baseVal > 0 ? formatAmount(baseVal, { currencyCode: curr.code }) : "";
         },
-        align: "left",
-        className: "tabular-nums font-black text-blue-700 text-[11px]"
+        className: "tabular-nums font-black text-blue-700"
       });
     });
 
@@ -130,54 +119,54 @@ export function AccountMovementTable({
         label: `له / دائن (${symbol})`,
         accessor: (l) => {
           const baseVal = parseFloat(l.credit_base);
-          return baseVal > 0 ? formatAmount(baseVal, { currencyCode: curr.code }) : "—";
+          return baseVal > 0 ? formatAmount(baseVal, { currencyCode: curr.code }) : "";
         },
-        align: "left",
-        className: "tabular-nums font-black text-emerald-700 text-[11px]"
+        className: "tabular-nums font-black text-emerald-700"
       });
     });
 
     cols.push(
-      { 
+      {
         id: "description",
-        header: "البيان", 
-        label: "البيان", 
-        accessor: "description", 
-        className: "min-w-[200px] text-slate-700 font-medium" 
+        header: "البيان",
+        label: "البيان",
+        accessor: (l) => l.description,
+        className: "text-slate-700 font-bold"
       },
       {
         id: "credit_account",
         header: "الحساب الدائن / المصدر",
         label: "الحساب الدائن / المصدر",
         accessor: (l) => l.source_account,
-        className: "font-medium text-slate-800 text-sm"
+        className: "text-emerald-600 font-bold"
       },
       {
         id: "debit_account",
         header: "الحساب المدين / الوجهة",
         label: "الحساب المدين / الوجهة",
         accessor: (l) => l.destination_account,
-        className: "font-medium text-slate-800 text-sm"
+        className: "text-blue-600 font-bold"
       },
-      { 
+      {
         id: "date",
-        header: "التاريخ", 
-        label: "التاريخ", 
+        header: "التاريخ",
+        label: "التاريخ",
         accessor: (l) => formatDateTime(l.date),
-        className: "tabular-nums text-slate-500 text-[11px] w-32" 
+        className: "text-slate-500 tabular-nums"
       },
     );
     return cols;
   }, [sortedCurrencies, formatAmount]);
 
   const defaultVisible = useMemo(() => {
-    const def = ["entry_number", "date", "journal_type", "description"];
+    const def = ["entry_number", "journal_type"];
     sortedCurrencies.forEach(curr => {
       def.push(`debit_${curr.code}`);
     });
     sortedCurrencies.forEach(curr => {
       def.push(`credit_${curr.code}`);
     });
+    def.push("description", "date");
     return def;
   }, [sortedCurrencies]);
 
@@ -191,55 +180,46 @@ export function AccountMovementTable({
     const baseDebitTotal = tableData.reduce((s, l) => s + parseFloat(l.debit_base || "0"), 0);
     const baseCreditTotal = tableData.reduce((s, l) => s + parseFloat(l.credit_base || "0"), 0);
 
-    const colIds = enrichedColumns.map(c => c.id);
-    return colIds.map(id => {
-      if (id === 'entry_number') {
-        return { id: 'count', columnId: 'entry_number', label: '', value: `${tableData.length} حركة`, className: 'text-slate-500 font-medium' };
+    return enrichedColumns.map((col) => {
+      const id = col.id;
+      if (id === "entry_number") {
+        return { id: "count", columnId: "entry_number", label: "", value: `${sortedData.length} حركة`, className: "text-slate-500 font-medium" };
       }
-      if (id === 'journal_type') {
-        return { id: 'journal_type_summary', columnId: 'journal_type', label: '', value: 'المجموع', className: 'text-slate-600 font-bold', align: 'center' as const };
-      }
-      if (id === 'description') {
-        const balanceParts: string[] = [];
-        sortedCurrencies.forEach(curr => {
-          const bal = baseDebitTotal - baseCreditTotal;
-          balanceParts.push(formatAmount(bal, { currencyCode: curr.code }));
-        });
-        return {
-          id: 'balance_summary', columnId: 'description', label: 'الرصيد',
-          value: balanceParts.join(' / '),
-          className: 'text-slate-900 font-black'
-        };
+      if (id === "journal_type" || id === "description") {
+        return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
       }
       const debitMatch = id.match(/^debit_(.+)$/);
       if (debitMatch) {
         const currCode = debitMatch[1];
         return {
-          id: `${id}_total`, columnId: id, label: 'إجمالي',
+          id: `${id}_total`,
+          columnId: id,
+          label: "إجمالي",
           value: baseDebitTotal > 0 ? formatAmount(baseDebitTotal, { currencyCode: currCode }) : "—",
-          align: 'left' as const,
-          className: 'text-blue-700 font-black'
+          className: "text-blue-700 font-black"
         };
       }
       const creditMatch = id.match(/^credit_(.+)$/);
       if (creditMatch) {
         const currCode = creditMatch[1];
         return {
-          id: `${id}_total`, columnId: id, label: 'إجمالي',
+          id: `${id}_total`,
+          columnId: id,
+          label: "إجمالي",
           value: baseCreditTotal > 0 ? formatAmount(baseCreditTotal, { currencyCode: currCode }) : "—",
-          align: 'left' as const,
-          className: 'text-emerald-700 font-black'
+          className: "text-emerald-700 font-black"
         };
       }
-      return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
+      return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [tableData, formatAmount, enrichedColumns, sortedCurrencies]);
+  }, [tableData, sortedData, formatAmount, enrichedColumns, sortedCurrencies]);
 
   return (
     <TableShell
       title={`حركة الحساب: ${accountName}`}
       search={search}
       onSearchChange={onSearchChange}
+      searchPlaceholder="بحث برقم القيد أو البيان..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       showToolbar={true}

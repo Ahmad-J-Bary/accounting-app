@@ -61,7 +61,6 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
             : code;
           return suffix || "—";
         },
-        align: "center",
         className: "font-black text-slate-500"
       },
       {
@@ -89,7 +88,6 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
           const baseAmount = toBase(absBal, c.currency);
           return formatAmount(baseAmount, { currencyCode: curr.code });
         },
-        align: "left",
         className: "tabular-nums font-bold text-slate-800"
       });
     });
@@ -109,7 +107,6 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
           ]}
         />
       ),
-      align: "center",
       className: "w-[80px]"
     });
 
@@ -167,7 +164,6 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
           columnId: id,
           label: '',
           value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
-          align: 'left' as const,
           className: `${overallColor} font-bold`
         };
       }
@@ -179,6 +175,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
     <TableShell
       search={search}
       onSearchChange={onSearchChange}
+      searchPlaceholder="بحث باسم البند أو الكود..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       showToolbar={true}

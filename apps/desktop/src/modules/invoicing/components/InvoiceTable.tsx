@@ -109,7 +109,7 @@ export function InvoiceTable({
         header: "التوصيف",
         label: "البيان/الملاحظات",
         accessor: (inv) => (
-          <span className="text-slate-500 text-xs truncate max-w-[200px] inline-block">{inv.notes || "—"}</span>
+          <span className="text-slate-500 text-xs">{inv.notes || "—"}</span>
         ),
       },
       {
@@ -134,7 +134,6 @@ export function InvoiceTable({
           if (baseAmt === 0) return "—";
           return formatAmount(baseAmt, { currencyCode: curr.code });
         },
-        align: "left" as const,
         className: "font-bold tabular-nums text-slate-700",
       })) : []),
       ...(showExtraCosts ? currencies.map(curr => ({
@@ -152,7 +151,6 @@ export function InvoiceTable({
           if (baseAmt === 0) return "—";
           return formatAmount(baseAmt, { currencyCode: curr.code });
         },
-        align: "left" as const,
         className: "font-bold tabular-nums text-rose-600",
       })) : []),
       ...currencies.map(curr => ({
@@ -170,7 +168,6 @@ export function InvoiceTable({
           if (baseAmt === 0) return "—";
           return formatAmount(baseAmt, { currencyCode: curr.code });
         },
-        align: "left" as const,
         className: "font-black tabular-nums text-slate-900",
       })),
       ...currencies.map(curr => ({
@@ -188,7 +185,6 @@ export function InvoiceTable({
           if (baseAmt === 0) return "—";
           return formatAmount(baseAmt, { currencyCode: curr.code });
         },
-        align: "left" as const,
         className: "font-bold tabular-nums text-emerald-600",
       })),
       ...currencies.map(curr => ({
@@ -206,7 +202,6 @@ export function InvoiceTable({
           if (baseAmt === 0) return "—";
           return formatAmount(baseAmt, { currencyCode: curr.code });
         },
-        align: "left" as const,
         className: "font-bold tabular-nums text-orange-600",
       })),
       {
@@ -268,7 +263,6 @@ export function InvoiceTable({
             </DropdownMenuContent>
           </DropdownMenu>
         ),
-        align: "center",
         className: "w-[80px]",
       },
     ];
@@ -311,7 +305,6 @@ export function InvoiceTable({
           columnId: id,
           label: 'الإجمالي الفرعي',
           value: baseSubtotalTotal > 0 ? formatAmount(baseSubtotalTotal, { currencyCode: currCode }) : "—",
-          align: 'left' as const,
           className: 'font-bold text-slate-700',
         };
       }
@@ -324,7 +317,6 @@ export function InvoiceTable({
           columnId: id,
           label: 'التكاليف الإضافية',
           value: baseExtraCostsTotal > 0 ? formatAmount(baseExtraCostsTotal, { currencyCode: currCode }) : "—",
-          align: 'left' as const,
           className: 'font-bold text-rose-600',
         };
       }
@@ -337,7 +329,6 @@ export function InvoiceTable({
           columnId: id,
           label: 'الإجمالي',
           value: baseTotalTotal > 0 ? formatAmount(baseTotalTotal, { currencyCode: currCode }) : "—",
-          align: 'left' as const,
           className: 'font-black text-slate-900',
         };
       }
@@ -350,7 +341,6 @@ export function InvoiceTable({
           columnId: id,
           label: 'المدفوع',
           value: basePaidTotal > 0 ? formatAmount(basePaidTotal, { currencyCode: currCode }) : "—",
-          align: 'left' as const,
           className: 'font-bold text-emerald-600',
         };
       }
@@ -363,7 +353,6 @@ export function InvoiceTable({
           columnId: id,
           label: 'المتبقي',
           value: baseRemainingTotal > 0 ? formatAmount(baseRemainingTotal, { currencyCode: currCode }) : "—",
-          align: 'left' as const,
           className: 'font-bold text-orange-600',
         };
       }
@@ -379,6 +368,7 @@ export function InvoiceTable({
       searchPlaceholder={searchPlaceholder}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      showToolbar={true}
       actions={
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="h-9 border-slate-200" onClick={() => onStatusFilterChange("all")}>الكل</Button>

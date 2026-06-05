@@ -78,7 +78,6 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
         accessor: (i) => (
           <span className="tabular-nums font-bold text-amber-600">{Math.round(parseFloat(i.quantity))}</span>
         ),
-        align: "left",
         className: "w-24"
       },
     ];
@@ -93,7 +92,6 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
           const val = parseFloat(i.cost_impact || "0");
           return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "—";
         },
-        align: "left",
         className: "tabular-nums font-black text-rose-600 text-[11px]"
       });
     });
@@ -136,7 +134,6 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
           id: 'quantity_summary',     // matches `${col.id}_summary`
           label: '',
           value: Math.round(totalQty).toString(),
-          align: 'left' as const,
           className: 'text-amber-600 font-bold'
         };
       }
@@ -147,7 +144,6 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
           id: `${col.id}_summary`,    // matches `${col.id}_summary`
           label: '',
           value: totalCost > 0 ? formatAmount(totalCost, { currencyCode: currCode }) : "—",
-          align: 'left' as const,
           className: 'text-rose-600 font-bold'
         };
       }
@@ -163,6 +159,7 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
       searchPlaceholder="بحث بالمنتج أو السبب..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      showToolbar={true}
     >
       <UnifiedTable
         data={sortedItems}

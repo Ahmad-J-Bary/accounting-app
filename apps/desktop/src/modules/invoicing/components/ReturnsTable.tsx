@@ -72,7 +72,6 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
           if (val === 0) return "—";
           return formatAmount(val, { currencyCode: curr.code });
         },
-        align: "left" as const,
         className: "tabular-nums",
       })),
       {
@@ -80,7 +79,6 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
         header: "الكمية",
         label: "الكمية المرتجعة",
         accessor: (i) => <span className="tabular-nums font-bold">{Math.round(parseFloat(i.quantity))}</span>,
-        align: "left",
         className: "",
       },
       {
@@ -102,7 +100,6 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
           if (val === 0) return "—";
           return formatAmount(val, { currencyCode: curr.code });
         },
-        align: "left" as const,
         className: "tabular-nums font-bold",
       })),
       {
@@ -130,7 +127,6 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
             onDelete={onDelete ? () => onDelete(i.return_id!) : undefined}
           />
         ) : null,
-        align: "center",
         className: "w-[80px]",
       },
     ];
@@ -168,7 +164,7 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
       const match = id.match(/^line_total_(.+)$/);
       if (match) {
         const currCode = match[1];
-        return { id: `${id}_summary`, columnId: id, label: "الإجمالي", value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—", align: "left" as const, className: "font-black text-slate-900" };
+        return { id: `${id}_summary`, columnId: id, label: "الإجمالي", value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—", className: "font-black text-slate-900" };
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });

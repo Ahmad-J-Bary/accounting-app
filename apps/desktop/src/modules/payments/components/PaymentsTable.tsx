@@ -121,7 +121,6 @@ export function PaymentsTable({
         label: "رقم القيد",
         accessor: (p) => p.journal_entry_number ?? "—",
         className: "font-black text-indigo-700 tabular-nums",
-        align: "center",
       },
       {
         id: "payment_type",
@@ -154,7 +153,6 @@ export function PaymentsTable({
             const baseAmount = toBase(amount, p.currency_code);
             return formatAmount(baseAmount, { currencyCode: curr.code });
           },
-          align: "left" as const,
           className: "tabular-nums font-black text-slate-900",
         };
       }),
@@ -211,7 +209,6 @@ export function PaymentsTable({
             onDelete={() => onDelete(p.id)}
           />
         ),
-        align: "center",
       },
     ];
     return cols;
@@ -270,7 +267,6 @@ export function PaymentsTable({
           value: baseTotal > 0
             ? formatAmount(baseTotal, { currencyCode: currCode })
             : "—",
-          align: "left" as const,
           className: "text-slate-900 font-black",
         };
       }

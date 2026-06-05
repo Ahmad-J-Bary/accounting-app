@@ -58,7 +58,6 @@ export function UsersTable({ data, loading, search, onSearchChange, roles }: Use
       header: "الحالة",
       label: "حالة الحساب",
       accessor: (u) => <StatusBadge status={u.is_active ? "active" : "inactive"} />,
-      align: "center",
       className: "w-28"
     },
     {
@@ -71,7 +70,6 @@ export function UsersTable({ data, loading, search, onSearchChange, roles }: Use
           onDelete={() => toast.warning("حذف المستخدم قيد التطوير")}
         />
       ),
-      align: "center",
       className: "w-[80px]"
     }
   ], [roles]);
@@ -89,6 +87,7 @@ export function UsersTable({ data, loading, search, onSearchChange, roles }: Use
       searchPlaceholder="بحث بالاسم أو اسم المستخدم..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      showToolbar={true}
     >
       <UnifiedTable
         data={data}

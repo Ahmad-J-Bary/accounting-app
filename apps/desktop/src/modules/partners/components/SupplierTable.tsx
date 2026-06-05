@@ -49,7 +49,6 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
         accessor: (s) => (
           <span className="font-black text-slate-500">{s.code || "—"}</span>
         ),
-        align: "center"
       },
       {
         id: "name",
@@ -91,7 +90,6 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
           ]}
         />
       ),
-      align: "center",
       className: "w-[80px]"
     });
 
@@ -115,8 +113,10 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
       title="سجل الموردين"
       search={search}
       onSearchChange={onSearchChange}
+      searchPlaceholder="بحث باسم المورد أو الرقم..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      showToolbar={true}
     >
       <UnifiedTable
         data={sortedSuppliers}
@@ -127,8 +127,8 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
         sortField={sortField}
         sortDirection={sortDirection}
         onHeaderClick={(col) => {
-          if (col.id === "#" || col.id === "name") {
-            handleSort(col.id === "#" ? "code" : "name");
+          if (col.id === "code" || col.id === "name") {
+            handleSort(col.id === "code" ? "code" : "name");
           }
           if (col.id === "status" || col.id?.startsWith("balance_")) {
             handleSort("balance");

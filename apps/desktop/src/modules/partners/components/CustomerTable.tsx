@@ -51,7 +51,6 @@ export function CustomerTable({ customers, loading, search, onSearchChange, onVi
           <span className="font-black text-slate-500">{c.code || "—"}</span>
         ),
         className: "w-16",
-        align: "center"
       },
       { 
         id: "name",
@@ -98,7 +97,6 @@ export function CustomerTable({ customers, loading, search, onSearchChange, onVi
           ]}
         />
       ),
-      align: "center",
       className: "w-[80px]"
     });
 
@@ -122,8 +120,10 @@ export function CustomerTable({ customers, loading, search, onSearchChange, onVi
       title="سجل العملاء"
       search={search}
       onSearchChange={onSearchChange}
+      searchPlaceholder="بحث باسم العميل أو الرقم..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      showToolbar={true}
     >
       <UnifiedTable
         data={sortedCustomers}

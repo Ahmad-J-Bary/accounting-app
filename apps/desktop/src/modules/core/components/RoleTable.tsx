@@ -43,7 +43,6 @@ export function RoleTable({ roles, loading, onEdit, onDelete }: RoleTableProps) 
           <span className="font-bold tabular-nums text-blue-600">{r.permissions.length}</span>
         </div>
       ),
-      align: "center",
       className: ""
     },
     { 
@@ -59,7 +58,6 @@ export function RoleTable({ roles, loading, onEdit, onDelete }: RoleTableProps) 
            مخصص
         </span>
       ),
-      align: "center",
       className: ""
     },
     {
@@ -85,7 +83,6 @@ export function RoleTable({ roles, loading, onEdit, onDelete }: RoleTableProps) 
           </DropdownMenuContent>
         </DropdownMenu>
       ),
-      align: "center",
       className: "w-[80px]"
     }
   ], [onEdit, onDelete]);

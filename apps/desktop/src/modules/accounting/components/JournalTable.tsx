@@ -87,7 +87,6 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
           if (e.active_side !== "debit") return "";
           return e.debit_base > 0 ? formatAmount(e.debit_base, { currencyCode: curr.code }) : "";
         },
-        align: "left",
         className: "tabular-nums font-black text-blue-700"
       });
     });
@@ -102,7 +101,6 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
           if (e.active_side !== "credit") return "";
           return e.credit_base > 0 ? formatAmount(e.credit_base, { currencyCode: curr.code }) : "";
         },
-        align: "left",
         className: "tabular-nums font-black text-emerald-700"
       });
     });
@@ -113,8 +111,7 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
         header: "البيان",
         label: "البيان",
         accessor: (e) => e.description,
-        align: "right",
-        className: "max-w-[200px] truncate font-bold text-slate-700"
+        className: "text-slate-700 font-bold"
       },
       {
         id: "credit_account",
@@ -168,22 +165,8 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
       if (id === "entry_number") {
         return { id: "count", columnId: "entry_number", label: "", value: `${sortedData.length} قيد`, className: "text-slate-500 font-medium" };
       }
-      if (id === "journal_type") {
-        return { id: "journal_type_summary", columnId: "journal_type", label: "", value: "المجموع", className: "text-slate-600 font-bold", align: "center" as const };
-      }
-      if (id === "description") {
-        const balanceParts: string[] = [];
-        sortedCurrencies.forEach(curr => {
-          const bal = baseDebitTotal - baseCreditTotal;
-          balanceParts.push(formatAmount(bal, { currencyCode: curr.code }));
-        });
-        return {
-          id: "balance_summary",
-          columnId: "description",
-          label: "الرصيد",
-          value: balanceParts.join(" / "),
-          className: "text-slate-900 font-black"
-        };
+      if (id === "journal_type" || id === "description") {
+        return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
       }
       const debitMatch = id.match(/^debit_(.+)$/);
       if (debitMatch) {
@@ -193,7 +176,6 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
           columnId: id,
           label: "إجمالي",
           value: baseDebitTotal > 0 ? formatAmount(baseDebitTotal, { currencyCode: currCode }) : "—",
-          align: "left" as const,
           className: "text-blue-700 font-black"
         };
       }
@@ -205,7 +187,6 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
           columnId: id,
           label: "إجمالي",
           value: baseCreditTotal > 0 ? formatAmount(baseCreditTotal, { currencyCode: currCode }) : "—",
-          align: "left" as const,
           className: "text-emerald-700 font-black"
         };
       }
@@ -217,6 +198,7 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
     <TableShell
       search={search}
       onSearchChange={onSearchChange}
+      searchPlaceholder="بحث برقم القيد أو البيان..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       showToolbar={true}

@@ -171,7 +171,6 @@ export function MaterialTable({
           const raw = rawPriceBase(m);
           return raw > 0 ? formatAmount(raw, { currencyCode: curr.code }) : "—";
         },
-        align: "left",
         className: "tabular-nums font-bold text-slate-700 text-[11px]"
       });
     });
@@ -187,7 +186,6 @@ export function MaterialTable({
           const extra = extraCostBase(m);
           return extra > 0 ? formatAmount(extra, { currencyCode: curr.code }) : "—";
         },
-        align: "left",
         className: "tabular-nums text-amber-600 text-[11px]"
       });
     });
@@ -210,7 +208,6 @@ export function MaterialTable({
           }
           return <>{formatAmount(val, { currencyCode: curr.code })}</>;
         },
-        align: "left",
         className: "tabular-nums font-bold text-amber-600 text-[11px]"
       });
     });
@@ -226,7 +223,6 @@ export function MaterialTable({
           const val = totalReceived(m) * unitCostBase(m);
           return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "—";
         },
-        align: "left",
         className: "tabular-nums font-black text-slate-900 text-[11px]"
       });
     });
@@ -237,7 +233,6 @@ export function MaterialTable({
       header: "الكمية الكلية",
       label: "الكمية الكلية",
       accessor: (m) => parseFloat(m.total_received || "0").toLocaleString(),
-      align: "center",
       className: "tabular-nums text-emerald-600 font-bold",
     });
 
@@ -247,7 +242,6 @@ export function MaterialTable({
       header: "الكمية المباعة",
       label: "الكمية المباعة",
       accessor: (m) => parseFloat(m.total_sold || "0").toLocaleString(),
-      align: "center",
       className: "tabular-nums text-blue-600 font-bold",
     });
 
@@ -257,7 +251,6 @@ export function MaterialTable({
       header: "الكمية التالفة",
       label: "الكمية التالفة",
       accessor: (m) => parseFloat(m.total_damaged || "0").toLocaleString(),
-      align: "center",
       className: "tabular-nums text-rose-600 font-bold"
     });
 
@@ -267,7 +260,6 @@ export function MaterialTable({
       header: "الكمية المتوفرة",
       label: "الكمية المتوفرة",
       accessor: (m) => parseFloat(m.total_available).toLocaleString(),
-      align: "center",
       className: "tabular-nums font-bold text-slate-700",
     });
 
@@ -282,7 +274,6 @@ export function MaterialTable({
           const val = totalAvailable(m) * unitCostBase(m);
           return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "—";
         },
-        align: "left",
         className: "tabular-nums font-black text-indigo-700 text-[11px]"
       });
     });
@@ -298,7 +289,6 @@ export function MaterialTable({
           const val = salePriceBase(m);
           return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "—";
         },
-        align: "left",
         className: "tabular-nums font-bold text-emerald-600 text-[11px]"
       });
     });
@@ -343,8 +333,7 @@ export function MaterialTable({
         )}>
           {parseFloat(m.minimum_stock).toLocaleString()}
         </span>
-      ),
-      align: "center"
+      )
     });
 
     // 19. وحدة الشراء الافتراضية
@@ -383,7 +372,6 @@ export function MaterialTable({
           onDelete={() => onDelete(m.id, m.name)}
         />
       ),
-      align: "center",
       className: "w-[80px]"
     });
 
@@ -434,7 +422,6 @@ export function MaterialTable({
         return {
           id: `${id}_summary`, columnId: id, label: "المجموع",
           value: totalValueBase > 0 ? formatAmount(totalValueBase, { currencyCode: totalMatch[1] }) : "—",
-          align: "left" as const,
           className: "text-slate-900 font-black",
         };
       }
@@ -443,7 +430,6 @@ export function MaterialTable({
         return {
           id: `${id}_summary`, columnId: id, label: "المجموع للمتوفر",
           value: availableValueBase > 0 ? formatAmount(availableValueBase, { currencyCode: availMatch[1] }) : "—",
-          align: "left" as const,
           className: "text-indigo-700 font-black",
         };
       }
@@ -456,8 +442,10 @@ export function MaterialTable({
       title="قائمة المواد"
       search={search}
       onSearchChange={onSearchChange}
+      searchPlaceholder="بحث بالاسم أو الكود أو الباركود..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      showToolbar={true}
     >
       <UnifiedTable
         data={sortedMaterials}

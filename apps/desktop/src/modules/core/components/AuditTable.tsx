@@ -60,7 +60,6 @@ export function AuditTable({ data, loading, search, onSearchChange }: AuditTable
       header: "IP Address",
       label: "عنوان IP",
       accessor: (l) => l.ip_address || "—",
-      align: "left",
       className: "font-mono text-[10px] text-slate-400 w-32"
     }
   ], []);
@@ -88,6 +87,7 @@ export function AuditTable({ data, loading, search, onSearchChange }: AuditTable
       searchPlaceholder="بحث بالمستخدم، العملية، الكيان..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
+      showToolbar={true}
     >
       <UnifiedTable
         data={filtered}
