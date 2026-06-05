@@ -22,3 +22,14 @@ pub struct CreateDamagedItemRequest {
     pub cost_impact: f64,
     pub notes: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateDamagedItemRequest {
+    pub id: String,
+    pub material_id: String,
+    pub quantity: f64,
+    pub reason: String,
+    pub damage_date: String,
+    pub cost_impact: f64,
+    pub notes: Option<String>,
+}

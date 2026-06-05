@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
+import { TableActions } from '@widgets/table-shell/TableActions';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { formatDateTime } from '@shared/lib/format';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
@@ -13,11 +14,24 @@ interface DamagedTableProps {
   loading: boolean;
   search: string;
   onSearchChange: (val: string) => void;
+  selectedId?: string | null;
+  onView?: (item: DamagedItem) => void;
+  onEdit?: (item: DamagedItem) => void;
+  onDelete?: (id: string) => void;
 }
 
 type SortField = "material_name" | "quantity" | "damage_date" | "cost_impact";
 
-export function DamagedTable({ items, loading, search, onSearchChange }: DamagedTableProps) {
+export function DamagedTable({
+  items,
+  loading,
+  search,
+  onSearchChange,
+  selectedId,
+  onView,
+  onEdit,
+  onDelete,
+}: DamagedTableProps) {
   const { formatAmount, currencies } = useCurrencyContext();
   const { isBaseCurrency } = useBaseCurrencyColumns();
 
@@ -62,13 +76,6 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
         className: "text-slate-500 italic"
       },
       {
-        id: "damage_date",
-        header: "التاريخ",
-        label: "تاريخ التسجيل",
-        accessor: (i) => formatDateTime(i.damage_date),
-        className: "text-slate-500 tabular-nums"
-      },
-      {
         id: "quantity",
         header: "الكمية",
         label: "الكمية التالفة",
@@ -93,19 +100,44 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
       });
     });
 
+    cols.push({
+      id: "damage_date",
+      header: "التاريخ",
+      label: "تاريخ التسجيل",
+      accessor: (i) => formatDateTime(i.damage_date),
+      className: "text-slate-500 tabular-nums"
+    });
+
+    if (onView || onEdit || onDelete) {
+      cols.push({
+        id: "actions",
+        header: "إجراءات",
+        label: "إجراءات",
+        accessor: (i) => (
+          <TableActions
+            onView={onView ? () => onView(i) : undefined}
+            onEdit={onEdit ? () => onEdit(i) : undefined}
+            onDelete={onDelete ? () => onDelete(i.id) : undefined}
+          />
+        ),
+      });
+    }
+
     return cols;
-  }, [formatAmount, currencies, isBaseCurrency]);
+  }, [formatAmount, currencies, isBaseCurrency, onView, onEdit, onDelete]);
 
   // Default visible: only base currency's loss column is shown.
   const defaultVisible = useMemo(() => {
-    const ids: string[] = ["material_name", "reason", "damage_date", "quantity"];
+    const ids: string[] = ["material_name", "reason", "quantity"];
     currencies.forEach(curr => {
       if (isBaseCurrency(curr.code)) {
         ids.push(`cost_${curr.code}`);
       }
     });
+    ids.push("damage_date");
+    if (onView || onEdit || onDelete) ids.push("actions");
     return ids;
-  }, [currencies, isBaseCurrency]);
+  }, [currencies, isBaseCurrency, onView, onEdit, onDelete]);
 
   const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "damaged-items-table",
@@ -115,7 +147,6 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     const totalCost = sortedItems.reduce((s, i) => s + parseFloat(i.cost_impact || "0"), 0);
-    const totalQty = sortedItems.reduce((s, i) => s + parseFloat(i.quantity || "0"), 0);
 
     return enrichedColumns.map(col => {
       if (col.id === 'material_name') {
@@ -128,22 +159,17 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
         };
       }
       if (col.id === 'quantity') {
-        return {
-          id: 'quantity_summary',
-          columnId: 'quantity',
-          label: 'المجموع',
-          value: Math.round(totalQty).toString(),
-          className: 'text-amber-600 font-black'
-        };
+        return { id: `${col.id}_spacer`, columnId: col.id, label: '', value: '' };
       }
       const match = col.id.match(/^cost_(.+)$/);
       if (match) {
         const currCode = match[1];
         const isBase = isBaseCurrency(currCode);
+        const sym = currencies.find(c => c.code === currCode)?.symbol || currCode;
         return {
           id: `${col.id}_summary`,
           columnId: col.id,
-          label: 'إجمالي الخسارة',
+          label: `إجمالي الخسارة (${sym})`,
           value: totalCost > 0 ? formatAmount(totalCost, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'text-rose-600 font-black'
@@ -152,7 +178,7 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
       }
       return { id: `${col.id}_spacer`, columnId: col.id, label: '', value: '' };
     });
-  }, [sortedItems, enrichedColumns, formatAmount, isBaseCurrency]);
+  }, [sortedItems, enrichedColumns, formatAmount, isBaseCurrency, currencies]);
 
   return (
     <TableShell
@@ -173,6 +199,8 @@ export function DamagedTable({ items, loading, search, onSearchChange }: Damaged
         tableId="damaged"
         sortField={sortField}
         sortDirection={sortDirection}
+        selectedId={selectedId}
+        onRowClick={onView}
         onHeaderClick={(col) => {
           if (col.id === "material_name") handleSort("material_name");
           else if (col.id === "damage_date") handleSort("damage_date");

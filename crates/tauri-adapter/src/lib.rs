@@ -61,6 +61,8 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             // Damaged Items
             commands::damaged::create_damaged_item,
             commands::damaged::list_damaged_items,
+            commands::damaged::update_damaged_item,
+            commands::damaged::delete_damaged_item,
             // Production Orders
             commands::production::create_production_order,
             commands::production::list_production_orders,

@@ -2,6 +2,7 @@ import { invoke } from '@shared/lib/invoke';
 import type {
   DamagedItem,
   CreateDamagedItemRequest,
+  UpdateDamagedItemRequest,
   StockAdjustment,
   CreateStockAdjustmentRequest,
   ProductionOrder,
@@ -17,6 +18,14 @@ export const damagedService = {
 
   async listDamagedItems(): Promise<DamagedItem[]> {
     return await invoke<DamagedItem[]>('list_damaged_items');
+  },
+
+  async updateDamagedItem(request: UpdateDamagedItemRequest): Promise<DamagedItem> {
+    return await invoke<DamagedItem>('update_damaged_item', { request });
+  },
+
+  async deleteDamagedItem(id: string): Promise<void> {
+    return await invoke<void>('delete_damaged_item', { id });
   },
 };
 

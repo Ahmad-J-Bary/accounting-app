@@ -13,10 +13,15 @@ interface DamagedFormProps {
   onSave: (payload: CreateDamagedItemRequest) => Promise<void>;
   saving: boolean;
   initialMaterialId?: string;
+  initialValues?: Partial<CreateDamagedItemRequest>;
 }
 
-export function DamagedForm({ onClose, products, onSave, saving, initialMaterialId }: DamagedFormProps) {
+export function DamagedForm({ onClose, products, onSave, saving, initialMaterialId, initialValues }: DamagedFormProps) {
+  const isEditMode = !!initialValues;
   const [form, setForm] = useState<Partial<CreateDamagedItemRequest>>(() => {
+    if (initialValues) {
+      return { ...initialValues };
+    }
     const prod = products.find(p => p.id === initialMaterialId);
     return {
       damage_date: new Date().toISOString(),
@@ -28,15 +33,19 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
   });
 
   useEffect(() => {
-    const prod = products.find(p => p.id === initialMaterialId);
-    setForm({
-      damage_date: new Date().toISOString(),
-      quantity: 0,
-      cost_impact: prod ? parseFloat(prod.last_purchase_price || "0") : 0,
-      reason: "",
-      material_id: initialMaterialId ?? "",
-    });
-  }, [initialMaterialId, products]);
+    if (initialValues) {
+      setForm({ ...initialValues });
+    } else {
+      const prod = products.find(p => p.id === initialMaterialId);
+      setForm({
+        damage_date: new Date().toISOString(),
+        quantity: 0,
+        cost_impact: prod ? parseFloat(prod.last_purchase_price || "0") : 0,
+        reason: "",
+        material_id: initialMaterialId ?? "",
+      });
+    }
+  }, [initialMaterialId, initialValues, products]);
 
   const handleSave = async () => {
     if (!form.material_id || !form.reason || !form.quantity) return;
@@ -45,7 +54,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
 
   return (
     <FormPanel
-      title="تسجيل مواد تالفة"
+      title={isEditMode ? "تعديل تالف" : "تسجيل مواد تالفة"}
       icon={<AlertTriangle className="w-5 h-5 text-rose-600" />}
       onClose={onClose}
       onSave={handleSave}

@@ -1,22 +1,22 @@
-use crate::dto::damaged_dto::{CreateDamagedItemRequest, DamagedItemDto};
+use crate::dto::damaged_dto::{UpdateDamagedItemRequest, DamagedItemDto};
 use crate::errors::AppError;
 use crate::ports::damaged_item_repository::DamagedItemRepository;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
 use chrono::{DateTime, Utc};
 use domain::inventory::stock_movement::{MovementType, StockMovement};
-use domain::inventory::DamagedItem;
-use domain::shared::ids::MaterialId;
+use domain::shared::ids::{DamagedItemId, MaterialId};
 use rust_decimal::Decimal;
 use std::sync::Arc;
+use crate::use_cases::damaged::create::to_dto;
 
-pub struct CreateDamagedItemUseCase {
+pub struct UpdateDamagedItemUseCase {
     repo: Arc<dyn DamagedItemRepository>,
     material_repo: Arc<dyn MaterialRepository>,
     movement_repo: Arc<dyn StockMovementRepository>,
 }
 
-impl CreateDamagedItemUseCase {
+impl UpdateDamagedItemUseCase {
     pub fn new(
         repo: Arc<dyn DamagedItemRepository>,
         material_repo: Arc<dyn MaterialRepository>,
@@ -29,7 +29,18 @@ impl CreateDamagedItemUseCase {
         }
     }
 
-    pub async fn execute(&self, req: CreateDamagedItemRequest) -> Result<DamagedItemDto, AppError> {
+    pub async fn execute(&self, req: UpdateDamagedItemRequest) -> Result<DamagedItemDto, AppError> {
+        let id = req
+            .id
+            .parse::<DamagedItemId>()
+            .map_err(|_| AppError::Invalid("معرف التالف غير صالح".into()))?;
+
+        let mut item = self
+            .repo
+            .find_by_id(&id)
+            .await?
+            .ok_or_else(|| AppError::NotFound("سجل التالف غير موجود".into()))?;
+
         let material_id = req
             .material_id
             .parse::<MaterialId>()
@@ -49,16 +60,17 @@ impl CreateDamagedItemUseCase {
             .map_err(|_| AppError::Invalid("التاريخ غير صالح".into()))?
             .with_timezone(&Utc);
 
-        let item = DamagedItem::new(
-            material_id,
-            quantity,
-            req.reason.clone(),
-            damage_date,
-            cost_impact,
-            req.notes,
-        )
-        .map_err(|e| AppError::Invalid(e.to_string()))?;
+        item.material_id = material_id;
+        item.quantity = quantity;
+        item.reason = req.reason.clone();
+        item.damage_date = damage_date;
+        item.cost_impact = cost_impact;
+        item.notes = req.notes;
+
         self.repo.save(&item).await?;
+
+        let reference = format!("DAM-{}", item.id);
+        self.movement_repo.delete_by_reference(&reference, "Damaged").await?;
 
         let unit_cost = if quantity > Decimal::ZERO {
             cost_impact / quantity
@@ -71,27 +83,13 @@ impl CreateDamagedItemUseCase {
             quantity,
             unit_cost,
             cost_impact,
-            format!("DAM-{}", item.id),
-            req.reason.clone(),
+            reference,
+            req.reason,
             damage_date,
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
         self.movement_repo.save(&movement).await?;
 
         Ok(to_dto(item))
-    }
-}
-
-pub fn to_dto(d: DamagedItem) -> DamagedItemDto {
-    DamagedItemDto {
-        id: d.id.to_string(),
-        material_id: d.material_id.to_string(),
-        material_name: None,
-        quantity: d.quantity.to_string(),
-        reason: d.reason,
-        damage_date: d.damage_date.to_rfc3339(),
-        cost_impact: d.cost_impact.to_string(),
-        notes: d.notes,
-        created_at: d.created_at.to_rfc3339(),
     }
 }

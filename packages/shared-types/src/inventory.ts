@@ -19,6 +19,16 @@ export interface CreateDamagedItemRequest {
   notes?: string;
 }
 
+export interface UpdateDamagedItemRequest {
+  id: string;
+  material_id: string;
+  quantity: number;
+  reason: string;
+  damage_date: string;
+  cost_impact: number;
+  notes?: string;
+}
+
 // ---- Stock Adjustment ----
 export interface StockAdjustment {
   id: string;
