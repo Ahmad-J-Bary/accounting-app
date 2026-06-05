@@ -111,7 +111,7 @@ export function CustomerTable({ customers, loading, search, onSearchChange, onVi
 
   // Default visible: only base currency's balance is shown; secondary balances are hidden.
   const defaultVisible = useMemo(() => {
-    const ids: string[] = ["code", "name", "phone", "status"];
+    const ids: string[] = ["code", "name", "status"];
     currencies.forEach(curr => {
       if (isBaseCurrency(curr.code)) {
         ids.push(`balance_${curr.code}`);

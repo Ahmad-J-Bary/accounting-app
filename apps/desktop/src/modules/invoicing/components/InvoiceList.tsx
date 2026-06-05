@@ -4,7 +4,8 @@ import { Button } from "@shared/ui/button";
 import { Plus, Eye, Printer, ShoppingCart, Settings2, Banknote, History, Trash2, RefreshCw } from "lucide-react";
 import { InvoiceDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { InvoiceTable, getInvoiceBaseAmount } from "./InvoiceTable";
+import { InvoiceTable } from "./InvoiceTable";
+import { getInvoiceBaseAmount } from "../lib/invoiceHelpers";
 
 export interface ExtraColumn {
   key: string;

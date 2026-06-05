@@ -5,6 +5,7 @@ import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
 import { formatDateTime } from "@shared/lib/format";
+import { getInvoiceBaseAmount } from "../lib/invoiceHelpers";
 import { Button } from "@shared/ui/button";
 import type { InvoiceDto } from "@erp/shared-types";
 import { DocumentStatusBadge } from "./DocumentStatusBadge";
@@ -42,25 +43,6 @@ interface InvoiceTableProps {
   onStatusFilterChange: (val: string) => void;
   toolbarTitle?: string;
 }
-
-export const getInvoiceBaseAmount = (
-  originalAmount: string | number | null | undefined,
-  v2Amount?: { base_amount?: string },
-  currencyCode?: string,
-  exchangeRate?: string,
-  baseCurrencyCode?: string | null
-): number => {
-  if (v2Amount?.base_amount) {
-    return parseFloat(v2Amount.base_amount) || 0;
-  }
-  const amt = typeof originalAmount === "string" ? parseFloat(originalAmount) : (originalAmount ?? 0);
-  if (!amt) return 0;
-  if (currencyCode && baseCurrencyCode && currencyCode === baseCurrencyCode) {
-    return amt;
-  }
-  const rate = parseFloat(exchangeRate || "1") || 1;
-  return amt / rate;
-};
 
 export function InvoiceTable({
   data,

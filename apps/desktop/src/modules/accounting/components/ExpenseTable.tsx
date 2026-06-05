@@ -135,7 +135,6 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     const totalBal = sortedExpenses.reduce((sum, e) => sum + Number(e.balance || 0), 0);
-    const overall = totalBal > 0 ? "مدين" : totalBal < 0 ? "دائن" : null;
     const overallColor = totalBal > 0 ? 'text-red-600' : totalBal < 0 ? 'text-emerald-600' : 'text-slate-400';
 
     const baseTotal = sortedExpenses.reduce((sum, e) => {
@@ -149,26 +148,18 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
       if (id === 'name') {
         return { id: 'name_summary', columnId: 'name', label: '', value: `${sortedExpenses.length} بند`, className: 'text-slate-600 font-medium' };
       }
-      if (id === 'code' || id === 'actions') {
+      if (id === 'code' || id === 'status' || id === 'actions') {
         return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
-      }
-      if (id === 'status') {
-        return {
-          id: 'status_summary',
-          columnId: 'status',
-          label: '',
-          value: overall ? `الرصيد: ${overall}` : "—",
-          className: `${overallColor} font-bold`
-        };
       }
       const match = id.match(/^balance_(.+)$/);
       if (match) {
         const currCode = match[1];
         const isBase = isBaseCurrency(currCode);
+        const statusLabel = totalBal > 0 ? 'مدين' : 'دائن';
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: 'الإجمالي',
+          label: totalBal === 0 ? '—' : `الرصيد / ${statusLabel}`,
           value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? `${overallColor} font-black`

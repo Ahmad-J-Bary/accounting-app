@@ -108,7 +108,7 @@ export function SupplierTable({ suppliers, loading, search, onSearchChange, onVi
   }, [onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, getBalanceColumns, isBaseCurrency]);
 
   const defaultVisible = useMemo(() => {
-    const ids: string[] = ["code", "name", "phone", "status"];
+    const ids: string[] = ["code", "name", "status"];
     currencies.forEach(curr => {
       if (isBaseCurrency(curr.code)) {
         ids.push(`balance_${curr.code}`);

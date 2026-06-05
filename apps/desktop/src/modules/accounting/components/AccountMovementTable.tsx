@@ -165,7 +165,8 @@ export function AccountMovementTable({
     return cols;
   }, [sortedCurrencies, formatAmount, isBaseCurrency]);
 
-  // Default visible: only base currency's debit/credit columns are shown.
+  // Default visible: only base currency's debit/credit columns are shown,
+  // plus the credit/debit account columns by default.
   const defaultVisible = useMemo(() => {
     const def: string[] = ["entry_number", "journal_type"];
     sortedCurrencies.forEach(curr => {
@@ -178,7 +179,7 @@ export function AccountMovementTable({
         def.push(`credit_${curr.code}`);
       }
     });
-    def.push("description", "date");
+    def.push("description", "credit_account", "debit_account", "date");
     return def;
   }, [sortedCurrencies, isBaseCurrency]);
 
@@ -189,8 +190,16 @@ export function AccountMovementTable({
   });
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
-    const baseDebitTotal = tableData.reduce((s, l) => s + parseFloat(l.debit_base || "0"), 0);
-    const baseCreditTotal = tableData.reduce((s, l) => s + parseFloat(l.credit_base || "0"), 0);
+    const baseDebitTotal = tableData.reduce(
+      (s, l) => s + parseFloat(l.debit_base || "0"),
+      0,
+    );
+    const baseCreditTotal = tableData.reduce(
+      (s, l) => s + parseFloat(l.credit_base || "0"),
+      0,
+    );
+    const baseBalance = baseDebitTotal - baseCreditTotal;
+    const baseSymbol = baseCurrency?.symbol || baseCurrency?.code || "";
 
     return enrichedColumns.map((col) => {
       const id = col.id;
@@ -200,37 +209,69 @@ export function AccountMovementTable({
       if (id === "journal_type" || id === "description") {
         return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
       }
+
+      if (id === "credit_account") {
+        const sign = baseBalance > 0 ? "مدين" : baseBalance < 0 ? "دائن" : "متزن";
+        const label = `الرصيد / ${sign} (${baseSymbol})`;
+        const value = formatAmount(Math.abs(baseBalance), { currencyCode: baseCurrency?.code || "" });
+        const valueClass = baseBalance > 0
+          ? "text-blue-700 font-black"
+          : baseBalance < 0
+          ? "text-emerald-700 font-black"
+          : "text-slate-500 font-bold";
+        return { id: `${id}_balance`, columnId: id, label, value, className: valueClass };
+      }
+      if (id === "debit_account") {
+        const sec = sortedCurrencies.length > 1 ? sortedCurrencies[1] : null;
+        const curr = sec || baseCurrency;
+        const code = curr?.code || "";
+        const sym = curr?.symbol || code;
+        const sign = baseBalance > 0 ? "مدين" : baseBalance < 0 ? "دائن" : "متزن";
+        const label = `الرصيد / ${sign} (${sym})`;
+        const value = formatAmount(Math.abs(baseBalance), { currencyCode: code });
+        const valueClass = baseBalance > 0
+          ? "text-blue-700 font-black"
+          : baseBalance < 0
+          ? "text-emerald-700 font-black"
+          : "text-slate-500 font-bold";
+        return { id: `${id}_balance`, columnId: id, label, value, className: valueClass };
+      }
+
       const debitMatch = id.match(/^debit_(.+)$/);
       if (debitMatch) {
         const currCode = debitMatch[1];
         const isBase = isBaseCurrency(currCode);
+        const label = col.label || `عليه / مدين (${currCode})`;
         return {
           id: `${id}_total`,
           columnId: id,
-          label: "إجمالي مدين",
+          label,
           value: baseDebitTotal > 0 ? formatAmount(baseDebitTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? "text-blue-700 font-black"
             : "text-blue-300 font-extrabold"
         };
       }
+
       const creditMatch = id.match(/^credit_(.+)$/);
       if (creditMatch) {
         const currCode = creditMatch[1];
         const isBase = isBaseCurrency(currCode);
+        const label = col.label || `له / دائن (${currCode})`;
         return {
           id: `${id}_total`,
           columnId: id,
-          label: "إجمالي دائن",
+          label,
           value: baseCreditTotal > 0 ? formatAmount(baseCreditTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? "text-emerald-700 font-black"
             : "text-emerald-300 font-extrabold"
         };
       }
+
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [tableData, sortedData, formatAmount, enrichedColumns, isBaseCurrency]);
+  }, [tableData, sortedData, formatAmount, enrichedColumns, isBaseCurrency, baseCurrency, sortedCurrencies]);
 
   return (
     <TableShell

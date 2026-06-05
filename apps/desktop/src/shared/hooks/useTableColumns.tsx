@@ -36,7 +36,7 @@ export function useTableColumns() {
       const symbol = curr.symbol || curr.code;
       return {
         id: `balance_${curr.code}`,
-        header: sortableHeader,
+        header: `الرصيد (${symbol})`,
         label: `الرصيد (${symbol})`,
         accessor: (item) => {
           const absBal = Math.abs(Number(item.balance || 0));
@@ -77,21 +77,12 @@ export function useTableColumns() {
         value: `${items.length} ${countLabel}`,
         className: 'text-slate-500 font-medium'
       };
-      if (['code', 'phone', 'actions'].includes(id)) return {
+      if (['code', 'status', 'phone', 'actions'].includes(id)) return {
         id: `${id}_spacer`,
         columnId: id,
         label: '',
         value: ''
       };
-      if (id === 'status') {
-        return {
-          id: 'status_summary',
-          columnId: 'status',
-          label: '',
-          value: overall ? `الرصيد: ${overall}` : "—",
-          className: `${overallColor} font-bold`
-        };
-      }
       const match = id.match(/^balance_(.+)$/);
       if (match) {
         const currCode = match[1];
@@ -102,7 +93,7 @@ export function useTableColumns() {
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: 'الإجمالي',
+          label: overall ? `الرصيد / ${overall}` : "—",
           value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
           className: valueClass,
         };
