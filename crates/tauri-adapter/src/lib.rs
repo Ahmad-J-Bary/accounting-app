@@ -40,6 +40,7 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::material::delete_material,
             commands::material::add_material_unit,
             commands::material::delete_material_unit,
+            commands::material::update_material_costing_method,
             commands::category::create_category,
             commands::category::list_categories,
             commands::category::update_category,
@@ -73,6 +74,8 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             // Inventory
             commands::inventory::list_stock_movements,
             commands::inventory::list_movements_by_material,
+            commands::inventory::get_material_available_lots,
+            commands::inventory::get_material_costing_method,
             // Journal Entries
             commands::journal::create_journal_entry,
             commands::journal::list_journal_entries,

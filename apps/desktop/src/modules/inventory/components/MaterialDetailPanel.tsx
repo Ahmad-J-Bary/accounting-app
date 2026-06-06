@@ -1,10 +1,14 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
 import { Badge } from "@shared/ui/badge";
+import { Button } from "@shared/ui/button";
+import { cn } from '@shared/lib/utils';
 import { formatCurrency, formatDate } from '@shared/lib/format';
-import { Package, TrendingUp, RefreshCw, Pencil, Trash2, Barcode, Hash, ArrowDown, ArrowUp } from "lucide-react";
-import type { MaterialDto, StockMovementDetailDto } from "@erp/shared-types";
+import { toast } from 'sonner';
+import { Package, TrendingUp, RefreshCw, Pencil, Trash2, Barcode, Hash, ArrowDown, ArrowUp, Layers } from "lucide-react";
+import type { MaterialDto, StockMovementDetailDto, InventoryLotDto } from "@erp/shared-types";
 import { materialService } from '@modules/inventory/api/materialService';
+import { lotService } from '@modules/inventory/api/lotService';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import {
   SidebarShell,
@@ -44,6 +48,13 @@ export function MaterialDetailPanel({
   const baseSym = baseCurrency?.symbol || baseCurrency?.code || "";
   const [movements, setMovements] = useState<StockMovementDetailDto[]>([]);
   const [movementsLoading, setMovementsLoading] = useState(false);
+  const [lots, setLots] = useState<InventoryLotDto[]>([]);
+  const [lotsLoading, setLotsLoading] = useState(false);
+  const [costingMethod, setCostingMethod] = useState(material?.costing_method || "Average");
+
+  useEffect(() => {
+    setCostingMethod(material?.costing_method || "Average");
+  }, [material?.id]);
 
   useEffect(() => {
     if (!material) return;
@@ -53,6 +64,28 @@ export function MaterialDetailPanel({
       .catch(() => {})
       .finally(() => setMovementsLoading(false));
   }, [material]);
+
+  useEffect(() => {
+    if (!material) return;
+    setLotsLoading(true);
+    lotService.getAvailableLots(material.id)
+      .then(setLots)
+      .catch(() => {})
+      .finally(() => setLotsLoading(false));
+  }, [material, costingMethod]);
+
+  const toggleCostingMethod = useCallback(async () => {
+    if (!material) return;
+    const newMethod = costingMethod === "Average" ? "FIFO" : "Average";
+    try {
+      await lotService.updateCostingMethod(material.id, newMethod);
+      material.costing_method = newMethod;
+      setCostingMethod(newMethod);
+      toast.success(`تم تغيير طريقة التكلفة إلى ${newMethod === "FIFO" ? "FIFO" : "المتوسط"}`);
+    } catch (e) {
+      toast.error("فشل تغيير طريقة التكلفة: " + e);
+    }
+  }, [material, costingMethod]);
 
   const displayMovements = useMemo(() => {
     const groups = new Map<string, StockMovementDetailDto>();
@@ -159,6 +192,21 @@ export function MaterialDetailPanel({
                   ),
                 },
                 {
+                  label: "طريقة التكلفة",
+                  value: (
+                    <div className="flex items-center gap-2">
+                      <span className={cn("text-[11px] font-medium px-2 py-0.5 rounded-full border cursor-pointer hover:opacity-80",
+                        costingMethod === "FIFO"
+                          ? "bg-purple-50 text-purple-700 border-purple-200"
+                          : "bg-slate-50 text-slate-600 border-slate-200"
+                      )} onClick={toggleCostingMethod}>
+                        {costingMethod === "FIFO" ? "FIFO" : "متوسط"}
+                      </span>
+                      <span className="text-[9px] text-slate-400">(اضغط للتغيير)</span>
+                    </div>
+                  ),
+                },
+                {
                   label: "حد الطلب",
                   value: material.minimum_stock || "0",
                 },
@@ -181,7 +229,9 @@ export function MaterialDetailPanel({
 
           {/* Tabs */}
           <Tabs defaultValue="units">
-            <TabsList className="grid w-full grid-cols-3 h-10 p-1 bg-slate-100/80 rounded-lg">
+            <TabsList className={cn("grid w-full h-10 p-1 bg-slate-100/80 rounded-lg",
+              costingMethod === "FIFO" ? "grid-cols-4" : "grid-cols-3"
+            )}>
               <TabsTrigger
                 value="units"
                 className="flex items-center gap-2 text-xs rounded-md"
@@ -200,6 +250,14 @@ export function MaterialDetailPanel({
               >
                 <RefreshCw className="w-3.5 h-3.5" /> حركة المادة
               </TabsTrigger>
+              {costingMethod === "FIFO" && (
+                <TabsTrigger
+                  value="lots"
+                  className="flex items-center gap-2 text-xs rounded-md"
+                >
+                  <Layers className="w-3.5 h-3.5" /> الدفعات
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="units" className="mt-4 focus-visible:outline-none">
@@ -352,6 +410,48 @@ export function MaterialDetailPanel({
                 )}
               </div>
             </TabsContent>
+
+            {costingMethod === "FIFO" && (
+              <TabsContent value="lots" className="mt-4 focus-visible:outline-none">
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                  {lotsLoading ? (
+                    <div className="text-center py-8 text-muted-foreground text-xs">
+                      جاري التحميل...
+                    </div>
+                  ) : lots.length === 0 ? (
+                    <div className="text-center py-10 border-2 border-dashed rounded-xl text-muted-foreground bg-slate-50/50">
+                      <Layers className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                      <span className="text-xs">لا توجد دفعات متاحة</span>
+                    </div>
+                  ) : (
+                    <div className="border rounded-xl overflow-hidden shadow-sm bg-white">
+                      <table className="w-full text-[11px] text-right">
+                        <thead className="bg-slate-50 border-b">
+                          <tr>
+                            <th className="p-2 font-bold text-slate-500">تاريخ الشراء</th>
+                            <th className="p-2 font-bold text-slate-500 text-center">الكمية الأصلية</th>
+                            <th className="p-2 font-bold text-slate-500 text-center">المتبقي</th>
+                            <th className="p-2 font-bold text-slate-500 text-left">تكلفة الوحدة</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {lots.map((lot) => (
+                            <tr key={lot.id} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="p-2 text-slate-600">{lot.purchase_date?.slice(0, 10) || "—"}</td>
+                              <td className="p-2 text-center tabular-nums">{parseFloat(lot.quantity_original).toLocaleString()}</td>
+                              <td className="p-2 text-center tabular-nums font-bold text-emerald-600">{parseFloat(lot.quantity_remaining).toLocaleString()}</td>
+                              <td className="p-2 text-left tabular-nums font-bold text-amber-600">
+                                {formatCurrency(parseFloat(lot.unit_cost_base), baseSym || undefined)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       </SidebarBody>

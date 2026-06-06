@@ -1,8 +1,5 @@
 import { useMemo, useCallback, useState, useEffect } from "react";
-import {
-  formatWithLocale,
-  useCurrencyContext,
-} from "@app/providers/CurrencyContext";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 import { GridLine } from "@modules/invoicing/lib/invoiceUtils";
 import { DocumentColumn } from "@widgets/document-shell/GenericDocumentGrid";
@@ -87,7 +84,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
         } else {
           el[priceKey] = p.toFixed(2).replace(/\.?0+$/, "");
         }
-        el[`line_total_${curr.code}`] = formatWithLocale(t, curr.decimals);
+        el[`line_total_${curr.code}`] = t.toFixed(curr.decimals).replace(/\.?0+$/, "");
 
         [
           "cost_price",
@@ -301,7 +298,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
         header: `الإجمالي (${s})`,
         width: "w-[110px]",
         align: "left",
-        type: "readonly",
+        type: "number",
         defaultVisible: isBase,
       });
     });
@@ -310,13 +307,13 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
       ...baseCols,
       ...prePriceExtraColumns,
       ...priceCols,
-      {
+      ...(invoiceType === "OpeningBalance" ? [] : [{
         key: "discount",
         header: "خصم %",
         width: "w-[70px]",
         align: "center",
         type: "number",
-      },
+      } as DocumentColumn]),
       ...totalCols,
       ...extraColumns,
     ];
@@ -324,7 +321,9 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
     currencies,
     baseCurrency?.code,
     priceLabel,
+    prePriceExtraColumns,
     extraColumns,
+    invoiceType,
   ]);
 
   const [displayCurrency, setDisplayCurrency] = useState<string>(

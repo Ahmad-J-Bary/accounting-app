@@ -3,9 +3,11 @@ use std::str::FromStr;
 use chrono::Utc;
 use domain::sales::unified_invoice::{InvoiceType};
 use domain::inventory::stock_movement::{StockMovement, MovementType};
+use domain::inventory::inventory_lot::{InventoryLot, LotConsumption};
 use domain::shared::ids::{InvoiceId};
 use crate::ports::unified_invoice_repository::UnifiedInvoiceRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
+use crate::ports::inventory_lot_repository::InventoryLotRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::customer_repository::CustomerRepository;
@@ -17,12 +19,14 @@ use crate::ports::exchange_rate_repository::ExchangeRateRepository;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine};
 use domain::shared::{Currency, Money, MonetaryAmount};
 use rust_decimal::Decimal;
+use uuid::Uuid;
 use crate::dto::invoice_dto::{InvoiceDto};
 use crate::errors::AppError;
 
 pub struct PostInvoiceUseCase {
     repo: Arc<dyn UnifiedInvoiceRepository>,
     movement_repo: Arc<dyn StockMovementRepository>,
+    lot_repo: Arc<dyn InventoryLotRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
     account_repo: Arc<dyn AccountRepository>,
     customer_repo: Arc<dyn CustomerRepository>,
@@ -36,6 +40,7 @@ pub struct PostInvoiceUseCase {
 pub struct PostInvoiceDependencies {
     pub repo: Arc<dyn UnifiedInvoiceRepository>,
     pub movement_repo: Arc<dyn StockMovementRepository>,
+    pub lot_repo: Arc<dyn InventoryLotRepository>,
     pub journal_repo: Arc<dyn JournalEntryRepository>,
     pub account_repo: Arc<dyn AccountRepository>,
     pub customer_repo: Arc<dyn CustomerRepository>,
@@ -68,11 +73,51 @@ fn allocate_extra_cost(
     allocated
 }
 
+/// FIFO allocation: consume from oldest available lots first.
+/// Returns (consumed_lots, weighted_average_cost, weighted_average_cost_base).
+fn allocate_fifo(
+    lots: &[InventoryLot],
+    quantity_needed: Decimal,
+) -> (Vec<LotConsumption>, Decimal) {
+    let mut remaining = quantity_needed;
+    let mut consumed = Vec::new();
+    let mut total_weighted_cost_base = Decimal::ZERO;
+    let mut total_consumed = Decimal::ZERO;
+
+    for lot in lots {
+        if remaining <= Decimal::ZERO {
+            break;
+        }
+        let take = if lot.quantity_remaining >= remaining {
+            remaining
+        } else {
+            lot.quantity_remaining
+        };
+        consumed.push(LotConsumption {
+            lot_id: lot.id,
+            quantity: take,
+            unit_cost_base: lot.unit_cost_base,
+        });
+        total_weighted_cost_base += take * lot.unit_cost_base;
+        total_consumed += take;
+        remaining -= take;
+    }
+
+    let avg_cost_base = if total_consumed > Decimal::ZERO {
+        total_weighted_cost_base / total_consumed
+    } else {
+        Decimal::ZERO
+    };
+
+    (consumed, avg_cost_base)
+}
+
 impl PostInvoiceUseCase {
     pub fn new(deps: PostInvoiceDependencies) -> Self {
         Self {
             repo: deps.repo,
             movement_repo: deps.movement_repo,
+            lot_repo: deps.lot_repo,
             journal_repo: deps.journal_repo,
             account_repo: deps.account_repo,
             customer_repo: deps.customer_repo,
@@ -94,6 +139,7 @@ impl PostInvoiceUseCase {
              let reopener = crate::use_cases::unified_invoice::ReopenInvoiceUseCase::new(
                 self.repo.clone(),
                 self.movement_repo.clone(),
+                self.lot_repo.clone(),
                 self.journal_repo.clone(),
                 self.customer_repo.clone(),
                 self.supplier_repo.clone(),
@@ -101,7 +147,7 @@ impl PostInvoiceUseCase {
                 self.exchange_rate_repo.clone(),
             );
             reopener.execute(id.clone()).await?;
-            
+
             // Re-fetch to get clean state
             invoice = self.repo.find_by_id(&invoice_id).await?
                 .ok_or_else(|| AppError::NotFound("الفاتورة غير موجودة بعد التراجع".into()))?;
@@ -112,7 +158,7 @@ impl PostInvoiceUseCase {
         let movement_type = match invoice.invoice_type {
             InvoiceType::Sales => MovementType::Sale,
             InvoiceType::Purchase => MovementType::Purchase,
-            InvoiceType::PurchaseCosts => MovementType::Purchase, 
+            InvoiceType::PurchaseCosts => MovementType::Purchase,
             InvoiceType::OpeningBalance => MovementType::OpeningBalance,
         };
 
@@ -127,12 +173,17 @@ impl PostInvoiceUseCase {
         for (index, line) in invoice.lines.iter().enumerate() {
             let conversion_factor = line.conversion_factor.unwrap_or(Decimal::ONE);
             let effective_quantity = line.quantity * conversion_factor;
-            
+
             let line_total = line.line_total();
             let mut total_cost = line_total.amount();
             let mut total_cost_base = line_total.base_amount;
 
-            if invoice.invoice_type == InvoiceType::Purchase {
+            let is_purchase = invoice.invoice_type == InvoiceType::Purchase
+                || invoice.invoice_type == InvoiceType::OpeningBalance;
+
+            let is_sales = invoice.invoice_type == InvoiceType::Sales;
+
+            if is_purchase {
                 let is_last_line = index + 1 == invoice.lines.len();
                 total_cost += allocate_extra_cost(
                     line_total.amount(),
@@ -148,28 +199,78 @@ impl PostInvoiceUseCase {
                     &mut remaining_extra_base,
                     is_last_line,
                 );
-            } else if invoice.invoice_type == InvoiceType::Sales {
-                // For Sales invoices, the stock movement cost must reflect the
-                // INVENTORY COST (average cost), NOT the sale price.
-                // This is critical for correct Ending Inventory calculation in Income Statement.
-                let summary = self.movement_repo.get_material_summary(&line.material_id).await
-                    .unwrap_or(crate::ports::stock_movement_repository::MaterialInventorySummary {
-                        total_received: Decimal::ZERO,
-                        total_sold: Decimal::ZERO,
-                        total_available: Decimal::ZERO,
-                        total_damaged: Decimal::ZERO,
-                        last_purchase_price: Decimal::ZERO,
-                        last_purchase_price_base: Decimal::ZERO,
-                        last_sale_price: Decimal::ZERO,
-                        last_sale_price_base: Decimal::ZERO,
-                        average_cost: Decimal::ZERO,
-                        average_cost_base: Decimal::ZERO,
-                        average_raw_price_base: Decimal::ZERO,
-                    });
-                let avg_unit_cost_base = summary.average_cost_base;
-                let avg_unit_cost = summary.average_cost;
-                total_cost = avg_unit_cost * effective_quantity;
-                total_cost_base = avg_unit_cost_base * effective_quantity;
+            } else if is_sales {
+                // Determine costing strategy
+                let costing_method = self.lot_repo
+                    .get_costing_method(&line.material_id.to_string())
+                    .await
+                    .unwrap_or_else(|_| "Average".to_string());
+
+                if costing_method == "FIFO" {
+                    // Pre-fetch all available lots and allocate FIFO
+                    let available_lots = self.lot_repo
+                        .find_available_by_material(&line.material_id.to_string())
+                        .await?;
+
+                    // Compute total available quantity from lots
+                    let total_available_qty: Decimal = available_lots.iter()
+                        .map(|l| l.quantity_remaining)
+                        .sum();
+
+                    if total_available_qty < effective_quantity {
+                        return Err(AppError::Invalid(format!(
+                            "الكمية المتاحة في المستودع ({}) غير كافية للصنف. المطلوب: {}",
+                            total_available_qty, effective_quantity
+                        )));
+                    }
+
+                    let (_consumed, avg_cost_base) = allocate_fifo(
+                        &available_lots,
+                        effective_quantity,
+                    );
+
+                    total_cost_base = avg_cost_base * effective_quantity;
+                    total_cost = avg_cost_base * effective_quantity;
+
+                    // Update lot remaining quantities
+                    let mut remaining_qty = effective_quantity;
+                    for lot in &available_lots {
+                        if remaining_qty <= Decimal::ZERO {
+                            break;
+                        }
+                        let take = if lot.quantity_remaining >= remaining_qty {
+                            remaining_qty
+                        } else {
+                            lot.quantity_remaining
+                        };
+                        let new_remaining = lot.quantity_remaining - take;
+                        self.lot_repo.update_remaining(
+                            &lot.id.to_string(),
+                            &new_remaining.to_string(),
+                        ).await?;
+                        remaining_qty -= take;
+                    }
+                } else {
+                    // Average cost (existing logic)
+                    let summary = self.movement_repo.get_material_summary(&line.material_id).await
+                        .unwrap_or(crate::ports::stock_movement_repository::MaterialInventorySummary {
+                            total_received: Decimal::ZERO,
+                            total_sold: Decimal::ZERO,
+                            total_available: Decimal::ZERO,
+                            total_damaged: Decimal::ZERO,
+                            last_purchase_price: Decimal::ZERO,
+                            last_purchase_price_base: Decimal::ZERO,
+                            last_sale_price: Decimal::ZERO,
+                            last_sale_price_base: Decimal::ZERO,
+                            average_cost: Decimal::ZERO,
+                            average_cost_base: Decimal::ZERO,
+                            average_raw_price_base: Decimal::ZERO,
+                        });
+                    let avg_unit_cost_base = summary.average_cost_base;
+                    let avg_unit_cost = summary.average_cost;
+                    total_cost = avg_unit_cost * effective_quantity;
+                    total_cost_base = avg_unit_cost_base * effective_quantity;
+                }
             }
 
             let unit_cost = if effective_quantity > Decimal::ZERO {
@@ -197,10 +298,30 @@ impl PostInvoiceUseCase {
             movement.unit_cost_base = unit_cost_base;
             movement.total_cost = total_cost;
             movement.total_cost_base = total_cost_base;
-            movement.raw_total_cost_base = line_total.base_amount; // raw cost before extras allocation
+            movement.raw_total_cost_base = line_total.base_amount;
             movement.original_currency = Some(invoice.currency_code.clone());
             movement.fx_rate = invoice.exchange_rate;
             self.movement_repo.save(&movement).await?;
+
+            // For purchase invoices (excluding OpeningBalance), create inventory lots
+            if is_purchase {
+                let now = Utc::now();
+                let lot = InventoryLot {
+                    id: Uuid::new_v4(),
+                    material_id: line.material_id.0,
+                    purchase_invoice_id: Some(invoice.id.0),
+                    movement_id: movement.id,
+                    quantity_original: effective_quantity,
+                    quantity_remaining: effective_quantity,
+                    unit_cost_base: movement.unit_cost_base,
+                    raw_unit_cost_base: line_total.base_amount,
+                    currency_code: Some(invoice.currency_code.clone()),
+                    fx_rate: invoice.exchange_rate,
+                    purchase_date: now,
+                    created_at: now,
+                };
+                self.lot_repo.save(&lot).await?;
+            }
         }
 
         self.repo.update(&invoice).await?;
@@ -279,9 +400,9 @@ impl PostInvoiceUseCase {
                 let main_debit_amount = total_amount - extra_costs_val;
 
                 journal_lines.push(JournalLine::new(
-                    main_account.id, 
-                    MonetaryAmount::new(Money::new(main_debit_amount, doc_currency.clone()), fx_rate), 
-                    MonetaryAmount::zero(doc_currency.clone()), 
+                    main_account.id,
+                    MonetaryAmount::new(Money::new(main_debit_amount, doc_currency.clone()), fx_rate),
+                    MonetaryAmount::zero(doc_currency.clone()),
                     format!("إنشاء فاتورة المشتريات رقم {}", invoice.invoice_number)
                 ));
 
@@ -294,9 +415,9 @@ impl PostInvoiceUseCase {
                     if let Some(p_acc_id) = supplier.account_id {
                         if let Some(supplier_id) = &invoice.supplier_id {
                             journal_lines.push(JournalLine::new(
-                                p_acc_id, 
-                                MonetaryAmount::zero(doc_currency.clone()), 
-                                MonetaryAmount::new(Money::new(main_debit_amount, doc_currency.clone()), fx_rate), 
+                                p_acc_id,
+                                MonetaryAmount::zero(doc_currency.clone()),
+                                MonetaryAmount::new(Money::new(main_debit_amount, doc_currency.clone()), fx_rate),
                                 format!("ذمة دائنة - فاتورة رقم {}", invoice.invoice_number)
                             ).with_partner(supplier_id.0));
                         }
@@ -315,17 +436,17 @@ impl PostInvoiceUseCase {
                     }
                 } else {
                     journal_lines.push(JournalLine::new(
-                        cash_account.id, 
-                        MonetaryAmount::zero(doc_currency.clone()), 
-                        MonetaryAmount::new(Money::new(main_debit_amount, doc_currency.clone()), fx_rate), 
+                        cash_account.id,
+                        MonetaryAmount::zero(doc_currency.clone()),
+                        MonetaryAmount::new(Money::new(main_debit_amount, doc_currency.clone()), fx_rate),
                         format!("ذمة نقدية - فاتورة رقم {}", invoice.invoice_number)
                     ));
                 }
             } else if invoice.invoice_type == InvoiceType::PurchaseCosts {
                 journal_lines.push(JournalLine::new(
-                    main_account.id, 
-                    MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate), 
-                    MonetaryAmount::zero(doc_currency.clone()), 
+                    main_account.id,
+                    MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate),
+                    MonetaryAmount::zero(doc_currency.clone()),
                     format!("تكاليف إضافية مرتبطة بفاتورة المشتريات رقم {}", invoice.invoice_number)
                 ));
 
@@ -333,18 +454,18 @@ impl PostInvoiceUseCase {
                     if let Some(supplier) = self.supplier_repo.find_by_id(sid).await? {
                         if let Some(p_acc_id) = supplier.account_id {
                             journal_lines.push(JournalLine::new(
-                                p_acc_id, 
-                                MonetaryAmount::zero(doc_currency.clone()), 
-                                MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate), 
+                                p_acc_id,
+                                MonetaryAmount::zero(doc_currency.clone()),
+                                MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate),
                                 format!("ذمة دائنة (تكاليف) - فاتورة رقم {}", invoice.invoice_number)
                             ).with_partner(sid.0));
                         }
                     }
                 } else {
                     journal_lines.push(JournalLine::new(
-                        cash_account.id, 
-                        MonetaryAmount::zero(doc_currency.clone()), 
-                        MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate), 
+                        cash_account.id,
+                        MonetaryAmount::zero(doc_currency.clone()),
+                        MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate),
                         format!("ذمة نقدية (تكاليف) - فاتورة رقم {}", invoice.invoice_number)
                     ));
                 }
@@ -352,15 +473,15 @@ impl PostInvoiceUseCase {
                 let inv_account_opt = self.account_repo.find_by_code("124").await?;
                 if let Some(inv_account) = inv_account_opt {
                     journal_lines.push(JournalLine::new(
-                        inv_account.id, 
-                        MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate), 
-                        MonetaryAmount::zero(doc_currency.clone()), 
+                        inv_account.id,
+                        MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate),
+                        MonetaryAmount::zero(doc_currency.clone()),
                         format!("إنشاء فاتورة أول المدة رقم {}", invoice.invoice_number)
                     ));
                     journal_lines.push(JournalLine::new(
-                        main_account.id, 
-                        MonetaryAmount::zero(doc_currency.clone()), 
-                        MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate), 
+                        main_account.id,
+                        MonetaryAmount::zero(doc_currency.clone()),
+                        MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate),
                         format!("إنشاء فاتورة أول المدة رقم {}", invoice.invoice_number)
                     ));
                 }
@@ -391,7 +512,7 @@ impl PostInvoiceUseCase {
                 },
                 Some(invoice.id.to_string()),
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
-            
+
             journal_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
             self.journal_repo.save(&journal_entry).await?;
         }
@@ -400,12 +521,11 @@ impl PostInvoiceUseCase {
         if invoice.invoice_type == InvoiceType::Purchase && extra_costs_val > Decimal::ZERO {
             let desc = format!("تكاليف إضافية مرتبطة بفاتورة المشتريات رقم {}", invoice.invoice_number);
 
-            // PurchaseCostsJournal always credits CASH — supplier has no relationship with extra costs
             let extra_lines = vec![
                 JournalLine::new(
-                    main_account.id, 
-                    MonetaryAmount::new(Money::new(extra_costs_val, doc_currency.clone()), fx_rate), 
-                    MonetaryAmount::zero(doc_currency.clone()), 
+                    main_account.id,
+                    MonetaryAmount::new(Money::new(extra_costs_val, doc_currency.clone()), fx_rate),
+                    MonetaryAmount::zero(doc_currency.clone()),
                     desc.clone()
                 ),
                 JournalLine::new(
@@ -424,7 +544,7 @@ impl PostInvoiceUseCase {
                 desc,
                 Some(invoice.id.to_string()),
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
-            
+
             extra_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
             self.journal_repo.save(&extra_entry).await?;
         }
@@ -565,7 +685,6 @@ pub async fn convert_to_partner_currency(
     currency_repo: &Arc<dyn CurrencyRepository>,
     exchange_rate_repo: &Arc<dyn ExchangeRateRepository>,
 ) -> Result<Decimal, AppError> {
-    // If partner has no currency assigned, treat it as base currency
     if partner_currency.is_empty() {
         let base_currency = currency_repo
             .get_base_currency()
@@ -586,7 +705,6 @@ pub async fn convert_to_partner_currency(
         .await?
         .ok_or_else(|| AppError::NotFound("العملة الأساسية غير معرفة".into()))?;
 
-    // Step 1: convert amount to base currency (divide by invoice exchange rate)
     let base_amount = if invoice_currency == base_currency.code || invoice_exchange_rate.is_zero() {
         amount
     } else {
@@ -597,7 +715,6 @@ pub async fn convert_to_partner_currency(
         return Ok(base_amount);
     }
 
-    // Step 2: convert base currency to partner currency (multiply by rate)
     let rate_opt = exchange_rate_repo
         .find_latest(&base_currency.code, partner_currency, domain::shared::exchange_rate::RateType::Middle)
         .await?;

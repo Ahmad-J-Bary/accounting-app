@@ -2,6 +2,7 @@ use std::sync::Arc;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
 use crate::ports::unified_invoice_repository::UnifiedInvoiceRepository;
+use crate::ports::inventory_lot_repository::InventoryLotRepository;
 use crate::dto::material_dto::{MaterialDto};
 use crate::errors::AppError;
 
@@ -9,6 +10,7 @@ pub struct MaterialQueries {
     repo: Arc<dyn MaterialRepository>,
     movement_repo: Arc<dyn StockMovementRepository>,
     invoice_repo: Arc<dyn UnifiedInvoiceRepository>,
+    lot_repo: Option<Arc<dyn InventoryLotRepository>>,
 }
 
 impl MaterialQueries {
@@ -17,7 +19,20 @@ impl MaterialQueries {
         movement_repo: Arc<dyn StockMovementRepository>,
         invoice_repo: Arc<dyn UnifiedInvoiceRepository>,
     ) -> Self {
-        Self { repo, movement_repo, invoice_repo }
+        Self { repo, movement_repo, invoice_repo, lot_repo: None }
+    }
+
+    pub fn with_lot_repo(mut self, lot_repo: Arc<dyn InventoryLotRepository>) -> Self {
+        self.lot_repo = Some(lot_repo);
+        self
+    }
+
+    async fn populate_lot_info(&self, dto: &mut MaterialDto, material_id: &str) -> Result<(), AppError> {
+        if let Some(ref lot_repo) = self.lot_repo {
+            dto.costing_method = lot_repo.get_costing_method(material_id).await?;
+            dto.active_lots_count = lot_repo.count_active_by_material(material_id).await?;
+        }
+        Ok(())
     }
 
     pub async fn list_all(&self) -> Result<Vec<MaterialDto>, AppError> {
@@ -42,6 +57,8 @@ impl MaterialQueries {
             let (last_p_orig, last_s_orig) = self.invoice_repo.get_last_original_prices(&mid.to_string()).await?;
             dto.last_purchase_price_original = last_p_orig;
             dto.last_sale_price_original = last_s_orig;
+
+            self.populate_lot_info(&mut dto, &mid.to_string()).await?;
 
             dtos.push(dto);
         }
@@ -70,6 +87,8 @@ impl MaterialQueries {
         let (last_p_orig, last_s_orig) = self.invoice_repo.get_last_original_prices(&mid.to_string()).await?;
         dto.last_purchase_price_original = last_p_orig;
         dto.last_sale_price_original = last_s_orig;
+
+        self.populate_lot_info(&mut dto, &mid.to_string()).await?;
 
         Ok(dto)
     }

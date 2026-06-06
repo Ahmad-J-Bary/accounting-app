@@ -61,7 +61,11 @@ export function MaterialTable({
     }
   });
 
-  const unitCostBase = useCallback((m: MaterialDto) => parseFloat(m.average_cost_base || "0"), []);
+  const unitCostBase = useCallback((m: MaterialDto) =>
+    m.costing_method === "FIFO"
+      ? parseFloat(m.last_purchase_price_base || "0")
+      : parseFloat(m.average_cost_base || "0")
+  , []);
   const rawPriceBase = useCallback((m: MaterialDto): number => parseFloat(m.average_raw_price_base || "0"), []);
   const extraCostBase = useCallback((m: MaterialDto) => {
     const raw = rawPriceBase(m);
@@ -190,10 +194,13 @@ export function MaterialTable({
         accessor: (m) => {
           const val = unitCostBase(m);
           if (val <= 0) return "";
+          if (m.costing_method === "FIFO") {
+            return <span title="آخر سعر شراء (FIFO)">{formatAmount(val, { currencyCode: curr.code })}</span>;
+          }
           const raw = rawPriceBase(m);
           if (raw > 0) {
             const extra = extraCostBase(m);
-            const hint = `السعر: ${formatAmount(raw, { currencyCode: curr.code })} + تكاليف: ${formatAmount(extra, { currencyCode: curr.code })}`;
+            const hint = `متوسط: ${formatAmount(raw, { currencyCode: curr.code })} + تكاليف: ${formatAmount(extra, { currencyCode: curr.code })}`;
             return <span title={hint}>{formatAmount(val, { currencyCode: curr.code })}</span>;
           }
           return <>{formatAmount(val, { currencyCode: curr.code })}</>;
@@ -327,6 +334,32 @@ export function MaterialTable({
     });
 
     cols.push({
+      id: "costing_method",
+      header: "طريقة التكلفة",
+      label: "طريقة التكلفة",
+      accessor: (m) => (
+        <span className={cn("text-[11px] font-medium px-2 py-0.5 rounded-full border", 
+          m.costing_method === "FIFO" 
+            ? "bg-purple-50 text-purple-700 border-purple-200" 
+            : "bg-slate-50 text-slate-600 border-slate-200"
+        )}>
+          {m.costing_method === "FIFO" ? "FIFO" : "متوسط"}
+        </span>
+      ),
+      className: "text-center"
+    });
+
+    cols.push({
+      id: "active_lots_count",
+      header: "الدفعات النشطة",
+      label: "الدفعات النشطة",
+      accessor: (m) => m.costing_method === "FIFO" ? (
+        <span className="tabular-nums font-bold text-purple-700">{m.active_lots_count}</span>
+      ) : <span className="text-slate-300">—</span>,
+      className: "tabular-nums"
+    });
+
+    cols.push({
       id: "default_purchase_unit",
       header: "وحدة الشراء",
       label: "وحدة الشراء الافتراضية",
@@ -390,6 +423,8 @@ export function MaterialTable({
       "total_available",
       "units",
       "minimum_stock",
+      "costing_method",
+      "active_lots_count",
       "notes",
       "actions",
     );

@@ -30,6 +30,8 @@ interface InvoiceTableProps {
   onSelect: (id: string | null) => void;
   onView: (inv: InvoiceDto) => void;
   onEdit: (inv: InvoiceDto) => void;
+  onViewOpeningBalance?: (inv: InvoiceDto) => void;
+  onEditOpeningBalance?: (inv: InvoiceDto) => void;
   onPost: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onReopen: (id: string) => Promise<void>;
@@ -55,6 +57,8 @@ export function InvoiceTable({
   onSelect,
   onView,
   onEdit,
+  onViewOpeningBalance,
+  onEditOpeningBalance,
   onPost,
   onDelete,
   onReopen,
@@ -244,10 +248,11 @@ export function InvoiceTable({
               onClick: () => onReopen(inv.id),
             });
           }
+          const isOpeningBalance = inv.invoice_type === "OpeningBalance";
           return (
             <TableActions
-              onView={() => onView(inv)}
-              onEdit={() => onEdit(inv)}
+              onView={() => isOpeningBalance && onViewOpeningBalance ? onViewOpeningBalance(inv) : onView(inv)}
+              onEdit={() => isOpeningBalance && onEditOpeningBalance ? onEditOpeningBalance(inv) : onEdit(inv)}
               onDelete={() => {
                 if (window.confirm("هل أنت متأكد من حذف هذه الفاتورة؟")) {
                   onDelete(inv.id);
@@ -261,7 +266,7 @@ export function InvoiceTable({
       },
     ];
     return cols;
-  }, [formatAmount, currencies, baseCurrency, partyField, partyLabel, partyType, defaultName, showSubtotal, showExtraCosts, extraColumns, onView, onEdit, onPost, onReopen, onDelete, isBaseCurrency]);
+  }, [formatAmount, currencies, baseCurrency, partyField, partyLabel, partyType, defaultName, showSubtotal, showExtraCosts, extraColumns, onView, onEdit, onViewOpeningBalance, onEditOpeningBalance, onPost, onReopen, onDelete, isBaseCurrency]);
 
   // Default visible: hide secondary currency columns by default.
   // User can toggle them on.
@@ -503,7 +508,7 @@ export function InvoiceTable({
           else if (col.id.startsWith("extra_costs_")) handleSort("extra_costs");
         }}
         onRowClick={(inv) => onSelect(inv.id)}
-        onRowDoubleClick={onView}
+        onRowDoubleClick={(inv) => inv.invoice_type === "OpeningBalance" && onViewOpeningBalance ? onViewOpeningBalance(inv) : onView(inv)}
         selectedId={selectedId}
         emptyMessage={emptyMessage}
         summary={summaryColumns}

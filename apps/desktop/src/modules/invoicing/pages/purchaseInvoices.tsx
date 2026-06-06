@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Save, Send, Printer, History, Settings2, Plus } from "lucide-react";
+import { DocumentToolbar } from "@widgets/document-shell/DocumentToolbar";
 import type { SupplierDto, CategoryDto, CreateMaterialRequest } from "@erp/shared-types";
 import { materialService } from "@modules/inventory/api/materialService";
 import { categoryService } from "@modules/inventory/api/categoryService";
@@ -89,66 +88,24 @@ export default function PurchaseInvoices() {
         title="فاتورة مشتريات"
         statusBadge={<DocumentStatusBadge status={headerState.status} />}
         toolbar={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setMaterialFormOpen(true)}
-              className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-            >
-              <Plus className="w-4 h-4 ml-2" /> مادة جديدة
-            </Button>
-            {isReadOnly && (
-              <Button 
-                size="sm" 
-                onClick={() => {
-                  closeTab(activeTabId);
-                  openTab({
-                    id: `/purchase-invoices/${headerState.id}`,
-                    title: `تعديل فاتورة ${headerState.invoice_number}`,
-                    path: `/purchase-invoices/${headerState.id}`,
-                    closable: true
-                  });
-                }}
-                className="bg-amber-500 hover:bg-amber-600 shadow-lg shadow-amber-100 font-bold"
-              >
-                <Settings2 className="w-4 h-4 ml-2" /> تعديل الفاتورة
-              </Button>
-            )}
-            
-            {headerState.status === "Posted" && !isReadOnly ? (
-              <>
-                <Button 
-                  size="sm" 
-                  onClick={() => handleSave(true)} 
-                  disabled={saving} 
-                  className="bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-100 font-bold"
-                >
-                  <Send className="w-4 h-4 ml-2" /> حفظ وترحيل التعديلات
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleReopen}
-                  className="border-rose-200 text-rose-600 hover:bg-rose-50 font-bold"
-                >
-                  <History className="w-4 h-4 ml-2" /> إلغاء الترحيل
-                </Button>
-              </>
-            ) : headerState.status !== "Posted" && !isReadOnly ? (
-              <>
-                <Button variant="outline" size="sm" onClick={() => handleSave(false)} disabled={saving} className="bg-white border-slate-200 text-slate-700 font-bold">
-                  <Save className="w-4 h-4 ml-2" /> {saving ? "جاري الحفظ..." : "حفظ مسودة"}
-                </Button>
-                <Button size="sm" onClick={() => handleSave(true)} disabled={saving} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold">
-                  <Send className="w-4 h-4 ml-2" /> ترحيل الفاتورة
-                </Button>
-              </>
-            ) : null}
-            <Button variant="outline" size="sm" onClick={() => window.print()} className="bg-white">
-              <Printer className="w-4 h-4 ml-2" /> طباعة
-            </Button>
-          </div>
+          <DocumentToolbar
+            status={headerState.status}
+            isReadOnly={isReadOnly}
+            saving={saving}
+            onNewMaterial={() => setMaterialFormOpen(true)}
+            onEdit={isReadOnly && headerState.id ? () => {
+              closeTab(activeTabId);
+              openTab({
+                id: `/purchase-invoices/${headerState.id}`,
+                title: `تعديل فاتورة ${headerState.invoice_number}`,
+                path: `/purchase-invoices/${headerState.id}`,
+                closable: true,
+              });
+            } : undefined}
+            onSaveDraft={() => handleSave(false)}
+            onSaveAndPost={() => handleSave(true)}
+            onReopen={handleReopen}
+          />
         }
         headerFields={
           <>
@@ -259,6 +216,12 @@ export default function PurchaseInvoices() {
       }}
       onView={(inv) => {
         openTab({ id: `/purchase-invoices/${inv.id}-view`, title: `عرض فاتورة ${inv.invoice_number}`, path: `/purchase-invoices/${inv.id}?mode=view`, closable: true });
+      }}
+      onEditOpeningBalance={(inv) => {
+        openTab({ id: `/opening-balance/${inv.id}`, title: `تعديل بضاعة أول المدة`, path: `/opening-balance/${inv.id}`, closable: true });
+      }}
+      onViewOpeningBalance={(inv) => {
+        openTab({ id: `/opening-balance/${inv.id}-view`, title: `عرض بضاعة أول المدة`, path: `/opening-balance/${inv.id}?mode=view`, closable: true });
       }}
       onPost={async (id) => { await invoiceService.postInvoice(id); loadData(false); }}
       onDelete={async (id) => {

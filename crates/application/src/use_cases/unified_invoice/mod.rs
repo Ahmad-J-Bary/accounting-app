@@ -6,7 +6,7 @@ pub mod reopen;
 pub mod delete;
 
 pub use create::CreateInvoiceUseCase;
-pub use post::{PostInvoiceUseCase, PostInvoiceDependencies};
+pub use post::{PostInvoiceUseCase, PostInvoiceDependencies, convert_to_partner_currency};
 pub use queries::InvoiceQueries;
 pub use update::UpdateInvoiceUseCase;
 pub use reopen::ReopenInvoiceUseCase;

@@ -484,6 +484,7 @@ export function GenericDocumentGrid({
           searchType={searchType}
           columns={columns}
           visibleColumnKeys={visibleColumns}
+          baseCurrency={baseCurrency}
           style={panelStyle}
           onSelect={(m) => {
             if (readOnly) return;

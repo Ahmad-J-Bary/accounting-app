@@ -76,6 +76,8 @@ export interface MaterialDto {
   average_cost: string;
   average_cost_base: string;
   average_raw_price_base: string;
+  costing_method: string;
+  active_lots_count: number;
   units: MaterialUnitDto[];
 }
 

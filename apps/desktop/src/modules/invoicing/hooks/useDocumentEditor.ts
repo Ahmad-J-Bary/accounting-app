@@ -1,12 +1,14 @@
 import { useState, useCallback, useMemo } from "react";
 import { GridLine, newGridLine, calcLineTotal } from "../lib/invoiceUtils";
-import { MaterialDto } from "@erp/shared-types";
+import type { MaterialDto } from "@erp/shared-types";
+
 
 interface UseDocumentEditorProps {
   initialLines?: GridLine[];
   onLinesChange?: (lines: GridLine[]) => void;
   priceField?: "last_sale_price" | "last_purchase_price";
   materials?: MaterialDto[];
+  invoiceType?: "Sales" | "Purchase" | "OpeningBalance";
 }
 
 /**
@@ -19,6 +21,7 @@ export function useDocumentEditor({
   onLinesChange,
   priceField = "last_sale_price",
   materials = [],
+  invoiceType = "Purchase",
 }: UseDocumentEditorProps & { materials?: MaterialDto[] } = {}) {
   const [lines, setLines] = useState<GridLine[]>(
     initialLines.length > 0 ? initialLines : [newGridLine()]
@@ -73,6 +76,63 @@ export function useDocumentEditor({
         }
       }
 
+      // Smart total edit: if the user edited "line_total" (or any line_total_<CURR>
+      // cell, which handleCellChange converts to the base-currency "line_total"),
+      // derive the right side of the equation depending on whether the new total
+      // went below or above the base subtotal (qty * price).
+      if ('line_total' in updates) {
+        const newTotal = parseFloat(String(updates.line_total)) || 0;
+        const qty = parseFloat(updatedLine.quantity) || 0;
+        const price = parseFloat(updatedLine.unit_price) || 0;
+        const subtotal = qty * price;
+
+        const noDiscount = invoiceType === "OpeningBalance";
+
+        if (qty > 0) {
+          if (!noDiscount && subtotal > 0 && newTotal < subtotal) {
+            // User reduced the total below the base subtotal → derive a discount%
+            const derivedDiscount = ((subtotal - newTotal) / subtotal) * 100;
+            const clamped = Math.min(100, Math.max(0, derivedDiscount));
+            updatedLine.discount = clamped.toFixed(2);
+            // unit_price stays unchanged
+            // Reflect the clamped effective total (handles negative input → 100% discount → 0)
+            updatedLine.line_total = Number((subtotal * (1 - clamped / 100)).toFixed(2));
+          } else {
+            // User kept or increased the total (or base subtotal is 0) →
+            // bump unit_price and clear any discount so the math reconciles.
+            const derivedPrice = newTotal / qty;
+            updatedLine.unit_price = derivedPrice.toFixed(2);
+            updatedLine.discount = "0";
+            updatedLine.line_total = Number(newTotal.toFixed(2));
+          }
+        } else {
+          updatedLine.line_total = Number(newTotal.toFixed(2));
+        }
+
+        // Keep the price-mirror field in sync (cost_price for purchase,
+        // retail_price for sale) so the linked columns stay consistent.
+        if (priceField === "last_sale_price") {
+          updatedLine.retail_price = updatedLine.unit_price;
+        } else {
+          updatedLine.cost_price = updatedLine.unit_price;
+        }
+
+        // Recalculate profit using the new effective price/discount
+        const cost = parseFloat(updatedLine.cost_price || "0");
+        const p = parseFloat(updatedLine.unit_price || "0");
+        const q = parseFloat(updatedLine.quantity || "0");
+        const disc = parseFloat(updatedLine.discount || "0");
+        const netPrice = p - (p * disc / 100);
+        const profitPerUnit = netPrice - cost;
+        const totalProfit = profitPerUnit * q;
+        updatedLine.profit_amount = totalProfit.toFixed(2);
+        updatedLine.profit_percent = cost > 0 ? ((profitPerUnit / cost) * 100).toFixed(2) : "0";
+
+        next[index] = updatedLine;
+        onLinesChange?.(next);
+        return next;
+      }
+
       // Auto-calculate line total if quantity, price or discount changed
       if ('quantity' in updates || 'unit_price' in updates || 'discount' in updates || 'unit_id' in updates) {
         updatedLine.line_total = calcLineTotal(updatedLine);
@@ -125,7 +185,9 @@ export function useDocumentEditor({
         p => p.unit_id === defaultUnit?.id && p.tier === 'retail'
       );
       price = retailPrice?.price_base || retailPrice?.price || "0";
-      costPrice = material.average_cost_base || "0";
+      costPrice = material.costing_method === "FIFO"
+        ? (material.last_purchase_price_base || "0")
+        : (material.average_cost_base || "0");
     } else {
       const purchasePrice = material.purchase_prices?.find(
         p => p.unit_id === defaultUnit?.id

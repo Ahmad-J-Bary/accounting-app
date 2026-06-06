@@ -51,6 +51,7 @@ pub async fn update_unified_invoice(
             application::use_cases::unified_invoice::ReopenInvoiceUseCase::new(
                 state.unified_invoice_repo.clone(),
                 state.stock_movement_repo.clone(),
+                state.inventory_lot_repo.clone(),
                 state.journal_entry_repo.clone(),
                 state.customer_repo.clone(),
                 state.supplier_repo.clone(),
@@ -83,6 +84,7 @@ pub async fn post_unified_invoice(
     PostInvoiceUseCase::new(PostInvoiceDependencies {
         repo: state.unified_invoice_repo.clone(), 
         movement_repo: state.stock_movement_repo.clone(),
+        lot_repo: state.inventory_lot_repo.clone(),
         journal_repo: state.journal_entry_repo.clone(),
         account_repo: state.account_repo.clone(),
         customer_repo: state.customer_repo.clone(),
@@ -144,6 +146,7 @@ pub async fn reopen_unified_invoice(
     application::use_cases::unified_invoice::ReopenInvoiceUseCase::new(
         state.unified_invoice_repo.clone(),
         state.stock_movement_repo.clone(),
+        state.inventory_lot_repo.clone(),
         state.journal_entry_repo.clone(),
         state.customer_repo.clone(),
         state.supplier_repo.clone(),

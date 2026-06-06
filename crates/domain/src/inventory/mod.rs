@@ -5,6 +5,7 @@ pub mod damaged_item;
 pub mod production_order;
 pub mod stock_adjustment;
 pub mod code_policy;
+pub mod inventory_lot;
 
 pub use damaged_item::DamagedItem;
 pub use production_order::{ProductionOrder, ProductionMaterial, ProductionOutput, ProductionOrderStatus};

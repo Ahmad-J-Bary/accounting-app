@@ -40,6 +40,18 @@ pub async fn list_by_material(pool: &SqlitePool, material_id: &MaterialId) -> Re
     rows.into_iter().map(row_to_movement).collect()
 }
 
+pub async fn list_by_reference(pool: &SqlitePool, reference: &str) -> Result<Vec<StockMovement>, AppError> {
+    let rows = sqlx::query_as::<_, StockMovementRow>(
+        "SELECT id, material_id, quantity, unit_cost, unit_cost_base, total_cost, total_cost_base, raw_total_cost_base, original_currency, fx_rate, movement_type, reason, reference, movement_date, created_at FROM stock_movements WHERE reference = ? ORDER BY movement_date ASC"
+    )
+    .bind(reference)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    rows.into_iter().map(row_to_movement).collect()
+}
+
 pub async fn get_stock_balance(pool: &SqlitePool, material_id: &MaterialId) -> Result<Decimal, AppError> {
     let movements = list_by_material(pool, material_id).await?;
     let mut balance = Decimal::ZERO;

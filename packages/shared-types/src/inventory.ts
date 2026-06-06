@@ -98,6 +98,21 @@ export interface CreateProductionOrderRequest {
   notes?: string;
 }
 
+export interface InventoryLotDto {
+  id: string;
+  material_id: string;
+  purchase_invoice_id?: string | null;
+  movement_id: string;
+  quantity_original: string;
+  quantity_remaining: string;
+  unit_cost_base: string;
+  raw_unit_cost_base: string;
+  currency_code?: string | null;
+  fx_rate: string;
+  purchase_date: string;
+  created_at: string;
+}
+
 export interface StockMovement {
   id: string;
   product_id: string;

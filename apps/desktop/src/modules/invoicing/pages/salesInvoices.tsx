@@ -1,7 +1,6 @@
 import { useLocation } from "react-router-dom";
-import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Save, Send, Printer, History, Settings2 } from "lucide-react";
+import { DocumentToolbar } from "@widgets/document-shell/DocumentToolbar";
 import type { CustomerDto } from "@erp/shared-types";
 
 import { FinancialDocumentTemplate } from '@widgets/templates/FinancialDocumentTemplate';
@@ -60,57 +59,23 @@ export default function SalesInvoices() {
         title="فاتورة مبيعات"
         statusBadge={<DocumentStatusBadge status={headerState.status} />}
         toolbar={
-          <>
-            {isReadOnly && (
-              <Button 
-                size="sm" 
-                onClick={() => {
-                  closeTab(activeTabId);
-                  openTab({
-                    id: `/sales-invoices/${headerState.id}`,
-                    title: `تعديل ${headerState.invoice_number}`,
-                    path: `/sales-invoices/${headerState.id}`,
-                    closable: true
-                  });
-                }}
-                className="bg-amber-500 hover:bg-amber-600 shadow-lg shadow-amber-100 font-bold"
-              >
-                <Settings2 className="w-4 h-4 ml-2" /> تعديل الفاتورة
-              </Button>
-            )}
-            {headerState.status === "Posted" && !isReadOnly ? (
-              <>
-                <Button 
-                  size="sm" 
-                  onClick={() => handleSave(true)} 
-                  disabled={saving} 
-                  className="bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-100 font-bold"
-                >
-                  <Send className="w-4 h-4 ml-2" /> حفظ وترحيل التعديلات
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleReopen}
-                  className="border-rose-200 text-rose-600 hover:bg-rose-50 font-bold"
-                >
-                  <History className="w-4 h-4 ml-2" /> إلغاء الترحيل
-                </Button>
-              </>
-            ) : headerState.status !== "Posted" && !isReadOnly ? (
-              <>
-                <Button variant="outline" size="sm" onClick={() => handleSave(false)} disabled={saving} className="bg-white border-slate-200 text-slate-700 font-bold">
-                  <Save className="w-4 h-4 ml-2" /> {saving ? "جاري الحفظ..." : "حفظ مسودة"}
-                </Button>
-                <Button size="sm" onClick={() => handleSave(true)} disabled={saving} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold">
-                  <Send className="w-4 h-4 ml-2" /> ترحيل الفاتورة
-                </Button>
-              </>
-            ) : null}
-            <Button variant="outline" size="sm" onClick={() => window.print()} className="bg-white font-bold border-slate-200">
-              <Printer className="w-4 h-4 ml-2 text-slate-500" /> طباعة
-            </Button>
-          </>
+          <DocumentToolbar
+            status={headerState.status}
+            isReadOnly={isReadOnly}
+            saving={saving}
+            onEdit={isReadOnly && headerState.id ? () => {
+              closeTab(activeTabId);
+              openTab({
+                id: `/sales-invoices/${headerState.id}`,
+                title: `تعديل ${headerState.invoice_number}`,
+                path: `/sales-invoices/${headerState.id}`,
+                closable: true,
+              });
+            } : undefined}
+            onSaveDraft={() => handleSave(false)}
+            onSaveAndPost={() => handleSave(true)}
+            onReopen={handleReopen}
+          />
         }
         headerFields={
           <>

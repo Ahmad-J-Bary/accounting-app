@@ -25,6 +25,8 @@ interface InvoiceListProps {
   onCreate: () => void;
   onEdit: (inv: InvoiceDto) => void;
   onView: (inv: InvoiceDto) => void;
+  onEditOpeningBalance?: (inv: InvoiceDto) => void;
+  onViewOpeningBalance?: (inv: InvoiceDto) => void;
   onPost: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onReopen: (id: string) => Promise<void>;
@@ -52,6 +54,8 @@ export function InvoiceList({
   onCreate,
   onEdit,
   onView,
+  onEditOpeningBalance,
+  onViewOpeningBalance,
   onPost,
   onDelete,
   onReopen,
@@ -127,12 +131,26 @@ export function InvoiceList({
           </Button>
           <div className="w-[1px] h-6 bg-slate-200 mx-1" />
           <Button variant="outline" size="sm" disabled={!selectedId}
-            onClick={() => selectedInvoice && onView(selectedInvoice)}
+            onClick={() => {
+              if (!selectedInvoice) return;
+              if (selectedInvoice.invoice_type === "OpeningBalance") {
+                onViewOpeningBalance?.(selectedInvoice);
+              } else {
+                onView(selectedInvoice);
+              }
+            }}
             className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
             <Eye className="w-4 h-4 ml-2 text-blue-500" /> عرض
           </Button>
           <Button variant="outline" size="sm" disabled={!selectedId}
-            onClick={() => selectedInvoice && onEdit(selectedInvoice)}
+            onClick={() => {
+              if (!selectedInvoice) return;
+              if (selectedInvoice.invoice_type === "OpeningBalance") {
+                onEditOpeningBalance?.(selectedInvoice);
+              } else {
+                onEdit(selectedInvoice);
+              }
+            }}
             className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
             <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> تعديل
           </Button>
@@ -155,29 +173,31 @@ export function InvoiceList({
         </div>
       }
       tableContent={
-        <InvoiceTable
-          data={filtered}
-          loading={loading}
-          search={search}
-          onSearchChange={onSearchChange}
-          searchPlaceholder={searchPlaceholder}
-          emptyMessage={emptyMessage}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-          onView={onView}
-          onEdit={onEdit}
-          onPost={onPost}
-          onDelete={onDelete}
-          onReopen={onReopen}
-          partyLabel={partyLabel}
-          partyType={partyType}
-          defaultName={defaultName}
-          showSubtotal={showSubtotal}
-          showExtraCosts={showExtraCosts}
-          extraColumns={extraColumns}
-          statusFilter={statusFilter}
-          onStatusFilterChange={setStatusFilter}
-        />
+          <InvoiceTable
+            data={filtered}
+            loading={loading}
+            search={search}
+            onSearchChange={onSearchChange}
+            searchPlaceholder={searchPlaceholder}
+            emptyMessage={emptyMessage}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            onView={onView}
+            onEdit={onEdit}
+            onViewOpeningBalance={onViewOpeningBalance}
+            onEditOpeningBalance={onEditOpeningBalance}
+            onPost={onPost}
+            onDelete={onDelete}
+            onReopen={onReopen}
+            partyLabel={partyLabel}
+            partyType={partyType}
+            defaultName={defaultName}
+            showSubtotal={showSubtotal}
+            showExtraCosts={showExtraCosts}
+            extraColumns={extraColumns}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+          />
       }
     />
   );

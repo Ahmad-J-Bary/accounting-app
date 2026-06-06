@@ -7,17 +7,13 @@ use domain::sales::unified_invoice::{InvoiceType, InvoiceStatus};
 use domain::shared::ids::{InvoiceId};
 use crate::ports::unified_invoice_repository::UnifiedInvoiceRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
+use crate::ports::inventory_lot_repository::InventoryLotRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::supplier_repository::SupplierRepository;
 use crate::dto::invoice_dto::{InvoiceDto};
 use crate::errors::AppError;
 
-/// Compute the net supplier credit that was actually recorded during posting
-/// for a Purchase invoice. This mirrors the logic in PostInvoiceUseCase exactly:
-///   main_debit = total - extra_costs
-///   main_paid  = if amount_paid > extra_costs { amount_paid - extra_costs } else { 0 }
-///   net_credit = main_debit - main_paid  (clamped to >= 0)
 fn purchase_net_supplier_credit(
     total: Decimal,
     extra_costs: Decimal,
@@ -35,6 +31,7 @@ fn purchase_net_supplier_credit(
 pub struct ReopenInvoiceUseCase {
     repo: Arc<dyn UnifiedInvoiceRepository>,
     movement_repo: Arc<dyn StockMovementRepository>,
+    lot_repo: Arc<dyn InventoryLotRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
     customer_repo: Arc<dyn CustomerRepository>,
     supplier_repo: Arc<dyn SupplierRepository>,
@@ -46,6 +43,7 @@ impl ReopenInvoiceUseCase {
     pub fn new(
         repo: Arc<dyn UnifiedInvoiceRepository>,
         movement_repo: Arc<dyn StockMovementRepository>,
+        lot_repo: Arc<dyn InventoryLotRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
         customer_repo: Arc<dyn CustomerRepository>,
         supplier_repo: Arc<dyn SupplierRepository>,
@@ -55,6 +53,7 @@ impl ReopenInvoiceUseCase {
         Self {
             repo,
             movement_repo,
+            lot_repo,
             journal_repo,
             customer_repo,
             supplier_repo,
@@ -77,9 +76,6 @@ impl ReopenInvoiceUseCase {
         let extra_costs = invoice.extra_costs.amount();
 
         // 1. Reverse Party Balance (Subledger)
-        // For Sales: net customer debit posted = total - amount_paid
-        // For Purchase: net supplier credit posted = purchase_net_supplier_credit(...)
-        //   (mirrors PostInvoiceUseCase logic which separates extra_costs from main invoice)
         match invoice.invoice_type {
             InvoiceType::Sales => {
                 let sales_deferred = total - amount_paid;
@@ -122,13 +118,67 @@ impl ReopenInvoiceUseCase {
             _ => {}
         }
 
-        // 2. Delete all journal entries linked to this invoice
+        // 2. Before deleting movements, handle inventory lot restoration
+        if invoice.invoice_type == InvoiceType::Purchase || invoice.invoice_type == InvoiceType::OpeningBalance {
+            // Delete lots created by this purchase invoice
+            self.lot_repo.delete_by_purchase_invoice(&invoice.id.to_string()).await?;
+        } else if invoice.invoice_type == InvoiceType::Sales {
+            // Restore lot quantities consumed by this sale
+            // Get all movements for this invoice reference
+            let sales_movements = self.movement_repo.list_by_reference(&invoice.invoice_number).await?;
+
+            for movement in &sales_movements {
+                let material_id = movement.material_id.to_string();
+                let consumed_qty = movement.quantity;
+
+                // Get available lots for this material, ordered FIFO (same order as consumption)
+                let mut lots = self.lot_repo.find_available_by_material(&material_id).await?;
+
+                if lots.is_empty() {
+                    // If no lots exist (e.g. all consumed), get ALL lots for this material
+                    // and restore based on original quantities
+                    lots = self.lot_repo.find_available_by_material(&material_id).await?;
+                }
+
+                // Sort lots by purchase_date ASC to match consumption order
+                lots.sort_by(|a, b| a.purchase_date.cmp(&b.purchase_date));
+
+                if !lots.is_empty() {
+                    // Restore consumed quantity to the lots, starting from the oldest
+                    // The oldest lots were consumed first, so they get restored first
+                    let mut remaining_restore = consumed_qty;
+
+                    for lot in &lots {
+                        if remaining_restore <= Decimal::ZERO {
+                            break;
+                        }
+                        let max_restore = lot.quantity_original - lot.quantity_remaining;
+                        if max_restore <= Decimal::ZERO {
+                            continue;
+                        }
+                        let restore = if max_restore >= remaining_restore {
+                            remaining_restore
+                        } else {
+                            max_restore
+                        };
+                        let new_remaining = lot.quantity_remaining + restore;
+                        self.lot_repo.update_remaining(
+                            &lot.id.to_string(),
+                            &new_remaining.to_string(),
+                        ).await?;
+                        remaining_restore -= restore;
+                    }
+                }
+            }
+        }
+
+        // 3. Delete all journal entries linked to this invoice
         let entries = self.journal_repo.find_all_by_source_id(&invoice.id.to_string()).await?;
         for entry in entries {
             self.journal_repo.delete(&entry.id).await?;
         }
 
-        // 3. Delete Stock Movements (filter by type to avoid cross-document collision)
+        // 4. Delete Stock Movements
         let mov_type = match invoice.invoice_type {
             InvoiceType::Sales => "Sale",
             InvoiceType::Purchase | InvoiceType::PurchaseCosts => "Purchase",
@@ -136,7 +186,7 @@ impl ReopenInvoiceUseCase {
         };
         self.movement_repo.delete_by_reference(&invoice.invoice_number, mov_type).await?;
 
-        // 4. Update Invoice Status
+        // 5. Update Invoice Status
         invoice.reopen().map_err(|e| AppError::Invalid(e.to_string()))?;
         self.repo.update(&invoice).await?;
 

@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { cn } from "@shared/lib/utils";
-import { X, Search, Hash, Barcode, Package } from "lucide-react";
+import { X, Search, Hash, Barcode, Package, TrendingUp, ShoppingCart, DollarSign } from "lucide-react";
 import type { MaterialDto } from "@erp/shared-types";
+import type { Currency } from "@modules/core/api/currencyService";
 import type { DocumentColumn } from "./GenericDocumentGrid";
 
 interface MaterialSearchPanelProps {
@@ -12,6 +13,7 @@ interface MaterialSearchPanelProps {
   onClose: () => void;
   columns: DocumentColumn[];
   visibleColumnKeys: string[];
+  baseCurrency?: Currency | null;
   style?: React.CSSProperties;
 }
 
@@ -23,6 +25,12 @@ const fieldConfig = {
 
 type FieldId = keyof typeof fieldConfig;
 
+function formatCost(val: string): string {
+  const n = parseFloat(val);
+  if (n <= 0) return "—";
+  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 export function MaterialSearchPanel({
   materials,
   search,
@@ -31,6 +39,7 @@ export function MaterialSearchPanel({
   onClose,
   columns,
   visibleColumnKeys,
+  baseCurrency,
   style,
 }: MaterialSearchPanelProps) {
   const filtered = useMemo(() => {
@@ -53,6 +62,8 @@ export function MaterialSearchPanel({
       id => visibleColumnKeys.includes(id),
     );
   }, [visibleColumnKeys]);
+
+  const sym = baseCurrency?.symbol || baseCurrency?.code || "";
 
   return (
     <div
@@ -80,7 +91,7 @@ export function MaterialSearchPanel({
       </div>
 
       {/* ── Results ── */}
-      <div className="max-h-56 overflow-y-auto custom-scrollbar" dir="rtl">
+      <div className="max-h-72 overflow-y-auto custom-scrollbar" dir="rtl">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
             <Search className="w-8 h-8 text-slate-200 mb-2" />
@@ -100,7 +111,6 @@ export function MaterialSearchPanel({
                 )}
               >
                 <div className="flex items-center gap-3 flex-wrap">
-                  {/* Code */}
                   {activeFields.includes("material_code") && (
                     <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-50 border border-slate-100/80 font-mono text-[11px] font-bold text-slate-500 leading-relaxed shrink-0">
                       <Hash className="w-3 h-3 text-slate-300" />
@@ -108,7 +118,6 @@ export function MaterialSearchPanel({
                     </span>
                   )}
 
-                  {/* Barcode */}
                   {activeFields.includes("unit_barcode") && (
                     <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-50 border border-slate-100/80 font-mono text-[11px] text-slate-400 leading-relaxed shrink-0 dir-ltr">
                       <Barcode className="w-3 h-3 text-slate-300" />
@@ -116,10 +125,30 @@ export function MaterialSearchPanel({
                     </span>
                   )}
 
-                  {/* Name (Arabic) */}
                   {activeFields.includes("material_name") && (
                     <span className="font-bold text-[13px] text-slate-800 min-w-0 leading-snug">
                       {fieldConfig.material_name.render(m)}
+                    </span>
+                  )}
+                </div>
+
+                {/* ── Cost Row ── */}
+                <div className="flex items-center gap-3 mt-2 pt-1.5 border-t border-slate-50 flex-wrap" dir="ltr">
+                  <span className="flex items-center gap-1 text-[10px] tabular-nums text-amber-600 font-bold" title="تكلفة الوحدة">
+                    <DollarSign className="w-2.5 h-2.5 opacity-60" />
+                    {formatCost(m.average_cost_base)} {sym}
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] tabular-nums text-emerald-600 font-bold" title="آخر سعر شراء">
+                    <ShoppingCart className="w-2.5 h-2.5 opacity-60" />
+                    {formatCost(m.last_purchase_price_base)} {sym}
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] tabular-nums text-blue-600 font-bold" title="آخر سعر مبيع">
+                    <TrendingUp className="w-2.5 h-2.5 opacity-60" />
+                    {formatCost(m.last_sale_price_base)} {sym}
+                  </span>
+                  {m.costing_method === "FIFO" && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600 border border-purple-200">
+                      FIFO
                     </span>
                   )}
                 </div>

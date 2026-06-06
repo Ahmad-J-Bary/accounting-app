@@ -17,3 +17,4 @@ pub mod settings_dto;
 pub mod audit_dto;
 pub mod currency_dto;
 pub mod returns_dto;
+pub mod inventory_lot_dto;

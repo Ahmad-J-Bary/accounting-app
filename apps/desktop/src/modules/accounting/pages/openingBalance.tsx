@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { useTabs } from "@app/providers/TabContext";
-import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { Save, Plus } from "lucide-react";
+import { DocumentToolbar } from "@widgets/document-shell/DocumentToolbar";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { materialService } from "@modules/inventory/api/materialService";
 import { categoryService } from "@modules/inventory/api/categoryService";
@@ -19,11 +18,12 @@ import {
 import { SummaryPanel } from "@widgets/document-shell/SummaryPanel";
 import { DocumentStatusBadge } from "@modules/invoicing/components/DocumentStatusBadge";
 import { useDocumentEditor } from "@modules/invoicing/hooks/useDocumentEditor";
-import { toBackendLines } from "@modules/invoicing/lib/invoiceUtils";
+import { toBackendLines, calcLineTotal } from "@modules/invoicing/lib/invoiceUtils";
 import { useDocumentFinancials } from "@modules/invoicing/lib/useDocumentFinancials";
 import { MaterialForm } from "@modules/inventory/components/MaterialForm";
 
 interface HeaderState {
+  id?: string;
   docNumber: string;
   issued_at: string;
   notes: string;
@@ -35,6 +35,7 @@ interface HeaderState {
   paid_amount: string;
   extra_paid_amount: string;
   payment_method: string;
+  status: string;
 }
 
 const defaultHeader = (): HeaderState => ({
@@ -49,10 +50,12 @@ const defaultHeader = (): HeaderState => ({
   paid_amount: "0",
   extra_paid_amount: "0",
   payment_method: "Deferred",
+  status: "Draft",
 });
 
 export default function OpeningBalance() {
   const location = useLocation();
+  const { id } = useParams<{ id: string }>();
   const { closeTab, activeTabId, openTab } = useTabs();
 
   const [materials, setMaterials] = useState<MaterialDto[]>([]);
@@ -76,10 +79,11 @@ export default function OpeningBalance() {
   } = useDocumentEditor({
     priceField: "last_purchase_price",
     materials,
+    invoiceType: "OpeningBalance",
   });
 
-  const isNew =
-    location.pathname.includes("/new") || !location.pathname.includes("/edit");
+  const isNew = !id || location.pathname.includes("/new");
+  const isReadOnly = location.search.includes("mode=view");
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -95,13 +99,57 @@ export default function OpeningBalance() {
 
   useEffect(() => {
     loadData();
-    if (isNew) {
+    if (!id) {
       invoiceService.getNextInvoiceNumber("OpeningBalance").then((num) => {
         setHeader((s) => ({ ...s, docNumber: num }));
       });
       setHeader((s) => ({ ...s, exchange_rate: "1" }));
     }
-  }, [loadData, isNew, rateMap, baseCurrency?.code]);
+  }, [loadData, id, rateMap, baseCurrency?.code]);
+
+  // Load existing invoice data when editing/viewing
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    invoiceService.getInvoiceById(id).then((inv) => {
+      setHeader({
+        id: inv.id,
+        docNumber: inv.invoice_number,
+        issued_at: inv.issued_at.split("T")[0],
+        notes: inv.notes || "",
+        currency_code: inv.currency_code,
+        exchange_rate: inv.exchange_rate || "1",
+        discount_amount: inv.discount_amount || "0",
+        tax_amount: inv.tax_amount || "0",
+        extra_costs: inv.extra_costs || "0",
+        paid_amount: inv.amount_paid || "0",
+        extra_paid_amount: "0",
+        payment_method: inv.payment_method || "Deferred",
+        status: inv.status || "Draft",
+      });
+      setLines(inv.lines.map((l) => {
+        const line = {
+          _id: `ln_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          material_id: l.material_id || "",
+          material_name: l.material_name || "",
+          quantity: l.quantity || "1",
+          unit_price: l.unit_price || "0",
+          unit_id: l.unit_id || "",
+          unit_name: l.unit_name || "",
+          cost_price: l.unit_price || "0",
+          notes: l.notes || "",
+          discount: "",
+          line_total: 0,
+        };
+        line.line_total = calcLineTotal(line);
+        return line;
+      }));
+    }).catch((e) => {
+      toast.error("فشل تحميل الرصيد الافتتاحي: " + e);
+    }).finally(() => {
+      setLoading(false);
+    });
+  }, [id, setLines]);
 
   useEffect(() => {
     categoryService.listCategories().then(setCategories).catch(() => {});
@@ -127,7 +175,7 @@ export default function OpeningBalance() {
     }
   }, [loadData]);
 
-  const handleSave = async () => {
+  const handleSave = async (andPost = true) => {
     if (!header.currency_code) {
       toast.error("الرجاء اختيار العملات أولاً من إعدادات العملات");
       return;
@@ -154,9 +202,19 @@ export default function OpeningBalance() {
         notes: header.notes || undefined,
       };
 
-      const result = await invoiceService.createInvoice(payload);
-      await invoiceService.postInvoice(result.id);
-      toast.success("تم ترحيل الرصيد الافتتاحي للمخزون بنجاح");
+      let result;
+      if (header.id) {
+        result = await invoiceService.updateInvoice({ ...payload, id: header.id });
+      } else {
+        result = await invoiceService.createInvoice(payload);
+      }
+
+      if (andPost) {
+        await invoiceService.postInvoice(result.id);
+        toast.success("تم ترحيل الرصيد الافتتاحي للمخزون بنجاح");
+      } else {
+        toast.success("تم حفظ المسودة");
+      }
 
       closeTab(activeTabId);
       openTab({
@@ -167,6 +225,20 @@ export default function OpeningBalance() {
       });
     } catch (e: unknown) {
       toast.error("فشل الحفظ: " + e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReopen = async () => {
+    if (!header.id) return;
+    setSaving(true);
+    try {
+      await invoiceService.reopenInvoice(header.id);
+      toast.success("تم إلغاء الترحيل بنجاح");
+      setHeader(s => ({ ...s, status: "Draft" }));
+    } catch (e: unknown) {
+      toast.error("فشل إلغاء الترحيل: " + e);
     } finally {
       setSaving(false);
     }
@@ -222,27 +294,27 @@ export default function OpeningBalance() {
   return (
     <FinancialDocumentTemplate
       title="بضاعة أول المدة"
-      statusBadge={<DocumentStatusBadge status="Draft" />}
+      statusBadge={<DocumentStatusBadge status={header.status} />}
       toolbar={
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setMaterialFormOpen(true)}
-            className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-          >
-            <Plus className="w-4 h-4 ml-2" /> مادة جديدة
-          </Button>
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={saving || loading}
-            className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
-          >
-            <Save className="w-4 h-4 ml-2" />{" "}
-            {saving ? "جاري الحفظ..." : "حفظ وترحيل الرصيد"}
-          </Button>
-        </div>
+        <DocumentToolbar
+          status={header.status}
+          isReadOnly={isReadOnly}
+          saving={saving}
+          onNewMaterial={() => setMaterialFormOpen(true)}
+          onEdit={isReadOnly && header.id ? () => {
+            closeTab(activeTabId);
+            openTab({
+              id: `/opening-balance/${header.id}`,
+              title: `تعديل بضاعة أول المدة`,
+              path: `/opening-balance/${header.id}`,
+              closable: true,
+            });
+          } : undefined}
+          onSaveDraft={() => handleSave(false)}
+          onSaveAndPost={() => handleSave(true)}
+          onReopen={handleReopen}
+          saveAndPostLabel="حفظ وترحيل الرصيد"
+        />
       }
       headerFields={
         <>
@@ -262,6 +334,7 @@ export default function OpeningBalance() {
             </label>
             <Input
               type="date"
+              disabled={isReadOnly}
               value={header.issued_at}
               onChange={(e) =>
                 setHeader((s) => ({ ...s, issued_at: e.target.value }))
@@ -275,6 +348,7 @@ export default function OpeningBalance() {
             </label>
             <Input
               placeholder="أدخل أي ملاحظات هنا..."
+              disabled={isReadOnly}
               value={header.notes}
               onChange={(e) =>
                 setHeader((s) => ({ ...s, notes: e.target.value }))
@@ -294,6 +368,7 @@ export default function OpeningBalance() {
           onSelectMaterial={selectMaterial}
           materials={Object.values(materials)}
           preferenceKey="opening_balance_grid"
+          readOnly={isReadOnly}
           docCurrency={header.currency_code}
           exchangeRate={header.exchange_rate}
         />
@@ -313,6 +388,7 @@ export default function OpeningBalance() {
           exchangeRate={parseFloat(header.exchange_rate)}
           docCurrency={header.currency_code}
           docSubtotal={docSubtotal}
+          isReadOnly={isReadOnly}
           paymentMethod={header.payment_method}
           onPaymentMethodChange={(method) => {
             setHeader((s) => ({ ...s, payment_method: method }));
