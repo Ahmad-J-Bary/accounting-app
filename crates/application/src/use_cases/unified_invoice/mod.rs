@@ -9,5 +9,5 @@ pub use create::CreateInvoiceUseCase;
 pub use post::{PostInvoiceUseCase, PostInvoiceDependencies, convert_to_partner_currency};
 pub use queries::InvoiceQueries;
 pub use update::UpdateInvoiceUseCase;
-pub use reopen::ReopenInvoiceUseCase;
+pub use reopen::{ReopenInvoiceUseCase, ReopenInvoiceDependencies};
 pub use delete::DeleteInvoiceUseCase;

@@ -28,6 +28,17 @@ fn purchase_net_supplier_credit(
     if main_debit > main_paid { main_debit - main_paid } else { Decimal::ZERO }
 }
 
+pub struct ReopenInvoiceDependencies {
+    pub repo: Arc<dyn UnifiedInvoiceRepository>,
+    pub movement_repo: Arc<dyn StockMovementRepository>,
+    pub lot_repo: Arc<dyn InventoryLotRepository>,
+    pub journal_repo: Arc<dyn JournalEntryRepository>,
+    pub customer_repo: Arc<dyn CustomerRepository>,
+    pub supplier_repo: Arc<dyn SupplierRepository>,
+    pub currency_repo: Arc<dyn CurrencyRepository>,
+    pub exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
+}
+
 pub struct ReopenInvoiceUseCase {
     repo: Arc<dyn UnifiedInvoiceRepository>,
     movement_repo: Arc<dyn StockMovementRepository>,
@@ -40,25 +51,16 @@ pub struct ReopenInvoiceUseCase {
 }
 
 impl ReopenInvoiceUseCase {
-    pub fn new(
-        repo: Arc<dyn UnifiedInvoiceRepository>,
-        movement_repo: Arc<dyn StockMovementRepository>,
-        lot_repo: Arc<dyn InventoryLotRepository>,
-        journal_repo: Arc<dyn JournalEntryRepository>,
-        customer_repo: Arc<dyn CustomerRepository>,
-        supplier_repo: Arc<dyn SupplierRepository>,
-        currency_repo: Arc<dyn CurrencyRepository>,
-        exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
-    ) -> Self {
+    pub fn new(deps: ReopenInvoiceDependencies) -> Self {
         Self {
-            repo,
-            movement_repo,
-            lot_repo,
-            journal_repo,
-            customer_repo,
-            supplier_repo,
-            currency_repo,
-            exchange_rate_repo,
+            repo: deps.repo,
+            movement_repo: deps.movement_repo,
+            lot_repo: deps.lot_repo,
+            journal_repo: deps.journal_repo,
+            customer_repo: deps.customer_repo,
+            supplier_repo: deps.supplier_repo,
+            currency_repo: deps.currency_repo,
+            exchange_rate_repo: deps.exchange_rate_repo,
         }
     }
 
@@ -141,7 +143,7 @@ impl ReopenInvoiceUseCase {
                 }
 
                 // Sort lots by purchase_date ASC to match consumption order
-                lots.sort_by(|a, b| a.purchase_date.cmp(&b.purchase_date));
+                lots.sort_by_key(|a| a.purchase_date);
 
                 if !lots.is_empty() {
                     // Restore consumed quantity to the lots, starting from the oldest

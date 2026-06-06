@@ -48,16 +48,17 @@ pub async fn update_unified_invoice(
         .map_err(|e| e.to_string())?
     {
         if existing.status == InvoiceStatus::Posted {
-            application::use_cases::unified_invoice::ReopenInvoiceUseCase::new(
-                state.unified_invoice_repo.clone(),
-                state.stock_movement_repo.clone(),
-                state.inventory_lot_repo.clone(),
-                state.journal_entry_repo.clone(),
-                state.customer_repo.clone(),
-                state.supplier_repo.clone(),
-                state.currency_repo.clone(),
-                state.exchange_rate_repo.clone(),
-            )
+            let reopen_deps = application::use_cases::unified_invoice::ReopenInvoiceDependencies {
+                repo: state.unified_invoice_repo.clone(),
+                movement_repo: state.stock_movement_repo.clone(),
+                lot_repo: state.inventory_lot_repo.clone(),
+                journal_repo: state.journal_entry_repo.clone(),
+                customer_repo: state.customer_repo.clone(),
+                supplier_repo: state.supplier_repo.clone(),
+                currency_repo: state.currency_repo.clone(),
+                exchange_rate_repo: state.exchange_rate_repo.clone(),
+            };
+            application::use_cases::unified_invoice::ReopenInvoiceUseCase::new(reopen_deps)
             .execute(request.id.clone())
             .await
             .map_err(|e| e.to_string())?;
@@ -143,16 +144,17 @@ pub async fn reopen_unified_invoice(
     state: State<'_, AppState>,
     id: String,
 ) -> Result<InvoiceDto, String> {
-    application::use_cases::unified_invoice::ReopenInvoiceUseCase::new(
-        state.unified_invoice_repo.clone(),
-        state.stock_movement_repo.clone(),
-        state.inventory_lot_repo.clone(),
-        state.journal_entry_repo.clone(),
-        state.customer_repo.clone(),
-        state.supplier_repo.clone(),
-        state.currency_repo.clone(),
-        state.exchange_rate_repo.clone(),
-    )
+    let reopen_deps = application::use_cases::unified_invoice::ReopenInvoiceDependencies {
+        repo: state.unified_invoice_repo.clone(),
+        movement_repo: state.stock_movement_repo.clone(),
+        lot_repo: state.inventory_lot_repo.clone(),
+        journal_repo: state.journal_entry_repo.clone(),
+        customer_repo: state.customer_repo.clone(),
+        supplier_repo: state.supplier_repo.clone(),
+        currency_repo: state.currency_repo.clone(),
+        exchange_rate_repo: state.exchange_rate_repo.clone(),
+    };
+    application::use_cases::unified_invoice::ReopenInvoiceUseCase::new(reopen_deps)
     .execute(id).await.map_err(|e| e.to_string())
 }
 

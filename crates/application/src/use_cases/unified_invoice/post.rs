@@ -136,16 +136,17 @@ impl PostInvoiceUseCase {
 
         // If already posted, we need to reverse existing impact before re-posting
         if invoice.status == domain::sales::unified_invoice::InvoiceStatus::Posted {
-             let reopener = crate::use_cases::unified_invoice::ReopenInvoiceUseCase::new(
-                self.repo.clone(),
-                self.movement_repo.clone(),
-                self.lot_repo.clone(),
-                self.journal_repo.clone(),
-                self.customer_repo.clone(),
-                self.supplier_repo.clone(),
-                self.currency_repo.clone(),
-                self.exchange_rate_repo.clone(),
-            );
+             let reopened_deps = crate::use_cases::unified_invoice::ReopenInvoiceDependencies {
+                repo: self.repo.clone(),
+                movement_repo: self.movement_repo.clone(),
+                lot_repo: self.lot_repo.clone(),
+                journal_repo: self.journal_repo.clone(),
+                customer_repo: self.customer_repo.clone(),
+                supplier_repo: self.supplier_repo.clone(),
+                currency_repo: self.currency_repo.clone(),
+                exchange_rate_repo: self.exchange_rate_repo.clone(),
+            };
+            let reopener = crate::use_cases::unified_invoice::ReopenInvoiceUseCase::new(reopened_deps);
             reopener.execute(id.clone()).await?;
 
             // Re-fetch to get clean state
