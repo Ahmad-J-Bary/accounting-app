@@ -1,71 +1,131 @@
+import { useMemo } from "react";
+import { cn } from "@shared/lib/utils";
+import { X, Search, Hash, Barcode, Package } from "lucide-react";
 import type { MaterialDto } from "@erp/shared-types";
+import type { DocumentColumn } from "./GenericDocumentGrid";
 
 interface MaterialSearchPanelProps {
   materials: MaterialDto[];
   search: string;
   searchType: "name" | "code" | "barcode";
-  visible: boolean;
   onSelect: (m: MaterialDto) => void;
   onClose: () => void;
+  columns: DocumentColumn[];
+  visibleColumnKeys: string[];
+  style?: React.CSSProperties;
 }
 
-export function MaterialSearchPanel({ materials, search, searchType, visible, onSelect, onClose }: MaterialSearchPanelProps) {
-  const filtered = materials.filter(m => {
-    if (!search) return false;
-    const s = search.toLowerCase();
-    if (searchType === "code") {
-      return m.code.toLowerCase().includes(s);
-    } else if (searchType === "barcode") {
-      const materialBarcode = (m.barcode ?? "").toLowerCase().includes(s);
-      const unitBarcode = m.units.some(u => (u.barcode ?? "").toLowerCase().includes(s));
-      return materialBarcode || unitBarcode;
-    }
-    return m.name.toLowerCase().includes(s);
-  }).slice(0, 30);
+const fieldConfig = {
+  material_code:   { icon: Hash,      label: "الكود",      key: "code" as const,     render: (m: MaterialDto) => m.code },
+  unit_barcode:    { icon: Barcode,   label: "الباركود",   key: "barcode" as const,  render: (m: MaterialDto) => m.barcode || (m.units.find(u => u.is_base)?.barcode) || "—" },
+  material_name:   { icon: Package,   label: "الصنف (عربي)", key: "name" as const,   render: (m: MaterialDto) => m.name },
+} as const;
 
-  if (!visible) return null;
+type FieldId = keyof typeof fieldConfig;
+
+export function MaterialSearchPanel({
+  materials,
+  search,
+  searchType,
+  onSelect,
+  onClose,
+  columns,
+  visibleColumnKeys,
+  style,
+}: MaterialSearchPanelProps) {
+  const filtered = useMemo(() => {
+    return materials.filter(m => {
+      if (!search) return false;
+      const s = search.toLowerCase();
+      if (searchType === "code") {
+        return m.code.toLowerCase().includes(s);
+      }
+      if (searchType === "barcode") {
+        if ((m.barcode ?? "").toLowerCase().includes(s)) return true;
+        return m.units.some(u => (u.barcode ?? "").toLowerCase().includes(s));
+      }
+      return m.name.toLowerCase().includes(s);
+    }).slice(0, 30);
+  }, [materials, search, searchType]);
+
+  const activeFields = useMemo<FieldId[]>(() => {
+    return (["material_code", "unit_barcode", "material_name"] as FieldId[]).filter(
+      id => visibleColumnKeys.includes(id),
+    );
+  }, [visibleColumnKeys]);
 
   return (
-    <div className="border-t border-slate-200 bg-white/98 backdrop-blur-md shadow-lg transition-all duration-200">
-      <div className="flex items-center gap-3 px-4 py-2 bg-slate-50/80 border-b border-slate-200/80">
-        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-          نتائج البحث — {filtered.length} صنف
+    <div
+      style={style}
+      className="bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150 origin-top-right"
+    >
+      {/* ── Header ── */}
+      <div className="flex items-center gap-2.5 px-5 py-3 bg-white border-b border-slate-100">
+        <div className="flex items-center gap-1.5 text-slate-400">
+          <Search className="w-3.5 h-3.5" />
+        </div>
+        <span className="text-[11px] font-black text-slate-500 tracking-wider">
+          نتائج البحث
         </span>
-        <button 
-          onClick={onClose} 
-          className="text-[10px] font-bold text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 px-2 py-0.5 rounded transition-all duration-150 mr-auto"
+        <span className="text-[10px] tabular-nums font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">
+          {filtered.length}
+        </span>
+        <span className="text-[10px] text-slate-400 font-semibold">صنف</span>
+        <button
+          onClick={onClose}
+          className="mr-auto p-1 rounded-lg text-slate-300 hover:text-slate-500 hover:bg-slate-100 transition-all"
         >
-          إغلاق
+          <X className="w-3.5 h-3.5" />
         </button>
       </div>
-      <div className="max-h-48 overflow-y-auto custom-scrollbar" dir="rtl">
+
+      {/* ── Results ── */}
+      <div className="max-h-56 overflow-y-auto custom-scrollbar" dir="rtl">
         {filtered.length === 0 ? (
-          <div className="py-8 text-center text-xs text-slate-400 font-semibold">لا توجد نتائج مطابقة لبحثك</div>
+          <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+            <Search className="w-8 h-8 text-slate-200 mb-2" />
+            <p className="text-xs text-slate-400 font-semibold">
+              {search ? "لا توجد نتائج مطابقة لبحثك" : "ابدأ بكتابة النص للبحث"}
+            </p>
+          </div>
         ) : (
-          <table className="w-full text-xs border-collapse">
-            <thead className="bg-slate-50/50 backdrop-blur border-b border-slate-200/80 sticky top-0 z-10">
-              <tr>
-                <th className="px-4 py-2 text-right font-black text-slate-700 uppercase tracking-wider text-[10px] w-24">الكود</th>
-                <th className="px-4 py-2 text-right font-black text-slate-700 uppercase tracking-wider text-[10px]">اسم الصنف</th>
-                <th className="px-4 py-2 text-left font-black text-slate-700 uppercase tracking-wider text-[10px] w-20">المخزون</th>
-                <th className="px-4 py-2 text-left font-black text-slate-700 uppercase tracking-wider text-[10px] w-24">آخر تكلفة شراء</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y-0">
-              {filtered.map(m => (
-                <tr
-                  key={m.id}
-                  className="group hover:bg-slate-50/80 active:bg-slate-100 border-b border-slate-100 cursor-pointer transition-all duration-75"
-                  onMouseDown={() => onSelect(m)}
-                >
-                  <td className="px-4 py-2.5 font-mono text-slate-500 group-hover:text-slate-900 transition-colors">{m.code}</td>
-                  <td className="px-4 py-2.5 font-semibold text-slate-700 group-hover:text-slate-950 transition-colors">{m.name}</td>
-                  <td className="px-4 py-2.5 text-left tabular-nums text-slate-500 group-hover:text-slate-900 transition-colors">{m.total_available}</td>
-                  <td className="px-4 py-2.5 text-left tabular-nums text-slate-500 group-hover:text-slate-900 transition-colors">{m.last_purchase_price}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="divide-y divide-slate-50">
+            {filtered.map((m) => (
+              <button
+                key={m.id}
+                onMouseDown={(e) => { e.preventDefault(); onSelect(m); }}
+                className={cn(
+                  "w-full text-right block px-5 py-3 transition-all duration-75",
+                  "hover:bg-blue-50/60 active:bg-blue-100/40",
+                )}
+              >
+                <div className="flex items-center gap-3 flex-wrap">
+                  {/* Code */}
+                  {activeFields.includes("material_code") && (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-50 border border-slate-100/80 font-mono text-[11px] font-bold text-slate-500 leading-relaxed shrink-0">
+                      <Hash className="w-3 h-3 text-slate-300" />
+                      {fieldConfig.material_code.render(m)}
+                    </span>
+                  )}
+
+                  {/* Barcode */}
+                  {activeFields.includes("unit_barcode") && (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-50 border border-slate-100/80 font-mono text-[11px] text-slate-400 leading-relaxed shrink-0 dir-ltr">
+                      <Barcode className="w-3 h-3 text-slate-300" />
+                      {fieldConfig.unit_barcode.render(m)}
+                    </span>
+                  )}
+
+                  {/* Name (Arabic) */}
+                  {activeFields.includes("material_name") && (
+                    <span className="font-bold text-[13px] text-slate-800 min-w-0 leading-snug">
+                      {fieldConfig.material_name.render(m)}
+                    </span>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
         )}
       </div>
     </div>

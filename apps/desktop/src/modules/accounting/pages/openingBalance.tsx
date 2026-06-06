@@ -186,6 +186,7 @@ export default function OpeningBalance() {
         width: "w-[90px]",
         align: "left" as const,
         type: "number" as const,
+        defaultVisible: curr.code === baseCurrency?.code,
       }))
       .concat(
         sortedCurrencies.map((curr) => ({
@@ -194,6 +195,7 @@ export default function OpeningBalance() {
           width: "w-[90px]",
           align: "left" as const,
           type: "number" as const,
+          defaultVisible: curr.code === baseCurrency?.code,
         })),
       );
   }, [currencies, baseCurrency]);

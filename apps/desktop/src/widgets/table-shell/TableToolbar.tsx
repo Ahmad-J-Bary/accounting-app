@@ -138,7 +138,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-64 max-h-[420px] overflow-y-auto">
                   <DropdownMenuLabel className="flex items-center justify-between text-right gap-2">
-                    <span>إظهار/إخفاء الأعمدة</span>
+                    <span>إظهار / إخفاء الأعمدة</span>
                     {hasColumns && (
                       <span className="text-[10px] tabular-nums text-slate-500 font-medium">
                         {visibleCount} / {totalCount}

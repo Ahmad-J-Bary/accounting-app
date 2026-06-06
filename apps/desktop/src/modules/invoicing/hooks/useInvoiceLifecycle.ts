@@ -266,6 +266,7 @@ export function useInvoiceLifecycle({
           width: "w-[90px]",
           align: "left" as const,
           type: "readonly" as const,
+          defaultVisible: curr.code === baseCurrency?.code,
         }))
         .concat(
           sortedCurrencies.map((curr) => ({
@@ -274,6 +275,17 @@ export function useInvoiceLifecycle({
             width: "w-[90px]",
             align: "left" as const,
             type: "readonly" as const,
+            defaultVisible: curr.code === baseCurrency?.code,
+          })),
+        )
+        .concat(
+          sortedCurrencies.map((curr) => ({
+            key: `profit_amount_${curr.code}`,
+            header: `المربح (${curr.symbol || curr.code})`,
+            width: "w-[90px]",
+            align: "left" as const,
+            type: "readonly" as const,
+            defaultVisible: curr.code === baseCurrency?.code,
           })),
         );
     }
@@ -286,6 +298,21 @@ export function useInvoiceLifecycle({
         type: "text",
       },
     ];
+  }, [invoiceType, currencies, baseCurrency]);
+
+  const prePriceExtraCols = useMemo<DocumentColumn[]>(() => {
+    if (invoiceType !== "Sales") return [];
+    const sortedCurrencies = baseCurrency
+      ? [baseCurrency, ...currencies.filter((c) => c.code !== baseCurrency.code)]
+      : currencies;
+    return sortedCurrencies.map((curr) => ({
+      key: `cost_price_${curr.code}`,
+      header: `التكلفة (${curr.symbol || curr.code})`,
+      width: "w-[90px]",
+      align: "left" as const,
+      type: "readonly" as const,
+      defaultVisible: curr.code === baseCurrency?.code,
+    }));
   }, [invoiceType, currencies, baseCurrency]);
 
   const {
@@ -305,6 +332,7 @@ export function useInvoiceLifecycle({
     invoiceType,
     priceLabel: invoiceType === "Sales" ? "السعر" : "التكلفة",
     extraColumns: extraCols,
+    prePriceExtraColumns: prePriceExtraCols,
   });
 
   // Auto-set default currency to base currency for new documents

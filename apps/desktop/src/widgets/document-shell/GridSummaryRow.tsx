@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { cn } from "@shared/lib/utils";
 import { TableSummary, type SummaryColumn } from "@widgets/table-shell/TableSummary";
 import type { DocumentColumn } from "./GenericDocumentGrid";
@@ -7,41 +8,88 @@ interface GridSummaryRowProps {
   filteredColumns: DocumentColumn[];
   lines: GridLine[];
   cellBorderClass: string;
-  columnWidths: Record<string, number>;
   formatRawAmount: (amount: number, currencyCode?: string) => string;
   docCurrency: string;
   baseCurrency: { code: string } | null;
+  asPageFooter?: boolean;
+  gridTemplate?: string;
 }
 
 export function GridSummaryRow({
   filteredColumns,
   lines,
   cellBorderClass,
-  columnWidths,
   formatRawAmount,
   docCurrency,
   baseCurrency,
+  asPageFooter = false,
+  gridTemplate,
 }: GridSummaryRowProps) {
   const totalQty = lines.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
-  const totalAmount = lines.reduce((sum, line) => sum + (line.line_total ?? 0), 0);
   const formattedQty = String(totalQty).replace(/\.?0+$/, "");
-  const formattedAmount = formatRawAmount(totalAmount, docCurrency || baseCurrency?.code);
 
-  const summaryColumns: SummaryColumn[] = filteredColumns.map((col) => {
-    if (col.key === "quantity") return { id: col.key, columnId: col.key, label: "إجمالي الكمية", value: formattedQty, align: col.align };
-    if (col.key === "line_total") return { id: col.key, columnId: col.key, label: "المجموع", value: formattedAmount, align: col.align };
-    return { id: col.key, columnId: col.key, label: "", value: "" };
-  });
+  const summaryColumns: SummaryColumn[] = useMemo(() => {
+    const cols: SummaryColumn[] = [];
+
+    // Prepend a spacer column for the row number/index column (48px prefix)
+    cols.push({
+      id: "row_index_prefix",
+      columnId: "row_index_prefix",
+      label: "",
+      value: "",
+    });
+
+    // Add middle columns corresponding to filteredColumns
+    filteredColumns.forEach((col) => {
+      if (col.key === "quantity") {
+        cols.push({
+          id: col.key,
+          columnId: col.key,
+          label: "إجمالي الكمية",
+          value: formattedQty,
+          align: col.align,
+          className: "tabular-nums font-bold",
+        });
+      } else {
+        const totalMatch = col.key.match(/^line_total_(.+)$/);
+        if (totalMatch) {
+          const currCode = totalMatch[1];
+          const total = lines.reduce((sum, line) => {
+            const val = (line as unknown as Record<string, string | number>)[`line_total_${currCode}`];
+            return sum + (typeof val === "number" ? val : parseFloat(String(val)) || 0);
+          }, 0);
+          cols.push({
+            id: col.key,
+            columnId: col.key,
+            label: "المجموع",
+            value: formatRawAmount(total, currCode),
+            align: col.align,
+            className: "tabular-nums font-black text-slate-900",
+          });
+        } else {
+          cols.push({ id: col.key, columnId: col.key, label: "", value: "" });
+        }
+      }
+    });
+
+    // Append a spacer column for the actions/delete column (48px suffix)
+    cols.push({
+      id: "actions_suffix",
+      columnId: "actions_suffix",
+      label: "",
+      value: "",
+    });
+
+    return cols;
+  }, [filteredColumns, formattedQty, lines, formatRawAmount]);
 
   return (
     <TableSummary
       columns={summaryColumns}
-      columnWidths={columnWidths}
-
-      className="border-t-2 border-slate-300 bg-slate-50/80"
-      sticky
-      beforeContent={<div className={cn("w-10 shrink-0 flex items-center justify-center bg-slate-100/30", cellBorderClass)} />}
-      afterContent={<div className="w-12 shrink-0" />}
+      gridTemplate={gridTemplate}
+      className={asPageFooter ? "" : "border-t-2 border-slate-300 bg-slate-50/80"}
+      sticky={!asPageFooter}
+      asPageFooter={asPageFooter}
     />
   );
 }

@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback, useMemo } from "react";
-import { Trash2 } from "lucide-react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
+import { Trash2, Columns, RotateCcw } from "lucide-react";
 import type { MaterialDto } from "@erp/shared-types";
 import { cn } from "@shared/lib/utils";
 import { getRowBackgroundClass, getRowBorderClass, getLeftBorderClass } from "@shared/lib/table-utils";
@@ -8,10 +8,20 @@ import { GridLine } from "@modules/invoicing/lib/invoiceUtils";
 import { useColumnPreferences } from "@shared/hooks/useColumnPreferences";
 import { MaterialSearchPanel } from "./MaterialSearchPanel";
 import { DocumentGridCell, type DocumentGridConfig, type DocumentGridCallbacks } from "./DocumentGridCell";
-import { DocumentGridHeader } from "./DocumentGridHeader";
+import { GridHeader } from "@widgets/table-shell/GridHeader";
 import { GridSummaryRow } from "./GridSummaryRow";
 import { useColumnResize } from "./useColumnResize";
 import { useTableSettings } from "@shared/hooks";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
+  DropdownMenuItem,
+} from "@shared/ui/dropdown-menu";
+import { Button } from "@shared/ui/button";
 import {
   formatWithLocale,
   useCurrencyContext,
@@ -22,6 +32,8 @@ export interface DocumentColumn {
   header: string;
   width: string;
   align?: "right" | "left" | "center";
+  /** When false, the column is hidden by default (user can show via column picker) */
+  defaultVisible?: boolean;
   type:
     | "text"
     | "number"
@@ -72,10 +84,11 @@ export function GenericDocumentGrid({
   const [searchType, setSearchType] = useState<"name" | "code" | "barcode">("name");
   const [searchRow, setSearchRow] = useState<number | null>(null);
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const defaultVisible = useMemo(() => columns.map((c) => c.key), [columns]);
+  const defaultVisible = useMemo(() => columns.filter((c) => c.defaultVisible !== false).map((c) => c.key), [columns]);
   const allColumnIds = useMemo(() => columns.map((c) => c.key), [columns]);
-  const { visibleColumns, toggleColumn, isVisible } = useColumnPreferences({
+  const { visibleColumns, toggleColumn, isVisible, isModified, resetToDefault } = useColumnPreferences({
     tableId: preferenceKey,
     allColumnIds,
     defaultVisibleColumns: defaultVisible,
@@ -86,7 +99,59 @@ export function GenericDocumentGrid({
     [columns, visibleColumns],
   );
 
-  const { columnWidths, handleResizeStart, getColumnStyle, autoFitColumn } = useColumnResize(columns, preferenceKey);
+  const formatRawAmount = useCallback(
+    (amount: number, currencyCode?: string) => {
+      const currency = currencies.find((c) => c.code === currencyCode) || baseCurrency || null;
+      const formatted = formatWithLocale(amount, currency?.decimals ?? 2);
+      return currency ? `${formatted} ${currency.symbol || currency.code}` : formatted;
+    },
+    [currencies, baseCurrency],
+  );
+
+  const getCellValue = useCallback((line: GridLine, key: string): string => {
+    if (!line.material_id && !line.material_name) return "";
+    if (key === "line_total")
+      return formatRawAmount(line.line_total ?? 0, docCurrency || baseCurrency?.code);
+    const raw = (line as unknown as Record<string, string | number>)[key];
+    if (raw === undefined) return "";
+    let s = String(raw);
+    if (s.includes(".")) s = s.replace(/\.?0+$/, "");
+    if (key === "profit_percent" && s && s !== "0") return `${s}%`;
+    return s;
+  }, [formatRawAmount, docCurrency, baseCurrency?.code]);
+
+  const contentByColumn = useMemo(() => {
+    const out: Record<string, { headerText: string; sampleValues: string[] }> = {};
+    for (const col of filteredColumns) {
+      out[col.key] = {
+        headerText: col.header,
+        sampleValues: lines.slice(0, 30).map(line => getCellValue(line, col.key)).filter(Boolean),
+      };
+    }
+    return out;
+  }, [filteredColumns, lines, getCellValue]);
+
+  const { gridTemplateColumns, gridHeaderColumns, handleResizeStart, autoFitColumn } = useColumnResize(
+    filteredColumns,
+    preferenceKey,
+    scrollContainerRef,
+    contentByColumn,
+  );
+
+  const fullGridTemplate = useMemo(
+    () => `48px ${gridTemplateColumns} 48px`,
+    [gridTemplateColumns],
+  );
+
+  const handleAutoFit = useCallback(
+    (colKey: string) => {
+      autoFitColumn(colKey, {
+        headerText: columns.find(c => c.key === colKey)?.header ?? colKey,
+        sampleValues: lines.slice(0, 30).map(line => getCellValue(line, colKey)).filter(Boolean),
+      });
+    },
+    [autoFitColumn, columns, lines, getCellValue],
+  );
 
   const editableCols = filteredColumns.filter((c) => c.type !== "readonly");
   const isNavigableCol = (c: DocumentColumn) =>
@@ -190,27 +255,6 @@ export function GenericDocumentGrid({
     [editableCols.length, lines, onAddLine, onRemoveLine, readOnly, findNextCol],
   );
 
-  const formatRawAmount = useCallback(
-    (amount: number, currencyCode?: string) => {
-      const currency = currencies.find((c) => c.code === currencyCode) || baseCurrency || null;
-      const formatted = formatWithLocale(amount, currency?.decimals ?? 2);
-      return currency ? `${formatted} ${currency.symbol || currency.code}` : formatted;
-    },
-    [currencies, baseCurrency],
-  );
-
-  const getCellValue = useCallback((line: GridLine, key: string): string => {
-    if (!line.material_id && !line.material_name) return "";
-    if (key === "line_total")
-      return formatRawAmount(line.line_total ?? 0, docCurrency || baseCurrency?.code);
-    const raw = (line as unknown as Record<string, string | number>)[key];
-    if (raw === undefined) return "";
-    let s = String(raw);
-    if (s.includes(".")) s = s.replace(/\.?0+$/, "");
-    if (key === "profit_percent" && s && s !== "0") return `${s}%`;
-    return s;
-  }, [formatRawAmount, docCurrency, baseCurrency?.code]);
-
   const handleCellChange = useCallback(
     (rowIdx: number, colKey: string, value: string) => {
       if (readOnly) return;
@@ -239,12 +283,35 @@ export function GenericDocumentGrid({
   const cellBorderClass = getLeftBorderClass(settings.borderStyle);
   const showSearchPanel = searchRow !== null;
 
+  const [panelStyle, setPanelStyle] = useState<React.CSSProperties | null>(null);
+
+  useEffect(() => {
+    if (searchRow === null) {
+      setPanelStyle(null);
+      return;
+    }
+    const colKeyMap: Record<string, string> = { name: "material_name", code: "material_code", barcode: "unit_barcode" };
+    const colKey = colKeyMap[searchType];
+    const rowEl = scrollContainerRef.current?.querySelector(`[data-row-idx="${searchRow}"]`);
+    const cellEl = rowEl?.querySelector<HTMLElement>(`[data-col-id="${colKey}"]`) ?? rowEl?.querySelector<HTMLElement>("[data-col-id]");
+    if (!cellEl) { setPanelStyle(null); return; }
+    const rect = cellEl.getBoundingClientRect();
+    const scrollRect = scrollContainerRef.current?.getBoundingClientRect();
+    const maxWidth = scrollRect ? scrollRect.width - 16 : 420;
+    setPanelStyle({
+      position: "fixed",
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: Math.min(Math.max(rect.width, 380), maxWidth),
+      zIndex: 100,
+    });
+  }, [searchRow, searchType]);
+
   const cellConfig: DocumentGridConfig = {
     cellBorderClass,
-    columnWidths,
-    getColumnStyle,
     densityPadding: getDensityPadding(),
     fontSize: settings.fontSize,
+    fontFamily: settings.fontFamily,
     readOnly,
     materials,
     getCellValue,
@@ -262,30 +329,88 @@ export function GenericDocumentGrid({
     inputRefs,
   };
 
-  const handleAutoFit = useCallback(
-    (colKey: string) => autoFitColumn(colKey, getCellValue, lines, columns),
-    [autoFitColumn, getCellValue, lines, columns],
+  const visibleCount = columns.filter((c) => isVisible(c.key)).length;
+  const totalCount = columns.length;
+
+  const headerPrefix = (
+    <div className={cn("w-10 shrink-0 flex items-center justify-center bg-slate-100/30", getLeftBorderClass(settings.borderStyle))}>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className={cn(
+              "p-1 transition-colors rounded",
+              isModified
+                ? "text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                : "text-slate-400 hover:text-blue-600 hover:bg-blue-50",
+            )}
+            title="إظهار / إخفاء الأعمدة"
+          >
+            <Columns className="w-3.5 h-3.5" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-64 max-h-[420px] overflow-y-auto shadow-xl">
+          <DropdownMenuLabel className="flex items-center justify-between text-right gap-2">
+            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">
+              إظهار / إخفاء الأعمدة
+            </span>
+            <span className={cn(
+              "text-[10px] tabular-nums font-bold px-1.5 py-0.5 rounded",
+              isModified
+                ? "bg-amber-100 text-amber-700"
+                : "bg-slate-100 text-slate-500"
+            )}>
+              {visibleCount} / {totalCount}
+            </span>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {columns.map((col) => (
+            <DropdownMenuCheckboxItem
+              key={col.key}
+              checked={isVisible(col.key)}
+              onCheckedChange={() => toggleColumn(col.key)}
+              className="text-right flex-row-reverse gap-2 text-[11px] font-bold py-1.5"
+            >
+              {col.header}
+            </DropdownMenuCheckboxItem>
+          ))}
+          {resetToDefault && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={resetToDefault}
+                disabled={!isModified}
+                className="flex-row-reverse text-blue-600 focus:text-blue-600 disabled:text-slate-400 disabled:opacity-50"
+              >
+                <RotateCcw className="w-4 h-4 ml-2" />
+                استعادة الأعمدة الافتراضية
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
+
+  const headerSuffix = <div className="w-12 shrink-0" />;
 
   return (
     <div className="flex flex-col h-full bg-white">
-      <DocumentGridHeader
-        columns={columns}
-        filteredColumns={filteredColumns}
+      <GridHeader
+        columns={gridHeaderColumns}
         getDensityPadding={getDensityPadding}
+        fontSize={settings.fontSize}
+        fontFamily={settings.fontFamily}
         headerColor={settings.headerColor}
         stickyHeader={settings.stickyHeader}
         borderStyle={settings.borderStyle}
-        columnWidths={columnWidths}
-        getColumnStyle={getColumnStyle}
-        fontSize={settings.fontSize}
-        isVisible={isVisible}
-        toggleColumn={toggleColumn}
-        handleResizeStart={handleResizeStart}
-        handleAutoFit={handleAutoFit}
+        gridTemplate={fullGridTemplate}
+        prefixSlot={headerPrefix}
+        suffixSlot={headerSuffix}
+        onResizeStart={handleResizeStart}
+        onAutoFit={handleAutoFit}
       />
 
-      <div className="flex-1 overflow-auto min-h-[300px] custom-scrollbar">
+      <div ref={scrollContainerRef} className="flex-1 overflow-auto min-h-[300px] custom-scrollbar">
         {lines.map((line, rowIdx) => {
           const isActiveRow = activeCell?.row === rowIdx;
           let editColCursor = 0;
@@ -293,13 +418,15 @@ export function GenericDocumentGrid({
           return (
             <div
               key={line._id}
+              data-row-idx={rowIdx}
+              style={{ display: "grid", gridTemplateColumns: fullGridTemplate }}
               className={cn(
-                "flex transition-colors duration-75 group",
+                "transition-colors duration-75 group min-w-0",
                 getRowBorderClass(settings.borderStyle),
                 getRowBackgroundClass(isActiveRow, rowIdx, settings.zebraRows, settings.rowHoverEffect),
               )}
             >
-              <div className={cn("w-10 shrink-0 flex items-center justify-center text-[10px] text-slate-400 font-bold bg-slate-50/50", cellBorderClass)}>
+              <div className={cn("w-10 flex items-center justify-center text-[10px] text-slate-400 font-bold bg-slate-50/50", cellBorderClass)}>
                 {rowIdx + 1}
               </div>
 
@@ -321,7 +448,7 @@ export function GenericDocumentGrid({
                 );
               })}
 
-              <div className="w-12 shrink-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="w-12 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 {!readOnly && (
                   <button
                     onClick={() => onRemoveLine(rowIdx)}
@@ -335,35 +462,41 @@ export function GenericDocumentGrid({
             </div>
           );
         })}
-
-        {settings.showSummary && lines.length > 0 && (
-          <GridSummaryRow
-            filteredColumns={filteredColumns}
-            lines={lines}
-            cellBorderClass={cellBorderClass}
-            columnWidths={columnWidths}
-            formatRawAmount={formatRawAmount}
-            docCurrency={docCurrency}
-            baseCurrency={baseCurrency}
-          />
-        )}
       </div>
 
-      <MaterialSearchPanel
-        materials={materials}
-        search={searchTerm}
-        searchType={searchType}
-        visible={showSearchPanel}
-        onSelect={(m) => {
-          if (readOnly) return;
-          if (searchRow !== null) {
-            onSelectMaterial(searchRow, m);
-            setSearchRow(null);
-            setSearchTerm("");
-          }
-        }}
-        onClose={() => { setSearchRow(null); setSearchTerm(""); }}
-      />
+      {settings.showSummary && lines.length > 0 && (
+        <GridSummaryRow
+          filteredColumns={filteredColumns}
+          lines={lines}
+          cellBorderClass={cellBorderClass}
+          formatRawAmount={formatRawAmount}
+          docCurrency={docCurrency}
+          baseCurrency={baseCurrency}
+          asPageFooter
+          gridTemplate={fullGridTemplate}
+        />
+      )}
+
+      {showSearchPanel && panelStyle && (
+        <MaterialSearchPanel
+          materials={materials}
+          search={searchTerm}
+          searchType={searchType}
+          columns={columns}
+          visibleColumnKeys={visibleColumns}
+          style={panelStyle}
+          onSelect={(m) => {
+            if (readOnly) return;
+            if (searchRow !== null) {
+              onSelectMaterial(searchRow, m);
+              setSearchRow(null);
+              setSearchTerm("");
+              setPanelStyle(null);
+            }
+          }}
+          onClose={() => { setSearchRow(null); setSearchTerm(""); setPanelStyle(null); }}
+        />
+      )}
     </div>
   );
 }

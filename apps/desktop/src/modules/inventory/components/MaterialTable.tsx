@@ -369,17 +369,16 @@ export function MaterialTable({
   // Default visible: only base currency's money columns are shown.
   const defaultVisible = useMemo(() => {
     const ids: string[] = [
-      "image",
       "code",
-      "barcode",
       "name",
-      "name_en",
       "categories",
     ];
     currencies.forEach(curr => {
       if (isBaseCurrency(curr.code)) {
         ids.push(`unit_price_${curr.code}`);
+        ids.push(`extra_costs_${curr.code}`);
         ids.push(`average_cost_${curr.code}`);
+        ids.push(`total_value_${curr.code}`);
         ids.push(`available_value_${curr.code}`);
         ids.push(`sale_price_${curr.code}`);
       }

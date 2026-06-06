@@ -14,10 +14,9 @@ import type { GridLine } from "@modules/invoicing/lib/invoiceUtils";
 
 export interface DocumentGridConfig {
   cellBorderClass: string;
-  columnWidths: Record<string, number>;
-  getColumnStyle: (col: DocumentColumn) => React.CSSProperties;
   densityPadding: string;
   fontSize: number;
+  fontFamily: string;
   readOnly: boolean;
   materials: MaterialDto[];
   getCellValue: (line: GridLine, key: string) => string;
@@ -61,29 +60,30 @@ function CellWrapper({
 }) {
   return (
     <div
+      data-col-id={column.key}
       className={cn(
         isInteractive ? "relative" : cn(config.densityPadding, "flex items-center truncate"),
         config.cellBorderClass,
         !isInteractive && getAlignmentClass(column.align),
         !isInteractive && "text-slate-600 transition-colors group-hover:text-slate-900",
-        !config.columnWidths[column.key] && column.width,
         isCellActive && "ring-inset ring-2 ring-blue-400 z-20",
       )}
-      style={config.getColumnStyle(column)}
+      style={{ minWidth: 0, fontSize: `${config.fontSize}px`, fontFamily: config.fontFamily }}
     >
       {children}
     </div>
   );
 }
 
-function ReadonlyContent({ value, fontSize }: { value: string; fontSize: number }) {
-  return <span style={{ fontSize: `${fontSize}px` }}>{value}</span>;
+function ReadonlyContent({ value, fontSize, fontFamily }: { value: string; fontSize: number; fontFamily: string }) {
+  return <span style={{ fontSize: `${fontSize}px`, fontFamily }}>{value}</span>;
 }
 
 function EditableInput({
   refKey,
   value,
   fontSize,
+  fontFamily,
   align,
   onChange,
   onFocus,
@@ -95,6 +95,7 @@ function EditableInput({
   refKey: string;
   value: string;
   fontSize: number;
+  fontFamily: string;
   align?: "right" | "left" | "center";
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onFocus: () => void;
@@ -115,7 +116,7 @@ function EditableInput({
         isNum ? "tabular-nums font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" : "font-bold text-blue-800 placeholder:text-slate-400",
         getAlignmentClass(align),
       )}
-      style={{ fontSize: `${fontSize}px` }}
+      style={{ fontSize: `${fontSize}px`, fontFamily }}
       value={value}
       placeholder={placeholder}
       autoComplete="off"
@@ -136,13 +137,13 @@ export function DocumentGridCell({
   config,
   callbacks,
 }: DocumentGridCellProps) {
-  const { densityPadding: dp, fontSize, readOnly, materials, getCellValue, searchRow, columnWidths, cellBorderClass, getColumnStyle } = config;
+  const { densityPadding: dp, fontSize, readOnly, materials, getCellValue, searchRow, cellBorderClass } = config;
   const { onUpdateLine, onCellChange, onKeyDown, onActiveCellChange, onSearchRowChange, onSearchTypeChange, onSearchTermChange, inputRefs } = callbacks;
 
   if (col.type === "readonly") {
     return (
       <CellWrapper column={col} config={config}>
-        <ReadonlyContent value={getCellValue(line, col.key)} fontSize={fontSize} />
+        <ReadonlyContent value={getCellValue(line, col.key)} fontSize={fontSize} fontFamily={config.fontFamily} />
       </CellWrapper>
     );
   }
@@ -216,7 +217,7 @@ export function DocumentGridCell({
     if (readOnly) {
       return (
         <CellWrapper column={col} config={config}>
-          <ReadonlyContent value={displayValue || "-"} fontSize={fontSize} />
+          <ReadonlyContent value={displayValue || "-"} fontSize={fontSize} fontFamily={config.fontFamily} />
         </CellWrapper>
       );
     }
@@ -245,6 +246,7 @@ export function DocumentGridCell({
           refKey={refKey}
           value={displayValue}
           fontSize={fontSize}
+          fontFamily={config.fontFamily}
           align={col.align}
           placeholder="البحث..."
           inputRefs={inputRefs}
@@ -259,7 +261,7 @@ export function DocumentGridCell({
   if (readOnly) {
     return (
       <CellWrapper column={col} config={config}>
-        <ReadonlyContent value={getCellValue(line, col.key) || "-"} fontSize={fontSize} />
+        <ReadonlyContent value={getCellValue(line, col.key) || "-"} fontSize={fontSize} fontFamily={config.fontFamily} />
       </CellWrapper>
     );
   }
@@ -270,6 +272,7 @@ export function DocumentGridCell({
         refKey={refKey}
         value={getCellValue(line, col.key)}
         fontSize={fontSize}
+        fontFamily={config.fontFamily}
         align={col.align}
         type={col.type}
         inputRefs={inputRefs}

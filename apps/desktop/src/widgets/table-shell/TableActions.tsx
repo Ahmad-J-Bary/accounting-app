@@ -26,7 +26,7 @@ export function TableActions({ onView, onEdit, onDelete, extraActions, align = "
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-8 w-8 text-slate-400 hover:text-slate-600 hover:bg-slate-100/50 transition-colors rounded-lg"
+            className="h-6 w-6 text-slate-400 hover:text-slate-600 hover:bg-slate-100/50 transition-colors rounded-md"
           >
             <MoreHorizontal className="w-4 h-4" />
           </Button>

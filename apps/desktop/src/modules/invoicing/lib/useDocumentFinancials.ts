@@ -26,6 +26,8 @@ interface UseDocumentFinancialsProps<T extends BaseFinancialState> {
   invoiceType: "Sales" | "Purchase" | "OpeningBalance";
   priceLabel?: string;
   extraColumns?: DocumentColumn[];
+  /** Columns injected before the unit_price columns */
+  prePriceExtraColumns?: DocumentColumn[];
 }
 
 export function useDocumentFinancials<T extends BaseFinancialState>({
@@ -37,6 +39,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
   invoiceType,
   priceLabel = "السعر",
   extraColumns = [],
+  prePriceExtraColumns = [],
 }: UseDocumentFinancialsProps<T>) {
   const { convertBetween, rateMap, baseCurrency } = useCurrencyContext();
 
@@ -219,6 +222,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
         width: "w-[40px]",
         align: "center",
         type: "image",
+        defaultVisible: false,
       },
       {
         key: "material_code",
@@ -233,6 +237,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
         width: "w-[120px]",
         align: "center",
         type: "material_barcode",
+        defaultVisible: false,
       },
       {
         key: "material_name",
@@ -247,6 +252,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
         width: "flex-[1.5]",
         align: "left",
         type: "readonly",
+        defaultVisible: false,
       },
       {
         key: "warehouse_qty",
@@ -282,23 +288,27 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
         width: "w-[100px]",
         align: "left",
         type: "number",
+        defaultVisible: isBase,
       });
     });
 
     const totalCols: DocumentColumn[] = [];
     currencies.forEach((curr) => {
       const s = curr.symbol || curr.code;
+      const isBase = curr.code === baseCode;
       totalCols.push({
         key: `line_total_${curr.code}`,
         header: `الإجمالي (${s})`,
         width: "w-[110px]",
         align: "left",
         type: "readonly",
+        defaultVisible: isBase,
       });
     });
 
     return [
       ...baseCols,
+      ...prePriceExtraColumns,
       ...priceCols,
       {
         key: "discount",

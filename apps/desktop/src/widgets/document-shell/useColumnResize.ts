@@ -1,29 +1,43 @@
-import { useCallback } from "react";
-import { useColumnResize as useSharedColumnResize } from "@shared/hooks";
+import { useCallback, useMemo } from "react";
+import { useGridResize, useTableSettings } from "@shared/hooks";
 import type { DocumentColumn } from "./GenericDocumentGrid";
+import type { GridHeaderColumn } from "@widgets/table-shell/GridHeader";
 
-export function useColumnResize(columns: DocumentColumn[], preferenceKey: string) {
-  const { columnWidths, handleResizeStart, getColumnStyle, setColumnWidths } = useSharedColumnResize(columns, preferenceKey);
+export function useColumnResize(
+  columns: DocumentColumn[],
+  preferenceKey: string,
+  containerRef: React.RefObject<HTMLDivElement>,
+  contentByColumn?: Record<string, { headerText: string; sampleValues: string[] }>,
+) {
+  const { settings } = useTableSettings();
 
-  const getColumnStyleTyped = useCallback(
-    (col: DocumentColumn): React.CSSProperties => getColumnStyle(col),
-    [getColumnStyle],
+  const gridHeaderColumns: GridHeaderColumn[] = useMemo(
+    () =>
+      columns.map((col) => ({
+        id: col.key,
+        header: col.header,
+        label: col.header,
+        align: col.align,
+        width: col.width,
+      })),
+    [columns],
   );
+
+  const { gridTemplateColumns, handleResizeStart, autoFitColumn: sharedAutoFit } =
+    useGridResize(
+      gridHeaderColumns,
+      preferenceKey,
+      containerRef,
+      contentByColumn,
+      settings.fontSize,
+    );
 
   const autoFitColumn = useCallback(
-    (colKey: string, getCellValue: (line: unknown, key: string) => string, lines: unknown[], cols: DocumentColumn[]) => {
-      let maxLen = 0;
-      lines.forEach((line) => {
-        const val = getCellValue(line, colKey);
-        if (val && val.length > maxLen) maxLen = val.length;
-      });
-      const col = cols.find((c) => c.key === colKey);
-      const headerLen = col ? col.header.length : 10;
-      const estimatedWidth = Math.max(70, Math.min(400, Math.max(maxLen, headerLen) * 8.5 + 32));
-      setColumnWidths({ ...columnWidths, [colKey]: estimatedWidth });
+    (colKey: string, opts?: { headerText?: string; sampleValues?: Array<string | number | null | undefined> }) => {
+      sharedAutoFit(colKey, opts);
     },
-    [columnWidths, setColumnWidths],
+    [sharedAutoFit],
   );
 
-  return { columnWidths, handleResizeStart, getColumnStyle: getColumnStyleTyped, autoFitColumn };
+  return { gridTemplateColumns, gridHeaderColumns, handleResizeStart, autoFitColumn };
 }
