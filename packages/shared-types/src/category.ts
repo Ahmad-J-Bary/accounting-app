@@ -24,3 +24,8 @@ export interface UpdateCategoryRequest {
   is_active: boolean;
   code_prefix?: string | null;
 }
+
+export interface DeleteCategoryCascadeResultDto {
+  materials_reassigned: number;
+  subs_deleted: number;
+}

@@ -400,7 +400,7 @@ export function CategoryDetailsSidebar({
       onSave={handleSave}
       saving={saving}
       canEdit={canEdit}
-      canDelete={canDelete && !isUncategorized && (selected?.material_count || 0) === 0 && !isMaterial}
+      canDelete={canDelete && !isUncategorized && !isMaterial}
       formPanel={formPanel}
       disableNew={false}
       newButtonLabel={isMaterial ? "إضافة وحدة قياس" : (isSubCategory || isUncategorized ? "مادة جديدة" : "تصنيف جديد")}

@@ -6,6 +6,6 @@ pub mod hybrid;
 
 pub use create::CreateCategoryUseCase;
 pub use update::UpdateCategoryUseCase;
-pub use delete::DeleteCategoryUseCase;
+pub use delete::{DeleteCategoryUseCase, DeleteCategoryCascadeUseCase, DeleteCategoryCascadeResult};
 pub use queries::CategoryQueries;
 pub use hybrid::HybridCategoryUseCase;

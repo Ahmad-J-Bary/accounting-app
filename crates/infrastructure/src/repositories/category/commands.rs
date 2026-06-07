@@ -49,3 +49,19 @@ pub async fn delete(pool: &SqlitePool, id: &MaterialCategoryId) -> Result<(), Ap
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
 }
+
+pub async fn reassign_materials(
+    pool: &SqlitePool,
+    from: &MaterialCategoryId,
+    to: &MaterialCategoryId,
+) -> Result<u64, AppError> {
+    let result = sqlx::query(
+        "UPDATE material_categories SET category_id = ? WHERE category_id = ?",
+    )
+    .bind(to.to_string())
+    .bind(from.to_string())
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    Ok(result.rows_affected())
+}

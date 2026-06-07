@@ -283,13 +283,14 @@ export default function Materials() {
         }
         sidePanel={
           isFormOpen ? (
-            <MaterialForm 
+            <MaterialForm
               open={isFormOpen}
               onClose={() => setIsFormOpen(false)}
               material={editMaterial}
               categories={categories}
               onSave={handleSave}
               saving={saving}
+              onCategoryCreated={(cat) => setCategories((prev) => prev.some((c) => c.id === cat.id) ? prev : [...prev, cat])}
             />
           ) : managingUnitsMaterial ? (
             <MaterialUnitsManager 

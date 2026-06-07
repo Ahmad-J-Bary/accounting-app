@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
 import { Textarea } from "@shared/ui/textarea";
 import {
@@ -32,7 +32,13 @@ interface MaterialFormProps {
   categories: CategoryDto[];
   onSave: (data: CreateMaterialRequest | UpdateMaterialRequest) => Promise<void>;
   saving: boolean;
+  onCategoryCreated?: (category: CategoryDto) => void;
 }
+
+type InlineCreateMode =
+  | { type: "main" }
+  | { type: "sub"; parentId: string; parentName: string }
+  | null;
 
 const EMPTY_FORM = {
   name: "",
@@ -53,14 +59,116 @@ const EMPTY_FORM = {
   sale_prices: [] as { unit_id: string; tier: string; price: string; price_base: string; min_price: string; min_price_base: string; currency: string }[],
 };
 
-export function MaterialForm({ open, onClose, material, categories, onSave, saving }: MaterialFormProps) {
+export function MaterialForm({ open, onClose, material, categories, onSave, saving, onCategoryCreated }: MaterialFormProps) {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [activeTab, setActiveTab] = useState("basic");
+  const [inlineCreate, setInlineCreate] = useState<InlineCreateMode>(null);
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatPrefix, setNewCatPrefix] = useState("");
+  const [creatingSaving, setCreatingSaving] = useState(false);
 
   const { currencies, baseCurrency, rateMap } = useCurrencyContext();
   const activeCurrencies = useMemo(() => currencies.filter(c => c.is_active), [currencies]);
   const uncategorizedCat = useMemo(() => categories.find(c => c.name === DEFAULT_CATEGORY_NAME && !c.parent_id), [categories]);
   const mainCategories = useMemo(() => categories.filter(c => !c.parent_id && c.name !== DEFAULT_CATEGORY_NAME && !c.is_hybrid), [categories]);
+
+  const suggestPrefix = useCallback(() => {
+    const chars = "أبتثجحخدذرزسشصضطظعغفقكلمنهويABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const existingPrefixes = new Set(categories.map(c => c.code_prefix).filter(Boolean) as string[]);
+    for (const ch of chars) {
+      if (!existingPrefixes.has(ch)) return ch;
+    }
+    return "X";
+  }, [categories]);
+
+  const openInlineCreate = (mode: InlineCreateMode) => {
+    setInlineCreate(mode);
+    setNewCatName("");
+    setNewCatPrefix(suggestPrefix());
+  };
+
+  const cancelInlineCreate = useCallback(() => {
+    setInlineCreate(null);
+    setNewCatName("");
+    setNewCatPrefix("");
+  }, []);
+
+  const handleCreateMain = useCallback(async () => {
+    if (!newCatName.trim()) { toast.error("اسم التصنيف مطلوب"); return; }
+    setCreatingSaving(true);
+    try {
+      // The backend's CreateCategoryUseCase already auto-creates a "X عام"
+      // sub-category under any new root, using the prefix we pass here. We
+      // therefore only call createCategory once (for the root), and then
+      // fetch the fresh list to pick up the auto-created sub.
+      const mainPrefix = newCatPrefix.trim().toUpperCase() || suggestPrefix();
+      const main = await categoryService.createCategory({
+        name: newCatName.trim(),
+        parent_id: null,
+        code_prefix: mainPrefix,
+      });
+      onCategoryCreated?.(main);
+
+      // Pull the freshly-created sub from the backend (it was created server-side).
+      const freshList = await categoryService.listCategories();
+      const generalSub = freshList.find(
+        (c) => c.parent_id === main.id && c.name === `${newCatName.trim()} عام`
+      );
+
+      if (generalSub) {
+        onCategoryCreated?.(generalSub);
+        setFormData((prev) => ({
+          ...prev,
+          selectedCategoryIds: [generalSub.id],
+        }));
+      }
+
+      toast.success("تم إضافة التصنيف الرئيسي");
+      cancelInlineCreate();
+    } catch (e) {
+      toast.error("فشل إنشاء التصنيف: " + e);
+    } finally {
+      setCreatingSaving(false);
+    }
+  }, [newCatName, newCatPrefix, suggestPrefix, onCategoryCreated, cancelInlineCreate]);
+
+  const handleCreateSub = useCallback(async (parentId: string) => {
+    if (!newCatName.trim()) { toast.error("اسم التصنيف مطلوب"); return; }
+    setCreatingSaving(true);
+    try {
+      const sub = await categoryService.createCategory({
+        name: newCatName.trim(),
+        parent_id: parentId,
+        code_prefix: newCatPrefix.trim().toUpperCase() || null,
+      });
+      onCategoryCreated?.(sub);
+
+      // Auto-select the new sub, replacing any existing sub in that parent's row.
+      setFormData((prev) => {
+        const next = prev.selectedCategoryIds.filter((id) => {
+          const c = categories.find((cc) => cc.id === id);
+          return c?.parent_id !== parentId;
+        });
+        return { ...prev, selectedCategoryIds: [...next, sub.id] };
+      });
+
+      toast.success("تم إضافة التصنيف الفرعي");
+      cancelInlineCreate();
+    } catch (e) {
+      toast.error("فشل إنشاء التصنيف: " + e);
+    } finally {
+      setCreatingSaving(false);
+    }
+  }, [newCatName, newCatPrefix, categories, onCategoryCreated, cancelInlineCreate]);
+
+  const submitInlineCreate = useCallback(() => {
+    if (!inlineCreate) return;
+    if (inlineCreate.type === "main") {
+      void handleCreateMain();
+    } else {
+      void handleCreateSub(inlineCreate.parentId);
+    }
+  }, [inlineCreate, handleCreateMain, handleCreateSub]);
 
   useEffect(() => {
     if (open) {
@@ -105,8 +213,9 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
         });
       }
       setActiveTab("basic");
+      cancelInlineCreate();
     }
-  }, [open, material, uncategorizedCat]);
+  }, [open, material, uncategorizedCat, cancelInlineCreate]);
 
   // Sync default unit selections if units change
   useEffect(() => {
@@ -430,45 +539,47 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
           {/* تصنيف المادة */}
           <SidebarSection title="تصنيف المادة" defaultOpen={false}>
             <div className="border border-slate-200/70 rounded-2xl overflow-hidden bg-white shadow-sm">
-              <div className="bg-slate-50 px-4 py-2.5 border-b text-[10px] font-black text-slate-400 grid grid-cols-2 gap-4">
+              <div className="bg-slate-50 px-4 py-2.5 border-b text-[10px] font-black text-slate-400 grid grid-cols-[1fr_1fr_28px] gap-3 items-center">
                 <div>التصنيف الرئيسي</div>
                 <div>التصنيفات الفرعية</div>
+                <div></div>
               </div>
               <div className="divide-y divide-slate-100 max-h-[260px] overflow-y-auto custom-scrollbar text-right">
                 {uncategorizedCat && (
-                  <div className="grid grid-cols-2 items-center min-h-[44px] hover:bg-slate-50/50">
+                  <div className="grid grid-cols-[1fr_1fr_28px] items-center min-h-[44px] hover:bg-slate-50/50">
                     <div className="px-4 py-2 font-black text-blue-600 text-xs italic">غير مصنف</div>
                     <div className="px-4 py-2">
-                      <div 
-                        onClick={() => handleCategoryToggle(uncategorizedCat.id, true)} 
-                        className={cn("flex items-center justify-center gap-2 px-3 py-1.5 rounded-xl border cursor-pointer text-[10px] transition-all", 
-                          formData.selectedCategoryIds.includes(uncategorizedCat.id) 
-                            ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" 
+                      <div
+                        onClick={() => handleCategoryToggle(uncategorizedCat.id, true)}
+                        className={cn("flex items-center justify-center gap-2 px-3 py-1.5 rounded-xl border cursor-pointer text-[10px] transition-all",
+                          formData.selectedCategoryIds.includes(uncategorizedCat.id)
+                            ? "bg-blue-50 border-blue-200 text-blue-700 font-bold"
                             : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
                         )}
                       >
                         افتراضي
                       </div>
                     </div>
+                    <div></div>
                   </div>
                 )}
                 {mainCategories.map(main => (
-                  <div key={main.id} className="grid grid-cols-2 items-center min-h-[44px] hover:bg-slate-50/50">
+                  <div key={main.id} className="grid grid-cols-[1fr_1fr_28px] items-center min-h-[44px] hover:bg-slate-50/50 group">
                     <div className="px-4 py-2 font-bold text-slate-700 text-xs">{main.name}</div>
                     <div className="px-4 py-2 flex flex-wrap gap-1.5">
                       {categories.filter(c => c.parent_id === main.id).map(sub => (
-                        <div 
-                          key={sub.id} 
-                          onClick={() => handleCategoryToggle(sub.id, false, main.id)} 
-                          className={cn("flex items-center gap-2 px-2.5 py-1 rounded-xl border cursor-pointer text-[9px] transition-all", 
-                            formData.selectedCategoryIds.includes(sub.id) 
-                              ? "bg-emerald-50 border-emerald-200 text-emerald-700 font-bold" 
+                        <div
+                          key={sub.id}
+                          onClick={() => handleCategoryToggle(sub.id, false, main.id)}
+                          className={cn("flex items-center gap-2 px-2.5 py-1 rounded-xl border cursor-pointer text-[9px] transition-all",
+                            formData.selectedCategoryIds.includes(sub.id)
+                              ? "bg-emerald-50 border-emerald-200 text-emerald-700 font-bold"
                               : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
                           )}
                         >
-                          <div className={cn("w-2.5 h-2.5 rounded border flex items-center justify-center transition-colors", 
-                            formData.selectedCategoryIds.includes(sub.id) 
-                              ? "bg-emerald-600 border-emerald-600" 
+                          <div className={cn("w-2.5 h-2.5 rounded border flex items-center justify-center transition-colors",
+                            formData.selectedCategoryIds.includes(sub.id)
+                              ? "bg-emerald-600 border-emerald-600"
                               : "border-slate-300 bg-white"
                           )}>
                             {formData.selectedCategoryIds.includes(sub.id) && <Check className="w-2 h-2 text-white" />}
@@ -477,9 +588,106 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                         </div>
                       ))}
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => openInlineCreate({ type: "sub", parentId: main.id, parentName: main.name })}
+                      title={`إضافة تصنيف فرعي لـ ${main.name}`}
+                      className="ml-1.5 w-7 h-7 rounded-lg border border-dashed border-slate-300 text-slate-400 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center transition-all"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 ))}
+                {/* "Add main" trigger row */}
+                <div className="bg-slate-50/50 px-3 py-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openInlineCreate({ type: "main" })}
+                    className="w-full h-7 text-[10px] font-bold gap-1 border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
+                  >
+                    <Plus className="w-3 h-3" /> إضافة تصنيف رئيسي
+                  </Button>
+                </div>
               </div>
+
+              {/* Inline create form */}
+              {inlineCreate && (
+                <div className="border-t-2 border-blue-200 bg-blue-50/60 p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[11px] font-black text-blue-800 flex items-center gap-1.5">
+                      {inlineCreate.type === "main" ? (
+                        <>
+                          <Plus className="w-3.5 h-3.5" />
+                          تصنيف رئيسي جديد
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-3.5 h-3.5" />
+                          تصنيف فرعي جديد تحت: <span className="text-blue-600">{inlineCreate.parentName}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-[1fr_60px] gap-2">
+                    <Input
+                      autoFocus
+                      placeholder="اسم التصنيف"
+                      value={newCatName}
+                      onChange={(e) => setNewCatName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          submitInlineCreate();
+                        }
+                      }}
+                      className="h-8 text-xs bg-white border-slate-200"
+                    />
+                    <Input
+                      placeholder="A"
+                      value={newCatPrefix}
+                      onChange={(e) => setNewCatPrefix(e.target.value.slice(0, 1).toUpperCase())}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          submitInlineCreate();
+                        }
+                      }}
+                      className="h-8 text-xs font-mono text-center bg-white border-slate-200"
+                      maxLength={1}
+                      dir="ltr"
+                      title="بادئة الكود (حرف واحد)"
+                    />
+                  </div>
+                  <p className="text-[9px] text-slate-500 leading-relaxed">
+                    {inlineCreate.type === "main"
+                      ? "سيُنشأ أيضاً تصنيف فرعي افتراضي «عام» ويُحدَّد تلقائياً."
+                      : "سيتم تحديد التصنيف الفرعي الجديد تلقائياً للمادة."}
+                  </p>
+                  <div className="flex items-center gap-2 justify-end">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={cancelInlineCreate}
+                      disabled={creatingSaving}
+                      className="h-7 text-[10px] font-bold"
+                    >
+                      إلغاء
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={submitInlineCreate}
+                      disabled={creatingSaving || !newCatName.trim()}
+                      className="h-7 text-[10px] font-bold bg-blue-600 hover:bg-blue-700"
+                    >
+                      {creatingSaving ? "جاري الحفظ..." : "حفظ التصنيف"}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </SidebarSection>
         </TabsContent>

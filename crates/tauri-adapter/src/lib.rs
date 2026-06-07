@@ -45,6 +45,7 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::category::list_categories,
             commands::category::update_category,
             commands::category::delete_category,
+            commands::category::delete_category_with_reassignment,
             commands::category::get_or_create_hybrid_category,
             commands::material_code::generate_material_code,
             commands::material_code::preview_material_code,

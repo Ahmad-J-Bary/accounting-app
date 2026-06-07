@@ -1,7 +1,8 @@
 use crate::bootstrap::container::AppState;
 use application::dto::category_dto::{CreateCategoryRequest, UpdateCategoryRequest, CategoryDto};
 use application::use_cases::category::{
-    CreateCategoryUseCase, CategoryQueries, UpdateCategoryUseCase, DeleteCategoryUseCase, HybridCategoryUseCase
+    CreateCategoryUseCase, CategoryQueries, UpdateCategoryUseCase, DeleteCategoryUseCase,
+    DeleteCategoryCascadeUseCase, DeleteCategoryCascadeResult, HybridCategoryUseCase,
 };
 use tauri::State;
 
@@ -38,6 +39,16 @@ pub async fn delete_category(
 ) -> Result<(), String> {
     DeleteCategoryUseCase::new(state.category_repo.clone())
         .execute(id).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn delete_category_with_reassignment(
+    state: State<'_, AppState>,
+    id: String,
+    reassign_materials_to: String,
+) -> Result<DeleteCategoryCascadeResult, String> {
+    DeleteCategoryCascadeUseCase::new(state.category_repo.clone())
+        .execute(id, reassign_materials_to).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]

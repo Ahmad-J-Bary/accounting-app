@@ -1,9 +1,14 @@
 import { invoke } from '@shared/lib/invoke';
-import type { 
-  CategoryDto, 
+import type {
+  CategoryDto,
   CreateCategoryRequest,
   UpdateCategoryRequest
 } from '@erp/shared-types';
+
+export interface DeleteCategoryCascadeResult {
+  materials_reassigned: number;
+  subs_deleted: number;
+}
 
 export const categoryService = {
   async createCategory(request: CreateCategoryRequest): Promise<CategoryDto> {
@@ -20,6 +25,16 @@ export const categoryService = {
 
   async deleteCategory(id: string): Promise<void> {
     return await invoke<void>('delete_category', { id });
+  },
+
+  async deleteCategoryWithReassignment(
+    id: string,
+    reassignMaterialsTo: string
+  ): Promise<DeleteCategoryCascadeResult> {
+    return await invoke<DeleteCategoryCascadeResult>(
+      'delete_category_with_reassignment',
+      { id, reassignMaterialsTo }
+    );
   },
 
   async getOrCreateHybridCategory(prefixes: string[]): Promise<CategoryDto> {

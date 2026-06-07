@@ -12,6 +12,7 @@ import { HierarchicalTreeTemplate } from '@widgets/templates/HierarchicalTreeTem
 import { CategoryTreeNodeItem } from "./categories/CategoryTreeNodeItem";
 import { CategoryDetailsSidebar } from "./categories/CategoryDetailsSidebar";
 import { useCategoryTree, VIRTUAL_ROOT_ID, type CategoryTreeNode } from '@modules/inventory/hooks/useCategoryTree';
+import { CategoryDeleteDialog, type CategoryDeleteKind } from "./categories/CategoryDeleteDialog";
 
 const DEFAULT_CATEGORY_NAME = "غير مصنف";
 
@@ -59,52 +60,207 @@ export default function Categories() {
     });
   }, []);
 
-  const handleDelete = useCallback(async () => {
-    if (!selected || selected.id === VIRTUAL_ROOT_ID) return;
-    
-    const isMat = selected.isMaterial;
-    const name = selected.name;
-    const id = isMat ? selected.id.replace('mat-', '') : selected.id;
+  // Delete dialog state
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteKind, setDeleteKind] = useState<CategoryDeleteKind | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [pendingCategoryDelete, setPendingCategoryDelete] = useState<{
+    id: string;
+    name: string;
+    targetId: string;
+  } | null>(null);
 
-    if (!isMat) {
-      if (name === DEFAULT_CATEGORY_NAME) {
-        toast.error(`لا يمكن حذف التصنيف الافتراضي "${DEFAULT_CATEGORY_NAME}"`);
-        return;
-      }
-      if ((selected.material_count ?? 0) > 0) {
-        toast.error("لا يمكن حذف تصنيف يحتوي على مواد");
-        return;
-      }
+  /** Build a `CategoryDeleteKind` from the currently selected node. */
+  const computeDeleteKind = useCallback((node: CategoryTreeNode): CategoryDeleteKind | null => {
+    if (node.id === VIRTUAL_ROOT_ID) return null;
+    if (node.isMaterial) return null; // handled by material flow
+
+    const id = node.id;
+    const isRoot = !node.parent_id && node.name !== DEFAULT_CATEGORY_NAME;
+
+    if (isRoot) {
+      const subs = categories.filter(c => c.parent_id === id);
+      const subMaterialCount = subs.reduce((s, c) => s + (c.material_count ?? 0), 0);
+      if (subs.length === 0) return { type: "root_no_subs" };
+      const defaultCat = categories.find(c => c.name === DEFAULT_CATEGORY_NAME);
+      return {
+        type: "root_with_subs",
+        subCount: subs.length,
+        subMaterialCount,
+        targetName: defaultCat?.name || DEFAULT_CATEGORY_NAME,
+      };
     }
 
-    if (!confirm(`هل أنت متأكد من حذف "${name}"؟`)) return;
+    // Sub-category
+    const materialCount = node.material_count ?? 0;
+    if (materialCount === 0) return { type: "sub_empty" };
 
+    const root = categories.find(c => c.id === node.parent_id);
+    const isGeneralSub = !!root && node.name === `${root.name} عام`;
+
+    if (isGeneralSub) {
+      const defaultCat = categories.find(c => c.name === DEFAULT_CATEGORY_NAME);
+      return {
+        type: "sub_with_materials",
+        materialCount,
+        targetName: defaultCat?.name || DEFAULT_CATEGORY_NAME,
+        isGeneralSub: true,
+      };
+    }
+
+    const generalSub = root ? categories.find(c => c.parent_id === root.id && c.name === `${root.name} عام`) : undefined;
+    if (generalSub) {
+      return {
+        type: "sub_with_materials",
+        materialCount,
+        targetName: generalSub.name,
+        isGeneralSub: false,
+      };
+    }
+
+    const defaultCat = categories.find(c => c.name === DEFAULT_CATEGORY_NAME);
+    return {
+      type: "sub_with_materials",
+      materialCount,
+      targetName: defaultCat?.name || DEFAULT_CATEGORY_NAME,
+      isGeneralSub: true,
+    };
+  }, [categories]);
+
+  /** Compute the target category id to receive reassigned materials. */
+  const computeReassignTargetId = useCallback((node: CategoryTreeNode): string | null => {
+    if (node.id === VIRTUAL_ROOT_ID || node.isMaterial) return null;
+
+    const isRoot = !node.parent_id && node.name !== DEFAULT_CATEGORY_NAME;
+    if (isRoot) {
+      const defaultCat = categories.find(c => c.name === DEFAULT_CATEGORY_NAME);
+      return defaultCat?.id ?? null;
+    }
+
+    const root = categories.find(c => c.id === node.parent_id);
+    const isGeneralSub = !!root && node.name === `${root.name} عام`;
+
+    if (isGeneralSub) {
+      const defaultCat = categories.find(c => c.name === DEFAULT_CATEGORY_NAME);
+      return defaultCat?.id ?? null;
+    }
+
+    const generalSub = root ? categories.find(c => c.parent_id === root.id && c.name === `${root.name} عام`) : undefined;
+    if (generalSub) return generalSub.id;
+
+    const defaultCat = categories.find(c => c.name === DEFAULT_CATEGORY_NAME);
+    return defaultCat?.id ?? null;
+  }, [categories]);
+
+  const handleDelete = useCallback(() => {
+    if (!selected || selected.id === VIRTUAL_ROOT_ID) return;
+
+    // Material deletion keeps the existing flow.
+    if (selected.isMaterial) {
+      const id = selected.id.replace('mat-', '');
+      if (!window.confirm(`هل أنت متأكد من حذف المادة "${selected.name}"؟`)) return;
+      (async () => {
+        try {
+          setLoading(true);
+          await materialService.deleteMaterial(id);
+          toast.success("تم الحذف بنجاح");
+          setSelected(null);
+          await fetchData(false);
+        } catch (error) {
+          toast.error("فشل الحذف: " + error);
+        } finally {
+          setLoading(false);
+        }
+      })();
+      return;
+    }
+
+    if (selected.name === DEFAULT_CATEGORY_NAME) {
+      toast.error(`لا يمكن حذف التصنيف الافتراضي "${DEFAULT_CATEGORY_NAME}"`);
+      return;
+    }
+
+    const kind = computeDeleteKind(selected);
+    const targetId = computeReassignTargetId(selected);
+
+    if (!kind || !targetId) {
+      if (!window.confirm(`هل تريد حذف "${selected.name}"؟`)) return;
+      (async () => {
+        try {
+          setLoading(true);
+          await categoryService.deleteCategory(selected.id);
+          toast.success("تم الحذف بنجاح");
+          setSelected(null);
+          await fetchData(false);
+        } catch (error) {
+          toast.error("فشل الحذف: " + error);
+        } finally {
+          setLoading(false);
+        }
+      })();
+      return;
+    }
+
+    setDeleteKind(kind);
+    setPendingCategoryDelete({ id: selected.id, name: selected.name, targetId });
+    setDeleteOpen(true);
+  }, [selected, computeDeleteKind, computeReassignTargetId, fetchData]);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!pendingCategoryDelete) return;
+    setDeleting(true);
     try {
-      setLoading(true);
-      if (isMat) {
-        await materialService.deleteMaterial(id);
+      if (deleteKind?.type === "sub_empty" || deleteKind?.type === "root_no_subs") {
+        await categoryService.deleteCategory(pendingCategoryDelete.id);
+        toast.success("تم الحذف بنجاح");
       } else {
-        await categoryService.deleteCategory(id);
+        const result = await categoryService.deleteCategoryWithReassignment(
+          pendingCategoryDelete.id,
+          pendingCategoryDelete.targetId,
+        );
+        const parts: string[] = [];
+        if (result.materials_reassigned > 0) {
+          parts.push(`تم تعديل تصنيف ${result.materials_reassigned} مادة`);
+        }
+        if (result.subs_deleted > 0) {
+          parts.push(`وحذف ${result.subs_deleted} تصنيف فرعي`);
+        }
+        const suffix = parts.length > 0 ? ` (${parts.join("، ")})` : "";
+        toast.success(`تم الحذف بنجاح${suffix}`);
       }
-      toast.success("تم الحذف بنجاح");
+      setDeleteOpen(false);
+      setDeleteKind(null);
+      setPendingCategoryDelete(null);
       setSelected(null);
       await fetchData(false);
-    } catch (error) { 
-      toast.error("فشل الحذف: " + error); 
-    } finally { 
-      setLoading(false); 
+    } catch (error) {
+      toast.error("فشل الحذف: " + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setDeleting(false);
     }
-  }, [selected, fetchData]);
+  }, [pendingCategoryDelete, deleteKind, fetchData]);
+
+  const handleCancelDelete = useCallback(() => {
+    if (deleting) return;
+    setDeleteOpen(false);
+    setDeleteKind(null);
+    setPendingCategoryDelete(null);
+  }, [deleting]);
 
   const parentName = useMemo(() => {
     if (!selected?.parent_id) return null;
     return categories.find(c => c.id === selected.parent_id)?.name ?? null;
   }, [selected, categories]);
 
-  const isLoading = loading || refreshing;
+  const selectedIsGeneralSub = useMemo(() => {
+    if (!selected || selected.parent_id == null) return false;
+    const root = categories.find(c => c.id === selected.parent_id);
+    return !!root && selected.name === `${root.name} عام`;
+  }, [selected, categories]);
 
   return (
-    <HierarchicalTreeTemplate
+    <>
+      <HierarchicalTreeTemplate
       title="تصنيفات المواد"
       toolbar={
         <>
@@ -170,6 +326,16 @@ export default function Categories() {
            ))}
         </div>
       }
-    />
+      />
+      <CategoryDeleteDialog
+        open={deleteOpen}
+        kind={deleteKind}
+        categoryName={pendingCategoryDelete?.name ?? ""}
+        isGeneralSub={selectedIsGeneralSub}
+        onCancel={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        confirming={deleting}
+      />
+    </>
   );
 }

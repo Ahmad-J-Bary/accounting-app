@@ -50,4 +50,12 @@ impl CategoryRepository for SqliteCategoryRepository {
     async fn count_materials_in_category(&self, id: &MaterialCategoryId) -> Result<u64, AppError> {
         queries::count_materials_in_category(&self.pool, id).await
     }
+
+    async fn reassign_materials(
+        &self,
+        from: &MaterialCategoryId,
+        to: &MaterialCategoryId,
+    ) -> Result<u64, AppError> {
+        commands::reassign_materials(&self.pool, from, to).await
+    }
 }
