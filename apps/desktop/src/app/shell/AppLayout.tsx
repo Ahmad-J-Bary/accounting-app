@@ -1,4 +1,4 @@
-import { ReactNode, useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
@@ -9,6 +9,7 @@ import { cn } from '@shared/lib/utils';
 import { useKeyboardShortcuts } from '@shared/hooks/useKeyboardShortcuts';
 import { FloatingExchangeRateWidget } from '@modules/core/components/FloatingExchangeRateWidget';
 import { UpdateBanner } from '@modules/core/components/UpdateBanner';
+import { useUpdateChecker } from '@modules/core/hooks/useUpdateChecker';
 
 interface AppLayoutProps {
   title?: string;
@@ -19,6 +20,26 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { tabs, openTab } = useTabs();
   const navigate = useNavigate();
+  const { updateSuccess, isUpdating } = useUpdateChecker();
+  const hasSavedRef = useRef(false);
+
+  const saveState = useCallback(() => {
+    if (hasSavedRef.current) return;
+    hasSavedRef.current = true;
+    try {
+      localStorage.setItem('erp_app_state_saved', Date.now().toString());
+    } catch { /***/ }
+  }, []);
+
+  useEffect(() => {
+    if (updateSuccess) saveState();
+  }, [updateSuccess, saveState]);
+
+  useEffect(() => {
+    const handler = () => { if (isUpdating || updateSuccess) saveState(); };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isUpdating, updateSuccess, saveState]);
 
   const [isExchangeVisible, setIsExchangeVisible] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -94,7 +115,10 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
           
           {/* Tab Bar */}
           <TabBar />
-          
+
+          {/* Update Banner (thin bar between tabs and content) */}
+          <UpdateBanner />
+
           {/* Page Content Containers (One per tab) */}
           <main className="flex-1 relative bg-slate-100 overflow-hidden">
             {tabs.map((tab) => (
@@ -120,7 +144,6 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
               </div>
             ))}
             <FloatingExchangeRateWidget isVisible={isExchangeVisible} onClose={() => toggleExchange()} />
-            <UpdateBanner />
           </main>
         </div>
       </div>
