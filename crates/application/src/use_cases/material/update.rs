@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use chrono::Utc;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
 use crate::dto::material_dto::{UpdateMaterialRequest, MaterialDto};
@@ -42,12 +43,7 @@ impl UpdateMaterialUseCase {
 
         material.purchase_prices = build_purchase_prices(req.purchase_prices, &material.units)?;
         material.sale_prices = build_sale_prices(req.sale_prices, &material.units)?;
-
-        if req.is_active {
-            material.activate();
-        } else {
-            material.deactivate();
-        }
+        material.updated_at = Utc::now();
 
         self.repo.update(&material).await?;
         

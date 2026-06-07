@@ -22,7 +22,6 @@ pub fn row_to_material(
         code: row.code.unwrap_or_default(),
         minimum_stock: Decimal::from_str(&row.minimum_stock).unwrap_or_default(),
         units,
-        is_active: row.is_active,
         category_ids,
         notes: row.notes,
         image_path: row.image_path,

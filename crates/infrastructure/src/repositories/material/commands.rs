@@ -11,8 +11,8 @@ pub async fn save(pool: &SqlitePool, material: &Material) -> Result<(), AppError
     let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     sqlx::query(
-        "INSERT INTO materials (id, name, name_en, barcode, code, minimum_stock, is_active, notes, image_path, default_purchase_unit_id, default_sale_unit_id, created_at, updated_at) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO materials (id, name, name_en, barcode, code, minimum_stock, notes, image_path, default_purchase_unit_id, default_sale_unit_id, created_at, updated_at) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(material.id.to_string())
     .bind(&material.name)
@@ -20,7 +20,6 @@ pub async fn save(pool: &SqlitePool, material: &Material) -> Result<(), AppError
     .bind(&material.barcode)
     .bind(&material.code)
     .bind(material.minimum_stock.to_string())
-    .bind(material.is_active)
     .bind(&material.notes)
     .bind(&material.image_path)
     .bind(material.default_purchase_unit_id.as_ref().map(|id| id.to_string()))
@@ -44,7 +43,7 @@ pub async fn update(pool: &SqlitePool, material: &Material) -> Result<(), AppErr
     let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     sqlx::query(
-        "UPDATE materials SET name=?, name_en=?, barcode=?, code=?, minimum_stock=?, is_active=?, notes=?, image_path=?, default_purchase_unit_id=?, default_sale_unit_id=?, updated_at=? 
+        "UPDATE materials SET name=?, name_en=?, barcode=?, code=?, minimum_stock=?, notes=?, image_path=?, default_purchase_unit_id=?, default_sale_unit_id=?, updated_at=? 
          WHERE id=?"
     )
     .bind(&material.name)
@@ -52,7 +51,6 @@ pub async fn update(pool: &SqlitePool, material: &Material) -> Result<(), AppErr
     .bind(&material.barcode)
     .bind(&material.code)
     .bind(material.minimum_stock.to_string())
-    .bind(material.is_active)
     .bind(&material.notes)
     .bind(&material.image_path)
     .bind(material.default_purchase_unit_id.as_ref().map(|id| id.to_string()))

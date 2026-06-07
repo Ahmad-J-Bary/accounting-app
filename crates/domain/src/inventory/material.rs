@@ -41,7 +41,6 @@ pub struct Material {
     pub name_en: String,
     pub barcode: String,
     pub code: String,
-    pub is_active: bool,
     pub minimum_stock: rust_decimal::Decimal,
     pub units: Vec<MaterialUnit>,
     pub category_ids: Vec<MaterialCategoryId>,
@@ -108,7 +107,6 @@ impl Material {
             name_en: "".to_string(),
             barcode,
             code,
-            is_active: true,
             minimum_stock,
             units,
             category_ids,
@@ -121,16 +119,6 @@ impl Material {
             created_at: now,
             updated_at: now,
         })
-    }
-
-    pub fn deactivate(&mut self) {
-        self.is_active = false;
-        self.updated_at = Utc::now();
-    }
-
-    pub fn activate(&mut self) {
-        self.is_active = true;
-        self.updated_at = Utc::now();
     }
 
     pub fn update_categories(&mut self, category_ids: Vec<MaterialCategoryId>) {

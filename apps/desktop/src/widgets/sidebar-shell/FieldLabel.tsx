@@ -8,8 +8,8 @@ export function FieldLabel({
 }: FieldLabelProps) {
   return (
     <label
-      className={`font-bold text-slate-600 ${className}`}
-      style={{ fontSize: "var(--sidebar-label-size)", display: "block" }}
+      className={`font-bold text-slate-600 block ${className}`}
+      style={{ fontSize: "var(--sidebar-label-size)" }}
     >
       {children}
       {required && <span className="text-red-500 mr-1">*</span>}

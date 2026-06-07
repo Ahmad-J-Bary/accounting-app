@@ -68,6 +68,7 @@ export interface SidebarFooterProps {
 
 export interface SidebarSectionProps {
   title: string;
+  icon?: ReactNode;
   children: ReactNode;
   defaultOpen?: boolean;
   className?: string;

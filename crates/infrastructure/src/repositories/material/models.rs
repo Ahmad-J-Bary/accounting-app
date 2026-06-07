@@ -8,7 +8,6 @@ pub struct MaterialRow {
     pub barcode: Option<String>,
     pub code: Option<String>,
     pub minimum_stock: String,
-    pub is_active: bool,
     pub notes: Option<String>,
     pub image_path: Option<String>,
     pub default_purchase_unit_id: Option<String>,

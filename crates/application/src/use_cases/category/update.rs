@@ -24,6 +24,21 @@ impl UpdateCategoryUseCase {
             .await?
             .ok_or_else(|| AppError::NotFound("التصنيف غير موجود".into()))?;
 
+        // Enforce unique names before mutating
+        let all_cats = self.repo.list_all().await?;
+        let trimmed = req.name.trim();
+        if !category.is_default() && category.name != trimmed {
+            if category.is_root() {
+                if all_cats.iter().any(|c| c.is_root() && c.name == trimmed && c.id != cid) {
+                    return Err(AppError::Invalid(format!("يوجد تصنيف أساسي بنفس الاسم «{}»", trimmed)));
+                }
+            } else {
+                if all_cats.iter().any(|c| c.parent_id == category.parent_id && c.name == trimmed && c.id != cid) {
+                    return Err(AppError::Invalid(format!("يوجد تصنيف فرعي بنفس الاسم «{}» ضمن نفس التصنيف الأساسي", trimmed)));
+                }
+            }
+        }
+
         if category.is_default() {
             category.code_prefix = req.code_prefix;
             category.name = DEFAULT_CATEGORY_NAME.to_string();

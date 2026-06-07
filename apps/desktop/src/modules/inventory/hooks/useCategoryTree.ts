@@ -25,7 +25,7 @@ function buildTree(cats: CategoryDto[], materials: MaterialDto[]): CategoryTreeN
       name: m.name,
       code_prefix: m.code, 
       is_hybrid: false,
-      is_active: m.is_active,
+      is_active: true,
       material_count: 0,
       parent_id: "",
       children: [],

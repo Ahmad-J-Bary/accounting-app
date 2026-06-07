@@ -7,7 +7,7 @@ use super::models::{MaterialRow, MaterialUnitRow, MaterialPurchasePriceRow, Mate
 use super::mappers::{row_to_material, row_to_unit, row_to_purchase_price, row_to_sale_price};
 use domain::inventory::material::{MaterialPurchasePrice, MaterialSalePrice};
 
-const MATERIAL_FIELDS: &str = "id, name, name_en, barcode, code, minimum_stock, is_active, notes, image_path, default_purchase_unit_id, default_sale_unit_id, created_at, updated_at";
+const MATERIAL_FIELDS: &str = "id, name, name_en, barcode, code, minimum_stock, notes, image_path, default_purchase_unit_id, default_sale_unit_id, created_at, updated_at";
 
 pub async fn find_by_id(pool: &SqlitePool, id: &MaterialId) -> Result<Option<Material>, AppError> {
     let row = sqlx::query_as::<_, MaterialRow>(

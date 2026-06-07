@@ -213,11 +213,26 @@ export function CategoryDetailsSidebar({
         if (codePrefix.trim().length === 0 && (formMode === "create_cat" || isUncategorized)) {
           setError("بادئة الكود مطلوبة."); setSaving(false); return;
         }
+        const trimmedName = name.trim();
+        if (formMode === "create_cat") {
+          if (parentId) {
+            if (allCategories.some(c => c.parent_id === parentId && c.name === trimmedName)) {
+              setError(`يوجد تصنيف فرعي بنفس الاسم «${trimmedName}» ضمن نفس التصنيف الأساسي`); setSaving(false); return;
+            }
+          } else {
+            if (allCategories.some(c => !c.parent_id && c.name === trimmedName && c.name !== DEFAULT_CATEGORY_NAME)) {
+              setError(`يوجد تصنيف أساسي بنفس الاسم «${trimmedName}»`); setSaving(false); return;
+            }
+          }
+        }
         if (formMode === "edit_cat" && selected) {
           if (isRoot) {
+            if (allCategories.some(c => !c.parent_id && c.name === trimmedName && c.name !== DEFAULT_CATEGORY_NAME && c.id !== selected.id)) {
+              setError(`يوجد تصنيف أساسي بنفس الاسم «${trimmedName}»`); setSaving(false); return;
+            }
             await categoryService.updateCategory({ 
               id: selected.id, 
-              name: name.trim(), 
+              name: trimmedName, 
               is_active: selected.is_active,
               code_prefix: null 
             });
@@ -231,9 +246,13 @@ export function CategoryDetailsSidebar({
               });
             }
           } else {
+            const siblingParent = parentId || selected.parent_id;
+            if (siblingParent && allCategories.some(c => c.parent_id === siblingParent && c.name === trimmedName && c.id !== selected.id)) {
+              setError(`يوجد تصنيف فرعي بنفس الاسم «${trimmedName}» ضمن نفس التصنيف الأساسي`); setSaving(false); return;
+            }
             await categoryService.updateCategory({ 
               id: selected.id, 
-              name: name.trim(), 
+              name: trimmedName, 
               parent_id: parentId || undefined, 
               is_active: selected.is_active,
               code_prefix: codePrefix.trim().toUpperCase() || null 

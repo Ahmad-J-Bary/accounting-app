@@ -55,7 +55,6 @@ export interface MaterialDto {
   name_en: string;
   barcode: string;
   code: string;
-  is_active: boolean;
   category_ids: string[];
   minimum_stock: string;
   notes?: string | null;
@@ -127,7 +126,6 @@ export interface UpdateMaterialRequest {
   barcode: string;
   code: string;
   minimum_stock: string;
-  is_active: boolean;
   category_ids: string[];
   notes?: string | null;
   image_path?: string | null;

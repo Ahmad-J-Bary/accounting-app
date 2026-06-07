@@ -5,6 +5,7 @@ import type { SidebarSectionProps } from "./types";
 
 export function SidebarSection({
   title,
+  icon,
   children,
   defaultOpen = true,
   className,
@@ -23,7 +24,7 @@ export function SidebarSection({
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50/80 hover:bg-slate-100/60 transition text-right border-b border-slate-100"
       >
-        <span className="text-xs font-black text-slate-800">{title}</span>
+        <span className="text-xs font-black text-slate-800 flex items-center gap-1.5">{icon}{title}</span>
         <ChevronDown
           className={cn(
             "w-4 h-4 text-slate-400 transition-transform duration-200",

@@ -480,7 +480,6 @@ export function useInvoiceLifecycle({
                         barcode: mat.barcode || "", 
                         code: mat.code || "", 
                         minimum_stock: mat.minimum_stock, 
-                        is_active: mat.is_active, 
                         category_ids: mat.category_ids, 
                         notes: mat.notes || null, 
                         image_path: mat.image_path || null, 

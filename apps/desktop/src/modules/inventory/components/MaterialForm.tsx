@@ -11,7 +11,7 @@ import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { toast } from "sonner";
 import { cn } from "@shared/lib/utils";
-import { Plus, Edit, Hash, Barcode, Package, Layers, Shuffle, Check, Scale, Boxes, Package2, FileText, Globe, Image as ImageIcon, DollarSign, Tag, ShoppingCart, TrendingUp } from "lucide-react";
+import { Plus, Edit, Hash, Barcode, Package, Layers, Shuffle, Check, Scale, Boxes, Package2, FileText, Globe, Image as ImageIcon, DollarSign, Tag, ShoppingCart, TrendingUp, Search, ChevronDown } from "lucide-react";
 import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest } from "@erp/shared-types";
 import { materialCodeService } from "@modules/inventory/api/materialCodeService";
 import { categoryService } from "@modules/inventory/api/categoryService";
@@ -46,7 +46,6 @@ const EMPTY_FORM = {
   barcode: "",
   code: "",
   minimum_stock: "0",
-  is_active: true,
   notes: "",
   image_path: "",
   default_purchase_unit_id: "",
@@ -67,6 +66,9 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
   const [newCatPrefix, setNewCatPrefix] = useState("");
   const [creatingSaving, setCreatingSaving] = useState(false);
 
+  const [categorySearch, setCategorySearch] = useState("");
+  const [expandedMains, setExpandedMains] = useState<Set<string>>(new Set());
+
   const { currencies, baseCurrency, rateMap } = useCurrencyContext();
   const activeCurrencies = useMemo(() => currencies.filter(c => c.is_active), [currencies]);
   const uncategorizedCat = useMemo(() => categories.find(c => c.name === DEFAULT_CATEGORY_NAME && !c.parent_id), [categories]);
@@ -80,6 +82,27 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
     }
     return "X";
   }, [categories]);
+
+  const filteredMains = useMemo(() => {
+    const q = categorySearch.trim().toLowerCase();
+    if (!q) return mainCategories;
+    return mainCategories.filter(main => {
+      if (main.name.toLowerCase().includes(q)) return true;
+      return categories.some(c => c.parent_id === main.id && c.name.toLowerCase().includes(q));
+    });
+  }, [categorySearch, mainCategories, categories]);
+
+  const toggleMain = useCallback((id: string) => {
+    setExpandedMains(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (filteredMains.length > 0) setExpandedMains(new Set(filteredMains.map(m => m.id)));
+  }, [filteredMains]);
 
   const openInlineCreate = (mode: InlineCreateMode) => {
     setInlineCreate(mode);
@@ -95,12 +118,13 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
 
   const handleCreateMain = useCallback(async () => {
     if (!newCatName.trim()) { toast.error("اسم التصنيف مطلوب"); return; }
+    const trimmed = newCatName.trim();
+    if (categories.some(c => !c.parent_id && c.name === trimmed && c.name !== DEFAULT_CATEGORY_NAME)) {
+      toast.error(`يوجد تصنيف أساسي بنفس الاسم «${trimmed}»`);
+      return;
+    }
     setCreatingSaving(true);
     try {
-      // The backend's CreateCategoryUseCase already auto-creates a "X عام"
-      // sub-category under any new root, using the prefix we pass here. We
-      // therefore only call createCategory once (for the root), and then
-      // fetch the fresh list to pick up the auto-created sub.
       const mainPrefix = newCatPrefix.trim().toUpperCase() || suggestPrefix();
       const main = await categoryService.createCategory({
         name: newCatName.trim(),
@@ -130,10 +154,15 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
     } finally {
       setCreatingSaving(false);
     }
-  }, [newCatName, newCatPrefix, suggestPrefix, onCategoryCreated, cancelInlineCreate]);
+  }, [newCatName, newCatPrefix, suggestPrefix, onCategoryCreated, cancelInlineCreate, categories]);
 
   const handleCreateSub = useCallback(async (parentId: string) => {
     if (!newCatName.trim()) { toast.error("اسم التصنيف مطلوب"); return; }
+    const trimmed = newCatName.trim();
+    if (categories.some(c => c.parent_id === parentId && c.name === trimmed)) {
+      toast.error(`يوجد تصنيف فرعي بنفس الاسم «${trimmed}» ضمن نفس التصنيف الأساسي`);
+      return;
+    }
     setCreatingSaving(true);
     try {
       const sub = await categoryService.createCategory({
@@ -179,7 +208,6 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
           barcode: material.barcode || "",
           code: material.code || "",
           minimum_stock: material.minimum_stock,
-          is_active: material.is_active,
           notes: material.notes || "",
           image_path: material.image_path || "",
           default_purchase_unit_id: material.default_purchase_unit_id || "",
@@ -459,235 +487,239 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
         </TabsList>
 
         {/* Tab 1: الأساسيات */}
-        <TabsContent value="basic" className="space-y-4">
-          <SidebarSection title="البيانات الأساسية" defaultOpen={true}>
-            <div className="space-y-4 text-right">
-              {/* اسم المادة عربي */}
-              <div className="space-y-2">
-                <FieldLabel required>اسم المادة (عربي)</FieldLabel>
-                <Input 
-                  value={formData.name} 
-                  onChange={e => setFormData({ ...formData, name: e.target.value })} 
-                  placeholder="مثال: سكر ناعم" 
-                  className="bg-white border-slate-200" 
-                />
-              </div>
-
-              {/* الاسم إنجليزي */}
-              <div className="space-y-2">
-                <FieldLabel className="flex items-center gap-1.5"><Globe className="w-3.5 h-3.5 text-slate-400" /> الاسم (English)</FieldLabel>
-                <Input 
-                  value={formData.name_en} 
-                  onChange={e => setFormData({ ...formData, name_en: e.target.value })} 
-                  placeholder="Example: Fine Sugar" 
-                  className="bg-white border-slate-200" 
-                  dir="ltr" 
-                />
+        <TabsContent value="basic" className="space-y-3">
+          <SidebarSection icon={<Package className="w-3.5 h-3.5" />} title="البيانات الأساسية" defaultOpen={true}>
+            <div className="space-y-2.5 text-right">
+              {/* اسم المادة عربي + إنجليزي */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <FieldLabel className="flex items-center gap-1.5" required><Tag className="w-3.5 h-3.5 text-slate-400" /> اسم المادة (عربي)</FieldLabel>
+                  <Input 
+                    value={formData.name} 
+                    onChange={e => setFormData({ ...formData, name: e.target.value })} 
+                    placeholder="مثال: سكر ناعم" 
+                    className="bg-white border-slate-200 h-9" 
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <FieldLabel className="flex items-center gap-1.5"><Globe className="w-3.5 h-3.5 text-slate-400" /> الاسم (English)</FieldLabel>
+                  <Input 
+                    value={formData.name_en} 
+                    onChange={e => setFormData({ ...formData, name_en: e.target.value })} 
+                    placeholder="Example: Fine Sugar" 
+                    className="bg-white border-slate-200 h-9" 
+                    dir="ltr" 
+                  />
+                </div>
               </div>
 
               {/* الكود والباركود */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
                   <FieldLabel className="flex items-center gap-1.5"><Hash className="w-3.5 h-3.5 text-slate-400" /> الكود</FieldLabel>
                   <Input 
                     value={formData.code} 
                     onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })} 
-                    className="font-mono text-xs bg-white border-slate-200" 
+                    className="font-mono text-xs bg-white border-slate-200 h-9" 
                     placeholder="الكود" 
                     dir="ltr" 
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <FieldLabel className="flex items-center gap-1.5"><Barcode className="w-3.5 h-3.5 text-slate-400" /> الباركود العام</FieldLabel>
                   <Input 
                     value={formData.barcode} 
                     onChange={e => setFormData({ ...formData, barcode: e.target.value })} 
-                    className="font-mono text-xs bg-white border-slate-200" 
+                    className="font-mono text-xs bg-white border-slate-200 h-9" 
                     placeholder="الباركود" 
                     dir="ltr" 
                   />
                 </div>
               </div>
               
-              {/* حد الطلب والحالة */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
+              {/* حد الطلب + ملاحظات */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
                   <FieldLabel className="flex items-center gap-1.5"><Package className="w-3.5 h-3.5 text-slate-400" /> حد الطلب</FieldLabel>
                   <Input 
                     type="number" 
                     value={formData.minimum_stock} 
                     onChange={e => setFormData({ ...formData, minimum_stock: e.target.value })} 
-                    className="bg-white border-slate-200" 
+                    className="bg-white border-slate-200 h-9" 
                   />
                 </div>
-                <div className="space-y-2">
-                  <FieldLabel className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-slate-400" /> الحالة</FieldLabel>
-                  <div className="flex items-center gap-2 h-10 px-3 bg-slate-50 rounded-lg border border-slate-200">
-                    <input 
-                      type="checkbox" 
-                      checked={formData.is_active} 
-                      onChange={e => setFormData({ ...formData, is_active: e.target.checked })} 
-                      className="w-4 h-4 accent-blue-600 cursor-pointer" 
-                    />
-                    <span className="text-xs font-bold text-slate-600">نشط</span>
-                  </div>
+                <div className="space-y-1.5">
+                  <FieldLabel className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-slate-400" /> ملاحظات</FieldLabel>
+                  <Textarea 
+                    value={formData.notes} 
+                    onChange={e => setFormData({ ...formData, notes: e.target.value })} 
+                    placeholder="أي تفاصيل أو مواصفات أخرى..." 
+                    className="min-h-[72px] resize-none bg-white border-slate-200 text-xs" 
+                  />
                 </div>
               </div>
             </div>
           </SidebarSection>
 
           {/* تصنيف المادة */}
-          <SidebarSection title="تصنيف المادة" defaultOpen={false}>
-            <div className="border border-slate-200/70 rounded-2xl overflow-hidden bg-white shadow-sm">
-              <div className="bg-slate-50 px-4 py-2.5 border-b text-[10px] font-black text-slate-400 grid grid-cols-[1fr_1fr_28px] gap-3 items-center">
-                <div>التصنيف الرئيسي</div>
-                <div>التصنيفات الفرعية</div>
-                <div></div>
+          <SidebarSection icon={<Layers className="w-3.5 h-3.5" />} title="تصنيف المادة" defaultOpen={true}>
+            <div className="space-y-2">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                <Input
+                  placeholder="بحث عن تصنيف..."
+                  value={categorySearch}
+                  onChange={e => setCategorySearch(e.target.value)}
+                  className="pr-9 h-8 text-xs bg-white border-slate-200"
+                />
               </div>
-              <div className="divide-y divide-slate-100 max-h-[260px] overflow-y-auto custom-scrollbar text-right">
-                {uncategorizedCat && (
-                  <div className="grid grid-cols-[1fr_1fr_28px] items-center min-h-[44px] hover:bg-slate-50/50">
-                    <div className="px-4 py-2 font-black text-blue-600 text-xs italic">غير مصنف</div>
-                    <div className="px-4 py-2">
-                      <div
-                        onClick={() => handleCategoryToggle(uncategorizedCat.id, true)}
-                        className={cn("flex items-center justify-center gap-2 px-3 py-1.5 rounded-xl border cursor-pointer text-[10px] transition-all",
-                          formData.selectedCategoryIds.includes(uncategorizedCat.id)
-                            ? "bg-blue-50 border-blue-200 text-blue-700 font-bold"
-                            : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
-                        )}
-                      >
-                        افتراضي
-                      </div>
-                    </div>
-                    <div></div>
-                  </div>
-                )}
-                {mainCategories.map(main => (
-                  <div key={main.id} className="grid grid-cols-[1fr_1fr_28px] items-center min-h-[44px] hover:bg-slate-50/50 group">
-                    <div className="px-4 py-2 font-bold text-slate-700 text-xs">{main.name}</div>
-                    <div className="px-4 py-2 flex flex-wrap gap-1.5">
-                      {categories.filter(c => c.parent_id === main.id).map(sub => (
+
+              <div className="border border-slate-200/70 rounded-xl overflow-hidden bg-white shadow-sm">
+                {/* Header */}
+                <div className="bg-slate-50 px-3 py-2 border-b text-[10px] font-black text-slate-400 grid grid-cols-[1fr_1fr_28px] gap-2 items-center">
+                  <div>التصنيف الرئيسي</div>
+                  <div>التصنيفات الفرعية</div>
+                  <div></div>
+                </div>
+
+                {/* Content */}
+                <div className="divide-y divide-slate-100 text-right">
+                  {uncategorizedCat && (!categorySearch.trim() || uncategorizedCat.name.includes(categorySearch.trim())) && (
+                    <div className="grid grid-cols-[1fr_1fr_28px] items-center min-h-[36px] hover:bg-slate-50/50">
+                      <div className="px-3 py-1.5 font-black text-blue-600 text-xs italic">غير مصنف</div>
+                      <div className="px-3 py-1.5">
                         <div
-                          key={sub.id}
-                          onClick={() => handleCategoryToggle(sub.id, false, main.id)}
-                          className={cn("flex items-center gap-2 px-2.5 py-1 rounded-xl border cursor-pointer text-[9px] transition-all",
-                            formData.selectedCategoryIds.includes(sub.id)
-                              ? "bg-emerald-50 border-emerald-200 text-emerald-700 font-bold"
+                          onClick={() => handleCategoryToggle(uncategorizedCat.id, true)}
+                          className={cn("inline-flex items-center justify-center gap-2 px-3 py-1 rounded-xl border cursor-pointer text-[10px] transition-all",
+                            formData.selectedCategoryIds.includes(uncategorizedCat.id)
+                              ? "bg-blue-50 border-blue-200 text-blue-700 font-bold"
                               : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
                           )}
                         >
-                          <div className={cn("w-2.5 h-2.5 rounded border flex items-center justify-center transition-colors",
-                            formData.selectedCategoryIds.includes(sub.id)
-                              ? "bg-emerald-600 border-emerald-600"
-                              : "border-slate-300 bg-white"
-                          )}>
-                            {formData.selectedCategoryIds.includes(sub.id) && <Check className="w-2 h-2 text-white" />}
-                          </div>
-                          {sub.name}
+                          افتراضي
                         </div>
-                      ))}
+                      </div>
+                      <div></div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => openInlineCreate({ type: "sub", parentId: main.id, parentName: main.name })}
-                      title={`إضافة تصنيف فرعي لـ ${main.name}`}
-                      className="ml-1.5 w-7 h-7 rounded-lg border border-dashed border-slate-300 text-slate-400 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center transition-all"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-                {/* "Add main" trigger row */}
-                <div className="bg-slate-50/50 px-3 py-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openInlineCreate({ type: "main" })}
-                    className="w-full h-7 text-[10px] font-bold gap-1 border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
-                  >
-                    <Plus className="w-3 h-3" /> إضافة تصنيف رئيسي
-                  </Button>
-                </div>
-              </div>
+                  )}
 
-              {/* Inline create form */}
-              {inlineCreate && (
-                <div className="border-t-2 border-blue-200 bg-blue-50/60 p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="text-[11px] font-black text-blue-800 flex items-center gap-1.5">
-                      {inlineCreate.type === "main" ? (
-                        <>
-                          <Plus className="w-3.5 h-3.5" />
-                          تصنيف رئيسي جديد
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-3.5 h-3.5" />
-                          تصنيف فرعي جديد تحت: <span className="text-blue-600">{inlineCreate.parentName}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-[1fr_60px] gap-2">
-                    <Input
-                      autoFocus
-                      placeholder="اسم التصنيف"
-                      value={newCatName}
-                      onChange={(e) => setNewCatName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          submitInlineCreate();
-                        }
-                      }}
-                      className="h-8 text-xs bg-white border-slate-200"
-                    />
-                    <Input
-                      placeholder="A"
-                      value={newCatPrefix}
-                      onChange={(e) => setNewCatPrefix(e.target.value.slice(0, 1).toUpperCase())}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          submitInlineCreate();
-                        }
-                      }}
-                      className="h-8 text-xs font-mono text-center bg-white border-slate-200"
-                      maxLength={1}
-                      dir="ltr"
-                      title="بادئة الكود (حرف واحد)"
-                    />
-                  </div>
-                  <p className="text-[9px] text-slate-500 leading-relaxed">
-                    {inlineCreate.type === "main"
-                      ? "سيُنشأ أيضاً تصنيف فرعي افتراضي «عام» ويُحدَّد تلقائياً."
-                      : "سيتم تحديد التصنيف الفرعي الجديد تلقائياً للمادة."}
-                  </p>
-                  <div className="flex items-center gap-2 justify-end">
+                  {filteredMains.map(main => {
+                    const isExpanded = expandedMains.has(main.id);
+                    const subs = categories.filter(c => c.parent_id === main.id);
+                    const q = categorySearch.trim().toLowerCase();
+                    const visibleSubs = q ? subs.filter(s => s.name.toLowerCase().includes(q)) : subs;
+
+                    return (
+                      <div key={main.id} className="group">
+                        {/* Main category row */}
+                        <div
+                          onClick={() => toggleMain(main.id)}
+                          className="grid grid-cols-[1fr_1fr_28px] items-center min-h-[36px] hover:bg-slate-50/50 cursor-pointer select-none"
+                        >
+                          <div className="px-3 py-1.5 font-bold text-slate-700 text-xs flex items-center gap-1.5">
+                            <ChevronDown className={cn("w-3 h-3 text-slate-400 transition-transform duration-200", !isExpanded && "-rotate-90")} />
+                            {main.name}
+                          </div>
+                          <div className="px-3 py-1.5">
+                            {isExpanded ? (
+                              <div className="flex flex-wrap gap-1">
+                                {visibleSubs.map(sub => (
+                                  <div
+                                    key={sub.id}
+                                    onClick={(e) => { e.stopPropagation(); handleCategoryToggle(sub.id, false, main.id); }}
+                                    className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border cursor-pointer text-[9px] transition-all",
+                                      formData.selectedCategoryIds.includes(sub.id)
+                                        ? "bg-emerald-50 border-emerald-200 text-emerald-700 font-bold"
+                                        : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                                    )}
+                                  >
+                                    <div className={cn("w-2 h-2 rounded-sm border flex items-center justify-center transition-colors",
+                                      formData.selectedCategoryIds.includes(sub.id)
+                                        ? "bg-emerald-600 border-emerald-600"
+                                        : "border-slate-300 bg-white"
+                                    )}>
+                                      {formData.selectedCategoryIds.includes(sub.id) && <Check className="w-1.5 h-1.5 text-white" />}
+                                    </div>
+                                    {sub.name}
+                                  </div>
+                                ))}
+                                {visibleSubs.length === 0 && (
+                                  <span className="text-[9px] text-slate-400 italic">لا توجد تصنيفات فرعية</span>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-[9px] text-slate-400 italic flex items-center gap-1">
+                                <span>{subs.length}</span>
+                                {subs.length === 1 ? 'تصنيف فرعي' : 'تصنيفات فرعية'}
+                              </div>
+                            )}
+                          </div>
+                          <div className="pl-1 flex items-center justify-center">
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); openInlineCreate({ type: "sub", parentId: main.id, parentName: main.name }); }}
+                              title={`إضافة تصنيف فرعي لـ ${main.name}`}
+                              className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-lg border border-dashed border-slate-300 text-slate-400 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center transition-all"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* "Add main" trigger row */}
+                  <div className="bg-slate-50/50 px-3 py-2">
                     <Button
                       type="button"
                       size="sm"
-                      variant="ghost"
-                      onClick={cancelInlineCreate}
-                      disabled={creatingSaving}
-                      className="h-7 text-[10px] font-bold"
+                      variant="outline"
+                      onClick={() => openInlineCreate({ type: "main" })}
+                      className="w-full h-7 text-[10px] font-bold gap-1 border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
                     >
-                      إلغاء
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={submitInlineCreate}
-                      disabled={creatingSaving || !newCatName.trim()}
-                      className="h-7 text-[10px] font-bold bg-blue-600 hover:bg-blue-700"
-                    >
-                      {creatingSaving ? "جاري الحفظ..." : "حفظ التصنيف"}
+                      <Plus className="w-3 h-3" /> إضافة تصنيف رئيسي
                     </Button>
                   </div>
                 </div>
-              )}
+
+                {/* Inline create form */}
+                {inlineCreate && (
+                  <div className="border-t-2 border-blue-200 bg-blue-50/60 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="text-[11px] font-black text-blue-800 flex items-center gap-1.5">
+                        {inlineCreate.type === "main" ? (
+                          <><Plus className="w-3.5 h-3.5" /> تصنيف رئيسي جديد</>
+                        ) : (
+                          <><Plus className="w-3.5 h-3.5" /> تصنيف فرعي جديد تحت: <span className="text-blue-600">{inlineCreate.parentName}</span></>
+                        )}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-[1fr_60px] gap-2">
+                      <Input autoFocus placeholder="اسم التصنيف" value={newCatName}
+                        onChange={e => setNewCatName(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); submitInlineCreate(); } }}
+                        className="h-8 text-xs bg-white border-slate-200" />
+                      <Input placeholder="A" value={newCatPrefix}
+                        onChange={e => setNewCatPrefix(e.target.value.slice(0, 1).toUpperCase())}
+                        onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); submitInlineCreate(); } }}
+                        className="h-8 text-xs font-mono text-center bg-white border-slate-200" maxLength={1} dir="ltr" title="بادئة الكود (حرف واحد)" />
+                    </div>
+                    <p className="text-[9px] text-slate-500 leading-relaxed">
+                      {inlineCreate.type === "main"
+                        ? "سيُنشأ أيضاً تصنيف فرعي افتراضي «عام» ويُحدَّد تلقائياً."
+                        : "سيتم تحديد التصنيف الفرعي الجديد تلقائياً للمادة."}
+                    </p>
+                    <div className="flex items-center gap-2 justify-end">
+                      <Button type="button" size="sm" variant="ghost" onClick={cancelInlineCreate} disabled={creatingSaving} className="h-7 text-[10px] font-bold">إلغاء</Button>
+                      <Button type="button" size="sm" onClick={submitInlineCreate} disabled={creatingSaving || !newCatName.trim()} className="h-7 text-[10px] font-bold bg-blue-600 hover:bg-blue-700">
+                        {creatingSaving ? "جاري الحفظ..." : "حفظ التصنيف"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </SidebarSection>
         </TabsContent>
@@ -777,7 +809,7 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
           <div className="bg-amber-50/55 border border-amber-100 p-3.5 rounded-2xl flex gap-3 text-right">
             <Shuffle className="w-4.5 h-4.5 text-amber-600 flex-shrink-0 mt-0.5" />
             <p className="text-[10px] text-amber-800 leading-relaxed font-semibold">
-              <strong>تنبيه:</strong> الوحدة الأولى تعتبر <strong>الوحدة الأساسية</strong> للمستودعات. الوحدات الإضافية تُحسب كمعادلات تعادل كمية من الوحدة الأساسية (مثلاً: صندوق = 12 قطعة).
+              <strong>تنبيه:</strong> الوحدة الأولى تعتبر <strong>الوحدة الأساسية</strong> للمستودعات. الوحدات الإضافية تُحسب كمعادلات تعادل كمية من الوحدة الأساسية (مثلاً: دزينة = 12 قطعة).
             </p>
           </div>
         </TabsContent>
@@ -882,20 +914,9 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
         </TabsContent>
 
         {/* Tab 4: إضافي */}
-        <TabsContent value="extra" className="space-y-4">
-          <SidebarSection title="ملاحظات وتفاصيل أخرى" defaultOpen={true}>
-            <div className="space-y-4 text-right">
-              {/* ملاحظات */}
-              <div className="space-y-2">
-                <FieldLabel className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-slate-400" /> ملاحظات إضافية</FieldLabel>
-                <Textarea 
-                  value={formData.notes} 
-                  onChange={e => setFormData({ ...formData, notes: e.target.value })} 
-                  placeholder="أي تفاصيل أو مواصفات أخرى حول هذه المادة..." 
-                  className="min-h-[100px] resize-none bg-white border-slate-200" 
-                />
-              </div>
-
+        <TabsContent value="extra" className="space-y-3">
+          <SidebarSection icon={<ImageIcon className="w-3.5 h-3.5" />} title="صورة المادة" defaultOpen={true}>
+            <div className="space-y-3 text-right">
               {/* الصورة */}
               <div className="space-y-2">
                 <FieldLabel className="flex items-center gap-1.5"><ImageIcon className="w-3.5 h-3.5 text-slate-400" /> صورة المادة التعريفية</FieldLabel>
