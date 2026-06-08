@@ -125,6 +125,8 @@ pub fn build_sale_prices(
                 price_base: request.price_base.parse().unwrap_or_default(),
                 min_price: request.min_price.parse().unwrap_or_default(),
                 min_price_base: request.min_price_base.parse().unwrap_or_default(),
+                max_quantity: request.max_quantity.clone(),
+                max_quantity_unit_id: request.max_quantity_unit_id.clone().or(Some(request.unit_id.clone())),
                 currency: request.currency,
             })
         })

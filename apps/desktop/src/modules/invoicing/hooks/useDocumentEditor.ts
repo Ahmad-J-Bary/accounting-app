@@ -47,22 +47,49 @@ export function useDocumentEditor({
                     updatedLine.cost_price = updatedLine.unit_price;
                 }
             } else {
-                const sPrice = material.sale_prices.find(p => p.unit_id === updates.unit_id && p.tier === 'retail');
-                if (sPrice) {
-                    updatedLine.unit_price = sPrice.price_base || sPrice.price;
-                    updatedLine.retail_price = updatedLine.unit_price;
+                const tierPrices = {
+                  retail: material.sale_prices.find(p => p.unit_id === updates.unit_id && p.tier === 'retail'),
+                  semi_wholesale: material.sale_prices.find(p => p.unit_id === updates.unit_id && p.tier === 'semi_wholesale'),
+                  wholesale: material.sale_prices.find(p => p.unit_id === updates.unit_id && p.tier === 'wholesale'),
+                };
+                const currentTier = updatedLine.tier || 'retail';
+                const selected = tierPrices[currentTier as keyof typeof tierPrices] || tierPrices.retail;
+                if (selected) {
+                    updatedLine.unit_price = selected.price_base || selected.price;
                 }
+                if (tierPrices.retail) updatedLine.retail_price = tierPrices.retail.price_base || tierPrices.retail.price;
+                if (tierPrices.semi_wholesale) updatedLine.semi_wholesale_price = tierPrices.semi_wholesale.price_base || tierPrices.semi_wholesale.price;
+                if (tierPrices.wholesale) updatedLine.wholesale_price = tierPrices.wholesale.price_base || tierPrices.wholesale.price;
             }
         }
       }
 
-      // Bidirectional sync: unit_price ↔ retail_price for sales invoices
-      if (priceField === "last_sale_price") {
-        if ('unit_price' in updates && !('retail_price' in updates)) {
-          updatedLine.retail_price = updates.unit_price;
-        }
-        if ('retail_price' in updates && !('unit_price' in updates)) {
-          updatedLine.unit_price = updates.retail_price;
+      // Tier-aware price suggestion when quantity changes for sales invoices
+      if (priceField === "last_sale_price" && 'quantity' in updates && updatedLine.material_id) {
+        const qty = parseInt(updates.quantity || "0");
+        const material = materials.find(m => m.id === updatedLine.material_id);
+        if (material) {
+          const retailPrice = material.sale_prices?.find(p => p.unit_id === updatedLine.unit_id && p.tier === 'retail');
+          const semiPrice = material.sale_prices?.find(p => p.unit_id === updatedLine.unit_id && p.tier === 'semi_wholesale');
+          const wholePrice = material.sale_prices?.find(p => p.unit_id === updatedLine.unit_id && p.tier === 'wholesale');
+
+          const retailMax = retailPrice?.max_quantity ? parseInt(retailPrice.max_quantity) : 0;
+          const semiMax = semiPrice?.max_quantity ? parseInt(semiPrice.max_quantity) : 0;
+          // 0 means "no limit" (unset by user)
+          let suggestedTier = 'wholesale';
+          if (retailMax > 0 && qty <= retailMax) suggestedTier = 'retail';
+          else if (semiMax > 0 && qty <= semiMax) suggestedTier = 'semi_wholesale';
+
+          if (suggestedTier !== updatedLine.tier) {
+            const tierPrice = material.sale_prices?.find(p => p.unit_id === updatedLine.unit_id && p.tier === suggestedTier);
+            if (tierPrice) {
+              const basePrice = tierPrice.price_base || tierPrice.price || "0";
+              updatedLine.unit_price = basePrice;
+              updatedLine.tier = suggestedTier;
+            } else {
+              updatedLine.tier = suggestedTier;
+            }
+          }
         }
       }
 
@@ -180,11 +207,17 @@ export function useDocumentEditor({
 
     let price = "0";
     let costPrice: string;
+    let retailPrice: string | undefined;
+    let semiWholesalePrice: string | undefined;
+    let wholesalePrice: string | undefined;
     if (priceField === "last_sale_price") {
-      const retailPrice = material.sale_prices?.find(
-        p => p.unit_id === defaultUnit?.id && p.tier === 'retail'
-      );
-      price = retailPrice?.price_base || retailPrice?.price || "0";
+      const retail = material.sale_prices?.find(p => p.unit_id === defaultUnit?.id && p.tier === 'retail');
+      const semi = material.sale_prices?.find(p => p.unit_id === defaultUnit?.id && p.tier === 'semi_wholesale');
+      const whole = material.sale_prices?.find(p => p.unit_id === defaultUnit?.id && p.tier === 'wholesale');
+      retailPrice = retail?.price_base || retail?.price || undefined;
+      semiWholesalePrice = semi?.price_base || semi?.price || undefined;
+      wholesalePrice = whole?.price_base || whole?.price || undefined;
+      price = retailPrice || "0";
       costPrice = material.costing_method === "FIFO"
         ? (material.last_purchase_price_base || "0")
         : (material.average_cost_base || "0");
@@ -210,7 +243,10 @@ export function useDocumentEditor({
       conversion_factor: defaultUnit?.conversion_factor.toString() || "1",
       unit_barcode: defaultUnit?.barcode || material.barcode,
       unit_price: price,
-      retail_price: price,
+      retail_price: retailPrice,
+      semi_wholesale_price: semiWholesalePrice,
+      wholesale_price: wholesalePrice,
+      tier: "retail",
       cost_price: costPrice,
       purchase_price: material.last_purchase_price?.toString() || "",
     });

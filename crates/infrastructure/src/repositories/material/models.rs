@@ -39,6 +39,8 @@ pub struct MaterialSalePriceRow {
     pub price_base: f64,
     pub min_price: f64,
     pub min_price_base: f64,
+    pub max_quantity: String,
+    pub max_quantity_unit_id: Option<String>,
     pub currency: String,
     pub updated_at: String,
 }

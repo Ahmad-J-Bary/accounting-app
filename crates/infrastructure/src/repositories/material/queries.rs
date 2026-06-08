@@ -87,7 +87,7 @@ pub async fn get_purchase_prices(pool: &SqlitePool, material_id: &str) -> Result
 
 pub async fn get_sale_prices(pool: &SqlitePool, material_id: &str) -> Result<Vec<MaterialSalePrice>, AppError> {
     let rows = sqlx::query_as::<_, MaterialSalePriceRow>(
-        "SELECT id, material_id, unit_id, tier, price, price_base, min_price, min_price_base, currency, updated_at FROM material_sale_prices WHERE material_id = ?"
+        "SELECT id, material_id, unit_id, tier, price, price_base, min_price, min_price_base, max_quantity, max_quantity_unit_id, currency, updated_at FROM material_sale_prices WHERE material_id = ?"
     )
     .bind(material_id)
     .fetch_all(pool)

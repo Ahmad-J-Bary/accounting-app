@@ -277,20 +277,39 @@ export function MaterialTable({
       });
     });
 
+        const TIERS = [
+      { id: "retail", label: "مفرق" },
+      { id: "semi_wholesale", label: "نصف جملة" },
+      { id: "wholesale", label: "جملة" },
+    ];
     currencies.forEach(curr => {
       const sym = curr.symbol || curr.code;
       const isBase = isBaseCurrency(curr.code);
-      cols.push({
-        id: `sale_price_${curr.code}`,
-        header: `سعر المبيع (${sym})`,
-        label: `سعر المبيع (${sym})`,
-        accessor: (m) => {
-          const val = salePriceBase(m);
-          return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "";
-        },
-        className: isBase
-          ? "tabular-nums font-bold text-emerald-600"
-          : "tabular-nums font-medium text-emerald-300"
+      TIERS.forEach(tier => {
+        cols.push({
+          id: `sale_price_${tier.id}_${curr.code}`,
+          header: `${tier.label} (${sym})`,
+          label: `${tier.label} (${sym})`,
+          accessor: (m) => {
+            const defaultSaleUnitId = m.default_sale_unit_id;
+            const salePrice = m.sale_prices?.find(
+              p => p.unit_id === defaultSaleUnitId && p.tier === tier.id
+            );
+            const val = salePrice ? parseFloat(salePrice.price_base || "0") : 0;
+            const maxQty = salePrice?.max_quantity ? parseInt(salePrice.max_quantity) : 0;
+            return (
+              <div className="flex flex-col items-end gap-0.5">
+                <span>{val > 0 ? formatAmount(val, { currencyCode: curr.code }) : ""}</span>
+                {maxQty > 0 && (
+                  <span className="text-[8px] font-medium text-slate-400 whitespace-nowrap">&le;{maxQty}</span>
+                )}
+              </div>
+            );
+          },
+          className: isBase
+            ? "tabular-nums font-bold text-emerald-600"
+            : "tabular-nums font-medium text-emerald-300"
+        });
       });
     });
 
@@ -413,7 +432,9 @@ export function MaterialTable({
         ids.push(`average_cost_${curr.code}`);
         ids.push(`total_value_${curr.code}`);
         ids.push(`available_value_${curr.code}`);
-        ids.push(`sale_price_${curr.code}`);
+        ids.push(`sale_price_retail_${curr.code}`);
+        ids.push(`sale_price_semi_wholesale_${curr.code}`);
+        ids.push(`sale_price_wholesale_${curr.code}`);
       }
     });
     ids.push(

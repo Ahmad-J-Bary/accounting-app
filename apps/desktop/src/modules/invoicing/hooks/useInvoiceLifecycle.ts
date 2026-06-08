@@ -221,6 +221,7 @@ export function useInvoiceLifecycle({
               line_total: parseFloat(l.quantity) * basePrice,
               material_code: l.code,
               unit_barcode: l.barcode,
+              tier: "retail",
             };
           });
 
@@ -261,33 +262,13 @@ export function useInvoiceLifecycle({
         : currencies;
       return sortedCurrencies
         .map((curr) => ({
-          key: `retail_price_${curr.code}`,
-          header: `مفرق (${curr.symbol || curr.code})`,
+          key: `profit_amount_${curr.code}`,
+          header: `المربح (${curr.symbol || curr.code})`,
           width: "w-[90px]",
           align: "left" as const,
           type: "readonly" as const,
           defaultVisible: curr.code === baseCurrency?.code,
-        }))
-        .concat(
-          sortedCurrencies.map((curr) => ({
-            key: `wholesale_price_${curr.code}`,
-            header: `جملة (${curr.symbol || curr.code})`,
-            width: "w-[90px]",
-            align: "left" as const,
-            type: "readonly" as const,
-            defaultVisible: curr.code === baseCurrency?.code,
-          })),
-        )
-        .concat(
-          sortedCurrencies.map((curr) => ({
-            key: `profit_amount_${curr.code}`,
-            header: `المربح (${curr.symbol || curr.code})`,
-            width: "w-[90px]",
-            align: "left" as const,
-            type: "readonly" as const,
-            defaultVisible: curr.code === baseCurrency?.code,
-          })),
-        );
+        }));
     }
     return [
       {

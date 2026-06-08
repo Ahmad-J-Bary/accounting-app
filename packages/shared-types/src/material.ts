@@ -46,6 +46,8 @@ export interface MaterialSalePriceDto {
   price_base: string;
   min_price: string;
   min_price_base: string;
+  max_quantity: string;
+  max_quantity_unit_id: string | null;
   currency: string;
 }
 
@@ -100,6 +102,8 @@ export interface CreateMaterialSalePriceRequest {
   price_base: string;
   min_price: string;
   min_price_base: string;
+  max_quantity: string;
+  max_quantity_unit_id: string | null;
   currency: string;
 }
 

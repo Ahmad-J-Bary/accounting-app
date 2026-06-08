@@ -53,6 +53,8 @@ pub fn row_to_sale_price(row: MaterialSalePriceRow) -> Result<MaterialSalePrice,
         price_base: Decimal::from_f64_retain(row.price_base).unwrap_or_default(),
         min_price: Decimal::from_f64_retain(row.min_price).unwrap_or_default(),
         min_price_base: Decimal::from_f64_retain(row.min_price_base).unwrap_or_default(),
+        max_quantity: row.max_quantity,
+        max_quantity_unit_id: row.max_quantity_unit_id,
         currency: row.currency,
     })
 }

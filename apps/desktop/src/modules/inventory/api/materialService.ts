@@ -56,6 +56,8 @@ function dedupeSalePrices(
       price_base: String(price.price_base ?? '0'),
       min_price: String(price.min_price ?? '0'),
       min_price_base: String(price.min_price_base ?? '0'),
+      max_quantity: String(price.max_quantity ?? '0'),
+      max_quantity_unit_id: price.max_quantity_unit_id ?? null,
       currency,
     });
   }

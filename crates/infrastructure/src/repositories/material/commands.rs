@@ -197,8 +197,8 @@ async fn save_sale_prices(tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>, material
     let now = Utc::now().to_rfc3339();
     for p in prices {
         sqlx::query(
-            "INSERT INTO material_sale_prices (id, material_id, unit_id, tier, price, price_base, min_price, min_price_base, currency, updated_at) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO material_sale_prices (id, material_id, unit_id, tier, price, price_base, min_price, min_price_base, max_quantity, max_quantity_unit_id, currency, updated_at) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
         .bind(&p.id)
         .bind(material_id)
@@ -208,6 +208,8 @@ async fn save_sale_prices(tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>, material
         .bind(rust_decimal::prelude::ToPrimitive::to_f64(&p.price_base).unwrap_or_default())
         .bind(rust_decimal::prelude::ToPrimitive::to_f64(&p.min_price).unwrap_or_default())
         .bind(rust_decimal::prelude::ToPrimitive::to_f64(&p.min_price_base).unwrap_or_default())
+        .bind(&p.max_quantity)
+        .bind(&p.max_quantity_unit_id)
         .bind(&p.currency)
         .bind(&now)
         .execute(&mut **tx)

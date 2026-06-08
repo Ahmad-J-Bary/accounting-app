@@ -31,6 +31,8 @@ pub struct MaterialSalePrice {
     pub price_base: rust_decimal::Decimal,
     pub min_price: rust_decimal::Decimal,
     pub min_price_base: rust_decimal::Decimal,
+    pub max_quantity: String,
+    pub max_quantity_unit_id: Option<String>,
     pub currency: String,
 }
 

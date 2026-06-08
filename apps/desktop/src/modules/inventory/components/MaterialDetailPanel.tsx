@@ -54,7 +54,7 @@ export function MaterialDetailPanel({
 
   useEffect(() => {
     setCostingMethod(material?.costing_method || "Average");
-  }, [material?.id]);
+  }, [material]);
 
   useEffect(() => {
     if (!material) return;
@@ -325,8 +325,8 @@ export function MaterialDetailPanel({
                     <div className="grid grid-cols-2 gap-px bg-slate-100">
                       {[
                         { id: "retail", label: "مفرق" },
-                        { id: "wholesale", label: "جملة" },
                         { id: "semi_wholesale", label: "نصف جملة" },
+                        { id: "wholesale", label: "جملة" },
                       ].map((tier) => {
                         const price = material.sale_prices.find(
                           (p) =>

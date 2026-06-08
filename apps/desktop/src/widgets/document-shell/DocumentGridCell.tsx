@@ -140,6 +140,77 @@ export function DocumentGridCell({
   const { densityPadding: dp, fontSize, readOnly, materials, getCellValue, searchRow, cellBorderClass } = config;
   const { onUpdateLine, onCellChange, onKeyDown, onActiveCellChange, onSearchRowChange, onSearchTypeChange, onSearchTermChange, inputRefs } = callbacks;
 
+  if (col.type === "tier_select") {
+    const material = materials.find((m) => m.id === line.material_id);
+    const unitId = line.unit_id;
+    const currentTier = line.tier || "retail";
+
+    const tiers = [
+      { id: "retail", label: "مفرق" },
+      { id: "semi_wholesale", label: "نصف جملة" },
+      { id: "wholesale", label: "جملة" },
+    ];
+
+    const handleTierChange = (tierId: string) => {
+      if (readOnly || !line.material_id) return;
+      const price = material?.sale_prices?.find(
+        p => p.unit_id === unitId && p.tier === tierId
+      );
+      const basePrice = price?.price_base || price?.price || "0";
+      onUpdateLine(rowIdx, { tier: tierId, unit_price: basePrice });
+    };
+
+    const currentTierPrice = material?.sale_prices?.find(
+      p => p.unit_id === unitId && p.tier === currentTier
+    );
+    const currentMaxQty = currentTierPrice?.max_quantity ? parseInt(currentTierPrice.max_quantity) : 0;
+
+    return (
+      <CellWrapper column={col} config={config}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild disabled={readOnly || !line.material_id}>
+            <button className={cn(
+              "text-[9px] font-black px-2 py-0.5 rounded border uppercase tracking-tighter transition-all",
+              line.material_id
+                ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 cursor-pointer"
+                : "bg-slate-50 text-slate-400 border-slate-200 cursor-default",
+            )}>
+              <span className="flex items-center gap-1">
+                <span>{line.material_id ? (tiers.find(t => t.id === currentTier)?.label || "مفرق") : ""}</span>
+                {currentMaxQty > 0 && <span className="text-[7px] text-amber-500 font-bold">&le;{currentMaxQty}</span>}
+              </span>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" className="min-w-[140px] shadow-xl">
+            <DropdownMenuLabel className="text-right text-[9px] font-black text-slate-500 uppercase">نوع السعر</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {tiers.map((t) => {
+              const salePrice = material?.sale_prices?.find(
+                p => p.unit_id === unitId && p.tier === t.id
+              );
+              const priceStr = salePrice ? `${salePrice.price || salePrice.price_base || ""}` : "";
+              const maxQty = salePrice?.max_quantity ? parseInt(salePrice.max_quantity) : 0;
+              return (
+                <DropdownMenuCheckboxItem
+                  key={t.id}
+                  checked={currentTier === t.id}
+                  onCheckedChange={() => handleTierChange(t.id)}
+                  className="text-right flex-row-reverse gap-2 text-[10px] font-bold py-1.5"
+                >
+                  <span className="flex items-center gap-2 w-full">
+                    <span>{t.label}</span>
+                    {priceStr && <span className="tabular-nums text-slate-400 font-medium">{priceStr}</span>}
+                    {maxQty > 0 && <span className="text-[8px] text-purple-500 font-bold mr-auto">&le;{maxQty}</span>}
+                  </span>
+                </DropdownMenuCheckboxItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </CellWrapper>
+    );
+  }
+
   if (col.type === "readonly") {
     return (
       <CellWrapper column={col} config={config}>

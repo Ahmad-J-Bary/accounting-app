@@ -29,6 +29,8 @@ pub struct MaterialSalePriceDto {
     pub price_base: String,
     pub min_price: String,
     pub min_price_base: String,
+    pub max_quantity: String,
+    pub max_quantity_unit_id: Option<String>,
     pub currency: String,
 }
 
@@ -110,6 +112,8 @@ impl From<MaterialSalePrice> for MaterialSalePriceDto {
             price_base: p.price_base.to_string(),
             min_price: p.min_price.to_string(),
             min_price_base: p.min_price_base.to_string(),
+            max_quantity: p.max_quantity,
+            max_quantity_unit_id: p.max_quantity_unit_id,
             currency: p.currency,
         }
     }
@@ -201,6 +205,8 @@ pub struct CreateMaterialSalePriceRequest {
     pub price_base: String,
     pub min_price: String,
     pub min_price_base: String,
+    pub max_quantity: String,
+    pub max_quantity_unit_id: Option<String>,
     pub currency: String,
 }
 

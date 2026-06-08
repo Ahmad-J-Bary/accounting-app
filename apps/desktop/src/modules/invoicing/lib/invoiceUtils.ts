@@ -22,6 +22,9 @@ export interface GridLine extends InvoiceLineDto {
   // Analytics
   profit_amount?: string;
   profit_percent?: string;
+
+  // Current selected price tier
+  tier?: string;
 }
 
 /** Strip local-only fields before sending to backend */
@@ -33,7 +36,7 @@ export function toBackendLines(lines: GridLine[], exchangeRate: string = "1"): I
       _id, line_total, discount, 
       name_en, barcode, material_image, warehouse_qty, unit_name, unit_barcode, 
       cost_price, current_cost_price,
-      profit_amount, profit_percent, 
+      profit_amount, profit_percent, tier,
       ...rest 
     }) => {
       const basePrice = parseFloat(rest.unit_price || "0");
@@ -57,6 +60,7 @@ export function newGridLine(): GridLine {
     discount: "",
     notes: "",
     line_total: 0,
+    tier: "retail",
   };
 }
 

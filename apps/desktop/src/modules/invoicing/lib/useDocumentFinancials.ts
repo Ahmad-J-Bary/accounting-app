@@ -90,6 +90,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
           "cost_price",
           "profit_amount",
           "retail_price",
+          "semi_wholesale_price",
           "wholesale_price",
         ].forEach((field) => {
           const val = parseFloat((el[field] as string) || "0");
@@ -272,6 +273,15 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
         align: "center",
         type: "unit_select",
       },
+      ...(invoiceType === "Sales"
+        ? [{
+            key: "tier",
+            header: "نوع السعر",
+            width: "w-[80px]",
+            align: "center",
+            type: "tier_select" as const,
+          }]
+        : []),
     ];
 
     const baseCode = baseCurrency?.code;

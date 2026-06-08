@@ -21,8 +21,8 @@ const DEFAULT_CATEGORY_NAME = "غير مصنف";
 
 const SALE_TIERS = [
   { id: 'retail', label: 'مفرق' },
-  { id: 'wholesale', label: 'جملة' },
   { id: 'semi_wholesale', label: 'نصف جملة' },
+  { id: 'wholesale', label: 'جملة' },
 ];
 
 interface MaterialFormProps {
@@ -48,14 +48,14 @@ const EMPTY_FORM = {
   minimum_stock: "0",
   notes: "",
   image_path: "",
-  default_purchase_unit_id: "",
-  default_sale_unit_id: "",
+  default_purchase_unit_id: "قطعة",
+  default_sale_unit_id: "قطعة",
   units: [
     { name: "قطعة", conversion_factor: "1", barcode: "" }
   ],
   selectedCategoryIds: [] as string[],
   purchase_prices: [] as { unit_id: string; price: string; price_base: string; currency: string }[],
-  sale_prices: [] as { unit_id: string; tier: string; price: string; price_base: string; min_price: string; min_price_base: string; currency: string }[],
+  sale_prices: [] as { unit_id: string; tier: string; price: string; price_base: string; min_price: string; min_price_base: string; max_quantity: string; max_quantity_unit_id: string | null; currency: string }[],
 };
 
 export function MaterialForm({ open, onClose, material, categories, onSave, saving, onCategoryCreated }: MaterialFormProps) {
@@ -68,6 +68,9 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
 
   const [categorySearch, setCategorySearch] = useState("");
   const [expandedMains, setExpandedMains] = useState<Set<string>>(new Set());
+
+  const [tierMaxQty, setTierMaxQty] = useState<Record<string, string>>({});
+  const [tierMaxQtyUnit, setTierMaxQtyUnit] = useState<Record<string, string>>({});
 
   const { currencies, baseCurrency, rateMap } = useCurrencyContext();
   const activeCurrencies = useMemo(() => currencies.filter(c => c.is_active), [currencies]);
@@ -231,14 +234,39 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
             price_base: p.price_base,
             min_price: p.min_price,
             min_price_base: p.min_price_base,
+            max_quantity: p.max_quantity || "0",
+            max_quantity_unit_id: p.max_quantity_unit_id || null,
             currency: p.currency
           })),
         });
+
+        // Initialize tier max qty from existing data
+        const baseUnit = material.units[0]?.name || 'قطعة';
+        const newMaxQty: Record<string, string> = {};
+        const newMaxUnit: Record<string, string> = {};
+        for (const tier of ['retail', 'semi_wholesale']) {
+          const sp = material.sale_prices.find(p => p.tier === tier);
+          if (sp) {
+            const baseVal = parseFloat(sp.max_quantity || "0") || 0;
+            const unitName = sp.max_quantity_unit_id || baseUnit;
+            const unit = material.units.find(u => u.name === unitName || u.id === unitName);
+            const factor = unit ? parseFloat(unit.conversion_factor) : 1;
+            newMaxQty[tier] = factor > 0 ? String(baseVal / factor) : String(baseVal);
+            newMaxUnit[tier] = unitName;
+          } else {
+            newMaxQty[tier] = "0";
+            newMaxUnit[tier] = baseUnit;
+          }
+        }
+        setTierMaxQty(newMaxQty);
+        setTierMaxQtyUnit(newMaxUnit);
       } else {
         setFormData({
           ...EMPTY_FORM,
           selectedCategoryIds: uncategorizedCat ? [uncategorizedCat.id] : [],
         });
+        setTierMaxQty({ retail: "0", semi_wholesale: "0" });
+        setTierMaxQtyUnit({ retail: "قطعة", semi_wholesale: "قطعة" });
       }
       setActiveTab("basic");
       cancelInlineCreate();
@@ -250,8 +278,8 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
     if (!material && formData.units.length > 0) {
       setFormData(prev => ({
         ...prev,
-        default_purchase_unit_id: prev.default_purchase_unit_id || prev.units[0].name,
-        default_sale_unit_id: prev.default_sale_unit_id || prev.units[0].name
+        default_purchase_unit_id: prev.default_purchase_unit_id || prev.units[0].name || `وحدة 1`,
+        default_sale_unit_id: prev.default_sale_unit_id || prev.units[0].name || `وحدة 1`,
       }));
     }
   }, [formData.units, material]);
@@ -336,8 +364,43 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
       } catch { /* save without code */ }
     }
 
+    // Write tier max quantities into sale_prices (in base units)
+    let finalSalePrices = [...formData.sale_prices];
+
+    // Ensure at least one entry per tier carries the max_quantity
+    for (const tier of ['retail', 'semi_wholesale']) {
+      const hasEntry = finalSalePrices.some(p => p.tier === tier);
+      if (!hasEntry && activeCurrencies.length > 0) {
+        const firstUnitId = formData.units[0]?.name || 'قطعة';
+        finalSalePrices.push({
+          unit_id: firstUnitId,
+          tier,
+          currency: activeCurrencies[0].code,
+          price: "0",
+          price_base: "0",
+          min_price: "0",
+          min_price_base: "0",
+          max_quantity: getTierBaseMaxQty(tier),
+          max_quantity_unit_id: null,
+        });
+      }
+    }
+
+    // Convert to base units and clear unit reference
+    finalSalePrices = finalSalePrices.map(p => {
+      const baseMaxQty = ['retail', 'semi_wholesale'].includes(p.tier)
+        ? getTierBaseMaxQty(p.tier)
+        : "0";
+      return {
+        ...p,
+        max_quantity: baseMaxQty,
+        max_quantity_unit_id: null,
+      };
+    });
+
     await onSave({
       ...formData,
+      sale_prices: finalSalePrices,
       code: finalCode,
       id: material?.id,
       category_ids: formData.selectedCategoryIds,
@@ -377,15 +440,21 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
     return rateMap.get(currencyCode) || 1;
   };
 
+  const resolveUnitId = (unitIdx: number) => {
+    const u = formData.units[unitIdx];
+    if (!u) return '';
+    return material && material.units[unitIdx] ? material.units[unitIdx].id : u.name;
+  };
+
   const getPurchasePrice = (unitIdx: number, currencyCode: string) => {
-    const unitId = material ? material.units[unitIdx]?.id : formData.units[unitIdx].name;
+    const unitId = resolveUnitId(unitIdx);
     return formData.purchase_prices.find(p => p.unit_id === unitId && p.currency === currencyCode)?.price || "0";
   };
 
   const handlePurchasePriceChange = (unitIdx: number, currencyCode: string, value: string) => {
     setFormData(prev => {
       const unit = prev.units[unitIdx];
-      const unitId = material ? material.units[unitIdx]?.id : unit.name;
+      const unitId = material && material.units[unitIdx] ? material.units[unitIdx].id : unit.name;
       const sourceRate = getPurchaseRate(currencyCode);
       const sourcePrice = parseFloat(value || "0") || 0;
       const baseValue = sourceRate > 0 ? sourcePrice / sourceRate : 0;
@@ -409,19 +478,45 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
   };
 
   const getSalePrice = (unitIdx: number, tier: string, currencyCode: string) => {
-    const unitId = material ? material.units[unitIdx]?.id : formData.units[unitIdx].name;
+    const unitId = resolveUnitId(unitIdx);
     return formData.sale_prices.find(p => p.unit_id === unitId && p.tier === tier && p.currency === currencyCode)?.price || "0";
   };
 
   const getSaleMinPrice = (unitIdx: number, tier: string, currencyCode: string) => {
-    const unitId = material ? material.units[unitIdx]?.id : formData.units[unitIdx].name;
+    const unitId = resolveUnitId(unitIdx);
     return formData.sale_prices.find(p => p.unit_id === unitId && p.tier === tier && p.currency === currencyCode)?.min_price || "0";
+  };
+
+  const getTierUnitFactor = (tier: string): number => {
+    const unitName = tierMaxQtyUnit[tier] || formData.units[0]?.name || 'قطعة';
+    const unit = formData.units.find(u => u.name === unitName);
+    const factor = unit ? parseFloat(unit.conversion_factor) : 1;
+    return factor > 0 ? factor : 1;
+  };
+
+  const getTierBaseMaxQty = (tier: string): string => {
+    const val = parseFloat(tierMaxQty[tier] || "0") || 0;
+    const factor = getTierUnitFactor(tier);
+    return String(val * factor);
+  };
+
+  const getSaleMaxQuantity = (tier: string) => {
+    return tierMaxQty[tier] || "0";
+  };
+
+  const handleMaxQuantityChange = (tier: string, value: string) => {
+    setTierMaxQty(prev => ({ ...prev, [tier]: value }));
+  };
+
+  const handleTierQtyUnitChange = (tier: string, unitName: string) => {
+    setTierMaxQtyUnit(prev => ({ ...prev, [tier]: unitName }));
   };
 
   const handleSalePriceChange = (unitIdx: number, tier: string, currencyCode: string, field: 'price' | 'min_price', value: string) => {
     setFormData(prev => {
       const unit = prev.units[unitIdx];
-      const unitId = material ? material.units[unitIdx]?.id : unit.name;
+      const unitId = material && material.units[unitIdx] ? material.units[unitIdx].id : unit.name;
+
       const sourceRate = getPurchaseRate(currencyCode);
       const sourcePrice = parseFloat(value || "0") || 0;
       const baseValue = sourceRate > 0 ? sourcePrice / sourceRate : 0;
@@ -444,6 +539,8 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
             price_base: baseVal,
             min_price: existing?.min_price || "0",
             min_price_base: existing?.min_price_base || "0",
+            max_quantity: existing?.max_quantity || "0",
+            max_quantity_unit_id: existing?.max_quantity_unit_id || null,
           };
         }
 
@@ -455,6 +552,8 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
           price_base: existing?.price_base || "0",
           min_price: priceVal,
           min_price_base: baseVal,
+          max_quantity: existing?.max_quantity || "0",
+          max_quantity_unit_id: existing?.max_quantity_unit_id || null,
         };
       });
 
@@ -734,9 +833,12 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                 <Select value={formData.default_purchase_unit_id} onValueChange={v => setFormData({ ...formData, default_purchase_unit_id: v })}>
                   <SelectTrigger className="w-full bg-white border-slate-200"><SelectValue placeholder="اختر وحدة" /></SelectTrigger>
                   <SelectContent>
-                    {formData.units.map((u, i) => (
-                      <SelectItem key={i} value={material ? (material.units[i]?.id || u.name) : u.name}>{u.name}</SelectItem>
-                    ))}
+                    {formData.units.map((u, i) => {
+                      const unitLabel = u.name || `وحدة ${i + 1}`;
+                      return (
+                        <SelectItem key={unitLabel} value={material ? (material.units[i]?.id || unitLabel) : unitLabel}>{unitLabel}</SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -745,9 +847,12 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                 <Select value={formData.default_sale_unit_id} onValueChange={v => setFormData({ ...formData, default_sale_unit_id: v })}>
                   <SelectTrigger className="w-full bg-white border-slate-200"><SelectValue placeholder="اختر وحدة" /></SelectTrigger>
                   <SelectContent>
-                    {formData.units.map((u, i) => (
-                      <SelectItem key={i} value={material ? (material.units[i]?.id || u.name) : u.name}>{u.name}</SelectItem>
-                    ))}
+                    {formData.units.map((u, i) => {
+                      const unitLabel = u.name || `وحدة ${i + 1}`;
+                      return (
+                        <SelectItem key={unitLabel} value={material ? (material.units[i]?.id || unitLabel) : unitLabel}>{unitLabel}</SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -852,6 +957,44 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
           <div className="flex items-center gap-2 pt-2 border-b pb-1.5 text-right">
             <TrendingUp className="w-4 h-4 text-emerald-600" />
             <h3 className="font-bold text-xs text-slate-800">أسعار المبيع ومستويات التسعير</h3>
+          </div>
+
+          {/* الحد الأعلى للكمية لكل مستوى (على مستوى المادة) */}
+          <div className="bg-purple-50/40 border border-purple-100/70 rounded-xl p-3 space-y-2">
+            <span className="text-[8px] font-black text-purple-600 block uppercase">الحد الأعلى للكمية</span>
+            <div className="flex items-center gap-4 flex-wrap">
+              {SALE_TIERS.filter(t => t.id !== 'wholesale').map(tier => (
+                <div key={tier.id} className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-slate-600 whitespace-nowrap">{tier.label}:</span>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={getSaleMaxQuantity(tier.id)}
+                    onChange={e => handleMaxQuantityChange(tier.id, e.target.value)}
+                    className="h-7 w-16 text-xs font-bold text-center bg-white border-slate-200"
+                  />
+                  <Select
+                    value={tierMaxQtyUnit[tier.id] || formData.units[0]?.name || 'قطعة'}
+                    onValueChange={v => handleTierQtyUnitChange(tier.id, v)}
+                  >
+                    <SelectTrigger className="h-7 w-20 text-[9px] font-bold border-slate-200 px-1.5 gap-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {formData.units.map((u, i) => (
+                        <SelectItem key={i} value={u.name || `وحدة ${i + 1}`}>
+                          {u.name || `وحدة ${i + 1}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold text-slate-600 whitespace-nowrap">جملة:</span>
+                <span className="text-[9px] text-slate-400 italic font-medium">غير محدود</span>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-3">

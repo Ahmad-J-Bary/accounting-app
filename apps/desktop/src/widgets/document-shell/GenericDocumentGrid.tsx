@@ -43,7 +43,8 @@ export interface DocumentColumn {
     | "readonly"
     | "image"
     | "badge"
-    | "unit_select";
+    | "unit_select"
+    | "tier_select";
 }
 
 export interface GenericDocumentGridProps {
@@ -153,9 +154,9 @@ export function GenericDocumentGrid({
     [autoFitColumn, columns, lines, getCellValue],
   );
 
-  const editableCols = filteredColumns.filter((c) => c.type !== "readonly");
+  const editableCols = filteredColumns.filter((c) => c.type !== "readonly" && c.type !== "tier_select");
   const isNavigableCol = (c: DocumentColumn) =>
-    c.type !== "unit_select" && c.type !== "image";
+    c.type !== "unit_select" && c.type !== "image" && c.type !== "tier_select";
 
   const findNextCol = useCallback(
     (fromIdx: number, dir: 1 | -1): number => {
