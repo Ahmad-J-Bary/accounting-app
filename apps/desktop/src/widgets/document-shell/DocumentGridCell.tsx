@@ -51,21 +51,24 @@ function CellWrapper({
   config,
   isInteractive,
   isCellActive,
+  isReadonlyCell,
 }: {
   column: DocumentColumn;
   children: React.ReactNode;
   config: DocumentGridConfig;
   isInteractive?: boolean;
   isCellActive?: boolean;
+  isReadonlyCell?: boolean;
 }) {
   return (
     <div
       data-col-id={column.key}
       className={cn(
-        isInteractive ? "relative" : cn(config.densityPadding, "flex items-center truncate"),
+        cn(config.densityPadding, "flex items-center truncate text-center justify-center"),
         config.cellBorderClass,
-        !isInteractive && getAlignmentClass(column.align),
+        isInteractive && "relative",
         !isInteractive && "text-slate-600 transition-colors group-hover:text-slate-900",
+        isReadonlyCell && "bg-gray-100/50",
         isCellActive && "ring-inset ring-2 ring-blue-400 z-20",
       )}
       style={{ minWidth: 0, fontSize: `${config.fontSize}px`, fontFamily: config.fontFamily }}
@@ -112,9 +115,8 @@ function EditableInput({
       min={isNum ? "0" : undefined}
       step={isNum ? "any" : undefined}
       className={cn(
-        "w-full h-8 px-2 bg-transparent border-none outline-none focus:bg-white transition-colors",
+        "w-full bg-transparent border-none outline-none focus:bg-white transition-colors text-center",
         isNum ? "tabular-nums font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" : "font-bold text-blue-800 placeholder:text-slate-400",
-        getAlignmentClass(align),
       )}
       style={{ fontSize: `${fontSize}px`, fontFamily }}
       value={value}
@@ -166,7 +168,7 @@ export function DocumentGridCell({
     const currentMaxQty = currentTierPrice?.max_quantity ? parseInt(currentTierPrice.max_quantity) : 0;
 
     return (
-      <CellWrapper column={col} config={config}>
+      <CellWrapper column={col} config={config} isReadonlyCell={readOnly}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild disabled={readOnly || !line.material_id}>
             <button className={cn(
@@ -213,7 +215,7 @@ export function DocumentGridCell({
 
   if (col.type === "readonly") {
     return (
-      <CellWrapper column={col} config={config}>
+      <CellWrapper column={col} config={config} isReadonlyCell>
         <ReadonlyContent value={getCellValue(line, col.key)} fontSize={fontSize} fontFamily={config.fontFamily} />
       </CellWrapper>
     );
@@ -222,7 +224,7 @@ export function DocumentGridCell({
   if (col.type === "image") {
     const src = getCellValue(line, col.key);
     return (
-      <CellWrapper column={col} config={config}>
+      <CellWrapper column={col} config={config} isReadonlyCell>
         {src ? (
           <img src={src} alt="" className="w-6 h-6 object-contain rounded bg-slate-50 border border-slate-200" />
         ) : (
@@ -234,7 +236,7 @@ export function DocumentGridCell({
 
   if (col.type === "badge") {
     return (
-      <CellWrapper column={col} config={config}>
+      <CellWrapper column={col} config={config} isReadonlyCell>
         <span className="text-[9px] font-black bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 uppercase tracking-tighter">
           {getCellValue(line, col.key)}
         </span>
@@ -247,7 +249,7 @@ export function DocumentGridCell({
     const units = material?.units || [];
     const currentUnit = getCellValue(line, col.key);
     return (
-      <CellWrapper column={col} config={config}>
+      <CellWrapper column={col} config={config} isReadonlyCell={readOnly}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild disabled={readOnly || !line.material_id}>
             <button className={cn(
@@ -287,7 +289,7 @@ export function DocumentGridCell({
 
     if (readOnly) {
       return (
-        <CellWrapper column={col} config={config}>
+        <CellWrapper column={col} config={config} isReadonlyCell>
           <ReadonlyContent value={displayValue || "-"} fontSize={fontSize} fontFamily={config.fontFamily} />
         </CellWrapper>
       );
@@ -331,7 +333,7 @@ export function DocumentGridCell({
 
   if (readOnly) {
     return (
-      <CellWrapper column={col} config={config}>
+      <CellWrapper column={col} config={config} isReadonlyCell>
         <ReadonlyContent value={getCellValue(line, col.key) || "-"} fontSize={fontSize} fontFamily={config.fontFamily} />
       </CellWrapper>
     );

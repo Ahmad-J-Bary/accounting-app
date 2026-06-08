@@ -194,8 +194,9 @@ export function GenericDocumentGrid({
         case "Enter": {
           e.preventDefault();
           setSearchRow(null);
-          let nr = rowIdx, nc = colIdx + 1;
-          if (nc >= editableCols.length) {
+          let nc = findNextCol(colIdx, 1);
+          let nr = rowIdx;
+          if (nc === colIdx) {
             nc = findNextCol(-1, 1);
             nr = rowIdx + 1;
             const hasMaterial = lines[rowIdx]?.material_id || lines[rowIdx]?.material_name;

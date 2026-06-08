@@ -67,6 +67,8 @@ export function useDocumentEditor({
       // Tier-aware price suggestion when quantity changes for sales invoices
       if (priceField === "last_sale_price" && 'quantity' in updates && updatedLine.material_id) {
         const qty = parseInt(updates.quantity || "0");
+        const convFactor = parseFloat(updatedLine.conversion_factor || "1") || 1;
+        const qtyInBase = qty * convFactor;
         const material = materials.find(m => m.id === updatedLine.material_id);
         if (material) {
           const retailPrice = material.sale_prices?.find(p => p.unit_id === updatedLine.unit_id && p.tier === 'retail');
@@ -77,8 +79,8 @@ export function useDocumentEditor({
           const semiMax = semiPrice?.max_quantity ? parseInt(semiPrice.max_quantity) : 0;
           // 0 means "no limit" (unset by user)
           let suggestedTier = 'wholesale';
-          if (retailMax > 0 && qty <= retailMax) suggestedTier = 'retail';
-          else if (semiMax > 0 && qty <= semiMax) suggestedTier = 'semi_wholesale';
+          if (retailMax > 0 && qtyInBase <= retailMax) suggestedTier = 'retail';
+          else if (semiMax > 0 && qtyInBase <= semiMax) suggestedTier = 'semi_wholesale';
 
           if (suggestedTier !== updatedLine.tier) {
             const tierPrice = material.sale_prices?.find(p => p.unit_id === updatedLine.unit_id && p.tier === suggestedTier);
@@ -182,7 +184,7 @@ export function useDocumentEditor({
       onLinesChange?.(next);
       return next;
     });
-  }, [onLinesChange, materials, priceField]);
+  }, [onLinesChange, materials, priceField, invoiceType]);
 
   const addLine = useCallback(() => {
     setLines(prev => {

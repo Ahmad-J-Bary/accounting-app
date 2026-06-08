@@ -92,14 +92,14 @@ export interface GridResizeContent {
 }
 
 /**
- * useGridResize – proportional CSS Grid resize for tables.
+ * useGridResize – stable CSS Grid resize for tables.
  *
  * FEATURES:
- *  - All columns always fill 100% of the container (fr units, no trailing space)
+ *  - All columns always fill 100% of the container (fr + fixed px, no trailing space)
  *  - Dragging the handle between col[i] and col[i+1] grows one and shrinks the other
- *  - N-1 handles for N columns (no handle after the last column)
- *  - Pixel widths stored as fr values (proportions survive window resize)
- *  - Persisted in localStorage under `${preferenceKey}_grid_fr`
+ *  - Only the two resized columns change; all other columns remain completely stable
+ *  - Resized columns get fixed pixel widths; untouched columns use 1fr
+ *  - Persisted in localStorage under `${preferenceKey}_grid_px`
  *
  * ALIGNMENT GUARANTEE:
  *  Header and body rows receive the same `gridTemplateColumns` string, so
@@ -138,26 +138,38 @@ export function useGridResize(
   fontSize?: number,
 ) {
   const measurePx = fontSize || 12;
-  // fr values per column id (pixel-based ratios, persisted).
-  // Empty = all columns equal (1fr each).
-  const [fractions, setFractions] = useState<Record<string, number>>(() => {
+  // Fixed pixel widths per column id for explicitly-resized columns.
+  // Columns not in this map get `1fr` (equal share of remaining space).
+  // Only the two columns involved in a resize get fixed pixel widths;
+  // all other columns stay as `1fr` and are completely unaffected.
+  const [fixedWidths, setFixedWidths] = useState<Record<string, number>>(() => {
     if (!preferenceKey) return {};
     try {
-      const saved = localStorage.getItem(`${preferenceKey}_grid_fr`);
+      const saved = localStorage.getItem(`${preferenceKey}_grid_px`);
       if (saved) return JSON.parse(saved);
     } catch { /* ignore */ }
     return {};
   });
 
-  // Persist to localStorage whenever fractions change
+  // Remove legacy `_grid_fr` data on first mount if present
   useEffect(() => {
     if (!preferenceKey) return;
     try {
-      if (Object.keys(fractions).length > 0) {
-        localStorage.setItem(`${preferenceKey}_grid_fr`, JSON.stringify(fractions));
+      localStorage.removeItem(`${preferenceKey}_grid_fr`);
+    } catch { /* ignore */ }
+  }, [preferenceKey]);
+
+  // Persist to localStorage whenever fixedWidths change
+  useEffect(() => {
+    if (!preferenceKey) return;
+    try {
+      if (Object.keys(fixedWidths).length > 0) {
+        localStorage.setItem(`${preferenceKey}_grid_px`, JSON.stringify(fixedWidths));
+      } else {
+        localStorage.removeItem(`${preferenceKey}_grid_px`);
       }
     } catch { /* ignore */ }
-  }, [fractions, preferenceKey]);
+  }, [fixedWidths, preferenceKey]);
 
   // ── Compute the minimum content width (in px) for each column ───────────
   // Used as a floor in minmax(minPx, Xfr). The min is deliberately set to
@@ -207,23 +219,28 @@ export function useGridResize(
       );
     }
     return out;
-  }, [columns, contentByColumn]);
+  }, [columns, contentByColumn, measurePx]);
 
   // ── Build the CSS grid-template-columns string ──────────────────────────
-  // Each track is `minmax(minPx, Xfr)` so it can never shrink below the
-  // content-derived minimum (no clipping) while still participating in
-  // the proportional grow/shrink dance driven by `fractions`.
+  // Columns with an explicit fixedWidths entry get a fixed pixel column
+  // (`minmax(minPx, Xpx)`) — they never change unless explicitly resized.
+  // Untouched columns use `1fr` (equal share of remaining space) so they
+  // remain stable when other columns are resized. Only the two columns
+  // involved in a resize (A and its neighbor B) get new fixed widths; all
+  // other columns stay as `1fr` and are completely unaffected.
   const gridTemplateColumns = useMemo(() => {
     return columns
       .map((col) => {
         const colId = getColumnId(col);
-        const fr = fractions[colId];
+        const px = fixedWidths[colId];
         const minPx = minContentPx[colId] ?? MIN_COL_PX;
-        const frValue = fr !== undefined && fr > 0 ? fr : 1;
-        return `minmax(${minPx}px, ${frValue}fr)`;
+        if (px !== undefined && px > 0) {
+          return `minmax(${minPx}px, ${px}px)`;
+        }
+        return `minmax(${minPx}px, 1fr)`;
       })
       .join(' ');
-  }, [columns, fractions, minContentPx]);
+  }, [columns, fixedWidths, minContentPx]);
 
   // ── Resize state ─────────────────────────────────────────────────────────
   const resizeRef = useRef<{
@@ -290,9 +307,10 @@ export function useGridResize(
         const actualDelta = newWidthA - wa;
         const newWidthB = Math.max(minB, wb - actualDelta);
 
-        // Store pixel widths directly as fr values.
-        // Since fr is proportional, this keeps total = container width.
-        setFractions((prev) => ({
+        // Store pixel widths directly as fixed pixel values.
+        // Only column A and its neighbor B get fixed widths; all other
+        // columns stay as 1fr and are completely unaffected.
+        setFixedWidths((prev) => ({
           ...prev,
           [colId]: newWidthA,
           [neighborId]: newWidthB,
@@ -318,6 +336,8 @@ export function useGridResize(
   // ── autoFitColumn ────────────────────────────────────────────────────────
   /**
    * Auto-fit a column to its content width, compensating from the neighbor.
+   * Both the target column and the neighbor get fixed pixel widths so all
+   * other columns (using 1fr) remain completely stable.
    *
    * - Single click on header → pass only headerText (title-fit)
    * - Double-click on resize handle → pass headerText + sampleValues (full-fit)
@@ -364,7 +384,7 @@ export function useGridResize(
           : null;
 
       if (!neighborId) {
-        setFractions((prev) => ({ ...prev, [colId]: targetWidth }));
+        setFixedWidths((prev) => ({ ...prev, [colId]: targetWidth }));
         return;
       }
 
@@ -373,21 +393,21 @@ export function useGridResize(
       const neighborFloor = minContentPx[neighborId] ?? MIN_COL_PX;
       const newNeighborWidth = Math.max(neighborFloor, neighborWidth - delta);
 
-      setFractions((prev) => ({
+      setFixedWidths((prev) => ({
         ...prev,
         [colId]: targetWidth,
         [neighborId]: newNeighborWidth,
       }));
     },
-    [columns, containerRef, minContentPx],
+    [columns, containerRef, minContentPx, measurePx],
   );
 
   // ── resetWidths ──────────────────────────────────────────────────────────
   const resetWidths = useCallback(() => {
-    setFractions({});
+    setFixedWidths({});
     if (preferenceKey) {
       try {
-        localStorage.removeItem(`${preferenceKey}_grid_fr`);
+        localStorage.removeItem(`${preferenceKey}_grid_px`);
       } catch { /* ignore */ }
     }
   }, [preferenceKey]);
