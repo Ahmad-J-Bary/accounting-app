@@ -1,13 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@shared/ui/button";
-import { Input } from "@shared/ui/input";
-import { Label } from "@shared/ui/label";
-import { X, Plus, Trash2, Scale, Boxes, Package, Wand2, Check } from "lucide-react";
+import { X, Plus, Scale, Boxes, Shuffle } from "lucide-react";
 import { toast } from "sonner";
-import { FormPanel } from '@widgets/form-shell/FormPanel';
 import { materialService } from '@modules/inventory/api/materialService';
 import type { MaterialDto, MaterialUnitDto } from "@erp/shared-types";
 import { cn } from '@shared/lib/utils';
+import { UnitCard } from './UnitCard';
+import { AddUnitForm } from './AddUnitForm';
 
 interface MaterialUnitsManagerProps {
   material: MaterialDto | null;
@@ -17,104 +16,90 @@ interface MaterialUnitsManagerProps {
 
 export function MaterialUnitsManager({ material, onClose, onUnitsUpdated }: MaterialUnitsManagerProps) {
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newUnit, setNewUnit] = useState({ name: "", factor: "1", barcode: "" });
-  const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [localUnits, setLocalUnits] = useState<MaterialUnitDto[] | null>(null);
+  const [editingUnitId, setEditingUnitId] = useState<string | null>(null);
+  const [editingUnitData, setEditingUnitData] = useState<MaterialUnitDto | null>(null);
+  const [pendingServerSync, setPendingServerSync] = useState(false);
+  const prevUnitsRef = useRef(material?.units);
+
+  useEffect(() => {
+    if (pendingServerSync && material?.units && material.units !== prevUnitsRef.current) {
+      setLocalUnits(null);
+      setPendingServerSync(false);
+    }
+    prevUnitsRef.current = material?.units;
+  }, [material?.units, pendingServerSync]);
 
   if (!material) return null;
 
-  const baseUnit = material.units?.find(u => u.is_base);
-  const secondaryUnits = material.units?.filter(u => !u.is_base) || [];
-
-  const handleAddUnit = async () => {
-    if (!newUnit.name.trim()) { toast.error("اسم الوحدة مطلوب"); return; }
-    if (parseFloat(newUnit.factor) <= 0) { toast.error("معامل التعبئة يجب أن يكون أكبر من صفر"); return; }
-
-    setLoading(true);
-    try {
-      await materialService.addMaterialUnit({
-        material_id: material.id,
-        name: newUnit.name,
-        conversion_factor: newUnit.factor,
-        barcode: newUnit.barcode || undefined,
-      });
-      toast.success("تمت إضافة الوحدة بنجاح");
-      setNewUnit({ name: "", factor: "1", barcode: "" });
-      setShowAddForm(false);
-      onUnitsUpdated();
-    } catch (err) {
-      toast.error("فشل إضافة الوحدة: " + err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const displayUnits = localUnits ?? material.units ?? [];
+  const baseUnit = displayUnits.find(u => u.is_base);
+  const secondaryUnits = displayUnits.filter(u => !u.is_base);
 
   const handleDeleteUnit = async (unitId: string) => {
     if (!confirm("هل أنت متأكد من حذف هذه الوحدة؟")) return;
-
-    setLoading(true);
+    setDeletingId(unitId);
+    const deletedUnit = displayUnits.find(u => u.id === unitId);
+    setLocalUnits(prev => (prev ?? material.units ?? []).filter(u => u.id !== unitId));
     try {
       await materialService.deleteMaterialUnit(unitId);
       toast.success("تم حذف الوحدة");
       onUnitsUpdated();
+      setPendingServerSync(true);
     } catch (err) {
+      if (deletedUnit) setLocalUnits(prev => [...(prev ?? material.units ?? []), deletedUnit]);
       toast.error("فشل حذف الوحدة: " + err);
     } finally {
-      setLoading(false);
+      setDeletingId(null);
     }
   };
 
-  const unitFormContent = (
-    <div className="space-y-6 text-right">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="space-y-1.5">
-          <Label className="text-[11px] font-bold text-slate-700">اسم الوحدة <span className="text-red-500">*</span></Label>
-          <Input
-            value={newUnit.name}
-            onChange={e => setNewUnit({ ...newUnit, name: e.target.value })}
-            placeholder="مثلاً: طرد، دزينة"
-            className="h-9 text-sm"
-            dir="rtl"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-[11px] font-bold text-slate-700">معامل التعبئة <span className="text-red-500">*</span></Label>
-          <Input
-            type="number"
-            value={newUnit.factor}
-            onChange={e => setNewUnit({ ...newUnit, factor: e.target.value })}
-            placeholder="مثلاً: 12"
-            className="h-9 text-sm font-bold"
-            min="0.000001"
-            step="any"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-[11px] font-bold text-slate-700">الباركود (اختياري)</Label>
-          <Input
-            value={newUnit.barcode}
-            onChange={e => setNewUnit({ ...newUnit, barcode: e.target.value })}
-            placeholder="باركود الوحدة"
-            className="h-9 text-sm font-mono"
-            dir="ltr"
-          />
-        </div>
-      </div>
+  const handleAddUnit = async (unit: { name: string; conversion_factor: string; barcode: string }) => {
+    if (displayUnits.some(u => u.name.toLowerCase() === unit.name.trim().toLowerCase())) {
+      toast.error("يوجد وحدة بنفس الاسم مسبقاً");
+      return;
+    }
+    const tempId = `temp_${Date.now()}`;
+    const tempUnit: MaterialUnitDto = {
+      id: tempId,
+      material_id: material.id,
+      name: unit.name,
+      conversion_factor: unit.conversion_factor,
+      barcode: unit.barcode || "",
+      is_base: false,
+    };
+    setLocalUnits(prev => [...(prev ?? material.units ?? []), tempUnit]);
 
-      {newUnit.name && (
-        <div className="bg-blue-50 rounded-md p-3 border border-blue-100 flex items-center gap-3">
-          <Package className="w-4 h-4 text-blue-500" />
-          <div>
-            <p className="text-[10px] text-blue-400 font-bold uppercase">إضافة للمادة</p>
-            <p className="text-xs font-bold text-blue-700">{material.name}</p>
-          </div>
-          <div className="text-left ml-auto">
-            <p className="text-[9px] text-slate-500">معامل التعادل</p>
-            <p className="text-sm font-mono text-blue-700">1 {newUnit.name} = {newUnit.factor || "1"} {baseUnit?.name}</p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+    try {
+      await materialService.addMaterialUnit({
+        material_id: material.id,
+        name: unit.name,
+        conversion_factor: unit.conversion_factor,
+        barcode: unit.barcode || undefined,
+      });
+      toast.success("تمت إضافة الوحدة بنجاح");
+      onUnitsUpdated();
+      setPendingServerSync(true);
+    } catch (err) {
+      setLocalUnits(prev => prev?.filter(u => u.id !== tempId) ?? null);
+      throw err;
+    }
+  };
+
+  const handleEditUnit = (u: MaterialUnitDto) => {
+    setEditingUnitId(u.id);
+    setEditingUnitData({ ...u });
+  };
+
+  const handleUpdateEditingUnit = (field: string, value: string) => {
+    setEditingUnitData(prev => prev ? { ...prev, [field]: value } : prev);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingUnitId(null);
+    setEditingUnitData(null);
+  };
 
   return (
     <div className="flex flex-col h-full bg-white" dir="rtl">
@@ -127,105 +112,84 @@ export function MaterialUnitsManager({ material, onClose, onUnitsUpdated }: Mate
           </h2>
           <span className="text-xs text-muted-foreground">{material.name}</span>
         </div>
-        <div className="flex items-center gap-2">
-          {!showAddForm && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="bg-emerald-500 text-white hover:bg-emerald-600 border-none h-8 px-3 rounded-lg"
-              onClick={() => setShowAddForm(true)}
-            >
-              <Plus className="w-3.5 h-3.5 ml-1.5" />
-              إضافة وحدة جديدة
-            </Button>
-          )}
-          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full text-slate-400 hover:text-slate-600">
-            <X className="w-5 h-5" />
-          </Button>
-        </div>
+        <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full text-slate-400 hover:text-slate-600">
+          <X className="w-5 h-5" />
+        </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {/* Show Units List or Add Form */}
-        {showAddForm ? (
-          <FormPanel
-            title="إضافة وحدة قياس جديدة"
-            icon={<Package className="w-5 h-5 text-emerald-600" />}
-            onClose={() => {
-              setShowAddForm(false);
-              setNewUnit({ name: "", factor: "1", barcode: "" });
-            }}
-            onSave={handleAddUnit}
-            isSaving={loading}
-            saveDisabled={!newUnit.name.trim()}
-            saveLabel="إضافة الوحدة"
-          >
-            {unitFormContent}
-          </FormPanel>
-        ) : (
-          <div className="p-6">
-            {/* Base Unit Info */}
-            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 flex justify-between items-center mb-4">
-              <div>
-                <p className="text-[10px] text-slate-400 font-bold">الوحدة الأساسية (أصغر وحدة)</p>
-                <p className="text-sm font-bold text-slate-700">{baseUnit?.name || "قطعة"}</p>
-              </div>
-              <div className="text-left">
-                <p className="text-[10px] text-slate-400 font-bold">الباركود</p>
-                <p className="text-xs font-mono">{baseUnit?.barcode || "—"}</p>
-              </div>
-            </div>
+      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        {/* Base Unit */}
+        <UnitCard
+          key={`base-${editingUnitId === '__base__' ? 'edit' : 'view'}`}
+          mode={editingUnitId === '__base__' ? "edit" : "view"}
+          unit={editingUnitId === '__base__' && editingUnitData ? { name: editingUnitData.name, conversion_factor: editingUnitData.conversion_factor, barcode: editingUnitData.barcode || "" } : { name: baseUnit?.name || "قطعة", conversion_factor: baseUnit?.conversion_factor || "1", barcode: baseUnit?.barcode || "" }}
+          index={0}
+          isBase={true}
+          baseUnitName={baseUnit?.name}
+          onEdit={editingUnitId === '__base__' ? undefined : () => { setEditingUnitId('__base__'); setEditingUnitData(baseUnit ? { ...baseUnit } : null); }}
+          onCancelEdit={editingUnitId === '__base__' ? handleCancelEdit : undefined}
+          defaultCollapsed={editingUnitId !== '__base__'}
+        />
 
-            {/* Secondary Units List */}
-            <div className="space-y-2">
-              <h3 className="text-sm font-bold text-slate-800">الوحدات الحالية ({secondaryUnits.length})</h3>
-              {secondaryUnits.length === 0 ? (
-                <div className="text-center py-6 bg-slate-50/50 rounded-xl border border-dashed">
-                  <Boxes className="w-8 h-8 mx-auto mb-2 opacity-30 text-slate-400" />
-                  <p className="text-xs text-slate-400 mb-3">لا توجد وحدات إضافية معرفة لهذه المادة.</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowAddForm(true)}
-                  >
-                    <Plus className="w-3.5 h-3.5 ml-1.5" />
-                    إضافة أول وحدة
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {secondaryUnits.map((u: MaterialUnitDto) => (
-                    <div key={u.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50/50 transition-colors group">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-blue-50 p-1.5 rounded">
-                          <Boxes className="w-4 h-4 text-blue-600" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-bold text-sm text-slate-700">{u.name}</span>
-                          <span className="text-[11px] text-slate-500">1 {u.name} = {u.conversion_factor} {baseUnit?.name}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {u.barcode && (
-                          <span className="text-[9px] font-mono text-slate-400 hidden sm:inline">{u.barcode}</span>
-                        )}
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => handleDeleteUnit(u.id)}
-                          disabled={loading}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+        {/* Secondary Units Section */}
+        <div>
+          <div className="flex items-center justify-between border-b pb-2">
+            <h3 className="text-sm font-bold text-slate-800">الوحدات الحالية ({secondaryUnits.length})</h3>
+            <Button type="button" size="sm" onClick={() => setShowAddForm(true)} className="bg-blue-600 hover:bg-blue-700 gap-1.5 h-8 text-xs font-bold rounded-lg shadow-sm"><Plus className="w-3.5 h-3.5" /> إضافة وحدة</Button>
+          </div>
+
+          {secondaryUnits.length === 0 && !showAddForm ? (
+            <div className="text-center py-10 bg-slate-50/50 rounded-xl border border-dashed mt-3">
+              <Boxes className="w-8 h-8 mx-auto mb-2 opacity-30 text-slate-400" />
+              <p className="text-xs text-slate-400 mb-3">لا توجد وحدات إضافية معرفة لهذه المادة.</p>
+              <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
+                <Plus className="w-3.5 h-3.5 ml-1.5" />
+                إضافة أول وحدة
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3 mt-3">
+              {secondaryUnits.map((u: MaterialUnitDto) => {
+                const isEditing = editingUnitId === u.id;
+                return (
+                  <UnitCard
+                    key={`${u.id}-${isEditing ? 'edit' : 'view'}`}
+                    mode={isEditing ? "edit" : "view"}
+                    unit={isEditing && editingUnitData ? { name: editingUnitData.name, conversion_factor: editingUnitData.conversion_factor, barcode: editingUnitData.barcode || "" } : { name: u.name, conversion_factor: u.conversion_factor, barcode: u.barcode || "" }}
+                    index={0}
+                    isBase={false}
+                    baseUnitName={baseUnit?.name}
+                    onUpdate={isEditing ? handleUpdateEditingUnit : undefined}
+                    onEdit={isEditing ? undefined : () => handleEditUnit(u)}
+                    onCancelEdit={isEditing ? handleCancelEdit : undefined}
+                    onDelete={() => handleDeleteUnit(u.id)}
+                    deleteDisabled={deletingId === u.id}
+                    showDeleteOnHover={true}
+                    defaultCollapsed={!isEditing}
+                  />
+                );
+              })}
+
+              {showAddForm && (
+                <AddUnitForm
+                  baseUnitName={baseUnit?.name || "قطعة"}
+                  materialName={material.name}
+                  existingNames={displayUnits.map(u => u.name)}
+                  onAdd={handleAddUnit}
+                  onCancel={() => setShowAddForm(false)}
+                />
               )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
+
+        {/* Info box */}
+        <div className="bg-amber-50/55 border border-amber-100 p-3.5 rounded-2xl flex gap-3 text-right">
+          <Shuffle className="w-4.5 h-4.5 text-amber-600 shrink-0 mt-0.5" />
+          <p className="text-[10px] text-amber-800 leading-relaxed font-semibold">
+            <strong>تنبيه:</strong> الوحدة الأولى تعتبر <strong>الوحدة الأساسية</strong> للمستودعات. الوحدات الإضافية تُحسب كمعادلات تعادل كمية من الوحدة الأساسية (مثلاً: دزينة = 12 قطعة).
+          </p>
+        </div>
       </div>
     </div>
   );

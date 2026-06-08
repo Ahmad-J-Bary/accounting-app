@@ -16,6 +16,8 @@ import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialReq
 import { materialCodeService } from "@modules/inventory/api/materialCodeService";
 import { categoryService } from "@modules/inventory/api/categoryService";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { UnitCard } from './UnitCard';
+import { AddUnitForm } from './AddUnitForm';
 
 const DEFAULT_CATEGORY_NAME = "غير مصنف";
 
@@ -71,6 +73,9 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
 
   const [tierMaxQty, setTierMaxQty] = useState<Record<string, string>>({});
   const [tierMaxQtyUnit, setTierMaxQtyUnit] = useState<Record<string, string>>({});
+  const [showUnitForm, setShowUnitForm] = useState(false);
+  const [editingUnitIdx, setEditingUnitIdx] = useState<number | null>(null);
+  const [editingUnitData, setEditingUnitData] = useState<{ name: string; conversion_factor: string; barcode: string } | null>(null);
 
   const { currencies, baseCurrency, rateMap } = useCurrencyContext();
   const activeCurrencies = useMemo(() => currencies.filter(c => c.is_active), [currencies]);
@@ -407,10 +412,10 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
     });
   };
 
-  const addUnit = () => {
+  const addUnit = (unit?: { name: string; conversion_factor: string; barcode: string }) => {
     setFormData(prev => ({
       ...prev,
-      units: [...prev.units, { name: `وحدة ${prev.units.length + 1}`, conversion_factor: "1", barcode: "" }]
+      units: [...prev.units, unit || { name: `وحدة ${prev.units.length + 1}`, conversion_factor: "1", barcode: "" }]
     }));
   };
 
@@ -428,6 +433,24 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
       nextUnits[index] = { ...nextUnits[index], [field]: value };
       return { ...prev, units: nextUnits };
     });
+  };
+
+  const handleEditUnit = (idx: number) => {
+    const u = formData.units[idx];
+    setEditingUnitIdx(idx);
+    setEditingUnitData({ name: u.name, conversion_factor: u.conversion_factor, barcode: u.barcode });
+  };
+
+  const handleCancelEdit = () => {
+    if (editingUnitIdx !== null && editingUnitData) {
+      setFormData(prev => {
+        const next = [...prev.units];
+        next[editingUnitIdx] = { ...editingUnitData };
+        return { ...prev, units: next };
+      });
+    }
+    setEditingUnitIdx(null);
+    setEditingUnitData(null);
   };
 
   const formatPrice = (n: number) => {
@@ -865,50 +888,38 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
               <h3 className="text-sm font-bold text-slate-800">إدارة الوحدات</h3>
               <p className="text-[10px] text-slate-400 italic">عرّف وحدات البيع والشراء لهذه المادة.</p>
             </div>
-            <Button type="button" size="sm" onClick={addUnit} className="bg-blue-600 hover:bg-blue-700 gap-1.5 h-8 text-xs font-bold rounded-lg shadow-sm"><Plus className="w-3.5 h-3.5" /> إضافة وحدة</Button>
+            <Button type="button" size="sm" onClick={() => setShowUnitForm(true)} className="bg-blue-600 hover:bg-blue-700 gap-1.5 h-8 text-xs font-bold rounded-lg shadow-sm"><Plus className="w-3.5 h-3.5" /> إضافة وحدة</Button>
           </div>
 
           <div className="space-y-3">
-            {formData.units.map((unit, idx) => (
-              <div key={idx} className={cn(
-                "p-4 rounded-2xl border relative transition-all shadow-sm space-y-3 text-right bg-white",
-                idx === 0 ? "border-blue-200 bg-blue-50/20" : "border-slate-200/80"
-              )}>
-                {idx > 0 && (
-                  <Button 
-                    type="button"
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => removeUnit(idx)}
-                    className="absolute -left-2 -top-2 h-7 w-7 rounded-full bg-red-50 text-red-500 hover:bg-red-100 border border-red-100 shadow-sm z-10"
-                  >
-                    <Plus className="w-3.5 h-3.5 rotate-45" />
-                  </Button>
-                )}
-                
-                <div className="flex items-center gap-3">
-                  <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center", idx === 0 ? "bg-blue-600 text-white shadow-md shadow-blue-200" : "bg-slate-100 text-slate-500")}>
-                    {idx === 0 ? <Package className="w-4 h-4" /> : <Boxes className="w-4 h-4" />}
-                  </div>
-                  <div className="flex-1">
-                    <FieldLabel className="text-[10px] font-bold text-slate-500 block mb-1">اسم الوحدة {idx === 0 && <span className="text-blue-600 font-bold">(أساسية)</span>}</FieldLabel>
-                    <Input value={unit.name} onChange={e => updateUnit(idx, "name", e.target.value)} className="h-8 font-bold bg-white" placeholder="مثلاً: قطعة" disabled={!!(material && idx < material.units.length)} />
-                  </div>
-                </div>
+            {formData.units.map((unit, idx) => {
+              const isEditing = editingUnitIdx === idx;
+              return (
+                <UnitCard
+                  key={`${idx}-${isEditing ? 'edit' : 'view'}`}
+                  mode={isEditing ? "edit" : "view"}
+                  unit={isEditing && editingUnitData ? editingUnitData : unit}
+                  index={idx}
+                  isBase={idx === 0}
+                  baseUnitName={formData.units[0]?.name}
+                  onUpdate={isEditing ? (field, value) => setEditingUnitData(prev => prev ? { ...prev, [field]: value } : prev) : undefined}
+                  onEdit={isEditing ? undefined : () => handleEditUnit(idx)}
+                  onCancelEdit={isEditing ? handleCancelEdit : undefined}
+                  onDelete={idx > 0 ? () => removeUnit(idx) : undefined}
+                  defaultCollapsed={!isEditing}
+                />
+              );
+            })}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <FieldLabel>معامل التعبئة</FieldLabel>
-                    <Input type="number" value={unit.conversion_factor} onChange={e => updateUnit(idx, "conversion_factor", e.target.value)} className="h-8 font-mono bg-white" disabled={idx === 0 || !!(material && idx < material.units.length)} min="0" step="any" />
-                    {idx === 0 && <p className="text-[8px] text-blue-500 font-bold mt-0.5">دائماً 1 للوحدة الأساسية</p>}
-                  </div>
-                  <div className="space-y-1.5">
-                    <FieldLabel>باركود الوحدة</FieldLabel>
-                    <Input value={unit.barcode} onChange={e => updateUnit(idx, "barcode", e.target.value)} className="h-8 font-mono text-xs bg-white" placeholder="اختياري" dir="ltr" disabled={!!(material && idx < material.units.length)} />
-                  </div>
-                </div>
-              </div>
-            ))}
+            {showUnitForm && (
+              <AddUnitForm
+                baseUnitName={formData.units[0]?.name || "قطعة"}
+                materialName={formData.name || "..."}
+                existingNames={formData.units.map(u => u.name)}
+                onAdd={async (unit) => { addUnit(unit); }}
+                onCancel={() => setShowUnitForm(false)}
+              />
+            )}
           </div>
 
           <div className="bg-amber-50/55 border border-amber-100 p-3.5 rounded-2xl flex gap-3 text-right">
