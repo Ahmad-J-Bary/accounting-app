@@ -260,15 +260,24 @@ export function useInvoiceLifecycle({
             ...currencies.filter((c) => c.code !== baseCurrency.code),
           ]
         : currencies;
-      return sortedCurrencies
-        .map((curr) => ({
+      return [
+        ...sortedCurrencies.map((curr) => ({
           key: `profit_amount_${curr.code}`,
           header: `المربح (${curr.symbol || curr.code})`,
           width: "w-[90px]",
           align: "left" as const,
           type: "readonly" as const,
           defaultVisible: curr.code === baseCurrency?.code,
-        }));
+        })),
+        {
+          key: "notes",
+          header: "ملاحظات",
+          width: "flex-[1]",
+          align: "right",
+          type: "text",
+          defaultVisible: true,
+        },
+      ];
     }
     return [
       {
@@ -277,6 +286,7 @@ export function useInvoiceLifecycle({
         width: "flex-[1]",
         align: "right",
         type: "text",
+        defaultVisible: true,
       },
     ];
   }, [invoiceType, currencies, baseCurrency]);

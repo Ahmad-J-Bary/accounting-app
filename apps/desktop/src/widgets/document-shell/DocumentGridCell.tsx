@@ -280,6 +280,82 @@ export function DocumentGridCell({
     );
   }
 
+  if (col.type === "price_tier") {
+    const currentTier = line.tier || "retail";
+    const tiers = [
+      { id: "retail", label: "مفرق" },
+      { id: "semi_wholesale", label: "نصف جملة" },
+      { id: "wholesale", label: "جملة" },
+    ];
+    const tierLabel = tiers.find(t => t.id === currentTier)?.label || "مفرق";
+    const priceValue = getCellValue(line, col.key);
+
+    const handleTierChange = (tierId: string) => {
+      if (readOnly || !line.material_id) return;
+      const material = materials.find(m => m.id === line.material_id);
+      const price = material?.sale_prices?.find(
+        p => p.unit_id === line.unit_id && p.tier === tierId
+      );
+      const basePrice = price?.price_base || price?.price || "0";
+      onUpdateLine(rowIdx, { tier: tierId, unit_price: basePrice });
+    };
+
+    if (readOnly) {
+      return (
+        <CellWrapper column={col} config={config} isReadonlyCell>
+          <span className="flex items-center gap-1.5 text-center justify-center">
+            <span className="text-[8px] font-black px-1 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200">{tierLabel}</span>
+            <ReadonlyContent value={priceValue || "-"} fontSize={fontSize} fontFamily={config.fontFamily} />
+          </span>
+        </CellWrapper>
+      );
+    }
+
+    return (
+      <CellWrapper column={col} config={config} isInteractive isCellActive={isCellActive}>
+        <span className="flex items-center gap-1 w-full text-center justify-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild disabled={!line.material_id}>
+              <button className={cn(
+                "text-[8px] font-black px-1 py-0.5 rounded border uppercase tracking-tighter transition-all shrink-0",
+                line.material_id
+                  ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 cursor-pointer"
+                  : "bg-slate-50 text-slate-400 border-slate-200 cursor-default",
+              )}>
+                {tierLabel}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center" className="min-w-[140px] shadow-xl">
+              <DropdownMenuLabel className="text-right text-[9px] font-black text-slate-500 uppercase">نوع السعر</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {tiers.map((t) => (
+                <DropdownMenuCheckboxItem
+                  key={t.id}
+                  checked={currentTier === t.id}
+                  onCheckedChange={() => handleTierChange(t.id)}
+                  className="text-right flex-row-reverse gap-2 text-[10px] font-bold py-1.5"
+                >
+                  {t.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <EditableInput
+            refKey={refKey}
+            value={priceValue}
+            fontSize={fontSize}
+            fontFamily={config.fontFamily}
+            inputRefs={inputRefs}
+            onChange={(e) => onCellChange(rowIdx, col.key, e.target.value)}
+            onFocus={() => onActiveCellChange({ row: rowIdx, col: editColIdx })}
+            onKeyDown={(e) => onKeyDown(e, rowIdx, editColIdx)}
+            type="number"
+          />
+        </span>
+      </CellWrapper>
+    );
+  }
+
   if (col.type === "material" || col.type === "material_code" || col.type === "material_barcode") {
     const isCodeSearch = col.type === "material_code";
     const isBarcodeSearch = col.type === "material_barcode";

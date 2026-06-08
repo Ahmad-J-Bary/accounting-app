@@ -44,7 +44,8 @@ export interface DocumentColumn {
     | "image"
     | "badge"
     | "unit_select"
-    | "tier_select";
+    | "tier_select"
+    | "price_tier";
 }
 
 export interface GenericDocumentGridProps {

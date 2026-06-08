@@ -273,15 +273,6 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
         align: "center",
         type: "unit_select",
       },
-      ...(invoiceType === "Sales"
-        ? [{
-            key: "tier",
-            header: "نوع السعر",
-            width: "w-[80px]",
-            align: "center",
-            type: "tier_select" as const,
-          }]
-        : []),
     ];
 
     const baseCode = baseCurrency?.code;
@@ -292,9 +283,9 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
       priceCols.push({
         key: isBase ? "unit_price" : `unit_price_${curr.code}`,
         header: `${priceLabel} (${s})`,
-        width: "w-[100px]",
-        align: "left",
-        type: "number",
+        width: "w-[120px]",
+        align: "center",
+        type: invoiceType === "Sales" ? "price_tier" : "number",
         defaultVisible: isBase,
       });
     });

@@ -251,25 +251,35 @@ export default function OpeningBalance() {
           ...currencies.filter((c) => c.code !== baseCurrency.code),
         ]
       : currencies;
-    return sortedCurrencies
-      .map((curr) => ({
-        key: `retail_price_${curr.code}`,
-        header: `مفرق (${curr.symbol || curr.code})`,
-        width: "w-[90px]",
-        align: "left" as const,
-        type: "number" as const,
-        defaultVisible: curr.code === baseCurrency?.code,
-      }))
-      .concat(
-        sortedCurrencies.map((curr) => ({
-          key: `wholesale_price_${curr.code}`,
-          header: `جملة (${curr.symbol || curr.code})`,
+    return [
+      ...sortedCurrencies
+        .map((curr) => ({
+          key: `retail_price_${curr.code}`,
+          header: `مفرق (${curr.symbol || curr.code})`,
           width: "w-[90px]",
           align: "left" as const,
           type: "number" as const,
           defaultVisible: curr.code === baseCurrency?.code,
-        })),
-      );
+        }))
+        .concat(
+          sortedCurrencies.map((curr) => ({
+            key: `wholesale_price_${curr.code}`,
+            header: `جملة (${curr.symbol || curr.code})`,
+            width: "w-[90px]",
+            align: "left" as const,
+            type: "number" as const,
+            defaultVisible: curr.code === baseCurrency?.code,
+          })),
+        ),
+      {
+        key: "notes",
+        header: "ملاحظات",
+        width: "flex-[1]",
+        align: "right",
+        type: "text",
+        defaultVisible: true,
+      },
+    ];
   }, [currencies, baseCurrency]);
 
   const {
