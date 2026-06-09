@@ -1,6 +1,6 @@
 ﻿#![allow(clippy::too_many_arguments)]
 use crate::shared::errors::DomainError;
-use crate::shared::ids::MaterialId;
+use crate::shared::ids::{MaterialId, WarehouseId};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -37,6 +37,7 @@ pub struct StockMovement {
     pub notes: String,
     pub movement_date: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
+    pub warehouse_id: Option<WarehouseId>,
 }
 
 impl StockMovement {
@@ -78,6 +79,7 @@ impl StockMovement {
             notes,
             movement_date,
             created_at: now,
+            warehouse_id: None,
         })
     }
 

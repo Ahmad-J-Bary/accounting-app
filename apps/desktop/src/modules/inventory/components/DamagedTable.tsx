@@ -1,12 +1,11 @@
 import { useMemo } from "react";
-import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
-import { TableShell } from '@widgets/table-shell/TableShell';
+import { SharedTable } from '@widgets/table-shell/SharedTable';
+import type { UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableActions } from '@widgets/table-shell/TableActions';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { formatDateTime } from '@shared/lib/format';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
-
+import { useBaseCurrencyColumns } from "@shared/hooks";
 import type { DamagedItem } from "@erp/shared-types";
 
 interface DamagedTableProps {
@@ -34,30 +33,6 @@ export function DamagedTable({
 }: DamagedTableProps) {
   const { formatAmount, currencies } = useCurrencyContext();
   const { isBaseCurrency } = useBaseCurrencyColumns();
-
-  const { sortedData: sortedItems, sortField, sortDirection, handleSort } = useSortable({
-    data: items,
-    defaultField: "damage_date" as SortField,
-    defaultDirection: "desc",
-    sortFn: (a, b, field, direction) => {
-      let comparison = 0;
-      switch (field) {
-        case "material_name":
-          comparison = (a.material_name || a.material_id || "").localeCompare(b.material_name || b.material_id || "", "ar");
-          break;
-        case "quantity":
-          comparison = parseFloat(a.quantity) - parseFloat(b.quantity);
-          break;
-        case "damage_date":
-          comparison = new Date(a.damage_date).getTime() - new Date(b.damage_date).getTime();
-          break;
-        case "cost_impact":
-          comparison = parseFloat(a.cost_impact || "0") - parseFloat(b.cost_impact || "0");
-          break;
-      }
-      return direction === "asc" ? comparison : -comparison;
-    }
-  });
 
   const allColumns = useMemo<UnifiedColumn<DamagedItem>[]>(() => {
     const cols: UnifiedColumn<DamagedItem>[] = [
@@ -126,7 +101,6 @@ export function DamagedTable({
     return cols;
   }, [formatAmount, currencies, isBaseCurrency, onView, onEdit, onDelete]);
 
-  // Default visible: only base currency's loss column is shown.
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["material_name", "reason", "quantity"];
     currencies.forEach(curr => {
@@ -139,77 +113,48 @@ export function DamagedTable({
     return ids;
   }, [currencies, isBaseCurrency, onView, onEdit, onDelete]);
 
-  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
-    tableId: "damaged-items-table",
-    columns: allColumns,
-    defaultVisible,
-  });
-
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
-    const totalCost = sortedItems.reduce((s, i) => s + parseFloat(i.cost_impact || "0"), 0);
+    const totalCost = items.reduce((s, i) => s + parseFloat(i.cost_impact || "0"), 0);
+    return [
+      { id: 'count', columnId: 'material_name', label: '', value: `${items.length} سجل`, className: 'text-slate-500 font-medium' },
+      { id: 'qty_spacer', columnId: 'quantity', label: '', value: '' },
+      ...currencies.filter(c => isBaseCurrency(c.code)).map(c => ({
+        id: `cost_${c.code}_summary`,
+        columnId: `cost_${c.code}`,
+        label: `إجمالي الخسارة (${c.symbol || c.code})`,
+        value: totalCost > 0 ? formatAmount(totalCost, { currencyCode: c.code }) : "—",
+        className: 'text-rose-600 font-black' as const,
+      })),
+    ];
+  }, [items, currencies, formatAmount, isBaseCurrency]);
 
-    return enrichedColumns.map(col => {
-      if (col.id === 'material_name') {
-        return {
-          id: 'count',
-          columnId: 'material_name',
-          label: '',
-          value: `${sortedItems.length} سجل`,
-          className: 'text-slate-500 font-medium'
-        };
-      }
-      if (col.id === 'quantity') {
-        return { id: `${col.id}_spacer`, columnId: col.id, label: '', value: '' };
-      }
-      const match = col.id.match(/^cost_(.+)$/);
-      if (match) {
-        const currCode = match[1];
-        const isBase = isBaseCurrency(currCode);
-        const sym = currencies.find(c => c.code === currCode)?.symbol || currCode;
-        return {
-          id: `${col.id}_summary`,
-          columnId: col.id,
-          label: `إجمالي الخسارة (${sym})`,
-          value: totalCost > 0 ? formatAmount(totalCost, { currencyCode: currCode }) : "—",
-          className: isBase
-            ? 'text-rose-600 font-black'
-            : 'text-rose-300 font-extrabold'
-        };
-      }
-      return { id: `${col.id}_spacer`, columnId: col.id, label: '', value: '' };
-    });
-  }, [sortedItems, enrichedColumns, formatAmount, isBaseCurrency, currencies]);
+  const sortFn = (a: DamagedItem, b: DamagedItem, field: string, direction: 'asc' | 'desc') => {
+    let comparison = 0;
+    switch (field) {
+      case "material_name": comparison = (a.material_name || a.material_id || "").localeCompare(b.material_name || b.material_id || "", "ar"); break;
+      case "quantity": comparison = parseFloat(a.quantity) - parseFloat(b.quantity); break;
+      case "damage_date": comparison = new Date(a.damage_date).getTime() - new Date(b.damage_date).getTime(); break;
+      case "cost_impact": comparison = parseFloat(a.cost_impact || "0") - parseFloat(b.cost_impact || "0"); break;
+    }
+    return direction === "asc" ? comparison : -comparison;
+  };
 
   return (
-    <TableShell
+    <SharedTable
+      data={items}
+      columns={allColumns}
+      defaultVisible={defaultVisible}
+      loading={loading}
       search={search}
       onSearchChange={onSearchChange}
       searchPlaceholder="بحث بالمنتج أو السبب..."
-      columns={toolbarColumns}
-      onColumnToggle={toggleColumn}
-      onColumnsReset={resetToDefault}
-      columnsModified={isModified}
-      showToolbar={true}
-    >
-      <UnifiedTable
-        data={sortedItems}
-        columns={enrichedColumns}
-        loading={loading}
-        enableResize
-        tableId="damaged"
-        sortField={sortField}
-        sortDirection={sortDirection}
-        selectedId={selectedId}
-        onRowClick={onView}
-        onHeaderClick={(col) => {
-          if (col.id === "material_name") handleSort("material_name");
-          else if (col.id === "damage_date") handleSort("damage_date");
-          else if (col.id === "quantity") handleSort("quantity");
-          else if (col.id?.startsWith("cost_")) handleSort("cost_impact");
-        }}
-        summary={summaryColumns}
-        emptyMessage={search ? "لا توجد نتائج للبحث" : "لا توجد سجلات تالف"}
-      />
-    </TableShell>
+      tableId="damaged"
+      sortConfig={{ field: "damage_date", direction: "desc", sortFn }}
+      sortableFields={["material_name", "damage_date", "quantity", "cost_impact"]}
+      selectedId={selectedId}
+      onRowClick={onView}
+      emptyMessage={search ? "لا توجد نتائج للبحث" : "لا توجد سجلات تالف"}
+      summary={summaryColumns}
+    />
   );
 }

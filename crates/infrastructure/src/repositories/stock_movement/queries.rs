@@ -7,9 +7,11 @@ use rust_decimal::Decimal;
 use super::models::StockMovementRow;
 use super::mappers::row_to_movement;
 
+const COLUMNS: &str = "id, material_id, quantity, unit_cost, unit_cost_base, total_cost, total_cost_base, raw_total_cost_base, original_currency, fx_rate, movement_type, reason, reference, warehouse_id, movement_date, created_at";
+
 pub async fn find_by_id(pool: &SqlitePool, id: &StockMovementId) -> Result<Option<StockMovement>, AppError> {
     let row = sqlx::query_as::<_, StockMovementRow>(
-        "SELECT id, material_id, quantity, unit_cost, unit_cost_base, total_cost, total_cost_base, raw_total_cost_base, original_currency, fx_rate, movement_type, reason, reference, movement_date, created_at FROM stock_movements WHERE id = ?"
+        &format!("SELECT {} FROM stock_movements WHERE id = ?", COLUMNS)
     )
     .bind(id.to_string())
     .fetch_optional(pool)
@@ -20,17 +22,19 @@ pub async fn find_by_id(pool: &SqlitePool, id: &StockMovementId) -> Result<Optio
 }
 
 pub async fn list_all(pool: &SqlitePool) -> Result<Vec<StockMovement>, AppError> {
-    let rows = sqlx::query_as::<_, StockMovementRow>("SELECT id, material_id, quantity, unit_cost, unit_cost_base, total_cost, total_cost_base, raw_total_cost_base, original_currency, fx_rate, movement_type, reason, reference, movement_date, created_at FROM stock_movements ORDER BY movement_date DESC")
-        .fetch_all(pool)
-        .await
-        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let rows = sqlx::query_as::<_, StockMovementRow>(
+        &format!("SELECT {} FROM stock_movements ORDER BY movement_date DESC", COLUMNS)
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     rows.into_iter().map(row_to_movement).collect()
 }
 
 pub async fn list_by_material(pool: &SqlitePool, material_id: &MaterialId) -> Result<Vec<StockMovement>, AppError> {
     let rows = sqlx::query_as::<_, StockMovementRow>(
-        "SELECT id, material_id, quantity, unit_cost, unit_cost_base, total_cost, total_cost_base, raw_total_cost_base, original_currency, fx_rate, movement_type, reason, reference, movement_date, created_at FROM stock_movements WHERE material_id = ? ORDER BY movement_date DESC"
+        &format!("SELECT {} FROM stock_movements WHERE material_id = ? ORDER BY movement_date DESC", COLUMNS)
     )
     .bind(material_id.to_string())
     .fetch_all(pool)
@@ -42,7 +46,7 @@ pub async fn list_by_material(pool: &SqlitePool, material_id: &MaterialId) -> Re
 
 pub async fn list_by_reference(pool: &SqlitePool, reference: &str) -> Result<Vec<StockMovement>, AppError> {
     let rows = sqlx::query_as::<_, StockMovementRow>(
-        "SELECT id, material_id, quantity, unit_cost, unit_cost_base, total_cost, total_cost_base, raw_total_cost_base, original_currency, fx_rate, movement_type, reason, reference, movement_date, created_at FROM stock_movements WHERE reference = ? ORDER BY movement_date ASC"
+        &format!("SELECT {} FROM stock_movements WHERE reference = ? ORDER BY movement_date ASC", COLUMNS)
     )
     .bind(reference)
     .fetch_all(pool)
@@ -88,7 +92,6 @@ pub async fn get_material_summary(pool: &SqlitePool, material_id: &MaterialId) -
     for m in &movements {
         if m.is_inflow() {
             if matches!(m.movement_type, domain::inventory::stock_movement::MovementType::SalesReturn) {
-                // SalesReturn increases physical stock but NOT received/purchased quantity
                 total_available += m.quantity;
             } else {
                 total_available += m.quantity;
@@ -120,7 +123,6 @@ pub async fn get_material_summary(pool: &SqlitePool, material_id: &MaterialId) -
             } else if matches!(m.movement_type, domain::inventory::stock_movement::MovementType::Damaged) {
                 total_damaged += m.quantity;
             } else if matches!(m.movement_type, domain::inventory::stock_movement::MovementType::PurchaseReturn) {
-                // PurchaseReturn: goods returned to supplier, reduce received count & costs
                 total_received -= m.quantity;
                 total_inflow_cost -= m.total_cost;
                 total_inflow_cost_base -= m.total_cost_base;
@@ -162,7 +164,6 @@ pub async fn get_material_summary(pool: &SqlitePool, material_id: &MaterialId) -
     })
 }
 
-// Row struct for the enriched detail query (JOINed with invoices + parties)
 #[derive(sqlx::FromRow)]
 pub struct MovementDetailRow {
     pub id: String,
@@ -178,6 +179,8 @@ pub struct MovementDetailRow {
     pub reference: Option<String>,
     pub reason: Option<String>,
     pub movement_date: String,
+    pub warehouse_id: Option<String>,
+    pub warehouse_name: Option<String>,
     pub invoice_number: Option<String>,
     pub invoice_type: Option<String>,
     pub customer_name: Option<String>,
@@ -228,6 +231,8 @@ pub async fn list_detailed_by_material(
             sm.reference,
             sm.reason,
             sm.movement_date,
+            sm.warehouse_id,
+            w.name AS warehouse_name,
             ui.invoice_number,
             ui.invoice_type,
             COALESCE(c.name, cr.name) AS customer_name,
@@ -244,6 +249,7 @@ pub async fn list_detailed_by_material(
         LEFT JOIN customers cr        ON sr.customer_id = cr.id
         LEFT JOIN purchase_returns pr ON sm.reference = pr.return_number AND sm.movement_type = 'PurchaseReturn'
         LEFT JOIN suppliers sr2       ON pr.supplier_id = sr2.id
+        LEFT JOIN warehouses w        ON sm.warehouse_id = w.id
         WHERE sm.material_id = ?
         ORDER BY sm.movement_date ASC, sm.created_at ASC
         "#
@@ -253,7 +259,6 @@ pub async fn list_detailed_by_material(
     .await
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-    // Compute running balance (ASC order)
     let mut balance = Decimal::ZERO;
     let mut result = Vec::with_capacity(rows.len());
 
@@ -291,6 +296,8 @@ pub async fn list_detailed_by_material(
             invoice_number: row.invoice_number,
             invoice_type: row.invoice_type,
             party_name,
+            warehouse_id: row.warehouse_id,
+            warehouse_name: row.warehouse_name,
             balance_before: balance_before.to_string(),
             balance_after: balance_after.to_string(),
             is_inflow: inflow,

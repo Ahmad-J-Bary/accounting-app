@@ -123,6 +123,7 @@ export interface StockMovement {
   total_cost?: string;
   reference?: string;
   notes?: string;
+  warehouse_id?: string | null;
   date: string;
   created_at: string;
 }

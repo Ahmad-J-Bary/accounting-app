@@ -1,6 +1,7 @@
 import { Toaster } from '@shared/ui/sonner';
 import { TooltipProvider } from '@shared/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from 'next-themes';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from '@app/shell/AppLayout';
 import { TabProvider } from '@app/providers/TabProvider';
@@ -17,9 +18,10 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <BrowserRouter>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+      <TooltipProvider>
+        <Toaster />
+        <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
@@ -40,7 +42,8 @@ const App = () => (
           } />
         </Routes>
       </BrowserRouter>
-    </TooltipProvider>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 pub struct StockMovementDetailDto {
     pub id: String,
     pub material_id: String,
-    pub movement_type: String,       // "Purchase" | "Sale" | "OpeningBalance" | etc.
-    pub movement_type_label: String, // Arabic label
+    pub movement_type: String,
+    pub movement_type_label: String,
     pub quantity: String,
     pub unit_cost: String,
     pub unit_cost_base: String,
@@ -15,12 +15,14 @@ pub struct StockMovementDetailDto {
     pub fx_rate: String,
     pub reference: String,
     pub notes: String,
-    pub movement_date: String,       // ISO 8601
+    pub movement_date: String,
     pub invoice_number: Option<String>,
     pub invoice_type: Option<String>,
-    pub party_name: Option<String>,  // customer or supplier name
-    pub balance_before: String,      // running balance before this movement
-    pub balance_after: String,       // running balance after this movement
+    pub party_name: Option<String>,
+    pub warehouse_id: Option<String>,
+    pub warehouse_name: Option<String>,
+    pub balance_before: String,
+    pub balance_after: String,
     pub is_inflow: bool,
 }
 
@@ -33,6 +35,7 @@ pub struct StockMovementDto {
     pub movement_type: String,
     pub reason: Option<String>,
     pub reference: Option<String>,
+    pub warehouse_id: Option<String>,
     pub movement_date: String,
     pub created_at: String,
 }

@@ -20,6 +20,7 @@ pub async fn list_stock_movements(
         movement_type: format!("{:?}", m.movement_type),
         reason: if m.notes.is_empty() { None } else { Some(m.notes) },
         reference: if m.reference.is_empty() { None } else { Some(m.reference) },
+        warehouse_id: m.warehouse_id.map(|id| id.to_string()),
         movement_date: m.movement_date.to_rfc3339(),
         created_at: m.created_at.to_rfc3339(),
     }).collect())

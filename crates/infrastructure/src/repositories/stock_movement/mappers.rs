@@ -1,6 +1,6 @@
 use application::errors::AppError;
 use domain::inventory::stock_movement::{StockMovement, MovementType};
-use domain::shared::ids::{MaterialId};
+use domain::shared::ids::{MaterialId, WarehouseId};
 use rust_decimal::Decimal;
 use std::str::FromStr;
 use uuid::Uuid;
@@ -38,5 +38,6 @@ pub fn row_to_movement(row: StockMovementRow) -> Result<StockMovement, AppError>
         notes: row.reason.unwrap_or_default(),
         movement_date: DateTime::parse_from_rfc3339(&row.movement_date).map_err(|e| AppError::Invalid(e.to_string()))?.with_timezone(&Utc),
         created_at: DateTime::parse_from_rfc3339(&row.created_at).map_err(|e| AppError::Invalid(e.to_string()))?.with_timezone(&Utc),
+        warehouse_id: row.warehouse_id.and_then(|id| Uuid::parse_str(&id).ok()).map(WarehouseId),
     })
 }

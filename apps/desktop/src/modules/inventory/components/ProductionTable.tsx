@@ -2,9 +2,8 @@ import { useMemo } from "react";
 import { formatDateTime, formatCurrency } from '@shared/lib/format';
 import { cn } from "@shared/lib/utils";
 import type { ProductionOrder } from "@erp/shared-types";
-import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
-import { TableShell } from '@widgets/table-shell/TableShell';
-import { useUnifiedColumns, useSortable } from '@shared/hooks';
+import { SharedTable } from '@widgets/table-shell/SharedTable';
+import type { UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
   Draft: { label: "مسودة", cls: "bg-slate-100 text-slate-600 ring-slate-200" },
@@ -83,12 +82,6 @@ export function ProductionTable({ data, loading, search, onSearchChange }: Produ
 
   type SortField = "order_number" | "production_date" | "materials_count" | "outputs_count" | "total_cost" | "status";
 
-  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
-    tableId: "production-orders-unified",
-    columns: allColumns,
-    defaultVisible: allColumns.map(c => c.id),
-  });
-
   const filtered = useMemo(() =>
     data.filter(o =>
       o.order_number.toLowerCase().includes(search.toLowerCase())
@@ -96,63 +89,32 @@ export function ProductionTable({ data, loading, search, onSearchChange }: Produ
     [data, search]
   );
 
-  const { sortedData, sortField, sortDirection, handleSort } = useSortable({
-    data: filtered,
-    defaultField: "production_date" as SortField,
-    defaultDirection: "desc",
-    sortFn: (a, b, field, direction) => {
-      let comparison = 0;
-      switch (field) {
-        case "order_number":
-          comparison = (a.order_number || "").localeCompare(b.order_number || "", "ar", { numeric: true });
-          break;
-        case "production_date":
-          comparison = new Date(a.production_date).getTime() - new Date(b.production_date).getTime();
-          break;
-        case "materials_count":
-          comparison = a.materials.length - b.materials.length;
-          break;
-        case "outputs_count":
-          comparison = a.outputs.length - b.outputs.length;
-          break;
-        case "total_cost":
-          comparison = parseFloat(a.total_cost) - parseFloat(b.total_cost);
-          break;
-        case "status":
-          comparison = (a.status || "").localeCompare(b.status || "", "ar");
-          break;
-      }
-      return direction === "asc" ? comparison : -comparison;
+  const sortFn = (a: ProductionOrder, b: ProductionOrder, field: string, direction: 'asc' | 'desc') => {
+    let comparison = 0;
+    switch (field) {
+      case "order_number": comparison = (a.order_number || "").localeCompare(b.order_number || "", "ar", { numeric: true }); break;
+      case "production_date": comparison = new Date(a.production_date).getTime() - new Date(b.production_date).getTime(); break;
+      case "materials_count": comparison = a.materials.length - b.materials.length; break;
+      case "outputs_count": comparison = a.outputs.length - b.outputs.length; break;
+      case "total_cost": comparison = parseFloat(a.total_cost) - parseFloat(b.total_cost); break;
+      case "status": comparison = (a.status || "").localeCompare(b.status || "", "ar"); break;
     }
-  });
+    return direction === "asc" ? comparison : -comparison;
+  };
 
   return (
-    <TableShell
+    <SharedTable
+      data={filtered}
+      columns={allColumns}
+      defaultVisible={allColumns.map(c => c.id)}
+      loading={loading}
       search={search}
       onSearchChange={onSearchChange}
       searchPlaceholder="بحث برقم الأمر..."
-      columns={toolbarColumns}
-      onColumnToggle={toggleColumn}
-      onColumnsReset={resetToDefault}
-      columnsModified={isModified}
-      showToolbar={true}
-    >
-      <UnifiedTable
-        data={sortedData}
-        columns={enrichedColumns}
-        loading={loading}
-        enableResize
-        tableId="production"
-        sortField={sortField}
-        sortDirection={sortDirection}
-        onHeaderClick={(col) => {
-          const sortableFields: SortField[] = ["order_number", "production_date", "materials_count", "outputs_count", "total_cost", "status"];
-          if (sortableFields.includes(col.id as SortField)) {
-            handleSort(col.id as SortField);
-          }
-        }}
-        emptyMessage={search ? "لا توجد نتائج للبحث" : "لا توجد أوامر إنتاج مسجّلة"}
-      />
-    </TableShell>
+      tableId="production"
+      sortConfig={{ field: "production_date", direction: "desc", sortFn }}
+      sortableFields={["order_number", "production_date", "materials_count", "outputs_count", "total_cost", "status"]}
+      emptyMessage={search ? "لا توجد نتائج للبحث" : "لا توجد أوامر إنتاج مسجّلة"}
+    />
   );
 }

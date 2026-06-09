@@ -51,3 +51,5 @@ pub mod purchase_return;
 pub use purchase_return::SqlitePurchaseReturnRepository;
 pub mod inventory_lot;
 pub use inventory_lot::SqliteInventoryLotRepository;
+pub mod warehouse;
+pub use warehouse::SqliteWarehouseRepository;

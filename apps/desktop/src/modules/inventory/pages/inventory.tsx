@@ -1,182 +1,146 @@
-import { useState, useMemo } from "react";
-import { Button } from "@shared/ui/button";
-import { Input } from "@shared/ui/input";
-import { Plus, Download, Search, Warehouse, ArrowLeftRight, History, Package } from "lucide-react";
-import { formatNumber, formatCurrency, formatDateTime } from '@shared/lib/format';
+import { useState, useMemo, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
-import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
-import { useDataTable } from '@shared/hooks';
+import { useQuery } from '@tanstack/react-query';
+import { Button } from "@shared/ui/button";
 import { inventoryService } from '@modules/inventory/api/inventoryService';
-import type { StockMovement } from "@erp/shared-types";
-import { toast } from "sonner";
-import { cn } from "@shared/lib/utils";
+import { warehouseService } from '@modules/inventory/api/warehouseService';
+import type { StockMovement, WarehouseDto } from '@erp/shared-types';
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
+import { InventoryMovementsTable } from '@modules/inventory/components/InventoryMovementsTable';
+import { InventoryWarehouses } from '@modules/inventory/components/InventoryWarehouses';
+import { WarehouseSelector } from '@modules/inventory/components/WarehouseSelector';
+import { WarehouseForm } from '@modules/inventory/components/WarehouseForm';
+import { History, Warehouse, RefreshCw } from "lucide-react";
 
 export default function Inventory() {
-  const {
-    filtered: movements,
-    loading: movementsLoading,
-    refreshing,
-    search,
-    setSearch,
-    refresh,
-  } = useDataTable<StockMovement>({
-    fetchData: () => inventoryService.listStockMovements(),
-    searchFields: ["product_name", "reference"],
+  const [activeTab, setActiveTab] = useState('movements');
+
+  const { data: movements = [], isLoading: movementsLoading, refetch: refreshMovements, isRefetching: movementsRefetching } = useQuery<StockMovement[]>({
+    queryKey: ['stock-movements'],
+    queryFn: () => inventoryService.listStockMovements(),
   });
 
-  const isLoading = movementsLoading || refreshing;
+  const {
+    data: warehouses = [],
+    isLoading: warehousesLoading,
+    refetch: refreshWarehouses,
+    isRefetching: warehousesRefetching,
+  } = useQuery<WarehouseDto[]>({
+    queryKey: ['warehouses'],
+    queryFn: () => warehouseService.listWarehouses(),
+  });
 
-  const movementColumns = useMemo<UnifiedColumn<StockMovement>[]>(() => [
-    { 
-      id: "date", header: "التاريخ", label: "التاريخ",
-      accessor: (m) => formatDateTime(m.date),
-      className: "tabular-nums text-slate-500 font-medium" 
-    },
-    { 
-      id: "type", header: "النوع", label: "النوع",
-      accessor: (m) => {
-        const typeMap: Record<string, string> = {
-          'In': 'وارد',
-          'Out': 'صادر',
-          'Adjustment': 'تسوية',
-          'Production': 'تصنيع',
-          'Damaged': 'تالف'
-        };
-        return (
-          <span className={cn(
-            "inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ring-1 ring-inset",
-            m.movement_type === 'In' ? 'bg-emerald-50 text-emerald-700 ring-emerald-100' :
-            m.movement_type === 'Out' ? 'bg-rose-50 text-rose-700 ring-rose-100' :
-            'bg-blue-50 text-blue-700 ring-blue-100'
-          )}>
-            {typeMap[m.movement_type] || m.movement_type}
-          </span>
-        );
-      },
-      align: "center"
-    },
-    { 
-      id: "product", header: "الصنف / المنتج", label: "الصنف / المنتج",
-      accessor: "product_name",
-      className: "font-bold text-slate-900" 
-    },
-    { 
-      id: "qty", header: "الكمية", label: "الكمية",
-      accessor: (m) => (
-        <span className={cn("tabular-nums font-black text-base", parseFloat(m.quantity) < 0 ? "text-rose-600" : "text-emerald-600")}>
-          {parseFloat(m.quantity) > 0 ? "+" : ""}{formatNumber(parseFloat(m.quantity))}
-        </span>
-      ), 
-      align: "left"
-    },
-    { 
-      id: "total_cost", header: "التكلفة (إجمالي)", label: "التكلفة (إجمالي)",
-      accessor: (m) => m.total_cost ? formatCurrency(parseFloat(m.total_cost)) : "—",
-      className: "tabular-nums text-slate-600 font-medium"
-    },
-    { 
-      id: "reference", header: "المرجع", label: "المرجع",
-      accessor: "reference", 
-      className: "text-blue-600 hover:text-blue-800 font-bold font-mono text-xs cursor-pointer bg-blue-50/50 px-2 py-1 rounded border border-blue-100 w-fit" 
+  const [search, setSearch] = useState('');
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | null>(null);
+  const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null);
+  const [warehouseFormOpen, setWarehouseFormOpen] = useState(false);
+  const [warehouseEditItem, setWarehouseEditItem] = useState<WarehouseDto | null>(null);
+
+  useEffect(() => {
+    if (warehouses.length > 0 && !selectedWarehouseId) {
+      if (warehouses.length === 1) {
+        setSelectedWarehouseId(warehouses[0].id);
+      } else {
+        setSelectedWarehouseId('all');
+      }
     }
-  ], []);
+  }, [warehouses, selectedWarehouseId]);
 
-  const warehouses = useMemo(() => [
-    { name: "المستودع الرئيسي - دمشق", items: 245, value: 87000, color: "bg-blue-600" },
-    { name: "مستودع حلب", items: 128, value: 34000, color: "bg-indigo-600" },
-  ], []);
+  const isSingleWarehouse = warehouses.length === 1;
+
+  const filteredByWarehouse = useMemo(() => {
+    if (!selectedWarehouseId || selectedWarehouseId === 'all') return movements;
+    return movements.filter(m => m.warehouse_id === selectedWarehouseId);
+  }, [movements, selectedWarehouseId]);
+
+  const filteredMovements = useMemo(() => {
+    if (!search.trim()) return filteredByWarehouse;
+    const q = search.toLowerCase();
+    return filteredByWarehouse.filter(m =>
+      (m.product_name?.toLowerCase().includes(q)) ||
+      (m.reference?.toLowerCase().includes(q))
+    );
+  }, [filteredByWarehouse, search]);
+
+  const movementsLoading_ = movementsLoading || movementsRefetching;
 
   const stats = useMemo(() => [
     { label: "إجمالي الحركات", value: movements.length, icon: History, color: "text-blue-600" },
-    { label: "قيمة المخزون الكلية", value: "$121,000", icon: Package, color: "text-emerald-600" },
-    { label: "المستودعات النشطة", value: warehouses.length, icon: Warehouse, color: "text-slate-900" },
+    { label: "المستودعات النشطة", value: warehouses.filter(w => w.is_active).length, icon: Warehouse, color: "text-slate-900" },
   ], [movements, warehouses]);
+
+  const refreshAll = () => { refreshMovements(); refreshWarehouses(); };
+
+  const handleCloseForm = () => { setWarehouseFormOpen(false); setWarehouseEditItem(null); };
+
+  const handleFormSaved = () => { refreshAll(); };
 
   return (
     <OperationalTableTemplate
       title="إدارة المخزون"
+      stats={stats}
       toolbar={
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="bg-white"><Download className="w-4 h-4 ml-2" />تصدير</Button>
-          <Button size="sm" onClick={() => toast.info("تحويل مخزني قيد التطوير")} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
-            <ArrowLeftRight className="w-4 h-4 ml-2" />تحويل مخزني
-          </Button>
-          <Button size="sm" onClick={() => toast.info("إضافة حركة قيد التطوير")} className="bg-slate-900 hover:bg-slate-800 shadow-lg shadow-slate-200">
-            <Plus className="w-4 h-4 ml-2" />حركة جديدة
-          </Button>
-
-          <div className="flex items-center gap-6 mr-auto pl-2">
-            {stats.map((s, i) => (
-              <div key={i} className="flex flex-col items-start gap-1">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{s.label}</span>
-                <div className="flex items-center gap-2">
-                   <s.icon className={cn("w-4 h-4", s.color)} />
-                   <span className={cn("text-lg font-black tabular-nums", s.color)}>{s.value}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
+        <Button size="sm" variant="outline" onClick={refreshAll} className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50">
+          <RefreshCw className="w-4 h-4 ml-2 shrink-0" />تحديث
+        </Button>
+      }
+      filterBar={
+        <div className="flex items-center gap-4">
+          {activeTab === 'movements' && (
+            <div className="flex items-center gap-2">
+              <Warehouse className="w-4 h-4 text-slate-400 shrink-0" />
+              <WarehouseSelector
+                warehouses={warehouses}
+                value={selectedWarehouseId || 'all'}
+                onValueChange={(v) => setSelectedWarehouseId(v === 'all' ? null : v)}
+                includeAll={!isSingleWarehouse}
+                placeholder={isSingleWarehouse ? (warehouses[0]?.name || 'مستودع الشركة') : 'جميع المستودعات'}
+              />
+            </div>
+          )}
+          {activeTab === 'warehouses' && (
+            <span className="text-xs text-slate-400 font-medium">إدارة وعرض المستودعات المتاحة</span>
+          )}
         </div>
       }
       tableContent={
-        <Tabs defaultValue="movements" className="w-full h-full flex flex-col">
-          <div className="px-6 py-4 border-b flex items-center justify-between bg-slate-50/50">
-            <TabsList className="bg-white border p-1 h-11 rounded-xl shadow-sm">
-              <TabsTrigger value="movements" className="rounded-lg px-8 font-bold data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">سجل الحركات</TabsTrigger>
-              <TabsTrigger value="warehouses" className="rounded-lg px-8 font-bold data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">حالة المستودعات</TabsTrigger>
+        <Tabs dir="rtl" value={activeTab} onValueChange={setActiveTab} className="w-full h-full flex flex-col">
+          <div className="flex items-center justify-between px-6 py-3 border-b shrink-0">
+            <TabsList className="bg-slate-100 p-0.5 rounded-lg">
+              <TabsTrigger value="movements" className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:font-bold">
+                <History className="w-3.5 h-3.5 ml-1.5 shrink-0" />سجل الحركات
+              </TabsTrigger>
+              <TabsTrigger value="warehouses" className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:font-bold">
+                <Warehouse className="w-3.5 h-3.5 ml-1.5 shrink-0" />المستودعات
+              </TabsTrigger>
             </TabsList>
-            
-            <div className="relative w-64">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input 
-                placeholder="بحث..." 
-                className="pr-10 h-10 border-slate-200 bg-white" 
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
           </div>
 
-          <TabsContent value="movements" className="flex-1 m-0 p-0 overflow-auto">
-            <UnifiedTable
-              data={movements}
-              columns={movementColumns}
-              loading={movementsLoading}
-              emptyMessage="لا توجد حركات مخزنية مسجلة"
+          <TabsContent value="movements" className="flex-1 m-0 p-0 overflow-hidden">
+            <InventoryMovementsTable
+              movements={filteredMovements}
+              loading={movementsLoading_}
+              warehouses={warehouses}
+              search={search}
+              onSearchChange={setSearch}
+              selectedId={selectedMovementId}
+              onRowClick={(m) => setSelectedMovementId(m.id === selectedMovementId ? null : m.id)}
             />
           </TabsContent>
 
-          <TabsContent value="warehouses" className="flex-1 m-0 p-8 overflow-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {warehouses.map((w, i) => (
-                <div key={i} className="group relative bg-white p-8 rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300">
-                  <div className="flex items-start justify-between mb-8">
-                    <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center shadow-inner", w.color)}>
-                      <Warehouse className="w-8 h-8 text-white" />
-                    </div>
-                    <div className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-wider border border-emerald-100">نشط</div>
-                  </div>
-                  
-                  <h3 className="font-black text-slate-900 text-xl mb-6">{w.name}</h3>
-                  
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 group-hover:bg-blue-50/30 group-hover:border-blue-100 transition-colors">
-                      <div className="text-xs font-bold text-slate-400">عدد الأصناف</div>
-                      <div className="font-black tabular-nums text-slate-900 text-lg">{formatNumber(w.items)}</div>
-                    </div>
-                    <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 group-hover:bg-blue-50/30 group-hover:border-blue-100 transition-colors">
-                      <div className="text-xs font-bold text-slate-400">قيمة المخزون</div>
-                      <div className="font-black tabular-nums text-blue-600 text-lg">{formatCurrency(w.value)}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <TabsContent value="warehouses" className="flex-1 m-0 p-6 overflow-auto">
+            <InventoryWarehouses
+              warehouses={warehouses}
+              loading={warehousesLoading || warehousesRefetching}
+              onRefresh={refreshAll}
+              onAdd={() => { setWarehouseEditItem(null); setWarehouseFormOpen(true); }}
+              onEdit={(w) => { setWarehouseEditItem(w); setWarehouseFormOpen(true); }}
+            />
           </TabsContent>
         </Tabs>
       }
+      sidePanel={<WarehouseForm open={warehouseFormOpen} onClose={handleCloseForm} onSaved={handleFormSaved} editItem={warehouseEditItem} />}
+      isPanelOpen={warehouseFormOpen}
     />
   );
 }

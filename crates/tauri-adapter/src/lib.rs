@@ -147,6 +147,13 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::returns::post_purchase_return,
             commands::returns::delete_sales_return,
             commands::returns::delete_purchase_return,
+            // Warehouse commands
+            commands::warehouse::create_warehouse,
+            commands::warehouse::list_warehouses,
+            commands::warehouse::get_warehouse,
+            commands::warehouse::update_warehouse,
+            commands::warehouse::delete_warehouse,
+            commands::warehouse::get_default_warehouse,
         ])
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir().expect("Failed to get app data directory");

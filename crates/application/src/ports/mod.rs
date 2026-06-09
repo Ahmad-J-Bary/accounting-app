@@ -26,3 +26,4 @@ pub mod exchange_rate_repository;
 pub mod sales_return_repository;
 pub mod purchase_return_repository;
 pub mod inventory_lot_repository;
+pub mod warehouse_repository;

@@ -16,3 +16,4 @@ export { EmptyState } from './EmptyState';
 
 export { DataTable } from './DataTable';
 export type { Column } from './DataTable';
+export { SharedTable } from './SharedTable';

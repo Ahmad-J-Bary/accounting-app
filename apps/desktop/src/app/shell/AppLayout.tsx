@@ -10,6 +10,7 @@ import { useKeyboardShortcuts } from '@shared/hooks/useKeyboardShortcuts';
 import { FloatingExchangeRateWidget } from '@modules/core/components/FloatingExchangeRateWidget';
 import { UpdateBanner } from '@modules/core/components/UpdateBanner';
 import { useUpdateChecker } from '@modules/core/hooks/useUpdateChecker';
+import { warehouseService } from '@modules/inventory/api/warehouseService';
 
 interface AppLayoutProps {
   title?: string;
@@ -29,6 +30,10 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
     try {
       localStorage.setItem('erp_app_state_saved', Date.now().toString());
     } catch { /***/ }
+  }, []);
+
+  useEffect(() => {
+    warehouseService.ensureDefaultWarehouse().catch(() => {});
   }, []);
 
   useEffect(() => {

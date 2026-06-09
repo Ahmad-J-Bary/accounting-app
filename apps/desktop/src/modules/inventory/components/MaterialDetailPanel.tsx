@@ -19,6 +19,7 @@ import {
   SidebarDetailGrid,
   type SidebarAction,
 } from "@widgets/sidebar-shell";
+import { statCard, statLabel, statValue, sectionCard } from './inventoryStyles';
 
 interface MaterialDetailPanelProps {
   material: MaterialDto | null;
@@ -27,13 +28,6 @@ interface MaterialDetailPanelProps {
   onDelete?: (id: string, name: string) => void;
   loadingDetails?: boolean;
 }
-
-const statCard =
-  "p-4 border border-border rounded-xl bg-slate-50/50 shadow-sm text-right";
-const statLabel = "text-[10px] uppercase font-bold text-slate-500 mb-1";
-const statValue = "font-bold tabular-nums text-xl";
-const sectionCard =
-  "p-5 border border-slate-100 rounded-xl bg-white shadow-sm text-right space-y-4";
 
 export function MaterialDetailPanel({
   material,

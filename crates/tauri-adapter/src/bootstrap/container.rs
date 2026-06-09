@@ -20,6 +20,7 @@ use application::ports::settings_repository::SettingsRepository;
 use application::ports::stock_adjustment_repository::StockAdjustmentRepository;
 use application::ports::stock_movement_repository::StockMovementRepository;
 use application::ports::supplier_repository::SupplierRepository;
+use application::ports::warehouse_repository::WarehouseRepository;
 use application::ports::unified_invoice_repository::UnifiedInvoiceRepository;
 use application::ports::unit_of_work::UnitOfWork;
 use application::ports::user_repository::UserRepository;
@@ -42,6 +43,7 @@ use infrastructure::{
 };
 use infrastructure::repositories::SqliteInvoiceRepository;
 use infrastructure::repositories::SqlitePurchaseInvoiceRepository;
+use infrastructure::SqliteWarehouseRepository;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -72,6 +74,7 @@ pub struct AppState {
     pub sales_return_repo: Arc<dyn SalesReturnRepository>,
     pub purchase_return_repo: Arc<dyn PurchaseReturnRepository>,
     pub inventory_lot_repo: Arc<dyn InventoryLotRepository>,
+    pub warehouse_repo: Arc<dyn WarehouseRepository>,
     pub uow: Arc<dyn UnitOfWork>,
     pub material_code_use_cases: Arc<MaterialCodeUseCases>,
     pub currency_commands: Arc<CurrencyCommands>,
@@ -106,6 +109,7 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
     let sales_return_repo = Arc::new(SqliteSalesReturnRepository::new(pool.clone()));
     let purchase_return_repo = Arc::new(SqlitePurchaseReturnRepository::new(pool.clone()));
     let inventory_lot_repo = Arc::new(SqliteInventoryLotRepository::new(pool.clone()));
+    let warehouse_repo = Arc::new(SqliteWarehouseRepository::new(pool.clone()));
 
     Ok(AppState {
         customer_repo: customer_repo.clone() as Arc<dyn CustomerRepository>,
@@ -142,6 +146,7 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
         sales_return_repo: sales_return_repo.clone() as Arc<dyn SalesReturnRepository>,
         purchase_return_repo: purchase_return_repo.clone() as Arc<dyn PurchaseReturnRepository>,
         inventory_lot_repo: inventory_lot_repo.clone() as Arc<dyn InventoryLotRepository>,
+        warehouse_repo: warehouse_repo.clone() as Arc<dyn WarehouseRepository>,
         uow: Arc::new(SqliteUnitOfWork::new(pool.clone())) as Arc<dyn UnitOfWork>,
         material_code_use_cases: Arc::new(MaterialCodeUseCases::new(
             prefix_repo.clone(),
