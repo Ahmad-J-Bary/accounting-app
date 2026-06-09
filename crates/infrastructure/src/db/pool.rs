@@ -126,18 +126,28 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::migrate::Migr
                             .await
                             .unwrap_or_default();
 
+                    let has_execution_time =
+                        column_exists(pool, "_sqlx_migrations", "execution_time").await;
+
                     for migration in migrator.migrations.iter() {
                         let v = migration.version;
                         if !applied_versions.contains(&v) {
-                            sqlx::query(
-                                "INSERT OR IGNORE INTO _sqlx_migrations (version, description, checksum, success) VALUES (?1, ?2, ?3, 1)",
-                            )
-                            .bind(v)
-                            .bind(migration.description.as_ref())
-                            .bind(migration.checksum.as_ref())
-                            .execute(pool)
-                            .await
-                            .map_err(|e| sqlx::migrate::MigrateError::Source(e.into()))?;
+                            let query = if has_execution_time {
+                                sqlx::query(
+                                    "INSERT OR IGNORE INTO _sqlx_migrations (version, description, checksum, success, execution_time) VALUES (?1, ?2, ?3, 1, 0)",
+                                )
+                            } else {
+                                sqlx::query(
+                                    "INSERT OR IGNORE INTO _sqlx_migrations (version, description, checksum, success) VALUES (?1, ?2, ?3, 1)",
+                                )
+                            };
+                            query
+                                .bind(v)
+                                .bind(migration.description.as_ref())
+                                .bind(migration.checksum.as_ref())
+                                .execute(pool)
+                                .await
+                                .map_err(|e| sqlx::migrate::MigrateError::Source(e.into()))?;
                         }
                     }
                     continue;
