@@ -94,7 +94,6 @@ export function InventoryWarehouses({ warehouses, loading, onRefresh, onAdd, onE
               </div>
 
               <h3 className="font-black text-slate-900 text-xl mb-2">{w.name}</h3>
-              {w.code && <div className="text-sm font-medium text-slate-400 mb-2 font-mono">{w.code}</div>}
 
               {w.address && (
                 <div className="flex items-center gap-1.5 text-sm text-slate-500 mb-4">
@@ -102,8 +101,6 @@ export function InventoryWarehouses({ warehouses, loading, onRefresh, onAdd, onE
                   <span>{w.address}</span>
                 </div>
               )}
-              {!w.code && !w.address && <div className="mb-4" />}
-
               {w.is_default && (
                 <div className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-100 mb-4">
                   رئيسي

@@ -171,11 +171,15 @@ export function InventoryMovementsTable({
       const costMatch = id.match(/^total_cost_(.+)$/);
       if (costMatch) {
         const currCode = costMatch[1];
-        const totalCost = movements.reduce((s, m) => s + parseFloat(m.total_cost_base || "0"), 0);
+        const totalCost = movements.reduce((s, m) => {
+          const cfg = getMovementType(m.movement_type);
+          const cost = parseFloat(m.total_cost_base || "0");
+          return s + (cfg.inflow ? cost : -cost);
+        }, 0);
         const isBase = isBaseCurrency(currCode);
         return {
           id: `${id}_summary`, columnId: id, label: "الإجمالي",
-          value: totalCost > 0 ? formatAmount(totalCost, { currencyCode: currCode }) : "—",
+          value: totalCost !== 0 ? formatAmount(totalCost, { currencyCode: currCode }) : "—",
           className: isBase ? "text-slate-900 font-black" : "text-slate-500 font-extrabold"
         };
       }

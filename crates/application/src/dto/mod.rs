@@ -19,3 +19,4 @@ pub mod currency_dto;
 pub mod returns_dto;
 pub mod inventory_lot_dto;
 pub mod warehouse_dto;
+pub mod transfer_dto;

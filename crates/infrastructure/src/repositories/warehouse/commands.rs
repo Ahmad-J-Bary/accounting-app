@@ -6,20 +6,9 @@ use super::models::WarehouseRow;
 use super::mappers::row_to_dto;
 use uuid::Uuid;
 
-fn generate_code_from_name(name: &str) -> String {
-    let prefix: String = name.chars().filter(|c| c.is_ascii_alphanumeric()).take(4).collect();
-    let suffix = &Uuid::new_v4().to_string()[..6];
-    if prefix.is_empty() {
-        format!("WH-{}", suffix)
-    } else {
-        format!("{}-{}", prefix.to_uppercase(), suffix)
-    }
-}
-
 pub async fn create(pool: &SqlitePool, req: &CreateWarehouseRequest) -> Result<WarehouseDto, AppError> {
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
-    let code = req.code.clone().unwrap_or_else(|| generate_code_from_name(&req.name));
 
     let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM warehouses")
         .fetch_one(pool)
@@ -29,12 +18,11 @@ pub async fn create(pool: &SqlitePool, req: &CreateWarehouseRequest) -> Result<W
     let is_default = count.0 == 0;
 
     sqlx::query(
-        "INSERT INTO warehouses (id, name, code, address, is_active, is_default, created_at, updated_at)
-         VALUES (?, ?, ?, ?, 1, ?, ?, ?)"
+        "INSERT INTO warehouses (id, name, address, is_active, is_default, created_at, updated_at)
+         VALUES (?, ?, ?, 1, ?, ?, ?)"
     )
     .bind(&id)
     .bind(&req.name)
-    .bind(&code)
     .bind(&req.address)
     .bind(is_default)
     .bind(&now)
@@ -44,7 +32,7 @@ pub async fn create(pool: &SqlitePool, req: &CreateWarehouseRequest) -> Result<W
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     let row = sqlx::query_as::<_, WarehouseRow>(
-        "SELECT id, name, code, address, is_active, is_default, created_at, updated_at FROM warehouses WHERE id = ?"
+        "SELECT id, name, address, is_active, is_default, created_at, updated_at FROM warehouses WHERE id = ?"
     )
     .bind(&id)
     .fetch_one(pool)
@@ -65,16 +53,10 @@ pub async fn update(pool: &SqlitePool, req: &UpdateWarehouseRequest) -> Result<W
             .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     }
 
-    let code = match &req.code {
-        Some(c) if !c.is_empty() => c.clone(),
-        _ => generate_code_from_name(&req.name),
-    };
-
     sqlx::query(
-        "UPDATE warehouses SET name = ?, code = ?, address = ?, is_active = ?, is_default = ?, updated_at = ? WHERE id = ?"
+        "UPDATE warehouses SET name = ?, address = ?, is_active = ?, is_default = ?, updated_at = ? WHERE id = ?"
     )
     .bind(&req.name)
-    .bind(&code)
     .bind(&req.address)
     .bind(req.is_active)
     .bind(req.is_default)
@@ -90,7 +72,7 @@ pub async fn update(pool: &SqlitePool, req: &UpdateWarehouseRequest) -> Result<W
 
 async fn find_by_id_opt(pool: &SqlitePool, id: &WarehouseId) -> Result<Option<WarehouseDto>, AppError> {
     let row = sqlx::query_as::<_, WarehouseRow>(
-        "SELECT id, name, code, address, is_active, is_default, created_at, updated_at FROM warehouses WHERE id = ?"
+        "SELECT id, name, address, is_active, is_default, created_at, updated_at FROM warehouses WHERE id = ?"
     )
     .bind(id.to_string())
     .fetch_optional(pool)

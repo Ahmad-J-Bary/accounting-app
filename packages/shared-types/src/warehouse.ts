@@ -1,7 +1,6 @@
 export interface WarehouseDto {
   id: string;
   name: string;
-  code?: string | null;
   address?: string | null;
   is_active: boolean;
   is_default: boolean;

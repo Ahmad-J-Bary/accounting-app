@@ -5,7 +5,6 @@ use crate::shared::ids::WarehouseId;
 pub struct Warehouse {
     pub id: WarehouseId,
     pub name: String,
-    pub code: String,
     pub address: Option<String>,
     pub is_active: bool,
     pub is_default: bool,
