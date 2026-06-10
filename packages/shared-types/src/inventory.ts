@@ -115,15 +115,19 @@ export interface InventoryLotDto {
 
 export interface StockMovement {
   id: string;
-  product_id: string;
-  product_name?: string;
-  movement_type: 'In' | 'Out' | 'Adjustment' | 'Production' | 'Damaged';
+  material_id: string;
+  material_name?: string | null;
+  movement_type: string;
   quantity: string;
-  unit_cost?: string;
-  total_cost?: string;
-  reference?: string;
-  notes?: string;
+  unit_cost?: string | null;
+  unit_cost_base?: string | null;
+  total_cost?: string | null;
+  total_cost_base?: string | null;
+  original_currency?: string | null;
+  fx_rate?: string | null;
+  reference?: string | null;
+  reason?: string | null;
   warehouse_id?: string | null;
-  date: string;
+  movement_date: string;
   created_at: string;
 }

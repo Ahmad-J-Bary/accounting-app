@@ -19,7 +19,7 @@ pub async fn find_by_id(pool: &SqlitePool, id: &WarehouseId) -> Result<Option<Wa
 
 pub async fn list_all(pool: &SqlitePool) -> Result<Vec<WarehouseDto>, AppError> {
     let rows = sqlx::query_as::<_, WarehouseRow>(
-        "SELECT id, name, code, address, is_active, is_default, created_at, updated_at FROM warehouses ORDER BY name"
+        "SELECT id, name, code, address, is_active, is_default, created_at, updated_at FROM warehouses ORDER BY created_at ASC"
     )
     .fetch_all(pool)
     .await

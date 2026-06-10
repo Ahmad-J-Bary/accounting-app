@@ -57,7 +57,7 @@ export default function Inventory() {
     if (!search.trim()) return filteredByWarehouse;
     const q = search.toLowerCase();
     return filteredByWarehouse.filter(m =>
-      (m.product_name?.toLowerCase().includes(q)) ||
+      (m.material_name?.toLowerCase().includes(q)) ||
       (m.reference?.toLowerCase().includes(q))
     );
   }, [filteredByWarehouse, search]);
