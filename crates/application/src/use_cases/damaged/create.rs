@@ -49,7 +49,7 @@ impl CreateDamagedItemUseCase {
             .map_err(|_| AppError::Invalid("التاريخ غير صالح".into()))?
             .with_timezone(&Utc);
 
-        let item = DamagedItem::new(
+        let mut item = DamagedItem::new(
             material_id,
             quantity,
             req.reason.clone(),
@@ -58,10 +58,12 @@ impl CreateDamagedItemUseCase {
             req.notes,
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
-        self.repo.save(&item).await?;
 
         let count = self.repo.count().await?;
-        let reference = format!("{}", count);
+        let reference = format!("{}", count + 1);
+        item.reference = Some(reference.clone());
+        self.repo.save(&item).await?;
+
         let unit_cost = if quantity > Decimal::ZERO {
             cost_impact / quantity
         } else {

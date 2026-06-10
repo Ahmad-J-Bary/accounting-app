@@ -16,6 +16,7 @@ pub fn row_to_damaged(row: DamagedItemRow) -> Result<DamagedItem, AppError> {
         damage_date: DateTime::parse_from_rfc3339(&row.damage_date).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
         cost_impact: Decimal::from_str(&row.cost_impact).unwrap_or(Decimal::ZERO),
         notes: row.notes,
+        reference: row.reference,
         created_at: DateTime::parse_from_rfc3339(&row.created_at).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
     })
 }

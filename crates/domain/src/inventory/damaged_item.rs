@@ -14,6 +14,7 @@ pub struct DamagedItem {
     pub damage_date: DateTime<Utc>,
     pub cost_impact: Decimal,
     pub notes: Option<String>,
+    pub reference: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -43,6 +44,7 @@ impl DamagedItem {
             damage_date,
             cost_impact,
             notes,
+            reference: None,
             created_at: Utc::now(),
         })
     }

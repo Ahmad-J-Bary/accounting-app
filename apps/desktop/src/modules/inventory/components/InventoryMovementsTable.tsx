@@ -3,11 +3,11 @@ import { cn } from '@shared/lib/utils';
 import type { StockMovement, WarehouseDto } from "@erp/shared-types";
 import { SharedTable } from '@widgets/table-shell/SharedTable';
 import type { UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
-import { TableActions } from '@widgets/table-shell/TableActions';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { formatDateTime } from '@shared/lib/format';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useBaseCurrencyColumns } from "@shared/hooks";
+import { getMovementType } from '../constants/movementTypes';
 
 interface InventoryMovementsTableProps {
   movements: StockMovement[];
@@ -20,25 +20,6 @@ interface InventoryMovementsTableProps {
 }
 
 type SortField = "date" | "type" | "product_name" | "quantity" | "reference";
-
-const typeConfig: Record<string, { label: string; inflow: boolean }> = {
-  In:             { label: 'وارد', inflow: true },
-  Out:            { label: 'صادر', inflow: false },
-  Adjustment:     { label: 'تسوية', inflow: false },
-  Production:     { label: 'تصنيع', inflow: true },
-  Damaged:        { label: 'تالف', inflow: false },
-  Sale:           { label: 'مبيعات', inflow: false },
-  Purchase:       { label: 'مشتريات', inflow: true },
-  OpeningBalance: { label: 'أول المدة', inflow: true },
-  SalesReturn:    { label: 'مرتجع مبيعات', inflow: true },
-  PurchaseReturn: { label: 'مرتجع مشتريات', inflow: false },
-  Transfer:       { label: 'تحويل', inflow: true },
-};
-
-function getMovementType(type: string): { label: string; inflow: boolean } {
-  const clean = type.replace('MovementType::', '');
-  return typeConfig[clean] || { label: clean, inflow: true };
-}
 
 export function InventoryMovementsTable({
   movements, loading, warehouses, search, onSearchChange,
@@ -163,17 +144,9 @@ export function InventoryMovementsTable({
         accessor: (m) => formatDateTime(m.movement_date),
         className: 'tabular-nums text-slate-500 font-medium'
       },
-      ...(onRowClick ? [{
-        id: 'actions' as const,
-        header: 'إجراءات',
-        label: 'إجراءات',
-        accessor: (m: StockMovement) => (
-          <TableActions onView={() => onRowClick(m)} />
-        ),
-      }] : []),
     );
     return cols;
-  }, [warehouseName, warehouseClass, onRowClick, currencies, formatAmount, isBaseCurrency, baseCost]);
+  }, [warehouseName, warehouseClass, currencies, formatAmount, isBaseCurrency, baseCost]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["product_name", "type", "warehouse", "quantity"];
@@ -182,19 +155,18 @@ export function InventoryMovementsTable({
         ids.push(`total_cost_${curr.code}`);
       }
     });
-    ids.push("reference", "date", "actions");
+    ids.push("reference", "date");
     return ids;
   }, [currencies, isBaseCurrency]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
-    const totalQty = movements.reduce((s, m) => s + Math.abs(parseFloat(m.quantity)), 0);
     const colIds = allColumns.map(c => c.id);
     return colIds.map(id => {
       if (id === "product_name") {
         return { id: "count", columnId: id, label: "", value: `${movements.length} حركة`, className: "text-slate-500 font-medium" };
       }
       if (id === "quantity") {
-        return { id: "qty_summary", columnId: id, label: "الإجمالي", value: totalQty.toLocaleString(), className: "font-bold text-slate-700" };
+        return { id: "qty_spacer", columnId: id, label: "", value: "" };
       }
       const costMatch = id.match(/^total_cost_(.+)$/);
       if (costMatch) {

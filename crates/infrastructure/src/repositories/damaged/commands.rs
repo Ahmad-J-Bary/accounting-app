@@ -5,15 +5,16 @@ use domain::shared::ids::{DamagedItemId};
 
 pub async fn save(pool: &SqlitePool, item: &DamagedItem) -> Result<(), AppError> {
     sqlx::query(
-        "INSERT INTO damaged_items (id, material_id, quantity, reason, damage_date, cost_impact, notes, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        "INSERT INTO damaged_items (id, material_id, quantity, reason, damage_date, cost_impact, notes, reference, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
             material_id = excluded.material_id,
             quantity = excluded.quantity,
             reason = excluded.reason,
             damage_date = excluded.damage_date,
             cost_impact = excluded.cost_impact,
-            notes = excluded.notes"
+            notes = excluded.notes,
+            reference = excluded.reference"
     )
     .bind(item.id.0.to_string())
     .bind(item.material_id.to_string())
@@ -22,6 +23,7 @@ pub async fn save(pool: &SqlitePool, item: &DamagedItem) -> Result<(), AppError>
     .bind(item.damage_date.to_rfc3339())
     .bind(item.cost_impact.to_string())
     .bind(&item.notes)
+    .bind(&item.reference)
     .bind(item.created_at.to_rfc3339())
     .execute(pool)
     .await

@@ -22,11 +22,15 @@ impl DeleteDamagedItemUseCase {
             .parse::<DamagedItemId>()
             .map_err(|_| AppError::Invalid("معرف التالف غير صالح".into()))?;
 
-        // Delete related stock movement first
-        let reference = format!("DAM-{}", id);
+        let item = self
+            .repo
+            .find_by_id(&damaged_id)
+            .await?
+            .ok_or_else(|| AppError::NotFound("سجل التالف غير موجود".into()))?;
+
+        let reference = item.reference.clone().unwrap_or_else(|| format!("DAM-{}", id));
         self.movement_repo.delete_by_reference(&reference, "Damaged").await?;
 
-        // Delete the damaged item record
         self.repo.delete(&damaged_id).await?;
 
         Ok(())

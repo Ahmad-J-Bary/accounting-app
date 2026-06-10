@@ -7,5 +7,6 @@ pub struct DamagedItemRow {
     pub damage_date: String,
     pub cost_impact: String,
     pub notes: Option<String>,
+    pub reference: Option<String>,
     pub created_at: String,
 }

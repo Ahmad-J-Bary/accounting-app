@@ -9,7 +9,9 @@ import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTem
 import { InventoryMovementsTable } from '@modules/inventory/components/InventoryMovementsTable';
 import { InventoryWarehouses } from '@modules/inventory/components/InventoryWarehouses';
 import { WarehouseSelector } from '@modules/inventory/components/WarehouseSelector';
+import { MovementTypeFilter } from '@modules/inventory/components/MovementTypeFilter';
 import { WarehouseForm } from '@modules/inventory/components/WarehouseForm';
+import { MOVEMENT_TYPE_KEYS } from '@modules/inventory/constants/movementTypes';
 import { History, Warehouse, RefreshCw } from "lucide-react";
 
 export default function Inventory() {
@@ -31,6 +33,7 @@ export default function Inventory() {
   });
 
   const [search, setSearch] = useState('');
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([...MOVEMENT_TYPE_KEYS]);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | null>(null);
   const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null);
   const [warehouseFormOpen, setWarehouseFormOpen] = useState(false);
@@ -53,14 +56,22 @@ export default function Inventory() {
     return movements.filter(m => m.warehouse_id === selectedWarehouseId);
   }, [movements, selectedWarehouseId]);
 
+  const filteredByType = useMemo(() => {
+    if (selectedTypes.length === 0) return filteredByWarehouse;
+    return filteredByWarehouse.filter(m => {
+      const clean = m.movement_type.replace('MovementType::', '');
+      return selectedTypes.includes(clean);
+    });
+  }, [filteredByWarehouse, selectedTypes]);
+
   const filteredMovements = useMemo(() => {
-    if (!search.trim()) return filteredByWarehouse;
+    if (!search.trim()) return filteredByType;
     const q = search.toLowerCase();
-    return filteredByWarehouse.filter(m =>
+    return filteredByType.filter(m =>
       (m.material_name?.toLowerCase().includes(q)) ||
       (m.reference?.toLowerCase().includes(q))
     );
-  }, [filteredByWarehouse, search]);
+  }, [filteredByType, search]);
 
   const movementsLoading_ = movementsLoading || movementsRefetching;
 
@@ -87,16 +98,19 @@ export default function Inventory() {
       filterBar={
         <div className="flex items-center gap-4">
           {activeTab === 'movements' && (
-            <div className="flex items-center gap-2">
-              <Warehouse className="w-4 h-4 text-slate-400 shrink-0" />
-              <WarehouseSelector
-                warehouses={warehouses}
-                value={selectedWarehouseId || 'all'}
-                onValueChange={(v) => setSelectedWarehouseId(v === 'all' ? null : v)}
-                includeAll={!isSingleWarehouse}
-                placeholder={isSingleWarehouse ? (warehouses[0]?.name || 'مستودع الشركة') : 'جميع المستودعات'}
-              />
-            </div>
+            <>
+              <div className="flex items-center gap-2">
+                <Warehouse className="w-4 h-4 text-slate-400 shrink-0" />
+                <WarehouseSelector
+                  warehouses={warehouses}
+                  value={selectedWarehouseId || 'all'}
+                  onValueChange={(v) => setSelectedWarehouseId(v === 'all' ? null : v)}
+                  includeAll={!isSingleWarehouse}
+                  placeholder={isSingleWarehouse ? (warehouses[0]?.name || 'مستودع الشركة') : 'جميع المستودعات'}
+                />
+              </div>
+              <MovementTypeFilter value={selectedTypes} onChange={setSelectedTypes} />
+            </>
           )}
           {activeTab === 'warehouses' && (
             <span className="text-xs text-slate-400 font-medium">إدارة وعرض المستودعات المتاحة</span>
