@@ -69,9 +69,11 @@ impl UpdateDamagedItemUseCase {
 
         self.repo.save(&item).await?;
 
-        let reference = format!("DAM-{}", item.id);
-        self.movement_repo.delete_by_reference(&reference, "Damaged").await?;
+        let old_reference = format!("DAM-{}", item.id);
+        self.movement_repo.delete_by_reference(&old_reference, "Damaged").await?;
 
+        let count = self.repo.count().await?;
+        let reference = format!("{}", count);
         let unit_cost = if quantity > Decimal::ZERO {
             cost_impact / quantity
         } else {
@@ -83,13 +85,13 @@ impl UpdateDamagedItemUseCase {
             quantity,
             unit_cost,
             cost_impact,
-            reference,
+            reference.clone(),
             req.reason,
             damage_date,
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
         self.movement_repo.save(&movement).await?;
 
-        Ok(to_dto(item))
+        Ok(to_dto(item, Some(reference)))
     }
 }

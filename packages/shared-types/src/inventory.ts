@@ -7,6 +7,7 @@ export interface DamagedItem {
   damage_date: string;
   cost_impact: string;
   notes?: string;
+  reference?: string | null;
   created_at: string;
 }
 

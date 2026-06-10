@@ -60,6 +60,8 @@ impl CreateDamagedItemUseCase {
         .map_err(|e| AppError::Invalid(e.to_string()))?;
         self.repo.save(&item).await?;
 
+        let count = self.repo.count().await?;
+        let reference = format!("{}", count);
         let unit_cost = if quantity > Decimal::ZERO {
             cost_impact / quantity
         } else {
@@ -71,18 +73,18 @@ impl CreateDamagedItemUseCase {
             quantity,
             unit_cost,
             cost_impact,
-            format!("DAM-{}", item.id),
+            reference.clone(),
             req.reason.clone(),
             damage_date,
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
         self.movement_repo.save(&movement).await?;
 
-        Ok(to_dto(item))
+        Ok(to_dto(item, Some(reference)))
     }
 }
 
-pub fn to_dto(d: DamagedItem) -> DamagedItemDto {
+pub fn to_dto(d: DamagedItem, reference: Option<String>) -> DamagedItemDto {
     DamagedItemDto {
         id: d.id.to_string(),
         material_id: d.material_id.to_string(),
@@ -92,6 +94,7 @@ pub fn to_dto(d: DamagedItem) -> DamagedItemDto {
         damage_date: d.damage_date.to_rfc3339(),
         cost_impact: d.cost_impact.to_string(),
         notes: d.notes,
+        reference,
         created_at: d.created_at.to_rfc3339(),
     }
 }

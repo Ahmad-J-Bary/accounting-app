@@ -9,4 +9,5 @@ pub trait DamagedItemRepository: Send + Sync {
     async fn find_by_id(&self, id: &DamagedItemId) -> Result<Option<DamagedItem>, AppError>;
     async fn list_all(&self) -> Result<Vec<DamagedItem>, AppError>;
     async fn delete(&self, id: &DamagedItemId) -> Result<(), AppError>;
+    async fn count(&self) -> Result<i64, AppError>;
 }

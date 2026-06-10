@@ -56,7 +56,7 @@ export function DamagedDetailPanel({
           <SidebarDetailGrid
             columns={2}
             fields={[
-              { label: "المنتج / الصنف", value: item.material_name || item.material_id },
+              { label: "المادة", value: item.material_name || item.material_id },
               { label: "تاريخ التسجيل", value: formatDateTime(item.damage_date) },
             ]}
           />

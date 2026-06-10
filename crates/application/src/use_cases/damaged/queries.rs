@@ -23,7 +23,7 @@ impl DamagedItemQueries {
         let mut dtos = Vec::new();
 
         for item in items {
-            let mut dto = to_dto(item.clone());
+            let mut dto = to_dto(item.clone(), None);
             if let Ok(Some(material)) = self.material_repo.find_by_id(&item.material_id).await {
                 dto.material_name = Some(material.name);
             }

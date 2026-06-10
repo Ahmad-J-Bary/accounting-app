@@ -17,8 +17,8 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange }: Adju
   const allColumns = useMemo<UnifiedColumn<StockAdjustment>[]>(() => [
     {
       id: "product_name",
-      header: "المنتج / الصنف",
-      label: "اسم المنتج",
+      header: "المادة",
+      label: "المادة",
       accessor: (a) => a.product_name ?? a.product_id,
       className: "font-black text-slate-900"
     },

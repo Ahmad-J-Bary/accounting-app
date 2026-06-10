@@ -17,6 +17,13 @@ pub async fn find_by_id(pool: &SqlitePool, id: &DamagedItemId) -> Result<Option<
     row.map(row_to_damaged).transpose()
 }
 
+pub async fn count(pool: &SqlitePool) -> Result<i64, AppError> {
+    sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM damaged_items")
+        .fetch_one(pool)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))
+}
+
 pub async fn list_all(pool: &SqlitePool) -> Result<Vec<DamagedItem>, AppError> {
     let rows = sqlx::query_as::<_, DamagedItemRow>(
         "SELECT id, material_id, quantity, reason, damage_date, cost_impact, notes, created_at

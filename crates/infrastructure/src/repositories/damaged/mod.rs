@@ -38,4 +38,8 @@ impl DamagedItemRepository for SqliteDamagedItemRepository {
     async fn delete(&self, id: &DamagedItemId) -> Result<(), AppError> {
         commands::delete(&self.pool, id).await
     }
+
+    async fn count(&self) -> Result<i64, AppError> {
+        queries::count(&self.pool).await
+    }
 }

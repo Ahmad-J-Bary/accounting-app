@@ -37,9 +37,16 @@ export function DamagedTable({
   const allColumns = useMemo<UnifiedColumn<DamagedItem>[]>(() => {
     const cols: UnifiedColumn<DamagedItem>[] = [
       {
+        id: "id",
+        header: "الرقم",
+        label: "الرقم",
+        accessor: (i, idx) => i.reference || (idx + 1).toString(),
+        className: "font-black text-slate-900 text-center"
+      },
+      {
         id: "material_name",
-        header: "المنتج / الصنف",
-        label: "اسم المنتج",
+        header: "المادة",
+        label: "المادة",
         accessor: (i) => i.material_name || i.material_id || "",
         className: "font-bold text-slate-800"
       },
@@ -102,7 +109,7 @@ export function DamagedTable({
   }, [formatAmount, currencies, isBaseCurrency, onView, onEdit, onDelete]);
 
   const defaultVisible = useMemo(() => {
-    const ids: string[] = ["material_name", "reason", "quantity"];
+    const ids: string[] = ["id", "material_name", "reason", "quantity"];
     currencies.forEach(curr => {
       if (isBaseCurrency(curr.code)) {
         ids.push(`cost_${curr.code}`);
@@ -115,18 +122,27 @@ export function DamagedTable({
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     const totalCost = items.reduce((s, i) => s + parseFloat(i.cost_impact || "0"), 0);
-    return [
-      { id: 'count', columnId: 'material_name', label: '', value: `${items.length} سجل`, className: 'text-slate-500 font-medium' },
-      { id: 'qty_spacer', columnId: 'quantity', label: '', value: '' },
-      ...currencies.filter(c => isBaseCurrency(c.code)).map(c => ({
-        id: `cost_${c.code}_summary`,
-        columnId: `cost_${c.code}`,
-        label: `إجمالي الخسارة (${c.symbol || c.code})`,
-        value: totalCost > 0 ? formatAmount(totalCost, { currencyCode: c.code }) : "—",
-        className: 'text-rose-600 font-black' as const,
-      })),
-    ];
-  }, [items, currencies, formatAmount, isBaseCurrency]);
+    const colIds = allColumns.map(c => c.id);
+    return colIds.map(id => {
+      if (id === "material_name") {
+        return { id: 'count', columnId: id, label: '', value: `${items.length} سجل`, className: 'text-slate-500 font-medium' };
+      }
+      const costMatch = id.match(/^cost_(.+)$/);
+      if (costMatch) {
+        const currCode = costMatch[1];
+        const isBase = isBaseCurrency(currCode);
+        const sym = currencies.find(c => c.code === currCode)?.symbol || currCode;
+        return {
+          id: `${id}_summary`,
+          columnId: id,
+          label: `إجمالي الخسارة (${sym})`,
+          value: totalCost > 0 ? formatAmount(totalCost, { currencyCode: currCode }) : "—",
+          className: isBase ? 'text-rose-600 font-black' as const : 'text-rose-300 font-bold' as const,
+        };
+      }
+      return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
+    });
+  }, [items, allColumns, currencies, formatAmount, isBaseCurrency]);
 
   const sortFn = (a: DamagedItem, b: DamagedItem, field: string, direction: 'asc' | 'desc') => {
     let comparison = 0;

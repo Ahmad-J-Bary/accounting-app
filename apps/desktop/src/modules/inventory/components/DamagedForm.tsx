@@ -66,7 +66,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
         <div className="space-y-4 text-right">
           {/* المنتج */}
           <div className="space-y-2">
-            <FieldLabel required>المنتج / الصنف</FieldLabel>
+            <FieldLabel required>المادة</FieldLabel>
             <Select
               value={form.material_id ?? ""}
               onValueChange={(val) => {
