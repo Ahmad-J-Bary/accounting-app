@@ -1,4 +1,4 @@
-import { Warehouse, Plus, Pencil, Trash2, MapPin } from "lucide-react";
+import { Warehouse, Plus, Pencil, Trash2, MapPin, Package } from "lucide-react";
 import { cn } from "@shared/lib/utils";
 import { Button } from "@shared/ui/button";
 import { Skeleton } from "@shared/ui/skeleton";
@@ -12,9 +12,10 @@ interface InventoryWarehousesProps {
   onRefresh: () => void;
   onAdd: () => void;
   onEdit: (warehouse: WarehouseDto) => void;
+  onViewMaterials?: (warehouse: WarehouseDto) => void;
 }
 
-export function InventoryWarehouses({ warehouses, loading, onRefresh, onAdd, onEdit }: InventoryWarehousesProps) {
+export function InventoryWarehouses({ warehouses, loading, onRefresh, onAdd, onEdit, onViewMaterials }: InventoryWarehousesProps) {
   const handleDelete = async (id: string, name: string) => {
     if (!window.confirm(`هل أنت متأكد من حذف المستودع "${name}"؟`)) return;
     try {
@@ -99,6 +100,11 @@ export function InventoryWarehouses({ warehouses, loading, onRefresh, onAdd, onE
             <Button variant="outline" size="sm" className="flex-1 border-slate-200 bg-white text-slate-700 hover:bg-slate-50" onClick={() => onEdit(w)}>
               <Pencil className="w-3.5 h-3.5 ml-1.5 shrink-0" />تعديل
             </Button>
+            {onViewMaterials && (
+              <Button variant="outline" size="sm" className="flex-1 border-slate-200 bg-white text-slate-700 hover:bg-slate-50" onClick={() => onViewMaterials(w)}>
+                <Package className="w-3.5 h-3.5 ml-1.5 shrink-0" />المواد
+              </Button>
+            )}
             <Button variant="outline" size="sm" className={cn("flex-1", w.is_default ? "text-slate-300 border-slate-200 cursor-not-allowed" : "text-rose-600 hover:bg-rose-50 border-rose-200 hover:border-rose-300")} onClick={() => handleDelete(w.id, w.name)} disabled={w.is_default} title={w.is_default ? 'لا يمكن حذف المستودع الرئيسي' : ''}>
               <Trash2 className="w-3.5 h-3.5 ml-1.5 shrink-0" />حذف
             </Button>

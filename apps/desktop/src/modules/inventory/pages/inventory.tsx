@@ -15,6 +15,7 @@ import { MovementTypeFilter } from '@modules/inventory/components/MovementTypeFi
 import { WarehouseForm } from '@modules/inventory/components/WarehouseForm';
 import { TransferForm } from '@modules/inventory/components/TransferForm';
 import { TransferTable } from '@modules/inventory/components/TransferTable';
+import { WarehouseMaterialList } from '@modules/inventory/components/WarehouseMaterialList';
 import { MOVEMENT_TYPE_KEYS, getTransferRefs, getMovementType } from '@modules/inventory/constants/movementTypes';
 import { History, Warehouse, RefreshCw, ArrowLeftRight, Plus } from "lucide-react";
 
@@ -44,6 +45,8 @@ export default function Inventory() {
   const [warehouseEditItem, setWarehouseEditItem] = useState<WarehouseDto | null>(null);
   const [transferFormOpen, setTransferFormOpen] = useState(false);
   const [savingTransfer, setSavingTransfer] = useState(false);
+  const [warehouseMaterialView, setWarehouseMaterialView] = useState<WarehouseDto | null>(null);
+  const [warehouseTransferPreset, setWarehouseTransferPreset] = useState<{ materialId: string; sourceWarehouseId: string } | null>(null);
 
   const { data: products = [] } = useQuery<MaterialDto[]>({
     queryKey: ['materials'],
@@ -130,6 +133,7 @@ export default function Inventory() {
       await transferService.createTransfer(req);
       toast.success('تم إنشاء التحويل بنجاح');
       setTransferFormOpen(false);
+      setWarehouseTransferPreset(null);
       refreshAll();
     } catch (e) {
       toast.error(e as string);
@@ -221,6 +225,7 @@ export default function Inventory() {
               onRefresh={refreshAll}
               onAdd={() => { setTransferFormOpen(false); setWarehouseEditItem(null); setWarehouseFormOpen(true); }}
               onEdit={(w) => { setTransferFormOpen(false); setWarehouseEditItem(w); setWarehouseFormOpen(true); }}
+              onViewMaterials={(w) => { setTransferFormOpen(false); setWarehouseFormOpen(false); setWarehouseMaterialView(w); }}
             />
           </TabsContent>
         </Tabs>
@@ -233,19 +238,34 @@ export default function Inventory() {
             onSaved={handleFormSaved}
             editItem={warehouseEditItem}
           />
-        ) : transferFormOpen ? (
+        ) : (transferFormOpen || warehouseTransferPreset) ? (
           <TransferForm
-            open={transferFormOpen}
-            onClose={() => setTransferFormOpen(false)}
+            open={true}
+            onClose={() => { setTransferFormOpen(false); setWarehouseTransferPreset(null); }}
             warehouses={warehouses}
             products={products}
             onSave={handleCreateTransfer}
             saving={savingTransfer}
             stockByWarehouse={stockByWarehouse}
+            initialMaterialId={warehouseTransferPreset?.materialId}
+            initialSourceWarehouseId={warehouseTransferPreset?.sourceWarehouseId}
+            lockMaterial={!!warehouseTransferPreset}
+          />
+        ) : warehouseMaterialView ? (
+          <WarehouseMaterialList
+            open={!!warehouseMaterialView}
+            onClose={() => setWarehouseMaterialView(null)}
+            warehouse={warehouseMaterialView}
+            warehouses={warehouses}
+            products={products}
+            stockByWarehouse={stockByWarehouse}
+            onOpenTransfer={(materialId, sourceWarehouseId) => {
+              setWarehouseTransferPreset({ materialId, sourceWarehouseId });
+            }}
           />
         ) : null
       }
-      isPanelOpen={warehouseFormOpen || transferFormOpen}
+      isPanelOpen={warehouseFormOpen || transferFormOpen || !!warehouseTransferPreset || !!warehouseMaterialView}
     />
   );
 }

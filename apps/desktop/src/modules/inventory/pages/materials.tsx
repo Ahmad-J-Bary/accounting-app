@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@shared/ui/button";
-import { Plus, RefreshCw, Package, Layers, Barcode, ShoppingCart, TrendingUp, AlertTriangle, Undo2 } from "lucide-react";
+import { Plus, RefreshCw, Package, Layers, Barcode, ShoppingCart, TrendingUp, AlertTriangle, Undo2, ArrowRightLeft } from "lucide-react";
 import { materialService } from '@modules/inventory/api/materialService';
 import { categoryService } from '@modules/inventory/api/categoryService';
-import { damagedService } from '@modules/inventory/api/inventoryService';
-import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest, CreateDamagedItemRequest } from "@erp/shared-types";
+import { damagedService, transferService, inventoryService } from '@modules/inventory/api/inventoryService';
+import { warehouseService } from '@modules/inventory/api/warehouseService';
+import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest, CreateDamagedItemRequest, WarehouseDto, CreateTransferRequest, StockMovement } from "@erp/shared-types";
 import { cn } from '@shared/lib/utils';
 import { toast } from 'sonner';
 
@@ -16,6 +17,7 @@ import { MaterialUnitsManager } from '@modules/inventory/components/MaterialUnit
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { MaterialDetailPanel } from '@modules/inventory/components/MaterialDetailPanel';
 import { DamagedForm } from '@modules/inventory/components/DamagedForm';
+import { TransferForm } from '@modules/inventory/components/TransferForm';
 import { ReturnsForm, type ReturnsFormState } from '@modules/invoicing/components/ReturnsForm';
 import { customerService } from '@modules/partners/api/customerService';
 import { supplierService } from '@modules/partners/api/supplierService';
@@ -24,6 +26,7 @@ import { returnService } from '@modules/invoicing/api/returnService';
 import type { CustomerDto, SupplierDto, InvoiceDto, CreatePurchaseReturnRequest } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useTabs } from "@app/providers/TabContext";
+import { buildStockByWarehouse } from '@modules/inventory/lib/stockUtils';
 
 export default function Materials() {
   const { currencies, baseCurrency } = useCurrencyContext();
@@ -65,6 +68,11 @@ export default function Materials() {
   const [savingDamaged, setSavingDamaged] = useState(false);
   const [isReturnOpen, setIsReturnOpen] = useState(false);
   const [returnSaving, setReturnSaving] = useState(false);
+  const [transferFormOpen, setTransferFormOpen] = useState(false);
+  const [savingTransfer, setSavingTransfer] = useState(false);
+  const [transferPreset, setTransferPreset] = useState<{ sourceWarehouseId?: string } | null>(null);
+  const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
+  const [movements, setMovements] = useState<StockMovement[]>([]);
   const [returnForm, setReturnForm] = useState<ReturnsFormState>({
     customer_id: "", supplier_id: "", return_date: new Date().toISOString().slice(0, 10),
     notes: "", purchase_invoice_id: "", lines: [],
@@ -73,12 +81,50 @@ export default function Materials() {
   const [returnSuppliers, setReturnSuppliers] = useState<SupplierDto[]>([]);
   const [returnInvoices, setReturnInvoices] = useState<InvoiceDto[]>([]);
 
+  const stockByWarehouse = useMemo(() => buildStockByWarehouse(movements), [movements]);
+
   const loadCategories = useCallback(async () => {
     try {
       const cats = await categoryService.listCategories();
       setCategories(cats);
     } catch (e) { console.error(e); }
   }, []);
+
+  const loadInventoryData = useCallback(async () => {
+    try {
+      const [whs, mvs] = await Promise.all([
+        warehouseService.listWarehouses(),
+        inventoryService.listStockMovements(),
+      ]);
+      setWarehouses(whs);
+      setMovements(mvs);
+    } catch (e) { console.error(e); }
+  }, []);
+
+  const handleCreateTransfer = useCallback(async (req: CreateTransferRequest) => {
+    setSavingTransfer(true);
+    try {
+      await transferService.createTransfer(req);
+      toast.success('تم إنشاء التحويل بنجاح');
+      setTransferFormOpen(false);
+      setTransferPreset(null);
+      loadInventoryData();
+      refresh();
+    } catch (e) {
+      toast.error('فشل التحويل: ' + e);
+    } finally {
+      setSavingTransfer(false);
+    }
+  }, [loadInventoryData, refresh]);
+
+  const handleOpenTransfer = useCallback((opts: { sourceWarehouseId?: string }) => {
+    setTransferPreset(opts);
+    setTransferFormOpen(true);
+    setIsFormOpen(false);
+    setShowDamagedPanel(false);
+    setManagingUnitsMaterial(null);
+    setIsReturnOpen(false);
+  }, [setIsFormOpen]);
 
   const handleCreateDamaged = useCallback(async (payload: CreateDamagedItemRequest) => {
     setSavingDamaged(true);
@@ -95,6 +141,7 @@ export default function Materials() {
   }, [refresh]);
 
   useEffect(() => { loadCategories(); }, [loadCategories]);
+  useEffect(() => { loadInventoryData(); }, [loadInventoryData]);
 
   useEffect(() => {
     const handler = () => handleOpenAdd();
@@ -186,6 +233,17 @@ export default function Materials() {
           <>
             <Button size="sm" onClick={handleOpenAdd} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
               <Plus className="w-4 h-4 ml-2" /> مادة جديدة
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-white border-amber-200 text-amber-700 hover:bg-amber-50"
+              disabled={!selectedId}
+              onClick={() => handleOpenTransfer({})}
+            >
+              <ArrowRightLeft className="w-4 h-4 ml-2 text-amber-600" />
+              تحويل مخزني
             </Button>
 
             <div className="h-6 w-px bg-slate-200 mx-1" />
@@ -292,6 +350,19 @@ export default function Materials() {
               saving={saving}
               onCategoryCreated={(cat) => setCategories((prev) => prev.some((c) => c.id === cat.id) ? prev : [...prev, cat])}
             />
+          ) : transferFormOpen ? (
+            <TransferForm
+              open={transferFormOpen}
+              onClose={() => { setTransferFormOpen(false); setTransferPreset(null); }}
+              warehouses={warehouses}
+              products={materials}
+              onSave={handleCreateTransfer}
+              saving={savingTransfer}
+              stockByWarehouse={stockByWarehouse}
+              initialMaterialId={selectedId ?? undefined}
+              initialSourceWarehouseId={transferPreset?.sourceWarehouseId}
+              lockMaterial={true}
+            />
           ) : managingUnitsMaterial ? (
             <MaterialUnitsManager 
               material={managingUnitsMaterial}
@@ -325,10 +396,11 @@ export default function Materials() {
               onClose={() => setSelectedId(null)}
               onEdit={handleOpenEdit}
               onDelete={handleDelete}
+              onOpenTransfer={handleOpenTransfer}
             />
           )
         }
-        isPanelOpen={isFormOpen || isReturnOpen || !!selectedId || !!managingUnitsMaterial || showDamagedPanel}
+        isPanelOpen={isFormOpen || transferFormOpen || isReturnOpen || !!selectedId || !!managingUnitsMaterial || showDamagedPanel}
       />
     </>
   );

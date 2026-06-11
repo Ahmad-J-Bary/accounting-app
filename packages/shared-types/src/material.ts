@@ -25,6 +25,8 @@ export interface StockMovementDetailDto {
   invoice_number?: string;
   invoice_type?: string;
   party_name?: string;
+  warehouse_id?: string;
+  warehouse_name?: string;
   balance_before: string;
   balance_after: string;
   is_inflow: boolean;

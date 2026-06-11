@@ -7,6 +7,7 @@ import { FormPanel } from "@widgets/form-shell/FormPanel";
 import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { Package, Warehouse, ArrowRightLeft, Calendar, FileText } from "lucide-react";
+import { decomposeUnits, formatDecomposition } from "../lib/stockUtils";
 
 interface TransferFormProps {
   open: boolean;
@@ -16,32 +17,23 @@ interface TransferFormProps {
   onSave: (payload: CreateTransferRequest) => Promise<void>;
   saving: boolean;
   stockByWarehouse: Map<string, Map<string, number>>;
+  initialMaterialId?: string;
+  initialSourceWarehouseId?: string;
+  lockMaterial?: boolean;
 }
 
-function decomposeUnits(baseQty: number, units: MaterialUnitDto[]): { unit: MaterialUnitDto; qty: number }[] {
-  const sorted = [...units].sort((a, b) => parseFloat(b.conversion_factor) - parseFloat(a.conversion_factor));
-  let remaining = Math.max(0, baseQty);
-  const result: { unit: MaterialUnitDto; qty: number }[] = [];
-  for (const u of sorted) {
-    const factor = parseFloat(u.conversion_factor);
-    if (factor === 0) continue;
-    const qty = Math.floor(remaining / factor);
-    remaining = remaining - qty * factor;
-    result.push({ unit: u, qty });
-  }
-  return result;
-}
-
-function formatDecomposition(parts: { unit: MaterialUnitDto; qty: number }[]): string {
-  const nonZero = parts.filter(p => p.qty > 0);
-  if (nonZero.length === 0 && parts.length > 0) return `0 ${parts[parts.length - 1].unit.name}`;
-  return nonZero.map((p, i) => {
-    const isLast = i === nonZero.length - 1;
-    return `${p.qty.toLocaleString()} ${p.unit.name}${isLast ? '' : '، '}`;
-  }).join('و ');
-}
-
-export function TransferForm({ open, onClose, warehouses, products, onSave, saving, stockByWarehouse }: TransferFormProps) {
+export function TransferForm({
+  open,
+  onClose,
+  warehouses,
+  products,
+  onSave,
+  saving,
+  stockByWarehouse,
+  initialMaterialId,
+  initialSourceWarehouseId,
+  lockMaterial = false
+}: TransferFormProps) {
   const [form, setForm] = useState<CreateTransferRequest>({
     source_warehouse_id: "",
     dest_warehouse_id: "",
@@ -55,22 +47,37 @@ export function TransferForm({ open, onClose, warehouses, products, onSave, savi
   const [qtyRemainder, setQtyRemainder] = useState("");
 
   const resetAll = useCallback(() => {
+    const matId = initialMaterialId || "";
+    const srcWhId = initialSourceWarehouseId || "";
     setForm({
-      source_warehouse_id: "",
+      source_warehouse_id: srcWhId,
       dest_warehouse_id: "",
-      material_id: "",
+      material_id: matId,
       quantity: "",
       transfer_date: new Date().toISOString(),
       notes: null,
     });
-    setSelectedUnitId("");
+    const m = products.find(p => p.id === matId);
+    const bu = m?.units.find(u => u.is_base) || m?.units[0];
+    setSelectedUnitId(bu?.id || "");
     setQtyInUnit("");
     setQtyRemainder("");
-  }, []);
+  }, [initialMaterialId, initialSourceWarehouseId, products]);
 
   useEffect(() => { if (open) resetAll(); }, [open, resetAll]);
 
   const activeWarehouses = warehouses.filter(w => w.is_active);
+
+  const sourceWarehouses = useMemo(() => {
+    const active = warehouses.filter(w => w.is_active);
+    if (lockMaterial && form.material_id) {
+      return active.filter(w => {
+        const whMap = stockByWarehouse.get(form.material_id);
+        return (whMap?.get(w.id) || 0) > 0;
+      });
+    }
+    return active;
+  }, [warehouses, lockMaterial, form.material_id, stockByWarehouse]);
 
   const availableQtyBase = useMemo(() => {
     if (!form.source_warehouse_id || !form.material_id) return 0;
@@ -178,11 +185,17 @@ export function TransferForm({ open, onClose, warehouses, products, onSave, savi
   }, [products]);
 
   const handleSrcWhChange = useCallback((val: string) => {
-    setForm(p => ({ ...p, source_warehouse_id: val, material_id: "", quantity: "" }));
-    setSelectedUnitId("");
-    setQtyInUnit("");
-    setQtyRemainder("");
-  }, []);
+    if (lockMaterial) {
+      setForm(p => ({ ...p, source_warehouse_id: val, quantity: "" }));
+      setQtyInUnit("");
+      setQtyRemainder("");
+    } else {
+      setForm(p => ({ ...p, source_warehouse_id: val, material_id: "", quantity: "" }));
+      setSelectedUnitId("");
+      setQtyInUnit("");
+      setQtyRemainder("");
+    }
+  }, [lockMaterial]);
 
   if (!open) return null;
 
@@ -205,7 +218,7 @@ export function TransferForm({ open, onClose, warehouses, products, onSave, savi
             <Select value={form.source_warehouse_id} onValueChange={handleSrcWhChange}>
               <SelectTrigger className="bg-white border-slate-200 h-9"><SelectValue placeholder="اختر المستودع المصدر..." /></SelectTrigger>
               <SelectContent>
-                {activeWarehouses.map(w => (
+                {sourceWarehouses.map(w => (
                   <SelectItem key={w.id} value={w.id} disabled={w.id === form.dest_warehouse_id}>{w.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -233,20 +246,26 @@ export function TransferForm({ open, onClose, warehouses, products, onSave, savi
             <FieldLabel className="flex items-center gap-1.5" required>
               <Package className="w-3.5 h-3.5 text-slate-400" /> المادة
             </FieldLabel>
-            <Select value={form.material_id} onValueChange={handleMatChange} disabled={!form.source_warehouse_id}>
-              <SelectTrigger className="bg-white border-slate-200 h-9">
-                <SelectValue placeholder={form.source_warehouse_id ? "اختر المادة..." : "اختر المستودع أولاً"} />
-              </SelectTrigger>
-              <SelectContent>
-                {materialsInSource.length === 0 ? (
-                  <div className="px-2 py-4 text-center text-sm text-slate-400">لا توجد مواد متوفرة في هذا المستودع</div>
-                ) : (
-                  materialsInSource.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+            {lockMaterial ? (
+              <div className="h-9 px-3 rounded-lg border border-slate-200 bg-slate-50 flex items-center text-xs font-bold text-slate-700">
+                {selectedMaterial?.name || "—"}
+              </div>
+            ) : (
+              <Select value={form.material_id} onValueChange={handleMatChange} disabled={!form.source_warehouse_id}>
+                <SelectTrigger className="bg-white border-slate-200 h-9">
+                  <SelectValue placeholder={form.source_warehouse_id ? "اختر المادة..." : "اختر المستودع أولاً"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {materialsInSource.length === 0 ? (
+                    <div className="px-2 py-4 text-center text-sm text-slate-400">لا توجد مواد متوفرة في هذا المستودع</div>
+                  ) : (
+                    materialsInSource.map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <div>
             <FieldLabel className="flex items-center gap-1.5 mb-1.5" required>

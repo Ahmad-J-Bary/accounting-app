@@ -5,7 +5,7 @@ import { Button } from "@shared/ui/button";
 import { cn } from '@shared/lib/utils';
 import { formatCurrency, formatDate } from '@shared/lib/format';
 import { toast } from 'sonner';
-import { Package, TrendingUp, RefreshCw, Pencil, Trash2, Barcode, Hash, ArrowDown, ArrowUp, Layers } from "lucide-react";
+import { Package, TrendingUp, RefreshCw, Pencil, Trash2, Barcode, Hash, ArrowDown, ArrowUp, Layers, ArrowRightLeft, Warehouse as WarehouseIcon } from "lucide-react";
 import type { MaterialDto, StockMovementDetailDto, InventoryLotDto } from "@erp/shared-types";
 import { materialService } from '@modules/inventory/api/materialService';
 import { lotService } from '@modules/inventory/api/lotService';
@@ -27,6 +27,7 @@ interface MaterialDetailPanelProps {
   onEdit?: (m: MaterialDto) => void;
   onDelete?: (id: string, name: string) => void;
   loadingDetails?: boolean;
+  onOpenTransfer?: (opts: { sourceWarehouseId?: string }) => void;
 }
 
 export function MaterialDetailPanel({
@@ -35,6 +36,7 @@ export function MaterialDetailPanel({
   onEdit,
   onDelete,
   loadingDetails = false,
+  onOpenTransfer,
 }: MaterialDetailPanelProps) {
   const { baseCurrency, currencies } = useCurrencyContext();
   const foreignCurrency = currencies.find(c => c.code !== baseCurrency?.code);
@@ -98,6 +100,26 @@ export function MaterialDetailPanel({
     });
     return Array.from(groups.values());
   }, [movements]);
+
+  const warehouseStock = useMemo(() => {
+    const stockMap = new Map<string, { warehouseId: string; warehouseName: string; quantity: number }>();
+    for (const m of movements) {
+      if (!m.warehouse_id) continue;
+      const existing = stockMap.get(m.warehouse_id);
+      const qty = parseFloat(m.quantity || "0");
+      if (existing) {
+        existing.quantity += m.is_inflow ? qty : -qty;
+      } else {
+        stockMap.set(m.warehouse_id, {
+          warehouseId: m.warehouse_id,
+          warehouseName: m.warehouse_name || m.warehouse_id,
+          quantity: m.is_inflow ? qty : -qty,
+        });
+      }
+    }
+    return Array.from(stockMap.values()).filter(s => s.quantity !== 0).sort((a, b) => b.quantity - a.quantity);
+  }, [movements]);
+
 
   if (!material) return null;
 
@@ -224,7 +246,7 @@ export function MaterialDetailPanel({
           {/* Tabs */}
           <Tabs defaultValue="units">
             <TabsList className={cn("grid w-full h-10 p-1 bg-slate-100/80 rounded-lg",
-              costingMethod === "FIFO" ? "grid-cols-4" : "grid-cols-3"
+              costingMethod === "FIFO" ? "grid-cols-5" : "grid-cols-4"
             )}>
               <TabsTrigger
                 value="units"
@@ -243,6 +265,12 @@ export function MaterialDetailPanel({
                 className="flex items-center gap-2 text-xs rounded-md"
               >
                 <RefreshCw className="w-3.5 h-3.5" /> حركة المادة
+              </TabsTrigger>
+              <TabsTrigger
+                value="warehouses"
+                className="flex items-center gap-2 text-xs rounded-md"
+              >
+                <WarehouseIcon className="w-3.5 h-3.5" /> المستودعات
               </TabsTrigger>
               {costingMethod === "FIFO" && (
                 <TabsTrigger
@@ -399,6 +427,41 @@ export function MaterialDetailPanel({
                       {m.notes && (
                         <div className="text-slate-400 text-[9px] line-clamp-1">{m.notes}</div>
                       )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="warehouses" className="mt-4 focus-visible:outline-none">
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {movementsLoading ? (
+                  <div className="text-center py-8 text-muted-foreground text-xs">جاري التحميل...</div>
+                ) : warehouseStock.length === 0 ? (
+                  <div className="text-center py-10 border-2 border-dashed rounded-xl text-muted-foreground bg-slate-50/50">
+                    <WarehouseIcon className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                    <span className="text-xs">لا توجد كميات في المستودعات</span>
+                  </div>
+                ) : (
+                  warehouseStock.map((ws) => (
+                    <div key={ws.warehouseId} className="border border-slate-100 rounded-lg bg-white text-xs">
+                      <div className="flex items-center justify-between p-3">
+                        <div className="flex items-center gap-2">
+                          <WarehouseIcon className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="font-bold text-slate-700">{ws.warehouseName}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className={cn("font-bold tabular-nums", ws.quantity > 0 ? "text-emerald-600" : "text-red-600")}>
+                            {ws.quantity.toLocaleString()}
+                          </span>
+                          {onOpenTransfer && (
+                            <Button variant="outline" size="sm" className="h-7 text-[10px] border-slate-200"
+                              onClick={() => onOpenTransfer({ sourceWarehouseId: ws.warehouseId })}>
+                              <ArrowRightLeft className="w-3 h-3 ml-1" /> تحويل
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ))
                 )}
