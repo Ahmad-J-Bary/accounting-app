@@ -45,6 +45,7 @@ export default function SalesInvoices() {
     openTab,
     closeTab,
     activeTabId,
+    warehouses,
   } = useInvoiceLifecycle({
     invoiceType: "Sales",
     partyType: "customer",
@@ -116,6 +117,7 @@ export default function SalesInvoices() {
             onAddLine={addLine}
             onSelectMaterial={selectMaterial}
             materials={Object.values(materials)} 
+            warehouses={warehouses}
             readOnly={isReadOnly}
             preferenceKey="sales_invoice_grid_v2"
             docCurrency={headerState.currency_code}

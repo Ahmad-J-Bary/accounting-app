@@ -99,7 +99,7 @@ export function InventoryWarehouses({ warehouses, loading, onRefresh, onAdd, onE
             <Button variant="outline" size="sm" className="flex-1 border-slate-200 bg-white text-slate-700 hover:bg-slate-50" onClick={() => onEdit(w)}>
               <Pencil className="w-3.5 h-3.5 ml-1.5 shrink-0" />تعديل
             </Button>
-            <Button variant="outline" size="sm" className="flex-1 text-rose-600 hover:bg-rose-50 border-rose-200 hover:border-rose-300" onClick={() => handleDelete(w.id, w.name)}>
+            <Button variant="outline" size="sm" className={cn("flex-1", w.is_default ? "text-slate-300 border-slate-200 cursor-not-allowed" : "text-rose-600 hover:bg-rose-50 border-rose-200 hover:border-rose-300")} onClick={() => handleDelete(w.id, w.name)} disabled={w.is_default} title={w.is_default ? 'لا يمكن حذف المستودع الرئيسي' : ''}>
               <Trash2 className="w-3.5 h-3.5 ml-1.5 shrink-0" />حذف
             </Button>
           </div>

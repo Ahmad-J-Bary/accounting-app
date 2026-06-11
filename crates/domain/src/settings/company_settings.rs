@@ -21,6 +21,8 @@ pub struct CompanySettings {
     pub journal_prefix: String,
     pub fiscal_year_start_month: u32,
     pub logo_path: Option<String>,
+    pub purchase_warehouse_id: Option<String>,
+    pub sales_warehouse_id: Option<String>,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -43,6 +45,8 @@ impl Default for CompanySettings {
             journal_prefix: "JE".into(),
             fiscal_year_start_month: 1,
             logo_path: None,
+            purchase_warehouse_id: None,
+            sales_warehouse_id: None,
             updated_at: Utc::now(),
         }
     }

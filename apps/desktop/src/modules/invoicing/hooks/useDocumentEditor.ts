@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { GridLine, newGridLine, calcLineTotal } from "../lib/invoiceUtils";
 import type { MaterialDto } from "@erp/shared-types";
 
@@ -9,6 +9,7 @@ interface UseDocumentEditorProps {
   priceField?: "last_sale_price" | "last_purchase_price";
   materials?: MaterialDto[];
   invoiceType?: "Sales" | "Purchase" | "OpeningBalance";
+  defaultWarehouseId?: string;
 }
 
 /**
@@ -22,10 +23,36 @@ export function useDocumentEditor({
   priceField = "last_sale_price",
   materials = [],
   invoiceType = "Purchase",
+  defaultWarehouseId,
 }: UseDocumentEditorProps & { materials?: MaterialDto[] } = {}) {
-  const [lines, setLines] = useState<GridLine[]>(
-    initialLines.length > 0 ? initialLines : [newGridLine()]
+  const [_lines, _rawSetLines] = useState<GridLine[]>(
+    initialLines.length > 0 ? initialLines : [newGridLine(defaultWarehouseId)]
   );
+
+  // Wrap setLines to auto-fill missing warehouse_id whenever lines are updated
+  const setLines = useCallback((updater: GridLine[] | ((prev: GridLine[]) => GridLine[])) => {
+    _rawSetLines(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      if (!defaultWarehouseId) return next;
+      return next.map(ln => (!ln.warehouse_id ? { ...ln, warehouse_id: defaultWarehouseId } : ln));
+    });
+  }, [defaultWarehouseId]);
+
+  // Backfill warehouse_id on existing lines when default becomes known
+  useEffect(() => {
+    if (!defaultWarehouseId) return;
+    _rawSetLines(prev => {
+      let changed = false;
+      const next = prev.map(ln => {
+        if (!ln.warehouse_id) {
+          changed = true;
+          return { ...ln, warehouse_id: defaultWarehouseId };
+        }
+        return ln;
+      });
+      return changed ? next : prev;
+    });
+  }, [defaultWarehouseId]);
 
   const updateLine = useCallback((index: number, updates: Partial<GridLine>) => {
     setLines(prev => {
@@ -188,20 +215,20 @@ export function useDocumentEditor({
 
   const addLine = useCallback(() => {
     setLines(prev => {
-      const next = [...prev, newGridLine()];
+      const next = [...prev, newGridLine(defaultWarehouseId)];
       onLinesChange?.(next);
       return next;
     });
-  }, [onLinesChange]);
+  }, [onLinesChange, defaultWarehouseId]);
 
   const removeLine = useCallback((index: number) => {
     setLines(prev => {
-      if (prev.length <= 1) return [newGridLine()]; // Keep at least one row
+      if (prev.length <= 1) return [newGridLine(defaultWarehouseId)]; // Keep at least one row
       const next = prev.filter((_, i) => i !== index);
       onLinesChange?.(next);
       return next;
     });
-  }, [onLinesChange]);
+  }, [onLinesChange, defaultWarehouseId]);
 
   const selectMaterial = useCallback((index: number, material: MaterialDto) => {
     const defaultUnitId = priceField === "last_purchase_price" ? material.default_purchase_unit_id : material.default_sale_unit_id;
@@ -251,28 +278,29 @@ export function useDocumentEditor({
       tier: "retail",
       cost_price: costPrice,
       purchase_price: material.last_purchase_price?.toString() || "",
+      warehouse_id: defaultWarehouseId,
     });
 
     // If this was the last line, auto-add a new empty line
     setLines(prev => {
       if (index === prev.length - 1) {
-        return [...prev, newGridLine()];
+        return [...prev, newGridLine(defaultWarehouseId)];
       }
       return prev;
     });
-  }, [updateLine, priceField]);
+  }, [updateLine, priceField, defaultWarehouseId]);
 
   const totals = useMemo(() => {
-    const subtotal = lines.reduce((sum, ln) => sum + (ln.line_total || 0), 0);
+    const subtotal = _lines.reduce((sum, ln) => sum + (ln.line_total || 0), 0);
     return {
       subtotal,
       total: subtotal, // Add tax/global discount logic here if needed
-      itemCount: lines.filter(l => !!l.material_id).length,
+      itemCount: _lines.filter(l => !!l.material_id).length,
     };
-  }, [lines]);
+  }, [_lines]);
 
   return {
-    lines,
+    lines: _lines,
     setLines,
     updateLine,
     addLine,

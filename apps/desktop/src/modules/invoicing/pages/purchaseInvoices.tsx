@@ -52,6 +52,7 @@ export default function PurchaseInvoices() {
     openTab,
     closeTab,
     activeTabId,
+    warehouses,
   } = useInvoiceLifecycle({
     invoiceType: "Purchase",
     partyType: "supplier",
@@ -146,6 +147,7 @@ export default function PurchaseInvoices() {
             onAddLine={addLine}
             onSelectMaterial={selectMaterial}
             materials={Object.values(materials)} 
+            warehouses={warehouses}
             readOnly={isReadOnly}
             preferenceKey="purchase_invoice_grid"
             docCurrency={headerState.currency_code}

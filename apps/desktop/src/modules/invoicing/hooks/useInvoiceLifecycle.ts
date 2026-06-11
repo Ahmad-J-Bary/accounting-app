@@ -6,11 +6,15 @@ import { customerService } from "@modules/partners/api/customerService";
 import { supplierService } from "@modules/partners/api/supplierService";
 import { materialService } from "@modules/inventory/api/materialService";
 import { currencyService } from "@modules/core/api/currencyService";
+import { settingsService } from "@modules/core/api/settingsService";
+import { warehouseService } from "@modules/inventory/api/warehouseService";
 import type {
   InvoiceDto,
   CustomerDto,
   SupplierDto,
   MaterialDto,
+  WarehouseDto,
+  CompanySettings,
 } from "@erp/shared-types";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
@@ -89,6 +93,8 @@ export function useInvoiceLifecycle({
   const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
   const [parties, setParties] = useState<Array<CustomerDto | SupplierDto>>([]);
   const [materials, setMaterials] = useState<MaterialDto[]>([]);
+  const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
+  const [appSettings, setAppSettings] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -97,6 +103,12 @@ export function useInvoiceLifecycle({
   const [headerState, setHeaderState] = useState<InvoiceHeaderState>(
     DEFAULT_HEADER(invoiceType),
   );
+
+  const defaultWarehouseId = appSettings
+    ? (invoiceType === "Sales"
+        ? appSettings.sales_warehouse_id
+        : appSettings.purchase_warehouse_id) || warehouses.find(w => w.is_default)?.id
+    : undefined;
 
   const {
     lines,
@@ -109,6 +121,7 @@ export function useInvoiceLifecycle({
   } = useDocumentEditor({
     priceField,
     materials,
+    defaultWarehouseId,
   });
 
   const isNew = location.pathname.includes("/new");
@@ -130,15 +143,19 @@ export function useInvoiceLifecycle({
             ? customerService.listCustomers()
             : supplierService.listSuppliers();
 
-        const [invData, partyData, matData] = await Promise.all([
+        const [invData, partyData, matData, whData, settingsData] = await Promise.all([
           listInvoicesPromise,
           listPartiesPromise,
           materialService.listMaterials(),
+          warehouseService.listWarehouses(),
+          settingsService.getSettings(),
         ]);
 
         setInvoices(invData);
         setParties(partyData);
         setMaterials(matData);
+        setWarehouses(whData);
+        setAppSettings(settingsData);
       } catch (e) {
         toast.error("فشل تحميل البيانات: " + e);
       } finally {
@@ -227,7 +244,7 @@ export function useInvoiceLifecycle({
 
           // If the invoice is opened in edit mode (not view-only), append a blank row at the end
           if (!isReadOnly) {
-            loadedLines.push(newGridLine());
+            loadedLines.push(newGridLine(defaultWarehouseId));
           }
 
           setLines(loadedLines);
@@ -535,6 +552,7 @@ export function useInvoiceLifecycle({
     parties,
     currencies,
     materials,
+    warehouses,
     loading,
     refreshing,
     saving,

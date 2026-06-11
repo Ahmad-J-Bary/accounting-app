@@ -17,6 +17,7 @@ pub struct InvoiceLine {
     pub minimum_stock: Option<Decimal>,
     pub unit_id: Option<String>,
     pub conversion_factor: Option<Decimal>,
+    pub warehouse_id: Option<String>,
     pub notes: Option<String>,
 
     pub unit_price_original: Option<Money>,
@@ -36,6 +37,7 @@ impl InvoiceLine {
         minimum_stock: Option<Decimal>,
         unit_id: Option<String>,
         conversion_factor: Option<Decimal>,
+        warehouse_id: Option<String>,
         notes: Option<String>,
         unit_price_original: Option<Money>,
         purchase_price_original: Option<Money>,
@@ -52,6 +54,7 @@ impl InvoiceLine {
             minimum_stock,
             unit_id,
             conversion_factor,
+            warehouse_id,
             notes,
             unit_price_original,
             purchase_price_original,

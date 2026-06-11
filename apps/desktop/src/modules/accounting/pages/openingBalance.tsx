@@ -6,7 +6,9 @@ import { DocumentToolbar } from "@widgets/document-shell/DocumentToolbar";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { materialService } from "@modules/inventory/api/materialService";
 import { categoryService } from "@modules/inventory/api/categoryService";
-import type { MaterialDto, CategoryDto, CreateMaterialRequest } from "@erp/shared-types";
+import type { MaterialDto, CategoryDto, CreateMaterialRequest, WarehouseDto, CompanySettings } from "@erp/shared-types";
+import { settingsService } from "@modules/core/api/settingsService";
+import { warehouseService } from "@modules/inventory/api/warehouseService";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
@@ -59,6 +61,8 @@ export default function OpeningBalance() {
   const { closeTab, activeTabId, openTab } = useTabs();
 
   const [materials, setMaterials] = useState<MaterialDto[]>([]);
+  const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
+  const [appSettings, setAppSettings] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
@@ -67,6 +71,8 @@ export default function OpeningBalance() {
 
   const { currencies, rateMap, baseCurrency } = useCurrencyContext();
   const [header, setHeader] = useState<HeaderState>(defaultHeader());
+
+  const defaultWarehouseId = appSettings?.purchase_warehouse_id || warehouses.find(w => w.is_default)?.id;
 
   const {
     lines,
@@ -80,6 +86,7 @@ export default function OpeningBalance() {
     priceField: "last_purchase_price",
     materials,
     invoiceType: "OpeningBalance",
+    defaultWarehouseId,
   });
 
   const isNew = !id || location.pathname.includes("/new");
@@ -88,8 +95,14 @@ export default function OpeningBalance() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const mats = await materialService.listMaterials();
+      const [mats, whData, settingsData] = await Promise.all([
+        materialService.listMaterials(),
+        warehouseService.listWarehouses(),
+        settingsService.getSettings(),
+      ]);
       setMaterials(mats);
+      setWarehouses(whData);
+      setAppSettings(settingsData);
     } catch (e: unknown) {
       toast.error("فشل تحميل البيانات: " + e);
     } finally {
@@ -140,6 +153,7 @@ export default function OpeningBalance() {
           notes: l.notes || "",
           discount: "",
           line_total: 0,
+          warehouse_id: l.warehouse_id || defaultWarehouseId,
         };
         line.line_total = calcLineTotal(line);
         return line;
@@ -377,6 +391,7 @@ export default function OpeningBalance() {
           onAddLine={addLine}
           onSelectMaterial={selectMaterial}
           materials={Object.values(materials)}
+          warehouses={warehouses}
           preferenceKey="opening_balance_grid"
           readOnly={isReadOnly}
           docCurrency={header.currency_code}

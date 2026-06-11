@@ -36,6 +36,8 @@ pub fn to_dto(s: domain::settings::CompanySettings) -> CompanySettingsDto {
         journal_prefix: s.journal_prefix,
         fiscal_year_start_month: s.fiscal_year_start_month,
         logo_path: s.logo_path,
+        purchase_warehouse_id: s.purchase_warehouse_id,
+        sales_warehouse_id: s.sales_warehouse_id,
         updated_at: s.updated_at.to_rfc3339(),
     }
 }

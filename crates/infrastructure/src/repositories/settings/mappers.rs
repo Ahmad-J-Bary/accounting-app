@@ -22,6 +22,8 @@ pub fn row_to_settings(row: SettingsRow) -> CompanySettings {
         journal_prefix: row.journal_prefix,
         fiscal_year_start_month: row.fiscal_year_start_month as u32,
         logo_path: row.logo_path,
+        purchase_warehouse_id: row.purchase_warehouse_id,
+        sales_warehouse_id: row.sales_warehouse_id,
         updated_at: DateTime::parse_from_rfc3339(&row.updated_at)
             .map(|d| d.with_timezone(&Utc))
             .unwrap_or_else(|_| Utc::now()),

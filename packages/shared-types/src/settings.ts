@@ -15,6 +15,8 @@ export interface CompanySettings {
   journal_prefix: string;
   fiscal_year_start_month: number;
   logo_path?: string;
+  purchase_warehouse_id?: string;
+  sales_warehouse_id?: string;
   updated_at: string;
 }
 
@@ -33,4 +35,6 @@ export interface UpdateSettingsRequest {
   purchase_prefix: string;
   journal_prefix: string;
   fiscal_year_start_month: number;
+  purchase_warehouse_id?: string;
+  sales_warehouse_id?: string;
 }

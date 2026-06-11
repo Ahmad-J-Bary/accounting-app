@@ -201,6 +201,7 @@ impl CreateInvoiceUseCase {
                 minimum_stock,
                 line_dto.unit_id,
                 conversion_factor,
+                line_dto.warehouse_id,
                 line_dto.notes,
                 unit_price_original,
                 purchase_price_original,

@@ -1,6 +1,6 @@
 import { cn } from "@shared/lib/utils";
 import { getAlignmentClass } from "@shared/lib/table-utils";
-import type { MaterialDto } from "@erp/shared-types";
+import type { MaterialDto, WarehouseDto } from "@erp/shared-types";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +19,7 @@ export interface DocumentGridConfig {
   fontFamily: string;
   readOnly: boolean;
   materials: MaterialDto[];
+  warehouses: WarehouseDto[];
   getCellValue: (line: GridLine, key: string) => string;
   searchRow: number | null;
 }
@@ -139,7 +140,7 @@ export function DocumentGridCell({
   config,
   callbacks,
 }: DocumentGridCellProps) {
-  const { densityPadding: dp, fontSize, readOnly, materials, getCellValue, searchRow, cellBorderClass } = config;
+  const { densityPadding: dp, fontSize, readOnly, materials, warehouses, getCellValue, searchRow, cellBorderClass } = config;
   const { onUpdateLine, onCellChange, onKeyDown, onActiveCellChange, onSearchRowChange, onSearchTypeChange, onSearchTermChange, inputRefs } = callbacks;
 
   if (col.type === "tier_select") {
@@ -272,6 +273,41 @@ export function DocumentGridCell({
                 className="text-right flex-row-reverse gap-2 text-[10px] font-bold py-1.5"
               >
                 {u.name}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </CellWrapper>
+    );
+  }
+
+  if (col.type === "warehouse_select") {
+    const currentWarehouseId = line.warehouse_id || "";
+    const currentWarehouse = warehouses.find(w => w.id === currentWarehouseId);
+    return (
+      <CellWrapper column={col} config={config} isReadonlyCell={readOnly}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild disabled={readOnly}>
+            <button className={cn(
+              "text-[9px] font-black px-2 py-0.5 rounded border tracking-tighter transition-all",
+              currentWarehouseId
+                ? "bg-violet-50 text-violet-600 border-violet-100 hover:bg-violet-100 cursor-pointer"
+                : "bg-slate-50 text-slate-400 border-slate-200 cursor-default",
+            )}>
+              {currentWarehouse?.name || "اختر المستودع"}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" className="min-w-[140px] shadow-xl">
+            <DropdownMenuLabel className="text-right text-[9px] font-black text-slate-500 uppercase">المستودعات</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {warehouses.map((w) => (
+              <DropdownMenuCheckboxItem
+                key={w.id}
+                checked={currentWarehouseId === w.id}
+                onCheckedChange={() => onUpdateLine(rowIdx, { warehouse_id: w.id })}
+                className="text-right flex-row-reverse gap-2 text-[10px] font-bold py-1.5"
+              >
+                {w.name}
               </DropdownMenuCheckboxItem>
             ))}
           </DropdownMenuContent>

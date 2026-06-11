@@ -12,6 +12,7 @@ import { PrefixSettings } from "../components/settings/PrefixSettings";
 import { FinancialSettings } from "../components/settings/FinancialSettings";
 import { AboutSettings } from "../components/settings/AboutSettings";
 import { UnderDevelopmentSection } from "../components/settings/UnderDevelopmentSection";
+import { WarehouseSettings } from "../components/settings/WarehouseSettings";
 
 import { SettingsLayout } from "@widgets/templates/SettingsLayout";
 
@@ -52,6 +53,7 @@ export default function Settings() {
     { id: "prefixes", label: "الأرقام التسلسلية", icon: FileText },
     { id: "currencies", label: "إدارة العملات", icon: DollarSign },
     { id: "financial", label: "الإعدادات المالية", icon: SettingsIcon },
+    { id: "warehouses", label: "المستودعات", icon: Building },
     { id: "localization", label: "اللغة والمنطقة", icon: Globe },
     { id: "security", label: "الأمان والوصول", icon: ShieldCheck },
     { id: "about", label: "حول التطبيق", icon: SettingsIcon },
@@ -72,6 +74,8 @@ export default function Settings() {
         return <CurrencySettings />;
       case "financial":
         return <FinancialSettings settings={settings} onChange={handleChange} />;
+      case "warehouses":
+        return <WarehouseSettings settings={settings} onChange={handleChange} />;
       case "tables":
         return <TableSettingsManager />;
       case "sidebar":
@@ -80,6 +84,7 @@ export default function Settings() {
         return <AboutSettings />;
       case "localization":
       case "security":
+        break;
       default:
         return <UnderDevelopmentSection />;
     }

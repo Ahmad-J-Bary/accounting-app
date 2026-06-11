@@ -3,6 +3,7 @@ use std::str::FromStr;
 use chrono::Utc;
 use domain::sales::unified_invoice::{InvoiceType};
 use domain::inventory::stock_movement::{StockMovement, MovementType};
+use domain::shared::ids::WarehouseId;
 use domain::inventory::inventory_lot::{InventoryLot, LotConsumption};
 use domain::shared::ids::{InvoiceId};
 use crate::ports::unified_invoice_repository::UnifiedInvoiceRepository;
@@ -302,6 +303,8 @@ impl PostInvoiceUseCase {
             movement.raw_total_cost_base = line_total.base_amount;
             movement.original_currency = Some(invoice.currency_code.clone());
             movement.fx_rate = invoice.exchange_rate;
+            movement.warehouse_id = line.warehouse_id.as_ref()
+                .and_then(|id| WarehouseId::from_str(id).ok());
             self.movement_repo.save(&movement).await?;
 
             // For purchase invoices (excluding OpeningBalance), create inventory lots

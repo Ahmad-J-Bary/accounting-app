@@ -273,6 +273,14 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
         align: "center",
         type: "unit_select",
       },
+      {
+        key: "warehouse_id",
+        header: "المستودع",
+        width: "w-[90px]",
+        align: "center",
+        type: "warehouse_select",
+        defaultVisible: true,
+      },
     ];
 
     const baseCode = baseCurrency?.code;

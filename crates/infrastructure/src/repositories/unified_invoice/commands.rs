@@ -62,8 +62,8 @@ pub async fn save(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), App
 
     for line in &invoice.lines {
         sqlx::query(
-            "INSERT INTO unified_invoice_lines (id, invoice_id, material_id, quantity, unit_id, conversion_factor, unit_price, purchase_price, retail_price, wholesale_price, semi_wholesale_price, minimum_stock, notes, unit_price_original, purchase_price_original, profit_amount_original) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO unified_invoice_lines (id, invoice_id, material_id, quantity, unit_id, conversion_factor, unit_price, purchase_price, retail_price, wholesale_price, semi_wholesale_price, minimum_stock, warehouse_id, notes, unit_price_original, purchase_price_original, profit_amount_original) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
         .bind(Uuid::new_v4().to_string())
         .bind(invoice.id.to_string())
@@ -77,6 +77,7 @@ pub async fn save(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), App
         .bind(line.wholesale_price.as_ref().map(|m| m.amount().to_string()))
         .bind(line.semi_wholesale_price.as_ref().map(|m| m.amount().to_string()))
         .bind(line.minimum_stock.as_ref().map(|s| s.to_string()))
+        .bind(&line.warehouse_id)
         .bind(&line.notes)
         .bind(line.unit_price_original.as_ref().map(|m| m.amount().to_string()))
         .bind(line.purchase_price_original.as_ref().map(|m| m.amount().to_string()))
@@ -143,8 +144,8 @@ pub async fn update(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), A
 
         for line in &invoice.lines {
             sqlx::query(
-                "INSERT INTO unified_invoice_lines (id, invoice_id, material_id, quantity, unit_id, conversion_factor, unit_price, purchase_price, retail_price, wholesale_price, semi_wholesale_price, minimum_stock, notes, unit_price_original, purchase_price_original, profit_amount_original) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                "INSERT INTO unified_invoice_lines (id, invoice_id, material_id, quantity, unit_id, conversion_factor, unit_price, purchase_price, retail_price, wholesale_price, semi_wholesale_price, minimum_stock, warehouse_id, notes, unit_price_original, purchase_price_original, profit_amount_original) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             )
             .bind(Uuid::new_v4().to_string())
             .bind(invoice.id.to_string())
@@ -158,6 +159,7 @@ pub async fn update(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), A
             .bind(line.wholesale_price.as_ref().map(|m| m.amount().to_string()))
             .bind(line.semi_wholesale_price.as_ref().map(|m| m.amount().to_string()))
             .bind(line.minimum_stock.as_ref().map(|s| s.to_string()))
+            .bind(&line.warehouse_id)
             .bind(&line.notes)
             .bind(line.unit_price_original.as_ref().map(|m| m.amount().to_string()))
             .bind(line.purchase_price_original.as_ref().map(|m| m.amount().to_string()))

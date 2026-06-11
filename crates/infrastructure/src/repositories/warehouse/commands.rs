@@ -83,6 +83,16 @@ async fn find_by_id_opt(pool: &SqlitePool, id: &WarehouseId) -> Result<Option<Wa
 }
 
 pub async fn delete(pool: &SqlitePool, id: &WarehouseId) -> Result<(), AppError> {
+    let is_default: Option<(bool,)> = sqlx::query_as("SELECT is_default FROM warehouses WHERE id = ?")
+        .bind(id.to_string())
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    if is_default.map(|(d,)| d).unwrap_or(false) {
+        return Err(AppError::Invalid("لا يمكن حذف المستودع الرئيسي".into()));
+    }
+
     let has_movements: Option<(i32,)> = sqlx::query_as::<_, (i32,)>(
         "SELECT 1 FROM stock_movements WHERE warehouse_id = ? LIMIT 1"
     )
@@ -95,32 +105,11 @@ pub async fn delete(pool: &SqlitePool, id: &WarehouseId) -> Result<(), AppError>
         return Err(AppError::Invalid("لا يمكن حذف مستودع لديه حركات مخزنية".into()));
     }
 
-    let was_default: Option<(bool,)> = sqlx::query_as("SELECT is_default FROM warehouses WHERE id = ?")
-        .bind(id.to_string())
-        .fetch_optional(pool)
-        .await
-        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
-
     sqlx::query("DELETE FROM warehouses WHERE id = ?")
         .bind(id.to_string())
         .execute(pool)
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
-
-    if was_default.map(|(d,)| d).unwrap_or(false) {
-        let another: Option<(String,)> = sqlx::query_as("SELECT id FROM warehouses LIMIT 1")
-            .fetch_optional(pool)
-            .await
-            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
-
-        if let Some((new_id,)) = another {
-            sqlx::query("UPDATE warehouses SET is_default = 1 WHERE id = ?")
-                .bind(new_id)
-                .execute(pool)
-                .await
-                .map_err(|e| AppError::Infrastructure(e.to_string()))?;
-        }
-    }
 
     Ok(())
 }

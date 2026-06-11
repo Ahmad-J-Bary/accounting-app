@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { Trash2, Columns, RotateCcw } from "lucide-react";
-import type { MaterialDto } from "@erp/shared-types";
+import type { MaterialDto, WarehouseDto } from "@erp/shared-types";
 import { cn } from "@shared/lib/utils";
 import { getRowBackgroundClass, getRowBorderClass, getLeftBorderClass } from "@shared/lib/table-utils";
 import { GridLine } from "@modules/invoicing/lib/invoiceUtils";
@@ -45,7 +45,8 @@ export interface DocumentColumn {
     | "badge"
     | "unit_select"
     | "tier_select"
-    | "price_tier";
+    | "price_tier"
+    | "warehouse_select";
 }
 
 export interface GenericDocumentGridProps {
@@ -56,6 +57,7 @@ export interface GenericDocumentGridProps {
   onAddLine: () => void;
   onSelectMaterial: (index: number, material: MaterialDto) => void;
   materials: MaterialDto[];
+  warehouses?: WarehouseDto[];
   readOnly?: boolean;
   preferenceKey?: string;
   docCurrency?: string;
@@ -70,6 +72,7 @@ export function GenericDocumentGrid({
   onAddLine,
   onSelectMaterial,
   materials,
+  warehouses,
   readOnly = false,
   preferenceKey = "generic_grid",
   docCurrency = "",
@@ -155,9 +158,9 @@ export function GenericDocumentGrid({
     [autoFitColumn, columns, lines, getCellValue],
   );
 
-  const editableCols = filteredColumns.filter((c) => c.type !== "readonly" && c.type !== "tier_select");
+  const editableCols = filteredColumns.filter((c) => c.type !== "readonly" && c.type !== "tier_select" && c.type !== "warehouse_select");
   const isNavigableCol = (c: DocumentColumn) =>
-    c.type !== "unit_select" && c.type !== "image" && c.type !== "tier_select";
+    c.type !== "unit_select" && c.type !== "image" && c.type !== "tier_select" && c.type !== "warehouse_select";
 
   const findNextCol = useCallback(
     (fromIdx: number, dir: 1 | -1): number => {
@@ -317,6 +320,7 @@ export function GenericDocumentGrid({
     fontFamily: settings.fontFamily,
     readOnly,
     materials,
+    warehouses: warehouses || [],
     getCellValue,
     searchRow,
   };

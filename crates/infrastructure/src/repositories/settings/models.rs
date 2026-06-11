@@ -16,5 +16,7 @@ pub struct SettingsRow {
     pub journal_prefix: String,
     pub fiscal_year_start_month: i64,
     pub logo_path: Option<String>,
+    pub purchase_warehouse_id: Option<String>,
+    pub sales_warehouse_id: Option<String>,
     pub updated_at: String,
 }

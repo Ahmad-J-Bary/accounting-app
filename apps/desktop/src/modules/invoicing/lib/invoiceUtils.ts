@@ -50,7 +50,7 @@ export function toBackendLines(lines: GridLine[], exchangeRate: string = "1"): I
 }
 
 /** Create a fresh empty local line */
-export function newGridLine(): GridLine {
+export function newGridLine(defaultWarehouseId?: string): GridLine {
   return {
     _id: `ln_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     material_id: "",
@@ -61,6 +61,7 @@ export function newGridLine(): GridLine {
     notes: "",
     line_total: 0,
     tier: "retail",
+    warehouse_id: defaultWarehouseId,
   };
 }
 

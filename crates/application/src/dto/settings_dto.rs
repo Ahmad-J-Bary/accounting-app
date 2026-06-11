@@ -18,6 +18,8 @@ pub struct CompanySettingsDto {
     pub journal_prefix: String,
     pub fiscal_year_start_month: u32,
     pub logo_path: Option<String>,
+    pub purchase_warehouse_id: Option<String>,
+    pub sales_warehouse_id: Option<String>,
     pub updated_at: String,
 }
 
@@ -37,4 +39,6 @@ pub struct UpdateSettingsRequest {
     pub purchase_prefix: String,
     pub journal_prefix: String,
     pub fiscal_year_start_month: u32,
+    pub purchase_warehouse_id: Option<String>,
+    pub sales_warehouse_id: Option<String>,
 }
