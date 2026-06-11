@@ -42,7 +42,90 @@ export function InventoryMovementsTable({
     return w?.is_default ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-blue-50 text-blue-700 border-blue-100";
   }, [warehouses]);
 
-  const baseCost = useMemo(() => (m: StockMovement) => parseFloat(m.total_cost_base || "0"), []);
+  interface PairCostEntry {
+    base: string;
+    original: string;
+    currency: string | null;
+  }
+
+  const materialAvgCost = useMemo(() => {
+    const acc = new Map<string, { cost: number; qty: number }>();
+    for (const m of movements) {
+      const cfg = getMovementType(m.movement_type);
+      if (!cfg.inflow) continue;
+      const cost = parseFloat(m.total_cost_base || "0");
+      const qty = parseFloat(m.quantity || "0");
+      if (!(cost > 0) || !(qty > 0)) continue;
+      const p = acc.get(m.material_id) || { cost: 0, qty: 0 };
+      acc.set(m.material_id, { cost: p.cost + cost, qty: p.qty + qty });
+    }
+    const avg = new Map<string, number>();
+    for (const [mid, { cost, qty }] of acc) avg.set(mid, cost / qty);
+    return avg;
+  }, [movements]);
+
+  const pairCost = useMemo(() => {
+    const map = new Map<string, PairCostEntry>();
+    for (const m of movements) {
+      if (!m.reference || !transferRefs.has(m.reference)) continue;
+      let base = m.total_cost_base;
+      let orig = m.total_cost;
+      if ((!base || parseFloat(base) === 0) && (!orig || parseFloat(orig) === 0)) {
+        const fromUnit = parseFloat(m.unit_cost_base || "0") * parseFloat(m.quantity || "0");
+        if (fromUnit !== 0) {
+          base = String(fromUnit);
+          orig = m.total_cost || null;
+        } else {
+          const avg = materialAvgCost.get(m.material_id);
+          if (avg !== undefined) {
+            const qty = parseFloat(m.quantity || "0");
+            if (qty > 0) { base = String(avg * qty); orig = null; }
+          }
+        }
+      }
+      const hasBase = base && parseFloat(base) !== 0;
+      const hasOrig = orig && parseFloat(orig) !== 0;
+      if (!hasBase && !hasOrig) continue;
+      const existing = map.get(m.reference);
+      if (!existing || (hasBase && !existing.base) || (hasOrig && !existing.original)) {
+        map.set(m.reference, {
+          base: base || existing?.base || "0",
+          original: orig || existing?.original || "0",
+          currency: m.original_currency || existing?.currency || null,
+        });
+      }
+    }
+    return map;
+  }, [movements, transferRefs, materialAvgCost]);
+
+  const baseCost = useMemo(() => (m: StockMovement) => {
+    const own = parseFloat(m.total_cost_base || "0");
+    if (own !== 0 || !m.reference || !transferRefs.has(m.reference)) return own;
+    const pair = pairCost.get(m.reference);
+    if (!pair) return own;
+    const pb = parseFloat(pair.base);
+    if (pb !== 0) return pb;
+    const po = parseFloat(pair.original);
+    return po !== 0 ? po : own;
+  }, [pairCost, transferRefs]);
+
+  const costInfo = useMemo(() => {
+    return (m: StockMovement): { base: number; original: string | null; currency: string | null } => {
+      const ownBase = parseFloat(m.total_cost_base || "0");
+      const ownOrig = m.total_cost || null;
+      const ownCurr = m.original_currency || null;
+      if (ownBase !== 0 || !m.reference || !transferRefs.has(m.reference)) {
+        return { base: ownBase, original: ownOrig, currency: ownCurr };
+      }
+      const pair = pairCost.get(m.reference);
+      if (!pair) return { base: ownBase, original: ownOrig, currency: ownCurr };
+      const pb = parseFloat(pair.base);
+      if (pb !== 0) return { base: pb, original: pair.original, currency: pair.currency };
+      const po = parseFloat(pair.original);
+      if (po !== 0) return { base: po, original: pair.original, currency: pair.currency };
+      return { base: ownBase, original: ownOrig, currency: ownCurr };
+    };
+  }, [pairCost, transferRefs]);
 
   const { sortedData, sortField, sortDirection, handleSort } = useSortable({
     data: movements,
@@ -79,12 +162,13 @@ export function InventoryMovementsTable({
         header: 'النوع',
         label: 'النوع',
         accessor: (m) => {
+          const clean = m.movement_type.replace('MovementType::', '');
           const isTransfer = m.reference ? transferRefs.has(m.reference) : false;
-          const cfg = getMovementType(m.movement_type);
-          let label = cfg.label;
-          if (isTransfer) {
-            const clean = m.movement_type.replace('MovementType::', '');
-            label = clean === 'Out' ? 'تحويل من' : 'تحويل إلى';
+          let cfg = getMovementType(m.movement_type);
+          if (isTransfer && (clean === 'In' || clean === 'Out')) {
+            cfg = clean === 'Out'
+              ? { label: 'تحويل من', inflow: false, group: 'outflow' }
+              : { label: 'تحويل إلى', inflow: true, group: 'inflow' };
           }
           return (
             <span className={cn(
@@ -92,7 +176,7 @@ export function InventoryMovementsTable({
               cfg.inflow ? 'bg-emerald-50 text-emerald-700 ring-emerald-100' :
               'bg-rose-50 text-rose-700 ring-rose-100'
             )}>
-              {label}
+              {cfg.label}
             </span>
           );
         },
@@ -102,14 +186,20 @@ export function InventoryMovementsTable({
         id: 'warehouse',
         header: 'المستودع',
         label: 'المستودع',
-        accessor: (m) => (
-          <span className={cn(
-            "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border",
-            m.warehouse_id ? warehouseClass(m) : "bg-slate-50 text-slate-500 border-slate-200"
-          )}>
-            {warehouseName(m)}
-          </span>
-        ),
+        accessor: (m) => {
+          const isTransfer = m.reference ? transferRefs.has(m.reference) : false;
+          const clean = m.movement_type.replace('MovementType::', '');
+          const prefix = isTransfer && clean === 'In' ? 'إلى ' :
+                         isTransfer && clean === 'Out' ? 'من ' : '';
+          return (
+            <span className={cn(
+              "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border",
+              m.warehouse_id ? warehouseClass(m) : "bg-slate-50 text-slate-500 border-slate-200"
+            )}>
+              {prefix}{warehouseName(m)}
+            </span>
+          );
+        },
       },
       {
         id: 'quantity',
@@ -136,14 +226,16 @@ export function InventoryMovementsTable({
         accessor: (m) => {
           const base = baseCost(m);
           if (base === 0) return '—';
+          const info = costInfo(m);
+          const showOrig = isBase && info.currency && info.original && parseFloat(info.original) !== 0 && base !== parseFloat(info.original);
           return (
             <div className="flex flex-col gap-0.5">
               <span className="tabular-nums font-medium">
                 {formatAmount(base, { currencyCode: curr.code })}
               </span>
-              {isBase && m.original_currency && m.total_cost && baseCost(m) !== parseFloat(m.total_cost) && (
+              {showOrig && (
                 <span className="tabular-nums text-[10px] text-slate-400 font-medium">
-                  {parseFloat(m.total_cost).toLocaleString()} {m.original_currency}
+                  {parseFloat(info.original).toLocaleString()} {info.currency}
                 </span>
               )}
             </div>
@@ -175,7 +267,7 @@ export function InventoryMovementsTable({
       },
     );
     return cols;
-  }, [warehouseName, warehouseClass, currencies, formatAmount, isBaseCurrency, baseCost, transferRefs]);
+  }, [warehouseName, warehouseClass, currencies, formatAmount, isBaseCurrency, baseCost, transferRefs, costInfo]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["product_name", "type", "warehouse", "quantity"];
@@ -208,7 +300,7 @@ export function InventoryMovementsTable({
         const currCode = costMatch[1];
         const totalCost = sortedData.reduce((s, m) => {
           const cfg = getMovementType(m.movement_type);
-          const cost = parseFloat(m.total_cost_base || "0");
+          const cost = baseCost(m);
           return s + (cfg.inflow ? cost : -cost);
         }, 0);
         const isBase = isBaseCurrency(currCode);
@@ -220,7 +312,7 @@ export function InventoryMovementsTable({
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [sortedData, enrichedColumns, formatAmount, isBaseCurrency]);
+  }, [sortedData, enrichedColumns, formatAmount, isBaseCurrency, baseCost]);
 
   return (
     <TableShell

@@ -15,7 +15,7 @@ import { MovementTypeFilter } from '@modules/inventory/components/MovementTypeFi
 import { WarehouseForm } from '@modules/inventory/components/WarehouseForm';
 import { TransferForm } from '@modules/inventory/components/TransferForm';
 import { TransferTable } from '@modules/inventory/components/TransferTable';
-import { MOVEMENT_TYPE_KEYS, getTransferRefs } from '@modules/inventory/constants/movementTypes';
+import { MOVEMENT_TYPE_KEYS, getTransferRefs, getMovementType } from '@modules/inventory/constants/movementTypes';
 import { History, Warehouse, RefreshCw, ArrowLeftRight, Plus } from "lucide-react";
 
 export default function Inventory() {
@@ -99,6 +99,21 @@ export default function Inventory() {
     { label: "إجمالي الحركات", value: movements.length, icon: History, color: "text-blue-600" },
     { label: "المستودعات النشطة", value: warehouses.filter(w => w.is_active).length, icon: Warehouse, color: "text-slate-900" },
   ], [movements, warehouses]);
+
+  const stockByWarehouse = useMemo(() => {
+    const map = new Map<string, Map<string, number>>();
+    for (const m of movements) {
+      if (!m.warehouse_id) continue;
+      const mid = m.material_id;
+      const wid = m.warehouse_id;
+      const cfg = getMovementType(m.movement_type);
+      const qty = parseFloat(m.quantity || "0");
+      let mat = map.get(mid);
+      if (!mat) { mat = new Map(); map.set(mid, mat); }
+      mat.set(wid, (mat.get(wid) || 0) + (cfg.inflow ? qty : -qty));
+    }
+    return map;
+  }, [movements]);
 
   const refreshAll = useCallback(() => {
     refreshMovements();
@@ -226,6 +241,7 @@ export default function Inventory() {
             products={products}
             onSave={handleCreateTransfer}
             saving={savingTransfer}
+            stockByWarehouse={stockByWarehouse}
           />
         ) : null
       }
