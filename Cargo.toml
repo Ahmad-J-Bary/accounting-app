@@ -12,7 +12,7 @@ exclude = []
 
 [workspace.package]
 edition = "2021"
-version = "0.8.8"
+version = "0.8.9"
 authors = ["Ahmad Abdelbary"]
 
 [workspace.dependencies]
