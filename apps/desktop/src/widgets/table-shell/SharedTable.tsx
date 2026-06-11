@@ -30,6 +30,7 @@ interface SharedTableProps<T> {
   summary?: SummaryColumn[];
   enableResize?: boolean;
   title?: string;
+  className?: string;
 }
 
 export function SharedTable<T>({
@@ -49,6 +50,7 @@ export function SharedTable<T>({
   summary,
   enableResize = true,
   title,
+  className,
 }: SharedTableProps<T>) {
   const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: `${tableId}-unified`,
@@ -56,11 +58,11 @@ export function SharedTable<T>({
     defaultVisible: defaultVisible || columns.map(c => c.id),
   });
 
-  const { sortedData, sortField, sortDirection, handleSort } = useSortable({
+  const { sortedData, sortField, sortDirection, handleSort } = useSortable<T, string>({
     data,
-    defaultField: (sortConfig?.field || '') as any,
+    defaultField: sortConfig?.field || '',
     defaultDirection: sortConfig?.direction || 'asc',
-    sortFn: sortConfig?.sortFn || ((a: any, b: any) => 0),
+    sortFn: sortConfig?.sortFn || ((_a: T, _b: T, _field: string, _dir: "asc" | "desc") => 0),
   });
 
   return (
@@ -74,6 +76,7 @@ export function SharedTable<T>({
       onColumnsReset={resetToDefault}
       columnsModified={isModified}
       showToolbar={true}
+      className={className}
     >
       <UnifiedTable
         data={sortedData}
@@ -87,7 +90,7 @@ export function SharedTable<T>({
         onRowClick={onRowClick}
         onHeaderClick={(col) => {
           if (sortableFields && sortableFields.includes(col.id)) {
-            handleSort(col.id as any);
+            handleSort(col.id);
           }
         }}
         emptyMessage={search ? "لا توجد نتائج تطابق معايير البحث" : emptyMessage}

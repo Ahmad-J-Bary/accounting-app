@@ -1,12 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { cn } from '@shared/lib/utils';
 import type { StockMovement, WarehouseDto } from "@erp/shared-types";
-import { SharedTable } from '@widgets/table-shell/SharedTable';
-import type { UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
+import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
+import { TableShell } from '@widgets/table-shell/TableShell';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
+import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
 import { formatDateTime } from '@shared/lib/format';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useBaseCurrencyColumns } from "@shared/hooks";
 import { getMovementType } from '../constants/movementTypes';
 
 interface InventoryMovementsTableProps {
@@ -17,13 +17,15 @@ interface InventoryMovementsTableProps {
   onSearchChange: (val: string) => void;
   selectedId?: string | null;
   onRowClick?: (movement: StockMovement) => void;
+  transferRefs: Set<string>;
+  className?: string;
 }
 
-type SortField = "date" | "type" | "product_name" | "quantity" | "reference";
+type SortField = "date" | "type" | "product_name" | "quantity" | "reference" | `total_cost_${string}`;
 
 export function InventoryMovementsTable({
   movements, loading, warehouses, search, onSearchChange,
-  selectedId, onRowClick,
+  selectedId, onRowClick, transferRefs, className,
 }: InventoryMovementsTableProps) {
   const { formatAmount, currencies } = useCurrencyContext();
   const { isBaseCurrency } = useBaseCurrencyColumns();
@@ -42,6 +44,27 @@ export function InventoryMovementsTable({
 
   const baseCost = useMemo(() => (m: StockMovement) => parseFloat(m.total_cost_base || "0"), []);
 
+  const { sortedData, sortField, sortDirection, handleSort } = useSortable({
+    data: movements,
+    defaultField: "date" as SortField,
+    defaultDirection: "desc",
+    sortFn: (a, b, field, direction) => {
+      if ((field as string).startsWith("total_cost_")) {
+        const cmp = parseFloat(a.total_cost_base || "0") - parseFloat(b.total_cost_base || "0");
+        return direction === "asc" ? cmp : -cmp;
+      }
+      let comparison = 0;
+      switch (field) {
+        case "date": comparison = new Date(a.movement_date).getTime() - new Date(b.movement_date).getTime(); break;
+        case "type": comparison = (a.movement_type || "").localeCompare(b.movement_type || "", "ar"); break;
+        case "product_name": comparison = (a.material_name || "").localeCompare(b.material_name || "", "ar"); break;
+        case "quantity": comparison = parseFloat(a.quantity) - parseFloat(b.quantity); break;
+        case "reference": comparison = (a.reference || "").localeCompare(b.reference || "", "ar"); break;
+      }
+      return direction === "asc" ? comparison : -comparison;
+    }
+  });
+
   const allColumns = useMemo<UnifiedColumn<StockMovement>[]>(() => {
     const cols: UnifiedColumn<StockMovement>[] = [
       {
@@ -56,14 +79,20 @@ export function InventoryMovementsTable({
         header: 'النوع',
         label: 'النوع',
         accessor: (m) => {
+          const isTransfer = m.reference ? transferRefs.has(m.reference) : false;
           const cfg = getMovementType(m.movement_type);
+          let label = cfg.label;
+          if (isTransfer) {
+            const clean = m.movement_type.replace('MovementType::', '');
+            label = clean === 'Out' ? 'تحويل من' : 'تحويل إلى';
+          }
           return (
             <span className={cn(
               "inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ring-1 ring-inset",
               cfg.inflow ? 'bg-emerald-50 text-emerald-700 ring-emerald-100' :
               'bg-rose-50 text-rose-700 ring-rose-100'
             )}>
-              {cfg.label}
+              {label}
             </span>
           );
         },
@@ -146,7 +175,7 @@ export function InventoryMovementsTable({
       },
     );
     return cols;
-  }, [warehouseName, warehouseClass, currencies, formatAmount, isBaseCurrency, baseCost]);
+  }, [warehouseName, warehouseClass, currencies, formatAmount, isBaseCurrency, baseCost, transferRefs]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["product_name", "type", "warehouse", "quantity"];
@@ -159,11 +188,17 @@ export function InventoryMovementsTable({
     return ids;
   }, [currencies, isBaseCurrency]);
 
+  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
+    tableId: "inventory-movements-unified",
+    columns: allColumns,
+    defaultVisible,
+  });
+
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
-    const colIds = allColumns.map(c => c.id);
-    return colIds.map(id => {
+    return enrichedColumns.map(col => {
+      const id = col.id;
       if (id === "product_name") {
-        return { id: "count", columnId: id, label: "", value: `${movements.length} حركة`, className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: id, label: "", value: `${sortedData.length} حركة`, className: "text-slate-500 font-medium" };
       }
       if (id === "quantity") {
         return { id: "qty_spacer", columnId: id, label: "", value: "" };
@@ -171,7 +206,7 @@ export function InventoryMovementsTable({
       const costMatch = id.match(/^total_cost_(.+)$/);
       if (costMatch) {
         const currCode = costMatch[1];
-        const totalCost = movements.reduce((s, m) => {
+        const totalCost = sortedData.reduce((s, m) => {
           const cfg = getMovementType(m.movement_type);
           const cost = parseFloat(m.total_cost_base || "0");
           return s + (cfg.inflow ? cost : -cost);
@@ -185,43 +220,38 @@ export function InventoryMovementsTable({
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [movements, allColumns, formatAmount, isBaseCurrency]);
-
-  const sortFn = (a: StockMovement, b: StockMovement, field: string, direction: 'asc' | 'desc') => {
-    let comparison = 0;
-    switch (field) {
-      case "date": comparison = new Date(a.movement_date).getTime() - new Date(b.movement_date).getTime(); break;
-      case "type": comparison = (a.movement_type || "").localeCompare(b.movement_type || "", "ar"); break;
-      case "product_name": comparison = (a.material_name || "").localeCompare(b.material_name || "", "ar"); break;
-      case "quantity": comparison = parseFloat(a.quantity) - parseFloat(b.quantity); break;
-      case "reference": comparison = (a.reference || "").localeCompare(b.reference || "", "ar"); break;
-      default: {
-        if (field.startsWith("total_cost_")) {
-          comparison = parseFloat(a.total_cost_base || "0") - parseFloat(b.total_cost_base || "0");
-        }
-        break;
-      }
-    }
-    return direction === "asc" ? comparison : -comparison;
-  };
+  }, [sortedData, enrichedColumns, formatAmount, isBaseCurrency]);
 
   return (
-    <SharedTable
-      data={movements}
-      columns={allColumns}
-      defaultVisible={defaultVisible}
-      loading={loading}
+    <TableShell
       search={search}
       onSearchChange={onSearchChange}
       searchPlaceholder="بحث بالصنف أو المرجع..."
-      tableId="inventory-movements"
-      title="سجل الحركات"
-      sortConfig={{ field: "date", direction: "desc", sortFn }}
-      sortableFields={["date", "type", "product_name", "quantity", "reference"]}
-      selectedId={selectedId}
-      onRowClick={onRowClick}
-      emptyMessage={search ? "لا توجد حركات تطابق معايير البحث" : "لا توجد حركات مخزنية مسجلة"}
-      summary={summaryColumns}
-    />
+      columns={toolbarColumns}
+      onColumnToggle={toggleColumn}
+      onColumnsReset={resetToDefault}
+      columnsModified={isModified}
+      showToolbar={true}
+      className={className}
+    >
+      <UnifiedTable
+        data={sortedData}
+        columns={enrichedColumns}
+        loading={loading}
+        enableResize
+        tableId="inventory-movements"
+        sortField={sortField}
+        sortDirection={sortDirection}
+        onHeaderClick={(col) => {
+          if (["date", "type", "product_name", "quantity", "reference"].includes(col.id) || col.id.startsWith("total_cost_")) {
+            handleSort(col.id as SortField);
+          }
+        }}
+        selectedId={selectedId}
+        onRowClick={onRowClick}
+        emptyMessage={search ? "لا توجد نتائج تطابق معايير البحث" : "لا توجد حركات مخزنية مسجلة"}
+        summary={summaryColumns}
+      />
+    </TableShell>
   );
 }

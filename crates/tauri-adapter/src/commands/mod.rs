@@ -24,3 +24,4 @@ pub mod currency;
 pub mod update;
 pub mod returns;
 pub mod warehouse;
+pub mod transfer;

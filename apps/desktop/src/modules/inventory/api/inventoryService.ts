@@ -8,6 +8,8 @@ import type {
   ProductionOrder,
   CreateProductionOrderRequest,
   StockMovement,
+  CreateTransferRequest,
+  TransferResponse,
 } from '@erp/shared-types';
 
 // Damaged Items
@@ -52,6 +54,13 @@ export const productionService = {
 
   async getProductionOrder(id: string): Promise<ProductionOrder> {
     return await invoke<ProductionOrder>('get_production_order', { id });
+  },
+};
+
+// Transfers
+export const transferService = {
+  async createTransfer(request: CreateTransferRequest): Promise<TransferResponse> {
+    return await invoke<TransferResponse>('create_transfer', { request });
   },
 };
 

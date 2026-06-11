@@ -132,3 +132,23 @@ export interface StockMovement {
   movement_date: string;
   created_at: string;
 }
+
+export interface CreateTransferRequest {
+  source_warehouse_id: string;
+  dest_warehouse_id: string;
+  material_id: string;
+  quantity: string;
+  transfer_date: string;
+  notes?: string | null;
+}
+
+export interface TransferResponse {
+  reference: string;
+  source_movement_id: string;
+  dest_movement_id: string;
+  source_warehouse_id: string;
+  dest_warehouse_id: string;
+  material_id: string;
+  quantity: string;
+  transfer_date: string;
+}

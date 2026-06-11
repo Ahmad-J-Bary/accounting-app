@@ -1,18 +1,22 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
 import { useQuery } from '@tanstack/react-query';
 import { Button } from "@shared/ui/button";
-import { inventoryService } from '@modules/inventory/api/inventoryService';
+import { toast } from "sonner";
+import { inventoryService, transferService } from '@modules/inventory/api/inventoryService';
 import { warehouseService } from '@modules/inventory/api/warehouseService';
-import type { StockMovement, WarehouseDto } from '@erp/shared-types';
+import { materialService } from '@modules/inventory/api/materialService';
+import type { StockMovement, WarehouseDto, MaterialDto, CreateTransferRequest } from '@erp/shared-types';
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { InventoryMovementsTable } from '@modules/inventory/components/InventoryMovementsTable';
 import { InventoryWarehouses } from '@modules/inventory/components/InventoryWarehouses';
 import { WarehouseSelector } from '@modules/inventory/components/WarehouseSelector';
 import { MovementTypeFilter } from '@modules/inventory/components/MovementTypeFilter';
 import { WarehouseForm } from '@modules/inventory/components/WarehouseForm';
-import { MOVEMENT_TYPE_KEYS } from '@modules/inventory/constants/movementTypes';
-import { History, Warehouse, RefreshCw } from "lucide-react";
+import { TransferForm } from '@modules/inventory/components/TransferForm';
+import { TransferTable } from '@modules/inventory/components/TransferTable';
+import { MOVEMENT_TYPE_KEYS, getTransferRefs } from '@modules/inventory/constants/movementTypes';
+import { History, Warehouse, RefreshCw, ArrowLeftRight, Plus } from "lucide-react";
 
 export default function Inventory() {
   const [activeTab, setActiveTab] = useState('movements');
@@ -38,6 +42,13 @@ export default function Inventory() {
   const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null);
   const [warehouseFormOpen, setWarehouseFormOpen] = useState(false);
   const [warehouseEditItem, setWarehouseEditItem] = useState<WarehouseDto | null>(null);
+  const [transferFormOpen, setTransferFormOpen] = useState(false);
+  const [savingTransfer, setSavingTransfer] = useState(false);
+
+  const { data: products = [] } = useQuery<MaterialDto[]>({
+    queryKey: ['materials'],
+    queryFn: () => materialService.listMaterials(),
+  });
 
   useEffect(() => {
     if (warehouses.length > 0 && !selectedWarehouseId) {
@@ -56,13 +67,22 @@ export default function Inventory() {
     return movements.filter(m => m.warehouse_id === selectedWarehouseId);
   }, [movements, selectedWarehouseId]);
 
+  const transferRefs = useMemo(() => getTransferRefs(movements), [movements]);
+
   const filteredByType = useMemo(() => {
     if (selectedTypes.length === 0) return filteredByWarehouse;
     return filteredByWarehouse.filter(m => {
       const clean = m.movement_type.replace('MovementType::', '');
+      const isTransfer = m.reference ? transferRefs.has(m.reference) : false;
+      if (clean === 'In' && isTransfer) {
+        return selectedTypes.includes('In') || selectedTypes.includes('TransferTo');
+      }
+      if (clean === 'Out' && isTransfer) {
+        return selectedTypes.includes('Out') || selectedTypes.includes('TransferFrom');
+      }
       return selectedTypes.includes(clean);
     });
-  }, [filteredByWarehouse, selectedTypes]);
+  }, [filteredByWarehouse, selectedTypes, transferRefs]);
 
   const filteredMovements = useMemo(() => {
     if (!search.trim()) return filteredByType;
@@ -80,20 +100,49 @@ export default function Inventory() {
     { label: "المستودعات النشطة", value: warehouses.filter(w => w.is_active).length, icon: Warehouse, color: "text-slate-900" },
   ], [movements, warehouses]);
 
-  const refreshAll = () => { refreshMovements(); refreshWarehouses(); };
+  const refreshAll = useCallback(() => {
+    refreshMovements();
+    refreshWarehouses();
+  }, [refreshMovements, refreshWarehouses]);
 
   const handleCloseForm = () => { setWarehouseFormOpen(false); setWarehouseEditItem(null); };
 
   const handleFormSaved = () => { refreshAll(); };
+
+  const handleCreateTransfer = useCallback(async (req: CreateTransferRequest) => {
+    setSavingTransfer(true);
+    try {
+      await transferService.createTransfer(req);
+      toast.success('تم إنشاء التحويل بنجاح');
+      setTransferFormOpen(false);
+      refreshAll();
+    } catch (e) {
+      toast.error(e as string);
+    } finally {
+      setSavingTransfer(false);
+    }
+  }, [refreshAll]);
 
   return (
     <OperationalTableTemplate
       title="إدارة المخزون"
       stats={stats}
       toolbar={
-        <Button size="sm" variant="outline" onClick={refreshAll} className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50">
-          <RefreshCw className="w-4 h-4 ml-2 shrink-0" />تحديث
-        </Button>
+        <div className="flex items-center gap-2">
+          {activeTab === 'transfers' && (
+            <Button size="sm" onClick={() => { setWarehouseFormOpen(false); setTransferFormOpen(true); }} className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-100 font-bold">
+              <ArrowLeftRight className="w-4 h-4 ml-2 shrink-0" />إضافة تحويل
+            </Button>
+          )}
+          {activeTab === 'warehouses' && (
+            <Button size="sm" onClick={() => { setTransferFormOpen(false); setWarehouseEditItem(null); setWarehouseFormOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-100 font-bold">
+              <Plus className="w-4 h-4 ml-2 shrink-0" />مستودع جديد
+            </Button>
+          )}
+          <Button size="sm" variant="outline" onClick={refreshAll} className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50">
+            <RefreshCw className="w-4 h-4 ml-2 shrink-0" />تحديث
+          </Button>
+        </div>
       }
       filterBar={
         <div className="flex items-center gap-4">
@@ -119,10 +168,13 @@ export default function Inventory() {
       }
       tableContent={
         <Tabs dir="rtl" value={activeTab} onValueChange={setActiveTab} className="w-full h-full flex flex-col">
-          <div className="flex items-center justify-between px-6 py-3 border-b shrink-0">
+          <div className="flex items-center px-6 py-2 border-b shrink-0">
             <TabsList className="bg-slate-100 p-0.5 rounded-lg">
               <TabsTrigger value="movements" className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:font-bold">
                 <History className="w-3.5 h-3.5 ml-1.5 shrink-0" />سجل الحركات
+              </TabsTrigger>
+              <TabsTrigger value="transfers" className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:font-bold">
+                <ArrowLeftRight className="w-3.5 h-3.5 ml-1.5 shrink-0" />التحويلات
               </TabsTrigger>
               <TabsTrigger value="warehouses" className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:font-bold">
                 <Warehouse className="w-3.5 h-3.5 ml-1.5 shrink-0" />المستودعات
@@ -139,7 +191,12 @@ export default function Inventory() {
               onSearchChange={setSearch}
               selectedId={selectedMovementId}
               onRowClick={(m) => setSelectedMovementId(m.id === selectedMovementId ? null : m.id)}
+              transferRefs={transferRefs}
             />
+          </TabsContent>
+
+          <TabsContent value="transfers" className="flex-1 m-0 p-0 overflow-hidden">
+            <TransferTable movements={movements} warehouses={warehouses} />
           </TabsContent>
 
           <TabsContent value="warehouses" className="flex-1 m-0 p-6 overflow-auto">
@@ -147,14 +204,32 @@ export default function Inventory() {
               warehouses={warehouses}
               loading={warehousesLoading || warehousesRefetching}
               onRefresh={refreshAll}
-              onAdd={() => { setWarehouseEditItem(null); setWarehouseFormOpen(true); }}
-              onEdit={(w) => { setWarehouseEditItem(w); setWarehouseFormOpen(true); }}
+              onAdd={() => { setTransferFormOpen(false); setWarehouseEditItem(null); setWarehouseFormOpen(true); }}
+              onEdit={(w) => { setTransferFormOpen(false); setWarehouseEditItem(w); setWarehouseFormOpen(true); }}
             />
           </TabsContent>
         </Tabs>
       }
-      sidePanel={<WarehouseForm open={warehouseFormOpen} onClose={handleCloseForm} onSaved={handleFormSaved} editItem={warehouseEditItem} />}
-      isPanelOpen={warehouseFormOpen}
+      sidePanel={
+        warehouseFormOpen ? (
+          <WarehouseForm
+            open={warehouseFormOpen}
+            onClose={handleCloseForm}
+            onSaved={handleFormSaved}
+            editItem={warehouseEditItem}
+          />
+        ) : transferFormOpen ? (
+          <TransferForm
+            open={transferFormOpen}
+            onClose={() => setTransferFormOpen(false)}
+            warehouses={warehouses}
+            products={products}
+            onSave={handleCreateTransfer}
+            saving={savingTransfer}
+          />
+        ) : null
+      }
+      isPanelOpen={warehouseFormOpen || transferFormOpen}
     />
   );
 }
