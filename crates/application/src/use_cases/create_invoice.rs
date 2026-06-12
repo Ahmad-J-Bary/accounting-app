@@ -45,7 +45,20 @@ impl CreateInvoiceUseCase {
             lines.push(InvoiceLine::new(
                 material_id,
                 quantity,
-                domain::shared::money::Money::new(unit_price, base_currency.clone()),
+                domain::shared::monetary_amount::MonetaryAmount::from_base(unit_price, base_currency.clone()),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
             ));
         }
 

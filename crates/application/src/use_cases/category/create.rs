@@ -62,10 +62,8 @@ impl CreateCategoryUseCase {
             if all_cats.iter().any(|c| c.parent_id.as_ref() == Some(pid) && c.name == trimmed) {
                 return Err(AppError::Invalid(format!("يوجد تصنيف فرعي بنفس الاسم «{}» ضمن نفس التصنيف الأساسي", trimmed)));
             }
-        } else {
-            if all_cats.iter().any(|c| c.is_root() && c.name == trimmed) {
-                return Err(AppError::Invalid(format!("يوجد تصنيف أساسي بنفس الاسم «{}»", trimmed)));
-            }
+        } else if all_cats.iter().any(|c| c.is_root() && c.name == trimmed) {
+            return Err(AppError::Invalid(format!("يوجد تصنيف أساسي بنفس الاسم «{}»", trimmed)));
         }
 
         let category = MaterialCategory::new(

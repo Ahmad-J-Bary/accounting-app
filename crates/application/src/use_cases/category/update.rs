@@ -32,10 +32,8 @@ impl UpdateCategoryUseCase {
                 if all_cats.iter().any(|c| c.is_root() && c.name == trimmed && c.id != cid) {
                     return Err(AppError::Invalid(format!("يوجد تصنيف أساسي بنفس الاسم «{}»", trimmed)));
                 }
-            } else {
-                if all_cats.iter().any(|c| c.parent_id == category.parent_id && c.name == trimmed && c.id != cid) {
-                    return Err(AppError::Invalid(format!("يوجد تصنيف فرعي بنفس الاسم «{}» ضمن نفس التصنيف الأساسي", trimmed)));
-                }
+            } else if all_cats.iter().any(|c| c.parent_id == category.parent_id && c.name == trimmed && c.id != cid) {
+                return Err(AppError::Invalid(format!("يوجد تصنيف فرعي بنفس الاسم «{}» ضمن نفس التصنيف الأساسي", trimmed)));
             }
         }
 

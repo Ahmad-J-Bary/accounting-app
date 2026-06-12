@@ -165,7 +165,7 @@ mod tests {
             MaterialId(Uuid::new_v4()),
             dec!(2),
             MonetaryAmount::from_base(dec!(50), base_currency.clone()),
-            None, None, None, None, None, None, None, None, None, None, None, None
+            None, None, None, None, None, None, None, None, None, None, None, None, None
         )];
 
         let result = Invoice::new(
@@ -187,13 +187,13 @@ mod tests {
                 MaterialId(Uuid::new_v4()),
                 dec!(2),
                 MonetaryAmount::from_base(dec!(50), base_currency.clone()),
-                None, None, None, None, None, None, None, None, None, None, None, None
+                None, None, None, None, None, None, None, None, None, None, None, None, None
             ),
             InvoiceLine::new(
                 MaterialId(Uuid::new_v4()),
                 dec!(3),
                 MonetaryAmount::from_base(dec!(100), base_currency.clone()),
-                None, None, None, None, None, None, None, None, None, None, None, None
+                None, None, None, None, None, None, None, None, None, None, None, None, None
             ),
         ];
 
@@ -217,7 +217,7 @@ mod tests {
             MaterialId(Uuid::new_v4()),
             dec!(2),
             MonetaryAmount::from_base(dec!(50), base_currency.clone()),
-            None, None, None, None, None, None, None, None, None, None, None, None
+            None, None, None, None, None, None, None, None, None, None, None, None, None
         )];
 
         let mut invoice = Invoice::new(
@@ -240,7 +240,7 @@ mod tests {
             MaterialId(Uuid::new_v4()),
             dec!(2),
             MonetaryAmount::from_base(dec!(50), base_currency.clone()),
-            None, None, None, None, None, None, None, None, None, None, None, None
+            None, None, None, None, None, None, None, None, None, None, None, None, None
         )];
 
         let mut invoice = Invoice::new(
@@ -257,7 +257,7 @@ mod tests {
             MaterialId(Uuid::new_v4()),
             dec!(1),
             MonetaryAmount::from_base(dec!(30), base_currency.clone()),
-            None, None, None, None, None, None, None, None, None, None, None, None
+            None, None, None, None, None, None, None, None, None, None, None, None, None
         );
 
         assert!(invoice.add_line(new_line).is_err());
@@ -271,7 +271,7 @@ mod tests {
             MaterialId(Uuid::new_v4()),
             dec!(2),
             MonetaryAmount::from_base(dec!(50), base_currency.clone()),
-            None, None, None, None, None, None, None, None, None, None, None, None
+            None, None, None, None, None, None, None, None, None, None, None, None, None
         )];
 
         let mut invoice = Invoice::new(
@@ -295,7 +295,7 @@ mod tests {
             MaterialId(Uuid::new_v4()),
             dec!(-1),
             MonetaryAmount::from_base(dec!(50), base_currency.clone()),
-            None, None, None, None, None, None, None, None, None, None, None, None
+            None, None, None, None, None, None, None, None, None, None, None, None, None
         )];
 
         let result = Invoice::new(
@@ -316,7 +316,7 @@ mod tests {
             MaterialId(Uuid::new_v4()),
             dec!(2),
             MonetaryAmount::from_base(dec!(-50), base_currency.clone()),
-            None, None, None, None, None, None, None, None, None, None, None, None
+            None, None, None, None, None, None, None, None, None, None, None, None, None
         )];
 
         let result = Invoice::new(
