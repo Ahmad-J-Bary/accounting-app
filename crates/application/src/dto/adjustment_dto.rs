@@ -14,12 +14,24 @@ pub struct StockAdjustmentDto {
     pub total_cost: String,
     pub total_cost_base: String,
     pub notes: Option<String>,
+    pub reference: Option<String>,
     pub adjustment_date: String,
     pub created_at: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateStockAdjustmentRequest {
+    pub material_id: String,
+    pub actual_quantity: f64,
+    pub unit_cost: f64,
+    pub reason: Option<String>,
+    pub notes: Option<String>,
+    pub adjustment_date: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateStockAdjustmentRequest {
+    pub id: String,
     pub material_id: String,
     pub actual_quantity: f64,
     pub unit_cost: f64,

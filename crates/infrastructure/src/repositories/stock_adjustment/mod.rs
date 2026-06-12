@@ -34,4 +34,12 @@ impl StockAdjustmentRepository for SqliteStockAdjustmentRepository {
     async fn list_all(&self) -> Result<Vec<StockAdjustment>, AppError> {
         queries::list_all(&self.pool).await
     }
+
+    async fn delete(&self, id: &StockAdjustmentId) -> Result<(), AppError> {
+        commands::delete(&self.pool, id).await
+    }
+
+    async fn count(&self) -> Result<i64, AppError> {
+        queries::count(&self.pool).await
+    }
 }

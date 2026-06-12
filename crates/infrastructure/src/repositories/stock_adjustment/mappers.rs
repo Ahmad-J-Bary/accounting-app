@@ -16,7 +16,8 @@ pub fn row_to_adjustment(row: AdjustmentRow) -> Result<StockAdjustment, AppError
         difference: Decimal::from_str(&row.difference).unwrap_or(Decimal::ZERO),
         reason: row.reason,
         unit_cost: Decimal::from_str(&row.unit_cost).unwrap_or(Decimal::ZERO),
-        notes: row.notes,
+        notes: row.notes.clone(),
+        reference: row.reference,
         adjustment_date: DateTime::parse_from_rfc3339(&row.adjustment_date).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
         created_at: DateTime::parse_from_rfc3339(&row.created_at).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
     })

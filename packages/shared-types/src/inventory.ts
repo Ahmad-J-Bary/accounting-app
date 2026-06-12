@@ -44,11 +44,22 @@ export interface StockAdjustment {
   total_cost: string;
   total_cost_base: string;
   notes?: string;
+  reference?: string | null;
   adjustment_date: string;
   created_at: string;
 }
 
 export interface CreateStockAdjustmentRequest {
+  material_id: string;
+  actual_quantity: number;
+  unit_cost: number;
+  reason?: string;
+  notes?: string;
+  adjustment_date: string;
+}
+
+export interface UpdateStockAdjustmentRequest {
+  id: string;
   material_id: string;
   actual_quantity: number;
   unit_cost: number;

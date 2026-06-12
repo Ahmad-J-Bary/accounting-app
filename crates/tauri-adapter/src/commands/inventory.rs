@@ -72,6 +72,20 @@ pub async fn get_material_available_lots(
 }
 
 #[tauri::command]
+pub async fn get_stock_balance(
+    state: State<'_, AppState>,
+    material_id: String,
+) -> Result<String, String> {
+    let mid = material_id.parse()
+        .map_err(|_| "معرّف المادة غير صالح".to_string())?;
+    let balance = state.stock_movement_repo
+        .get_stock_balance(&mid)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(balance.to_string())
+}
+
+#[tauri::command]
 pub async fn get_material_costing_method(
     state: State<'_, AppState>,
     material_id: String,

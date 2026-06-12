@@ -1,22 +1,22 @@
 use std::sync::Arc;
 use chrono::DateTime;
 use rust_decimal::Decimal;
-use domain::inventory::StockAdjustment;
 use domain::inventory::stock_movement::{StockMovement, MovementType};
-use domain::shared::ids::MaterialId;
+use domain::shared::ids::{StockAdjustmentId, MaterialId};
 use crate::ports::stock_adjustment_repository::StockAdjustmentRepository;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
-use crate::dto::adjustment_dto::{CreateStockAdjustmentRequest, StockAdjustmentDto};
+use crate::dto::adjustment_dto::{UpdateStockAdjustmentRequest, StockAdjustmentDto};
 use crate::errors::AppError;
+use super::create::to_dto;
 
-pub struct CreateStockAdjustmentUseCase {
+pub struct UpdateStockAdjustmentUseCase {
     adjustment_repo: Arc<dyn StockAdjustmentRepository>,
     material_repo: Arc<dyn MaterialRepository>,
     movement_repo: Arc<dyn StockMovementRepository>,
 }
 
-impl CreateStockAdjustmentUseCase {
+impl UpdateStockAdjustmentUseCase {
     pub fn new(
         adjustment_repo: Arc<dyn StockAdjustmentRepository>,
         material_repo: Arc<dyn MaterialRepository>,
@@ -25,7 +25,13 @@ impl CreateStockAdjustmentUseCase {
         Self { adjustment_repo, material_repo, movement_repo }
     }
 
-    pub async fn execute(&self, req: CreateStockAdjustmentRequest) -> Result<StockAdjustmentDto, AppError> {
+    pub async fn execute(&self, req: UpdateStockAdjustmentRequest) -> Result<StockAdjustmentDto, AppError> {
+        let id = req.id.parse::<StockAdjustmentId>()
+            .map_err(|_| AppError::Invalid("معرف التسوية غير صالح".into()))?;
+
+        let mut adjustment = self.adjustment_repo.find_by_id(&id).await?
+            .ok_or_else(|| AppError::NotFound("التسوية غير موجودة".into()))?;
+
         let material_id = req.material_id.parse::<MaterialId>()
             .map_err(|_| AppError::Invalid("معرف المادة غير صالح".into()))?;
 
@@ -44,24 +50,29 @@ impl CreateStockAdjustmentUseCase {
             .map_err(|_| AppError::Invalid("التاريخ غير صالح".into()))?
             .with_timezone(&chrono::Utc);
 
-        let mut adjustment = StockAdjustment::new(
-            material_id,
-            current_balance,
-            actual_quantity,
-            req.reason,
-            unit_cost,
-            req.notes.clone(),
-            adjustment_date,
-        ).map_err(|e| AppError::Invalid(e.to_string()))?;
+        if current_balance < Decimal::ZERO {
+            return Err(AppError::Invalid("كمية النظام لا يمكن أن تكون سالبة".into()));
+        }
+        if actual_quantity < Decimal::ZERO {
+            return Err(AppError::Invalid("الكمية المجرودة لا يمكن أن تكون سالبة".into()));
+        }
 
-        // Save initially to get count for reference
-        self.adjustment_repo.save(&adjustment).await?;
-        let count = self.adjustment_repo.count().await?;
-        let reference = format!("{}", count);
-        adjustment.reference = Some(reference.clone());
+        adjustment.material_id = material_id;
+        adjustment.system_quantity = current_balance;
+        adjustment.actual_quantity = actual_quantity;
+        adjustment.difference = actual_quantity - current_balance;
+        adjustment.reason = req.reason;
+        adjustment.unit_cost = unit_cost;
+        adjustment.notes = req.notes;
+        adjustment.adjustment_date = adjustment_date;
+
+        // Delete old stock movement
+        let reference = adjustment.reference.clone().unwrap_or_else(|| adjustment.id.to_string());
+        self.movement_repo.delete_by_reference(&reference, "Adjustment").await?;
+
         self.adjustment_repo.save(&adjustment).await?;
 
-        // Create a stock movement for inventory tracking
+        // Create new stock movement
         let difference = adjustment.difference;
         let abs_diff = difference.abs();
         if abs_diff > Decimal::ZERO {
@@ -70,9 +81,12 @@ impl CreateStockAdjustmentUseCase {
             } else {
                 "تسوية: عجز".to_string()
             };
-            let quantity_unit_cost = unit_cost / abs_diff;
-            let total_cost_value = unit_cost;
-            let movement_notes = if let Some(ref user_notes) = req.notes {
+            let quantity_unit_cost = if abs_diff > Decimal::ZERO {
+                unit_cost / abs_diff
+            } else {
+                Decimal::ZERO
+            };
+            let movement_notes = if let Some(ref user_notes) = adjustment.notes {
                 format!("{} - {}", notes, user_notes)
             } else {
                 notes
@@ -82,7 +96,7 @@ impl CreateStockAdjustmentUseCase {
                 MovementType::Adjustment,
                 abs_diff,
                 quantity_unit_cost,
-                total_cost_value,
+                unit_cost,
                 reference,
                 movement_notes,
                 adjustment.adjustment_date,
@@ -92,31 +106,5 @@ impl CreateStockAdjustmentUseCase {
         }
 
         Ok(to_dto(adjustment, material.name))
-    }
-}
-
-pub fn to_dto(a: StockAdjustment, material_name: String) -> StockAdjustmentDto {
-    let diff = a.difference;
-    let unit_cost_base = if diff != Decimal::ZERO {
-        a.unit_cost / diff.abs()
-    } else {
-        Decimal::ZERO
-    };
-    StockAdjustmentDto {
-        id: a.id.to_string(),
-        material_id: a.material_id.to_string(),
-        material_name: Some(material_name),
-        system_quantity: a.system_quantity.to_string(),
-        actual_quantity: a.actual_quantity.to_string(),
-        difference: diff.to_string(),
-        reason: a.reason,
-        unit_cost: unit_cost_base.to_string(),
-        unit_cost_base: unit_cost_base.to_string(),
-        total_cost: a.unit_cost.to_string(),
-        total_cost_base: a.unit_cost.to_string(),
-        notes: a.notes,
-        reference: a.reference,
-        adjustment_date: a.adjustment_date.to_rfc3339(),
-        created_at: a.created_at.to_rfc3339(),
     }
 }

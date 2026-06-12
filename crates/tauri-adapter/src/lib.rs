@@ -72,10 +72,14 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             // Stock Adjustments
             commands::adjustment::create_stock_adjustment,
             commands::adjustment::list_stock_adjustments,
+            commands::adjustment::get_stock_adjustment,
+            commands::adjustment::update_stock_adjustment,
+            commands::adjustment::delete_stock_adjustment,
             // Inventory
             commands::inventory::list_stock_movements,
             commands::inventory::list_movements_by_material,
             commands::inventory::get_material_available_lots,
+            commands::inventory::get_stock_balance,
             commands::inventory::get_material_costing_method,
             // Journal Entries
             commands::journal::create_journal_entry,

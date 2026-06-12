@@ -15,6 +15,7 @@ pub struct StockAdjustment {
     pub reason: Option<String>,
     pub unit_cost: Decimal,
     pub notes: Option<String>,
+    pub reference: Option<String>,
     pub adjustment_date: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
 }
@@ -49,6 +50,7 @@ impl StockAdjustment {
             reason,
             unit_cost,
             notes,
+            reference: None,
             adjustment_date,
             created_at: Utc::now(),
         })

@@ -5,6 +5,7 @@ import type {
   UpdateDamagedItemRequest,
   StockAdjustment,
   CreateStockAdjustmentRequest,
+  UpdateStockAdjustmentRequest,
   ProductionOrder,
   CreateProductionOrderRequest,
   StockMovement,
@@ -40,6 +41,18 @@ export const adjustmentService = {
   async listStockAdjustments(): Promise<StockAdjustment[]> {
     return await invoke<StockAdjustment[]>('list_stock_adjustments');
   },
+
+  async getStockAdjustment(id: string): Promise<StockAdjustment> {
+    return await invoke<StockAdjustment>('get_stock_adjustment', { id });
+  },
+
+  async updateStockAdjustment(request: UpdateStockAdjustmentRequest): Promise<StockAdjustment> {
+    return await invoke<StockAdjustment>('update_stock_adjustment', { request });
+  },
+
+  async deleteStockAdjustment(id: string): Promise<void> {
+    return await invoke<void>('delete_stock_adjustment', { id });
+  },
 };
 
 // Production Orders
@@ -68,5 +81,9 @@ export const transferService = {
 export const inventoryService = {
   async listStockMovements(): Promise<StockMovement[]> {
     return await invoke<StockMovement[]>('list_stock_movements');
+  },
+
+  async getStockBalance(materialId: string): Promise<string> {
+    return await invoke<string>('get_stock_balance', { materialId });
   },
 };
