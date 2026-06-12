@@ -19,11 +19,12 @@ impl StockAdjustmentQueries {
         let adjustments = self.repo.list_all().await?;
         let mut dtos = Vec::new();
         for adj in adjustments {
-            let mut dto = to_dto(adj.clone());
-            if let Ok(Some(material)) = self.material_repo.find_by_id(&adj.material_id).await {
-                dto.material_name = Some(material.name);
-            }
-            dtos.push(dto);
+            let material_name = self.material_repo.find_by_id(&adj.material_id).await
+                .ok()
+                .flatten()
+                .map(|m| m.name)
+                .unwrap_or_default();
+            dtos.push(to_dto(adj, material_name));
         }
         Ok(dtos)
     }

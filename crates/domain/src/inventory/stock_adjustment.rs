@@ -13,6 +13,8 @@ pub struct StockAdjustment {
     pub actual_quantity: Decimal,
     pub difference: Decimal,
     pub reason: Option<String>,
+    pub unit_cost: Decimal,
+    pub notes: Option<String>,
     pub adjustment_date: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
 }
@@ -23,6 +25,8 @@ impl StockAdjustment {
         system_quantity: Decimal,
         actual_quantity: Decimal,
         reason: Option<String>,
+        unit_cost: Decimal,
+        notes: Option<String>,
         adjustment_date: DateTime<Utc>,
     ) -> Result<Self, DomainError> {
         if system_quantity < Decimal::ZERO {
@@ -32,7 +36,7 @@ impl StockAdjustment {
         }
         if actual_quantity < Decimal::ZERO {
             return Err(DomainError::Invalid(
-                "الكمية الفعلية لا يمكن أن تكون سالبة".into(),
+                "الكمية المجرودة لا يمكن أن تكون سالبة".into(),
             ));
         }
         let difference = actual_quantity - system_quantity;
@@ -43,6 +47,8 @@ impl StockAdjustment {
             actual_quantity,
             difference,
             reason,
+            unit_cost,
+            notes,
             adjustment_date,
             created_at: Utc::now(),
         })

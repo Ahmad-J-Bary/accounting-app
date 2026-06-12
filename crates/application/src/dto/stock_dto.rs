@@ -44,6 +44,7 @@ pub struct StockMovementDto {
     pub warehouse_id: Option<String>,
     pub movement_date: String,
     pub created_at: String,
+    pub signed_quantity: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

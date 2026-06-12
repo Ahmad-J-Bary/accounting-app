@@ -33,20 +33,27 @@ export interface UpdateDamagedItemRequest {
 // ---- Stock Adjustment ----
 export interface StockAdjustment {
   id: string;
-  product_id: string;
-  product_name?: string;
+  material_id: string;
+  material_name?: string;
   system_quantity: string;
   actual_quantity: string;
   difference: string;
   reason?: string;
+  unit_cost: string;
+  unit_cost_base: string;
+  total_cost: string;
+  total_cost_base: string;
+  notes?: string;
   adjustment_date: string;
   created_at: string;
 }
 
 export interface CreateStockAdjustmentRequest {
-  product_id: string;
+  material_id: string;
   actual_quantity: number;
+  unit_cost: number;
   reason?: string;
+  notes?: string;
   adjustment_date: string;
 }
 
@@ -131,6 +138,7 @@ export interface StockMovement {
   warehouse_id?: string | null;
   movement_date: string;
   created_at: string;
+  signed_quantity?: string | null;
 }
 
 export interface CreateTransferRequest {

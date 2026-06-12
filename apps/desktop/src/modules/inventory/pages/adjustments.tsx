@@ -13,6 +13,7 @@ import { AdjustmentForm } from '@modules/inventory/components/AdjustmentForm';
 
 export default function AdjustmentsPage() {
   const {
+    data,
     filtered: adjustments,
     loading: adjLoading,
     refreshing,
@@ -21,7 +22,7 @@ export default function AdjustmentsPage() {
     refresh,
   } = useDataTable<StockAdjustment>({
     fetchData: () => adjustmentService.listStockAdjustments(),
-    searchFields: ["product_name", "product_id", "reason"],
+    searchFields: ["material_name", "material_id", "notes", "reason"],
   });
 
   const [products, setProducts] = useState<MaterialDto[]>([]);
@@ -43,8 +44,8 @@ export default function AdjustmentsPage() {
 
   useEffect(() => { loadProducts(); }, [loadProducts]);
 
-  const surplusCount = useMemo(() => adjustments.filter((a: StockAdjustment) => parseFloat(a.difference) > 0).length, [adjustments]);
-  const shortageCount = useMemo(() => adjustments.filter((a: StockAdjustment) => parseFloat(a.difference) < 0).length, [adjustments]);
+  const surplusCount = useMemo(() => data.filter((a: StockAdjustment) => parseFloat(a.difference) > 0).length, [data]);
+  const shortageCount = useMemo(() => data.filter((a: StockAdjustment) => parseFloat(a.difference) < 0).length, [data]);
 
   const handleCreate = async (payload: CreateStockAdjustmentRequest) => {
     setSaving(true);
@@ -62,11 +63,12 @@ export default function AdjustmentsPage() {
 
   const isLoading = adjLoading || refreshing || loadingProducts;
 
+  const totalCount = data.length;
   const stats = useMemo(() => [
-    { label: "إجمالي التسويات", value: adjustments.length, icon: Scale, color: "text-slate-900" },
+    { label: "إجمالي التسويات", value: totalCount, icon: Scale, color: "text-slate-900" },
     { label: "فائض مخزون", value: surplusCount, icon: ArrowUpCircle, color: "text-emerald-600" },
     { label: "عجز مخزون", value: shortageCount, icon: ArrowDownCircle, color: "text-rose-600" },
-  ], [adjustments.length, surplusCount, shortageCount]);
+  ], [totalCount, surplusCount, shortageCount]);
 
   return (
     <OperationalTableTemplate
@@ -85,14 +87,15 @@ export default function AdjustmentsPage() {
           onSearchChange={setSearch}
         />
       }
-    >
-      <AdjustmentForm
-        open={showDialog}
-        onOpenChange={setShowDialog}
-        products={products}
-        onSave={handleCreate}
-        saving={saving}
-      />
-    </OperationalTableTemplate>
+      sidePanel={showDialog ? (
+        <AdjustmentForm
+          onClose={() => setShowDialog(false)}
+          products={products}
+          onSave={handleCreate}
+          saving={saving}
+        />
+      ) : null}
+      isPanelOpen={showDialog}
+    />
   );
 }

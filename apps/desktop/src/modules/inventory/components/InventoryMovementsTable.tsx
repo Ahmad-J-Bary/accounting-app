@@ -206,6 +206,14 @@ export function InventoryMovementsTable({
         header: 'الكمية',
         label: 'الكمية',
         accessor: (m) => {
+          if (m.signed_quantity != null) {
+            const sq = parseFloat(m.signed_quantity);
+            return (
+              <span className={cn("tabular-nums font-black text-base", sq >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                {sq >= 0 ? "+" : ""}{sq.toLocaleString()}
+              </span>
+            );
+          }
           const cfg = getMovementType(m.movement_type);
           return (
             <span className={cn("tabular-nums font-black text-base", cfg.inflow ? "text-emerald-600" : "text-rose-600")}>

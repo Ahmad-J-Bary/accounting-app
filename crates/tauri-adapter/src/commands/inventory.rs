@@ -39,6 +39,7 @@ pub async fn list_stock_movements(
             warehouse_id: m.warehouse_id.map(|id| id.to_string()),
             movement_date: m.movement_date.to_rfc3339(),
             created_at: m.created_at.to_rfc3339(),
+            signed_quantity: m.signed_quantity.map(|v| v.to_string()),
         }
     }).collect())
 }

@@ -9,6 +9,11 @@ pub struct StockAdjustmentDto {
     pub actual_quantity: String,
     pub difference: String,
     pub reason: Option<String>,
+    pub unit_cost: String,
+    pub unit_cost_base: String,
+    pub total_cost: String,
+    pub total_cost_base: String,
+    pub notes: Option<String>,
     pub adjustment_date: String,
     pub created_at: String,
 }
@@ -17,6 +22,8 @@ pub struct StockAdjustmentDto {
 pub struct CreateStockAdjustmentRequest {
     pub material_id: String,
     pub actual_quantity: f64,
+    pub unit_cost: f64,
     pub reason: Option<String>,
+    pub notes: Option<String>,
     pub adjustment_date: String,
 }

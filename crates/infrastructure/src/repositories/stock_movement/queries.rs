@@ -7,7 +7,7 @@ use rust_decimal::Decimal;
 use super::models::StockMovementRow;
 use super::mappers::row_to_movement;
 
-const COLUMNS: &str = "id, material_id, quantity, unit_cost, unit_cost_base, total_cost, total_cost_base, raw_total_cost_base, original_currency, fx_rate, movement_type, reason, reference, warehouse_id, movement_date, created_at";
+const COLUMNS: &str = "id, material_id, quantity, unit_cost, unit_cost_base, total_cost, total_cost_base, raw_total_cost_base, original_currency, fx_rate, movement_type, reason, reference, warehouse_id, movement_date, created_at, signed_quantity";
 
 pub async fn find_by_id(pool: &SqlitePool, id: &StockMovementId) -> Result<Option<StockMovement>, AppError> {
     let row = sqlx::query_as::<_, StockMovementRow>(
@@ -60,7 +60,9 @@ pub async fn get_stock_balance(pool: &SqlitePool, material_id: &MaterialId) -> R
     let movements = list_by_material(pool, material_id).await?;
     let mut balance = Decimal::ZERO;
     for m in movements {
-        if m.is_inflow() {
+        if let Some(sq) = m.signed_quantity {
+            balance += sq;
+        } else if m.is_inflow() {
             balance += m.quantity;
         } else if m.is_outflow() {
             balance -= m.quantity;

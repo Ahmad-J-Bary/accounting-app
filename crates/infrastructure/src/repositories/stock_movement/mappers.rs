@@ -39,5 +39,6 @@ pub fn row_to_movement(row: StockMovementRow) -> Result<StockMovement, AppError>
         movement_date: DateTime::parse_from_rfc3339(&row.movement_date).map_err(|e| AppError::Invalid(e.to_string()))?.with_timezone(&Utc),
         created_at: DateTime::parse_from_rfc3339(&row.created_at).map_err(|e| AppError::Invalid(e.to_string()))?.with_timezone(&Utc),
         warehouse_id: row.warehouse_id.and_then(|id| Uuid::parse_str(&id).ok()).map(WarehouseId),
+        signed_quantity: row.signed_quantity.and_then(|v| Decimal::from_str(&v).ok()),
     })
 }

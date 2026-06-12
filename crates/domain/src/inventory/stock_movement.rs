@@ -38,6 +38,7 @@ pub struct StockMovement {
     pub movement_date: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub warehouse_id: Option<WarehouseId>,
+    pub signed_quantity: Option<Decimal>,
 }
 
 impl StockMovement {
@@ -80,6 +81,7 @@ impl StockMovement {
             movement_date,
             created_at: now,
             warehouse_id: None,
+            signed_quantity: None,
         })
     }
 

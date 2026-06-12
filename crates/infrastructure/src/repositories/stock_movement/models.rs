@@ -16,4 +16,5 @@ pub struct StockMovementRow {
     pub warehouse_id: Option<String>,
     pub movement_date: String,
     pub created_at: String,
+    pub signed_quantity: Option<String>,
 }

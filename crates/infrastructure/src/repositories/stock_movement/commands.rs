@@ -19,8 +19,8 @@ pub async fn save(pool: &SqlitePool, movement: &StockMovement) -> Result<(), App
     let warehouse_id = resolve_warehouse_id(pool, movement).await?;
 
     sqlx::query(
-        "INSERT INTO stock_movements (id, material_id, quantity, unit_cost, unit_cost_base, total_cost, total_cost_base, raw_total_cost_base, original_currency, fx_rate, movement_type, reason, reference, warehouse_id, movement_date, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO stock_movements (id, material_id, quantity, unit_cost, unit_cost_base, total_cost, total_cost_base, raw_total_cost_base, original_currency, fx_rate, movement_type, reason, reference, warehouse_id, movement_date, created_at, signed_quantity)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(movement.id.to_string())
     .bind(movement.material_id.to_string())
@@ -38,6 +38,7 @@ pub async fn save(pool: &SqlitePool, movement: &StockMovement) -> Result<(), App
     .bind(warehouse_id)
     .bind(movement.movement_date.to_rfc3339())
     .bind(movement.created_at.to_rfc3339())
+    .bind(movement.signed_quantity.map(|v| v.to_string()))
     .execute(pool)
     .await
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
