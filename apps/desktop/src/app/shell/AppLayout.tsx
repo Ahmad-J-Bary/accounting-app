@@ -21,7 +21,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { tabs, openTab } = useTabs();
   const navigate = useNavigate();
-  const { updateSuccess, isUpdating } = useUpdateChecker();
+  const { phase } = useUpdateChecker();
   const hasSavedRef = useRef(false);
 
   const saveState = useCallback(() => {
@@ -37,14 +37,14 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   }, []);
 
   useEffect(() => {
-    if (updateSuccess) saveState();
-  }, [updateSuccess, saveState]);
+    if (phase === 'ready') saveState();
+  }, [phase, saveState]);
 
   useEffect(() => {
-    const handler = () => { if (isUpdating || updateSuccess) saveState(); };
+    const handler = () => { if (phase === 'downloading' || phase === 'preparing' || phase === 'ready') saveState(); };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
-  }, [isUpdating, updateSuccess, saveState]);
+  }, [phase, saveState]);
 
   const [isExchangeVisible, setIsExchangeVisible] = useState(() => {
     if (typeof window !== 'undefined') {

@@ -1,6 +1,7 @@
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use std::fs::File;
 use std::io::Write;
+use std::sync::Mutex;
 use futures_util::StreamExt;
 
 #[derive(Clone, serde::Serialize)]
@@ -9,8 +10,11 @@ struct DownloadProgress {
     total: Option<u64>,
 }
 
+// Store the path to the downloaded update file so we can use it later
+static UPDATE_FILE_PATH: Mutex<Option<std::path::PathBuf>> = Mutex::new(None);
+
 #[tauri::command]
-pub async fn download_and_install_update(
+pub async fn download_and_prepare_update(
     app: AppHandle,
     url: String,
 ) -> Result<(), String> {
@@ -27,7 +31,9 @@ pub async fn download_and_install_update(
         .map_err(|e| format!("Failed to send request: {}", e))?;
 
     if !response.status().is_success() {
-        return Err(format!("Server returned error status: {}", response.status()));
+        let err = format!("Server returned error status: {}", response.status());
+        let _ = app.emit("update-failed", err.clone());
+        return Err(err);
     }
 
     let total_size = response.content_length();
@@ -76,48 +82,89 @@ pub async fn download_and_install_update(
     // Explicitly flush to disk and drop file to release lock
     file.sync_all().map_err(|e| format!("Failed to sync file to disk: {}", e))?;
     drop(file);
-    
-    // 5. Execute the installer
+
+    // Store the file path for later use
+    *UPDATE_FILE_PATH.lock().unwrap() = Some(file_path.clone());
+
+    // Notify frontend that the update is ready to be applied
+    let _ = app.emit("update-ready", ());
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn apply_update_and_restart(
+    app: AppHandle,
+) -> Result<(), String> {
+    let file_path_opt = UPDATE_FILE_PATH.lock().unwrap().clone();
+    let file_path = file_path_opt.ok_or_else(|| "No update file found".to_string())?;
+
+    let filename = file_path.file_name().and_then(|f| f.to_str()).unwrap_or("");
+
+    // 5. Execute the installer silently
     #[cfg(target_os = "windows")]
     {
         if filename.ends_with(".msi") {
-            std::process::Command::new("msiexec")
+            // /quiet: No user interaction
+            // /norestart: Don't restart automatically (we'll handle that)
+            let status = std::process::Command::new("msiexec")
                 .arg("/i")
                 .arg(&file_path)
-                .arg("/passive") // Runs with simple progress bar, no user interaction
-                .spawn()
+                .arg("/quiet")
+                .arg("/norestart")
+                .status()
                 .map_err(|e| format!("Failed to run MSI installer: {}", e))?;
+
+            if !status.success() {
+                let err = format!("MSI installer returned non-zero exit code: {}", status);
+                let _ = app.emit("update-failed", err.clone());
+                return Err(err);
+            }
         } else {
-            // For EXEs, we use `cmd /C start ""` to invoke ShellExecute, which properly handles UAC elevation
-            std::process::Command::new("cmd")
-                .arg("/C")
-                .arg("start")
-                .arg("")
-                .arg(&file_path)
-                .spawn()
-                .map_err(|e| format!("Failed to run EXE installer: {}", e))?;
+            // For EXE installers, try to find silent options.
+            // Common options: /S, /silent, /quiet, --silent
+            // Let's try /S first (common for NSIS installers)
+            let mut cmd = std::process::Command::new(&file_path);
+            cmd.arg("/S");
+            
+            let status = cmd.status().map_err(|e| format!("Failed to run EXE installer: {}", e))?;
+
+            if !status.success() {
+                // If /S failed, try /silent
+                let mut cmd2 = std::process::Command::new(&file_path);
+                cmd2.arg("/silent");
+                let status2 = cmd2.status();
+                
+                if let Err(e) = status2 {
+                    let err = format!("Failed to run EXE installer (both /S and /silent failed): {}", e);
+                    let _ = app.emit("update-failed", err.clone());
+                    return Err(err);
+                }
+            }
         }
     }
 
     #[cfg(target_os = "macos")]
     {
-        std::process::Command::new("open")
-            .arg(&file_path)
-            .spawn()
-            .map_err(|e| format!("Failed to open DMG: {}", e))?;
+        // For DMG: mount it, copy app to Applications, then restart
+        unimplemented!("macOS updates not fully implemented yet");
     }
 
     #[cfg(target_os = "linux")]
     {
-        std::process::Command::new("xdg-open")
-            .arg(&file_path)
-            .spawn()
-            .map_err(|e| format!("Failed to open package: {}", e))?;
+        unimplemented!("Linux updates not fully implemented yet");
     }
 
-    // 6. Notify frontend that the update has been installed, then exit
-    let _ = app.emit("update-installed", ());
-    // Small delay to let the event flush before the process exits
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    std::process::exit(0);
+    // Restart the app
+    tauri::process::restart(&app.env());
+    Ok(())
+}
+
+// Keep the old command for backwards compatibility
+#[tauri::command]
+pub async fn download_and_install_update(
+    app: AppHandle,
+    url: String,
+) -> Result<(), String> {
+    download_and_prepare_update(app.clone(), url).await?;
+    apply_update_and_restart(app).await
 }

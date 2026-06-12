@@ -138,8 +138,10 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::currency::get_world_currencies,
             commands::currency::is_setup_complete,
             commands::currency::setup_currencies,
-            // Update command
+            // Update commands
             commands::update::download_and_install_update,
+            commands::update::download_and_prepare_update,
+            commands::update::apply_update_and_restart,
             // Returns commands
             commands::returns::create_sales_return,
             commands::returns::list_sales_returns,
