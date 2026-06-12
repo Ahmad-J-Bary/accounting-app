@@ -58,6 +58,7 @@ impl CreateInvoiceUseCase {
                 None,
                 None,
                 None,
+                None,
             ));
         }
 

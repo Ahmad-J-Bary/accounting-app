@@ -346,6 +346,7 @@ export default function Materials() {
               onClose={() => setIsFormOpen(false)}
               material={editMaterial}
               categories={categories}
+              warehouses={warehouses}
               onSave={handleSave}
               saving={saving}
               onCategoryCreated={(cat) => setCategories((prev) => prev.some((c) => c.id === cat.id) ? prev : [...prev, cat])}

@@ -10,6 +10,7 @@ import type { MaterialDto, StockMovementDetailDto, InventoryLotDto } from "@erp/
 import { materialService } from '@modules/inventory/api/materialService';
 import { lotService } from '@modules/inventory/api/lotService';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { buildStockByWarehouse } from '@modules/inventory/lib/stockUtils';
 import {
   SidebarShell,
   SidebarHeader,
@@ -102,23 +103,23 @@ export function MaterialDetailPanel({
   }, [movements]);
 
   const warehouseStock = useMemo(() => {
-    const stockMap = new Map<string, { warehouseId: string; warehouseName: string; quantity: number }>();
+    const byWh = buildStockByWarehouse(movements).get(material?.id || "");
+    if (!byWh) return [];
+    const nameMap = new Map<string, string>();
     for (const m of movements) {
-      if (!m.warehouse_id) continue;
-      const existing = stockMap.get(m.warehouse_id);
-      const qty = parseFloat(m.quantity || "0");
-      if (existing) {
-        existing.quantity += m.is_inflow ? qty : -qty;
-      } else {
-        stockMap.set(m.warehouse_id, {
-          warehouseId: m.warehouse_id,
-          warehouseName: m.warehouse_name || m.warehouse_id,
-          quantity: m.is_inflow ? qty : -qty,
-        });
+      if (m.warehouse_id && m.warehouse_name) {
+        nameMap.set(m.warehouse_id, m.warehouse_name);
       }
     }
-    return Array.from(stockMap.values()).filter(s => s.quantity !== 0).sort((a, b) => b.quantity - a.quantity);
-  }, [movements]);
+    return Array.from(byWh.entries())
+      .map(([wid, qty]) => ({
+        warehouseId: wid,
+        warehouseName: nameMap.get(wid) || wid,
+        quantity: qty,
+      }))
+      .filter(s => s.quantity !== 0)
+      .sort((a, b) => b.quantity - a.quantity);
+  }, [movements, material]);
 
 
   if (!material) return null;

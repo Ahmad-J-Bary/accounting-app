@@ -33,6 +33,11 @@ impl UpdateMaterialUseCase {
         material.image_path = req.image_path;
         material.default_purchase_unit_id = resolve_default_unit_id(req.default_purchase_unit_id, &material.units)?;
         material.default_sale_unit_id = resolve_default_unit_id(req.default_sale_unit_id, &material.units)?;
+        material.default_purchase_currency = req.default_purchase_currency;
+        material.default_sale_currency = req.default_sale_currency;
+        material.default_warehouse_id = req.default_warehouse_id;
+        material.has_expiry = req.has_expiry.unwrap_or(false);
+        material.expiry_alert_before_days = req.expiry_alert_before_days.unwrap_or(0);
 
         let mut category_ids = vec![];
         for cid_str in req.category_ids {

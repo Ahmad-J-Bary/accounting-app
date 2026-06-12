@@ -12,6 +12,11 @@ pub struct MaterialRow {
     pub image_path: Option<String>,
     pub default_purchase_unit_id: Option<String>,
     pub default_sale_unit_id: Option<String>,
+    pub default_purchase_currency: Option<String>,
+    pub default_sale_currency: Option<String>,
+    pub default_warehouse_id: Option<String>,
+    pub has_expiry: bool,
+    pub expiry_alert_before_days: i32,
     pub created_at: String,
     pub updated_at: String,
 }

@@ -154,6 +154,7 @@ export default function OpeningBalance() {
           discount: "",
           line_total: 0,
           warehouse_id: l.warehouse_id || defaultWarehouseId,
+          expiry_date: l.expiry_date || "",
         };
         line.line_total = calcLineTotal(line);
         return line;
@@ -163,7 +164,7 @@ export default function OpeningBalance() {
     }).finally(() => {
       setLoading(false);
     });
-  }, [id, setLines]);
+  }, [id, setLines, defaultWarehouseId]);
 
   useEffect(() => {
     categoryService.listCategories().then(setCategories).catch(() => {});
@@ -286,6 +287,14 @@ export default function OpeningBalance() {
           })),
         ),
       {
+        key: "expiry_date",
+        header: "تاريخ الانتهاء",
+        width: "w-[110px]",
+        align: "center",
+        type: "date",
+        defaultVisible: false,
+      },
+      {
         key: "notes",
         header: "ملاحظات",
         width: "flex-[1]",
@@ -295,6 +304,17 @@ export default function OpeningBalance() {
       },
     ];
   }, [currencies, baseCurrency]);
+
+  const dynamicVisibleColumns = useMemo<string[]>(() => {
+    const cols: string[] = [];
+    const hasExpiryLine = lines.some(ln => {
+      if (!ln.material_id) return false;
+      const mat = materials.find(m => m.id === ln.material_id);
+      return mat?.has_expiry;
+    });
+    if (hasExpiryLine) cols.push("expiry_date");
+    return cols;
+  }, [lines, materials]);
 
   const {
     enrichedLines,
@@ -396,6 +416,7 @@ export default function OpeningBalance() {
           readOnly={isReadOnly}
           docCurrency={header.currency_code}
           exchangeRate={header.exchange_rate}
+          dynamicVisibleColumns={dynamicVisibleColumns}
         />
       }
       summaryPanel={

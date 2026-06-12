@@ -403,6 +403,58 @@ export function MaterialTable({
     });
 
     cols.push({
+      id: "default_warehouse",
+      header: "المستودع الافتراضي",
+      label: "المستودع الافتراضي",
+      accessor: (row) => (
+        <span className="text-[11px] text-slate-500">{row.default_warehouse_id || "—"}</span>
+      ),
+      className: "text-center",
+    });
+
+    cols.push({
+      id: "default_purchase_currency",
+      header: "عملة الشراء",
+      label: "عملة الشراء",
+      accessor: (row) => (
+        <span className="text-[11px] text-slate-500">{row.default_purchase_currency || "—"}</span>
+      ),
+      className: "text-center",
+    });
+
+    cols.push({
+      id: "default_sale_currency",
+      header: "عملة البيع",
+      label: "عملة البيع",
+      accessor: (row) => (
+        <span className="text-[11px] text-slate-500">{row.default_sale_currency || "—"}</span>
+      ),
+      className: "text-center",
+    });
+
+    cols.push({
+      id: "has_expiry",
+      header: "صلاحية",
+      label: "صلاحية",
+      accessor: (row) => (
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${row.has_expiry ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}>
+          {row.has_expiry ? "له صلاحية" : "بدون صلاحية"}
+        </span>
+      ),
+      className: "text-center",
+    });
+
+    cols.push({
+      id: "expiry_alert_before_days",
+      header: "التنبيه (أيام)",
+      label: "التنبيه قبل الصلاحية (أيام)",
+      accessor: (row) => (
+        <span className="text-[11px] text-slate-600">{row.has_expiry ? row.expiry_alert_before_days : "—"}</span>
+      ),
+      className: "text-center",
+    });
+
+    cols.push({
       id: "actions",
       header: "إجراءات",
       label: "إجراءات",
@@ -416,7 +468,7 @@ export function MaterialTable({
     });
 
     return cols;
-  }, [categories, onManageUnits, formatAmount, currencies, onEdit, onDelete, onRowClick, rawPriceBase, unitCostBase, extraCostBase, salePriceBase, totalReceived, totalAvailable, isBaseCurrency]);
+  }, [categories, onManageUnits, formatAmount, currencies, onEdit, onDelete, onRowClick, rawPriceBase, unitCostBase, extraCostBase, totalReceived, totalAvailable, isBaseCurrency]);
 
   // Default visible: only base currency's money columns are shown.
   const defaultVisible = useMemo(() => {
@@ -447,6 +499,7 @@ export function MaterialTable({
       "costing_method",
       "active_lots_count",
       "notes",
+      "has_expiry",
       "actions",
     );
     return ids;

@@ -91,6 +91,7 @@ export function useInvoiceLifecycle({
 
   const [view, setView] = useState<"list" | "editor">("list");
   const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
+  const [purchaseInvoicesForExpiry, setPurchaseInvoicesForExpiry] = useState<InvoiceDto[]>([]);
   const [parties, setParties] = useState<Array<CustomerDto | SupplierDto>>([]);
   const [materials, setMaterials] = useState<MaterialDto[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
@@ -110,6 +111,26 @@ export function useInvoiceLifecycle({
         : appSettings.purchase_warehouse_id) || warehouses.find(w => w.is_default)?.id
     : undefined;
 
+  // Build a map of material_id → latest expiry_date from purchase/opening balance invoices
+  // Used to pre-fill expiry_date when selecting a material in a sales invoice
+  const defaultExpiryMap = useMemo(() => {
+    const map = new Map<string, string>();
+    const source = invoiceType === "Sales" ? purchaseInvoicesForExpiry : invoices;
+    for (const inv of source) {
+      for (const line of inv.lines) {
+        if (line.material_id && line.expiry_date && !map.has(line.material_id)) {
+          map.set(line.material_id, line.expiry_date);
+        }
+      }
+    }
+    return map;
+  }, [invoiceType, purchaseInvoicesForExpiry, invoices]);
+
+  const getDefaultExpiryDate = useCallback(
+    (materialId: string) => defaultExpiryMap.get(materialId),
+    [defaultExpiryMap],
+  );
+
   const {
     lines,
     setLines,
@@ -122,6 +143,7 @@ export function useInvoiceLifecycle({
     priceField,
     materials,
     defaultWarehouseId,
+    getDefaultExpiryDate,
   });
 
   const isNew = location.pathname.includes("/new");
@@ -138,13 +160,19 @@ export function useInvoiceLifecycle({
             ? invoiceService.listInvoicesByType("Sales")
             : invoiceService.listInvoicesByType(["Purchase", "OpeningBalance"]);
 
+        const purchaseExpiryPromise =
+          invoiceType === "Sales"
+            ? invoiceService.listInvoicesByType(["Purchase", "OpeningBalance"])
+            : Promise.resolve([] as InvoiceDto[]);
+
         const listPartiesPromise =
           partyType === "customer"
             ? customerService.listCustomers()
             : supplierService.listSuppliers();
 
-        const [invData, partyData, matData, whData, settingsData] = await Promise.all([
+        const [invData, purchaseExpiryData, partyData, matData, whData, settingsData] = await Promise.all([
           listInvoicesPromise,
+          purchaseExpiryPromise,
           listPartiesPromise,
           materialService.listMaterials(),
           warehouseService.listWarehouses(),
@@ -152,6 +180,7 @@ export function useInvoiceLifecycle({
         ]);
 
         setInvoices(invData);
+        setPurchaseInvoicesForExpiry(purchaseExpiryData);
         setParties(partyData);
         setMaterials(matData);
         setWarehouses(whData);
@@ -287,6 +316,14 @@ export function useInvoiceLifecycle({
           defaultVisible: curr.code === baseCurrency?.code,
         })),
         {
+          key: "expiry_date",
+          header: "تاريخ الانتهاء",
+          width: "w-[110px]",
+          align: "center",
+          type: "date",
+          defaultVisible: false,
+        },
+        {
           key: "notes",
           header: "ملاحظات",
           width: "flex-[1]",
@@ -296,7 +333,15 @@ export function useInvoiceLifecycle({
         },
       ];
     }
-    return [
+    const baseCols: DocumentColumn[] = [
+      {
+        key: "expiry_date",
+        header: "تاريخ الانتهاء",
+        width: "w-[110px]",
+        align: "center",
+        type: "date",
+        defaultVisible: false,
+      },
       {
         key: "notes",
         header: "ملاحظات",
@@ -306,6 +351,7 @@ export function useInvoiceLifecycle({
         defaultVisible: true,
       },
     ];
+    return baseCols;
   }, [invoiceType, currencies, baseCurrency]);
 
   const prePriceExtraCols = useMemo<DocumentColumn[]>(() => {
@@ -350,6 +396,18 @@ export function useInvoiceLifecycle({
       setHeaderState((s) => ({ ...s, currency_code: baseCurrency.code, exchange_rate: rate.toString() }));
     }
   }, [isNew, baseCurrency, rateMap, headerState.currency_code]);
+
+  // Compute columns to auto-show based on line data
+  const dynamicVisibleColumns = useMemo<string[]>(() => {
+    const cols: string[] = [];
+    const hasExpiryLine = lines.some(ln => {
+      if (!ln.material_id) return false;
+      const mat = materials.find(m => m.id === ln.material_id);
+      return mat?.has_expiry;
+    });
+    if (hasExpiryLine) cols.push("expiry_date");
+    return cols;
+  }, [lines, materials]);
 
   // Action handlers
   const handleSave = async (andPost = false) => {
@@ -579,6 +637,7 @@ export function useInvoiceLifecycle({
     displayCurrency,
     setDisplayCurrency: onCurrencyChange,
     gridColumns,
+    dynamicVisibleColumns,
 
     formatMonetaryAmount,
     openTab,

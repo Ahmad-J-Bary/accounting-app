@@ -46,7 +46,8 @@ export interface DocumentColumn {
     | "unit_select"
     | "tier_select"
     | "price_tier"
-    | "warehouse_select";
+    | "warehouse_select"
+    | "date";
 }
 
 export interface GenericDocumentGridProps {
@@ -62,6 +63,7 @@ export interface GenericDocumentGridProps {
   preferenceKey?: string;
   docCurrency?: string;
   exchangeRate?: string;
+  dynamicVisibleColumns?: string[];
 }
 
 export function GenericDocumentGrid({
@@ -77,6 +79,7 @@ export function GenericDocumentGrid({
   preferenceKey = "generic_grid",
   docCurrency = "",
   exchangeRate = "1",
+  dynamicVisibleColumns,
 }: GenericDocumentGridProps) {
   const { baseCurrency, convertBetween, currencies } = useCurrencyContext();
   const { settings, getDensityPadding } = useTableSettings();
@@ -93,11 +96,27 @@ export function GenericDocumentGrid({
 
   const defaultVisible = useMemo(() => columns.filter((c) => c.defaultVisible !== false).map((c) => c.key), [columns]);
   const allColumnIds = useMemo(() => columns.map((c) => c.key), [columns]);
-  const { visibleColumns, toggleColumn, isVisible, isModified, resetToDefault } = useColumnPreferences({
+  const { visibleColumns, setVisibleColumns, toggleColumn, isVisible, isModified, resetToDefault } = useColumnPreferences({
     tableId: preferenceKey,
     allColumnIds,
     defaultVisibleColumns: defaultVisible,
   });
+
+  // Auto-show columns requested by the parent (e.g. expiry_date when a material with expiry is selected)
+  useEffect(() => {
+    if (!dynamicVisibleColumns?.length) return;
+    setVisibleColumns(prev => {
+      let changed = false;
+      const next = [...prev];
+      for (const colKey of dynamicVisibleColumns) {
+        if (!next.includes(colKey)) {
+          next.push(colKey);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [dynamicVisibleColumns, setVisibleColumns]);
 
   const filteredColumns = useMemo(
     () => columns.filter((c) => visibleColumns.includes(c.key)),

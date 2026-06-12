@@ -10,6 +10,7 @@ interface UseDocumentEditorProps {
   materials?: MaterialDto[];
   invoiceType?: "Sales" | "Purchase" | "OpeningBalance";
   defaultWarehouseId?: string;
+  getDefaultExpiryDate?: (materialId: string) => string | undefined;
 }
 
 /**
@@ -24,6 +25,7 @@ export function useDocumentEditor({
   materials = [],
   invoiceType = "Purchase",
   defaultWarehouseId,
+  getDefaultExpiryDate,
 }: UseDocumentEditorProps & { materials?: MaterialDto[] } = {}) {
   const [_lines, _rawSetLines] = useState<GridLine[]>(
     initialLines.length > 0 ? initialLines : [newGridLine(defaultWarehouseId)]
@@ -211,7 +213,7 @@ export function useDocumentEditor({
       onLinesChange?.(next);
       return next;
     });
-  }, [onLinesChange, materials, priceField, invoiceType]);
+  }, [onLinesChange, materials, priceField, invoiceType, setLines]);
 
   const addLine = useCallback(() => {
     setLines(prev => {
@@ -219,7 +221,7 @@ export function useDocumentEditor({
       onLinesChange?.(next);
       return next;
     });
-  }, [onLinesChange, defaultWarehouseId]);
+  }, [onLinesChange, defaultWarehouseId, setLines]);
 
   const removeLine = useCallback((index: number) => {
     setLines(prev => {
@@ -228,7 +230,7 @@ export function useDocumentEditor({
       onLinesChange?.(next);
       return next;
     });
-  }, [onLinesChange, defaultWarehouseId]);
+  }, [onLinesChange, defaultWarehouseId, setLines]);
 
   const selectMaterial = useCallback((index: number, material: MaterialDto) => {
     const defaultUnitId = priceField === "last_purchase_price" ? material.default_purchase_unit_id : material.default_sale_unit_id;
@@ -258,6 +260,8 @@ export function useDocumentEditor({
       costPrice = price;
     }
 
+    const expiryDate = getDefaultExpiryDate?.(material.id);
+
     updateLine(index, {
       material_id: material.id,
       material_name: material.name,
@@ -278,7 +282,8 @@ export function useDocumentEditor({
       tier: "retail",
       cost_price: costPrice,
       purchase_price: material.last_purchase_price?.toString() || "",
-      warehouse_id: defaultWarehouseId,
+      warehouse_id: material.default_warehouse_id || defaultWarehouseId,
+      expiry_date: expiryDate || "",
     });
 
     // If this was the last line, auto-add a new empty line
@@ -288,7 +293,7 @@ export function useDocumentEditor({
       }
       return prev;
     });
-  }, [updateLine, priceField, defaultWarehouseId]);
+  }, [updateLine, priceField, defaultWarehouseId, setLines, getDefaultExpiryDate]);
 
   const totals = useMemo(() => {
     const subtotal = _lines.reduce((sum, ln) => sum + (ln.line_total || 0), 0);

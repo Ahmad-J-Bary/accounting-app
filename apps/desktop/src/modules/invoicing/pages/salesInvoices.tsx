@@ -41,6 +41,7 @@ export default function SalesInvoices() {
     displayCurrency,
     setDisplayCurrency,
     gridColumns,
+    dynamicVisibleColumns,
     formatMonetaryAmount,
     openTab,
     closeTab,
@@ -122,6 +123,7 @@ export default function SalesInvoices() {
             preferenceKey="sales_invoice_grid_v2"
             docCurrency={headerState.currency_code}
             exchangeRate={headerState.exchange_rate}
+            dynamicVisibleColumns={dynamicVisibleColumns}
           />
         }
         summaryPanel={

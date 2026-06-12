@@ -443,6 +443,32 @@ export function DocumentGridCell({
     );
   }
 
+  if (col.type === "date") {
+    const dateVal = getCellValue(line, col.key) || "";
+    const material = line.material_id ? materials.find(m => m.id === line.material_id) : undefined;
+
+    // For expiry_date, show "—" when the material has no expiry
+    if (col.key === "expiry_date" && material && !material.has_expiry) {
+      return (
+        <CellWrapper column={col} config={config} isReadonlyCell>
+          <span className="text-[11px] text-slate-400">—</span>
+        </CellWrapper>
+      );
+    }
+
+    return readOnly ? (
+      <span className="text-[11px] text-slate-600">{dateVal}</span>
+    ) : (
+      <input
+        type="date"
+        value={dateVal}
+        onChange={e => onCellChange(rowIdx, col.key, e.target.value)}
+        className="w-full bg-transparent border-none outline-none text-[11px] text-slate-700 cursor-default"
+        style={{ direction: "ltr" }}
+      />
+    );
+  }
+
   if (readOnly) {
     return (
       <CellWrapper column={col} config={config} isReadonlyCell>

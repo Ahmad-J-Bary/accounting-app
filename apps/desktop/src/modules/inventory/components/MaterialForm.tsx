@@ -11,7 +11,7 @@ import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { toast } from "sonner";
 import { cn } from "@shared/lib/utils";
-import { Plus, Edit, Hash, Barcode, Package, Layers, Shuffle, Check, Scale, Boxes, Package2, FileText, Globe, Image as ImageIcon, DollarSign, Tag, ShoppingCart, TrendingUp, Search, ChevronDown } from "lucide-react";
+import { Plus, Edit, Hash, Barcode, Package, Layers, Shuffle, Check, Scale, Boxes, Package2, FileText, Globe, Image as ImageIcon, DollarSign, Tag, ShoppingCart, TrendingUp, Search, ChevronDown, Warehouse } from "lucide-react";
 import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest } from "@erp/shared-types";
 import { materialCodeService } from "@modules/inventory/api/materialCodeService";
 import { categoryService } from "@modules/inventory/api/categoryService";
@@ -35,6 +35,7 @@ interface MaterialFormProps {
   onSave: (data: CreateMaterialRequest | UpdateMaterialRequest) => Promise<void>;
   saving: boolean;
   onCategoryCreated?: (category: CategoryDto) => void;
+  warehouses?: { id: string; name: string }[];
 }
 
 type InlineCreateMode =
@@ -58,9 +59,14 @@ const EMPTY_FORM = {
   selectedCategoryIds: [] as string[],
   purchase_prices: [] as { unit_id: string; price: string; price_base: string; currency: string }[],
   sale_prices: [] as { unit_id: string; tier: string; price: string; price_base: string; min_price: string; min_price_base: string; max_quantity: string; max_quantity_unit_id: string | null; currency: string }[],
+  default_purchase_currency: "",
+  default_sale_currency: "",
+  default_warehouse_id: "",
+  has_expiry: false,
+  expiry_alert_before_days: 0,
 };
 
-export function MaterialForm({ open, onClose, material, categories, onSave, saving, onCategoryCreated }: MaterialFormProps) {
+export function MaterialForm({ open, onClose, material, categories, onSave, saving, onCategoryCreated, warehouses }: MaterialFormProps) {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [activeTab, setActiveTab] = useState("basic");
   const [inlineCreate, setInlineCreate] = useState<InlineCreateMode>(null);
@@ -243,6 +249,11 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
             max_quantity_unit_id: p.max_quantity_unit_id || null,
             currency: p.currency
           })),
+          default_purchase_currency: material.default_purchase_currency || "",
+          default_sale_currency: material.default_sale_currency || "",
+          default_warehouse_id: material.default_warehouse_id || "",
+          has_expiry: material.has_expiry ?? false,
+          expiry_alert_before_days: material.expiry_alert_before_days ?? 0,
         });
 
         // Initialize tier max qty from existing data
@@ -1126,6 +1137,73 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                 </div>
                 <div className="space-y-0.5">
                   <p className="text-[10px] font-bold text-slate-500">معاينة الصورة المرفقة</p>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 pt-3 mt-3" />
+
+              <div className="space-y-1.5">
+                <FieldLabel className="flex items-center gap-1.5"><Warehouse className="w-3.5 h-3.5 text-slate-400" /> المستودع الافتراضي</FieldLabel>
+                <Select value={formData.default_warehouse_id} onValueChange={v => setFormData({ ...formData, default_warehouse_id: v })}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="بدون مستودع افتراضي" /></SelectTrigger>
+                  <SelectContent>
+                    {warehouses?.map(w => (
+                      <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 pt-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <div
+                      className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${formData.has_expiry ? 'bg-amber-500 border-amber-500' : 'border-slate-300'}`}
+                      onClick={() => setFormData({ ...formData, has_expiry: !formData.has_expiry })}
+                    >
+                      {formData.has_expiry && <Check className="w-3 h-3 text-white" />}
+                    </div>
+                    <span className="text-xs font-medium text-slate-700">له صلاحية (تاريخ انتهاء)</span>
+                  </label>
+                </div>
+
+                {formData.has_expiry && (
+                  <div className="space-y-1.5 pr-6">
+                    <FieldLabel className="flex items-center gap-1.5 text-[11px]"><span className="text-slate-400">التنبيه قبل انتهاء الصلاحية بـ (أيام)</span></FieldLabel>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={formData.expiry_alert_before_days}
+                      onChange={e => setFormData({ ...formData, expiry_alert_before_days: parseInt(e.target.value) || 0 })}
+                      className="h-7 text-xs"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-slate-100 pt-3 mt-1" />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <FieldLabel className="flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5 text-slate-400" /> عملة الشراء الافتراضية</FieldLabel>
+                  <Select value={formData.default_purchase_currency} onValueChange={v => setFormData({ ...formData, default_purchase_currency: v })}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="تلقائي" /></SelectTrigger>
+                    <SelectContent>
+                      {activeCurrencies?.map(c => (
+                        <SelectItem key={c.code} value={c.code}>{c.symbol || c.code}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <FieldLabel className="flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5 text-slate-400" /> عملة البيع الافتراضية</FieldLabel>
+                  <Select value={formData.default_sale_currency} onValueChange={v => setFormData({ ...formData, default_sale_currency: v })}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="تلقائي" /></SelectTrigger>
+                    <SelectContent>
+                      {activeCurrencies?.map(c => (
+                        <SelectItem key={c.code} value={c.code}>{c.symbol || c.code}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>

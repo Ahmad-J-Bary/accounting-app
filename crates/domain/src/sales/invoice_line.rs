@@ -18,6 +18,7 @@ pub struct InvoiceLine {
     pub unit_id: Option<String>,
     pub conversion_factor: Option<Decimal>,
     pub warehouse_id: Option<String>,
+    pub expiry_date: Option<String>,
     pub notes: Option<String>,
 
     pub unit_price_original: Option<Money>,
@@ -38,6 +39,7 @@ impl InvoiceLine {
         unit_id: Option<String>,
         conversion_factor: Option<Decimal>,
         warehouse_id: Option<String>,
+        expiry_date: Option<String>,
         notes: Option<String>,
         unit_price_original: Option<Money>,
         purchase_price_original: Option<Money>,
@@ -55,6 +57,7 @@ impl InvoiceLine {
             unit_id,
             conversion_factor,
             warehouse_id,
+            expiry_date,
             notes,
             unit_price_original,
             purchase_price_original,

@@ -11,8 +11,8 @@ pub async fn save(pool: &SqlitePool, material: &Material) -> Result<(), AppError
     let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     sqlx::query(
-        "INSERT INTO materials (id, name, name_en, barcode, code, minimum_stock, notes, image_path, default_purchase_unit_id, default_sale_unit_id, created_at, updated_at) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO materials (id, name, name_en, barcode, code, minimum_stock, notes, image_path, default_purchase_unit_id, default_sale_unit_id, default_purchase_currency, default_sale_currency, default_warehouse_id, has_expiry, expiry_alert_before_days, created_at, updated_at) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(material.id.to_string())
     .bind(&material.name)
@@ -24,6 +24,11 @@ pub async fn save(pool: &SqlitePool, material: &Material) -> Result<(), AppError
     .bind(&material.image_path)
     .bind(material.default_purchase_unit_id.as_ref().map(|id| id.to_string()))
     .bind(material.default_sale_unit_id.as_ref().map(|id| id.to_string()))
+    .bind(&material.default_purchase_currency)
+    .bind(&material.default_sale_currency)
+    .bind(&material.default_warehouse_id)
+    .bind(material.has_expiry)
+    .bind(material.expiry_alert_before_days)
     .bind(material.created_at.to_rfc3339())
     .bind(material.updated_at.to_rfc3339())
     .execute(&mut *tx)
@@ -43,7 +48,7 @@ pub async fn update(pool: &SqlitePool, material: &Material) -> Result<(), AppErr
     let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     sqlx::query(
-        "UPDATE materials SET name=?, name_en=?, barcode=?, code=?, minimum_stock=?, notes=?, image_path=?, default_purchase_unit_id=?, default_sale_unit_id=?, updated_at=? 
+        "UPDATE materials SET name=?, name_en=?, barcode=?, code=?, minimum_stock=?, notes=?, image_path=?, default_purchase_unit_id=?, default_sale_unit_id=?, default_purchase_currency=?, default_sale_currency=?, default_warehouse_id=?, has_expiry=?, expiry_alert_before_days=?, updated_at=? 
          WHERE id=?"
     )
     .bind(&material.name)
@@ -55,6 +60,11 @@ pub async fn update(pool: &SqlitePool, material: &Material) -> Result<(), AppErr
     .bind(&material.image_path)
     .bind(material.default_purchase_unit_id.as_ref().map(|id| id.to_string()))
     .bind(material.default_sale_unit_id.as_ref().map(|id| id.to_string()))
+    .bind(&material.default_purchase_currency)
+    .bind(&material.default_sale_currency)
+    .bind(&material.default_warehouse_id)
+    .bind(material.has_expiry)
+    .bind(material.expiry_alert_before_days)
     .bind(material.updated_at.to_rfc3339())
     .bind(material.id.to_string())
     .execute(&mut *tx)

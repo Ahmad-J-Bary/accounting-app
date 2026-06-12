@@ -65,6 +65,11 @@ export interface MaterialDto {
   image_path?: string | null;
   default_purchase_unit_id?: string | null;
   default_sale_unit_id?: string | null;
+  default_purchase_currency?: string | null;
+  default_sale_currency?: string | null;
+  default_warehouse_id?: string | null;
+  has_expiry: boolean;
+  expiry_alert_before_days: number;
   purchase_prices: MaterialPurchasePriceDto[];
   sale_prices: MaterialSalePriceDto[];
   // Summary Fields
@@ -121,6 +126,11 @@ export interface CreateMaterialRequest {
   image_path?: string;
   default_purchase_unit_id?: string;
   default_sale_unit_id?: string;
+  default_purchase_currency?: string;
+  default_sale_currency?: string;
+  default_warehouse_id?: string;
+  has_expiry?: boolean;
+  expiry_alert_before_days?: number;
   purchase_prices: CreateMaterialPriceRequest[];
   sale_prices: CreateMaterialSalePriceRequest[];
 }
@@ -137,6 +147,11 @@ export interface UpdateMaterialRequest {
   image_path?: string | null;
   default_purchase_unit_id?: string | null;
   default_sale_unit_id?: string | null;
+  default_purchase_currency?: string | null;
+  default_sale_currency?: string | null;
+  default_warehouse_id?: string | null;
+  has_expiry?: boolean;
+  expiry_alert_before_days?: number;
   purchase_prices: CreateMaterialPriceRequest[];
   sale_prices: CreateMaterialSalePriceRequest[];
 }

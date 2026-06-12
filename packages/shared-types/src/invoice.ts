@@ -27,6 +27,7 @@ export interface InvoiceLineDto {
   semi_wholesale_price_v2?: MonetaryAmount;
   minimum_stock?: string;
   warehouse_id?: string;
+  expiry_date?: string;
   notes?: string;
   unit_price_original?: string;
   purchase_price_original?: string;

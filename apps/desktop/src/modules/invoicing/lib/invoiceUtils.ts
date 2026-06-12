@@ -62,6 +62,7 @@ export function newGridLine(defaultWarehouseId?: string): GridLine {
     line_total: 0,
     tier: "retail",
     warehouse_id: defaultWarehouseId,
+    expiry_date: "",
   };
 }
 
