@@ -2,7 +2,9 @@ use tauri::{AppHandle, Emitter, Manager};
 use std::fs::File;
 use std::io::Write;
 use std::sync::Mutex;
+use std::path::PathBuf;
 use futures_util::StreamExt;
+use sha2::{Sha256, Digest};
 
 #[derive(Clone, serde::Serialize)]
 struct DownloadProgress {
@@ -10,21 +12,37 @@ struct DownloadProgress {
     total: Option<u64>,
 }
 
-// Store the path to the downloaded update file so we can use it later
-static UPDATE_FILE_PATH: Mutex<Option<std::path::PathBuf>> = Mutex::new(None);
+static UPDATE_FILE_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
+static EXPECTED_SHA256: Mutex<Option<String>> = Mutex::new(None);
+
+fn compute_sha256(file_path: &PathBuf) -> Result<String, String> {
+    let mut file = File::open(file_path).map_err(|e| format!("Failed to open file for SHA256: {}", e))?;
+    let mut hasher = Sha256::new();
+    let mut buffer = [0; 8192];
+    
+    loop {
+        let bytes_read = std::io::Read::read(&mut file, &mut buffer).map_err(|e| format!("Failed to read file: {}", e))?;
+        if bytes_read == 0 { break; }
+        hasher.update(&buffer[..bytes_read]);
+    }
+    
+    let result = hasher.finalize();
+    Ok(format!("{:x}", result))
+}
 
 #[tauri::command]
 pub async fn download_and_prepare_update(
     app: AppHandle,
     url: String,
+    expected_sha256: Option<String>,
 ) -> Result<(), String> {
-    // 1. Create a client with a custom User-Agent to satisfy GitHub's requirements
+    *EXPECTED_SHA256.lock().unwrap() = expected_sha256.clone();
+
     let client = reqwest::Client::builder()
         .user_agent("Almowakeb-ERP-Updater")
         .build()
         .map_err(|e| format!("Failed to initialize HTTP client: {}", e))?;
     
-    // 2. Fetch the URL
     let response = client.get(&url)
         .send()
         .await
@@ -38,7 +56,6 @@ pub async fn download_and_prepare_update(
 
     let total_size = response.content_length();
     
-    // 3. Determine file name and temp path
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis())
@@ -54,7 +71,6 @@ pub async fn download_and_prepare_update(
     let temp_dir = std::env::temp_dir();
     let file_path = temp_dir.join(&filename);
     
-    // 4. Download file with progress reporting
     let mut file = File::create(&file_path)
         .map_err(|e| format!("Failed to create temp file: {}", e))?;
         
@@ -68,7 +84,6 @@ pub async fn download_and_prepare_update(
             .map_err(|e| format!("Failed to write to file: {}", e))?;
         downloaded += chunk.len() as u64;
         
-        // Emit progress event to frontend, throttled to prevent UI freeze
         let total = total_size.unwrap_or(0);
         if last_emit.elapsed().as_millis() >= 50 || downloaded == total {
             let _ = app.emit("update-progress", DownloadProgress {
@@ -79,14 +94,25 @@ pub async fn download_and_prepare_update(
         }
     }
     
-    // Explicitly flush to disk and drop file to release lock
     file.sync_all().map_err(|e| format!("Failed to sync file to disk: {}", e))?;
     drop(file);
 
-    // Store the file path for later use
     *UPDATE_FILE_PATH.lock().unwrap() = Some(file_path.clone());
 
-    // Notify frontend that the update is ready to be applied
+    let _ = app.emit("update-verifying", ());
+    
+    if let Some(expected_hash) = expected_sha256 {
+        let actual_hash = compute_sha256(&file_path)?;
+        if actual_hash.to_lowercase() != expected_hash.to_lowercase() {
+            let err = "Downloaded file SHA256 does not match expected value".to_string();
+            let _ = app.emit("update-failed", err.clone());
+            return Err(err);
+        }
+    }
+    
+    let _ = app.emit("update-preparing", ());
+    tokio::time::sleep(tokio::time::Duration::from_millis(600)).await;
+
     let _ = app.emit("update-ready", ());
     Ok(())
 }
@@ -100,12 +126,9 @@ pub async fn apply_update_and_restart(
 
     let filename = file_path.file_name().and_then(|f| f.to_str()).unwrap_or("");
 
-    // 5. Execute the installer silently
     #[cfg(target_os = "windows")]
     {
         if filename.ends_with(".msi") {
-            // /quiet: No user interaction
-            // /norestart: Don't restart automatically (we'll handle that)
             let status = std::process::Command::new("msiexec")
                 .arg("/i")
                 .arg(&file_path)
@@ -120,16 +143,12 @@ pub async fn apply_update_and_restart(
                 return Err(err);
             }
         } else {
-            // For EXE installers, try to find silent options.
-            // Common options: /S, /silent, /quiet, --silent
-            // Let's try /S first (common for NSIS installers)
             let mut cmd = std::process::Command::new(&file_path);
             cmd.arg("/S");
             
             let status = cmd.status().map_err(|e| format!("Failed to run EXE installer: {}", e))?;
 
             if !status.success() {
-                // If /S failed, try /silent
                 let mut cmd2 = std::process::Command::new(&file_path);
                 cmd2.arg("/silent");
                 let status2 = cmd2.status();
@@ -145,7 +164,6 @@ pub async fn apply_update_and_restart(
 
     #[cfg(target_os = "macos")]
     {
-        // For DMG: mount it, copy app to Applications, then restart
         unimplemented!("macOS updates not fully implemented yet");
     }
 
@@ -154,17 +172,25 @@ pub async fn apply_update_and_restart(
         unimplemented!("Linux updates not fully implemented yet");
     }
 
-    // Restart the app
     tauri::process::restart(&app.env());
-    Ok(())
 }
 
-// Keep the old command for backwards compatibility
 #[tauri::command]
 pub async fn download_and_install_update(
     app: AppHandle,
     url: String,
 ) -> Result<(), String> {
-    download_and_prepare_update(app.clone(), url).await?;
+    download_and_prepare_update(app.clone(), url, None).await?;
     apply_update_and_restart(app).await
+}
+
+#[tauri::command]
+pub fn compute_sha256_command(file_path: String) -> Result<String, String> {
+    compute_sha256(&PathBuf::from(file_path))
+}
+
+#[tauri::command]
+pub fn get_file_size(file_path: String) -> Result<u64, String> {
+    let metadata = std::fs::metadata(file_path).map_err(|e| format!("Failed to get file metadata: {}", e))?;
+    Ok(metadata.len())
 }

@@ -8,16 +8,20 @@ import {
   RotateCcw, 
   ArrowDownToLine, 
   CheckCircle2,
-  Globe
+  Globe,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 import { Button } from "@shared/ui/button";
-import { useUpdateChecker, type UpdatePhase } from "../hooks/useUpdateChecker";
+import { useUpdateManager } from "../update/useUpdateManager";
 import { cn } from "@shared/lib/utils";
 import { UpdateProgress } from "./UpdateProgress";
+import type { UpdatePhase } from "../update/types";
 
-const accentColor: Record<Exclude<UpdatePhase, 'idle'>, string> = {
+const accentColor: Record<Exclude<UpdatePhase, 'idle' | 'checking'>, string> = {
   available:    'bg-blue-500',
   downloading:  'bg-blue-500',
+  verifying:    'bg-amber-500',
   preparing:    'bg-amber-500',
   ready:        'bg-green-500',
   failed:       'bg-red-500',
@@ -27,174 +31,191 @@ function PhaseIcon({ phase }: { phase: Exclude<UpdatePhase, 'idle'> }) {
   switch (phase) {
     case 'available':    return <ArrowDownToLine className="w-4 h-4" />;
     case 'downloading':  return <Download className="w-4 h-4 animate-spin" />;
+    case 'verifying':    return <CheckCircle2 className="w-4 h-4 animate-spin" />;
     case 'preparing':    return <RotateCcw className="w-4 h-4 animate-spin" />;
     case 'ready':        return <CheckCircle2 className="w-4 h-4" />;
     case 'failed':       return <AlertCircle className="w-4 h-4" />;
+    case 'checking':     return <Download className="w-4 h-4" />;
   }
 }
 
+function formatSize(bytes: number): string {
+  const mb = bytes / (1024 * 1024);
+  if (mb > 100) return mb.toFixed(0) + ' MB';
+  if (mb > 1) return mb.toFixed(1) + ' MB';
+  return (bytes / 1024).toFixed(0) + ' KB';
+}
+
 export function UpdateBanner() {
-  const { 
-    updateInfo, 
-    check, 
-    dismiss, 
-    startUpdate,
-    restartToUpdate,
-    retry,
-    phase,
-    updateProgress, 
-    error 
-  } = useUpdateChecker();
+  const { state, startUpdate, restartToUpdate, dismissUpdate, retry } = useUpdateManager();
   const [visible, setVisible] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [showReleaseNotes, setShowReleaseNotes] = useState(false);
 
   useEffect(() => {
-    if (phase !== 'idle') {
+    if (state.phase !== 'idle') {
       const t = setTimeout(() => setVisible(true), 30);
       return () => clearTimeout(t);
     } else {
       setVisible(false);
       setExpanded(false);
     }
-  }, [phase]);
+  }, [state.phase]);
 
   const handleDismiss = useCallback(() => {
     setVisible(false);
-    setTimeout(dismiss, 300);
-  }, [dismiss]);
+    setTimeout(dismissUpdate, 300);
+  }, [dismissUpdate]);
 
-  const percentage = updateProgress && updateProgress.total > 0
-    ? Math.round((updateProgress.downloaded / updateProgress.total) * 100)
-    : 0;
+  if (state.phase === 'idle' || state.phase === 'checking') return null;
 
-  if (phase === 'idle') return null;
-
-  const accent = accentColor[phase];
-  const isBusy = phase === 'downloading' || phase === 'preparing';
+  const accent = accentColor[state.phase] || 'bg-slate-500';
+  const isBusy = state.phase === 'downloading' || state.phase === 'verifying' || state.phase === 'preparing';
 
   return (
     <div className={cn(
       "transition-all duration-300 ease-out overflow-hidden border-b border-slate-200",
       visible ? 'opacity-100' : 'opacity-0',
-      expanded ? 'max-h-80' : 'max-h-16'
+      expanded ? 'max-h-[400px]' : 'max-h-20'
     )}>
       <div className="flex flex-col bg-white text-slate-700">
         {/* Main bar */}
-        <div className="flex items-center gap-3 px-4 py-3">
+        <div className="flex items-center gap-3 px-4 py-4">
           {/* Left accent indicator */}
-          <div className={cn("w-1.5 h-6 rounded-full shrink-0", accent)} />
+          <div className={cn("w-1.5 h-7 rounded-full shrink-0", accent)} />
 
           {/* Icon */}
-          <span className={cn("shrink-0", phase === 'failed' ? 'text-red-500' : phase === 'ready' ? 'text-green-500' : 'text-blue-500')}>
-            <PhaseIcon phase={phase} />
+          <span className={cn(
+            "shrink-0",
+            state.phase === 'failed' && 'text-red-500',
+            state.phase === 'ready' && 'text-green-500',
+            !['failed', 'ready'].includes(state.phase) && 'text-blue-500'
+          )}>
+            <PhaseIcon phase={state.phase} />
           </span>
 
           {/* Label */}
-          <div className="flex-1 flex flex-col gap-0.5">
-            <span className="text-sm font-semibold">
-              {phase === 'available' && updateInfo && (
-                <>يتوفر تحديث جديد لـ <span className="text-blue-700">{updateInfo.release_name}</span></>
+          <div className="flex-1 flex flex-col gap-1">
+            <span className="text-base font-semibold">
+              {state.phase === 'available' && (
+                <>تحديث متوفر لـ Almowakeb</>
               )}
-              {phase === 'downloading' && <>جاري تحميل التحديث...</>}
-              {phase === 'preparing' && <>جاري تحضير التحديث...</>}
-              {phase === 'ready' && <>التحديث جاهز! اضغط لإعادة تشغيل</>}
-              {phase === 'failed' && <span className="text-red-600">{error || 'فشل التحديث'}</span>}
+              {state.phase === 'downloading' && <>جاري تحميل التحديث...</>}
+              {state.phase === 'verifying' && <>جاري التحقق من سلامة التحديث...</>}
+              {state.phase === 'preparing' && <>جاري تحضير التحديث للتثبيت...</>}
+              {state.phase === 'ready' && <>التحديث جاهز للتثبيت</>}
+              {state.phase === 'failed' && <span className="text-red-600">{state.error || 'فشل التحديث'}</span>}
             </span>
-            {phase === 'available' && updateInfo && (
-              <span className="text-xs text-slate-500 font-mono" dir="ltr">
-                v{updateInfo.current_version} → v{updateInfo.latest_version}
-              </span>
+            {state.phase === 'available' && (
+              <div className="flex flex-col gap-1">
+                <span className="text-sm text-slate-500 font-mono" dir="ltr">
+                  v{state.currentVersion} → v{state.targetVersion}
+                </span>
+                {state.updateType && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-full font-medium",
+                      state.updateType === 'delta' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                    )}>
+                      {state.updateType === 'delta' ? 'تحديث جزئي' : 'تحديث كامل'}
+                    </span>
+                    <span className="text-slate-400">{formatSize(state.progress.totalBytes)}</span>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
           {/* Actions */}
           <div className="flex items-center gap-2 shrink-0">
-            {phase === 'available' && (
+            {state.phase === 'available' && (
               <>
-                {updateInfo?.release_url && (
-                  <a
-                    href={updateInfo.release_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 h-9 px-3 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-                    title="ملاحظات الإصدار"
+                {state.manifest?.releaseNotes && (
+                  <button
+                    onClick={() => setShowReleaseNotes(!showReleaseNotes)}
+                    className="inline-flex items-center gap-1.5 h-10 px-3 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
                   >
-                    <Globe className="w-4 h-4" />
-                    <span className="hidden sm:inline">ملاحظات</span>
-                  </a>
+                    {showReleaseNotes ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    <span className="hidden sm:inline">ملاحظات الإصدار</span>
+                  </button>
                 )}
                 <Button 
                   size="sm" 
                   onClick={startUpdate} 
-                  className="h-9 px-4 text-sm gap-1.5 rounded-lg font-medium bg-blue-600 hover:bg-blue-700 text-white"
+                  className="h-10 px-5 text-sm gap-2 rounded-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
                 >
-                  <Download className="w-4 h-4" />
+                  <Download className="w-4.5 h-4.5" />
                   تحديث الآن
                 </Button>
               </>
             )}
 
-            {phase === 'ready' && (
+            {state.phase === 'ready' && (
               <Button 
                 size="sm" 
                 onClick={restartToUpdate} 
-                className="h-9 px-4 text-sm gap-1.5 rounded-lg font-medium bg-green-600 hover:bg-green-700 text-white"
+                className="h-10 px-5 text-sm gap-2 rounded-lg font-semibold bg-green-600 hover:bg-green-700 text-white shadow-sm"
               >
-                <RotateCcw className="w-4 h-4" />
+                <RotateCcw className="w-4.5 h-4.5" />
                 إعادة تشغيل
               </Button>
             )}
 
-            {phase === 'failed' && (
+            {state.phase === 'failed' && (
               <Button 
                 size="sm" 
                 onClick={retry} 
-                className="h-9 px-4 text-sm gap-1.5 rounded-lg font-medium"
+                className="h-10 px-5 text-sm gap-2 rounded-lg font-semibold"
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className="w-4.5 h-4.5" />
                 إعادة المحاولة
               </Button>
             )}
 
-            {(phase === 'available' || phase === 'failed') && (
+            {(state.phase === 'available' || state.phase === 'failed') && (
               <button 
                 onClick={handleDismiss} 
-                className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" 
+                className="p-2.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" 
                 title="تجاهل"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             )}
 
             {isBusy && (
               <button
                 onClick={() => setExpanded(e => !e)}
-                className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                className="p-2.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
                 title="تفاصيل التحديث"
               >
-                {expanded ? 
-                  <div className="w-4 h-4 flex flex-col items-center justify-center gap-0.5">
-                    <div className="w-1.5 h-0.5 bg-current rounded-full" />
-                  </div> :
-                  <div className="w-4 h-4 flex flex-col items-center justify-center gap-0.5">
-                    <div className="w-1.5 h-0.5 bg-current rounded-full" />
-                    <div className="w-1.5 h-0.5 bg-current rounded-full" />
-                  </div>
-                }
+                {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
               </button>
             )}
           </div>
         </div>
 
+        {/* Release Notes */}
+        {state.phase === 'available' && state.manifest?.releaseNotes && showReleaseNotes && (
+          <div className="px-6 pb-4 pt-0 border-t border-slate-100">
+            <div className="mt-3 p-4 bg-slate-50 rounded-lg text-slate-700">
+              <h3 className="font-bold text-lg mb-3">ما الجديد في v{state.targetVersion}</h3>
+              <div className="text-sm whitespace-pre-wrap">
+                {state.manifest.releaseNotes}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Expanded progress detail */}
         {expanded && isBusy && (
-          <div className="px-6 pb-4 pt-1 border-t border-slate-100">
+          <div className="px-8 pb-6 pt-2 border-t border-slate-100">
             <UpdateProgress
-              phase={phase === 'downloading' ? 'downloading' : 'preparing'}
-              percentage={percentage}
-              downloaded={updateProgress?.downloaded || 0}
-              total={updateProgress?.total || 0}
-              error={error}
+              phase={state.phase}
+              percentage={state.progress.percentage}
+              downloadedBytes={state.progress.downloadedBytes}
+              totalBytes={state.progress.totalBytes}
+              speed={state.progress.speed}
+              error={state.error}
               compact={false}
             />
           </div>

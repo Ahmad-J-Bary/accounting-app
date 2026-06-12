@@ -9,7 +9,7 @@ import { cn } from '@shared/lib/utils';
 import { useKeyboardShortcuts } from '@shared/hooks/useKeyboardShortcuts';
 import { FloatingExchangeRateWidget } from '@modules/core/components/FloatingExchangeRateWidget';
 import { UpdateBanner } from '@modules/core/components/UpdateBanner';
-import { useUpdateChecker } from '@modules/core/hooks/useUpdateChecker';
+import { useUpdateManager } from '@modules/core/update/useUpdateManager';
 import { warehouseService } from '@modules/inventory/api/warehouseService';
 
 interface AppLayoutProps {
@@ -21,7 +21,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { tabs, openTab } = useTabs();
   const navigate = useNavigate();
-  const { phase } = useUpdateChecker();
+  const { state } = useUpdateManager();
   const hasSavedRef = useRef(false);
 
   const saveState = useCallback(() => {
@@ -37,14 +37,18 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   }, []);
 
   useEffect(() => {
-    if (phase === 'ready') saveState();
-  }, [phase, saveState]);
+    if (state.phase === 'ready') saveState();
+  }, [state.phase, saveState]);
 
   useEffect(() => {
-    const handler = () => { if (phase === 'downloading' || phase === 'preparing' || phase === 'ready') saveState(); };
+    const handler = () => { 
+      if (['downloading', 'verifying', 'preparing', 'ready'].includes(state.phase)) {
+        saveState();
+      }
+    };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
-  }, [phase, saveState]);
+  }, [state.phase, saveState]);
 
   const [isExchangeVisible, setIsExchangeVisible] = useState(() => {
     if (typeof window !== 'undefined') {
