@@ -14,6 +14,7 @@ export default function SalesReturns() {
     returns,
     parties,
     materials,
+    warehouses,
     loading,
     refreshing,
     search,
@@ -46,6 +47,7 @@ export default function SalesReturns() {
         partyType="customer"
         parties={parties}
         materials={materials}
+        warehouses={warehouses}
         onSaved={() => { setIsCreating(false); loadData(false); }}
         onClose={() => setIsCreating(false)}
       />

@@ -64,6 +64,13 @@ export interface GenericDocumentGridProps {
   docCurrency?: string;
   exchangeRate?: string;
   dynamicVisibleColumns?: string[];
+  searchPanelRenderer?: (props: {
+    search: string;
+    searchType: "name" | "code" | "barcode";
+    style: React.CSSProperties | null;
+    onSelect: (material: MaterialDto) => void;
+    onClose: () => void;
+  }) => React.ReactNode;
 }
 
 export function GenericDocumentGrid({
@@ -80,6 +87,7 @@ export function GenericDocumentGrid({
   docCurrency = "",
   exchangeRate = "1",
   dynamicVisibleColumns,
+  searchPanelRenderer,
 }: GenericDocumentGridProps) {
   const { baseCurrency, convertBetween, currencies } = useCurrencyContext();
   const { settings, getDensityPadding } = useTableSettings();
@@ -504,25 +512,43 @@ export function GenericDocumentGrid({
       )}
 
       {showSearchPanel && panelStyle && (
-        <MaterialSearchPanel
-          materials={materials}
-          search={searchTerm}
-          searchType={searchType}
-          columns={columns}
-          visibleColumnKeys={visibleColumns}
-          baseCurrency={baseCurrency}
-          style={panelStyle}
-          onSelect={(m) => {
-            if (readOnly) return;
-            if (searchRow !== null) {
-              onSelectMaterial(searchRow, m);
-              setSearchRow(null);
-              setSearchTerm("");
-              setPanelStyle(null);
-            }
-          }}
-          onClose={() => { setSearchRow(null); setSearchTerm(""); setPanelStyle(null); }}
-        />
+        searchPanelRenderer ? (
+          searchPanelRenderer({
+            search: searchTerm,
+            searchType,
+            style: panelStyle,
+            onSelect: (m) => {
+              if (readOnly) return;
+              if (searchRow !== null) {
+                onSelectMaterial(searchRow, m);
+                setSearchRow(null);
+                setSearchTerm("");
+                setPanelStyle(null);
+              }
+            },
+            onClose: () => { setSearchRow(null); setSearchTerm(""); setPanelStyle(null); },
+          })
+        ) : (
+          <MaterialSearchPanel
+            materials={materials}
+            search={searchTerm}
+            searchType={searchType}
+            columns={columns}
+            visibleColumnKeys={visibleColumns}
+            baseCurrency={baseCurrency}
+            style={panelStyle}
+            onSelect={(m) => {
+              if (readOnly) return;
+              if (searchRow !== null) {
+                onSelectMaterial(searchRow, m);
+                setSearchRow(null);
+                setSearchTerm("");
+                setPanelStyle(null);
+              }
+            }}
+            onClose={() => { setSearchRow(null); setSearchTerm(""); setPanelStyle(null); }}
+          />
+        )
       )}
     </div>
   );

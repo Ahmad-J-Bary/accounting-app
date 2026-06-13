@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
 import { Save, X } from "lucide-react";
@@ -7,9 +7,11 @@ import { FinancialDocumentTemplate } from "@widgets/templates/FinancialDocumentT
 import { GenericDocumentGrid } from "@widgets/document-shell/GenericDocumentGrid";
 import { SummaryPanel } from "@widgets/document-shell/SummaryPanel";
 import { InvoicePartySelector } from "../components/InvoicePartySelector";
+import { ReturnMaterialSearchPanel, type ReturnOccurrenceItem } from "../components/ReturnMaterialSearchPanel";
 import { useDocumentEditor } from "@modules/invoicing/hooks/useDocumentEditor";
 import { returnService } from "@modules/invoicing/api/returnService";
-import { toReturnBackendLines } from "@modules/invoicing/lib/invoiceUtils";
+import { invoiceService } from "@modules/invoicing/api/invoiceService";
+import { toReturnBackendLines, newGridLine } from "@modules/invoicing/lib/invoiceUtils";
 import type { CustomerDto, SupplierDto, MaterialDto, SalesReturnLineDto, PurchaseReturnLineDto } from "@erp/shared-types";
 import type { DocumentColumn } from "@widgets/document-shell/GenericDocumentGrid";
 
@@ -18,11 +20,12 @@ interface ReturnsEditorProps {
   partyType: "supplier" | "customer";
   parties: (SupplierDto | CustomerDto)[];
   materials: MaterialDto[];
+  warehouses: any[];
   onSaved: () => void;
   onClose: () => void;
 }
 
-export function ReturnsEditor({ returnType, partyType, parties, materials, onSaved, onClose }: ReturnsEditorProps) {
+export function ReturnsEditor({ returnType, partyType, parties, materials, warehouses, onSaved, onClose }: ReturnsEditorProps) {
   const isSales = returnType === "SalesReturn";
   const [saving, setSaving] = useState(false);
   const [partyId, setPartyId] = useState("");
@@ -36,20 +39,132 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, onSav
     removeLine,
     addLine,
     selectMaterial,
+    setLines,
   } = useDocumentEditor({
     priceField: isSales ? "last_sale_price" : "last_purchase_price",
     materials,
   });
 
+  // Track selected occurrence keys to prevent duplicates!
+  const [selectedOccurrenceKeys, setSelectedOccurrenceKeys] = useState<Set<string>>(new Set());
+  const [occurrences, setOccurrences] = useState<ReturnOccurrenceItem[]>([]);
+  const pendingOccurrenceRef = useRef<ReturnOccurrenceItem | null>(null);
+
+  // Build invoice-line occurrences when partyId changes
+  useEffect(() => {
+    if (!partyId) {
+      setOccurrences([]);
+      setSelectedOccurrenceKeys(new Set());
+      return;
+    }
+    const invType = isSales ? "Sales" as const : "Purchase" as const;
+    invoiceService.listInvoicesByType(invType).then((invoices) => {
+      const filtered = isSales
+        ? invoices.filter((inv) => inv.customer_id === partyId)
+        : invoices.filter((inv) => inv.supplier_id === partyId);
+      const items: ReturnOccurrenceItem[] = [];
+      const seen = new Set<string>();
+      for (const inv of filtered) {
+        for (const line of inv.lines) {
+          const material = materials.find((m) => m.id === line.material_id);
+          if (!material) continue;
+          // Unique key per invoice + line identifier (using invoice ID, material ID, quantity, price, unit to avoid duplicates)
+          const key = `${inv.id}_${line.material_id}_${line.quantity}_${line.unit_price}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          items.push({
+            material,
+            original_quantity: line.quantity,
+            original_price: line.unit_price,
+            unit_id: line.unit_id,
+            unit_name: line.unit_name,
+            warehouse_id: line.warehouse_id,
+            invoice_id: inv.id,
+            invoice_date: inv.issued_at,
+            invoice_number: inv.invoice_number,
+          });
+        }
+      }
+      setOccurrences(items);
+      setSelectedOccurrenceKeys(new Set());
+    }).catch((e) => console.error("Failed to fetch partner invoices", e));
+  }, [partyId, isSales, materials]);
+
+  // Clear lines when partyId changes
+  useEffect(() => {
+    setLines([newGridLine()]);
+  }, [partyId, setLines]);
+
   const columns = useMemo<DocumentColumn[]>(() => [
-    { key: "material_name", header: "الصنف", width: "flex-[2]", type: "material", defaultVisible: true },
+    { key: "material_image", header: "صورة", width: "w-[40px]", type: "image", defaultVisible: false },
+    { key: "material_code", header: "الكود", width: "w-[100px]", type: "material_code", defaultVisible: true },
+    { key: "unit_barcode", header: "الباركود", width: "w-[120px]", type: "material_barcode", defaultVisible: false },
+    { key: "material_name", header: "الصنف (عربي)", width: "flex-[2]", type: "material", defaultVisible: true },
+    { key: "name_en", header: "الصنف (EN)", width: "flex-[1.5]", type: "readonly", defaultVisible: false },
+    { key: "warehouse_qty", header: "المتوفر", width: "w-[70px]", type: "readonly", defaultVisible: true },
     { key: "original_quantity", header: "الكمية الأصلية", width: "w-[90px]", type: "readonly", defaultVisible: true },
     { key: "original_price", header: "السعر الأصلي", width: "w-[90px]", type: "readonly", defaultVisible: true },
     { key: "quantity", header: "كمية المرتجع", width: "w-[90px]", type: "number", defaultVisible: true },
+    { key: "unit_name", header: "الوحدة", width: "w-[100px]", type: "unit_select", defaultVisible: true },
+    { key: "warehouse_id", header: "المستودع", width: "w-[140px]", type: "warehouse_select", defaultVisible: true },
     { key: "unit_price", header: "سعر المرتجع", width: "w-[100px]", type: "number", defaultVisible: true },
     { key: "line_total", header: "الإجمالي", width: "w-[110px]", type: "readonly", defaultVisible: true },
     { key: "notes", header: "ملاحظات", width: "flex-[1]", type: "text", defaultVisible: true },
   ], []);
+
+  // Intercept material selection to inject original invoice-line data
+  const handleSelectMaterial = useCallback((index: number, material: MaterialDto) => {
+    selectMaterial(index, material);
+    const occ = pendingOccurrenceRef.current;
+    if (occ) {
+      // Generate unique key to mark as selected
+      const occKey = `${occ.invoice_id}_${occ.material.id}_${occ.original_quantity}_${occ.original_price}`;
+      
+      updateLine(index, {
+        original_quantity: occ.original_quantity,
+        original_price: occ.original_price,
+        quantity: occ.original_quantity,
+        unit_price: occ.original_price,
+        unit_id: occ.unit_id,
+        unit_name: occ.unit_name,
+        warehouse_id: occ.warehouse_id,
+      });
+      
+      setSelectedOccurrenceKeys(prev => new Set(prev).add(occKey));
+      pendingOccurrenceRef.current = null;
+    }
+  }, [selectMaterial, updateLine]);
+
+  // Custom search panel: shows invoice-line occurrences only when partner has invoices, and filters already selected ones!
+  const searchPanelRenderer = useMemo(() => {
+    if (!partyId || occurrences.length === 0) return undefined;
+    
+    // Filter out already selected occurrences
+    const filteredOccurrences = occurrences.filter(occ => {
+      const occKey = `${occ.invoice_id}_${occ.material.id}_${occ.original_quantity}_${occ.original_price}`;
+      return !selectedOccurrenceKeys.has(occKey);
+    });
+    
+    return (props: {
+      search: string;
+      searchType: "name" | "code" | "barcode";
+      style: React.CSSProperties | null;
+      onSelect: (material: MaterialDto) => void;
+      onClose: () => void;
+    }) => (
+      <ReturnMaterialSearchPanel
+        occurrences={filteredOccurrences}
+        search={props.search}
+        searchType={props.searchType}
+        style={props.style}
+        onSelect={(occ) => {
+          pendingOccurrenceRef.current = occ;
+          props.onSelect(occ.material);
+        }}
+        onClose={props.onClose}
+      />
+    );
+  }, [occurrences, partyId, selectedOccurrenceKeys]);
 
   const totalAmount = useMemo(() =>
     lines.reduce((sum, l) => sum + (parseFloat(l.quantity || "0") * parseFloat(l.unit_price || "0")), 0), [lines]);
@@ -135,9 +250,11 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, onSav
           onUpdateLine={updateLine}
           onRemoveLine={removeLine}
           onAddLine={addLine}
-          onSelectMaterial={(idx, mat) => selectMaterial(idx, mat)}
+          onSelectMaterial={handleSelectMaterial}
           materials={materials}
+          warehouses={warehouses}
           preferenceKey={`${returnType === "SalesReturn" ? "sales" : "purchase"}-returns-editor`}
+          searchPanelRenderer={searchPanelRenderer}
         />
       }
       summaryPanel={

@@ -57,13 +57,20 @@ export function useReturnLifecycle({
             ? customerService.listCustomers()
             : supplierService.listSuppliers();
 
-        const [retData, partyData] = await Promise.all([
+        const listMaterialsPromise = materialService.listMaterials();
+        const listWarehousesPromise = warehouseService.listWarehouses();
+
+        const [retData, partyData, matData, whData] = await Promise.all([
           listReturnsPromise,
           listPartiesPromise,
+          listMaterialsPromise,
+          listWarehousesPromise,
         ]);
 
         setReturns(retData);
         setParties(partyData);
+        setMaterials(matData);
+        setWarehouses(whData);
       } catch {
         toast.error("فشل تحميل البيانات");
       } finally {
