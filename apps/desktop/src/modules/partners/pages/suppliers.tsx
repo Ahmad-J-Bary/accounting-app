@@ -5,17 +5,15 @@ import { toast } from "sonner";
 
 import { supplierService } from '@modules/partners/api/supplierService';
 import { accountingService } from '@modules/accounting/api/accountingService';
-import { invoiceService } from '@modules/invoicing/api/invoiceService';
 import { paymentService } from '@modules/payments/api/paymentService';
-import { materialService } from '@modules/inventory/api/materialService';
-import { returnService } from '@modules/invoicing/api/returnService';
-import type { SupplierDto, AccountDto, MaterialDto, InvoiceDto, CreatePurchaseReturnRequest, Payment, CreateSupplierRequest, UpdateSupplierRequest, CreatePaymentRequest } from "@erp/shared-types";
+import { invoiceService } from '@modules/invoicing/api/invoiceService';
+import type { SupplierDto, AccountDto, Payment, InvoiceDto, CreateSupplierRequest, UpdateSupplierRequest, CreatePaymentRequest } from "@erp/shared-types";
 
 import { useTabs } from "@app/providers/TabContext";
 import { useEntityList } from '@shared/hooks/useEntityList';
 import { SupplierTable } from '@modules/partners/components/SupplierTable';
 import { SupplierPaymentForm } from '@modules/partners/components/SupplierPaymentForm';
-import { ReturnsForm, type ReturnsFormState } from '@modules/invoicing/components/ReturnsForm';
+import { ReturnFromMaterialPanel } from '@modules/inventory/components/ReturnFromMaterialPanel';
 
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { PartnerDetailPanel } from '@modules/partners/components/PartnerDetailPanel';
@@ -62,13 +60,6 @@ export default function Suppliers() {
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [paymentSaving, setPaymentSaving] = useState(false);
   const [isReturnOpen, setIsReturnOpen] = useState(false);
-  const [returnSaving, setReturnSaving] = useState(false);
-  const [returnForm, setReturnForm] = useState<ReturnsFormState>({
-    customer_id: "", supplier_id: "", return_date: new Date().toISOString().slice(0, 10),
-    notes: "", purchase_invoice_id: "", lines: [],
-  });
-  const [returnMaterials, setReturnMaterials] = useState<MaterialDto[]>([]);
-  const [returnInvoices, setReturnInvoices] = useState<InvoiceDto[]>([]);
 
   const handleSavePayment = async (payload: CreatePaymentRequest) => {
     try {
@@ -81,44 +72,6 @@ export default function Suppliers() {
       toast.error("فشل تسجيل السند: " + error);
     } finally {
       setPaymentSaving(false);
-    }
-  };
-
-  useEffect(() => {
-    if (isReturnOpen) {
-      materialService.listMaterials().then(setReturnMaterials).catch(() => {});
-      invoiceService.listInvoicesByType("Purchase").then(setReturnInvoices).catch(() => {});
-    }
-  }, [isReturnOpen]);
-
-  const handleSaveReturn = async (lines: ReturnsFormState["lines"]) => {
-    if (!selectedSupplier) return;
-    setReturnSaving(true);
-    try {
-      const payload: CreatePurchaseReturnRequest = {
-        return_number: "",
-        supplier_id: selectedSupplier.id,
-        supplier_name: selectedSupplier.name,
-        return_date: returnForm.return_date || new Date().toISOString().slice(0, 10),
-        lines: lines.map(l => ({
-          id: "",
-          material_id: l.material_id,
-          quantity: l.quantity,
-          unit_price: l.unit_price,
-          unit_id: l.unit_id,
-          line_total: l.line_total,
-          notes: l.notes,
-        })),
-        notes: returnForm.notes || undefined,
-      };
-      await returnService.createPurchaseReturn(payload);
-      await refresh(true);
-      toast.success("تم تسجيل مرتجع المشتريات بنجاح");
-      setIsReturnOpen(false);
-    } catch (err) {
-      toast.error("فشل تسجيل المرتجع: " + err);
-    } finally {
-      setReturnSaving(false);
     }
   };
 
@@ -234,7 +187,6 @@ export default function Suppliers() {
             className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
             disabled={!selectedId}
             onClick={() => {
-              setReturnForm(f => ({ ...f, supplier_id: selectedSupplier?.id || "", lines: [] }));
               setIsReturnOpen(true);
               setIsFormOpen(false);
               setIsPaymentOpen(false);
@@ -305,16 +257,11 @@ export default function Suppliers() {
             saving={saving}
           />
         ) : isReturnOpen && selectedSupplier ? (
-          <ReturnsForm
-            type="purchase"
+          <ReturnFromMaterialPanel
             onClose={() => setIsReturnOpen(false)}
-            onSave={handleSaveReturn}
-            saving={returnSaving}
-            suppliers={suppliers}
-            invoices={returnInvoices}
-            materials={returnMaterials}
-            form={returnForm}
-            setForm={setReturnForm}
+            onSaved={() => refresh(true)}
+            initialReturnType="purchase"
+            initialPartyId={selectedSupplier?.id}
           />
         ) : isPaymentOpen && selectedSupplier ? (
           <SupplierPaymentForm

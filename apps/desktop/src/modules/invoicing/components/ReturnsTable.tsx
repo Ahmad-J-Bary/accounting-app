@@ -1,110 +1,88 @@
 import { useMemo } from "react";
-import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
-import { TableShell } from '@widgets/table-shell/TableShell';
-import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
-import { TableActions } from "@widgets/table-shell/TableActions";
-import { formatDateTime } from '@shared/lib/format';
+import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
+import { TableShell } from "@widgets/table-shell/TableShell";
+import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
-import type { MaterialDto } from "@erp/shared-types";
-
-export type ReturnLineRow = {
-  return_id?: string;
-  return_number: string;
-  material_name?: string;
-  material_id?: string;
-  partner_name?: string;
-  unit_id?: string;
-  quantity: string;
-  unit_price: string;
-  line_total: string;
-  return_date: string;
-  notes?: string;
-};
+import { formatDateTime } from "@shared/lib/format";
+import { Button } from "@shared/ui/button";
+import type { SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
+import { TableActions } from "@widgets/table-shell/TableActions";
 
 interface ReturnsTableProps {
-  items: ReturnLineRow[];
+  items: (SalesReturnDto | PurchaseReturnDto)[];
   loading: boolean;
   search: string;
   onSearchChange: (val: string) => void;
-  materials: MaterialDto[];
   partnerLabel: string;
   emptyMessage?: string;
   selectedId?: string | null;
   onSelect?: (id: string | null) => void;
-  onView?: (returnId: string) => void;
-  onEdit?: (returnId: string) => void;
-  onDelete?: (returnId: string) => void;
+  onView?: (ret: SalesReturnDto | PurchaseReturnDto) => void;
+  onEdit?: (ret: SalesReturnDto | PurchaseReturnDto) => void;
+  onDelete?: (id: string) => Promise<void>;
+  toolbarTitle?: string;
 }
 
-export function ReturnsTable({ items, loading, search, onSearchChange, materials, partnerLabel, emptyMessage, selectedId, onSelect, onView, onEdit, onDelete }: ReturnsTableProps) {
+export function ReturnsTable({
+  items,
+  loading,
+  search,
+  onSearchChange,
+  partnerLabel,
+  emptyMessage,
+  selectedId,
+  onSelect,
+  onView,
+  onEdit,
+  onDelete,
+}: ReturnsTableProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
   const { isBaseCurrency } = useBaseCurrencyColumns();
 
-  const allColumns = useMemo<UnifiedColumn<ReturnLineRow>[]>(() => {
-    const cols: UnifiedColumn<ReturnLineRow>[] = [
+  // Type guards
+  const isSalesReturn = (ret: SalesReturnDto | PurchaseReturnDto): ret is SalesReturnDto => {
+    return 'customer_id' in ret;
+  };
+  const isPurchaseReturn = (ret: SalesReturnDto | PurchaseReturnDto): ret is PurchaseReturnDto => {
+    return 'supplier_id' in ret;
+  };
+
+  const allColumns = useMemo<UnifiedColumn<SalesReturnDto | PurchaseReturnDto>[]>(() => {
+    const cols: UnifiedColumn<SalesReturnDto | PurchaseReturnDto>[] = [
       {
         id: "return_number",
         header: "الرقم",
-        label: "الرقم",
-        accessor: (i) => i.return_number,
+        label: "رقم المرتجع",
+        accessor: (ret) => ret.return_number,
         className: "font-black text-slate-900 text-center"
       },
       {
-        id: "material_name",
-        header: "المادة",
-        label: "المادة",
-        accessor: (i) => i.material_name ?? "",
-        className: "font-bold text-slate-800"
+        id: "notes",
+        header: "التوصيف",
+        label: "التوصيف",
+        accessor: (ret) => ret.notes || "",
+        className: "text-slate-500 italic"
       },
       {
         id: "partner_name",
         header: partnerLabel,
         label: partnerLabel,
-        accessor: (i) => i.partner_name || "",
-        className: "font-bold text-slate-700"
-      },
-      ...currencies.map(curr => {
-        const isBase = isBaseCurrency(curr.code);
-        return {
-          id: `unit_price_${curr.code}`,
-          header: `السعر (${curr.symbol || curr.code})`,
-          label: `السعر الفردي (${curr.symbol || curr.code})`,
-          accessor: (i: ReturnLineRow) => {
-            const val = parseFloat(i.unit_price || "0");
-            if (val === 0) return "";
-            return formatAmount(val, { currencyCode: curr.code });
-          },
-          className: isBase
-            ? "tabular-nums font-black text-slate-900"
-            : "tabular-nums font-medium text-slate-400"
-        };
-      }),
-      {
-        id: "quantity",
-        header: "الكمية",
-        label: "الكمية المرتجعة",
-        accessor: (i) => Math.round(parseFloat(i.quantity || "0")).toString(),
-        className: "tabular-nums font-black text-slate-900"
-      },
-      {
-        id: "unit_id",
-        header: "الوحدة",
-        label: "الوحدة",
-        accessor: (i) => {
-          const unitName = materials.find(m => m.id === i.material_id)?.units.find(u => u.id === i.unit_id)?.name;
-          return unitName || "";
+        accessor: (ret) => {
+          if (isSalesReturn(ret)) return ret.customer_name || "";
+          if (isPurchaseReturn(ret)) return ret.supplier_name || "";
+          return "";
         },
-        className: "text-slate-500"
+        className: "font-bold text-slate-800"
       },
       ...currencies.map(curr => {
         const isBase = isBaseCurrency(curr.code);
         return {
-          id: `line_total_${curr.code}`,
-          header: `المجموع (${curr.symbol || curr.code})`,
-          label: `المجموع (${curr.symbol || curr.code})`,
-          accessor: (i: ReturnLineRow) => {
-            const val = parseFloat(i.line_total || "0");
+          id: `total_amount_${curr.code}`,
+          header: `الإجمالي (${curr.symbol || curr.code})`,
+          label: `الإجمالي (${curr.symbol || curr.code})`,
+          accessor: (ret: SalesReturnDto | PurchaseReturnDto) => {
+            const val = parseFloat(ret.total_amount || "0");
             if (val === 0) return "";
             return formatAmount(val, { currencyCode: curr.code });
           },
@@ -117,49 +95,47 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
         id: "return_date",
         header: "التاريخ",
         label: "التاريخ",
-        accessor: (i) => formatDateTime(i.return_date),
+        accessor: (ret) => formatDateTime(ret.return_date),
         className: "text-slate-500 tabular-nums"
       },
-      {
-        id: "notes",
-        header: "ملاحظة",
-        label: "ملاحظة",
-        accessor: (i) => i.notes || "",
-        className: "text-slate-500 italic"
-      },
-      {
+      ...((onView || onEdit || onDelete) ? [{
         id: "actions",
         header: "إجراءات",
         label: "إجراءات",
-        accessor: (i) => i.return_id ? (
-          <TableActions
-            onView={onView ? () => onView(i.return_id!) : undefined}
-            onEdit={onEdit ? () => onEdit(i.return_id!) : undefined}
-            onDelete={onDelete ? () => onDelete(i.return_id!) : undefined}
-          />
-        ) : null
-      },
+        accessor: (ret) => {
+          return (
+            <TableActions
+              onView={onView ? () => onView(ret) : undefined}
+              onEdit={onEdit ? () => onEdit(ret) : undefined}
+              onDelete={onDelete ? () => {
+                if (window.confirm("هل أنت متأكد من حذف هذا المرتجع؟")) {
+                  onDelete(ret.id);
+                }
+              } : undefined}
+              align="start"
+            />
+          );
+        }
+      }] : []),
     ];
     return cols;
-  }, [currencies, formatAmount, partnerLabel, materials, onView, onEdit, onDelete, isBaseCurrency]);
+  }, [currencies, formatAmount, partnerLabel, onView, onEdit, onDelete, isBaseCurrency]);
 
-  // Default visible: only base currency's price and total columns are shown.
+  // Default visible: only base currency's total column shown
   const defaultVisible = useMemo(() => {
     const baseCode = baseCurrency?.code;
-    return [
+    const ids = [
       "return_number",
-      "material_name",
-      "partner_name",
-      ...(baseCode ? [`unit_price_${baseCode}`] : []),
-      "quantity",
-      "unit_id",
-      ...(baseCode ? [`line_total_${baseCode}`] : []),
-      "return_date",
       "notes",
+      "partner_name",
+      ...(baseCode ? [`total_amount_${baseCode}`] : []),
+      "return_date",
     ];
-  }, [baseCurrency]);
+    if (onView || onEdit || onDelete) ids.push("actions");
+    return ids;
+  }, [baseCurrency, onView, onEdit, onDelete]);
 
-  type SortField = "return_number" | "material_name" | "partner_name" | "unit_price" | "quantity" | "line_total" | "return_date" | "notes";
+  type SortField = "return_number" | "notes" | "partner_name" | "total_amount" | "return_date";
 
   const { sortedData, sortField, sortDirection, handleSort } = useSortable({
     data: items,
@@ -171,26 +147,21 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
         case "return_number":
           comparison = (a.return_number || "").localeCompare(b.return_number || "", "ar", { numeric: true });
           break;
-        case "material_name":
-          comparison = (a.material_name || "").localeCompare(b.material_name || "", "ar");
-          break;
-        case "partner_name":
-          comparison = (a.partner_name || "").localeCompare(b.partner_name || "", "ar");
-          break;
-        case "unit_price":
-          comparison = parseFloat(a.unit_price || "0") - parseFloat(b.unit_price || "0");
-          break;
-        case "quantity":
-          comparison = parseFloat(a.quantity || "0") - parseFloat(b.quantity || "0");
-          break;
-        case "line_total":
-          comparison = parseFloat(a.line_total || "0") - parseFloat(b.line_total || "0");
-          break;
-        case "return_date":
-          comparison = new Date(a.return_date).getTime() - new Date(b.return_date).getTime();
-          break;
         case "notes":
           comparison = (a.notes || "").localeCompare(b.notes || "", "ar");
+          break;
+        case "partner_name": {
+          const aName = isSalesReturn(a) ? a.customer_name || "" : isPurchaseReturn(a) ? a.supplier_name || "" : "";
+          const bName = isSalesReturn(b) ? b.customer_name || "" : isPurchaseReturn(b) ? b.supplier_name || "" : "";
+          comparison = aName.localeCompare(bName, "ar");
+          break;
+        }
+        case "total_amount": {
+          comparison = parseFloat(a.total_amount || "0") - parseFloat(b.total_amount || "0");
+          break;
+        }
+        case "return_date":
+          comparison = new Date(a.return_date).getTime() - new Date(b.return_date).getTime();
           break;
       }
       return direction === "asc" ? comparison : -comparison;
@@ -204,8 +175,8 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
   });
 
   const baseTotal = useMemo(() =>
-    items.reduce((s, i) => s + (parseFloat(i.line_total || "0") || 0), 0),
-  [items]);
+    items.reduce((s, ret) => s + (parseFloat(ret.total_amount || "0") || 0), 0),
+    [items]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     const colIds = enrichedColumns.map(c => c.id);
@@ -213,7 +184,7 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
       if (id === "return_number") {
         return { id: "count", columnId: "return_number", label: "", value: `${sortedData.length} مرتجع`, className: "text-slate-500 font-medium" };
       }
-      const match = id.match(/^line_total_(.+)$/);
+      const match = id.match(/^total_amount_(.+)$/);
       if (match) {
         const currCode = match[1];
         const isBase = isBaseCurrency(currCode);
@@ -235,7 +206,7 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
     <TableShell
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder="بحث بالرقم أو المادة..."
+      searchPlaceholder="بحث برقم المرتجع أو الاسم..."
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}
@@ -252,15 +223,12 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
         sortDirection={sortDirection}
         onHeaderClick={(col) => {
           if (col.id === "return_number") handleSort("return_number");
-          else if (col.id === "material_name") handleSort("material_name");
-          else if (col.id === "partner_name") handleSort("partner_name");
-          else if (col.id === "quantity") handleSort("quantity");
           else if (col.id === "return_date") handleSort("return_date");
           else if (col.id === "notes") handleSort("notes");
-          else if (col.id.startsWith("line_total_")) handleSort("line_total");
-          else if (col.id.startsWith("unit_price_")) handleSort("unit_price");
+          else if (col.id === "partner_name") handleSort("partner_name");
+          else if (col.id.startsWith("total_amount_")) handleSort("total_amount");
         }}
-        onRowClick={(i) => onSelect?.(i.return_id || null)}
+        onRowClick={(ret) => onSelect?.(ret.id)}
         selectedId={selectedId}
         summary={summaryColumns}
         emptyMessage={emptyMessage ?? "لا توجد بيانات"}
@@ -268,3 +236,17 @@ export function ReturnsTable({ items, loading, search, onSearchChange, materials
     </TableShell>
   );
 }
+
+export type ReturnLineRow = {
+  return_id?: string;
+  return_number: string;
+  material_name?: string;
+  material_id?: string;
+  partner_name?: string;
+  unit_id?: string;
+  quantity: string;
+  unit_price: string;
+  line_total: string;
+  return_date: string;
+  notes?: string;
+};

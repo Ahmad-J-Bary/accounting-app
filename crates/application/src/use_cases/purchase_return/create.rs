@@ -64,6 +64,7 @@ impl CreatePurchaseReturnUseCase {
                 unit_price,
                 line_dto.unit_id,
                 line_dto.notes,
+                line_dto.invoice_line_id,
             ).map_err(|e: domain::shared::errors::DomainError| AppError::Invalid(e.to_string()))?;
             ret.add_line(line).map_err(|e: domain::shared::errors::DomainError| AppError::Invalid(e.to_string()))?;
         }

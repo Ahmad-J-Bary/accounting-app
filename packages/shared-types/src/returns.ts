@@ -7,6 +7,7 @@ export interface SalesReturnLineDto {
   unit_id?: string;
   line_total: string;
   notes?: string;
+  invoice_line_id?: string;
 }
 
 export interface SalesReturnDto {
@@ -40,6 +41,7 @@ export interface PurchaseReturnLineDto {
   unit_id?: string;
   line_total: string;
   notes?: string;
+  invoice_line_id?: string;
 }
 
 export interface PurchaseReturnDto {

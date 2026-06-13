@@ -23,4 +23,5 @@ pub struct SalesReturnLineRow {
     pub unit_id: Option<String>,
     pub line_total: String,
     pub notes: Option<String>,
+    pub invoice_line_id: Option<String>,
 }

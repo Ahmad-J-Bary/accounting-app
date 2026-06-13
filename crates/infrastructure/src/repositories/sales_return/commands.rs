@@ -36,8 +36,8 @@ pub async fn save(pool: &SqlitePool, ret: &SalesReturn) -> Result<(), AppError> 
 
     for line in &ret.lines {
         sqlx::query(
-            "INSERT INTO sales_return_lines (id, sales_return_id, material_id, quantity, unit_price, unit_id, line_total, notes)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO sales_return_lines (id, sales_return_id, material_id, quantity, unit_price, unit_id, line_total, notes, invoice_line_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
         .bind(line.id.to_string())
         .bind(ret.id.0.to_string())
@@ -47,6 +47,7 @@ pub async fn save(pool: &SqlitePool, ret: &SalesReturn) -> Result<(), AppError> 
         .bind(&line.unit_id)
         .bind(line.line_total.to_string())
         .bind(&line.notes)
+        .bind(&line.invoice_line_id)
         .execute(pool)
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;

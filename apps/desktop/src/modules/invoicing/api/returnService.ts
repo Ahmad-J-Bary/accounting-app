@@ -46,4 +46,12 @@ export const returnService = {
   async deletePurchaseReturn(id: string): Promise<void> {
     return invoke('delete_purchase_return', { id });
   },
+
+  async getNextSalesReturnNumber(): Promise<string> {
+    return invoke('get_next_sales_return_number');
+  },
+
+  async getNextPurchaseReturnNumber(): Promise<string> {
+    return invoke('get_next_purchase_return_number');
+  },
 };

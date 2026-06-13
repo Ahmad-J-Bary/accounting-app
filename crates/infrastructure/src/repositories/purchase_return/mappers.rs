@@ -31,6 +31,7 @@ pub fn row_to_purchase_return(row: PurchaseReturnRow, lines: Vec<PurchaseReturnL
                 unit_id: l.unit_id,
                 line_total: parse_decimal(&l.line_total),
                 notes: l.notes,
+                invoice_line_id: l.invoice_line_id,
             }
         }).collect(),
         total_amount: parse_decimal(&row.total_amount),

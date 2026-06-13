@@ -13,6 +13,7 @@ pub struct SalesReturnLineDto {
     pub unit_id: Option<String>,
     pub line_total: String,
     pub notes: Option<String>,
+    pub invoice_line_id: Option<String>,
 }
 
 impl From<SalesReturnLine> for SalesReturnLineDto {
@@ -25,7 +26,8 @@ impl From<SalesReturnLine> for SalesReturnLineDto {
             unit_price: l.unit_price.to_string(),
             unit_id: l.unit_id,
             line_total: l.line_total.to_string(),
-            notes: l.notes,
+            notes: l.notes.clone(),
+            invoice_line_id: l.invoice_line_id,
         }
     }
 }
@@ -80,6 +82,7 @@ pub struct PurchaseReturnLineDto {
     pub unit_id: Option<String>,
     pub line_total: String,
     pub notes: Option<String>,
+    pub invoice_line_id: Option<String>,
 }
 
 impl From<PurchaseReturnLine> for PurchaseReturnLineDto {
@@ -92,7 +95,8 @@ impl From<PurchaseReturnLine> for PurchaseReturnLineDto {
             unit_price: l.unit_price.to_string(),
             unit_id: l.unit_id,
             line_total: l.line_total.to_string(),
-            notes: l.notes,
+            notes: l.notes.clone(),
+            invoice_line_id: l.invoice_line_id,
         }
     }
 }

@@ -273,3 +273,13 @@ pub async fn post_purchase_return(
     )
     .execute(id).await.map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub async fn get_next_sales_return_number(state: State<'_, AppState>) -> Result<String, String> {
+    state.sales_return_repo.get_next_return_number().await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_next_purchase_return_number(state: State<'_, AppState>) -> Result<String, String> {
+    state.purchase_return_repo.get_next_return_number().await.map_err(|e| e.to_string())
+}

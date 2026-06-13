@@ -1,4 +1,4 @@
-import type { InvoiceLineDto } from "@erp/shared-types";
+import type { InvoiceLineDto, SalesReturnLineDto, PurchaseReturnLineDto } from "@erp/shared-types";
 
 // GridLine extends InvoiceLineDto with local-only UI fields (never sent to backend)
 export interface GridLine extends InvoiceLineDto {
@@ -25,9 +25,40 @@ export interface GridLine extends InvoiceLineDto {
 
   // Current selected price tier
   tier?: string;
+
+  // Return-specific fields
+  original_quantity?: string;
+  original_price?: string;
 }
 
-/** Strip local-only fields before sending to backend */
+/** Strip local-only fields before sending to backend (for returns) */
+export function toReturnBackendLines(lines: GridLine[], exchangeRate: string = "1"): Array<SalesReturnLineDto | PurchaseReturnLineDto> {
+  const rate = parseFloat(exchangeRate) || 1;
+  return lines
+    .filter(l => l.material_id || l.material_name) // skip truly empty rows
+    .map(({ 
+      _id, line_total, discount, 
+      name_en, barcode, material_image, warehouse_qty, unit_name, unit_barcode, 
+      cost_price, current_cost_price,
+      profit_amount, profit_percent, tier,
+      original_quantity, original_price,
+      ...rest 
+    }) => {
+      const basePrice = parseFloat(rest.unit_price || "0");
+      const docPrice = basePrice * rate;
+      const qty = parseFloat(rest.quantity || "0");
+      const computedTotal = (qty * docPrice);
+      return { 
+        id: _id, // use the local _id
+        ...rest, 
+        unit_price: Number.isFinite(docPrice) ? docPrice.toFixed(2).replace(/\.?0+$/, "") : rest.unit_price,
+        unit_name,
+        line_total: computedTotal.toFixed(2).replace(/\.?0+$/, "")
+      };
+    });
+}
+
+/** Strip local-only fields before sending to backend (for invoices) */
 export function toBackendLines(lines: GridLine[], exchangeRate: string = "1"): InvoiceLineDto[] {
   const rate = parseFloat(exchangeRate) || 1;
   return lines

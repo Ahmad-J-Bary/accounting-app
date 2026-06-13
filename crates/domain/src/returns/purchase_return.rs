@@ -14,6 +14,7 @@ pub struct PurchaseReturnLine {
     pub unit_id: Option<String>,
     pub line_total: Decimal,
     pub notes: Option<String>,
+    pub invoice_line_id: Option<String>,
 }
 
 impl PurchaseReturnLine {
@@ -23,6 +24,7 @@ impl PurchaseReturnLine {
         unit_price: Decimal,
         unit_id: Option<String>,
         notes: Option<String>,
+        invoice_line_id: Option<String>,
     ) -> Result<Self, DomainError> {
         if quantity <= Decimal::ZERO {
             return Err(DomainError::Invalid("الكمية يجب أن تكون أكبر من صفر".into()));
@@ -38,6 +40,7 @@ impl PurchaseReturnLine {
             unit_id,
             line_total: quantity * unit_price,
             notes,
+            invoice_line_id,
         })
     }
 }

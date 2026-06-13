@@ -1,234 +1,78 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { Button } from "@shared/ui/button";
-import { Plus, Undo2, DollarSign, Eye, Settings2, Trash2, RefreshCw } from "lucide-react";
-import { returnService } from '@modules/invoicing/api/returnService';
-import { customerService } from '@modules/partners/api/customerService';
-import { materialService } from '@modules/inventory/api/materialService';
-import type { CustomerDto, MaterialDto } from "@erp/shared-types";
+import { useCallback, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { ReturnsList } from "../components/ReturnsList";
+import { ReturnsEditor } from "../components/ReturnsEditor";
+import { useReturnLifecycle } from "../hooks/useReturnLifecycle";
+import { returnService } from "@modules/invoicing/api/returnService";
 import { toast } from "sonner";
-import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
-import { useDataTable } from '@shared/hooks';
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { ReturnsTable, type ReturnLineRow } from '../components/ReturnsTable';
-import { ReturnsForm, type ReturnsFormState, type ReturnLineForm } from '../components/ReturnsForm';
 
-export default function SalesReturnsPage() {
-  const { formatMonetaryAmount } = useCurrencyContext();
-  const [customers, setCustomers] = useState<CustomerDto[]>([]);
-  const [materials, setMaterials] = useState<MaterialDto[]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [editingInfo, setEditingInfo] = useState<{id: string; returnNumber: string} | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [form, setForm] = useState<ReturnsFormState>({
-    customer_id: "",
-    supplier_id: "",
-    return_date: new Date().toISOString().slice(0, 10),
-    notes: "",
-    purchase_invoice_id: "",
-    lines: [{ material_id: "", quantity: "1", unit_price: "0", unit_id: "", notes: "", line_total: "0" }],
-  });
+export default function SalesReturns() {
+  const location = useLocation();
+  const [isCreating, setIsCreating] = useState(false);
 
   const {
-    filtered: items,
+    returns,
+    parties,
+    materials,
     loading,
     refreshing,
     search,
     setSearch,
-    refresh,
-  } = useDataTable<ReturnLineRow>({
-    fetchData: async () => {
-      const data = await returnService.listSalesReturns();
-      const safeData = Array.isArray(data) ? data : [];
-      return safeData.flatMap(r =>
-        (Array.isArray(r.lines) ? r.lines : []).map(l => ({
-          return_id: r.id,
-          return_number: r.return_number,
-          material_name: l.material_name,
-          material_id: l.material_id,
-          partner_name: r.customer_name,
-          unit_price: l.unit_price,
-          quantity: l.quantity,
-          unit_id: l.unit_id,
-          line_total: l.line_total,
-          return_date: r.return_date,
-          notes: l.notes,
-        }))
-      );
-    },
-    searchFields: ["return_number", "material_name", "partner_name"],
+    loadData,
+    formatMonetaryAmount,
+  } = useReturnLifecycle({
+    returnType: "SalesReturn",
+    partyType: "customer",
+    priceField: "last_sale_price"
   });
 
-  const loadData = useCallback(async () => {
-    try {
-      const [c, m] = await Promise.all([
-        customerService.listCustomers(),
-        materialService.listMaterials(),
-      ]);
-      setCustomers(c);
-      setMaterials(m);
-    } catch { toast.error("فشل تحميل البيانات"); }
-  }, []);
+  const searchParams = new URLSearchParams(location.search);
+  const customerIdFilter = searchParams.get("customerId") || undefined;
 
-  useEffect(() => { loadData(); }, [loadData]);
-
-  const handleView = useCallback(async (returnId: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     try {
-      const ret = await returnService.getSalesReturn(returnId);
-      setForm({
-        customer_id: ret.customer_id,
-        supplier_id: "",
-        return_date: ret.return_date.slice(0, 10),
-        notes: ret.notes || "",
-        purchase_invoice_id: "",
-        lines: ret.lines.map(l => ({
-          material_id: l.material_id,
-          quantity: l.quantity,
-          unit_price: l.unit_price,
-          unit_id: l.unit_id || "",
-          notes: l.notes || "",
-          line_total: l.line_total,
-        })),
-      });
-      setEditingInfo({ id: returnId, returnNumber: ret.return_number });
-      setShowForm(true);
-    } catch (e) { toast.error("فشل تحميل المرتجع: " + e); }
-  }, []);
-
-  const handleDelete = useCallback(async (returnId: string) => {
-    if (!window.confirm("هل أنت متأكد من حذف هذا المرتجع؟")) return;
-    try {
-      await returnService.deleteSalesReturn(returnId);
+      await returnService.deleteSalesReturn(id);
       toast.success("تم حذف المرتجع بنجاح");
-      setSelectedId(null);
-      refresh(true);
-    } catch (e) { toast.error("فشل الحذف: " + e); }
-  }, [refresh]);
+      loadData(false);
+    } catch (e) {
+      toast.error("فشل الحذف: " + e);
+    }
+  }, [loadData]);
 
-  const handleEdit = useCallback(async (returnId: string) => {
-    try {
-      const ret = await returnService.getSalesReturn(returnId);
-      setForm({
-        customer_id: ret.customer_id,
-        supplier_id: "",
-        return_date: ret.return_date.slice(0, 10),
-        notes: ret.notes || "",
-        purchase_invoice_id: "",
-        lines: ret.lines.map(l => ({
-          material_id: l.material_id,
-          quantity: l.quantity,
-          unit_price: l.unit_price,
-          unit_id: l.unit_id || "",
-          notes: l.notes || "",
-          line_total: l.line_total,
-        })),
-      });
-      setEditingInfo({ id: returnId, returnNumber: ret.return_number });
-      setShowForm(true);
-    } catch (e) { toast.error("فشل تحميل بيانات المرتجع: " + e); }
-  }, []);
-
-  const handleCloseForm = useCallback(() => {
-    setShowForm(false);
-    setEditingInfo(null);
-    setForm({
-      customer_id: "", supplier_id: "", return_date: new Date().toISOString().slice(0, 10),
-      notes: "", purchase_invoice_id: "", lines: [{ material_id: "", quantity: "1", unit_price: "0", unit_id: "", notes: "", line_total: "0" }],
-    });
-  }, []);
-
-  const handleSave = async (lines: ReturnLineForm[]) => {
-    setSaving(true);
-    try {
-      const isEditing = !!editingInfo;
-      await returnService.createSalesReturn({
-        id: editingInfo?.id ?? undefined,
-        return_number: editingInfo?.returnNumber ?? "",
-        customer_id: form.customer_id,
-        return_date: new Date(form.return_date).toISOString(),
-        lines: lines.map(l => ({ ...l, id: "" })),
-        notes: form.notes || undefined,
-      });
-      handleCloseForm();
-      refresh(true);
-      toast.success(isEditing ? "تم تحديث مرتجع المبيعات بنجاح" : "تم تسجيل مرتجع المبيعات بنجاح");
-    } catch (e) { toast.error("فشل الحفظ: " + e); }
-    finally { setSaving(false); }
-  };
-
-  const totalAmount = useMemo(() =>
-    items.reduce((s: number, r: ReturnLineRow) => s + parseFloat(r.line_total || "0"), 0),
-  [items]);
-
-  const stats = useMemo(() => [
-    { label: "إجمالي المرتجعات", value: items.length, icon: Undo2, color: "text-blue-600" },
-    { label: "إجمالي المبلغ", value: formatMonetaryAmount(totalAmount, "base"), icon: DollarSign, color: "text-green-600" },
-  ], [items.length, totalAmount, formatMonetaryAmount]);
+  if (isCreating) {
+    return (
+      <ReturnsEditor
+        returnType="SalesReturn"
+        partyType="customer"
+        parties={parties}
+        materials={materials}
+        onSaved={() => { setIsCreating(false); loadData(false); }}
+        onClose={() => setIsCreating(false)}
+      />
+    );
+  }
 
   return (
-    <OperationalTableTemplate
+    <ReturnsList
+      returns={returns}
+      loading={loading || refreshing}
+      search={search}
+      partyIdFilter={customerIdFilter}
+      onSearchChange={setSearch}
+      onRefresh={() => loadData(false)}
+      onCreate={() => setIsCreating(true)}
+      onEdit={() => {}}
+      onView={() => {}}
+      onDelete={handleDelete}
+      formatMonetaryAmount={formatMonetaryAmount}
+      partyType="customer"
       title="مرتجعات المبيعات"
-      stats={stats}
-      toolbar={
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700 font-bold">
-            <Plus className="w-4 h-4 ml-2" /> مرتجع مبيعات جديد
-          </Button>
-          <div className="h-6 w-px bg-slate-200 mx-1" />
-          <Button variant="outline" size="sm" disabled={!selectedId}
-            onClick={() => selectedId && handleView(selectedId)}
-            className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <Eye className="w-4 h-4 ml-2 text-blue-500" /> عرض
-          </Button>
-          <Button variant="outline" size="sm" disabled={!selectedId}
-            onClick={() => selectedId && handleEdit(selectedId)}
-            className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <Settings2 className="w-4 h-4 ml-2 text-amber-500" /> تعديل
-          </Button>
-          <Button variant="outline" size="sm" disabled={!selectedId}
-            onClick={() => selectedId && handleDelete(selectedId)}
-            className="h-9 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 font-bold transition-all">
-            <Trash2 className="w-4 h-4 ml-2 text-rose-500" /> حذف
-          </Button>
-          <div className="h-6 w-px bg-slate-200 mx-1" />
-          <Button variant="outline" size="sm"
-            onClick={() => refresh(true)}
-            className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <RefreshCw className="w-4 h-4 ml-2 text-slate-500" /> تحديث
-          </Button>
-        </div>
-      }
-      tableContent={
-        <ReturnsTable
-          items={items}
-          loading={loading || refreshing}
-          search={search}
-          onSearchChange={setSearch}
-          materials={materials}
-          partnerLabel="العميل"
-          emptyMessage="لا توجد مرتجعات مبيعات"
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-          onView={handleView}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-      }
-      sidePanel={
-        showForm ? (
-          <ReturnsForm
-            type="sales"
-            onClose={handleCloseForm}
-            onSave={handleSave}
-            saving={saving}
-            customers={customers}
-            materials={materials}
-            form={form}
-            setForm={setForm}
-          />
-        ) : null
-      }
-      isPanelOpen={showForm}
+      createLabel="مرتجع جديد"
+      searchPlaceholder="بحث برقم المرتجع أو الزبون..."
+      emptyMessage="لا توجد مرتجعات مبيعات مسجلة"
+      statsLabel="إجمالي المرتجعات"
+      statsColor="text-blue-600"
+      preferenceKey="sales-returns"
     />
   );
 }

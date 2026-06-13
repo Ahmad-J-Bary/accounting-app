@@ -155,6 +155,8 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::returns::post_purchase_return,
             commands::returns::delete_sales_return,
             commands::returns::delete_purchase_return,
+            commands::returns::get_next_sales_return_number,
+            commands::returns::get_next_purchase_return_number,
             // Warehouse commands
             commands::warehouse::create_warehouse,
             commands::warehouse::list_warehouses,

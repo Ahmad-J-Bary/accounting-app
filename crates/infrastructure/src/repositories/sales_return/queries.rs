@@ -18,7 +18,7 @@ pub async fn find_by_id(pool: &SqlitePool, id: &SalesReturnId) -> Result<Option<
     match row {
         Some(r) => {
             let lines = sqlx::query_as::<_, SalesReturnLineRow>(
-                "SELECT id, sales_return_id, material_id, quantity, unit_price, unit_id, line_total, notes
+                "SELECT id, sales_return_id, material_id, quantity, unit_price, unit_id, line_total, notes, invoice_line_id
                  FROM sales_return_lines WHERE sales_return_id = ?"
             )
             .bind(r.id.clone())
@@ -43,7 +43,7 @@ pub async fn list_all(pool: &SqlitePool) -> Result<Vec<SalesReturn>, AppError> {
     let mut results = Vec::new();
     for r in rows {
         let lines = sqlx::query_as::<_, SalesReturnLineRow>(
-            "SELECT id, sales_return_id, material_id, quantity, unit_price, unit_id, line_total, notes
+            "SELECT id, sales_return_id, material_id, quantity, unit_price, unit_id, line_total, notes, invoice_line_id
              FROM sales_return_lines WHERE sales_return_id = ?"
         )
         .bind(r.id.clone())
