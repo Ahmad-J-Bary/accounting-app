@@ -309,6 +309,8 @@ export default function Materials() {
             <ReturnFromMaterialPanel
               onClose={() => setIsReturnOpen(false)}
               onSaved={refresh}
+              materials={materials}
+              initialMaterialId={selectedMaterial.id}
             />
           ) : showDamagedPanel ? (
             <DamagedForm
