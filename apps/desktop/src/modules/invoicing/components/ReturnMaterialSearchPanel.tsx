@@ -8,7 +8,9 @@ export interface ReturnOccurrenceItem {
   original_price: string;
   unit_id?: string;
   unit_name?: string;
+  conversion_factor?: string;
   warehouse_id?: string;
+  id?: string;
   invoice_id: string;
   invoice_date: string;
   invoice_number: string;

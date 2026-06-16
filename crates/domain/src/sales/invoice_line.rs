@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InvoiceLine {
+    pub line_id: Option<String>,
     pub material_id: MaterialId,
     pub quantity: Decimal,
     pub unit_price: MonetaryAmount, // Encapsulates both original and base
@@ -28,6 +29,7 @@ pub struct InvoiceLine {
 
 impl InvoiceLine {
     pub fn new(
+        line_id: Option<String>,
         material_id: MaterialId, 
         quantity: Decimal, 
         unit_price: MonetaryAmount,
@@ -46,6 +48,7 @@ impl InvoiceLine {
         profit_amount_original: Option<Money>,
     ) -> Self {
         Self {
+            line_id,
             material_id,
             quantity,
             unit_price,

@@ -6,6 +6,7 @@ export interface MonetaryAmount {
 }
 
 export interface InvoiceLineDto {
+  id: string;
   material_id: string;
   material_name?: string;
   barcode?: string;

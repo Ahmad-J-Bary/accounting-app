@@ -28,7 +28,12 @@ export interface GridLine extends InvoiceLineDto {
 
   // Return-specific fields
   original_quantity?: string;
+  original_quantity_raw?: string;
+  original_conversion_factor?: string;
   original_price?: string;
+  original_price_base?: string;
+  occurrence_key?: string;
+  invoice_line_id?: string;
 }
 
 /** Strip local-only fields before sending to backend (for returns) */
@@ -37,11 +42,11 @@ export function toReturnBackendLines(lines: GridLine[], exchangeRate: string = "
   return lines
     .filter(l => l.material_id || l.material_name) // skip truly empty rows
     .map(({ 
-      _id, line_total, discount, 
+      _id, id, line_total, discount, 
       name_en, barcode, material_image, warehouse_qty, unit_name, unit_barcode, 
       cost_price, current_cost_price,
       profit_amount, profit_percent, tier,
-      original_quantity, original_price,
+      original_quantity, original_quantity_raw, original_conversion_factor, original_price, original_price_base, occurrence_key,
       ...rest 
     }) => {
       const basePrice = parseFloat(rest.unit_price || "0");
@@ -67,7 +72,7 @@ export function toBackendLines(lines: GridLine[], exchangeRate: string = "1"): I
       _id, line_total, discount, 
       name_en, barcode, material_image, warehouse_qty, unit_name, unit_barcode, 
       cost_price, current_cost_price,
-      profit_amount, profit_percent, tier,
+      profit_amount, profit_percent, tier, occurrence_key, original_conversion_factor, original_quantity_raw, original_price_base,
       ...rest 
     }) => {
       const basePrice = parseFloat(rest.unit_price || "0");
@@ -84,6 +89,7 @@ export function toBackendLines(lines: GridLine[], exchangeRate: string = "1"): I
 export function newGridLine(defaultWarehouseId?: string): GridLine {
   return {
     _id: `ln_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    id: "",
     material_id: "",
     material_name: "",
     quantity: "",

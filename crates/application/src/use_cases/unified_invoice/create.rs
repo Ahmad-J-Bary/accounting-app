@@ -191,6 +191,7 @@ impl CreateInvoiceUseCase {
                 .and_then(|s| Decimal::from_str(s).ok());
 
             let line = InvoiceLine::new(
+                None,
                 material_id,
                 quantity,
                 unit_price,

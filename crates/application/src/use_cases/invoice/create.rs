@@ -40,6 +40,7 @@ impl CreateInvoiceUseCase {
             let unit_price = crate::utils::parse_decimal(Some(&line_dto.unit_price), "سعر الوحدة")?;
             
             lines.push(InvoiceLine::new(
+                None,
                 material_id,
                 quantity,
                 domain::shared::monetary_amount::MonetaryAmount::new(

@@ -178,6 +178,7 @@ impl SqliteInvoiceRepository {
             let price_str: String = row.get("unit_price");
 
             lines.push(InvoiceLine::new(
+                None,
                 MaterialId(uuid::Uuid::parse_str(&material_id_str).unwrap()),
                 Decimal::from_str(&quantity_str).unwrap_or(Decimal::ZERO),
                 domain::shared::monetary_amount::MonetaryAmount::from_base(

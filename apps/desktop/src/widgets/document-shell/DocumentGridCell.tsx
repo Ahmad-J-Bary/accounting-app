@@ -80,7 +80,19 @@ function CellWrapper({
 }
 
 function ReadonlyContent({ value, fontSize, fontFamily }: { value: string; fontSize: number; fontFamily: string }) {
-  return <span style={{ fontSize: `${fontSize}px`, fontFamily }}>{value}</span>;
+  if (!value.includes('\n')) {
+    return <span style={{ fontSize: `${fontSize}px`, fontFamily }}>{value}</span>;
+  }
+  return (
+    <span style={{ fontSize: `${fontSize}px`, fontFamily, lineHeight: 1.3, whiteSpace: 'normal' }}>
+      {value.split('\n').map((part, i) => (
+        <span key={i}>
+          {i > 0 && <br />}
+          {part}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 function EditableInput({
@@ -248,7 +260,14 @@ export function DocumentGridCell({
   if (col.type === "unit_select") {
     const material = materials.find((m) => m.id === line.material_id);
     const units = material?.units || [];
-    const currentUnit = getCellValue(line, col.key);
+    let currentUnitName = getCellValue(line, col.key);
+    // If unit_name is empty but unit_id is set, find unit name from material.units
+    if (!currentUnitName && line.unit_id && material) {
+      const foundUnit = material.units?.find(u => u.id === line.unit_id);
+      if (foundUnit) {
+        currentUnitName = foundUnit.name;
+      }
+    }
     return (
       <CellWrapper column={col} config={config} isReadonlyCell={readOnly}>
         <DropdownMenu>
@@ -259,7 +278,7 @@ export function DocumentGridCell({
                 ? "bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 cursor-pointer"
                 : "bg-slate-50 text-slate-400 border-slate-200 cursor-default",
             )}>
-              {line.material_id ? currentUnit || "اختر" : ""}
+              {line.material_id ? currentUnitName || "اختر" : ""}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="min-w-[100px] shadow-xl">
@@ -268,7 +287,7 @@ export function DocumentGridCell({
             {units.map((u) => (
               <DropdownMenuCheckboxItem
                 key={u.id}
-                checked={line.unit_id === u.id || currentUnit === u.name}
+                checked={line.unit_id === u.id || currentUnitName === u.name}
                 onCheckedChange={() => onUpdateLine(rowIdx, { unit_id: u.id, unit_name: u.name })}
                 className="text-right flex-row-reverse gap-2 text-[10px] font-bold py-1.5"
               >

@@ -3,7 +3,7 @@ import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { Undo2, X, ShoppingBag, ShoppingCart, Search, Plus } from "lucide-react";
-import type { CustomerDto, SupplierDto, InvoiceDto, InvoiceLineDto, SalesReturnLineDto, PurchaseReturnLineDto, CreateSalesReturnRequest, CreatePurchaseReturnRequest } from "@erp/shared-types";
+import type { CustomerDto, SupplierDto, InvoiceDto, InvoiceLineDto, SalesReturnLineDto, PurchaseReturnLineDto, CreateSalesReturnRequest, CreatePurchaseReturnRequest, SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
 import { FormPanel } from "@widgets/form-shell/FormPanel";
 import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
@@ -55,6 +55,7 @@ export function ReturnFromMaterialPanel({ onClose, onSaved, initialReturnType, i
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLines, setSelectedLines] = useState<SelectedReturnLine[]>([]);
   const [saving, setSaving] = useState(false);
+  const [returns, setReturns] = useState<(SalesReturnDto | PurchaseReturnDto)[]>([]);
 
   const isSales = returnType === "sales";
 
@@ -71,16 +72,22 @@ export function ReturnFromMaterialPanel({ onClose, onSaved, initialReturnType, i
   }, []);
 
   useEffect(() => {
-    if (!partyId) { setInvoices([]); return; }
+    if (!partyId) { setInvoices([]); setReturns([]); return; }
     setLoadingInvoices(true);
-    invoiceService.listInvoicesByType(isSales ? "Sales" : "Purchase")
-      .then(allInvoices => {
-        const filtered = allInvoices.filter(inv =>
-          isSales ? (inv as InvoiceDto).customer_id === partyId : (inv as InvoiceDto).supplier_id === partyId
-        );
-        setInvoices(filtered);
-      })
-      .catch(() => toast.error("فشل تحميل الفواتير"))
+    Promise.all([
+      invoiceService.listInvoicesByType(isSales ? "Sales" : "Purchase"),
+      isSales ? returnService.listSalesReturns() : returnService.listPurchaseReturns(),
+    ]).then(([allInvoices, allReturns]) => {
+      const filteredInvoices = allInvoices.filter(inv =>
+        isSales ? (inv as InvoiceDto).customer_id === partyId : (inv as InvoiceDto).supplier_id === partyId
+      );
+      setInvoices(filteredInvoices);
+      const filteredReturns = (allReturns as Array<SalesReturnDto | PurchaseReturnDto>).filter(r =>
+        isSales ? (r as SalesReturnDto).customer_id === partyId : (r as PurchaseReturnDto).supplier_id === partyId
+      );
+      setReturns(filteredReturns);
+    })
+      .catch(() => toast.error("فشل تحميل البيانات"))
       .finally(() => setLoadingInvoices(false));
   }, [partyId, isSales]);
 
@@ -93,6 +100,20 @@ export function ReturnFromMaterialPanel({ onClose, onSaved, initialReturnType, i
     );
   }, [invoices, partyId, isSales]);
 
+  // Build map of invoice_line_id → total returned qty (same-unit assumption)
+  const returnedQtyMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const ret of returns) {
+      for (const line of (ret.lines || [])) {
+        const lid = line.invoice_line_id;
+        if (lid) {
+          map.set(lid, (map.get(lid) || 0) + parseFloat(line.quantity || "0"));
+        }
+      }
+    }
+    return map;
+  }, [returns]);
+
   const invoiceLinesByMaterial = useMemo(() => {
     const map = new Map<string, InvoiceLineInstance[]>();
     if (!partyInvoices.length) return map;
@@ -100,6 +121,10 @@ export function ReturnFromMaterialPanel({ onClose, onSaved, initialReturnType, i
     for (const inv of partyInvoices) {
       for (const line of (inv.lines || [])) {
         if (!line.material_id) continue;
+        // Skip fully-returned lines
+        const returnedQty = returnedQtyMap.get(line.id) || 0;
+        const origQty = parseFloat(line.quantity || "0");
+        if (origQty - returnedQty <= 0) continue;
         const key = line.material_id;
         if (!map.has(key)) map.set(key, []);
         map.get(key)!.push({
@@ -111,7 +136,7 @@ export function ReturnFromMaterialPanel({ onClose, onSaved, initialReturnType, i
       }
     }
     return map;
-  }, [partyInvoices]);
+  }, [partyInvoices, returnedQtyMap]);
 
   const materialKeys = useMemo(() => Array.from(invoiceLinesByMaterial.keys()), [invoiceLinesByMaterial]);
 
@@ -130,16 +155,19 @@ export function ReturnFromMaterialPanel({ onClose, onSaved, initialReturnType, i
 
   const handleAddInstance = (instance: InvoiceLineInstance) => {
     const key = `${instance.invoiceId}_${instance.line.material_id}_${instance.line.unit_id || ""}_${Date.now()}`;
+    const returnedQty = returnedQtyMap.get(instance.line.id) || 0;
+    const origQty = parseFloat(instance.line.quantity || "0");
+    const remainingQty = Math.max(0, origQty - returnedQty).toString();
     setSelectedLines(prev => [...prev, {
       key,
       materialId: instance.line.material_id,
       materialName: instance.line.material_name || instance.line.material_id,
-      invoiceLineId: instance.line.unit_id || "",
+      invoiceLineId: instance.line.id || "",
       invoiceNumber: instance.invoiceNumber,
       invoiceDate: instance.invoiceDate,
-      originalQuantity: instance.line.quantity,
+      originalQuantity: remainingQty,
       originalPrice: instance.line.unit_price,
-      returnQuantity: instance.line.quantity,
+      returnQuantity: remainingQty,
       returnPrice: instance.line.unit_price,
       notes: "",
     }]);

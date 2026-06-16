@@ -23,6 +23,7 @@ impl From<MonetaryAmount> for MonetaryAmountDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InvoiceLineDto {
+    pub id: String,
     pub material_id: String,
     pub material_name: Option<String>,
     pub barcode: Option<String>,
@@ -225,6 +226,7 @@ impl From<UnifiedInvoice> for InvoiceDto {
 impl From<InvoiceLine> for InvoiceLineDto {
     fn from(line: InvoiceLine) -> Self {
         Self {
+            id: line.line_id.unwrap_or_default(),
             material_id: line.material_id.0.to_string(),
             material_name: None,
             barcode: None,

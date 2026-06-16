@@ -260,8 +260,20 @@ export function useInvoiceLifecycle({
             const rate = parseFloat(inv.exchange_rate || "1");
             const docPrice = parseFloat(l.unit_price || "0");
             const basePrice = rate > 0 ? docPrice / rate : docPrice;
+            let unit_name = l.unit_name;
+            // If unit name is empty but unit id is present, try to find from materials (if available yet)
+            if (!unit_name && l.unit_id) {
+              const material = materials.find(m => m.id === l.material_id);
+              if (material?.units) {
+                const foundUnit = material.units.find(u => u.id === l.unit_id);
+                if (foundUnit) {
+                  unit_name = foundUnit.name;
+                }
+              }
+            }
             return {
               ...l,
+              unit_name,
               unit_price: Number.isFinite(basePrice) ? basePrice.toFixed(2).replace(/\.?0+$/, "") : l.unit_price,
               _id: `line_${Math.random()}`,
               line_total: parseFloat(l.quantity) * basePrice,
@@ -295,6 +307,8 @@ export function useInvoiceLifecycle({
     rateMap,
     isReadOnly,
     currencies,
+    defaultWarehouseId,
+    materials,
   ]);
 
   // Financial document calculations and grid columns adaptation

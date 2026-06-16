@@ -162,6 +162,7 @@ mod tests {
         let base_currency = test_base_currency();
         let customer_id = CustomerId::new();
         let lines = vec![InvoiceLine::new(
+            None,
             MaterialId(Uuid::new_v4()),
             dec!(2),
             MonetaryAmount::from_base(dec!(50), base_currency.clone()),
@@ -184,12 +185,14 @@ mod tests {
         let customer_id = CustomerId::new();
         let lines = vec![
             InvoiceLine::new(
+                None,
                 MaterialId(Uuid::new_v4()),
                 dec!(2),
                 MonetaryAmount::from_base(dec!(50), base_currency.clone()),
                 None, None, None, None, None, None, None, None, None, None, None, None, None
             ),
             InvoiceLine::new(
+                None,
                 MaterialId(Uuid::new_v4()),
                 dec!(3),
                 MonetaryAmount::from_base(dec!(100), base_currency.clone()),
@@ -214,6 +217,7 @@ mod tests {
         let base_currency = test_base_currency();
         let customer_id = CustomerId::new();
         let lines = vec![InvoiceLine::new(
+            None,
             MaterialId(Uuid::new_v4()),
             dec!(2),
             MonetaryAmount::from_base(dec!(50), base_currency.clone()),
@@ -237,6 +241,7 @@ mod tests {
         let base_currency = test_base_currency();
         let customer_id = CustomerId::new();
         let lines = vec![InvoiceLine::new(
+            None,
             MaterialId(Uuid::new_v4()),
             dec!(2),
             MonetaryAmount::from_base(dec!(50), base_currency.clone()),
@@ -254,6 +259,7 @@ mod tests {
         invoice.post().unwrap();
 
         let new_line = InvoiceLine::new(
+            None,
             MaterialId(Uuid::new_v4()),
             dec!(1),
             MonetaryAmount::from_base(dec!(30), base_currency.clone()),
@@ -268,6 +274,7 @@ mod tests {
         let base_currency = test_base_currency();
         let customer_id = CustomerId::new();
         let lines = vec![InvoiceLine::new(
+            None,
             MaterialId(Uuid::new_v4()),
             dec!(2),
             MonetaryAmount::from_base(dec!(50), base_currency.clone()),
@@ -292,6 +299,7 @@ mod tests {
         let base_currency = test_base_currency();
         let customer_id = CustomerId::new();
         let lines = vec![InvoiceLine::new(
+            None,
             MaterialId(Uuid::new_v4()),
             dec!(-1),
             MonetaryAmount::from_base(dec!(50), base_currency.clone()),
@@ -313,6 +321,7 @@ mod tests {
         let base_currency = test_base_currency();
         let customer_id = CustomerId::new();
         let lines = vec![InvoiceLine::new(
+            None,
             MaterialId(Uuid::new_v4()),
             dec!(2),
             MonetaryAmount::from_base(dec!(-50), base_currency.clone()),
