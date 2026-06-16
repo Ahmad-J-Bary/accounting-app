@@ -34,12 +34,14 @@ export function FormPanel({
   return (
     <SidebarShell className={className} width={width} onClose={onClose}>
       <SidebarHeader title={title} icon={icon} onClose={onClose} />
-      <div className="flex-1 overflow-y-auto"
+      <div className="flex-1 overflow-y-auto custom-scrollbar"
         style={{
           padding: "var(--sidebar-container-py) var(--sidebar-container-px)",
           display: "flex",
           flexDirection: "column",
           gap: "var(--sidebar-content-gap)",
+          scrollBehavior: "smooth",
+          overscrollBehavior: "contain",
         }}>
         {children}
       </div>
