@@ -11,6 +11,10 @@ export const returnService = {
     return invoke('create_sales_return', { request: req });
   },
 
+  async updateSalesReturn(req: CreateSalesReturnRequest): Promise<SalesReturnDto> {
+    return invoke('create_sales_return', { request: req });
+  },
+
   async listSalesReturns(): Promise<SalesReturnDto[]> {
     return invoke('list_sales_returns');
   },
@@ -24,6 +28,10 @@ export const returnService = {
   },
 
   async createPurchaseReturn(req: CreatePurchaseReturnRequest): Promise<PurchaseReturnDto> {
+    return invoke('create_purchase_return', { request: req });
+  },
+
+  async updatePurchaseReturn(req: CreatePurchaseReturnRequest): Promise<PurchaseReturnDto> {
     return invoke('create_purchase_return', { request: req });
   },
 

@@ -470,7 +470,16 @@ export function DocumentGridCell({
     if (col.key === "expiry_date" && material && !material.has_expiry) {
       return (
         <CellWrapper column={col} config={config} isReadonlyCell>
-          <span className="text-[11px] text-slate-400">—</span>
+          <input
+            ref={(el) => { if (el) inputRefs.current.set(refKey, el); else inputRefs.current.delete(refKey); }}
+            type="text"
+            value="—"
+            readOnly
+            onFocus={() => onActiveCellChange({ row: rowIdx, col: editColIdx })}
+            onKeyDown={(e) => onKeyDown(e, rowIdx, editColIdx)}
+            className="w-full bg-transparent border-none outline-none text-[11px] text-slate-400 text-center cursor-default"
+            tabIndex={-1}
+          />
         </CellWrapper>
       );
     }
@@ -479,11 +488,15 @@ export function DocumentGridCell({
       <span className="text-[11px] text-slate-600">{dateVal}</span>
     ) : (
       <input
+        ref={(el) => { if (el) inputRefs.current.set(refKey, el); else inputRefs.current.delete(refKey); }}
         type="date"
         value={dateVal}
         onChange={e => onCellChange(rowIdx, col.key, e.target.value)}
+        onFocus={() => onActiveCellChange({ row: rowIdx, col: editColIdx })}
+        onKeyDown={(e) => onKeyDown(e, rowIdx, editColIdx)}
         className="w-full bg-transparent border-none outline-none text-[11px] text-slate-700 cursor-default"
         style={{ direction: "ltr" }}
+        autoComplete="off"
       />
     );
   }

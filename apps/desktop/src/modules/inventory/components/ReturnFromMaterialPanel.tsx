@@ -38,6 +38,7 @@ interface InvoiceLineInstance {
   unitId: string;
   unitName: string;
   conversionFactor: string;
+  availableQty: number;
 }
 
 interface SelectedReturnLine {
@@ -198,6 +199,28 @@ export function ReturnFromMaterialPanel({
     return map;
   }, [prevReturns, allMaterials]);
 
+  // Session returned quantities (from selectedLines in this session)
+  const sessionReturnedMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const line of selectedLines) {
+      const lid = line.invoiceLineId;
+      if (lid) {
+        const conv = parseConv(line.conversionFactor);
+        map.set(lid, (map.get(lid) || 0) + parseNum(line.returnQuantity) * conv);
+      }
+    }
+    return map;
+  }, [selectedLines]);
+
+  // Combined returned quantities (historical returns + current session)
+  const combinedReturnedMap = useMemo(() => {
+    const map = new Map(returnedQtyMap);
+    for (const [lid, baseQty] of sessionReturnedMap) {
+      map.set(lid, (map.get(lid) || 0) + baseQty);
+    }
+    return map;
+  }, [returnedQtyMap, sessionReturnedMap]);
+
   // Invoice lines grouped by material (unit-aware)
   const invoiceLinesByMaterial = useMemo(() => {
     const map = new Map<string, InvoiceLineInstance[]>();
@@ -209,8 +232,10 @@ export function ReturnFromMaterialPanel({
         const conv = parseConv(conversionFactor);
         const origQty = parseNum(line.quantity);
         const origBase = origQty * conv;
-        const returnedBase = returnedQtyMap.get(line.id) || 0;
-        if (origBase - returnedBase <= 0) continue;
+        const returnedBase = combinedReturnedMap.get(line.id) || 0;
+        const remainingBase = origBase - returnedBase;
+        if (remainingBase <= 0) continue;
+        const availableQty = remainingBase / conv;
         const key = line.material_id;
         if (!map.has(key)) map.set(key, []);
         map.get(key)!.push({
@@ -221,11 +246,12 @@ export function ReturnFromMaterialPanel({
           unitId,
           unitName,
           conversionFactor,
+          availableQty,
         });
       }
     }
     return map;
-  }, [invoices, returnedQtyMap, allMaterials]);
+  }, [invoices, combinedReturnedMap, allMaterials]);
 
   const materialKeys = useMemo(() => Array.from(invoiceLinesByMaterial.keys()), [invoiceLinesByMaterial]);
 
@@ -254,9 +280,10 @@ export function ReturnFromMaterialPanel({
     const key = `${occKey}_${Date.now()}`;
     const conv = parseConv(inst.conversionFactor);
     const origQty = parseNum(inst.line.quantity);
-    const returnedBase = returnedQtyMap.get(inst.line.id) || 0;
     const origBase = origQty * conv;
-    const remainingBase = Math.max(0, origBase - returnedBase);
+    const histReturnedBase = returnedQtyMap.get(inst.line.id) || 0;
+    const sessionReturnedBase = sessionReturnedMap.get(inst.line.id) || 0;
+    const remainingBase = Math.max(0, origBase - histReturnedBase - sessionReturnedBase);
     const remainingQty = (remainingBase / conv).toString();
     const priceBase = parseNum(inst.line.unit_price) / conv;
 
@@ -281,7 +308,7 @@ export function ReturnFromMaterialPanel({
       notes: "",
     }]);
     setSelectedOccurrenceKeys(prev => new Set(prev).add(occKey));
-  }, [returnedQtyMap, selectedOccurrenceKeys]);
+  }, [returnedQtyMap, sessionReturnedMap, selectedOccurrenceKeys]);
 
   const updateSelectedLine = useCallback((key: string, fields: Partial<SelectedReturnLine>) => {
     setSelectedLines(prev => prev.map(l => l.key === key ? { ...l, ...fields } : l));
@@ -545,7 +572,7 @@ export function ReturnFromMaterialPanel({
                         </div>
                         <div className="flex flex-col items-end gap-0.5 shrink-0 pl-1">
                           <span className="font-mono font-black text-slate-700">
-                            {parseFloat(inst.line.quantity).toFixed(2)}
+                            {inst.availableQty.toFixed(2)}
                           </span>
                           <span className="text-[9px] text-slate-400">{inst.unitName}</span>
                         </div>

@@ -1,16 +1,18 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { ReturnsList } from "../components/ReturnsList";
 import { ReturnsEditor } from "../components/ReturnsEditor";
 import { useReturnLifecycle } from "../hooks/useReturnLifecycle";
 import { returnService } from "@modules/invoicing/api/returnService";
 import { toast } from "sonner";
+import type { SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
 
 export default function PurchaseReturns() {
   const location = useLocation();
-  const [isCreating, setIsCreating] = useState(false);
 
   const {
+    view,
+    isReadOnly,
     returns,
     parties,
     materials,
@@ -21,10 +23,13 @@ export default function PurchaseReturns() {
     setSearch,
     loadData,
     formatMonetaryAmount,
+    openTab,
+    closeTab,
+    activeTabId,
+    editingReturn,
   } = useReturnLifecycle({
     returnType: "PurchaseReturn",
     partyType: "supplier",
-    priceField: "last_purchase_price"
   });
 
   const searchParams = new URLSearchParams(location.search);
@@ -40,7 +45,7 @@ export default function PurchaseReturns() {
     }
   }, [loadData]);
 
-  if (isCreating) {
+  if (view === "editor") {
     return (
       <ReturnsEditor
         returnType="PurchaseReturn"
@@ -48,8 +53,10 @@ export default function PurchaseReturns() {
         parties={parties}
         materials={materials}
         warehouses={warehouses}
-        onSaved={() => { setIsCreating(false); loadData(false); }}
-        onClose={() => setIsCreating(false)}
+        onSaved={() => { loadData(false); closeTab(activeTabId); }}
+        onClose={() => closeTab(activeTabId)}
+        returnId={editingReturn?.id}
+        readOnly={isReadOnly}
       />
     );
   }
@@ -62,9 +69,16 @@ export default function PurchaseReturns() {
       partyIdFilter={supplierIdFilter}
       onSearchChange={setSearch}
       onRefresh={() => loadData(false)}
-      onCreate={() => setIsCreating(true)}
-      onEdit={() => {}}
-      onView={() => {}}
+      onCreate={() => {
+        const uniqueId = `/purchase-returns/new-${Date.now()}`;
+        openTab({ id: uniqueId, title: "مرتجع مشتريات جديد", path: uniqueId, closable: true });
+      }}
+      onEdit={(ret) => {
+        openTab({ id: `/purchase-returns/${ret.id}`, title: `تعديل ${ret.return_number}`, path: `/purchase-returns/${ret.id}`, closable: true });
+      }}
+      onView={(ret) => {
+        openTab({ id: `/purchase-returns/${ret.id}-view`, title: `عرض ${ret.return_number}`, path: `/purchase-returns/${ret.id}?mode=view`, closable: true });
+      }}
       onDelete={handleDelete}
       formatMonetaryAmount={formatMonetaryAmount}
       partyType="supplier"

@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
-import { Save, X } from "lucide-react";
+import { Save, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { FinancialDocumentTemplate } from "@widgets/templates/FinancialDocumentTemplate";
 import { GenericDocumentGrid } from "@widgets/document-shell/GenericDocumentGrid";
@@ -24,14 +24,18 @@ interface ReturnsEditorProps {
   warehouses: WarehouseDto[];
   onSaved: () => void;
   onClose: () => void;
+  returnId?: string;
+  readOnly?: boolean;
 }
 
-export function ReturnsEditor({ returnType, partyType, parties, materials, warehouses, onSaved, onClose }: ReturnsEditorProps) {
+export function ReturnsEditor({ returnType, partyType, parties, materials, warehouses, onSaved, onClose, returnId, readOnly = false }: ReturnsEditorProps) {
   const isSales = returnType === "SalesReturn";
   const [saving, setSaving] = useState(false);
+  const [loadingExisting, setLoadingExisting] = useState(false);
   const [partyId, setPartyId] = useState("");
   const [partyName, setPartyName] = useState(isSales ? "زبون نقدي" : "مورد نقدي");
   const [returnDate, setReturnDate] = useState(new Date().toISOString().slice(0, 10));
+  const [returnNumber, setReturnNumber] = useState("");
   const [notes, setNotes] = useState("");
 
   const {
@@ -46,7 +50,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
     materials,
   });
 
-  // Wrapped removeLine that also removes occurrence key!
+  // Wrapped removeLine that also removes occurrence key
   const removeLine = useCallback((index: number) => {
     const line = lines[index];
     if (line?.occurrence_key) {
@@ -59,7 +63,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
     originalRemoveLine(index);
   }, [lines, originalRemoveLine]);
 
-  // Track selected occurrence keys to prevent duplicates!
+  // Track selected occurrence keys to prevent duplicates
   const [selectedOccurrenceKeys, setSelectedOccurrenceKeys] = useState<Set<string>>(new Set());
   const [occurrences, setOccurrences] = useState<ReturnOccurrenceItem[]>([]);
   const pendingOccurrenceRef = useRef<ReturnOccurrenceItem | null>(null);
@@ -80,7 +84,6 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
         ? invoices.filter((inv) => inv.customer_id === partyId)
         : invoices.filter((inv) => inv.supplier_id === partyId);
 
-      // Build returned qty map: invoice_line_id → total returned base quantity
       const returnedQtyMap = new Map<string, number>();
       const filteredReturns = (returns as Array<SalesReturnDto | PurchaseReturnDto>).filter(r =>
         isSales ? (r as SalesReturnDto).customer_id === partyId : (r as PurchaseReturnDto).supplier_id === partyId
@@ -104,21 +107,18 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
         for (const line of inv.lines) {
           const material = materials.find((m) => m.id === line.material_id);
           if (!material) continue;
-          // Unique key per invoice + line identifier (using invoice ID, material ID, quantity, price, unit to avoid duplicates)
           const key = `${inv.id}_${line.material_id}_${line.quantity}_${line.unit_price}`;
           if (seen.has(key)) continue;
           seen.add(key);
-          // Derive unit info from material when not provided on invoice line
           const invUnit = line.unit_id ? material.units.find(u => u.id === line.unit_id) : undefined;
           const unitName = line.unit_name || invUnit?.name || "";
           const convFactor = line.conversion_factor || invUnit?.conversion_factor || "1";
 
-          // Compute remaining quantity (subtract already-returned amounts)
           const origBase = parseFloat(line.quantity) * parseFloat(convFactor);
           const returnedBase = returnedQtyMap.get(line.id) || 0;
           const remainingBase = Math.max(0, origBase - returnedBase);
           const remainingQty = remainingBase / parseFloat(convFactor);
-          if (remainingQty <= 0) continue; // Skip fully-returned lines
+          if (remainingQty <= 0) continue;
 
           items.push({
             material,
@@ -140,10 +140,82 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
     }).catch((e) => console.error("Failed to fetch partner invoices", e));
   }, [partyId, isSales, materials]);
 
-  // Clear lines when partyId changes
+  // Clear lines when partyId changes (only in create mode)
   useEffect(() => {
-    setLines([newGridLine()]);
-  }, [partyId, setLines]);
+    if (!returnId) {
+      setLines([newGridLine()]);
+    }
+  }, [partyId, setLines, returnId]);
+
+  // Track invoice_line_ids already in the grid (for edit-mode duplicate prevention)
+  const existingInvoiceLineIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const line of lines) {
+      if (line.invoice_line_id) {
+        set.add(line.invoice_line_id);
+      }
+    }
+    return set;
+  }, [lines]);
+
+  // Load existing return for edit/view
+  useEffect(() => {
+    if (!returnId || materials.length === 0) return;
+    setLoadingExisting(true);
+    const loadFn = isSales
+      ? returnService.getSalesReturn(returnId)
+      : returnService.getPurchaseReturn(returnId);
+    loadFn
+      .then((ret) => {
+        const pid = isSales
+          ? (ret as SalesReturnDto).customer_id
+          : (ret as PurchaseReturnDto).supplier_id;
+        const pname = isSales
+          ? (ret as SalesReturnDto).customer_name || ""
+          : (ret as PurchaseReturnDto).supplier_name || "";
+        setPartyId(pid);
+        setPartyName(pname);
+        setReturnDate(ret.return_date.split("T")[0]);
+        setReturnNumber(ret.return_number);
+        setNotes(ret.notes || "");
+
+        const gridLines: GridLine[] = ret.lines.map((line) => {
+          const mat = materials.find((m) => m.id === line.material_id);
+          const unit = mat?.units.find((u) => u.id === line.unit_id);
+          const unitName = unit?.name || line.unit_name || "";
+          const convFactor = unit?.conversion_factor || "1";
+          const basePrice = parseFloat(line.unit_price) / parseFloat(convFactor);
+          return {
+            _id: `line_${Math.random()}`,
+            id: line.id,
+            material_id: line.material_id,
+            material_name: line.material_name || mat?.name || "",
+            quantity: line.quantity,
+            unit_price: line.unit_price,
+            unit_id: line.unit_id,
+            unit_name: unitName,
+            conversion_factor: convFactor,
+            line_total: parseFloat(line.line_total),
+            notes: line.notes || "",
+            invoice_line_id: line.invoice_line_id,
+            original_quantity: line.quantity,
+            original_quantity_raw: line.quantity,
+            original_conversion_factor: convFactor,
+            original_price: line.unit_price,
+            original_price_base: Number.isFinite(basePrice) ? basePrice.toFixed(6) : line.unit_price,
+          } as GridLine;
+        });
+
+        if (!readOnly) {
+          gridLines.push(newGridLine());
+        }
+        setLines(gridLines);
+      })
+      .catch((e) => {
+        toast.error("فشل تحميل بيانات المرتجع");
+      })
+      .finally(() => setLoadingExisting(false));
+  }, [returnId, materials, isSales, readOnly, setLines]);
 
   const columns = useMemo<DocumentColumn[]>(() => [
     { key: "material_image", header: "صورة", width: "w-[40px]", type: "image", defaultVisible: false },
@@ -162,11 +234,9 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
     { key: "notes", header: "ملاحظات", width: "flex-[1]", type: "text", defaultVisible: true },
   ], []);
 
-  // Read current lines for clamping
   const linesRef = useRef(lines);
   linesRef.current = lines;
 
-  // Wrapped updateLine: clamp return quantity and recalc prices on unit change
   const wrappedUpdateLine = useCallback((index: number, updates: Partial<GridLine>) => {
     let postUpdates: Partial<GridLine> | null = null;
 
@@ -205,15 +275,12 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
     }
   }, [updateLine, materials]);
 
-  // Intercept material selection to inject original invoice-line data
   const handleSelectMaterial = useCallback((index: number, material: MaterialDto) => {
     selectMaterial(index, material);
     const occ = pendingOccurrenceRef.current;
     if (occ) {
-      // Generate unique key to mark as selected
       const occKey = `${occ.invoice_id}_${occ.material.id}_${occ.original_quantity}_${occ.original_price}`;
 
-      // Compute two-line display for original_quantity with unit info
       const rawQty = parseFloat(occ.original_quantity);
       const conv = parseFloat(occ.conversion_factor || "1");
       const baseUnit = occ.material.units.find(u => u.is_base);
@@ -248,16 +315,17 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
     }
   }, [selectMaterial, wrappedUpdateLine]);
 
-  // Custom search panel: shows invoice-line occurrences only when partner has invoices, and filters already selected ones!
+  // Custom search panel: shows invoice-line occurrences filtered by party and already-selected ones
   const searchPanelRenderer = useMemo(() => {
     if (!partyId || occurrences.length === 0) return undefined;
-    
-    // Filter out already selected occurrences
+
     const filteredOccurrences = occurrences.filter(occ => {
       const occKey = `${occ.invoice_id}_${occ.material.id}_${occ.original_quantity}_${occ.original_price}`;
-      return !selectedOccurrenceKeys.has(occKey);
+      if (selectedOccurrenceKeys.has(occKey)) return false;
+      if (existingInvoiceLineIds.has(occ.id)) return false;
+      return true;
     });
-    
+
     return (props: {
       search: string;
       searchType: "name" | "code" | "barcode";
@@ -277,7 +345,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
         onClose={props.onClose}
       />
     );
-  }, [occurrences, partyId, selectedOccurrenceKeys]);
+  }, [occurrences, partyId, selectedOccurrenceKeys, existingInvoiceLineIds]);
 
   const totalAmount = useMemo(() =>
     lines.reduce((sum, l) => sum + (parseFloat(l.quantity || "0") * parseFloat(l.unit_price || "0")), 0), [lines]);
@@ -294,7 +362,8 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
 
       if (isSales) {
         await returnService.createSalesReturn({
-          return_number: "",
+          id: returnId || undefined,
+          return_number: returnNumber,
           customer_id: partyId,
           customer_name: partyName,
           return_date: new Date(returnDate).toISOString(),
@@ -303,7 +372,8 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
         });
       } else {
         await returnService.createPurchaseReturn({
-          return_number: "",
+          id: returnId || undefined,
+          return_number: returnNumber,
           supplier_id: partyId,
           supplier_name: partyName,
           return_date: new Date(returnDate).toISOString(),
@@ -312,33 +382,63 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
         });
       }
 
-      toast.success("تم تسجيل المرتجع بنجاح");
+      toast.success(returnId ? "تم تحديث المرتجع بنجاح" : "تم تسجيل المرتجع بنجاح");
       onSaved();
     } catch (e) {
-      toast.error("فشل تسجيل المرتجع: " + e);
+      toast.error("فشل " + (returnId ? "تحديث" : "تسجيل") + " المرتجع: " + e);
     } finally {
       setSaving(false);
     }
   };
 
+  const editorTitle = readOnly
+    ? `عرض ${returnType === "SalesReturn" ? "مرتجع مبيعات" : "مرتجع مشتريات"}${returnNumber ? ` - ${returnNumber}` : ""}`
+    : returnId
+      ? `تعديل ${returnType === "SalesReturn" ? "مرتجع مبيعات" : "مرتجع مشتريات"}${returnNumber ? ` - ${returnNumber}` : ""}`
+      : returnType === "SalesReturn" ? "مرتجع مبيعات جديد" : "مرتجع مشتريات جديد";
+
+  if (loadingExisting) {
+    return (
+      <FinancialDocumentTemplate
+        title={editorTitle}
+        toolbar={
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={onClose} className="h-9 border-slate-200 hover:bg-slate-50">
+              <X className="w-4 h-4 ml-2" /> إلغاء
+            </Button>
+          </div>
+        }
+        headerFields={<div className="flex items-center gap-2 text-slate-400 py-8"><Loader2 className="w-5 h-5 animate-spin" /> جاري تحميل بيانات المرتجع...</div>}
+        lineItemsGrid={null}
+        summaryPanel={null}
+        sidebar={null}
+      />
+    );
+  }
+
   return (
     <FinancialDocumentTemplate
-      title={returnType === "SalesReturn" ? "مرتجع مبيعات" : "مرتجع مشتريات"}
+      title={editorTitle}
       toolbar={
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={onClose} className="h-9 border-slate-200 hover:bg-slate-50">
-            <X className="w-4 h-4 ml-2" /> إلغاء
+            <X className="w-4 h-4 ml-2" /> {readOnly ? "إغلاق" : "إلغاء"}
           </Button>
-          <Button size="sm" onClick={handleSave} disabled={saving} className="h-9 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
-            <Save className="w-4 h-4 ml-2" /> {saving ? "جاري الحفظ..." : "حفظ المرتجع"}
-          </Button>
+          {!readOnly && (
+            <Button size="sm" onClick={handleSave} disabled={saving} className="h-9 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
+              <Save className="w-4 h-4 ml-2" /> {saving ? "جاري الحفظ..." : "حفظ المرتجع"}
+            </Button>
+          )}
         </div>
       }
       headerFields={
         <>
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase">تاريخ المرتجع</label>
-            <Input type="date" value={returnDate} onChange={e => setReturnDate(e.target.value)} className="h-9 font-bold border-slate-200" />
+            <Input type="date" value={returnDate}
+              disabled={readOnly}
+              onChange={e => setReturnDate(e.target.value)}
+              className="h-9 font-bold border-slate-200 disabled:opacity-100 disabled:bg-slate-50 disabled:cursor-not-allowed" />
           </div>
           <div className="md:col-span-2 space-y-1">
             <InvoicePartySelector
@@ -348,11 +448,15 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
               selectedName={partyName}
               onSelect={(id, name) => { setPartyId(id); setPartyName(name); }}
               onClear={() => { setPartyId(""); setPartyName(isSales ? "زبون نقدي" : "مورد نقدي"); }}
+              readOnly={readOnly}
             />
           </div>
           <div className="md:col-span-2 space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase">ملاحظات</label>
-            <Input placeholder="ملاحظات إضافية..." value={notes} onChange={e => setNotes(e.target.value)} className="h-9 border-slate-200" />
+            <Input placeholder="ملاحظات إضافية..." value={notes}
+              disabled={readOnly}
+              onChange={e => setNotes(e.target.value)}
+              className="h-9 border-slate-200 disabled:opacity-100 disabled:bg-slate-50 disabled:cursor-not-allowed" />
           </div>
         </>
       }
@@ -361,13 +465,14 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
           columns={columns}
           lines={lines}
           onUpdateLine={wrappedUpdateLine}
-          onRemoveLine={removeLine}
-          onAddLine={addLine}
-          onSelectMaterial={handleSelectMaterial}
+          onRemoveLine={readOnly ? undefined : removeLine}
+          onAddLine={readOnly ? undefined : addLine}
+          onSelectMaterial={readOnly ? undefined : handleSelectMaterial}
           materials={materials}
           warehouses={warehouses}
           preferenceKey={`${returnType === "SalesReturn" ? "sales" : "purchase"}-returns-editor`}
           searchPanelRenderer={searchPanelRenderer}
+          readOnly={readOnly}
         />
       }
       summaryPanel={

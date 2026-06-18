@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useLocation, useParams } from "react-router-dom";
 import { useTabs } from "@app/providers/TabContext";
 import { returnService } from "@modules/invoicing/api/returnService";
 import { customerService } from "@modules/partners/api/customerService";
 import { supplierService } from "@modules/partners/api/supplierService";
 import { materialService } from "@modules/inventory/api/materialService";
-import { settingsService } from "@modules/core/api/settingsService";
 import { warehouseService } from "@modules/inventory/api/warehouseService";
 import type {
   SalesReturnDto,
@@ -13,7 +13,6 @@ import type {
   SupplierDto,
   MaterialDto,
   WarehouseDto,
-  CompanySettings,
 } from "@erp/shared-types";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
@@ -21,19 +20,27 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 interface UseReturnLifecycleProps {
   returnType: "SalesReturn" | "PurchaseReturn";
   partyType: "customer" | "supplier";
-  priceField: "last_sale_price" | "last_purchase_price";
 }
 
 export function useReturnLifecycle({
   returnType,
   partyType,
 }: UseReturnLifecycleProps) {
+  const location = useLocation();
+  const { id } = useParams();
   const { openTab, closeTab, activeTabId } = useTabs();
-  const {
-    formatMonetaryAmount,
-  } = useCurrencyContext();
+  const { formatMonetaryAmount } = useCurrencyContext();
 
+  const isSales = returnType === "SalesReturn";
+  const isNew = location.pathname.includes("/new");
+  const isReadOnly = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get("mode") === "view";
+  }, [location.search]);
+
+  const [view, setView] = useState<"list" | "editor">("list");
   const [returns, setReturns] = useState<(SalesReturnDto | PurchaseReturnDto)[]>([]);
+  const [editingReturn, setEditingReturn] = useState<SalesReturnDto | PurchaseReturnDto | null>(null);
   const [parties, setParties] = useState<Array<CustomerDto | SupplierDto>>([]);
   const [materials, setMaterials] = useState<MaterialDto[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
@@ -57,14 +64,11 @@ export function useReturnLifecycle({
             ? customerService.listCustomers()
             : supplierService.listSuppliers();
 
-        const listMaterialsPromise = materialService.listMaterials();
-        const listWarehousesPromise = warehouseService.listWarehouses();
-
         const [retData, partyData, matData, whData] = await Promise.all([
           listReturnsPromise,
           listPartiesPromise,
-          listMaterialsPromise,
-          listWarehousesPromise,
+          materialService.listMaterials(),
+          warehouseService.listWarehouses(),
         ]);
 
         setReturns(retData);
@@ -81,6 +85,31 @@ export function useReturnLifecycle({
     [returnType, partyType],
   );
 
+  // Route-based view switching
+  useEffect(() => {
+    if (isNew) {
+      setEditingReturn(null);
+      setView("editor");
+    } else if (id) {
+      const loadReturn = async () => {
+        try {
+          const ret = isSales
+            ? await returnService.getSalesReturn(id)
+            : await returnService.getPurchaseReturn(id);
+          setEditingReturn(ret);
+          setView("editor");
+        } catch {
+          toast.error("فشل تحميل بيانات المرتجع");
+          setView("list");
+        }
+      };
+      loadReturn();
+    } else {
+      setEditingReturn(null);
+      setView("list");
+    }
+  }, [isNew, id, isSales]);
+
   const prevActiveTab = useRef(activeTabId);
   useEffect(() => {
     loadData(true);
@@ -96,7 +125,10 @@ export function useReturnLifecycle({
   }, [activeTabId, loadData, returnType]);
 
   return {
+    view,
+    isReadOnly,
     returns,
+    editingReturn,
     parties,
     materials,
     warehouses,

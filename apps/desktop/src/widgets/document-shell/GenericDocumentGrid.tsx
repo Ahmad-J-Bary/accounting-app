@@ -185,22 +185,21 @@ export function GenericDocumentGrid({
     [autoFitColumn, columns, lines, getCellValue],
   );
 
-  const editableCols = filteredColumns.filter((c) => c.type !== "readonly" && c.type !== "tier_select" && c.type !== "warehouse_select");
-  const isNavigableCol = (c: DocumentColumn) =>
-    c.type !== "unit_select" && c.type !== "image" && c.type !== "tier_select" && c.type !== "warehouse_select";
+  const editableCols = filteredColumns.filter(
+    (c) => c.type !== "readonly" && c.type !== "tier_select" && c.type !== "warehouse_select" && c.type !== "image" && c.type !== "unit_select",
+  );
 
   const findNextCol = useCallback(
     (fromIdx: number, dir: 1 | -1): number => {
-      let idx = fromIdx + dir;
-      if (fromIdx < 0) idx = dir === 1 ? 0 : editableCols.length - 1;
-      if (fromIdx >= editableCols.length) idx = dir === 1 ? 0 : editableCols.length - 1;
-      while (idx >= 0 && idx < editableCols.length) {
-        if (isNavigableCol(editableCols[idx])) return idx;
-        idx += dir;
-      }
-      return fromIdx;
+      if (editableCols.length === 0) return 0;
+      const idx = fromIdx + dir;
+      if (fromIdx < 0) return dir === 1 ? 0 : editableCols.length - 1;
+      if (fromIdx >= editableCols.length) return dir === 1 ? 0 : editableCols.length - 1;
+      if (idx < 0) return 0;
+      if (idx >= editableCols.length) return editableCols.length - 1;
+      return idx;
     },
-    [editableCols],
+    [editableCols.length],
   );
 
   const handleKeyDown = useCallback(
@@ -465,7 +464,7 @@ export function GenericDocumentGrid({
               </div>
 
               {filteredColumns.map((col) => {
-                const isEditable = col.type !== "readonly";
+                const isEditable = editableCols.includes(col);
                 const editColIdx = isEditable ? editColCursor++ : -1;
                 return (
                   <DocumentGridCell
