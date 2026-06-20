@@ -286,6 +286,13 @@ impl PostInvoiceUseCase {
                 Decimal::ZERO
             };
 
+            let auto_notes = format!("{:?} بموجب فاتورة رقم {} ({} x {})", invoice.invoice_type, invoice.invoice_number, line.quantity, conversion_factor);
+            let movement_notes = line.notes.clone()
+                .filter(|n| !n.trim().is_empty())
+                .or_else(|| {
+                    invoice.notes.clone().filter(|n| !n.trim().is_empty())
+                })
+                .unwrap_or(auto_notes);
             let mut movement = StockMovement::new(
                 line.material_id,
                 movement_type.clone(),
@@ -293,7 +300,7 @@ impl PostInvoiceUseCase {
                 unit_cost,
                 total_cost,
                 invoice.invoice_number.clone(),
-                format!("{:?} بموجب فاتورة رقم {} ({} x {})", invoice.invoice_type, invoice.invoice_number, line.quantity, conversion_factor),
+                movement_notes,
                 Utc::now(),
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
             movement.unit_cost = unit_cost;

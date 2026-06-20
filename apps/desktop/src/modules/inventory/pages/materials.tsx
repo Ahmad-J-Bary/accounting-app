@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@shared/ui/button";
-import { Plus, RefreshCw, Package, Layers, Barcode, ShoppingCart, TrendingUp, AlertTriangle, Undo2, ArrowRightLeft } from "lucide-react";
+import { Plus, RefreshCw, Package, Layers, Barcode, ShoppingCart, TrendingUp, AlertTriangle, Undo2, ArrowRightLeft, Scale } from "lucide-react";
 import { materialService } from '@modules/inventory/api/materialService';
 import { categoryService } from '@modules/inventory/api/categoryService';
-import { damagedService, transferService, inventoryService } from '@modules/inventory/api/inventoryService';
+import { damagedService, transferService, adjustmentService, inventoryService } from '@modules/inventory/api/inventoryService';
 import { warehouseService } from '@modules/inventory/api/warehouseService';
-import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest, CreateDamagedItemRequest, WarehouseDto, CreateTransferRequest, StockMovement } from "@erp/shared-types";
+import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest, CreateDamagedItemRequest, CreateStockAdjustmentRequest, WarehouseDto, CreateTransferRequest, StockMovement } from "@erp/shared-types";
 import { cn } from '@shared/lib/utils';
 import { toast } from 'sonner';
 
@@ -19,6 +19,7 @@ import { MaterialDetailPanel } from '@modules/inventory/components/MaterialDetai
 import { DamagedForm } from '@modules/inventory/components/DamagedForm';
 import { TransferForm } from '@modules/inventory/components/TransferForm';
 import { ReturnFromMaterialPanel } from '@modules/inventory/components/ReturnFromMaterialPanel';
+import { AdjustmentForm } from '@modules/inventory/components/AdjustmentForm';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useTabs } from "@app/providers/TabContext";
 import { buildStockByWarehouse } from '@modules/inventory/lib/stockUtils';
@@ -66,6 +67,8 @@ export default function Materials() {
   const [transferFormOpen, setTransferFormOpen] = useState(false);
   const [savingTransfer, setSavingTransfer] = useState(false);
   const [transferPreset, setTransferPreset] = useState<{ sourceWarehouseId?: string } | null>(null);
+  const [showAdjustmentPanel, setShowAdjustmentPanel] = useState(false);
+  const [savingAdjustment, setSavingAdjustment] = useState(false);
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
 
@@ -125,6 +128,20 @@ export default function Materials() {
       toast.error("فشل تسجيل التالف: " + e);
     } finally {
       setSavingDamaged(false);
+    }
+  }, [refresh]);
+
+  const handleCreateAdjustment = useCallback(async (payload: CreateStockAdjustmentRequest) => {
+    setSavingAdjustment(true);
+    try {
+      await adjustmentService.createStockAdjustment(payload);
+      setShowAdjustmentPanel(false);
+      refresh();
+      toast.success('تم إنشاء التسوية بنجاح');
+    } catch (e: unknown) {
+      toast.error("فشل إنشاء التسوية: " + e);
+    } finally {
+      setSavingAdjustment(false);
     }
   }, [refresh]);
 
@@ -254,6 +271,25 @@ export default function Materials() {
               <AlertTriangle className="w-4 h-4 ml-2 text-rose-600" />
               تسجيل تالف
             </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-white border-teal-200 text-teal-700 hover:bg-teal-50"
+              disabled={!selectedId}
+              onClick={() => {
+                setShowAdjustmentPanel(true);
+                setIsFormOpen(false);
+                setManagingUnitsMaterial(null);
+                setTransferFormOpen(false);
+                setIsReturnOpen(false);
+                setShowDamagedPanel(false);
+                setShowUnitsPanel(false);
+              }}
+            >
+              <Scale className="w-4 h-4 ml-2 text-teal-600" />
+              تسوية
+            </Button>
           </>
         }
 
@@ -320,6 +356,14 @@ export default function Materials() {
               saving={savingDamaged}
               initialMaterialId={selectedId ?? undefined}
             />
+          ) : showAdjustmentPanel ? (
+            <AdjustmentForm
+              onClose={() => setShowAdjustmentPanel(false)}
+              products={materials}
+              onSave={handleCreateAdjustment}
+              saving={savingAdjustment}
+              initialMaterialId={selectedId ?? undefined}
+            />
           ) : (
             <MaterialDetailPanel 
               material={selectedMaterial}
@@ -330,7 +374,7 @@ export default function Materials() {
             />
           )
         }
-        isPanelOpen={isFormOpen || transferFormOpen || isReturnOpen || !!selectedId || !!managingUnitsMaterial || showDamagedPanel}
+        isPanelOpen={isFormOpen || transferFormOpen || isReturnOpen || !!selectedId || !!managingUnitsMaterial || showDamagedPanel || showAdjustmentPanel}
       />
     </>
   );

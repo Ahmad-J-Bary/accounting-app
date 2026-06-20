@@ -82,7 +82,7 @@ export function DamagedForm({ onClose, products, onSave, saving, initialMaterial
               }}
             >
               <SelectTrigger className="w-full bg-white border-slate-200">
-                <SelectValue placeholder="اختر المنتج..." />
+                <SelectValue placeholder="اختر المادة..." />
               </SelectTrigger>
               <SelectContent>
                 {products.map((p) => (

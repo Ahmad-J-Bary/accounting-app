@@ -16,9 +16,10 @@ interface AdjustmentFormProps {
   onSave: (payload: CreateStockAdjustmentRequest) => Promise<void>;
   saving: boolean;
   initialValues?: StockAdjustment | null;
+  initialMaterialId?: string;
 }
 
-export function AdjustmentForm({ onClose, products, onSave, saving, initialValues }: AdjustmentFormProps) {
+export function AdjustmentForm({ onClose, products, onSave, saving, initialValues, initialMaterialId }: AdjustmentFormProps) {
   const isEditMode = !!initialValues;
   const [form, setForm] = useState<Partial<CreateStockAdjustmentRequest>>({
     adjustment_date: new Date().toISOString(),
@@ -69,13 +70,16 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
       setForm({
         adjustment_date: new Date().toISOString(),
         actual_quantity: 0,
-        material_id: "",
+        material_id: initialMaterialId || "",
         unit_cost: 0,
       });
       setSystemQuantity(0);
       setUnitCostPerUnit(0);
+      if (initialMaterialId) {
+        fetchBalance(initialMaterialId);
+      }
     }
-  }, [initialValues]);
+  }, [initialValues, initialMaterialId, fetchBalance]);
 
   const handleMaterialChange = async (val: string) => {
     setForm(p => ({ ...p, material_id: val }));
@@ -118,7 +122,7 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
           <div className="space-y-2">
             <FieldLabel required>المادة</FieldLabel>
             <Select value={form.material_id ?? ""} onValueChange={handleMaterialChange}>
-              <SelectTrigger className="w-full bg-white border-slate-200"><SelectValue placeholder="اختر المنتج..." /></SelectTrigger>
+              <SelectTrigger className="w-full bg-white border-slate-200"><SelectValue placeholder="اختر المادة..." /></SelectTrigger>
               <SelectContent>
                 {products.map(p => (
                   <SelectItem key={p.id} value={p.id}>{p.name} ({p.code})</SelectItem>

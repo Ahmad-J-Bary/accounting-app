@@ -105,18 +105,18 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
         className: "tabular-nums"
       },
       {
-        id: "adjustment_date",
-        header: "التاريخ",
-        label: "تاريخ التسوية",
-        accessor: (a) => formatDateTime(a.adjustment_date),
-        className: "tabular-nums text-slate-500"
-      },
-      {
         id: "notes",
         header: "ملاحظة",
         label: "ملاحظة",
         accessor: (a) => a.notes ?? a.reason ?? "",
         className: "text-slate-500"
+      },
+      {
+        id: "adjustment_date",
+        header: "التاريخ",
+        label: "تاريخ التسوية",
+        accessor: (a) => formatDateTime(a.adjustment_date),
+        className: "tabular-nums text-slate-500"
       },
     ];
 

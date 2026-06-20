@@ -86,13 +86,6 @@ export function InvoiceTable({
         className: "font-black text-slate-900 text-center"
       },
       {
-        id: "notes",
-        header: "التوصيف",
-        label: "التوصيف",
-        accessor: (inv) => inv.notes || "",
-        className: "text-slate-500 italic"
-      },
-      {
         id: partyField,
         header: partyLabel,
         label: partyLabel,
@@ -214,6 +207,13 @@ export function InvoiceTable({
         header: "الحالة",
         label: "حالة الفاتورة",
         accessor: (inv) => <DocumentStatusBadge status={inv.status} />
+      },
+      {
+        id: "notes",
+        header: "التوصيف",
+        label: "التوصيف",
+        accessor: (inv) => inv.notes || "",
+        className: "text-slate-500 italic"
       },
       {
         id: "issued_at",

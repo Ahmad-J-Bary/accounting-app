@@ -43,6 +43,8 @@ impl PostInvoiceUseCase {
         for line in &invoice.lines {
             if let Ok(Some(material)) = self.material_repo.find_by_id(&line.material_id).await {
                 // Record stock movement
+                let auto_notes = format!("بيع بموجب فاتورة مبيعات رقم {}", invoice.invoice_number);
+                let movement_notes = line.notes.clone().filter(|n| !n.trim().is_empty()).unwrap_or(auto_notes);
                 let movement = StockMovement::new(
                     material.id,
                     MovementType::Sale,
@@ -50,7 +52,7 @@ impl PostInvoiceUseCase {
                     line.unit_price.amount(),
                     line.line_total().amount(),
                     invoice.invoice_number.clone(),
-                    format!("بيع بموجب فاتورة مبيعات رقم {}", invoice.invoice_number),
+                    movement_notes,
                     chrono::Utc::now(),
                 ).map_err(|e| AppError::Invalid(e.to_string()))?;
                 self.movement_repo.save(&movement).await?;

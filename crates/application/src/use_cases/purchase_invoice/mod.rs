@@ -265,7 +265,13 @@ impl PostPurchaseInvoiceUseCase {
                 // Calculate effective quantity in base units
                 let effective_quantity = item.quantity * item.conversion_factor.unwrap_or(rust_decimal::Decimal::ONE);
 
-                // Record stock movement
+                let auto_notes = format!("شراء بموجب فاتورة مشتريات رقم {}", invoice.invoice_number);
+                let movement_notes = item.notes.clone()
+                    .filter(|n| !n.trim().is_empty())
+                    .or_else(|| {
+                        invoice.notes.clone().filter(|n| !n.trim().is_empty())
+                    })
+                    .unwrap_or(auto_notes);
                 let movement = StockMovement::new(
                     material.id,
                     MovementType::Purchase,
@@ -273,7 +279,7 @@ impl PostPurchaseInvoiceUseCase {
                     item.unit_price,
                     item.line_total,
                     invoice.invoice_number.clone(),
-                    format!("شراء بموجب فاتورة مشتريات رقم {}", invoice.invoice_number),
+                    movement_notes,
                     chrono::Utc::now(),
                 ).map_err(|e| AppError::Invalid(e.to_string()))?;
                 self.movement_repo.save(&movement).await?;

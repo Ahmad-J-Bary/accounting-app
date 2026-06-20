@@ -97,6 +97,13 @@ impl PostSalesReturnUseCase {
             let unit_cost_base = summary.average_cost_base;
             let total_cost_base = unit_cost_base * effective_quantity;
             
+            let custom_notes = line.notes.clone()
+                .filter(|n| !n.trim().is_empty())
+                .or_else(|| {
+                    ret.notes.clone().filter(|n| !n.trim().is_empty())
+                })
+                .unwrap_or_default();
+
             let mut movement = StockMovement::new(
                 line.material_id,
                 MovementType::SalesReturn,
@@ -104,9 +111,7 @@ impl PostSalesReturnUseCase {
                 unit_cost,
                 total_cost,
                 ret.return_number.clone(),
-                format!("مرتجع مبيعات رقم {} - {}",
-                    ret.return_number,
-                    line.notes.as_deref().unwrap_or("")),
+                format!("مرتجع مبيعات رقم {} - {}", ret.return_number, custom_notes),
                 Utc::now(),
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
             movement.unit_cost_base = unit_cost_base;

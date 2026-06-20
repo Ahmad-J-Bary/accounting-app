@@ -51,13 +51,6 @@ export function DamagedTable({
         className: "font-bold text-slate-800"
       },
       {
-        id: "reason",
-        header: "السبب",
-        label: "سبب التلف",
-        accessor: (i) => i.reason || "",
-        className: "text-slate-500 italic"
-      },
-      {
         id: "quantity",
         header: "الكمية",
         label: "الكمية التالفة",
@@ -82,6 +75,13 @@ export function DamagedTable({
       });
     });
 
+    cols.push({
+      id: "reason",
+      header: "السبب",
+      label: "سبب التلف",
+      accessor: (i) => i.reason || "",
+      className: "text-slate-500 italic"
+    });
     cols.push({
       id: "damage_date",
       header: "التاريخ",
@@ -109,13 +109,13 @@ export function DamagedTable({
   }, [formatAmount, currencies, isBaseCurrency, onView, onEdit, onDelete]);
 
   const defaultVisible = useMemo(() => {
-    const ids: string[] = ["id", "material_name", "reason", "quantity"];
+    const ids: string[] = ["id", "material_name", "quantity"];
     currencies.forEach(curr => {
       if (isBaseCurrency(curr.code)) {
         ids.push(`cost_${curr.code}`);
       }
     });
-    ids.push("damage_date");
+    ids.push("reason", "damage_date");
     if (onView || onEdit || onDelete) ids.push("actions");
     return ids;
   }, [currencies, isBaseCurrency, onView, onEdit, onDelete]);

@@ -9,6 +9,47 @@ import { formatDateTime } from '@shared/lib/format';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { getMovementType } from '../constants/movementTypes';
 
+const getCleanNotes = (m: StockMovement): string => {
+  const type = m.movement_type.replace('MovementType::', '');
+  const rawReason = m.reason ? m.reason.trim() : '';
+
+  if (!rawReason) return '—';
+
+  // 1. Sales, Purchase, OpeningBalance, PurchaseCosts
+  if (['Sale', 'Purchase', 'OpeningBalance', 'PurchaseCosts'].includes(type)) {
+    const autoNotesRegex = /^(Sales|Purchase|OpeningBalance|PurchaseCosts)\s+بموجب\s+فاتورة\s+رقم/i;
+    if (autoNotesRegex.test(rawReason)) {
+      return '—';
+    }
+    return rawReason;
+  }
+
+  // 2. SalesReturn, PurchaseReturn
+  if (['SalesReturn', 'PurchaseReturn'].includes(type)) {
+    const returnRegex = /^مرتجع\s+(?:مبيعات|مشتريات)\s+رقم\s+\S+(?:\s*-\s*(.*))?$/;
+    const match = rawReason.match(returnRegex);
+    if (match) {
+      const customNotes = match[1] ? match[1].trim() : '';
+      return customNotes || '—';
+    }
+    return rawReason;
+  }
+
+  // 3. Adjustment
+  if (type === 'Adjustment') {
+    const adjRegex = /^تسوية:\s+(?:فائض|عجز)(?:\s*-\s*(.*))?$/;
+    const match = rawReason.match(adjRegex);
+    if (match) {
+      const customNotes = match[1] ? match[1].trim() : '';
+      return customNotes || '—';
+    }
+    return rawReason;
+  }
+
+  // 4. Damaged, Transfer, and other types
+  return rawReason;
+};
+
 interface InventoryMovementsTableProps {
   movements: StockMovement[];
   loading: boolean;
@@ -21,7 +62,7 @@ interface InventoryMovementsTableProps {
   className?: string;
 }
 
-type SortField = "date" | "type" | "product_name" | "quantity" | "reference" | `total_cost_${string}`;
+type SortField = "date" | "type" | "product_name" | "quantity" | "reference" | "notes" | `total_cost_${string}`;
 
 export function InventoryMovementsTable({
   movements, loading, warehouses, search, onSearchChange,
@@ -143,6 +184,7 @@ export function InventoryMovementsTable({
         case "product_name": comparison = (a.material_name || "").localeCompare(b.material_name || "", "ar"); break;
         case "quantity": comparison = parseFloat(a.quantity) - parseFloat(b.quantity); break;
         case "reference": comparison = (a.reference || "").localeCompare(b.reference || "", "ar"); break;
+        case "notes": comparison = getCleanNotes(a).localeCompare(getCleanNotes(b), "ar"); break;
       }
       return direction === "asc" ? comparison : -comparison;
     }
@@ -267,6 +309,18 @@ export function InventoryMovementsTable({
         ) : '—',
       },
       {
+        id: 'notes',
+        header: 'ملاحظة / التوصيف / السبب',
+        label: 'ملاحظة / التوصيف / السبب',
+        accessor: (m) => (
+          <span className="w-full text-center truncate">
+            {getCleanNotes(m)}
+          </span>
+        ),
+        className: 'text-slate-600 text-xs max-w-[240px]',
+        align: 'center',
+      },
+      {
         id: 'date',
         header: 'التاريخ',
         label: 'التاريخ',
@@ -284,7 +338,7 @@ export function InventoryMovementsTable({
         ids.push(`total_cost_${curr.code}`);
       }
     });
-    ids.push("reference", "date");
+    ids.push("notes", "reference", "date");
     return ids;
   }, [currencies, isBaseCurrency]);
 
@@ -302,6 +356,9 @@ export function InventoryMovementsTable({
       }
       if (id === "quantity") {
         return { id: "qty_spacer", columnId: id, label: "", value: "" };
+      }
+      if (id === "notes") {
+        return { id: "notes_spacer", columnId: id, label: "", value: "" };
       }
       const costMatch = id.match(/^total_cost_(.+)$/);
       if (costMatch) {
@@ -343,7 +400,7 @@ export function InventoryMovementsTable({
         sortField={sortField}
         sortDirection={sortDirection}
         onHeaderClick={(col) => {
-          if (["date", "type", "product_name", "quantity", "reference"].includes(col.id) || col.id.startsWith("total_cost_")) {
+          if (["date", "type", "product_name", "quantity", "reference", "notes"].includes(col.id) || col.id.startsWith("total_cost_")) {
             handleSort(col.id as SortField);
           }
         }}

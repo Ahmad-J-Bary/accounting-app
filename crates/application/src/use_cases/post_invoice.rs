@@ -51,6 +51,8 @@ impl PostInvoiceUseCase {
                     .unwrap_or(rust_decimal::Decimal::ZERO);
                 let total_cost = cost_price * line.quantity;
 
+                let auto_notes = format!("بيع بموجب فاتورة مبيعات رقم {}", invoice.invoice_number);
+                let movement_notes = line.notes.clone().filter(|n| !n.trim().is_empty()).unwrap_or(auto_notes);
                 let movement = StockMovement::new(
                     material.id.clone(),
                     MovementType::Sale,
@@ -58,7 +60,7 @@ impl PostInvoiceUseCase {
                     cost_price,
                     total_cost,
                     invoice.invoice_number.clone(),
-                    format!("بيع بموجب فاتورة مبيعات رقم {}", invoice.invoice_number),
+                    movement_notes,
                     chrono::Utc::now(),
                 ).map_err(|e| AppError::Invalid(e.to_string()))?;
                 self.movement_repo.save(&movement).await?;

@@ -12,6 +12,7 @@ interface TransferRow {
   source_warehouse_name: string;
   dest_warehouse_name: string;
   quantity: string;
+  notes: string;
   transfer_date: string;
 }
 
@@ -21,7 +22,7 @@ interface TransferTableProps {
   className?: string;
 }
 
-type TransferSortField = "date" | "material_name" | "reference" | "quantity";
+type TransferSortField = "date" | "material_name" | "reference" | "quantity" | "notes";
 
 const sortFn = (a: TransferRow, b: TransferRow, field: TransferSortField, direction: 'asc' | 'desc') => {
   const cmp = field === "date"
@@ -56,6 +57,7 @@ export function TransferTable({ movements, warehouses, className }: TransferTabl
         source_warehouse_name: sourceName,
         dest_warehouse_name: destName,
         quantity: out.quantity,
+        notes: out.reason || inn.reason || '',
         transfer_date: out.movement_date,
       });
     }
@@ -118,13 +120,18 @@ export function TransferTable({ movements, warehouses, className }: TransferTabl
       ),
     },
     {
+      id: 'notes', header: 'ملاحظة', label: 'ملاحظة',
+      accessor: (r) => r.notes || '—',
+      className: 'text-slate-600 text-xs max-w-[200px] truncate',
+    },
+    {
       id: 'date', header: 'التاريخ', label: 'التاريخ',
       accessor: (r) => formatDateTime(r.transfer_date),
       className: 'tabular-nums text-slate-500 font-medium'
     },
   ], []);
 
-  const defaultVisible = useMemo(() => ["material_name", "source", "dest", "quantity", "reference", "date"], []);
+  const defaultVisible = useMemo(() => ["material_name", "source", "dest", "quantity", "reference", "notes", "date"], []);
 
   const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "transfers-unified",
@@ -163,7 +170,7 @@ export function TransferTable({ movements, warehouses, className }: TransferTabl
         sortField={sortField}
         sortDirection={sortDirection}
         onHeaderClick={(col) => {
-          if (["date", "material_name", "reference", "quantity"].includes(col.id)) {
+          if (["date", "material_name", "reference", "quantity", "notes"].includes(col.id)) {
             handleSort(col.id as TransferSortField);
           }
         }}

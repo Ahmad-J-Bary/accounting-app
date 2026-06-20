@@ -58,13 +58,6 @@ export function ReturnsTable({
         className: "font-black text-slate-900 text-center"
       },
       {
-        id: "notes",
-        header: "التوصيف",
-        label: "التوصيف",
-        accessor: (ret) => ret.notes || "",
-        className: "text-slate-500 italic"
-      },
-      {
         id: "partner_name",
         header: partnerLabel,
         label: partnerLabel,
@@ -91,6 +84,13 @@ export function ReturnsTable({
             : "tabular-nums font-medium text-slate-400"
         };
       }),
+      {
+        id: "notes",
+        header: "التوصيف",
+        label: "التوصيف",
+        accessor: (ret) => ret.notes || "",
+        className: "text-slate-500 italic"
+      },
       {
         id: "return_date",
         header: "التاريخ",
