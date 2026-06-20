@@ -1,5 +1,5 @@
 import React, { ReactNode } from "react";
-import { useSidebarSettings } from "@shared/hooks/useSidebarSettings";
+import { useSidePanelSettings } from "@shared/hooks/useSidePanelSettings";
 import { cn } from "@shared/lib/utils";
 import { Button } from "@shared/ui/button";
 import { X } from "lucide-react";
@@ -13,7 +13,7 @@ export function SidebarHeader({
   actions,
   className,
 }: SidebarHeaderProps) {
-  const { settings } = useSidebarSettings();
+  const { settings } = useSidePanelSettings();
 
   return (
     <div

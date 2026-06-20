@@ -1,5 +1,5 @@
 import React, { ReactNode } from "react";
-import { useSidebarSettings } from "@shared/hooks/useSidebarSettings";
+import { useSidePanelSettings } from "@shared/hooks/useSidePanelSettings";
 import { cn } from "@shared/lib/utils";
 import { Button } from "@shared/ui/button";
 import type { SidebarFooterProps } from "./types";
@@ -14,7 +14,7 @@ export function SidebarFooter({
   cancelLabel = "إلغاء",
   className,
 }: SidebarFooterProps) {
-  const { settings } = useSidebarSettings();
+  const { settings } = useSidePanelSettings();
 
   const footerPadding =
     settings.paddingPreset === "compact" ? "p-3" : "p-4";

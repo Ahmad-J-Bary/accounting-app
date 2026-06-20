@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
-import { useSidePanelSettings, useNavSidebarSettings } from '@shared/hooks';
-import type { SidebarWidthPreset, NavLayoutType, SidebarDensityPreset } from '@shared/types/sidebar-settings';
+import { useSidePanelSettings } from '@shared/hooks';
+import type { SidebarWidthPreset } from '@shared/types/sidebar-settings';
 import { Label } from "@shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { Switch } from "@shared/ui/switch";
 import { Slider } from "@shared/ui/slider";
 import { Button } from "@shared/ui/button";
-import { LayoutGrid, Type, Monitor, Eye, PanelRightOpen, PanelRightClose, Menu, Sliders } from "lucide-react";
+import { LayoutGrid, Type, Monitor, Eye, PanelRightOpen, PanelRightClose } from "lucide-react";
 import { SidebarShell, SidebarHeader, SidebarBody, SidebarFooter, SidebarSection, SidebarFieldGroup } from '@widgets/sidebar-shell';
 import { SettingsManagerLayout, SettingsGroup } from '@widgets/templates/SettingsManagerLayout';
 
-export const SidebarSettingsManager: React.FC = () => {
-  const { settings: navSettings, updateSetting: updateNavSetting, resetSettings: resetNavSettings } = useNavSidebarSettings();
+export const PanelSettingsManager: React.FC = () => {
   const { settings: sideSettings, updateSetting: updateSideSetting, resetSettings: resetSideSettings } = useSidePanelSettings();
   const [previewOverlay, setPreviewOverlay] = useState(false);
 
@@ -21,198 +20,15 @@ export const SidebarSettingsManager: React.FC = () => {
   type OverlayUnion = 'overlay' | 'inline';
   type PlacementUnion = 'left' | 'right' | 'justify';
 
-  const handleResetAll = () => {
-    resetNavSettings();
-    resetSideSettings();
-  };
-
   return (
-    <SettingsManagerLayout resetAction={handleResetAll}>
-      {/* ──────────────────────────────────────────────────────────────────────── */}
-      {/* القسم الأول: إعدادات شريط التنقل الجانبي الرئيسي (قائمة التطبيق) */}
-      {/* ──────────────────────────────────────────────────────────────────────── */}
+    <SettingsManagerLayout resetAction={resetSideSettings}>
       <div className="space-y-5">
-        <div className="flex flex-col gap-1 border-r-4 border-blue-600 pr-3 pb-1 mb-2">
-          <h2 className="text-xl font-black text-slate-800">1. شريط التنقل الجانبي الرئيسي للتطبيق (قائمة التصفح)</h2>
-          <p className="text-xs text-slate-500">تخصيص مظهر وتخطيط القائمة الجانبية الرئيسية للتنقل بين شاشات وفروع النظام</p>
-        </div>
-
-        <SettingsGroup title="تخطيط وأبعاد شريط التنقل الرئيسي" icon={Menu} color="text-blue-600">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">نوع التخطيط</Label>
-              <Select
-                value={navSettings.navLayoutType}
-                onValueChange={(v) => updateNavSetting('navLayoutType', v as NavLayoutType)}
-              >
-                <SelectTrigger className="h-10 rounded-lg border-slate-200">
-                  <SelectValue placeholder="اختر نوع التخطيط" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="vertical">عمودي (افتراضي)</SelectItem>
-                  <SelectItem value="collapsed">مطوي</SelectItem>
-                  <SelectItem value="icon-only">أيقونات فقط</SelectItem>
-                  <SelectItem value="darknav">داكن بالكامل</SelectItem>
-                  <SelectItem value="topnav-slim">شريط علوي نحيف</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <Label className="text-slate-600 font-semibold">عرض شريط التنقل ({navSettings.navWidth}px)</Label>
-              </div>
-              <Slider
-                value={[navSettings.navWidth]}
-                min={180}
-                max={320}
-                step={5}
-                disabled={navSettings.navLayoutType === 'topnav-slim'}
-                onValueChange={(v) => updateNavSetting('navWidth', v[0])}
-                className="py-2"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">تباعد الكثافة</Label>
-              <Select
-                value={navSettings.navDensity}
-                onValueChange={(v) => updateNavSetting('navDensity', v as SidebarDensityPreset)}
-              >
-                <SelectTrigger className="h-10 rounded-lg border-slate-200">
-                  <SelectValue placeholder="اختر الكثافة" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="compact">مكتنز (صغير)</SelectItem>
-                  <SelectItem value="comfortable">مريح (متوسط)</SelectItem>
-                  <SelectItem value="spacious">متسع (كبير)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <Label className="text-slate-600 font-semibold">حجم خط القائمة ({navSettings.navFontSize}px)</Label>
-              </div>
-              <Slider
-                value={[navSettings.navFontSize]}
-                min={12}
-                max={16}
-                step={1}
-                onValueChange={(v) => updateNavSetting('navFontSize', v[0])}
-                className="py-2"
-              />
-            </div>
-          </div>
-        </SettingsGroup>
-
-        <SettingsGroup title="ألوان ومظهر شريط التنقل الرئيسي" icon={LayoutGrid} color="text-indigo-600">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">خلفية شريط التنقل</Label>
-              <Select
-                value={navSettings.navBackground}
-                onValueChange={(v) => updateNavSetting('navBackground', v)}
-              >
-                <SelectTrigger className="h-10 rounded-lg border-slate-200">
-                  <SelectValue placeholder="اختر لون الخلفية" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bg-slate-900">داكن (افتراضي)</SelectItem>
-                  <SelectItem value="bg-slate-950">داكن جداً</SelectItem>
-                  <SelectItem value="bg-slate-800">رمادي داكن</SelectItem>
-                  <SelectItem value="bg-white">أبيض ناصع</SelectItem>
-                  <SelectItem value="bg-slate-50">رمادي فاتح</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">خلفية العنصر النشط</Label>
-              <Select
-                value={navSettings.navActiveBg}
-                onValueChange={(v) => updateNavSetting('navActiveBg', v)}
-              >
-                <SelectTrigger className="h-10 rounded-lg border-slate-200">
-                  <SelectValue placeholder="اختر اللون النشط" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bg-blue-600">أزرق ملكي</SelectItem>
-                  <SelectItem value="bg-emerald-600">أخضر زمردي</SelectItem>
-                  <SelectItem value="bg-slate-700">رمادي داكن</SelectItem>
-                  <SelectItem value="bg-rose-600">أحمر مرجاني</SelectItem>
-                  <SelectItem value="bg-violet-600">بنفسجي ملكي</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">مظهر التمرير (Hover)</Label>
-              <Select
-                value={navSettings.navHoverBg}
-                onValueChange={(v) => updateNavSetting('navHoverBg', v)}
-              >
-                <SelectTrigger className="h-10 rounded-lg border-slate-200">
-                  <SelectValue placeholder="اختر لون التمرير" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="hover:bg-white/5 hover:text-white">افتراضي (شفاف خفيف)</SelectItem>
-                  <SelectItem value="hover:bg-white/10 hover:text-white">تأثير مضيء</SelectItem>
-                  <SelectItem value="hover:bg-slate-800 hover:text-white">تأثير داكن</SelectItem>
-                  <SelectItem value="hover:bg-transparent hover:text-white">بدون خلفية (نص فقط)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </SettingsGroup>
-
-        <SettingsGroup title="خيارات العرض وتكامل سلوك التنقل" icon={Sliders} color="text-cyan-600">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
-              <Label className="text-slate-700 font-semibold">إظهار تسميات العناصر</Label>
-              <Switch
-                checked={navSettings.navShowLabels}
-                onCheckedChange={(v) => updateNavSetting('navShowLabels', v)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
-              <Label className="text-slate-700 font-semibold">إظهار عناوين الأقسام</Label>
-              <Switch
-                checked={navSettings.navShowSectionHeaders}
-                onCheckedChange={(v) => updateNavSetting('navShowSectionHeaders', v)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
-              <Label className="text-slate-700 font-semibold">حفظ حالة طي القائمة</Label>
-              <Switch
-                checked={navSettings.navRemembersState}
-                onCheckedChange={(v) => updateNavSetting('navRemembersState', v)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
-              <Label className="text-slate-700 font-semibold">حدود فاصلة جانبية</Label>
-              <Switch
-                checked={navSettings.navBordered}
-                onCheckedChange={(v) => updateNavSetting('navBordered', v)}
-              />
-            </div>
-          </div>
-        </SettingsGroup>
-      </div>
-
-      {/* ──────────────────────────────────────────────────────────────────────── */}
-      {/* القسم الثاني: إعدادات لوحة العمليات والمدخلات الجانبية (شاشات إدخال البيانات والنماذج) */}
-      {/* ──────────────────────────────────────────────────────────────────────── */}
-      <div className="space-y-5 pt-8 border-t border-slate-200">
         <div className="flex flex-col gap-1 border-r-4 border-emerald-600 pr-3 pb-1 mb-2">
-          <h2 className="text-xl font-black text-slate-800">2. لوحة العمليات والنوافذ الجانبية للنماذج (لوحة التفاصيل)</h2>
-          <p className="text-xs text-slate-500">تخصيص مظهر وأبعاد وسلوك لوحة العمليات والمدخلات الجانبية المنبثقة للنماذج (Drawer / Operations Panel)</p>
+          <h2 className="text-xl font-black text-slate-800">لوحة العمليات والنماذج الجانبية</h2>
+          <p className="text-xs text-slate-500">تخصيص مظهر وأبعاد وسلوك لوحة النماذج والمدخلات الجانبية المنبثقة (Drawer / Operations Panel)</p>
         </div>
 
-        <SettingsGroup title="تخطيط وأبعاد لوحة العمليات الجانبية" icon={LayoutGrid} color="text-emerald-600">
+        <SettingsGroup title="تخطيط وأبعاد لوحة العمليات" icon={LayoutGrid} color="text-emerald-600">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label className="text-slate-600 font-semibold">العرض الافتراضي للوحة</Label>
@@ -264,7 +80,7 @@ export const SidebarSettingsManager: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-600 font-semibold">التباعد بين حقول النموذج والمدخلات</Label>
+              <Label className="text-slate-600 font-semibold">التباعد بين حقول النموذج</Label>
               <Select
                 value={sideSettings.spacingPreset}
                 onValueChange={(v) => updateSideSetting('spacingPreset', v as PresetUnion)}
@@ -318,7 +134,7 @@ export const SidebarSettingsManager: React.FC = () => {
           </div>
         </SettingsGroup>
 
-        <SettingsGroup title="الخطوط والحدود الفاصلة للوحة العمليات" icon={Type} color="text-amber-600">
+        <SettingsGroup title="الخطوط والحدود الفاصلة للوحة" icon={Type} color="text-amber-600">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">
               <div className="flex justify-between items-center">
@@ -354,7 +170,7 @@ export const SidebarSettingsManager: React.FC = () => {
           </div>
         </SettingsGroup>
 
-        <SettingsGroup title="تفاعل وسلوك لوحة العمليات الجانبية" icon={Monitor} color="text-orange-600">
+        <SettingsGroup title="تفاعل وسلوك لوحة العمليات" icon={Monitor} color="text-orange-600">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
               <div className="space-y-0.5">
@@ -376,7 +192,7 @@ export const SidebarSettingsManager: React.FC = () => {
 
             <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30">
               <div className="space-y-0.5">
-                <Label className="text-slate-700 font-semibold">ترويسة وتذييل ثابتين للوحة</Label>
+                <Label className="text-slate-700 font-semibold">ترويسة وتذييل ثابتين</Label>
               </div>
               <Switch
                 checked={sideSettings.stickyHeaderFooter}
@@ -434,7 +250,7 @@ export const SidebarSettingsManager: React.FC = () => {
           </div>
         </SettingsGroup>
 
-        <SettingsGroup title="معاينة حية لتصميم لوحة العمليات الجانبية" icon={Eye} color="text-violet-600">
+        <SettingsGroup title="معاينة حية لتصميم لوحة العمليات" icon={Eye} color="text-violet-600">
           <div className="flex items-center gap-2 mb-4">
             <Button
               variant={previewOverlay ? "default" : "outline"}

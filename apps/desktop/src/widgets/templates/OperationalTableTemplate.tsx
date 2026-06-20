@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { cn } from "@shared/lib/utils";
-import { useSidebarSettings } from "@shared/hooks/useSidebarSettings";
+import { useSidePanelSettings } from "@shared/hooks";
 
 interface TableStat {
   label: string;
@@ -54,7 +54,7 @@ export function OperationalTableTemplate({
   className,
   children
 }: OperationalTableTemplateProps) {
-  const { getSidebarWidth, settings } = useSidebarSettings();
+  const { getSidebarWidth, settings } = useSidePanelSettings();
 
   return (
     <div className={cn("flex flex-col h-full w-full bg-[#f8fafc]", className)} dir="rtl">

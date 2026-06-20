@@ -1,5 +1,5 @@
 import React, { ReactNode } from "react";
-import { useSidebarSettings } from "@shared/hooks/useSidebarSettings";
+import { useSidePanelSettings } from "@shared/hooks";
 import { cn } from "@shared/lib/utils";
 import { Sheet, SheetContent } from "@shared/ui/sheet";
 import type { SidebarShellProps } from "./types";
@@ -19,7 +19,7 @@ export function SidebarShell({
   onClose,
   forceOverlay,
 }: SidebarShellProps) {
-  const { settings, getSidebarWidth } = useSidebarSettings();
+  const { settings, getSidebarWidth } = useSidePanelSettings();
   const isOverlay =
     forceOverlay === true ||
     (forceOverlay === undefined && settings.overlayVsInline === "overlay");

@@ -7,7 +7,8 @@ import { AppLayout } from '@app/shell/AppLayout';
 import { TabProvider } from '@app/providers/TabProvider';
 import { CurrencyProvider } from '@app/providers/CurrencyProvider';
 import { TableSettingsProvider } from '@app/providers/TableSettingsProvider';
-import { SidebarSettingsProvider } from '@app/providers/SidebarSettingsProvider';
+import { SidePanelSettingsProvider } from '@app/providers/SidePanelSettingsProvider';
+import { NavSidebarSettingsProvider } from '@app/providers/NavSidebarSettingsProvider';
 import { ErpRoutes } from '@app/router/ErpRoutes';
 import AuthCallback from '@modules/core/pages/authCallback';
 import AuthError from '@modules/core/pages/authError';
@@ -32,11 +33,13 @@ const App = () => (
           <Route path="/*" element={
             <CurrencyProvider>
               <TableSettingsProvider>
-                <SidebarSettingsProvider>
-                  <TabProvider>
-                    <AppLayout />
-                  </TabProvider>
-                </SidebarSettingsProvider>
+                <SidePanelSettingsProvider>
+                  <NavSidebarSettingsProvider>
+                    <TabProvider>
+                      <AppLayout />
+                    </TabProvider>
+                  </NavSidebarSettingsProvider>
+                </SidePanelSettingsProvider>
               </TableSettingsProvider>
             </CurrencyProvider>
           } />

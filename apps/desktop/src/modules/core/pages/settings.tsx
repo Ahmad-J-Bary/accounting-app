@@ -5,7 +5,8 @@ import type { CompanySettings as CompanySettingsType } from "@erp/shared-types";
 import { cn } from "@shared/lib/utils";
 
 import { TableSettingsManager } from "../components/TableSettingsManager";
-import { SidebarSettingsManager } from "../components/SidebarSettingsManager";
+import { NavbarSettingsManager } from "../components/NavbarSettingsManager";
+import { PanelSettingsManager } from "../components/PanelSettingsManager";
 import CurrencySettings from "./currencySettings";
 import { CompanySettings } from "../components/settings/CompanySettings";
 import { PrefixSettings } from "../components/settings/PrefixSettings";
@@ -61,7 +62,8 @@ export default function Settings() {
 
   const appearanceItems = [
     { id: "tables", label: "مظهر الجداول", icon: Table2 },
-    { id: "sidebar", label: "مظهر السايد بار", icon: PanelRightOpen },
+    { id: "navbar", label: "قائمة التنقل الجانبي", icon: PanelRightOpen },
+    { id: "panel", label: "لوحة العمليات والنماذج", icon: PanelRightOpen },
   ];
 
   const renderSection = () => {
@@ -78,8 +80,10 @@ export default function Settings() {
         return <WarehouseSettings settings={settings} onChange={handleChange} />;
       case "tables":
         return <TableSettingsManager />;
-      case "sidebar":
-        return <SidebarSettingsManager />;
+      case "navbar":
+        return <NavbarSettingsManager />;
+      case "panel":
+        return <PanelSettingsManager />;
       case "about":
         return <AboutSettings />;
       case "localization":

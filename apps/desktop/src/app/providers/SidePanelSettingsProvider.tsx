@@ -1,8 +1,8 @@
 import React, { useState, useEffect, ReactNode } from 'react';
-import { SidebarSettings, SidebarWidthPreset, SidebarDensity } from '@shared/types/sidebar-settings';
-import { SidebarSettingsContext } from '@shared/context/SidebarSettingsContext';
+import { SidePanelSettings, SidebarWidthPreset, SidebarDensity } from '@shared/types/sidebar-settings';
+import { SidePanelSettingsContext } from '@shared/context/SidePanelSettingsContext';
 
-const DEFAULT_SETTINGS: SidebarSettings = {
+const DEFAULT_SETTINGS: SidePanelSettings = {
   widthPreset: 'standard',
   customWidth: 500,
   density: 'comfortable',
@@ -56,10 +56,10 @@ const DENSITY_VARS: Record<SidebarDensity, Record<string, string>> = {
   },
 };
 
-export const SidebarSettingsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [settings, setSettings] = useState<SidebarSettings>(() => {
+export const SidePanelSettingsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [settings, setSettings] = useState<SidePanelSettings>(() => {
     try {
-      const saved = localStorage.getItem('erp_sidebar_settings');
+      const saved = localStorage.getItem('erp_side_panel_settings');
       return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
     } catch {
       return DEFAULT_SETTINGS;
@@ -67,7 +67,9 @@ export const SidebarSettingsProvider: React.FC<{ children: ReactNode }> = ({ chi
   });
 
   useEffect(() => {
-    try { localStorage.setItem('erp_sidebar_settings', JSON.stringify(settings)); } catch { /* ignore storage errors */ }
+    try {
+      localStorage.setItem('erp_side_panel_settings', JSON.stringify(settings));
+    } catch { /* ignore storage errors */ }
   }, [settings]);
 
   useEffect(() => {
@@ -90,7 +92,7 @@ export const SidebarSettingsProvider: React.FC<{ children: ReactNode }> = ({ chi
     });
   }, [settings.density]);
 
-  const updateSetting = <K extends keyof SidebarSettings>(key: K, value: SidebarSettings[K]) => {
+  const updateSetting = <K extends keyof SidePanelSettings>(key: K, value: SidePanelSettings[K]) => {
     setSettings(prev => {
       const next = { ...prev, [key]: value };
       if (key === 'widthPreset') {
@@ -132,7 +134,7 @@ export const SidebarSettingsProvider: React.FC<{ children: ReactNode }> = ({ chi
   const getSidebarWidth = () => `${settings.customWidth}px`;
 
   return (
-    <SidebarSettingsContext.Provider value={{
+    <SidePanelSettingsContext.Provider value={{
       settings,
       updateSetting,
       resetSettings,
@@ -142,6 +144,6 @@ export const SidebarSettingsProvider: React.FC<{ children: ReactNode }> = ({ chi
       getSidebarWidth,
     }}>
       {children}
-    </SidebarSettingsContext.Provider>
+    </SidePanelSettingsContext.Provider>
   );
 };

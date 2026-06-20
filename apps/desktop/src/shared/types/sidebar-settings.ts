@@ -1,7 +1,32 @@
 export type SidebarDensity = 'compact' | 'comfortable' | 'spacious';
 export type SidebarWidthPreset = 'narrow' | 'standard' | 'wide' | 'extra-wide';
+export type SidebarDensityPreset = 'compact' | 'comfortable' | 'spacious';
 
-export interface SidebarSettings {
+export type NavLayoutType =
+  | 'vertical'
+  | 'collapsed'
+  | 'icon-only'
+  | 'darknav'
+  | 'topnav-slim';
+
+export interface NavSidebarSettings {
+  navLayoutType: NavLayoutType;
+  navWidth: number;
+  navCollapsed: boolean;
+  navIconOnly: boolean;
+  navFontSize: number;
+  navDensity: SidebarDensityPreset;
+  navShowLabels: boolean;
+  navShowSectionHeaders: boolean;
+  navActiveBg: string;
+  navHoverBg: string;
+  navBordered: boolean;
+  navRemembersState: boolean;
+  navAutoCollapse: boolean;
+  navBackground: string;
+}
+
+export interface SidePanelSettings {
   widthPreset: SidebarWidthPreset;
   customWidth: number;
   density: SidebarDensity;

@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { cn } from "@shared/lib/utils";
-import { useSidebarSettings } from "@shared/hooks/useSidebarSettings";
+import { useSidePanelSettings } from "@shared/hooks";
 
 interface FinancialDocumentTemplateProps {
   title: string;
@@ -20,7 +20,7 @@ export function FinancialDocumentTemplate({
   title, subtitle, statusBadge, toolbar, headerFields,
   lineItemsGrid, summaryPanel, sidebar, isSidebarOpen = false, footer, className
 }: FinancialDocumentTemplateProps) {
-  const { getSidebarWidth } = useSidebarSettings();
+  const { getSidebarWidth } = useSidePanelSettings();
 
   return (
     <div className={cn("flex flex-col h-full w-full bg-muted/30", className)} dir="rtl">

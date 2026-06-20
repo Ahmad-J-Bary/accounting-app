@@ -1,11 +1,11 @@
 import React, { ReactNode } from "react";
-import { useSidebarSettings } from "@shared/hooks/useSidebarSettings";
+import { useSidePanelSettings } from "@shared/hooks/useSidePanelSettings";
 import { cn } from "@shared/lib/utils";
 import type { SidebarBodyProps } from "./types";
 
 export function SidebarBody({ children, className }: SidebarBodyProps) {
   const { getPaddingClass, getSpacingClass, getFontSizeClass } =
-    useSidebarSettings();
+    useSidePanelSettings();
 
   return (
     <div
