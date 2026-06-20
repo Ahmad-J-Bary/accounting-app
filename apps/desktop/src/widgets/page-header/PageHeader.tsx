@@ -1,5 +1,6 @@
 import { ChevronLeft } from "lucide-react";
 import { Link } from "react-router-dom";
+import { SidebarAddAction } from "@shared/components/SidebarAddAction";
 
 interface Crumb {
   label: string;
@@ -35,7 +36,10 @@ export function PageHeader({ title, subtitle, breadcrumbs, actions }: PageHeader
       )}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
+            <SidebarAddAction label={title} />
+          </div>
           {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
         </div>
         {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}

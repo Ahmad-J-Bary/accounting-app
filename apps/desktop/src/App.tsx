@@ -9,6 +9,7 @@ import { CurrencyProvider } from '@app/providers/CurrencyProvider';
 import { TableSettingsProvider } from '@app/providers/TableSettingsProvider';
 import { SidePanelSettingsProvider } from '@app/providers/SidePanelSettingsProvider';
 import { NavSidebarSettingsProvider } from '@app/providers/NavSidebarSettingsProvider';
+import { SidebarLayoutProvider } from '@app/providers/SidebarLayoutProvider';
 import { ErpRoutes } from '@app/router/ErpRoutes';
 import AuthCallback from '@modules/core/pages/authCallback';
 import AuthError from '@modules/core/pages/authError';
@@ -35,9 +36,11 @@ const App = () => (
               <TableSettingsProvider>
                 <SidePanelSettingsProvider>
                   <NavSidebarSettingsProvider>
-                    <TabProvider>
-                      <AppLayout />
-                    </TabProvider>
+                    <SidebarLayoutProvider>
+                      <TabProvider>
+                        <AppLayout />
+                      </TabProvider>
+                    </SidebarLayoutProvider>
                   </NavSidebarSettingsProvider>
                 </SidePanelSettingsProvider>
               </TableSettingsProvider>

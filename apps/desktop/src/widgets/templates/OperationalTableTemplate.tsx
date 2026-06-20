@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { cn } from "@shared/lib/utils";
 import { useSidePanelSettings } from "@shared/hooks";
+import { SidebarAddAction } from "@shared/components/SidebarAddAction";
 
 interface TableStat {
   label: string;
@@ -60,18 +61,20 @@ export function OperationalTableTemplate({
     <div className={cn("flex flex-col h-full w-full bg-[#f8fafc]", className)} dir="rtl">
       {/* 1. Page Header - Optimized for Density */}
       <header className="flex items-center justify-between px-6 py-2.5 bg-white border-b border-slate-200/60 shadow-[0_1px_2px_rgba(0,0,0,0.02)] shrink-0 sticky top-0 z-20">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-md shadow-slate-200 shrink-0">
             <span className="text-lg font-black">ERP</span>
           </div>
-          <div className="flex flex-col">
+          <div className="flex items-center gap-3">
             <h1 className="text-xl font-black text-slate-900 tracking-tight">{title}</h1>
+            <SidebarAddAction label={title} />
           </div>
         </div>
         <div className="flex items-center gap-3">
           {toolbar}
         </div>
       </header>
+
 
       {/* 2. Main Layout Area - High Density Spacing */}
       <div className="flex-1 flex overflow-hidden p-4 gap-4">

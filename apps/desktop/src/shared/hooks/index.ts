@@ -12,3 +12,6 @@ export * from './useTableColumns';
 export * from './useColumnResize';
 export * from './useGridResize';
 export * from './useBaseCurrencyColumns';
+export * from './useSidebarLayoutContext';
+export * from './useSidebarQuickAdd';
+

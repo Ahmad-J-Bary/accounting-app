@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Building, FileText, DollarSign, Palette, ChevronDown, ChevronUp, Table2, PanelRightOpen, Settings as SettingsIcon, Globe, ShieldCheck } from "lucide-react";
+import { Building, FileText, DollarSign, Palette, ChevronDown, ChevronUp, Table2, PanelRightOpen, Settings as SettingsIcon, Globe, ShieldCheck, Sliders } from "lucide-react";
 import { settingsService } from '@modules/core/api/settingsService';
 import type { CompanySettings as CompanySettingsType } from "@erp/shared-types";
 import { cn } from "@shared/lib/utils";
 
 import { TableSettingsManager } from "../components/TableSettingsManager";
 import { NavbarSettingsManager } from "../components/NavbarSettingsManager";
+import { SidebarContentManager } from "../components/SidebarContentManager";
 import { PanelSettingsManager } from "../components/PanelSettingsManager";
 import CurrencySettings from "./currencySettings";
 import { CompanySettings } from "../components/settings/CompanySettings";
@@ -14,6 +15,7 @@ import { FinancialSettings } from "../components/settings/FinancialSettings";
 import { AboutSettings } from "../components/settings/AboutSettings";
 import { UnderDevelopmentSection } from "../components/settings/UnderDevelopmentSection";
 import { WarehouseSettings } from "../components/settings/WarehouseSettings";
+
 
 import { SettingsLayout } from "@widgets/templates/SettingsLayout";
 
@@ -62,7 +64,8 @@ export default function Settings() {
 
   const appearanceItems = [
     { id: "tables", label: "مظهر الجداول", icon: Table2 },
-    { id: "navbar", label: "قائمة التنقل الجانبي", icon: PanelRightOpen },
+    { id: "navbar", label: "مظهر قائمة التنقل الجانبي", icon: PanelRightOpen },
+    { id: "sidebar-content", label: "محتوى وترتيب القائمة", icon: Sliders },
     { id: "panel", label: "لوحة العمليات والنماذج", icon: PanelRightOpen },
   ];
 
@@ -82,10 +85,13 @@ export default function Settings() {
         return <TableSettingsManager />;
       case "navbar":
         return <NavbarSettingsManager />;
+      case "sidebar-content":
+        return <SidebarContentManager />;
       case "panel":
         return <PanelSettingsManager />;
       case "about":
         return <AboutSettings />;
+
       case "localization":
       case "security":
         break;
