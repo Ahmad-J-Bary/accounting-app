@@ -1,3 +1,4 @@
+#[cfg_attr(not(target_os = "windows"), allow(unused_imports))]
 use tauri::{AppHandle, Emitter, Manager};
 use std::fs::File;
 use std::io::Write;
@@ -145,14 +146,14 @@ pub async fn apply_update_and_restart(
         } else {
             let mut cmd = std::process::Command::new(&file_path);
             cmd.arg("/S");
-            
+
             let status = cmd.status().map_err(|e| format!("Failed to run EXE installer: {}", e))?;
 
             if !status.success() {
                 let mut cmd2 = std::process::Command::new(&file_path);
                 cmd2.arg("/silent");
                 let status2 = cmd2.status();
-                
+
                 if let Err(e) = status2 {
                     let err = format!("Failed to run EXE installer (both /S and /silent failed): {}", e);
                     let _ = app.emit("update-failed", err.clone());
@@ -166,8 +167,8 @@ pub async fn apply_update_and_restart(
 
     #[cfg(not(target_os = "windows"))]
     {
-        let _ = app;
-        return Err("Auto-update is only supported on Windows".to_string());
+        let _ = (app, &file_path);
+        Err("Auto-update is only supported on Windows".to_string())
     }
 }
 
