@@ -145,6 +145,7 @@ export interface StockMovement {
   original_currency?: string | null;
   fx_rate?: string | null;
   reference?: string | null;
+  source_document_id?: string | null;
   reason?: string | null;
   warehouse_id?: string | null;
   movement_date: string;
@@ -170,4 +171,14 @@ export interface TransferResponse {
   material_id: string;
   quantity: string;
   transfer_date: string;
+}
+
+export interface UpdateTransferRequest {
+  reference: string;
+  source_warehouse_id: string;
+  dest_warehouse_id: string;
+  material_id: string;
+  quantity: string;
+  transfer_date: string;
+  notes?: string | null;
 }

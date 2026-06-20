@@ -20,8 +20,37 @@ pub async fn list_stock_movements(
         }
     }
 
+    let mut source_ids: HashMap<String, String> = HashMap::new();
+    if let Ok(all_invoices) = state.unified_invoice_repo.list_all().await {
+        for inv in all_invoices {
+            source_ids.insert(inv.invoice_number, inv.id.to_string());
+        }
+    }
+    // Fallback: also look up legacy sales_invoices table
+    if let Ok(all_invoices) = state.invoice_repo.list_all().await {
+        for inv in all_invoices {
+            source_ids.entry(inv.invoice_number).or_insert_with(|| inv.id.to_string());
+        }
+    }
+    if let Ok(all_returns) = state.sales_return_repo.list_all().await {
+        for ret in all_returns {
+            source_ids.insert(ret.return_number, ret.id.to_string());
+        }
+    }
+    if let Ok(all_returns) = state.purchase_return_repo.list_all().await {
+        for ret in all_returns {
+            source_ids.insert(ret.return_number, ret.id.to_string());
+        }
+    }
+
     Ok(movements.into_iter().map(|m| {
         let mat_id = m.material_id.to_string();
+        let ref_str = m.reference.clone();
+        let source_document_id = if ref_str.is_empty() {
+            None
+        } else {
+            source_ids.get(&ref_str).cloned()
+        };
         StockMovementDto {
             id: m.id.to_string(),
             material_id: mat_id.clone(),
@@ -35,7 +64,8 @@ pub async fn list_stock_movements(
             original_currency: m.original_currency.clone(),
             fx_rate: Some(m.fx_rate.to_string()),
             reason: if m.notes.is_empty() { None } else { Some(m.notes) },
-            reference: if m.reference.is_empty() { None } else { Some(m.reference) },
+            reference: if ref_str.is_empty() { None } else { Some(ref_str) },
+            source_document_id,
             warehouse_id: m.warehouse_id.map(|id| id.to_string()),
             movement_date: m.movement_date.to_rfc3339(),
             created_at: m.created_at.to_rfc3339(),

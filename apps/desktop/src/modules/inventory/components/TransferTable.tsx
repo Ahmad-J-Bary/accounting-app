@@ -2,14 +2,18 @@ import { useMemo, useState } from "react";
 import type { StockMovement, WarehouseDto } from "@erp/shared-types";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
+import { TableActions } from '@widgets/table-shell/TableActions';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useUnifiedColumns, useSortable } from "@shared/hooks";
 import { formatDateTime } from '@shared/lib/format';
 
-interface TransferRow {
+export interface TransferRow {
   reference: string;
+  material_id: string;
   material_name: string;
+  source_warehouse_id: string;
   source_warehouse_name: string;
+  dest_warehouse_id: string;
   dest_warehouse_name: string;
   quantity: string;
   notes: string;
@@ -20,6 +24,9 @@ interface TransferTableProps {
   movements: StockMovement[];
   warehouses: WarehouseDto[];
   className?: string;
+  onView?: (row: TransferRow) => void;
+  onEdit?: (row: TransferRow) => void;
+  onDelete?: (reference: string) => void;
 }
 
 type TransferSortField = "date" | "material_name" | "reference" | "quantity" | "notes";
@@ -31,8 +38,9 @@ const sortFn = (a: TransferRow, b: TransferRow, field: TransferSortField, direct
   return direction === "asc" ? cmp : -cmp;
 };
 
-export function TransferTable({ movements, warehouses, className }: TransferTableProps) {
+export function TransferTable({ movements, warehouses, className, onView, onEdit, onDelete }: TransferTableProps) {
   const [search, setSearch] = useState("");
+  const [selectedRef, setSelectedRef] = useState<string | null>(null);
 
   const rows = useMemo<TransferRow[]>(() => {
     const groups = new Map<string, { out?: StockMovement; in?: StockMovement }>();
@@ -53,8 +61,11 @@ export function TransferTable({ movements, warehouses, className }: TransferTabl
       const destName = warehouses.find(w => w.id === inn.warehouse_id)?.name || inn.warehouse_id || '';
       result.push({
         reference: ref,
+        material_id: out.material_id,
         material_name: out.material_name || inn.material_name || '',
+        source_warehouse_id: out.warehouse_id || '',
         source_warehouse_name: sourceName,
+        dest_warehouse_id: inn.warehouse_id || '',
         dest_warehouse_name: destName,
         quantity: out.quantity,
         notes: out.reason || inn.reason || '',
@@ -64,6 +75,14 @@ export function TransferTable({ movements, warehouses, className }: TransferTabl
     result.sort((a, b) => new Date(b.transfer_date).getTime() - new Date(a.transfer_date).getTime());
     return result;
   }, [movements, warehouses]);
+
+  const handleRowClick = useMemo(() => {
+    if (!onView) return undefined;
+    return (row: TransferRow) => {
+      setSelectedRef(row.reference === selectedRef ? null : row.reference);
+      onView(row);
+    };
+  }, [onView, selectedRef]);
 
   const filteredRows = useMemo(() => {
     if (!search.trim()) return rows;
@@ -81,7 +100,8 @@ export function TransferTable({ movements, warehouses, className }: TransferTabl
     sortFn,
   });
 
-  const columns = useMemo<UnifiedColumn<TransferRow>[]>(() => [
+  const columns = useMemo<UnifiedColumn<TransferRow>[]>(() => {
+    const cols: UnifiedColumn<TransferRow>[] = [
     {
       id: 'material_name', header: 'المادة', label: 'المادة',
       accessor: (r) => r.material_name || '—',
@@ -129,9 +149,29 @@ export function TransferTable({ movements, warehouses, className }: TransferTabl
       accessor: (r) => formatDateTime(r.transfer_date),
       className: 'tabular-nums text-slate-500 font-medium'
     },
-  ], []);
+    ];
+    if (onView || onEdit || onDelete) {
+      cols.push({
+        id: 'actions',
+        header: 'إجراءات',
+        label: 'إجراءات',
+        accessor: (r) => (
+          <TableActions
+            onView={onView ? () => onView(r) : undefined}
+            onEdit={onEdit ? () => onEdit(r) : undefined}
+            onDelete={onDelete ? () => onDelete(r.reference) : undefined}
+          />
+        ),
+      });
+    }
+    return cols;
+  }, [onView, onEdit, onDelete]);
 
-  const defaultVisible = useMemo(() => ["material_name", "source", "dest", "quantity", "reference", "notes", "date"], []);
+  const defaultVisible = useMemo(() => {
+    const ids = ["material_name", "source", "dest", "quantity", "reference", "notes", "date"];
+    if (onView || onEdit || onDelete) ids.push("actions");
+    return ids;
+  }, [onView, onEdit, onDelete]);
 
   const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "transfers-unified",
@@ -174,6 +214,8 @@ export function TransferTable({ movements, warehouses, className }: TransferTabl
             handleSort(col.id as TransferSortField);
           }
         }}
+        onRowClick={handleRowClick}
+        selectedId={selectedRef}
         emptyMessage={search ? "لا توجد نتائج تطابق معايير البحث" : "لا توجد تحويلات مسجلة"}
         summary={summaryColumns}
       />

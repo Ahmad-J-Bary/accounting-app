@@ -71,6 +71,7 @@ export function DamagedDetailPanel({
             title="معلومات إضافية"
             fields={[
               { label: "سبب التلف", value: item.reason || "—" },
+              { label: "المرجع", value: item.reference || "—" },
               ...(item.notes ? [{ label: "ملاحظات", value: item.notes }] : []),
               { label: "تاريخ الإنشاء", value: formatDateTime(item.created_at) },
             ]}

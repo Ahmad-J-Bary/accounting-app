@@ -58,6 +58,7 @@ interface InventoryMovementsTableProps {
   onSearchChange: (val: string) => void;
   selectedId?: string | null;
   onRowClick?: (movement: StockMovement) => void;
+  onRowDoubleClick?: (movement: StockMovement) => void;
   transferRefs: Set<string>;
   className?: string;
 }
@@ -66,7 +67,7 @@ type SortField = "date" | "type" | "product_name" | "quantity" | "reference" | "
 
 export function InventoryMovementsTable({
   movements, loading, warehouses, search, onSearchChange,
-  selectedId, onRowClick, transferRefs, className,
+  selectedId, onRowClick, onRowDoubleClick, transferRefs, className,
 }: InventoryMovementsTableProps) {
   const { formatAmount, currencies } = useCurrencyContext();
   const { isBaseCurrency } = useBaseCurrencyColumns();
@@ -406,6 +407,7 @@ export function InventoryMovementsTable({
         }}
         selectedId={selectedId}
         onRowClick={onRowClick}
+        onRowDoubleClick={onRowDoubleClick}
         emptyMessage={search ? "لا توجد نتائج تطابق معايير البحث" : "لا توجد حركات مخزنية مسجلة"}
         summary={summaryColumns}
       />

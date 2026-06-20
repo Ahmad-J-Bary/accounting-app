@@ -10,6 +10,7 @@ import type {
   CreateProductionOrderRequest,
   StockMovement,
   CreateTransferRequest,
+  UpdateTransferRequest,
   TransferResponse,
 } from '@erp/shared-types';
 
@@ -74,6 +75,14 @@ export const productionService = {
 export const transferService = {
   async createTransfer(request: CreateTransferRequest): Promise<TransferResponse> {
     return await invoke<TransferResponse>('create_transfer', { request });
+  },
+
+  async updateTransfer(request: UpdateTransferRequest): Promise<TransferResponse> {
+    return await invoke<TransferResponse>('update_transfer', { request });
+  },
+
+  async deleteTransfer(reference: string): Promise<void> {
+    return await invoke<void>('delete_transfer', { reference });
   },
 };
 

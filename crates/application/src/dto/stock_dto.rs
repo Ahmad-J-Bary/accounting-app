@@ -41,6 +41,7 @@ pub struct StockMovementDto {
     pub fx_rate: Option<String>,
     pub reason: Option<String>,
     pub reference: Option<String>,
+    pub source_document_id: Option<String>,
     pub warehouse_id: Option<String>,
     pub movement_date: String,
     pub created_at: String,

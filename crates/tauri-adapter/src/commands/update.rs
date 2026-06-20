@@ -124,10 +124,10 @@ pub async fn apply_update_and_restart(
     let file_path_opt = UPDATE_FILE_PATH.lock().unwrap().clone();
     let file_path = file_path_opt.ok_or_else(|| "No update file found".to_string())?;
 
-    let filename = file_path.file_name().and_then(|f| f.to_str()).unwrap_or("");
-
     #[cfg(target_os = "windows")]
     {
+        let filename = file_path.file_name().and_then(|f| f.to_str()).unwrap_or("");
+
         if filename.ends_with(".msi") {
             let status = std::process::Command::new("msiexec")
                 .arg("/i")
@@ -160,19 +160,15 @@ pub async fn apply_update_and_restart(
                 }
             }
         }
+
+        tauri::process::restart(&app.env());
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(not(target_os = "windows"))]
     {
-        unimplemented!("macOS updates not fully implemented yet");
+        let _ = app;
+        return Err("Auto-update is only supported on Windows".to_string());
     }
-
-    #[cfg(target_os = "linux")]
-    {
-        unimplemented!("Linux updates not fully implemented yet");
-    }
-
-    tauri::process::restart(&app.env());
 }
 
 #[tauri::command]

@@ -20,6 +20,8 @@ interface TransferFormProps {
   initialMaterialId?: string;
   initialSourceWarehouseId?: string;
   lockMaterial?: boolean;
+  initialValues?: CreateTransferRequest | null;
+  readOnly?: boolean;
 }
 
 export function TransferForm({
@@ -32,7 +34,9 @@ export function TransferForm({
   stockByWarehouse,
   initialMaterialId,
   initialSourceWarehouseId,
-  lockMaterial = false
+  lockMaterial = false,
+  initialValues = null,
+  readOnly = false
 }: TransferFormProps) {
   const [form, setForm] = useState<CreateTransferRequest>({
     source_warehouse_id: "",
@@ -64,7 +68,29 @@ export function TransferForm({
     setQtyRemainder("");
   }, [initialMaterialId, initialSourceWarehouseId, products]);
 
-  useEffect(() => { if (open) resetAll(); }, [open, resetAll]);
+  useEffect(() => {
+    if (!open) return;
+    if (initialValues) {
+      setForm({
+        source_warehouse_id: initialValues.source_warehouse_id,
+        dest_warehouse_id: initialValues.dest_warehouse_id,
+        material_id: initialValues.material_id,
+        quantity: initialValues.quantity,
+        transfer_date: initialValues.transfer_date,
+        notes: initialValues.notes,
+      });
+      const mat = products.find(p => p.id === initialValues.material_id);
+      if (mat) {
+        const bu = mat.units.find(u => u.is_base) || mat.units[0];
+        setSelectedUnitId(bu?.id || "");
+        const qty = parseFloat(initialValues.quantity) || 0;
+        setQtyInUnit(qty > 0 ? String(qty) : "");
+        setQtyRemainder("");
+      }
+    } else {
+      resetAll();
+    }
+  }, [open, initialValues, products, resetAll]);
 
   const activeWarehouses = warehouses.filter(w => w.is_active);
 
@@ -199,15 +225,17 @@ export function TransferForm({
 
   if (!open) return null;
 
+  const formTitle = readOnly ? "عرض التحويل" : initialValues ? "تعديل التحويل" : "تحويل مخزني جديد";
+
   return (
     <FormPanel
-      title="تحويل مخزني جديد"
+      title={formTitle}
       icon={<ArrowRightLeft className="w-5 h-5 text-blue-600" />}
       onClose={onClose}
-      onSave={handleSave}
+      onSave={readOnly ? undefined : handleSave}
       isSaving={saving}
       saveDisabled={!valid}
-      saveLabel="حفظ التحويل"
+      saveLabel={readOnly ? undefined : (initialValues ? "تحديث التحويل" : "حفظ التحويل")}
     >
       <SidebarSection icon={<Warehouse className="w-3.5 h-3.5" />} title="المستودعات" defaultOpen={true}>
         <div className="flex gap-2 items-end text-right">
@@ -215,7 +243,7 @@ export function TransferForm({
             <FieldLabel className="flex items-center gap-1.5" required>
               <Warehouse className="w-3.5 h-3.5 text-slate-400" /> من مستودع
             </FieldLabel>
-            <Select value={form.source_warehouse_id} onValueChange={handleSrcWhChange}>
+            <Select value={form.source_warehouse_id} onValueChange={handleSrcWhChange} disabled={readOnly}>
               <SelectTrigger className="bg-white border-slate-200 h-9"><SelectValue placeholder="اختر المستودع المصدر..." /></SelectTrigger>
               <SelectContent>
                 {sourceWarehouses.map(w => (
@@ -228,7 +256,7 @@ export function TransferForm({
             <FieldLabel className="flex items-center gap-1.5" required>
               <Warehouse className="w-3.5 h-3.5 text-slate-400" /> إلى مستودع
             </FieldLabel>
-            <Select value={form.dest_warehouse_id} onValueChange={val => setForm(p => ({ ...p, dest_warehouse_id: val }))}>
+            <Select value={form.dest_warehouse_id} onValueChange={val => setForm(p => ({ ...p, dest_warehouse_id: val }))} disabled={readOnly}>
               <SelectTrigger className="bg-white border-slate-200 h-9"><SelectValue placeholder="اختر مستودع الوجهة..." /></SelectTrigger>
               <SelectContent>
                 {activeWarehouses.map(w => (
@@ -246,7 +274,7 @@ export function TransferForm({
             <FieldLabel className="flex items-center gap-1.5" required>
               <Package className="w-3.5 h-3.5 text-slate-400" /> المادة
             </FieldLabel>
-            {lockMaterial ? (
+            {lockMaterial || readOnly ? (
               <div className="h-9 px-3 rounded-lg border border-slate-200 bg-slate-50 flex items-center text-xs font-bold text-slate-700">
                 {selectedMaterial?.name || "—"}
               </div>
@@ -282,11 +310,12 @@ export function TransferForm({
                       const clamped = num > availableQtyBase ? String(availableQtyBase) : e.target.value;
                       setQtyInUnit(clamped);
                     }}
+                    disabled={readOnly}
                     placeholder="0"
                     className="bg-white border-slate-200 h-9" />
                 </div>
                 <div className="shrink-0" style={{ width: "110px" }}>
-                  <Select value={selectedUnitId} onValueChange={handleUnitChange} disabled={!selectedMaterial}>
+                  <Select value={selectedUnitId} onValueChange={handleUnitChange} disabled={!selectedMaterial || readOnly}>
                     <SelectTrigger className="bg-white border-slate-200 h-9 text-xs">
                       <SelectValue placeholder="الوحدة" />
                     </SelectTrigger>
@@ -307,6 +336,7 @@ export function TransferForm({
                     <Input type="number" min="0" max={maxUnitQty || undefined} step="1"
                       value={qtyInUnit}
                       onChange={e => handleUnitQtyChange(e.target.value)}
+                      disabled={readOnly}
                       placeholder="0"
                       className="bg-white border-slate-200 h-9" />
                   </div>
@@ -320,6 +350,7 @@ export function TransferForm({
                     <Input type="number" min="0" max={remainderMax || undefined} step="any"
                       value={qtyRemainder}
                       onChange={e => handleRemainderChange(e.target.value)}
+                      disabled={readOnly}
                       placeholder="0"
                       className="bg-white border-slate-200 h-9" />
                   </div>
@@ -327,7 +358,7 @@ export function TransferForm({
                     {baseUnit?.name}
                   </div>
                   <div className="shrink-0" style={{ width: "110px" }}>
-                    <Select value={selectedUnitId} onValueChange={handleUnitChange}>
+                    <Select value={selectedUnitId} onValueChange={handleUnitChange} disabled={readOnly}>
                       <SelectTrigger className="bg-white border-slate-200 h-9 text-xs">
                         <SelectValue placeholder="الوحدة" />
                       </SelectTrigger>
@@ -366,6 +397,7 @@ export function TransferForm({
             <Input type="date"
               value={form.transfer_date?.slice(0, 10) ?? ""}
               onChange={e => setForm(p => ({ ...p, transfer_date: new Date(e.target.value).toISOString() }))}
+              disabled={readOnly}
               className="bg-white border-slate-200 h-9" />
           </div>
           <div className="space-y-1.5">
@@ -374,6 +406,7 @@ export function TransferForm({
             </FieldLabel>
             <Input value={form.notes ?? ""}
               onChange={e => setForm(p => ({ ...p, notes: e.target.value || null }))}
+              disabled={readOnly}
               placeholder="سبب التحويل..."
               className="bg-white border-slate-200 h-9" />
           </div>
