@@ -20,6 +20,8 @@ const DEFAULT_SETTINGS: NavSidebarSettings = {
   navRemembersState: true,
   navAutoCollapse: false,
   navBackground: 'bg-slate-900',
+  navGroupCollapseBehavior: 'free',
+  navGroupHeaderStyle: 'classic',
 };
 
 export const NavSidebarSettingsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {

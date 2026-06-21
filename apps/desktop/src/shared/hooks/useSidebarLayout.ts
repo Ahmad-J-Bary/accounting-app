@@ -6,7 +6,7 @@ import type {
   SidebarGroupConfig,
   SidebarItemConfig,
 } from '@shared/types/sidebar-config';
-import { buildDefaultLayout, NAV_GROUPS } from '@app/shell/sidebarConfig';
+import { buildDefaultLayout, NAV_GROUPS, ICON_MAP } from '@app/shell/sidebarConfig';
 
 const STORAGE_KEY = 'erp_sidebar_layout_v2'; // ترقية الإصدار لدعم المجموعات والاختصارات المخصصة
 const CURRENT_VERSION = 2;
@@ -284,6 +284,7 @@ export function useSidebarLayout() {
           id: 'custom_group_links',
           defaultTitle: 'روابط سريعة',
           customTitle: undefined,
+          icon: 'Link',
           visible: true,
           collapsed: false,
           items: [newCustomItem],
@@ -362,13 +363,14 @@ export function useSidebarLayout() {
     });
   }, []);
 
-  const addCustomGroup = useCallback((title: string) => {
+  const addCustomGroup = useCallback((title: string, icon?: string) => {
     setLayout(prev => {
       const newGroupId = `custom_group_${Date.now()}`;
       const newGroup: SidebarGroupConfig = {
         id: newGroupId,
         defaultTitle: title.trim() || 'مجموعة مخصصة جديدة',
         customTitle: undefined,
+        icon: icon || 'FolderPlus',
         visible: true,
         collapsed: false,
         items: [],
@@ -436,6 +438,52 @@ export function useSidebarLayout() {
     });
   }, []);
 
+  // ── System item actions ─────────────────────────────────────────────────
+  const addSystemItemToGroup = useCallback((routeId: string, targetGroupId: string, customIcon?: string, customLabel?: string) => {
+    setLayout(prev => {
+      // البحث عن المسار في NAV_GROUPS
+      const navGroup = NAV_GROUPS.find(g => g.items.some(i => i.id === routeId));
+      if (!navGroup) return prev;
+      const navItem = navGroup.items.find(i => i.id === routeId)!;
+
+      // هل العنصر موجود مسبقاً في أي مجموعة؟
+      const existingGroup = prev.groups.find(g => g.items.some(i => i.id === routeId));
+      if (existingGroup) {
+        // مجرد تفعيل الظهور
+        return {
+          ...prev,
+          groups: prev.groups.map(g => ({
+            ...g,
+            items: g.items.map(i =>
+              i.id === routeId ? { ...i, visible: true } : i
+            ),
+          })),
+        };
+      }
+
+      // إنشاء عنصر جديد بناءً على مسار النظام
+      const newItem: SidebarItemConfig = {
+        id: routeId,
+        to: navItem.to,
+        defaultLabel: customLabel || navItem.label,
+        icon: customIcon || Object.keys(ICON_MAP).find(k => ICON_MAP[k] === navItem.icon) || 'Layers',
+        visible: true,
+        pinned: false,
+        isShortcut: false,
+        order: 0,
+      };
+
+      return {
+        ...prev,
+        groups: prev.groups.map(g =>
+          g.id === targetGroupId
+            ? { ...g, items: [...g.items, { ...newItem, order: g.items.length }] }
+            : g
+        ),
+      };
+    });
+  }, []);
+
   // ── Global ────────────────────────────────────────────────────────────────
   const resetToDefault = useCallback(() => {
     const def = buildDefaultLayout();
@@ -482,6 +530,8 @@ export function useSidebarLayout() {
     deleteCustomGroup,
     // Global
     resetToDefault,
+    // System item actions
+    addSystemItemToGroup,
     // NAV_GROUPS للاستخدام في TopNav الثابت
     NAV_GROUPS,
   };

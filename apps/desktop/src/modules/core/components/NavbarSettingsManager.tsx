@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavSidebarSettings } from '@shared/hooks';
-import type { NavLayoutType, SidebarDensityPreset } from '@shared/types/sidebar-settings';
+import type { NavLayoutType, SidebarDensityPreset, GroupCollapseBehavior, GroupHeaderStyle } from '@shared/types/sidebar-settings';
 import { Label } from "@shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { Switch } from "@shared/ui/switch";
@@ -64,12 +64,13 @@ interface NavPreviewProps {
   density: SidebarDensityPreset;
   fontSize: number;
   layoutType: NavLayoutType;
+  groupHeaderStyle: string;
 }
 
 function NavSidebarPreview({
   background, activeBg, collapsed, iconOnly,
   showSectionHeaders, showLabels, bordered,
-  density, fontSize, layoutType,
+  density, fontSize, layoutType, groupHeaderStyle,
 }: NavPreviewProps) {
   const [activeItem, setActiveItem] = useState("لوحة التحكم");
   const [isCollapsed, setIsCollapsed] = useState(collapsed);
@@ -153,11 +154,35 @@ function NavSidebarPreview({
             const showHeader = showSectionHeaders && !isCollapsed && !effectiveIconOnly;
             return (
               <div key={group.title}>
-                {showHeader && (
-                  <div className={cn("px-2 mb-1 uppercase tracking-widest font-bold", sectionHeaderClass)} style={{ fontSize: '7px' }}>
-                    {group.title}
-                  </div>
-                )}
+                {showHeader && (() => {
+                  if (groupHeaderStyle === 'line') {
+                    return (
+                      <div className="flex items-center gap-1 px-2 mb-1">
+                        <span className={cn("uppercase tracking-widest font-bold shrink-0", sectionHeaderClass)} style={{ fontSize: '7px' }}>
+                          {group.title}
+                        </span>
+                        <div className={cn("flex-1 h-px border-t opacity-10", borderClass)} />
+                      </div>
+                    );
+                  }
+                  if (groupHeaderStyle === 'card') {
+                    return (
+                      <div className={cn(
+                        "mx-1 px-2 py-0.5 rounded text-[6px] font-black border mb-1",
+                        isBgLight
+                          ? "bg-slate-100/70 text-slate-800 border-slate-200/50 shadow-sm"
+                          : "bg-white/5 text-white border-white/5 shadow-sm"
+                      )}>
+                        {group.title}
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className={cn("px-2 mb-1 uppercase tracking-widest font-bold", sectionHeaderClass)} style={{ fontSize: '7px' }}>
+                      {group.title}
+                    </div>
+                  );
+                })()}
                 <ul className="space-y-0.5">
                   {group.items.map((item) => {
                     const isActive = activeItem === item.label;
@@ -412,6 +437,44 @@ export const NavbarSettingsManager: React.FC = () => {
           </div>
         </SettingsGroup>
 
+        <SettingsGroup title="خيارات وسلوك مجموعات القائمة" icon={Sliders} color="text-teal-600">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label className="text-slate-600 font-bold text-xs">سلوك ضغط وتوسيع المجموعات</Label>
+              <Select
+                value={navSettings.navGroupCollapseBehavior}
+                onValueChange={(v) => updateNavSetting('navGroupCollapseBehavior', v as GroupCollapseBehavior)}
+              >
+                <SelectTrigger className="h-10 rounded-lg border-slate-200 text-xs">
+                  <SelectValue placeholder="اختر السلوك" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="free">يدوي حر (توسيع/طي أي مجموعة بشكل مستقل)</SelectItem>
+                  <SelectItem value="accordion">أكورديون (مجموعة نشطة واحدة مفتوحة فقط)</SelectItem>
+                  <SelectItem value="all-expanded">موسعة بالكامل دائمًا (تعطيل خيار الطي)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-slate-600 font-bold text-xs">نمط شكل ترويسات المجموعات</Label>
+              <Select
+                value={navSettings.navGroupHeaderStyle}
+                onValueChange={(v) => updateNavSetting('navGroupHeaderStyle', v as GroupHeaderStyle)}
+              >
+                <SelectTrigger className="h-10 rounded-lg border-slate-200 text-xs">
+                  <SelectValue placeholder="اختر النمط" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="classic">كلاسيكي (نص صغير بسيط)</SelectItem>
+                  <SelectItem value="line">كلاسيكي فاصل (خط يتبع النص)</SelectItem>
+                  <SelectItem value="card">بطاقة مخصصة (خلفية بارزة تفاعلية)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </SettingsGroup>
+
         {/* ── Live Preview ── */}
         <SettingsGroup title="معاينة حية لقائمة التنقل الجانبي" icon={Eye} color="text-violet-600">
           <p className="text-xs text-slate-400 mb-4 font-medium">
@@ -428,6 +491,7 @@ export const NavbarSettingsManager: React.FC = () => {
             density={navSettings.navDensity}
             fontSize={navSettings.navFontSize}
             layoutType={navSettings.navLayoutType}
+            groupHeaderStyle={navSettings.navGroupHeaderStyle}
           />
         </SettingsGroup>
       </div>

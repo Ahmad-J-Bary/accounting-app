@@ -142,6 +142,7 @@ export default function OpeningBalance() {
       });
       setLines(inv.lines.map((l) => {
         const line = {
+          id: l.id || "",
           _id: `ln_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
           material_id: l.material_id || "",
           material_name: l.material_name || "",

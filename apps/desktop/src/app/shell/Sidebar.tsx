@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { useTabs } from '@app/providers/TabContext';
 import { useNavSidebarSettings, useSidebarLayout } from '@shared/hooks';
 import { cn } from '@shared/lib/utils';
 import { NAV_GROUPS } from './sidebarConfig';
@@ -17,7 +19,9 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
   const { settings, updateSetting, getNavWidth } = useNavSidebarSettings();
-  const { layout } = useSidebarLayout();
+  const { layout, toggleGroupCollapsed } = useSidebarLayout();
+  const { activeTabId } = useTabs();
+  const location = useLocation();
 
   const {
     navLayoutType,
@@ -28,7 +32,26 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
     navDensity,
     navBordered,
     navBackground,
+    navGroupCollapseBehavior = 'free',
   } = settings;
+
+  // البحث عن المجموعة النشطة حالياً بناءً على الصفحة المفتوحة
+  const activeGroup = layout.groups.find(g =>
+    g.items.some(item => activeTabId === item.to || location.pathname === item.to)
+  );
+
+  // حالة المجموعة المفتوحة في وضع الأكورديون (Accordion)
+  const [expandedGroupId, setExpandedGroupId] = useState<string | null>(() => {
+    if (navGroupCollapseBehavior !== 'accordion') return null;
+    return activeGroup ? activeGroup.id : null;
+  });
+
+  // مزامنة المجموعة النشطة عند تغيير الصفحة في وضع الأكورديون
+  useEffect(() => {
+    if (navGroupCollapseBehavior === 'accordion' && activeGroup) {
+      setExpandedGroupId(activeGroup.id);
+    }
+  }, [location.pathname, activeTabId, navGroupCollapseBehavior, activeGroup]);
 
   // TopNav slim
   if (navLayoutType === 'topnav-slim') {
@@ -53,6 +76,14 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
 
   const handleToggleCollapse = () => {
     updateSetting('navCollapsed', !navCollapsed);
+  };
+
+  const handleToggleGroup = (groupId: string) => {
+    if (navGroupCollapseBehavior === 'accordion') {
+      setExpandedGroupId(prev => prev === groupId ? null : groupId);
+    } else if (navGroupCollapseBehavior === 'free') {
+      toggleGroupCollapsed(groupId);
+    }
   };
 
   // المجموعات المرئية مرتّبة
@@ -102,19 +133,29 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
         />
 
         {/* المجموعات الديناميكية */}
-        {visibleGroups.map(group => (
-          <SidebarGroup
-            key={group.id}
-            group={group}
-            collapsed={isCollapsed}
-            iconOnly={isIconOnly}
-            activeBg={navActiveBg}
-            hoverBg={navHoverBg}
-            onClose={onClose}
-          />
-        ))}
-      </nav>
+        {visibleGroups.map(group => {
+          const isGroupCollapsed =
+            navGroupCollapseBehavior === 'all-expanded'
+              ? false
+              : navGroupCollapseBehavior === 'accordion'
+              ? expandedGroupId !== group.id
+              : group.collapsed;
 
+          return (
+            <SidebarGroup
+              key={group.id}
+              group={group}
+              collapsed={isCollapsed}
+              iconOnly={isIconOnly}
+              activeBg={navActiveBg}
+              hoverBg={navHoverBg}
+              isGroupCollapsed={isGroupCollapsed}
+              onToggleCollapse={() => handleToggleGroup(group.id)}
+              onClose={onClose}
+            />
+          );
+        })}
+      </nav>
 
       {/* Collapse button */}
       <SidebarCollapseBtn

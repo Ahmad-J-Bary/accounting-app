@@ -1,6 +1,8 @@
 export type SidebarDensity = 'compact' | 'comfortable' | 'spacious';
 export type SidebarWidthPreset = 'narrow' | 'standard' | 'wide' | 'extra-wide';
 export type SidebarDensityPreset = 'compact' | 'comfortable' | 'spacious';
+export type GroupCollapseBehavior = 'free' | 'accordion' | 'all-expanded';
+export type GroupHeaderStyle = 'classic' | 'card' | 'line';
 
 export type NavLayoutType =
   | 'vertical'
@@ -24,7 +26,10 @@ export interface NavSidebarSettings {
   navRemembersState: boolean;
   navAutoCollapse: boolean;
   navBackground: string;
+  navGroupCollapseBehavior: GroupCollapseBehavior;
+  navGroupHeaderStyle: GroupHeaderStyle;
 }
+
 
 export interface SidePanelSettings {
   widthPreset: SidebarWidthPreset;

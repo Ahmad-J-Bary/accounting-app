@@ -40,6 +40,8 @@ export interface SidebarGroupConfig {
   defaultTitle: string;
   /** العنوان المخصص من المستخدم */
   customTitle?: string;
+  /** اسم الأيقونة من lucide-react */
+  icon?: string;
   /** ظاهرة في الـ Sidebar؟ */
   visible: boolean;
   /** مطوية؟ */
@@ -96,8 +98,10 @@ export interface SidebarLayoutContextType {
   toggleGroupCollapsed: (groupId: SidebarGroupId) => void;
   renameGroup: (groupId: SidebarGroupId, title: string) => void;
   reorderGroups: (orderedIds: SidebarGroupId[]) => void;
-  addCustomGroup: (title: string) => void;
+  addCustomGroup: (title: string, icon?: string) => void;
   deleteCustomGroup: (groupId: SidebarGroupId) => void;
+  // ── System item actions ───────────────────────────────────
+  addSystemItemToGroup: (routeId: string, targetGroupId: string, customIcon?: string, customLabel?: string) => void;
   // ── Global ────────────────────────────────────────────────
   resetToDefault: () => void;
 }
