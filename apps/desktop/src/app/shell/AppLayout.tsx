@@ -1,16 +1,19 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sidebar } from './Sidebar';
-import { TopBar } from './TopBar';
-import { TabBar } from './TabBar';
 import { ErpRoutes } from '@app/router/ErpRoutes';
 import { useTabs } from '@app/providers/TabContext';
 import { cn } from '@shared/lib/utils';
 import { useKeyboardShortcuts } from '@shared/hooks/useKeyboardShortcuts';
+import { useAppearance } from '@shared/hooks/useAppearance';
 import { FloatingExchangeRateWidget } from '@modules/core/components/FloatingExchangeRateWidget';
 import { UpdateBanner } from '@modules/core/components/UpdateBanner';
 import { useUpdateManager } from '@modules/core/update/useUpdateManager';
 import { warehouseService } from '@modules/inventory/api/warehouseService';
+import { VerticalLayout } from './layouts/VerticalLayout';
+import { TopNavLayout } from './layouts/TopNavLayout';
+import { HorizontalLayout } from './layouts/HorizontalLayout';
+import { ComboLayout } from './layouts/ComboLayout';
+import { TabBar } from './TabBar';
 
 interface AppLayoutProps {
   title?: string;
@@ -23,6 +26,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   const navigate = useNavigate();
   const { state } = useUpdateManager();
   const hasSavedRef = useRef(false);
+  const { activeLayout, settings } = useAppearance();
 
   const saveState = useCallback(() => {
     if (hasSavedRef.current) return;
@@ -106,56 +110,75 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
 
   useKeyboardShortcuts(shortcuts);
 
-  return (
-    <div className="min-h-screen bg-gray-50 overflow-hidden" dir="rtl">
-      <div className="flex h-screen overflow-hidden">
-        {/* Right Sidebar Navigation */}
-        {sidebarOpen && <Sidebar onClose={() => setSidebarOpen(false)} />}
-        
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Top Navigation Bar */}
-          <TopBar 
-            onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} 
-            sidebarOpen={sidebarOpen} 
-            isExchangeVisible={isExchangeVisible}
-            onToggleExchange={toggleExchange}
-          />
-          
-          {/* Tab Bar */}
-          <TabBar />
+  const handleToggleSidebar = useCallback(() => {
+    setSidebarOpen(prev => !prev);
+  }, []);
 
-          {/* Update Banner (thin bar between tabs and content) */}
-          <UpdateBanner />
-
-          {/* Page Content Containers (One per tab) */}
-          <main className="flex-1 relative bg-slate-100 overflow-hidden">
-            {tabs.map((tab) => (
-              <div 
-                key={tab.id}
-                className={cn(
-                  "absolute inset-0 flex flex-col transition-opacity duration-200",
-                  tab.active ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
-                )}
-              >
-                <div className="flex-1 p-6 overflow-auto">
-                  {/* Page Header */}
-                  {(title || subtitle) && tab.active && (
-                    <div className="mb-6">
-                      {title && <h1 className="text-2xl font-bold text-gray-900 mb-1">{title}</h1>}
-                      {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
-                    </div>
-                  )}
-                  
-                  {/* The Page Component for this tab */}
-                  <ErpRoutes location={tab.path} />
+  // Render content (tabs + routes)
+  const content = (
+    <>
+      <UpdateBanner />
+      <main className="flex-1 relative bg-slate-100 overflow-hidden">
+        {tabs.map((tab) => (
+          <div 
+            key={tab.id}
+            className={cn(
+              "absolute inset-0 flex flex-col transition-opacity duration-200",
+              tab.active ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
+            )}
+          >
+            <div className="flex-1 p-6 overflow-auto">
+              {(title || subtitle) && tab.active && (
+                <div className="mb-6">
+                  {title && <h1 className="text-2xl font-bold text-gray-900 mb-1">{title}</h1>}
+                  {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
                 </div>
-              </div>
-            ))}
-            <FloatingExchangeRateWidget isVisible={isExchangeVisible} onClose={() => toggleExchange()} />
-          </main>
-        </div>
-      </div>
-    </div>
+              )}
+              <ErpRoutes location={tab.path} />
+            </div>
+          </div>
+        ))}
+        <FloatingExchangeRateWidget isVisible={isExchangeVisible} onClose={() => toggleExchange()} />
+      </main>
+    </>
   );
+
+  // Select layout shell based on current layout type
+  const shellVariant = activeLayout.shellVariant;
+
+  switch (shellVariant) {
+    case 'topnav':
+      return (
+        <div className="min-h-screen bg-gray-50 overflow-hidden" dir="rtl">
+          <TopNavLayout isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
+            {content}
+          </TopNavLayout>
+        </div>
+      );
+    case 'horizontal':
+      return (
+        <div className="min-h-screen bg-gray-50 overflow-hidden" dir="rtl">
+          <HorizontalLayout isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
+            {content}
+          </HorizontalLayout>
+        </div>
+      );
+    case 'combo':
+      return (
+        <div className="min-h-screen bg-gray-50 overflow-hidden" dir="rtl">
+          <ComboLayout sidebarOpen={sidebarOpen} onToggleSidebar={handleToggleSidebar} isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
+            {content}
+          </ComboLayout>
+        </div>
+      );
+    case 'vertical':
+    default:
+      return (
+        <div className="min-h-screen bg-gray-50 overflow-hidden" dir="rtl">
+          <VerticalLayout sidebarOpen={sidebarOpen} onToggleSidebar={handleToggleSidebar} isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
+            {content}
+          </VerticalLayout>
+        </div>
+      );
+  }
 }

@@ -47,6 +47,19 @@ export const NavSidebarSettingsProvider: React.FC<{ children: ReactNode }> = ({ 
     } catch { /* ignore storage errors */ }
   }, [settings]);
 
+  // ── Sync with global layout changes dispatched by AppearanceProvider ──
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { layoutType } = (e as CustomEvent<{ layoutType: NavLayoutType }>).detail;
+      const preset = LAYOUT_PRESETS[layoutType];
+      if (preset) {
+        setSettings(prev => ({ ...prev, ...preset }));
+      }
+    };
+    window.addEventListener('erp:layout-changed', handler);
+    return () => window.removeEventListener('erp:layout-changed', handler);
+  }, []);
+
   const updateSetting = <K extends keyof NavSidebarSettings>(key: K, value: NavSidebarSettings[K]) => {
     setSettings(prev => {
       let next = { ...prev, [key]: value };

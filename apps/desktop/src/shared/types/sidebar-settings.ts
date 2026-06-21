@@ -6,10 +6,10 @@ export type GroupHeaderStyle = 'classic' | 'card' | 'line';
 
 export type NavLayoutType =
   | 'vertical'
-  | 'collapsed'
-  | 'icon-only'
-  | 'darknav'
-  | 'topnav-slim';
+  | 'topnav-slim'
+  | 'navbar-horizontal'
+  | 'horizontal-slim'
+  | 'combo-nav';
 
 export interface NavSidebarSettings {
   navLayoutType: NavLayoutType;

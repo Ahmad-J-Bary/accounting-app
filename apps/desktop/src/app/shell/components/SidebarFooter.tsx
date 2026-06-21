@@ -11,9 +11,10 @@ export function SidebarFooter({ collapsed, iconOnly }: SidebarFooterProps) {
   const { settings } = useNavSidebarSettings();
   if (collapsed && iconOnly) return null;
 
-  const isBgLight = settings.navBackground === 'bg-white' || settings.navBackground === 'bg-slate-50';
-  const borderClass = isBgLight ? 'border-slate-200' : 'border-white/5';
-  const textClass = isBgLight ? 'text-slate-500 font-semibold' : 'text-slate-400';
+  const lightBgs = ['bg-white', 'bg-slate-50', 'bg-gray-50', 'bg-zinc-50'];
+  const isBgLight = lightBgs.includes(settings.navBackground);
+  const borderClass = isBgLight ? 'border-slate-200' : 'border-[hsl(var(--sidebar-border))]';
+  const textClass = isBgLight ? 'text-slate-500 font-semibold' : 'text-[hsl(var(--sidebar-foreground))] opacity-60';
 
   return (
     <div className={cn(

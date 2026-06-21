@@ -15,7 +15,7 @@ import { FinancialSettings } from "../components/settings/FinancialSettings";
 import { AboutSettings } from "../components/settings/AboutSettings";
 import { UnderDevelopmentSection } from "../components/settings/UnderDevelopmentSection";
 import { WarehouseSettings } from "../components/settings/WarehouseSettings";
-
+import { AppearanceSettings } from "../components/settings/AppearanceSettings";
 
 import { SettingsLayout } from "@widgets/templates/SettingsLayout";
 
@@ -67,6 +67,7 @@ export default function Settings() {
     { id: "navbar", label: "مظهر قائمة التنقل الجانبي", icon: PanelRightOpen },
     { id: "sidebar-content", label: "محتوى وترتيب القائمة", icon: Sliders },
     { id: "panel", label: "لوحة العمليات والنماذج", icon: PanelRightOpen },
+    { id: "appearance", label: "المظهر العام", icon: Palette },
   ];
 
   const renderSection = () => {
@@ -89,6 +90,8 @@ export default function Settings() {
         return <SidebarContentManager />;
       case "panel":
         return <PanelSettingsManager />;
+      case "appearance":
+        return <AppearanceSettings />;
       case "about":
         return <AboutSettings />;
 

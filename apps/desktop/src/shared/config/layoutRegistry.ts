@@ -1,0 +1,81 @@
+import type { LayoutDefinition, LayoutType } from '@shared/types/appearance';
+
+export const LAYOUT_REGISTRY: Record<LayoutType, LayoutDefinition> = {
+  'vertical': {
+    id: 'vertical',
+    name: 'Vertical',
+    nameAr: 'عمودي',
+    icon: 'PanelLeft',
+    description: 'شريط جانبي عمودي كامل مع شريط علوي',
+    sidebarMode: 'visible',
+    topBarMode: 'visible',
+    navbarMode: 'none',
+    showTabs: true,
+    sidebarGroups: true,
+    sidebarWidth: 256,
+    shellVariant: 'vertical',
+  },
+  'topnav-slim': {
+    id: 'topnav-slim',
+    name: 'Topnav Slim',
+    nameAr: 'شريط علوي نحيف',
+    icon: 'ArrowUpFromLine',
+    description: 'شريط تنقل علوي نحيف بدون شريط جانبي',
+    sidebarMode: 'hidden',
+    topBarMode: 'slim',
+    navbarMode: 'full',
+    showTabs: true,
+    sidebarGroups: false,
+    sidebarWidth: 0,
+    shellVariant: 'topnav',
+  },
+  'navbar-horizontal': {
+    id: 'navbar-horizontal',
+    name: 'Navbar Horizontal',
+    nameAr: 'شريط أفقي',
+    icon: 'AlignJustify',
+    description: 'شريط تنقل أفقي كامل أسفل الشريط العلوي',
+    sidebarMode: 'hidden',
+    topBarMode: 'visible',
+    navbarMode: 'full',
+    showTabs: true,
+    sidebarGroups: false,
+    sidebarWidth: 0,
+    shellVariant: 'horizontal',
+  },
+  'horizontal-slim': {
+    id: 'horizontal-slim',
+    name: 'Horizontal Slim',
+    nameAr: 'شريط أفقي نحيف',
+    icon: 'Minimize',
+    description: 'شريط تنقل أفقي نحيف مع شريط علوي مصغر',
+    sidebarMode: 'hidden',
+    topBarMode: 'slim',
+    navbarMode: 'slim',
+    showTabs: true,
+    sidebarGroups: false,
+    sidebarWidth: 0,
+    shellVariant: 'horizontal',
+  },
+  'combo-nav': {
+    id: 'combo-nav',
+    name: 'Combo Nav',
+    nameAr: 'مدمج',
+    icon: 'LayoutPanelTop',
+    description: 'شريط أفقي + شريط جانبي معاً',
+    sidebarMode: 'visible',
+    topBarMode: 'visible',
+    navbarMode: 'full',
+    showTabs: true,
+    sidebarGroups: true,
+    sidebarWidth: 200,
+    shellVariant: 'combo',
+  },
+
+};
+
+export const LAYOUT_LIST = Object.values(LAYOUT_REGISTRY);
+
+export function getLayoutDefinition(type: LayoutType): LayoutDefinition {
+  return LAYOUT_REGISTRY[type];
+}

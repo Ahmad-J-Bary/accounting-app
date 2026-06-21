@@ -77,20 +77,20 @@ export const LAYOUT_PRESETS: Record<NavLayoutType, Partial<NavSidebarSettings>> 
     navWidth: 256, navCollapsed: false, navIconOnly: false,
     navShowLabels: true, navShowSectionHeaders: true, navBackground: 'bg-slate-900',
   },
-  collapsed: {
-    navWidth: 256, navCollapsed: true, navIconOnly: false,
-    navShowLabels: true, navShowSectionHeaders: false, navBackground: 'bg-slate-900',
-  },
-  'icon-only': {
-    navWidth: 256, navCollapsed: true, navIconOnly: true,
-    navShowLabels: false, navShowSectionHeaders: false, navBackground: 'bg-slate-900',
-  },
-  darknav: {
-    navWidth: 240, navCollapsed: false, navIconOnly: false,
-    navShowLabels: true, navShowSectionHeaders: true, navBackground: 'bg-slate-950',
-  },
   'topnav-slim': {
     navWidth: 0, navCollapsed: false, navIconOnly: false,
+    navShowLabels: true, navShowSectionHeaders: true, navBackground: 'bg-slate-900',
+  },
+  'navbar-horizontal': {
+    navWidth: 0, navCollapsed: false, navIconOnly: false,
+    navShowLabels: true, navShowSectionHeaders: true, navBackground: 'bg-slate-900',
+  },
+  'horizontal-slim': {
+    navWidth: 0, navCollapsed: false, navIconOnly: false,
+    navShowLabels: true, navShowSectionHeaders: true, navBackground: 'bg-slate-900',
+  },
+  'combo-nav': {
+    navWidth: 200, navCollapsed: false, navIconOnly: false,
     navShowLabels: true, navShowSectionHeaders: true, navBackground: 'bg-slate-900',
   },
 };

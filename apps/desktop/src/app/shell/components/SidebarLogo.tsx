@@ -11,10 +11,12 @@ interface SidebarLogoProps {
 
 export function SidebarLogo({ collapsed, iconOnly, onClose }: SidebarLogoProps) {
   const { settings } = useNavSidebarSettings();
-  const isBgLight = settings.navBackground === 'bg-white' || settings.navBackground === 'bg-slate-50';
-  const borderClass = isBgLight ? 'border-slate-200' : 'border-white/5';
-  const textClass = isBgLight ? 'text-slate-800' : 'text-white';
-  const subtextClass = isBgLight ? 'text-slate-500' : 'text-slate-400';
+  // Detect light vs dark sidebar background
+  const lightBgs = ['bg-white', 'bg-slate-50', 'bg-gray-50', 'bg-zinc-50'];
+  const isBgLight = lightBgs.includes(settings.navBackground);
+  const borderClass = isBgLight ? 'border-slate-200' : 'border-[hsl(var(--sidebar-border))]';
+  const textClass = isBgLight ? 'text-slate-800' : 'text-[hsl(var(--sidebar-foreground))]';
+  const subtextClass = isBgLight ? 'text-slate-500' : 'text-[hsl(var(--sidebar-foreground))] opacity-60';
   const logoHeight = collapsed ? "h-14" : (settings.navDensity === 'compact' ? "h-14" : settings.navDensity === 'spacious' ? "h-20" : "h-16");
 
   return (

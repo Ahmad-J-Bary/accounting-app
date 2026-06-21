@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Bell, Search, Plus, ChevronDown, PanelLeft, Building2, LogOut, User, Settings as SettingsIcon, DollarSign } from "lucide-react";
+import { Bell, Search, Plus, PanelLeft, Building2, LogOut, Settings as SettingsIcon, DollarSign } from "lucide-react";
+import { useAppearance } from '@shared/hooks/useAppearance';
 import { cn } from '@shared/lib/utils';
 import { Button } from "@shared/ui/button";
 import {
@@ -36,6 +37,9 @@ export function TopBar({
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const { openTab } = useTabs();
   const navigate = useNavigate();
+  const { settings: appearance } = useAppearance();
+  const showSearch = appearance.show.search;
+  const showNotifications = appearance.show.notifications;
 
   const loadSettings = () => {
     settingsService.getSettings()
@@ -115,14 +119,16 @@ export function TopBar({
           </Button>
         )}
 
-        <Button
-          variant="outline"
-          className="flex-1 max-w-md justify-start text-muted-foreground"
-          onClick={() => setSearchOpen(true)}
-        >
-          <Search className="w-4 h-4 ml-2" />
-          بحث شامل في النظام...
-        </Button>
+        {showSearch && (
+          <Button
+            variant="outline"
+            className="flex-1 max-w-md justify-start text-muted-foreground"
+            onClick={() => setSearchOpen(true)}
+          >
+            <Search className="w-4 h-4 ml-2" />
+            بحث شامل في النظام...
+          </Button>
+        )}
 
         <div className="flex-1" />
 
@@ -164,10 +170,12 @@ export function TopBar({
           <DollarSign className="w-5 h-5" />
         </Button>
 
-        <Button variant="ghost" size="icon" className="relative" onClick={() => setNotificationsOpen(true)}>
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 left-1.5 w-2 h-2 bg-red-500 rounded-full" />
-        </Button>
+        {showNotifications && (
+          <Button variant="ghost" size="icon" className="relative" onClick={() => setNotificationsOpen(true)}>
+            <Bell className="w-5 h-5" />
+            <span className="absolute top-1.5 left-1.5 w-2 h-2 bg-red-500 rounded-full" />
+          </Button>
+        )}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

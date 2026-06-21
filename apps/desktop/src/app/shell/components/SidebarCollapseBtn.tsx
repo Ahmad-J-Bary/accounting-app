@@ -10,9 +10,12 @@ interface SidebarCollapseBtnProps {
 
 export function SidebarCollapseBtn({ collapsed, onToggle }: SidebarCollapseBtnProps) {
   const { settings } = useNavSidebarSettings();
-  const isBgLight = settings.navBackground === 'bg-white' || settings.navBackground === 'bg-slate-50';
-  const borderClass = isBgLight ? 'border-slate-200' : 'border-white/5';
-  const textClass = isBgLight ? "text-slate-500 hover:text-slate-900 hover:bg-slate-100" : "text-slate-400 hover:text-white hover:bg-white/5";
+  const lightBgs = ['bg-white', 'bg-slate-50', 'bg-gray-50', 'bg-zinc-50'];
+  const isBgLight = lightBgs.includes(settings.navBackground);
+  const borderClass = isBgLight ? 'border-slate-200' : 'border-[hsl(var(--sidebar-border))]';
+  const textClass = isBgLight
+    ? "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+    : "text-[hsl(var(--sidebar-foreground))] opacity-60 hover:opacity-100 hover:bg-[hsl(var(--sidebar-accent))]";
 
   return (
     <div className={cn("border-t shrink-0", borderClass, "p-3")}>

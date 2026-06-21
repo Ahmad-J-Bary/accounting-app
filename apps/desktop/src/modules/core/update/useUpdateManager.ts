@@ -38,7 +38,7 @@ export function useUpdateManager(channel: UpdateChannel = 'stable') {
       setState(prev => ({
         ...prev,
         phase: 'idle',
-        error: 'Failed to check for updates'
+        error: null
       }));
       return;
     }

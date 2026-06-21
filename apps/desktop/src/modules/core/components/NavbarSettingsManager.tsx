@@ -285,9 +285,6 @@ export const NavbarSettingsManager: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="vertical">عمودي (افتراضي)</SelectItem>
-                  <SelectItem value="collapsed">مطوي</SelectItem>
-                  <SelectItem value="icon-only">أيقونات فقط</SelectItem>
-                  <SelectItem value="darknav">داكن بالكامل</SelectItem>
                   <SelectItem value="topnav-slim">شريط علوي نحيف</SelectItem>
                 </SelectContent>
               </Select>

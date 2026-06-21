@@ -15,15 +15,13 @@ export class UpdateService {
   }
 
   async fetchManifest(channel: UpdateChannel = 'stable'): Promise<UpdateManifest | null> {
+    if (!UPDATE_MANIFEST_URL) return null;
     try {
       const response = await fetch(UPDATE_MANIFEST_URL);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch manifest: ${response.statusText}`);
-      }
+      if (!response.ok) return null;
       const manifest = await response.json();
       return manifest as UpdateManifest;
-    } catch (error) {
-      console.error('Error fetching update manifest:', error);
+    } catch {
       return null;
     }
   }

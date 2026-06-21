@@ -7,7 +7,6 @@ import { NAV_GROUPS } from './sidebarConfig';
 import { SidebarLogo } from './components/SidebarLogo';
 import { SidebarCollapseBtn } from './components/SidebarCollapseBtn';
 import { SidebarFooter } from './components/SidebarFooter';
-import { SidebarTopNav } from './components/SidebarTopNav';
 import { SidebarGroup } from './sidebar/SidebarGroup';
 import { SidebarPinnedSection } from './sidebar/SidebarPinnedSection';
 import { SidebarShortcutsSection } from './sidebar/SidebarShortcutsSection';
@@ -52,17 +51,6 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
       setExpandedGroupId(activeGroup.id);
     }
   }, [location.pathname, activeTabId, navGroupCollapseBehavior, activeGroup]);
-
-  // TopNav slim
-  if (navLayoutType === 'topnav-slim') {
-    return (
-      <SidebarTopNav
-        groups={NAV_GROUPS}
-        activeBg={navActiveBg}
-        hoverBg={navHoverBg}
-      />
-    );
-  }
 
   const isCollapsed = navCollapsed;
   const isIconOnly = navCollapsed && navIconOnly;
