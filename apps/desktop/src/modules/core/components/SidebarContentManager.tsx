@@ -445,7 +445,7 @@ export const SidebarContentManager: React.FC = () => {
                         .filter(item => !layout.groups.some(g => g.items.some(i => i.id === item.id && g.items.find(x => x.id === item.id)?.visible)))
                         .map(item => (
                           <option key={item.id} value={item.id}>
-                            {item.label} ({item.groupLabel})
+                            {item.label}{item.groupLabel ? ` (${item.groupLabel})` : ''}
                           </option>
                         ))}
                     </select>
@@ -529,7 +529,7 @@ export const SidebarContentManager: React.FC = () => {
                         <IconComp className={cn("w-4 h-4 shrink-0", isInSidebar ? "text-slate-500" : "text-slate-400")} />
                         <span className={cn("text-xs font-bold truncate", isInSidebar ? "text-slate-800" : "text-slate-500")}>{item.label}</span>
                         <span className="text-[9px] text-slate-400 direction-ltr" dir="ltr">{item.to}</span>
-                        <span className="text-[8px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">{item.groupLabel}</span>
+                        {item.groupLabel && <span className="text-[8px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">{item.groupLabel}</span>}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full", isInSidebar ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-500")}>

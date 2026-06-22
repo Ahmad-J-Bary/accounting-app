@@ -2,7 +2,6 @@ import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle,
   BookOpen,
-  Clock,
   FileText,
   Package,
   Receipt,
@@ -44,7 +43,6 @@ export const reportCatalog: ReportCatalogGroup[] = [
     category: "الدفاتر والتقارير المالية",
     items: [
       { name: "دفتر الأستاذ العام", desc: "كشف حركات الحسابات التفصيلية خلال فترة", icon: BookOpen, color: "text-purple-600", bg: "bg-purple-50", to: "/accounting/reports/ledger" },
-      { name: "كشف حركات تفصيلي", desc: "تحليل الحركات المالية لحساب معين بالتفصيل", icon: Clock, color: "text-blue-600", bg: "bg-blue-50", to: "/accounting/reports/movements" },
       { name: "ميزان المراجعة", desc: "عرض جميع أرصدة الحسابات الإجمالية والتفصيلية", icon: Scale, color: "text-amber-600", bg: "bg-amber-50", to: "/accounting/reports/trial-balance" },
       { name: "قائمة الدخل", desc: "ملخص الأرباح والخسائر والنشاط التشغيلي", icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50", to: "/accounting/reports/income" },
     ],
