@@ -5,7 +5,6 @@ import { useNavSidebarSettings, useSidebarLayout } from '@shared/hooks';
 import { useAppearance } from '@shared/hooks/useAppearance';
 import { cn } from '@shared/lib/utils';
 import { ICON_MAP } from './sidebarConfig';
-import { SidebarLogo } from './components/SidebarLogo';
 import { SidebarCollapseBtn } from './components/SidebarCollapseBtn';
 import { SidebarFooter } from './components/SidebarFooter';
 import { SidebarGroup } from './sidebar/SidebarGroup';
@@ -119,7 +118,7 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
     const railIconActive = isRailDark ? 'bg-blue-500/20 text-blue-400' : 'bg-primary/10 text-primary';
 
     return (
-      <div className="flex h-screen overflow-hidden" dir="rtl">
+      <div className="flex h-full overflow-hidden" dir="rtl">
         {/* ── الرييل الضيق ── */}
         <div className={cn("flex flex-col items-center py-2 gap-0.5 w-11 shrink-0 border-l z-10", railBg, railBorder)}>
           {/* أيقونة الشعار */}
@@ -155,7 +154,7 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
 
         {/* ── اللوحة الجانبية ── */}
         <aside className={cn(
-          "flex flex-col h-screen overflow-hidden border-l transition-all duration-300",
+          "flex flex-col h-full overflow-hidden border-l transition-all duration-300",
           effectiveBg, effectiveTextClass, effectiveBorderClass,
         )} style={{ width: 200, minWidth: 200 }}>
           {selectedGroup && (
@@ -198,21 +197,13 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "h-screen flex flex-col transition-all duration-300 ease-in-out relative",
+        "h-full flex flex-col transition-all duration-300 ease-in-out relative",
         effectiveBg,
         effectiveTextClass,
         navBordered ? `border-l ${effectiveBorderClass}` : "border-none"
       )}
       style={{ width: actualWidth, minWidth: actualWidth }}
     >
-      {/* Logo */}
-      <SidebarLogo
-        collapsed={isCollapsed}
-        iconOnly={isIconOnly}
-        onClose={onClose}
-        verticalAppearance={verticalNavbarAppearance}
-      />
-
       {/* Navigation */}
       <nav className={cn(
         "flex-1 overflow-y-auto scrollbar-hide px-2",

@@ -11,13 +11,15 @@ interface NavBarProps {
   activeBg?: string;
   hoverBg?: string;
   vertical?: boolean;
+  horizontalAppearance?: 'light' | 'dark';
 }
 
-export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hover:bg-white/5 hover:text-white', vertical = false }: NavBarProps) {
+export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hover:bg-white/5 hover:text-white', vertical = false, horizontalAppearance }: NavBarProps) {
   const { layout } = useSidebarLayout();
   const { openTab, updateMainTab, activeTabId } = useTabs();
   const location = useLocation();
   const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
+  const isHorizLight = horizontalAppearance === 'light';
 
   const visibleGroups = layout.groups.filter(g => g.visible).sort((a, b) => a.order - b.order);
 
@@ -59,10 +61,13 @@ export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hove
   return (
     <nav
       className={cn(
-        "flex items-center gap-2 px-4 border-b border-[hsl(var(--sidebar-border))] overflow-visible z-50",
+        "flex items-center justify-center gap-2 px-4 border-b overflow-visible z-50",
+        isHorizLight
+          ? "bg-white border-slate-200"
+          : "border-[hsl(var(--sidebar-border))]",
         slim ? "h-10" : "h-12"
       )}
-      style={{ background: 'hsl(var(--sidebar-background))' }}
+      style={!isHorizLight ? { background: 'hsl(var(--sidebar-background))' } : undefined}
       dir="rtl"
     >
       {visibleGroups.map(group => {
@@ -95,8 +100,10 @@ export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hove
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap",
                 isActive
-                  ? `${activeBg} text-white shadow-sm`
-                  : `text-[hsl(var(--sidebar-foreground))] opacity-75 hover:opacity-100 hover:bg-[hsl(var(--sidebar-accent))]`
+                  ? isHorizLight ? "text-primary bg-primary/10" : `${activeBg} text-white shadow-sm`
+                  : isHorizLight
+                    ? "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    : `text-[hsl(var(--sidebar-foreground))] opacity-75 hover:opacity-100 hover:bg-[hsl(var(--sidebar-accent))]`
               )}
               title={displayLabel}
             >
@@ -121,8 +128,10 @@ export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hove
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap",
                 isGroupActive
-                  ? "bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-accent-foreground))] opacity-100 shadow-sm"
-                  : "text-[hsl(var(--sidebar-foreground))] opacity-75 hover:opacity-100 hover:bg-[hsl(var(--sidebar-accent))]"
+                  ? isHorizLight ? "text-primary bg-primary/10" : "bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-accent-foreground))] opacity-100 shadow-sm"
+                  : isHorizLight
+                    ? "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    : "text-[hsl(var(--sidebar-foreground))] opacity-75 hover:opacity-100 hover:bg-[hsl(var(--sidebar-accent))]"
               )}
             >
               {GroupIcon && !slim && <GroupIcon className="w-3.5 h-3.5 opacity-80" />}
@@ -135,9 +144,9 @@ export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hove
               className={cn(
                 "absolute top-full right-0 mt-1 w-56 rounded-xl border p-1.5 shadow-xl opacity-0 translate-y-1 invisible",
                 "group-hover:opacity-100 group-hover:translate-y-0 group-hover:visible transition-all duration-200 z-50",
-                "border-[hsl(var(--sidebar-border))]"
+                isHorizLight ? "bg-white border-slate-200" : "border-[hsl(var(--sidebar-border))]"
               )}
-              style={{ background: 'hsl(var(--sidebar-background))' }}
+              style={!isHorizLight ? { background: 'hsl(var(--sidebar-background))' } : undefined}
             >
               <div className="space-y-0.5">
                 {visibleItems.map(item => {
@@ -161,8 +170,10 @@ export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hove
                       className={cn(
                         "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-right text-xs font-bold transition-all",
                         isActive
-                          ? `${activeBg} text-white shadow-sm`
-                          : `text-[hsl(var(--sidebar-foreground))] opacity-75 hover:opacity-100 ${hoverBg}`
+                          ? isHorizLight ? "text-primary bg-primary/10" : `${activeBg} text-white shadow-sm`
+                          : isHorizLight
+                            ? "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                            : `text-[hsl(var(--sidebar-foreground))] opacity-75 hover:opacity-100 ${hoverBg}`
                       )}
                     >
                       {ItemIcon && <ItemIcon className="w-3.5 h-3.5 shrink-0 opacity-80" />}

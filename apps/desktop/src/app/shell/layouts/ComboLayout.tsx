@@ -23,25 +23,27 @@ export function ComboLayout({ children, sidebarOpen, onToggleSidebar, isExchange
   const showTabs = settings.show.tabs && activeLayout.showTabs;
 
   return (
-    <div className="flex h-screen overflow-hidden" dir="rtl" data-density={settings.density}>
-      {showNavBar && (
-        <div className="flex flex-col shrink-0">
-          <NavBar
-            slim={activeLayout.navbarMode === 'slim'}
-            activeBg={navSettings.navActiveBg}
-            hoverBg={navSettings.navHoverBg}
-            vertical
-          />
-        </div>
-      )}
-      {showSidebar && (
-        <Sidebar collapsed={!sidebarOpen} onClose={() => sidebarOpen && onToggleSidebar()} />
-      )}
-      <div className="flex flex-col flex-1 min-w-0">
-        {showTopBar && <TopBar onToggleSidebar={onToggleSidebar} sidebarOpen={sidebarOpen} isExchangeVisible={isExchangeVisible} onToggleExchange={onToggleExchange} />}
-        {showTabs && <TabBar />}
-        <div className="flex-1 flex flex-col overflow-auto">
-          {children}
+    <div className="flex flex-col h-screen overflow-hidden" dir="rtl" data-density={settings.density}>
+      {showTopBar && <TopBar onToggleSidebar={onToggleSidebar} sidebarOpen={sidebarOpen} isExchangeVisible={isExchangeVisible} onToggleExchange={onToggleExchange} />}
+      <div className="flex flex-1 overflow-hidden">
+        {showNavBar && (
+          <div className="flex flex-col shrink-0">
+            <NavBar
+              slim={activeLayout.navbarMode === 'slim'}
+              activeBg={navSettings.navActiveBg}
+              hoverBg={navSettings.navHoverBg}
+              vertical
+            />
+          </div>
+        )}
+        {showSidebar && (
+          <Sidebar collapsed={!sidebarOpen} onClose={() => sidebarOpen && onToggleSidebar()} />
+        )}
+        <div className="flex flex-col flex-1 min-w-0">
+          {showTabs && <TabBar />}
+          <div className="flex-1 flex flex-col overflow-auto">
+            {children}
+          </div>
         </div>
       </div>
     </div>

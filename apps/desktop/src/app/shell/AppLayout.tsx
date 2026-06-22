@@ -28,18 +28,6 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   const hasSavedRef = useRef(false);
   const { activeLayout, settings } = useAppearance();
   const location = useLocation();
-  // Track previous route to detect entering/exiting settings (render-time, no effect)
-  const prevPathRef = useRef(location.pathname);
-  const stableShellRef = useRef(activeLayout.shellVariant);
-
-  if (!prevPathRef.current.includes('/settings') && location.pathname.includes('/settings')) {
-    stableShellRef.current = activeLayout.shellVariant;
-  }
-  prevPathRef.current = location.pathname;
-
-  const shellVariant = location.pathname.includes('/settings')
-    ? stableShellRef.current
-    : activeLayout.shellVariant;
 
   const saveState = useCallback(() => {
     if (hasSavedRef.current) return;
@@ -156,7 +144,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
     </>
   ), [tabs, isExchangeVisible, title, subtitle]);
 
-  switch (shellVariant) {
+  switch (activeLayout.shellVariant) {
     case 'topnav':
       return (
         <div className="min-h-screen bg-gray-50 overflow-hidden" dir="rtl">
