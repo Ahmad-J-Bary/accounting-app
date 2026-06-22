@@ -7,13 +7,16 @@ interface SidebarLogoProps {
   collapsed: boolean;
   iconOnly: boolean;
   onClose?: () => void;
+  verticalAppearance?: 'light' | 'dark';
 }
 
-export function SidebarLogo({ collapsed, iconOnly, onClose }: SidebarLogoProps) {
+export function SidebarLogo({ collapsed, iconOnly, onClose, verticalAppearance }: SidebarLogoProps) {
   const { settings } = useNavSidebarSettings();
   // Detect light vs dark sidebar background
   const lightBgs = ['bg-white', 'bg-slate-50', 'bg-gray-50', 'bg-zinc-50'];
-  const isBgLight = lightBgs.includes(settings.navBackground);
+  const isBgLight = verticalAppearance
+    ? verticalAppearance === 'light'
+    : lightBgs.includes(settings.navBackground);
   const borderClass = isBgLight ? 'border-slate-200' : 'border-[hsl(var(--sidebar-border))]';
   const textClass = isBgLight ? 'text-slate-800' : 'text-[hsl(var(--sidebar-foreground))]';
   const subtextClass = isBgLight ? 'text-slate-500' : 'text-[hsl(var(--sidebar-foreground))] opacity-60';

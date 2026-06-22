@@ -11,10 +11,11 @@ interface SidebarPinnedSectionProps {
   activeBg: string;
   hoverBg: string;
   onClose?: () => void;
+  verticalAppearance?: 'light' | 'dark';
 }
 
 export function SidebarPinnedSection({
-  collapsed, iconOnly, activeBg, hoverBg, onClose,
+  collapsed, iconOnly, activeBg, hoverBg, onClose, verticalAppearance,
 }: SidebarPinnedSectionProps) {
   const { getPinnedItems } = useSidebarLayout();
   const { settings } = useNavSidebarSettings();
@@ -22,7 +23,9 @@ export function SidebarPinnedSection({
   const pinnedItems = getPinnedItems();
   if (pinnedItems.length === 0) return null;
 
-  const isBgLight = settings.navBackground === 'bg-white' || settings.navBackground === 'bg-slate-50';
+  const isBgLight = verticalAppearance
+    ? verticalAppearance === 'light'
+    : settings.navBackground === 'bg-white' || settings.navBackground === 'bg-slate-50';
   const sectionHeaderClass = isBgLight ? 'text-slate-400' : 'text-slate-500';
   const borderClass = isBgLight ? 'border-slate-200' : 'border-white/5';
   const bgClass = isBgLight ? 'bg-slate-100/60' : 'bg-white/5';
@@ -50,6 +53,7 @@ export function SidebarPinnedSection({
             hoverBg={hoverBg}
             badge="pinned"
             onClose={onClose}
+            verticalAppearance={verticalAppearance}
           />
         ))}
       </ul>

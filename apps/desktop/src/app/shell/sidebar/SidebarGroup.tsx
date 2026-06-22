@@ -15,6 +15,7 @@ interface SidebarGroupProps {
   isGroupCollapsed?: boolean;
   onToggleCollapse?: () => void;
   onClose?: () => void;
+  verticalAppearance?: 'light' | 'dark';
 }
 
 export function SidebarGroup({
@@ -26,6 +27,7 @@ export function SidebarGroup({
   isGroupCollapsed,
   onToggleCollapse,
   onClose,
+  verticalAppearance,
 }: SidebarGroupProps) {
   const { settings } = useNavSidebarSettings();
 
@@ -34,7 +36,9 @@ export function SidebarGroup({
     navGroupHeaderStyle = 'classic',
   } = settings;
 
-  const isBgLight = settings.navBackground === 'bg-white' || settings.navBackground === 'bg-slate-50';
+  const isBgLight = verticalAppearance
+    ? verticalAppearance === 'light'
+    : settings.navBackground === 'bg-white' || settings.navBackground === 'bg-slate-50';
   const sectionHeaderClass = isBgLight ? 'text-slate-400' : 'text-slate-500';
   const borderClass = isBgLight ? 'border-slate-200' : 'border-white/5';
 
@@ -185,6 +189,7 @@ export function SidebarGroup({
                 activeBg={activeBg}
                 hoverBg={hoverBg}
                 onClose={onClose}
+                verticalAppearance={verticalAppearance}
               />
             ))}
           </ul>

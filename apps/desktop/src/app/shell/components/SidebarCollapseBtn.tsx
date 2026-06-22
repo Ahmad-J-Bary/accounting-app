@@ -6,12 +6,15 @@ import { useNavSidebarSettings } from '@shared/hooks';
 interface SidebarCollapseBtnProps {
   collapsed: boolean;
   onToggle: () => void;
+  verticalAppearance?: 'light' | 'dark';
 }
 
-export function SidebarCollapseBtn({ collapsed, onToggle }: SidebarCollapseBtnProps) {
+export function SidebarCollapseBtn({ collapsed, onToggle, verticalAppearance }: SidebarCollapseBtnProps) {
   const { settings } = useNavSidebarSettings();
   const lightBgs = ['bg-white', 'bg-slate-50', 'bg-gray-50', 'bg-zinc-50'];
-  const isBgLight = lightBgs.includes(settings.navBackground);
+  const isBgLight = verticalAppearance
+    ? verticalAppearance === 'light'
+    : lightBgs.includes(settings.navBackground);
   const borderClass = isBgLight ? 'border-slate-200' : 'border-[hsl(var(--sidebar-border))]';
   const textClass = isBgLight
     ? "text-slate-500 hover:text-slate-900 hover:bg-slate-100"

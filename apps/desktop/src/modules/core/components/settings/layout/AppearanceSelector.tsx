@@ -23,11 +23,11 @@ export function AppearanceSelector({
   ];
 
   return (
-    <div className="space-y-3">
-      <h4 className="text-xs font-semibold text-slate-400 tracking-wide">
+    <div>
+      <h4 className="text-[9px] font-bold text-slate-400 tracking-wide mb-1.5">
         {title}
       </h4>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-1.5">
         {options.map((opt) => {
           const isActive = value === opt.id;
           const Icon = opt.icon;
@@ -36,28 +36,28 @@ export function AppearanceSelector({
               key={opt.id}
               onClick={() => onChange(opt.id)}
               className={cn(
-                "relative flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all group text-right",
+                "relative flex flex-col items-center gap-1 p-1.5 rounded-lg border transition-all group text-right",
                 isActive
-                  ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
-                  : "border-slate-200 hover:border-slate-300 hover:bg-slate-50",
+                  ? "border-primary bg-primary/5 shadow-sm shadow-primary/10"
+                  : "border-slate-200 hover:border-slate-350 hover:bg-slate-50/50",
               )}
             >
               {isActive && (
-                <span className="absolute top-2 left-2 w-4 h-4 bg-primary rounded-full flex items-center justify-center shadow-sm z-10">
-                  <Check className="w-2.5 h-2.5 text-primary-foreground" />
+                <span className="absolute top-1 left-1 w-3 h-3 bg-primary rounded-full flex items-center justify-center shadow-sm z-10">
+                  <Check className="w-2 h-2 text-primary-foreground" />
                 </span>
               )}
               <Icon className={cn(
-                "w-6 h-6",
+                "w-3.5 h-3.5",
                 isActive ? "text-primary" : "text-slate-400",
               )} />
               {opt.preview && (
-                <div className="w-full overflow-hidden rounded-lg border border-slate-200">
+                <div className="w-full overflow-hidden rounded-md border border-slate-150">
                   {opt.preview}
                 </div>
               )}
               <span className={cn(
-                "text-xs font-bold",
+                "text-[9px] font-bold mt-0.5",
                 isActive ? "text-primary" : "text-slate-700",
               )}>
                 {opt.label}

@@ -22,8 +22,20 @@ import { SettingsLayout } from "@widgets/templates/SettingsLayout";
 export default function Settings() {
   const [settings, setSettings] = useState<CompanySettingsType | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeNav, setActiveNav] = useState("company");
-  const [appearanceExpanded, setAppearanceExpanded] = useState(false);
+  
+  const [activeNav, setActiveNav] = useState(() => {
+    return localStorage.getItem('erp_settings_active_nav') || 'company';
+  });
+
+  const [appearanceExpanded, setAppearanceExpanded] = useState(() => {
+    const active = localStorage.getItem('erp_settings_active_nav') || 'company';
+    return ['tables', 'navbar', 'sidebar-content', 'panel', 'appearance'].includes(active);
+  });
+
+  // Save active sub-tab on change
+  useEffect(() => {
+    localStorage.setItem('erp_settings_active_nav', activeNav);
+  }, [activeNav]);
 
   const load = async () => {
     setLoading(true);

@@ -178,6 +178,7 @@
     font-family: "Cairo", "Tajawal", system-ui, -apple-system, sans-serif;
     font-feature-settings: "kern", "liga";
     -webkit-font-smoothing: antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   .tabular-nums {

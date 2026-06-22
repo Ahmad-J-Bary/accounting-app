@@ -17,22 +17,27 @@ interface SidebarItemProps {
   /** Badge اختياري (مثبّت / اختصار) */
   badge?: 'pinned' | 'shortcut';
   onClose?: () => void;
+  /** تجاوز المظهر (فاتح/داكن) من AppearanceProvider */
+  verticalAppearance?: 'light' | 'dark';
 }
 
 export function SidebarItem({
   item, collapsed, iconOnly, activeBg, hoverBg,
-  badge, onClose,
+  badge, onClose, verticalAppearance,
 }: SidebarItemProps) {
   const { openTab, updateMainTab, activeTabId } = useTabs();
   const location = useLocation();
   const { settings, getNavFontSizeClass } = useNavSidebarSettings();
 
   const isActive = activeTabId === item.to || location.pathname === item.to;
-  const isBgLight = settings.navBackground === 'bg-white' || settings.navBackground === 'bg-slate-50';
+  const isBgLight = verticalAppearance
+    ? verticalAppearance === 'light'
+    : settings.navBackground === 'bg-white' || settings.navBackground === 'bg-slate-50';
+  const activeTextClass = verticalAppearance === 'light' ? 'text-primary' : 'text-white';
   const fontSizeClass = getNavFontSizeClass();
   const inactiveTextClass = isBgLight ? 'text-slate-600' : 'text-slate-400';
   const iconColorClass = isActive
-    ? 'text-white'
+    ? activeTextClass
     : isBgLight ? 'text-slate-500 group-hover:text-slate-800' : 'text-slate-500 group-hover:text-slate-300';
 
   const IconComp = ICON_MAP[item.icon] ?? ICON_MAP['Settings'];
@@ -65,7 +70,7 @@ export function SidebarItem({
             collapsed ? "justify-center px-2 py-2.5" : "px-3 py-2",
             fontSizeClass,
             isActive
-              ? `${activeBg} text-white shadow-md font-medium`
+              ? `${activeBg} ${activeTextClass} shadow-sm font-semibold`
               : `${inactiveTextClass} ${hoverBg}`
           )}
           title={collapsed || iconOnly ? displayLabel : undefined}

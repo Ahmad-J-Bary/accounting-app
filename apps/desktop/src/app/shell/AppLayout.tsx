@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ErpRoutes } from '@app/router/ErpRoutes';
 import { useTabs } from '@app/providers/TabContext';
 import { cn } from '@shared/lib/utils';
@@ -27,6 +27,19 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   const { state } = useUpdateManager();
   const hasSavedRef = useRef(false);
   const { activeLayout, settings } = useAppearance();
+  const location = useLocation();
+  // Track previous route to detect entering/exiting settings (render-time, no effect)
+  const prevPathRef = useRef(location.pathname);
+  const stableShellRef = useRef(activeLayout.shellVariant);
+
+  if (!prevPathRef.current.includes('/settings') && location.pathname.includes('/settings')) {
+    stableShellRef.current = activeLayout.shellVariant;
+  }
+  prevPathRef.current = location.pathname;
+
+  const shellVariant = location.pathname.includes('/settings')
+    ? stableShellRef.current
+    : activeLayout.shellVariant;
 
   const saveState = useCallback(() => {
     if (hasSavedRef.current) return;
@@ -114,8 +127,8 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
     setSidebarOpen(prev => !prev);
   }, []);
 
-  // Render content (tabs + routes)
-  const content = (
+  // Render content (tabs + routes) — memoized to preserve reference across shell switches
+  const content = useMemo(() => (
     <>
       <UpdateBanner />
       <main className="flex-1 relative bg-slate-100 overflow-hidden">
@@ -141,10 +154,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
         <FloatingExchangeRateWidget isVisible={isExchangeVisible} onClose={() => toggleExchange()} />
       </main>
     </>
-  );
-
-  // Select layout shell based on current layout type
-  const shellVariant = activeLayout.shellVariant;
+  ), [tabs, isExchangeVisible, title, subtitle]);
 
   switch (shellVariant) {
     case 'topnav':

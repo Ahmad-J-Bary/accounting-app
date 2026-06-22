@@ -1,10 +1,8 @@
+import { cn } from '@shared/lib/utils';
+import { Check } from 'lucide-react';
 import type { NavMenuType, SidenavShape, TopnavShape, NavbarAppearance } from '@shared/types/appearance';
 import { computeLayoutType } from '@shared/config/computeLayoutType';
 import { getLayoutDefinition } from '@shared/config/layoutRegistry';
-import { cn } from '@shared/lib/utils';
-import { LayoutOptionCard } from './LayoutOptionCard';
-import { ShapeSelector } from './ShapeSelector';
-import { AppearanceSelector } from './AppearanceSelector';
 import {
   SidenavPreview,
   TopnavPreview,
@@ -36,27 +34,75 @@ interface LayoutSettingsProps {
   }) => void;
 }
 
-const NAV_MENU_OPTIONS: {
-  id: NavMenuType;
+/** بطاقة اختيار مصغّرة موحّدة الحجم */
+function OptionCard({
+  isActive,
+  onClick,
+  label,
+  preview,
+}: {
+  isActive: boolean;
+  onClick: () => void;
   label: string;
-  description: string;
   preview: React.ReactNode;
-}[] = [
-  { id: 'sidenav', label: 'Sidenav', description: 'شريط جانبي رئيسي', preview: <SidenavPreview /> },
-  { id: 'topnav', label: 'Topnav', description: 'شريط تنقل علوي فقط', preview: <TopnavPreview /> },
-  { id: 'combo', label: 'Combo', description: 'شريط جانبي + شريط علوي معاً', preview: <ComboPreview /> },
-];
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'relative flex flex-col items-center gap-0.5 p-1 rounded-md border transition-all text-center w-full',
+        isActive
+          ? 'border-primary bg-primary/5 shadow-sm'
+          : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/60',
+      )}
+    >
+      {isActive && (
+        <span className="absolute top-0.5 left-0.5 w-2.5 h-2.5 bg-primary rounded-full flex items-center justify-center z-10 shadow-sm">
+          <Check className="w-1.5 h-1.5 text-primary-foreground" />
+        </span>
+      )}
+      {/* معاينة بصرية بارتفاع ثابت موحّد */}
+      <div className="w-full h-11 overflow-hidden rounded border border-slate-100 flex items-stretch">
+        <div className="w-full">{preview}</div>
+      </div>
+      <span className={cn('text-[8px] font-bold leading-none mt-px', isActive ? 'text-primary' : 'text-slate-600')}>
+        {label}
+      </span>
+    </button>
+  );
+}
 
-const SIDENAV_SHAPE_OPTIONS = [
-  { id: 'default' as SidenavShape, label: 'Default', description: 'شريط جانبي بعرض كامل', preview: <SidenavDefaultPreview /> },
-  { id: 'stacked' as SidenavShape, label: 'Stacked', description: 'شريط جانبي مع عناصر مكدسة', preview: <SidenavStackedPreview /> },
-];
+/** عنوان قسم فرعي */
+function SubLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="block text-[8px] font-bold text-slate-400 tracking-wide uppercase mb-1">
+      {children}
+    </span>
+  );
+}
 
-const TOPNAV_SHAPE_OPTIONS = [
-  { id: 'default' as TopnavShape, label: 'Default', description: 'شريط أفقي كامل', preview: <TopnavDefaultPreview /> },
-  { id: 'slim' as TopnavShape, label: 'Slim', description: 'شريط أفقي نحيف', preview: <TopnavSlimPreview /> },
-  { id: 'stacked' as TopnavShape, label: 'Stacked', description: 'شريط علوي مع شريط أفقي مكدس', preview: <TopnavStackedPreview /> },
-];
+/** مجموعة أفقية: عنوان + شبكة بطاقات */
+function CardGroup({
+  label,
+  cols,
+  children,
+}: {
+  label: string;
+  cols: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex-1 min-w-0">
+      <SubLabel>{label}</SubLabel>
+       <div
+         className="grid gap-0.5"
+        style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export function LayoutSettings({
   navMenuType,
@@ -70,111 +116,126 @@ export function LayoutSettings({
   const layoutDef = getLayoutDefinition(layoutType);
   const FinalPreview = getFinalPreview(layoutType);
 
+  const showSidenav = navMenuType === 'sidenav' || navMenuType === 'combo';
+  const showTopnav  = navMenuType === 'topnav'  || navMenuType === 'combo';
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-1.5">
 
-      {/* Step 1: Navigation Menu */}
-      <div className="space-y-3">
-        <h4 className="text-xs font-semibold text-slate-400 tracking-wide">Navigation Menu</h4>
-        <div className="grid grid-cols-3 gap-3">
-          {NAV_MENU_OPTIONS.map((opt) => (
-            <LayoutOptionCard
-              key={opt.id}
-              isActive={navMenuType === opt.id}
-              onClick={() => {
-                const next: Parameters<typeof onChange>[0] = { navMenuType: opt.id };
-                if (opt.id === 'sidenav') {
-                  next.sidenavShape = 'default';
-                  next.topnavShape = 'default';
-                } else if (opt.id === 'topnav') {
-                  next.sidenavShape = 'default';
-                  next.topnavShape = 'default';
-                } else {
-                  next.sidenavShape = 'default';
-                  next.topnavShape = 'default';
-                }
-                onChange(next);
-              }}
-              label={opt.label}
-              description={opt.description}
-              preview={opt.preview}
-            />
-          ))}
-        </div>
-      </div>
+      {/* ── قائمة التنقل ── */}
+      <CardGroup label="قائمة التنقل" cols={3}>
+        {([
+          { id: 'sidenav' as NavMenuType, label: 'شريط جانبي', preview: <SidenavPreview /> },
+          { id: 'topnav'  as NavMenuType, label: 'شريط علوي',  preview: <TopnavPreview /> },
+          { id: 'combo'   as NavMenuType, label: 'مدمج',        preview: <ComboPreview /> },
+        ]).map(opt => (
+          <OptionCard
+            key={opt.id}
+            isActive={navMenuType === opt.id}
+            onClick={() => onChange({ navMenuType: opt.id, sidenavShape: 'default', topnavShape: 'default' })}
+            label={opt.label}
+            preview={opt.preview}
+          />
+        ))}
+      </CardGroup>
 
-      {/* Step 2: Conditional sections */}
-      {(navMenuType === 'sidenav' || navMenuType === 'combo') && (
-        <div className="space-y-4">
-          <ShapeSelector
-            title="Sidenav Shape"
-            options={SIDENAV_SHAPE_OPTIONS}
-            value={sidenavShape}
-            onChange={(v) => onChange({ sidenavShape: v as SidenavShape })}
-          />
-          <AppearanceSelector
-            title="Vertical Navbar Appearance"
-            value={verticalNavbarAppearance}
-            onChange={(v) => onChange({ verticalNavbarAppearance: v })}
-            lightPreview={<VerticalLightPreview />}
-            darkPreview={<VerticalDarkPreview />}
-          />
-        </div>
-      )}
+      {/* ── شكل العمودي + مظهر العمودي (صف واحد) ── */}
+      {showSidenav && (
+        <div className="flex gap-1.5 items-start">
+          <CardGroup label="شكل الشريط العمودي" cols={2}>
+            {([
+              { id: 'default' as SidenavShape, label: 'كامل', preview: <SidenavDefaultPreview /> },
+              { id: 'stacked' as SidenavShape, label: 'مكدس', preview: <SidenavStackedPreview /> },
+            ]).map(opt => (
+              <OptionCard
+                key={opt.id}
+                isActive={sidenavShape === opt.id}
+                onClick={() => onChange({ sidenavShape: opt.id })}
+                label={opt.label}
+                preview={opt.preview}
+              />
+            ))}
+          </CardGroup>
 
-      {(navMenuType === 'topnav' || navMenuType === 'combo') && (
-        <div className="space-y-4">
-          <ShapeSelector
-            title="Topnav Shape"
-            options={TOPNAV_SHAPE_OPTIONS}
-            value={topnavShape}
-            onChange={(v) => onChange({ topnavShape: v as TopnavShape })}
-          />
-          <AppearanceSelector
-            title="Horizontal Navbar Appearance"
-            value={horizontalNavbarAppearance}
-            onChange={(v) => onChange({ horizontalNavbarAppearance: v })}
-            lightPreview={<HorizontalLightPreview />}
-            darkPreview={<HorizontalDarkPreview />}
-          />
+          <CardGroup label="مظهر الشريط العمودي" cols={2}>
+            {([
+              { id: 'light' as NavbarAppearance, label: 'فاتح', preview: <VerticalLightPreview /> },
+              { id: 'dark'  as NavbarAppearance, label: 'داكن', preview: <VerticalDarkPreview /> },
+            ]).map(opt => (
+              <OptionCard
+                key={opt.id}
+                isActive={verticalNavbarAppearance === opt.id}
+                onClick={() => onChange({ verticalNavbarAppearance: opt.id })}
+                label={opt.label}
+                preview={opt.preview}
+              />
+            ))}
+          </CardGroup>
         </div>
       )}
 
-      {/* Final Preview */}
-      <div className="pt-4 border-t border-slate-100">
-        <h4 className="text-xs font-semibold text-slate-400 mb-3 tracking-wide">
-          Preview
-        </h4>
-        <div className="rounded-xl border-2 border-primary/20 bg-primary/[0.02] p-4 transition-all">
-          <div className="flex items-center gap-4">
-            <div className="w-1/2 overflow-hidden rounded-lg border border-slate-200 shadow-sm">
-              <FinalPreview />
-            </div>
-            <div className="flex-1 space-y-2">
-              <h4 className="font-bold text-slate-800 text-base">{layoutDef.nameAr}</h4>
-              <p className="text-xs text-slate-500 leading-relaxed">{layoutDef.description}</p>
-              <div className="flex flex-wrap gap-2 mt-2">
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-slate-100 text-[10px] font-semibold text-slate-600">
-                  القائمة: {navMenuType === 'sidenav' ? 'شريط جانبي' : navMenuType === 'topnav' ? 'شريط علوي' : 'مدمج'}
+      {/* ── شكل الأفقي + مظهر الأفقي (صف واحد) ── */}
+      {showTopnav && (
+        <div className="flex gap-1.5 items-start">
+          <CardGroup label="شكل الشريط الأفقي" cols={3}>
+            {([
+              { id: 'default' as TopnavShape, label: 'كامل', preview: <TopnavDefaultPreview /> },
+              { id: 'slim'    as TopnavShape, label: 'نحيف', preview: <TopnavSlimPreview /> },
+              { id: 'stacked' as TopnavShape, label: 'مكدس', preview: <TopnavStackedPreview /> },
+            ]).map(opt => (
+              <OptionCard
+                key={opt.id}
+                isActive={topnavShape === opt.id}
+                onClick={() => onChange({ topnavShape: opt.id })}
+                label={opt.label}
+                preview={opt.preview}
+              />
+            ))}
+          </CardGroup>
+
+          <CardGroup label="مظهر الشريط الأفقي" cols={2}>
+            {([
+              { id: 'light' as NavbarAppearance, label: 'فاتح', preview: <HorizontalLightPreview /> },
+              { id: 'dark'  as NavbarAppearance, label: 'داكن', preview: <HorizontalDarkPreview /> },
+            ]).map(opt => (
+              <OptionCard
+                key={opt.id}
+                isActive={horizontalNavbarAppearance === opt.id}
+                onClick={() => onChange({ horizontalNavbarAppearance: opt.id })}
+                label={opt.label}
+                preview={opt.preview}
+              />
+            ))}
+          </CardGroup>
+        </div>
+      )}
+
+      {/* ── معاينة التخطيط المختار ── */}
+      <div className="border-t border-slate-100 pt-1.5">
+        <SubLabel>معاينة التخطيط المختار</SubLabel>
+        <div className="rounded-lg border border-primary/20 bg-primary/[0.02] p-1 flex gap-1.5 items-center">
+          <div className="w-14 shrink-0 overflow-hidden rounded border border-slate-200 shadow-sm">
+            <FinalPreview />
+          </div>
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <p className="font-bold text-[10px] text-slate-800 truncate leading-tight">{layoutDef.nameAr}</p>
+            <p className="text-[8px] text-slate-400 leading-snug line-clamp-2">{layoutDef.description}</p>
+            <div className="flex flex-wrap gap-1 mt-0.5">
+              {([
+                navMenuType === 'sidenav' ? 'جانبي' : navMenuType === 'topnav' ? 'علوي' : 'مدمج',
+                navMenuType !== 'topnav'  ? `جانبي: ${sidenavShape === 'default' ? 'كامل' : 'مكدس'}` : null,
+                navMenuType !== 'sidenav' ? `علوي: ${topnavShape === 'default' ? 'كامل' : topnavShape === 'slim' ? 'نحيف' : 'مكدس'}` : null,
+                verticalNavbarAppearance === 'dark' ? 'داكن' : 'فاتح',
+              ].filter(Boolean) as string[]).map(tag => (
+                <span key={tag} className="px-1 py-px rounded bg-slate-100 text-[7px] font-semibold text-slate-500">
+                  {tag}
                 </span>
-                {navMenuType !== 'topnav' && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-slate-100 text-[10px] font-semibold text-slate-600">
-                    الشريط الجانبي: {sidenavShape === 'default' ? 'كامل' : 'مكدس'}
-                  </span>
-                )}
-                {navMenuType !== 'sidenav' && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-slate-100 text-[10px] font-semibold text-slate-600">
-                    الشريط العلوي: {topnavShape === 'default' ? 'كامل' : topnavShape === 'slim' ? 'نحيف' : 'مكدس'}
-                  </span>
-                )}
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-slate-100 text-[10px] font-semibold text-slate-600">
-                  المظهر: {verticalNavbarAppearance === 'dark' ? 'داكن' : 'فاتح'}
-                </span>
-              </div>
+              ))}
             </div>
           </div>
         </div>
       </div>
+
     </div>
   );
 }

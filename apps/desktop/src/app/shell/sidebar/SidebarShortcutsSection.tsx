@@ -11,10 +11,11 @@ interface SidebarShortcutsSectionProps {
   activeBg: string;
   hoverBg: string;
   onClose?: () => void;
+  verticalAppearance?: 'light' | 'dark';
 }
 
 export function SidebarShortcutsSection({
-  collapsed, iconOnly, activeBg, hoverBg, onClose,
+  collapsed, iconOnly, activeBg, hoverBg, onClose, verticalAppearance,
 }: SidebarShortcutsSectionProps) {
   const { getShortcutItems } = useSidebarLayout();
   const { settings } = useNavSidebarSettings();
@@ -22,7 +23,9 @@ export function SidebarShortcutsSection({
   const shortcutItems = getShortcutItems();
   if (shortcutItems.length === 0) return null;
 
-  const isBgLight = settings.navBackground === 'bg-white' || settings.navBackground === 'bg-slate-50';
+  const isBgLight = verticalAppearance
+    ? verticalAppearance === 'light'
+    : settings.navBackground === 'bg-white' || settings.navBackground === 'bg-slate-50';
   const sectionHeaderClass = isBgLight ? 'text-slate-400' : 'text-slate-500';
   const borderClass = isBgLight ? 'border-slate-200' : 'border-white/5';
   const bgClass = isBgLight ? 'bg-blue-50/60' : 'bg-blue-900/10';
@@ -50,6 +53,7 @@ export function SidebarShortcutsSection({
             hoverBg={hoverBg}
             badge="shortcut"
             onClose={onClose}
+            verticalAppearance={verticalAppearance}
           />
         ))}
       </ul>
