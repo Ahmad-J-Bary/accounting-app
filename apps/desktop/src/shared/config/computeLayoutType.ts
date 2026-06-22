@@ -23,6 +23,8 @@ export function computeLayoutType(state: CompoundLayoutState): LayoutType {
       if (state.topnavShape === 'stacked') return 'horizontal-slim';
       return 'navbar-horizontal';
     case 'combo':
+      if (state.topnavShape === 'slim') return 'combo-nav-slim';
+      if (state.topnavShape === 'stacked') return 'combo-nav-stacked';
       return 'combo-nav';
   }
 }
@@ -66,6 +68,22 @@ export function deriveCompoundFromLayout(layout: LayoutType): CompoundLayoutStat
         navMenuType: 'combo',
         sidenavShape: 'default',
         topnavShape: 'default',
+        verticalNavbarAppearance: 'dark',
+        horizontalNavbarAppearance: 'dark',
+      };
+    case 'combo-nav-slim':
+      return {
+        navMenuType: 'combo',
+        sidenavShape: 'default',
+        topnavShape: 'slim',
+        verticalNavbarAppearance: 'dark',
+        horizontalNavbarAppearance: 'dark',
+      };
+    case 'combo-nav-stacked':
+      return {
+        navMenuType: 'combo',
+        sidenavShape: 'default',
+        topnavShape: 'stacked',
         verticalNavbarAppearance: 'dark',
         horizontalNavbarAppearance: 'dark',
       };

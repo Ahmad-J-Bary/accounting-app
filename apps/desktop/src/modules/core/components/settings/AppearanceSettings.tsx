@@ -43,7 +43,7 @@ export function AppearanceSettings() {
   };
 
   return (
-    <div className="max-w-3xl space-y-3" dir="rtl">
+    <div className="w-full space-y-3" dir="rtl">
 
       <div className="flex justify-end">
         <button

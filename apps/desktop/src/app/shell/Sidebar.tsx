@@ -21,7 +21,7 @@ interface SidebarProps {
 export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
   const { settings, updateSetting, getNavWidth } = useNavSidebarSettings();
   const { layout, toggleGroupCollapsed } = useSidebarLayout();
-  const { activeTabId } = useTabs();
+  const { openTab, updateMainTab, activeTabId } = useTabs();
   const location = useLocation();
 
   const {
@@ -121,12 +121,6 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
       <div className="flex h-full overflow-hidden" dir="rtl">
         {/* ── الرييل الضيق ── */}
         <div className={cn("flex flex-col items-center py-2 gap-0.5 w-11 shrink-0 border-l z-10", railBg, railBorder)}>
-          {/* أيقونة الشعار */}
-          <div className="mb-1.5 p-0.5">
-            <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-primary shadow-sm">
-              <span className="text-primary-foreground text-[9px] font-black">E</span>
-            </div>
-          </div>
           {/* أيقونات المجموعات */}
           <nav className="flex flex-col gap-0.5 flex-1 overflow-y-auto scrollbar-hide px-0.5">
             {visibleGroups.map(group => {
@@ -135,7 +129,21 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
               return (
                 <button
                   key={group.id}
-                  onClick={() => setSelectedStackedGroupId(group.id)}
+                  onClick={(e) => {
+                    const visibleItems = group.items.filter(i => i.visible);
+                    if (visibleItems.length === 1) {
+                      const item = visibleItems[0];
+                      if (item.to) {
+                        if (e.ctrlKey) {
+                          openTab({ id: `${item.to}-${Date.now()}`, title: item.customLabel ?? item.defaultLabel, path: item.to, closable: true });
+                        } else {
+                          updateMainTab({ title: item.customLabel ?? item.defaultLabel, path: item.to });
+                        }
+                      }
+                    } else {
+                      setSelectedStackedGroupId(group.id);
+                    }
+                  }}
                   className={cn(
                     "w-8 h-8 rounded-lg flex items-center justify-center transition-all relative group/rail-btn",
                     isSelected ? railIconActive : railIconBase + ' ' + railIconHover,

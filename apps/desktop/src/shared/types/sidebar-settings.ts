@@ -9,7 +9,9 @@ export type NavLayoutType =
   | 'topnav-slim'
   | 'navbar-horizontal'
   | 'horizontal-slim'
-  | 'combo-nav';
+  | 'combo-nav'
+  | 'combo-nav-slim'
+  | 'combo-nav-stacked';
 
 export interface NavSidebarSettings {
   navLayoutType: NavLayoutType;

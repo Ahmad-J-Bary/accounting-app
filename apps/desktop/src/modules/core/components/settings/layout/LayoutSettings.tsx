@@ -1,6 +1,7 @@
+import React from 'react';
 import { cn } from '@shared/lib/utils';
 import { Check } from 'lucide-react';
-import type { NavMenuType, SidenavShape, TopnavShape, NavbarAppearance } from '@shared/types/appearance';
+import type { LayoutType, NavMenuType, SidenavShape, TopnavShape, NavbarAppearance } from '@shared/types/appearance';
 import { computeLayoutType } from '@shared/config/computeLayoutType';
 import { getLayoutDefinition } from '@shared/config/layoutRegistry';
 import {
@@ -16,7 +17,6 @@ import {
   VerticalDarkPreview,
   HorizontalLightPreview,
   HorizontalDarkPreview,
-  getFinalPreview,
 } from './LayoutPreview';
 
 interface LayoutSettingsProps {
@@ -104,6 +104,87 @@ function CardGroup({
   );
 }
 
+const FinalVertical: React.FC = () => (
+  <svg viewBox="0 0 140 80" className="w-full h-auto">
+    <rect width="140" height="80" fill="#f8fafc" rx="4" />
+    <rect x="0" y="0" width="32" height="80" fill="#1e293b" rx="3" />
+    <rect x="34" y="0" width="106" height="12" fill="white" stroke="#e2e8f0" strokeWidth="0.5" rx="2" />
+    <rect x="38" y="16" width="98" height="60" fill="white" rx="2" />
+  </svg>
+);
+
+const FinalTopnavSlim: React.FC = () => (
+  <svg viewBox="0 0 140 80" className="w-full h-auto">
+    <rect width="140" height="80" fill="#f8fafc" rx="4" />
+    <rect x="0" y="0" width="140" height="9" fill="white" stroke="#e2e8f0" strokeWidth="0.5" rx="2" />
+    <rect x="0" y="9" width="140" height="12" fill="#1e293b" />
+    <rect x="4" y="24" width="132" height="52" fill="white" rx="2" />
+  </svg>
+);
+
+const FinalNavbarHorizontal: React.FC = () => (
+  <svg viewBox="0 0 140 80" className="w-full h-auto">
+    <rect width="140" height="80" fill="#f8fafc" rx="4" />
+    <rect x="0" y="0" width="140" height="12" fill="white" stroke="#e2e8f0" strokeWidth="0.5" rx="2" />
+    <rect x="0" y="12" width="140" height="16" fill="#1e293b" />
+    <rect x="4" y="32" width="132" height="44" fill="white" rx="2" />
+  </svg>
+);
+
+const FinalHorizontalSlim: React.FC = () => (
+  <svg viewBox="0 0 140 80" className="w-full h-auto">
+    <rect width="140" height="80" fill="#f8fafc" rx="4" />
+    <rect x="0" y="0" width="140" height="9" fill="white" stroke="#e2e8f0" strokeWidth="0.5" rx="2" />
+    <rect x="0" y="9" width="140" height="11" fill="#334155" />
+    <rect x="4" y="23" width="132" height="53" fill="white" rx="2" />
+  </svg>
+);
+
+const FinalComboNav: React.FC = () => (
+  <svg viewBox="0 0 140 80" className="w-full h-auto">
+    <rect width="140" height="80" fill="#f8fafc" rx="4" />
+    <rect x="0" y="0" width="140" height="12" fill="#1e293b" rx="2" />
+    <rect x="0" y="12" width="28" height="68" fill="#1e293b" rx="2" />
+    <rect x="28" y="12" width="112" height="12" fill="white" stroke="#e2e8f0" strokeWidth="0.5" rx="1" />
+    <rect x="32" y="28" width="104" height="48" fill="white" rx="2" />
+  </svg>
+);
+
+const FinalComboNavSlim: React.FC = () => (
+  <svg viewBox="0 0 140 80" className="w-full h-auto">
+    <rect width="140" height="80" fill="#f8fafc" rx="4" />
+    <rect x="0" y="0" width="140" height="9" fill="#1e293b" rx="2" />
+    <rect x="0" y="9" width="28" height="71" fill="#1e293b" rx="2" />
+    <rect x="28" y="9" width="112" height="9" fill="white" stroke="#e2e8f0" strokeWidth="0.5" rx="1" />
+    <rect x="32" y="22" width="104" height="54" fill="white" rx="2" />
+  </svg>
+);
+
+const FinalComboNavStacked: React.FC = () => (
+  <svg viewBox="0 0 140 80" className="w-full h-auto">
+    <rect width="140" height="80" fill="#f8fafc" rx="4" />
+    <rect x="0" y="0" width="140" height="10" fill="#1e293b" rx="2" />
+    <rect x="0" y="10" width="140" height="10" fill="#334155" rx="1" />
+    <rect x="0" y="20" width="28" height="60" fill="#1e293b" rx="2" />
+    <rect x="28" y="20" width="112" height="10" fill="white" stroke="#e2e8f0" strokeWidth="0.5" rx="1" />
+    <rect x="32" y="34" width="104" height="42" fill="white" rx="2" />
+  </svg>
+);
+
+const FINAL_PREVIEWS: Record<LayoutType, React.FC> = {
+  vertical: FinalVertical,
+  'topnav-slim': FinalTopnavSlim,
+  'navbar-horizontal': FinalNavbarHorizontal,
+  'horizontal-slim': FinalHorizontalSlim,
+  'combo-nav': FinalComboNav,
+  'combo-nav-slim': FinalComboNavSlim,
+  'combo-nav-stacked': FinalComboNavStacked,
+};
+
+function getFinalPreview(layoutType: LayoutType): React.FC {
+  return FINAL_PREVIEWS[layoutType];
+}
+
 export function LayoutSettings({
   navMenuType,
   sidenavShape,
@@ -174,7 +255,7 @@ export function LayoutSettings({
         </div>
       )}
 
-      {/* ── شكل الأفقي + مظهر الأفقي (صف واحد) ── */}
+      {/* ── شكل الأفقي (فقط للشريط العلوي) ── */}
       {showTopnav && (
         <div className="flex gap-1.5 items-start">
           <CardGroup label="شكل الشريط الأفقي" cols={3}>
@@ -192,23 +273,26 @@ export function LayoutSettings({
               />
             ))}
           </CardGroup>
-
-          <CardGroup label="مظهر الشريط الأفقي" cols={2}>
-            {([
-              { id: 'light' as NavbarAppearance, label: 'فاتح', preview: <HorizontalLightPreview /> },
-              { id: 'dark'  as NavbarAppearance, label: 'داكن', preview: <HorizontalDarkPreview /> },
-            ]).map(opt => (
-              <OptionCard
-                key={opt.id}
-                isActive={horizontalNavbarAppearance === opt.id}
-                onClick={() => onChange({ horizontalNavbarAppearance: opt.id })}
-                label={opt.label}
-                preview={opt.preview}
-              />
-            ))}
-          </CardGroup>
         </div>
       )}
+
+      {/* ── مظهر الأفقي (دائماً) ── */}
+      <div className="flex gap-1.5 items-start">
+        <CardGroup label="مظهر الشريط الأفقي" cols={2}>
+          {([
+            { id: 'light' as NavbarAppearance, label: 'فاتح', preview: <HorizontalLightPreview /> },
+            { id: 'dark'  as NavbarAppearance, label: 'داكن', preview: <HorizontalDarkPreview /> },
+          ]).map(opt => (
+            <OptionCard
+              key={opt.id}
+              isActive={horizontalNavbarAppearance === opt.id}
+              onClick={() => onChange({ horizontalNavbarAppearance: opt.id })}
+              label={opt.label}
+              preview={opt.preview}
+            />
+          ))}
+        </CardGroup>
+      </div>
 
       {/* ── معاينة التخطيط المختار ── */}
       <div className="border-t border-slate-100 pt-1.5">
@@ -225,7 +309,8 @@ export function LayoutSettings({
                 navMenuType === 'sidenav' ? 'جانبي' : navMenuType === 'topnav' ? 'علوي' : 'مدمج',
                 navMenuType !== 'topnav'  ? `جانبي: ${sidenavShape === 'default' ? 'كامل' : 'مكدس'}` : null,
                 navMenuType !== 'sidenav' ? `علوي: ${topnavShape === 'default' ? 'كامل' : topnavShape === 'slim' ? 'نحيف' : 'مكدس'}` : null,
-                verticalNavbarAppearance === 'dark' ? 'داكن' : 'فاتح',
+                `أفقي: ${horizontalNavbarAppearance === 'dark' ? 'داكن' : 'فاتح'}`,
+                verticalNavbarAppearance === 'dark' ? 'عمودي: داكن' : 'عمودي: فاتح',
               ].filter(Boolean) as string[]).map(tag => (
                 <span key={tag} className="px-1 py-px rounded bg-slate-100 text-[7px] font-semibold text-slate-500">
                   {tag}

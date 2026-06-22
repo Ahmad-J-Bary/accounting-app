@@ -1,5 +1,3 @@
-import type { LayoutType } from '@shared/types/appearance';
-
 /* ── Navigation Menu Previews (large cards) ── */
 
 export function SidenavPreview() {
@@ -138,74 +136,4 @@ export function HorizontalDarkPreview() {
       <rect x="2" y="14" width="76" height="20" fill="white" rx="1" />
     </svg>
   );
-}
-
-/* ── Final Layout Previews (large) ── */
-
-function VerticalFinalPreview() {
-  return (
-    <svg viewBox="0 0 140 80" className="w-full h-auto">
-      <rect width="140" height="80" fill="#f8fafc" rx="4" />
-      <rect x="0" y="0" width="32" height="80" fill="#1e293b" rx="3" />
-      <rect x="34" y="0" width="106" height="12" fill="white" stroke="#e2e8f0" strokeWidth="0.5" rx="2" />
-      <rect x="38" y="16" width="98" height="60" fill="white" rx="2" />
-    </svg>
-  );
-}
-
-function TopnavSlimFinalPreview() {
-  return (
-    <svg viewBox="0 0 140 80" className="w-full h-auto">
-      <rect width="140" height="80" fill="#f8fafc" rx="4" />
-      <rect x="0" y="0" width="140" height="9" fill="white" stroke="#e2e8f0" strokeWidth="0.5" rx="2" />
-      <rect x="0" y="9" width="140" height="12" fill="#1e293b" />
-      <rect x="4" y="24" width="132" height="52" fill="white" rx="2" />
-    </svg>
-  );
-}
-
-function NavbarHorizontalFinalPreview() {
-  return (
-    <svg viewBox="0 0 140 80" className="w-full h-auto">
-      <rect width="140" height="80" fill="#f8fafc" rx="4" />
-      <rect x="0" y="0" width="140" height="12" fill="white" stroke="#e2e8f0" strokeWidth="0.5" rx="2" />
-      <rect x="0" y="12" width="140" height="16" fill="#1e293b" />
-      <rect x="4" y="32" width="132" height="44" fill="white" rx="2" />
-    </svg>
-  );
-}
-
-function HorizontalSlimFinalPreview() {
-  return (
-    <svg viewBox="0 0 140 80" className="w-full h-auto">
-      <rect width="140" height="80" fill="#f8fafc" rx="4" />
-      <rect x="0" y="0" width="140" height="9" fill="white" stroke="#e2e8f0" strokeWidth="0.5" rx="2" />
-      <rect x="0" y="9" width="140" height="11" fill="#334155" />
-      <rect x="4" y="23" width="132" height="53" fill="white" rx="2" />
-    </svg>
-  );
-}
-
-function ComboNavFinalPreview() {
-  return (
-    <svg viewBox="0 0 140 80" className="w-full h-auto">
-      <rect width="140" height="80" fill="#f8fafc" rx="4" />
-      <rect x="0" y="0" width="140" height="12" fill="#1e293b" rx="2" />
-      <rect x="0" y="12" width="28" height="68" fill="#1e293b" rx="2" />
-      <rect x="28" y="12" width="112" height="12" fill="white" stroke="#e2e8f0" strokeWidth="0.5" rx="1" />
-      <rect x="32" y="28" width="104" height="48" fill="white" rx="2" />
-    </svg>
-  );
-}
-
-const FINAL_PREVIEWS: Record<LayoutType, React.FC> = {
-  'vertical': VerticalFinalPreview,
-  'topnav-slim': TopnavSlimFinalPreview,
-  'navbar-horizontal': NavbarHorizontalFinalPreview,
-  'horizontal-slim': HorizontalSlimFinalPreview,
-  'combo-nav': ComboNavFinalPreview,
-};
-
-export function getFinalPreview(layoutType: LayoutType): React.FC {
-  return FINAL_PREVIEWS[layoutType];
 }

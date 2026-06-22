@@ -93,4 +93,12 @@ export const LAYOUT_PRESETS: Record<NavLayoutType, Partial<NavSidebarSettings>> 
     navWidth: 200, navCollapsed: false, navIconOnly: false,
     navShowLabels: true, navShowSectionHeaders: true, navBackground: 'bg-slate-900',
   },
+  'combo-nav-slim': {
+    navWidth: 200, navCollapsed: false, navIconOnly: false,
+    navShowLabels: true, navShowSectionHeaders: true, navBackground: 'bg-slate-900',
+  },
+  'combo-nav-stacked': {
+    navWidth: 200, navCollapsed: false, navIconOnly: false,
+    navShowLabels: true, navShowSectionHeaders: true, navBackground: 'bg-slate-900',
+  },
 };

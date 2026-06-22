@@ -4,7 +4,9 @@ export type LayoutType =
   | 'topnav-slim'
   | 'navbar-horizontal'
   | 'horizontal-slim'
-  | 'combo-nav';
+  | 'combo-nav'
+  | 'combo-nav-slim'
+  | 'combo-nav-stacked';
 
 // ── Compound Layout State ───────────────────────────────────
 export type NavMenuType = 'sidenav' | 'topnav' | 'combo';
