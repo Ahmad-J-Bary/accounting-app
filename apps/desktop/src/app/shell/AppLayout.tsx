@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ErpRoutes } from '@app/router/ErpRoutes';
 import { useTabs } from '@app/providers/TabContext';
@@ -7,7 +7,6 @@ import { useKeyboardShortcuts } from '@shared/hooks/useKeyboardShortcuts';
 import { useAppearance } from '@shared/hooks/useAppearance';
 import { FloatingExchangeRateWidget } from '@modules/core/components/FloatingExchangeRateWidget';
 import { UpdateBanner } from '@modules/core/components/UpdateBanner';
-import { useUpdateManager } from '@modules/core/update/useUpdateManager';
 import { warehouseService } from '@modules/inventory/api/warehouseService';
 import { VerticalLayout } from './layouts/VerticalLayout';
 import { TopNavLayout } from './layouts/TopNavLayout';
@@ -24,36 +23,12 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { tabs, openTab } = useTabs();
   const navigate = useNavigate();
-  const { state } = useUpdateManager();
-  const hasSavedRef = useRef(false);
   const { activeLayout, settings } = useAppearance();
   const location = useLocation();
-
-  const saveState = useCallback(() => {
-    if (hasSavedRef.current) return;
-    hasSavedRef.current = true;
-    try {
-      localStorage.setItem('erp_app_state_saved', Date.now().toString());
-    } catch { /***/ }
-  }, []);
 
   useEffect(() => {
     warehouseService.ensureDefaultWarehouse().catch(() => {});
   }, []);
-
-  useEffect(() => {
-    if (state.phase === 'ready') saveState();
-  }, [state.phase, saveState]);
-
-  useEffect(() => {
-    const handler = () => { 
-      if (['downloading', 'verifying', 'preparing', 'ready'].includes(state.phase)) {
-        saveState();
-      }
-    };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [state.phase, saveState]);
 
   const [isExchangeVisible, setIsExchangeVisible] = useState(() => {
     if (typeof window !== 'undefined') {

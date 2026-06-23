@@ -16,6 +16,8 @@ interface UpdateProgressProps {
   phase: UpdatePhase;
   error?: string | null;
   compact?: boolean;
+  /** بديل مختصر — يحتوي على {downloaded, total} */
+  progress?: { downloaded: number; total: number } | null;
 }
 
 function formatMB(bytes: number): string {
@@ -60,8 +62,12 @@ export function UpdateProgress({
   speed = 0, 
   phase, 
   error, 
-  compact = false 
+  compact = false,
+  progress,
 }: UpdateProgressProps) {
+  const pct = progress && progress.total > 0 ? Math.round((progress.downloaded / progress.total) * 100) : percentage;
+  const dlBytes = progress?.downloaded ?? downloadedBytes;
+  const tlBytes = progress?.total ?? totalBytes;
   return (
     <div className={cn("space-y-4", compact && "space-y-2")} dir="rtl">
       {/* Steps row */}
@@ -108,22 +114,22 @@ export function UpdateProgress({
       </div>
 
       {/* Progress bar & details */}
-      {phase === 'downloading' && totalBytes > 0 && (
+      {phase === 'downloading' && tlBytes > 0 && (
         <div className="space-y-2">
           <div className="w-full bg-blue-100 rounded-full h-2.5 overflow-hidden">
             <div 
               className="bg-blue-600 h-full rounded-full transition-all duration-300" 
-              style={{ width: `${percentage}%` }} 
+              style={{ width: `${pct}%` }} 
             />
           </div>
           <div className="flex justify-between text-xs text-slate-600 font-mono" dir="ltr">
             <div className="flex items-center gap-2">
               <Activity className="w-3 h-3" />
-              <span>{formatMB(downloadedBytes)} / {formatMB(totalBytes)} MB</span>
+              <span>{formatMB(dlBytes)} / {formatMB(tlBytes)} MB</span>
             </div>
             <div className="flex items-center gap-3">
               <span className="font-medium">{speed > 0 ? formatKBps(speed) : ''}</span>
-              <span className="font-semibold text-blue-700">{percentage}%</span>
+              <span className="font-semibold text-blue-700">{pct}%</span>
             </div>
           </div>
         </div>

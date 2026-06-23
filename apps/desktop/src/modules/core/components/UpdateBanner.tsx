@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { 
   X, 
   Download, 
@@ -13,29 +13,27 @@ import {
   ChevronDown
 } from "lucide-react";
 import { Button } from "@shared/ui/button";
-import { useUpdateManager } from "../update/useUpdateManager";
+import { useUpdateChecker } from "../hooks/useUpdateChecker";
 import { cn } from "@shared/lib/utils";
 import { UpdateProgress } from "./UpdateProgress";
-import type { UpdatePhase } from "../update/types";
 
-const accentColor: Record<Exclude<UpdatePhase, 'idle' | 'checking'>, string> = {
+type BannerPhase = 'available' | 'downloading' | 'preparing' | 'ready' | 'failed';
+
+const accentColor: Record<BannerPhase, string> = {
   available:    'bg-blue-500',
   downloading:  'bg-blue-500',
-  verifying:    'bg-amber-500',
   preparing:    'bg-amber-500',
   ready:        'bg-green-500',
   failed:       'bg-red-500',
 };
 
-function PhaseIcon({ phase }: { phase: Exclude<UpdatePhase, 'idle'> }) {
+function PhaseIcon({ phase }: { phase: BannerPhase }) {
   switch (phase) {
     case 'available':    return <ArrowDownToLine className="w-4 h-4" />;
     case 'downloading':  return <Download className="w-4 h-4 animate-spin" />;
-    case 'verifying':    return <CheckCircle2 className="w-4 h-4 animate-spin" />;
     case 'preparing':    return <RotateCcw className="w-4 h-4 animate-spin" />;
     case 'ready':        return <CheckCircle2 className="w-4 h-4" />;
     case 'failed':       return <AlertCircle className="w-4 h-4" />;
-    case 'checking':     return <Download className="w-4 h-4" />;
   }
 }
 
@@ -47,30 +45,44 @@ function formatSize(bytes: number): string {
 }
 
 export function UpdateBanner() {
-  const { state, startUpdate, restartToUpdate, dismissUpdate, retry } = useUpdateManager();
+  const { updateInfo, phase, error, updateProgress, startUpdate, restartToUpdate, dismiss, retry } = useUpdateChecker();
   const [visible, setVisible] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [showReleaseNotes, setShowReleaseNotes] = useState(false);
+  const downloadStartRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (state.phase !== 'idle') {
+    if (phase !== 'idle') {
       const t = setTimeout(() => setVisible(true), 30);
       return () => clearTimeout(t);
     } else {
       setVisible(false);
       setExpanded(false);
     }
-  }, [state.phase]);
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase === 'downloading') {
+      downloadStartRef.current = Date.now();
+    }
+  }, [phase]);
 
   const handleDismiss = useCallback(() => {
     setVisible(false);
-    setTimeout(dismissUpdate, 300);
-  }, [dismissUpdate]);
+    setTimeout(dismiss, 300);
+  }, [dismiss]);
 
-  if (state.phase === 'idle' || state.phase === 'checking') return null;
+  if (phase === 'idle' || !updateInfo) return null;
 
-  const accent = accentColor[state.phase] || 'bg-slate-500';
-  const isBusy = state.phase === 'downloading' || state.phase === 'verifying' || state.phase === 'preparing';
+  const accent = accentColor[phase as BannerPhase] || 'bg-slate-500';
+  const isBusy = phase === 'downloading' || phase === 'preparing';
+  const elapsed = phase === 'downloading' && downloadStartRef.current
+    ? (Date.now() - downloadStartRef.current) / 1000
+    : 0;
+  const speed = updateProgress && elapsed > 0 ? updateProgress.downloaded / elapsed : 0;
+  const pct = updateProgress && updateProgress.total > 0
+    ? Math.round((updateProgress.downloaded / updateProgress.total) * 100)
+    : 0;
 
   return (
     <div className={cn(
@@ -87,39 +99,34 @@ export function UpdateBanner() {
           {/* Icon */}
           <span className={cn(
             "shrink-0",
-            state.phase === 'failed' && 'text-red-500',
-            state.phase === 'ready' && 'text-green-500',
-            !['failed', 'ready'].includes(state.phase) && 'text-blue-500'
+            phase === 'failed' && 'text-red-500',
+            phase === 'ready' && 'text-green-500',
+            !['failed', 'ready'].includes(phase) && 'text-blue-500'
           )}>
-            <PhaseIcon phase={state.phase} />
+            <PhaseIcon phase={phase as BannerPhase} />
           </span>
 
           {/* Label */}
           <div className="flex-1 flex flex-col gap-1">
             <span className="text-base font-semibold">
-              {state.phase === 'available' && (
+              {phase === 'available' && (
                 <>تحديث متوفر لـ Almowakeb</>
               )}
-              {state.phase === 'downloading' && <>جاري تحميل التحديث...</>}
-              {state.phase === 'verifying' && <>جاري التحقق من سلامة التحديث...</>}
-              {state.phase === 'preparing' && <>جاري تحضير التحديث للتثبيت...</>}
-              {state.phase === 'ready' && <>التحديث جاهز للتثبيت</>}
-              {state.phase === 'failed' && <span className="text-red-600">{state.error || 'فشل التحديث'}</span>}
+              {phase === 'downloading' && <>جاري تحميل التحديث...</>}
+              {phase === 'preparing' && <>جاري تحضير التحديث للتثبيت...</>}
+              {phase === 'ready' && <>التحديث جاهز للتثبيت</>}
+              {phase === 'failed' && <span className="text-red-600">{error || 'فشل التحديث'}</span>}
             </span>
-            {state.phase === 'available' && (
+            {phase === 'available' && (
               <div className="flex flex-col gap-1">
                 <span className="text-sm text-slate-500 font-mono" dir="ltr">
-                  v{state.currentVersion} → v{state.targetVersion}
+                  v{updateInfo.current_version} → v{updateInfo.latest_version}
                 </span>
-                {state.updateType && (
+                {updateInfo.download_url && (
                   <div className="flex items-center gap-2 text-xs">
-                    <span className={cn(
-                      "px-2 py-0.5 rounded-full font-medium",
-                      state.updateType === 'delta' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                    )}>
-                      {state.updateType === 'delta' ? 'تحديث جزئي' : 'تحديث كامل'}
+                    <span className="px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700">
+                      تحديث كامل
                     </span>
-                    <span className="text-slate-400">{formatSize(state.progress.totalBytes)}</span>
                   </div>
                 )}
               </div>
@@ -128,9 +135,9 @@ export function UpdateBanner() {
 
           {/* Actions */}
           <div className="flex items-center gap-2 shrink-0">
-            {state.phase === 'available' && (
+            {phase === 'available' && (
               <>
-                {state.manifest?.releaseNotes && (
+                {updateInfo.release_body && (
                   <button
                     onClick={() => setShowReleaseNotes(!showReleaseNotes)}
                     className="inline-flex items-center gap-1.5 h-10 px-3 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
@@ -150,7 +157,7 @@ export function UpdateBanner() {
               </>
             )}
 
-            {state.phase === 'ready' && (
+            {phase === 'ready' && (
               <Button 
                 size="sm" 
                 onClick={restartToUpdate} 
@@ -161,7 +168,7 @@ export function UpdateBanner() {
               </Button>
             )}
 
-            {state.phase === 'failed' && (
+            {phase === 'failed' && (
               <Button 
                 size="sm" 
                 onClick={retry} 
@@ -172,7 +179,7 @@ export function UpdateBanner() {
               </Button>
             )}
 
-            {(state.phase === 'available' || state.phase === 'failed') && (
+            {(phase === 'available' || phase === 'failed') && (
               <button 
                 onClick={handleDismiss} 
                 className="p-2.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" 
@@ -195,12 +202,12 @@ export function UpdateBanner() {
         </div>
 
         {/* Release Notes */}
-        {state.phase === 'available' && state.manifest?.releaseNotes && showReleaseNotes && (
+        {phase === 'available' && updateInfo.release_body && showReleaseNotes && (
           <div className="px-6 pb-4 pt-0 border-t border-slate-100">
             <div className="mt-3 p-4 bg-slate-50 rounded-lg text-slate-700">
-              <h3 className="font-bold text-lg mb-3">ما الجديد في v{state.targetVersion}</h3>
+              <h3 className="font-bold text-lg mb-3">ما الجديد في v{updateInfo.latest_version}</h3>
               <div className="text-sm whitespace-pre-wrap">
-                {state.manifest.releaseNotes}
+                {updateInfo.release_body}
               </div>
             </div>
           </div>
@@ -210,12 +217,12 @@ export function UpdateBanner() {
         {expanded && isBusy && (
           <div className="px-8 pb-6 pt-2 border-t border-slate-100">
             <UpdateProgress
-              phase={state.phase}
-              percentage={state.progress.percentage}
-              downloadedBytes={state.progress.downloadedBytes}
-              totalBytes={state.progress.totalBytes}
-              speed={state.progress.speed}
-              error={state.error}
+              phase={phase}
+              percentage={pct}
+              downloadedBytes={updateProgress?.downloaded || 0}
+              totalBytes={updateProgress?.total || 0}
+              speed={speed}
+              error={error}
               compact={false}
             />
           </div>

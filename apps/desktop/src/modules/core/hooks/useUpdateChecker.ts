@@ -67,18 +67,16 @@ export function useUpdateChecker() {
       });
 
       await invoke("download_and_prepare_update", { url: updateInfo.download_url });
-      setPhase("preparing");
+      setPhase(prev => prev === 'ready' ? 'ready' : 'preparing');
     } catch (err) {
-      if (phase !== "ready") {
-        setError(typeof err === "string" ? `فشل التحديث: ${err}` : "فشل التحديث: حدث خطأ غير معروف");
-        setPhase("failed");
-      }
+      setError(typeof err === "string" ? `فشل التحديث: ${err}` : "فشل التحديث: حدث خطأ غير معروف");
+      setPhase(prev => prev === 'ready' ? 'ready' : 'failed');
     } finally {
       unlistenProgress();
       unlistenReady();
       unlistenFailed();
     }
-  }, [updateInfo, phase]);
+  }, [updateInfo]);
 
   const restartToUpdate = useCallback(async () => {
     if (phase !== "ready") return;
