@@ -75,13 +75,20 @@ export function AccountTreeNodeItem({
   };
 
   const renderRight = (node: AccountTreeNode) => {
-    if (isVirtualRoot) return (
-      <>
-        <div className="w-[90px]" />
-        <div className="w-[100px]" />
-        <div className="w-[120px] text-left text-slate-400">—</div>
-      </>
-    );
+    if (isVirtualRoot) {
+      const bal = parseAmount(node.balance);
+      return (
+        <>
+          <div className="w-[90px]" />
+          <div className="w-[100px]" />
+          <div className="w-[120px] text-left tabular-nums">
+            <span className={cn("text-sm font-black", bal >= 0 ? "text-slate-700" : "text-red-600")}>
+              {formatCurrency(bal)}
+            </span>
+          </div>
+        </>
+      );
+    }
 
     return (
       <>

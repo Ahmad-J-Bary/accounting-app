@@ -14,7 +14,7 @@ interface ReportLayoutProps {
 
 export function ReportLayout({ title, subtitle, filters, children, actions, className }: ReportLayoutProps) {
   return (
-    <div className={cn("min-h-screen space-y-6 bg-slate-50/50 p-4 sm:p-6 lg:space-y-8 lg:p-10", className)} dir="rtl">
+    <div className={cn("min-h-full gap-6 bg-slate-50/50 p-4 sm:p-6 lg:gap-8 lg:p-10 flex flex-col", className)} dir="rtl">
       <header className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
         <div className="space-y-1">
           <h1 className="text-2xl font-black text-slate-900 sm:text-3xl">{title}</h1>
@@ -44,7 +44,7 @@ export function ReportLayout({ title, subtitle, filters, children, actions, clas
         </section>
       )}
 
-      <main className="flex min-h-[520px] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl lg:min-h-[600px]">
+      <main className="flex flex-1 min-h-[520px] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl lg:min-h-[600px]">
         {children}
       </main>
     </div>

@@ -32,6 +32,7 @@ import AccountingJournalsReport from '@modules/accounting/pages/AccountingJourna
 import AccountMovementsReport from '@modules/accounting/pages/AccountMovementsReport';
 import AccountMovement from '@modules/accounting/pages/accountMovement';
 import IncomeStatementReport from '@modules/accounting/pages/IncomeStatementReport';
+import TrialBalanceReport from '@modules/accounting/pages/TrialBalanceReport';
 
 export function ErpRoutes({ location }: { location?: string | Partial<Location> }) {
   return (
@@ -43,6 +44,7 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/accounting/reports/ledger" element={<AccountMovementsReport />} />
       <Route path="/accounting/reports/movements" element={<AccountMovementsReport />} />
       <Route path="/accounting/reports/income" element={<IncomeStatementReport />} />
+      <Route path="/accounting/reports/trial-balance" element={<TrialBalanceReport />} />
       <Route path="/accounting/account-ledger/:accountId" element={<AccountMovement />} />
       <Route path="/journal" element={<Journal />} />
       <Route path="/customers" element={<Customers />} />
