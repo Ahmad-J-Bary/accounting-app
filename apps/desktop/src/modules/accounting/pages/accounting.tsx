@@ -3,10 +3,8 @@ import { Button } from "@shared/ui/button";
 import { Download, RefreshCw, Folder, Search, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { accountingService } from '@modules/accounting/api/accountingService';
 import { journalEntryService } from '@modules/accounting/api/journalEntryService';
-import { materialService } from '@modules/inventory/api/materialService';
 import { invoiceService } from '@modules/invoicing/api/invoiceService';
-import { returnService } from '@modules/invoicing/api/returnService';
-import type { AccountDto, MaterialDto } from "@erp/shared-types";
+import type { AccountDto } from "@erp/shared-types";
 import { buildTree, getVisibleRootTree, getErrorMessage, parseAmount } from "./accounting/tree-utils";
 import type { AccountTreeNode, ToggleNodeHandler } from "./accounting/types";
 import { AccountTreeNodeItem } from "./accounting/AccountTreeNodeItem";
@@ -63,70 +61,17 @@ export default function Accounting() {
         }
       }
 
-      // For inventory/purchase-cost accounts that may not have journal postings,
-      // compute balances from stock movements and purchase invoices (like Income Statement)
+      // Override for purchase-cost accounts that may not have journal postings
       try {
-        const [materials, purchaseInvoices, purchaseReturns] = await Promise.allSettled([
-          materialService.listMaterials(),
-          invoiceService.listInvoicesByType("Purchase"),
-          returnService.listPurchaseReturns(),
-        ]);
+        const purchaseInvoices = await invoiceService.listInvoicesByType("Purchase").catch(() => []);
 
-        const movementResults = materials.status === "fulfilled"
-          ? await Promise.allSettled(
-              materials.value.map(async (m: MaterialDto) => ({
-                materialId: m.id,
-                movements: await materialService.listMovementsByMaterial(m.id),
-              })),
-            )
-          : [];
-
-        // Sum all stock movements → total inventory value (for بضاعة آخر المدة / المخزون)
-        let totalInventory = 0;
-        // Sum OpeningBalance movements only → opening inventory (for بضاعة أول المدة)
-        let openingInventory = 0;
-
-        for (const result of movementResults) {
-          if (result.status !== "fulfilled") continue;
-          const movements = result.value.movements ?? [];
-          for (const mov of movements) {
-            const base = parseFloat(mov.total_cost_base ?? mov.total_cost ?? "0");
-            const val = mov.is_inflow ? base : -base;
-            totalInventory += val;
-            if (mov.movement_type === "OpeningBalance") {
-              openingInventory += val;
-            }
-          }
-        }
-
-        // Compute net purchase cost from invoices + returns (for تكاليف إضافية على المشتريات)
         let netPurchaseCost = 0;
-        if (purchaseInvoices.status === "fulfilled") {
-          for (const inv of purchaseInvoices.value) {
-            if (inv.status !== "Posted" && inv.status !== "Paid") continue;
-            netPurchaseCost += parseFloat(inv.total_amount || "0");
-          }
-        }
-        if (purchaseReturns.status === "fulfilled") {
-          for (const ret of purchaseReturns.value) {
-            for (const line of ret.lines ?? []) {
-              netPurchaseCost -= parseFloat(line.line_total || "0");
-            }
-          }
+        for (const inv of purchaseInvoices) {
+          if (inv.status !== "Posted" && inv.status !== "Paid") continue;
+          netPurchaseCost += parseFloat(inv.extra_costs || "0");
         }
 
-        // Override specific accounts by name
         for (const account of data) {
-          if (account.name_ar === "بضاعة أول المدة") {
-            const debit = openingInventory > 0 ? openingInventory : 0;
-            const credit = openingInventory < 0 ? Math.abs(openingInventory) : 0;
-            totals.set(account.id, { debit, credit });
-          }
-          if (account.name_ar === "بضاعة آخر المدة" || account.name_ar === "المخزون") {
-            const debit = totalInventory > 0 ? totalInventory : 0;
-            const credit = totalInventory < 0 ? Math.abs(totalInventory) : 0;
-            totals.set(account.id, { debit, credit });
-          }
           if (account.name_ar === "تكاليف إضافية على المشتريات") {
             const debit = netPurchaseCost > 0 ? netPurchaseCost : 0;
             const credit = netPurchaseCost < 0 ? Math.abs(netPurchaseCost) : 0;
@@ -134,7 +79,7 @@ export default function Accounting() {
           }
         }
       } catch (e) {
-        console.warn("Inventory/purchase-cost override failed, using journal entries only:", e);
+        console.warn("Purchase-cost override failed, using journal entries only:", e);
       }
 
       setLedgerTotals(totals);

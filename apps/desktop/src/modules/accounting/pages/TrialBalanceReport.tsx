@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect } from "react";
 import { ReportLayout } from "@widgets/templates/ReportLayout";
 import { Button } from "@shared/ui/button";
 import { accountingService } from "@modules/accounting/api/accountingService";
+import { journalEntryService } from "@modules/accounting/api/journalEntryService";
+import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import type { AccountDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
@@ -9,27 +11,60 @@ import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useUnifiedColumns } from "@shared/hooks";
 import { cn } from "@shared/lib/utils";
-import { Scale, BookOpen, ArrowUpRight, ArrowDownLeft, Search } from "lucide-react";
+import { Search, Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { flattenTree, isBalanceDebit } from "../lib/trialBalance";
+import { computeTreeTotals, flattenTreeRows, isBalanceDebit } from "../lib/trialBalance";
+import type { TrialBalanceTreeRow } from "../lib/trialBalance";
 
-interface TrialBalanceFlatRow {
-  id: string;
-  code: string;
-  name: string;
-  depth: number;
-  balance: number;
-  debit: number;
-  credit: number;
-  balanceSec: number;
-  debitSec: number;
-  creditSec: number;
+const DETAIL_LEVELS = [
+  { level: 1, maxDepth: 0, label: "مستوى 1", desc: "التصنيفات الرئيسية" },
+  { level: 2, maxDepth: 1, label: "مستوى 2", desc: "+ التصنيفات الفرعية" },
+  { level: 3, maxDepth: 2, label: "مستوى 3", desc: "+ الحسابات المفصلة" },
+  { level: 4, maxDepth: Infinity, label: "مستوى 4", desc: "+ كافة التفاصيل" },
+];
+
+async function computeLedgerTotals(accounts: AccountDto[]): Promise<Map<string, { debit: number; credit: number }>> {
+  const entries = await journalEntryService.listJournalEntries({});
+
+  const totals = new Map<string, { debit: number; credit: number }>();
+  for (const entry of entries) {
+    for (const line of entry.lines) {
+      const cur = totals.get(line.account_id) || { debit: 0, credit: 0 };
+      cur.debit += parseFloat(line.debit_base || line.debit || "0");
+      cur.credit += parseFloat(line.credit_base || line.credit || "0");
+      totals.set(line.account_id, cur);
+    }
+  }
+
+  try {
+    const purchaseInvoices = await invoiceService.listInvoicesByType("Purchase").catch(() => []);
+
+    let netPurchaseCost = 0;
+    for (const inv of purchaseInvoices) {
+      if (inv.status !== "Posted" && inv.status !== "Paid") continue;
+      netPurchaseCost += parseFloat(inv.extra_costs || "0");
+    }
+
+    for (const account of accounts) {
+      if (account.name_ar === "تكاليف إضافية على المشتريات") {
+        const debit = netPurchaseCost > 0 ? netPurchaseCost : 0;
+        const credit = netPurchaseCost < 0 ? Math.abs(netPurchaseCost) : 0;
+        totals.set(account.id, { debit, credit });
+      }
+    }
+  } catch (_e) {
+    console.warn("Stock override failed, using journal entries only");
+  }
+
+  return totals;
 }
 
 export default function TrialBalanceReport() {
   const { baseCurrency, currencies, formatAmount, convertFromBase } = useCurrencyContext();
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
+  const [ledgerTotals, setLedgerTotals] = useState<Map<string, { debit: number; credit: number }>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [detailLevel, setDetailLevel] = useState(3);
 
   const secondaryCurrency = useMemo(() => {
     if (!baseCurrency) return null;
@@ -39,30 +74,29 @@ export default function TrialBalanceReport() {
   useEffect(() => {
     setLoading(true);
     accountingService.getChartOfAccounts()
-      .then(setAccounts)
+      .then(async (data) => {
+        setAccounts(data);
+        const totals = await computeLedgerTotals(data);
+        setLedgerTotals(totals);
+      })
       .catch(() => toast.error("فشل تحميل بيانات ميزان المراجعة"))
       .finally(() => setLoading(false));
   }, []);
 
-  const rows = useMemo<TrialBalanceFlatRow[]>(() => {
-    return flattenTree(accounts).map(({ account, depth }) => {
-      const debit = parseFloat(account.debit || "0");
-      const credit = parseFloat(account.credit || "0");
-      const balance = debit - credit;
-      return {
-        id: account.id,
-        code: account.code,
-        name: account.name_ar,
-        depth,
-        balance,
-        debit,
-        credit,
-        balanceSec: secondaryCurrency ? convertFromBase(balance, secondaryCurrency.code) : 0,
-        debitSec: secondaryCurrency ? convertFromBase(debit, secondaryCurrency.code) : 0,
-        creditSec: secondaryCurrency ? convertFromBase(credit, secondaryCurrency.code) : 0,
-      };
-    });
-  }, [accounts, secondaryCurrency, convertFromBase]);
+  const treeTotals = useMemo(() => computeTreeTotals(accounts, ledgerTotals), [accounts, ledgerTotals]);
+
+  const maxDepth = DETAIL_LEVELS[detailLevel - 1].maxDepth;
+
+  const rows = useMemo<TrialBalanceTreeRow[]>(() => {
+    const baseRows = flattenTreeRows(treeTotals, maxDepth);
+    if (!secondaryCurrency) return baseRows;
+    return baseRows.map((r) => ({
+      ...r,
+      balanceSec: convertFromBase(r.balance, secondaryCurrency.code),
+      debitSec: convertFromBase(r.debit, secondaryCurrency.code),
+      creditSec: convertFromBase(r.credit, secondaryCurrency.code),
+    }));
+  }, [treeTotals, maxDepth, secondaryCurrency, convertFromBase]);
 
   const baseSym = baseCurrency?.symbol || baseCurrency?.code || "";
   const secSym = secondaryCurrency?.symbol || secondaryCurrency?.code || "";
@@ -72,17 +106,27 @@ export default function TrialBalanceReport() {
     return formatAmount(value, { currencyCode: code });
   }, [formatAmount]);
 
-  const allColumns = useMemo<UnifiedColumn<TrialBalanceFlatRow>[]>(() => {
-    const cols: UnifiedColumn<TrialBalanceFlatRow>[] = [
+  const allColumns = useMemo<UnifiedColumn<TrialBalanceTreeRow>[]>(() => {
+    const cols: UnifiedColumn<TrialBalanceTreeRow>[] = [
       {
         id: "name",
         header: "اسم الحساب",
         label: "اسم الحساب",
-        accessor: (row) => (
-          <span className="truncate font-bold text-slate-700 text-xs">
-            {row.name}
-          </span>
-        ),
+        accessor: (row) => {
+          const padClass = row.depth === 0 ? "" : row.depth === 1 ? "pr-6" : row.depth === 2 ? "pr-12" : "pr-16";
+          const fontClass = row.depth === 0
+            ? "font-extrabold text-sm text-slate-900"
+            : row.depth === 1
+            ? "font-bold text-xs text-slate-800"
+            : row.depth === 2
+            ? "font-semibold text-xs text-slate-700"
+            : "font-normal text-xs text-slate-600";
+          return (
+            <span className={cn("truncate block", padClass, fontClass)}>
+              {row.name}
+            </span>
+          );
+        },
         className: "justify-start",
       },
       {
@@ -300,6 +344,48 @@ export default function TrialBalanceReport() {
           <span>بيان يوضح إجمالي الحركة المدينة والحركة الدائنة لكل الحسابات المتضمنة في دليل الحسابات (الشجرة)</span>
         </div>
 
+        {/* Detail Level Control */}
+        <div className="shrink-0 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              disabled={detailLevel === 1}
+              onClick={() => setDetailLevel((p) => Math.max(1, p - 1))}
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-1.5" dir="ltr">
+              {[1, 2, 3, 4].map((level) => (
+                <button
+                  key={level}
+                  className={cn(
+                    "h-2 rounded-full transition-all duration-200 cursor-pointer",
+                    level <= detailLevel
+                      ? "bg-slate-900"
+                      : "bg-slate-200 hover:bg-slate-300",
+                    level === detailLevel ? "w-8" : "w-2",
+                  )}
+                  onClick={() => setDetailLevel(level)}
+                  title={DETAIL_LEVELS.find((d) => d.level === level)?.desc}
+                />
+              ))}
+            </div>
+
+            <button
+              className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              disabled={detailLevel === 4}
+              onClick={() => setDetailLevel((p) => Math.min(4, p + 1))}
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+
+          <span className="text-[11px] font-bold text-slate-400 tracking-wider">
+            {detailLevel === 1 ? "مختصر" : detailLevel === 4 ? "مفصل" : "مستوى " + detailLevel}
+          </span>
+        </div>
+
         {/* Table */}
         <div className="flex-1 min-h-0 rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <TableShell
@@ -315,7 +401,11 @@ export default function TrialBalanceReport() {
                 onClick={() => {
                   setLoading(true);
                   accountingService.getChartOfAccounts()
-                    .then(setAccounts)
+                    .then((data) => {
+                      setAccounts(data);
+                      return computeLedgerTotals(data);
+                    })
+                    .then(setLedgerTotals)
                     .catch(() => toast.error("فشل تحديث البيانات"))
                     .finally(() => setLoading(false));
                 }}
