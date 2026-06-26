@@ -151,7 +151,7 @@ export default function PaymentsPage() {
   const totalIn = useMemo(
     () =>
       payments
-        .filter((p) => ["Receipt", "CashIn"].includes(p.payment_type))
+        .filter((p) => ["Receipt", "CashIn", "SupplierReceipt"].includes(p.payment_type))
         .reduce((s, p) => {
           const amt = parseFloat(p.amount) || 0;
           return (
@@ -170,6 +170,7 @@ export default function PaymentsPage() {
         .filter((p) =>
           [
             "SupplierPayment",
+            "CustomerPayment",
             "CashOut",
             "ExpenseVoucher",
             "DrawingsVoucher",

@@ -9,6 +9,7 @@ export { GridSummaryRow } from './GridSummaryRow';
 
 export { MaterialSearchPanel } from './MaterialSearchPanel';
 export { SummaryPanel } from './SummaryPanel';
+export { ReturnSettlementPanel } from './ReturnSettlementPanel';
 export { useColumnResize } from './useColumnResize';
 export { DocumentToolbar } from './DocumentToolbar';
 export type { DocumentToolbarProps } from './DocumentToolbar';

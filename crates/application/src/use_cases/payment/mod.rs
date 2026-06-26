@@ -103,6 +103,24 @@ async fn reverse_entity_balances(
                 account_repo.save(&account).await?;
             }
         }
+        PaymentType::CustomerPayment => {
+            if let Some(cid) = customer_id {
+                let mut customer = customer_repo.find_by_id(cid).await?
+                    .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
+                customer.increase_debit(base_amount)
+                    .map_err(|e| AppError::Invalid(e.to_string()))?;
+                customer_repo.update(&customer).await?;
+            }
+        }
+        PaymentType::SupplierReceipt => {
+            if let Some(sid) = supplier_id {
+                let mut supplier = supplier_repo.find_by_id(sid).await?
+                    .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
+                supplier.increase_credit(base_amount)
+                    .map_err(|e| AppError::Invalid(e.to_string()))?;
+                supplier_repo.update(&supplier).await?;
+            }
+        }
         _ => {}
     }
     Ok(())
@@ -158,6 +176,24 @@ async fn apply_entity_balances(
                 account_repo.save(&account).await?;
             }
         }
+        PaymentType::CustomerPayment => {
+            if let Some(cid) = customer_id {
+                let mut customer = customer_repo.find_by_id(cid).await?
+                    .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
+                customer.decrease_debit(base_amount)
+                    .map_err(|e| AppError::Invalid(e.to_string()))?;
+                customer_repo.update(&customer).await?;
+            }
+        }
+        PaymentType::SupplierReceipt => {
+            if let Some(sid) = supplier_id {
+                let mut supplier = supplier_repo.find_by_id(sid).await?
+                    .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
+                supplier.decrease_credit(base_amount)
+                    .map_err(|e| AppError::Invalid(e.to_string()))?;
+                supplier_repo.update(&supplier).await?;
+            }
+        }
         _ => {}
     }
     Ok(())
@@ -186,6 +222,8 @@ impl CreatePaymentUseCase {
         let payment_type = match req.payment_type.as_str() {
             "Receipt" => PaymentType::Receipt,
             "SupplierPayment" => PaymentType::SupplierPayment,
+            "CustomerPayment" => PaymentType::CustomerPayment,
+            "SupplierReceipt" => PaymentType::SupplierReceipt,
             "ExpenseVoucher" => PaymentType::ExpenseVoucher,
             "DrawingsVoucher" => PaymentType::DrawingsVoucher,
             "CashIn" => PaymentType::CashIn,
@@ -227,6 +265,8 @@ impl CreatePaymentUseCase {
             let prefix = match payment_type {
                 PaymentType::Receipt => "RCV",
                 PaymentType::SupplierPayment => "PAY",
+                PaymentType::CustomerPayment => "CPY",
+                PaymentType::SupplierReceipt => "SRC",
                 PaymentType::ExpenseVoucher => "EXP",
                 PaymentType::DrawingsVoucher => "DRW",
                 _ => "VCH",
@@ -265,6 +305,8 @@ impl CreatePaymentUseCase {
         let journal_type = match payment.payment_type {
             PaymentType::Receipt => JournalType::CashReceipt,
             PaymentType::SupplierPayment => JournalType::CashPayment,
+            PaymentType::CustomerPayment => JournalType::CustomerPaymentJournal,
+            PaymentType::SupplierReceipt => JournalType::SupplierReceiptJournal,
             PaymentType::ExpenseVoucher => JournalType::ExpenseVoucher,
             PaymentType::DrawingsVoucher => JournalType::DrawingsVoucher,
             _ => JournalType::CashJournal,
@@ -339,6 +381,32 @@ impl CreatePaymentUseCase {
                     "صرف من الصندوق لسند مسحوبات".to_string(),
                 ));
             }
+            PaymentType::CustomerPayment => {
+                if let Some(cid) = &payment.customer_id {
+                    let customer = self.customer_repo.find_by_id(cid).await?
+                        .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
+                    let p_acc_id = customer.account_id
+                        .ok_or_else(|| AppError::Invalid("العميل لا يملك حساباً محاسبياً".into()))?;
+                    let credit_cash = payment.credit_account_id.unwrap_or(cash_account.id);
+                    payment.debit_account_id = Some(p_acc_id);
+                    payment.credit_account_id = Some(credit_cash);
+                    journal_lines.push(JournalLine::new(p_acc_id, amount_ma.clone(), zero_ma.clone(), format!("دفع للعميل: {}", customer.name)).with_partner(cid.0));
+                    journal_lines.push(JournalLine::new(credit_cash, zero_ma, amount_ma, format!("دفعة للعميل: {}", customer.name)));
+                }
+            }
+            PaymentType::SupplierReceipt => {
+                if let Some(sid) = &payment.supplier_id {
+                    let supplier = self.supplier_repo.find_by_id(sid).await?
+                        .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
+                    let p_acc_id = supplier.account_id
+                        .ok_or_else(|| AppError::Invalid("المورد لا يملك حساباً محاسبياً".into()))?;
+                    let debit_cash = payment.debit_account_id.unwrap_or(cash_account.id);
+                    payment.debit_account_id = Some(debit_cash);
+                    payment.credit_account_id = Some(p_acc_id);
+                    journal_lines.push(JournalLine::new(debit_cash, amount_ma.clone(), zero_ma.clone(), format!("قبض من المورد: {}", supplier.name)));
+                    journal_lines.push(JournalLine::new(p_acc_id, zero_ma, amount_ma, format!("مقبوضات من مورد: {}", supplier.name)).with_partner(sid.0));
+                }
+            }
             _ => {}
         }
 
@@ -398,6 +466,24 @@ impl CreatePaymentUseCase {
                         .map_err(|e| AppError::Invalid(e.to_string()))?;
                     drawings_account.debit += base_amount;
                     self.account_repo.save(&drawings_account).await?;
+                }
+            }
+            PaymentType::CustomerPayment => {
+                if let Some(cid) = &payment.customer_id {
+                    let mut customer = self.customer_repo.find_by_id(cid).await?
+                        .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
+                    customer.decrease_debit(base_amount)
+                        .map_err(|e| AppError::Invalid(e.to_string()))?;
+                    self.customer_repo.update(&customer).await?;
+                }
+            }
+            PaymentType::SupplierReceipt => {
+                if let Some(sid) = &payment.supplier_id {
+                    let mut supplier = self.supplier_repo.find_by_id(sid).await?
+                        .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
+                    supplier.decrease_credit(base_amount)
+                        .map_err(|e| AppError::Invalid(e.to_string()))?;
+                    self.supplier_repo.update(&supplier).await?;
                 }
             }
             _ => {}
@@ -515,6 +601,24 @@ impl DeletePaymentUseCase {
                     self.account_repo.save(&drawings_account).await?;
                 }
             }
+            PaymentType::CustomerPayment => {
+                if let Some(cid) = &payment.customer_id {
+                    let mut customer = self.customer_repo.find_by_id(cid).await?
+                        .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
+                    customer.increase_debit(base_amount)
+                        .map_err(|e| AppError::Invalid(e.to_string()))?;
+                    self.customer_repo.update(&customer).await?;
+                }
+            }
+            PaymentType::SupplierReceipt => {
+                if let Some(sid) = &payment.supplier_id {
+                    let mut supplier = self.supplier_repo.find_by_id(sid).await?
+                        .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
+                    supplier.increase_credit(base_amount)
+                        .map_err(|e| AppError::Invalid(e.to_string()))?;
+                    self.supplier_repo.update(&supplier).await?;
+                }
+            }
             _ => {}
         }
 
@@ -587,6 +691,8 @@ impl UpdatePaymentUseCase {
         let payment_type = match req.payment_type.as_str() {
             "Receipt" => PaymentType::Receipt,
             "SupplierPayment" => PaymentType::SupplierPayment,
+            "CustomerPayment" => PaymentType::CustomerPayment,
+            "SupplierReceipt" => PaymentType::SupplierReceipt,
             "ExpenseVoucher" => PaymentType::ExpenseVoucher,
             "DrawingsVoucher" => PaymentType::DrawingsVoucher,
             "CashIn" => PaymentType::CashIn,
@@ -600,7 +706,6 @@ impl UpdatePaymentUseCase {
             .and_then(|v| Decimal::try_from(v).ok())
             .unwrap_or(Decimal::ONE);
         let currency_code = req.currency_code.unwrap_or_default();
-
         let payment_date = DateTime::parse_from_rfc3339(&req.payment_date)
             .map_err(|_| AppError::Invalid("التاريخ غير صالح".into()))?
             .with_timezone(&chrono::Utc);
@@ -659,6 +764,8 @@ impl UpdatePaymentUseCase {
         let journal_type = match updated_payment.payment_type {
             PaymentType::Receipt => JournalType::CashReceipt,
             PaymentType::SupplierPayment => JournalType::CashPayment,
+            PaymentType::CustomerPayment => JournalType::CustomerPaymentJournal,
+            PaymentType::SupplierReceipt => JournalType::SupplierReceiptJournal,
             PaymentType::ExpenseVoucher => JournalType::ExpenseVoucher,
             PaymentType::DrawingsVoucher => JournalType::DrawingsVoucher,
             _ => JournalType::CashJournal,
@@ -730,6 +837,32 @@ impl UpdatePaymentUseCase {
                     amount_ma,
                     "صرف من الصندوق لسند مسحوبات".to_string(),
                 ));
+            }
+            PaymentType::CustomerPayment => {
+                if let Some(cid) = &updated_payment.customer_id {
+                    let customer = self.customer_repo.find_by_id(cid).await?
+                        .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
+                    let p_acc_id = customer.account_id
+                        .ok_or_else(|| AppError::Invalid("العميل لا يملك حساباً محاسبياً".into()))?;
+                    let credit_cash = updated_payment.credit_account_id.unwrap_or(cash_account.id);
+                    updated_payment.debit_account_id = Some(p_acc_id);
+                    updated_payment.credit_account_id = Some(credit_cash);
+                    journal_lines.push(JournalLine::new(p_acc_id, amount_ma.clone(), zero_ma.clone(), format!("دفع للعميل: {}", customer.name)).with_partner(cid.0));
+                    journal_lines.push(JournalLine::new(credit_cash, zero_ma, amount_ma, format!("دفعة للعميل: {}", customer.name)));
+                }
+            }
+            PaymentType::SupplierReceipt => {
+                if let Some(sid) = &updated_payment.supplier_id {
+                    let supplier = self.supplier_repo.find_by_id(sid).await?
+                        .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
+                    let p_acc_id = supplier.account_id
+                        .ok_or_else(|| AppError::Invalid("المورد لا يملك حساباً محاسبياً".into()))?;
+                    let debit_cash = updated_payment.debit_account_id.unwrap_or(cash_account.id);
+                    updated_payment.debit_account_id = Some(debit_cash);
+                    updated_payment.credit_account_id = Some(p_acc_id);
+                    journal_lines.push(JournalLine::new(debit_cash, amount_ma.clone(), zero_ma.clone(), format!("قبض من المورد: {}", supplier.name)));
+                    journal_lines.push(JournalLine::new(p_acc_id, zero_ma, amount_ma, format!("مقبوضات من مورد: {}", supplier.name)).with_partner(sid.0));
+                }
             }
             _ => {}
         }

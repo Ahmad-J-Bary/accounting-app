@@ -70,6 +70,10 @@ impl CreatePaymentUseCase {
         let payment_type = match req.payment_type.as_str() {
             "Receipt" => PaymentType::Receipt,
             "SupplierPayment" => PaymentType::SupplierPayment,
+            "CustomerPayment" => PaymentType::CustomerPayment,
+            "SupplierReceipt" => PaymentType::SupplierReceipt,
+            "ExpenseVoucher" => PaymentType::ExpenseVoucher,
+            "DrawingsVoucher" => PaymentType::DrawingsVoucher,
             "CashIn" => PaymentType::CashIn,
             "CashOut" => PaymentType::CashOut,
             _ => PaymentType::Other,

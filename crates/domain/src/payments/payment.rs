@@ -9,6 +9,8 @@ use uuid::Uuid;
 pub enum PaymentType {
     Receipt,           // قبض من عميل
     SupplierPayment,   // دفع لمورد
+    CustomerPayment,   // دفع لعميل (auto-generated for sales return cash refund)
+    SupplierReceipt,   // قبض من مورد (auto-generated for purchase return cash receipt)
     ExpenseVoucher,    // سند مصاريف
     DrawingsVoucher,   // سند مسحوبات
     CashIn,            // إيداع
@@ -65,19 +67,11 @@ impl Payment {
             return Err(DomainError::Invalid("سعر الصرف يجب أن يكون موجبًا".into()));
         }
 
-        // Validate that Receipt is linked to a customer
-        if payment_type == PaymentType::Receipt && customer_id.is_none() {
-            return Err(DomainError::Invalid(
-                "قبض الأموال يجب أن يكون مرتبطًا بعميل".into(),
-            ));
-        }
-
-        // Validate that SupplierPayment is linked to a supplier
-        if payment_type == PaymentType::SupplierPayment && supplier_id.is_none() {
-            return Err(DomainError::Invalid(
-                "الدفع للمورد يجب أن يكون مرتبطًا بمورد".into(),
-            ));
-        }
+        // Allow any payment type to be linked to customer or supplier.
+        // Receipt (قبض) can come from a supplier (قبض من مورد), and
+        // SupplierPayment (دفع) can go to a customer (دفع لعميل).
+        // This enables auto-generated return settlement vouchers to work correctly.
+        // The use case layer enforces business rules per payment type.
 
         let now = Utc::now();
         Ok(Self {

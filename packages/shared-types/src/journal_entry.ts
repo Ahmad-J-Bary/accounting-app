@@ -11,7 +11,11 @@ export type JournalType =
   | 'PurchaseJournal'
   | 'PurchaseCostsJournal'
   | 'MaterialOpeningBalance'
-  | 'GeneralJournal';
+  | 'GeneralJournal'
+  | 'SalesReturnJournal'
+  | 'PurchaseReturnJournal'
+  | 'SupplierReceiptJournal'
+  | 'CustomerPaymentJournal';
 
 export interface JournalLineDto {
   account_id: string;

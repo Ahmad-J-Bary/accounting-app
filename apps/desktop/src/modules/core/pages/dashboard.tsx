@@ -93,11 +93,11 @@ export default function Dashboard() {
     .reduce((sum, i) => sum + toNumber(i.total_amount), 0) - totalPurchaseReturns, [purchaseInvoices, totalPurchaseReturns]);
 
   const totalCashIn = useMemo(() => paymentEntries
-    .filter((p) => ["Receipt", "CashIn"].includes(p.payment_type))
+    .filter((p) => ["Receipt", "CashIn", "SupplierReceipt"].includes(p.payment_type))
     .reduce((s, p) => s + toNumber(p.amount), 0), [paymentEntries]);
 
   const totalCashOut = useMemo(() => paymentEntries
-    .filter((p) => ["SupplierPayment", "CashOut"].includes(p.payment_type))
+    .filter((p) => ["SupplierPayment", "CustomerPayment", "CashOut"].includes(p.payment_type))
     .reduce((s, p) => s + toNumber(p.amount), 0), [paymentEntries]);
 
   const cashBalance = totalCashIn - totalCashOut;
@@ -189,6 +189,8 @@ export default function Dashboard() {
   const paymentTypeLabel: Record<string, string> = {
     Receipt: "مقبوض",
     SupplierPayment: "مدفوع لمورد",
+    CustomerPayment: "مدفوع لعميل",
+    SupplierReceipt: "مقبوض من مورد",
     ExpenseVoucher: "سند صرف",
     DrawingsVoucher: "سند مسحوبات",
     CashIn: "إيداع خزينة",

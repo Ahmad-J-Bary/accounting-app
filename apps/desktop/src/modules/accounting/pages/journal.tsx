@@ -64,11 +64,15 @@ export default function Journal() {
     if (!jt || jt === 'GeneralJournal') return entries;
 
     const ALLOWED: Record<string, Set<string>> = {
-      CashJournal:       new Set(['CashJournal', 'DrawingsVoucher','CashReceipt','CashPayment', 'ExpenseVoucher','CashOpeningBalance','AccountOpeningBalance']),
-      PurchaseJournal:   new Set(['PurchaseJournal','PurchaseCostsJournal']),
+      CashJournal:          new Set(['CashJournal', 'DrawingsVoucher', 'CashReceipt', 'CashPayment', 'ExpenseVoucher', 'CashOpeningBalance', 'AccountOpeningBalance', 'SupplierReceiptJournal', 'CustomerPaymentJournal']),
+      PurchaseJournal:      new Set(['PurchaseJournal', 'PurchaseCostsJournal']),
       PurchaseCostsJournal: new Set(['PurchaseCostsJournal']),
-      CashSalesJournal:  new Set(['CashSalesJournal']),
-      CreditSalesJournal: new Set(['CreditSalesJournal']),
+      CashSalesJournal:     new Set(['CashSalesJournal']),
+      CreditSalesJournal:   new Set(['CreditSalesJournal']),
+      // مرتجعات المبيعات: قيد المرتجع + أي سند دفع لعميل مرتبط به
+      SalesReturnJournal:   new Set(['SalesReturnJournal']),
+      // مرتجعات المشتريات: قيد المرتجع + أي سند قبض من مورد مرتبط به
+      PurchaseReturnJournal: new Set(['PurchaseReturnJournal']),
     };
 
     const allowed = ALLOWED[jt];

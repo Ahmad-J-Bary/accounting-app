@@ -70,6 +70,8 @@ pub struct CreateSalesReturnRequest {
     pub return_date: String,
     pub lines: Vec<SalesReturnLineDto>,
     pub notes: Option<String>,
+    pub settlement_mode: Option<String>,
+    pub settlement_amount: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -139,4 +141,6 @@ pub struct CreatePurchaseReturnRequest {
     pub return_date: String,
     pub lines: Vec<PurchaseReturnLineDto>,
     pub notes: Option<String>,
+    pub settlement_mode: Option<String>,
+    pub settlement_amount: Option<String>,
 }

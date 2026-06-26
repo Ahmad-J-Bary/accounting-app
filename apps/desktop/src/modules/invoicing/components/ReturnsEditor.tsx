@@ -1,11 +1,12 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
+import { Badge } from "@shared/ui/badge";
 import { Save, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { FinancialDocumentTemplate } from "@widgets/templates/FinancialDocumentTemplate";
 import { GenericDocumentGrid } from "@widgets/document-shell/GenericDocumentGrid";
-import { SummaryPanel } from "@widgets/document-shell/SummaryPanel";
+import { SummaryPanel, ReturnSettlementPanel } from "@widgets/document-shell";
 import { InvoicePartySelector } from "../components/InvoicePartySelector";
 import { ReturnMaterialSearchPanel, type ReturnOccurrenceItem } from "../components/ReturnMaterialSearchPanel";
 import { useDocumentEditor } from "@modules/invoicing/hooks/useDocumentEditor";
@@ -37,6 +38,8 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
   const [returnDate, setReturnDate] = useState(new Date().toISOString().slice(0, 10));
   const [returnNumber, setReturnNumber] = useState("");
   const [notes, setNotes] = useState("");
+  const [settlementMode, setSettlementMode] = useState<"deduct_from_debt" | "full_cash_return" | "partial_settlement">("deduct_from_debt");
+  const [settlementCash, setSettlementCash] = useState("0");
 
   const {
     lines,
@@ -350,6 +353,14 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
   const totalAmount = useMemo(() =>
     lines.reduce((sum, l) => sum + (parseFloat(l.quantity || "0") * parseFloat(l.unit_price || "0")), 0), [lines]);
 
+  const partnerBalance = useMemo(() => {
+    if (!partyId) return 0;
+    const party = parties.find(p => p.id === partyId);
+    if (!party) return 0;
+    if (isSales) return parseFloat((party as CustomerDto).debit || "0");
+    return parseFloat((party as SupplierDto).credit || "0");
+  }, [partyId, parties, isSales]);
+
   const handleSave = async () => {
     if (!partyId && isSales) { toast.error("الرجاء اختيار الزبون"); return; }
     if (!partyId && !isSales) { toast.error("الرجاء اختيار المورد"); return; }
@@ -369,6 +380,8 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
           return_date: new Date(returnDate).toISOString(),
           lines: backendLines as SalesReturnLineDto[],
           notes: notes || undefined,
+          settlement_mode: settlementMode,
+          settlement_amount: settlementMode === "partial_settlement" ? settlementCash : undefined,
         });
       } else {
         await returnService.createPurchaseReturn({
@@ -379,6 +392,8 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
           return_date: new Date(returnDate).toISOString(),
           lines: backendLines as PurchaseReturnLineDto[],
           notes: notes || undefined,
+          settlement_mode: settlementMode,
+          settlement_amount: settlementMode === "partial_settlement" ? settlementCash : undefined,
         });
       }
 
@@ -476,14 +491,37 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
         />
       }
       summaryPanel={
-        <SummaryPanel
-          subtotal={totalAmount}
-          discount={0}
-          tax={0}
-          net={totalAmount}
-          invoiceType={isSales ? "Sales" : "Purchase"}
-          isReadOnly={true}
-        />
+        readOnly ? (
+          <SummaryPanel
+            subtotal={totalAmount}
+            discount={0}
+            tax={0}
+            net={totalAmount}
+            invoiceType={isSales ? "Sales" : "Purchase"}
+            isReadOnly={true}
+          />
+        ) : (
+          <div className="flex flex-col gap-3">
+            <ReturnSettlementPanel
+              totalAmount={totalAmount}
+              partnerBalance={partnerBalance}
+              isSales={isSales}
+              settlementMode={settlementMode}
+              onSettlementModeChange={setSettlementMode}
+              settlementCash={settlementCash}
+              onSettlementCashChange={setSettlementCash}
+            />
+
+            <SummaryPanel
+              subtotal={totalAmount}
+              discount={0}
+              tax={0}
+              net={totalAmount}
+              invoiceType={isSales ? "Sales" : "Purchase"}
+              isReadOnly={true}
+            />
+          </div>
+        )
       }
       sidebar={null}
     />

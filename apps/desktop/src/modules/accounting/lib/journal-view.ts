@@ -2,11 +2,13 @@ import type { JournalEntryDto } from "@erp/shared-types";
 
 /** Map each journal type to its focal account code prefix */
 export const FOCUS_PREFIX: Record<string, string> = {
-  CashJournal: "122",
-  CashSalesJournal: "311",
-  CreditSalesJournal: "312",
-  PurchaseJournal: "41",
+  CashJournal:          "122",
+  CashSalesJournal:     "311",
+  CreditSalesJournal:   "312",
+  PurchaseJournal:      "41",
   PurchaseCostsJournal: "41",
+  SalesReturnJournal:   "42",
+  PurchaseReturnJournal:"32",
 };
 
 const isOriginalAmount = (currencyCode?: string, fxRate?: string) => {
@@ -50,6 +52,18 @@ export function toJournalRow(
     entry.journal_type === "CreditSalesJournal"
   ) {
     journalTypeDisplay = "مبيعات نقدية";
+  }
+  if (entry.journal_type === "PurchaseReturnJournal") {
+    journalTypeDisplay = "مرتجعات المشتريات";
+  }
+  if (entry.journal_type === "SalesReturnJournal") {
+    journalTypeDisplay = "مرتجعات المبيعات";
+  }
+  if (entry.journal_type === "SupplierReceiptJournal") {
+    journalTypeDisplay = "سند قبض من مورد";
+  }
+  if (entry.journal_type === "CustomerPaymentJournal") {
+    journalTypeDisplay = "سند دفع لعميل";
   }
 
   if (prefix) {
@@ -96,12 +110,17 @@ export function toJournalRow(
     const credits = entry.lines.filter((l) => parseFloat(l.credit || "0") > 0);
 
     if (debits.length > 0 || credits.length > 0) {
-      if (entry.journal_type === "PurchaseJournal" && credits.length > 1) {
-        const supplierLine = credits.find(
+      if (
+        (entry.journal_type === "PurchaseJournal" ||
+         entry.journal_type === "SalesReturnJournal") &&
+        credits.length > 1
+      ) {
+        // مرتجعات المبيعات: تفضيل حساب العميل (غير الصندوق)
+        const partnerLine = credits.find(
           (l) => !l.account_code?.startsWith("122"),
         );
-        cAcc = supplierLine
-          ? supplierLine.account_name || supplierLine.account_id
+        cAcc = partnerLine
+          ? partnerLine.account_name || partnerLine.account_id
           : credits[0].account_name || credits[0].account_id;
       } else {
         cAcc =
@@ -114,14 +133,16 @@ export function toJournalRow(
 
       if (
         (entry.journal_type === "CashSalesJournal" ||
-          entry.journal_type === "CreditSalesJournal") &&
+          entry.journal_type === "CreditSalesJournal" ||
+          entry.journal_type === "PurchaseReturnJournal") &&
         debits.length > 1
       ) {
-        const customerLine = debits.find(
+        // مرتجعات المشتريات: تفضيل حساب المورد (غير الصندوق)
+        const partnerLine = debits.find(
           (l) => !l.account_code?.startsWith("122"),
         );
-        dAcc = customerLine
-          ? customerLine.account_name || customerLine.account_id
+        dAcc = partnerLine
+          ? partnerLine.account_name || partnerLine.account_id
           : debits[0].account_name || debits[0].account_id;
       } else {
         dAcc =
@@ -147,6 +168,14 @@ export function toJournalRow(
       entry.journal_type === "PurchaseCostsJournal"
     ) {
       activeSide = "debit";
+    } else if (
+      entry.journal_type === "SalesReturnJournal"
+    ) {
+      activeSide = "debit";
+    } else if (
+      entry.journal_type === "PurchaseReturnJournal"
+    ) {
+      activeSide = "credit";
     } else if (
       cashLine &&
       (parseFloat(cashLine.credit || "0") > 0 ||

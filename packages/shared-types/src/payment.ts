@@ -1,6 +1,8 @@
 export type PaymentType =
   | 'Receipt'
   | 'SupplierPayment'
+  | 'CustomerPayment'
+  | 'SupplierReceipt'
   | 'ExpenseVoucher'
   | 'DrawingsVoucher'
   | 'CashIn'

@@ -11,6 +11,8 @@ pub fn row_to_payment(row: PaymentRow) -> Result<Payment, AppError> {
     let payment_type = match row.payment_type.as_str() {
         "Receipt" => PaymentType::Receipt,
         "SupplierPayment" => PaymentType::SupplierPayment,
+        "CustomerPayment" => PaymentType::CustomerPayment,
+        "SupplierReceipt" => PaymentType::SupplierReceipt,
         "ExpenseVoucher" => PaymentType::ExpenseVoucher,
         "DrawingsVoucher" => PaymentType::DrawingsVoucher,
         "CashIn" => PaymentType::CashIn,

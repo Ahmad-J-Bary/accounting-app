@@ -8,11 +8,23 @@ import type {
 
 export const returnService = {
   async createSalesReturn(req: CreateSalesReturnRequest): Promise<SalesReturnDto> {
-    return invoke('create_sales_return', { request: req });
+    return invoke('create_sales_return', {
+      request: {
+        ...req,
+        settlement_mode: req.settlement_mode ?? null,
+        settlement_amount: req.settlement_amount ?? null,
+      },
+    });
   },
 
   async updateSalesReturn(req: CreateSalesReturnRequest): Promise<SalesReturnDto> {
-    return invoke('create_sales_return', { request: req });
+    return invoke('create_sales_return', {
+      request: {
+        ...req,
+        settlement_mode: req.settlement_mode ?? null,
+        settlement_amount: req.settlement_amount ?? null,
+      },
+    });
   },
 
   async listSalesReturns(): Promise<SalesReturnDto[]> {
@@ -28,11 +40,23 @@ export const returnService = {
   },
 
   async createPurchaseReturn(req: CreatePurchaseReturnRequest): Promise<PurchaseReturnDto> {
-    return invoke('create_purchase_return', { request: req });
+    return invoke('create_purchase_return', {
+      request: {
+        ...req,
+        settlement_mode: req.settlement_mode ?? null,
+        settlement_amount: req.settlement_amount ?? null,
+      },
+    });
   },
 
   async updatePurchaseReturn(req: CreatePurchaseReturnRequest): Promise<PurchaseReturnDto> {
-    return invoke('create_purchase_return', { request: req });
+    return invoke('create_purchase_return', {
+      request: {
+        ...req,
+        settlement_mode: req.settlement_mode ?? null,
+        settlement_amount: req.settlement_amount ?? null,
+      },
+    });
   },
 
   async listPurchaseReturns(): Promise<PurchaseReturnDto[]> {

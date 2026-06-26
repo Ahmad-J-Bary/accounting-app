@@ -9,7 +9,7 @@ import { SidebarSection } from '@widgets/sidebar-shell/SidebarSection';
 import { Receipt } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
-import { PAYMENT_TYPE_LABELS } from "../lib/constants";
+import { PAYMENT_TYPE_LABELS, HIDDEN_PAYMENT_TYPES } from "../lib/constants";
 
 export type PaymentFormPayload = CreatePaymentRequest & { id?: string };
 
@@ -201,7 +201,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
               >
                 <SelectTrigger className="h-9 font-bold bg-white border-blue-200 focus:ring-blue-500"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Object.entries(PAYMENT_TYPE_LABELS).map(([k, v]) => (
+                  {Object.entries(PAYMENT_TYPE_LABELS).filter(([k]) => !HIDDEN_PAYMENT_TYPES.includes(k)).map(([k, v]) => (
                     <SelectItem key={k} value={k}>{v}</SelectItem>
                   ))}
                 </SelectContent>

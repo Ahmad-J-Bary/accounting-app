@@ -56,7 +56,12 @@ export function PaymentsTable({
 
   const filtered = useMemo(() => {
     return payments.filter(
-      (p) => typeFilter === "all" || p.payment_type === typeFilter,
+      (p) => {
+        if (typeFilter === "all") return true;
+        if (typeFilter === "incoming") return ["Receipt", "CashIn", "SupplierReceipt"].includes(p.payment_type);
+        if (typeFilter === "outgoing") return ["SupplierPayment", "CustomerPayment", "CashOut", "ExpenseVoucher", "DrawingsVoucher"].includes(p.payment_type);
+        return p.payment_type === typeFilter;
+      },
     );
   }, [payments, typeFilter]);
 
@@ -129,7 +134,7 @@ export function PaymentsTable({
         label: "النوع",
         accessor: (p) => (
           <div className="flex items-center gap-2">
-            {["Receipt", "CashIn"].includes(p.payment_type) ? (
+            {["Receipt", "CashIn", "SupplierReceipt"].includes(p.payment_type) ? (
               <ArrowDownCircle className="w-3.5 h-3.5 text-emerald-500" />
             ) : (
               <ArrowUpCircle className="w-3.5 h-3.5 text-rose-500" />
@@ -306,20 +311,20 @@ export function PaymentsTable({
             الكل
           </Button>
           <Button
-            variant={typeFilter === "Receipt" ? "default" : "outline"}
+            variant={typeFilter === "incoming" ? "default" : "outline"}
             size="sm"
             className="h-9 text-emerald-600"
-            onClick={() => onTypeFilterChange("Receipt")}
+            onClick={() => onTypeFilterChange("incoming")}
           >
             قبض
           </Button>
           <Button
             variant={
-              typeFilter === "SupplierPayment" ? "default" : "outline"
+              typeFilter === "outgoing" ? "default" : "outline"
             }
             size="sm"
             className="h-9 text-rose-600"
-            onClick={() => onTypeFilterChange("SupplierPayment")}
+            onClick={() => onTypeFilterChange("outgoing")}
           >
             دفع
           </Button>

@@ -30,6 +30,8 @@ export interface CreateSalesReturnRequest {
   return_date: string;
   lines: SalesReturnLineDto[];
   notes?: string;
+  settlement_mode?: string;
+  settlement_amount?: string;
 }
 
 export interface PurchaseReturnLineDto {
@@ -64,4 +66,6 @@ export interface CreatePurchaseReturnRequest {
   return_date: string;
   lines: PurchaseReturnLineDto[];
   notes?: string;
+  settlement_mode?: string;
+  settlement_amount?: string;
 }
