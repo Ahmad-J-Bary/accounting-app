@@ -277,6 +277,7 @@ export default function Customers() {
             onClose={() => setSelectedId(null)}
             onEdit={(p) => { loadAccounts(); handleOpenEdit(p as unknown as CustomerDto); }}
             onDelete={(id, name) => { setSelectedId(null); handleDelete(id); }}
+            onRefresh={() => refresh(true)}
             invoices={customerInvoices}
             payments={customerPayments}
             loadingDetails={loadingDetails}

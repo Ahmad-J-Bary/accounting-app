@@ -32,6 +32,7 @@ export interface CreateSalesReturnRequest {
   notes?: string;
   settlement_mode?: string;
   settlement_amount?: string;
+  is_paid?: boolean;
 }
 
 export interface PurchaseReturnLineDto {
@@ -68,4 +69,5 @@ export interface CreatePurchaseReturnRequest {
   notes?: string;
   settlement_mode?: string;
   settlement_amount?: string;
+  is_paid?: boolean;
 }

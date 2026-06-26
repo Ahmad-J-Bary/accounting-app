@@ -40,6 +40,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
   const [notes, setNotes] = useState("");
   const [settlementMode, setSettlementMode] = useState<"deduct_from_debt" | "full_cash_return" | "partial_settlement">("deduct_from_debt");
   const [settlementCash, setSettlementCash] = useState("0");
+  const [isPaid, setIsPaid] = useState(true);
 
   const {
     lines,
@@ -382,6 +383,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
           notes: notes || undefined,
           settlement_mode: settlementMode,
           settlement_amount: settlementMode === "partial_settlement" ? settlementCash : undefined,
+          is_paid: isPaid,
         });
       } else {
         await returnService.createPurchaseReturn({
@@ -394,6 +396,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
           notes: notes || undefined,
           settlement_mode: settlementMode,
           settlement_amount: settlementMode === "partial_settlement" ? settlementCash : undefined,
+          is_paid: isPaid,
         });
       }
 
@@ -510,6 +513,8 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
               onSettlementModeChange={setSettlementMode}
               settlementCash={settlementCash}
               onSettlementCashChange={setSettlementCash}
+              isPaid={isPaid}
+              onIsPaidChange={setIsPaid}
             />
 
             <SummaryPanel

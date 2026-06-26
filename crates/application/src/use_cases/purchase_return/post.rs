@@ -49,7 +49,7 @@ impl PostPurchaseReturnUseCase {
         Self { repo, movement_repo, journal_repo, account_repo, supplier_repo, material_repo, currency_repo, exchange_rate_repo, payment_repo }
     }
 
-    pub async fn execute(&self, id: String, settlement_mode: Option<String>, settlement_amount: Option<String>) -> Result<PurchaseReturnDto, AppError> {
+    pub async fn execute(&self, id: String, settlement_mode: Option<String>, settlement_amount: Option<String>, is_paid: Option<bool>) -> Result<PurchaseReturnDto, AppError> {
         let rid = PurchaseReturnId::from_str(&id)
             .map_err(|_| AppError::Invalid("معرف المرتجع غير صالح".into()))?;
         let ret = self.repo.find_by_id(&rid).await?
@@ -156,9 +156,10 @@ impl PostPurchaseReturnUseCase {
             self.journal_repo.save(&entry).await?;
         }
 
-        // 4. Create CASH journal entry (separate — only if cash_amount > 0)
+        // 4. Create CASH journal entry (separate — only if cash_amount > 0 and paid now)
         //    SupplierReceiptJournal: Debit(cash, cash), Credit(supplier, cash)
-        if cash_amount > Decimal::ZERO {
+        let cash_actually_paid = cash_amount > Decimal::ZERO && is_paid.unwrap_or(true);
+        if cash_actually_paid {
             let cash_account = self.account_repo.find_by_code("122").await?
                 .ok_or_else(|| AppError::NotFound("حساب الصندوق غير موجود: 122".into()))?;
 
@@ -218,7 +219,7 @@ impl PostPurchaseReturnUseCase {
         }
 
         // 6. Adjust partner balance: return entry decreases credit by total,
-        //    cash entry increases credit by cash_amount → net: decrease by (total - cash)
+        //    cash entry (if paid now) increases credit by cash_amount → net: decrease by (total - cash)
         if let Some(supplier) = self.supplier_repo.find_by_id(&ret.supplier_id).await? {
             let converted_total = crate::use_cases::unified_invoice::post::convert_to_partner_currency(
                 total,
@@ -232,7 +233,7 @@ impl PostPurchaseReturnUseCase {
             updated_supplier.decrease_credit(converted_total)
                 .map_err(|e| AppError::Invalid(e.to_string()))?;
 
-            if cash_amount > Decimal::ZERO {
+            if cash_actually_paid {
                 let converted_cash = crate::use_cases::unified_invoice::post::convert_to_partner_currency(
                     cash_amount,
                     &base_currency.code,

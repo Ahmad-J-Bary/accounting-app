@@ -277,6 +277,7 @@ export default function Suppliers() {
             onClose={() => setSelectedId(null)}
             onEdit={(p) => { loadAccounts(); handleOpenEdit(p as unknown as SupplierDto); }}
             onDelete={(id, name) => { setSelectedId(null); handleDelete(id); }}
+            onRefresh={() => refresh(true)}
             invoices={supplierInvoices}
             payments={supplierPayments}
             loadingDetails={loadingDetails}

@@ -18,6 +18,8 @@ export const JOURNAL_TYPES: JournalTypeOption[] = [
   { value: "PurchaseJournal", label: "يومية المشتريات" },
   { value: "PurchaseCostsJournal", label: "يومية التكاليف الإضافية للمشتريات" },
   { value: "PurchaseReturnJournal", label: "يومية مرتجعات المشتريات" },
+  { value: "SupplierReceiptJournal", label: "سند قبض من مورد" },
+  { value: "CustomerPaymentJournal", label: "سند دفع لعميل" },
 ];
 
 /** Full mapping of every journal type to its Arabic display label (matches Rust Display impl) */
@@ -50,6 +52,8 @@ export const JOURNAL_REPORT_TYPES: JournalReportTypeOption[] = [
   { value: "PurchaseCostsJournal", label: "تكاليف إضافية للمشتريات", desc: "قيود التكاليف الإضافية للمشتريات" },
   { value: "SalesReturnJournal", label: "مرتجع مبيعات", desc: "مرتجعات المبيعات" },
   { value: "PurchaseReturnJournal", label: "مرتجع مشتريات", desc: "مرتجعات المشتريات" },
+  { value: "SupplierReceiptJournal", label: "سند قبض من مورد", desc: "سندات قبض من مورد" },
+  { value: "CustomerPaymentJournal", label: "سند دفع لعميل", desc: "سندات دفع لعميل" },
 ];
 
 // Unified column order for ALL journal types:

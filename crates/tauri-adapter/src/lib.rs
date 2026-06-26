@@ -168,6 +168,7 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::transfer::create_transfer,
             commands::transfer::delete_transfer,
             commands::transfer::update_transfer,
+            commands::settle::settle_partner_balance,
         ])
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir().expect("Failed to get app data directory");

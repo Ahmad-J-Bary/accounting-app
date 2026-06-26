@@ -22,3 +22,4 @@ pub mod unified_invoice;
 pub mod currency;
 pub mod sales_return;
 pub mod purchase_return;
+pub mod settle_partner_balance;

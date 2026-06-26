@@ -1,7 +1,10 @@
-import { Pencil, Trash2, BookOpen, FileText } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Pencil, Trash2, BookOpen, FileText, Scale } from "lucide-react";
 import type { InvoiceDto, Payment, CustomerDto, SupplierDto, PartnerDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useTabs } from "@app/providers/TabContext";
+import { toast } from "sonner";
+import { partnerService } from "@modules/partners/api/partnerService";
 import {
   SidebarShell,
   SidebarHeader,
@@ -23,6 +26,7 @@ interface PartnerDetailPanelProps {
   onClose: () => void;
   onEdit: (partner: CustomerDto | SupplierDto | PartnerDto) => void;
   onDelete: (id: string, name: string) => void;
+  onRefresh?: () => void;
   invoices: InvoiceDto[];
   payments: Payment[];
   loadingDetails: boolean;
@@ -34,14 +38,25 @@ export function PartnerDetailPanel({
   onClose,
   onEdit,
   onDelete,
+  onRefresh,
 }: PartnerDetailPanelProps) {
   const { currencies, baseCurrency } = useCurrencyContext();
   const { openTab } = useTabs();
+  const [settled, setSettled] = useState(false);
+  const [settling, setSettling] = useState(false);
+
+  useEffect(() => {
+    setSettled(false);
+  }, [partner?.id]);
 
   if (!partner) return null;
 
   const isCustomer = type === "customer";
   const isPartner = "amount_original" in partner;
+  const p = partner as CustomerDto | SupplierDto;
+  const pDebit = "debit" in partner ? parseFloat(p.debit) || 0 : 0;
+  const pCredit = "credit" in partner ? parseFloat(p.credit) || 0 : 0;
+  const isBalanceZero = pDebit <= 0 && pCredit <= 0;
   const hasAccountId = (p: typeof partner): p is CustomerDto | SupplierDto => "account_id" in p;
   const partnerAccountId = hasAccountId(partner) ? partner.account_id : null;
 
@@ -98,6 +113,40 @@ export function PartnerDetailPanel({
           closable: true,
         }),
     },
+    {
+      label: "تسديد المبلغ كاملا",
+      icon: <Scale className="w-4 h-4" />,
+      variant: "danger",
+      hidden: isPartner || !partnerAccountId || isBalanceZero || settled,
+      disabled: settling,
+      onClick: async () => {
+        if (isBalanceZero) {
+          toast.info("الرصيد صفر — لا حاجة للتسوية");
+          return;
+        }
+        const voucherLabel = isCustomer
+          ? (pDebit > 0 ? "سند قبض (RCV)" : "سند دفع لعميل (CPY)")
+          : (pCredit > 0 ? "سند دفع (PAY)" : "سند قبض من مورد (SRC)");
+        const amount = pDebit > 0 ? pDebit : pCredit;
+        const ok = confirm(`تأكيد تسديد رصيد "${partner.name}"؟\nسيتم إنشاء ${voucherLabel} بقيمة ${amount}`);
+        if (!ok) return;
+        setSettling(true);
+        try {
+          const entryNumber = await partnerService.settlePartnerBalance(type, partner.id);
+          setSettled(true);
+          onRefresh?.();
+          if (entryNumber === "0") {
+            toast.info("الرصيد صفر بالفعل — تم تحديث العرض");
+          } else {
+            toast.success(`تم تسديد المبلغ كاملاً — رقم القيد: ${entryNumber}`);
+          }
+        } catch (e) {
+          toast.error("فشل تسديد المبلغ: " + e);
+        } finally {
+          setSettling(false);
+        }
+      },
+    },
   ];
 
   const currencyName = currencies.find(
@@ -149,9 +198,9 @@ export function PartnerDetailPanel({
               fields={[
                 { label: "الرصيد الافتتاحي", value: partner.opening_balance || "0" },
                 { label: "العملة", value: currencyName ? `${currencyName.code} - ${currencyName.name_ar}` : baseCurrency?.code || "" },
-                { label: "مدين (حالي)", value: partner.debit || "0" },
-                { label: "دائن (حالي)", value: partner.credit || "0" },
-                { label: "الرصيد الحالي", value: partner.balance || "0" },
+                { label: "مدين (حالي)", value: settled ? "0" : (partner.debit || "0") },
+                { label: "دائن (حالي)", value: settled ? "0" : (partner.credit || "0") },
+                { label: "الرصيد الحالي", value: settled ? "0" : (partner.balance || "0") },
               ]}
             />
             {partner.notes && (

@@ -72,6 +72,7 @@ pub struct CreateSalesReturnRequest {
     pub notes: Option<String>,
     pub settlement_mode: Option<String>,
     pub settlement_amount: Option<String>,
+    pub is_paid: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -143,4 +144,5 @@ pub struct CreatePurchaseReturnRequest {
     pub notes: Option<String>,
     pub settlement_mode: Option<String>,
     pub settlement_amount: Option<String>,
+    pub is_paid: Option<bool>,
 }

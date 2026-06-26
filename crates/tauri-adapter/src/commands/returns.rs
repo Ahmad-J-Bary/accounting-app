@@ -251,6 +251,7 @@ pub async fn create_sales_return(
 
     let settlement_mode = request.settlement_mode.clone();
     let settlement_amount = request.settlement_amount.clone();
+    let is_paid = request.is_paid;
 
     let dto = CreateSalesReturnUseCase::new(
         state.sales_return_repo.clone(),
@@ -269,7 +270,7 @@ pub async fn create_sales_return(
         state.exchange_rate_repo.clone(),
         state.payment_repo.clone(),
     );
-    post_use_case.execute(dto.id.clone(), settlement_mode, settlement_amount).await.map_err(|e| e.to_string())
+    post_use_case.execute(dto.id.clone(), settlement_mode, settlement_amount, is_paid).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -313,7 +314,7 @@ pub async fn post_sales_return(
         state.exchange_rate_repo.clone(),
         state.payment_repo.clone(),
     )
-    .execute(id, None, None).await.map_err(|e| e.to_string())
+    .execute(id, None, None, None).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -331,6 +332,7 @@ pub async fn create_purchase_return(
 
     let settlement_mode = request.settlement_mode.clone();
     let settlement_amount = request.settlement_amount.clone();
+    let is_paid = request.is_paid;
 
     let dto = CreatePurchaseReturnUseCase::new(
         state.purchase_return_repo.clone(),
@@ -349,7 +351,7 @@ pub async fn create_purchase_return(
         state.exchange_rate_repo.clone(),
         state.payment_repo.clone(),
     );
-    post_use_case.execute(dto.id.clone(), settlement_mode, settlement_amount).await.map_err(|e| e.to_string())
+    post_use_case.execute(dto.id.clone(), settlement_mode, settlement_amount, is_paid).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -393,7 +395,7 @@ pub async fn post_purchase_return(
         state.exchange_rate_repo.clone(),
         state.payment_repo.clone(),
     )
-    .execute(id, None, None).await.map_err(|e| e.to_string())
+    .execute(id, None, None, None).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
