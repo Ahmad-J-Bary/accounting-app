@@ -52,38 +52,38 @@ impl SettlePartnerBalanceUseCase {
             "customer" => {
                 let cid = CustomerId::from_str(&partner_id)
                     .map_err(|_| AppError::Invalid("معرف العميل غير صالح".into()))?;
-                let customer = self.customer_repo.find_by_id(&cid).await?
+                let mut customer = self.customer_repo.find_by_id(&cid).await?
                     .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
                 let cust_acc_id = customer.account_id
                     .ok_or_else(|| AppError::NotFound("العميل ليس له حساب مالي".into()))?;
 
-                if customer.debit <= Decimal::ZERO && customer.credit <= Decimal::ZERO {
+                let effective = customer.debit - customer.credit;
+                if effective == Decimal::ZERO {
                     return Ok("0".to_string());
                 }
 
-                let (payment_type, jtype, amount, lines) = if customer.debit > Decimal::ZERO {
-                    let amount = customer.debit;
+                let (payment_type, jtype, amount, lines) = if effective > Decimal::ZERO {
                     (
                         PaymentType::Receipt,
                         JournalType::CashReceipt,
-                        amount,
+                        effective,
                         vec![
                             JournalLine::new(
                                 cash_account.id,
-                                MonetaryAmount::new(Money::new(amount, doc_currency.clone()), fx_rate),
+                                MonetaryAmount::new(Money::new(effective, doc_currency.clone()), fx_rate),
                                 MonetaryAmount::zero(doc_currency.clone()),
                                 format!("قبض من العميل: {}", customer.name),
                             ),
                             JournalLine::new(
                                 cust_acc_id,
                                 MonetaryAmount::zero(doc_currency.clone()),
-                                MonetaryAmount::new(Money::new(amount, doc_currency.clone()), fx_rate),
+                                MonetaryAmount::new(Money::new(effective, doc_currency.clone()), fx_rate),
                                 format!("دفعة من العميل: {}", customer.name),
                             ).with_partner(cid.0),
                         ],
                     )
                 } else {
-                    let amount = customer.credit;
+                    let amount = -effective;
                     (
                         PaymentType::CustomerPayment,
                         JournalType::CustomerPaymentJournal,
@@ -152,51 +152,55 @@ impl SettlePartnerBalanceUseCase {
                 entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
                 self.journal_repo.save(&entry).await?;
                 payment.journal_entry_number = Some(entry_number.clone());
+                payment.reference = Some("settlement".to_string());
                 self.payment_repo.save(&payment).await?;
 
-                let mut updated = customer;
-                updated.debit = Decimal::ZERO;
-                updated.credit = Decimal::ZERO;
-                updated.balance = Decimal::ZERO;
-                self.customer_repo.update(&updated).await?;
+                if effective > Decimal::ZERO {
+                    customer.increase_credit(effective)
+                        .map_err(|e| AppError::Invalid(e.to_string()))?;
+                } else {
+                    customer.decrease_credit(-effective)
+                        .map_err(|e| AppError::Invalid(e.to_string()))?;
+                }
+                self.customer_repo.update(&customer).await?;
 
                 Ok(entry_number)
             }
             "supplier" => {
                 let sid = SupplierId::from_str(&partner_id)
                     .map_err(|_| AppError::Invalid("معرف المورد غير صالح".into()))?;
-                let supplier = self.supplier_repo.find_by_id(&sid).await?
+                let mut supplier = self.supplier_repo.find_by_id(&sid).await?
                     .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
                 let supp_acc_id = supplier.account_id
                     .ok_or_else(|| AppError::NotFound("المورد ليس له حساب مالي".into()))?;
 
-                if supplier.debit <= Decimal::ZERO && supplier.credit <= Decimal::ZERO {
+                let effective = supplier.credit - supplier.debit;
+                if effective == Decimal::ZERO {
                     return Ok("0".to_string());
                 }
 
-                let (payment_type, jtype, amount, lines) = if supplier.credit > Decimal::ZERO {
-                    let amount = supplier.credit;
+                let (payment_type, jtype, amount, lines) = if effective > Decimal::ZERO {
                     (
                         PaymentType::SupplierPayment,
                         JournalType::CashPayment,
-                        amount,
+                        effective,
                         vec![
                             JournalLine::new(
                                 supp_acc_id,
-                                MonetaryAmount::new(Money::new(amount, doc_currency.clone()), fx_rate),
+                                MonetaryAmount::new(Money::new(effective, doc_currency.clone()), fx_rate),
                                 MonetaryAmount::zero(doc_currency.clone()),
                                 "دفعة على الحساب".to_string(),
                             ).with_partner(sid.0),
                             JournalLine::new(
                                 cash_account.id,
                                 MonetaryAmount::zero(doc_currency.clone()),
-                                MonetaryAmount::new(Money::new(amount, doc_currency.clone()), fx_rate),
+                                MonetaryAmount::new(Money::new(effective, doc_currency.clone()), fx_rate),
                                 "دفعة على الحساب".to_string(),
                             ),
                         ],
                     )
                 } else {
-                    let amount = supplier.debit;
+                    let amount = -effective;
                     (
                         PaymentType::SupplierReceipt,
                         JournalType::SupplierReceiptJournal,
@@ -265,13 +269,17 @@ impl SettlePartnerBalanceUseCase {
                 entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
                 self.journal_repo.save(&entry).await?;
                 payment.journal_entry_number = Some(entry_number.clone());
+                payment.reference = Some("settlement".to_string());
                 self.payment_repo.save(&payment).await?;
 
-                let mut updated = supplier;
-                updated.debit = Decimal::ZERO;
-                updated.credit = Decimal::ZERO;
-                updated.balance = Decimal::ZERO;
-                self.supplier_repo.update(&updated).await?;
+                if effective > Decimal::ZERO {
+                    supplier.increase_debit(effective)
+                        .map_err(|e| AppError::Invalid(e.to_string()))?;
+                } else {
+                    supplier.decrease_debit(-effective)
+                        .map_err(|e| AppError::Invalid(e.to_string()))?;
+                }
+                self.supplier_repo.update(&supplier).await?;
 
                 Ok(entry_number)
             }

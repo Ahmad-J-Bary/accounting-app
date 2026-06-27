@@ -56,7 +56,8 @@ export function PartnerDetailPanel({
   const p = partner as CustomerDto | SupplierDto;
   const pDebit = "debit" in partner ? parseFloat(p.debit) || 0 : 0;
   const pCredit = "credit" in partner ? parseFloat(p.credit) || 0 : 0;
-  const isBalanceZero = pDebit <= 0 && pCredit <= 0;
+  const effectiveBalance = isCustomer ? pDebit - pCredit : pCredit - pDebit;
+  const isBalanceZero = effectiveBalance === 0;
   const hasAccountId = (p: typeof partner): p is CustomerDto | SupplierDto => "account_id" in p;
   const partnerAccountId = hasAccountId(partner) ? partner.account_id : null;
 
@@ -124,10 +125,11 @@ export function PartnerDetailPanel({
           toast.info("الرصيد صفر — لا حاجة للتسوية");
           return;
         }
+        const isDebt = effectiveBalance > 0;
         const voucherLabel = isCustomer
-          ? (pDebit > 0 ? "سند قبض (RCV)" : "سند دفع لعميل (CPY)")
-          : (pCredit > 0 ? "سند دفع (PAY)" : "سند قبض من مورد (SRC)");
-        const amount = pDebit > 0 ? pDebit : pCredit;
+          ? (isDebt ? "سند قبض (RCV)" : "سند دفع لعميل (CPY)")
+          : (isDebt ? "سند دفع (PAY)" : "سند قبض من مورد (SRC)");
+        const amount = Math.abs(effectiveBalance);
         const ok = confirm(`تأكيد تسديد رصيد "${partner.name}"؟\nسيتم إنشاء ${voucherLabel} بقيمة ${amount}`);
         if (!ok) return;
         setSettling(true);
@@ -200,7 +202,7 @@ export function PartnerDetailPanel({
                 { label: "العملة", value: currencyName ? `${currencyName.code} - ${currencyName.name_ar}` : baseCurrency?.code || "" },
                 { label: "مدين (حالي)", value: settled ? "0" : (partner.debit || "0") },
                 { label: "دائن (حالي)", value: settled ? "0" : (partner.credit || "0") },
-                { label: "الرصيد الحالي", value: settled ? "0" : (partner.balance || "0") },
+                { label: "الرصيد الحالي", value: settled ? "0" : String(effectiveBalance) },
               ]}
             />
             {partner.notes && (

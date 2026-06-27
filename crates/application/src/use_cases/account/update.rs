@@ -156,7 +156,7 @@ impl UpdateAccountUseCase {
                     supplier.credit = credit;
                     supplier.currency = currency;
                     supplier.opening_balance = account.opening_balance;
-                    supplier.balance = debit - credit;
+                    supplier.balance = credit - debit;
 
                     let _ = supplier_repo.save(&supplier).await;
                 }

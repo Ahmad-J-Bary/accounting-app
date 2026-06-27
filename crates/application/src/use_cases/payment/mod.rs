@@ -63,6 +63,7 @@ async fn reverse_entity_balances(
     customer_repo: &Arc<dyn CustomerRepository>,
     supplier_repo: &Arc<dyn SupplierRepository>,
     account_repo: &Arc<dyn AccountRepository>,
+    is_settlement: bool,
 ) -> Result<(), AppError> {
     match payment_type {
         PaymentType::Receipt => {
@@ -107,8 +108,20 @@ async fn reverse_entity_balances(
             if let Some(cid) = customer_id {
                 let mut customer = customer_repo.find_by_id(cid).await?
                     .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
-                customer.increase_debit(base_amount)
-                    .map_err(|e| AppError::Invalid(e.to_string()))?;
+                if is_settlement {
+                    if customer.debit.is_zero() && customer.credit.is_zero() {
+                        customer.credit += base_amount;
+                    } else if customer.debit >= base_amount {
+                        customer.debit -= base_amount;
+                    } else {
+                        customer.credit += base_amount - customer.debit;
+                        customer.debit = Decimal::ZERO;
+                    }
+                    customer.balance = customer.debit - customer.credit;
+                } else {
+                    customer.increase_debit(base_amount)
+                        .map_err(|e| AppError::Invalid(e.to_string()))?;
+                }
                 customer_repo.update(&customer).await?;
             }
         }
@@ -116,8 +129,20 @@ async fn reverse_entity_balances(
             if let Some(sid) = supplier_id {
                 let mut supplier = supplier_repo.find_by_id(sid).await?
                     .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
-                supplier.increase_credit(base_amount)
-                    .map_err(|e| AppError::Invalid(e.to_string()))?;
+                if is_settlement {
+                    if supplier.debit.is_zero() && supplier.credit.is_zero() {
+                        supplier.debit += base_amount;
+                    } else if supplier.credit >= base_amount {
+                        supplier.credit -= base_amount;
+                    } else {
+                        supplier.debit += base_amount - supplier.credit;
+                        supplier.credit = Decimal::ZERO;
+                    }
+                    supplier.balance = supplier.credit - supplier.debit;
+                } else {
+                    supplier.increase_credit(base_amount)
+                        .map_err(|e| AppError::Invalid(e.to_string()))?;
+                }
                 supplier_repo.update(&supplier).await?;
             }
         }
@@ -190,7 +215,7 @@ async fn apply_entity_balances(
                 let mut supplier = supplier_repo.find_by_id(sid).await?
                     .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
                 supplier.decrease_credit(base_amount)
-                    .map_err(|e| AppError::Invalid(e.to_string()))?;
+                        .map_err(|e| AppError::Invalid(e.to_string()))?;
                 supplier_repo.update(&supplier).await?;
             }
         }
@@ -561,7 +586,10 @@ impl DeletePaymentUseCase {
         );
         let base_amount = amount_ma.base_amount;
 
-        // Reverse entity balances
+        let is_return = payment.reference.as_deref().map_or(false, |r| r.starts_with("return:"));
+
+        // Reverse entity balances (skip for return-related payments — balance is managed by return flow)
+        if !is_return {
         match payment.payment_type {
             PaymentType::Receipt => {
                 if let Some(cid) = &payment.customer_id {
@@ -605,8 +633,20 @@ impl DeletePaymentUseCase {
                 if let Some(cid) = &payment.customer_id {
                     let mut customer = self.customer_repo.find_by_id(cid).await?
                         .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
-                    customer.increase_debit(base_amount)
-                        .map_err(|e| AppError::Invalid(e.to_string()))?;
+                    if payment.reference.as_deref() == Some("settlement") {
+                        if customer.debit.is_zero() && customer.credit.is_zero() {
+                            customer.credit += base_amount;
+                        } else if customer.debit >= base_amount {
+                            customer.debit -= base_amount;
+                        } else {
+                            customer.credit += base_amount - customer.debit;
+                            customer.debit = Decimal::ZERO;
+                        }
+                        customer.balance = customer.debit - customer.credit;
+                    } else {
+                        customer.increase_debit(base_amount)
+                            .map_err(|e| AppError::Invalid(e.to_string()))?;
+                    }
                     self.customer_repo.update(&customer).await?;
                 }
             }
@@ -614,16 +654,58 @@ impl DeletePaymentUseCase {
                 if let Some(sid) = &payment.supplier_id {
                     let mut supplier = self.supplier_repo.find_by_id(sid).await?
                         .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
-                    supplier.increase_credit(base_amount)
+                    if payment.reference.as_deref() == Some("settlement") {
+                        if supplier.debit.is_zero() && supplier.credit.is_zero() {
+                            supplier.debit += base_amount;
+                        } else if supplier.credit >= base_amount {
+                            supplier.credit -= base_amount;
+                        } else {
+                            supplier.debit += base_amount - supplier.credit;
+                            supplier.credit = Decimal::ZERO;
+                        }
+                        supplier.balance = supplier.credit - supplier.debit;
+                    } else {
+                        supplier.increase_credit(base_amount)
                         .map_err(|e| AppError::Invalid(e.to_string()))?;
+                    }
                     self.supplier_repo.update(&supplier).await?;
                 }
             }
             _ => {}
         }
+        } else {
+            // Reverse cash portion for return-related payments
+            match payment.payment_type {
+                PaymentType::CustomerPayment => {
+                    if let Some(cid) = &payment.customer_id {
+                        let mut customer = self.customer_repo.find_by_id(cid).await?
+                            .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
+                        customer.decrease_debit(base_amount)
+                            .map_err(|e| AppError::Invalid(e.to_string()))?;
+                        self.customer_repo.update(&customer).await?;
+                    }
+                }
+                PaymentType::SupplierReceipt => {
+                    if let Some(sid) = &payment.supplier_id {
+                        let mut supplier = self.supplier_repo.find_by_id(sid).await?
+                            .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
+                        supplier.decrease_credit(base_amount)
+                            .map_err(|e| AppError::Invalid(e.to_string()))?;
+                        self.supplier_repo.update(&supplier).await?;
+                    }
+                }
+                _ => {}
+            }
+        }
 
         // Find associated journal entry and delete it
-        if let Ok(Some(entry)) = self.journal_repo.find_by_source_id(&pid.to_string()).await {
+        if payment.reference.as_deref().map_or(false, |r| r.starts_with("return:")) {
+            if let Some(ref entry_number) = payment.journal_entry_number {
+                if let Ok(Some(entry)) = self.journal_repo.find_by_number(entry_number).await {
+                    let _ = self.journal_repo.delete(&entry.id).await;
+                }
+            }
+        } else if let Ok(Some(entry)) = self.journal_repo.find_by_source_id(&pid.to_string()).await {
             let _ = self.journal_repo.delete(&entry.id).await;
         }
 
@@ -670,8 +752,11 @@ impl UpdatePaymentUseCase {
         let old_customer_id = existing_payment.customer_id;
         let old_supplier_id = existing_payment.supplier_id;
         let old_debit_account_id = existing_payment.debit_account_id;
+        let is_return = existing_payment.reference.as_deref().map_or(false, |r| r.starts_with("return:"));
 
         // 1. Reverse old entity balances
+        if !is_return {
+        let is_settlement = existing_payment.reference.as_deref() == Some("settlement");
         reverse_entity_balances(
             &old_type,
             old_base_amount,
@@ -681,10 +766,41 @@ impl UpdatePaymentUseCase {
             &self.customer_repo,
             &self.supplier_repo,
             &self.account_repo,
+            is_settlement,
         ).await?;
+        } else {
+            // Reverse cash portion for return-related payments
+            match old_type {
+                PaymentType::CustomerPayment => {
+                    if let Some(cid) = &old_customer_id {
+                        let mut customer = self.customer_repo.find_by_id(cid).await?
+                            .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
+                        customer.decrease_debit(old_base_amount)
+                            .map_err(|e| AppError::Invalid(e.to_string()))?;
+                        self.customer_repo.update(&customer).await?;
+                    }
+                }
+                PaymentType::SupplierReceipt => {
+                    if let Some(sid) = &old_supplier_id {
+                        let mut supplier = self.supplier_repo.find_by_id(sid).await?
+                            .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
+                        supplier.decrease_credit(old_base_amount)
+                            .map_err(|e| AppError::Invalid(e.to_string()))?;
+                        self.supplier_repo.update(&supplier).await?;
+                    }
+                }
+                _ => {}
+            }
+        }
 
         // 2. Delete associated journal entry if it exists
-        if let Ok(Some(entry)) = self.journal_repo.find_by_source_id(&pid.to_string()).await {
+        if existing_payment.reference.as_deref().map_or(false, |r| r.starts_with("return:")) {
+            if let Some(ref entry_number) = existing_payment.journal_entry_number {
+                if let Ok(Some(entry)) = self.journal_repo.find_by_number(entry_number).await {
+                    let _ = self.journal_repo.delete(&entry.id).await;
+                }
+            }
+        } else if let Ok(Some(entry)) = self.journal_repo.find_by_source_id(&pid.to_string()).await {
             let _ = self.journal_repo.delete(&entry.id).await;
         }
 
@@ -741,7 +857,7 @@ impl UpdatePaymentUseCase {
             credit_account_id,
             customer_id,
             supplier_id,
-            req.reference,
+            req.reference.or(existing_payment.reference.clone()),
             req.notes,
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
@@ -894,6 +1010,7 @@ impl UpdatePaymentUseCase {
             updated_payment.exchange_rate,
         );
         let new_base_amount = new_amount_ma.base_amount;
+        if !is_return {
         apply_entity_balances(
             &updated_payment.payment_type,
             new_base_amount,
@@ -904,6 +1021,30 @@ impl UpdatePaymentUseCase {
             &self.supplier_repo,
             &self.account_repo,
         ).await?;
+        } else {
+            // Apply new cash portion for return-related payments
+            match updated_payment.payment_type {
+                PaymentType::CustomerPayment => {
+                    if let Some(cid) = &updated_payment.customer_id {
+                        let mut customer = self.customer_repo.find_by_id(cid).await?
+                            .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
+                        customer.increase_debit(new_base_amount)
+                            .map_err(|e| AppError::Invalid(e.to_string()))?;
+                        self.customer_repo.update(&customer).await?;
+                    }
+                }
+                PaymentType::SupplierReceipt => {
+                    if let Some(sid) = &updated_payment.supplier_id {
+                        let mut supplier = self.supplier_repo.find_by_id(sid).await?
+                            .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
+                        supplier.increase_credit(new_base_amount)
+                            .map_err(|e| AppError::Invalid(e.to_string()))?;
+                        self.supplier_repo.update(&supplier).await?;
+                    }
+                }
+                _ => {}
+            }
+        }
 
         Ok(enrich_payment(updated_payment, &self.customer_repo, &self.supplier_repo).await)
     }

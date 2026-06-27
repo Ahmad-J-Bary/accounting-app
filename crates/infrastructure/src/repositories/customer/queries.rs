@@ -15,7 +15,7 @@ pub async fn find_by_id(pool: &SqlitePool, id: &CustomerId) -> Result<Option<Cus
             a.id, 
             CASE WHEN a.code LIKE '123%' THEN SUBSTR(a.code, 4) ELSE a.code END as code,
             a.name_ar as name, '' as phone, '' as address, a.id as account_id,
-            '0' as debit, '0' as credit,             a.opening_balance, a.balance, COALESCE((SELECT code FROM currencies WHERE is_base = 1 LIMIT 1), '') as currency,
+            a.debit as debit, a.credit as credit,             a.opening_balance, CAST(CAST(a.debit AS REAL) - CAST(a.credit AS REAL) AS TEXT) as balance, COALESCE((SELECT code FROM currencies WHERE is_base = 1 LIMIT 1), '') as currency,
             'تلقائي من دليل الحسابات' as notes, a.is_active, a.created_at, a.updated_at
          FROM accounts a
          WHERE a.id = ? AND a.code LIKE '123%' AND a.category = 'Detail'
@@ -39,7 +39,7 @@ pub async fn find_by_account_id(pool: &SqlitePool, account_id: &AccountId) -> Re
             a.id, 
             CASE WHEN a.code LIKE '123%' THEN SUBSTR(a.code, 4) ELSE a.code END as code,
             a.name_ar as name, '' as phone, '' as address, a.id as account_id,
-            '0' as debit, '0' as credit,             a.opening_balance, a.balance, COALESCE((SELECT code FROM currencies WHERE is_base = 1 LIMIT 1), '') as currency,
+            a.debit as debit, a.credit as credit,             a.opening_balance, CAST(CAST(a.debit AS REAL) - CAST(a.credit AS REAL) AS TEXT) as balance, COALESCE((SELECT code FROM currencies WHERE is_base = 1 LIMIT 1), '') as currency,
             'تلقائي من دليل الحسابات' as notes, a.is_active, a.created_at, a.updated_at
          FROM accounts a
          WHERE a.id = ? AND a.code LIKE '123%' AND a.category = 'Detail'
@@ -63,7 +63,7 @@ pub async fn list_all(pool: &SqlitePool) -> Result<Vec<Customer>, AppError> {
             a.id, 
             CASE WHEN a.code LIKE '123%' THEN SUBSTR(a.code, 4) ELSE a.code END as code,
             a.name_ar as name, '' as phone, '' as address, a.id as account_id,
-            '0' as debit, '0' as credit,             a.opening_balance, a.balance, COALESCE((SELECT code FROM currencies WHERE is_base = 1 LIMIT 1), '') as currency,
+            a.debit as debit, a.credit as credit,             a.opening_balance, CAST(CAST(a.debit AS REAL) - CAST(a.credit AS REAL) AS TEXT) as balance, COALESCE((SELECT code FROM currencies WHERE is_base = 1 LIMIT 1), '') as currency,
             'تلقائي من دليل الحسابات' as notes, a.is_active, a.created_at, a.updated_at
          FROM accounts a
          WHERE a.code LIKE '123%' AND a.category = 'Detail'

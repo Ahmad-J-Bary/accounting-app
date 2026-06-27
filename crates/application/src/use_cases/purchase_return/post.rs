@@ -199,7 +199,7 @@ impl PostPurchaseReturnUseCase {
             if let Some(supplier) = self.supplier_repo.find_by_id(&ret.supplier_id).await? {
                 if let Some(supp_acc_id) = supplier.account_id {
                     let mut payment = Payment::new(
-                        format!("PR-{}", ret.return_number),
+                        format!("SRC-{}", ret.return_number),
                         PaymentType::SupplierReceipt,
                         cash_amount,
                         base_currency.code.clone(),

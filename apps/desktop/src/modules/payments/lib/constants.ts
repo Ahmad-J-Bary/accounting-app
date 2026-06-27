@@ -7,5 +7,5 @@ export const PAYMENT_TYPE_LABELS: Record<string, string> = {
   DrawingsVoucher: "سند مسحوبات",
 };
 
-// Types that should NOT appear in manual payment creation dropdown
+// Types hidden from creation dropdown only (visible when editing)
 export const HIDDEN_PAYMENT_TYPES = ["CustomerPayment", "SupplierReceipt"];

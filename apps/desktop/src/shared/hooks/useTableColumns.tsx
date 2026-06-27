@@ -6,7 +6,7 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 export function useTableColumns() {
   const { currencies, baseCurrency, formatAmount, toBase } = useCurrencyContext();
 
-  const getAccountStatusColumn = useCallback(<T extends { balance?: number | string }>(
+  const getAccountStatusColumn = useCallback(<T extends { balance?: number | string; debit?: number | string; credit?: number | string }>(
     sortableHeader: React.ReactNode,
     options?: { isCreditFirst?: boolean }
   ): UnifiedColumn<T> => {
@@ -16,7 +16,11 @@ export function useTableColumns() {
       header: sortableHeader,
       label: "حالة الحساب",
       accessor: (item) => {
-        const bal = Number(item.balance || 0);
+        // Prefer recomputing from debit/credit for accuracy (fallback to stored balance)
+        const effectiveBalance = (item.debit !== undefined && item.credit !== undefined)
+          ? (Number(item.debit || 0) - Number(item.credit || 0)) * (isCreditFirst ? -1 : 1)
+          : Number(item.balance || 0);
+        const bal = effectiveBalance;
         if (bal === 0) return <span className="text-slate-300">—</span>;
         const isPositive = bal > 0;
         const isDebit = isCreditFirst ? !isPositive : isPositive;
@@ -29,7 +33,7 @@ export function useTableColumns() {
     };
   }, []);
 
-  const getBalanceColumns = useCallback(<T extends { balance?: number | string; currency?: string }>(
+  const getBalanceColumns = useCallback(<T extends { balance?: number | string; debit?: number | string; credit?: number | string; currency?: string }>(
     sortableHeader: React.ReactNode
   ): UnifiedColumn<T>[] => {
     return currencies.map(curr => {
@@ -49,14 +53,19 @@ export function useTableColumns() {
     });
   }, [currencies, formatAmount, toBase]);
 
-  const getSummaryColumns = useCallback(<T extends { balance?: number | string; currency?: string }>(
+  const getSummaryColumns = useCallback(<T extends { balance?: number | string; debit?: number | string; credit?: number | string; currency?: string }>(
     enrichedColumns: UnifiedColumn<T>[],
     items: T[],
     countLabel: string,
     options?: { isCreditFirst?: boolean }
   ): SummaryColumn[] => {
     const isCreditFirst = options?.isCreditFirst ?? false;
-    const totalBal = items.reduce((sum, item) => sum + Number(item.balance || 0), 0);
+    const totalBal = items.reduce((sum, item) => {
+      const effectiveBalance = (item.debit !== undefined && item.credit !== undefined)
+        ? (Number(item.debit || 0) - Number(item.credit || 0)) * (isCreditFirst ? -1 : 1)
+        : Number(item.balance || 0);
+      return sum + effectiveBalance;
+    }, 0);
     const isPositive = totalBal > 0;
     const overallIsDebit = isCreditFirst ? !isPositive : isPositive;
     const overall = totalBal !== 0 ? (overallIsDebit ? "مدين" : "دائن") : null;

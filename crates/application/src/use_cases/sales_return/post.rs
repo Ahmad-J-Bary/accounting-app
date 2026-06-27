@@ -210,7 +210,7 @@ impl PostSalesReturnUseCase {
             if let Some(customer) = self.customer_repo.find_by_id(&ret.customer_id).await? {
                 if let Some(cust_acc_id) = customer.account_id {
                     let mut payment = Payment::new(
-                        format!("SR-{}", ret.return_number),
+                        format!("CPY-{}", ret.return_number),
                         PaymentType::CustomerPayment,
                         cash_amount,
                         base_currency.code.clone(),

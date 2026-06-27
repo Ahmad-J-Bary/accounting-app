@@ -201,7 +201,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
               >
                 <SelectTrigger className="h-9 font-bold bg-white border-blue-200 focus:ring-blue-500"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Object.entries(PAYMENT_TYPE_LABELS).filter(([k]) => !HIDDEN_PAYMENT_TYPES.includes(k)).map(([k, v]) => (
+                  {Object.entries(PAYMENT_TYPE_LABELS).filter(([k]) => initialValues ? true : !HIDDEN_PAYMENT_TYPES.includes(k)).map(([k, v]) => (
                     <SelectItem key={k} value={k}>{v}</SelectItem>
                   ))}
                 </SelectContent>
