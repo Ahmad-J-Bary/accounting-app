@@ -39,6 +39,8 @@ export const JOURNAL_TYPE_LABELS: Record<string, string> = {
   MaterialOpeningBalance: "رصيد افتتاحي للمواد / أول المدة",
   SalesReturnJournal: "مرتجع مبيعات",
   PurchaseReturnJournal: "مرتجع مشتريات",
+  DamagedJournal: "خسائر المواد التالفة",
+  AdjustmentJournal: "تسوية جرد",
 };
 
 export const JOURNAL_REPORT_TYPES: JournalReportTypeOption[] = [

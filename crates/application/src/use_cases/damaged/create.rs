@@ -1,19 +1,27 @@
 use crate::dto::damaged_dto::{CreateDamagedItemRequest, DamagedItemDto};
 use crate::errors::AppError;
+use crate::ports::account_repository::AccountRepository;
 use crate::ports::damaged_item_repository::DamagedItemRepository;
+use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
 use chrono::{DateTime, Utc};
+use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::inventory::stock_movement::{MovementType, StockMovement};
 use domain::inventory::DamagedItem;
 use domain::shared::ids::MaterialId;
+use domain::shared::{Currency, MonetaryAmount};
 use rust_decimal::Decimal;
 use std::sync::Arc;
+
+const BASE_CURRENCY: &str = "SAR";
 
 pub struct CreateDamagedItemUseCase {
     repo: Arc<dyn DamagedItemRepository>,
     material_repo: Arc<dyn MaterialRepository>,
     movement_repo: Arc<dyn StockMovementRepository>,
+    account_repo: Arc<dyn AccountRepository>,
+    journal_repo: Arc<dyn JournalEntryRepository>,
 }
 
 impl CreateDamagedItemUseCase {
@@ -21,11 +29,15 @@ impl CreateDamagedItemUseCase {
         repo: Arc<dyn DamagedItemRepository>,
         material_repo: Arc<dyn MaterialRepository>,
         movement_repo: Arc<dyn StockMovementRepository>,
+        account_repo: Arc<dyn AccountRepository>,
+        journal_repo: Arc<dyn JournalEntryRepository>,
     ) -> Self {
         Self {
             repo,
             material_repo,
             movement_repo,
+            account_repo,
+            journal_repo,
         }
     }
 
@@ -82,8 +94,58 @@ impl CreateDamagedItemUseCase {
         .map_err(|e| AppError::Invalid(e.to_string()))?;
         self.movement_repo.save(&movement).await?;
 
+        // Create journal entry: Dr 45 (خسائر المواد التالفة والتسويات), Cr 1241 (بضاعة آخر المدة)
+        create_damaged_journal_entry(
+            &self.account_repo,
+            &self.journal_repo,
+            cost_impact,
+            &reference,
+            damage_date,
+        ).await?;
+
         Ok(to_dto(item, Some(reference)))
     }
+}
+
+pub async fn create_damaged_journal_entry(
+    account_repo: &Arc<dyn AccountRepository>,
+    journal_repo: &Arc<dyn JournalEntryRepository>,
+    cost_impact: Decimal,
+    reference: &str,
+    entry_date: DateTime<Utc>,
+) -> Result<(), AppError> {
+    let loss_account = account_repo.find_by_code("45").await?
+        .ok_or_else(|| AppError::NotFound("حساب خسائر المواد التالفة والتسويات غير موجود: 45".into()))?;
+    let inventory_account = account_repo.find_by_code("1241").await?
+        .ok_or_else(|| AppError::NotFound("حساب بضاعة آخر المدة غير موجود: 1241".into()))?;
+
+    let base_currency = Currency::new(BASE_CURRENCY, BASE_CURRENCY, "ريال", "ر.س", 2, false);
+    let entry_number = journal_repo.get_next_entry_number().await?;
+    let lines = vec![
+        JournalLine::new(
+            loss_account.id,
+            MonetaryAmount::from_base(cost_impact, base_currency.clone()),
+            MonetaryAmount::zero(base_currency.clone()),
+            format!("خسائر مواد تالفة - مرجع {}", reference),
+        ),
+        JournalLine::new(
+            inventory_account.id,
+            MonetaryAmount::zero(base_currency.clone()),
+            MonetaryAmount::from_base(cost_impact, base_currency.clone()),
+            format!("خسائر مواد تالفة - مرجع {}", reference),
+        ),
+    ];
+    let entry = JournalEntry::new(
+        entry_number,
+        JournalType::DamagedJournal,
+        lines,
+        entry_date,
+        format!("خسائر مواد تالفة - مرجع {}", reference),
+        Some(reference.to_string()),
+    )
+    .map_err(|e| AppError::Invalid(e.to_string()))?;
+    journal_repo.save(&entry).await?;
+    Ok(())
 }
 
 pub fn to_dto(d: DamagedItem, reference: Option<String>) -> DamagedItemDto {

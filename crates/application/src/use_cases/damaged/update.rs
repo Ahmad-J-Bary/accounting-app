@@ -1,6 +1,8 @@
 use crate::dto::damaged_dto::{UpdateDamagedItemRequest, DamagedItemDto};
 use crate::errors::AppError;
+use crate::ports::account_repository::AccountRepository;
 use crate::ports::damaged_item_repository::DamagedItemRepository;
+use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
 use chrono::{DateTime, Utc};
@@ -8,12 +10,14 @@ use domain::inventory::stock_movement::{MovementType, StockMovement};
 use domain::shared::ids::{DamagedItemId, MaterialId};
 use rust_decimal::Decimal;
 use std::sync::Arc;
-use crate::use_cases::damaged::create::to_dto;
+use crate::use_cases::damaged::create::{to_dto, create_damaged_journal_entry};
 
 pub struct UpdateDamagedItemUseCase {
     repo: Arc<dyn DamagedItemRepository>,
     material_repo: Arc<dyn MaterialRepository>,
     movement_repo: Arc<dyn StockMovementRepository>,
+    account_repo: Arc<dyn AccountRepository>,
+    journal_repo: Arc<dyn JournalEntryRepository>,
 }
 
 impl UpdateDamagedItemUseCase {
@@ -21,11 +25,15 @@ impl UpdateDamagedItemUseCase {
         repo: Arc<dyn DamagedItemRepository>,
         material_repo: Arc<dyn MaterialRepository>,
         movement_repo: Arc<dyn StockMovementRepository>,
+        account_repo: Arc<dyn AccountRepository>,
+        journal_repo: Arc<dyn JournalEntryRepository>,
     ) -> Self {
         Self {
             repo,
             material_repo,
             movement_repo,
+            account_repo,
+            journal_repo,
         }
     }
 
@@ -72,6 +80,12 @@ impl UpdateDamagedItemUseCase {
             item.reference = Some(format!("{}", count));
         }
         let reference = item.reference.clone().unwrap_or_else(|| format!("DAM-{}", item.id));
+
+        // Delete old journal entry
+        if let Ok(Some(entry)) = self.journal_repo.find_by_source_id(&reference).await {
+            self.journal_repo.delete(&entry.id).await?;
+        }
+
         self.movement_repo.delete_by_reference(&reference, "Damaged").await?;
 
         self.repo.save(&item).await?;
@@ -93,6 +107,15 @@ impl UpdateDamagedItemUseCase {
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
         self.movement_repo.save(&movement).await?;
+
+        // Create new journal entry
+        create_damaged_journal_entry(
+            &self.account_repo,
+            &self.journal_repo,
+            cost_impact,
+            &reference,
+            damage_date,
+        ).await?;
 
         Ok(to_dto(item, Some(reference)))
     }

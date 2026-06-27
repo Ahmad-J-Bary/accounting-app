@@ -1,19 +1,27 @@
 use std::sync::Arc;
-use chrono::DateTime;
+use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
+use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::inventory::StockAdjustment;
 use domain::inventory::stock_movement::{StockMovement, MovementType};
 use domain::shared::ids::MaterialId;
+use domain::shared::{Currency, MonetaryAmount};
+use crate::ports::account_repository::AccountRepository;
+use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::stock_adjustment_repository::StockAdjustmentRepository;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
 use crate::dto::adjustment_dto::{CreateStockAdjustmentRequest, StockAdjustmentDto};
 use crate::errors::AppError;
 
+const BASE_CURRENCY: &str = "SAR";
+
 pub struct CreateStockAdjustmentUseCase {
     adjustment_repo: Arc<dyn StockAdjustmentRepository>,
     material_repo: Arc<dyn MaterialRepository>,
     movement_repo: Arc<dyn StockMovementRepository>,
+    account_repo: Arc<dyn AccountRepository>,
+    journal_repo: Arc<dyn JournalEntryRepository>,
 }
 
 impl CreateStockAdjustmentUseCase {
@@ -21,8 +29,10 @@ impl CreateStockAdjustmentUseCase {
         adjustment_repo: Arc<dyn StockAdjustmentRepository>,
         material_repo: Arc<dyn MaterialRepository>,
         movement_repo: Arc<dyn StockMovementRepository>,
+        account_repo: Arc<dyn AccountRepository>,
+        journal_repo: Arc<dyn JournalEntryRepository>,
     ) -> Self {
-        Self { adjustment_repo, material_repo, movement_repo }
+        Self { adjustment_repo, material_repo, movement_repo, account_repo, journal_repo }
     }
 
     pub async fn execute(&self, req: CreateStockAdjustmentRequest) -> Result<StockAdjustmentDto, AppError> {
@@ -83,16 +93,101 @@ impl CreateStockAdjustmentUseCase {
                 abs_diff,
                 quantity_unit_cost,
                 total_cost_value,
-                reference,
+                reference.clone(),
                 movement_notes,
                 adjustment.adjustment_date,
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
             movement.signed_quantity = Some(difference);
             self.movement_repo.save(&movement).await?;
+
+            // Create journal entry for adjustment
+            create_adjustment_journal_entry(
+                &self.account_repo,
+                &self.journal_repo,
+                unit_cost,
+                difference,
+                &reference,
+                adjustment.adjustment_date,
+            ).await?;
         }
 
         Ok(to_dto(adjustment, material.name))
     }
+}
+
+pub async fn create_adjustment_journal_entry(
+    account_repo: &Arc<dyn AccountRepository>,
+    journal_repo: &Arc<dyn JournalEntryRepository>,
+    total_value: Decimal,
+    difference: Decimal,
+    reference: &str,
+    entry_date: DateTime<Utc>,
+) -> Result<(), AppError> {
+    let base_currency = Currency::new(BASE_CURRENCY, BASE_CURRENCY, "ريال", "ر.س", 2, false);
+    let entry_number = journal_repo.get_next_entry_number().await?;
+
+    if difference > Decimal::ZERO {
+        // Surplus: Dr 1241 (بضاعة آخر المدة), Cr 331 (أرباح تسوية المخزون)
+        let inventory_account = account_repo.find_by_code("1241").await?
+            .ok_or_else(|| AppError::NotFound("حساب بضاعة آخر المدة غير موجود: 1241".into()))?;
+        let gain_account = account_repo.find_by_code("331").await?
+            .ok_or_else(|| AppError::NotFound("حساب أرباح تسوية المخزون غير موجود: 331".into()))?;
+
+        let lines = vec![
+            JournalLine::new(
+                inventory_account.id,
+                MonetaryAmount::from_base(total_value, base_currency.clone()),
+                MonetaryAmount::zero(base_currency.clone()),
+                format!("تسوية جرد (فائض) - مرجع {}", reference),
+            ),
+            JournalLine::new(
+                gain_account.id,
+                MonetaryAmount::zero(base_currency.clone()),
+                MonetaryAmount::from_base(total_value, base_currency.clone()),
+                format!("تسوية جرد (فائض) - مرجع {}", reference),
+            ),
+        ];
+        let entry = JournalEntry::new(
+            entry_number,
+            JournalType::AdjustmentJournal,
+            lines,
+            entry_date,
+            format!("تسوية جرد (فائض) - مرجع {}", reference),
+            Some(reference.to_string()),
+        ).map_err(|e| AppError::Invalid(e.to_string()))?;
+        journal_repo.save(&entry).await?;
+    } else {
+        // Shortage: Dr 45 (خسائر المواد التالفة والتسويات), Cr 1241 (بضاعة آخر المدة)
+        let loss_account = account_repo.find_by_code("45").await?
+            .ok_or_else(|| AppError::NotFound("حساب خسائر المواد التالفة والتسويات غير موجود: 45".into()))?;
+        let inventory_account = account_repo.find_by_code("1241").await?
+            .ok_or_else(|| AppError::NotFound("حساب بضاعة آخر المدة غير موجود: 1241".into()))?;
+
+        let lines = vec![
+            JournalLine::new(
+                loss_account.id,
+                MonetaryAmount::from_base(total_value, base_currency.clone()),
+                MonetaryAmount::zero(base_currency.clone()),
+                format!("تسوية جرد (عجز) - مرجع {}", reference),
+            ),
+            JournalLine::new(
+                inventory_account.id,
+                MonetaryAmount::zero(base_currency.clone()),
+                MonetaryAmount::from_base(total_value, base_currency.clone()),
+                format!("تسوية جرد (عجز) - مرجع {}", reference),
+            ),
+        ];
+        let entry = JournalEntry::new(
+            entry_number,
+            JournalType::AdjustmentJournal,
+            lines,
+            entry_date,
+            format!("تسوية جرد (عجز) - مرجع {}", reference),
+            Some(reference.to_string()),
+        ).map_err(|e| AppError::Invalid(e.to_string()))?;
+        journal_repo.save(&entry).await?;
+    }
+    Ok(())
 }
 
 pub fn to_dto(a: StockAdjustment, material_name: String) -> StockAdjustmentDto {

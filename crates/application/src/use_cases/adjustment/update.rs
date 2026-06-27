@@ -3,17 +3,21 @@ use chrono::DateTime;
 use rust_decimal::Decimal;
 use domain::inventory::stock_movement::{StockMovement, MovementType};
 use domain::shared::ids::{StockAdjustmentId, MaterialId};
+use crate::ports::account_repository::AccountRepository;
+use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::stock_adjustment_repository::StockAdjustmentRepository;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
 use crate::dto::adjustment_dto::{UpdateStockAdjustmentRequest, StockAdjustmentDto};
 use crate::errors::AppError;
-use super::create::to_dto;
+use super::create::{to_dto, create_adjustment_journal_entry};
 
 pub struct UpdateStockAdjustmentUseCase {
     adjustment_repo: Arc<dyn StockAdjustmentRepository>,
     material_repo: Arc<dyn MaterialRepository>,
     movement_repo: Arc<dyn StockMovementRepository>,
+    account_repo: Arc<dyn AccountRepository>,
+    journal_repo: Arc<dyn JournalEntryRepository>,
 }
 
 impl UpdateStockAdjustmentUseCase {
@@ -21,8 +25,10 @@ impl UpdateStockAdjustmentUseCase {
         adjustment_repo: Arc<dyn StockAdjustmentRepository>,
         material_repo: Arc<dyn MaterialRepository>,
         movement_repo: Arc<dyn StockMovementRepository>,
+        account_repo: Arc<dyn AccountRepository>,
+        journal_repo: Arc<dyn JournalEntryRepository>,
     ) -> Self {
-        Self { adjustment_repo, material_repo, movement_repo }
+        Self { adjustment_repo, material_repo, movement_repo, account_repo, journal_repo }
     }
 
     pub async fn execute(&self, req: UpdateStockAdjustmentRequest) -> Result<StockAdjustmentDto, AppError> {
@@ -68,6 +74,12 @@ impl UpdateStockAdjustmentUseCase {
 
         // Delete old stock movement
         let reference = adjustment.reference.clone().unwrap_or_else(|| adjustment.id.to_string());
+
+        // Delete old journal entry
+        if let Ok(Some(entry)) = self.journal_repo.find_by_source_id(&reference).await {
+            self.journal_repo.delete(&entry.id).await?;
+        }
+
         self.movement_repo.delete_by_reference(&reference, "Adjustment").await?;
 
         self.adjustment_repo.save(&adjustment).await?;
@@ -97,12 +109,22 @@ impl UpdateStockAdjustmentUseCase {
                 abs_diff,
                 quantity_unit_cost,
                 unit_cost,
-                reference,
+                reference.clone(),
                 movement_notes,
                 adjustment.adjustment_date,
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
             movement.signed_quantity = Some(difference);
             self.movement_repo.save(&movement).await?;
+
+            // Create journal entry for adjustment
+            create_adjustment_journal_entry(
+                &self.account_repo,
+                &self.journal_repo,
+                unit_cost,
+                difference,
+                &reference,
+                adjustment.adjustment_date,
+            ).await?;
         }
 
         Ok(to_dto(adjustment, material.name))

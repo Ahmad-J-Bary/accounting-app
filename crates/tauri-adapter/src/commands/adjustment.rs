@@ -15,6 +15,8 @@ pub async fn create_stock_adjustment(
         state.adjustment_repo.clone(),
         state.material_repo.clone(),
         state.stock_movement_repo.clone(),
+        state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
     )
     .execute(request).await.map_err(|e| e.to_string())
 }
@@ -47,6 +49,8 @@ pub async fn update_stock_adjustment(
         state.adjustment_repo.clone(),
         state.material_repo.clone(),
         state.stock_movement_repo.clone(),
+        state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
     )
     .execute(request).await.map_err(|e| e.to_string())
 }
@@ -59,6 +63,7 @@ pub async fn delete_stock_adjustment(
     DeleteStockAdjustmentUseCase::new(
         state.adjustment_repo.clone(),
         state.stock_movement_repo.clone(),
+        state.journal_entry_repo.clone(),
     )
     .execute(&id).await.map_err(|e| e.to_string())
 }

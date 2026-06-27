@@ -30,6 +30,8 @@ pub fn row_to_entry(row: JournalEntryRow, lines: Vec<JournalLine>) -> Result<Jou
         "PurchaseCostsJournal" => JournalType::PurchaseCostsJournal,
         "PurchaseReturnJournal" => JournalType::PurchaseReturnJournal,
         "MaterialOpeningBalance" => JournalType::MaterialOpeningBalance,
+        "DamagedJournal" => JournalType::DamagedJournal,
+        "AdjustmentJournal" => JournalType::AdjustmentJournal,
         _ => JournalType::GeneralJournal,
     };
 
