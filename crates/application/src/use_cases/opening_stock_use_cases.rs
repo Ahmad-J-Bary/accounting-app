@@ -89,12 +89,11 @@ impl RecordOpeningStockUseCase {
         // 2. Create Journal Entry if value > 0
         if total_value > Decimal::ZERO {
             let inventory_account =
-                self.account_repo
-                    .find_by_code("1201")
-                    .await?
-                    .ok_or_else(|| {
-                        AppError::NotFound("حساب بضاعة أول المدة (1201) غير موجود".into())
-                    })?;
+                match self.account_repo.find_by_code("1201").await? {
+                    Some(a) => a,
+                    None => self.account_repo.find_by_code("121").await?
+                        .ok_or_else(|| AppError::NotFound("حساب بضاعة أول المدة غير موجود (1201 أو 121)".into()))?,
+                };
 
             let equity_account = self
                 .account_repo

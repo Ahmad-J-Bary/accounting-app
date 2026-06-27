@@ -350,7 +350,7 @@ impl PostInvoiceUseCase {
             InvoiceType::Sales => ("311", ()),
             InvoiceType::Purchase => ("41", ()),
             InvoiceType::PurchaseCosts => ("41", ()),
-            InvoiceType::OpeningBalance => ("33", ()),
+            InvoiceType::OpeningBalance => ("224", ()),
         };
 
         let main_account = self.account_repo.find_by_code(main_account_code).await?.ok_or_else(|| AppError::NotFound(format!("حساب الإيرادات/المصاريف غير موجود: {}", main_account_code)))?;
@@ -481,21 +481,23 @@ impl PostInvoiceUseCase {
                     ));
                 }
             } else if invoice.invoice_type == InvoiceType::OpeningBalance {
-                let inv_account_opt = self.account_repo.find_by_code("124").await?;
-                if let Some(inv_account) = inv_account_opt {
-                    journal_lines.push(JournalLine::new(
-                        inv_account.id,
-                        MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate),
-                        MonetaryAmount::zero(doc_currency.clone()),
-                        format!("إنشاء فاتورة أول المدة رقم {}", invoice.invoice_number)
-                    ));
-                    journal_lines.push(JournalLine::new(
-                        main_account.id,
-                        MonetaryAmount::zero(doc_currency.clone()),
-                        MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate),
-                        format!("إنشاء فاتورة أول المدة رقم {}", invoice.invoice_number)
-                    ));
-                }
+                let inv_account = match self.account_repo.find_by_code("1201").await? {
+                    Some(a) => a,
+                    None => self.account_repo.find_by_code("121").await?
+                        .ok_or_else(|| AppError::NotFound("حساب بضاعة أول المدة غير موجود (1201 أو 121)".into()))?,
+                };
+                journal_lines.push(JournalLine::new(
+                    inv_account.id,
+                    MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate),
+                    MonetaryAmount::zero(doc_currency.clone()),
+                    format!("إنشاء فاتورة أول المدة رقم {}", invoice.invoice_number)
+                ));
+                journal_lines.push(JournalLine::new(
+                    main_account.id,
+                    MonetaryAmount::zero(doc_currency.clone()),
+                    MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate),
+                    format!("إنشاء فاتورة أول المدة رقم {}", invoice.invoice_number)
+                ));
             }
         }
 

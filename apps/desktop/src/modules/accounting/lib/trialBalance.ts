@@ -89,8 +89,8 @@ export function computeTreeTotals(
     if (subTree.length > 0) {
       const sumDebit = subTree.reduce((s, c) => s + c.totDebit, 0);
       const sumCredit = subTree.reduce((s, c) => s + c.totCredit, 0);
-      totDebit = sumDebit;
-      totCredit = sumCredit;
+      totDebit = ownDebit + sumDebit;
+      totCredit = ownCredit + sumCredit;
     }
 
     return { id: acc.id, name: acc.name_ar, depth, totDebit, totCredit, children: subTree };

@@ -1,4 +1,4 @@
--- Migration 036: Ensure Opening Balance Equity Account (3002) exists
+-- Migration 036: Ensure Opening Balance Equity Account (224) exists
 -- This account is essential for balancing opening balances of customers, suppliers, and partners.
 
 INSERT OR IGNORE INTO accounts 
@@ -6,7 +6,7 @@ INSERT OR IGNORE INTO accounts
 VALUES 
 (
     '00000000-0000-0000-0000-000000003002', 
-    '3002', 
+    '224', 
     'رصيد افتتاحي', 
     'Opening Balance Equity', 
     'Equity', 

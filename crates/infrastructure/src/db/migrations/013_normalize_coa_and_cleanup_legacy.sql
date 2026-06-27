@@ -385,7 +385,7 @@ WHERE code IN ('120101', '130101', '210101', '300201', '400101', '500101', '5105
 
 -- Remove deprecated legacy accounts requested by product owner (only if unused)
 DELETE FROM accounts
-WHERE code IN ('1301', '2101', '3002', '4001', '5001', '5105')
+WHERE code IN ('1301', '2101', '224', '4001', '5001', '5105')
   AND id NOT IN (SELECT DISTINCT account_id FROM journal_lines);
 
 -- Optional: normalize obsolete labels when these rows could not be deleted due to references
@@ -400,7 +400,7 @@ WHERE code = '2101' AND id IN (SELECT DISTINCT account_id FROM journal_lines);
 
 UPDATE accounts
 SET name_ar = 'حساب قديم (رصيد افتتاحي)', name_en = 'Legacy Opening Balance Account', notes = COALESCE(notes, '') || ' [LEGACY-KEPT]', updated_at = datetime('now')
-WHERE code = '3002' AND id IN (SELECT DISTINCT account_id FROM journal_lines);
+WHERE code = '224' AND id IN (SELECT DISTINCT account_id FROM journal_lines);
 
 UPDATE accounts
 SET name_ar = 'حساب قديم (إيرادات المبيعات)', name_en = 'Legacy Sales Revenue Account', notes = COALESCE(notes, '') || ' [LEGACY-KEPT]', updated_at = datetime('now')
