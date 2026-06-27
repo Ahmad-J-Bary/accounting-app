@@ -586,7 +586,7 @@ impl DeletePaymentUseCase {
         );
         let base_amount = amount_ma.base_amount;
 
-        let is_return = payment.reference.as_deref().map_or(false, |r| r.starts_with("return:"));
+        let is_return = payment.reference.as_deref().is_some_and(|r| r.starts_with("return:"));
 
         // Reverse entity balances (skip for return-related payments — balance is managed by return flow)
         if !is_return {
@@ -699,7 +699,7 @@ impl DeletePaymentUseCase {
         }
 
         // Find associated journal entry and delete it
-        if payment.reference.as_deref().map_or(false, |r| r.starts_with("return:")) {
+        if payment.reference.as_deref().is_some_and(|r| r.starts_with("return:")) {
             if let Some(ref entry_number) = payment.journal_entry_number {
                 if let Ok(Some(entry)) = self.journal_repo.find_by_number(entry_number).await {
                     let _ = self.journal_repo.delete(&entry.id).await;
@@ -752,7 +752,7 @@ impl UpdatePaymentUseCase {
         let old_customer_id = existing_payment.customer_id;
         let old_supplier_id = existing_payment.supplier_id;
         let old_debit_account_id = existing_payment.debit_account_id;
-        let is_return = existing_payment.reference.as_deref().map_or(false, |r| r.starts_with("return:"));
+        let is_return = existing_payment.reference.as_deref().is_some_and(|r| r.starts_with("return:"));
 
         // 1. Reverse old entity balances
         if !is_return {
@@ -794,7 +794,7 @@ impl UpdatePaymentUseCase {
         }
 
         // 2. Delete associated journal entry if it exists
-        if existing_payment.reference.as_deref().map_or(false, |r| r.starts_with("return:")) {
+        if existing_payment.reference.as_deref().is_some_and(|r| r.starts_with("return:")) {
             if let Some(ref entry_number) = existing_payment.journal_entry_number {
                 if let Ok(Some(entry)) = self.journal_repo.find_by_number(entry_number).await {
                     let _ = self.journal_repo.delete(&entry.id).await;

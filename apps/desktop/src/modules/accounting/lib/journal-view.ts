@@ -187,8 +187,16 @@ export function toJournalRow(
     }
 
     if (entry.journal_type === "MaterialOpeningBalance") {
-      cAcc = "";
-      dAcc = "بضاعة أول المدة";
+      const debits = entry.lines.filter((l) => parseFloat(l.debit || "0") > 0);
+      const credits = entry.lines.filter((l) => parseFloat(l.credit || "0") > 0);
+      if (debits.length > 0) {
+        const d = debits[0];
+        dAcc = d.account_code ? `${d.account_name}` : (d.account_name || "-");
+      }
+      if (credits.length > 0) {
+        const c = credits[0];
+        cAcc = c.account_code ? `${c.account_name}` : (c.account_name || "-");
+      }
     }
   }
 
