@@ -182,9 +182,9 @@ export function toJournalRow(
         parseFloat(cashLine.debit || "0") > 0)
     ) {
       activeSide = parseFloat(cashLine.credit || "0") > 0 ? "credit" : "debit";
-    } else if (entry.journal_type === "DamagedJournal") {
+    } else if ((entry.journal_type as string) === "DamagedJournal") {
       activeSide = "debit";
-    } else if (entry.journal_type === "AdjustmentJournal") {
+    } else if ((entry.journal_type as string) === "AdjustmentJournal") {
       const gainLine = entry.lines.find(l =>
         l.account_code?.startsWith("331") && parseFloat(l.credit || "0") > 0
       );

@@ -15,6 +15,7 @@ export function AboutSettings() {
     error: updateError,
     check: handleCheckUpdate,
     installUpdate,
+    phase,
   } = useUpdateChecker();
 
   return (
@@ -72,7 +73,7 @@ export function AboutSettings() {
             </Button>
           )}
 
-          {isUpdating && <UpdateProgress progress={updateProgress} />}
+          {isUpdating && <UpdateProgress progress={updateProgress} phase={phase} />}
 
           {updateInfo && updateInfo.has_update && !isUpdating && !updateSuccess && (
             <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-3">

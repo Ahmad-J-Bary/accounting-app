@@ -6,7 +6,6 @@ import { cn } from '@shared/lib/utils';
 import { useKeyboardShortcuts } from '@shared/hooks/useKeyboardShortcuts';
 import { useAppearance } from '@shared/hooks/useAppearance';
 import { FloatingExchangeRateWidget } from '@modules/core/components/FloatingExchangeRateWidget';
-import { UpdateBanner } from '@modules/core/components/UpdateBanner';
 import { warehouseService } from '@modules/inventory/api/warehouseService';
 import { VerticalLayout } from './layouts/VerticalLayout';
 import { TopNavLayout } from './layouts/TopNavLayout';
@@ -93,7 +92,6 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   // Render content (tabs + routes) — memoized to preserve reference across shell switches
   const content = useMemo(() => (
     <>
-      <UpdateBanner />
       <main className="flex-1 relative bg-slate-100 overflow-hidden">
         {tabs.map((tab) => (
           <div 

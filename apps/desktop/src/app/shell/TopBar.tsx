@@ -19,6 +19,7 @@ import { GlobalSearch } from '@app/shell/GlobalSearch';
 import { useTabs } from '@app/providers/TabContext';
 import { ICON_MAP } from './sidebarConfig';
 import type { SidebarGroupConfig, SidebarItemConfig } from '@shared/types/sidebar-config';
+import { UpdateBanner } from '@modules/core/components/UpdateBanner';
 
 interface TopBarProps {
   onToggleSidebar?: () => void;
@@ -251,6 +252,8 @@ export function TopBar({
         <DollarSign className="w-5 h-5" />
       </Button>
 
+      <UpdateBanner variant={mergedSlim ? 'slim' : 'stacked'} dark={isHorizontalDark} />
+
       {merged && showSearch && (
         <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)} title="بحث شامل">
           <Search className="w-5 h-5" />
@@ -340,6 +343,8 @@ export function TopBar({
           {rightActions}
         </div>
       </header>
+
+      <UpdateBanner variant="full" />
 
       <NotificationsPanel
         isOpen={notificationsOpen}

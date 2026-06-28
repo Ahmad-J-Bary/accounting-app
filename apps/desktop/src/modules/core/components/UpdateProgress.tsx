@@ -1,6 +1,6 @@
 import { cn } from "@shared/lib/utils";
-import { Check, Loader2, X, Activity } from "lucide-react";
-import type { UpdatePhase } from "../update/types";
+import { Check, Loader2, X, Activity, HardDrive } from "lucide-react";
+import type { UpdatePhase } from "../hooks/useUpdateChecker";
 
 interface Step {
   key: string;
@@ -16,7 +16,6 @@ interface UpdateProgressProps {
   phase: UpdatePhase;
   error?: string | null;
   compact?: boolean;
-  /** بديل مختصر — يحتوي على {downloaded, total} */
   progress?: { downloaded: number; total: number } | null;
 }
 
@@ -24,34 +23,41 @@ function formatMB(bytes: number): string {
   return (bytes / (1024 * 1024)).toFixed(1);
 }
 
-function formatKBps(bytesPerSec: number): string {
+function formatSpeed(bytesPerSec: number): string {
   const kbPerSec = bytesPerSec / 1024;
   if (kbPerSec > 1000) {
-    return (kbPerSec / 1024).toFixed(1) + ' MB/s';
+    return (kbPerSec / 1024).toFixed(1) + ' MB/ث';
   }
-  return kbPerSec.toFixed(0) + ' KB/s';
+  return kbPerSec.toFixed(0) + ' KB/ث';
 }
 
 const steps: Step[] = [
-  { key: 'download', label: 'تحميل', status: 'pending' },
-  { key: 'verify', label: 'التحقق', status: 'pending' },
-  { key: 'prepare', label: 'تحضير', status: 'pending' },
-  { key: 'restart', label: 'إعادة تشغيل', status: 'pending' },
+  { key: 'download', label: 'تحميل التحديث', status: 'pending' },
+  { key: 'verify', label: 'التحقق من التوقيع', status: 'pending' },
+  { key: 'prepare', label: 'تحضير الملفات', status: 'pending' },
+  { key: 'restart', label: 'إعادة التشغيل', status: 'pending' },
 ];
 
 function stepStatus(phase: UpdatePhase, stepIndex: number): Step['status'] {
   if (phase === 'failed') return stepIndex === 0 ? 'failed' : 'pending';
   
-  const order: UpdatePhase[] = ['checking', 'downloading', 'verifying', 'preparing', 'ready'];
-  const currentIdx = order.indexOf(phase);
+  // Mapping phase to steps index
+  // downloading -> step 0 (download)
+  // preparing -> step 2 (prepare) (since verify is fast/internal)
+  // ready -> step 3 (ready to restart)
   
-  if (currentIdx === -1) return 'pending';
-  
-  const stepMap: Record<string, number> = { download: 0, verify: 1, prepare: 2, restart: 3 };
-  
-  if (stepIndex < Object.values(stepMap).findIndex(i => i >= currentIdx - 1)) return 'done';
-  if (stepIndex === Object.values(stepMap).findIndex(i => i >= currentIdx - 1)) return 'active';
-  if (phase === 'ready' && stepIndex === 3) return 'done';
+  if (phase === 'downloading') {
+    return stepIndex === 0 ? 'active' : 'pending';
+  }
+  if (phase === 'preparing') {
+    if (stepIndex < 2) return 'done';
+    if (stepIndex === 2) return 'active';
+    return 'pending';
+  }
+  if (phase === 'ready') {
+    if (stepIndex < 3) return 'done';
+    return 'active';
+  }
   return 'pending';
 }
 
@@ -68,94 +74,137 @@ export function UpdateProgress({
   const pct = progress && progress.total > 0 ? Math.round((progress.downloaded / progress.total) * 100) : percentage;
   const dlBytes = progress?.downloaded ?? downloadedBytes;
   const tlBytes = progress?.total ?? totalBytes;
+
+  if (compact) {
+    // Compact Inline UI for Banner Integration
+    return (
+      <div className="w-full flex flex-col gap-1.5" dir="rtl">
+        {/* Progress Info Row */}
+        <div className="flex items-center justify-between text-[11px] font-medium text-slate-600 dark:text-slate-400">
+          <div className="flex items-center gap-1.5 font-mono">
+            {phase === 'downloading' && (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
+                <span>{formatMB(dlBytes)} / {formatMB(tlBytes)} MB</span>
+                {speed > 0 && <span className="opacity-60">({formatSpeed(speed)})</span>}
+              </>
+            )}
+            {phase === 'preparing' && (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin text-amber-500" />
+                <span>جاري استخراج وتحضير ملفات التثبيت...</span>
+              </>
+            )}
+          </div>
+          <span className="font-bold text-slate-800 dark:text-slate-200">{pct}%</span>
+        </div>
+
+        {/* Mini progress bar */}
+        <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+          <div 
+            className={cn(
+              "h-full rounded-full transition-all duration-300 ease-out",
+              phase === 'preparing' ? "bg-amber-500 animate-pulse w-full" : "bg-blue-600"
+            )} 
+            style={{ width: phase === 'preparing' ? '100%' : `${pct}%` }} 
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Full Expanded UI (for about settings dialog or full panels)
   return (
-    <div className={cn("space-y-4", compact && "space-y-2")} dir="rtl">
-      {/* Steps row */}
-      <div className="flex items-center gap-2">
+    <div className="w-full space-y-5 py-2" dir="rtl">
+      {/* Visual Steps Tracker */}
+      <div className="grid grid-cols-4 gap-2 relative">
         {steps.map((s, i) => {
           const status = stepStatus(phase, i);
           return (
-            <div key={s.key} className="flex-1 flex items-center gap-2">
-              <div className="flex flex-col items-center gap-1">
-                <div className={cn(
-                  "w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300",
-                  status === 'done' && "bg-green-500",
-                  status === 'active' && !compact && "bg-blue-500 ring-2 ring-blue-100",
-                  status === 'active' && compact && "bg-blue-500",
-                  status === 'failed' && "bg-red-500",
-                  status === 'pending' && "bg-slate-200",
-                )}>
-                  {status === 'done' && <Check className="w-4 h-4 text-white" />}
-                  {status === 'active' && <Loader2 className="w-4 h-4 text-white animate-spin" />}
-                  {status === 'failed' && <X className="w-4 h-4 text-white" />}
-                  {status === 'pending' && <div className="w-2 h-2 rounded-full bg-slate-400" />}
-                </div>
-                {!compact && (
-                  <span className={cn(
-                    "text-xs font-medium",
-                    status === 'done' && "text-green-600",
-                    status === 'active' && "text-blue-600",
-                    status === 'failed' && "text-red-600",
-                    status === 'pending' && "text-slate-400",
-                  )}>
-                    {s.label}
-                  </span>
-                )}
+            <div key={s.key} className="flex flex-col items-center text-center relative z-10">
+              {/* Step indicator circle */}
+              <div className={cn(
+                "w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-350 shadow-sm",
+                status === 'done' && "bg-emerald-500 border-emerald-500 text-white",
+                status === 'active' && "bg-blue-600 border-blue-600 text-white ring-4 ring-blue-100 dark:ring-blue-900/30",
+                status === 'failed' && "bg-rose-500 border-rose-500 text-white",
+                status === 'pending' && "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400"
+              )}>
+                {status === 'done' && <Check className="w-4 h-4 stroke-[3]" />}
+                {status === 'active' && <Loader2 className="w-4 h-4 animate-spin" />}
+                {status === 'failed' && <X className="w-4 h-4" />}
+                {status === 'pending' && <span className="text-xs font-bold font-mono">{i + 1}</span>}
               </div>
-              {i < steps.length - 1 && (
-                <div className={cn(
-                  "flex-1 h-px transition-colors duration-300",
-                  status === 'done' ? "bg-green-400" : "bg-slate-200",
-                )} />
-              )}
+              
+              {/* Label */}
+              <span className={cn(
+                "text-xs font-semibold mt-2 transition-colors duration-300",
+                status === 'done' && "text-emerald-600 dark:text-emerald-400",
+                status === 'active' && "text-blue-600 dark:text-blue-400",
+                status === 'failed' && "text-rose-600 dark:text-rose-400",
+                status === 'pending' && "text-slate-400 dark:text-slate-500",
+              )}>
+                {s.label}
+              </span>
             </div>
           );
         })}
+        
+        {/* Connecting line background */}
+        <div className="absolute top-4 left-[12.5%] right-[12.5%] h-0.5 bg-slate-100 dark:bg-slate-800 -z-0" />
       </div>
 
-      {/* Progress bar & details */}
+      {/* Main progress details */}
       {phase === 'downloading' && tlBytes > 0 && (
-        <div className="space-y-2">
-          <div className="w-full bg-blue-100 rounded-full h-2.5 overflow-hidden">
+        <div className="space-y-2 bg-slate-50 dark:bg-slate-900/50 p-4 border border-slate-100 dark:border-slate-800 rounded-xl">
+          <div className="flex justify-between items-center text-xs font-medium text-slate-700 dark:text-slate-300">
+            <span className="flex items-center gap-1">
+              <HardDrive className="w-3.5 h-3.5 text-blue-500" />
+              تم تحميل {formatMB(dlBytes)} ميجابايت من أصل {formatMB(tlBytes)} ميجابايت
+            </span>
+            <span className="font-bold text-blue-600 dark:text-blue-400">{pct}%</span>
+          </div>
+
+          <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
             <div 
-              className="bg-blue-600 h-full rounded-full transition-all duration-300" 
+              className="bg-blue-600 h-full rounded-full transition-all duration-200 ease-out" 
               style={{ width: `${pct}%` }} 
             />
           </div>
-          <div className="flex justify-between text-xs text-slate-600 font-mono" dir="ltr">
-            <div className="flex items-center gap-2">
-              <Activity className="w-3 h-3" />
-              <span>{formatMB(dlBytes)} / {formatMB(tlBytes)} MB</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="font-medium">{speed > 0 ? formatKBps(speed) : ''}</span>
-              <span className="font-semibold text-blue-700">{pct}%</span>
-            </div>
+
+          <div className="flex justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+            <span className="flex items-center gap-1">
+              <Activity className="w-3 h-3 text-slate-400" />
+              سرعة النقل الحالية
+            </span>
+            <span className="font-bold text-slate-700 dark:text-slate-350">{speed > 0 ? formatSpeed(speed) : 'اتصال نشط...'}</span>
           </div>
         </div>
       )}
 
-      {/* Phase-specific messages */}
-      {phase === 'checking' && (
-        <div className="text-center text-sm text-slate-600">جاري التحقق من التحديثات...</div>
-      )}
-      {phase === 'verifying' && (
-        <div className="text-center text-sm text-slate-600">جاري التحقق من سلامة الملفات...</div>
-      )}
+      {/* Phase status messages */}
       {phase === 'preparing' && (
-        <div className="text-center text-sm text-slate-600">جاري تحضير التحديث للتطبيق...</div>
-      )}
-      {phase === 'ready' && (
-        <div className="text-center text-sm text-green-700 font-medium">
-          التحديث جاهز! اضغط على زر "إعادة تشغيل" لتطبيقه
+        <div className="p-4 bg-amber-50/50 dark:bg-amber-950/10 border border-amber-100 dark:border-amber-900/20 rounded-xl text-center text-sm text-amber-700 dark:text-amber-400 flex items-center justify-center gap-2">
+          <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+          <span>جاري استخراج الملفات وتحضير الحزمة لتثبيت التحديث...</span>
         </div>
       )}
 
-      {/* Error state */}
+      {phase === 'ready' && (
+        <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-100 dark:border-emerald-900/20 rounded-xl text-center text-sm text-emerald-700 dark:text-emerald-400 flex items-center justify-center gap-2 font-medium">
+          <Check className="w-4 h-4 text-emerald-500 stroke-[3]" />
+          <span>جاهز لتطبيق التحديث! انقر فوق "إعادة التشغيل" للمتابعة.</span>
+        </div>
+      )}
+
+      {/* Error container */}
       {phase === 'failed' && error && (
-        <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
-          <div className="font-semibold mb-1">حدث خطأ أثناء التحديث</div>
-          <div>{error}</div>
+        <div className="text-sm text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/10 border border-rose-200 dark:border-rose-900/20 rounded-xl px-4 py-3">
+          <div className="font-bold mb-1 flex items-center gap-1.5">
+            <X className="w-4 h-4 text-rose-500" />
+            فشلت عملية التحديث
+          </div>
+          <div className="text-xs opacity-90 leading-relaxed">{error}</div>
         </div>
       )}
     </div>

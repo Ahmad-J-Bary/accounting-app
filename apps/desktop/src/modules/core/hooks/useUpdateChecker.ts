@@ -11,16 +11,43 @@ const STORAGE_KEY = "erp_update_dismissed_version";
 export type UpdatePhase = "idle" | "available" | "downloading" | "preparing" | "ready" | "failed";
 
 export function useUpdateChecker() {
-  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
-  const [phase, setPhase] = useState<UpdatePhase>("idle");
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(() => {
+    if (import.meta.env.DEV) {
+      return {
+        has_update: true,
+        current_version: pkg.version,
+        latest_version: "1.0.0-معاينة",
+        release_name: "إصدار المعاينة التطويري",
+        release_body: "• تحسينات عامة على واجهة التحديث بأسلوب IDE\n• دعم وضع التحديث غير المزعج وتكامل المكونات\n• دعم التنسيق RTL بالكامل للغة العربية\n• إصلاح مشكلة 403 لمستودع GitHub",
+        release_url: "https://github.com/Ahmad-J-Bary/accounting-app",
+        download_url: "https://github.com/Ahmad-J-Bary/accounting-app/releases/download/v0.9.2/Almowakeb_0.9.2_x64-setup.exe",
+      };
+    }
+    return null;
+  });
+
+  const [phase, setPhase] = useState<UpdatePhase>(() => {
+    if (import.meta.env.DEV) {
+      return "available";
+    }
+    return "idle";
+  });
+
   const [error, setError] = useState<string | null>(null);
   const [updateProgress, setUpdateProgress] = useState<{ downloaded: number; total: number } | null>(null);
+  const [loading, setLoading] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const check = useCallback(async () => {
+    if (import.meta.env.DEV) {
+      // Use instant synchronous mock state in dev mode
+      return;
+    }
+    setLoading(true);
     setError(null);
     try {
       const info = await updateService.checkForUpdates(pkg.version);
+
       const dismissed = localStorage.getItem(STORAGE_KEY);
       if (info.has_update && info.latest_version !== dismissed) {
         setUpdateInfo(info);
@@ -33,6 +60,8 @@ export function useUpdateChecker() {
       setError(String(e));
       setUpdateInfo(null);
       setPhase("idle");
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -41,6 +70,33 @@ export function useUpdateChecker() {
     setPhase("downloading");
     setError(null);
     setUpdateProgress(null);
+
+    if (import.meta.env.DEV) {
+      // Simulate download progress in development mode (10MB total)
+      let currentProgress = 0;
+      const totalBytes = 10 * 1024 * 1024;
+      const startTime = Date.now();
+      
+      const interval = setInterval(() => {
+        // Increment between 300KB and 800KB
+        const increment = Math.floor(Math.random() * 500 + 300) * 1024;
+        currentProgress += increment;
+        
+        if (currentProgress >= totalBytes) {
+          clearInterval(interval);
+          setUpdateProgress({ downloaded: totalBytes, total: totalBytes });
+          setPhase("preparing");
+          
+          // Simulate preparing phase for 2 seconds
+          setTimeout(() => {
+            setPhase("ready");
+          }, 2000);
+        } else {
+          setUpdateProgress({ downloaded: currentProgress, total: totalBytes });
+        }
+      }, 250);
+      return;
+    }
 
     let unlistenProgress: () => void = () => {};
     let unlistenReady: () => void = () => {};
@@ -80,6 +136,17 @@ export function useUpdateChecker() {
 
   const restartToUpdate = useCallback(async () => {
     if (phase !== "ready") return;
+
+    if (import.meta.env.DEV) {
+      console.log("Simulating restart to update in DEV mode...");
+      setPhase("idle");
+      // Simulate app restart by reloading the browser window after a brief delay
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+      return;
+    }
+
     try {
       await invoke("apply_update_and_restart");
     } catch (err) {
@@ -120,6 +187,9 @@ export function useUpdateChecker() {
     };
   }, [check]);
 
+  const isUpdating = phase === "downloading" || phase === "preparing";
+  const updateSuccess = phase === "ready";
+
   return { 
     updateInfo, 
     phase, 
@@ -130,6 +200,10 @@ export function useUpdateChecker() {
     restartToUpdate, 
     dismiss, 
     dismissAll, 
-    retry 
+    retry,
+    loading,
+    isUpdating,
+    updateSuccess,
+    installUpdate: startUpdate
   };
 }
