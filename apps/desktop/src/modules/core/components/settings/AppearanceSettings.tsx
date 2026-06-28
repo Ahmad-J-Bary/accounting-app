@@ -67,33 +67,6 @@ export function AppearanceSettings() {
         />
       </SettingsSection>
 
-      {/* ── Update Banner Style ── */}
-      <SettingsSection title="شكل إشعار التحديث" description="اختر طريقة عرض إشعار التحديث في الشريط العلوي">
-        <div className="flex gap-1.5">
-          {([
-            { id: 'stacked' as const, label: 'مكدس', desc: 'زر مع قائمة منسدلة', icon: '⊞' },
-            { id: 'slim' as const, label: 'نحيف', desc: 'أيقونة صغيرة مدمجة', icon: '⊟' },
-            { id: 'full' as const, label: 'كامل', desc: 'شريط كامل أسفل الهيدر', icon: '⊡' },
-          ]).map(({ id, label, desc }) => (
-            <button
-              key={id}
-              onClick={() => updateSettings({ updateBannerStyle: id })}
-              className={cn(
-                "flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all flex-1",
-                settings.updateBannerStyle === id
-                  ? "border-primary bg-primary/5 shadow-sm"
-                  : "border-slate-200 hover:border-slate-300"
-              )}
-            >
-              <span className={cn("font-bold text-[10px]", settings.updateBannerStyle === id ? "text-primary" : "text-slate-700")}>
-                {label}
-              </span>
-              <span className="text-[8px] text-slate-400 leading-tight">{desc}</span>
-            </button>
-          ))}
-        </div>
-      </SettingsSection>
-
       {/* ── Themes ── */}
       <SettingsSection title="السمات" description="اختر السمة البصرية للتطبيق">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1.5">

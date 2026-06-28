@@ -1,7 +1,6 @@
 import React from 'react';
 import { TopBar } from '../TopBar';
 import { TabBar } from '../TabBar';
-import { FullBannerSlot } from '../FullBannerSlot';
 import { useAppearance } from '@shared/hooks/useAppearance';
 import { NavBar } from '../components/NavBar';
 
@@ -29,8 +28,7 @@ export function HorizontalLayout({ children, isExchangeVisible, onToggleExchange
             hoverBg="hover:bg-white/5 hover:text-white"
             horizontalAppearance={settings.horizontalNavbarAppearance}
           />
-        )}
-        <FullBannerSlot />
+          )}
         {showTabs && <TabBar />}
         <div className="flex-1 flex flex-col overflow-auto">
           {children}
@@ -49,7 +47,6 @@ export function HorizontalLayout({ children, isExchangeVisible, onToggleExchange
         merged
         mergedSlim={activeLayout.navbarMode === 'slim'}
       />
-      <FullBannerSlot />
       {showTabs && <TabBar />}
       <div className="flex-1 flex flex-col overflow-auto">
         {children}

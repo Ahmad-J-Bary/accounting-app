@@ -116,8 +116,6 @@ export interface AppearanceSettings {
   sidebarHoverBg: string;
   sidebarFontSize: number;
   sidebarBackground: string;
-  /** Style of the update banner */
-  updateBannerStyle: 'stacked' | 'slim' | 'full';
 }
 
 // ── Defaults ─────────────────────────────────────────────────
@@ -152,7 +150,6 @@ export const DEFAULT_APPEARANCE: AppearanceSettings = {
   sidebarHoverBg: 'hover:bg-white/5 hover:text-white',
   sidebarFontSize: 13,
   sidebarBackground: 'bg-slate-900',
-  updateBannerStyle: 'stacked',
 };
 
 // ── Context Type ─────────────────────────────────────────────

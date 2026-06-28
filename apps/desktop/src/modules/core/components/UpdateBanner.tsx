@@ -8,52 +8,14 @@ import {
   RotateCcw,
   ArrowDownToLine,
   CheckCircle2,
-  ChevronUp,
   ChevronDown,
-  Info,
-  ExternalLink,
-  Zap
 } from "lucide-react";
-import { Button } from "@shared/ui/button";
 import { useUpdateChecker } from "../hooks/useUpdateChecker";
 import { cn } from "@shared/lib/utils";
 import { UpdateProgress } from "./UpdateProgress";
 
 type BannerPhase = 'available' | 'downloading' | 'preparing' | 'ready' | 'failed';
-type BannerVariant = 'full' | 'stacked' | 'slim';
-
-const phaseColors: Record<BannerPhase, { bg: string; border: string; accent: string; text: string }> = {
-  available: {
-    bg: "bg-blue-50/95 dark:bg-blue-950/20",
-    border: "border-blue-150 dark:border-blue-900/40",
-    accent: "bg-blue-500",
-    text: "text-blue-700 dark:text-blue-300"
-  },
-  downloading: {
-    bg: "bg-blue-50/90 dark:bg-blue-950/15",
-    border: "border-blue-150 dark:border-blue-900/30",
-    accent: "bg-blue-500",
-    text: "text-blue-700 dark:text-blue-300"
-  },
-  preparing: {
-    bg: "bg-amber-50/95 dark:bg-amber-950/20",
-    border: "border-amber-200 dark:border-amber-900/40",
-    accent: "bg-amber-500",
-    text: "text-amber-700 dark:text-amber-300"
-  },
-  ready: {
-    bg: "bg-emerald-50/95 dark:bg-emerald-950/20",
-    border: "border-emerald-200 dark:border-emerald-900/40",
-    accent: "bg-emerald-500",
-    text: "text-emerald-700 dark:text-emerald-300"
-  },
-  failed: {
-    bg: "bg-rose-50/95 dark:bg-rose-950/20",
-    border: "border-rose-200 dark:border-rose-900/40",
-    accent: "bg-rose-500",
-    text: "text-rose-700 dark:text-rose-300"
-  }
-};
+type BannerVariant = 'stacked' | 'slim';
 
 interface PhaseMeta {
   label: string;
@@ -114,16 +76,6 @@ const headerIconCls: Record<BannerPhase, string> = {
     "bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400",
 };
 
-function PhaseIcon({ phase }: { phase: BannerPhase }) {
-  switch (phase) {
-    case 'available':    return <ArrowDownToLine className="w-4 h-4" />;
-    case 'downloading':  return <Download className="w-4 h-4 animate-bounce" />;
-    case 'preparing':    return <RefreshCw className="w-4 h-4 animate-spin" />;
-    case 'ready':        return <CheckCircle2 className="w-4 h-4" />;
-    case 'failed':       return <AlertCircle className="w-4 h-4" />;
-  }
-}
-
 interface UpdateBannerProps {
   variant?: BannerVariant;
   dark?: boolean;
@@ -139,7 +91,7 @@ const MOCK_INFO = {
   download_url: "https://github.com/Ahmad-J-Bary/accounting-app/releases/download/v0.9.2/Almowakeb_0.9.2_x64-setup.exe",
 };
 
-export function UpdateBanner({ variant = 'full', dark = false }: UpdateBannerProps) {
+export function UpdateBanner({ variant = 'stacked', dark = false }: UpdateBannerProps) {
   const checker = useUpdateChecker();
 
   const { error, updateProgress, startUpdate, restartToUpdate, retry } = checker;
@@ -149,18 +101,11 @@ export function UpdateBanner({ variant = 'full', dark = false }: UpdateBannerPro
   const updateInfo = checker.updateInfo || MOCK_INFO;
 
   // Shared state hooks
-  const [visible, setVisible] = useState(true);
-  const [showReleaseNotes, setShowReleaseNotes] = useState(false);
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const downloadStartRef = useRef<number | null>(null);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
-
-  useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 50);
-    return () => clearTimeout(t);
-  }, [phase]);
 
   useEffect(() => {
     if (phase === 'downloading') {
@@ -195,10 +140,6 @@ export function UpdateBanner({ variant = 'full', dark = false }: UpdateBannerPro
       ? Math.round((updateProgress.downloaded / updateProgress.total) * 100)
       : 0;
 
-  const handleFullDismiss = useCallback(() => {
-    setVisible(false);
-  }, []);
-
   const handleStackedDismiss = useCallback(() => {
     setOpen(false);
   }, []);
@@ -213,189 +154,6 @@ export function UpdateBanner({ variant = 'full', dark = false }: UpdateBannerPro
     }
     setOpen(v => !v);
   }, [open]);
-
-  // ── Full variant (كامل) ──
-  if (variant === 'full') {
-    const currentColors = phaseColors[phase] || phaseColors.available;
-
-    return (
-      <div
-        className={cn(
-          "w-full transition-all duration-300 ease-in-out border-b backdrop-blur-sm select-none",
-          currentColors.bg,
-          currentColors.border,
-          visible ? "translate-y-0 opacity-100 max-h-[500px]" : "-translate-y-2 opacity-0 max-h-0 overflow-hidden"
-        )}
-        dir="rtl"
-      >
-        <div className="max-w-7xl mx-auto px-4 py-2.5 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            {/* Right section: Icon + Message */}
-            <div className="flex items-start md:items-center gap-3 flex-1 min-w-0">
-              <div className={cn("w-1 h-6 rounded-full shrink-0", currentColors.accent)} />
-              <div
-                className={cn(
-                  "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border",
-                  "bg-white dark:bg-slate-900 border-slate-200/60 dark:border-slate-800",
-                  currentColors.text
-                )}
-              >
-                <PhaseIcon phase={phase} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                  <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    {phase === 'available' && "يتوفر إصدار جديد من تطبيق المواكب"}
-                    {phase === 'downloading' && "جاري تنزيل التحديث الجديد..."}
-                    {phase === 'preparing' && "جاري تحضير ملفات التثبيت..."}
-                    {phase === 'ready' && "اكتمل التنزيل! التحديث جاهز للتثبيت الآن"}
-                    {phase === 'failed' && "فشل التحديث"}
-                  </span>
-                  {phase === 'available' && (
-                    <span
-                      className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono font-medium bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                      dir="ltr"
-                    >
-                      v{updateInfo.current_version} → v{updateInfo.latest_version}
-                    </span>
-                  )}
-                  {phase === 'ready' && (
-                    <span className="text-xs text-slate-500 dark:text-slate-400">
-                      (سيعاد تشغيل التطبيق تلقائياً)
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                  {phase === 'failed' && (error || "حدث خطأ غير متوقع.")}
-                  {phase === 'available' && "نوصي بتنزيل التحديث للحصول على آخر التحسينات والأمان."}
-                  {phase === 'preparing' && "الرجاء عدم إغلاق التطبيق أثناء تحضير الحزمة."}
-                  {phase === 'downloading' && `${pct}% تم تنزيله من إجمالي الحزمة.`}
-                  {phase === 'ready' && "تم التحقق من سلامة الملفات وباتت جاهزة للتطبيق الفوري."}
-                </p>
-              </div>
-            </div>
-
-            {/* Middle section: Integrated inline progress bar */}
-            {isBusy && (
-              <div className="flex-1 max-w-xs md:max-w-md w-full mx-auto md:mx-0">
-                <UpdateProgress
-                  phase={phase}
-                  percentage={pct}
-                  downloadedBytes={updateProgress?.downloaded || 0}
-                  totalBytes={updateProgress?.total || 0}
-                  speed={speed}
-                  error={error}
-                  compact
-                />
-              </div>
-            )}
-
-            {/* Left section: Action buttons */}
-            <div className="flex items-center gap-2 shrink-0 justify-end">
-              {phase === 'available' && (
-                <>
-                  {updateInfo.release_body && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowReleaseNotes(!showReleaseNotes)}
-                      className="h-8 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800"
-                    >
-                      {showReleaseNotes ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />}
-                      ملاحظات الإصدار
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleFullDismiss}
-                    className="h-8 text-xs font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-800"
-                  >
-                    لاحقاً
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={startUpdate}
-                    className="h-8 px-4 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm flex items-center gap-1"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    تحديث الآن
-                  </Button>
-                </>
-              )}
-              {phase === 'ready' && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleFullDismiss}
-                    className="h-8 text-xs font-medium text-slate-500 hover:bg-slate-200/50 dark:hover:bg-slate-800"
-                  >
-                    لاحقاً
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={restartToUpdate}
-                    className="h-8 px-4 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm flex items-center gap-1"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    إعادة التشغيل وتطبيق التحديث
-                  </Button>
-                </>
-              )}
-              {phase === 'failed' && (
-                <>
-                  <button
-                    onClick={handleFullDismiss}
-                    className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-350 hover:bg-slate-200/50 dark:hover:bg-slate-800"
-                    title="تجاهل"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                  <Button
-                    size="sm"
-                    onClick={retry}
-                    className="h-8 px-4 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-sm flex items-center gap-1"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    إعادة المحاولة
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Expandable Release Notes Area */}
-          {phase === 'available' && updateInfo.release_body && showReleaseNotes && (
-            <div className="mt-2.5 pt-2.5 border-t border-slate-200/60 dark:border-slate-800/80 animate-in slide-in-from-top-1 duration-200">
-              <div className="p-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/50 rounded-lg text-slate-700 dark:text-slate-300 max-h-40 overflow-y-auto">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                    <Info className="w-3.5 h-3.5 text-blue-500" />
-                    تفاصيل التحديث لـ {updateInfo.release_name || `v${updateInfo.latest_version}`}
-                  </h4>
-                  {updateInfo.release_url && (
-                    <a
-                      href={updateInfo.release_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5 font-semibold"
-                    >
-                      عرض على GitHub
-                      <ExternalLink className="w-2.5 h-2.5" />
-                    </a>
-                  )}
-                </div>
-                <div className="text-xs whitespace-pre-wrap leading-relaxed font-sans opacity-95">
-                  {updateInfo.release_body}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
 
   // ── Stacked / Slim variant (مكدس / نحيف) ──
   const meta = PHASE_META[phase] ?? PHASE_META.available;
@@ -498,29 +256,6 @@ export function UpdateBanner({ variant = 'full', dark = false }: UpdateBannerPro
               {phase === "ready" && "اكتمل التنزيل. انقر على التثبيت لإعادة التشغيل وتطبيق التحديث."}
               {phase === "failed" && (error || "حدث خطأ غير متوقع أثناء معالجة ملفات التحديث.")}
             </p>
-
-            {/* Release notes */}
-            {phase === "available" && updateInfo.release_body && (
-              <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 p-3 max-h-28 overflow-y-auto">
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <Zap className="w-3 h-3 text-blue-500 shrink-0" />
-                  <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">ملاحظات الإصدار</span>
-                  {updateInfo.release_url && (
-                    <a
-                      href={updateInfo.release_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mr-auto text-[10px] text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-0.5 font-semibold hover:underline"
-                    >
-                      GitHub <ExternalLink className="w-2.5 h-2.5" />
-                    </a>
-                  )}
-                </div>
-                <div className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-wrap leading-relaxed">
-                  {updateInfo.release_body}
-                </div>
-              </div>
-            )}
 
             {/* Progress bar */}
             {isBusy && (

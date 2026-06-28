@@ -252,10 +252,6 @@ export function TopBar({
         <DollarSign className="w-5 h-5" />
       </Button>
 
-      {appearance.updateBannerStyle !== 'full' && (
-        <UpdateBanner variant={appearance.updateBannerStyle === 'slim' ? 'slim' : 'stacked'} dark={isHorizontalDark} />
-      )}
-
       {merged && showSearch && (
         <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)} title="بحث شامل">
           <Search className="w-5 h-5" />
@@ -317,8 +313,10 @@ export function TopBar({
           <div className="min-w-0 hidden sm:block">
             <div className={cn("text-sm font-bold leading-tight truncate", isHorizontalDark ? "text-slate-200" : "text-slate-800")}>المُواكِب</div>
           </div>
+          {merged && <UpdateBanner variant="slim" dark={isHorizontalDark} />}
         </div>
 
+        {!merged && <UpdateBanner variant="stacked" dark={isHorizontalDark} />}
         {merged ? (
           /* مدمج: عناصر التنقل في المنتصف */
           <div className="flex items-center gap-0.5 overflow-visible">
