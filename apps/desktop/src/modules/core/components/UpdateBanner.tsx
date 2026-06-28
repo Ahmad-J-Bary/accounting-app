@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   X,
   Download,
@@ -151,8 +152,10 @@ export function UpdateBanner({ variant = 'full', dark = false }: UpdateBannerPro
   const [visible, setVisible] = useState(true);
   const [showReleaseNotes, setShowReleaseNotes] = useState(false);
   const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const downloadStartRef = useRef<number | null>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 50);
@@ -170,8 +173,15 @@ export function UpdateBanner({ variant = 'full', dark = false }: UpdateBannerPro
     const handleClick = (e: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) setOpen(false);
     };
+    const handleScroll = () => setOpen(false);
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("scroll", handleScroll, true);
+    window.addEventListener("resize", handleScroll);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("resize", handleScroll);
+    };
   }, [open]);
 
   const isBusy = phase === 'downloading' || phase === 'preparing';
@@ -193,6 +203,17 @@ export function UpdateBanner({ variant = 'full', dark = false }: UpdateBannerPro
     setOpen(false);
   }, []);
 
+  const handleToggle = useCallback(() => {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        top: `${rect.bottom + 6}px`,
+        right: `${window.innerWidth - rect.right}px`,
+      });
+    }
+    setOpen(v => !v);
+  }, [open]);
+
   // ── Full variant (كامل) ──
   if (variant === 'full') {
     const currentColors = phaseColors[phase] || phaseColors.available;
@@ -200,7 +221,7 @@ export function UpdateBanner({ variant = 'full', dark = false }: UpdateBannerPro
     return (
       <div
         className={cn(
-          "w-full transition-all duration-300 ease-in-out border-b backdrop-blur-sm z-40 select-none",
+          "w-full transition-all duration-300 ease-in-out border-b backdrop-blur-sm select-none",
           currentColors.bg,
           currentColors.border,
           visible ? "translate-y-0 opacity-100 max-h-[500px]" : "-translate-y-2 opacity-0 max-h-0 overflow-hidden"
@@ -393,7 +414,7 @@ export function UpdateBanner({ variant = 'full', dark = false }: UpdateBannerPro
   return (
     <div className="relative" ref={panelRef} dir="rtl">
       {/* Trigger button */}
-      <button className={buttonCls} onClick={() => setOpen((v) => !v)} title={meta.label}>
+      <button ref={buttonRef} className={buttonCls} onClick={handleToggle} title={meta.label}>
         <span className="relative flex items-center justify-center">
           <span className={cn("absolute w-4 h-4 rounded-full opacity-25 animate-ping", meta.dotColor)} />
           <Icon
@@ -430,10 +451,11 @@ export function UpdateBanner({ variant = 'full', dark = false }: UpdateBannerPro
       </button>
 
       {/* Dropdown panel */}
-      {open && (
+      {open && createPortal(
         <div
+          style={dropdownStyle}
           className={cn(
-            "absolute top-full left-0 mt-2 z-50 w-80 rounded-xl shadow-2xl border overflow-hidden",
+            "fixed z-[9999] w-80 rounded-xl shadow-2xl border overflow-hidden",
             "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700/60",
             "animate-in slide-in-from-top-2 fade-in duration-150"
           )}
@@ -579,7 +601,7 @@ export function UpdateBanner({ variant = 'full', dark = false }: UpdateBannerPro
             </div>
           )}
         </div>
-      )}
+      , document.body)}
     </div>
   );
 }

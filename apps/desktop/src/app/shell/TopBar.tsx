@@ -252,7 +252,9 @@ export function TopBar({
         <DollarSign className="w-5 h-5" />
       </Button>
 
-      <UpdateBanner variant={mergedSlim ? 'slim' : 'stacked'} dark={isHorizontalDark} />
+      {appearance.updateBannerStyle !== 'full' && (
+        <UpdateBanner variant={appearance.updateBannerStyle === 'slim' ? 'slim' : 'stacked'} dark={isHorizontalDark} />
+      )}
 
       {merged && showSearch && (
         <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)} title="بحث شامل">
@@ -343,8 +345,6 @@ export function TopBar({
           {rightActions}
         </div>
       </header>
-
-      <UpdateBanner variant="full" />
 
       <NotificationsPanel
         isOpen={notificationsOpen}

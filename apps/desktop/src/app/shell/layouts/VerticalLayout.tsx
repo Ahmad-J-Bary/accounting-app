@@ -2,6 +2,7 @@ import React from 'react';
 import { Sidebar } from '../Sidebar';
 import { TopBar } from '../TopBar';
 import { TabBar } from '../TabBar';
+import { FullBannerSlot } from '../FullBannerSlot';
 import { useAppearance } from '@shared/hooks/useAppearance';
 import { cn } from '@shared/lib/utils';
 
@@ -22,6 +23,7 @@ export function VerticalLayout({ children, sidebarOpen, onToggleSidebar, isExcha
   return (
     <div className="flex flex-col h-screen overflow-hidden" dir="rtl" data-density={settings.density}>
       {showTopBar && <TopBar onToggleSidebar={onToggleSidebar} sidebarOpen={sidebarOpen} isExchangeVisible={isExchangeVisible} onToggleExchange={onToggleExchange} />}
+      <FullBannerSlot />
       <div className="flex flex-1 overflow-hidden">
         {showSidebar && (
           <Sidebar collapsed={!sidebarOpen} onClose={() => sidebarOpen && onToggleSidebar()} />

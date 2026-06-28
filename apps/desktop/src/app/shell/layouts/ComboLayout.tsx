@@ -2,6 +2,7 @@ import React from 'react';
 import { Sidebar } from '../Sidebar';
 import { TopBar } from '../TopBar';
 import { TabBar } from '../TabBar';
+import { FullBannerSlot } from '../FullBannerSlot';
 import { useAppearance } from '@shared/hooks/useAppearance';
 import { NavBar } from '../components/NavBar';
 
@@ -43,6 +44,7 @@ export function ComboLayout({ children, sidebarOpen, onToggleSidebar, isExchange
           horizontalAppearance={settings.horizontalNavbarAppearance}
         />
       )}
+      <FullBannerSlot />
       <div className="flex flex-1 overflow-hidden">
         {showSidebar && (
           <Sidebar collapsed={!sidebarOpen} onClose={() => sidebarOpen && onToggleSidebar()} />
