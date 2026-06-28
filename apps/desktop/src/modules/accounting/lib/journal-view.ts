@@ -182,6 +182,19 @@ export function toJournalRow(
         parseFloat(cashLine.debit || "0") > 0)
     ) {
       activeSide = parseFloat(cashLine.credit || "0") > 0 ? "credit" : "debit";
+    } else if (entry.journal_type === "DamagedJournal") {
+      activeSide = "debit";
+    } else if (entry.journal_type === "AdjustmentJournal") {
+      const gainLine = entry.lines.find(l =>
+        l.account_code?.startsWith("331") && parseFloat(l.credit || "0") > 0
+      );
+      activeSide = gainLine ? "credit" : "debit";
+    } else if (
+      entry.journal_type === "AccountOpeningBalance" ||
+      entry.journal_type === "MaterialOpeningBalance"
+    ) {
+      const oeLine = entry.lines.find(l => l.account_code === "224");
+      activeSide = oeLine && parseFloat(oeLine.credit || "0") > 0 ? "credit" : "debit";
     } else if (cOriginal > 0 || cBase > 0) {
       activeSide = dOriginal > 0 || dBase > 0 ? "debit" : "credit";
     }

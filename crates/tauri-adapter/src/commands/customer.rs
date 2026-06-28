@@ -46,7 +46,11 @@ pub async fn update_customer(
     state: State<'_, AppState>,
     request: UpdateCustomerRequest,
 ) -> Result<CustomerDto, String> {
-    UpdateCustomerUseCase::new(state.customer_repo.clone(), state.account_repo.clone())
+    UpdateCustomerUseCase::new(
+        state.customer_repo.clone(),
+        state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
+    )
         .execute(request)
         .await
         .map_err(|e| e.to_string())
