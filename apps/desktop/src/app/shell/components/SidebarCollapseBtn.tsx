@@ -1,4 +1,4 @@
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ArrowLeftToLine, ArrowRightFromLine } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { cn } from '@shared/lib/utils';
 import { useNavSidebarSettings } from '@shared/hooks';
@@ -33,10 +33,10 @@ export function SidebarCollapseBtn({ collapsed, onToggle, verticalAppearance }: 
         title={collapsed ? "توسيع الشريط" : "طي الشريط"}
       >
         {collapsed ? (
-          <PanelLeftOpen className="w-4 h-4" />
+          <ArrowLeftToLine className="w-4 h-4" />
         ) : (
           <>
-            <PanelLeftClose className="w-4 h-4" />
+            <ArrowRightFromLine className="w-4 h-4" />
             <span>طي</span>
           </>
         )}

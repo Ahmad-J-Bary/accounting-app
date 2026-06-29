@@ -8,6 +8,8 @@ interface OperationalTableTemplateProps {
   title: string;
   /** Main list actions (New, Import, etc) */
   toolbar?: ReactNode;
+  /** Filter bar rendered between title/actions and the table */
+  filterBar?: ReactNode;
   /** Stats cards or charts shown at the top (legacy, avoid using) */
   headerWidgets?: ReactNode;
   /** The main data table or list */
@@ -29,6 +31,7 @@ interface OperationalTableTemplateProps {
 export function OperationalTableTemplate({
   title,
   toolbar,
+  filterBar,
   headerWidgets,
   tableContent,
   sidePanel,
@@ -68,6 +71,13 @@ export function OperationalTableTemplate({
           {headerWidgets && (
             <div className="shrink-0">
               {headerWidgets}
+            </div>
+          )}
+
+          {/* Filter Bar */}
+          {filterBar && (
+            <div className="shrink-0">
+              {filterBar}
             </div>
           )}
 
