@@ -16,11 +16,12 @@ interface JournalTableProps {
   search: string;
   onSearchChange: (val: string) => void;
   filters?: JournalFilters;
+  filterBar?: React.ReactNode;
 }
 
 type SortField = "entry_number" | "entry_date" | "journal_type" | "credit_account" | "debit_account";
 
-export function JournalTable({ entries, loading, search, onSearchChange, filters }: JournalTableProps) {
+export function JournalTable({ entries, loading, search, onSearchChange, filters, filterBar }: JournalTableProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
   const { isBaseCurrency } = useBaseCurrencyColumns();
 
@@ -257,6 +258,7 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
       onColumnsReset={resetToDefault}
       columnsModified={isModified}
       showToolbar={true}
+      filterBar={filterBar}
     >
       <UnifiedTable
         data={sortedData}

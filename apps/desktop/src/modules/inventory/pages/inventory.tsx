@@ -214,11 +214,6 @@ export default function Inventory() {
 
   const movementsLoading_ = movementsLoading || movementsRefetching;
 
-  const stats = useMemo(() => [
-    { label: "إجمالي الحركات", value: movements.length, icon: History, color: "text-blue-600" },
-    { label: "المستودعات النشطة", value: warehouses.filter(w => w.is_active).length, icon: Warehouse, color: "text-slate-900" },
-  ], [movements, warehouses]);
-
   const stockByWarehouse = useMemo(() => buildStockByWarehouse(movements), [movements]);
 
   const handleRowClick = useCallback((m: StockMovement) => {
@@ -396,7 +391,6 @@ export default function Inventory() {
   return (
     <OperationalTableTemplate
       title="إدارة المخزون"
-      stats={stats}
       toolbar={
         <div className="flex items-center gap-2">
           {activeTab === 'transfers' && (
@@ -412,28 +406,6 @@ export default function Inventory() {
           <Button size="sm" variant="outline" onClick={refreshAll} className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50">
             <RefreshCw className="w-4 h-4 ml-2 shrink-0" />تحديث
           </Button>
-        </div>
-      }
-      filterBar={
-        <div className="flex items-center gap-4">
-          {activeTab === 'movements' && (
-            <>
-              <div className="flex items-center gap-2">
-                <Warehouse className="w-4 h-4 text-slate-400 shrink-0" />
-                <WarehouseSelector
-                  warehouses={warehouses}
-                  value={selectedWarehouseId || 'all'}
-                  onValueChange={(v) => setSelectedWarehouseId(v === 'all' ? null : v)}
-                  includeAll={!isSingleWarehouse}
-                  placeholder={isSingleWarehouse ? (warehouses[0]?.name || 'مستودع الشركة') : 'جميع المستودعات'}
-                />
-              </div>
-              <MovementTypeFilter value={selectedTypes} onChange={setSelectedTypes} />
-            </>
-          )}
-          {activeTab === 'warehouses' && (
-            <span className="text-xs text-slate-400 font-medium">إدارة وعرض المستودعات المتاحة</span>
-          )}
         </div>
       }
       tableContent={
@@ -459,6 +431,28 @@ export default function Inventory() {
               warehouses={warehouses}
               search={search}
               onSearchChange={setSearch}
+              filterBar={
+                <div className="flex items-center gap-4">
+                  {activeTab === 'movements' && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Warehouse className="w-4 h-4 text-slate-400 shrink-0" />
+                        <WarehouseSelector
+                          warehouses={warehouses}
+                          value={selectedWarehouseId || 'all'}
+                          onValueChange={(v) => setSelectedWarehouseId(v === 'all' ? null : v)}
+                          includeAll={!isSingleWarehouse}
+                          placeholder={isSingleWarehouse ? (warehouses[0]?.name || 'مستودع الشركة') : 'جميع المستودعات'}
+                        />
+                      </div>
+                      <MovementTypeFilter value={selectedTypes} onChange={setSelectedTypes} />
+                    </>
+                  )}
+                  {activeTab === 'warehouses' && (
+                    <span className="text-xs text-slate-400 font-medium">إدارة وعرض المستودعات المتاحة</span>
+                  )}
+                </div>
+              }
               selectedId={selectedMovementId}
               onRowClick={handleRowClick}
               onRowDoubleClick={handleRowDoubleClick}

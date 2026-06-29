@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Input } from "@shared/ui/input";
-import { Search, FileText, Banknote, Filter } from "lucide-react";
+import { Search, Filter } from "lucide-react";
 import { journalEntryService, type JournalFilters } from '@modules/accounting/api/journalEntryService';
 import type { JournalEntryDto, JournalType } from "@erp/shared-types";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
@@ -81,36 +81,12 @@ export default function Journal() {
     return entries;
   }, [entries, filters.journal_type]);
 
-  const stats = useMemo(() => [
-    { label: "إجمالي القيود", value: displayEntries.length, icon: FileText, color: "text-slate-900" },
-    { label: "إجمالي الحركات", value: displayEntries.reduce((s, e) => s + (e.lines?.length || 0), 0), icon: Banknote, color: "text-indigo-600" },
-  ], [displayEntries]);
-
   const journalTitle = JOURNAL_TYPES.find(t => t.value === (filters.journal_type || 'GeneralJournal'))?.label || 'القيود اليومية';
 
   return (
     <OperationalTableTemplate
       title={journalTitle}
-      stats={stats}
       toolbar={<></>}
-      filterBar={
-        <div className="flex flex-wrap items-center gap-2">
-          <Select 
-            value={filters.journal_type} 
-            onValueChange={(val) => setFilters(f => ({ ...f, journal_type: val as JournalType }))}
-          >
-            <SelectTrigger className="w-[180px] h-10 bg-white font-bold shadow-sm border-slate-200">
-              <Filter className="w-4 h-4 ml-2 text-slate-400" />
-              <SelectValue placeholder="نوع اليومية" />
-            </SelectTrigger>
-            <SelectContent>
-              {JOURNAL_TYPES.map(t => (
-                <SelectItem key={t.value} value={t.value} className="font-bold">{t.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      }
       tableContent={
         <JournalTable
           key={`journal-table-${filters.journal_type || 'GeneralJournal'}`}
@@ -119,6 +95,24 @@ export default function Journal() {
           search={search}
           onSearchChange={setSearch}
           filters={filters as JournalFilters}
+          filterBar={
+            <div className="flex flex-wrap items-center gap-2">
+              <Select 
+                value={filters.journal_type} 
+                onValueChange={(val) => setFilters(f => ({ ...f, journal_type: val as JournalType }))}
+              >
+                <SelectTrigger className="w-[180px] h-10 bg-white font-bold shadow-sm border-slate-200">
+                  <Filter className="w-4 h-4 ml-2 text-slate-400" />
+                  <SelectValue placeholder="نوع اليومية" />
+                </SelectTrigger>
+                <SelectContent>
+                  {JOURNAL_TYPES.map(t => (
+                    <SelectItem key={t.value} value={t.value} className="font-bold">{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          }
         />
       }
     >

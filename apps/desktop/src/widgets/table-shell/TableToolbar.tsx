@@ -43,6 +43,7 @@ interface TableToolbarProps {
   columnsModified?: boolean;
   actions?: React.ReactNode;
   showViewOptions?: boolean;
+  filterBar?: React.ReactNode;
 }
 
 export const TableToolbar: React.FC<TableToolbarProps> = ({
@@ -56,6 +57,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
   columnsModified = false,
   actions,
   showViewOptions = true,
+  filterBar,
 }) => {
   const { settings, updateSetting, resetSettings } = useTableSettings();
   const visibleCount = columns.filter((c) => c.visible).length;
@@ -73,6 +75,11 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
             placeholder={searchPlaceholder}
             className="h-8 pr-7 pl-3 text-sm bg-white border-slate-200 focus:bg-white transition-all w-full"
           />
+        </div>
+      )}
+      {filterBar && (
+        <div className="flex items-center gap-2">
+          {filterBar}
         </div>
       )}
       <div className="flex items-center gap-1 mr-auto">

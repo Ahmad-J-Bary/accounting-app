@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { Button } from "@shared/ui/button";
-import { Plus, User, Users, DollarSign, Wallet, History, ShoppingBag, Printer, Receipt, Download, Undo2 } from "lucide-react";
+import { Plus, User, DollarSign, History, ShoppingBag, Printer, Receipt, Download, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { customerService } from '@modules/partners/api/customerService';
@@ -122,18 +122,9 @@ export default function Customers() {
     }
   }, [selectedId, fetchDetails, setIsFormOpen]);
 
-  const stats = useMemo(() => {
-    const totalBalance = customers.reduce((acc, c) => acc + (parseFloat(c.balance || "0")), 0);
-    return [
-      { label: "إجمالي العملاء", value: customers.length, icon: Users, color: "text-slate-900" },
-      { label: "إجمالي الأرصدة", value: formatMonetaryAmount(totalBalance, "base"), icon: Wallet, color: "text-blue-600" },
-    ];
-  }, [customers, formatMonetaryAmount]);
-
   return (
     <OperationalTableTemplate
       title="إدارة العملاء"
-      stats={stats}
       toolbar={
         <div className="flex items-center gap-2">
           <Button 

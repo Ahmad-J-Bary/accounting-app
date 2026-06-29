@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@shared/ui/button";
-import { Plus, Truck, Wallet, History, ShoppingBag, Printer, DollarSign, Download, Undo2 } from "lucide-react";
+import { Plus, History, ShoppingBag, Printer, DollarSign, Download, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supplierService } from '@modules/partners/api/supplierService';
@@ -122,18 +122,9 @@ export default function Suppliers() {
     }
   }, [selectedId, fetchDetails, setIsFormOpen]);
 
-  const stats = useMemo(() => {
-    const totalBalance = suppliers.reduce((acc, s) => acc + (parseFloat(s.balance || "0")), 0);
-    return [
-      { label: "إجمالي الموردين", value: suppliers.length, icon: Truck, color: "text-slate-900" },
-      { label: "مستحقات للموردين", value: formatMonetaryAmount(totalBalance, "base"), icon: Wallet, color: "text-blue-600" }
-    ];
-  }, [suppliers, formatMonetaryAmount]);
-
   return (
     <OperationalTableTemplate
       title="إدارة الموردين"
-      stats={stats}
       toolbar={
         <div className="flex items-center gap-2">
           <Button 

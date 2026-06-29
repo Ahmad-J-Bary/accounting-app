@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Button } from "@shared/ui/button";
-import { Plus, Eye, Printer, Settings2, Trash2, RefreshCw, History } from "lucide-react";
+import { Plus, Eye, Printer, Settings2, Trash2, RefreshCw } from "lucide-react";
 import type { SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { ReturnsTable } from "./ReturnsTable";
@@ -76,13 +76,6 @@ export function ReturnsList({
   const totalAmount = useMemo(() =>
     filtered.reduce((sum, ret) => sum + parseFloat(ret.total_amount || "0"), 0), [filtered]);
 
-  const stats = useMemo(() => {
-    return [
-      { label: "عدد المرتجعات", value: filtered.length, icon: History, color: "text-slate-900" },
-      { label: statsLabel, value: formatMonetaryAmount(totalAmount.toString(), "base"), icon: Plus, color: statsColor },
-    ];
-  }, [filtered, totalAmount, formatMonetaryAmount, statsLabel, statsColor]);
-
   const handleDeleteSelected = async () => {
     if (!selectedId) return;
     if (!window.confirm("هل أنت متأكد من حذف هذا المرتجع؟")) return;
@@ -93,7 +86,6 @@ export function ReturnsList({
   return (
     <OperationalTableTemplate
       title={title}
-      stats={stats}
       toolbar={
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={onCreate} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 h-9 px-4 font-bold">

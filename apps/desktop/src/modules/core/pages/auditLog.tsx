@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Activity, Shield } from "lucide-react";
+
 import { auditService } from '@modules/core/api/auditService';
 import type { AuditLog } from "@erp/shared-types";
 import { AuditTable } from '@modules/core/components/AuditTable';
@@ -23,10 +23,6 @@ export default function AuditLogPage() {
   return (
     <OperationalTableTemplate
       title="سجل مراقبة النظام"
-      stats={[
-        { label: "إجمالي العمليات", value: logs.length, icon: Activity, color: "text-blue-600" },
-        { label: "حالة الأمان", value: "نشط", icon: Shield, color: "text-emerald-600" }
-      ]}
       tableContent={
         <AuditTable
           data={logs}

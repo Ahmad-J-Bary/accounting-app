@@ -56,6 +56,7 @@ interface InventoryMovementsTableProps {
   warehouses: WarehouseDto[];
   search: string;
   onSearchChange: (val: string) => void;
+  filterBar?: React.ReactNode;
   selectedId?: string | null;
   onRowClick?: (movement: StockMovement) => void;
   onRowDoubleClick?: (movement: StockMovement) => void;
@@ -67,6 +68,7 @@ type SortField = "date" | "type" | "product_name" | "quantity" | "reference" | "
 
 export function InventoryMovementsTable({
   movements, loading, warehouses, search, onSearchChange,
+  filterBar,
   selectedId, onRowClick, onRowDoubleClick, transferRefs, className,
 }: InventoryMovementsTableProps) {
   const { formatAmount, currencies } = useCurrencyContext();
@@ -385,6 +387,7 @@ export function InventoryMovementsTable({
       search={search}
       onSearchChange={onSearchChange}
       searchPlaceholder="بحث بالصنف أو المرجع..."
+      filterBar={filterBar}
       columns={toolbarColumns}
       onColumnToggle={toggleColumn}
       onColumnsReset={resetToDefault}

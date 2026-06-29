@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@shared/ui/button";
-import { Plus, History, Download, Receipt, Wallet, ClipboardList, DollarSign } from "lucide-react";
+import { Plus, History, Download, Receipt, DollarSign } from "lucide-react";
 
 import { accountingService } from '@modules/accounting/api/accountingService';
 import { SYSTEM_ACCOUNT_IDS, type AccountDto, type SaveAccountCommand } from "@erp/shared-types";
@@ -127,20 +127,11 @@ export default function Expenses() {
     await handleSave(cmd);
   }, [expensesParent, handleSave, baseCurrency, rateMap]);
 
-  const stats = useMemo(() => {
-    const totalDebit = expenses.reduce((acc, e) => acc + parseFloat(e.debit || "0"), 0);
-    return [
-      { label: "إجمالي بنود المصاريف", value: expenses.length, icon: ClipboardList, color: "text-slate-900" },
-      { label: "إجمالي المصروفات", value: formatMonetaryAmount(totalDebit, "base"), icon: Wallet, color: "text-red-600" },
-    ];
-  }, [expenses, formatMonetaryAmount]);
-
   const isLoading = loading || refreshing;
 
   return (
     <OperationalTableTemplate
       title="بنود المصاريف"
-      stats={stats}
       toolbar={
         <div className="flex items-center gap-2">
           <Button

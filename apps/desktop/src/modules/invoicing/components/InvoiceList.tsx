@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Button } from "@shared/ui/button";
-import { Plus, Eye, Printer, ShoppingCart, Settings2, Banknote, History, Trash2, RefreshCw } from "lucide-react";
+import { Plus, Eye, Printer, Settings2, Trash2, RefreshCw } from "lucide-react";
 import { InvoiceDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { InvoiceTable } from "./InvoiceTable";
@@ -102,28 +102,9 @@ export function InvoiceList({
   const partyLabel = partyType === "supplier" ? "المورد" : "الزبون";
   const defaultName = partyType === "supplier" ? "مورد نقدي" : "زبون نقدي";
 
-  const stats = useMemo(() => {
-    const total = filtered.reduce((acc, inv) => {
-      const baseAmt = getInvoiceBaseAmount(
-        inv.total_amount,
-        inv.total_amount_v2,
-        inv.currency_code,
-        inv.exchange_rate,
-        baseCurrency?.code
-      );
-      return acc + baseAmt;
-    }, 0);
-    return [
-      { label: "عدد الفواتير", value: filtered.length, icon: ShoppingCart, color: "text-slate-900" },
-      { label: statsLabel, value: formatMonetaryAmount(total.toString(), "base"), icon: Banknote, color: statsColor },
-      { label: "فواتير معلقة", value: filtered.filter(i => i.status === 'Draft').length, icon: History, color: "text-amber-600" },
-    ];
-  }, [filtered, formatMonetaryAmount, statsLabel, statsColor, baseCurrency]);
-
   return (
     <OperationalTableTemplate
       title={title}
-      stats={stats}
       toolbar={
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={onCreate} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 h-9 px-4 font-bold">

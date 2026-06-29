@@ -22,6 +22,7 @@ export interface TableShellProps {
   children: ReactNode;
   footer?: ReactNode;
   showToolbar?: boolean;
+  filterBar?: ReactNode;
   className?: string;
 }
 
@@ -38,6 +39,7 @@ export const TableShell: React.FC<TableShellProps> = ({
   children,
   footer,
   showToolbar = true,
+  filterBar,
   className,
 }) => {
   const { settings } = useTableSettings();
@@ -56,6 +58,7 @@ export const TableShell: React.FC<TableShellProps> = ({
             onColumnsReset={onColumnsReset}
             columnsModified={columnsModified}
             actions={actions}
+            filterBar={filterBar}
           />
         </div>
       )}

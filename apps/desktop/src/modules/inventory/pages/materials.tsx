@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@shared/ui/button";
-import { Plus, RefreshCw, Package, Layers, Barcode, ShoppingCart, TrendingUp, AlertTriangle, Undo2, ArrowRightLeft, Scale } from "lucide-react";
+import { Plus, RefreshCw, Layers, ShoppingCart, TrendingUp, AlertTriangle, Undo2, ArrowRightLeft, Scale } from "lucide-react";
 import { materialService } from '@modules/inventory/api/materialService';
 import { categoryService } from '@modules/inventory/api/categoryService';
 import { damagedService, transferService, adjustmentService, inventoryService } from '@modules/inventory/api/inventoryService';
@@ -170,17 +170,10 @@ export default function Materials() {
     setShowUnitsPanel(false);
   };
 
-  const stats = useMemo(() => [
-    { label: "إجمالي المواد", value: materials.length, icon: Package, color: "text-slate-900" },
-    { label: "التصنيفات", value: categories.length, icon: Layers, color: "text-blue-600" },
-    { label: "مواد بباركود", value: materials.filter(m => m.barcode).length, icon: Barcode, color: "text-emerald-600" },
-  ], [materials, categories]);
-
   return (
     <>
       <OperationalTableTemplate
         title="بطاقات المواد"
-        stats={stats}
         toolbar={
           <>
             <Button size="sm" onClick={handleOpenAdd} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">

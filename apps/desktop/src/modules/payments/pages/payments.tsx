@@ -1,12 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@shared/ui/button";
-import {
-  Plus,
-  ArrowDownCircle,
-  ArrowUpCircle,
-  Wallet,
-} from "lucide-react";
+import { Plus } from "lucide-react";
 import { paymentService } from "@modules/payments/api/paymentService";
 import { customerService } from "@modules/partners/api/customerService";
 import { supplierService } from "@modules/partners/api/supplierService";
@@ -148,69 +143,9 @@ export default function PaymentsPage() {
     setShowDialog(true);
   }, []);
 
-  const totalIn = useMemo(
-    () =>
-      payments
-        .filter((p) => ["Receipt", "CashIn", "SupplierReceipt"].includes(p.payment_type))
-        .reduce((s, p) => {
-          const amt = parseFloat(p.amount) || 0;
-          return (
-            s +
-            (baseCurrency?.code
-              ? convertBetween(amt, p.currency_code, baseCurrency.code)
-              : amt)
-          );
-        }, 0),
-    [payments, baseCurrency, convertBetween],
-  );
-
-  const totalOut = useMemo(
-    () =>
-      payments
-        .filter((p) =>
-          [
-            "SupplierPayment",
-            "CustomerPayment",
-            "CashOut",
-            "ExpenseVoucher",
-            "DrawingsVoucher",
-          ].includes(p.payment_type),
-        )
-        .reduce((s, p) => {
-          const amt = parseFloat(p.amount) || 0;
-          return (
-            s +
-            (baseCurrency?.code
-              ? convertBetween(amt, p.currency_code, baseCurrency.code)
-              : amt)
-          );
-        }, 0),
-    [payments, baseCurrency, convertBetween],
-  );
-
   return (
     <OperationalTableTemplate
       title="السندات المالية"
-      stats={[
-        {
-          label: "إجمالي المقبوضات",
-          value: formatMonetaryAmount(totalIn, "base"),
-          icon: ArrowDownCircle,
-          color: "text-emerald-600",
-        },
-        {
-          label: "إجمالي المدفوعات",
-          value: formatMonetaryAmount(totalOut, "base"),
-          icon: ArrowUpCircle,
-          color: "text-rose-600",
-        },
-        {
-          label: "الرصيد الصافي",
-          value: formatMonetaryAmount(totalIn - totalOut, "base"),
-          icon: Wallet,
-          color: "text-blue-600",
-        },
-      ]}
       toolbar={
         <Button
           size="sm"

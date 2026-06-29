@@ -1,9 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
-import { 
-  Users,
+import {
   TrendingUp,
   PieChart as PieChartIcon,
-  Calculator,
 } from "lucide-react";
 import { partnerService, type PartnerDto, type PartnerRequest } from '@modules/partners/api/partnerService';
 
@@ -59,21 +57,6 @@ export default function Partners() {
     [partnersWithRatios, selectedId]
   );
 
-  const stats = useMemo(() => [
-    { 
-      label: `إجمالي رأس المال (${baseCurrency?.symbol || ""})`, 
-      value: formatAmount(totals.base, { currencyCode: baseCurrency?.code || "", hideSymbol: false }), 
-      icon: Calculator, 
-      color: "text-slate-900" 
-    },
-    { 
-      label: "عدد الشركاء", 
-      value: partners.length.toString(), 
-      icon: Users, 
-      color: "text-blue-600" 
-    },
-  ], [totals, partners.length, formatAmount, baseCurrency]);
-
   const handleSave = async (payload: PartnerRequest) => {
     try {
       setSaving(true);
@@ -123,7 +106,6 @@ export default function Partners() {
   return (
     <OperationalTableTemplate
       title="الشركاء ورأس المال"
-      stats={stats}
       toolbar={
         <PartnersToolbar
           selectedPartner={selectedPartner}

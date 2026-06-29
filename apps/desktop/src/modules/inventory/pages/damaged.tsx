@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@shared/ui/button";
-import { Plus, AlertTriangle, Banknote, PackageOpen } from "lucide-react";
+import { Plus } from "lucide-react";
 import { damagedService } from '@modules/inventory/api/inventoryService';
 import { materialService } from '@modules/inventory/api/materialService';
 import type { DamagedItem, CreateDamagedItemRequest, UpdateDamagedItemRequest, MaterialDto } from "@erp/shared-types";
@@ -118,15 +118,6 @@ export default function DamagedPage() {
 
   const isLoading = itemsLoading || refreshing || loadingProducts;
 
-  const totalCost = useMemo(() => items.reduce((s: number, i: DamagedItem) => s + parseFloat(i.cost_impact || "0"), 0), [items]);
-  const totalQty = useMemo(() => items.reduce((s: number, i: DamagedItem) => s + parseFloat(i.quantity || "0"), 0), [items]);
-
-  const stats = useMemo(() => [
-    { label: "إجمالي السجلات", value: items.length, icon: AlertTriangle, color: "text-amber-500" },
-    { label: "إجمالي الكميات", value: totalQty.toFixed(2), icon: PackageOpen, color: "text-amber-600" },
-    { label: "خسائر التكلفة", value: formatMonetaryAmount(totalCost, "base"), icon: Banknote, color: "text-rose-600" },
-  ], [items.length, totalQty, totalCost, formatMonetaryAmount]);
-
   // Build initial values for form when editing
   const formInitialValues = selectedItem
     ? {
@@ -142,7 +133,6 @@ export default function DamagedPage() {
   return (
     <OperationalTableTemplate
       title="إدارة المواد التالفة"
-      stats={stats}
       toolbar={
         <Button
           size="sm"

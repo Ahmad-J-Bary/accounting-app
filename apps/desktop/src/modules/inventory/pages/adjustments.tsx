@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@shared/ui/button";
-import { Plus, Scale, ArrowUpCircle, ArrowDownCircle, Eye, Settings2, Trash2, RefreshCw } from "lucide-react";
+import { Plus, Eye, Settings2, Trash2, RefreshCw } from "lucide-react";
 import { adjustmentService } from '@modules/inventory/api/inventoryService';
 import { materialService } from '@modules/inventory/api/materialService';
 import type { StockAdjustment, CreateStockAdjustmentRequest, UpdateStockAdjustmentRequest, MaterialDto } from "@erp/shared-types";
@@ -45,9 +45,6 @@ export default function AdjustmentsPage() {
   }, []);
 
   useEffect(() => { loadProducts(); }, [loadProducts]);
-
-  const surplusCount = useMemo(() => data.filter((a: StockAdjustment) => parseFloat(a.difference) > 0).length, [data]);
-  const shortageCount = useMemo(() => data.filter((a: StockAdjustment) => parseFloat(a.difference) < 0).length, [data]);
 
   const handleCreate = useCallback(async (payload: CreateStockAdjustmentRequest) => {
     setSaving(true);
@@ -131,13 +128,6 @@ export default function AdjustmentsPage() {
 
   const isLoading = adjLoading || refreshing || loadingProducts;
 
-  const totalCount = data.length;
-  const stats = useMemo(() => [
-    { label: "إجمالي التسويات", value: totalCount, icon: Scale, color: "text-slate-900" },
-    { label: "فائض مخزون", value: surplusCount, icon: ArrowUpCircle, color: "text-emerald-600" },
-    { label: "عجز مخزون", value: shortageCount, icon: ArrowDownCircle, color: "text-rose-600" },
-  ], [totalCount, surplusCount, shortageCount]);
-
   const handleCloseForm = useCallback(() => {
     setShowDialog(false);
     if (!selectedItem) setSelectedItem(null);
@@ -146,7 +136,6 @@ export default function AdjustmentsPage() {
   return (
     <OperationalTableTemplate
       title="تسويات الجرد"
-      stats={stats}
       toolbar={
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={handleNewClick} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold">

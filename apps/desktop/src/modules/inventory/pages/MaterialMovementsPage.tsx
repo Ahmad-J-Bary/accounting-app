@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useLocation } from "react-router-dom";
-import { ArrowDown, ArrowUp, ShoppingCart, TrendingUp, Package, Hash } from "lucide-react";
+import { ArrowDown, ArrowUp, Package } from "lucide-react";
 import { materialService } from '@modules/inventory/api/materialService';
 import type { MaterialDto, StockMovementDetailDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
@@ -53,16 +53,6 @@ export default function MaterialMovementsPage() {
       .sort((a, b) => new Date(b.movement_date).getTime() - new Date(a.movement_date).getTime());
   }, [movements, isPurchase]);
 
-  const stats = useMemo(() => {
-    const totalQty = displayMovements.reduce((s, m) => s + parseFloat(m.quantity), 0);
-    const totalCost = displayMovements.reduce((s, m) => s + parseFloat(m.is_inflow ? m.unit_cost : m.total_cost), 0);
-    return [
-      { label: "عدد الحركات", value: displayMovements.length, icon: Package, color: "text-slate-900" },
-      { label: "الكمية الإجمالية", value: totalQty.toLocaleString(), icon: Hash, color: "text-blue-600" },
-      { label: "الإجمالي", value: formatCurrency(totalCost, baseCurrency?.symbol || ""), icon: isPurchase ? ShoppingCart : TrendingUp, color: "text-emerald-600" },
-    ];
-  }, [displayMovements, baseCurrency, isPurchase]);
-
   const title = material
     ? `${isPurchase ? "مشتريات" : "مبيعات"} المادة: ${material.name}`
     : "جاري التحميل...";
@@ -70,7 +60,6 @@ export default function MaterialMovementsPage() {
   return (
     <OperationalTableTemplate
       title={title}
-      stats={stats}
       tableContent={
         loading ? (
           <div className="flex items-center justify-center py-20 text-muted-foreground">
