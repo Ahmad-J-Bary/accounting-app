@@ -46,6 +46,7 @@ export const reportCatalog: ReportCatalogGroup[] = [
       { name: "ميزان المراجعة", desc: "عرض جميع أرصدة الحسابات الإجمالية والتفصيلية", icon: Scale, color: "text-amber-600", bg: "bg-amber-50", to: "/accounting/reports/trial-balance" },
       { name: "قائمة الدخل", desc: "ملخص الأرباح والخسائر والنشاط التشغيلي", icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50", to: "/accounting/reports/income" },
       { name: "الميزانية العمومية", desc: "قائمة المركز المالي (الأصول = الخصوم + حقوق الملكية)", icon: Scale, color: "text-indigo-600", bg: "bg-indigo-50", to: "/accounting/reports/balance-sheet" },
+      { name: "الشركاء وتقاسم الأرباح", desc: "توزيع الأرباح والرصيد العام للشركاء", icon: Users, color: "text-violet-600", bg: "bg-violet-50", to: "/accounting/reports/partner-profit-share" },
     ],
   },
   {
