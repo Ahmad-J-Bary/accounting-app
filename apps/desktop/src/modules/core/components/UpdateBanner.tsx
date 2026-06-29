@@ -81,32 +81,22 @@ interface UpdateBannerProps {
   dark?: boolean;
 }
 
-const MOCK_INFO = {
-  has_update: true,
-  current_version: "0.9.2",
-  latest_version: "1.0.0-معاينة",
-  release_name: "إصدار المعاينة التطويري",
-  release_body: "• تحسينات عامة على واجهة التحديث\n• دعم RTL بالكامل\n• إصلاح مشكلة 403 لمستودع GitHub",
-  release_url: "https://github.com/Ahmad-J-Bary/accounting-app",
-  download_url: "https://github.com/Ahmad-J-Bary/accounting-app/releases/download/v0.9.2/Almowakeb_0.9.2_x64-setup.exe",
-};
-
 export function UpdateBanner({ variant = 'stacked', dark = false }: UpdateBannerProps) {
   const checker = useUpdateChecker();
 
   const { error, updateProgress, startUpdate, restartToUpdate, retry } = checker;
 
-  // Always force 'available' phase and mock data when there's no real update
-  const phase: BannerPhase = checker.phase === 'idle' ? 'available' : (checker.phase as BannerPhase);
-  const updateInfo = checker.updateInfo || MOCK_INFO;
-
-  // Shared state hooks
+  // Hooks must be called unconditionally — before any early return
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const downloadStartRef = useRef<number | null>(null);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
+  const phase = checker.phase;
+  const updateInfo = checker.updateInfo;
+
+  // All hooks must be called unconditionally — before any conditional return
   useEffect(() => {
     if (phase === 'downloading') {
       downloadStartRef.current = Date.now();
@@ -129,17 +119,6 @@ export function UpdateBanner({ variant = 'stacked', dark = false }: UpdateBanner
     };
   }, [open]);
 
-  const isBusy = phase === 'downloading' || phase === 'preparing';
-  const elapsed =
-    phase === 'downloading' && downloadStartRef.current
-      ? (Date.now() - downloadStartRef.current) / 1000
-      : 0;
-  const speed = updateProgress && elapsed > 0 ? updateProgress.downloaded / elapsed : 0;
-  const pct =
-    updateProgress && updateProgress.total > 0
-      ? Math.round((updateProgress.downloaded / updateProgress.total) * 100)
-      : 0;
-
   const handleStackedDismiss = useCallback(() => {
     setOpen(false);
   }, []);
@@ -155,8 +134,22 @@ export function UpdateBanner({ variant = 'stacked', dark = false }: UpdateBanner
     setOpen(v => !v);
   }, [open]);
 
+  // Don't show anything when there's no actual update
+  if (!updateInfo || phase === 'idle') return null;
+
+  const isBusy = phase === 'downloading' || phase === 'preparing';
+  const elapsed =
+    phase === 'downloading' && downloadStartRef.current
+      ? (Date.now() - downloadStartRef.current) / 1000
+      : 0;
+  const speed = updateProgress && elapsed > 0 ? updateProgress.downloaded / elapsed : 0;
+  const pct =
+    updateProgress && updateProgress.total > 0
+      ? Math.round((updateProgress.downloaded / updateProgress.total) * 100)
+      : 0;
+
   // ── Stacked / Slim variant (مكدس / نحيف) ──
-  const meta = PHASE_META[phase] ?? PHASE_META.available;
+  const meta = PHASE_META[phase as BannerPhase] ?? PHASE_META.available;
   const { Icon } = meta;
   const isSlim = variant === 'slim';
 
@@ -221,7 +214,7 @@ export function UpdateBanner({ variant = 'stacked', dark = false }: UpdateBanner
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2.5">
-              <span className={cn("flex items-center justify-center w-7 h-7 rounded-lg border", headerIconCls[phase])}>
+              <span className={cn("flex items-center justify-center w-7 h-7 rounded-lg border", headerIconCls[phase as BannerPhase])}>
                 <Icon className="w-3.5 h-3.5" />
               </span>
               <div>
@@ -326,15 +319,6 @@ export function UpdateBanner({ variant = 'stacked', dark = false }: UpdateBanner
             </div>
           </div>
 
-          {/* Mock badge: shown when there's no real update */}
-          {(checker.phase === 'idle' || !checker.updateInfo) && (
-            <div className="px-4 py-1.5 bg-amber-50 dark:bg-amber-950/30 border-t border-amber-200/50 dark:border-amber-800/30">
-              <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                معاينة – لا يوجد تحديث حقيقي
-              </span>
-            </div>
-          )}
         </div>
       , document.body)}
     </div>

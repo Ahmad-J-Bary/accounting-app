@@ -6,11 +6,11 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
 import { formatDateTime } from "@shared/lib/format";
 import { getInvoiceBaseAmount } from "../lib/invoiceHelpers";
-import { Button } from "@shared/ui/button";
 import type { InvoiceDto } from "@erp/shared-types";
 import { DocumentStatusBadge } from "./DocumentStatusBadge";
 import { TableActions } from "@widgets/table-shell/TableActions";
-import { CheckCircle2, History } from "lucide-react";
+import { CheckCircle2, History, Filter } from "lucide-react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@shared/ui/select";
 
 interface ExtraColumn {
   key: string;
@@ -479,12 +479,18 @@ export function InvoiceTable({
       onColumnsReset={resetToDefault}
       columnsModified={isModified}
       showToolbar={true}
-      actions={
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="h-9 border-slate-200" onClick={() => onStatusFilterChange("all")}>الكل</Button>
-          <Button variant="outline" size="sm" className="h-9 border-slate-200 text-amber-600" onClick={() => onStatusFilterChange("Draft")}>مسودة</Button>
-          <Button variant="outline" size="sm" className="h-9 border-slate-200 text-emerald-600" onClick={() => onStatusFilterChange("Posted")}>مرحلة</Button>
-        </div>
+      filterBar={
+        <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+          <SelectTrigger className="w-[130px] h-8 bg-white font-bold shadow-sm border-slate-200 text-xs">
+            <Filter className="w-3.5 h-3.5 ml-1.5 text-slate-400" />
+            <SelectValue placeholder="الحالة" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all" className="text-xs font-bold">الكل</SelectItem>
+            <SelectItem value="Draft" className="text-xs font-bold text-amber-600">مسودة</SelectItem>
+            <SelectItem value="Posted" className="text-xs font-bold text-emerald-600">مرحلة</SelectItem>
+          </SelectContent>
+        </Select>
       }
     >
       <UnifiedTable

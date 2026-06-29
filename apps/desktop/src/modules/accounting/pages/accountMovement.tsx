@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useTabs } from "@app/providers/TabContext";
 import { Button } from "@shared/ui/button";
@@ -19,7 +19,6 @@ import type {
 } from "@erp/shared-types";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { AccountMovementTable } from "../components/AccountMovementTable";
-import { cn } from "@shared/lib/utils";
 import { useDataTable } from "@shared/hooks";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { toast } from "sonner";
@@ -105,42 +104,6 @@ export default function AccountMovement() {
     }
     return lines;
   }, [ledger, accountType]);
-
-  const formatMultiCurrency = useCallback((baseVal: string, originalVal: string) => {
-    return currencies.map(c => {
-      if (c.code === baseCurrency?.code) {
-        return formatAmount(parseFloat(baseVal), { currencyCode: c.code });
-      }
-      return formatAmount(parseFloat(originalVal), { currencyCode: c.code });
-    }).join(' / ');
-  }, [currencies, baseCurrency, formatAmount]);
-
-  const stats = useMemo(() => {
-    if (!ledger) return null;
-    return [
-      {
-        label: "الرصيد الافتتاحي",
-        value: formatMultiCurrency(ledger.opening_balance_base, ledger.opening_balance_original),
-        color: "text-slate-600"
-      },
-      {
-        label: "إجمالي مدين",
-        value: formatMultiCurrency(ledger.total_debit_base, ledger.total_debit_original),
-        color: "text-blue-600"
-      },
-      {
-        label: "إجمالي دائن",
-        value: formatMultiCurrency(ledger.total_credit_base, ledger.total_credit_original),
-        color: "text-emerald-600"
-      },
-      {
-        label: "الرصيد الحالي",
-        value: formatMultiCurrency(ledger.closing_balance_base, ledger.closing_balance_original),
-        color: "text-slate-900 font-black",
-        highlight: true
-      }
-    ];
-  }, [ledger, formatMultiCurrency]);
 
   const handleSaveVoucher = async (payload: CreatePaymentRequest) => {
     try {
@@ -239,18 +202,6 @@ export default function AccountMovement() {
       toolbar={
         <div className="flex items-center gap-2">
           {toolbarButtons}
-        </div>
-      }
-      filterBar={
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-4">
-             {stats?.map((s, i) => (
-               <div key={i} className="flex flex-col border-l last:border-0 border-slate-200 pl-4">
-                 <span className="text-[10px] text-slate-500 font-bold">{s.label}</span>
-                 <span className={cn("text-xs font-black tabular-nums", s.color)}>{s.value}</span>
-               </div>
-             ))}
-          </div>
         </div>
       }
       tableContent={

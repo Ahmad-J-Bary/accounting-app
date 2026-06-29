@@ -2,12 +2,12 @@ import { useMemo, useCallback } from "react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
 import { TableActions } from '@widgets/table-shell/TableActions';
-import { Button } from "@shared/ui/button";
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
 import { formatDate } from "@shared/lib/format";
 import { PAYMENT_TYPE_LABELS } from "@modules/payments/lib/constants";
-import { ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, Filter } from "lucide-react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@shared/ui/select";
 import type { Payment, AccountDto } from "@erp/shared-types";
 
 type SortField = "journal_entry_number" | "payment_date" | "payment_type" | "credit_account" | "debit_account";
@@ -300,35 +300,18 @@ export function PaymentsTable({
       onColumnsReset={resetToDefault}
       columnsModified={isModified}
       showToolbar={true}
-      actions={
-        <div className="flex items-center gap-2">
-          <Button
-            variant={typeFilter === "all" ? "default" : "outline"}
-            size="sm"
-            className="h-9"
-            onClick={() => onTypeFilterChange("all")}
-          >
-            الكل
-          </Button>
-          <Button
-            variant={typeFilter === "incoming" ? "default" : "outline"}
-            size="sm"
-            className="h-9 text-emerald-600"
-            onClick={() => onTypeFilterChange("incoming")}
-          >
-            قبض
-          </Button>
-          <Button
-            variant={
-              typeFilter === "outgoing" ? "default" : "outline"
-            }
-            size="sm"
-            className="h-9 text-rose-600"
-            onClick={() => onTypeFilterChange("outgoing")}
-          >
-            دفع
-          </Button>
-        </div>
+      filterBar={
+        <Select value={typeFilter} onValueChange={onTypeFilterChange}>
+          <SelectTrigger className="w-[130px] h-8 bg-white font-bold shadow-sm border-slate-200 text-xs">
+            <Filter className="w-3.5 h-3.5 ml-1.5 text-slate-400" />
+            <SelectValue placeholder="نوع الدفعة" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all" className="text-xs font-bold">الكل</SelectItem>
+            <SelectItem value="incoming" className="text-xs font-bold text-emerald-600">قبض</SelectItem>
+            <SelectItem value="outgoing" className="text-xs font-bold text-rose-600">دفع</SelectItem>
+          </SelectContent>
+        </Select>
       }
     >
       <UnifiedTable
