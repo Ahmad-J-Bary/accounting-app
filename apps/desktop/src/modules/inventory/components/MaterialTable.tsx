@@ -369,16 +369,6 @@ export function MaterialTable({
     });
 
     cols.push({
-      id: "active_lots_count",
-      header: "الدفعات النشطة",
-      label: "الدفعات النشطة",
-      accessor: (m) => m.costing_method === "FIFO" ? (
-        <span className="tabular-nums font-bold text-purple-700">{m.active_lots_count}</span>
-      ) : <span className="text-slate-300">—</span>,
-      className: "tabular-nums"
-    });
-
-    cols.push({
       id: "default_purchase_unit",
       header: "وحدة الشراء",
       label: "وحدة الشراء الافتراضية",
@@ -392,14 +382,6 @@ export function MaterialTable({
       label: "وحدة المبيع الافتراضية",
       accessor: (m) => m.units?.find(u => u.id === m.default_sale_unit_id)?.name || "",
       className: "text-slate-500"
-    });
-
-    cols.push({
-      id: "notes",
-      header: "ملاحظة",
-      label: "ملاحظات",
-      accessor: (m) => m.notes || "",
-      className: "text-slate-500 italic"
     });
 
     cols.push({
@@ -455,6 +437,14 @@ export function MaterialTable({
     });
 
     cols.push({
+      id: "notes",
+      header: "ملاحظة",
+      label: "ملاحظات",
+      accessor: (m) => m.notes || "",
+      className: "text-slate-500 italic"
+    });
+
+    cols.push({
       id: "actions",
       header: "إجراءات",
       label: "إجراءات",
@@ -495,15 +485,16 @@ export function MaterialTable({
       "total_damaged",
       "total_available",
       "units",
-      "minimum_stock",
-      "costing_method",
-      "active_lots_count",
+    );
+    if (materials.some(m => m.has_expiry)) {
+      ids.push("has_expiry");
+    }
+    ids.push(
       "notes",
-      "has_expiry",
       "actions",
     );
     return ids;
-  }, [currencies, isBaseCurrency]);
+  }, [currencies, isBaseCurrency, materials]);
 
   const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "materials-unified",
