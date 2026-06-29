@@ -10,11 +10,10 @@ import { PartnerTable } from '../components/PartnerTable';
 import { PartnersToolbar } from '../components/PartnersToolbar';
 import { PartnersSidePanel } from '../components/PartnersSidePanel';
 import { ChartCard } from '@modules/partners/components/ChartCard';
-import { StrategyOption } from '@modules/partners/components/StrategyOption';
 import { useDataTable } from '@shared/hooks';
 import { useTabs } from "@app/providers/TabContext";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { RadioGroup } from "@shared/ui/radio-group";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@shared/ui/select";
 import { toast } from "sonner";
 import { paymentService } from '@modules/payments/api/paymentService';
 import { type CreatePaymentRequest } from '@erp/shared-types';
@@ -122,21 +121,26 @@ export default function Partners() {
         />
       }
 
-      filterBar={
-        <div className="flex items-center gap-2 mr-auto pl-2" dir="rtl">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider hidden md:block">التوزيع:</span>
-          <RadioGroup value={globalStrategy} onValueChange={setGlobalStrategy} className="flex flex-row items-center gap-1">
-            <StrategyOption id="g1" value="BasedOnCapital" label="تلقائي" />
-            <StrategyOption id="g3" value="Manual" label="يدوي" />
-          </RadioGroup>
-        </div>
-      }
       tableContent={
         <PartnerTable
           partners={partnersWithRatios}
           loading={isLoading}
           search={search}
           onSearchChange={setSearch}
+          filterBar={
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap">التوزيع:</span>
+              <Select value={globalStrategy} onValueChange={setGlobalStrategy}>
+                <SelectTrigger className="w-[120px] h-8 bg-white font-bold shadow-sm border-slate-200 text-xs">
+                  <SelectValue placeholder="اختر" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="BasedOnCapital" className="text-xs font-bold">تلقائي</SelectItem>
+                  <SelectItem value="Manual" className="text-xs font-bold">يدوي</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          }
           onView={(p) => { setSelectedId(p.id); setActivePanel("view"); }}
           onEdit={(p) => { setEditPartner(p); setSelectedId(p.id); setActivePanel("edit"); }}
           onDelete={(id) => handleDelete(id)}

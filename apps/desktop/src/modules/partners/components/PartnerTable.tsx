@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
@@ -26,6 +26,7 @@ interface PartnerTableProps {
   onDocument: (p: PartnerDto) => void;
   selectedId?: string | null;
   onRowClick?: (p: PartnerDto) => void;
+  filterBar?: ReactNode;
 }
 
 type SortField = string;
@@ -41,7 +42,8 @@ export function PartnerTable({
   onJournal,
   onDocument,
   selectedId,
-  onRowClick
+  onRowClick,
+  filterBar
 }: PartnerTableProps) {
   const { currencies, formatAmount } = useCurrencyContext();
   const { isBaseCurrency } = useBaseCurrencyColumns();
@@ -202,6 +204,7 @@ export function PartnerTable({
       onColumnsReset={resetToDefault}
       columnsModified={isModified}
       showToolbar={true}
+      filterBar={filterBar}
     >
       <UnifiedTable<PartnerWithRatios>
         data={sortedPartners}
