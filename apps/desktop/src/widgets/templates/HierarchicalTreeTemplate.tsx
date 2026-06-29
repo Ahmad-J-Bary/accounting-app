@@ -10,8 +10,8 @@ interface HierarchicalTreeTemplateProps {
   treeSidebar: ReactNode;
   /** The detailed view/editor of the selected node */
   detailContent: ReactNode;
-  /** Filter and stats bar below header */
-  filterBar?: ReactNode;
+  /** Optional actions rendered in the tree card header next to the title */
+  treeHeaderActions?: ReactNode;
   /** Optional secondary info or stats */
   extraContent?: ReactNode;
   /** Custom class */
@@ -27,7 +27,7 @@ export function HierarchicalTreeTemplate({
   toolbar,
   treeSidebar,
   detailContent,
-  filterBar,
+  treeHeaderActions,
   extraContent,
   className
 }: HierarchicalTreeTemplateProps) {
@@ -49,22 +49,22 @@ export function HierarchicalTreeTemplate({
         </div>
       </header>
 
-      {/* Filter / Stats Bar */}
-      {filterBar && (
-        <div className="bg-white/60 backdrop-blur-md px-8 py-3 border-b border-slate-200/60 shadow-sm shrink-0 flex items-center justify-between z-10">
-          {filterBar}
-        </div>
-      )}
-
       {/* 2. Split Content Layout */}
       <div className="flex-1 flex overflow-hidden p-6 gap-6">
         
         {/* Right Column: Hierarchical Tree Navigation (Main Focus) */}
         <div className="flex-[1.5] flex flex-col min-w-0 overflow-hidden">
           <aside className="flex-1 bg-white rounded-2xl border border-slate-200/70 shadow-sm flex flex-col overflow-hidden transition-all hover:shadow-md">
-            <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-              <h2 className="text-sm font-black text-slate-800 uppercase tracking-wider">شجرة البيانات الهيكلية</h2>
-              <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                <h2 className="text-sm font-black text-slate-800 uppercase tracking-wider">شجرة البيانات الهيكلية</h2>
+              </div>
+              {treeHeaderActions && (
+                <div className="flex items-center gap-1">
+                  {treeHeaderActions}
+                </div>
+              )}
             </div>
             <div className="flex-1 overflow-auto p-6 custom-scrollbar">
               {treeSidebar}

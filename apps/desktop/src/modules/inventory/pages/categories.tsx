@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { RefreshCw, Search, Plus, ChevronLeft, ChevronRight, BarChart3, Folder } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { categoryService } from '@modules/inventory/api/categoryService';
 import { materialService } from '@modules/inventory/api/materialService';
 import type { CategoryDto, MaterialDto } from "@erp/shared-types";
-import { Button } from "@shared/ui/button";
-import { Input } from "@shared/ui/input";
+
 
 // Refactored Components & Hooks
 import { HierarchicalTreeTemplate } from '@widgets/templates/HierarchicalTreeTemplate';
@@ -262,23 +261,21 @@ export default function Categories() {
     <>
       <HierarchicalTreeTemplate
       title="تصنيفات المواد"
-      toolbar={
+      toolbar={<></>}
+      treeHeaderActions={
         <>
-          <div className="relative w-64 ml-4">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input 
-              placeholder="بحث في التصنيفات والمواد..." 
-              className="pr-10 h-10 border-slate-200 bg-slate-50/50" 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <Button variant="outline" size="sm" onClick={() => setExpandedIds(new Set([VIRTUAL_ROOT_ID, ...categories.map(c => c.id)]))} className="bg-white">
-            <ChevronLeft className="w-4 h-4 ml-1" /> توسيع الكل
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setExpandedIds(new Set([VIRTUAL_ROOT_ID]))} className="bg-white">
-             طي الكل <ChevronRight className="w-4 h-4 mr-1" />
-          </Button>
+          <button
+            onClick={() => setExpandedIds(new Set([VIRTUAL_ROOT_ID, ...categories.map(c => c.id)]))}
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors"
+          >
+            <ChevronLeft className="w-3 h-3" /> توسيع
+          </button>
+          <button
+            onClick={() => setExpandedIds(new Set([VIRTUAL_ROOT_ID]))}
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors"
+          >
+            طي <ChevronRight className="w-3 h-3" />
+          </button>
         </>
       }
       treeSidebar={
@@ -308,23 +305,6 @@ export default function Categories() {
           onDelete={handleDelete}
           isVirtualRootSelected={selected?.id === VIRTUAL_ROOT_ID}
         />
-      }
-      filterBar={
-        <div className="flex items-center gap-8 w-full">
-           {[
-             { label: "إجمالي التصنيفات", value: categories.length, color: "text-slate-900", icon: Folder },
-             { label: "إجمالي المواد", value: materials.length, color: "text-blue-600", icon: BarChart3 },
-             { label: "تصنيفات نشطة", value: categories.length, color: "text-emerald-600", icon: RefreshCw },
-           ].map((stat, i) => (
-             <div key={i} className="flex flex-col items-start gap-1">
-                <div className="flex items-center gap-2">
-                  <stat.icon className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{stat.label}</span>
-                </div>
-                <div className={`text-lg font-black tabular-nums ${stat.color}`}>{stat.value}</div>
-             </div>
-           ))}
-        </div>
       }
       />
       <CategoryDeleteDialog

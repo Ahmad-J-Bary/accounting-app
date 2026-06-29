@@ -20,4 +20,6 @@ export interface TreeItemProps<T extends BaseTreeNode> {
   renderRight?: (node: T) => ReactNode;
   isVirtualRoot?: boolean;
   virtualRootId?: string;
+  /** Flags indicating if the node at each level (0..level-1) has a next sibling */
+  siblingFlags?: boolean[];
 }

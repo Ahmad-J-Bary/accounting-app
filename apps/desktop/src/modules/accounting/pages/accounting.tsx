@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Button } from "@shared/ui/button";
-import { Download, RefreshCw, Folder, Search, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { accountingService } from '@modules/accounting/api/accountingService';
 import { journalEntryService } from '@modules/accounting/api/journalEntryService';
 import { invoiceService } from '@modules/invoicing/api/invoiceService';
@@ -10,7 +9,6 @@ import type { AccountTreeNode, ToggleNodeHandler } from "./accounting/types";
 import { AccountTreeNodeItem } from "./accounting/AccountTreeNodeItem";
 import { AccountDetailsSidebar } from "./accounting/AccountDetailsSidebar";
 import { HierarchicalTreeTemplate } from '@widgets/templates/HierarchicalTreeTemplate';
-import { Input } from "@shared/ui/input";
 import { toast } from "sonner";
 
 const ROOT_ACCOUNT_ID = "__chart_of_accounts_root__";
@@ -184,27 +182,21 @@ const rootNode = useMemo<AccountTreeNode>(() => ({
   return (
     <HierarchicalTreeTemplate
       title="دليل الحسابات"
-      toolbar={
+      toolbar={<></>}
+      treeHeaderActions={
         <>
-           <div className="relative w-64 ml-4">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input 
-              placeholder="بحث في الحسابات..." 
-              className="pr-10 h-10 border-slate-200 bg-slate-50/50" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <Button variant="outline" size="sm" onClick={expandAll} className="bg-white">
-            <ChevronLeft className="w-4 h-4 ml-1" /> توسيع الكل
-          </Button>
-          <Button variant="outline" size="sm" onClick={collapseAll} className="bg-white">
-             طي الكل <ChevronRight className="w-4 h-4 mr-1" />
-          </Button>
-          <div className="h-6 w-px bg-slate-200 mx-2" />
-          <Button size="sm" className="bg-slate-900 text-white">
-            <Download className="w-4 h-4 ml-2" /> تصدير PDF
-          </Button>
+          <button
+            onClick={expandAll}
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors"
+          >
+            <ChevronLeft className="w-3 h-3" /> توسيع
+          </button>
+          <button
+            onClick={collapseAll}
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors"
+          >
+            طي <ChevronRight className="w-3 h-3" />
+          </button>
         </>
       }
       treeSidebar={
@@ -236,21 +228,6 @@ const rootNode = useMemo<AccountTreeNode>(() => ({
           canEdit={!isRootSelected && !!selected}
           canDelete={!isRootSelected && !!selected}
         />
-      }
-      filterBar={
-        <div className="flex items-center gap-6 w-full">
-           {[
-             { label: "إجمالي الحسابات", value: accounts.length, color: "text-slate-900" },
-             { label: "الأصول", value: accounts.filter(a => a.account_type === "Assets").length, color: "text-blue-600" },
-             { label: "الخصوم", value: accounts.filter(a => a.account_type === "Liabilities").length, color: "text-red-600" },
-             { label: "حقوق الملكية", value: accounts.filter(a => a.account_type === "Equity").length, color: "text-emerald-600" },
-           ].map((stat, i) => (
-             <div key={i} className="flex flex-col items-start gap-1">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{stat.label}</span>
-                <div className={`text-lg font-black tabular-nums ${stat.color}`}>{stat.value}</div>
-             </div>
-           ))}
-        </div>
       }
     />
   );
