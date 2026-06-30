@@ -40,6 +40,8 @@ export const ALL_SYSTEM_ROUTES: SystemRouteEntry[] = [
   { id: "materials", to: "/materials", label: "بطاقات المواد", icon: "Package", groupId: "inventory", groupLabel: "المخزون" },
   { id: "opening-balance", to: "/opening-balance", label: "فاتورة أول المدة", icon: "Layers", groupId: "inventory", groupLabel: "المحاسبة العامة" },
   { id: "inventory", to: "/inventory", label: "حركات المخزون", icon: "Warehouse", groupId: "inventory", groupLabel: "المخزون" },
+  { id: "transfers", to: "/inventory/transfers", label: "التحويلات", icon: "ArrowLeftRight", groupId: "inventory", groupLabel: "المخزون" },
+  { id: "warehouses", to: "/inventory/warehouses", label: "المستودعات", icon: "Warehouse", groupId: "inventory", groupLabel: "المخزون" },
   { id: "damaged", to: "/damaged", label: "التالف والهدر", icon: "AlertTriangle", groupId: "inventory", groupLabel: "المخزون" },
   { id: "production", to: "/production", label: "الإنتاج", icon: "Factory", groupId: "inventory", groupLabel: "المخزون" },
   { id: "adjustments", to: "/adjustments", label: "تسويات المخزون", icon: "ClipboardCheck", groupId: "inventory", groupLabel: "المخزون" },

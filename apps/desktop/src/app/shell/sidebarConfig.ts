@@ -2,7 +2,7 @@ import {
   LayoutDashboard, BookOpen, FileText, Users, Truck, Receipt,
   ShoppingCart, Wallet, Package, Warehouse, AlertTriangle,
   Factory, ClipboardCheck, BarChart3, Shield, Settings, History, Layers,
-  HardDrive, Folders, DollarSign, Undo2, GitMerge,
+  HardDrive, Folders, DollarSign, Undo2, GitMerge, ArrowLeftRight,
   Link, FolderPlus
 } from "lucide-react";
 import type { NavLayoutType, NavSidebarSettings } from '@shared/types/sidebar-settings';
@@ -14,7 +14,7 @@ export const ICON_MAP: Record<string, React.ElementType> = {
   LayoutDashboard, BookOpen, FileText, Users, Truck, Receipt,
   ShoppingCart, Wallet, Package, Warehouse, AlertTriangle,
   Factory, ClipboardCheck, BarChart3, Shield, Settings, History, Layers,
-  HardDrive, Folders, DollarSign, Undo2, GitMerge,
+  HardDrive, Folders, DollarSign, Undo2, GitMerge, ArrowLeftRight,
   Link, FolderPlus,
 };
 

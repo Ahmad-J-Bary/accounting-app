@@ -12,6 +12,8 @@ import Payments from '@modules/payments/pages/payments';
 import Materials from '@modules/inventory/pages/materials';
 import Categories from '@modules/inventory/pages/categories';
 import Inventory from '@modules/inventory/pages/inventory';
+import Transfers from '@modules/inventory/pages/transfers';
+import Warehouses from '@modules/inventory/pages/warehouses';
 import Damaged from '@modules/inventory/pages/damaged';
 import Production from '@modules/inventory/pages/production';
 import OpeningBalance from '@modules/accounting/pages/openingBalance';
@@ -72,6 +74,8 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/materials" element={<Materials />} />
       <Route path="/categories" element={<Categories />} />
       <Route path="/inventory" element={<Inventory />} />
+      <Route path="/inventory/transfers" element={<Transfers />} />
+      <Route path="/inventory/warehouses" element={<Warehouses />} />
       <Route path="/inventory/purchases/:materialId" element={<MaterialMovementsPage />} />
       <Route path="/inventory/sales/:materialId" element={<MaterialMovementsPage />} />
       <Route path="/damaged" element={<Damaged />} />
