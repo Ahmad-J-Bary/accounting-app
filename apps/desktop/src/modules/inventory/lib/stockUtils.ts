@@ -1,10 +1,11 @@
 import type { MaterialUnitDto } from "@erp/shared-types";
+import { getMovementType } from '../constants/movementTypes';
 
 interface StockMovementLike {
   warehouse_id?: string | null;
   material_id: string;
   quantity: string;
-  is_inflow?: boolean;
+  movement_type: string;
 }
 
 export function buildStockByWarehouse(
@@ -16,7 +17,7 @@ export function buildStockByWarehouse(
     const mid = m.material_id;
     const wid = m.warehouse_id;
     const qty = parseFloat(m.quantity || "0");
-    const isInflow = m.is_inflow ?? (qty >= 0);
+    const isInflow = getMovementType(m.movement_type).inflow;
     let mat = map.get(mid);
     if (!mat) {
       mat = new Map();

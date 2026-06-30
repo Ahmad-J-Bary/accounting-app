@@ -103,8 +103,22 @@ export default function Dashboard() {
   const cashBalance = totalCashIn - totalCashOut;
 
   const inventoryValue = useMemo(() => productItems.reduce((sum, p) => {
-    const price = toNumber(p.average_cost_base) || toNumber(p.last_purchase_price_base);
-    return sum + (toNumber(p.total_available) * price);
+    const avgCost = toNumber(p.average_cost_base);
+    const fifoPrice = toNumber(p.last_purchase_price_base);
+    const price = avgCost || fifoPrice;
+    const totalRecv = toNumber(p.total_received);
+    const totalAvail = toNumber(p.total_available);
+    const totalSold = toNumber(p.total_sold);
+    const totalDamaged = toNumber(p.total_damaged);
+    if (avgCost > 0 && totalRecv > 0) {
+      const transferQty = Math.max(0, totalRecv - totalAvail - totalSold - totalDamaged);
+      const purchaseQty = totalRecv - transferQty;
+      if (purchaseQty > 0 && totalRecv !== purchaseQty) {
+        const correctedPrice = avgCost * totalRecv / purchaseQty;
+        return sum + totalAvail * correctedPrice;
+      }
+    }
+    return sum + totalAvail * price;
   }, 0), [productItems]);
 
   const lowStock = useMemo(() => productItems.filter(

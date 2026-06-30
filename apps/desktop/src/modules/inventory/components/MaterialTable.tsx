@@ -22,6 +22,7 @@ interface MaterialTableProps {
   onManageUnits?: (material: MaterialDto) => void;
   selectedId?: string | null;
   onRowClick?: (material: MaterialDto) => void;
+  stockTotal?: Map<string, number>;
 }
 
 type SortField = "code" | "name" | "total_available" | "total_received" | "total_sold" | "minimum_stock" | "average_cost" | "unit_price" | "sale_price";
@@ -36,7 +37,8 @@ export function MaterialTable({
   onDelete,
   onManageUnits,
   selectedId,
-  onRowClick
+  onRowClick,
+  stockTotal
 }: MaterialTableProps) {
   const { formatAmount, currencies } = useCurrencyContext();
   const { isBaseCurrency } = useBaseCurrencyColumns();
@@ -61,12 +63,25 @@ export function MaterialTable({
     }
   });
 
-  const unitCostBase = useCallback((m: MaterialDto) =>
-    m.costing_method === "FIFO"
-      ? parseFloat(m.last_purchase_price_base || "0")
-      : parseFloat(m.average_cost_base || "0")
-  , []);
-  const rawPriceBase = useCallback((m: MaterialDto): number => parseFloat(m.average_raw_price_base || "0"), []);
+  const unitCostBase = useCallback((m: MaterialDto) => {
+    if (m.costing_method === "FIFO") return parseFloat(m.last_purchase_price_base || "0");
+    const avgCost = parseFloat(m.average_cost_base || "0");
+    const totalRecv = parseFloat(m.total_received || "0");
+    const totalStock = stockTotal?.get(m.id) ?? totalRecv;
+    if (totalRecv > 0 && totalStock > 0 && totalStock !== totalRecv) {
+      return avgCost * totalRecv / totalStock;
+    }
+    return avgCost;
+  }, [stockTotal]);
+  const rawPriceBase = useCallback((m: MaterialDto): number => {
+    const avgRaw = parseFloat(m.average_raw_price_base || "0");
+    const totalRecv = parseFloat(m.total_received || "0");
+    const totalStock = stockTotal?.get(m.id) ?? totalRecv;
+    if (totalRecv > 0 && totalStock > 0 && totalStock !== totalRecv) {
+      return avgRaw * totalRecv / totalStock;
+    }
+    return avgRaw;
+  }, [stockTotal]);
   const extraCostBase = useCallback((m: MaterialDto) => {
     const raw = rawPriceBase(m);
     const total = unitCostBase(m);
@@ -74,7 +89,7 @@ export function MaterialTable({
     return 0;
   }, [rawPriceBase, unitCostBase]);
   const salePriceBase = useCallback((m: MaterialDto) => parseFloat(m.last_sale_price_base || "0"), []);
-  const totalReceived = useCallback((m: MaterialDto) => parseFloat(m.total_received || "0"), []);
+  const totalReceived = useCallback((m: MaterialDto) => stockTotal?.get(m.id) ?? parseFloat(m.total_received || "0"), [stockTotal]);
   const totalAvailable = useCallback((m: MaterialDto) => parseFloat(m.total_available || "0"), []);
 
   const allColumns = useMemo<UnifiedColumn<MaterialDto>[]>(() => {
@@ -232,7 +247,7 @@ export function MaterialTable({
       id: "total_received",
       header: "الكمية الكلية",
       label: "الكمية الكلية",
-      accessor: (m) => parseFloat(m.total_received || "0").toLocaleString(),
+      accessor: (m) => totalReceived(m).toLocaleString(),
       className: "tabular-nums text-emerald-600 font-bold"
     });
 
@@ -458,7 +473,7 @@ export function MaterialTable({
     });
 
     return cols;
-  }, [categories, onManageUnits, formatAmount, currencies, onEdit, onDelete, onRowClick, rawPriceBase, unitCostBase, extraCostBase, totalReceived, totalAvailable, isBaseCurrency]);
+  }, [categories, onManageUnits, formatAmount, currencies, onEdit, onDelete, onRowClick, rawPriceBase, unitCostBase, extraCostBase, totalReceived, totalAvailable, isBaseCurrency, stockTotal]);
 
   // Default visible: only base currency's money columns are shown.
   const defaultVisible = useMemo(() => {

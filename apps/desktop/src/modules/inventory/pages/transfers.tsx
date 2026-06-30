@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { inventoryService, transferService } from '@modules/inventory/api/inventoryService';
@@ -31,6 +31,7 @@ export default function Transfers() {
     queryFn: () => materialService.listMaterials(),
   });
 
+  const queryClient = useQueryClient();
   const stockByWarehouse = useMemo(() => buildStockByWarehouse(movements), [movements]);
   const transferRefs = useMemo(() => getTransferRefs(movements), [movements]);
 
@@ -48,12 +49,14 @@ export default function Transfers() {
       toast.success('تم إنشاء التحويل بنجاح');
       setTransferFormOpen(false);
       setTransferFormData(null);
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['materials'] });
     } catch (e) {
       toast.error(e as string);
     } finally {
       setSavingTransfer(false);
     }
-  }, []);
+  }, [queryClient]);
 
   const handleUpdateTransfer = useCallback(async (req: CreateTransferRequest) => {
     if (!transferFormData) return;
@@ -63,22 +66,26 @@ export default function Transfers() {
       toast.success('تم تحديث التحويل بنجاح');
       setTransferFormOpen(false);
       setTransferFormData(null);
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['materials'] });
     } catch (e) {
       toast.error(e as string);
     } finally {
       setSavingTransfer(false);
     }
-  }, [transferFormData]);
+  }, [transferFormData, queryClient]);
 
   const handleDeleteTransfer = useCallback(async (reference: string) => {
     try {
       await transferService.deleteTransfer(reference);
       toast.success('تم حذف التحويل بنجاح');
       setTransferDetailData(null);
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['materials'] });
     } catch (e) {
       toast.error(e as string);
     }
-  }, []);
+  }, [queryClient]);
 
   const handleViewTransfer = useCallback((row: TransferRow) => {
     setTransferDetailData(row);

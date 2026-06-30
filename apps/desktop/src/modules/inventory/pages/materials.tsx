@@ -74,6 +74,15 @@ export default function Materials() {
 
   const stockByWarehouse = useMemo(() => buildStockByWarehouse(movements), [movements]);
 
+  const materialStockTotal = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const [mid, whMap] of stockByWarehouse) {
+      const total = [...whMap.values()].reduce((s, q) => s + q, 0);
+      map.set(mid, total);
+    }
+    return map;
+  }, [stockByWarehouse]);
+
   const loadCategories = useCallback(async () => {
     try {
       const cats = await categoryService.listCategories();
@@ -301,6 +310,7 @@ export default function Materials() {
             }}
             selectedId={selectedId}
             onRowClick={(m) => setSelectedId(m.id)}
+            stockTotal={materialStockTotal}
           />
         }
         sidePanel={
