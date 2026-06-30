@@ -24,9 +24,9 @@ import Users from '@modules/core/pages/users';
 import Settings from '@modules/core/pages/settings';
 import AuditLog from '@modules/core/pages/auditLog';
 import Partners from '@modules/partners/pages/partners';
-import Assets from '@modules/assets/pages/assets';
 import CustomerStatementPage from '@modules/partners/pages/customerStatementPage';
 import SupplierStatementPage from '@modules/partners/pages/supplierStatementPage';
+import FixedAssets from '@modules/fixed-assets/pages/fixedAssets';
 
 import Expenses from '@modules/accounting/pages/expenses';
 
@@ -88,7 +88,7 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/users" element={<Users />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/audit-log" element={<AuditLog />} />
-      <Route path="/assets" element={<Assets />} />
+      <Route path="/fixed-assets" element={<FixedAssets />} />
       <Route path="/currencies" element={<Navigate to="/settings" replace />} />
     </Routes>
   );

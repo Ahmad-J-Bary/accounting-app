@@ -4,6 +4,7 @@ pub struct AssetRow {
     pub code: String,
     pub name: String,
     pub category_id: String,
+    pub warehouse_id: Option<String>,
     pub purchase_date: String,
     pub purchase_cost: String,
     pub currency: String,

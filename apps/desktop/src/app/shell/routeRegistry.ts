@@ -20,7 +20,6 @@ export const ALL_SYSTEM_ROUTES: SystemRouteEntry[] = [
   { id: "trial-balance", to: "/accounting/reports/trial-balance", label: "ميزان المراجعة", icon: "Scale", groupId: "", groupLabel: "" },
   { id: "balance-sheet", to: "/accounting/reports/balance-sheet", label: "الميزانية العمومية", icon: "BarChart3", groupId: "", groupLabel: "" },
   { id: "partner-profit-share", to: "/accounting/reports/partner-profit-share", label: "الشركاء وتقاسم الأرباح", icon: "Users", groupId: "", groupLabel: "" },
-  { id: "assets", to: "/assets", label: "إدارة الموجودات", icon: "HardDrive", groupId: "accounting", groupLabel: "المحاسبة العامة" },
 
   // ── الجهات والعمليات المالية ──
   { id: "partners", to: "/partners", label: "الشركاء ورأس المال", icon: "Users", groupId: "parties", groupLabel: "الجهات والعمليات المالية" },
@@ -34,6 +33,9 @@ export const ALL_SYSTEM_ROUTES: SystemRouteEntry[] = [
   { id: "purchase-invoices", to: "/purchase-invoices", label: "فواتير المشتريات", icon: "ShoppingCart", groupId: "trade", groupLabel: "المبيعات والمشتريات" },
   { id: "sales-returns", to: "/sales-returns", label: "مرتجعات المبيعات", icon: "Undo2", groupId: "trade", groupLabel: "المبيعات والمشتريات" },
   { id: "purchase-returns", to: "/purchase-returns", label: "مرتجعات المشتريات", icon: "Undo2", groupId: "trade", groupLabel: "المبيعات والمشتريات" },
+
+  // ── الأصول الثابتة ──
+  { id: "fixed-assets", to: "/fixed-assets", label: "الأصول الثابتة", icon: "Building2", groupId: "fixed-assets", groupLabel: "الأصول الثابتة" },
 
   // ── المخزون ──
   { id: "categories", to: "/categories", label: "تصنيفات المواد", icon: "Folders", groupId: "inventory", groupLabel: "المخزون" },
@@ -84,6 +86,12 @@ export const SYSTEM_ROUTE_GROUPS: SystemRouteGroup[] = [
     title: "المبيعات والمشتريات",
     icon: "Receipt",
     items: ALL_SYSTEM_ROUTES.filter(r => r.groupId === "trade"),
+  },
+  {
+    id: "fixed-assets",
+    title: "الأصول الثابتة",
+    icon: "Building2",
+    items: ALL_SYSTEM_ROUTES.filter(r => r.groupId === "fixed-assets"),
   },
   {
     id: "inventory",

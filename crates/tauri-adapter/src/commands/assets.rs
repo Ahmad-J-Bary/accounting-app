@@ -13,6 +13,7 @@ pub async fn create_fixed_asset(
     code: String,
     name: String,
     category_id: String,
+    warehouse_id: Option<String>,
     purchase_date: String,
     purchase_cost: String,
     currency: String,
@@ -25,6 +26,7 @@ pub async fn create_fixed_asset(
     state: State<'_, AppState>,
 ) -> Result<String, String> {
     let category_uuid = Uuid::parse_str(&category_id).map_err(|e| e.to_string())?;
+    let warehouse_uuid = warehouse_id.and_then(|s| Uuid::parse_str(&s).ok());
     let purchase_dt = chrono::DateTime::parse_from_rfc3339(&purchase_date)
         .map(|d| d.with_timezone(&chrono::Utc))
         .map_err(|e| e.to_string())?;
@@ -44,6 +46,7 @@ pub async fn create_fixed_asset(
         code,
         name,
         category_id: category_uuid,
+        warehouse_id: warehouse_uuid,
         purchase_date: purchase_dt,
         purchase_cost: money,
         fx_rate: fx,

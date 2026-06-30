@@ -1,26 +1,39 @@
+export interface CurrencyDto {
+  code: string;
+  name_ar: string;
+  name_en: string;
+  symbol: string;
+  decimals: number;
+  is_base: boolean;
+  is_active: boolean;
+  notes?: string | null;
+}
+
+export interface MoneyDto {
+  amount: string;
+  currency: CurrencyDto;
+}
+
 export interface FixedAssetDto {
   id: string;
   code: string;
   name: string;
   category_id: string;
+  warehouse_id?: string | null;
   purchase_date: string;
-  purchase_cost: {
-    amount: string;
-    currency: string;
-  };
+  purchase_cost: MoneyDto;
   fx_rate: string;
   useful_life_months: number;
-  salvage_value?: {
-    amount: string;
-    currency: string;
-  };
-  accumulated_depreciation: {
-    amount: string;
-    currency: string;
-  };
+  salvage_value?: MoneyDto | null;
+  accumulated_depreciation: MoneyDto;
   status: 'Active' | 'Disposed' | 'Sold' | 'Damaged';
   location?: string;
   notes?: string;
+  asset_account_id: string;
+  depreciation_account_id: string;
+  accumulated_depreciation_account_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ConsumableDto {
@@ -49,16 +62,30 @@ export interface AssetMovement {
   id: string;
   asset_id: string;
   asset_name?: string;
-  movement_type: 'Purchase' | 'Depreciation' | 'Disposal' | 'Transfer' | 'Issue' | 'Return';
+  movement_type: 'Acquisition' | 'Depreciation' | 'Disposal' | 'Sale' | 'Adjustment' | 'Transfer' | 'Issue' | 'Consumption' | 'Damage' | 'Revaluation';
   quantity?: string;
-  amount: {
-    amount: string;
-    currency: string;
-  };
+  amount: MoneyDto;
   date: string;
   description?: string;
-  reference?: string;
+  reference_no?: string;
+  journal_entry_id?: string;
   created_at: string;
+}
+
+export interface CreateFixedAssetRequest {
+  code: string;
+  name: string;
+  category_id: string;
+  warehouse_id?: string;
+  purchase_date: string;
+  purchase_cost: string;
+  currency: string;
+  fx_rate: string;
+  useful_life_months: number;
+  asset_account_id: string;
+  depreciation_account_id: string;
+  accumulated_depreciation_account_id: string;
+  payment_account_id: string;
 }
 
 export interface CreateConsumableRequest {

@@ -1,4 +1,5 @@
 import { useMemo, ReactNode } from "react";
+import React from "react";
 import type { UnifiedColumn } from './UnifiedTable';
 import { UnifiedTable } from './UnifiedTable';
 import { TableShell } from './TableShell';
@@ -31,6 +32,7 @@ interface SharedTableProps<T> {
   enableResize?: boolean;
   title?: string;
   className?: string;
+  filterBar?: React.ReactNode;
 }
 
 export function SharedTable<T>({
@@ -51,6 +53,7 @@ export function SharedTable<T>({
   enableResize = true,
   title,
   className,
+  filterBar,
 }: SharedTableProps<T>) {
   const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: `${tableId}-unified`,
@@ -77,6 +80,7 @@ export function SharedTable<T>({
       columnsModified={isModified}
       showToolbar={true}
       className={className}
+      filterBar={filterBar}
     >
       <UnifiedTable
         data={sortedData}

@@ -17,6 +17,7 @@ pub fn row_to_asset(row: AssetRow) -> Result<FixedAsset, AppError> {
         code: row.code,
         name: row.name,
         category_id: Uuid::parse_str(&row.category_id).map_err(|e| AppError::Infrastructure(e.to_string()))?,
+        warehouse_id: row.warehouse_id.and_then(|s| Uuid::parse_str(&s).ok()),
         purchase_date: DateTime::parse_from_rfc3339(&row.purchase_date).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
         purchase_cost: Money::new(Decimal::from_str(&row.purchase_cost).unwrap_or_default(), currency_from_code(&row.currency)),
         fx_rate: Decimal::from_str(&row.fx_rate).unwrap_or(Decimal::ONE),
