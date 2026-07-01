@@ -34,8 +34,8 @@ export const ALL_SYSTEM_ROUTES: SystemRouteEntry[] = [
   { id: "sales-returns", to: "/sales-returns", label: "مرتجعات المبيعات", icon: "Undo2", groupId: "trade", groupLabel: "المبيعات والمشتريات" },
   { id: "purchase-returns", to: "/purchase-returns", label: "مرتجعات المشتريات", icon: "Undo2", groupId: "trade", groupLabel: "المبيعات والمشتريات" },
 
-  // ── الأصول الثابتة ──
-  { id: "fixed-assets", to: "/fixed-assets", label: "الأصول الثابتة", icon: "Building2", groupId: "fixed-assets", groupLabel: "الأصول الثابتة" },
+  // ── الأصول الثابتة (ضمن المحاسبة العامة) ──
+  { id: "fixed-assets", to: "/fixed-assets", label: "الأصول الثابتة", icon: "Building2", groupId: "accounting", groupLabel: "المحاسبة العامة" },
 
   // ── المخزون ──
   { id: "categories", to: "/categories", label: "تصنيفات المواد", icon: "Folders", groupId: "inventory", groupLabel: "المخزون" },
@@ -86,12 +86,6 @@ export const SYSTEM_ROUTE_GROUPS: SystemRouteGroup[] = [
     title: "المبيعات والمشتريات",
     icon: "Receipt",
     items: ALL_SYSTEM_ROUTES.filter(r => r.groupId === "trade"),
-  },
-  {
-    id: "fixed-assets",
-    title: "الأصول الثابتة",
-    icon: "Building2",
-    items: ALL_SYSTEM_ROUTES.filter(r => r.groupId === "fixed-assets"),
   },
   {
     id: "inventory",

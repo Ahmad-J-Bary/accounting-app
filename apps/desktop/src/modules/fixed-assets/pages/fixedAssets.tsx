@@ -147,7 +147,7 @@ export default function FixedAssetsPage() {
     }
   }, []);
 
-  const columns: UnifiedColumn<FixedAssetDto>[] = useMemo(
+  const allColumns: UnifiedColumn<FixedAssetDto>[] = useMemo(
     () => [
       {
         id: "code",
@@ -218,6 +218,15 @@ export default function FixedAssetsPage() {
     ],
     [warehouseMap, categoryMap]
   );
+
+  const columns = useMemo(() => {
+    if (assetTypeFilter === "buildings_land") {
+      return allColumns.filter(
+        (c) => c.id !== "warehouse" && c.id !== "accumulated_depreciation"
+      );
+    }
+    return allColumns;
+  }, [allColumns, assetTypeFilter]);
 
   const handleRowClick = useCallback(
     (asset: FixedAssetDto) => {

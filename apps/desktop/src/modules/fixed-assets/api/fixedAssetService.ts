@@ -28,6 +28,10 @@ export const fixedAssetService = {
     return await invoke<AssetCategoryDto[]>('list_asset_categories', { assetType });
   },
 
+  async createCategory(name: string, assetType: string = 'Fixed'): Promise<string> {
+    return await invoke<string>('create_asset_category', { name, assetType });
+  },
+
   async listMovements(assetId: string): Promise<AssetMovement[]> {
     return await invoke<AssetMovement[]>('list_asset_movements', { assetId });
   },
