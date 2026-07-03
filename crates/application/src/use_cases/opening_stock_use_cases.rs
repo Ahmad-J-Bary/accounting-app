@@ -96,11 +96,8 @@ impl RecordOpeningStockUseCase {
                 };
 
             let equity_account =
-                match self.account_repo.find_by_code("224").await? {
-                    Some(a) => a,
-                    None => self.account_repo.find_by_code("3002").await?
-                        .ok_or_else(|| AppError::NotFound("حساب رصيد افتتاحي غير موجود (224 أو 3002)".into()))?,
-                };
+                self.account_repo.find_by_code("222").await?
+                .ok_or_else(|| AppError::NotFound("حساب رأس المال غير موجود: 222".into()))?;
 
             let lines = vec![
                 JournalLine::new(

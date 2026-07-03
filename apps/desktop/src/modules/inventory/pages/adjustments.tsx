@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@shared/ui/button";
-import { Plus, Eye, Settings2, Trash2, RefreshCw } from "lucide-react";
+import { Plus, Eye, Settings2, Trash2 } from "lucide-react";
 import { adjustmentService } from '@modules/inventory/api/inventoryService';
 import { materialService } from '@modules/inventory/api/materialService';
 import type { StockAdjustment, CreateStockAdjustmentRequest, UpdateStockAdjustmentRequest, MaterialDto } from "@erp/shared-types";
@@ -156,12 +156,6 @@ export default function AdjustmentsPage() {
             onClick={() => selectedItem && handleDelete(selectedItem.id)}
             className="h-9 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 font-bold transition-all">
             <Trash2 className="w-4 h-4 ml-2 text-rose-500" /> حذف
-          </Button>
-          <div className="h-6 w-px bg-slate-200 mx-1" />
-          <Button variant="outline" size="sm"
-            onClick={() => refresh(true)}
-            className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <RefreshCw className="w-4 h-4 ml-2 text-slate-500" /> تحديث
           </Button>
         </div>
       }

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Button } from "@shared/ui/button";
-import { Plus, Eye, Printer, Settings2, Trash2, RefreshCw } from "lucide-react";
+import { Plus, Eye, Printer, Settings2, Trash2 } from "lucide-react";
 import type { SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { ReturnsTable } from "./ReturnsTable";
@@ -36,7 +36,6 @@ export function ReturnsList({
   search,
   partyIdFilter,
   onSearchChange,
-  onRefresh,
   onCreate,
   onEdit,
   onView,
@@ -112,12 +111,6 @@ export function ReturnsList({
             onClick={handleDeleteSelected}
             className="h-9 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 font-bold transition-all">
             <Trash2 className="w-4 h-4 ml-2 text-rose-500" /> حذف
-          </Button>
-          <div className="w-[1px] h-6 bg-slate-200 mx-1" />
-          <Button variant="outline" size="sm"
-            onClick={() => onRefresh()}
-            className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <RefreshCw className="w-4 h-4 ml-2 text-slate-500" /> تحديث
           </Button>
         </div>
       }

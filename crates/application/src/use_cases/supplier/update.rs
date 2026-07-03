@@ -68,15 +68,15 @@ impl UpdateSupplierUseCase {
 
         if balance_change != Decimal::ZERO {
             if let Some(ref account_id) = &supplier.account_id {
-                let adjustment_account = self.account_repo.find_by_code("224").await?
-                    .ok_or_else(|| AppError::NotFound("حساب الرصيد الافتتاحي غير موجود: 224".into()))?;
+                let adjustment_account = self.account_repo.find_by_code("222").await?
+                    .ok_or_else(|| AppError::NotFound("حساب رأس المال غير موجود: 222".into()))?;
 
                 let base_currency = Currency::new("SAR", "SAR", "ريال", "ر.س", 2, false);
                 let amount = MonetaryAmount::from_base(balance_change.abs(), base_currency.clone());
                 let zero = MonetaryAmount::zero(base_currency);
 
                 let lines = if balance_change > Decimal::ZERO {
-                    // We owe more: Dr 224, Cr supplier
+                    // We owe more: Dr 222, Cr supplier
                     vec![
                         JournalLine::new(
                             adjustment_account.id,
@@ -92,7 +92,7 @@ impl UpdateSupplierUseCase {
                         ),
                     ]
                 } else {
-                    // We owe less: Dr supplier, Cr 224
+                    // We owe less: Dr supplier, Cr 222
                     vec![
                         JournalLine::new(
                             *account_id,

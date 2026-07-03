@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import { ReportLayout } from "@widgets/templates/ReportLayout";
-import { Button } from "@shared/ui/button";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import { journalEntryService } from "@modules/accounting/api/journalEntryService";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
@@ -11,7 +10,7 @@ import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useUnifiedColumns } from "@shared/hooks";
 import { cn } from "@shared/lib/utils";
-import { Search, Minus, Plus } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { computeTreeTotals, flattenTreeRows, isBalanceDebit } from "../lib/trialBalance";
 import type { TrialBalanceTreeRow } from "../lib/trialBalance";
@@ -23,12 +22,43 @@ const DETAIL_LEVELS = [
   { level: 4, maxDepth: Infinity, label: "مستوى 4", desc: "+ كافة التفاصيل" },
 ];
 
+function parseNumber(value?: string | number | null) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const parsed = Number.parseFloat(value ?? "0");
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function isCreditNatureAccount(account: AccountDto) {
+  return ["Liabilities", "Equity", "Revenue"].includes(account.account_type);
+}
+
 async function computeLedgerTotals(accounts: AccountDto[]): Promise<Map<string, { debit: number; credit: number }>> {
+  const accountMap = new Map(accounts.map((account) => [account.id, account]));
   const entries = await journalEntryService.listJournalEntries({});
 
   const totals = new Map<string, { debit: number; credit: number }>();
+  for (const account of accounts) {
+    const openingBalance = parseNumber(account.opening_balance);
+    if (openingBalance === 0) continue;
+
+    const existing = totals.get(account.id) || { debit: 0, credit: 0 };
+    if (isCreditNatureAccount(account)) {
+      existing.credit += Math.abs(openingBalance);
+    } else {
+      existing.debit += Math.abs(openingBalance);
+    }
+    totals.set(account.id, existing);
+  }
+
   for (const entry of entries) {
     for (const line of entry.lines) {
+      const account = accountMap.get(line.account_id);
+      const isConsolidatedCapitalParent =
+        entry.source_id === "consolidated_capital" && account?.code === "222";
+      if (isConsolidatedCapitalParent) {
+        continue;
+      }
+
       const cur = totals.get(line.account_id) || { debit: 0, credit: 0 };
       cur.debit += parseFloat(line.debit_base || line.debit || "0");
       cur.credit += parseFloat(line.credit_base || line.credit || "0");
@@ -394,25 +424,6 @@ export default function TrialBalanceReport() {
             onColumnToggle={toggleColumn}
             onColumnsReset={resetToDefault}
             columnsModified={isModified}
-            actions={
-              <Button
-                size="sm"
-                className="h-9 bg-slate-900 text-white rounded-xl font-black gap-2"
-                onClick={() => {
-                  setLoading(true);
-                  accountingService.getChartOfAccounts()
-                    .then((data) => {
-                      setAccounts(data);
-                      return computeLedgerTotals(data);
-                    })
-                    .then(setLedgerTotals)
-                    .catch(() => toast.error("فشل تحديث البيانات"))
-                    .finally(() => setLoading(false));
-                }}
-              >
-                <Search className="w-4 h-4" /> تحديث
-              </Button>
-            }
           >
             <UnifiedTable
               data={rows}

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Button } from "@shared/ui/button";
-import { Plus, Eye, Printer, Settings2, Trash2, RefreshCw } from "lucide-react";
+import { Plus, Eye, Printer, Settings2, Trash2 } from "lucide-react";
 import { InvoiceDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { InvoiceTable } from "./InvoiceTable";
@@ -50,7 +50,6 @@ export function InvoiceList({
   search,
   partyIdFilter,
   onSearchChange,
-  onRefresh,
   onCreate,
   onEdit,
   onView,
@@ -145,11 +144,6 @@ export function InvoiceList({
             onClick={() => window.print()}
             className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
             <Printer className="w-4 h-4 ml-2 text-slate-500" /> طباعة
-          </Button>
-          <Button variant="outline" size="sm"
-            onClick={() => onRefresh()}
-            className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
-            <RefreshCw className="w-4 h-4 ml-2 text-slate-500" /> تحديث
           </Button>
         </div>
       }

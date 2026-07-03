@@ -350,7 +350,7 @@ impl PostInvoiceUseCase {
             InvoiceType::Sales => ("311", ()),
             InvoiceType::Purchase => ("41", ()),
             InvoiceType::PurchaseCosts => ("41", ()),
-            InvoiceType::OpeningBalance => ("224", ()),
+            InvoiceType::OpeningBalance => ("222", ()),
         };
 
         let main_account = self.account_repo.find_by_code(main_account_code).await?.ok_or_else(|| AppError::NotFound(format!("حساب الإيرادات/المصاريف غير موجود: {}", main_account_code)))?;

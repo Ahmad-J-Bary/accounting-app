@@ -43,4 +43,4 @@ SELECT '00000000-0000-0000-0000-000000002202', '2202', 'رأس المال', 'Cap
 FROM accounts WHERE code = '22';
 
 -- 4. Ensure they are active (in case they existed but were deactivated)
-UPDATE accounts SET is_active = 1 WHERE code IN ('1203', '2203', '2202', '224');
+UPDATE accounts SET is_active = 1 WHERE code IN ('1203', '2203', '222');
