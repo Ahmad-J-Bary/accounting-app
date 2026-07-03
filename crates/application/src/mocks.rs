@@ -1,9 +1,12 @@
 use std::sync::Mutex;
 use async_trait::async_trait;
+use crate::ports::account_repository::AccountRepository;
 use crate::ports::asset_repository::AssetRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
+use domain::accounting::account::Account;
 use domain::assets::{FixedAsset, FixedAssetId, AssetCategory, AssetMovement, DepreciationSchedule, AssetType};
 use domain::accounting::{JournalEntry, JournalEntryId};
+use domain::shared::AccountId;
 use crate::errors::AppError;
 use uuid::Uuid;
 
@@ -129,4 +132,53 @@ impl JournalEntryRepository for MockJournalRepository {
         Ok(entries.iter().filter(|e| e.source_id.as_deref() == Some(source_id)).cloned().collect())
     }
     async fn delete(&self, _id: &JournalEntryId) -> Result<(), AppError> { Ok(()) }
+}
+
+pub struct MockAccountRepository {
+    pub accounts: Mutex<Vec<Account>>,
+}
+
+impl MockAccountRepository {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl Default for MockAccountRepository {
+    fn default() -> Self {
+        Self { accounts: Mutex::new(Vec::new()) }
+    }
+}
+
+#[async_trait]
+impl AccountRepository for MockAccountRepository {
+    async fn save(&self, account: &Account) -> Result<(), AppError> {
+        let mut accounts = self.accounts.lock().unwrap();
+        accounts.retain(|a| a.id.0 != account.id.0);
+        accounts.push(account.clone());
+        Ok(())
+    }
+
+    async fn find_by_id(&self, id: &AccountId) -> Result<Option<Account>, AppError> {
+        let accounts = self.accounts.lock().unwrap();
+        Ok(accounts.iter().find(|a| a.id.0 == id.0).cloned())
+    }
+
+    async fn find_by_code(&self, _code: &str) -> Result<Option<Account>, AppError> {
+        Ok(None)
+    }
+
+    async fn list_all(&self) -> Result<Vec<Account>, AppError> {
+        Ok(self.accounts.lock().unwrap().clone())
+    }
+
+    async fn delete(&self, id: &AccountId) -> Result<(), AppError> {
+        let mut accounts = self.accounts.lock().unwrap();
+        accounts.retain(|a| a.id.0 != id.0);
+        Ok(())
+    }
+
+    async fn get_next_child_code(&self, _parent_code: &str) -> Result<String, AppError> {
+        Ok("001".to_string())
+    }
 }

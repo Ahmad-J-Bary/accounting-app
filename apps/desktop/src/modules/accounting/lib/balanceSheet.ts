@@ -52,25 +52,25 @@ function parseNum(value?: string | number | null): number {
 }
 
 function isFixedAsset(code: string, name: string): boolean {
-  const fixedIndicators = ["12", "13", "14", "15", "16", "17", "18", "19", "ثابت", "عقار", "أرض", "مبنى", "بناء", "أبنية", "معدات", "تجهيز", "أثاث", "مفروش", "مجمع إهلاك"];
+  const fixedIndicators = ["11", "ثابت", "عقار", "أرض", "مبنى", "بناء", "أبنية", "أراضي", "معدات", "تجهيز", "أثاث", "مفروش", "مجمع إهلاك"];
   if (fixedIndicators.some(i => code.startsWith(i) || name.includes(i))) return true;
   return false;
 }
 
 function isCurrentAsset(code: string, name: string): boolean {
-  const currentIndicators = ["11", "متداول", "نقد", "خزين", "صندوق", "عميل", "مدين", "زبون", "مخزون", "بضاعة"];
+  const currentIndicators = ["12", "متداول", "نقد", "خزين", "صندوق", "عميل", "مدين", "زبون", "مخزون", "بضاعة"];
   if (currentIndicators.some(i => code.startsWith(i) || name.includes(i))) return true;
   return false;
 }
 
 function isFixedLiability(code: string, name: string): boolean {
-  const fixedIndicators = ["22", "23", "24", "25", "26", "27", "28", "29", "ثابت", "طويل", "قرض"];
+  const fixedIndicators = ["21", "ثابت", "طويل", "قرض"];
   if (fixedIndicators.some(i => code.startsWith(i) || name.includes(i))) return true;
   return false;
 }
 
 function isCurrentLiability(code: string, name: string): boolean {
-  const currentIndicators = ["21", "متداول", "قصير", "مورد", "دائن", "مستحق", "رأس المال", "راس المال"];
+  const currentIndicators = ["22", "23", "24", "25", "26", "27", "28", "29", "متداول", "قصير", "مورد", "دائن", "مستحق"];
   if (currentIndicators.some(i => code.startsWith(i) || name.includes(i))) return true;
   return false;
 }
@@ -146,7 +146,7 @@ export function computeBalanceSheet(
   const allEquity = collectEquity(equityAccounts);
 
   function isTreeAccount(name: string): boolean {
-    return name.includes("مدين") || name.includes("مخزون") || name.includes("دائن");
+    return name.includes("مدين") || name.includes("مخزون") || name.includes("دائن") || name.includes("شركاء") || name.includes("شريك") || name.includes("رأس المال") || name.includes("راس المال") || name.includes("جاري");
   }
 
   function accountToRow(acc: AccountBalance, depth: number = 0): BalanceSheetRow {

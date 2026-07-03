@@ -1,4 +1,5 @@
 use crate::errors::AppError;
+use crate::ports::account_repository::AccountRepository;
 use crate::ports::asset_repository::AssetRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use chrono::Utc;
@@ -14,6 +15,7 @@ use uuid::Uuid;
 pub struct FixedAssetUseCases {
     repo: Arc<dyn AssetRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
+    account_repo: Arc<dyn AccountRepository>,
 }
 
 pub struct CreateAssetRequest {
@@ -39,8 +41,9 @@ impl FixedAssetUseCases {
     pub fn new(
         repo: Arc<dyn AssetRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
+        account_repo: Arc<dyn AccountRepository>,
     ) -> Self {
-        Self { repo, journal_repo }
+        Self { repo, journal_repo, account_repo }
     }
 
     pub async fn create_asset(
@@ -124,6 +127,21 @@ impl FixedAssetUseCases {
         .map_err(|e| AppError::Invalid(e.to_string()))?;
 
         self.journal_repo.save(&entry).await?;
+
+        // --- Update account balances ---
+        let base_amount = req.purchase_cost.amount() * req.fx_rate;
+
+        if let Some(mut asset_account) = self.account_repo.find_by_id(&AccountId(req.asset_account_id)).await? {
+            asset_account.debit(base_amount).map_err(|e| AppError::Invalid(e.to_string()))?;
+            asset_account.debit += base_amount;
+            self.account_repo.save(&asset_account).await?;
+        }
+
+        if let Some(mut payment_account) = self.account_repo.find_by_id(&AccountId(req.payment_account_id)).await? {
+            payment_account.credit(base_amount).map_err(|e| AppError::Invalid(e.to_string()))?;
+            payment_account.credit += base_amount;
+            self.account_repo.save(&payment_account).await?;
+        }
 
         Ok(asset.id)
     }
@@ -309,7 +327,7 @@ impl FixedAssetUseCases {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mocks::{MockAssetRepository, MockJournalRepository};
+    use crate::mocks::{MockAssetRepository, MockJournalRepository, MockAccountRepository};
     use domain::shared::Currency;
     use rust_decimal_macros::dec;
 
@@ -322,7 +340,8 @@ mod tests {
         println!("Starting test_asset_lifecycle");
         let asset_repo = Arc::new(MockAssetRepository::default());
         let journal_repo = Arc::new(MockJournalRepository::default());
-        let use_cases = FixedAssetUseCases::new(asset_repo.clone(), journal_repo.clone());
+        let account_repo = Arc::new(MockAccountRepository::default());
+        let use_cases = FixedAssetUseCases::new(asset_repo.clone(), journal_repo.clone(), account_repo.clone());
 
         let purchase_date = Utc::now();
         let cost = Money::new(dec!(12000), test_currency());

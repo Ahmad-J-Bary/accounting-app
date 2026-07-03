@@ -19,7 +19,7 @@ interface JournalTableProps {
   filterBar?: React.ReactNode;
 }
 
-type SortField = "entry_number" | "entry_date" | "journal_type" | "credit_account" | "debit_account";
+type SortField = "entry_number" | "created_at" | "journal_type" | "credit_account" | "debit_account";
 
 export function JournalTable({ entries, loading, search, onSearchChange, filters, filterBar }: JournalTableProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
@@ -37,7 +37,7 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
 
   const { sortedData, sortField, sortDirection, handleSort } = useSortable({
     data: tableData,
-    defaultField: "entry_date" as SortField,
+    defaultField: "created_at" as SortField,
     defaultDirection: "desc",
     sortFn: (a, b, field, direction) => {
       let comparison = 0;
@@ -45,8 +45,8 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
         case "entry_number":
           comparison = (parseInt(a.entry_number || "0", 10) || 0) - (parseInt(b.entry_number || "0", 10) || 0);
           break;
-        case "entry_date":
-          comparison = new Date(a.entry_date).getTime() - new Date(b.entry_date).getTime();
+        case "created_at":
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
           break;
         case "journal_type":
           comparison = (a.journal_type_display || "").localeCompare(b.journal_type_display || "", "ar");
@@ -136,10 +136,10 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
         className: "text-blue-600 font-bold"
       },
       {
-        id: "entry_date",
+        id: "created_at",
         header: "التاريخ",
         label: "التاريخ",
-        accessor: (e) => formatDateTime(e.entry_date),
+        accessor: (e) => formatDateTime(e.created_at),
         className: "text-slate-500 tabular-nums"
       },
     );
@@ -160,7 +160,7 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
         def.push(`credit_${curr.code}`);
       }
     });
-    def.push("description", "credit_account", "debit_account", "entry_date");
+    def.push("description", "credit_account", "debit_account", "created_at");
     return def;
   }, [sortedCurrencies, isBaseCurrency]);
 
@@ -269,7 +269,7 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
         sortField={sortField}
         sortDirection={sortDirection}
         onHeaderClick={(col) => {
-          if (col.id === "entry_number" || col.id === "journal_type" || col.id === "credit_account" || col.id === "debit_account" || col.id === "entry_date") {
+          if (col.id === "entry_number" || col.id === "journal_type" || col.id === "credit_account" || col.id === "debit_account" || col.id === "created_at") {
             handleSort(col.id as SortField);
           }
         }}

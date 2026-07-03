@@ -21,6 +21,7 @@ export interface JournalRow {
   journal_type_display: string;
   description: string;
   entry_date: string;
+  created_at: string;
   debit_original: number;
   debit_base: number;
   credit_original: number;
@@ -242,6 +243,7 @@ export function toJournalRow(
     journal_type_display: journalTypeDisplay,
     description: entry.description,
     entry_date: entry.entry_date,
+    created_at: entry.created_at,
     debit_original: dOriginal,
     debit_base: dBase,
     credit_original: cOriginal,
