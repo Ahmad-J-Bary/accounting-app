@@ -6,6 +6,7 @@ import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { returnService } from "@modules/invoicing/api/returnService";
 import { materialService } from "@modules/inventory/api/materialService";
 import { partnerService } from "@modules/partners/api/partnerService";
+import { fixedAssetService } from "@modules/fixed-assets/api/fixedAssetService";
 import { computeIncomeStatement, emptyIncomeStatementData } from "@modules/accounting/lib/incomeStatement";
 import type { LoadedIncomeStatementData, IncomeStatementFilters } from "@modules/accounting/lib/incomeStatement";
 import type { PartnerDto, MaterialDto, StockMovementDetailDto, AccountLedgerDto } from "@erp/shared-types";
@@ -14,6 +15,7 @@ export type LoadedPartnerProfitShareData = {
   partners: PartnerDto[];
   netProfit: number;
   inventoryValue: number;
+  fixedAssetsValue: number;
   partnerDrawings: Record<string, number>;
   customerDebts: number;
 };
@@ -22,6 +24,7 @@ const emptyData: LoadedPartnerProfitShareData = {
   partners: [],
   netProfit: 0,
   inventoryValue: 0,
+  fixedAssetsValue: 0,
   partnerDrawings: {},
   customerDebts: 0,
 };
@@ -39,7 +42,7 @@ export function usePartnerProfitShareReport(filters: IncomeStatementFilters) {
     else setRefreshing(true);
 
     try {
-      const [partners, entries, salesInvoices, purchaseInvoices, purchaseReturns, salesReturns, expenseItems, materials, receivables] = await Promise.all([
+      const [partners, entries, salesInvoices, purchaseInvoices, purchaseReturns, salesReturns, expenseItems, materials, receivables, fixedAssets] = await Promise.all([
         partnerService.listPartners(),
         journalEntryService.listJournalEntries({
           from_date: filters.from_date,
@@ -52,6 +55,7 @@ export function usePartnerProfitShareReport(filters: IncomeStatementFilters) {
         accountingService.getExpenseItems(),
         materialService.listMaterials(),
         accountingService.getReceivablesPayablesSummary(),
+        fixedAssetService.list(),
       ]);
 
       const movementResults = await Promise.allSettled(
@@ -115,11 +119,19 @@ export function usePartnerProfitShareReport(filters: IncomeStatementFilters) {
       }
 
       const customerDebts = parseFloat(receivables?.customers_debit || "0");
+      const fixedAssetsValue = (fixedAssets ?? [])
+        .filter((asset) => asset.status === "Active")
+        .reduce((sum, asset) => {
+          const purchaseCost = parseFloat(asset.purchase_cost.amount || "0");
+          const accumulated = parseFloat(asset.accumulated_depreciation.amount || "0");
+          return sum + (purchaseCost - accumulated);
+        }, 0);
 
       setReportData({
         partners,
         netProfit: incomeStatementResult.netProfit,
         inventoryValue: incomeStatementResult.closingInventory,
+        fixedAssetsValue,
         partnerDrawings,
         customerDebts,
       });

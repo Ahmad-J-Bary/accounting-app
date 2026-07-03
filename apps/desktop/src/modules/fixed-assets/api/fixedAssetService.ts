@@ -21,7 +21,38 @@ export const fixedAssetService = {
       depreciationAccountId: req.depreciation_account_id,
       accumulatedDepreciationAccountId: req.accumulated_depreciation_account_id,
       paymentAccountId: req.payment_account_id,
+      additionType: req.addition_type ?? "new",
+      notes: req.notes ?? null,
+      location: req.location ?? null,
+      salvageValue: req.salvage_value ?? null,
     });
+  },
+
+  async update(id: string, req: CreateFixedAssetRequest): Promise<void> {
+    return await invoke<void>('update_fixed_asset', {
+      id,
+      code: req.code,
+      name: req.name,
+      categoryId: req.category_id,
+      warehouseId: req.warehouse_id ?? null,
+      purchaseDate: req.purchase_date,
+      purchaseCost: req.purchase_cost,
+      currency: req.currency,
+      fxRate: req.fx_rate,
+      usefulLifeMonths: req.useful_life_months,
+      assetAccountId: req.asset_account_id,
+      depreciationAccountId: req.depreciation_account_id,
+      accumulatedDepreciationAccountId: req.accumulated_depreciation_account_id,
+      paymentAccountId: req.payment_account_id,
+      additionType: req.addition_type ?? "new",
+      notes: req.notes ?? null,
+      location: req.location ?? null,
+      salvageValue: req.salvage_value ?? null,
+    });
+  },
+
+  async delete(id: string): Promise<void> {
+    return await invoke<void>('delete_fixed_asset', { assetId: id });
   },
 
   async listCategories(assetType: string = 'Fixed'): Promise<AssetCategoryDto[]> {

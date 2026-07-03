@@ -37,6 +37,7 @@ export type BalanceSheetComputed = {
 
 type AccountBalance = {
   id: string;
+  code: string;
   name: string;
   balance: number;
   accountType: string;
@@ -51,7 +52,7 @@ function parseNum(value?: string | number | null): number {
 }
 
 function isFixedAsset(code: string, name: string): boolean {
-  const fixedIndicators = ["12", "13", "14", "15", "16", "17", "18", "19", "ثابت", "عقار", "أرض", "مبنى", "بناء", "أبنية", "معدات", "تجهيز", "أثاث", "مفروش"];
+  const fixedIndicators = ["12", "13", "14", "15", "16", "17", "18", "19", "ثابت", "عقار", "أرض", "مبنى", "بناء", "أبنية", "معدات", "تجهيز", "أثاث", "مفروش", "مجمع إهلاك"];
   if (fixedIndicators.some(i => code.startsWith(i) || name.includes(i))) return true;
   return false;
 }
@@ -84,6 +85,7 @@ function buildAccountTree(accounts: AccountDto[], parentId: string | null = null
       const childrenBalance = children.reduce((s, c) => s + c.balance, 0);
       return {
         id: acc.id,
+        code: acc.code,
         name: acc.name_ar,
         balance: children.length > 0 ? childrenBalance : ownBalance,
         accountType: acc.account_type,
@@ -109,8 +111,8 @@ export function computeBalanceSheet(
     function walk(list: AccountBalance[], skip: boolean) {
       for (const a of list) {
         if (!skip) {
-          if (isFixedAsset(a.id, a.name)) { fixed.push(a); continue; }
-          if (isCurrentAsset(a.id, a.name)) { current.push(a); continue; }
+          if (isFixedAsset(a.code, a.name)) { fixed.push(a); continue; }
+          if (isCurrentAsset(a.code, a.name)) { current.push(a); continue; }
         }
         walk(a.children, false);
       }
@@ -125,8 +127,8 @@ export function computeBalanceSheet(
     function walk(list: AccountBalance[], skip: boolean) {
       for (const a of list) {
         if (!skip) {
-          if (isFixedLiability(a.id, a.name)) { fixed.push(a); continue; }
-          if (isCurrentLiability(a.id, a.name)) { current.push(a); continue; }
+          if (isFixedLiability(a.code, a.name)) { fixed.push(a); continue; }
+          if (isCurrentLiability(a.code, a.name)) { current.push(a); continue; }
         }
         walk(a.children, false);
       }
@@ -156,6 +158,10 @@ export function computeBalanceSheet(
     };
   }
 
+  function isAccDep(name: string): boolean {
+    return name.includes("مجمع إهلاك");
+  }
+
   function buildSectionRows(accounts: AccountBalance[]): BalanceSheetRow[] {
     const result: BalanceSheetRow[] = [];
     function walk(list: AccountBalance[], depth: number) {
@@ -165,7 +171,11 @@ export function computeBalanceSheet(
         } else if (a.children.length > 0) {
           walk(a.children, depth);
         } else {
-          result.push({ label: a.name, value: a.balance, depth });
+          result.push({
+            label: isAccDep(a.name) ? `(-) ${a.name}` : a.name,
+            value: isAccDep(a.name) ? Math.abs(a.balance) : a.balance,
+            depth,
+          });
         }
       }
     }

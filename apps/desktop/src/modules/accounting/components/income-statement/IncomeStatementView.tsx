@@ -25,7 +25,7 @@ function ReportMeta({
     <div className="rounded-3xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-center text-sm text-slate-600">
       <span className="text-lg font-black text-slate-900">قائمة الدخل</span>
       <span className="mx-2 text-slate-300">|</span>
-      <span>قائمة تبين مجمل الربح وصافي الربح المحقق، ويظهر فيها حساب المتاجرة وحساب الأرباح والخسائر</span>
+      <span>قائمة تبين مجمل الربح وصافي الربح والنشاط التشغيلي، وتظهر فيها تكلفة المبيعات والمصروفات التشغيلية</span>
     </div>
   );
 }
@@ -39,8 +39,8 @@ function SummaryCards({
 }) {
   const cards = [
     { label: "إجمالي الإيرادات", value: computed.totalRevenue },
-    { label: "إجمالي الخصوم", value: computed.totalLiabilities },
-    { label: "إجمالي الأرباح", value: computed.grossProfit },
+    { label: "إجمالي التكاليف", value: computed.totalLiabilities },
+    { label: "مجمل الربح", value: computed.grossProfit },
     { label: "صافي الأرباح", value: computed.netProfit },
   ];
 

@@ -1,4 +1,4 @@
-﻿use sqlx::SqlitePool;
+use sqlx::SqlitePool;
 use application::errors::AppError;
 use domain::assets::{FixedAsset, AssetCategory, AssetMovement, DepreciationSchedule};
 
@@ -46,7 +46,7 @@ pub async fn save_category(pool: &SqlitePool, category: &AssetCategory) -> Resul
 
 pub async fn save_movement(pool: &SqlitePool, movement: &AssetMovement) -> Result<(), AppError> {
     sqlx::query(
-        "INSERT INTO asset_movements (id, asset_id, movement_type, movement_date, quantity, amount, currency, description, reference_no, journal_entry_id, created_at) 
+        "INSERT OR REPLACE INTO asset_movements (id, asset_id, movement_type, movement_date, quantity, amount, currency, description, reference_no, journal_entry_id, created_at) 
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(movement.id.to_string())

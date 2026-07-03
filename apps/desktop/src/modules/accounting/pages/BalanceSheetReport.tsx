@@ -38,7 +38,7 @@ export default function BalanceSheetReport() {
       to_date: now.toISOString().split("T")[0],
     };
   });
-  const { loading, refreshing, lastLoadedAt, reportData, loadReportData } = useBalanceSheetReport();
+  const { loading, refreshing, lastLoadedAt, reportData, loadReportData } = useBalanceSheetReport(filters);
 
   useEffect(() => {
     if (!selectedCurrency && baseCurrency?.code) {

@@ -53,6 +53,29 @@ pub async fn list_all_movements(pool: &SqlitePool) -> Result<Vec<AssetMovement>,
     Ok(rows.into_iter().map(row_to_movement).collect())
 }
 
+pub async fn delete_asset(pool: &SqlitePool, id: &FixedAssetId) -> Result<(), AppError> {
+    sqlx::query("DELETE FROM fixed_assets WHERE id = ?")
+        .bind(id.0.to_string())
+        .execute(pool)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    Ok(())
+}
+
+pub async fn delete_movements_by_asset(pool: &SqlitePool, asset_id: &Uuid) -> Result<(), AppError> {
+    sqlx::query("DELETE FROM asset_movements WHERE asset_id = ?")
+        .bind(asset_id.to_string())
+        .execute(pool)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    sqlx::query("DELETE FROM depreciation_schedules WHERE fixed_asset_id = ?")
+        .bind(asset_id.to_string())
+        .execute(pool)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    Ok(())
+}
+
 pub async fn get_depreciation_schedule(pool: &SqlitePool, asset_id: &Uuid) -> Result<Vec<DepreciationSchedule>, AppError> {
     let rows = sqlx::query_as::<_, DepreciationScheduleRow>("SELECT * FROM depreciation_schedules WHERE fixed_asset_id = ? ORDER BY period_date ASC")
         .bind(asset_id.to_string())

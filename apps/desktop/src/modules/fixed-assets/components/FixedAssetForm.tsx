@@ -30,6 +30,7 @@ import type {
   AccountDto,
   CurrencyDto,
   WarehouseDto,
+  FixedAssetDto,
   CreateFixedAssetRequest,
 } from "@erp/shared-types";
 import { SYSTEM_ACCOUNT_IDS } from "@erp/shared-types";
@@ -39,7 +40,22 @@ interface FixedAssetFormProps {
   onClose: () => void;
   onSaved: () => void;
   currencies: CurrencyDto[];
+  asset?: FixedAssetDto;
   initialCategoryId?: string;
+}
+
+const labelByAssetType: Record<string, string> = {
+  buildings_land: "أبنية وأراضي",
+  equipment: "معدات وتجهيزات",
+  furniture: "أثاث ومفروشات",
+};
+
+function detectAssetTypeFromCategory(catName: string): "buildings_land" | "equipment" | "furniture" | "" {
+  const lower = catName.toLowerCase();
+  if (lower.includes("أبنية") || lower.includes("أراضي") || lower.includes("land") || lower.includes("building")) return "buildings_land";
+  if (lower.includes("معدات") || lower.includes("تجهيزات") || lower.includes("equipment")) return "equipment";
+  if (lower.includes("أثاث") || lower.includes("مفروشات") || lower.includes("furniture")) return "furniture";
+  return "";
 }
 
 // ===== Constants =====
@@ -77,6 +93,7 @@ export function FixedAssetForm({
   onClose,
   onSaved,
   currencies,
+  asset,
   initialCategoryId,
 }: FixedAssetFormProps) {
   const [saving, setSaving] = useState(false);
@@ -84,29 +101,31 @@ export function FixedAssetForm({
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
 
+  const isEditing = !!asset;
+
   // --- Mode ---
   const [additionType, setAdditionType] = useState<"new" | "existing">("new");
 
   // --- Basic info ---
-  const [code, setCode] = useState("");
-  const [name, setName] = useState("");
+  const [code, setCode] = useState(asset?.code ?? "");
+  const [name, setName] = useState(asset?.name ?? "");
   const [assetType, setAssetType] = useState<"buildings_land" | "equipment" | "furniture" | "">("");
-  const [categoryId, setCategoryId] = useState("");
-  const [warehouseId, setWarehouseId] = useState<string | undefined>(undefined);
-  const [location, setLocation] = useState("");
-  const [notes, setNotes] = useState("");
+  const [categoryId, setCategoryId] = useState(asset?.category_id ?? "");
+  const [warehouseId, setWarehouseId] = useState<string | undefined>(asset?.warehouse_id ?? undefined);
+  const [location, setLocation] = useState(asset?.location ?? "");
+  const [notes, setNotes] = useState(asset?.notes ?? "");
 
   // --- Purchase ---
   const [purchaseDate, setPurchaseDate] = useState(
-    new Date().toISOString().split("T")[0]
+    asset ? new Date(asset.purchase_date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0]
   );
-  const [purchaseCost, setPurchaseCost] = useState("");
-  const [currency, setCurrency] = useState("");
-  const [fxRate, setFxRate] = useState("1");
-  const [salvageValue, setSalvageValue] = useState("");
+  const [purchaseCost, setPurchaseCost] = useState(asset?.purchase_cost?.amount ?? "");
+  const [currency, setCurrency] = useState(asset?.purchase_cost?.currency?.code ?? "");
+  const [fxRate, setFxRate] = useState(asset?.fx_rate ?? "1");
+  const [salvageValue, setSalvageValue] = useState(asset?.salvage_value?.amount ?? "");
 
   // --- Depreciation ---
-  const [usefulLifeMonths, setUsefulLifeMonths] = useState("60");
+  const [usefulLifeMonths, setUsefulLifeMonths] = useState(asset ? String(asset.useful_life_months) : "60");
 
   // --- Derived state ---
   const isNonDepreciable = useMemo(() => {
@@ -196,31 +215,19 @@ export function FixedAssetForm({
       if (initialCategoryId && cats.length > 0) {
         const cat = cats.find((c) => c.id === initialCategoryId);
         if (cat) {
-          const lowerName = cat.name.toLowerCase();
-          if (
-            lowerName.includes("أبنية") ||
-            lowerName.includes("أراضي") ||
-            lowerName.includes("land") ||
-            lowerName.includes("building")
-          ) {
-            setAssetType("buildings_land");
-          } else if (
-            lowerName.includes("معدات") ||
-            lowerName.includes("تجهيزات") ||
-            lowerName.includes("equipment")
-          ) {
-            setAssetType("equipment");
-          } else if (
-            lowerName.includes("أثاث") ||
-            lowerName.includes("مفروشات") ||
-            lowerName.includes("furniture")
-          ) {
-            setAssetType("furniture");
-          }
+          setAssetType(detectAssetTypeFromCategory(cat.name));
+        }
+      }
+
+      // Map existing asset's category to assetType
+      if (asset && cats.length > 0) {
+        const cat = cats.find((c) => c.id === asset.category_id);
+        if (cat) {
+          setAssetType(detectAssetTypeFromCategory(cat.name));
         }
       }
     })();
-  }, [initialCategoryId]);
+  }, [initialCategoryId, asset]);
 
   // Set default currency when currencies are loaded
   useEffect(() => {
@@ -346,9 +353,18 @@ export function FixedAssetForm({
         depreciation_account_id: mappedAccounts.depreciationAccountId,
         accumulated_depreciation_account_id: mappedAccounts.accumulatedDepreciationAccountId,
         payment_account_id: mappedAccounts.paymentAccountId,
+        addition_type: additionType,
+        notes: notes || undefined,
+        location: location || undefined,
+        salvage_value: salvageValue || undefined,
       };
-      await fixedAssetService.create(req);
-      toast.success("تم إضافة الأصل بنجاح");
+      if (isEditing && asset) {
+        await fixedAssetService.update(asset.id, req);
+        toast.success("تم تحديث الأصل بنجاح");
+      } else {
+        await fixedAssetService.create(req);
+        toast.success("تم إضافة الأصل بنجاح");
+      }
       onSaved();
     } catch (e) {
       toast.error("فشل حفظ الأصل: " + e);
@@ -362,7 +378,7 @@ export function FixedAssetForm({
 
   return (
     <FormPanel
-      title={additionType === "new" ? "شراء أصل جديد" : "إضافة أصل سابق (أول المدة)"}
+      title={isEditing ? `تعديل أصل: ${asset?.name}` : (additionType === "new" ? "شراء أصل جديد" : "إضافة أصل سابق (أول المدة)")}
       icon={panelIcon}
       onClose={onClose}
       onSave={handleSave}
@@ -371,7 +387,8 @@ export function FixedAssetForm({
     >
       {/* ── Section 1: Basic Info ── */}
       <SidebarSection title="البيانات الأساسية" icon={<FileText className="w-3.5 h-3.5" />} defaultOpen>
-        {/* Addition Type Toggle */}
+        {/* Addition Type Toggle (hidden when editing) */}
+        {!isEditing && (
         <div className="flex rounded-lg border border-slate-200 overflow-hidden bg-slate-50 mb-3">
           <button
             type="button"
@@ -398,8 +415,8 @@ export function FixedAssetForm({
             أصل سابق
           </button>
         </div>
+        )}
 
-        {/* Asset Type - First */}
         <FormField label="نوع الأصل" required>
           <Select dir="rtl" value={assetType} onValueChange={(v) => setAssetType(v as "buildings_land" | "equipment" | "furniture")}>
             <SelectTrigger className="bg-white border-slate-200 h-9 w-full text-right text-xs font-bold text-slate-800">
@@ -411,12 +428,7 @@ export function FixedAssetForm({
               <SelectItem value="furniture" className="text-xs">أثاث ومفروشات</SelectItem>
             </SelectContent>
           </Select>
-          {isNonDepreciable && assetType && (
-            <p className="text-[11px] text-amber-600 mt-1 flex items-center gap-1">
-              <Landmark className="w-3 h-3" />
-              هذا النوع لا يخضع للإهلاك (أراضي)
-            </p>
-          )}
+
         </FormField>
 
         {/* Code & Name - second */}
@@ -466,7 +478,7 @@ export function FixedAssetForm({
           />
         </FormField>
 
-        <FormField label="ملاحظات">
+        <FormField label="التوصيف والملاحظات">
           <Textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -576,22 +588,6 @@ export function FixedAssetForm({
       {assetType && !!accountMappingError && (
         <div className="px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
           {accountMappingError}
-        </div>
-      )}
-
-      {assetType && !accountMappingError && mappedAccounts.assetAccountId && (
-        <div className="px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700">
-          <div className="font-bold mb-1">تم تعيين الحسابات تلقائياً:</div>
-          <div className="space-y-0.5">
-            <div>حساب الأصل: {accounts.find(a => a.id === mappedAccounts.assetAccountId)?.name_ar}</div>
-            <div>حساب الدفع: {accounts.find(a => a.id === mappedAccounts.paymentAccountId)?.name_ar}</div>
-            {assetType !== "buildings_land" && (
-              <>
-                <div>مصروف الإهلاك: {accounts.find(a => a.id === mappedAccounts.depreciationAccountId)?.name_ar}</div>
-                <div>مجمع الإهلاك: {accounts.find(a => a.id === mappedAccounts.accumulatedDepreciationAccountId)?.name_ar}</div>
-              </>
-            )}
-          </div>
         </div>
       )}
     </FormPanel>

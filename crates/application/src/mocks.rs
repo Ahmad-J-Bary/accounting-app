@@ -64,6 +64,18 @@ impl AssetRepository for MockAssetRepository {
     }
     async fn save_depreciation_schedule(&self, _schedule: &DepreciationSchedule) -> Result<(), AppError> { Ok(()) }
     async fn get_depreciation_schedule(&self, _asset_id: &Uuid) -> Result<Vec<DepreciationSchedule>, AppError> { Ok(vec![]) }
+
+    async fn delete_asset(&self, id: &FixedAssetId) -> Result<(), AppError> {
+        let mut assets = self.assets.lock().unwrap();
+        assets.retain(|a| a.id.0 != id.0);
+        Ok(())
+    }
+
+    async fn delete_movements_by_asset(&self, asset_id: &Uuid) -> Result<(), AppError> {
+        let mut movements = self.movements.lock().unwrap();
+        movements.retain(|m| m.asset_id != *asset_id);
+        Ok(())
+    }
 }
 
 pub struct MockJournalRepository {

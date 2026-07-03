@@ -4,7 +4,15 @@ import { accountingService } from "@modules/accounting/api/accountingService";
 import { journalEntryService } from "@modules/accounting/api/journalEntryService";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { returnService } from "@modules/invoicing/api/returnService";
-import type { AccountDto } from "@erp/shared-types";
+import { materialService } from "@modules/inventory/api/materialService";
+import {
+  computeIncomeStatement,
+  emptyIncomeStatementData,
+  type IncomeStatementFilters,
+  type LoadedIncomeStatementData,
+} from "@modules/accounting/lib/incomeStatement";
+import { SYSTEM_ACCOUNT_IDS } from "@erp/shared-types";
+import type { AccountDto, AccountLedgerDto, MaterialDto, StockMovementDetailDto } from "@erp/shared-types";
 
 export type LoadedBalanceSheetData = {
   accounts: AccountDto[];
@@ -18,7 +26,7 @@ const emptyData: LoadedBalanceSheetData = {
   totalDrawings: 0,
 };
 
-export function useBalanceSheetReport() {
+export function useBalanceSheetReport(filters: IncomeStatementFilters) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
@@ -31,49 +39,87 @@ export function useBalanceSheetReport() {
     else setRefreshing(true);
 
     try {
-      const [accounts, entries, salesInvoices, purchaseInvoices] = await Promise.all([
+      const [
+        accounts,
+        entries,
+        salesInvoices,
+        purchaseInvoices,
+        purchaseReturns,
+        salesReturns,
+        expenseAccounts,
+        materials,
+      ] = await Promise.all([
         accountingService.getChartOfAccounts(),
-        journalEntryService.listJournalEntries({}),
+        journalEntryService.listJournalEntries({
+          from_date: filters.from_date,
+          to_date: filters.to_date,
+        }),
         invoiceService.listInvoicesByType("Sales"),
         invoiceService.listInvoicesByType("Purchase"),
+        returnService.listPurchaseReturns(),
+        returnService.listSalesReturns(),
+        accountingService.getExpenseItems(),
+        materialService.listMaterials(),
       ]);
 
-      const DRAWINGS_ID = "00000000-0000-0000-0000-000000000044";
+      const movementResults = await Promise.allSettled(
+        materials.map(async (material: MaterialDto) => ({
+          materialId: material.id,
+          movements: await materialService.listMovementsByMaterial(material.id),
+        })),
+      );
 
-      let totalRevenue = 0;
-      let totalExpenses = 0;
+      const ledgerResults = await Promise.allSettled(
+        expenseAccounts.map(async (account) => ({
+          accountId: account.id,
+          ledger: await accountingService.getAccountLedger(account.id),
+        })),
+      );
+
+      const stockMovementsByMaterial = new Map<string, StockMovementDetailDto[]>();
+      movementResults.forEach((result) => {
+        if (result.status === "fulfilled") {
+          stockMovementsByMaterial.set(result.value.materialId, result.value.movements ?? []);
+        }
+      });
+
+      const expenseLedgers = new Map<string, AccountLedgerDto>();
+      ledgerResults.forEach((result) => {
+        if (result.status === "fulfilled") {
+          expenseLedgers.set(result.value.accountId, result.value.ledger);
+        }
+      });
+
+      const incomeStatementData: LoadedIncomeStatementData = {
+        ...emptyIncomeStatementData,
+        salesInvoices,
+        purchaseInvoices,
+        purchaseReturns,
+        salesReturns,
+        expenseAccounts,
+        expenseLedgers,
+        stockMovementsByMaterial,
+        materials,
+      };
+
+      const incomeStatementResult = computeIncomeStatement(filters, incomeStatementData);
+
       let totalDrawings = 0;
-
-      const revenueAccounts = new Set(
-        accounts.filter(a => a.account_type === "Revenue").map(a => a.id),
-      );
-      const expenseAccounts = new Set(
-        accounts.filter(a => a.account_type === "Expenses").map(a => a.id),
-      );
 
       for (const entry of entries) {
         for (const line of entry.lines) {
           const amt = parseFloat(line.debit_base || line.debit || "0") - parseFloat(line.credit_base || line.credit || "0");
-          if (line.account_id === DRAWINGS_ID) {
+          if (line.account_id === SYSTEM_ACCOUNT_IDS.DRAWINGS) {
             totalDrawings += Math.abs(amt);
-          } else if (revenueAccounts.has(line.account_id)) {
-            totalRevenue += amt;
-          } else if (expenseAccounts.has(line.account_id)) {
-            totalExpenses += Math.abs(amt);
           }
         }
       }
 
-      const salesTotal = (salesInvoices ?? [])
-        .filter(inv => inv.status === "Posted")
-        .reduce((s, inv) => s + parseFloat(inv.total_amount || "0"), 0);
-      const purchaseTotal = (purchaseInvoices ?? [])
-        .filter(inv => inv.status === "Posted")
-        .reduce((s, inv) => s + parseFloat(inv.total_amount || "0"), 0);
-
-      const netProfit = totalRevenue + salesTotal - totalExpenses - purchaseTotal;
-
-      setReportData({ accounts, netProfit, totalDrawings });
+      setReportData({
+        accounts,
+        netProfit: incomeStatementResult.netProfit,
+        totalDrawings,
+      });
       hasLoadedOnceRef.current = true;
       setLastLoadedAt(new Date());
     } catch (error) {
@@ -83,7 +129,7 @@ export function useBalanceSheetReport() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [filters]);
 
   useEffect(() => {
     void loadReportData();

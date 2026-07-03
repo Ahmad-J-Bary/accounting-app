@@ -12,11 +12,13 @@ const summaryCards = [
   { label: "صافي الأرباح", key: "netProfit" as const, icon: TrendingUp, color: "text-emerald-700", bg: "bg-emerald-50" },
   { label: "قيمة البضاعة المتوفرة حاليا", key: "inventoryValue" as const, icon: Package, color: "text-amber-700", bg: "bg-amber-50" },
   { label: "مجموع الدين المترتبة على العملاء", key: "totalCustomerDebts" as const, icon: CreditCard, color: "text-rose-700", bg: "bg-rose-50" },
+  { label: "صافي الأصول الثابتة", key: "fixedAssetsValue" as const, icon: Package, color: "text-violet-700", bg: "bg-violet-50" },
+  { label: "إجمالي الأصول التشغيلية", key: "totalOperationalAssets" as const, icon: TrendingUp, color: "text-slate-700", bg: "bg-slate-100" },
 ];
 
 function SummaryCards({ computed, formatValue }: { computed: PartnerProfitShareComputed; formatValue: (value: number) => string }) {
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
       {summaryCards.map((card) => {
         const Icon = card.icon;
         return (
@@ -61,6 +63,8 @@ function PartnerTable({ computed, formatValue }: { computed: PartnerProfitShareC
             <TableHeader>المسحوبات</TableHeader>
             <TableHeader>المبلغ النهائي للشريك</TableHeader>
             <TableHeader>حصته من البضاعة المتوفرة</TableHeader>
+            <TableHeader>حصته من الأصول الثابتة</TableHeader>
+            <TableHeader>حصته من الأصول التشغيلية</TableHeader>
           </tr>
         </thead>
         <tbody>
@@ -74,6 +78,8 @@ function PartnerTable({ computed, formatValue }: { computed: PartnerProfitShareC
               <TableCell className="text-rose-600 font-bold">{formatValue(row.drawings)}</TableCell>
               <TableCell highlight>{formatValue(row.finalAmount)}</TableCell>
               <TableCell>{formatValue(row.inventoryShare)}</TableCell>
+              <TableCell>{formatValue(row.fixedAssetsShare)}</TableCell>
+              <TableCell highlight>{formatValue(row.operationalAssetShare)}</TableCell>
             </tr>
           ))}
         </tbody>
@@ -87,6 +93,8 @@ function PartnerTable({ computed, formatValue }: { computed: PartnerProfitShareC
             <TableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.drawings, 0))}</TableCell>
             <TableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.finalAmount, 0))}</TableCell>
             <TableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.inventoryShare, 0))}</TableCell>
+            <TableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.fixedAssetsShare, 0))}</TableCell>
+            <TableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.operationalAssetShare, 0))}</TableCell>
           </tr>
         </tfoot>
       </table>

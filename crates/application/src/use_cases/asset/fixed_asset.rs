@@ -29,6 +29,10 @@ pub struct CreateAssetRequest {
     pub depreciation_account_id: Uuid,
     pub accumulated_depreciation_account_id: Uuid,
     pub payment_account_id: Uuid,
+    pub addition_type: String,
+    pub notes: Option<String>,
+    pub location: Option<String>,
+    pub salvage_value: Option<Money>,
 }
 
 impl FixedAssetUseCases {
@@ -57,14 +61,40 @@ impl FixedAssetUseCases {
             req.accumulated_depreciation_account_id,
         );
 
+        let mut asset = asset;
+        if let Some(ref notes) = req.notes {
+            asset.notes = Some(notes.clone());
+        }
+        if let Some(ref location) = req.location {
+            asset.location = Some(location.clone());
+        }
+        if let Some(ref salvage) = req.salvage_value {
+            asset.salvage_value = Some(salvage.clone());
+        }
+
         self.repo.save_asset(&asset).await?;
+
+        let (movement_desc, entry_desc, line1_desc, line2_desc) = match req.addition_type.as_str() {
+            "existing" => (
+                format!("إضافة أصل سابق (أول المدة): {}", asset.name),
+                format!("إضافة أصل سابق (أول المدة): {}", asset.name),
+                format!("اثبات أصل سابق: {}", asset.name),
+                format!("مقابل رصيد افتتاحي: {}", asset.name),
+            ),
+            _ => (
+                format!("شراء أصل ثابت: {}", asset.name),
+                format!("شراء أصل ثابت: {}", asset.name),
+                format!("اثبات شراء أصل: {}", asset.name),
+                format!("سداد قيمة أصل: {}", asset.name),
+            ),
+        };
 
         let movement = AssetMovement::new(
             asset.id.0,
             AssetMovementType::Acquisition,
             req.purchase_date,
             req.purchase_cost.clone(),
-            format!("شراء أصل ثابت: {}", asset.name),
+            movement_desc,
         );
         self.repo.save_movement(&movement).await?;
 
@@ -73,14 +103,14 @@ impl FixedAssetUseCases {
             AccountId(req.asset_account_id),
             MonetaryAmount::new(req.purchase_cost.clone(), req.fx_rate),
             MonetaryAmount::zero(req.purchase_cost.currency().clone()),
-            format!("اثبات شراء أصل: {}", asset.name),
+            line1_desc,
         ));
 
         lines.push(JournalLine::new(
             AccountId(req.payment_account_id),
             MonetaryAmount::zero(req.purchase_cost.currency().clone()),
             MonetaryAmount::new(req.purchase_cost.clone(), req.fx_rate),
-            format!("سداد قيمة أصل: {}", asset.name),
+            line2_desc,
         ));
 
         let entry = JournalEntry::new(
@@ -88,7 +118,7 @@ impl FixedAssetUseCases {
             domain::accounting::JournalType::GeneralJournal,
             lines,
             req.purchase_date,
-            format!("شراء أصل ثابت: {}", asset.name),
+            entry_desc,
             Some(asset.id.0.to_string()),
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
@@ -182,6 +212,98 @@ impl FixedAssetUseCases {
     pub async fn list_movements(&self, asset_id: Uuid) -> Result<Vec<AssetMovement>, AppError> {
         self.repo.list_movements_by_asset(&asset_id).await
     }
+
+    pub async fn update_asset(
+        &self,
+        id: FixedAssetId,
+        req: CreateAssetRequest,
+    ) -> Result<(), AppError> {
+        let mut asset = self
+            .repo
+            .find_asset_by_id(&id)
+            .await?
+            .ok_or_else(|| AppError::NotFound("Asset not found".to_string()))?;
+
+        asset.code = req.code;
+        asset.name = req.name.clone();
+        asset.category_id = req.category_id;
+        asset.warehouse_id = req.warehouse_id;
+        asset.purchase_date = req.purchase_date;
+        asset.purchase_cost = req.purchase_cost.clone();
+        asset.fx_rate = req.fx_rate;
+        asset.useful_life_months = req.useful_life_months;
+        asset.notes = req.notes.clone();
+        asset.location = req.location.clone();
+        asset.salvage_value = req.salvage_value.clone();
+        asset.asset_account_id = req.asset_account_id;
+        asset.depreciation_account_id = req.depreciation_account_id;
+        asset.accumulated_depreciation_account_id = req.accumulated_depreciation_account_id;
+        asset.updated_at = Utc::now();
+
+        self.repo.save_asset(&asset).await?;
+
+        // Also update the acquisition movement
+        let movements = self.repo.list_movements_by_asset(&id.0).await?;
+        if let Some(mut acq_mov) = movements.into_iter().find(|m| m.movement_type == domain::assets::AssetMovementType::Acquisition) {
+            acq_mov.date = req.purchase_date;
+            acq_mov.amount = req.purchase_cost.clone();
+            acq_mov.description = match req.addition_type.as_str() {
+                "existing" => format!("إضافة أصل سابق (أول المدة): {}", req.name),
+                _ => format!("شراء أصل ثابت: {}", req.name),
+            };
+            self.repo.save_movement(&acq_mov).await?;
+        }
+
+        // Also update the acquisition journal entry if it exists
+        let entries = self.journal_repo.find_all_by_source_id(&id.0.to_string()).await?;
+        if let Some(mut entry) = entries.into_iter().find(|e| e.journal_type != domain::accounting::JournalType::GeneralJournal || !e.description.contains("إهلاك")) {
+            entry.description = match req.addition_type.as_str() {
+                "existing" => format!("إضافة أصل سابق (أول المدة): {}", req.name),
+                _ => format!("شراء أصل ثابت: {}", req.name),
+            };
+            entry.entry_date = req.purchase_date;
+
+            let line1_desc = match req.addition_type.as_str() {
+                "existing" => format!("اثبات أصل سابق: {}", req.name),
+                _ => format!("اثبات شراء أصل: {}", req.name),
+            };
+            let line2_desc = match req.addition_type.as_str() {
+                "existing" => format!("مقابل رصيد افتتاحي: {}", req.name),
+                _ => format!("سداد قيمة أصل: {}", req.name),
+            };
+
+            let mut lines = Vec::new();
+            lines.push(JournalLine::new(
+                AccountId(req.asset_account_id),
+                MonetaryAmount::new(req.purchase_cost.clone(), req.fx_rate),
+                MonetaryAmount::zero(req.purchase_cost.currency().clone()),
+                line1_desc,
+            ));
+
+            lines.push(JournalLine::new(
+                AccountId(req.payment_account_id),
+                MonetaryAmount::zero(req.purchase_cost.currency().clone()),
+                MonetaryAmount::new(req.purchase_cost.clone(), req.fx_rate),
+                line2_desc,
+            ));
+
+            entry.lines = lines;
+            self.journal_repo.save(&entry).await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn delete_asset(&self, id: FixedAssetId) -> Result<(), AppError> {
+        // Find all journal entries for this source and delete them
+        let entries = self.journal_repo.find_all_by_source_id(&id.0.to_string()).await?;
+        for entry in entries {
+            self.journal_repo.delete(&entry.id).await?;
+        }
+        self.repo.delete_movements_by_asset(&id.0).await?;
+        self.repo.delete_asset(&id).await?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -220,6 +342,10 @@ mod tests {
                 depreciation_account_id: Uuid::new_v4(),
                 accumulated_depreciation_account_id: Uuid::new_v4(),
                 payment_account_id: Uuid::new_v4(),
+                addition_type: "new".to_string(),
+                notes: None,
+                location: None,
+                salvage_value: None,
             })
             .await
             .unwrap();

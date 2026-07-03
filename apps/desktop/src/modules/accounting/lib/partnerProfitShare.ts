@@ -15,12 +15,16 @@ export type PartnerProfitShareRow = {
   drawings: number;
   finalAmount: number;
   inventoryShare: number;
+  fixedAssetsShare: number;
+  operationalAssetShare: number;
 };
 
 export type PartnerProfitShareComputed = {
   totalCapital: number;
   netProfit: number;
   inventoryValue: number;
+  fixedAssetsValue: number;
+  totalOperationalAssets: number;
   totalCustomerDebts: number;
   rows: PartnerProfitShareRow[];
 };
@@ -29,10 +33,12 @@ export function computePartnerProfitShare(
   partners: PartnerDto[],
   netProfit: number,
   inventoryValue: number,
+  fixedAssetsValue: number,
   partnerDrawings: Record<string, number>,
   customerDebts: number,
 ): PartnerProfitShareComputed {
   const totalCapital = partners.reduce((s, p) => s + parseFloat(p.amount_local || "0"), 0);
+  const totalOperationalAssets = inventoryValue + fixedAssetsValue + customerDebts;
 
   const rows: PartnerProfitShareRow[] = partners.map(p => {
     const capitalAmount = parseFloat(p.amount_local || "0");
@@ -49,6 +55,8 @@ export function computePartnerProfitShare(
     const drawings = partnerDrawings[p.id] || 0;
     const finalAmount = capitalAmount + profitShareAmount - drawings;
     const inventoryShare = inventoryValue * (profitShareRatio / 100);
+    const fixedAssetsShare = fixedAssetsValue * (profitShareRatio / 100);
+    const operationalAssetShare = totalOperationalAssets * (profitShareRatio / 100);
 
     return {
       partnerId: p.id,
@@ -60,6 +68,8 @@ export function computePartnerProfitShare(
       drawings,
       finalAmount,
       inventoryShare,
+      fixedAssetsShare,
+      operationalAssetShare,
     };
   });
 
@@ -67,6 +77,8 @@ export function computePartnerProfitShare(
     totalCapital,
     netProfit,
     inventoryValue,
+    fixedAssetsValue,
+    totalOperationalAssets,
     totalCustomerDebts: customerDebts,
     rows,
   };

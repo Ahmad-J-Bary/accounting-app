@@ -17,6 +17,7 @@ import { FixedAssetForm } from "@modules/fixed-assets/components/FixedAssetForm"
 import { FixedAssetDetailPanel } from "@modules/fixed-assets/components/FixedAssetDetailPanel";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import type { UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
+import { TableActions } from "@widgets/table-shell/TableActions";
 import { WarehouseSelector } from "@modules/inventory/components/WarehouseSelector";
 import {
   Select,
@@ -25,20 +26,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@shared/ui/select";
-
-const STATUS_LABELS: Record<string, string> = {
-  Active: "نشط",
-  Disposed: "مستبعد",
-  Sold: "مباع",
-  Damaged: "تالف",
-};
-
-const STATUS_CLASSES: Record<string, string> = {
-  Active: "bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded-full text-xs font-medium",
-  Disposed: "bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-full text-xs font-medium",
-  Sold: "bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full text-xs font-medium",
-  Damaged: "bg-red-50 text-red-700 border border-red-100 px-2 py-0.5 rounded-full text-xs font-medium",
-};
 
 export default function FixedAssetsPage() {
   const { currencies } = useCurrencyContext();
@@ -59,6 +46,7 @@ export default function FixedAssetsPage() {
   const [assetTypeFilter, setAssetTypeFilter] = useState<"all" | "buildings_land" | "equipment" | "furniture">("all");
   const [warehouseFilter, setWarehouseFilter] = useState<string>("all");
   const [showForm, setShowForm] = useState(false);
+  const [editingAsset, setEditingAsset] = useState<FixedAssetDto | null>(null);
   const [selectedAsset, setSelectedAsset] = useState<FixedAssetDto | null>(null);
   const [movements, setMovements] = useState<AssetMovement[]>([]);
 
@@ -147,6 +135,34 @@ export default function FixedAssetsPage() {
     }
   }, []);
 
+  const handleRowClick = useCallback(
+    (asset: FixedAssetDto) => {
+      setSelectedAsset(asset);
+      setEditingAsset(null);
+      loadMovements(asset.id);
+      setShowForm(false);
+    },
+    [loadMovements]
+  );
+
+  const handleEdit = useCallback((asset: FixedAssetDto) => {
+    setEditingAsset(asset);
+    setSelectedAsset(null);
+    setShowForm(true);
+  }, []);
+
+  const handleDelete = useCallback(async (asset: FixedAssetDto) => {
+    if (!confirm(`هل أنت متأكد من حذف الأصل "${asset.name}"؟\nهذه العملية لا يمكن التراجع عنها.`)) return;
+    try {
+      await fixedAssetService.delete(asset.id);
+      toast.success("تم حذف الأصل بنجاح");
+      if (selectedAsset?.id === asset.id) setSelectedAsset(null);
+      refresh(true);
+    } catch (e) {
+      toast.error("فشل حذف الأصل: " + e);
+    }
+  }, [refresh, selectedAsset]);
+
   const allColumns: UnifiedColumn<FixedAssetDto>[] = useMemo(
     () => [
       {
@@ -167,13 +183,6 @@ export default function FixedAssetsPage() {
         header: "المستودع",
         accessor: (r: FixedAssetDto) =>
           r.warehouse_id ? warehouseMap.get(r.warehouse_id) || "-" : "-",
-        className: "w-28 text-center",
-      },
-      {
-        id: "purchase_date",
-        header: "تاريخ الشراء",
-        accessor: (r: FixedAssetDto) =>
-          new Date(r.purchase_date).toLocaleDateString("ar-SA"),
         className: "w-28 text-center",
       },
       {
@@ -206,17 +215,32 @@ export default function FixedAssetsPage() {
         className: "w-32 text-left font-bold",
       },
       {
-        id: "status",
-        header: "الحالة",
+        id: "notes",
+        header: "التوصيف",
+        accessor: (r: FixedAssetDto) => r.notes || "—",
+        className: "max-w-[200px] truncate text-xs",
+      },
+      {
+        id: "created_at",
+        header: "التاريخ",
+        accessor: (r: FixedAssetDto) =>
+          new Date(r.created_at).toLocaleString("ar-SA"),
+        className: "w-36 text-center text-xs",
+      },
+      {
+        id: "actions",
+        header: "إجراءات",
         accessor: (r: FixedAssetDto) => (
-          <span className={STATUS_CLASSES[r.status] || ""}>
-            {STATUS_LABELS[r.status] || r.status}
-          </span>
+          <TableActions
+            onView={() => handleRowClick(r)}
+            onEdit={() => handleEdit(r)}
+            onDelete={() => handleDelete(r)}
+          />
         ),
-        className: "w-24 text-center",
+        className: "w-24",
       },
     ],
-    [warehouseMap, categoryMap]
+    [warehouseMap, categoryMap, handleRowClick, handleEdit, handleDelete]
   );
 
   const columns = useMemo(() => {
@@ -227,15 +251,6 @@ export default function FixedAssetsPage() {
     }
     return allColumns;
   }, [allColumns, assetTypeFilter]);
-
-  const handleRowClick = useCallback(
-    (asset: FixedAssetDto) => {
-      setSelectedAsset(asset);
-      loadMovements(asset.id);
-      setShowForm(false);
-    },
-    [loadMovements]
-  );
 
   const handlePostDepreciation = useCallback(
     async (assetId: string) => {
@@ -279,6 +294,7 @@ export default function FixedAssetsPage() {
           size="sm"
           onClick={() => {
             setSelectedAsset(null);
+            setEditingAsset(null);
             setShowForm(true);
           }}
           className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold"
@@ -301,7 +317,7 @@ export default function FixedAssetsPage() {
               <Select
                 dir="rtl"
                 value={assetTypeFilter}
-                onValueChange={(v: any) => {
+                onValueChange={(v: "all" | "buildings_land" | "equipment" | "furniture") => {
                   setAssetTypeFilter(v);
                   setWarehouseFilter("all");
                 }}
@@ -335,10 +351,12 @@ export default function FixedAssetsPage() {
         showForm ? (
           <FixedAssetForm
             currencies={currencies}
+            asset={editingAsset ?? undefined}
             initialCategoryId={selectedCategoryId}
-            onClose={() => setShowForm(false)}
+            onClose={() => { setShowForm(false); setEditingAsset(null); }}
             onSaved={() => {
               setShowForm(false);
+              setEditingAsset(null);
               refresh(true);
             }}
           />

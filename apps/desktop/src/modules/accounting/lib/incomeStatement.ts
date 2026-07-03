@@ -52,6 +52,7 @@ export type IncomeStatementComputed = {
   salesCount: number;
   purchaseCount: number;
   expenseAccountsCount: number;
+  expenseRows: IncomeStatementRow[];
   sections: IncomeStatementSection[];
 };
 
@@ -161,15 +162,19 @@ export function computeIncomeStatement(
 
   const closingInventory = openingInventory + periodMovements;
 
-  const totalExpenses = data.expenseAccounts.reduce((sum, account) => {
-    const ledger = data.expenseLedgers.get(account.id);
-    if (!ledger) return sum;
-    const periodNet = ledger.lines.reduce((ledgerSum, line) => {
-      if (!isWithinRange(line.date, fromTs, toTs)) return ledgerSum;
-      return ledgerSum + parseNumber(line.debit_base) - parseNumber(line.credit_base);
-    }, 0);
-    return sum + periodNet;
-  }, 0);
+  const expenseRows: IncomeStatementRow[] = data.expenseAccounts
+    .map((account) => {
+      const ledger = data.expenseLedgers.get(account.id);
+      if (!ledger) return { label: account.name_ar, value: 0 };
+      const periodNet = ledger.lines.reduce((ledgerSum, line) => {
+        if (!isWithinRange(line.date, fromTs, toTs)) return ledgerSum;
+        return ledgerSum + parseNumber(line.debit_base) - parseNumber(line.credit_base);
+      }, 0);
+      return { label: account.name_ar, value: periodNet };
+    })
+    .filter((r) => r.value !== 0);
+
+  const totalExpenses = expenseRows.reduce((s, r) => s + r.value, 0);
 
   const totalRevenue = salesTotal + closingInventory + purchaseReturnsTotal;
   const totalLiabilities = openingInventory + purchaseTotal + salesReturnsTotal;
@@ -216,6 +221,7 @@ export function computeIncomeStatement(
       totalValue: netProfit,
       rows: [
         { label: "إجمالي الأرباح", value: grossProfit },
+        ...expenseRows,
         { label: `إجمالي المصاريف`, value: totalExpenses },
       ],
     },
@@ -236,6 +242,7 @@ export function computeIncomeStatement(
     salesCount: postedSales.length,
     purchaseCount: postedPurchases.length,
     expenseAccountsCount: data.expenseLedgers.size,
+    expenseRows,
     sections,
   };
 }

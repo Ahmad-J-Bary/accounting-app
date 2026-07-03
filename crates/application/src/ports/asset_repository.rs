@@ -18,4 +18,7 @@ pub trait AssetRepository: Send + Sync {
     
     async fn save_depreciation_schedule(&self, schedule: &DepreciationSchedule) -> Result<(), AppError>;
     async fn get_depreciation_schedule(&self, asset_id: &Uuid) -> Result<Vec<DepreciationSchedule>, AppError>;
+
+    async fn delete_asset(&self, id: &FixedAssetId) -> Result<(), AppError>;
+    async fn delete_movements_by_asset(&self, asset_id: &Uuid) -> Result<(), AppError>;
 }

@@ -62,4 +62,12 @@ impl AssetRepository for SqliteAssetRepository {
     async fn get_depreciation_schedule(&self, asset_id: &Uuid) -> Result<Vec<DepreciationSchedule>, AppError> {
         queries::get_depreciation_schedule(&self.pool, asset_id).await
     }
+
+    async fn delete_asset(&self, id: &FixedAssetId) -> Result<(), AppError> {
+        queries::delete_asset(&self.pool, id).await
+    }
+
+    async fn delete_movements_by_asset(&self, asset_id: &Uuid) -> Result<(), AppError> {
+        queries::delete_movements_by_asset(&self.pool, asset_id).await
+    }
 }

@@ -106,6 +106,8 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::accounting::deactivate_account,
             commands::accounting::get_expense_items,
             commands::assets::create_fixed_asset,
+            commands::assets::update_fixed_asset,
+            commands::assets::delete_fixed_asset,
             commands::assets::list_fixed_assets,
             commands::assets::create_consumable,
             commands::assets::list_consumables,
@@ -171,15 +173,21 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::settle::settle_partner_balance,
         ])
         .setup(|app| {
-            let app_data_dir = app.path().app_data_dir().expect("Failed to get app data directory");
+            let app_data_dir = app
+                .path()
+                .app_data_dir()
+                .expect("Failed to get app data directory");
             if !app_data_dir.exists() {
-                std::fs::create_dir_all(&app_data_dir).expect("Failed to create app data directory");
+                std::fs::create_dir_all(&app_data_dir)
+                    .expect("Failed to create app data directory");
             }
             let db_path = app_data_dir.join("erp.db");
             let database_url = format!("sqlite:{}?mode=rwc", db_path.display());
 
-            let app_state = tauri::async_runtime::block_on(bootstrap::container::build_app_state(&database_url))
-                .expect("Failed to create app state");
+            let app_state = tauri::async_runtime::block_on(bootstrap::container::build_app_state(
+                &database_url,
+            ))
+            .expect("Failed to create app state");
             app.manage(app_state);
             Ok(())
         })

@@ -86,6 +86,10 @@ export interface CreateFixedAssetRequest {
   depreciation_account_id: string;
   accumulated_depreciation_account_id: string;
   payment_account_id: string;
+  addition_type?: string;
+  notes?: string;
+  location?: string;
+  salvage_value?: string;
 }
 
 export interface CreateConsumableRequest {

@@ -51,6 +51,7 @@ export default function PartnerProfitShareReport() {
       reportData.partners,
       reportData.netProfit,
       reportData.inventoryValue,
+      reportData.fixedAssetsValue,
       reportData.partnerDrawings,
       reportData.customerDebts,
     );
