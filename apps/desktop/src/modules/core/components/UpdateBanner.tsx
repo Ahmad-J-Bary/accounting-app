@@ -104,6 +104,12 @@ export function UpdateBanner({ variant = 'stacked', dark = false }: UpdateBanner
   }, [phase]);
 
   useEffect(() => {
+    if (phase === 'downloading' || phase === 'ready' || phase === 'failed') {
+      setOpen(true);
+    }
+  }, [phase]);
+
+  useEffect(() => {
     if (!open) return;
     const handleClick = (e: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) setOpen(false);
@@ -273,12 +279,12 @@ export function UpdateBanner({ variant = 'stacked', dark = false }: UpdateBanner
                   >
                     لاحقاً
                   </button>
-                  <button
-                    onClick={() => { startUpdate(); setOpen(false); }}
-                    className="flex-[2] flex items-center justify-center gap-1.5 text-xs py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition"
-                  >
-                    <Download className="w-3.5 h-3.5" /> تحديث الآن
-                  </button>
+                    <button
+                      onClick={startUpdate}
+                      className="flex-[2] flex items-center justify-center gap-1.5 text-xs py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition"
+                    >
+                      <Download className="w-3.5 h-3.5" /> تحديث الآن
+                    </button>
                 </>
               )}
               {phase === "ready" && (
@@ -289,12 +295,12 @@ export function UpdateBanner({ variant = 'stacked', dark = false }: UpdateBanner
                   >
                     لاحقاً
                   </button>
-                  <button
-                    onClick={() => { restartToUpdate(); setOpen(false); }}
-                    className="flex-[2] flex items-center justify-center gap-1.5 text-xs py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm transition"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" /> إعادة التشغيل والتثبيت
-                  </button>
+                    <button
+                      onClick={restartToUpdate}
+                      className="flex-[2] flex items-center justify-center gap-1.5 text-xs py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm transition"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" /> إعادة التشغيل والتثبيت
+                    </button>
                 </>
               )}
               {phase === "failed" && (
@@ -305,12 +311,12 @@ export function UpdateBanner({ variant = 'stacked', dark = false }: UpdateBanner
                   >
                     تجاهل
                   </button>
-                  <button
-                    onClick={() => { retry(); setOpen(false); }}
-                    className="flex-[2] flex items-center justify-center gap-1.5 text-xs py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold shadow-sm transition"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" /> إعادة المحاولة
-                  </button>
+                    <button
+                      onClick={retry}
+                      className="flex-[2] flex items-center justify-center gap-1.5 text-xs py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold shadow-sm transition"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" /> إعادة المحاولة
+                    </button>
                 </>
               )}
               {isBusy && (

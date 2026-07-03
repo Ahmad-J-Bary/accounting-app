@@ -1,4 +1,4 @@
-import { Info, RefreshCw, Download, ExternalLink } from "lucide-react";
+import { Info, RefreshCw, Download, ExternalLink, RotateCcw } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { SettingsSection } from "@widgets/templates/SettingsLayout";
 import { useUpdateChecker } from "@modules/core/hooks/useUpdateChecker";
@@ -10,11 +10,12 @@ export function AboutSettings() {
     updateInfo,
     loading: updateLoading,
     isUpdating,
-    updateSuccess,
     updateProgress,
     error: updateError,
     check: handleCheckUpdate,
     installUpdate,
+    restartToUpdate,
+    retry,
     phase,
   } = useUpdateChecker();
 
@@ -44,20 +45,45 @@ export function AboutSettings() {
             </div>
           </div>
 
-          {updateSuccess && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center">
-              <p className="text-sm font-bold text-emerald-700">✅ تم تثبيت التحديث بنجاح</p>
-              <p className="text-xs text-emerald-600 mt-1">سيتم تطبيق التغييرات بعد إعادة تشغيل التطبيق</p>
+          {phase === "ready" && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-3">
+              <p className="text-sm font-bold text-emerald-700 text-center">التحديث جاهز للتثبيت</p>
+              <Button
+                size="sm"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-9 text-xs font-bold gap-1.5"
+                onClick={restartToUpdate}
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                إعادة التشغيل والتثبيت
+              </Button>
             </div>
           )}
 
-          {updateError && (
+          {phase === "failed" && (
+            <div className="space-y-2">
+              {updateError && (
+                <div className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-xl p-3.5 font-bold">
+                  خطأ في التحديث: {updateError}
+                </div>
+              )}
+              <Button
+                size="sm"
+                className="w-full bg-rose-600 hover:bg-rose-700 text-white rounded-xl h-9 text-xs font-bold gap-1.5"
+                onClick={retry}
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                إعادة المحاولة
+              </Button>
+            </div>
+          )}
+
+          {updateError && phase !== "failed" && (
             <div className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-xl p-3.5 font-bold">
               خطأ في التحديث: {updateError}
             </div>
           )}
 
-          {!isUpdating && !updateSuccess && (
+          {!isUpdating && phase !== "ready" && phase !== "failed" && (
             <Button
               size="sm"
               className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-10 text-sm font-bold gap-2"
@@ -75,7 +101,7 @@ export function AboutSettings() {
 
           {isUpdating && <UpdateProgress progress={updateProgress} phase={phase} />}
 
-          {updateInfo && updateInfo.has_update && !isUpdating && !updateSuccess && (
+          {updateInfo && updateInfo.has_update && phase === "available" && (
             <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-3">
               <p className="text-sm font-bold text-green-800 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />

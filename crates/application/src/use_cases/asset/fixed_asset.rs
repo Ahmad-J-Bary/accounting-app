@@ -101,20 +101,20 @@ impl FixedAssetUseCases {
         );
         self.repo.save_movement(&movement).await?;
 
-        let mut lines = Vec::new();
-        lines.push(JournalLine::new(
-            AccountId(req.asset_account_id),
-            MonetaryAmount::new(req.purchase_cost.clone(), req.fx_rate),
-            MonetaryAmount::zero(req.purchase_cost.currency().clone()),
-            line1_desc,
-        ));
-
-        lines.push(JournalLine::new(
-            AccountId(req.payment_account_id),
-            MonetaryAmount::zero(req.purchase_cost.currency().clone()),
-            MonetaryAmount::new(req.purchase_cost.clone(), req.fx_rate),
-            line2_desc,
-        ));
+        let lines = vec![
+            JournalLine::new(
+                AccountId(req.asset_account_id),
+                MonetaryAmount::new(req.purchase_cost.clone(), req.fx_rate),
+                MonetaryAmount::zero(req.purchase_cost.currency().clone()),
+                line1_desc,
+            ),
+            JournalLine::new(
+                AccountId(req.payment_account_id),
+                MonetaryAmount::zero(req.purchase_cost.currency().clone()),
+                MonetaryAmount::new(req.purchase_cost.clone(), req.fx_rate),
+                line2_desc,
+            ),
+        ];
 
         let entry = JournalEntry::new(
             self.journal_repo.get_next_entry_number().await?,
@@ -290,22 +290,20 @@ impl FixedAssetUseCases {
                 _ => format!("سداد قيمة أصل: {}", req.name),
             };
 
-            let mut lines = Vec::new();
-            lines.push(JournalLine::new(
-                AccountId(req.asset_account_id),
-                MonetaryAmount::new(req.purchase_cost.clone(), req.fx_rate),
-                MonetaryAmount::zero(req.purchase_cost.currency().clone()),
-                line1_desc,
-            ));
-
-            lines.push(JournalLine::new(
-                AccountId(req.payment_account_id),
-                MonetaryAmount::zero(req.purchase_cost.currency().clone()),
-                MonetaryAmount::new(req.purchase_cost.clone(), req.fx_rate),
-                line2_desc,
-            ));
-
-            entry.lines = lines;
+            entry.lines = vec![
+                JournalLine::new(
+                    AccountId(req.asset_account_id),
+                    MonetaryAmount::new(req.purchase_cost.clone(), req.fx_rate),
+                    MonetaryAmount::zero(req.purchase_cost.currency().clone()),
+                    line1_desc,
+                ),
+                JournalLine::new(
+                    AccountId(req.payment_account_id),
+                    MonetaryAmount::zero(req.purchase_cost.currency().clone()),
+                    MonetaryAmount::new(req.purchase_cost.clone(), req.fx_rate),
+                    line2_desc,
+                ),
+            ];
             self.journal_repo.save(&entry).await?;
         }
 
