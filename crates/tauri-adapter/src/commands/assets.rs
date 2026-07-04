@@ -27,6 +27,7 @@ pub async fn create_fixed_asset(
     notes: Option<String>,
     location: Option<String>,
     salvage_value: Option<String>,
+    depreciation_method: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
     let category_uuid = Uuid::parse_str(&category_id).map_err(|e| e.to_string())?;
@@ -72,6 +73,7 @@ pub async fn create_fixed_asset(
         notes,
         location,
         salvage_value: salvage_money,
+        depreciation_method,
     }).await.map_err(|e| e.to_string())?;
 
     Ok(id.0.to_string())
@@ -98,6 +100,7 @@ pub async fn update_fixed_asset(
     notes: Option<String>,
     location: Option<String>,
     salvage_value: Option<String>,
+    depreciation_method: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let asset_id = FixedAssetId(Uuid::parse_str(&id).map_err(|e| e.to_string())?);
@@ -142,6 +145,7 @@ pub async fn update_fixed_asset(
         notes,
         location,
         salvage_value: salvage_money,
+        depreciation_method,
     }).await.map_err(|e| e.to_string())?;
 
     Ok(())

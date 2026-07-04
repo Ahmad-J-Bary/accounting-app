@@ -78,6 +78,8 @@ async fn ensure_currency_columns(pool: &SqlitePool) {
     add_column_if_missing(pool, "material_purchase_prices", "currency", "TEXT", "''").await;
     // material_sale_prices
     add_column_if_missing(pool, "material_sale_prices", "currency", "TEXT", "''").await;
+    // fixed_assets
+    add_column_if_missing(pool, "fixed_assets", "depreciation_method", "TEXT", "'StraightLine'").await;
 }
 
 pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::migrate::MigrateError> {
@@ -85,7 +87,10 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::migrate::Migr
 
     loop {
         match migrator.run(pool).await {
-            Ok(()) => return Ok(()),
+            Ok(()) => {
+                ensure_currency_columns(pool).await;
+                return Ok(());
+            }
             Err(sqlx::migrate::MigrateError::VersionMismatch(version)) => {
                 if let Some(migration) = migrator.migrations.iter().find(|m| m.version == version) {
                     sqlx::query("UPDATE _sqlx_migrations SET checksum = ? WHERE version = ?")

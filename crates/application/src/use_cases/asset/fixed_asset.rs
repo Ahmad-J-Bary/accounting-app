@@ -5,7 +5,7 @@ use crate::ports::journal_entry_repository::JournalEntryRepository;
 use chrono::Utc;
 use domain::accounting::{JournalEntry, JournalLine};
 use domain::assets::{
-    AssetCategory, AssetMovement, AssetMovementType, AssetType, FixedAsset, FixedAssetId,
+    AssetCategory, AssetMovement, AssetMovementType, AssetType, DepreciationMethod, FixedAsset, FixedAssetId,
 };
 use domain::shared::{AccountId, MonetaryAmount, Money};
 use rust_decimal::Decimal;
@@ -35,6 +35,7 @@ pub struct CreateAssetRequest {
     pub notes: Option<String>,
     pub location: Option<String>,
     pub salvage_value: Option<Money>,
+    pub depreciation_method: Option<String>,
 }
 
 impl FixedAssetUseCases {
@@ -73,6 +74,11 @@ impl FixedAssetUseCases {
         }
         if let Some(ref salvage) = req.salvage_value {
             asset.salvage_value = Some(salvage.clone());
+        }
+        if let Some(ref method) = req.depreciation_method {
+            if method.as_str() == "StraightLine" {
+                asset.depreciation_method = DepreciationMethod::StraightLine;
+            }
         }
 
         self.repo.save_asset(&asset).await?;
@@ -256,6 +262,11 @@ impl FixedAssetUseCases {
         asset.asset_account_id = req.asset_account_id;
         asset.depreciation_account_id = req.depreciation_account_id;
         asset.accumulated_depreciation_account_id = req.accumulated_depreciation_account_id;
+        if let Some(ref method) = req.depreciation_method {
+            if method.as_str() == "StraightLine" {
+                asset.depreciation_method = DepreciationMethod::StraightLine;
+            }
+        }
         asset.updated_at = Utc::now();
 
         self.repo.save_asset(&asset).await?;
@@ -363,6 +374,7 @@ mod tests {
                 notes: None,
                 location: None,
                 salvage_value: None,
+                depreciation_method: None,
             })
             .await
             .unwrap();

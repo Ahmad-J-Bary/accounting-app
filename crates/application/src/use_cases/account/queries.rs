@@ -237,17 +237,19 @@ impl AccountQueries {
             .await
             .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
 
-        // Filter for "Other Expenses" children
-        // EXPENSES_PARENT_ID = "00000000-0000-0000-0000-000000000043"
+        // Filter for "Other Expenses" children and the dedicated depreciation account
         let parent_id_str = crate::constants::EXPENSES_PARENT_ID;
+        let depreciation_id_str = crate::constants::DEPRECIATION_ACCOUNT_ID;
 
         let mut expense_items: Vec<AccountDto> = accounts
             .into_iter()
             .filter(|a| {
-                a.parent_id
+                let is_child_of_other_expenses = a.parent_id
                     .as_ref()
                     .map(|id| id.0.to_string() == parent_id_str)
-                    .unwrap_or(false)
+                    .unwrap_or(false);
+                let is_depreciation_account = a.id.0.to_string() == depreciation_id_str;
+                is_child_of_other_expenses || is_depreciation_account
             })
             .map(AccountDto::from)
             .collect();

@@ -1,5 +1,5 @@
 ﻿use application::errors::AppError;
-use domain::assets::{FixedAsset, FixedAssetId, AssetCategory, AssetType, AssetMovement, AssetMovementType, AssetStatus, DepreciationSchedule, DepreciationStatus};
+use domain::assets::{FixedAsset, FixedAssetId, AssetCategory, AssetType, AssetMovement, AssetMovementType, AssetStatus, DepreciationSchedule, DepreciationStatus, DepreciationMethod};
 use domain::shared::{Money, Currency};
 use rust_decimal::Decimal;
 use std::str::FromStr;
@@ -32,6 +32,10 @@ pub fn row_to_asset(row: AssetRow) -> Result<FixedAsset, AppError> {
         },
         location: Some(row.location),
         notes: row.notes,
+        depreciation_method: row.depreciation_method.map(|s| {
+            if s.as_str() == "StraightLine" { DepreciationMethod::StraightLine }
+            else { DepreciationMethod::StraightLine }
+        }).unwrap_or(DepreciationMethod::StraightLine),
         asset_account_id: Uuid::parse_str(&row.asset_account_id).map_err(|e| AppError::Infrastructure(e.to_string()))?,
         depreciation_account_id: Uuid::parse_str(&row.depreciation_account_id).map_err(|e| AppError::Infrastructure(e.to_string()))?,
         accumulated_depreciation_account_id: Uuid::parse_str(&row.accumulated_depreciation_account_id).map_err(|e| AppError::Infrastructure(e.to_string()))?,

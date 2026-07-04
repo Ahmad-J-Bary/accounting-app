@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS fixed_assets (
     asset_account_id TEXT NOT NULL,
     depreciation_account_id TEXT NOT NULL,
     accumulated_depreciation_account_id TEXT NOT NULL,
+    depreciation_method TEXT NOT NULL DEFAULT 'StraightLine',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     FOREIGN KEY (category_id) REFERENCES asset_categories(id)

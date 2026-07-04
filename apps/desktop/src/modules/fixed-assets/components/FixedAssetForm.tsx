@@ -126,6 +126,7 @@ export function FixedAssetForm({
 
   // --- Depreciation ---
   const [usefulLifeMonths, setUsefulLifeMonths] = useState(asset ? String(asset.useful_life_months) : "60");
+  const [depreciationMethod, setDepreciationMethod] = useState(asset?.depreciation_method ?? "StraightLine");
 
   // --- Derived state ---
   const isNonDepreciable = useMemo(() => {
@@ -357,6 +358,7 @@ export function FixedAssetForm({
         notes: notes || undefined,
         location: location || undefined,
         salvage_value: salvageValue || undefined,
+        depreciation_method: depreciationMethod,
       };
       if (isEditing && asset) {
         await fixedAssetService.update(asset.id, req);
@@ -543,8 +545,25 @@ export function FixedAssetForm({
             />
           </FormField>
         </div>
+      </SidebarSection>
 
-        {!isNonDepreciable && assetType && (
+      {/* ── Section 3: Depreciation (hidden for non-depreciable) ── */}
+      {!isNonDepreciable && assetType && (
+        <SidebarSection
+          title="الإهلاك"
+          icon={<BarChart2 className="w-3.5 h-3.5" />}
+          defaultOpen
+        >
+          <FormField label="طريقة الإهلاك">
+            <Select dir="rtl" value={depreciationMethod} onValueChange={setDepreciationMethod}>
+              <SelectTrigger className="bg-white border-slate-200 h-9 w-full text-right text-xs font-bold text-slate-800">
+                <SelectValue placeholder="اختر طريقة الإهلاك" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="StraightLine" className="text-xs">القسط الثابت</SelectItem>
+              </SelectContent>
+            </Select>
+          </FormField>
           <FormField label="قيمة الخردة (المتبقية)">
             <Input
               type="number"
@@ -556,16 +575,6 @@ export function FixedAssetForm({
               className="bg-white border-slate-200 h-9 text-xs"
             />
           </FormField>
-        )}
-      </SidebarSection>
-
-      {/* ── Section 3: Depreciation (hidden for non-depreciable) ── */}
-      {!isNonDepreciable && assetType && (
-        <SidebarSection
-          title="الإهلاك"
-          icon={<BarChart2 className="w-3.5 h-3.5" />}
-          defaultOpen
-        >
           <FormField label="العمر الإنتاجي (بالشهور)" required>
             <div className="relative">
               <Input

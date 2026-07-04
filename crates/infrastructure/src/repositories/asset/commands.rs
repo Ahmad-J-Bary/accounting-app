@@ -4,8 +4,8 @@ use domain::assets::{FixedAsset, AssetCategory, AssetMovement, DepreciationSched
 
 pub async fn save_asset(pool: &SqlitePool, asset: &FixedAsset) -> Result<(), AppError> {
     sqlx::query(
-        "INSERT OR REPLACE INTO fixed_assets (id, code, name, category_id, warehouse_id, purchase_date, purchase_cost, currency, fx_rate, useful_life_months, salvage_value, accumulated_depreciation, status, location, notes, asset_account_id, depreciation_account_id, accumulated_depreciation_account_id, created_at, updated_at) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT OR REPLACE INTO fixed_assets (id, code, name, category_id, warehouse_id, purchase_date, purchase_cost, currency, fx_rate, useful_life_months, salvage_value, accumulated_depreciation, status, location, notes, asset_account_id, depreciation_account_id, accumulated_depreciation_account_id, depreciation_method, created_at, updated_at) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(asset.id.0.to_string())
     .bind(&asset.code)
@@ -25,6 +25,7 @@ pub async fn save_asset(pool: &SqlitePool, asset: &FixedAsset) -> Result<(), App
     .bind(asset.asset_account_id.to_string())
     .bind(asset.depreciation_account_id.to_string())
     .bind(asset.accumulated_depreciation_account_id.to_string())
+    .bind(format!("{:?}", asset.depreciation_method))
     .bind(asset.created_at.to_rfc3339())
     .bind(asset.updated_at.to_rfc3339())
     .execute(pool)

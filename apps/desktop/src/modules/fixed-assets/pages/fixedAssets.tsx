@@ -16,6 +16,7 @@ import { useDataTable } from "@shared/hooks";
 import { FixedAssetForm } from "@modules/fixed-assets/components/FixedAssetForm";
 import { FixedAssetDetailPanel } from "@modules/fixed-assets/components/FixedAssetDetailPanel";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useBaseCurrencyColumns } from "@shared/hooks";
 import type { UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import { TableActions } from "@widgets/table-shell/TableActions";
 import { WarehouseSelector } from "@modules/inventory/components/WarehouseSelector";
@@ -28,7 +29,8 @@ import {
 } from "@shared/ui/select";
 
 export default function FixedAssetsPage() {
-  const { currencies } = useCurrencyContext();
+  const { currencies, formatAmount, toBase } = useCurrencyContext();
+  const { isBaseCurrency } = useBaseCurrencyColumns();
 
   const {
     filtered: allAssets,
@@ -164,89 +166,117 @@ export default function FixedAssetsPage() {
   }, [refresh, selectedAsset]);
 
   const allColumns: UnifiedColumn<FixedAssetDto>[] = useMemo(
-    () => [
-      {
-        id: "code",
-        header: "الكود",
-        accessor: "code",
-        className: "font-mono w-24",
-      },
-      { id: "name", header: "الاسم", accessor: "name" },
-      {
-        id: "category",
-        header: "التصنيف",
-        accessor: (r: FixedAssetDto) => categoryMap.get(r.category_id) || "-",
-        className: "w-32 text-center",
-      },
-      {
-        id: "warehouse",
-        header: "المستودع",
-        accessor: (r: FixedAssetDto) =>
-          r.warehouse_id ? warehouseMap.get(r.warehouse_id) || "-" : "-",
-        className: "w-28 text-center",
-      },
-      {
-        id: "purchase_cost",
-        header: "التكلفة",
-        accessor: (r: FixedAssetDto) =>
-          `${parseFloat(r.purchase_cost.amount).toLocaleString()} ${r.purchase_cost.currency.code}`,
-        className: "w-32 text-left",
-      },
-      {
-        id: "accumulated_depreciation",
-        header: "مجمع الإهلاك",
-        accessor: (r: FixedAssetDto) => {
-          const amt = parseFloat(r.accumulated_depreciation.amount);
-          if (amt === 0 && r.useful_life_months === 0)
-            return <span className="text-slate-400 text-xs">لا ينطبق</span>;
-          return `${amt.toLocaleString()} ${r.accumulated_depreciation.currency.code}`;
+    () => {
+      const cols: UnifiedColumn<FixedAssetDto>[] = [
+        {
+          id: "code",
+          header: "الكود",
+          accessor: "code",
+          className: "font-mono w-24",
         },
-        className: "w-32 text-left",
-      },
-      {
-        id: "net_book_value",
-        header: "صافي القيمة",
-        accessor: (r: FixedAssetDto) => {
-          const nbv =
-            parseFloat(r.purchase_cost.amount) -
-            parseFloat(r.accumulated_depreciation.amount);
-          return `${nbv.toLocaleString()} ${r.purchase_cost.currency.code}`;
+        { id: "name", header: "الاسم", accessor: "name" },
+        {
+          id: "category",
+          header: "التصنيف",
+          accessor: (r: FixedAssetDto) => categoryMap.get(r.category_id) || "-",
+          className: "w-32 text-center",
         },
-        className: "w-32 text-left font-bold",
-      },
-      {
-        id: "notes",
-        header: "التوصيف",
-        accessor: (r: FixedAssetDto) => r.notes || "—",
-        className: "max-w-[200px] truncate text-xs",
-      },
-      {
-        id: "created_at",
-        header: "التاريخ",
-        accessor: (r: FixedAssetDto) =>
-          new Date(r.created_at).toLocaleString("ar-SA"),
-        className: "w-36 text-center text-xs",
-      },
-      {
-        id: "actions",
-        header: "إجراءات",
-        accessor: (r: FixedAssetDto) => (
-          <TableActions
-            onView={() => handleRowClick(r)}
-            onEdit={() => handleEdit(r)}
-            onDelete={() => handleDelete(r)}
-          />
-        ),
-        className: "w-24",
-      },
-    ],
-    [warehouseMap, categoryMap, handleRowClick, handleEdit, handleDelete]
+        {
+          id: "warehouse",
+          header: "المستودع",
+          accessor: (r: FixedAssetDto) =>
+            r.warehouse_id ? warehouseMap.get(r.warehouse_id) || "-" : "-",
+          className: "w-28 text-center",
+        },
+      ];
+
+      currencies.forEach((curr) => {
+        const symbol = curr.symbol || curr.code;
+        cols.push({
+          id: `purchase_cost_${curr.code}`,
+          header: `التكلفة (${symbol})`,
+          label: `التكلفة (${symbol})`,
+          accessor: (r: FixedAssetDto) => {
+            const val = parseFloat(r.purchase_cost.amount);
+            if (Math.abs(val) === 0) return "";
+            const base = toBase(val, r.purchase_cost.currency.code);
+            return formatAmount(base, { currencyCode: curr.code });
+          },
+          className: "tabular-nums font-black text-slate-900",
+        });
+      });
+      currencies.forEach((curr) => {
+        const symbol = curr.symbol || curr.code;
+        cols.push({
+          id: `accumulated_depreciation_${curr.code}`,
+          header: `مجمع الإهلاك (${symbol})`,
+          label: `مجمع الإهلاك (${symbol})`,
+          accessor: (r: FixedAssetDto) => {
+            const val = parseFloat(r.accumulated_depreciation.amount);
+            if (val === 0 && r.useful_life_months === 0)
+              return <span className="text-slate-400 text-xs">لا ينطبق</span>;
+            if (Math.abs(val) === 0) return "";
+            const base = toBase(val, r.accumulated_depreciation.currency.code);
+            return formatAmount(base, { currencyCode: curr.code });
+          },
+          className: "tabular-nums font-black text-slate-900",
+        });
+      });
+      currencies.forEach((curr) => {
+        const symbol = curr.symbol || curr.code;
+        cols.push({
+          id: `net_book_value_${curr.code}`,
+          header: `صافي القيمة (${symbol})`,
+          label: `صافي القيمة (${symbol})`,
+          accessor: (r: FixedAssetDto) => {
+            const nbv =
+              parseFloat(r.purchase_cost.amount) -
+              parseFloat(r.accumulated_depreciation.amount);
+            if (Math.abs(nbv) === 0) return "";
+            const base = toBase(nbv, r.purchase_cost.currency.code);
+            return formatAmount(base, { currencyCode: curr.code });
+          },
+          className: "tabular-nums font-black text-slate-900",
+        });
+      });
+
+      cols.push(
+        {
+          id: "notes",
+          header: "التوصيف",
+          accessor: (r: FixedAssetDto) => r.notes || "—",
+          className: "max-w-[200px] truncate text-xs",
+        },
+        {
+          id: "created_at",
+          header: "التاريخ",
+          accessor: (r: FixedAssetDto) =>
+            new Date(r.created_at).toLocaleString("ar-SA"),
+          className: "w-36 text-center text-xs",
+        },
+        {
+          id: "actions",
+          header: "إجراءات",
+          accessor: (r: FixedAssetDto) => (
+            <TableActions
+              onView={() => handleRowClick(r)}
+              onEdit={() => handleEdit(r)}
+              onDelete={() => handleDelete(r)}
+            />
+          ),
+          className: "w-24",
+        }
+      );
+
+      return cols;
+    },
+    [warehouseMap, categoryMap, handleRowClick, handleEdit, handleDelete, currencies, formatAmount, toBase]
   );
 
   const columns = useMemo(() => {
     if (assetTypeFilter === "buildings_land") {
       return allColumns.filter(
-        (c) => c.id !== "warehouse" && c.id !== "accumulated_depreciation"
+        (c) => c.id !== "warehouse" && !c.id.startsWith("accumulated_depreciation_")
       );
     }
     return allColumns;
@@ -266,6 +296,24 @@ export default function FixedAssetsPage() {
     },
     [refresh, selectedAsset, loadMovements]
   );
+
+  const defaultVisible = useMemo(() => {
+    const ids: string[] = ["code", "name", "category"];
+    if (!(assetTypeFilter === "buildings_land")) {
+      ids.push("warehouse");
+    }
+    currencies.forEach((curr) => {
+      if (isBaseCurrency(curr.code)) {
+        ids.push(`purchase_cost_${curr.code}`);
+        if (!(assetTypeFilter === "buildings_land")) {
+          ids.push(`accumulated_depreciation_${curr.code}`);
+        }
+        ids.push(`net_book_value_${curr.code}`);
+      }
+    });
+    ids.push("notes", "created_at", "actions");
+    return ids;
+  }, [currencies, isBaseCurrency, assetTypeFilter]);
 
   // Determine the default category ID to pass to Form if filtering by type
   const selectedCategoryId = useMemo(() => {
@@ -310,6 +358,7 @@ export default function FixedAssetsPage() {
           search={search}
           onSearchChange={setSearch}
           tableId="fixed-assets"
+          defaultVisible={defaultVisible}
           selectedId={selectedAsset?.id}
           onRowClick={handleRowClick}
           filterBar={
@@ -366,6 +415,8 @@ export default function FixedAssetsPage() {
             movements={movements}
             onClose={() => setSelectedAsset(null)}
             onDepreciation={handlePostDepreciation}
+            onEdit={() => handleEdit(selectedAsset)}
+            onDelete={() => handleDelete(selectedAsset)}
             categoryName={categoryMap.get(selectedAsset.category_id)}
             warehouseName={
               selectedAsset.warehouse_id

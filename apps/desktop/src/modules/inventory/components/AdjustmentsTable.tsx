@@ -8,6 +8,8 @@ import { TableActions } from '@widgets/table-shell/TableActions';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useUnifiedColumns, useSortable } from "@shared/hooks";
 import { formatDateTime } from '@shared/lib/format';
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useBaseCurrencyColumns } from "@shared/hooks";
 
 interface AdjustmentsTableProps {
   data: StockAdjustment[];
@@ -22,7 +24,9 @@ interface AdjustmentsTableProps {
 }
 
 export function AdjustmentsTable({ data, loading, search, onSearchChange, selectedId, onView, onEdit, onDelete, onRowClick }: AdjustmentsTableProps) {
-  type SortField = "material_name" | "system_quantity" | "actual_quantity" | "difference" | "total_cost_base" | "adjustment_date" | "notes";
+  const { currencies, formatAmount } = useCurrencyContext();
+  const { isBaseCurrency } = useBaseCurrencyColumns();
+  type SortField = "material_name" | "system_quantity" | "actual_quantity" | "difference" | "total_cost" | "adjustment_date" | "notes";
 
   const { sortedData, sortField, sortDirection, handleSort } = useSortable({
     data,
@@ -35,7 +39,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
         case "system_quantity": comparison = parseFloat(a.system_quantity) - parseFloat(b.system_quantity); break;
         case "actual_quantity": comparison = parseFloat(a.actual_quantity) - parseFloat(b.actual_quantity); break;
         case "difference": comparison = parseFloat(a.difference) - parseFloat(b.difference); break;
-        case "total_cost_base": comparison = parseFloat(a.total_cost_base || "0") - parseFloat(b.total_cost_base || "0"); break;
+        case "total_cost": comparison = parseFloat(a.total_cost_base || "0") - parseFloat(b.total_cost_base || "0"); break;
         case "adjustment_date": comparison = new Date(a.adjustment_date).getTime() - new Date(b.adjustment_date).getTime(); break;
         case "notes": comparison = (a.notes || a.reason || "").localeCompare(b.notes || b.reason || "", "ar"); break;
       }
@@ -90,20 +94,23 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
           );
         },
       },
-      {
-        id: "total_cost_base",
-        header: "التكلفة",
-        label: "التكلفة",
-        accessor: (a) => {
-          const cost = parseFloat(a.total_cost_base || "0");
-          return cost !== 0 ? (
-            <span className="tabular-nums font-medium text-slate-900">{cost.toFixed(2)}</span>
-          ) : (
-            <span className="text-slate-400">—</span>
-          );
-        },
-        className: "tabular-nums"
-      },
+      ...currencies.map((curr) => {
+        const symbol = curr.symbol || curr.code;
+        return {
+          id: `total_cost_${curr.code}`,
+          header: `التكلفة (${symbol})`,
+          label: `التكلفة (${symbol})`,
+          accessor: (a: StockAdjustment) => {
+            const cost = parseFloat(a.total_cost_base || "0");
+            return Math.abs(cost) > 0 ? (
+              <span className="tabular-nums font-black text-slate-900">{formatAmount(cost, { currencyCode: curr.code })}</span>
+            ) : (
+              <span className="text-slate-400">—</span>
+            );
+          },
+          className: "tabular-nums",
+        } as UnifiedColumn<StockAdjustment>;
+      }),
       {
         id: "notes",
         header: "ملاحظة",
@@ -136,14 +143,19 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
     }
 
     return cols;
-  }, [onView, onEdit, onDelete]);
+  }, [onView, onEdit, onDelete, formatAmount, currencies]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["id", "material_name", "system_quantity", "actual_quantity",
-      "difference", "total_cost_base", "adjustment_date", "notes"];
+      "difference", "adjustment_date", "notes"];
+    currencies.forEach((curr) => {
+      if (isBaseCurrency(curr.code)) {
+        ids.push(`total_cost_${curr.code}`);
+      }
+    });
     if (onView || onEdit || onDelete) ids.push("actions");
     return ids;
-  }, [onView, onEdit, onDelete]);
+  }, [onView, onEdit, onDelete, currencies, isBaseCurrency]);
 
   const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "adjustments",
@@ -157,21 +169,22 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
       if (id === "material_name") {
         return { id: "count", columnId: id, label: "", value: `${sortedData.length} تسوية`, className: "text-slate-500 font-medium" };
       }
-      if (id === "total_cost_base") {
+      if (id.startsWith("total_cost_")) {
         const total = sortedData.reduce((s, a) => s + parseFloat(a.total_cost_base || "0"), 0);
+        const totalCostId = id;
         return {
-          id: "cost_summary", columnId: id, label: "الإجمالي",
-          value: total !== 0 ? total.toFixed(2) : "—",
+          id: `cost_summary_${totalCostId}`, columnId: id, label: "الإجمالي",
+          value: total !== 0 ? formatAmount(total, { currencyCode: id.replace("total_cost_", "") }) : "—",
           className: "text-slate-900 font-black"
         };
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [sortedData, enrichedColumns]);
+  }, [sortedData, enrichedColumns, formatAmount]);
 
   const sortableFields: SortField[] = [
     "material_name", "system_quantity", "actual_quantity",
-    "difference", "total_cost_base", "adjustment_date", "notes"
+    "difference", "total_cost", "adjustment_date", "notes"
   ];
 
   const filtered = useMemo(() =>
@@ -207,6 +220,8 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
         onHeaderClick={(col) => {
           if (sortableFields.includes(col.id as SortField)) {
             handleSort(col.id as SortField);
+          } else if (col.id.startsWith("total_cost_")) {
+            handleSort("total_cost" as SortField);
           }
         }}
         selectedId={selectedId}

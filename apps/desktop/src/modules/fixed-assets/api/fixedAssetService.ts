@@ -25,6 +25,7 @@ export const fixedAssetService = {
       notes: req.notes ?? null,
       location: req.location ?? null,
       salvageValue: req.salvage_value ?? null,
+      depreciationMethod: req.depreciation_method ?? "StraightLine",
     });
   },
 
@@ -48,6 +49,7 @@ export const fixedAssetService = {
       notes: req.notes ?? null,
       location: req.location ?? null,
       salvageValue: req.salvage_value ?? null,
+      depreciationMethod: req.depreciation_method ?? "StraightLine",
     });
   },
 

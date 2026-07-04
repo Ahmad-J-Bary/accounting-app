@@ -26,6 +26,7 @@ export interface FixedAssetDto {
   useful_life_months: number;
   salvage_value?: MoneyDto | null;
   accumulated_depreciation: MoneyDto;
+  depreciation_method: string;
   status: 'Active' | 'Disposed' | 'Sold' | 'Damaged';
   location?: string;
   notes?: string;
@@ -90,6 +91,7 @@ export interface CreateFixedAssetRequest {
   notes?: string;
   location?: string;
   salvage_value?: string;
+  depreciation_method?: string;
 }
 
 export interface CreateConsumableRequest {
