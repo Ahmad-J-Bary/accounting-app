@@ -75,6 +75,12 @@ export function useDocumentEditor({
                     updatedLine.unit_price = pPrice.price_base || "0";
                     updatedLine.cost_price = updatedLine.unit_price;
                 }
+                const retailSale = material.sale_prices.find(p => p.unit_id === updates.unit_id && p.tier === 'retail');
+                const semiSale = material.sale_prices.find(p => p.unit_id === updates.unit_id && p.tier === 'semi_wholesale');
+                const wholeSale = material.sale_prices.find(p => p.unit_id === updates.unit_id && p.tier === 'wholesale');
+                if (retailSale) updatedLine.retail_price = retailSale.price_base || retailSale.price;
+                if (semiSale) updatedLine.semi_wholesale_price = semiSale.price_base || semiSale.price;
+                if (wholeSale) updatedLine.wholesale_price = wholeSale.price_base || wholeSale.price;
             } else {
                 const tierPrices = {
                   retail: material.sale_prices.find(p => p.unit_id === updates.unit_id && p.tier === 'retail'),
@@ -258,6 +264,12 @@ export function useDocumentEditor({
       );
       price = purchasePrice?.price_base || material.last_purchase_price_base || "0";
       costPrice = price;
+      const retailSale = material.sale_prices?.find(p => p.unit_id === defaultUnit?.id && p.tier === 'retail');
+      const semiSale = material.sale_prices?.find(p => p.unit_id === defaultUnit?.id && p.tier === 'semi_wholesale');
+      const wholeSale = material.sale_prices?.find(p => p.unit_id === defaultUnit?.id && p.tier === 'wholesale');
+      retailPrice = retailSale?.price_base || retailSale?.price || undefined;
+      semiWholesalePrice = semiSale?.price_base || semiSale?.price || undefined;
+      wholesalePrice = wholeSale?.price_base || wholeSale?.price || undefined;
     }
 
     const expiryDate = getDefaultExpiryDate?.(material.id);

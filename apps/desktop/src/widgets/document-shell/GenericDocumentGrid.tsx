@@ -34,6 +34,8 @@ export interface DocumentColumn {
   align?: "right" | "left" | "center";
   /** When false, the column is hidden by default (user can show via column picker) */
   defaultVisible?: boolean;
+  /** Layout for sale_tier_prices column: "row" (vertical stacked) or "column" (horizontal) */
+  saleTierLayout?: "row" | "column";
   type:
     | "text"
     | "number"
@@ -47,7 +49,9 @@ export interface DocumentColumn {
     | "tier_select"
     | "price_tier"
     | "warehouse_select"
-    | "date";
+    | "date"
+    | "sale_tier_prices"
+    | "cost_with_history";
 }
 
 export interface GenericDocumentGridProps {
@@ -71,6 +75,7 @@ export interface GenericDocumentGridProps {
     onSelect: (material: MaterialDto) => void;
     onClose: () => void;
   }) => React.ReactNode;
+  priceHistoryMap?: Record<string, import("@erp/shared-types").MaterialPriceHistoryDto>;
 }
 
 export function GenericDocumentGrid({
@@ -88,6 +93,7 @@ export function GenericDocumentGrid({
   exchangeRate = "1",
   dynamicVisibleColumns,
   searchPanelRenderer,
+  priceHistoryMap,
 }: GenericDocumentGridProps) {
   const { baseCurrency, convertBetween, currencies } = useCurrencyContext();
   const { settings, getDensityPadding } = useTableSettings();
@@ -349,6 +355,7 @@ export function GenericDocumentGrid({
     warehouses: warehouses || [],
     getCellValue,
     searchRow,
+    priceHistoryMap,
   };
 
   const cellCallbacks: DocumentGridCallbacks = {

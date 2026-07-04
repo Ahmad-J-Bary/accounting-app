@@ -30,6 +30,10 @@ impl InventoryLotRepository for SqliteInventoryLotRepository {
         queries::find_available_by_material(&self.pool, material_id).await
     }
 
+    async fn find_by_material(&self, material_id: &str) -> Result<Vec<InventoryLot>, AppError> {
+        queries::find_by_material(&self.pool, material_id).await
+    }
+
     async fn find_by_movement_id(&self, movement_id: &str) -> Result<Vec<InventoryLot>, AppError> {
         queries::find_by_movement_id(&self.pool, movement_id).await
     }
@@ -48,6 +52,10 @@ impl InventoryLotRepository for SqliteInventoryLotRepository {
 
     async fn update_remaining(&self, lot_id: &str, new_quantity_remaining: &str) -> Result<(), AppError> {
         commands::update_remaining(&self.pool, lot_id, new_quantity_remaining).await
+    }
+
+    async fn update_sale_prices(&self, lot_id: &str, retail: Option<&str>, semi_wholesale: Option<&str>, wholesale: Option<&str>) -> Result<(), AppError> {
+        commands::update_sale_prices(&self.pool, lot_id, retail, semi_wholesale, wholesale).await
     }
 
     async fn delete_by_movement_id(&self, movement_id: &str) -> Result<(), AppError> {

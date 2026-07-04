@@ -15,6 +15,9 @@ pub struct InventoryLotDto {
     pub fx_rate: String,
     pub purchase_date: String,
     pub created_at: String,
+    pub retail_price_base: Option<String>,
+    pub semi_wholesale_price_base: Option<String>,
+    pub wholesale_price_base: Option<String>,
 }
 
 impl From<InventoryLot> for InventoryLotDto {
@@ -32,6 +35,9 @@ impl From<InventoryLot> for InventoryLotDto {
             fx_rate: lot.fx_rate.to_string(),
             purchase_date: lot.purchase_date.to_rfc3339(),
             created_at: lot.created_at.to_rfc3339(),
+            retail_price_base: lot.retail_price_base.map(|v| v.to_string()),
+            semi_wholesale_price_base: lot.semi_wholesale_price_base.map(|v| v.to_string()),
+            wholesale_price_base: lot.wholesale_price_base.map(|v| v.to_string()),
         }
     }
 }

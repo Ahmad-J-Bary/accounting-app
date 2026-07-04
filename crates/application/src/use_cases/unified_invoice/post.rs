@@ -5,6 +5,8 @@ use domain::sales::unified_invoice::{InvoiceType};
 use domain::inventory::stock_movement::{StockMovement, MovementType};
 use domain::shared::ids::WarehouseId;
 use domain::inventory::inventory_lot::{InventoryLot, LotConsumption};
+use domain::inventory::material::{MaterialPurchasePrice, MaterialSalePrice};
+use domain::shared::ids::MaterialUnitId;
 use domain::shared::ids::{InvoiceId};
 use crate::ports::unified_invoice_repository::UnifiedInvoiceRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
@@ -272,6 +274,40 @@ impl PostInvoiceUseCase {
                     let avg_unit_cost = summary.average_cost;
                     total_cost = avg_unit_cost * effective_quantity;
                     total_cost_base = avg_unit_cost_base * effective_quantity;
+
+                    // Also consume lots to track remaining quantities for display
+                    let available_lots = self.lot_repo
+                        .find_available_by_material(&line.material_id.to_string())
+                        .await?;
+
+                    let total_available_qty: Decimal = available_lots.iter()
+                        .map(|l| l.quantity_remaining)
+                        .sum();
+
+                    if total_available_qty < effective_quantity {
+                        return Err(AppError::Invalid(format!(
+                            "الكمية المتاحة في المستودع ({}) غير كافية للصنف. المطلوب: {}",
+                            total_available_qty, effective_quantity
+                        )));
+                    }
+
+                    let mut remaining_qty = effective_quantity;
+                    for lot in &available_lots {
+                        if remaining_qty <= Decimal::ZERO {
+                            break;
+                        }
+                        let take = if lot.quantity_remaining >= remaining_qty {
+                            remaining_qty
+                        } else {
+                            lot.quantity_remaining
+                        };
+                        let new_remaining = lot.quantity_remaining - take;
+                        self.lot_repo.update_remaining(
+                            &lot.id.to_string(),
+                            &new_remaining.to_string(),
+                        ).await?;
+                        remaining_qty -= take;
+                    }
                 }
             }
 
@@ -317,6 +353,10 @@ impl PostInvoiceUseCase {
             // For purchase invoices (excluding OpeningBalance), create inventory lots
             if is_purchase {
                 let now = Utc::now();
+                let retail_price_base = line.retail_price.as_ref().map(|m| m.base_amount);
+                let semi_wholesale_price_base = line.semi_wholesale_price.as_ref().map(|m| m.base_amount);
+                let wholesale_price_base = line.wholesale_price.as_ref().map(|m| m.base_amount);
+
                 let lot = InventoryLot {
                     id: Uuid::new_v4(),
                     material_id: line.material_id.0,
@@ -330,8 +370,63 @@ impl PostInvoiceUseCase {
                     fx_rate: invoice.exchange_rate,
                     purchase_date: now,
                     created_at: now,
+                    retail_price_base,
+                    semi_wholesale_price_base,
+                    wholesale_price_base,
                 };
                 self.lot_repo.save(&lot).await?;
+            }
+
+            // Auto-update material purchase and sale prices for Purchase invoices
+            if invoice.invoice_type == InvoiceType::Purchase {
+                if let (Ok(Some(mut material)), Some(unit_id_str)) = (self.material_repo.find_by_id(&line.material_id).await, &line.unit_id) {
+                    if let Ok(unit_id) = MaterialUnitId::from_str(unit_id_str) {
+                        let raw_unit_price_doc = line.unit_price.amount();
+                        let raw_unit_price_base = line.unit_price.base_amount;
+                        let purchase_price = MaterialPurchasePrice {
+                            id: Uuid::new_v4().to_string(),
+                            unit_id,
+                            price: raw_unit_price_doc,
+                            price_base: raw_unit_price_base,
+                            currency: invoice.currency_code.clone(),
+                        };
+                        let existing_purchase = material.purchase_prices.iter().position(|p| p.unit_id == unit_id);
+                        if let Some(idx) = existing_purchase {
+                            material.purchase_prices[idx] = purchase_price;
+                        } else {
+                            material.purchase_prices.push(purchase_price);
+                        }
+
+                        for (tier_label, sale_opt) in [
+                            ("retail", &line.retail_price),
+                            ("semi_wholesale", &line.semi_wholesale_price),
+                            ("wholesale", &line.wholesale_price),
+                        ] {
+                            if let Some(price) = sale_opt {
+                                let sale_price = MaterialSalePrice {
+                                    id: Uuid::new_v4().to_string(),
+                                    unit_id,
+                                    tier: tier_label.to_string(),
+                                    price: price.amount(),
+                                    price_base: price.base_amount,
+                                    min_price: Decimal::ZERO,
+                                    min_price_base: Decimal::ZERO,
+                                    max_quantity: "0".to_string(),
+                                    max_quantity_unit_id: None,
+                                    currency: invoice.currency_code.clone(),
+                                };
+                                let existing_sale = material.sale_prices.iter().position(|p| p.unit_id == unit_id && p.tier == tier_label);
+                                if let Some(idx) = existing_sale {
+                                    material.sale_prices[idx] = sale_price;
+                                } else {
+                                    material.sale_prices.push(sale_price);
+                                }
+                            }
+                        }
+
+                        self.material_repo.update(&material).await?;
+                    }
+                }
             }
         }
 

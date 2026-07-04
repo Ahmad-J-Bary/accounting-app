@@ -293,7 +293,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
         header: `${priceLabel} (${s})`,
         width: "w-[120px]",
         align: "center",
-        type: invoiceType === "Sales" ? "price_tier" : "number",
+        type: invoiceType === "Sales" ? "price_tier" : invoiceType === "Purchase" ? "cost_with_history" : "number",
         defaultVisible: isBase,
       });
     });
@@ -312,10 +312,23 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
       });
     });
 
+    const saleTierCols: DocumentColumn[] =
+      invoiceType === "Purchase"
+        ? [{
+            key: "sale_prices",
+            header: "المبيع",
+            width: "w-[110px]",
+            align: "center",
+            type: "sale_tier_prices",
+            defaultVisible: true,
+          }]
+        : [];
+
     return [
       ...baseCols,
       ...prePriceExtraColumns,
       ...priceCols,
+      ...saleTierCols,
       ...(invoiceType === "OpeningBalance" ? [] : [{
         key: "discount",
         header: "خصم %",

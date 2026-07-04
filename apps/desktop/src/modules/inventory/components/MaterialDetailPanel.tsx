@@ -22,6 +22,58 @@ import {
 } from "@widgets/sidebar-shell";
 import { statCard, statLabel, statValue, sectionCard } from './inventoryStyles';
 
+function LotRow({ lot, baseSym, onUpdate }: {
+  lot: InventoryLotDto;
+  baseSym: string;
+  onUpdate: (id: string, retail?: string | null, semi?: string | null, wholesale?: string | null) => void;
+}) {
+  const [retail, setRetail] = useState(lot.retail_price_base || "");
+  const [semi, setSemi] = useState(lot.semi_wholesale_price_base || "");
+  const [wholesale, setWholesale] = useState(lot.wholesale_price_base || "");
+  const [saving, setSaving] = useState(false);
+
+  const handleBlur = async () => {
+    const r = retail || null;
+    const s = semi || null;
+    const w = wholesale || null;
+    if (r === (lot.retail_price_base || null) && s === (lot.semi_wholesale_price_base || null) && w === (lot.wholesale_price_base || null)) return;
+    setSaving(true);
+    await onUpdate(lot.id, r, s, w);
+    setSaving(false);
+  };
+
+  return (
+    <tr className="hover:bg-slate-50/50 transition-colors">
+      <td className="p-2 text-slate-600">{lot.purchase_date?.slice(0, 10) || "—"}</td>
+      <td className="p-2 text-center tabular-nums">{parseFloat(lot.quantity_original).toLocaleString()}</td>
+      <td className={cn("p-2 text-center tabular-nums font-bold",
+        parseFloat(lot.quantity_remaining) > 0 ? "text-emerald-600" : "text-red-400"
+      )}>{parseFloat(lot.quantity_remaining).toLocaleString()}</td>
+      <td className="p-2 text-left tabular-nums font-bold text-amber-600" title="تكلفة الوحدة (قبل التكاليف الإضافية)">
+        {formatCurrency(parseFloat(lot.raw_unit_cost_base || lot.unit_cost_base), baseSym || undefined)}
+      </td>
+      <td className="p-2 text-left tabular-nums font-bold text-slate-600" title="تكلفة الوحدة (بعد التكاليف الإضافية)">
+        {formatCurrency(parseFloat(lot.unit_cost_base), baseSym || undefined)}
+      </td>
+      <td className="p-1 text-center">
+        <input className={cn("w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-blue-300 rounded px-1 py-0.5 text-center text-[10px] tabular-nums font-bold outline-none transition-colors",
+          saving && "opacity-50"
+        )} value={retail} onChange={e => setRetail(e.target.value)} onBlur={handleBlur} type="number" min="0" step="any" />
+      </td>
+      <td className="p-1 text-center">
+        <input className={cn("w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-blue-300 rounded px-1 py-0.5 text-center text-[10px] tabular-nums font-bold outline-none transition-colors",
+          saving && "opacity-50"
+        )} value={semi} onChange={e => setSemi(e.target.value)} onBlur={handleBlur} type="number" min="0" step="any" />
+      </td>
+      <td className="p-1 text-center">
+        <input className={cn("w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-blue-300 rounded px-1 py-0.5 text-center text-[10px] tabular-nums font-bold outline-none transition-colors",
+          saving && "opacity-50"
+        )} value={wholesale} onChange={e => setWholesale(e.target.value)} onBlur={handleBlur} type="number" min="0" step="any" />
+      </td>
+    </tr>
+  );
+}
+
 interface MaterialDetailPanelProps {
   material: MaterialDto | null;
   onClose: () => void;
@@ -29,6 +81,7 @@ interface MaterialDetailPanelProps {
   onDelete?: (id: string, name: string) => void;
   loadingDetails?: boolean;
   onOpenTransfer?: (opts: { sourceWarehouseId?: string }) => void;
+  initialTab?: string;
 }
 
 export function MaterialDetailPanel({
@@ -38,6 +91,7 @@ export function MaterialDetailPanel({
   onDelete,
   loadingDetails = false,
   onOpenTransfer,
+  initialTab = "units",
 }: MaterialDetailPanelProps) {
   const { baseCurrency, currencies } = useCurrencyContext();
   const foreignCurrency = currencies.find(c => c.code !== baseCurrency?.code);
@@ -65,7 +119,7 @@ export function MaterialDetailPanel({
   useEffect(() => {
     if (!material) return;
     setLotsLoading(true);
-    lotService.getAvailableLots(material.id)
+    lotService.getMaterialLots(material.id)
       .then(setLots)
       .catch(() => {})
       .finally(() => setLotsLoading(false));
@@ -245,10 +299,8 @@ export function MaterialDetailPanel({
           </div>
 
           {/* Tabs */}
-          <Tabs defaultValue="units">
-            <TabsList className={cn("grid w-full h-10 p-1 bg-slate-100/80 rounded-lg",
-              costingMethod === "FIFO" ? "grid-cols-5" : "grid-cols-4"
-            )}>
+          <Tabs defaultValue={initialTab}>
+            <TabsList className="grid w-full h-10 p-1 bg-slate-100/80 rounded-lg grid-cols-5">
               <TabsTrigger
                 value="units"
                 className="flex items-center gap-2 text-xs rounded-md"
@@ -273,14 +325,12 @@ export function MaterialDetailPanel({
               >
                 <WarehouseIcon className="w-3.5 h-3.5" /> المستودعات
               </TabsTrigger>
-              {costingMethod === "FIFO" && (
-                <TabsTrigger
-                  value="lots"
-                  className="flex items-center gap-2 text-xs rounded-md"
-                >
-                  <Layers className="w-3.5 h-3.5" /> الدفعات
-                </TabsTrigger>
-              )}
+              <TabsTrigger
+                value="lots"
+                className="flex items-center gap-2 text-xs rounded-md"
+              >
+                <Layers className="w-3.5 h-3.5" /> الدفعات
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="units" className="mt-4 focus-visible:outline-none">
@@ -469,47 +519,49 @@ export function MaterialDetailPanel({
               </div>
             </TabsContent>
 
-            {costingMethod === "FIFO" && (
-              <TabsContent value="lots" className="mt-4 focus-visible:outline-none">
-                <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                  {lotsLoading ? (
-                    <div className="text-center py-8 text-muted-foreground text-xs">
-                      جاري التحميل...
-                    </div>
-                  ) : lots.length === 0 ? (
-                    <div className="text-center py-10 border-2 border-dashed rounded-xl text-muted-foreground bg-slate-50/50">
-                      <Layers className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                      <span className="text-xs">لا توجد دفعات متاحة</span>
-                    </div>
-                  ) : (
-                    <div className="border rounded-xl overflow-hidden shadow-sm bg-white">
-                      <table className="w-full text-[11px] text-right">
-                        <thead className="bg-slate-50 border-b">
-                          <tr>
-                            <th className="p-2 font-bold text-slate-500">تاريخ الشراء</th>
-                            <th className="p-2 font-bold text-slate-500 text-center">الكمية الأصلية</th>
-                            <th className="p-2 font-bold text-slate-500 text-center">المتبقي</th>
-                            <th className="p-2 font-bold text-slate-500 text-left">تكلفة الوحدة</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                          {lots.map((lot) => (
-                            <tr key={lot.id} className="hover:bg-slate-50/50 transition-colors">
-                              <td className="p-2 text-slate-600">{lot.purchase_date?.slice(0, 10) || "—"}</td>
-                              <td className="p-2 text-center tabular-nums">{parseFloat(lot.quantity_original).toLocaleString()}</td>
-                              <td className="p-2 text-center tabular-nums font-bold text-emerald-600">{parseFloat(lot.quantity_remaining).toLocaleString()}</td>
-                              <td className="p-2 text-left tabular-nums font-bold text-amber-600">
-                                {formatCurrency(parseFloat(lot.unit_cost_base), baseSym || undefined)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              </TabsContent>
-            )}
+            <TabsContent value="lots" className="mt-4 focus-visible:outline-none">
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {lotsLoading ? (
+                  <div className="text-center py-8 text-muted-foreground text-xs">
+                    جاري التحميل...
+                  </div>
+                ) : lots.length === 0 ? (
+                  <div className="text-center py-10 border-2 border-dashed rounded-xl text-muted-foreground bg-slate-50/50">
+                    <Layers className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                    <span className="text-xs">لا توجد دفعات</span>
+                  </div>
+                ) : (
+                  <div className="border rounded-xl overflow-hidden shadow-sm bg-white">
+                    <table className="w-full text-[11px] text-right">
+                      <thead className="bg-slate-50 border-b">
+                        <tr>
+                          <th className="p-2 font-bold text-slate-500">تاريخ الشراء</th>
+                          <th className="p-2 font-bold text-slate-500 text-center">الأصلية</th>
+                          <th className="p-2 font-bold text-slate-500 text-center">المتبقي</th>
+                          <th className="p-2 font-bold text-slate-500 text-left">تكلفة الشراء</th>
+                          <th className="p-2 font-bold text-slate-500 text-left">صافي التكلفة</th>
+                          <th className="p-2 font-bold text-slate-500 text-center">مفرق</th>
+                          <th className="p-2 font-bold text-slate-500 text-center">نصف جملة</th>
+                          <th className="p-2 font-bold text-slate-500 text-center">جملة</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {lots.map((lot) => (
+                          <LotRow key={lot.id} lot={lot} baseSym={baseSym || ""} onUpdate={async (lotId, retail, semi, wholesale) => {
+                            try {
+                              await lotService.updateLotSalePrices(lotId, retail, semi, wholesale);
+                              setLots(prev => prev.map(l => l.id === lotId ? { ...l, retail_price_base: retail, semi_wholesale_price_base: semi, wholesale_price_base: wholesale } : l));
+                            } catch (e) {
+                              toast.error("فشل تحديث سعر البيع: " + e);
+                            }
+                          }} />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
           </Tabs>
         </div>
       </SidebarBody>

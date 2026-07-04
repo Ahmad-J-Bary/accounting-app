@@ -9,7 +9,7 @@ pub async fn find_available_by_material(
     material_id: &str,
 ) -> Result<Vec<InventoryLot>, AppError> {
     let rows = sqlx::query_as::<_, InventoryLotRow>(
-        "SELECT id, material_id, purchase_invoice_id, movement_id, quantity_original, quantity_remaining, unit_cost_base, raw_unit_cost_base, currency_code, fx_rate, purchase_date, created_at 
+        "SELECT id, material_id, purchase_invoice_id, movement_id, quantity_original, quantity_remaining, unit_cost_base, raw_unit_cost_base, currency_code, fx_rate, purchase_date, created_at, retail_price_base, semi_wholesale_price_base, wholesale_price_base
          FROM inventory_lots 
          WHERE material_id = ? AND CAST(quantity_remaining AS REAL) > 0 
          ORDER BY purchase_date ASC, created_at ASC"
@@ -27,7 +27,7 @@ pub async fn find_by_movement_id(
     movement_id: &str,
 ) -> Result<Vec<InventoryLot>, AppError> {
     let rows = sqlx::query_as::<_, InventoryLotRow>(
-        "SELECT id, material_id, purchase_invoice_id, movement_id, quantity_original, quantity_remaining, unit_cost_base, raw_unit_cost_base, currency_code, fx_rate, purchase_date, created_at 
+        "SELECT id, material_id, purchase_invoice_id, movement_id, quantity_original, quantity_remaining, unit_cost_base, raw_unit_cost_base, currency_code, fx_rate, purchase_date, created_at, retail_price_base, semi_wholesale_price_base, wholesale_price_base
          FROM inventory_lots 
          WHERE movement_id = ?
          ORDER BY purchase_date ASC"
@@ -45,7 +45,7 @@ pub async fn find_by_purchase_invoice(
     invoice_id: &str,
 ) -> Result<Vec<InventoryLot>, AppError> {
     let rows = sqlx::query_as::<_, InventoryLotRow>(
-        "SELECT id, material_id, purchase_invoice_id, movement_id, quantity_original, quantity_remaining, unit_cost_base, raw_unit_cost_base, currency_code, fx_rate, purchase_date, created_at 
+        "SELECT id, material_id, purchase_invoice_id, movement_id, quantity_original, quantity_remaining, unit_cost_base, raw_unit_cost_base, currency_code, fx_rate, purchase_date, created_at, retail_price_base, semi_wholesale_price_base, wholesale_price_base
          FROM inventory_lots 
          WHERE purchase_invoice_id = ?
          ORDER BY purchase_date ASC"
@@ -71,6 +71,24 @@ pub async fn count_active_by_material(
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     Ok(row.0)
+}
+
+pub async fn find_by_material(
+    pool: &SqlitePool,
+    material_id: &str,
+) -> Result<Vec<InventoryLot>, AppError> {
+    let rows = sqlx::query_as::<_, InventoryLotRow>(
+        "SELECT id, material_id, purchase_invoice_id, movement_id, quantity_original, quantity_remaining, unit_cost_base, raw_unit_cost_base, currency_code, fx_rate, purchase_date, created_at, retail_price_base, semi_wholesale_price_base, wholesale_price_base
+         FROM inventory_lots 
+         WHERE material_id = ?
+         ORDER BY purchase_date DESC, created_at DESC"
+    )
+    .bind(material_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    rows.into_iter().map(row_to_inventory_lot).collect()
 }
 
 pub async fn get_costing_method(

@@ -130,6 +130,9 @@ export interface InventoryLotDto {
   fx_rate: string;
   purchase_date: string;
   created_at: string;
+  retail_price_base?: string | null;
+  semi_wholesale_price_base?: string | null;
+  wholesale_price_base?: string | null;
 }
 
 export interface StockMovement {
@@ -181,4 +184,18 @@ export interface UpdateTransferRequest {
   quantity: string;
   transfer_date: string;
   notes?: string | null;
+}
+
+export interface PriceHistoryEntryDto {
+  price_base: string;
+  invoice_number?: string | null;
+  purchase_date?: string | null;
+  lot_id: string;
+}
+
+export interface MaterialPriceHistoryDto {
+  first_cost_base: string | null;
+  average_cost_base: string;
+  last_cost_base: string | null;
+  history: PriceHistoryEntryDto[];
 }

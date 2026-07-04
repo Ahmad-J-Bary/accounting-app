@@ -14,6 +14,9 @@ pub struct InventoryLotRow {
     pub fx_rate: String,
     pub purchase_date: String,
     pub created_at: String,
+    pub retail_price_base: Option<String>,
+    pub semi_wholesale_price_base: Option<String>,
+    pub wholesale_price_base: Option<String>,
 }
 
 #[derive(FromRow, Debug, Clone)]

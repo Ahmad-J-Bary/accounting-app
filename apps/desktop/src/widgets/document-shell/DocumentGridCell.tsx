@@ -12,6 +12,8 @@ import {
 import type { DocumentColumn } from "./GenericDocumentGrid";
 import type { GridLine } from "@modules/invoicing/lib/invoiceUtils";
 
+import type { MaterialPriceHistoryDto } from "@erp/shared-types";
+
 export interface DocumentGridConfig {
   cellBorderClass: string;
   densityPadding: string;
@@ -22,6 +24,7 @@ export interface DocumentGridConfig {
   warehouses: WarehouseDto[];
   getCellValue: (line: GridLine, key: string) => string;
   searchRow: number | null;
+  priceHistoryMap?: Record<string, MaterialPriceHistoryDto>;
 }
 
 export interface DocumentGridCallbacks {
@@ -407,6 +410,129 @@ export function DocumentGridCell({
             type="number"
           />
         </span>
+      </CellWrapper>
+    );
+  }
+
+  if (col.type === "cost_with_history") {
+    const historyKey = `${line.material_id}_${line.unit_id}`;
+    const priceHistory = config.priceHistoryMap?.[historyKey];
+    const currentVal = getCellValue(line, col.key);
+
+    if (readOnly) {
+      return (
+        <CellWrapper column={col} config={config} isReadonlyCell>
+          <span className="tabular-nums font-bold" style={{ fontSize: `${fontSize}px`, fontFamily: config.fontFamily }}>
+            {currentVal || "-"}
+          </span>
+        </CellWrapper>
+      );
+    }
+
+    const chips: { label: string; value: string | null; color: string }[] = [
+      { label: "أول", value: priceHistory?.first_cost_base ?? null, color: "text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100" },
+      { label: "متوسط", value: priceHistory?.average_cost_base ?? null, color: "text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100" },
+      { label: "آخر", value: priceHistory?.last_cost_base ?? null, color: "text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100" },
+    ];
+    const hasAnyHistory = chips.some(c => c.value !== null && c.value !== "0");
+
+    return (
+      <CellWrapper column={col} config={config} isInteractive isCellActive={isCellActive}>
+        <div className={cn("flex items-center gap-1 w-full group", hasAnyHistory ? "flex-nowrap" : "")} style={{ fontSize: `${fontSize}px`, fontFamily: config.fontFamily }}>
+          <EditableInput
+            refKey={refKey}
+            value={currentVal}
+            fontSize={fontSize}
+            fontFamily={config.fontFamily}
+            inputRefs={inputRefs}
+            onChange={(e) => onCellChange(rowIdx, col.key, e.target.value)}
+            onFocus={() => onActiveCellChange({ row: rowIdx, col: editColIdx })}
+            onKeyDown={(e) => onKeyDown(e, rowIdx, editColIdx)}
+            type="number"
+          />
+          {hasAnyHistory && (
+            <div className="flex gap-px opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              {chips.map((chip) => {
+                if (!chip.value || chip.value === "0") return null;
+                return (
+                  <button
+                    key={chip.label}
+                    tabIndex={-1}
+                    onClick={() => onCellChange(rowIdx, col.key, chip.value!)}
+                    className={cn("text-[7px] font-black px-1 py-0.5 rounded border leading-tight", chip.color)}
+                    title={chip.value}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </CellWrapper>
+    );
+  }
+
+  if (col.type === "sale_tier_prices") {
+    const tiers = [
+      { key: "retail_price", label: "مفرق" },
+      { key: "semi_wholesale_price", label: "نصف جملة" },
+      { key: "wholesale_price", label: "جملة" },
+    ];
+    const layout = line.sale_tier_layout || col.saleTierLayout || "row";
+    const isRowLayout = layout === "row";
+    const toggleLayout = () => onCellChange(rowIdx, "sale_tier_layout", isRowLayout ? "column" : "row");
+
+    const toggleBtn = (
+      <button
+        tabIndex={-1}
+        onClick={toggleLayout}
+        className="absolute -top-0.5 -left-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] p-0.5 rounded bg-white border border-slate-200 text-slate-400 hover:text-slate-700 hover:border-slate-300 shadow-sm z-10"
+        title={isRowLayout ? "عرض أفقي" : "عرض عمودي"}
+      >
+        {isRowLayout ? "⊞" : "☰"}
+      </button>
+    );
+
+    if (readOnly) {
+      return (
+        <CellWrapper column={col} config={config} isReadonlyCell>
+          <div className={cn("relative w-full text-[10px] leading-tight group", isRowLayout ? "flex flex-col gap-0.5" : "flex flex-row gap-0")} style={{ fontSize: `${fontSize}px`, fontFamily: config.fontFamily }}>
+            {toggleBtn}
+            {tiers.map((t) => (
+              <span key={t.key} className={cn("flex items-center gap-1", isRowLayout ? "justify-between" : "flex-col flex-1 min-w-0 text-center")}>
+                <span className="text-[8px] font-bold text-slate-400 shrink-0">{t.label}</span>
+                <span className="tabular-nums">{getCellValue(line, t.key) || "-"}</span>
+              </span>
+            ))}
+          </div>
+        </CellWrapper>
+      );
+    }
+
+    return (
+      <CellWrapper column={col} config={config} isInteractive isCellActive={isCellActive}>
+        <div className={cn("relative w-full group", isRowLayout ? "flex flex-col gap-0.5" : "flex flex-row gap-0")} style={{ fontSize: `${fontSize}px`, fontFamily: config.fontFamily }}>
+          {toggleBtn}
+          {tiers.map((t, i) => (
+            <div key={t.key} className={cn("flex", isRowLayout ? "items-center gap-1" : "flex-col flex-1 min-w-0 items-center gap-0")}>
+              <span className="text-[8px] font-bold text-slate-400 shrink-0">{t.label}</span>
+              <input
+                ref={(el) => { if (el) callbacks.inputRefs.current.set(`${refKey}_${t.key}`, el); else callbacks.inputRefs.current.delete(`${refKey}_${t.key}`); }}
+                type="number"
+                min="0"
+                step="any"
+                className="w-full bg-transparent border-none outline-none focus:bg-white transition-colors text-center tabular-nums font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                style={{ fontSize: `${isRowLayout ? fontSize : fontSize - 1}px`, fontFamily: config.fontFamily }}
+                value={getCellValue(line, t.key)}
+                autoComplete="off"
+                onChange={(e) => onCellChange(rowIdx, t.key, e.target.value)}
+                onFocus={() => onActiveCellChange({ row: rowIdx, col: editColIdx + i })}
+                onKeyDown={(e) => onKeyDown(e, rowIdx, editColIdx + i)}
+              />
+            </div>
+          ))}
+        </div>
       </CellWrapper>
     );
   }

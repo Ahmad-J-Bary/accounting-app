@@ -71,6 +71,7 @@ export default function Materials() {
   const [savingAdjustment, setSavingAdjustment] = useState(false);
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
+  const [lotsPanelActive, setLotsPanelActive] = useState(false);
 
   const stockByWarehouse = useMemo(() => buildStockByWarehouse(movements), [movements]);
 
@@ -188,6 +189,30 @@ export default function Materials() {
             <Button size="sm" onClick={handleOpenAdd} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
               <Plus className="w-4 h-4 ml-2" /> مادة جديدة
             </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+              disabled={!selectedId}
+              onClick={() => {
+                if (selectedId) {
+                  setLotsPanelActive(true);
+                  setIsFormOpen(false);
+                  setShowDamagedPanel(false);
+                  setManagingUnitsMaterial(null);
+                  setTransferFormOpen(false);
+                  setIsReturnOpen(false);
+                  setShowUnitsPanel(false);
+                  setShowAdjustmentPanel(false);
+                }
+              }}
+            >
+              <Layers className="w-4 h-4 ml-2 text-indigo-600" />
+              الدفعات
+            </Button>
+
+            <div className="h-6 w-px bg-slate-200 mx-1" />
 
             <Button
               size="sm"
@@ -369,15 +394,17 @@ export default function Materials() {
             />
           ) : (
             <MaterialDetailPanel 
+              key={`${selectedId}-${lotsPanelActive ? "lots" : "default"}`}
               material={selectedMaterial}
-              onClose={() => setSelectedId(null)}
+              onClose={() => { setSelectedId(null); setLotsPanelActive(false); }}
               onEdit={handleOpenEdit}
               onDelete={handleDelete}
               onOpenTransfer={handleOpenTransfer}
+              initialTab={lotsPanelActive ? "lots" : "units"}
             />
           )
         }
-        isPanelOpen={isFormOpen || transferFormOpen || isReturnOpen || !!selectedId || !!managingUnitsMaterial || showDamagedPanel || showAdjustmentPanel}
+        isPanelOpen={isFormOpen || transferFormOpen || isReturnOpen || !!selectedId || !!managingUnitsMaterial || showDamagedPanel || showAdjustmentPanel || lotsPanelActive}
       />
     </>
   );

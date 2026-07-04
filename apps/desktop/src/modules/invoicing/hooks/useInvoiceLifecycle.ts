@@ -5,6 +5,7 @@ import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { customerService } from "@modules/partners/api/customerService";
 import { supplierService } from "@modules/partners/api/supplierService";
 import { materialService } from "@modules/inventory/api/materialService";
+import { lotService } from "@modules/inventory/api/lotService";
 import { currencyService } from "@modules/core/api/currencyService";
 import { settingsService } from "@modules/core/api/settingsService";
 import { warehouseService } from "@modules/inventory/api/warehouseService";
@@ -15,6 +16,7 @@ import type {
   MaterialDto,
   WarehouseDto,
   CompanySettings,
+  MaterialPriceHistoryDto,
 } from "@erp/shared-types";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
@@ -423,6 +425,22 @@ export function useInvoiceLifecycle({
     return cols;
   }, [lines, materials]);
 
+  // Price history map for cost_with_history column
+  const [priceHistoryMap, setPriceHistoryMap] = useState<Record<string, MaterialPriceHistoryDto>>({});
+  const fetchedKeys = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    for (const ln of lines) {
+      if (!ln.material_id || !ln.unit_id) continue;
+      const key = `${ln.material_id}_${ln.unit_id}`;
+      if (fetchedKeys.current.has(key)) continue;
+      fetchedKeys.current.add(key);
+      lotService.getPurchasePriceHistory(ln.material_id, ln.unit_id)
+        .then(dto => { setPriceHistoryMap(prev => ({ ...prev, [key]: dto })); })
+        .catch(() => { fetchedKeys.current.delete(key); });
+    }
+  }, [lines]);
+
   // Action handlers
   const handleSave = async (andPost = false) => {
     if (!headerState.currency_code) {
@@ -516,68 +534,6 @@ export function useInvoiceLifecycle({
       if (andPost) {
         await invoiceService.postInvoice(result.id);
         toast.success("تم الحفظ والترحيل بنجاح");
-
-        // After posting a Purchase invoice, check if prices differ from stored material prices
-        if (invoiceType === "Purchase") {
-          const exchangeRate = parseFloat(headerState.exchange_rate || "1");
-          const docCurrency = headerState.currency_code || baseCurrency?.code || "";
-          for (const line of lines) {
-            if (!line.material_id || !line.unit_id) continue;
-            const mat = materials.find(m => m.id === line.material_id);
-            if (!mat) continue;
-            const basePrice = parseFloat(line.unit_price || "0"); // line.unit_price is base currency
-            const docPrice = basePrice * exchangeRate;
-            const storedEntry = mat.purchase_prices?.find(p => p.unit_id === line.unit_id);
-            const storedBasePrice = parseFloat(storedEntry?.price_base || "0");
-            
-            if (basePrice > 0 && storedBasePrice > 0 && Math.abs(basePrice - storedBasePrice) > 0.001) {
-              const unitName = mat.units?.find(u => u.id === line.unit_id)?.name || "";
-              toast(`${mat.name} (${unitName})`, {
-                description: `سعر الشراء المحفوظ: ${storedBasePrice.toFixed(2)} — السعر الجديد: ${basePrice.toFixed(2)}`,
-                action: {
-                  label: "تحديث",
-                  onClick: async () => {
-                    try {
-                      const existingPrices = mat.purchase_prices || [];
-                      const updatedPrices = existingPrices.some(p => p.unit_id === line.unit_id)
-                        ? existingPrices.map(p => p.unit_id === line.unit_id ? { 
-                            ...p, 
-                            price: docPrice.toFixed(2), 
-                            price_base: basePrice.toFixed(2), 
-                            currency: docCurrency || p.currency 
-                          } : p)
-                        : [...existingPrices, { 
-                            unit_id: line.unit_id!, 
-                            price: docPrice.toFixed(2), 
-                            price_base: basePrice.toFixed(2), 
-                            currency: docCurrency || baseCurrency?.code || "" 
-                          }];
-                          
-                      await materialService.updateMaterial({ 
-                        id: mat.id, 
-                        name: mat.name, 
-                        name_en: mat.name_en || "", 
-                        barcode: mat.barcode || "", 
-                        code: mat.code || "", 
-                        minimum_stock: mat.minimum_stock, 
-                        category_ids: mat.category_ids, 
-                        notes: mat.notes || null, 
-                        image_path: mat.image_path || null, 
-                        default_purchase_unit_id: mat.default_purchase_unit_id || null, 
-                        default_sale_unit_id: mat.default_sale_unit_id || null, 
-                        purchase_prices: updatedPrices, 
-                        sale_prices: mat.sale_prices || [] 
-                      });
-                      toast.success(`تم تحديث سعر شراء ${mat.name}`);
-                    } catch (e) { 
-                      toast.error("فشل تحديث السعر: " + e); 
-                    }
-                  },
-                },
-              });
-            }
-          }
-        }
       } else {
         toast.success("تم حفظ المسودة");
       }
@@ -652,6 +608,7 @@ export function useInvoiceLifecycle({
     setDisplayCurrency: onCurrencyChange,
     gridColumns,
     dynamicVisibleColumns,
+    priceHistoryMap,
 
     formatMonetaryAmount,
     openTab,

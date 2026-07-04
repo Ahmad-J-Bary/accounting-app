@@ -49,6 +49,7 @@ export default function PurchaseInvoices() {
     setDisplayCurrency,
     gridColumns,
     dynamicVisibleColumns,
+    priceHistoryMap,
     formatMonetaryAmount,
     openTab,
     closeTab,
@@ -154,6 +155,7 @@ export default function PurchaseInvoices() {
             docCurrency={headerState.currency_code}
             exchangeRate={headerState.exchange_rate}
             dynamicVisibleColumns={dynamicVisibleColumns}
+            priceHistoryMap={priceHistoryMap}
           />
         }
         summaryPanel={

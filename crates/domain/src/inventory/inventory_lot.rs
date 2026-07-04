@@ -16,6 +16,9 @@ pub struct InventoryLot {
     pub fx_rate: Decimal,
     pub purchase_date: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
+    pub retail_price_base: Option<Decimal>,
+    pub semi_wholesale_price_base: Option<Decimal>,
+    pub wholesale_price_base: Option<Decimal>,
 }
 
 #[derive(Debug, Clone)]

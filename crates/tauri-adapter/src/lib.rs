@@ -81,6 +81,9 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::inventory::get_material_available_lots,
             commands::inventory::get_stock_balance,
             commands::inventory::get_material_costing_method,
+            commands::inventory::get_material_lots,
+            commands::inventory::update_lot_sale_prices,
+            commands::inventory::get_material_purchase_price_history,
             // Journal Entries
             commands::journal::create_journal_entry,
             commands::journal::list_journal_entries,

@@ -26,6 +26,9 @@ export interface GridLine extends InvoiceLineDto {
   // Current selected price tier
   tier?: string;
 
+  // Sale tier prices layout: "row" for vertical stacked, "column" for horizontal
+  sale_tier_layout?: "row" | "column";
+
   // Return-specific fields
   original_quantity?: string;
   original_quantity_raw?: string;
@@ -72,7 +75,7 @@ export function toBackendLines(lines: GridLine[], exchangeRate: string = "1"): I
       _id, line_total, discount, 
       name_en, barcode, material_image, warehouse_qty, unit_name, unit_barcode, 
       cost_price, current_cost_price,
-      profit_amount, profit_percent, tier, occurrence_key, original_conversion_factor, original_quantity_raw, original_price_base,
+      profit_amount, profit_percent, tier, sale_tier_layout, occurrence_key, original_conversion_factor, original_quantity_raw, original_price_base,
       ...rest 
     }) => {
       const basePrice = parseFloat(rest.unit_price || "0");
