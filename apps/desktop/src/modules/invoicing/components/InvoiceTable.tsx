@@ -39,6 +39,7 @@ interface InvoiceTableProps {
   partyType: "supplier" | "customer";
   defaultName: string;
   showSubtotal?: boolean;
+  showDiscount?: boolean;
   showExtraCosts?: boolean;
   extraColumns?: ExtraColumn[];
   statusFilter: string;
@@ -66,6 +67,7 @@ export function InvoiceTable({
   partyType,
   defaultName,
   showSubtotal = false,
+  showDiscount = false,
   showExtraCosts = false,
   extraColumns = [],
   statusFilter,
@@ -114,6 +116,28 @@ export function InvoiceTable({
             : "font-medium tabular-nums text-slate-400"
         };
       }) : []),
+      ...(showDiscount ? currencies.map(curr => {
+        const isBase = isBaseCurrency(curr.code);
+        return {
+          id: `discount_${curr.code}`,
+          header: `خصوم مكتسبة (${curr.symbol || curr.code})`,
+          label: `خصوم مكتسبة (${curr.symbol || curr.code})`,
+          accessor: (inv: InvoiceDto) => {
+            const baseAmt = getInvoiceBaseAmount(
+              inv.discount_amount,
+              inv.discount_amount_v2,
+              inv.currency_code,
+              inv.exchange_rate,
+              baseCurrency?.code
+            );
+            if (baseAmt === 0) return "";
+            return formatAmount(baseAmt, { currencyCode: curr.code });
+          },
+          className: isBase
+            ? "font-bold tabular-nums text-blue-600"
+            : "font-medium tabular-nums text-blue-300"
+        };
+      }) : []),
       ...(showExtraCosts ? currencies.map(curr => {
         const isBase = isBaseCurrency(curr.code);
         return {
@@ -143,15 +167,12 @@ export function InvoiceTable({
           header: `المجموع الكلي (${curr.symbol || curr.code})`,
           label: `المجموع الكلي (${curr.symbol || curr.code})`,
           accessor: (inv: InvoiceDto) => {
-            const baseAmt = getInvoiceBaseAmount(
-              inv.total_amount,
-              inv.total_amount_v2,
-              inv.currency_code,
-              inv.exchange_rate,
-              baseCurrency?.code
-            );
-            if (baseAmt === 0) return "";
-            return formatAmount(baseAmt, { currencyCode: curr.code });
+            const baseSubtotal = getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+            const baseDiscount = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+            const baseExtraCosts = getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+            const total = baseSubtotal - baseDiscount + baseExtraCosts;
+            if (total === 0) return "";
+            return formatAmount(total, { currencyCode: curr.code });
           },
           className: isBase
             ? "font-black tabular-nums text-slate-900"
@@ -187,15 +208,14 @@ export function InvoiceTable({
           header: `المبلغ المتبقي (${curr.symbol || curr.code})`,
           label: `المبلغ المتبقي (${curr.symbol || curr.code})`,
           accessor: (inv: InvoiceDto) => {
-            const baseAmt = getInvoiceBaseAmount(
-              inv.remaining_amount,
-              inv.remaining_amount_v2,
-              inv.currency_code,
-              inv.exchange_rate,
-              baseCurrency?.code
-            );
-            if (baseAmt === 0) return "";
-            return formatAmount(baseAmt, { currencyCode: curr.code });
+            const baseSubtotal = getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+            const baseDiscount = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+            const baseExtraCosts = getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+            const basePaid = getInvoiceBaseAmount(inv.amount_paid, inv.amount_paid_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+            const total = baseSubtotal - baseDiscount + baseExtraCosts;
+            const remaining = total - basePaid;
+            if (remaining === 0) return "";
+            return formatAmount(remaining, { currencyCode: curr.code });
           },
           className: isBase
             ? "font-bold tabular-nums text-orange-600"
@@ -266,7 +286,7 @@ export function InvoiceTable({
       },
     ];
     return cols;
-  }, [formatAmount, currencies, baseCurrency, partyField, partyLabel, partyType, defaultName, showSubtotal, showExtraCosts, extraColumns, onView, onEdit, onViewOpeningBalance, onEditOpeningBalance, onPost, onReopen, onDelete, isBaseCurrency]);
+  }, [formatAmount, currencies, baseCurrency, partyField, partyLabel, partyType, defaultName, showSubtotal, showDiscount, showExtraCosts, extraColumns, onView, onEdit, onViewOpeningBalance, onEditOpeningBalance, onPost, onReopen, onDelete, isBaseCurrency]);
 
   // Default visible: hide secondary currency columns by default.
   // User can toggle them on.
@@ -290,6 +310,7 @@ export function InvoiceTable({
     | "supplier_name"
     | "customer_name"
     | "subtotal_amount"
+    | "discount_amount"
     | "extra_costs"
     | "total_amount"
     | "amount_paid"
@@ -323,6 +344,12 @@ export function InvoiceTable({
           comparison = baseAmtA - baseAmtB;
           break;
         }
+        case "discount_amount": {
+          const baseAmtA = getInvoiceBaseAmount(a.discount_amount, a.discount_amount_v2, a.currency_code, a.exchange_rate, baseCurrency?.code);
+          const baseAmtB = getInvoiceBaseAmount(b.discount_amount, b.discount_amount_v2, b.currency_code, b.exchange_rate, baseCurrency?.code);
+          comparison = baseAmtA - baseAmtB;
+          break;
+        }
         case "extra_costs": {
           const baseAmtA = getInvoiceBaseAmount(a.extra_costs, a.extra_costs_v2, a.currency_code, a.exchange_rate, baseCurrency?.code);
           const baseAmtB = getInvoiceBaseAmount(b.extra_costs, b.extra_costs_v2, b.currency_code, b.exchange_rate, baseCurrency?.code);
@@ -330,9 +357,13 @@ export function InvoiceTable({
           break;
         }
         case "total_amount": {
-          const baseAmtA = getInvoiceBaseAmount(a.total_amount, a.total_amount_v2, a.currency_code, a.exchange_rate, baseCurrency?.code);
-          const baseAmtB = getInvoiceBaseAmount(b.total_amount, b.total_amount_v2, b.currency_code, b.exchange_rate, baseCurrency?.code);
-          comparison = baseAmtA - baseAmtB;
+          const calc = (inv: InvoiceDto) => {
+            const s = getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+            const d = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+            const e = getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+            return s - d + e;
+          };
+          comparison = calc(a) - calc(b);
           break;
         }
         case "amount_paid": {
@@ -342,9 +373,14 @@ export function InvoiceTable({
           break;
         }
         case "remaining_amount": {
-          const baseAmtA = getInvoiceBaseAmount(a.remaining_amount, a.remaining_amount_v2, a.currency_code, a.exchange_rate, baseCurrency?.code);
-          const baseAmtB = getInvoiceBaseAmount(b.remaining_amount, b.remaining_amount_v2, b.currency_code, b.exchange_rate, baseCurrency?.code);
-          comparison = baseAmtA - baseAmtB;
+          const calc = (inv: InvoiceDto) => {
+            const s = getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+            const d = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+            const e = getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+            const p = getInvoiceBaseAmount(inv.amount_paid, inv.amount_paid_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+            return (s - d + e) - p;
+          };
+          comparison = calc(a) - calc(b);
           break;
         }
         case "status":
@@ -366,18 +402,18 @@ export function InvoiceTable({
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     let baseSubtotalTotal = 0;
+    let baseDiscountTotal = 0;
     let baseExtraCostsTotal = 0;
-    let baseTotalTotal = 0;
     let basePaidTotal = 0;
-    let baseRemainingTotal = 0;
 
     data.forEach(inv => {
       baseSubtotalTotal += getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+      baseDiscountTotal += getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
       baseExtraCostsTotal += getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
-      baseTotalTotal += getInvoiceBaseAmount(inv.total_amount, inv.total_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
       basePaidTotal += getInvoiceBaseAmount(inv.amount_paid, inv.amount_paid_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
-      baseRemainingTotal += getInvoiceBaseAmount(inv.remaining_amount, inv.remaining_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
     });
+    const baseComputedTotal = baseSubtotalTotal - baseDiscountTotal + baseExtraCostsTotal;
+    const baseComputedRemaining = baseComputedTotal - basePaidTotal;
 
     const colIds = enrichedColumns.map(c => c.id);
     return colIds.map(id => {
@@ -398,6 +434,22 @@ export function InvoiceTable({
           className: isBase
             ? 'font-bold text-slate-700'
             : 'font-extrabold text-slate-400',
+        };
+      }
+
+      const discountMatch = id.match(/^discount_(.+)$/);
+      if (discountMatch) {
+        const currCode = discountMatch[1];
+        const isBase = isBaseCurrency(currCode);
+        const sym = currencies.find(c => c.code === currCode)?.symbol || currCode;
+        return {
+          id: `${id}_summary`,
+          columnId: id,
+          label: `خصوم مكتسبة (${sym})`,
+          value: baseDiscountTotal > 0 ? formatAmount(baseDiscountTotal, { currencyCode: currCode }) : "—",
+          className: isBase
+            ? 'font-bold text-blue-600'
+            : 'font-extrabold text-blue-300',
         };
       }
 
@@ -426,7 +478,7 @@ export function InvoiceTable({
           id: `${id}_summary`,
           columnId: id,
           label: `المجموع الكلي (${sym})`,
-          value: baseTotalTotal > 0 ? formatAmount(baseTotalTotal, { currencyCode: currCode }) : "—",
+          value: baseComputedTotal > 0 ? formatAmount(baseComputedTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-black text-slate-900'
             : 'font-extrabold text-slate-500',
@@ -458,7 +510,7 @@ export function InvoiceTable({
           id: `${id}_summary`,
           columnId: id,
           label: `المبلغ المتبقي (${sym})`,
-          value: baseRemainingTotal > 0 ? formatAmount(baseRemainingTotal, { currencyCode: currCode }) : "—",
+          value: baseComputedRemaining > 0 ? formatAmount(baseComputedRemaining, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-bold text-orange-600'
             : 'font-extrabold text-orange-300',
@@ -511,6 +563,7 @@ export function InvoiceTable({
           else if (col.id.startsWith("paid_")) handleSort("amount_paid");
           else if (col.id.startsWith("remaining_")) handleSort("remaining_amount");
           else if (col.id.startsWith("subtotal_")) handleSort("subtotal_amount");
+          else if (col.id.startsWith("discount_")) handleSort("discount_amount");
           else if (col.id.startsWith("extra_costs_")) handleSort("extra_costs");
         }}
         onRowClick={(inv) => onSelect(inv.id)}

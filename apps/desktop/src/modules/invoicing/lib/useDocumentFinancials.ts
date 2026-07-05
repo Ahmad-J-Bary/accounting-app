@@ -86,6 +86,13 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
         }
         el[`line_total_${curr.code}`] = t.toFixed(curr.decimals).replace(/\.?0+$/, "");
 
+        // Per-currency discount_value = gross_total * discount% / 100
+        const discPct = parseFloat(line.discount || "0");
+        const grossPerLine = qty * p;
+        el[`discount_value_${curr.code}`] = (grossPerLine * discPct / 100)
+          .toFixed(curr.decimals)
+          .replace(/\.?0+$/, "");
+
         [
           "cost_price",
           "profit_amount",
@@ -324,6 +331,20 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
           }]
         : [];
 
+    const discountValueCols: DocumentColumn[] = [];
+    currencies.forEach((curr) => {
+      const s = curr.symbol || curr.code;
+      const isBase = curr.code === baseCode;
+      discountValueCols.push({
+        key: isBase ? "discount_value" : `discount_value_${curr.code}`,
+        header: `خصم (${s})`,
+        width: "w-[80px]",
+        align: "center",
+        type: "number",
+        defaultVisible: isBase,
+      });
+    });
+
     return [
       ...baseCols,
       ...prePriceExtraColumns,
@@ -337,14 +358,8 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
           align: "center",
           type: "number",
         } as DocumentColumn,
-        {
-          key: "discount_value",
-          header: "خصم",
-          width: "w-[80px]",
-          align: "center",
-          type: "number",
-        } as DocumentColumn,
       ]),
+      ...discountValueCols,
       ...totalCols,
       ...extraColumns,
     ];

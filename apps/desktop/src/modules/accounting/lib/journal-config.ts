@@ -41,6 +41,7 @@ export const JOURNAL_TYPE_LABELS: Record<string, string> = {
   PurchaseReturnJournal: "مرتجع مشتريات",
   DamagedJournal: "خسائر المواد التالفة",
   AdjustmentJournal: "تسوية جرد",
+  DiscountEarnedJournal: "حسم مكتسب",
 };
 
 export const JOURNAL_REPORT_TYPES: JournalReportTypeOption[] = [

@@ -161,7 +161,6 @@ export default function PurchaseInvoices() {
         summaryPanel={
           <SummaryPanel
             subtotal={subtotal}
-            discount={parseFloat(headerState.discount_amount)}
             tax={parseFloat(headerState.tax_amount)}
             extraCosts={parseFloat(headerState.extra_costs)}
             net={net}
@@ -248,6 +247,7 @@ export default function PurchaseInvoices() {
       statsColor="text-rose-600"
       preferenceKey="purchase_invoices"
       showSubtotal
+      showDiscount
       showExtraCosts
     />
   );

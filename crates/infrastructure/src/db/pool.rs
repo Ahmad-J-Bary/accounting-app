@@ -98,7 +98,7 @@ async fn ensure_discount_earned_account(pool: &SqlitePool) {
         return;
     }
     // Rename 3301 → 332 if it exists from botched migration 133
-    let _ = sqlx::query("UPDATE accounts SET code = '332', name_ar = 'حسم مكتسب', name_en = 'Discount Earned', updated_at = datetime('now') WHERE code = '3301'")
+    let _ = sqlx::query("UPDATE accounts SET code = '332', name_ar = 'الخصوم المكتسبة', name_en = 'Discount Earned', updated_at = datetime('now') WHERE code = '3301'")
         .execute(pool).await;
     let exists_now: bool = sqlx::query_scalar("SELECT COUNT(*) > 0 FROM accounts WHERE code = '332'")
         .fetch_one(pool)
@@ -106,7 +106,7 @@ async fn ensure_discount_earned_account(pool: &SqlitePool) {
         .unwrap_or(false);
     if !exists_now {
         let _ = sqlx::query(
-            "INSERT OR IGNORE INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at) SELECT '00000000-0000-0000-0000-000000000332', '332', 'حسم مكتسب', 'Discount Earned', 'Revenue', COALESCE((SELECT id FROM accounts WHERE code = '33'), (SELECT id FROM accounts WHERE code = '3')), 'Detail', 3, '0', '0', 1, datetime('now'), datetime('now') WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '332')"
+            "INSERT OR IGNORE INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at) SELECT '00000000-0000-0000-0000-000000000332', '332', 'الخصوم المكتسبة', 'Discount Earned', 'Revenue', COALESCE((SELECT id FROM accounts WHERE code = '33'), (SELECT id FROM accounts WHERE code = '3')), 'Detail', 3, '0', '0', 1, datetime('now'), datetime('now') WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '332')"
         ).execute(pool).await;
     }
 }

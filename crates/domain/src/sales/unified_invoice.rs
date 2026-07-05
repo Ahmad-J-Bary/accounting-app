@@ -136,6 +136,19 @@ impl UnifiedInvoice {
                         .unwrap_or_else(|_| MonetaryAmount::zero(doc_currency.clone()))
                 });
 
+        // Compute total discount from line-level discount_percent
+        let line_discount_total =
+            self.lines
+                .iter()
+                .fold(Decimal::ZERO, |acc, line| {
+                    acc + (line.quantity * line.unit_price.amount() * line.discount_percent / Decimal::from(100))
+                });
+
+        self.discount_amount = MonetaryAmount::new(
+            Money::new(line_discount_total, doc_currency.clone()),
+            self.exchange_rate,
+        );
+
         let before_extra =
             (subtotal + self.tax_amount.clone()).unwrap();
         self.total_amount =

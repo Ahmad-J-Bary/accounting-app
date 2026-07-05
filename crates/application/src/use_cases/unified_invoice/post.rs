@@ -504,11 +504,7 @@ impl PostInvoiceUseCase {
                     format!("إثبات مبيعات فاتورة رقم {}", invoice.invoice_number)
                 ));
             } else if invoice.invoice_type == InvoiceType::Purchase {
-                let line_discount_total = invoice.lines.iter().fold(Decimal::ZERO, |acc, line| {
-                    acc + (line.quantity * line.unit_price.amount() * line.discount_percent / Decimal::from(100))
-                });
-                let header_discount = invoice.discount_amount.amount();
-                let total_discount_earned = header_discount + line_discount_total;
+                let total_discount_earned = invoice.discount_amount.amount();
 
                 let discount_earned_account = self.account_repo.find_by_code("332").await?
                     .ok_or_else(|| AppError::NotFound("حساب الخصوم المكتسبة غير موجود: 332".into()))?;

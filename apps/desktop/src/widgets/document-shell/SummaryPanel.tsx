@@ -9,7 +9,6 @@ import {
 
 interface SummaryPanelProps {
   subtotal: number;
-  discount?: number;
   tax?: number;
   extraCosts?: number;
   net: number;
@@ -35,7 +34,6 @@ interface SummaryPanelProps {
 
 export function SummaryPanel({
   subtotal,
-  discount = 0,
   tax = 0,
   extraCosts,
   net,
@@ -242,17 +240,6 @@ export function SummaryPanel({
                     {formatRawAmount(subtotal, currency)}
                   </span>
                 </div>
-
-                {/* الخصم */}
-                {discount > 0 && (
-                  <div className="flex items-center gap-2 text-[10px] font-bold text-rose-500 bg-rose-50/40 px-2.5 py-1 rounded-md border border-rose-100/60 h-7 shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                    <span>الخصم:</span>
-                    <span className="font-black tabular-nums">
-                      -{formatRawAmount(discount, currency)}
-                    </span>
-                  </div>
-                )}
 
                 {/* تكاليف إضافية */}
                 <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-500 bg-indigo-50/40 px-2.5 py-1 rounded-md border border-indigo-100/60 h-7 shrink-0">

@@ -196,8 +196,24 @@ export function toJournalRow(
     ) {
       const oeLine = entry.lines.find(l => l.account_code === "222");
       activeSide = oeLine && parseFloat(oeLine.credit || "0") > 0 ? "credit" : "debit";
+    } else if ((entry.journal_type as string) === "DiscountEarnedJournal") {
+      activeSide = "credit";
     } else if (cOriginal > 0 || cBase > 0) {
       activeSide = dOriginal > 0 || dBase > 0 ? "debit" : "credit";
+    }
+
+    // Handle GeneralJournal entries that are discount entries
+    // New entries: Dr has partner_id, Cr doesn't
+    // Old entries: neither has partner_id — detect by credit account code 332 or name containing "خصوم مكتسبة"
+    if (entry.journal_type === "GeneralJournal" && debits.length === 1 && credits.length === 1) {
+      const drLine = debits[0];
+      const crLine = credits[0];
+      if ((drLine.partner_id && !crLine.partner_id) ||
+          crLine.account_code?.startsWith("332") ||
+          crLine.account_name?.includes("خصوم مكتسبة")) {
+        journalTypeDisplay = "حسم مكتسب";
+        activeSide = "credit";
+      }
     }
 
     if (entry.journal_type === "MaterialOpeningBalance") {

@@ -101,11 +101,7 @@ impl ReopenInvoiceUseCase {
                 }
             },
             InvoiceType::Purchase => {
-                let header_discount = invoice.discount_amount.amount();
-                let line_discount_total = invoice.lines.iter().fold(Decimal::ZERO, |acc, line| {
-                    acc + (line.quantity * line.unit_price.amount() * line.discount_percent / Decimal::from(100))
-                });
-                let total_discount = header_discount + line_discount_total;
+                let total_discount = invoice.discount_amount.amount();
                 let net_credit = purchase_net_supplier_credit(total, extra_costs, total_discount, amount_paid);
                 if net_credit > Decimal::ZERO {
                     if let Some(sid) = &invoice.supplier_id {
