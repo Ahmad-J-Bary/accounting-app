@@ -11,6 +11,7 @@ pub struct InvoiceLine {
     pub material_id: MaterialId,
     pub quantity: Decimal,
     pub unit_price: MonetaryAmount, // Encapsulates both original and base
+    pub discount_percent: Decimal,
     pub purchase_price: Option<MonetaryAmount>,
     pub retail_price: Option<MonetaryAmount>,
     pub wholesale_price: Option<MonetaryAmount>,
@@ -28,11 +29,13 @@ pub struct InvoiceLine {
 }
 
 impl InvoiceLine {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         line_id: Option<String>,
-        material_id: MaterialId, 
-        quantity: Decimal, 
+        material_id: MaterialId,
+        quantity: Decimal,
         unit_price: MonetaryAmount,
+        discount_percent: Decimal,
         purchase_price: Option<MonetaryAmount>,
         retail_price: Option<MonetaryAmount>,
         wholesale_price: Option<MonetaryAmount>,
@@ -52,6 +55,7 @@ impl InvoiceLine {
             material_id,
             quantity,
             unit_price,
+            discount_percent,
             purchase_price,
             retail_price,
             wholesale_price,
@@ -69,6 +73,7 @@ impl InvoiceLine {
     }
 
     pub fn line_total(&self) -> MonetaryAmount {
-        self.unit_price.clone() * self.quantity
+        let factor = Decimal::ONE - self.discount_percent / Decimal::from(100);
+        self.unit_price.clone() * self.quantity * factor
     }
 }

@@ -45,6 +45,7 @@ pub struct LineRow {
     pub warehouse_id: Option<String>,
     pub expiry_date: Option<String>,
     pub notes: Option<String>,
+    pub discount_percent: String,
     pub unit_price_original: Option<String>,
     pub purchase_price_original: Option<String>,
     pub profit_amount_original: Option<String>,

@@ -29,6 +29,7 @@ pub enum JournalType {
     PurchaseReturnJournal,// مرتجع مشتريات
     DamagedJournal,       // خسائر المواد التالفة
     AdjustmentJournal,    // تسوية جرد (فائض/عجز)
+    DiscountEarnedJournal,// حسم مكتسب
 }
 
 impl std::fmt::Display for JournalType {
@@ -53,6 +54,7 @@ impl std::fmt::Display for JournalType {
             Self::PurchaseReturnJournal => "مرتجع مشتريات",
             Self::DamagedJournal => "خسائر المواد التالفة",
             Self::AdjustmentJournal => "تسوية جرد",
+            Self::DiscountEarnedJournal => "حسم مكتسب",
         };
         write!(f, "{}", s)
     }

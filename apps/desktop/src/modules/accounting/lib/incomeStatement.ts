@@ -42,6 +42,7 @@ export type IncomeStatementComputed = {
   purchaseTotal: number;
   purchaseReturnsTotal: number;
   salesReturnsTotal: number;
+  discountsEarned: number;
   openingInventory: number;
   closingInventory: number;
   totalExpenses: number;
@@ -135,6 +136,22 @@ export function computeIncomeStatement(
     .filter((document) => isWithinRange(document.return_date, fromTs, toTs))
     .reduce((sum, document) => sum + getReturnBaseTotal(document), 0);
 
+  // Discounts earned = sum of header + line-level discounts from posted purchase invoices
+  const discountsEarned = postedPurchases.reduce((sum, invoice) => {
+    const v2 = parseNumber(invoice.discount_amount_v2?.base_amount);
+    const headerDisc = v2 > 0 ? v2 : (parseNumber(invoice.discount_amount) / (parseNumber(invoice.exchange_rate) || 1));
+
+    // Sum line-level discounts: qty * unit_price * discount_percent / 100
+    const lineDisc = (invoice.lines ?? []).reduce((lineSum, line) => {
+      const qty = parseNumber(line.quantity);
+      const price = parseNumber(line.unit_price);
+      const discPct = parseNumber(line.discount_percent);
+      return lineSum + (qty * price * discPct / 100);
+    }, 0);
+
+    return sum + headerDisc + lineDisc;
+  }, 0);
+
   // OpeningBalance movements always count toward opening inventory (regardless of date)
   const openingInventory = Array.from(data.stockMovementsByMaterial.values()).reduce((sum, movements) => {
     return sum + movements.reduce((materialSum, movement) => {
@@ -176,7 +193,7 @@ export function computeIncomeStatement(
 
   const totalExpenses = expenseRows.reduce((s, r) => s + r.value, 0);
 
-  const totalRevenue = salesTotal + closingInventory + purchaseReturnsTotal;
+  const totalRevenue = salesTotal + closingInventory + purchaseReturnsTotal + discountsEarned;
   const totalLiabilities = openingInventory + purchaseTotal + salesReturnsTotal;
   const grossProfit = totalRevenue - totalLiabilities;
   const netProfit = grossProfit - totalExpenses;
@@ -191,6 +208,7 @@ export function computeIncomeStatement(
         { label: `المبيعات (${postedSales.length} فاتورة مرحلة)`, value: salesTotal },
         { label: "بضاعة آخر المدة", value: closingInventory },
         { label: "مرتجعات المشتريات", value: purchaseReturnsTotal },
+        { label: "خصوم مكتسبة", value: discountsEarned },
       ],
     },
     {
@@ -232,6 +250,7 @@ export function computeIncomeStatement(
     purchaseTotal,
     purchaseReturnsTotal,
     salesReturnsTotal,
+    discountsEarned,
     openingInventory,
     closingInventory,
     totalExpenses,

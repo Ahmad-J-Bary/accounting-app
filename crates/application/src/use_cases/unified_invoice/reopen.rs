@@ -17,15 +17,17 @@ use crate::errors::AppError;
 fn purchase_net_supplier_credit(
     total: Decimal,
     extra_costs: Decimal,
+    discount_amount: Decimal,
     amount_paid: Decimal,
 ) -> Decimal {
     let main_debit = if total > extra_costs { total - extra_costs } else { Decimal::ZERO };
+    let supplier_credit = if main_debit > discount_amount { main_debit - discount_amount } else { Decimal::ZERO };
     let main_paid = if extra_costs > Decimal::ZERO {
         if amount_paid > extra_costs { amount_paid - extra_costs } else { Decimal::ZERO }
     } else {
         amount_paid
     };
-    if main_debit > main_paid { main_debit - main_paid } else { Decimal::ZERO }
+    if supplier_credit > main_paid { supplier_credit - main_paid } else { Decimal::ZERO }
 }
 
 pub struct ReopenInvoiceDependencies {
@@ -99,7 +101,12 @@ impl ReopenInvoiceUseCase {
                 }
             },
             InvoiceType::Purchase => {
-                let net_credit = purchase_net_supplier_credit(total, extra_costs, amount_paid);
+                let header_discount = invoice.discount_amount.amount();
+                let line_discount_total = invoice.lines.iter().fold(Decimal::ZERO, |acc, line| {
+                    acc + (line.quantity * line.unit_price.amount() * line.discount_percent / Decimal::from(100))
+                });
+                let total_discount = header_discount + line_discount_total;
+                let net_credit = purchase_net_supplier_credit(total, extra_costs, total_discount, amount_paid);
                 if net_credit > Decimal::ZERO {
                     if let Some(sid) = &invoice.supplier_id {
                         if let Some(mut supplier) = self.supplier_repo.find_by_id(sid).await? {

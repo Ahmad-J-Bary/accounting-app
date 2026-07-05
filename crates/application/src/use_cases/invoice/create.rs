@@ -47,6 +47,7 @@ impl CreateInvoiceUseCase {
                     domain::shared::money::Money::new(unit_price, base_currency.clone()),
                     rust_decimal::Decimal::ONE,
                 ),
+                rust_decimal::Decimal::ZERO,
                 None,
                 None,
                 None,

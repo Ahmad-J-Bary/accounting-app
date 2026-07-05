@@ -140,56 +140,29 @@ export function useDocumentEditor({
         }
       }
 
-      // Smart total edit: if the user edited "line_total" (or any line_total_<CURR>
-      // cell, which handleCellChange converts to the base-currency "line_total"),
-      // derive the right side of the equation depending on whether the new total
-      // went below or above the base subtotal (qty * price).
+      // User edited the line_total cell → derive discount %
       if ('line_total' in updates) {
         const newTotal = parseFloat(String(updates.line_total)) || 0;
         const qty = parseFloat(updatedLine.quantity) || 0;
-        const price = parseFloat(updatedLine.unit_price) || 0;
-        const subtotal = qty * price;
+        const price = parseFloat(updatedLine.unit_price || "0");
+        const expectedTotal = qty * price;
 
-        const noDiscount = invoiceType === "OpeningBalance";
-
-        if (qty > 0) {
-          if (!noDiscount && subtotal > 0 && newTotal < subtotal) {
-            // User reduced the total below the base subtotal → derive a discount%
-            const derivedDiscount = ((subtotal - newTotal) / subtotal) * 100;
-            const clamped = Math.min(100, Math.max(0, derivedDiscount));
-            updatedLine.discount = clamped.toFixed(2);
-            // unit_price stays unchanged
-            // Reflect the clamped effective total (handles negative input → 100% discount → 0)
-            updatedLine.line_total = Number((subtotal * (1 - clamped / 100)).toFixed(2));
-          } else {
-            // User kept or increased the total (or base subtotal is 0) →
-            // bump unit_price and clear any discount so the math reconciles.
-            const derivedPrice = newTotal / qty;
-            updatedLine.unit_price = derivedPrice.toFixed(2);
-            updatedLine.discount = "0";
-            updatedLine.line_total = Number(newTotal.toFixed(2));
-          }
+        if (qty > 0 && expectedTotal > 0 && newTotal < expectedTotal) {
+          const derivedDisc = ((expectedTotal - newTotal) / expectedTotal) * 100;
+          updatedLine.discount = String(Math.min(100, Math.max(0, derivedDisc)));
+          updatedLine.line_total = Number(newTotal.toFixed(2));
+        } else if (qty > 0) {
+          updatedLine.discount = "0";
+          updatedLine.line_total = Number(newTotal.toFixed(2));
         } else {
           updatedLine.line_total = Number(newTotal.toFixed(2));
         }
 
-        // Keep the price-mirror field in sync (cost_price for purchase,
-        // retail_price for sale) so the linked columns stay consistent.
-        if (priceField === "last_sale_price") {
-          updatedLine.retail_price = updatedLine.unit_price;
-        } else {
-          updatedLine.cost_price = updatedLine.unit_price;
-        }
-
-        // Recalculate profit using the new effective price/discount
-        const cost = parseFloat(updatedLine.cost_price || "0");
-        const p = parseFloat(updatedLine.unit_price || "0");
-        const q = parseFloat(updatedLine.quantity || "0");
         const disc = parseFloat(updatedLine.discount || "0");
-        const netPrice = p - (p * disc / 100);
+        const netPrice = price * (1 - disc / 100);
+        const cost = parseFloat(updatedLine.cost_price || "0");
         const profitPerUnit = netPrice - cost;
-        const totalProfit = profitPerUnit * q;
-        updatedLine.profit_amount = totalProfit.toFixed(2);
+        updatedLine.profit_amount = (profitPerUnit * qty).toFixed(2);
         updatedLine.profit_percent = cost > 0 ? ((profitPerUnit / cost) * 100).toFixed(2) : "0";
 
         next[index] = updatedLine;
@@ -197,22 +170,39 @@ export function useDocumentEditor({
         return next;
       }
 
-      // Auto-calculate line total if quantity, price or discount changed
+      // Auto-calculate line total and discount_value if quantity, price or discount changed
       if ('quantity' in updates || 'unit_price' in updates || 'discount' in updates || 'unit_id' in updates) {
         updatedLine.line_total = calcLineTotal(updatedLine);
-        
-        // Profit calculation
-        const cost = parseFloat(updatedLine.cost_price || "0");
+
+        // Derive monetary discount value from percentage
         const price = parseFloat(updatedLine.unit_price || "0");
         const qty = parseFloat(updatedLine.quantity || "0");
         const disc = parseFloat(updatedLine.discount || "0");
+        const subtotal = qty * price;
+        updatedLine.discount_value = subtotal > 0 ? (subtotal * disc / 100).toFixed(2) : "0";
         
-        const netPrice = price - (price * disc / 100);
+        // Profit calculation (discount reduces net unit price)
+        const cost = parseFloat(updatedLine.cost_price || "0");
+        const netPrice = price * (1 - disc / 100);
         const profitPerUnit = netPrice - cost;
         const totalProfit = profitPerUnit * qty;
         
         updatedLine.profit_amount = totalProfit.toFixed(2);
         updatedLine.profit_percent = cost > 0 ? ((profitPerUnit / cost) * 100).toFixed(2) : "0";
+      }
+
+      // User edited the monetary discount value → derive discount %
+      if ('discount_value' in updates && !('quantity' in updates) && !('unit_price' in updates)) {
+        const price = parseFloat(updatedLine.unit_price || "0");
+        const qty = parseFloat(updatedLine.quantity || "0");
+        const subtotal = qty * price;
+        if (subtotal > 0) {
+          const val = parseFloat(updatedLine.discount_value || "0");
+          const derivedPct = (val / subtotal) * 100;
+          const clamped = Math.min(100, Math.max(0, derivedPct));
+          updatedLine.discount = clamped.toFixed(2);
+          updatedLine.line_total = calcLineTotal(updatedLine);
+        }
       }
       
       next[index] = updatedLine;

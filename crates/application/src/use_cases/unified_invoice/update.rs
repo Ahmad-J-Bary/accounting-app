@@ -166,21 +166,24 @@ impl UpdateInvoiceUseCase {
             let conversion_factor = line_dto.conversion_factor.as_ref()
                 .and_then(|s| Decimal::from_str(s).ok());
 
+            let discount_percent = Decimal::from_str(&line_dto.discount_percent)
+                .unwrap_or(Decimal::ZERO);
             let line = InvoiceLine::new(
                 None,
                 material_id,
                 quantity,
                 unit_price,
+                discount_percent,
                 purchase_price,
                 retail_price,
                 wholesale_price,
                 semi_wholesale_price,
                 minimum_stock,
-                line_dto.unit_id,
+                line_dto.unit_id.clone(),
                 conversion_factor,
-                line_dto.warehouse_id,
-                line_dto.expiry_date,
-                line_dto.notes,
+                line_dto.warehouse_id.clone(),
+                line_dto.expiry_date.clone(),
+                line_dto.notes.clone(),
                 unit_price_original,
                 purchase_price_original,
                 profit_amount_original,

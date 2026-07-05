@@ -93,11 +93,13 @@ pub async fn get_lines(pool: &SqlitePool, invoice_id: &str, currency_code: &str,
         
         let parse_money = |s: Option<String>| s.and_then(|v| Decimal::from_str(&v).ok().map(|amt| Money::new(amt, Currency::new(currency_code, currency_code, currency_code, "", 2, false))));
         
+        let discount_percent = Decimal::from_str(&r.discount_percent).unwrap_or(Decimal::ZERO);
         lines.push(InvoiceLine::new(
             Some(r.id),
             material_id,
             quantity,
             to_monetary(r.unit_price),
+            discount_percent,
             to_opt_monetary(r.purchase_price),
             to_opt_monetary(r.retail_price),
             to_opt_monetary(r.wholesale_price),

@@ -185,7 +185,7 @@ impl SqliteInvoiceRepository {
                     Decimal::from_str(&price_str).unwrap_or(Decimal::ZERO),
                     base_currency.clone()
                 ),
-                None, None, None, None, None, None, None, None, None, None, None, None, None
+                rust_decimal::Decimal::ZERO, None, None, None, None, None, None, None, None, None, None, None, None, None
             ));
         }
         Ok(lines)

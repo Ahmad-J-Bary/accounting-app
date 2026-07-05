@@ -80,6 +80,35 @@ async fn ensure_currency_columns(pool: &SqlitePool) {
     add_column_if_missing(pool, "material_sale_prices", "currency", "TEXT", "''").await;
     // fixed_assets
     add_column_if_missing(pool, "fixed_assets", "depreciation_method", "TEXT", "'StraightLine'").await;
+    // inventory_lots (for lot-level sale prices)
+    add_column_if_missing(pool, "inventory_lots", "retail_price_base", "TEXT", "NULL").await;
+    add_column_if_missing(pool, "inventory_lots", "semi_wholesale_price_base", "TEXT", "NULL").await;
+    add_column_if_missing(pool, "inventory_lots", "wholesale_price_base", "TEXT", "NULL").await;
+    // unified_invoice_lines (for line-level discount)
+    add_column_if_missing(pool, "unified_invoice_lines", "discount_percent", "TEXT", "'0'").await;
+}
+
+/// Ensure the Discount Earned account (332) exists under "إيرادات أخرى" (33)
+async fn ensure_discount_earned_account(pool: &SqlitePool) {
+    let exists: bool = sqlx::query_scalar("SELECT COUNT(*) > 0 FROM accounts WHERE code = '332'")
+        .fetch_one(pool)
+        .await
+        .unwrap_or(false);
+    if exists {
+        return;
+    }
+    // Rename 3301 → 332 if it exists from botched migration 133
+    let _ = sqlx::query("UPDATE accounts SET code = '332', name_ar = 'حسم مكتسب', name_en = 'Discount Earned', updated_at = datetime('now') WHERE code = '3301'")
+        .execute(pool).await;
+    let exists_now: bool = sqlx::query_scalar("SELECT COUNT(*) > 0 FROM accounts WHERE code = '332'")
+        .fetch_one(pool)
+        .await
+        .unwrap_or(false);
+    if !exists_now {
+        let _ = sqlx::query(
+            "INSERT OR IGNORE INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at) SELECT '00000000-0000-0000-0000-000000000332', '332', 'حسم مكتسب', 'Discount Earned', 'Revenue', COALESCE((SELECT id FROM accounts WHERE code = '33'), (SELECT id FROM accounts WHERE code = '3')), 'Detail', 3, '0', '0', 1, datetime('now'), datetime('now') WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '332')"
+        ).execute(pool).await;
+    }
 }
 
 pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::migrate::MigrateError> {
@@ -89,6 +118,7 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::migrate::Migr
         match migrator.run(pool).await {
             Ok(()) => {
                 ensure_currency_columns(pool).await;
+                ensure_discount_earned_account(pool).await;
                 return Ok(());
             }
             Err(sqlx::migrate::MigrateError::VersionMismatch(version)) => {
@@ -123,6 +153,7 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::migrate::Migr
                 if err_msg.contains("duplicate column name") {
                     // Heal the schema by adding any missing columns
                     ensure_currency_columns(pool).await;
+                    ensure_discount_earned_account(pool).await;
 
                     // Mark all remaining migrations as applied so they won't be retried
                     let applied_versions: Vec<i64> =

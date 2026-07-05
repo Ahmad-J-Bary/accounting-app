@@ -329,13 +329,22 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
       ...prePriceExtraColumns,
       ...priceCols,
       ...saleTierCols,
-      ...(invoiceType === "OpeningBalance" ? [] : [{
-        key: "discount",
-        header: "خصم %",
-        width: "w-[70px]",
-        align: "center",
-        type: "number",
-      } as DocumentColumn]),
+      ...(invoiceType === "OpeningBalance" ? [] : [
+        {
+          key: "discount",
+          header: "خصم %",
+          width: "w-[70px]",
+          align: "center",
+          type: "number",
+        } as DocumentColumn,
+        {
+          key: "discount_value",
+          header: "خصم",
+          width: "w-[80px]",
+          align: "center",
+          type: "number",
+        } as DocumentColumn,
+      ]),
       ...totalCols,
       ...extraColumns,
     ];

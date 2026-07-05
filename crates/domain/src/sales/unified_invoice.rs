@@ -126,25 +126,25 @@ impl UnifiedInvoice {
         let code = &self.currency_code;
         let doc_currency = Currency::new(code, code, code, "", 2, self.exchange_rate == Decimal::ONE);
 
+        // Compute gross subtotal from qty * unit_price (ignoring all discounts)
         let subtotal =
             self.lines
                 .iter()
                 .fold(MonetaryAmount::zero(doc_currency.clone()), |acc, line| {
-                    (acc + line.line_total())
+                    let gross_line_total = line.unit_price.clone() * line.quantity;
+                    (acc + gross_line_total)
                         .unwrap_or_else(|_| MonetaryAmount::zero(doc_currency.clone()))
                 });
 
-        // Convert to MonetaryAmount using the invoice's exchange rate
         let before_extra =
-            ((subtotal + self.tax_amount.clone()).unwrap() - self.discount_amount.clone()).unwrap();
+            (subtotal + self.tax_amount.clone()).unwrap();
         self.total_amount =
             (before_extra.clone() + self.extra_costs.clone()).unwrap_or(before_extra);
 
-        if self.payment_method == PaymentMethod::Cash {
-            self.amount_paid = self.total_amount.clone();
-        } else if self.payment_method == PaymentMethod::Deferred {
+        if self.payment_method == PaymentMethod::Deferred {
             self.amount_paid = MonetaryAmount::zero(doc_currency);
         }
+        // For Cash/Partial: keep the user-entered amount_paid as-is
 
         self.updated_at = Utc::now();
     }
@@ -155,7 +155,8 @@ impl UnifiedInvoice {
         self.lines
             .iter()
             .fold(MonetaryAmount::zero(doc_currency.clone()), |acc, line| {
-                (acc + line.line_total())
+                let gross_line_total = line.unit_price.clone() * line.quantity;
+                (acc + gross_line_total)
                     .unwrap_or_else(|_| MonetaryAmount::zero(doc_currency.clone()))
             })
     }

@@ -47,6 +47,7 @@ impl CreateInvoiceUseCase {
                 material_id,
                 quantity,
                 domain::shared::monetary_amount::MonetaryAmount::from_base(unit_price, base_currency.clone()),
+                rust_decimal::Decimal::ZERO,
                 None,
                 None,
                 None,

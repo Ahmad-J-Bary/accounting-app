@@ -4,6 +4,7 @@ import type { InvoiceLineDto, SalesReturnLineDto, PurchaseReturnLineDto } from "
 export interface GridLine extends InvoiceLineDto {
   _id: string;        // local React key only
   discount?: string;  // line-level discount %
+  discount_value?: string; // line-level monetary discount amount
   line_total?: number; // computed
   
   // High-density metadata (read-only in grid usually)
@@ -45,7 +46,7 @@ export function toReturnBackendLines(lines: GridLine[], exchangeRate: string = "
   return lines
     .filter(l => l.material_id || l.material_name) // skip truly empty rows
     .map(({ 
-      _id, id, line_total, discount, 
+      _id, id, line_total, discount, discount_value,
       name_en, barcode, material_image, warehouse_qty, unit_name, unit_barcode, 
       cost_price, current_cost_price,
       profit_amount, profit_percent, tier,
@@ -72,7 +73,7 @@ export function toBackendLines(lines: GridLine[], exchangeRate: string = "1"): I
   return lines
     .filter(l => l.material_id || l.material_name) // skip truly empty rows
     .map(({ 
-      _id, line_total, discount, 
+      _id, line_total, discount_value, discount,
       name_en, barcode, material_image, warehouse_qty, unit_name, unit_barcode, 
       cost_price, current_cost_price,
       profit_amount, profit_percent, tier, sale_tier_layout, occurrence_key, original_conversion_factor, original_quantity_raw, original_price_base,
@@ -83,7 +84,8 @@ export function toBackendLines(lines: GridLine[], exchangeRate: string = "1"): I
       return { 
         ...rest, 
         unit_price: Number.isFinite(docPrice) ? docPrice.toFixed(2).replace(/\.?0+$/, "") : rest.unit_price,
-        unit_name 
+        unit_name,
+        discount_percent: discount || "0",
       };
     });
 }
@@ -98,6 +100,7 @@ export function newGridLine(defaultWarehouseId?: string): GridLine {
     quantity: "",
     unit_price: "",
     discount: "",
+    discount_value: "",
     notes: "",
     line_total: 0,
     tier: "retail",
@@ -106,13 +109,12 @@ export function newGridLine(defaultWarehouseId?: string): GridLine {
   };
 }
 
-/** Compute line total considering discount */
+/** Compute line total (discount reduces the line total) */
 export function calcLineTotal(line: GridLine): number {
   const qty = parseFloat(line.quantity) || 0;
   const price = parseFloat(line.unit_price) || 0;
-  const disc = parseFloat(line.discount || "0") || 0;
-  const subtotal = qty * price;
-  return subtotal - (subtotal * disc / 100);
+  const disc = parseFloat(line.discount || "0");
+  return qty * price * (1 - disc / 100);
 }
 
 

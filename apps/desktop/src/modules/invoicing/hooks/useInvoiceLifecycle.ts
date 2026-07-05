@@ -278,6 +278,7 @@ export function useInvoiceLifecycle({
               unit_name,
               unit_price: Number.isFinite(basePrice) ? basePrice.toFixed(2).replace(/\.?0+$/, "") : l.unit_price,
               _id: `line_${Math.random()}`,
+              discount: l.discount_percent || "0",
               line_total: parseFloat(l.quantity) * basePrice,
               material_code: l.code,
               unit_barcode: l.barcode,
