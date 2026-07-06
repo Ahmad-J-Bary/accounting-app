@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { Input } from "@shared/ui/input";
 import { DocumentToolbar } from "@widgets/document-shell/DocumentToolbar";
 import type { SupplierDto, CategoryDto, CreateMaterialRequest } from "@erp/shared-types";
 import { materialService } from "@modules/inventory/api/materialService";
@@ -8,6 +7,7 @@ import { categoryService } from "@modules/inventory/api/categoryService";
 import { MaterialForm } from "@modules/inventory/components/MaterialForm";
 import { toast } from "sonner";
 
+import { HeaderField } from '@shared/ui/header-field';
 import { FinancialDocumentTemplate } from "@widgets/templates/FinancialDocumentTemplate";
 import { GenericDocumentGrid } from "@widgets/document-shell/GenericDocumentGrid";
 import { SummaryPanel } from "@widgets/document-shell/SummaryPanel";
@@ -112,12 +112,11 @@ export default function PurchaseInvoices() {
         }
         headerFields={
           <>
-            <div className="space-y-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase">رقم الفاتورة</label>
-              <Input value={headerState.invoice_number} readOnly className="h-9 font-mono font-bold bg-slate-50 border-slate-200" />
-            </div>
-            
-            <div className="md:col-span-2 space-y-1">
+            <HeaderField label="رقم الفاتورة" value={headerState.invoice_number} readOnly inputClassName="font-mono font-bold" />
+
+            <HeaderField label="تاريخ الإصدار" type="date" value={headerState.issued_at} onChange={v => setHeaderState(s => ({ ...s, issued_at: v }))} disabled={isReadOnly} inputClassName="font-bold" />
+
+            <HeaderField label="المورد" className="lg:col-span-2">
               <InvoicePartySelector
                 type="supplier"
                 parties={suppliers}
@@ -126,18 +125,12 @@ export default function PurchaseInvoices() {
                 selectedName={headerState.supplier_name || "مورد نقدي"}
                 onSelect={(id, name) => setHeaderState(s => ({ ...s, supplier_id: id, supplier_name: name }))}
                 onClear={() => setHeaderState(s => ({ ...s, supplier_id: "", supplier_name: "مورد نقدي" }))}
+                hideLabel
+                noBorder
               />
-            </div>
+            </HeaderField>
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase">تاريخ الإصدار</label>
-              <Input type="date" disabled={isReadOnly} value={headerState.issued_at} onChange={e => setHeaderState(s => ({ ...s, issued_at: e.target.value }))} className="h-9 font-bold border-slate-200 disabled:opacity-100 disabled:bg-slate-50 disabled:cursor-not-allowed" />
-            </div>
-            
-            <div className="md:col-span-2 space-y-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase">ملاحظات المستند</label>
-              <Input placeholder="أدخل أي ملاحظات إضافية هنا..." disabled={isReadOnly} value={headerState.notes} onChange={e => setHeaderState(s => ({ ...s, notes: e.target.value }))} className="h-9 border-slate-200 disabled:opacity-100 disabled:bg-slate-50 disabled:cursor-not-allowed" />
-            </div>
+            <HeaderField label="ملاحظات المستند" value={headerState.notes} onChange={v => setHeaderState(s => ({ ...s, notes: v }))} disabled={isReadOnly} placeholder="أدخل أي ملاحظات إضافية هنا..." className="md:col-span-3 lg:col-span-2" />
           </>
         }
         lineItemsGrid={

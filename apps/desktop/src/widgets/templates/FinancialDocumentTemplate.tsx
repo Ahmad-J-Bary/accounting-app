@@ -37,10 +37,10 @@ export function FinancialDocumentTemplate({
         <div className="flex items-center gap-3">{toolbar}</div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden p-2 gap-2">
+      <div className="flex-1 flex overflow-hidden p-1 gap-1.5">
         <div className="flex-1 flex flex-col min-w-0 gap-2 overflow-hidden">
-          <div className="bg-card border border-border rounded-lg shadow-sm p-2 shrink-0">
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-2">{headerFields}</div>
+          <div className="bg-card border border-border rounded-lg shadow-sm p-1.5 shrink-0 border-t-2 border-t-primary/5">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-1 auto-rows-min">{headerFields}</div>
           </div>
 
           <div className="flex-1 flex flex-col bg-card border border-border rounded-lg shadow-sm overflow-hidden min-h-0">

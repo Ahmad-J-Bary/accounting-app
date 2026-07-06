@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { useTabs } from "@app/providers/TabContext";
-import { Input } from "@shared/ui/input";
 import { DocumentToolbar } from "@widgets/document-shell/DocumentToolbar";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { materialService } from "@modules/inventory/api/materialService";
@@ -12,6 +11,7 @@ import { warehouseService } from "@modules/inventory/api/warehouseService";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
+import { HeaderField } from '@shared/ui/header-field';
 import { FinancialDocumentTemplate } from "@widgets/templates/FinancialDocumentTemplate";
 import {
   GenericDocumentGrid,
@@ -338,44 +338,11 @@ export default function OpeningBalance() {
       }
       headerFields={
         <>
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-muted-foreground uppercase">
-              رقم القيد
-            </label>
-            <Input
-              value={header.docNumber}
-              readOnly
-              className="h-9 font-mono font-bold bg-muted border-border"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-muted-foreground uppercase">
-              التاريخ
-            </label>
-            <Input
-              type="date"
-              disabled={isReadOnly}
-              value={header.issued_at}
-              onChange={(e) =>
-                setHeader((s) => ({ ...s, issued_at: e.target.value }))
-              }
-              className="h-9 font-bold border-border"
-            />
-          </div>
-          <div className="md:col-span-2 space-y-1">
-            <label className="text-[10px] font-black text-muted-foreground uppercase">
-              ملاحظات
-            </label>
-            <Input
-              placeholder="أدخل أي ملاحظات هنا..."
-              disabled={isReadOnly}
-              value={header.notes}
-              onChange={(e) =>
-                setHeader((s) => ({ ...s, notes: e.target.value }))
-              }
-              className="h-9 border-border"
-            />
-          </div>
+          <HeaderField label="رقم القيد" value={header.docNumber} readOnly inputClassName="font-mono font-bold" />
+
+          <HeaderField label="التاريخ" type="date" value={header.issued_at} onChange={v => setHeader(s => ({ ...s, issued_at: v }))} disabled={isReadOnly} inputClassName="font-bold" />
+
+          <HeaderField label="ملاحظات" value={header.notes} onChange={v => setHeader(s => ({ ...s, notes: v }))} disabled={isReadOnly} placeholder="أدخل أي ملاحظات هنا..." className="lg:col-span-4" />
         </>
       }
       lineItemsGrid={

@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { Search, User, Truck, X, Plus, AlertCircle } from "lucide-react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { Search, User, Truck, X, Plus, Loader2 } from "lucide-react";
 import type { CustomerDto, SupplierDto } from "@erp/shared-types";
 import { cn } from '@shared/lib/utils';
 import { customerService } from '@modules/partners/api/customerService';
@@ -18,6 +18,8 @@ interface InvoicePartySelectorProps {
   readOnly?: boolean;
   defaultName?: string;
   predictedBalance?: number;
+  hideLabel?: boolean;
+  noBorder?: boolean;
 }
 
 export function InvoicePartySelector({
@@ -30,27 +32,44 @@ export function InvoicePartySelector({
   disabled = false,
   readOnly = false,
   defaultName,
-  predictedBalance = 0,
+  hideLabel = false,
+  noBorder = false,
 }: InvoicePartySelectorProps) {
+  const [isEditing, setIsEditing] = useState(!selectedId);
   const [inputValue, setInputValue] = useState(selectedName || "");
+  const [debouncedValue, setDebouncedValue] = useState("");
   const [open, setOpen] = useState(false);
   const [currentBalance, setCurrentBalance] = useState<{ debit: string; credit: string } | null>(null);
   const [loadingBalance, setLoadingBalance] = useState(false);
-  
+
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isEditingRef = useRef(isEditing);
+  const inputValueRef = useRef(inputValue);
+  const selectedIdRef = useRef(selectedId);
+  const selectedNameRef = useRef(selectedName);
+
+  isEditingRef.current = isEditing;
+  inputValueRef.current = inputValue;
+  selectedIdRef.current = selectedId;
+  selectedNameRef.current = selectedName;
 
   const label = type === "customer" ? "العميل" : "المورد";
   const Icon = type === "customer" ? User : Truck;
   const placeholder = type === "customer" ? (defaultName ?? "زبون نقدي") : (defaultName ?? "مورد نقدي");
 
-  // Update input when props change
   useEffect(() => {
-    if (selectedName) setInputValue(selectedName);
-    else if (!selectedId) setInputValue("");
+    if (selectedId && selectedName) {
+      setInputValue(selectedName);
+      setIsEditing(false);
+      setOpen(false);
+    } else if (!selectedId) {
+      setInputValue("");
+      setIsEditing(true);
+    }
   }, [selectedId, selectedName]);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -64,7 +83,11 @@ export function InvoicePartySelector({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Fetch balance when partner changes
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(inputValue), 300);
+    return () => clearTimeout(timer);
+  }, [inputValue]);
+
   useEffect(() => {
     const fetchBalance = async () => {
       if (!selectedId) {
@@ -89,63 +112,189 @@ export function InvoicePartySelector({
     fetchBalance();
   }, [selectedId, type]);
 
-  const filtered = (parties as Array<CustomerDto | SupplierDto>).filter(p =>
-    !inputValue ||
-    p.name.includes(inputValue) ||
-    (p.code ?? "").includes(inputValue)
-  ).slice(0, 10);
+  const filtered = useMemo(() =>
+    (parties as Array<CustomerDto | SupplierDto>).filter(p =>
+      !debouncedValue ||
+      p.name.includes(debouncedValue) ||
+      (p.code ?? "").includes(debouncedValue)
+    ).slice(0, 10),
+    [parties, debouncedValue]
+  );
 
-  const isNewPartner = inputValue && !parties.some(p => p.name === inputValue) && !selectedId;
+  const selectedParty = useMemo(() =>
+    selectedId ? (parties as Array<CustomerDto | SupplierDto>).find(p => p.id === selectedId) ?? null : null,
+    [selectedId, parties]
+  );
 
-  return (
-    <div className="relative w-full" dir="rtl">
-      <label className="text-[10px] font-black text-slate-400 uppercase">
-        {label}
-      </label>
+  const handleSelect = useCallback((id: string, name: string) => {
+    onSelect(id, name);
+    setInputValue(name);
+    setIsEditing(false);
+    setOpen(false);
+  }, [onSelect]);
 
-      <div className={cn(
-        "relative flex items-center gap-2 h-9 rounded-lg border bg-white px-3 transition-colors",
-        open ? "border-blue-500 ring-2 ring-blue-100" : "border-slate-200 hover:border-slate-300",
-        (disabled || readOnly) && "bg-slate-50",
-      )}>
-          <Icon className={cn("w-4 h-4 flex-shrink-0", selectedId ? "text-blue-600" : "text-slate-400")} />
-          
-          <input
-              ref={inputRef}
-              disabled={disabled || readOnly}
-              className="flex-1 text-sm bg-transparent outline-none text-right font-bold placeholder:text-slate-300"
-              placeholder={placeholder}
-              value={inputValue}
-              onChange={e => {
-                  setInputValue(e.target.value);
-                  onSelect("", e.target.value);
-                  setOpen(true);
-              }}
-              onFocus={() => {
-                  if (!readOnly) setOpen(true);
-              }}
-              autoComplete="off"
-          />
+  const handleClear = useCallback(() => {
+    setInputValue("");
+    setIsEditing(true);
+    if (onClear) onClear();
+    else onSelect("", "");
+    setOpen(false);
+  }, [onClear, onSelect]);
 
-          {(inputValue || selectedId) && !disabled && !readOnly && (
-              <button
-                  onClick={() => {
-                      setInputValue("");
-                      if (onClear) onClear();
-                      else onSelect("", "");
-                      setOpen(false);
-                  }}
-                  className="p-1 hover:bg-slate-100 rounded-full text-slate-400 hover:text-red-500 transition-colors"
-              >
-                  <X className="w-3.5 h-3.5" />
-              </button>
+  const startEditing = useCallback(() => {
+    setIsEditing(true);
+    setInputValue(selectedName || "");
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }, [selectedName]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && open && filtered.length > 0) {
+      e.preventDefault();
+      const first = filtered[0];
+      handleSelect(first.id, first.name);
+    } else if (e.key === 'Escape') {
+      setOpen(false);
+      if (selectedId) {
+        setIsEditing(false);
+        setInputValue(selectedName || "");
+      }
+    }
+  }, [open, filtered, handleSelect, selectedId, selectedName]);
+
+  const handleBlur = useCallback(() => {
+    blurTimeoutRef.current = setTimeout(() => {
+      if (!isEditingRef.current) return;
+      const val = inputValueRef.current;
+      const sId = selectedIdRef.current;
+      const sName = selectedNameRef.current;
+      if (!val && sId) {
+        setIsEditing(false);
+        setInputValue(sName || "");
+      } else if (sId && val !== sName) {
+        setIsEditing(false);
+        setInputValue(sName || "");
+      }
+    }, 200);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    };
+  }, []);
+
+  const balanceLabel = useMemo(() => {
+    if (!currentBalance) return null;
+    const d = parseFloat(currentBalance.debit);
+    const c = parseFloat(currentBalance.credit);
+    if (d > 0) return `مدين ${currentBalance.debit}`;
+    if (c > 0) return `دائن ${currentBalance.credit}`;
+    return null;
+  }, [currentBalance]);
+
+  const renderSelectedMode = () => (
+    <div className={cn(
+      "relative flex items-center gap-3 min-h-8 transition-all duration-200",
+      noBorder ? "px-1" : "px-3 border border-border/60 rounded-lg shadow-sm hover:shadow-md hover:border-primary/20",
+      readOnly ? "bg-muted/50" : noBorder ? "" : "bg-muted/20 hover:bg-muted/30"
+    )}>
+      <Icon className="w-5 h-5 flex-shrink-0 text-primary" />
+
+      <div className="flex-1 min-w-0 py-1">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-foreground truncate">
+            {selectedName}
+          </span>
+          {selectedParty?.code && (
+            <span className="text-[10px] text-muted-foreground font-mono bg-background px-1.5 py-0.5 rounded">
+              {selectedParty.code}
+            </span>
           )}
+        </div>
+        {selectedParty?.phone && (
+          <span className="text-[10px] text-muted-foreground">{selectedParty.phone}</span>
+        )}
+      </div>
+
+      {loadingBalance && (
+        <Loader2 className="w-3.5 h-3.5 text-muted-foreground animate-spin flex-shrink-0" />
+      )}
+
+      {balanceLabel && !loadingBalance && (
+        <span className="text-[10px] text-muted-foreground whitespace-nowrap bg-muted px-1.5 py-0.5 rounded flex-shrink-0">
+          {balanceLabel}
+        </span>
+      )}
+
+      {!readOnly && !disabled && (
+        <div className="flex items-center gap-1 mr-auto">
+          <button
+            type="button"
+            onClick={startEditing}
+            className="text-[11px] text-primary hover:text-primary/80 font-semibold px-1.5 py-0.5 rounded hover:bg-primary/5 transition-colors"
+          >
+            تغيير
+          </button>
+          <button
+            type="button"
+            onClick={handleClear}
+            className="p-1 hover:bg-muted rounded-full text-muted-foreground hover:text-destructive transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderSearchMode = () => (
+    <>
+      <div className={cn(
+        "relative flex items-center gap-2 min-h-8 transition-all duration-200",
+        noBorder ? "px-1" : "rounded-lg border bg-background px-3 shadow-sm border-border/60 hover:border-primary/30 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10",
+        (disabled || readOnly) && (noBorder ? "" : "bg-muted/50"),
+      )}>
+        <Search className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+
+        <input
+          ref={inputRef}
+          disabled={disabled || readOnly}
+          className="flex-1 text-sm bg-transparent outline-none text-right font-semibold placeholder:text-muted-foreground/40"
+          placeholder={placeholder}
+          value={inputValue}
+          onChange={e => {
+            setInputValue(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => {
+            if (!readOnly) {
+              setOpen(true);
+              setDebouncedValue(inputValue);
+            }
+          }}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          autoComplete="off"
+        />
+
+        {(inputValue || selectedId) && !disabled && !readOnly && (
+          <button
+            type="button"
+            onClick={() => {
+              setInputValue("");
+              setOpen(true);
+            }}
+            className="p-1 hover:bg-muted rounded-full text-muted-foreground hover:text-destructive transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       {open && (
         <div
           ref={dropdownRef}
-          className="absolute z-[100] top-full mt-1 right-0 w-full bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+          className="absolute z-[100] top-full mt-1 right-0 w-full bg-popover border border-border rounded-lg shadow-lg overflow-hidden"
         >
           <div className="max-h-60 overflow-y-auto">
             {filtered.map(p => (
@@ -153,37 +302,55 @@ export function InvoicePartySelector({
                 key={p.id}
                 type="button"
                 className={cn(
-                  "w-full flex items-center justify-between px-3 py-2.5 hover:bg-blue-50 border-b border-slate-50 last:border-0 text-right transition-colors",
-                  p.id === selectedId && "bg-blue-50 border-r-4 border-r-blue-600"
+                  "w-full flex items-center justify-between px-3 py-2.5 hover:bg-accent border-b border-border last:border-0 text-right transition-colors",
+                  p.id === selectedId && "bg-accent border-r-4 border-r-primary"
                 )}
-                onMouseDown={() => {
-                  onSelect(p.id, p.name);
-                  setInputValue(p.name);
-                  setOpen(false);
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  handleSelect(p.id, p.name);
                 }}
               >
                 <div className="flex flex-col">
-                  <span className="text-sm font-black text-slate-800">{p.name}</span>
+                  <span className="text-sm font-semibold text-foreground">{p.name}</span>
                   <div className="flex gap-2 items-center mt-0.5">
-                    <span className="text-[10px] text-slate-400 font-mono">{p.code}</span>
-                    {p.phone && <span className="text-[10px] text-slate-400 bg-slate-100 px-1 rounded">{p.phone}</span>}
+                    <span className="text-[10px] text-muted-foreground font-mono">{p.code}</span>
+                    {p.phone && <span className="text-[10px] text-muted-foreground bg-muted px-1 rounded">{p.phone}</span>}
                   </div>
                 </div>
                 {p.id === selectedId && (
-                  <div className="bg-blue-600 text-white p-1 rounded-full"><Plus className="w-3 h-3 rotate-45" /></div>
+                  <Plus className="w-3.5 h-3.5 rotate-45 text-primary" />
                 )}
               </button>
             ))}
 
-            {filtered.length === 0 && !isNewPartner && (
-              <div className="py-10 text-center flex flex-col items-center gap-2">
-                <Search className="w-8 h-8 text-slate-200" />
-                <span className="text-sm text-slate-400 font-bold">اكتب اسماً جديداً للبدء</span>
+            {filtered.length === 0 && debouncedValue && (
+              <div className="py-8 text-center flex flex-col items-center gap-2">
+                <Search className="w-6 h-6 text-muted-foreground/20" />
+                <span className="text-sm text-muted-foreground">لا توجد نتائج</span>
+              </div>
+            )}
+
+            {filtered.length === 0 && !debouncedValue && !selectedId && (
+              <div className="py-8 text-center flex flex-col items-center gap-2">
+                <Search className="w-6 h-6 text-muted-foreground/20" />
+                <span className="text-sm text-muted-foreground">ابدأ بالبحث...</span>
               </div>
             )}
           </div>
         </div>
       )}
+    </>
+  );
+
+  return (
+    <div className="relative w-full" dir="rtl">
+      {!hideLabel && (
+        <label className="text-xs font-semibold text-muted-foreground">
+          {label}
+        </label>
+      )}
+
+      {!isEditing && selectedId ? renderSelectedMode() : renderSearchMode()}
     </div>
   );
 }

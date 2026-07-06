@@ -18,6 +18,7 @@ export function useColumnPreferences({
     [allColumnIds],
   );
   const prevAllIdsKeyRef = useRef<string | null>(null);
+  const prevDefaultRef = useRef<string[]>([]);
 
   const defaultRef = useRef<string[]>(defaultVisibleColumns);
   defaultRef.current = defaultVisibleColumns;
@@ -37,16 +38,24 @@ export function useColumnPreferences({
     return defaultVisibleColumns;
   });
 
-  // Reconcile ONLY when the column set itself changes (a column was added or
-  // removed from the table). Never on every render – that would clobber the
-  // user's explicit hide/show choices.
+  // Reconcile when column set OR default visibility changes.
+  // On column set changes: add newly added default columns, remove deleted columns.
+  // On default visibility changes (e.g. baseCurrency loaded after first render):
+  //   add new default columns that aren't already visible.
+  // Never removes columns the user explicitly toggled on.
   useEffect(() => {
-    if (prevAllIdsKeyRef.current === null) {
-      prevAllIdsKeyRef.current = allIdsKey;
-      return;
-    }
-    if (prevAllIdsKeyRef.current === allIdsKey) return;
+    const isInitialRender = prevAllIdsKeyRef.current === null;
+    const columnsChanged = prevAllIdsKeyRef.current !== null && prevAllIdsKeyRef.current !== allIdsKey;
+    const defaultsChanged = !isInitialRender && (
+      prevDefaultRef.current.length !== defaultVisibleColumns.length ||
+      !prevDefaultRef.current.every((id, i) => id === defaultVisibleColumns[i])
+    );
+
     prevAllIdsKeyRef.current = allIdsKey;
+    prevDefaultRef.current = defaultVisibleColumns;
+
+    if (isInitialRender) return;
+    if (!columnsChanged && !defaultsChanged) return;
 
     setVisibleColumns(prev => {
       const allIds = new Set(allColumnIds);

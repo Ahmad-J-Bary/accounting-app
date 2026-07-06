@@ -1,9 +1,9 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
-import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
 import { Badge } from "@shared/ui/badge";
 import { Save, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { HeaderField } from '@shared/ui/header-field';
 import { FinancialDocumentTemplate } from "@widgets/templates/FinancialDocumentTemplate";
 import { GenericDocumentGrid } from "@widgets/document-shell/GenericDocumentGrid";
 import { SummaryPanel, ReturnSettlementPanel } from "@widgets/document-shell";
@@ -451,14 +451,9 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
       }
       headerFields={
         <>
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase">تاريخ المرتجع</label>
-            <Input type="date" value={returnDate}
-              disabled={readOnly}
-              onChange={e => setReturnDate(e.target.value)}
-              className="h-9 font-bold border-slate-200 disabled:opacity-100 disabled:bg-slate-50 disabled:cursor-not-allowed" />
-          </div>
-          <div className="md:col-span-2 space-y-1">
+          <HeaderField label="تاريخ المرتجع" type="date" value={returnDate} onChange={setReturnDate} disabled={readOnly} inputClassName="font-bold" />
+
+          <HeaderField label={isSales ? "العميل" : "المورد"} className="lg:col-span-2">
             <InvoicePartySelector
               type={partyType}
               parties={parties}
@@ -467,15 +462,12 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
               onSelect={(id, name) => { setPartyId(id); setPartyName(name); }}
               onClear={() => { setPartyId(""); setPartyName(isSales ? "زبون نقدي" : "مورد نقدي"); }}
               readOnly={readOnly}
+              hideLabel
+              noBorder
             />
-          </div>
-          <div className="md:col-span-2 space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase">ملاحظات</label>
-            <Input placeholder="ملاحظات إضافية..." value={notes}
-              disabled={readOnly}
-              onChange={e => setNotes(e.target.value)}
-              className="h-9 border-slate-200 disabled:opacity-100 disabled:bg-slate-50 disabled:cursor-not-allowed" />
-          </div>
+          </HeaderField>
+
+          <HeaderField label="ملاحظات" value={notes} onChange={setNotes} disabled={readOnly} placeholder="ملاحظات إضافية..." className="lg:col-span-3" />
         </>
       }
       lineItemsGrid={
@@ -495,15 +487,14 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
       }
       summaryPanel={
         readOnly ? (
-          <SummaryPanel
-            subtotal={totalAmount}
-            discount={0}
-            tax={0}
-            net={totalAmount}
-            invoiceType={isSales ? "Sales" : "Purchase"}
-            isReadOnly={true}
-          />
-        ) : (
+            <SummaryPanel
+              subtotal={totalAmount}
+              tax={0}
+              net={totalAmount}
+              invoiceType={isSales ? "Sales" : "Purchase"}
+              isReadOnly={true}
+            />
+          ) : (
           <div className="flex flex-col gap-3">
             <ReturnSettlementPanel
               totalAmount={totalAmount}
@@ -519,7 +510,6 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
 
             <SummaryPanel
               subtotal={totalAmount}
-              discount={0}
               tax={0}
               net={totalAmount}
               invoiceType={isSales ? "Sales" : "Purchase"}

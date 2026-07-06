@@ -46,6 +46,7 @@ interface InvoiceTableProps {
   statusFilter: string;
   onStatusFilterChange: (val: string) => void;
   toolbarTitle?: string;
+  tableId?: string;
 }
 
 export function InvoiceTable({
@@ -74,6 +75,7 @@ export function InvoiceTable({
   extraColumns = [],
   statusFilter,
   onStatusFilterChange,
+  tableId = "invoices-unified",
 }: InvoiceTableProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
   const { isBaseCurrency } = useBaseCurrencyColumns();
@@ -310,7 +312,7 @@ export function InvoiceTable({
       },
     ];
     return cols;
-  }, [formatAmount, currencies, baseCurrency, partyField, partyLabel, partyType, defaultName, showSubtotal, showDiscount, showExtraCosts, extraColumns, onView, onEdit, onViewOpeningBalance, onEditOpeningBalance, onPost, onReopen, onDelete, isBaseCurrency]);
+  }, [formatAmount, currencies, baseCurrency, partyField, partyLabel, partyType, defaultName, showSubtotal, showDiscountGranted, showDiscount, showExtraCosts, extraColumns, onView, onEdit, onViewOpeningBalance, onEditOpeningBalance, onPost, onReopen, onDelete, isBaseCurrency]);
 
   // Default visible: hide secondary currency columns by default.
   // User can toggle them on.
@@ -419,7 +421,7 @@ export function InvoiceTable({
   });
 
   const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
-    tableId: "invoices-unified",
+    tableId,
     columns: allColumns,
     defaultVisible,
   });

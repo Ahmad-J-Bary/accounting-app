@@ -206,6 +206,7 @@ export function InvoiceList({
             extraColumns={extraColumns}
             statusFilter={statusFilter}
             onStatusFilterChange={setStatusFilter}
+            tableId={preferenceKey}
           />
       }
     />
