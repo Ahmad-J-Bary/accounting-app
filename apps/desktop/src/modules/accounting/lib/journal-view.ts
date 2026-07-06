@@ -198,6 +198,8 @@ export function toJournalRow(
       activeSide = oeLine && parseFloat(oeLine.credit || "0") > 0 ? "credit" : "debit";
     } else if ((entry.journal_type as string) === "DiscountEarnedJournal") {
       activeSide = "credit";
+    } else if ((entry.journal_type as string) === "DiscountGrantedJournal") {
+      activeSide = "debit";
     } else if (cOriginal > 0 || cBase > 0) {
       activeSide = dOriginal > 0 || dBase > 0 ? "debit" : "credit";
     }

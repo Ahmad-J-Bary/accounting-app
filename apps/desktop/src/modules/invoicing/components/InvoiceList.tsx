@@ -40,6 +40,7 @@ interface InvoiceListProps {
   statsColor: string;
   preferenceKey: string;
   showSubtotal?: boolean;
+  showDiscountGranted?: boolean;
   showDiscount?: boolean;
   showExtraCosts?: boolean;
   extraColumns?: ExtraColumn[];
@@ -69,6 +70,7 @@ export function InvoiceList({
   statsColor,
   preferenceKey,
   showSubtotal = false,
+  showDiscountGranted = false,
   showDiscount = false,
   showExtraCosts = false,
   extraColumns = [],
@@ -124,6 +126,14 @@ export function InvoiceList({
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200">
               <span className="text-[11px] font-bold text-blue-600">خصوم مكتسبة:</span>
               <span className="text-[11px] font-black text-blue-700 tabular-nums">
+                {formatAmount(totalDiscount, { currencyCode: baseCurrency?.code })}
+              </span>
+            </div>
+          )}
+          {showDiscountGranted && totalDiscount > 0 && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-50 border border-rose-200">
+              <span className="text-[11px] font-bold text-rose-600">خصوم ممنوحة:</span>
+              <span className="text-[11px] font-black text-rose-700 tabular-nums">
                 {formatAmount(totalDiscount, { currencyCode: baseCurrency?.code })}
               </span>
             </div>
@@ -190,6 +200,7 @@ export function InvoiceList({
             partyType={partyType}
             defaultName={defaultName}
             showSubtotal={showSubtotal}
+            showDiscountGranted={showDiscountGranted}
             showDiscount={showDiscount}
             showExtraCosts={showExtraCosts}
             extraColumns={extraColumns}

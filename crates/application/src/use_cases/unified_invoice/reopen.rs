@@ -76,13 +76,14 @@ impl ReopenInvoiceUseCase {
         }
 
         let total = invoice.total_amount.amount();
+        let discount_amount = invoice.discount_amount.amount();
         let amount_paid = invoice.amount_paid.amount();
         let extra_costs = invoice.extra_costs.amount();
 
         // 1. Reverse Party Balance (Subledger)
         match invoice.invoice_type {
             InvoiceType::Sales => {
-                let sales_deferred = total - amount_paid;
+                let sales_deferred = total - amount_paid - discount_amount;
                 if sales_deferred > Decimal::ZERO {
                     if let Some(cid) = &invoice.customer_id {
                         if let Some(mut customer) = self.customer_repo.find_by_id(cid).await? {

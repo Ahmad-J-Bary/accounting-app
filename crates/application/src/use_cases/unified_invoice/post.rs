@@ -440,6 +440,7 @@ impl PostInvoiceUseCase {
         let fx_rate = invoice.exchange_rate;
 
         let total_amount = invoice.total_amount.amount();
+        let total_discount_granted = invoice.discount_amount.amount();
         let amount_paid = invoice.amount_paid.amount();
         let amount_deferred = total_amount - amount_paid;
 
@@ -827,6 +828,53 @@ impl PostInvoiceUseCase {
             self.journal_repo.save(&receipt_entry).await?;
         }
 
+        // Entry: Discount Granted (DiscountGrantedJournal) — Dr 47, Cr Customer (if discount on sales)
+        if invoice.invoice_type == InvoiceType::Sales && total_discount_granted > Decimal::ZERO {
+            let discount_granted_account = self.account_repo.find_by_code("47").await?
+                .ok_or_else(|| AppError::NotFound("حساب الخصوم الممنوحة غير موجود: 47".into()))?;
+
+            if let Some(cid) = &invoice.customer_id {
+                if let Some(mut customer) = self.customer_repo.find_by_id(cid).await? {
+                    if let Some(cust_acc_id) = customer.account_id {
+                        let discount_lines = vec![
+                            JournalLine::new(
+                                discount_granted_account.id,
+                                MonetaryAmount::new(Money::new(total_discount_granted, doc_currency.clone()), fx_rate),
+                                MonetaryAmount::zero(doc_currency.clone()),
+                                format!("حسم ممنوح بموجب فاتورة المبيعات رقم {}", invoice.invoice_number)
+                            ),
+                            JournalLine::new(
+                                cust_acc_id,
+                                MonetaryAmount::zero(doc_currency.clone()),
+                                MonetaryAmount::new(Money::new(total_discount_granted, doc_currency.clone()), fx_rate),
+                                format!("حسم ممنوح بموجب فاتورة المبيعات رقم {}", invoice.invoice_number)
+                            ).with_partner(cid.0),
+                        ];
+                        let mut discount_entry = JournalEntry::new(
+                            self.journal_repo.get_next_entry_number().await?,
+                            domain::accounting::JournalType::DiscountGrantedJournal,
+                            discount_lines,
+                            Utc::now(),
+                            format!("حسم ممنوح بموجب فاتورة المبيعات رقم {}", invoice.invoice_number),
+                            Some(invoice.id.to_string()),
+                        ).map_err(|e| AppError::Invalid(e.to_string()))?;
+                        discount_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
+                        self.journal_repo.save(&discount_entry).await?;
+
+                        let converted_discount = super::convert_to_partner_currency(
+                            total_discount_granted,
+                            &invoice.currency_code,
+                            fx_rate,
+                            &customer.currency.code,
+                            &self.currency_repo,
+                            &self.exchange_rate_repo,
+                        ).await?;
+                        customer.decrease_debit(converted_discount).map_err(|e| AppError::Invalid(e.to_string()))?;
+                        self.customer_repo.update(&customer).await?;
+                    }
+                }
+            }
+        }
 
 
         let dto = InvoiceDto::from(invoice);

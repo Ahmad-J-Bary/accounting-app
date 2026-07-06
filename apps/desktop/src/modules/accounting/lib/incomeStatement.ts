@@ -43,6 +43,7 @@ export type IncomeStatementComputed = {
   purchaseReturnsTotal: number;
   salesReturnsTotal: number;
   discountsEarned: number;
+  discountsGranted: number;
   openingInventory: number;
   closingInventory: number;
   totalExpenses: number;
@@ -136,20 +137,18 @@ export function computeIncomeStatement(
     .filter((document) => isWithinRange(document.return_date, fromTs, toTs))
     .reduce((sum, document) => sum + getReturnBaseTotal(document), 0);
 
-  // Discounts earned = sum of header + line-level discounts from posted purchase invoices
+  // Discounts granted = sum of line-level discounts from posted sales invoices
+  const discountsGranted = postedSales.reduce((sum, invoice) => {
+    const v2 = parseNumber(invoice.discount_amount_v2?.base_amount);
+    const disc = v2 > 0 ? v2 : (parseNumber(invoice.discount_amount) / (parseNumber(invoice.exchange_rate) || 1));
+    return sum + disc;
+  }, 0);
+
+  // Discounts earned = sum of line-level discounts from posted purchase invoices
   const discountsEarned = postedPurchases.reduce((sum, invoice) => {
     const v2 = parseNumber(invoice.discount_amount_v2?.base_amount);
-    const headerDisc = v2 > 0 ? v2 : (parseNumber(invoice.discount_amount) / (parseNumber(invoice.exchange_rate) || 1));
-
-    // Sum line-level discounts: qty * unit_price * discount_percent / 100
-    const lineDisc = (invoice.lines ?? []).reduce((lineSum, line) => {
-      const qty = parseNumber(line.quantity);
-      const price = parseNumber(line.unit_price);
-      const discPct = parseNumber(line.discount_percent);
-      return lineSum + (qty * price * discPct / 100);
-    }, 0);
-
-    return sum + headerDisc + lineDisc;
+    const disc = v2 > 0 ? v2 : (parseNumber(invoice.discount_amount) / (parseNumber(invoice.exchange_rate) || 1));
+    return sum + disc;
   }, 0);
 
   // OpeningBalance movements always count toward opening inventory (regardless of date)
@@ -194,7 +193,7 @@ export function computeIncomeStatement(
   const totalExpenses = expenseRows.reduce((s, r) => s + r.value, 0);
 
   const totalRevenue = salesTotal + closingInventory + purchaseReturnsTotal + discountsEarned;
-  const totalLiabilities = openingInventory + purchaseTotal + salesReturnsTotal;
+  const totalLiabilities = openingInventory + purchaseTotal + salesReturnsTotal + discountsGranted;
   const grossProfit = totalRevenue - totalLiabilities;
   const netProfit = grossProfit - totalExpenses;
 
@@ -220,6 +219,7 @@ export function computeIncomeStatement(
         { label: "بضاعة أول المدة", value: openingInventory },
         { label: `المشتريات (${postedPurchases.length} فاتورة مرحلة)`, value: purchaseTotal },
         { label: "مرتجعات المبيعات", value: salesReturnsTotal },
+        { label: "خصوم ممنوحة", value: discountsGranted },
       ],
     },
     {
@@ -251,6 +251,7 @@ export function computeIncomeStatement(
     purchaseReturnsTotal,
     salesReturnsTotal,
     discountsEarned,
+    discountsGranted,
     openingInventory,
     closingInventory,
     totalExpenses,

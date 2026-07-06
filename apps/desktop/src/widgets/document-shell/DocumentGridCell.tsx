@@ -518,7 +518,7 @@ export function DocumentGridCell({
             <div key={t.key} className={cn("flex", isRowLayout ? "items-center gap-1" : "flex-col flex-1 min-w-0 items-center gap-0")}>
               <span className="text-[8px] font-bold text-slate-400 shrink-0">{t.label}</span>
               <input
-                ref={(el) => { if (el) callbacks.inputRefs.current.set(`${refKey}_${t.key}`, el); else callbacks.inputRefs.current.delete(`${refKey}_${t.key}`); }}
+                ref={(el) => { const refMapKey = i === 0 ? refKey : `${refKey}_${t.key}`; if (el) callbacks.inputRefs.current.set(refMapKey, el); else callbacks.inputRefs.current.delete(refMapKey); }}
                 type="number"
                 min="0"
                 step="any"
@@ -527,8 +527,63 @@ export function DocumentGridCell({
                 value={getCellValue(line, t.key)}
                 autoComplete="off"
                 onChange={(e) => onCellChange(rowIdx, t.key, e.target.value)}
-                onFocus={() => onActiveCellChange({ row: rowIdx, col: editColIdx + i })}
-                onKeyDown={(e) => onKeyDown(e, rowIdx, editColIdx + i)}
+                onFocus={() => onActiveCellChange({ row: rowIdx, col: editColIdx })}
+                onKeyDown={(e) => {
+                  const isFirst = i === 0;
+                  const isLast = i === tiers.length - 1;
+
+                  const moveToTier = (idx: number) => {
+                    const key = idx === 0 ? refKey : `${refKey}_${tiers[idx].key}`;
+                    callbacks.inputRefs.current.get(key)?.focus();
+                  };
+
+                  switch (e.key) {
+                    case "Tab":
+                    case "Enter":
+                      e.preventDefault();
+                      if (isLast) { onKeyDown(e, rowIdx, editColIdx); }
+                      else { moveToTier(i + 1); }
+                      break;
+                    case "ArrowDown":
+                      if (isRowLayout) {
+                        e.preventDefault();
+                        if (isLast) { onKeyDown(e, rowIdx, editColIdx); }
+                        else { moveToTier(i + 1); }
+                        return;
+                      }
+                      onKeyDown(e, rowIdx, editColIdx);
+                      break;
+                    case "ArrowUp":
+                      if (isRowLayout) {
+                        e.preventDefault();
+                        if (isFirst) { onKeyDown(e, rowIdx, editColIdx); }
+                        else { moveToTier(i - 1); }
+                        return;
+                      }
+                      onKeyDown(e, rowIdx, editColIdx);
+                      break;
+                    case "ArrowLeft":
+                      if (!isRowLayout) {
+                        e.preventDefault();
+                        if (isLast) { onKeyDown(e, rowIdx, editColIdx); }
+                        else { moveToTier(i + 1); }
+                        return;
+                      }
+                      onKeyDown(e, rowIdx, editColIdx);
+                      break;
+                    case "ArrowRight":
+                      if (!isRowLayout) {
+                        e.preventDefault();
+                        if (isFirst) { onKeyDown(e, rowIdx, editColIdx); }
+                        else { moveToTier(i - 1); }
+                        return;
+                      }
+                      onKeyDown(e, rowIdx, editColIdx);
+                      break;
+                    default:
+                      onKeyDown(e, rowIdx, editColIdx);
+                  }
+                }}
               />
             </div>
           ))}

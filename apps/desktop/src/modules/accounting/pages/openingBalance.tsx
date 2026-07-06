@@ -261,32 +261,7 @@ export default function OpeningBalance() {
   };
 
   const extraCols = useMemo<DocumentColumn[]>(() => {
-    const sortedCurrencies = baseCurrency
-      ? [
-          baseCurrency,
-          ...currencies.filter((c) => c.code !== baseCurrency.code),
-        ]
-      : currencies;
     return [
-      ...sortedCurrencies
-        .map((curr) => ({
-          key: `retail_price_${curr.code}`,
-          header: `مفرق (${curr.symbol || curr.code})`,
-          width: "w-[90px]",
-          align: "left" as const,
-          type: "number" as const,
-          defaultVisible: curr.code === baseCurrency?.code,
-        }))
-        .concat(
-          sortedCurrencies.map((curr) => ({
-            key: `wholesale_price_${curr.code}`,
-            header: `جملة (${curr.symbol || curr.code})`,
-            width: "w-[90px]",
-            align: "left" as const,
-            type: "number" as const,
-            defaultVisible: curr.code === baseCurrency?.code,
-          })),
-        ),
       {
         key: "expiry_date",
         header: "تاريخ الانتهاء",
@@ -304,7 +279,7 @@ export default function OpeningBalance() {
         defaultVisible: true,
       },
     ];
-  }, [currencies, baseCurrency]);
+  }, []);
 
   const dynamicVisibleColumns = useMemo<string[]>(() => {
     const cols: string[] = [];
@@ -423,7 +398,6 @@ export default function OpeningBalance() {
       summaryPanel={
         <SummaryPanel
           subtotal={subtotal}
-          discount={parseFloat(header.discount_amount)}
           tax={parseFloat(header.tax_amount)}
           extraCosts={parseFloat(header.extra_costs)}
           net={net}

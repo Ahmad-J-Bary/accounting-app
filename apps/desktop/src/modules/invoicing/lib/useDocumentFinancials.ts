@@ -320,7 +320,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
     });
 
     const saleTierCols: DocumentColumn[] =
-      invoiceType === "Purchase"
+      invoiceType === "Purchase" || invoiceType === "OpeningBalance"
         ? [{
             key: "sale_prices",
             header: "المبيع",
@@ -332,18 +332,20 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
         : [];
 
     const discountValueCols: DocumentColumn[] = [];
-    currencies.forEach((curr) => {
-      const s = curr.symbol || curr.code;
-      const isBase = curr.code === baseCode;
-      discountValueCols.push({
-        key: isBase ? "discount_value" : `discount_value_${curr.code}`,
-        header: `خصم (${s})`,
-        width: "w-[80px]",
-        align: "center",
-        type: "number",
-        defaultVisible: isBase,
+    if (invoiceType !== "OpeningBalance") {
+      currencies.forEach((curr) => {
+        const s = curr.symbol || curr.code;
+        const isBase = curr.code === baseCode;
+        discountValueCols.push({
+          key: isBase ? "discount_value" : `discount_value_${curr.code}`,
+          header: `خصم (${s})`,
+          width: "w-[80px]",
+          align: "center",
+          type: "number",
+          defaultVisible: isBase,
+        });
       });
-    });
+    }
 
     return [
       ...baseCols,

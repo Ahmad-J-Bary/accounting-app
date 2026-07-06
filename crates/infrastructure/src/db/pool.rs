@@ -111,6 +111,20 @@ async fn ensure_discount_earned_account(pool: &SqlitePool) {
     }
 }
 
+/// Ensure the Discount Granted account (47) exists under "المصروفات" (4)
+async fn ensure_discount_granted_account(pool: &SqlitePool) {
+    let exists: bool = sqlx::query_scalar("SELECT COUNT(*) > 0 FROM accounts WHERE code = '47'")
+        .fetch_one(pool)
+        .await
+        .unwrap_or(false);
+    if exists {
+        return;
+    }
+    let _ = sqlx::query(
+        "INSERT OR IGNORE INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at) SELECT '00000000-0000-0000-0000-000000000047', '47', 'الخصوم الممنوحة', 'Discount Granted', 'Expenses', COALESCE((SELECT id FROM accounts WHERE code = '4'), (SELECT id FROM accounts WHERE code = '0')), 'Detail', 2, '0', '0', 1, datetime('now'), datetime('now') WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '47')"
+    ).execute(pool).await;
+}
+
 pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::migrate::MigrateError> {
     let migrator = sqlx::migrate!("./src/db/migrations");
 
@@ -119,6 +133,7 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::migrate::Migr
             Ok(()) => {
                 ensure_currency_columns(pool).await;
                 ensure_discount_earned_account(pool).await;
+                ensure_discount_granted_account(pool).await;
                 return Ok(());
             }
             Err(sqlx::migrate::MigrateError::VersionMismatch(version)) => {
@@ -154,6 +169,7 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::migrate::Migr
                     // Heal the schema by adding any missing columns
                     ensure_currency_columns(pool).await;
                     ensure_discount_earned_account(pool).await;
+                    ensure_discount_granted_account(pool).await;
 
                     // Mark all remaining migrations as applied so they won't be retried
                     let applied_versions: Vec<i64> =

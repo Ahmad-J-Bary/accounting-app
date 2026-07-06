@@ -39,6 +39,7 @@ interface InvoiceTableProps {
   partyType: "supplier" | "customer";
   defaultName: string;
   showSubtotal?: boolean;
+  showDiscountGranted?: boolean;
   showDiscount?: boolean;
   showExtraCosts?: boolean;
   extraColumns?: ExtraColumn[];
@@ -67,6 +68,7 @@ export function InvoiceTable({
   partyType,
   defaultName,
   showSubtotal = false,
+  showDiscountGranted = false,
   showDiscount = false,
   showExtraCosts = false,
   extraColumns = [],
@@ -114,6 +116,28 @@ export function InvoiceTable({
           className: isBase
             ? "font-bold tabular-nums text-slate-700"
             : "font-medium tabular-nums text-slate-400"
+        };
+      }) : []),
+      ...(showDiscountGranted ? currencies.map(curr => {
+        const isBase = isBaseCurrency(curr.code);
+        return {
+          id: `discount_granted_${curr.code}`,
+          header: `خصوم ممنوحة (${curr.symbol || curr.code})`,
+          label: `خصوم ممنوحة (${curr.symbol || curr.code})`,
+          accessor: (inv: InvoiceDto) => {
+            const baseAmt = getInvoiceBaseAmount(
+              inv.discount_amount,
+              inv.discount_amount_v2,
+              inv.currency_code,
+              inv.exchange_rate,
+              baseCurrency?.code
+            );
+            if (baseAmt === 0) return "";
+            return formatAmount(baseAmt, { currencyCode: curr.code });
+          },
+          className: isBase
+            ? "font-bold tabular-nums text-rose-600"
+            : "font-medium tabular-nums text-rose-300"
         };
       }) : []),
       ...(showDiscount ? currencies.map(curr => {
@@ -434,6 +458,22 @@ export function InvoiceTable({
           className: isBase
             ? 'font-bold text-slate-700'
             : 'font-extrabold text-slate-400',
+        };
+      }
+
+      const discountGrantedMatch = id.match(/^discount_granted_(.+)$/);
+      if (discountGrantedMatch) {
+        const currCode = discountGrantedMatch[1];
+        const isBase = isBaseCurrency(currCode);
+        const sym = currencies.find(c => c.code === currCode)?.symbol || currCode;
+        return {
+          id: `${id}_summary`,
+          columnId: id,
+          label: `خصوم ممنوحة (${sym})`,
+          value: baseDiscountTotal > 0 ? formatAmount(baseDiscountTotal, { currencyCode: currCode }) : "—",
+          className: isBase
+            ? 'font-bold text-rose-600'
+            : 'font-extrabold text-rose-300',
         };
       }
 

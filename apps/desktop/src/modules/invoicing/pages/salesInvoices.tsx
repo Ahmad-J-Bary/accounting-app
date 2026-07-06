@@ -183,6 +183,8 @@ export default function SalesInvoices() {
       onReopen={(id) => invoiceService.reopenInvoice(id).then(() => loadData(false))}
       formatMonetaryAmount={formatMonetaryAmount}
       partyType="customer"
+      showSubtotal={true}
+      showDiscountGranted={true}
       title="فواتير المبيعات"
       createLabel="فاتورة جديدة"
       searchPlaceholder="بحث برقم الفاتورة أو الزبون..."
