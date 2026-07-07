@@ -769,7 +769,8 @@ impl PostInvoiceUseCase {
         }
 
         // --- Create separate CashReceipt entry for sales payments received ---
-        if invoice.invoice_type == InvoiceType::Sales && amount_paid > Decimal::ZERO {
+        // Only create when there's a customer (otherwise cash is already in the main entry)
+        if invoice.invoice_type == InvoiceType::Sales && amount_paid > Decimal::ZERO && invoice.customer_id.is_some() {
             let mut receipt_lines = Vec::new();
             receipt_lines.push(JournalLine::new(
                 cash_account.id,

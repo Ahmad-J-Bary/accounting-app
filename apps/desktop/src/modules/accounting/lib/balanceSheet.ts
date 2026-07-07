@@ -58,9 +58,14 @@ function isFixedAsset(code: string, name: string): boolean {
 }
 
 function isCurrentAsset(code: string, name: string): boolean {
-  const currentIndicators = ["12", "متداول", "نقد", "خزين", "صندوق", "عميل", "مدين", "زبون", "مخزون", "بضاعة"];
+  const currentIndicators = ["12", "متداول", "نقد", "خزين", "صندوق", "عميل", "مدين", "زبون", "مخزون"];
   if (currentIndicators.some(i => code.startsWith(i) || name.includes(i))) return true;
   return false;
+}
+
+/** حسابات البضاعة التي يجب استثناؤها من الميزانية العمومية (تُعالَج في قائمة الدخل) */
+function isInventoryTradingAccount(name: string): boolean {
+  return name.includes("بضاعة أول المدة") || name.includes("بضاعة آخر المدة") || name.includes("بضاعة");
 }
 
 function isFixedLiability(code: string, name: string): boolean {
@@ -70,18 +75,33 @@ function isFixedLiability(code: string, name: string): boolean {
 }
 
 function isCurrentLiability(code: string, name: string): boolean {
-  const currentIndicators = ["22", "23", "24", "25", "26", "27", "28", "29", "متداول", "قصير", "مورد", "دائن", "مستحق"];
+  const currentIndicators = ["22", "23", "24", "25", "26", "27", "28", "29", "متداول", "قصير", "مورد", "دائن", "مستحق", "تكاليف"];
   if (currentIndicators.some(i => code.startsWith(i) || name.includes(i))) return true;
   return false;
 }
 
-function buildAccountTree(accounts: AccountDto[], parentId: string | null = null): AccountBalance[] {
+function buildAccountTree(
+  accounts: AccountDto[],
+  ledgerTotals?: Map<string, { debit: number; credit: number }>,
+  parentId: string | null = null,
+): AccountBalance[] {
   return accounts
     .filter(a => parentId === null ? (!a.parent_id || a.parent_id === a.id) : a.parent_id === parentId)
     .sort((a, b) => a.code.localeCompare(b.code))
     .map(acc => {
-      const children = buildAccountTree(accounts, acc.id);
-      const ownBalance = parseNum(acc.balance);
+      const children = buildAccountTree(accounts, ledgerTotals, acc.id);
+      let ownBalance: number;
+      if (ledgerTotals) {
+        const lt = ledgerTotals.get(acc.id);
+        if (lt) {
+          const net = lt.debit - lt.credit;
+          ownBalance = ["Liabilities", "Equity", "Revenue"].includes(acc.account_type) ? -net : net;
+        } else {
+          ownBalance = 0;
+        }
+      } else {
+        ownBalance = parseNum(acc.balance);
+      }
       const childrenBalance = children.reduce((s, c) => s + c.balance, 0);
       return {
         id: acc.id,
@@ -98,8 +118,10 @@ function buildAccountTree(accounts: AccountDto[], parentId: string | null = null
 export function computeBalanceSheet(
   accounts: AccountDto[],
   profitLoss: { netProfit: number; totalDrawings: number },
+  ledgerTotals?: Map<string, { debit: number; credit: number }>,
+  inventory?: { closingInventory: number },
 ): BalanceSheetComputed {
-  const tree = buildAccountTree(accounts);
+  const tree = buildAccountTree(accounts, ledgerTotals);
 
   const assetAccounts = tree.filter(a => a.accountType === "Assets");
   const liabilityAccounts = tree.filter(a => a.accountType === "Liabilities");
@@ -111,6 +133,8 @@ export function computeBalanceSheet(
     function walk(list: AccountBalance[], skip: boolean) {
       for (const a of list) {
         if (!skip) {
+          // استثناء حسابات بضاعة أول/آخر المدة — تُعالج في قائمة الدخل فقط
+          if (isInventoryTradingAccount(a.name)) { continue; }
           if (isFixedAsset(a.code, a.name)) { fixed.push(a); continue; }
           if (isCurrentAsset(a.code, a.name)) { current.push(a); continue; }
         }
@@ -139,6 +163,63 @@ export function computeBalanceSheet(
 
   const assets = classifyAndCollect(assetAccounts);
   const liabilities = classifyLiabilities(liabilityAccounts);
+
+  // --- تنظيف عميق لشجرة الأصول المتداولة ---
+  //
+  // المشكلة الجذرية: حسابات "بضاعة أول/آخر المدة" و"مخزون" المكرر قد تكون
+  // أبناءً داخل حساب أب (مثل "الأصول المتداولة" برمز "12"). الفلترة السطحية
+  // على assets.current لا تطالها — يجب المعالجة بشكل تكراري في كل المستويات.
+
+  const inventoryBalance = inventory?.closingInventory;
+  let inventoryHandled = false;
+
+  function deepClean(list: AccountBalance[]): AccountBalance[] {
+    const cleaned: AccountBalance[] = [];
+    for (const a of list) {
+      // حذف حسابات البضاعة التجارية في أي مستوى من الشجرة
+      if (isInventoryTradingAccount(a.name)) continue;
+
+      // توحيد حسابات المخزون: الأول يُحتفظ به ويُطبَّع، البقية تُحذف
+      if (a.name.includes("مخزون")) {
+        if (!inventoryHandled) {
+          cleaned.push({
+            ...a,
+            name: "المخزون",
+            balance: inventoryBalance !== undefined ? inventoryBalance : a.balance,
+            children: [], // إزالة الأبناء لمنع ظهور بضاعة آخر المدة
+          });
+          inventoryHandled = true;
+        }
+        continue; // تجاهل حسابات المخزون المكررة
+      }
+
+      // حسابات أخرى: تنظيف أبنائها بشكل تكراري مع إعادة حساب الرصيد
+      if (a.children.length > 0) {
+        const cleanedChildren = deepClean(a.children);
+        const newBalance = cleanedChildren.reduce((s, c) => s + c.balance, 0);
+        cleaned.push({ ...a, children: cleanedChildren, balance: newBalance });
+      } else {
+        cleaned.push(a);
+      }
+    }
+    return cleaned;
+  }
+
+  assets.current = deepClean(assets.current);
+
+  // إذا لم يُعثر على أي حساب مخزون في الشجرة، نضيف صفاً اصطناعياً
+  if (!inventoryHandled && inventoryBalance !== undefined && inventoryBalance !== 0) {
+    assets.current.push({
+      id: "__inventory__",
+      code: "12-inventory",
+      name: "المخزون",
+      balance: inventoryBalance,
+      accountType: "Assets",
+      depth: 0,
+      children: [],
+    });
+  }
+
 
   function collectEquity(list: AccountBalance[]): AccountBalance[] {
     return list;
@@ -191,8 +272,7 @@ export function computeBalanceSheet(
   const totalCurrentLiabilities = liabilities.current.reduce((s, a) => s + a.balance, 0);
   const totalLiabilities = totalFixedLiabilities + totalCurrentLiabilities;
 
-  const equityBalance = allEquity.reduce((s, a) => s + a.balance, 0) + profitLoss.netProfit - profitLoss.totalDrawings;
-  const totalEquity = Math.max(0, equityBalance);
+  const totalEquity = allEquity.reduce((s, a) => s + a.balance, 0) + profitLoss.netProfit - profitLoss.totalDrawings;
 
   const totalLiabilitiesEquity = totalLiabilities + totalEquity;
   const isBalanced = Math.abs(totalAssets - totalLiabilitiesEquity) < 0.01;

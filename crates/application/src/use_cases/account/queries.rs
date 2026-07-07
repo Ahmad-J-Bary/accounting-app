@@ -117,9 +117,9 @@ impl AccountQueries {
             .list_all()
             .await
             .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
-        let mut account_name_map: HashMap<AccountId, String> = HashMap::new();
+        let mut account_info_map: HashMap<AccountId, (String, String)> = HashMap::new();
         for acc in all_accounts {
-            account_name_map.insert(acc.id, acc.name_ar);
+            account_info_map.insert(acc.id, (acc.code, acc.name_ar));
         }
 
         let journal_entries = self
@@ -151,19 +151,41 @@ impl AccountQueries {
                 .filter(|l| l.account_id != *account_id)
                 .collect();
             let opposite_account_name = if opposite_lines.len() == 1 {
-                account_name_map
+                account_info_map
                     .get(&opposite_lines[0].account_id)
-                    .cloned()
+                    .map(|(_, name)| name.clone())
                     .unwrap_or_else(|| "-".to_string())
             } else if opposite_lines.is_empty() {
                 "-".to_string()
             } else if let Some(partner_line) = opposite_lines.iter().find(|l| l.partner_id.is_some()) {
-                    account_name_map
+                    account_info_map
                         .get(&partner_line.account_id)
-                        .cloned()
+                        .map(|(_, name)| name.clone())
                         .unwrap_or_else(|| "-".to_string())
             } else {
                 "حسابات متعددة".to_string()
+            };
+
+            let effective_type = if entry.journal_type == domain::accounting::JournalType::GeneralJournal {
+                let is_discount_granted = entry.lines.iter().any(|l| {
+                    account_info_map.get(&l.account_id)
+                        .map(|(code, name)| code.as_str() == "47" || name.contains("خصوم ممنوحة"))
+                        .unwrap_or(false)
+                });
+                let is_discount_earned = entry.lines.iter().any(|l| {
+                    account_info_map.get(&l.account_id)
+                        .map(|(code, name)| code.as_str() == "332" || name.contains("خصوم مكتسبة"))
+                        .unwrap_or(false)
+                });
+                if is_discount_granted {
+                    domain::accounting::JournalType::DiscountGrantedJournal
+                } else if is_discount_earned {
+                    domain::accounting::JournalType::DiscountEarnedJournal
+                } else {
+                    entry.journal_type
+                }
+            } else {
+                entry.journal_type
             };
 
             for line in account_lines {
@@ -194,7 +216,7 @@ impl AccountQueries {
                     date: entry.entry_date,
                     journal_id: entry.id,
                     entry_number: entry.entry_number.clone(),
-                    journal_type: entry.journal_type,
+                    journal_type: effective_type,
                     source_id: entry.source_id.clone(),
                     description: line.description.clone(),
                     opposite_account_name: opposite_account_name.clone(),

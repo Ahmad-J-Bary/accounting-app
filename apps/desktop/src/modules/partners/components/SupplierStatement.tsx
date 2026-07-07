@@ -10,6 +10,7 @@ import {
 } from "@shared/ui/table";
 import { Card, CardHeader, CardTitle, CardContent } from "@shared/ui/card";
 import { journalEntryService } from "../../accounting/api/journalEntryService";
+import { JOURNAL_TYPE_LABELS } from "../../accounting/lib/journal-config";
 import type { JournalEntryDto } from "@erp/shared-types";
 import { format } from "date-fns";
 import { Loader2, FileText, ArrowRightLeft, TrendingUp, TrendingDown } from "lucide-react";
@@ -141,6 +142,25 @@ export const SupplierStatement: React.FC<SupplierStatementProps> = ({ partnerId,
                     return { code: c.code, symbol: c.symbol, debit: d, credit: cr, balance: runningBalances[c.code] };
                   });
 
+                  let journalDisplay = JOURNAL_TYPE_LABELS[entry.journal_type] || entry.journal_type;
+                  if (entry.journal_type === "GeneralJournal") {
+                    const allDebits = entry.lines.filter(l => parseFloat(l.debit || "0") > 0);
+                    const allCredits = entry.lines.filter(l => parseFloat(l.credit || "0") > 0);
+                    if (allDebits.length === 1 && allCredits.length === 1) {
+                      const dr = allDebits[0];
+                      const cr = allCredits[0];
+                      if ((dr.partner_id && !cr.partner_id) ||
+                          cr.account_code?.startsWith("332") ||
+                          cr.account_name?.includes("خصوم مكتسبة")) {
+                        journalDisplay = "حسم مكتسب";
+                      } else if ((!dr.partner_id && cr.partner_id) ||
+                                 dr.account_code?.startsWith("47") ||
+                                 dr.account_name?.includes("خصوم ممنوحة")) {
+                        journalDisplay = "حسم ممنوح";
+                      }
+                    }
+                  }
+
                   return (
                     <TableRow key={entry.id} className="hover:bg-slate-50/30 transition-colors">
                       <TableCell className="font-medium text-slate-600">
@@ -152,7 +172,7 @@ export const SupplierStatement: React.FC<SupplierStatementProps> = ({ partnerId,
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="font-bold text-slate-800">{entry.description}</span>
-                          <span className="text-xs text-slate-400">{entry.journal_type}</span>
+                          <span className="text-xs text-slate-400">{journalDisplay}</span>
                         </div>
                       </TableCell>
                       {perCurrency.map(({ code, symbol, debit, credit, balance }) => (

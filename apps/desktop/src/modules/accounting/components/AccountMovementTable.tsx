@@ -6,7 +6,6 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
 import type { AccountLedgerLineDto } from "@erp/shared-types";
 import { formatDateTime } from '@shared/lib/format';
-import { JOURNAL_TYPE_LABELS } from "../lib/journal-config";
 
 type SortField = "entry_number" | "date" | "journal_type" | "credit_account" | "debit_account";
 
@@ -34,13 +33,12 @@ export function AccountMovementTable({
 
   const tableData = useMemo(() => {
     return lines.map((line) => {
-      const typeLabel = JOURNAL_TYPE_LABELS[line.journal_type] || line.journal_type;
+      const typeLabel = line.journal_type;
 
       const debitBase = parseFloat(line.debit_base);
       const debitOrig = parseFloat(line.debit_original);
       const creditBase = parseFloat(line.credit_base);
       const creditOrig = parseFloat(line.credit_original);
-
       const isDebit = debitBase > 0 || debitOrig > 0;
 
       return {

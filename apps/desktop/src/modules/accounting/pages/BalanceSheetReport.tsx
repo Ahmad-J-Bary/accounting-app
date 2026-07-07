@@ -47,10 +47,15 @@ export default function BalanceSheetReport() {
   }, [baseCurrency, selectedCurrency]);
 
   const computed = useMemo(() => {
-    return computeBalanceSheet(reportData.accounts, {
-      netProfit: reportData.netProfit,
-      totalDrawings: reportData.totalDrawings,
-    });
+    return computeBalanceSheet(
+      reportData.accounts,
+      {
+        netProfit: reportData.netProfit,
+        totalDrawings: reportData.totalDrawings,
+      },
+      reportData.ledgerTotals,
+      { closingInventory: reportData.closingInventory },
+    );
   }, [reportData]);
 
   const formatValue = useCallback(

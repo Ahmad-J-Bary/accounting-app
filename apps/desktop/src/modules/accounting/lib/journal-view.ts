@@ -200,6 +200,10 @@ export function toJournalRow(
       activeSide = "credit";
     } else if ((entry.journal_type as string) === "DiscountGrantedJournal") {
       activeSide = "debit";
+      // Swap accounts: المصدر = الخصوم الممنوحة (debit account), الوجهة = عميل 0 (credit account)
+      const tmp = dAcc;
+      dAcc = cAcc;
+      cAcc = tmp;
     } else if (cOriginal > 0 || cBase > 0) {
       activeSide = dOriginal > 0 || dBase > 0 ? "debit" : "credit";
     }
@@ -215,6 +219,14 @@ export function toJournalRow(
           crLine.account_name?.includes("خصوم مكتسبة")) {
         journalTypeDisplay = "حسم مكتسب";
         activeSide = "credit";
+      } else if ((!drLine.partner_id && crLine.partner_id) ||
+                 drLine.account_code?.startsWith("47") ||
+                 drLine.account_name?.includes("خصوم ممنوحة")) {
+        journalTypeDisplay = "حسم ممنوح";
+        activeSide = "debit";
+        const tmp = dAcc;
+        dAcc = cAcc;
+        cAcc = tmp;
       }
     }
 

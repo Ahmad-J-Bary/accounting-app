@@ -18,12 +18,16 @@ export type LoadedBalanceSheetData = {
   accounts: AccountDto[];
   netProfit: number;
   totalDrawings: number;
+  ledgerTotals: Map<string, { debit: number; credit: number }>;
+  closingInventory: number;
 };
 
 const emptyData: LoadedBalanceSheetData = {
   accounts: [],
   netProfit: 0,
   totalDrawings: 0,
+  ledgerTotals: new Map(),
+  closingInventory: 0,
 };
 
 export function useBalanceSheetReport(filters: IncomeStatementFilters) {
@@ -106,12 +110,46 @@ export function useBalanceSheetReport(filters: IncomeStatementFilters) {
 
       let totalDrawings = 0;
 
+      const ledgerTotals = new Map<string, { debit: number; credit: number }>();
+
+      for (const account of accounts) {
+        const openingBalance = parseFloat(account.opening_balance || "0");
+        if (openingBalance !== 0) {
+          const existing = ledgerTotals.get(account.id) || { debit: 0, credit: 0 };
+          if (["Liabilities", "Equity", "Revenue"].includes(account.account_type)) {
+            existing.credit += Math.abs(openingBalance);
+          } else {
+            existing.debit += Math.abs(openingBalance);
+          }
+          ledgerTotals.set(account.id, existing);
+        }
+      }
+
       for (const entry of entries) {
         for (const line of entry.lines) {
           const amt = parseFloat(line.debit_base || line.debit || "0") - parseFloat(line.credit_base || line.credit || "0");
           if (line.account_id === SYSTEM_ACCOUNT_IDS.DRAWINGS) {
             totalDrawings += Math.abs(amt);
           }
+
+          const cur = ledgerTotals.get(line.account_id) || { debit: 0, credit: 0 };
+          cur.debit += parseFloat(line.debit_base || line.debit || "0");
+          cur.credit += parseFloat(line.credit_base || line.credit || "0");
+          ledgerTotals.set(line.account_id, cur);
+        }
+      }
+
+      let netPurchaseCost = 0;
+      for (const inv of purchaseInvoices) {
+        if (inv.status !== "Posted" && inv.status !== "Paid") continue;
+        netPurchaseCost += parseFloat(inv.extra_costs || "0");
+      }
+
+      for (const account of accounts) {
+        if (account.name_ar === "تكاليف إضافية على المشتريات") {
+          const debit = netPurchaseCost > 0 ? netPurchaseCost : 0;
+          const credit = netPurchaseCost < 0 ? Math.abs(netPurchaseCost) : 0;
+          ledgerTotals.set(account.id, { debit, credit });
         }
       }
 
@@ -119,6 +157,8 @@ export function useBalanceSheetReport(filters: IncomeStatementFilters) {
         accounts,
         netProfit: incomeStatementResult.netProfit,
         totalDrawings,
+        ledgerTotals,
+        closingInventory: incomeStatementResult.closingInventory,
       });
       hasLoadedOnceRef.current = true;
       setLastLoadedAt(new Date());

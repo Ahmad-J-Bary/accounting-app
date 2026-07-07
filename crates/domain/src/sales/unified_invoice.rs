@@ -136,6 +136,9 @@ impl UnifiedInvoice {
                         .unwrap_or_else(|_| MonetaryAmount::zero(doc_currency.clone()))
                 });
 
+        // Save header-level discount (set from create.rs/update.rs before calling this)
+        let header_discount = self.discount_amount.amount();
+
         // Compute total discount from line-level discount_percent
         let line_discount_total =
             self.lines
@@ -145,7 +148,7 @@ impl UnifiedInvoice {
                 });
 
         self.discount_amount = MonetaryAmount::new(
-            Money::new(line_discount_total, doc_currency.clone()),
+            Money::new(line_discount_total + header_discount, doc_currency.clone()),
             self.exchange_rate,
         );
 
@@ -156,8 +159,12 @@ impl UnifiedInvoice {
 
         if self.payment_method == PaymentMethod::Deferred {
             self.amount_paid = MonetaryAmount::zero(doc_currency);
+        } else if self.payment_method == PaymentMethod::Cash {
+            let net = (self.total_amount.clone() - self.discount_amount.clone())
+                .unwrap_or_else(|_| self.total_amount.clone());
+            self.amount_paid = net;
         }
-        // For Cash/Partial: keep the user-entered amount_paid as-is
+        // For Partial: keep the user-entered amount_paid as-is
 
         self.updated_at = Utc::now();
     }

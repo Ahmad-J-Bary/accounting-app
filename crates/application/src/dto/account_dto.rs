@@ -115,7 +115,7 @@ impl From<LedgerLine> for AccountLedgerLineDto {
             date: line.date.to_rfc3339(),
             journal_id: line.journal_id.0.to_string(),
             entry_number: line.entry_number,
-            journal_type: format!("{:?}", line.journal_type),
+            journal_type: line.journal_type.to_string(),
             source_id: line.source_id,
             description: line.description,
             opposite_account_name: line.opposite_account_name,
