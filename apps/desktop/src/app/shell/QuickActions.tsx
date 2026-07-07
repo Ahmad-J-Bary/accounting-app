@@ -4,7 +4,7 @@ import {
   Receipt, ShoppingCart, Wallet, FileText, Plus, User, Package, 
   ArrowRight, ChevronRight 
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useTabs } from '@app/providers/TabContext';
 
 interface QuickAction {
   label: string;
@@ -20,16 +20,16 @@ interface QuickActionsProps {
 }
 
 export function QuickActions({ actions, columns = 4 }: QuickActionsProps) {
-  const navigate = useNavigate();
+  const { openTab } = useTabs();
 
   const handleNewInvoice = () => {
-    navigate("/sales-invoices");
-    setTimeout(() => window.dispatchEvent(new CustomEvent("erp:open-new-invoice")), 100);
+    const id = `/sales-invoices/new-${Date.now()}`;
+    openTab({ id, title: "فاتورة مبيعات جديدة", path: id, closable: true });
   };
 
   const handleNewPurchaseInvoice = () => {
-    navigate("/purchase-invoices");
-    setTimeout(() => window.dispatchEvent(new CustomEvent("erp:open-new-purchase-invoice")), 100);
+    const id = `/purchase-invoices/new-${Date.now()}`;
+    openTab({ id, title: "فاتورة مشتريات جديدة", path: id, closable: true });
   };
 
   const defaultActions: QuickAction[] = actions || [

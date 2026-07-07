@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { Input } from "@shared/ui/input";
 import { Search, Filter } from "lucide-react";
 import { journalEntryService, type JournalFilters } from '@modules/accounting/api/journalEntryService';
@@ -13,7 +13,6 @@ import { JournalTable } from '@modules/accounting/components/JournalTable';
 import { JOURNAL_TYPES, getJournalColumnsByType } from "@modules/accounting/lib/journal-config";
 
 export default function Journal() {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const typeParam = searchParams.get('type') as JournalType | null;
   
@@ -30,12 +29,6 @@ export default function Journal() {
       setFilters(f => ({ ...f, journal_type: typeParam }));
     }
   }, [typeParam, filters.journal_type]);
-
-  useEffect(() => {
-    const handler = () => navigate("/journal/new");
-    window.addEventListener("erp:open-new-journal", handler);
-    return () => window.removeEventListener("erp:open-new-journal", handler);
-  }, [navigate]);
 
   const fetchData = useCallback(() => {
     return journalEntryService.listJournalEntries(filters);

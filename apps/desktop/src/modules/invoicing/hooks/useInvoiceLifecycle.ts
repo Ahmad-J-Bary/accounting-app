@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useLocation, useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useTabs } from "@app/providers/TabContext";
+import { useTabLocation } from "@app/providers/TabLocationContext";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { customerService } from "@modules/partners/api/customerService";
 import { supplierService } from "@modules/partners/api/supplierService";
@@ -80,8 +81,6 @@ export function useInvoiceLifecycle({
   partyType,
   priceField,
 }: UseInvoiceLifecycleProps) {
-  const location = useLocation();
-  const navigate = useNavigate();
   const { id } = useParams();
   const { openTab, closeTab, activeTabId } = useTabs();
   const {
@@ -148,7 +147,8 @@ export function useInvoiceLifecycle({
     getDefaultExpiryDate,
   });
 
-  const isNew = location.pathname.includes("/new");
+  const tabLocation = useTabLocation();
+  const isNew = tabLocation.includes("/new");
 
   // Fetch all necessary lookup and list data
   const loadData = useCallback(
@@ -197,26 +197,26 @@ export function useInvoiceLifecycle({
     [invoiceType, partyType],
   );
 
-  const prevActiveTab = useRef(activeTabId);
+  const prevActiveTabRef = useRef(activeTabId);
   useEffect(() => {
     loadData(true);
   }, [loadData]);
 
-  // Reload data if switching tabs back to this module
+  // Reload data when switching back to this tab
   useEffect(() => {
-    const tabName =
-      invoiceType === "Sales" ? "sales-invoices" : "purchase-invoices";
-    if (prevActiveTab.current !== tabName && activeTabId === tabName) {
-      loadData();
+    if (prevActiveTabRef.current !== activeTabId) {
+      if (!isNew && !id) {
+        loadData(false);
+      }
     }
-    prevActiveTab.current = activeTabId;
-  }, [activeTabId, loadData, invoiceType]);
+    prevActiveTabRef.current = activeTabId;
+  }, [activeTabId, loadData, isNew, id]);
 
-  // Read-only indicator derived strictly from query parameters
+  // Read-only indicator derived from the tab's own path (not useLocation, which returns the active tab's URL)
   const isReadOnly = useMemo(() => {
-    const searchParams = new URLSearchParams(location.search);
+    const searchParams = new URLSearchParams(tabLocation.includes("?") ? tabLocation.split("?")[1] : "");
     return searchParams.get("mode") === "view";
-  }, [location.search]);
+  }, [tabLocation]);
 
   // Synchronise state based on route parameter modifications (e.g. going from edit/view to list)
   useEffect(() => {
@@ -560,11 +560,16 @@ export function useInvoiceLifecycle({
       await invoiceService.reopenInvoice(headerState.id);
       toast.success("تم إلغاء الترحيل بنجاح. الفاتورة الآن مسودة.");
       setHeaderState((s) => ({ ...s, status: "Draft" }));
-      navigate(
-        invoiceType === "Sales"
-          ? `/sales-invoices/${headerState.id}`
-          : `/purchase-invoices/${headerState.id}`,
-      );
+      const invoicePath = invoiceType === "Sales"
+        ? `/sales-invoices/${headerState.id}`
+        : `/purchase-invoices/${headerState.id}`;
+      closeTab(activeTabId);
+      openTab({
+        id: invoicePath,
+        title: headerState.invoice_number,
+        path: invoicePath,
+        closable: true,
+      });
     } catch (e) {
       toast.error("فشل إلغاء الترحيل: " + e);
     } finally {

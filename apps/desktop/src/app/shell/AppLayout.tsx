@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ErpRoutes } from '@app/router/ErpRoutes';
 import { useTabs } from '@app/providers/TabContext';
+import { ErrorBoundary } from '@shared/ui/ErrorBoundary';
+import { TabLocationContext } from '@app/providers/TabLocationContext';
 import { cn } from '@shared/lib/utils';
 import { useKeyboardShortcuts } from '@shared/hooks/useKeyboardShortcuts';
 import { useAppearance } from '@shared/hooks/useAppearance';
@@ -108,7 +110,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
                   {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
                 </div>
               )}
-              <ErpRoutes location={tab.path} />
+              <TabLocationContext.Provider value={tab.path}><ErrorBoundary key={tab.id}><ErpRoutes location={tab.path} /></ErrorBoundary></TabLocationContext.Provider>
             </div>
           </div>
         ))}

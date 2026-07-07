@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useTabs } from "@app/providers/TabContext";
+import { useTabLocation } from "@app/providers/TabLocationContext";
 import { returnService } from "@modules/invoicing/api/returnService";
 import { customerService } from "@modules/partners/api/customerService";
 import { supplierService } from "@modules/partners/api/supplierService";
@@ -26,17 +27,17 @@ export function useReturnLifecycle({
   returnType,
   partyType,
 }: UseReturnLifecycleProps) {
-  const location = useLocation();
   const { id } = useParams();
   const { openTab, closeTab, activeTabId } = useTabs();
   const { formatMonetaryAmount } = useCurrencyContext();
+  const tabLocation = useTabLocation();
 
   const isSales = returnType === "SalesReturn";
-  const isNew = location.pathname.includes("/new");
+  const isNew = tabLocation.includes("/new");
   const isReadOnly = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    return params.get("mode") === "view";
-  }, [location.search]);
+    const searchParams = new URLSearchParams(tabLocation.includes("?") ? tabLocation.split("?")[1] : "");
+    return searchParams.get("mode") === "view";
+  }, [tabLocation]);
 
   const [view, setView] = useState<"list" | "editor">("list");
   const [returns, setReturns] = useState<(SalesReturnDto | PurchaseReturnDto)[]>([]);
@@ -116,13 +117,11 @@ export function useReturnLifecycle({
   }, [loadData]);
 
   useEffect(() => {
-    const tabName =
-      returnType === "SalesReturn" ? "sales-returns" : "purchase-returns";
-    if (prevActiveTab.current !== tabName && activeTabId === tabName) {
+    if (prevActiveTab.current !== activeTabId) {
       loadData();
     }
     prevActiveTab.current = activeTabId;
-  }, [activeTabId, loadData, returnType]);
+  }, [activeTabId, loadData]);
 
   return {
     view,

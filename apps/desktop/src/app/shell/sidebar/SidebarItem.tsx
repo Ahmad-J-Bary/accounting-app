@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
 import { useTabs } from '@app/providers/TabContext';
 import { useNavSidebarSettings } from '@shared/hooks';
 import { cn } from '@shared/lib/utils';
@@ -26,10 +25,9 @@ export function SidebarItem({
   badge, onClose, verticalAppearance,
 }: SidebarItemProps) {
   const { openTab, updateMainTab, activeTabId } = useTabs();
-  const location = useLocation();
   const { settings, getNavFontSizeClass } = useNavSidebarSettings();
 
-  const isActive = activeTabId === item.to || location.pathname === item.to;
+  const isActive = activeTabId === item.to;
   const isBgLight = verticalAppearance
     ? verticalAppearance === 'light'
     : settings.navBackground === 'bg-white' || settings.navBackground === 'bg-slate-50';
@@ -62,11 +60,13 @@ export function SidebarItem({
   return (
     <li className="group/item relative">
       <div className="flex items-center gap-1">
-        <Link
-          to={item.to}
+        <div
           onClick={handleClick}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClick(e as unknown as React.MouseEvent); }}
           className={cn(
-            "group flex-1 flex items-center gap-3 rounded-lg transition-all duration-200",
+            "group flex-1 flex items-center gap-3 rounded-lg transition-all duration-200 cursor-pointer",
             collapsed ? "justify-center px-2 py-2.5" : "px-3 py-2",
             fontSizeClass,
             isActive
@@ -92,7 +92,7 @@ export function SidebarItem({
               )}
             </>
           )}
-        </Link>
+        </div>
       </div>
     </li>
   );

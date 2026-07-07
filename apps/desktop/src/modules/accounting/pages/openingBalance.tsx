@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useTabs } from "@app/providers/TabContext";
+import { useTabLocation } from "@app/providers/TabLocationContext";
 import { DocumentToolbar } from "@widgets/document-shell/DocumentToolbar";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { materialService } from "@modules/inventory/api/materialService";
@@ -56,9 +57,9 @@ const defaultHeader = (): HeaderState => ({
 });
 
 export default function OpeningBalance() {
-  const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const { closeTab, activeTabId, openTab } = useTabs();
+  const tabLocation = useTabLocation();
 
   const [materials, setMaterials] = useState<MaterialDto[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
@@ -89,8 +90,8 @@ export default function OpeningBalance() {
     defaultWarehouseId,
   });
 
-  const isNew = !id || location.pathname.includes("/new");
-  const isReadOnly = location.search.includes("mode=view");
+  const isNew = !id || tabLocation.includes("/new");
+  const isReadOnly = tabLocation.includes("mode=view");
 
   const loadData = useCallback(async () => {
     setLoading(true);
