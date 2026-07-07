@@ -40,9 +40,9 @@ interface InvoiceListProps {
   statsColor: string;
   preferenceKey: string;
   showSubtotal?: boolean;
+  showExtraCosts?: boolean;
   showDiscountGranted?: boolean;
   showDiscount?: boolean;
-  showExtraCosts?: boolean;
   extraColumns?: ExtraColumn[];
 }
 
@@ -70,9 +70,9 @@ export function InvoiceList({
   statsColor,
   preferenceKey,
   showSubtotal = false,
+  showExtraCosts = false,
   showDiscountGranted = false,
   showDiscount = false,
-  showExtraCosts = false,
   extraColumns = [],
 }: InvoiceListProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
@@ -105,39 +105,11 @@ export function InvoiceList({
   const partyLabel = partyType === "supplier" ? "المورد" : "الزبون";
   const defaultName = partyType === "supplier" ? "مورد نقدي" : "زبون نقدي";
 
-  const totalDiscount = useMemo(() => {
-    return filtered.reduce((sum, inv) => {
-      return sum + getInvoiceBaseAmount(
-        inv.discount_amount,
-        inv.discount_amount_v2,
-        inv.currency_code,
-        inv.exchange_rate,
-        baseCurrency?.code
-      );
-    }, 0);
-  }, [filtered, baseCurrency]);
-
   return (
     <OperationalTableTemplate
       title={title}
       toolbar={
         <div className="flex items-center gap-2">
-          {showDiscount && totalDiscount > 0 && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200">
-              <span className="text-[11px] font-bold text-blue-600">خصوم مكتسبة:</span>
-              <span className="text-[11px] font-black text-blue-700 tabular-nums">
-                {formatAmount(totalDiscount, { currencyCode: baseCurrency?.code })}
-              </span>
-            </div>
-          )}
-          {showDiscountGranted && totalDiscount > 0 && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-50 border border-rose-200">
-              <span className="text-[11px] font-bold text-rose-600">خصوم ممنوحة:</span>
-              <span className="text-[11px] font-black text-rose-700 tabular-nums">
-                {formatAmount(totalDiscount, { currencyCode: baseCurrency?.code })}
-              </span>
-            </div>
-          )}
           <Button size="sm" onClick={onCreate} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 h-9 px-4 font-bold">
             <Plus className="w-4 h-4 ml-2" />{createLabel}
           </Button>
@@ -200,9 +172,9 @@ export function InvoiceList({
             partyType={partyType}
             defaultName={defaultName}
             showSubtotal={showSubtotal}
+            showExtraCosts={showExtraCosts}
             showDiscountGranted={showDiscountGranted}
             showDiscount={showDiscount}
-            showExtraCosts={showExtraCosts}
             extraColumns={extraColumns}
             statusFilter={statusFilter}
             onStatusFilterChange={setStatusFilter}

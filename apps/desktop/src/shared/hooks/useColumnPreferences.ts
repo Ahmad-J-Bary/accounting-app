@@ -43,6 +43,7 @@ export function useColumnPreferences({
   // On default visibility changes (e.g. baseCurrency loaded after first render):
   //   add new default columns that aren't already visible.
   // Never removes columns the user explicitly toggled on.
+  // Never re-adds columns the user explicitly toggled off.
   useEffect(() => {
     const isInitialRender = prevAllIdsKeyRef.current === null;
     const columnsChanged = prevAllIdsKeyRef.current !== null && prevAllIdsKeyRef.current !== allIdsKey;
@@ -50,6 +51,8 @@ export function useColumnPreferences({
       prevDefaultRef.current.length !== defaultVisibleColumns.length ||
       !prevDefaultRef.current.every((id, i) => id === defaultVisibleColumns[i])
     );
+
+    const prevDefaults = prevDefaultRef.current;
 
     prevAllIdsKeyRef.current = allIdsKey;
     prevDefaultRef.current = defaultVisibleColumns;
@@ -59,12 +62,13 @@ export function useColumnPreferences({
 
     setVisibleColumns(prev => {
       const allIds = new Set(allColumnIds);
-      const defaultSet = new Set(defaultVisibleColumns);
       const prevSet = new Set(prev);
+      const prevDefaultsSet = new Set(prevDefaults);
 
       const valid = prev.filter(id => allIds.has(id));
+
       const newIds = defaultVisibleColumns.filter(
-        id => !prevSet.has(id) && allIds.has(id),
+        id => !prevSet.has(id) && allIds.has(id) && !prevDefaultsSet.has(id),
       );
 
       const next = [...valid, ...newIds];

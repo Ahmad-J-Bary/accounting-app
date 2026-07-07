@@ -20,6 +20,8 @@ interface InvoicePartySelectorProps {
   predictedBalance?: number;
   hideLabel?: boolean;
   noBorder?: boolean;
+  onSearchActive?: (isSearching: boolean) => void;
+  onCreateParty?: (name: string) => Promise<{id: string, name: string}>;
 }
 
 export function InvoicePartySelector({
@@ -34,13 +36,16 @@ export function InvoicePartySelector({
   defaultName,
   hideLabel = false,
   noBorder = false,
+  onSearchActive,
+  onCreateParty,
 }: InvoicePartySelectorProps) {
   const [isEditing, setIsEditing] = useState(!selectedId);
-  const [inputValue, setInputValue] = useState(selectedName || "");
+  const [inputValue, setInputValue] = useState("");
   const [debouncedValue, setDebouncedValue] = useState("");
   const [open, setOpen] = useState(false);
   const [currentBalance, setCurrentBalance] = useState<{ debit: string; credit: string } | null>(null);
   const [loadingBalance, setLoadingBalance] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -49,6 +54,7 @@ export function InvoicePartySelector({
   const inputValueRef = useRef(inputValue);
   const selectedIdRef = useRef(selectedId);
   const selectedNameRef = useRef(selectedName);
+  const searchActiveRef = useRef(false);
 
   isEditingRef.current = isEditing;
   inputValueRef.current = inputValue;
@@ -64,11 +70,21 @@ export function InvoicePartySelector({
       setInputValue(selectedName);
       setIsEditing(false);
       setOpen(false);
+      if (searchActiveRef.current) {
+        searchActiveRef.current = false;
+        onSearchActive?.(false);
+      }
     } else if (!selectedId) {
-      setInputValue("");
+      if (!selectedName) {
+        setInputValue("");
+      }
       setIsEditing(true);
+      if (searchActiveRef.current) {
+        searchActiveRef.current = false;
+        onSearchActive?.(false);
+      }
     }
-  }, [selectedId, selectedName]);
+  }, [selectedId, selectedName, onSearchActive]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -131,7 +147,11 @@ export function InvoicePartySelector({
     setInputValue(name);
     setIsEditing(false);
     setOpen(false);
-  }, [onSelect]);
+    if (searchActiveRef.current) {
+      searchActiveRef.current = false;
+      onSearchActive?.(false);
+    }
+  }, [onSelect, onSearchActive]);
 
   const handleClear = useCallback(() => {
     setInputValue("");
@@ -139,19 +159,28 @@ export function InvoicePartySelector({
     if (onClear) onClear();
     else onSelect("", "");
     setOpen(false);
-  }, [onClear, onSelect]);
+    if (searchActiveRef.current) {
+      searchActiveRef.current = false;
+      onSearchActive?.(false);
+    }
+  }, [onClear, onSelect, onSearchActive]);
 
-  const startEditing = useCallback(() => {
-    setIsEditing(true);
-    setInputValue(selectedName || "");
-    setTimeout(() => inputRef.current?.focus(), 0);
-  }, [selectedName]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback(async (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && open && filtered.length > 0) {
       e.preventDefault();
       const first = filtered[0];
       handleSelect(first.id, first.name);
+    } else if (e.key === 'Enter' && open && filtered.length === 0 && inputValueRef.current && onCreateParty && !creating) {
+      e.preventDefault();
+      setCreating(true);
+      try {
+        const result = await onCreateParty(inputValueRef.current);
+        handleSelect(result.id, result.name);
+      } catch (err) {
+        console.error("Failed to create party", err);
+      } finally {
+        setCreating(false);
+      }
     } else if (e.key === 'Escape') {
       setOpen(false);
       if (selectedId) {
@@ -159,7 +188,7 @@ export function InvoicePartySelector({
         setInputValue(selectedName || "");
       }
     }
-  }, [open, filtered, handleSelect, selectedId, selectedName]);
+  }, [open, filtered, handleSelect, selectedId, selectedName, onCreateParty, creating]);
 
   const handleBlur = useCallback(() => {
     blurTimeoutRef.current = setTimeout(() => {
@@ -230,13 +259,6 @@ export function InvoicePartySelector({
         <div className="flex items-center gap-1 mr-auto">
           <button
             type="button"
-            onClick={startEditing}
-            className="text-[11px] text-primary hover:text-primary/80 font-semibold px-1.5 py-0.5 rounded hover:bg-primary/5 transition-colors"
-          >
-            تغيير
-          </button>
-          <button
-            type="button"
             onClick={handleClear}
             className="p-1 hover:bg-muted rounded-full text-muted-foreground hover:text-destructive transition-colors"
           >
@@ -258,13 +280,20 @@ export function InvoicePartySelector({
 
         <input
           ref={inputRef}
-          disabled={disabled || readOnly}
+          disabled={disabled || readOnly || creating}
           className="flex-1 text-sm bg-transparent outline-none text-right font-semibold placeholder:text-muted-foreground/40"
           placeholder={placeholder}
           value={inputValue}
           onChange={e => {
             setInputValue(e.target.value);
             setOpen(true);
+            if (!selectedId) {
+              onSelect("", e.target.value);
+            }
+            if (!selectedId && !searchActiveRef.current) {
+              searchActiveRef.current = true;
+              onSearchActive?.(true);
+            }
           }}
           onFocus={() => {
             if (!readOnly) {
@@ -324,9 +353,36 @@ export function InvoicePartySelector({
             ))}
 
             {filtered.length === 0 && debouncedValue && (
-              <div className="py-8 text-center flex flex-col items-center gap-2">
+              <div className="py-6 text-center flex flex-col items-center gap-2">
                 <Search className="w-6 h-6 text-muted-foreground/20" />
                 <span className="text-sm text-muted-foreground">لا توجد نتائج</span>
+                {onCreateParty && (
+                  <button
+                    type="button"
+                    disabled={creating}
+                    onMouseDown={async (e) => {
+                      e.preventDefault();
+                      if (creating) return;
+                      setCreating(true);
+                      try {
+                        const result = await onCreateParty(debouncedValue);
+                        handleSelect(result.id, result.name);
+                      } catch {
+                        // error handled by parent
+                      } finally {
+                        setCreating(false);
+                      }
+                    }}
+                    className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold transition-colors disabled:opacity-50"
+                  >
+                    {creating ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Plus className="w-3.5 h-3.5" />
+                    )}
+                    <span>إنشاء "{debouncedValue}"</span>
+                  </button>
+                )}
               </div>
             )}
 

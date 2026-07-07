@@ -16,6 +16,7 @@ import { DocumentStatusBadge } from "../components/DocumentStatusBadge";
 import { InvoiceList } from "../components/InvoiceList";
 import { useInvoiceLifecycle } from "../hooks/useInvoiceLifecycle";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
+import { supplierService } from "@modules/partners/api/supplierService";
 
 export default function PurchaseInvoices() {
   const location = useLocation();
@@ -62,6 +63,7 @@ export default function PurchaseInvoices() {
   });
 
   const suppliers = parties as SupplierDto[];
+  const [isSearchingParty, setIsSearchingParty] = useState(false);
 
   const [materialFormOpen, setMaterialFormOpen] = useState(false);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
@@ -127,6 +129,12 @@ export default function PurchaseInvoices() {
                 onClear={() => setHeaderState(s => ({ ...s, supplier_id: "", supplier_name: "مورد نقدي" }))}
                 hideLabel
                 noBorder
+                onSearchActive={setIsSearchingParty}
+                onCreateParty={async (name) => {
+                  const s = await supplierService.createSupplier({ code: "", name, phone: null, address: null });
+                  loadData(false);
+                  return { id: s.id, name: s.name };
+                }}
               />
             </HeaderField>
 
@@ -175,6 +183,7 @@ export default function PurchaseInvoices() {
             onExtraCostsChange={(value) => setHeaderState(s => ({ ...s, extra_costs: value }))}
             extraPaidAmount={headerState.extra_paid_amount}
             onExtraPaidAmountChange={(amount) => setHeaderState(s => ({ ...s, extra_paid_amount: amount }))}
+            isCashParty={!isSearchingParty && (!headerState.supplier_name || headerState.supplier_name === "مورد نقدي")}
           />
         }
         sidebar={

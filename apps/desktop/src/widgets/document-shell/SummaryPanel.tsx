@@ -30,6 +30,7 @@ interface SummaryPanelProps {
   onExtraCostsChange?: (value: string) => void;
   extraPaidAmount?: string;
   onExtraPaidAmountChange?: (amount: string) => void;
+  isCashParty?: boolean;
 }
 
 export function SummaryPanel({
@@ -54,6 +55,7 @@ export function SummaryPanel({
   extraPaidAmount,
   onExtraPaidAmountChange,
   docCurrency,
+  isCashParty = false,
 }: SummaryPanelProps) {
   const { baseCurrency, currencies: contextCurrencies, convertBetween } = useCurrencyContext();
   const safeExtra = extraCosts ?? 0;
@@ -134,6 +136,12 @@ export function SummaryPanel({
     }
   }, [currentOverallMethod, safeExtra, invoiceType, paymentMethod, onPaymentMethodChange]);
 
+  useEffect(() => {
+    if (isCashParty && paymentMethod !== "cash") {
+      onPaymentMethodChange?.("cash");
+    }
+  }, [isCashParty, paymentMethod, onPaymentMethodChange]);
+
   const handleInvoicePaymentMethodChange = (method: string) => {
     if (!onPaidAmountChange || !onPaymentMethodChange) return;
 
@@ -178,6 +186,11 @@ export function SummaryPanel({
   };
 
   const totalPaid = useMemo(() => {
+    if (isCashParty) return net;
+    if (invoiceType === "Sales" && paymentMethod) {
+      if (paymentMethod === "cash") return net;
+      if (paymentMethod === "credit") return 0;
+    }
     const basePaid = parseFloat(paidAmount || "0") || 0;
     const extraPaid =
       invoiceType === "Purchase" ? parseFloat(extraPaidAmount || "0") || 0 : 0;
@@ -187,7 +200,7 @@ export function SummaryPanel({
       return convertBetween(rawTotal, docCurrency, safeCurrency);
     }
     return rawTotal;
-  }, [paidAmount, extraPaidAmount, invoiceType, docCurrency, safeCurrency, convertBetween]);
+  }, [paidAmount, extraPaidAmount, invoiceType, docCurrency, safeCurrency, convertBetween, paymentMethod, net, isCashParty]);
 
   const remaining = Math.max(net - totalPaid, 0);
 
@@ -324,18 +337,24 @@ export function SummaryPanel({
                           <span className="text-[9px] font-black text-blue-500 uppercase tracking-wider shrink-0">
                             دفع الفاتورة:
                           </span>
-                          <select
-                            value={derivedInvoiceMethod}
-                            onChange={(e) =>
-                              handleInvoicePaymentMethodChange(e.target.value)
-                            }
-                            disabled={isReadOnly}
-                            className="h-5 px-1 bg-white border border-blue-200 rounded font-black text-[9px] outline-none cursor-pointer text-blue-700 focus:ring-0"
-                          >
-                            <option value="cash">نقداً</option>
-                            <option value="credit">آجل</option>
-                            <option value="partial">جزئي</option>
-                          </select>
+                          {isCashParty ? (
+                            <span className="h-5 px-1 font-black text-[9px] text-emerald-600 flex items-center">
+                              نقداً
+                            </span>
+                          ) : (
+                            <select
+                              value={derivedInvoiceMethod}
+                              onChange={(e) =>
+                                handleInvoicePaymentMethodChange(e.target.value)
+                              }
+                              disabled={isReadOnly}
+                              className="h-5 px-1 bg-white border border-blue-200 rounded font-black text-[9px] outline-none cursor-pointer text-blue-700 focus:ring-0"
+                            >
+                              <option value="cash">نقداً</option>
+                              <option value="credit">آجل</option>
+                              <option value="partial">جزئي</option>
+                            </select>
+                          )}
                           {derivedInvoiceMethod === "partial" &&
                           onPaidAmountChange &&
                           !isReadOnly ? (
@@ -368,18 +387,24 @@ export function SummaryPanel({
                           <span className="text-[9px] font-black text-violet-500 uppercase tracking-wider shrink-0">
                             دفع التكاليف:
                           </span>
-                          <select
-                            value={derivedExtraMethod}
-                            onChange={(e) =>
-                              handleExtraPaymentMethodChange(e.target.value)
-                            }
-                            disabled={isReadOnly}
-                            className="h-5 px-1 bg-white border border-violet-200 rounded font-black text-[9px] outline-none cursor-pointer text-violet-700 focus:ring-0"
-                          >
-                            <option value="cash">نقداً</option>
-                            <option value="credit">آجل</option>
-                            <option value="partial">جزئي</option>
-                          </select>
+                          {isCashParty ? (
+                            <span className="h-5 px-1 font-black text-[9px] text-emerald-600 flex items-center">
+                              نقداً
+                            </span>
+                          ) : (
+                            <select
+                              value={derivedExtraMethod}
+                              onChange={(e) =>
+                                handleExtraPaymentMethodChange(e.target.value)
+                              }
+                              disabled={isReadOnly}
+                              className="h-5 px-1 bg-white border border-violet-200 rounded font-black text-[9px] outline-none cursor-pointer text-violet-700 focus:ring-0"
+                            >
+                              <option value="cash">نقداً</option>
+                              <option value="credit">آجل</option>
+                              <option value="partial">جزئي</option>
+                            </select>
+                          )}
                           {derivedExtraMethod === "partial" &&
                           onExtraPaidAmountChange &&
                           !isReadOnly ? (
@@ -430,18 +455,24 @@ export function SummaryPanel({
                         <span className="text-[8px] font-black text-blue-500 uppercase tracking-wider">
                           طريقة دفع الفاتورة
                         </span>
-                        <select
-                          value={derivedInvoiceMethod}
-                          onChange={(e) =>
-                            handleInvoicePaymentMethodChange(e.target.value)
-                          }
-                          disabled={isReadOnly}
-                          className="h-6 px-1 bg-transparent font-black text-[10px] outline-none cursor-pointer border-none text-blue-700 focus:ring-0"
-                        >
-                          <option value="cash">نقداً</option>
-                          <option value="credit">آجل</option>
-                          <option value="partial">جزئي</option>
-                        </select>
+                        {isCashParty ? (
+                          <span className="h-6 px-1 font-black text-[10px] text-emerald-600 flex items-center">
+                            نقداً
+                          </span>
+                        ) : (
+                          <select
+                            value={derivedInvoiceMethod}
+                            onChange={(e) =>
+                              handleInvoicePaymentMethodChange(e.target.value)
+                            }
+                            disabled={isReadOnly}
+                            className="h-6 px-1 bg-transparent font-black text-[10px] outline-none cursor-pointer border-none text-blue-700 focus:ring-0"
+                          >
+                            <option value="cash">نقداً</option>
+                            <option value="credit">آجل</option>
+                            <option value="partial">جزئي</option>
+                          </select>
+                        )}
                           {derivedInvoiceMethod === "partial" &&
                           onPaidAmountChange &&
                           !isReadOnly ? (
@@ -505,16 +536,22 @@ export function SummaryPanel({
                     <span className="text-[8px] font-black text-muted-foreground uppercase tracking-wider">
                       طريقة الدفع
                     </span>
-                    <select
-                      value={paymentMethod || "cash"}
-                      onChange={(e) => onPaymentMethodChange(e.target.value)}
-                      disabled={isReadOnly}
-                      className="h-6 px-1 bg-transparent font-black text-[11px] outline-none cursor-pointer border-none text-slate-800 focus:ring-0"
-                    >
-                      <option value="cash">نقداً</option>
-                      <option value="credit">آجل</option>
-                      <option value="partial">جزئي</option>
-                    </select>
+                    {isCashParty ? (
+                      <span className="h-6 px-1 font-black text-[11px] text-emerald-600 flex items-center">
+                        نقداً
+                      </span>
+                    ) : (
+                      <select
+                        value={paymentMethod || "cash"}
+                        onChange={(e) => onPaymentMethodChange(e.target.value)}
+                        disabled={isReadOnly}
+                        className="h-6 px-1 bg-transparent font-black text-[11px] outline-none cursor-pointer border-none text-slate-800 focus:ring-0"
+                      >
+                        <option value="cash">نقداً</option>
+                        <option value="credit">آجل</option>
+                        <option value="partial">جزئي</option>
+                      </select>
+                    )}
                   </div>
 
                   {/* Connection Indicator */}

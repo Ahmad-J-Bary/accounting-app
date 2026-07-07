@@ -460,8 +460,7 @@ export function useInvoiceLifecycle({
     if (
       invoiceType === "Sales" &&
       headerState.payment_method !== "cash" &&
-      !headerState.customer_id &&
-      headerState.customer_name === "زبون نقدي"
+      !headerState.customer_id
     ) {
       toast.error(
         "المبيعات الآجلة أو الجزئية تتطلب اختيار عميل محدد. 'زبون نقدي' مخصص للبيع النقدي فقط.",
@@ -472,8 +471,7 @@ export function useInvoiceLifecycle({
     if (
       invoiceType === "Purchase" &&
       headerState.payment_method !== "cash" &&
-      !headerState.supplier_id &&
-      headerState.supplier_name === "مورد نقدي"
+      !headerState.supplier_id
     ) {
       toast.error(
         "المشتريات الآجلة أو الجزئية تتطلب اختيار مورد محدد. 'مورد نقدي' مخصص للشراء النقدي فقط.",

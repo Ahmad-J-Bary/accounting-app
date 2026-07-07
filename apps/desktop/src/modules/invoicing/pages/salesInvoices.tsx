@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { DocumentToolbar } from "@widgets/document-shell/DocumentToolbar";
 import type { CustomerDto } from "@erp/shared-types";
@@ -10,6 +11,7 @@ import { DocumentStatusBadge } from '../components/DocumentStatusBadge';
 import { InvoicePartySelector } from '../components/InvoicePartySelector';
 import { useInvoiceLifecycle } from '../hooks/useInvoiceLifecycle';
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
+import { customerService } from "@modules/partners/api/customerService";
 
 export default function SalesInvoices() {
   const location = useLocation();
@@ -54,6 +56,7 @@ export default function SalesInvoices() {
   });
 
   const customers = parties as CustomerDto[];
+  const [isSearchingParty, setIsSearchingParty] = useState(false);
 
   if (view === "editor") {
     return (
@@ -96,6 +99,12 @@ export default function SalesInvoices() {
                 readOnly={isReadOnly}
                 hideLabel
                 noBorder
+                onSearchActive={setIsSearchingParty}
+                onCreateParty={async (name) => {
+                  const c = await customerService.createCustomer({ code: "", name, phone: null, address: null });
+                  loadData(false);
+                  return { id: c.id, name: c.name };
+                }}
               />
             </HeaderField>
 
@@ -142,6 +151,7 @@ export default function SalesInvoices() {
             }}
             paidAmount={headerState.paid_amount}
             onPaidAmountChange={(amount) => setHeaderState(s => ({ ...s, paid_amount: amount }))}
+            isCashParty={!isSearchingParty && (!headerState.customer_name || headerState.customer_name === "زبون نقدي")}
           />
         }
         sidebar={null}
