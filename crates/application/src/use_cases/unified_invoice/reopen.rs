@@ -20,14 +20,11 @@ fn purchase_net_supplier_credit(
     discount_amount: Decimal,
     amount_paid: Decimal,
 ) -> Decimal {
+    // Supplier is credited for subtotal (total - extra_costs), debited for payments + discount
+    // Extra costs are paid separately from cash (not through supplier)
     let main_debit = if total > extra_costs { total - extra_costs } else { Decimal::ZERO };
     let supplier_credit = if main_debit > discount_amount { main_debit - discount_amount } else { Decimal::ZERO };
-    let main_paid = if extra_costs > Decimal::ZERO {
-        if amount_paid > extra_costs { amount_paid - extra_costs } else { Decimal::ZERO }
-    } else {
-        amount_paid
-    };
-    if supplier_credit > main_paid { supplier_credit - main_paid } else { Decimal::ZERO }
+    if supplier_credit > amount_paid { supplier_credit - amount_paid } else { Decimal::ZERO }
 }
 
 pub struct ReopenInvoiceDependencies {

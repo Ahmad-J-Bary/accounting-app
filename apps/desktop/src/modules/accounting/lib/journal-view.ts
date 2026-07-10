@@ -250,6 +250,12 @@ export function toJournalRow(
     activeSide = "debit";
   }
 
+  if (entry.journal_type === "CashPayment" && entry.description?.includes("تكاليف إضافية")) {
+    dAcc = "تكاليف إضافية للمشتريات";
+    cAcc = "الصندوق (الخزينة)";
+    activeSide = "credit";
+  }
+
   if (activeSide === "debit") {
     cOriginal = 0;
     cBase = 0;

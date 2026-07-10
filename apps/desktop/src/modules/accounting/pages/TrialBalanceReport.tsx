@@ -75,13 +75,13 @@ async function computeLedgerTotals(accounts: AccountDto[]): Promise<Map<string, 
       netPurchaseCost += parseFloat(inv.extra_costs || "0");
     }
 
-    for (const account of accounts) {
-      if (account.name_ar === "تكاليف إضافية على المشتريات") {
-        const debit = netPurchaseCost > 0 ? netPurchaseCost : 0;
-        const credit = netPurchaseCost < 0 ? Math.abs(netPurchaseCost) : 0;
-        totals.set(account.id, { debit, credit });
-      }
-    }
+        for (const account of accounts) {
+          if (account.name_ar === "تكاليف إضافية على المشتريات") {
+            const debit = Math.abs(netPurchaseCost);
+            const credit = Math.abs(netPurchaseCost);
+            totals.set(account.id, { debit, credit });
+          }
+        }
   } catch (_e) {
     console.warn("Stock override failed, using journal entries only");
   }

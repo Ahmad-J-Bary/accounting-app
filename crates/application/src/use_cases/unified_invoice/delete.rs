@@ -14,21 +14,17 @@ use crate::errors::AppError;
 
 /// Compute the net supplier credit that was actually recorded during posting
 /// for a Purchase invoice, mirroring PostInvoiceUseCase logic exactly.
-///   main_debit = total - extra_costs
-///   main_paid  = if amount_paid > extra_costs { amount_paid - extra_costs } else { 0 }
-///   net_credit = main_debit - main_paid  (clamped >= 0)
+///   main_debit  = total - extra_costs  (subtotal)
+///   main_paid   = min(amount_paid, subtotal)  (capped at subtotal)
+///   net_credit  = main_debit - main_paid  (clamped >= 0)
 fn purchase_net_supplier_credit(
     total: Decimal,
     extra_costs: Decimal,
     amount_paid: Decimal,
 ) -> Decimal {
-    let main_debit = if total > extra_costs { total - extra_costs } else { Decimal::ZERO };
-    let main_paid = if extra_costs > Decimal::ZERO {
-        if amount_paid > extra_costs { amount_paid - extra_costs } else { Decimal::ZERO }
-    } else {
-        amount_paid
-    };
-    if main_debit > main_paid { main_debit - main_paid } else { Decimal::ZERO }
+    let subtotal = if total > extra_costs { total - extra_costs } else { Decimal::ZERO };
+    let main_paid = if amount_paid > subtotal { subtotal } else { amount_paid };
+    if subtotal > main_paid { subtotal - main_paid } else { Decimal::ZERO }
 }
 
 pub struct DeleteInvoiceUseCase {

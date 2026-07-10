@@ -71,8 +71,8 @@ export default function Accounting() {
 
         for (const account of data) {
           if (account.name_ar === "تكاليف إضافية على المشتريات") {
-            const debit = netPurchaseCost > 0 ? netPurchaseCost : 0;
-            const credit = netPurchaseCost < 0 ? Math.abs(netPurchaseCost) : 0;
+            const debit = Math.abs(netPurchaseCost);
+            const credit = Math.abs(netPurchaseCost);
             totals.set(account.id, { debit, credit });
           }
         }

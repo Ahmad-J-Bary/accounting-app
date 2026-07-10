@@ -519,19 +519,19 @@ impl PostInvoiceUseCase {
                 if let Some(ref supplier) = purchase_supplier {
                     if let Some(p_acc_id) = supplier.account_id {
                         if let Some(supplier_id) = &invoice.supplier_id {
-                            // Entry 1: Purchase (PurchaseJournal) — Dr 41, Cr Supplier
+                            // Entry 1: Purchase (PurchaseJournal) — Dr 41 (subtotal only, excl. extra costs), Cr Supplier
                             let purchase_number = self.journal_repo.get_next_entry_number().await?;
                             let purchase_lines = vec![
                                 JournalLine::new(
                                     main_account.id,
-                                    MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate),
+                                    MonetaryAmount::new(Money::new(purchase_subtotal_doc, doc_currency.clone()), fx_rate),
                                     MonetaryAmount::zero(doc_currency.clone()),
                                     format!("فاتورة المشتريات رقم {}", invoice.invoice_number)
                                 ),
                                 JournalLine::new(
                                     p_acc_id,
                                     MonetaryAmount::zero(doc_currency.clone()),
-                                    MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate),
+                                    MonetaryAmount::new(Money::new(purchase_subtotal_doc, doc_currency.clone()), fx_rate),
                                     format!("فاتورة المشتريات رقم {}", invoice.invoice_number)
                                 ).with_partner(supplier_id.0),
                             ];
@@ -546,26 +546,26 @@ impl PostInvoiceUseCase {
                             purchase_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
                             self.journal_repo.save(&purchase_entry).await?;
 
-                            // Entry 2: Payment (CashPayment) — Dr Supplier, Cr Cash (if paid)
-                            let extra_costs_val = invoice.extra_costs.amount();
-                            let main_paid = if extra_costs_val > Decimal::ZERO {
-                                if amount_paid > extra_costs_val { amount_paid - extra_costs_val } else { Decimal::ZERO }
+                            // Entry 2: Payment (CashPayment) — Dr Supplier, Cr Cash (for purchase items only)
+                            // Cap at subtotal since extra costs are paid separately
+                            let purchase_paid = if amount_paid > purchase_subtotal_doc {
+                                purchase_subtotal_doc
                             } else {
                                 amount_paid
                             };
-                            if main_paid > Decimal::ZERO {
+                            if purchase_paid > Decimal::ZERO {
                                 let payment_number = self.journal_repo.get_next_entry_number().await?;
                                 let payment_lines = vec![
                                     JournalLine::new(
                                         p_acc_id,
-                                        MonetaryAmount::new(Money::new(main_paid, doc_currency.clone()), fx_rate),
+                                        MonetaryAmount::new(Money::new(purchase_paid, doc_currency.clone()), fx_rate),
                                         MonetaryAmount::zero(doc_currency.clone()),
                                         format!("سند دفع بموجب فاتورة المشتريات رقم {}", invoice.invoice_number)
                                     ).with_partner(supplier_id.0),
                                     JournalLine::new(
                                         cash_account.id,
                                         MonetaryAmount::zero(doc_currency.clone()),
-                                        MonetaryAmount::new(Money::new(main_paid, doc_currency.clone()), fx_rate),
+                                        MonetaryAmount::new(Money::new(purchase_paid, doc_currency.clone()), fx_rate),
                                         format!("سند دفع بموجب فاتورة المشتريات رقم {}", invoice.invoice_number)
                                     ),
                                 ];
@@ -611,8 +611,10 @@ impl PostInvoiceUseCase {
                             }
                         }
 
-                        // Supplier subledger: net = total - paid - discount
-                        let net_supplier_change = total_amount - amount_paid - total_discount_earned;
+                        // Supplier subledger: net = subtotal - purchase_paid - discount
+                        // Extra costs are paid separately (not through supplier), so exclude them
+                        let purchase_paid_cap = if amount_paid > purchase_subtotal_doc { purchase_subtotal_doc } else { amount_paid };
+                        let net_supplier_change = purchase_subtotal_doc - purchase_paid_cap - total_discount_earned;
                         let converted_change = convert_to_partner_currency(
                             net_supplier_change.abs(),
                             &invoice.currency_code,
@@ -633,15 +635,15 @@ impl PostInvoiceUseCase {
                 }
 
                 if !handled {
-                    // No supplier or no linked account — combined entry: Dr 41, Cr Cash, Cr 332
+                    // No supplier or no linked account — purchase entry: Dr 41 (subtotal), Cr Cash, Cr 332
                     journal_lines.push(JournalLine::new(
                         main_account.id,
-                        MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate),
+                        MonetaryAmount::new(Money::new(purchase_subtotal_doc, doc_currency.clone()), fx_rate),
                         MonetaryAmount::zero(doc_currency.clone()),
                         format!("فاتورة المشتريات رقم {}", invoice.invoice_number)
                     ));
 
-                    let net_cash = total_amount - total_discount_earned;
+                    let net_cash = purchase_subtotal_doc - total_discount_earned;
                     if net_cash > Decimal::ZERO {
                         journal_lines.push(JournalLine::new(
                             cash_account.id,
@@ -667,25 +669,12 @@ impl PostInvoiceUseCase {
                     format!("تكاليف إضافية مرتبطة بفاتورة المشتريات رقم {}", invoice.invoice_number)
                 ));
 
-                if let Some(sid) = &invoice.supplier_id {
-                    if let Some(supplier) = self.supplier_repo.find_by_id(sid).await? {
-                        if let Some(p_acc_id) = supplier.account_id {
-                            journal_lines.push(JournalLine::new(
-                                p_acc_id,
-                                MonetaryAmount::zero(doc_currency.clone()),
-                                MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate),
-                                format!("ذمة دائنة (تكاليف) - فاتورة رقم {}", invoice.invoice_number)
-                            ).with_partner(sid.0));
-                        }
-                    }
-                } else {
-                    journal_lines.push(JournalLine::new(
-                        cash_account.id,
-                        MonetaryAmount::zero(doc_currency.clone()),
-                        MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate),
-                        format!("ذمة نقدية (تكاليف) - فاتورة رقم {}", invoice.invoice_number)
-                    ));
-                }
+                journal_lines.push(JournalLine::new(
+                    cash_account.id,
+                    MonetaryAmount::zero(doc_currency.clone()),
+                    MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate),
+                    format!("ذمة نقدية (تكاليف) - فاتورة رقم {}", invoice.invoice_number)
+                ));
             } else if invoice.invoice_type == InvoiceType::OpeningBalance {
                 let inv_account = match self.account_repo.find_by_code("1201").await? {
                     Some(a) => a,
@@ -740,6 +729,7 @@ impl PostInvoiceUseCase {
         if invoice.invoice_type == InvoiceType::Purchase && extra_costs_val > Decimal::ZERO {
             let desc = format!("تكاليف إضافية مرتبطة بفاتورة المشتريات رقم {}", invoice.invoice_number);
 
+            // Entry 3: PurchaseCostsJournal — Dr 41 (extra costs), Cr 41 (allocation)
             let extra_lines = vec![
                 JournalLine::new(
                     main_account.id,
@@ -748,7 +738,7 @@ impl PostInvoiceUseCase {
                     desc.clone()
                 ),
                 JournalLine::new(
-                    cash_account.id,
+                    main_account.id,
                     MonetaryAmount::zero(doc_currency.clone()),
                     MonetaryAmount::new(Money::new(extra_costs_val, doc_currency.clone()), fx_rate),
                     format!("تكاليف إضافية - فاتورة رقم {}", invoice.invoice_number)
@@ -763,9 +753,35 @@ impl PostInvoiceUseCase {
                 desc,
                 Some(invoice.id.to_string()),
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
-
             extra_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
             self.journal_repo.save(&extra_entry).await?;
+
+            // Entry 4: CashPayment for extra costs — Dr 41 (تكاليف إضافية للمشترات), Cr Cash
+            let extra_pay_number = self.journal_repo.get_next_entry_number().await?;
+            let extra_pay_lines = vec![
+                JournalLine::new(
+                    main_account.id,
+                    MonetaryAmount::new(Money::new(extra_costs_val, doc_currency.clone()), fx_rate),
+                    MonetaryAmount::zero(doc_currency.clone()),
+                    format!("سند دفع تكاليف إضافية بموجب فاتورة المشتريات رقم {}", invoice.invoice_number)
+                ),
+                JournalLine::new(
+                    cash_account.id,
+                    MonetaryAmount::zero(doc_currency.clone()),
+                    MonetaryAmount::new(Money::new(extra_costs_val, doc_currency.clone()), fx_rate),
+                    format!("سند دفع تكاليف إضافية - فاتورة رقم {}", invoice.invoice_number)
+                ),
+            ];
+            let mut extra_pay_entry = JournalEntry::new(
+                extra_pay_number,
+                domain::accounting::JournalType::CashPayment,
+                extra_pay_lines,
+                Utc::now(),
+                format!("سند دفع تكاليف إضافية بموجب فاتورة المشتريات رقم {}", invoice.invoice_number),
+                Some(invoice.id.to_string()),
+            ).map_err(|e| AppError::Invalid(e.to_string()))?;
+            extra_pay_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
+            self.journal_repo.save(&extra_pay_entry).await?;
         }
 
         // --- Create separate CashReceipt entry for sales payments received ---
