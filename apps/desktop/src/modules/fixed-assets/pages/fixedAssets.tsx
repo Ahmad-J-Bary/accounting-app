@@ -29,7 +29,7 @@ import {
 } from "@shared/ui/select";
 
 export default function FixedAssetsPage() {
-  const { currencies, formatAmount, toBase } = useCurrencyContext();
+  const { currencies, formatAmount } = useCurrencyContext();
   const { isBaseCurrency } = useBaseCurrencyColumns();
 
   const {
@@ -199,7 +199,11 @@ export default function FixedAssetsPage() {
           accessor: (r: FixedAssetDto) => {
             const val = parseFloat(r.purchase_cost.amount);
             if (Math.abs(val) === 0) return "";
-            const base = toBase(val, r.purchase_cost.currency.code);
+            if (curr.code === r.purchase_cost.currency.code) {
+              return formatAmount(val, { currencyCode: curr.code });
+            }
+            const rate = parseFloat(r.fx_rate) || 1;
+            const base = val / rate;
             return formatAmount(base, { currencyCode: curr.code });
           },
           className: "tabular-nums font-black text-slate-900",
@@ -216,7 +220,11 @@ export default function FixedAssetsPage() {
             if (val === 0 && r.useful_life_months === 0)
               return <span className="text-slate-400 text-xs">لا ينطبق</span>;
             if (Math.abs(val) === 0) return "";
-            const base = toBase(val, r.accumulated_depreciation.currency.code);
+            if (curr.code === r.accumulated_depreciation.currency.code) {
+              return formatAmount(val, { currencyCode: curr.code });
+            }
+            const rate = parseFloat(r.fx_rate) || 1;
+            const base = val / rate;
             return formatAmount(base, { currencyCode: curr.code });
           },
           className: "tabular-nums font-black text-slate-900",
@@ -233,7 +241,11 @@ export default function FixedAssetsPage() {
               parseFloat(r.purchase_cost.amount) -
               parseFloat(r.accumulated_depreciation.amount);
             if (Math.abs(nbv) === 0) return "";
-            const base = toBase(nbv, r.purchase_cost.currency.code);
+            if (curr.code === r.purchase_cost.currency.code) {
+              return formatAmount(nbv, { currencyCode: curr.code });
+            }
+            const rate = parseFloat(r.fx_rate) || 1;
+            const base = nbv / rate;
             return formatAmount(base, { currencyCode: curr.code });
           },
           className: "tabular-nums font-black text-slate-900",
@@ -270,7 +282,7 @@ export default function FixedAssetsPage() {
 
       return cols;
     },
-    [warehouseMap, categoryMap, handleRowClick, handleEdit, handleDelete, currencies, formatAmount, toBase]
+    [warehouseMap, categoryMap, handleRowClick, handleEdit, handleDelete, currencies, formatAmount]
   );
 
   const columns = useMemo(() => {
@@ -282,20 +294,16 @@ export default function FixedAssetsPage() {
     return allColumns;
   }, [allColumns, assetTypeFilter]);
 
-  const handlePostDepreciation = useCallback(
-    async (assetId: string) => {
-      if (!confirm("هل تريد ترحيل قيد إهلاك لهذا الشهر؟")) return;
-      try {
-        await fixedAssetService.postDepreciation(assetId, new Date().toISOString());
-        toast.success("تم ترحيل الإهلاك بنجاح");
-        refresh(true);
-        if (selectedAsset?.id === assetId) loadMovements(assetId);
-      } catch (e) {
-        toast.error("فشل ترحيل الإهلاك: " + e);
-      }
-    },
-    [refresh, selectedAsset, loadMovements]
-  );
+  const handleRunRotation = useCallback(async () => {
+    if (!confirm("هل تريد تدوير الحسابات وترحيل إهلاك الأصول لهذا العام؟")) return;
+    try {
+      const results = await fixedAssetService.runYearlyRotation(new Date().toISOString());
+      toast.success(`تم ترحيل إهلاك ${results.length} أصل بنجاح`);
+      refresh(true);
+    } catch (e) {
+      toast.error("فشل تدوير الحسابات: " + e);
+    }
+  }, [refresh]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["code", "name", "category"];
@@ -338,17 +346,27 @@ export default function FixedAssetsPage() {
     <OperationalTableTemplate
       title="الأصول الثابتة"
       toolbar={
-        <Button
-          size="sm"
-          onClick={() => {
-            setSelectedAsset(null);
-            setEditingAsset(null);
-            setShowForm(true);
-          }}
-          className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold"
-        >
-          <Plus className="w-4 h-4 ml-2" /> أصل جديد
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            onClick={handleRunRotation}
+          >
+            تدوير الحسابات
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => {
+              setSelectedAsset(null);
+              setEditingAsset(null);
+              setShowForm(true);
+            }}
+            className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold"
+          >
+            <Plus className="w-4 h-4 ml-2" /> أصل جديد
+          </Button>
+        </div>
       }
       tableContent={
         <SharedTable
@@ -414,7 +432,6 @@ export default function FixedAssetsPage() {
             asset={selectedAsset}
             movements={movements}
             onClose={() => setSelectedAsset(null)}
-            onDepreciation={handlePostDepreciation}
             onEdit={() => handleEdit(selectedAsset)}
             onDelete={() => handleDelete(selectedAsset)}
             categoryName={categoryMap.get(selectedAsset.category_id)}

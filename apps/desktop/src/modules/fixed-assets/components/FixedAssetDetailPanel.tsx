@@ -1,4 +1,3 @@
-import { Button } from "@shared/ui/button";
 import {
   SidebarShell,
   SidebarHeader,
@@ -15,7 +14,6 @@ interface FixedAssetDetailPanelProps {
   asset: FixedAssetDto;
   movements: AssetMovement[];
   onClose: () => void;
-  onDepreciation?: (assetId: string) => void;
   onEdit?: () => void;
   onDelete?: () => void;
   categoryName?: string;
@@ -43,22 +41,24 @@ const movementLabels: Record<string, string> = {
   Revaluation: "إعادة تقييم",
 };
 
-export function FixedAssetDetailPanel({ asset, movements, onClose, onDepreciation, onEdit, onDelete, categoryName, warehouseName }: FixedAssetDetailPanelProps) {
-  const { formatAmount, toBase, baseCurrency } = useCurrencyContext();
+export function FixedAssetDetailPanel({ asset, movements, onClose, onEdit, onDelete, categoryName, warehouseName }: FixedAssetDetailPanelProps) {
+  const { formatAmount, baseCurrency } = useCurrencyContext();
   const baseCode = baseCurrency?.code;
 
+  const assetRate = parseFloat(asset.fx_rate) || 1;
+  const originalCode = asset.purchase_cost.currency.code;
   const netBookValue = parseFloat(asset.purchase_cost.amount) - parseFloat(asset.accumulated_depreciation.amount);
   const canDepreciate = asset.useful_life_months > 0;
 
   const fixedMovements = movements.filter(m => FIXED_ASSET_MOVEMENT_TYPES.has(m.movement_type));
-  const lastDepreciationDate = fixedMovements
-    .filter(m => m.movement_type === "Depreciation")
-    .slice(-1)[0]?.date;
 
   function formatInBase(m: { amount: string; currency: { code: string } } | undefined | null): string {
     if (!m) return "-";
-    const base = toBase(parseFloat(m.amount), m.currency.code);
-    return formatAmount(base, { currencyCode: baseCode });
+    if (m.currency.code !== baseCode) {
+      const base = parseFloat(m.amount) / assetRate;
+      return `${formatAmount(parseFloat(m.amount), { currencyCode: m.currency.code })} (ما يعادل ${formatAmount(base, { currencyCode: baseCode })}`;
+    }
+    return formatAmount(parseFloat(m.amount), { currencyCode: baseCode });
   }
 
   const infoFields = [
@@ -102,19 +102,6 @@ export function FixedAssetDetailPanel({ asset, movements, onClose, onDepreciatio
       <SidebarHeader title={asset.name} subtitle={`الكود: ${asset.code}`} onClose={onClose} />
       <SidebarActionBar actions={actions} />
       <SidebarBody>
-        {onDepreciation && canDepreciate && (
-          <div className="mb-3">
-            <Button size="sm" variant="outline" className="w-full text-xs" onClick={() => onDepreciation(asset.id)}>
-              ترحيل قيد الإهلاك
-            </Button>
-            {lastDepreciationDate && (
-              <p className="text-[10px] text-slate-400 mt-1 text-center">
-                آخر إهلاك: {new Date(lastDepreciationDate).toLocaleDateString("ar-SA")}
-              </p>
-            )}
-          </div>
-        )}
-
         <SidebarDetailGrid title="معلومات الأصل" fields={infoFields} columns={2} className="p-3" />
 
         {canDepreciate && (
@@ -122,7 +109,7 @@ export function FixedAssetDetailPanel({ asset, movements, onClose, onDepreciatio
             title="الإهلاك"
             fields={[
               { label: "مجمع الإهلاك", value: formatInBase(asset.accumulated_depreciation) },
-              { label: "صافي القيمة الدفترية", value: formatAmount(toBase(netBookValue, asset.purchase_cost.currency.code), { currencyCode: baseCode }) },
+              { label: "صافي القيمة الدفترية", value: originalCode !== baseCode ? `${formatAmount(netBookValue, { currencyCode: originalCode })} (ما يعادل ${formatAmount(netBookValue / assetRate, { currencyCode: baseCode })})` : formatAmount(netBookValue, { currencyCode: baseCode }) },
             ]}
             className="p-3"
           />

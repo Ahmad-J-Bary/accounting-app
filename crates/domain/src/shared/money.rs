@@ -1,4 +1,5 @@
 use rust_decimal::Decimal;
+use rust_decimal::prelude::One;
 use serde::{Deserialize, Serialize};
 use std::ops::{Add, Mul, Sub};
 
@@ -34,7 +35,7 @@ impl Money {
     /// 1 base currency = `fx_rate` units of secondary currency.
     /// If this currency IS the base currency, the rate is ignored (treated as 1).
     pub fn to_base(&self, fx_rate: Decimal) -> Decimal {
-        if self.currency.is_base || fx_rate.is_zero() {
+        if self.currency.is_base || fx_rate.is_zero() || fx_rate.is_one() {
             self.amount
         } else {
             self.amount / fx_rate

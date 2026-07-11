@@ -90,6 +90,18 @@ impl FixedAsset {
             &self.salvage_value,
             self.useful_life_months,
             0,
+            &self.accumulated_depreciation,
+        )
+    }
+
+    pub fn calculate_yearly_depreciation(&self) -> Money {
+        calculate_depreciation(
+            &self.depreciation_method,
+            &self.purchase_cost,
+            &self.salvage_value,
+            self.useful_life_months,
+            0,
+            &self.accumulated_depreciation,
         )
     }
 
@@ -97,6 +109,15 @@ impl FixedAsset {
         let amount = self.calculate_monthly_depreciation();
         self.accumulated_depreciation = self.accumulated_depreciation.clone() + amount.clone();
         self.updated_at = Utc::now();
+        amount
+    }
+
+    pub fn depreciate_yearly(&mut self) -> Money {
+        let amount = self.calculate_yearly_depreciation();
+        if amount.amount() > Decimal::ZERO {
+            self.accumulated_depreciation = self.accumulated_depreciation.clone() + amount.clone();
+            self.updated_at = Utc::now();
+        }
         amount
     }
 }

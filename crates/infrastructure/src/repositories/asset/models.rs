@@ -18,7 +18,6 @@ pub struct AssetRow {
     pub asset_account_id: String,
     pub depreciation_account_id: String,
     pub accumulated_depreciation_account_id: String,
-    #[allow(dead_code)]
     pub depreciation_method: Option<String>,
     pub created_at: String,
     pub updated_at: String,

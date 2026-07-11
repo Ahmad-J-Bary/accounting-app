@@ -17,7 +17,6 @@ import {
   Armchair,
   Landmark,
   BadgeDollarSign,
-  BarChart2,
   FileText,
   ShoppingCart,
   Archive,
@@ -35,6 +34,8 @@ import type {
 } from "@erp/shared-types";
 import { SYSTEM_ACCOUNT_IDS } from "@erp/shared-types";
 import { toast } from "sonner";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { getExchangeRate } from "@shared/lib/currency-strategy";
 
 interface FixedAssetFormProps {
   onClose: () => void;
@@ -100,6 +101,7 @@ export function FixedAssetForm({
   const [categories, setCategories] = useState<AssetCategoryDto[]>([]);
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
+  const { rateMap, baseCurrency } = useCurrencyContext();
 
   const isEditing = !!asset;
 
@@ -122,11 +124,6 @@ export function FixedAssetForm({
   const [purchaseCost, setPurchaseCost] = useState(asset?.purchase_cost?.amount ?? "");
   const [currency, setCurrency] = useState(asset?.purchase_cost?.currency?.code ?? "");
   const [fxRate, setFxRate] = useState(asset?.fx_rate ?? "1");
-  const [salvageValue, setSalvageValue] = useState(asset?.salvage_value?.amount ?? "");
-
-  // --- Depreciation ---
-  const [usefulLifeMonths, setUsefulLifeMonths] = useState(asset ? String(asset.useful_life_months) : "60");
-  const [depreciationMethod, setDepreciationMethod] = useState(asset?.depreciation_method ?? "StraightLine");
 
   // --- Derived state ---
   const isNonDepreciable = useMemo(() => {
@@ -174,16 +171,6 @@ export function FixedAssetForm({
     }
   }, [assetType, categories]);
 
-  // Reset depreciation fields when switching to non-depreciable category
-  useEffect(() => {
-    if (isNonDepreciable) {
-      setUsefulLifeMonths("0");
-      setSalvageValue("");
-    } else {
-      setUsefulLifeMonths((prev) => (prev === "0" ? "60" : prev));
-    }
-  }, [isNonDepreciable]);
-
   // Load master data on mount; auto-create default categories if empty
   useEffect(() => {
     const DEFAULT_CATEGORIES = [
@@ -228,7 +215,7 @@ export function FixedAssetForm({
         }
       }
     })();
-  }, [initialCategoryId, asset]);
+  }, [initialCategoryId, asset, setWarehouses]);
 
   // Set default currency when currencies are loaded
   useEffect(() => {
@@ -237,6 +224,14 @@ export function FixedAssetForm({
       setCurrency(base?.code ?? currencies[0].code);
     }
   }, [currencies, currency]);
+
+  // Auto-fill exchange rate when currency changes
+  useEffect(() => {
+    if (currency && rateMap.size > 0) {
+      const rate = getExchangeRate(currency, rateMap, baseCurrency?.code);
+      setFxRate(String(rate));
+    }
+  }, [currency, rateMap, baseCurrency]);
 
   // ===== Auto-account mapping =====
   const findAccount = useCallback(
@@ -321,11 +316,8 @@ export function FixedAssetForm({
   const canSave = useMemo(() => {
     const base = !!code && !!name && !!categoryId && !!assetType && !!purchaseCost && !!currency;
     if (!base) return false;
-    if (assetType !== "buildings_land") {
-      return !!usefulLifeMonths && parseInt(usefulLifeMonths) > 0 && !accountMappingError;
-    }
     return !accountMappingError;
-  }, [code, name, categoryId, assetType, purchaseCost, currency, usefulLifeMonths, accountMappingError]);
+  }, [code, name, categoryId, assetType, purchaseCost, currency, accountMappingError]);
 
   const handleSave = async () => {
     if (!canSave) return;
@@ -349,7 +341,7 @@ export function FixedAssetForm({
         purchase_cost: purchaseCost,
         currency,
         fx_rate: fxRate,
-        useful_life_months: isNonDepreciable ? 0 : parseInt(usefulLifeMonths) || 0,
+        useful_life_months: isNonDepreciable ? 0 : 120,
         asset_account_id: mappedAccounts.assetAccountId,
         depreciation_account_id: mappedAccounts.depreciationAccountId,
         accumulated_depreciation_account_id: mappedAccounts.accumulatedDepreciationAccountId,
@@ -357,8 +349,7 @@ export function FixedAssetForm({
         addition_type: additionType,
         notes: notes || undefined,
         location: location || undefined,
-        salvage_value: salvageValue || undefined,
-        depreciation_method: depreciationMethod,
+        depreciation_method: "DecliningBalance",
       };
       if (isEditing && asset) {
         await fixedAssetService.update(asset.id, req);
@@ -542,58 +533,16 @@ export function FixedAssetForm({
                 placeholder="1"
                 step="0.001"
                 min="0"
+                disabled={currency === baseCurrency?.code}
                 className="bg-white border-slate-200 h-9 text-xs"
               />
+              {currency === baseCurrency?.code && (
+                <span className="text-[10px] text-slate-400 mt-0.5 block">غير مطلوب للعملة الأساسية</span>
+              )}
             </FormField>
           )}
         </div>
       </SidebarSection>
-
-      {/* ── Section 3: Depreciation (hidden for non-depreciable) ── */}
-      {!isNonDepreciable && assetType && (
-        <SidebarSection
-          title="الإهلاك"
-          icon={<BarChart2 className="w-3.5 h-3.5" />}
-          defaultOpen
-        >
-          <FormField label="طريقة الإهلاك">
-            <Select dir="rtl" value={depreciationMethod} onValueChange={setDepreciationMethod}>
-              <SelectTrigger className="bg-white border-slate-200 h-9 w-full text-right text-xs font-bold text-slate-800">
-                <SelectValue placeholder="اختر طريقة الإهلاك" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="StraightLine" className="text-xs">القسط الثابت</SelectItem>
-              </SelectContent>
-            </Select>
-          </FormField>
-          <FormField label="قيمة الخردة (المتبقية)">
-            <Input
-              type="number"
-              value={salvageValue}
-              onChange={(e) => setSalvageValue(e.target.value)}
-              placeholder="0.00"
-              step="0.01"
-              min="0"
-              className="bg-white border-slate-200 h-9 text-xs"
-            />
-          </FormField>
-          <FormField label="العمر الإنتاجي (بالشهور)" required>
-            <div className="relative">
-              <Input
-                type="number"
-                value={usefulLifeMonths}
-                onChange={(e) => setUsefulLifeMonths(e.target.value)}
-                placeholder="60"
-                min="1"
-                className="bg-white border-slate-200 h-9 pl-16 text-xs"
-              />
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none">
-                شهر ({Math.round(parseInt(usefulLifeMonths || "0") / 12)} سنة)
-              </span>
-            </div>
-          </FormField>
-        </SidebarSection>
-      )}
 
       {/* Account mapping status - hidden informational */}
       {assetType && !!accountMappingError && (

@@ -121,6 +121,7 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::assets::issue_consumable,
             commands::assets::list_asset_movements,
             commands::assets::list_all_asset_movements,
+            commands::assets::run_yearly_rotation,
             // Dashboard
             commands::dashboard::get_receivables_payables_summary,
             // Partners

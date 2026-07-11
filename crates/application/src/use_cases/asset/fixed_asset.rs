@@ -12,10 +12,21 @@ use rust_decimal::Decimal;
 use std::sync::Arc;
 use uuid::Uuid;
 
+use serde::{Deserialize, Serialize};
+
 pub struct FixedAssetUseCases {
     repo: Arc<dyn AssetRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
     account_repo: Arc<dyn AccountRepository>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RotationResult {
+    pub asset_id: String,
+    pub asset_name: String,
+    pub depreciation_amount: f64,
+    pub accumulated_depreciation: f64,
+    pub net_book_value: f64,
 }
 
 pub struct CreateAssetRequest {
@@ -76,8 +87,9 @@ impl FixedAssetUseCases {
             asset.salvage_value = Some(salvage.clone());
         }
         if let Some(ref method) = req.depreciation_method {
-            if method.as_str() == "StraightLine" {
-                asset.depreciation_method = DepreciationMethod::StraightLine;
+            match method.as_str() {
+                "DecliningBalance" => asset.depreciation_method = DepreciationMethod::DecliningBalance,
+                _ => asset.depreciation_method = DepreciationMethod::StraightLine,
             }
         }
 
@@ -135,7 +147,7 @@ impl FixedAssetUseCases {
         self.journal_repo.save(&entry).await?;
 
         // --- Update account balances ---
-        let base_amount = req.purchase_cost.amount() * req.fx_rate;
+        let base_amount = req.purchase_cost.to_base(req.fx_rate);
 
         if let Some(mut asset_account) = self.account_repo.find_by_id(&AccountId(req.asset_account_id)).await? {
             asset_account.debit(base_amount).map_err(|e| AppError::Invalid(e.to_string()))?;
@@ -263,8 +275,9 @@ impl FixedAssetUseCases {
         asset.depreciation_account_id = req.depreciation_account_id;
         asset.accumulated_depreciation_account_id = req.accumulated_depreciation_account_id;
         if let Some(ref method) = req.depreciation_method {
-            if method.as_str() == "StraightLine" {
-                asset.depreciation_method = DepreciationMethod::StraightLine;
+            match method.as_str() {
+                "DecliningBalance" => asset.depreciation_method = DepreciationMethod::DecliningBalance,
+                _ => asset.depreciation_method = DepreciationMethod::StraightLine,
             }
         }
         asset.updated_at = Utc::now();
@@ -330,6 +343,83 @@ impl FixedAssetUseCases {
         self.repo.delete_movements_by_asset(&id.0).await?;
         self.repo.delete_asset(&id).await?;
         Ok(())
+    }
+
+    pub async fn run_yearly_rotation(
+        &self,
+        date: chrono::DateTime<Utc>,
+    ) -> Result<Vec<RotationResult>, AppError> {
+        let assets = self.repo.list_assets().await?;
+        let active_assets: Vec<_> = assets
+            .into_iter()
+            .filter(|a| a.status == domain::assets::AssetStatus::Active)
+            .collect();
+
+        let mut results = Vec::new();
+
+        for mut asset in active_assets {
+            let depreciation_amount = asset.depreciate_yearly();
+
+            if depreciation_amount.amount() <= Decimal::ZERO {
+                continue;
+            }
+
+            self.repo.save_asset(&asset).await?;
+
+            let movement = AssetMovement::new(
+                asset.id.0,
+                AssetMovementType::Depreciation,
+                date,
+                depreciation_amount.clone(),
+                format!(
+                    "إهلاك سنوي للأصل: {} - للفترة {}",
+                    asset.name,
+                    date.format("%Y")
+                ),
+            );
+            self.repo.save_movement(&movement).await?;
+
+            let lines = vec![
+                JournalLine::new(
+                    AccountId(asset.depreciation_account_id),
+                    MonetaryAmount::new(depreciation_amount.clone(), asset.fx_rate),
+                    MonetaryAmount::zero(asset.purchase_cost.currency().clone()),
+                    format!("مصروف إهلاك: {}", asset.name),
+                ),
+                JournalLine::new(
+                    AccountId(asset.accumulated_depreciation_account_id),
+                    MonetaryAmount::zero(asset.purchase_cost.currency().clone()),
+                    MonetaryAmount::new(depreciation_amount.clone(), asset.fx_rate),
+                    format!("مجمع إهلاك: {}", asset.name),
+                ),
+            ];
+
+            let entry = JournalEntry::new(
+                self.journal_repo.get_next_entry_number().await?,
+                domain::accounting::JournalType::GeneralJournal,
+                lines,
+                date,
+                format!(
+                    "إهلاك سنوي: {} للفترة {}",
+                    asset.name,
+                    date.format("%Y")
+                ),
+                Some(asset.id.0.to_string()),
+            )
+            .map_err(|e| AppError::Invalid(e.to_string()))?;
+
+            self.journal_repo.save(&entry).await?;
+
+            results.push(RotationResult {
+                asset_id: asset.id.0.to_string(),
+                asset_name: asset.name.clone(),
+                depreciation_amount: depreciation_amount.amount().to_string().parse().unwrap_or(0.0),
+                accumulated_depreciation: asset.accumulated_depreciation.amount().to_string().parse().unwrap_or(0.0),
+                net_book_value: asset.net_book_value().amount().to_string().parse().unwrap_or(0.0),
+            });
+        }
+
+        Ok(results)
     }
 }
 

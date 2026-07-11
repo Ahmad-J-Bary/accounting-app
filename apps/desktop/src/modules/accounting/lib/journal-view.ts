@@ -194,7 +194,7 @@ export function toJournalRow(
       entry.journal_type === "AccountOpeningBalance" ||
       entry.journal_type === "MaterialOpeningBalance"
     ) {
-      const oeLine = entry.lines.find(l => l.account_code === "222");
+      const oeLine = entry.lines.find(l => l.account_code === "53" || l.account_code === "51");
       activeSide = oeLine && parseFloat(oeLine.credit || "0") > 0 ? "credit" : "debit";
     } else if ((entry.journal_type as string) === "DiscountEarnedJournal") {
       activeSide = "credit";

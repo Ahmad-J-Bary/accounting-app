@@ -69,7 +69,13 @@ export const fixedAssetService = {
     return await invoke<AssetMovement[]>('list_asset_movements', { assetId });
   },
 
-  async postDepreciation(assetId: string, date: string): Promise<void> {
-    return await invoke<void>('post_asset_depreciation', { assetId, date });
+  async runYearlyRotation(date: string): Promise<Array<{
+    asset_id: string;
+    asset_name: string;
+    depreciation_amount: number;
+    accumulated_depreciation: number;
+    net_book_value: number;
+  }>> {
+    return await invoke('run_yearly_rotation', { date });
   },
 };

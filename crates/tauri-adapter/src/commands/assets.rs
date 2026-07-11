@@ -30,6 +30,9 @@ pub async fn create_fixed_asset(
     depreciation_method: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
+    let base_curr = state.currency_repo.get_base_currency().await.map_err(|e| e.to_string())?;
+    let is_base = base_curr.as_ref().map_or(false, |bc| bc.code == currency);
+
     let category_uuid = Uuid::parse_str(&category_id).map_err(|e| e.to_string())?;
     let warehouse_uuid = warehouse_id.and_then(|s| Uuid::parse_str(&s).ok());
     let purchase_dt = chrono::DateTime::parse_from_rfc3339(&purchase_date)
@@ -37,7 +40,7 @@ pub async fn create_fixed_asset(
         .map_err(|e| e.to_string())?;
     
     let amount = Decimal::from_str(&purchase_cost).map_err(|e: rust_decimal::Error| e.to_string())?;
-    let curr = domain::shared::Currency::new(&currency, &currency, &currency, "", 2, false);
+    let curr = domain::shared::Currency::new(&currency, &currency, &currency, "", 2, is_base);
     let money = Money::new(amount, curr);
     let fx = Decimal::from_str(&fx_rate).map_err(|e: rust_decimal::Error| e.to_string())?;
     
@@ -49,7 +52,7 @@ pub async fn create_fixed_asset(
     let salvage_money = match salvage_value {
         Some(val) if !val.trim().is_empty() => {
             let sal_amt = Decimal::from_str(&val).map_err(|e| e.to_string())?;
-            let curr = domain::shared::Currency::new(&currency, &currency, &currency, "", 2, false);
+            let curr = domain::shared::Currency::new(&currency, &currency, &currency, "", 2, is_base);
             Some(Money::new(sal_amt, curr))
         }
         _ => None,
@@ -103,6 +106,9 @@ pub async fn update_fixed_asset(
     depreciation_method: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
+    let base_curr = state.currency_repo.get_base_currency().await.map_err(|e| e.to_string())?;
+    let is_base = base_curr.as_ref().map_or(false, |bc| bc.code == currency);
+
     let asset_id = FixedAssetId(Uuid::parse_str(&id).map_err(|e| e.to_string())?);
     let category_uuid = Uuid::parse_str(&category_id).map_err(|e| e.to_string())?;
     let warehouse_uuid = warehouse_id.and_then(|s| Uuid::parse_str(&s).ok());
@@ -110,7 +116,7 @@ pub async fn update_fixed_asset(
         .map(|d| d.with_timezone(&chrono::Utc))
         .map_err(|e| e.to_string())?;
     let amount = Decimal::from_str(&purchase_cost).map_err(|e: rust_decimal::Error| e.to_string())?;
-    let curr = domain::shared::Currency::new(&currency, &currency, &currency, "", 2, false);
+    let curr = domain::shared::Currency::new(&currency, &currency, &currency, "", 2, is_base);
     let money = Money::new(amount, curr);
     let fx = Decimal::from_str(&fx_rate).map_err(|e: rust_decimal::Error| e.to_string())?;
     let asset_acc = Uuid::parse_str(&asset_account_id).map_err(|e| e.to_string())?;
@@ -121,7 +127,7 @@ pub async fn update_fixed_asset(
     let salvage_money = match salvage_value {
         Some(val) if !val.trim().is_empty() => {
             let sal_amt = Decimal::from_str(&val).map_err(|e| e.to_string())?;
-            let curr = domain::shared::Currency::new(&currency, &currency, &currency, "", 2, false);
+            let curr = domain::shared::Currency::new(&currency, &currency, &currency, "", 2, is_base);
             Some(Money::new(sal_amt, curr))
         }
         _ => None,
@@ -183,9 +189,12 @@ pub async fn create_consumable(
     expense_account_id: String,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
+    let base_curr = state.currency_repo.get_base_currency().await.map_err(|e| e.to_string())?;
+    let is_base = base_curr.as_ref().map_or(false, |bc| bc.code == currency);
+
     let category_uuid = Uuid::parse_str(&category_id).map_err(|e| e.to_string())?;
     let amount = Decimal::from_str(&unit_cost).map_err(|e: rust_decimal::Error| e.to_string())?;
-    let curr = domain::shared::Currency::new(&currency, &currency, &currency, "", 2, false);
+    let curr = domain::shared::Currency::new(&currency, &currency, &currency, "", 2, is_base);
     let money = Money::new(amount, curr);
     let fx = Decimal::from_str(&fx_rate).map_err(|e: rust_decimal::Error| e.to_string())?;
     let asset_acc = Uuid::parse_str(&asset_account_id).map_err(|e| e.to_string())?;
@@ -297,4 +306,17 @@ pub async fn list_all_asset_movements(
     state: State<'_, AppState>,
 ) -> Result<Vec<domain::assets::AssetMovement>, String> {
     state.asset_repo.list_all_movements().await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn run_yearly_rotation(
+    date: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<application::use_cases::asset::RotationResult>, String> {
+    let dt = chrono::DateTime::parse_from_rfc3339(&date)
+        .map(|d| d.with_timezone(&chrono::Utc))
+        .map_err(|e| e.to_string())?;
+
+    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone());
+    use_case.run_yearly_rotation(dt).await.map_err(|e| e.to_string())
 }
