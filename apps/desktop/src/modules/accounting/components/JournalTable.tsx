@@ -1,14 +1,21 @@
-import { useMemo } from "react";
-import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
+import { useMemo, useRef, useCallback, type ReactNode } from "react";
+import { GridHeader, type GridHeaderColumn } from "@widgets/table-shell/GridHeader";
+import type { UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
+import { TableSummary, type SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { TableShell } from "@widgets/table-shell/TableShell";
-import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
+import { Skeleton } from "@shared/ui/skeleton";
+import { EmptyState } from "@widgets/table-shell/EmptyState";
 import { formatDateTime } from "@shared/lib/format";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
+import { useUnifiedColumns, useSortable, useBaseCurrencyColumns, useTableSettings, useGridResize } from "@shared/hooks";
+import { cn } from "@shared/lib/utils";
+import { getLeftBorderClass, getRowBorderClass, getRowBackgroundClass } from "@shared/lib/table-utils";
+import type { GridResizeContent } from "@shared/hooks/useGridResize";
+import { GroupedEntrySharedCell } from "./GroupedEntrySharedCell";
 
 import type { JournalEntryDto } from "@erp/shared-types";
 import type { JournalFilters } from "../api/journalEntryService";
-import { toJournalRow } from "../lib/journal-view";
+import { toJournalLines, type JournalRowLine } from "../lib/journal-view";
 
 interface JournalTableProps {
   entries: JournalEntryDto[];
@@ -19,21 +26,40 @@ interface JournalTableProps {
   filterBar?: React.ReactNode;
 }
 
-type SortField = "entry_number" | "created_at" | "journal_type" | "credit_account" | "debit_account";
+type SortField = "entry_number" | "created_at" | "journal_type" | "account";
+type JournalTableRow = JournalRowLine & { isFirstInGroup: boolean };
+
+const SHARED_COLUMN_IDS = new Set(["entry_number", "journal_type", "description", "entry_date"]);
+
+function getHeaderText<T>(col: UnifiedColumn<T>): string {
+  if (typeof col.header === "string") return col.header;
+  if (typeof col.label === "string") return col.label;
+  return col.id;
+}
+
+function getPrimitiveCellValue(value: ReactNode): string {
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  return "";
+}
 
 export function JournalTable({ entries, loading, search, onSearchChange, filters, filterBar }: JournalTableProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
   const { isBaseCurrency } = useBaseCurrencyColumns();
+  const { settings, getDensityPadding } = useTableSettings();
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const sortedCurrencies = useMemo(() => {
     if (!baseCurrency) return currencies;
     return [baseCurrency, ...currencies.filter(c => c.code !== baseCurrency.code)];
   }, [currencies, baseCurrency]);
 
-  const tableData = useMemo(
-    () => entries.map(e => toJournalRow(e, filters?.journal_type)),
-    [entries, filters?.journal_type]
-  );
+  const tableData = useMemo(() => {
+    const lines = entries.flatMap(e => toJournalLines(e));
+    return lines.map((line, idx) => ({
+      ...line,
+      isFirstInGroup: idx === 0 || line.group_key !== lines[idx - 1].group_key,
+    }));
+  }, [entries]);
 
   const { sortedData, sortField, sortDirection, handleSort } = useSortable({
     data: tableData,
@@ -51,31 +77,32 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
         case "journal_type":
           comparison = (a.journal_type_display || "").localeCompare(b.journal_type_display || "", "ar");
           break;
-        case "credit_account":
-          comparison = (a.credit_account || "").localeCompare(b.credit_account || "", "ar");
-          break;
-        case "debit_account":
-          comparison = (a.debit_account || "").localeCompare(b.debit_account || "", "ar");
+        case "account":
+          comparison = (a.account_name || "").localeCompare(b.account_name || "", "ar");
           break;
       }
       return direction === "asc" ? comparison : -comparison;
     }
   });
 
-  const allColumns = useMemo<UnifiedColumn<typeof tableData[0]>[]>(() => {
-    const cols: UnifiedColumn<typeof tableData[0]>[] = [
+  const allColumns = useMemo<UnifiedColumn<JournalTableRow>[]>(() => {
+    const cols: UnifiedColumn<JournalTableRow>[] = [
       {
         id: "entry_number",
         header: "رقم القيد",
         label: "رقم القيد",
-        accessor: (e) => e.entry_number,
+        accessor: (e) => e.isFirstInGroup ? e.entry_number : "",
         className: "font-black text-slate-900 text-center"
       },
       {
         id: "journal_type",
         header: "نوع الحركة",
         label: "نوع الحركة",
-        accessor: (e) => <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">{e.journal_type_display}</span>,
+        accessor: (e) => e.isFirstInGroup ? (
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">
+            {e.journal_type_display}
+          </span>
+        ) : "",
       },
     ];
 
@@ -87,8 +114,8 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
         header: `عليه / مدين (${symbol})`,
         label: `عليه / مدين (${symbol})`,
         accessor: (e) => {
-          if (e.active_side !== "debit") return "";
-          return e.debit_base > 0 ? formatAmount(e.debit_base, { currencyCode: curr.code }) : "";
+          if (e.side !== "debit") return "";
+          return e.amount_base > 0 ? formatAmount(e.amount_base, { currencyCode: curr.code }) : "";
         },
         className: isBase
           ? "tabular-nums font-black text-blue-700"
@@ -104,8 +131,8 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
         header: `له / دائن (${symbol})`,
         label: `له / دائن (${symbol})`,
         accessor: (e) => {
-          if (e.active_side !== "credit") return "";
-          return e.credit_base > 0 ? formatAmount(e.credit_base, { currencyCode: curr.code }) : "";
+          if (e.side !== "credit") return "";
+          return e.amount_base > 0 ? formatAmount(e.amount_base, { currencyCode: curr.code }) : "";
         },
         className: isBase
           ? "tabular-nums font-black text-emerald-700"
@@ -118,36 +145,30 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
         id: "description",
         header: "البيان",
         label: "البيان",
-        accessor: (e) => e.description,
+        accessor: (e) => e.isFirstInGroup ? e.description : "",
         className: "text-slate-700 font-bold"
       },
       {
-        id: "credit_account",
-        header: "الحساب الدائن / المصدر",
-        label: "الحساب الدائن / المصدر",
-        accessor: (e) => e.credit_account,
-        className: "text-emerald-600 font-bold"
+        id: "account",
+        header: "الحساب",
+        label: "الحساب",
+        accessor: (e) => (
+          <span className={e.side === "debit" ? "text-blue-600 font-bold" : "text-emerald-600 font-bold"}>
+            {e.account_name}
+          </span>
+        ),
       },
       {
-        id: "debit_account",
-        header: "الحساب المدين / الوجهة",
-        label: "الحساب المدين / الوجهة",
-        accessor: (e) => e.debit_account,
-        className: "text-blue-600 font-bold"
-      },
-      {
-        id: "created_at",
+        id: "entry_date",
         header: "التاريخ",
         label: "التاريخ",
-        accessor: (e) => formatDateTime(e.created_at),
+        accessor: (e) => e.isFirstInGroup ? formatDateTime(e.created_at) : "",
         className: "text-slate-500 tabular-nums"
       },
     );
     return cols;
   }, [sortedCurrencies, formatAmount, isBaseCurrency]);
 
-  // Default visible: only base currency's debit/credit columns are shown,
-  // plus the credit/debit account columns by default.
   const defaultVisible = useMemo(() => {
     const def: string[] = ["entry_number", "journal_type"];
     sortedCurrencies.forEach(curr => {
@@ -160,7 +181,7 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
         def.push(`credit_${curr.code}`);
       }
     });
-    def.push("description", "credit_account", "debit_account", "created_at");
+    def.push("description", "account", "entry_date");
     return def;
   }, [sortedCurrencies, isBaseCurrency]);
 
@@ -170,22 +191,85 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
     defaultVisible,
   });
 
+  const visibleColumns = useMemo(
+    () => enrichedColumns.filter(c => c.visible !== false),
+    [enrichedColumns],
+  );
+
+  const gridHeaderColumns = useMemo<GridHeaderColumn[]>(
+    () => visibleColumns.map(col => ({
+      id: col.id,
+      header: col.header,
+      label: col.label || getHeaderText(col),
+      align: col.align,
+    })),
+    [visibleColumns],
+  );
+
+  const getColumnSampleValues = useCallback(
+    (col: UnifiedColumn<JournalTableRow>): string[] =>
+      sortedData
+        .slice(0, 30)
+        .map((row, idx) =>
+          typeof col.accessor === "function"
+            ? getPrimitiveCellValue(col.accessor(row, idx))
+            : getPrimitiveCellValue(row[col.accessor as keyof JournalTableRow] as ReactNode),
+        )
+        .filter(Boolean),
+    [sortedData],
+  );
+
+  const contentByColumn = useMemo(() => {
+    const out: Record<string, GridResizeContent> = {};
+    for (const col of visibleColumns) {
+      out[col.id] = {
+        headerText: getHeaderText(col),
+        sampleValues: getColumnSampleValues(col),
+      };
+    }
+    return out;
+  }, [visibleColumns, getColumnSampleValues]);
+
+  const { gridTemplateColumns, handleResizeStart, autoFitColumn } = useGridResize(
+    visibleColumns,
+    "unified_journal",
+    containerRef,
+    contentByColumn,
+    settings.fontSize,
+  );
+
+  const groupedData = useMemo(() => {
+    const groups: JournalTableRow[][] = [];
+    let group: JournalTableRow[] = [];
+    for (const row of sortedData) {
+      if (row.isFirstInGroup && group.length > 0) {
+        groups.push(group);
+        group = [];
+      }
+      group.push(row);
+    }
+    if (group.length > 0) {
+      groups.push(group);
+    }
+    return groups;
+  }, [sortedData]);
+
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
-    const baseDebitTotal = tableData.reduce((s, e) => s + e.debit_base, 0);
-    const baseCreditTotal = tableData.reduce((s, e) => s + e.credit_base, 0);
+    const baseDebitTotal = tableData.reduce((s, e) => s + (e.side === "debit" ? e.amount_base : 0), 0);
+    const baseCreditTotal = tableData.reduce((s, e) => s + (e.side === "credit" ? e.amount_base : 0), 0);
     const baseBalance = baseDebitTotal - baseCreditTotal;
     const baseSymbol = baseCurrency?.symbol || baseCurrency?.code || "";
 
     return enrichedColumns.map((col) => {
       const id = col.id;
       if (id === "entry_number") {
-        return { id: "count", columnId: "entry_number", label: "", value: `${sortedData.length} قيد`, className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: "entry_number", label: "", value: `${tableData.length} سطر`, className: "text-slate-500 font-medium" };
       }
       if (id === "journal_type" || id === "description") {
         return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
       }
 
-      if (id === "credit_account") {
+      if (id === "account") {
         const sign = baseBalance > 0 ? "مدين" : baseBalance < 0 ? "دائن" : "متزن";
         const label = `الرصيد / ${sign} (${baseSymbol})`;
         const value = formatAmount(Math.abs(baseBalance), { currencyCode: baseCurrency?.code || "" });
@@ -196,7 +280,7 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
           : "text-slate-500 font-bold";
         return { id: `${id}_balance`, columnId: id, label, value, className: valueClass };
       }
-      if (id === "debit_account") {
+      if (id === "entry_date") {
         const sec = sortedCurrencies.length > 1 ? sortedCurrencies[1] : null;
         const curr = sec || baseCurrency;
         const code = curr?.code || "";
@@ -215,14 +299,14 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
       const debitMatch = id.match(/^debit_(.+)$/);
       if (debitMatch) {
         const currCode = debitMatch[1];
-        const isBase = isBaseCurrency(currCode);
+        const isB = isBaseCurrency(currCode);
         const label = col.label || `عليه / مدين (${currCode})`;
         return {
           id: `${id}_total`,
           columnId: id,
           label,
           value: baseDebitTotal > 0 ? formatAmount(baseDebitTotal, { currencyCode: currCode }) : "—",
-          className: isBase
+          className: isB
             ? "text-blue-700 font-black"
             : "text-blue-300 font-extrabold"
         };
@@ -231,14 +315,14 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
       const creditMatch = id.match(/^credit_(.+)$/);
       if (creditMatch) {
         const currCode = creditMatch[1];
-        const isBase = isBaseCurrency(currCode);
+        const isB = isBaseCurrency(currCode);
         const label = col.label || `له / دائن (${currCode})`;
         return {
           id: `${id}_total`,
           columnId: id,
           label,
           value: baseCreditTotal > 0 ? formatAmount(baseCreditTotal, { currencyCode: currCode }) : "—",
-          className: isBase
+          className: isB
             ? "text-emerald-700 font-black"
             : "text-emerald-300 font-extrabold"
         };
@@ -246,7 +330,151 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
 
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [tableData, sortedData, formatAmount, enrichedColumns, isBaseCurrency, baseCurrency, sortedCurrencies]);
+  }, [tableData, formatAmount, enrichedColumns, isBaseCurrency, baseCurrency, sortedCurrencies]);
+
+  const visibleColumnIds = useMemo(
+    () => new Set(visibleColumns.map(c => c.id)),
+    [visibleColumns],
+  );
+
+  const filteredSummary = useMemo(() => {
+    if (!summaryColumns?.length) return undefined;
+    return summaryColumns.filter(s => {
+      if (!s.columnId) return true;
+      return visibleColumnIds.has(s.columnId);
+    });
+  }, [summaryColumns, visibleColumnIds]);
+
+  const showSummary = !!(
+    filteredSummary?.length && settings.showSummary && groupedData.length > 0
+  );
+
+  const cellBorderClass = getLeftBorderClass(settings.borderStyle);
+
+  const getCellStyle = useCallback((): React.CSSProperties => ({
+    minWidth: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    textAlign: "center",
+    fontSize: `${settings.fontSize}px`,
+    fontFamily: settings.fontFamily,
+  }), [settings.fontSize, settings.fontFamily]);
+
+  const handleHeaderCellClick = useCallback((colId: string) => {
+    if (["entry_number", "journal_type", "account", "created_at"].includes(colId)) {
+      handleSort(colId as SortField);
+    }
+  }, [handleSort]);
+
+  const renderBody = () => {
+    if (loading) {
+      return Array.from({ length: 5 }).map((_, idx) => (
+        <div
+          key={`skeleton-${idx}`}
+          className={cn("animate-pulse", getRowBorderClass(settings.borderStyle))}
+          style={{ display: "grid", gridTemplateColumns }}
+          dir="rtl"
+        >
+          {visibleColumns.map(col => (
+            <div
+              key={col.id}
+              className={cn(getDensityPadding(), cellBorderClass)}
+              style={{ minWidth: 0 }}
+            >
+              <Skeleton
+                className={cn(
+                  "h-3.5 rounded",
+                  col.align === "left"
+                    ? "mr-auto ml-0 w-3/4"
+                    : col.align === "center"
+                    ? "mx-auto w-1/2"
+                    : "ml-auto mr-0 w-3/4",
+                )}
+              />
+            </div>
+          ))}
+        </div>
+      ));
+    }
+
+    if (groupedData.length === 0) {
+      return <EmptyState message="لا توجد قيود يومية مسجلة" />;
+    }
+
+    return groupedData.map((group, groupIdx) => {
+      const first = group[0];
+      const rowCount = group.length;
+
+      return (
+        <div
+          key={`group-${first.group_key}-${groupIdx}`}
+          dir="rtl"
+          className={cn(
+            "transition-all duration-75",
+            getRowBorderClass(settings.borderStyle),
+            getRowBackgroundClass(false, groupIdx, settings.zebraRows, settings.rowHoverEffect),
+          )}
+          style={{
+            display: "grid",
+            gridTemplateColumns,
+            gridTemplateRows: `repeat(${rowCount}, auto)`,
+          }}
+        >
+          {visibleColumns.flatMap((col, colIdx) => {
+            const columnPosition = colIdx + 1;
+            const isShared = SHARED_COLUMN_IDS.has(col.id);
+
+            if (isShared) {
+              const value = typeof col.accessor === "function"
+                ? col.accessor(first, 0)
+                : (first[col.accessor as keyof JournalTableRow] as ReactNode);
+
+              return (
+                <GroupedEntrySharedCell
+                  key={`${col.id}`}
+                  rowCount={rowCount}
+                  columnPosition={columnPosition}
+                  densityClassName={getDensityPadding()}
+                  borderClassName={cellBorderClass}
+                  className={col.className}
+                  fontSize={settings.fontSize}
+                  fontFamily={settings.fontFamily}
+                >
+                  {value}
+                </GroupedEntrySharedCell>
+              );
+            }
+
+            return group.map((row, rowIdx) => {
+              const val = typeof col.accessor === "function"
+                ? col.accessor(row, 0)
+                : (row[col.accessor as keyof JournalTableRow] as ReactNode);
+
+              return (
+                <div
+                  key={`${col.id}-${rowIdx}`}
+                  style={{
+                    gridRow: rowIdx + 1,
+                    gridColumn: String(columnPosition),
+                    ...getCellStyle(),
+                  }}
+                  className={cn(
+                    getDensityPadding(),
+                    cellBorderClass,
+                    "text-slate-600",
+                    col.className,
+                  )}
+                >
+                  {val || ""}
+                </div>
+              );
+            });
+          })}
+        </div>
+      );
+    });
+  };
 
   return (
     <TableShell
@@ -260,22 +488,40 @@ export function JournalTable({ entries, loading, search, onSearchChange, filters
       showToolbar={true}
       filterBar={filterBar}
     >
-      <UnifiedTable
-        data={sortedData}
-        columns={enrichedColumns}
-        loading={loading}
-        enableResize
-        tableId="journal"
-        sortField={sortField}
-        sortDirection={sortDirection}
-        onHeaderClick={(col) => {
-          if (col.id === "entry_number" || col.id === "journal_type" || col.id === "credit_account" || col.id === "debit_account" || col.id === "created_at") {
-            handleSort(col.id as SortField);
-          }
-        }}
-        emptyMessage="لا توجد قيود يومية مسجلة"
-        summary={summaryColumns}
-      />
+      <div
+        ref={containerRef}
+        className="flex-1 overflow-auto relative custom-scrollbar"
+        style={{ scrollbarGutter: "stable" }}
+      >
+        <GridHeader
+          columns={gridHeaderColumns}
+          getDensityPadding={getDensityPadding}
+          fontSize={settings.fontSize}
+          fontFamily={settings.fontFamily}
+          headerColor={settings.headerColor}
+          stickyHeader={settings.stickyHeader}
+          borderStyle={settings.borderStyle}
+          enableResize
+          onHeaderCellClick={handleHeaderCellClick}
+          onResizeStart={handleResizeStart}
+          onAutoFit={autoFitColumn}
+          gridTemplate={gridTemplateColumns}
+          sortField={sortField}
+          sortDirection={sortDirection}
+        />
+
+        {renderBody()}
+      </div>
+
+      {showSummary && (
+        <div style={{ paddingInlineEnd: 8 }}>
+          <TableSummary
+            columns={filteredSummary!}
+            gridTemplate={gridTemplateColumns}
+            asPageFooter
+          />
+        </div>
+      )}
     </TableShell>
   );
 }

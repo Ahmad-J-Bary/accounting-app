@@ -1,51 +1,26 @@
 import type { JournalEntryDto } from "@erp/shared-types";
 
-/** Map each journal type to its focal account code prefix */
-export const FOCUS_PREFIX: Record<string, string> = {
-  CashJournal:          "122",
-  CashSalesJournal:     "311",
-  CreditSalesJournal:   "312",
-  PurchaseJournal:      "41",
-  PurchaseCostsJournal: "41",
-  SalesReturnJournal:   "42",
-  PurchaseReturnJournal:"32",
-};
-
 const isOriginalAmount = (currencyCode?: string, fxRate?: string) => {
   const rate = parseFloat(fxRate || "1");
   return Boolean(currencyCode) && Math.abs(rate - 1) > Number.EPSILON;
 };
 
-export interface JournalRow {
+export interface JournalRowLine {
+  group_key: string;
   entry_number: string;
   journal_type_display: string;
   description: string;
   entry_date: string;
   created_at: string;
-  debit_original: number;
-  debit_base: number;
-  credit_original: number;
-  credit_base: number;
-  debit_account: string;
-  credit_account: string;
-  active_side: "debit" | "credit";
-  /** Original currency if all original-amount lines share the same non-base currency. */
+  account_name: string;
+  account_code?: string;
+  side: "debit" | "credit";
+  amount_base: number;
+  amount_original: number;
   currency?: string;
 }
 
-export function toJournalRow(
-  entry: JournalEntryDto,
-  journalType?: string,
-): JournalRow {
-  const prefix = journalType ? FOCUS_PREFIX[journalType] : null;
-
-  let dOriginal = 0;
-  let cOriginal = 0;
-  let dBase = 0;
-  let cBase = 0;
-  let dAcc = "-";
-  let cAcc = "-";
-  let activeSide: "debit" | "credit" = "debit";
+export function toJournalLines(entry: JournalEntryDto): JournalRowLine[] {
   let journalTypeDisplay = entry.journal_type_display;
 
   if (
@@ -67,228 +42,93 @@ export function toJournalRow(
     journalTypeDisplay = "سند دفع لعميل";
   }
 
-  if (prefix) {
-    const focal = entry.lines.filter((l) => l.account_code?.startsWith(prefix));
-    const other = entry.lines.filter(
-      (l) => !l.account_code?.startsWith(prefix),
-    );
-
-    for (const l of focal) {
-      const d = parseFloat(l.debit || "0");
-      const c = parseFloat(l.credit || "0");
-      const rate = parseFloat(l.fx_rate || "1");
-      dBase += l.debit_base !== undefined ? parseFloat(l.debit_base) : (rate > 0 ? d / rate : d);
-      cBase += l.credit_base !== undefined ? parseFloat(l.credit_base) : (rate > 0 ? c / rate : c);
-      if (isOriginalAmount(l.currency, l.fx_rate)) {
-        dOriginal += d;
-        cOriginal += c;
-      }
-    }
-
-    activeSide = cOriginal > 0 || cBase > 0 ? "credit" : "debit";
-
-    if (activeSide === "credit") {
-      cAcc = focal.length ? focal[0].account_name || focal[0].account_id : cAcc;
-      dAcc = other.length ? other[0].account_name || other[0].account_id : dAcc;
-    } else {
-      dAcc = focal.length ? focal[0].account_name || focal[0].account_id : dAcc;
-      cAcc = other.length ? other[0].account_name || other[0].account_id : cAcc;
-    }
-  } else {
-    entry.lines.forEach((l) => {
-      const d = parseFloat(l.debit || "0");
-      const c = parseFloat(l.credit || "0");
-      const rate = parseFloat(l.fx_rate || "1");
-      dBase += l.debit_base !== undefined ? parseFloat(l.debit_base) : (rate > 0 ? d / rate : d);
-      cBase += l.credit_base !== undefined ? parseFloat(l.credit_base) : (rate > 0 ? c / rate : c);
-      if (isOriginalAmount(l.currency, l.fx_rate)) {
-        dOriginal += d;
-        cOriginal += c;
-      }
-    });
-
+  if (entry.journal_type === "GeneralJournal") {
     const debits = entry.lines.filter((l) => parseFloat(l.debit || "0") > 0);
     const credits = entry.lines.filter((l) => parseFloat(l.credit || "0") > 0);
-
-    if (debits.length > 0 || credits.length > 0) {
-      if (
-        (entry.journal_type === "PurchaseJournal" ||
-         entry.journal_type === "SalesReturnJournal") &&
-        credits.length > 1
-      ) {
-        // مرتجعات المبيعات: تفضيل حساب العميل (غير الصندوق)
-        const partnerLine = credits.find(
-          (l) => !l.account_code?.startsWith("122"),
-        );
-        cAcc = partnerLine
-          ? partnerLine.account_name || partnerLine.account_id
-          : credits[0].account_name || credits[0].account_id;
-      } else {
-        cAcc =
-          credits.length === 1
-            ? credits[0].account_name || credits[0].account_id
-            : credits.length > 1
-              ? "حسابات متعددة"
-              : "-";
-      }
-
-      if (
-        (entry.journal_type === "CashSalesJournal" ||
-          entry.journal_type === "CreditSalesJournal" ||
-          entry.journal_type === "PurchaseReturnJournal") &&
-        debits.length > 1
-      ) {
-        // مرتجعات المشتريات: تفضيل حساب المورد (غير الصندوق)
-        const partnerLine = debits.find(
-          (l) => !l.account_code?.startsWith("122"),
-        );
-        dAcc = partnerLine
-          ? partnerLine.account_name || partnerLine.account_id
-          : debits[0].account_name || debits[0].account_id;
-      } else {
-        dAcc =
-          debits.length === 1
-            ? debits[0].account_name || debits[0].account_id
-            : debits.length > 1
-              ? "حسابات متعددة"
-              : "-";
-      }
-    } else if (entry.lines.length >= 2) {
-      dAcc = entry.lines[0].account_name || entry.lines[0].account_id;
-      cAcc = entry.lines[1].account_name || entry.lines[1].account_id;
-    }
-
-    const cashLine = entry.lines.find((l) => l.account_code?.startsWith("122"));
-    if (
-      entry.journal_type === "CashSalesJournal" ||
-      entry.journal_type === "CreditSalesJournal"
-    ) {
-      activeSide = "credit";
-    } else if (
-      entry.journal_type === "PurchaseJournal" ||
-      entry.journal_type === "PurchaseCostsJournal"
-    ) {
-      activeSide = "debit";
-    } else if (
-      entry.journal_type === "SalesReturnJournal"
-    ) {
-      activeSide = "debit";
-    } else if (
-      entry.journal_type === "PurchaseReturnJournal"
-    ) {
-      activeSide = "credit";
-    } else if (
-      cashLine &&
-      (parseFloat(cashLine.credit || "0") > 0 ||
-        parseFloat(cashLine.debit || "0") > 0)
-    ) {
-      activeSide = parseFloat(cashLine.credit || "0") > 0 ? "credit" : "debit";
-    } else if ((entry.journal_type as string) === "DamagedJournal") {
-      activeSide = "debit";
-    } else if ((entry.journal_type as string) === "AdjustmentJournal") {
-      const gainLine = entry.lines.find(l =>
-        l.account_code?.startsWith("331") && parseFloat(l.credit || "0") > 0
-      );
-      activeSide = gainLine ? "credit" : "debit";
-    } else if (
-      entry.journal_type === "AccountOpeningBalance" ||
-      entry.journal_type === "MaterialOpeningBalance"
-    ) {
-      const oeLine = entry.lines.find(l => l.account_code === "53" || l.account_code === "51");
-      activeSide = oeLine && parseFloat(oeLine.credit || "0") > 0 ? "credit" : "debit";
-    } else if ((entry.journal_type as string) === "DiscountEarnedJournal") {
-      activeSide = "credit";
-    } else if ((entry.journal_type as string) === "DiscountGrantedJournal") {
-      activeSide = "debit";
-      // Swap accounts: المصدر = الخصوم الممنوحة (debit account), الوجهة = عميل 0 (credit account)
-      const tmp = dAcc;
-      dAcc = cAcc;
-      cAcc = tmp;
-    } else if (cOriginal > 0 || cBase > 0) {
-      activeSide = dOriginal > 0 || dBase > 0 ? "debit" : "credit";
-    }
-
-    // Handle GeneralJournal entries that are discount entries
-    // New entries: Dr has partner_id, Cr doesn't
-    // Old entries: neither has partner_id — detect by credit account code 332 or name containing "خصوم مكتسبة"
-    if (entry.journal_type === "GeneralJournal" && debits.length === 1 && credits.length === 1) {
+    if (debits.length === 1 && credits.length === 1) {
       const drLine = debits[0];
       const crLine = credits[0];
-      if ((drLine.partner_id && !crLine.partner_id) ||
-          crLine.account_code?.startsWith("332") ||
-          crLine.account_name?.includes("خصوم مكتسبة")) {
+      if (
+        (drLine.partner_id && !crLine.partner_id) ||
+        crLine.account_code?.startsWith("332") ||
+        crLine.account_name?.includes("خصوم مكتسبة")
+      ) {
         journalTypeDisplay = "حسم مكتسب";
-        activeSide = "credit";
-      } else if ((!drLine.partner_id && crLine.partner_id) ||
-                 drLine.account_code?.startsWith("47") ||
-                 drLine.account_name?.includes("خصوم ممنوحة")) {
+      } else if (
+        (!drLine.partner_id && crLine.partner_id) ||
+        drLine.account_code?.startsWith("47") ||
+        drLine.account_name?.includes("خصوم ممنوحة")
+      ) {
         journalTypeDisplay = "حسم ممنوح";
-        activeSide = "debit";
-        const tmp = dAcc;
-        dAcc = cAcc;
-        cAcc = tmp;
-      }
-    }
-
-    if (entry.journal_type === "MaterialOpeningBalance") {
-      const debits = entry.lines.filter((l) => parseFloat(l.debit || "0") > 0);
-      const credits = entry.lines.filter((l) => parseFloat(l.credit || "0") > 0);
-      if (debits.length > 0) {
-        const d = debits[0];
-        dAcc = d.account_code ? `${d.account_name}` : (d.account_name || "-");
-      }
-      if (credits.length > 0) {
-        const c = credits[0];
-        cAcc = c.account_code ? `${c.account_name}` : (c.account_name || "-");
       }
     }
   }
 
-  if (entry.journal_type === "PurchaseCostsJournal") {
-    dAcc = "المشتريات";
-    cAcc = "تكاليف إضافية للمشترات";
-    activeSide = "debit";
-  }
+  const lines: JournalRowLine[] = [];
 
-  if (entry.journal_type === "CashPayment" && entry.description?.includes("تكاليف إضافية")) {
-    dAcc = "تكاليف إضافية للمشتريات";
-    cAcc = "الصندوق (الخزينة)";
-    activeSide = "credit";
-  }
+  for (const l of entry.lines) {
+    const d = parseFloat(l.debit || "0");
+    const c = parseFloat(l.credit || "0");
+    const rate = parseFloat(l.fx_rate || "1");
 
-  if (activeSide === "debit") {
-    cOriginal = 0;
-    cBase = 0;
-  } else {
-    dOriginal = 0;
-    dBase = 0;
-  }
+    const debitBase =
+      l.debit_base !== undefined
+        ? parseFloat(l.debit_base)
+        : rate > 0
+          ? d / rate
+          : d;
+    const creditBase =
+      l.credit_base !== undefined
+        ? parseFloat(l.credit_base)
+        : rate > 0
+          ? c / rate
+          : c;
 
-  // Determine original currency (if all original-amount lines share one non-base currency)
-  const lineCurrencies = new Set<string>();
-  entry.lines.forEach(l => {
-    if (l.currency && isOriginalAmount(l.currency, l.fx_rate)) {
-      lineCurrencies.add(l.currency);
+    const isOrig = isOriginalAmount(l.currency, l.fx_rate);
+
+    if (d > 0) {
+      lines.push({
+        group_key: entry.id,
+        entry_number: entry.entry_number,
+        journal_type_display: journalTypeDisplay,
+        description: entry.description,
+        entry_date: entry.entry_date,
+        created_at: entry.created_at,
+        account_name: l.account_name || l.account_id,
+        account_code: l.account_code,
+        side: "debit",
+        amount_base: debitBase,
+        amount_original: isOrig ? d : 0,
+        currency: isOrig ? l.currency : undefined,
+      });
     }
+
+    if (c > 0) {
+      lines.push({
+        group_key: entry.id,
+        entry_number: entry.entry_number,
+        journal_type_display: journalTypeDisplay,
+        description: entry.description,
+        entry_date: entry.entry_date,
+        created_at: entry.created_at,
+        account_name: l.account_name || l.account_id,
+        account_code: l.account_code,
+        side: "credit",
+        amount_base: creditBase,
+        amount_original: isOrig ? c : 0,
+        currency: isOrig ? l.currency : undefined,
+      });
+    }
+  }
+
+  // Debits before credits within each group
+  lines.sort((a, b) => {
+    if (a.group_key !== b.group_key) return 0;
+    if (a.side !== b.side) return a.side === "debit" ? -1 : 1;
+    return 0;
   });
-  const origCurrencies = Array.from(lineCurrencies);
-  const currency = origCurrencies.length === 1 ? origCurrencies[0] : undefined;
 
-  return {
-    entry_number: entry.entry_number,
-    journal_type_display: journalTypeDisplay,
-    description: entry.description,
-    entry_date: entry.entry_date,
-    created_at: entry.created_at,
-    debit_original: dOriginal,
-    debit_base: dBase,
-    credit_original: cOriginal,
-    credit_base: cBase,
-    debit_account: dAcc,
-    credit_account: cAcc,
-    active_side: activeSide,
-    currency,
-  };
+  return lines;
 }
 
 export function aggregateEntryTotals(entries: JournalEntryDto[]) {
@@ -303,8 +143,18 @@ export function aggregateEntryTotals(entries: JournalEntryDto[]) {
       const d = parseFloat(l.debit || "0");
       const c = parseFloat(l.credit || "0");
       const rate = parseFloat(l.fx_rate || "1");
-      totals.debitBase += l.debit_base !== undefined ? parseFloat(l.debit_base) : (rate > 0 ? d / rate : d);
-      totals.creditBase += l.credit_base !== undefined ? parseFloat(l.credit_base) : (rate > 0 ? c / rate : c);
+      totals.debitBase +=
+        l.debit_base !== undefined
+          ? parseFloat(l.debit_base)
+          : rate > 0
+            ? d / rate
+            : d;
+      totals.creditBase +=
+        l.credit_base !== undefined
+          ? parseFloat(l.credit_base)
+          : rate > 0
+            ? c / rate
+            : c;
       if (isOriginalAmount(l.currency, l.fx_rate)) {
         totals.debitOriginal += d;
         totals.creditOriginal += c;
@@ -314,7 +164,7 @@ export function aggregateEntryTotals(entries: JournalEntryDto[]) {
   return totals;
 }
 
-export function aggregateTotals(rows: JournalRow[]) {
+export function aggregateTotals(rows: JournalRowLine[]) {
   const totals = {
     debitOriginal: 0,
     creditOriginal: 0,
@@ -322,10 +172,13 @@ export function aggregateTotals(rows: JournalRow[]) {
     creditBase: 0,
   };
   rows.forEach((r) => {
-    totals.debitOriginal += r.debit_original;
-    totals.creditOriginal += r.credit_original;
-    totals.debitBase += r.debit_base;
-    totals.creditBase += r.credit_base;
+    if (r.side === "debit") {
+      totals.debitBase += r.amount_base;
+      totals.debitOriginal += r.amount_original;
+    } else {
+      totals.creditBase += r.amount_base;
+      totals.creditOriginal += r.amount_original;
+    }
   });
   return totals;
 }

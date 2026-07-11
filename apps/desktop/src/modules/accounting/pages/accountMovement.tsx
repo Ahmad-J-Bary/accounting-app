@@ -20,7 +20,6 @@ import type {
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { AccountMovementTable } from "../components/AccountMovementTable";
 import { useDataTable } from "@shared/hooks";
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { toast } from "sonner";
 
 // Forms
@@ -29,10 +28,17 @@ import { SupplierPaymentForm } from "@modules/partners/components/SupplierPaymen
 import { ExpenseVoucherForm } from "@modules/accounting/components/ExpenseVoucherForm";
 import { PartnerDrawingsForm } from "@modules/partners/components/PartnerDrawingsForm";
 
+const OUTLINE_BUTTON_CLASS = "border-slate-200 text-slate-700 hover:bg-slate-50";
+const TOOLBAR_CLASS_BY_TYPE = {
+  partner: "bg-amber-600 hover:bg-amber-700 text-white",
+  customer: "bg-blue-600 hover:bg-blue-700 text-white",
+  supplier: "bg-emerald-600 hover:bg-emerald-700 text-white",
+  expense: "bg-red-600 hover:bg-red-700 text-white",
+} as const;
+
 export default function AccountMovement() {
   const { accountId } = useParams<{ accountId: string }>();
   const { openTab } = useTabs();
-  const { formatAmount, currencies, baseCurrency } = useCurrencyContext();
   const [ledger, setLedger] = useState<AccountLedgerDto | null>(null);
   
   // Entity Detection
@@ -119,25 +125,33 @@ export default function AccountMovement() {
     }
   };
 
+  const accountTitle = useMemo(
+    () => `حركة الحساب: ${ledger?.account_name || "..."}`,
+    [ledger?.account_name],
+  );
+
   const toolbarButtons = useMemo(() => {
     const commonExcel = (
-      <Button key="excel" variant="outline" size="sm" className="border-slate-200 text-slate-700 hover:bg-slate-50">
+      <Button key="excel" variant="outline" size="sm" className={OUTLINE_BUTTON_CLASS}>
         <Download className="w-4 h-4 ml-2 text-emerald-500" />
         تصدير Excel
       </Button>
     );
 
     const commonPrint = (
-      <Button key="print" variant="outline" size="sm" className="border-slate-200 text-slate-700 hover:bg-slate-50">
+      <Button key="print" variant="outline" size="sm" className={OUTLINE_BUTTON_CLASS}>
         <Printer className="w-4 h-4 ml-2 text-blue-500" />
         طباعة كشف حساب
       </Button>
     );
 
+    const linkedEntityId = linkedEntity?.id;
+    const linkedEntityName = linkedEntity?.name;
+
     switch (accountType) {
       case 'partner':
         return [
-          <Button key="drawings" size="sm" onClick={() => setIsVoucherOpen(true)} className="bg-amber-600 hover:bg-amber-700 text-white">
+          <Button key="drawings" size="sm" onClick={() => setIsVoucherOpen(true)} className={TOOLBAR_CLASS_BY_TYPE.partner}>
             <PlusCircle className="w-4 h-4 ml-2" />
             إنشاء سند مسحوبات جديد
           </Button>,
@@ -145,47 +159,63 @@ export default function AccountMovement() {
         ];
       case 'customer':
         return [
-          <Button key="receipt" size="sm" onClick={() => setIsVoucherOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
+          <Button key="receipt" size="sm" onClick={() => setIsVoucherOpen(true)} className={TOOLBAR_CLASS_BY_TYPE.customer}>
             <PlusCircle className="w-4 h-4 ml-2" />
             إنشاء سند قبض جديد
           </Button>,
           commonPrint,
-          <Button key="sales" variant="outline" size="sm" onClick={() => {
-            openTab({
-              id: `sales-cust-${linkedEntity.id}`,
-              title: `مبيعات ${linkedEntity.name}`,
-              path: `/sales-invoices?customerId=${linkedEntity.id}`,
-              closable: true
-            });
-          }} className="border-slate-200 text-slate-700 hover:bg-slate-50">
-            <ShoppingCart className="w-4 h-4 ml-2 text-blue-500" />
-            المبيعات للعميل {linkedEntity.name}
-          </Button>,
+          linkedEntityId && linkedEntityName ? (
+            <Button
+              key="sales"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                openTab({
+                  id: `sales-cust-${linkedEntityId}`,
+                  title: `مبيعات ${linkedEntityName}`,
+                  path: `/sales-invoices?customerId=${linkedEntityId}`,
+                  closable: true
+                });
+              }}
+              className={OUTLINE_BUTTON_CLASS}
+            >
+              <ShoppingCart className="w-4 h-4 ml-2 text-blue-500" />
+              المبيعات للعميل {linkedEntityName}
+            </Button>
+          ) : null,
           commonExcel
-        ];
+        ].filter(Boolean);
       case 'supplier':
         return [
-          <Button key="payment" size="sm" onClick={() => setIsVoucherOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+          <Button key="payment" size="sm" onClick={() => setIsVoucherOpen(true)} className={TOOLBAR_CLASS_BY_TYPE.supplier}>
             <PlusCircle className="w-4 h-4 ml-2" />
             إنشاء سند دفع جديد
           </Button>,
           commonPrint,
-          <Button key="purchases" variant="outline" size="sm" onClick={() => {
-            openTab({
-              id: `purchase-supp-${linkedEntity.id}`,
-              title: `مشتريات ${linkedEntity.name}`,
-              path: `/purchase-invoices?supplierId=${linkedEntity.id}`,
-              closable: true
-            });
-          }} className="border-slate-200 text-slate-700 hover:bg-slate-50">
-            <ShoppingCart className="w-4 h-4 ml-2 text-emerald-500" />
-            المشتريات للمورد {linkedEntity.name}
-          </Button>,
+          linkedEntityId && linkedEntityName ? (
+            <Button
+              key="purchases"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                openTab({
+                  id: `purchase-supp-${linkedEntityId}`,
+                  title: `مشتريات ${linkedEntityName}`,
+                  path: `/purchase-invoices?supplierId=${linkedEntityId}`,
+                  closable: true
+                });
+              }}
+              className={OUTLINE_BUTTON_CLASS}
+            >
+              <ShoppingCart className="w-4 h-4 ml-2 text-emerald-500" />
+              المشتريات للمورد {linkedEntityName}
+            </Button>
+          ) : null,
           commonExcel
-        ];
+        ].filter(Boolean);
       case 'expense':
         return [
-          <Button key="expense" size="sm" onClick={() => setIsVoucherOpen(true)} className="bg-red-600 hover:bg-red-700 text-white">
+          <Button key="expense" size="sm" onClick={() => setIsVoucherOpen(true)} className={TOOLBAR_CLASS_BY_TYPE.expense}>
             <PlusCircle className="w-4 h-4 ml-2" />
             إنشاء سند صرف جديد
           </Button>,
@@ -198,7 +228,7 @@ export default function AccountMovement() {
 
   return (
     <OperationalTableTemplate
-      title={`حركة اليومية للحساب: ${ledger?.account_name || "..."}`}
+      title={accountTitle}
       toolbar={
         <div className="flex items-center gap-2">
           {toolbarButtons}

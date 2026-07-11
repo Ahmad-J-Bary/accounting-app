@@ -11,7 +11,7 @@ import type { JournalEntryDto, JournalType } from "@erp/shared-types";
 import { cn } from "@shared/lib/utils";
 import { FileText, Calendar, Filter, ArrowUpRight, ArrowDownLeft, Printer, Download } from "lucide-react";
 import { JOURNAL_REPORT_TYPES } from "@modules/accounting/lib/journal-config";
-import { toJournalRow } from "@modules/accounting/lib/journal-view";
+import { toJournalLines } from "@modules/accounting/lib/journal-view";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { JournalTable } from "@modules/accounting/components/JournalTable";
 
@@ -48,8 +48,8 @@ export default function AccountingJournalsReport() {
   , [filters.journal_type]);
 
   const tableData = useMemo(
-    () => entries.map(e => toJournalRow(e, filters.journal_type)),
-    [entries, filters.journal_type]
+    () => entries.flatMap(e => toJournalLines(e)),
+    [entries]
   );
 
   const totals = useMemo(() => {
@@ -59,15 +59,23 @@ export default function AccountingJournalsReport() {
       t[curr.code] = { debit: 0, credit: 0 };
     });
     tableData.forEach(r => {
-      if (base && t[base.code]) {
-        t[base.code].debit += r.debit_base;
-        t[base.code].credit += r.credit_base;
+      if (r.side === "debit") {
+        if (base && t[base.code]) {
+          t[base.code].debit += r.amount_base;
+        }
+        currencies.filter(c => !c.is_base).forEach(curr => {
+          if (!t[curr.code]) return;
+          t[curr.code].debit += r.amount_original;
+        });
+      } else {
+        if (base && t[base.code]) {
+          t[base.code].credit += r.amount_base;
+        }
+        currencies.filter(c => !c.is_base).forEach(curr => {
+          if (!t[curr.code]) return;
+          t[curr.code].credit += r.amount_original;
+        });
       }
-      currencies.filter(c => !c.is_base).forEach(curr => {
-        if (!t[curr.code]) return;
-        t[curr.code].debit += r.debit_original;
-        t[curr.code].credit += r.credit_original;
-      });
     });
     return t;
   }, [tableData, currencies]);

@@ -63,7 +63,7 @@ export const TableShell: React.FC<TableShellProps> = ({
         </div>
       )}
 
-      <div className="flex-1 overflow-hidden relative">
+      <div className="flex flex-1 min-h-0 flex-col overflow-hidden relative">
         {children}
       </div>
 

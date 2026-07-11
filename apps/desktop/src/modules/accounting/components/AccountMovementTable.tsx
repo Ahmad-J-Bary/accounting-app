@@ -1,13 +1,20 @@
-import { useMemo } from "react";
-import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
-import { TableShell } from '@widgets/table-shell/TableShell';
-import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
+import { useMemo, useRef, useCallback, type ReactNode } from "react";
+import { GridHeader, type GridHeaderColumn } from "@widgets/table-shell/GridHeader";
+import type { UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
+import { TableSummary, type SummaryColumn } from "@widgets/table-shell/TableSummary";
+import { TableShell } from "@widgets/table-shell/TableShell";
+import { Skeleton } from "@shared/ui/skeleton";
+import { EmptyState } from "@widgets/table-shell/EmptyState";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
+import { useUnifiedColumns, useSortable, useBaseCurrencyColumns, useTableSettings, useGridResize } from "@shared/hooks";
+import { cn } from "@shared/lib/utils";
+import { getLeftBorderClass, getRowBorderClass, getRowBackgroundClass } from "@shared/lib/table-utils";
+import type { GridResizeContent } from "@shared/hooks/useGridResize";
 import type { AccountLedgerLineDto } from "@erp/shared-types";
-import { formatDateTime } from '@shared/lib/format';
+import { formatDateTime } from "@shared/lib/format";
+import { GroupedEntrySharedCell } from "./GroupedEntrySharedCell";
 
-type SortField = "entry_number" | "date" | "journal_type" | "credit_account" | "debit_account";
+type SortField = "entry_number" | "date" | "journal_type" | "account";
 
 interface AccountMovementTableProps {
   lines: AccountLedgerLineDto[];
@@ -15,6 +22,34 @@ interface AccountMovementTableProps {
   search: string;
   onSearchChange: (val: string) => void;
   accountName: string;
+}
+
+type EnrichedLine = AccountLedgerLineDto & {
+  typeLabel: string;
+  account_name: string;
+  side: "debit" | "credit";
+  amount_base: number;
+  amount_original: number;
+  group_key: string;
+};
+
+type LedgerTableRow = EnrichedLine & { isFirstInGroup: boolean };
+
+type EnrichedOriginalLine = AccountLedgerLineDto & {
+  typeLabel: string;
+};
+
+const SHARED_COLUMN_IDS = new Set(["entry_number", "journal_type", "description", "date"]);
+
+function getHeaderText<T>(col: UnifiedColumn<T>): string {
+  if (typeof col.header === "string") return col.header;
+  if (typeof col.label === "string") return col.label;
+  return col.id;
+}
+
+function getPrimitiveCellValue(value: ReactNode): string {
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  return "";
 }
 
 export function AccountMovementTable({
@@ -26,32 +61,28 @@ export function AccountMovementTable({
 }: AccountMovementTableProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
   const { isBaseCurrency } = useBaseCurrencyColumns();
+  const { settings, getDensityPadding } = useTableSettings();
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const sortedCurrencies = useMemo(() => {
     if (!baseCurrency) return currencies;
     return [baseCurrency, ...currencies.filter(c => c.code !== baseCurrency.code)];
   }, [currencies, baseCurrency]);
 
-  const tableData = useMemo(() => {
+  // إثراء قائمة الحركات الأصلية لاستخدامها في الفرز
+  const enrichedLines = useMemo(() => {
     return lines.map((line) => {
       const typeLabel = line.journal_type;
-
-      const debitBase = parseFloat(line.debit_base);
-      const debitOrig = parseFloat(line.debit_original);
-      const creditBase = parseFloat(line.credit_base);
-      const creditOrig = parseFloat(line.credit_original);
-      const isDebit = debitBase > 0 || debitOrig > 0;
-
       return {
         ...line,
         typeLabel,
-        source_account: isDebit ? line.opposite_account_name : accountName,
-        destination_account: isDebit ? accountName : line.opposite_account_name,
-      };
+      } satisfies EnrichedOriginalLine;
     });
-  }, [lines, accountName]);
+  }, [lines]);
 
-  const { sortedData, sortField, sortDirection, handleSort } = useSortable({
-    data: tableData,
+  // فرز الحركات الأصلية أولاً لضمان عدم انفصال أسطر الحركة الواحدة بعد التقسيم
+  const { sortedData: sortedOriginalLines, sortField, sortDirection, handleSort } = useSortable({
+    data: enrichedLines,
     defaultField: "entry_number" as SortField,
     defaultDirection: "asc",
     sortFn: (a, b, field, direction) => {
@@ -66,31 +97,74 @@ export function AccountMovementTable({
         case "journal_type":
           comparison = (a.typeLabel || "").localeCompare(b.typeLabel || "", "ar");
           break;
-        case "credit_account":
-          comparison = (a.source_account || "").localeCompare(b.source_account || "", "ar");
-          break;
-        case "debit_account":
-          comparison = (a.destination_account || "").localeCompare(b.destination_account || "", "ar");
+        case "account":
+          comparison = (a.opposite_account_name || "").localeCompare(b.opposite_account_name || "", "ar");
           break;
       }
       return direction === "asc" ? comparison : -comparison;
     }
   });
 
-  const allColumns = useMemo<UnifiedColumn<typeof tableData[0]>[]>(() => {
-    const cols: UnifiedColumn<typeof tableData[0]>[] = [
+  // تقسيم كل حركة أصلية مفروزة إلى سطرين: مدين ودائن
+  const tableData = useMemo(() => {
+    const rows: EnrichedLine[] = [];
+    sortedOriginalLines.forEach((line, idx) => {
+      const debitBase = parseFloat(line.debit_base || "0");
+      const creditBase = parseFloat(line.credit_base || "0");
+      const isDebit = debitBase > 0 || parseFloat(line.debit_original || "0") > 0;
+
+      const amtBase = debitBase > 0 ? debitBase : creditBase;
+      const amtOrig = parseFloat(line.debit_original || "0") > 0
+        ? parseFloat(line.debit_original || "0")
+        : parseFloat(line.credit_original || "0");
+
+      const groupKey = `${line.journal_id || idx}-${line.entry_number}-${idx}`;
+
+      // سطر المدين (Debit)
+      rows.push({
+        ...line,
+        account_name: isDebit ? accountName : line.opposite_account_name,
+        side: "debit",
+        amount_base: amtBase,
+        amount_original: amtOrig,
+        group_key: groupKey,
+      });
+
+      // سطر الدائن (Credit)
+      rows.push({
+        ...line,
+        account_name: isDebit ? line.opposite_account_name : accountName,
+        side: "credit",
+        amount_base: amtBase,
+        amount_original: amtOrig,
+        group_key: groupKey,
+      });
+    });
+
+    return rows.map((row, idx) => ({
+      ...row,
+      isFirstInGroup: idx % 2 === 0,
+    })) as LedgerTableRow[];
+  }, [sortedOriginalLines, accountName]);
+
+  const allColumns = useMemo<UnifiedColumn<LedgerTableRow>[]>(() => {
+    const cols: UnifiedColumn<LedgerTableRow>[] = [
       {
         id: "entry_number",
         header: "رقم القيد",
         label: "رقم القيد",
-        accessor: (l) => l.entry_number,
+        accessor: (r) => r.isFirstInGroup ? r.entry_number : "",
         className: "font-black text-slate-900 text-center"
       },
       {
         id: "journal_type",
         header: "نوع الحركة",
         label: "نوع الحركة",
-        accessor: (l) => <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">{l.typeLabel}</span>,
+        accessor: (r) => r.isFirstInGroup ? (
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">
+            {r.typeLabel}
+          </span>
+        ) : "",
       },
     ];
 
@@ -101,9 +175,9 @@ export function AccountMovementTable({
         id: `debit_${curr.code}`,
         header: `عليه / مدين (${symbol})`,
         label: `عليه / مدين (${symbol})`,
-        accessor: (l) => {
-          const baseVal = parseFloat(l.debit_base);
-          return baseVal > 0 ? formatAmount(baseVal, { currencyCode: curr.code }) : "";
+        accessor: (r) => {
+          if (r.side !== "debit") return "";
+          return r.amount_base > 0 ? formatAmount(r.amount_base, { currencyCode: curr.code }) : "";
         },
         className: isBase
           ? "tabular-nums font-black text-blue-700"
@@ -118,9 +192,9 @@ export function AccountMovementTable({
         id: `credit_${curr.code}`,
         header: `له / دائن (${symbol})`,
         label: `له / دائن (${symbol})`,
-        accessor: (l) => {
-          const baseVal = parseFloat(l.credit_base);
-          return baseVal > 0 ? formatAmount(baseVal, { currencyCode: curr.code }) : "";
+        accessor: (r) => {
+          if (r.side !== "credit") return "";
+          return r.amount_base > 0 ? formatAmount(r.amount_base, { currencyCode: curr.code }) : "";
         },
         className: isBase
           ? "tabular-nums font-black text-emerald-700"
@@ -133,36 +207,30 @@ export function AccountMovementTable({
         id: "description",
         header: "البيان",
         label: "البيان",
-        accessor: (l) => l.description,
+        accessor: (r) => r.isFirstInGroup ? r.description : "",
         className: "text-slate-700 font-bold"
       },
       {
-        id: "credit_account",
-        header: "الحساب الدائن / المصدر",
-        label: "الحساب الدائن / المصدر",
-        accessor: (l) => l.source_account,
-        className: "text-emerald-600 font-bold"
-      },
-      {
-        id: "debit_account",
-        header: "الحساب المدين / الوجهة",
-        label: "الحساب المدين / الوجهة",
-        accessor: (l) => l.destination_account,
-        className: "text-blue-600 font-bold"
+        id: "account",
+        header: "الحساب",
+        label: "الحساب",
+        accessor: (r) => (
+          <span className={r.side === "debit" ? "text-blue-600 font-bold" : "text-emerald-600 font-bold"}>
+            {r.account_name}
+          </span>
+        ),
       },
       {
         id: "date",
         header: "التاريخ",
         label: "التاريخ",
-        accessor: (l) => formatDateTime(l.date),
+        accessor: (r) => r.isFirstInGroup ? formatDateTime(r.date) : "",
         className: "text-slate-500 tabular-nums"
       },
     );
     return cols;
   }, [sortedCurrencies, formatAmount, isBaseCurrency]);
 
-  // Default visible: only base currency's debit/credit columns are shown,
-  // plus the credit/debit account columns by default.
   const defaultVisible = useMemo(() => {
     const def: string[] = ["entry_number", "journal_type"];
     sortedCurrencies.forEach(curr => {
@@ -175,7 +243,7 @@ export function AccountMovementTable({
         def.push(`credit_${curr.code}`);
       }
     });
-    def.push("description", "credit_account", "debit_account", "date");
+    def.push("description", "account", "date");
     return def;
   }, [sortedCurrencies, isBaseCurrency]);
 
@@ -185,12 +253,68 @@ export function AccountMovementTable({
     defaultVisible,
   });
 
+  const visibleColumns = useMemo(
+    () => enrichedColumns.filter(c => c.visible !== false),
+    [enrichedColumns],
+  );
+
+  const gridHeaderColumns = useMemo<GridHeaderColumn[]>(
+    () => visibleColumns.map(col => ({
+      id: col.id,
+      header: col.header,
+      label: col.label || getHeaderText(col),
+      align: col.align,
+    })),
+    [visibleColumns],
+  );
+
+  const getColumnSampleValues = useCallback(
+    (col: UnifiedColumn<LedgerTableRow>): string[] =>
+      tableData
+        .slice(0, 30)
+        .map((row, idx) =>
+          typeof col.accessor === "function"
+            ? getPrimitiveCellValue(col.accessor(row, idx))
+            : getPrimitiveCellValue(row[col.accessor as keyof LedgerTableRow] as ReactNode),
+        )
+        .filter(Boolean),
+    [tableData],
+  );
+
+  const contentByColumn = useMemo(() => {
+    const out: Record<string, GridResizeContent> = {};
+    for (const col of visibleColumns) {
+      out[col.id] = {
+        headerText: getHeaderText(col),
+        sampleValues: getColumnSampleValues(col),
+      };
+    }
+    return out;
+  }, [visibleColumns, getColumnSampleValues]);
+
+  const { gridTemplateColumns, handleResizeStart, autoFitColumn } = useGridResize(
+    visibleColumns,
+    "account-movement-grid",
+    containerRef,
+    contentByColumn,
+    settings.fontSize,
+  );
+
+  const groupedData = useMemo(() => {
+    const groups: LedgerTableRow[][] = [];
+    for (let i = 0; i < tableData.length; i += 2) {
+      groups.push([tableData[i], tableData[i + 1]]);
+    }
+    return groups;
+  }, [tableData]);
+
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
-    const baseDebitTotal = tableData.reduce(
+    // حساب الإجماليات من البيانات الأصلية لمنع تضاعف المبالغ بسبب التقسيم
+    const baseDebitTotal = lines.reduce(
       (s, l) => s + parseFloat(l.debit_base || "0"),
       0,
     );
-    const baseCreditTotal = tableData.reduce(
+    const baseCreditTotal = lines.reduce(
       (s, l) => s + parseFloat(l.credit_base || "0"),
       0,
     );
@@ -200,13 +324,13 @@ export function AccountMovementTable({
     return enrichedColumns.map((col) => {
       const id = col.id;
       if (id === "entry_number") {
-        return { id: "count", columnId: "entry_number", label: "", value: `${sortedData.length} حركة`, className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: "entry_number", label: "", value: `${lines.length} حركة`, className: "text-slate-500 font-medium" };
       }
       if (id === "journal_type" || id === "description") {
         return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
       }
 
-      if (id === "credit_account") {
+      if (id === "account") {
         const sign = baseBalance > 0 ? "مدين" : baseBalance < 0 ? "دائن" : "متزن";
         const label = `الرصيد / ${sign} (${baseSymbol})`;
         const value = formatAmount(Math.abs(baseBalance), { currencyCode: baseCurrency?.code || "" });
@@ -217,7 +341,7 @@ export function AccountMovementTable({
           : "text-slate-500 font-bold";
         return { id: `${id}_balance`, columnId: id, label, value, className: valueClass };
       }
-      if (id === "debit_account") {
+      if (id === "date") {
         const sec = sortedCurrencies.length > 1 ? sortedCurrencies[1] : null;
         const curr = sec || baseCurrency;
         const code = curr?.code || "";
@@ -236,14 +360,14 @@ export function AccountMovementTable({
       const debitMatch = id.match(/^debit_(.+)$/);
       if (debitMatch) {
         const currCode = debitMatch[1];
-        const isBase = isBaseCurrency(currCode);
+        const isB = isBaseCurrency(currCode);
         const label = col.label || `عليه / مدين (${currCode})`;
         return {
           id: `${id}_total`,
           columnId: id,
           label,
           value: baseDebitTotal > 0 ? formatAmount(baseDebitTotal, { currencyCode: currCode }) : "—",
-          className: isBase
+          className: isB
             ? "text-blue-700 font-black"
             : "text-blue-300 font-extrabold"
         };
@@ -252,14 +376,14 @@ export function AccountMovementTable({
       const creditMatch = id.match(/^credit_(.+)$/);
       if (creditMatch) {
         const currCode = creditMatch[1];
-        const isBase = isBaseCurrency(currCode);
+        const isB = isBaseCurrency(currCode);
         const label = col.label || `له / دائن (${currCode})`;
         return {
           id: `${id}_total`,
           columnId: id,
           label,
           value: baseCreditTotal > 0 ? formatAmount(baseCreditTotal, { currencyCode: currCode }) : "—",
-          className: isBase
+          className: isB
             ? "text-emerald-700 font-black"
             : "text-emerald-300 font-extrabold"
         };
@@ -267,7 +391,151 @@ export function AccountMovementTable({
 
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [tableData, sortedData, formatAmount, enrichedColumns, isBaseCurrency, baseCurrency, sortedCurrencies]);
+  }, [lines, formatAmount, enrichedColumns, isBaseCurrency, baseCurrency, sortedCurrencies]);
+
+  const visibleColumnIds = useMemo(
+    () => new Set(visibleColumns.map(c => c.id)),
+    [visibleColumns],
+  );
+
+  const filteredSummary = useMemo(() => {
+    if (!summaryColumns?.length) return undefined;
+    return summaryColumns.filter(s => {
+      if (!s.columnId) return true;
+      return visibleColumnIds.has(s.columnId);
+    });
+  }, [summaryColumns, visibleColumnIds]);
+
+  const showSummary = !!(
+    filteredSummary?.length && settings.showSummary && groupedData.length > 0
+  );
+
+  const cellBorderClass = getLeftBorderClass(settings.borderStyle);
+
+  const getCellStyle = useCallback((): React.CSSProperties => ({
+    minWidth: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    textAlign: "center",
+    fontSize: `${settings.fontSize}px`,
+    fontFamily: settings.fontFamily,
+  }), [settings.fontSize, settings.fontFamily]);
+
+  const handleHeaderCellClick = useCallback((colId: string) => {
+    if (["entry_number", "journal_type", "account", "date"].includes(colId)) {
+      handleSort(colId as SortField);
+    }
+  }, [handleSort]);
+
+  const renderBody = () => {
+    if (loading) {
+      return Array.from({ length: 5 }).map((_, idx) => (
+        <div
+          key={`skeleton-${idx}`}
+          className={cn("animate-pulse", getRowBorderClass(settings.borderStyle))}
+          style={{ display: "grid", gridTemplateColumns }}
+          dir="rtl"
+        >
+          {visibleColumns.map(col => (
+            <div
+              key={col.id}
+              className={cn(getDensityPadding(), cellBorderClass)}
+              style={{ minWidth: 0 }}
+            >
+              <Skeleton
+                className={cn(
+                  "h-3.5 rounded",
+                  col.align === "left"
+                    ? "mr-auto ml-0 w-3/4"
+                    : col.align === "center"
+                    ? "mx-auto w-1/2"
+                    : "ml-auto mr-0 w-3/4",
+                )}
+              />
+            </div>
+          ))}
+        </div>
+      ));
+    }
+
+    if (groupedData.length === 0) {
+      return <EmptyState message={search ? "لا توجد حركات تطابق معايير البحث" : "لا توجد حركات مسجلة لهذا الحساب"} />;
+    }
+
+    return groupedData.map((group, groupIdx) => {
+      const first = group[0];
+      const rowCount = group.length;
+
+      return (
+        <div
+          key={`group-${first.group_key}-${groupIdx}`}
+          dir="rtl"
+          className={cn(
+            "transition-all duration-75",
+            getRowBorderClass(settings.borderStyle),
+            getRowBackgroundClass(false, groupIdx, settings.zebraRows, settings.rowHoverEffect),
+          )}
+          style={{
+            display: "grid",
+            gridTemplateColumns,
+            gridTemplateRows: `repeat(${rowCount}, auto)`,
+          }}
+        >
+          {visibleColumns.flatMap((col, colIdx) => {
+            const columnPosition = colIdx + 1;
+            const isShared = SHARED_COLUMN_IDS.has(col.id);
+
+            if (isShared) {
+              const value = typeof col.accessor === "function"
+                ? col.accessor(first, 0)
+                : (first[col.accessor as keyof LedgerTableRow] as ReactNode);
+
+              return (
+                <GroupedEntrySharedCell
+                  key={col.id}
+                  rowCount={rowCount}
+                  columnPosition={columnPosition}
+                  densityClassName={getDensityPadding()}
+                  borderClassName={cellBorderClass}
+                  className={col.className}
+                  fontSize={settings.fontSize}
+                  fontFamily={settings.fontFamily}
+                >
+                  {value}
+                </GroupedEntrySharedCell>
+              );
+            }
+
+            return group.map((row, rowIdx) => {
+              const val = typeof col.accessor === "function"
+                ? col.accessor(row, 0)
+                : (row[col.accessor as keyof LedgerTableRow] as ReactNode);
+
+              return (
+                <div
+                  key={`${col.id}-${rowIdx}`}
+                  style={{
+                    gridRow: rowIdx + 1,
+                    gridColumn: String(columnPosition),
+                    ...getCellStyle(),
+                  }}
+                  className={cn(
+                    getDensityPadding(),
+                    cellBorderClass,
+                    "text-slate-600",
+                    col.className,
+                  )}
+                >
+                  {val || ""}
+                </div>
+              );
+            });
+          })}
+        </div>
+      );
+    });
+  };
 
   return (
     <TableShell
@@ -281,22 +549,40 @@ export function AccountMovementTable({
       columnsModified={isModified}
       showToolbar={true}
     >
-      <UnifiedTable
-        data={sortedData}
-        columns={enrichedColumns}
-        loading={loading}
-        enableResize
-        tableId="account-movement"
-        sortField={sortField}
-        sortDirection={sortDirection}
-        onHeaderClick={(col) => {
-          if (col.id === "entry_number" || col.id === "journal_type" || col.id === "credit_account" || col.id === "debit_account" || col.id === "date") {
-            handleSort(col.id as SortField);
-          }
-        }}
-        emptyMessage={search ? "لا توجد حركات تطابق معايير البحث" : "لا توجد حركات مسجلة لهذا الحساب"}
-        summary={summaryColumns}
-      />
+      <div
+        ref={containerRef}
+        className="flex-1 overflow-auto relative custom-scrollbar"
+        style={{ scrollbarGutter: "stable" }}
+      >
+        <GridHeader
+          columns={gridHeaderColumns}
+          getDensityPadding={getDensityPadding}
+          fontSize={settings.fontSize}
+          fontFamily={settings.fontFamily}
+          headerColor={settings.headerColor}
+          stickyHeader={settings.stickyHeader}
+          borderStyle={settings.borderStyle}
+          enableResize
+          onHeaderCellClick={handleHeaderCellClick}
+          onResizeStart={handleResizeStart}
+          onAutoFit={autoFitColumn}
+          gridTemplate={gridTemplateColumns}
+          sortField={sortField}
+          sortDirection={sortDirection}
+        />
+
+        {renderBody()}
+      </div>
+
+      {showSummary && (
+        <div style={{ paddingInlineEnd: 8 }}>
+          <TableSummary
+            columns={filteredSummary!}
+            gridTemplate={gridTemplateColumns}
+            asPageFooter
+          />
+        </div>
+      )}
     </TableShell>
   );
 }
