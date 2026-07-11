@@ -75,8 +75,8 @@ impl UpdateCustomerUseCase {
         // Create journal entry if balance changed
         if balance_change != Decimal::ZERO {
             if let Some(ref account_id) = &customer.account_id {
-                let adjustment_account = self.account_repo.find_by_code("222").await?
-                    .ok_or_else(|| AppError::NotFound("حساب رأس المال غير موجود: 222".into()))?;
+                let adjustment_account = self.account_repo.find_by_code("53").await?
+                    .ok_or_else(|| AppError::NotFound("حساب الرصيد الافتتاحي غير موجود: 53".into()))?;
 
                 let base_currency = Currency::new("SAR", "SAR", "ريال", "ر.س", 2, false);
                 let amount = MonetaryAmount::from_base(balance_change.abs(), base_currency.clone());

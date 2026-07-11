@@ -151,16 +151,16 @@ impl CreateAccountUseCase {
             );
             let zero_ma = MonetaryAmount::zero(currency.clone());
 
-            let cash_account = self.account_repo
-                .find_by_code("122")
+            let equity_account = self.account_repo
+                .find_by_code("53")
                 .await
                 .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?
-                .ok_or_else(|| AccountUseCaseError::Validation("حساب الصندوق غير موجود".into()))?;
+                .ok_or_else(|| AccountUseCaseError::Validation("حساب الرصيد الافتتاحي غير موجود: 53".into()))?;
 
             let mut lines = Vec::new();
 
             if total_opening > Decimal::ZERO {
-                // Debit the account, Credit cash
+                // Debit the account, Credit opening balance equity
                 lines.push(JournalLine::new(
                     account.id,
                     amount_ma.clone(),
@@ -168,15 +168,15 @@ impl CreateAccountUseCase {
                     format!("رصيد افتتاحي مدين للحساب: {}", account.name_ar),
                 ));
                 lines.push(JournalLine::new(
-                    cash_account.id,
+                    equity_account.id,
                     zero_ma,
                     amount_ma,
                     format!("رصيد افتتاحي للحساب: {}", account.name_ar),
                 ));
             } else {
-                // Debit cash, Credit the account
+                // Debit opening balance equity, Credit the account
                 lines.push(JournalLine::new(
-                    cash_account.id,
+                    equity_account.id,
                     amount_ma.clone(),
                     zero_ma.clone(),
                     format!("رصيد افتتاحي دائن للحساب: {}", account.name_ar),

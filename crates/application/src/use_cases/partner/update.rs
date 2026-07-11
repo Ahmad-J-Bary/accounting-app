@@ -122,8 +122,8 @@ impl UpdatePartnerUseCase {
         if total_local > Decimal::ZERO || total_original > Decimal::ZERO {
             let cash_account = self.account_repo.find_by_code("122").await?
                 .ok_or_else(|| AppError::NotFound("حساب الصندوق (الخزينة) (122) غير موجود".into()))?;
-            let _capital_parent = self.account_repo.find_by_code("222").await?
-                .ok_or_else(|| AppError::Invalid("حساب رأس المال العام (222) غير موجود".into()))?;
+            let _capital_parent = self.account_repo.find_by_code("51").await?
+                .ok_or_else(|| AppError::Invalid("حساب رأس المال العام (51) غير موجود".into()))?;
 
             let base_currency = self.currency_repo.get_base_currency().await?
                 .ok_or_else(|| AppError::Invalid("لم يتم تعيين العملة الأساسية".into()))?;

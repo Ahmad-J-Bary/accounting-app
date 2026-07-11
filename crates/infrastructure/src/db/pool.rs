@@ -125,6 +125,69 @@ async fn ensure_discount_granted_account(pool: &SqlitePool) {
     ).execute(pool).await;
 }
 
+/// Ensure the Equity section (5) and its sub-accounts (51 Capital, 52 Retained Earnings, 53 OBE) exist.
+/// Migration 128 deletes 224, and there is no proper root-level Equity section, so we create them here.
+async fn ensure_opening_balance_equity_account(pool: &SqlitePool) {
+    // 1. Ensure root-level "حقوق الملكية" (Equity) account (5) exists under root (0)
+    let root_equity: bool = sqlx::query_scalar("SELECT COUNT(*) > 0 FROM accounts WHERE code = '5'")
+        .fetch_one(pool)
+        .await
+        .unwrap_or(false);
+    if !root_equity {
+        let _ = sqlx::query(
+            "INSERT OR IGNORE INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at) SELECT '00000000-0000-0000-0000-000000000005', '5', 'حقوق الملكية', 'Equity', 'Equity', (SELECT id FROM accounts WHERE code = '0'), 'Summary', 1, '0', '0', 1, datetime('now'), datetime('now') WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '5')"
+        ).execute(pool).await;
+    }
+
+    // Cleanup: Remove old temporary "حقوق الملكية" (24) that was previously created under الخصوم
+    let _ = sqlx::query("DELETE FROM accounts WHERE code = '24'").execute(pool).await;
+
+    // 2. Rename existing "رأس المال" (Capital) account from code '222' → '51' under '5'
+    //    (the old 222 was created by migration 011 under الخصوم المتداولة 22)
+    let cap_51: bool = sqlx::query_scalar("SELECT COUNT(*) > 0 FROM accounts WHERE code = '51'")
+        .fetch_one(pool)
+        .await
+        .unwrap_or(false);
+    if !cap_51 {
+        // First try to rename existing 222 → 51
+        let _ = sqlx::query(
+            "UPDATE accounts SET code = '51', name_ar = 'رأس المال', name_en = 'Capital', parent_id = (SELECT id FROM accounts WHERE code = '5'), category = 'Summary', level = 2, updated_at = datetime('now') WHERE code = '222'"
+        ).execute(pool).await;
+        // If 222 didn't exist either, create 51 fresh
+        let _ = sqlx::query(
+            "INSERT OR IGNORE INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at) SELECT '00000000-0000-0000-0000-000000000051', '51', 'رأس المال', 'Capital', 'Equity', (SELECT id FROM accounts WHERE code = '5'), 'Summary', 2, '0', '0', 1, datetime('now'), datetime('now') WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '51')"
+        ).execute(pool).await;
+    }
+
+    // 3. Ensure "الأرباح المبقاة" (Retained Earnings) account (52) exists under '5'
+    let ret_earn: bool = sqlx::query_scalar("SELECT COUNT(*) > 0 FROM accounts WHERE code = '52'")
+        .fetch_one(pool)
+        .await
+        .unwrap_or(false);
+    if !ret_earn {
+        let _ = sqlx::query(
+            "INSERT OR IGNORE INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at) SELECT '00000000-0000-0000-0000-000000000052', '52', 'الأرباح المبقاة', 'Retained Earnings', 'Equity', (SELECT id FROM accounts WHERE code = '5'), 'Detail', 2, '0', '0', 1, datetime('now'), datetime('now') WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '52')"
+        ).execute(pool).await;
+    }
+
+    // 4. Rename existing "رصيد افتتاحي" (OBE) account from code '224' → '53' under '5'
+    //    (the old 224 was created by migration 036 and may have been deleted by 128)
+    let obe_53: bool = sqlx::query_scalar("SELECT COUNT(*) > 0 FROM accounts WHERE code = '53'")
+        .fetch_one(pool)
+        .await
+        .unwrap_or(false);
+    if !obe_53 {
+        // First try to rename existing 224 → 53
+        let _ = sqlx::query(
+            "UPDATE accounts SET code = '53', name_ar = 'رصيد افتتاحي', name_en = 'Opening Balance Equity', parent_id = (SELECT id FROM accounts WHERE code = '5'), account_type = 'Equity', category = 'Detail', level = 2, updated_at = datetime('now') WHERE code = '224'"
+        ).execute(pool).await;
+        // If 224 didn't exist either (e.g. deleted by migration 128), create 53 fresh
+        let _ = sqlx::query(
+            "INSERT OR IGNORE INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at) SELECT '00000000-0000-0000-0000-000000000053', '53', 'رصيد افتتاحي', 'Opening Balance Equity', 'Equity', (SELECT id FROM accounts WHERE code = '5'), 'Detail', 2, '0', '0', 1, datetime('now'), datetime('now') WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '53')"
+        ).execute(pool).await;
+    }
+}
+
 pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::migrate::MigrateError> {
     let migrator = sqlx::migrate!("./src/db/migrations");
 
@@ -134,6 +197,7 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::migrate::Migr
                 ensure_currency_columns(pool).await;
                 ensure_discount_earned_account(pool).await;
                 ensure_discount_granted_account(pool).await;
+                ensure_opening_balance_equity_account(pool).await;
                 return Ok(());
             }
             Err(sqlx::migrate::MigrateError::VersionMismatch(version)) => {

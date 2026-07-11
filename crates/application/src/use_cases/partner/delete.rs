@@ -63,7 +63,7 @@ impl DeletePartnerUseCase {
         if total_local > Decimal::ZERO || total_original > Decimal::ZERO {
             if let (Ok(Some(cash_account)), Ok(Some(_capital_parent))) = (
                 self.account_repo.find_by_code("122").await,
-                self.account_repo.find_by_code("222").await,
+                self.account_repo.find_by_code("51").await,
             ) {
                 let base_currency = self.currency_repo.get_base_currency().await?
                     .ok_or_else(|| AppError::Invalid("لم يتم تعيين العملة الأساسية".into()))?;

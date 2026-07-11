@@ -51,8 +51,8 @@ impl CreatePartnerUseCase {
         };
 
         // Get next partner code
-        let next_seq = self.account_repo.get_next_child_code("222").await?;
-        let numeric_part = if let Some(stripped) = next_seq.strip_prefix("222") {
+        let next_seq = self.account_repo.get_next_child_code("51").await?;
+        let numeric_part = if let Some(stripped) = next_seq.strip_prefix("51") {
             stripped
         } else {
             &next_seq
@@ -82,10 +82,10 @@ impl CreatePartnerUseCase {
 
         self.uow.begin().await?;
 
-        let capital_parent = self.account_repo.find_by_code("222").await?
-            .ok_or_else(|| AppError::Invalid("حساب رأس المال العام (222) غير موجود".into()))?;
+        let capital_parent = self.account_repo.find_by_code("51").await?
+            .ok_or_else(|| AppError::Invalid("حساب رأس المال العام (51) غير موجود".into()))?;
         
-        let cap_code = format!("222{}", &code[1..]); 
+        let cap_code = format!("51{}", &code[1..]); 
         let cap_account_id = domain::shared::ids::AccountId::new();
 
         let cap_account = Account {
@@ -172,8 +172,8 @@ impl CreatePartnerUseCase {
             let cash_account = self.account_repo.find_by_code("122").await?
                 .ok_or_else(|| AppError::NotFound("حساب الصندوق (الخزينة) (122) غير موجود".into()))?;
 
-            let _capital_parent = self.account_repo.find_by_code("222").await?
-                .ok_or_else(|| AppError::Invalid("حساب رأس المال العام (222) غير موجود".into()))?;
+            let _capital_parent = self.account_repo.find_by_code("51").await?
+                .ok_or_else(|| AppError::Invalid("حساب رأس المال العام (51) غير موجود".into()))?;
 
             let base_currency = self.currency_repo.get_base_currency().await?
                 .ok_or_else(|| AppError::Invalid("لم يتم تعيين العملة الأساسية".into()))?;

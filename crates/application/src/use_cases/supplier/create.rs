@@ -129,12 +129,12 @@ impl CreateSupplierUseCase {
 
         // --- Accounting Integration: Opening Balance ---
         let total_opening = credit - debit;
-        let cash_account = self
+        let equity_account = self
             .account_repo
-            .find_by_code("122")
+            .find_by_code("53")
             .await?
             .ok_or_else(|| {
-                AppError::NotFound("حساب الصندوق غير موجود".into())
+                AppError::NotFound("حساب الرصيد الافتتاحي غير موجود: 53".into())
             })?;
 
         let amount_ma = MonetaryAmount::new(
@@ -145,9 +145,9 @@ impl CreateSupplierUseCase {
 
         let mut lines = Vec::new();
         if total_opening > Decimal::ZERO {
-            // Cash Debit, Supplier Credit
+            // Opening Balance Equity Debit, Supplier Credit
             lines.push(JournalLine::new(
-                cash_account.id,
+                equity_account.id,
                 amount_ma.clone(),
                 zero_ma.clone(),
                 format!("رصيد افتتاحي للمورد: {}", supplier.name),
@@ -159,7 +159,7 @@ impl CreateSupplierUseCase {
                 format!("رصيد افتتاحي دائن للمورد: {}", supplier.name),
             ));
         } else {
-            // Supplier Debit, Cash Credit
+            // Supplier Debit, Opening Balance Equity Credit
             lines.push(JournalLine::new(
                 new_account_id,
                 amount_ma.clone(),
@@ -167,7 +167,7 @@ impl CreateSupplierUseCase {
                 format!("رصيد افتتاحي للمورد: {}", supplier.name),
             ));
             lines.push(JournalLine::new(
-                cash_account.id,
+                equity_account.id,
                 zero_ma,
                 amount_ma,
                 format!("رصيد افتتاحي مدين للمورد: {}", supplier.name),
