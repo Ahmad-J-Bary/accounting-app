@@ -533,17 +533,19 @@ export function FixedAssetForm({
             </Select>
           </FormField>
 
-          <FormField label="سعر الصرف">
-            <Input
-              type="number"
-              value={fxRate}
-              onChange={(e) => setFxRate(e.target.value)}
-              placeholder="1"
-              step="0.001"
-              min="0"
-              className="bg-white border-slate-200 h-9 text-xs"
-            />
-          </FormField>
+          {currencies.length > 1 && (
+            <FormField label="سعر الصرف">
+              <Input
+                type="number"
+                value={fxRate}
+                onChange={(e) => setFxRate(e.target.value)}
+                placeholder="1"
+                step="0.001"
+                min="0"
+                className="bg-white border-slate-200 h-9 text-xs"
+              />
+            </FormField>
+          )}
         </div>
       </SidebarSection>
 

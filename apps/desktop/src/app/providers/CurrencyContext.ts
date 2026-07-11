@@ -12,6 +12,7 @@ export type CurrencyContextValue = {
   displayCurrencyCode: string | null;
   displayMode: CurrencyDisplayMode;
   currencies: Currency[];
+  hasMultipleCurrencies: boolean;
   todayStatus: TodayRateStatus[];
   rateMap: Map<string, number>;
   setDisplayCurrencyCode: (code: string | null) => void;

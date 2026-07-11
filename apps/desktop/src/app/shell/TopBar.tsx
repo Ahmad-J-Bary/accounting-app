@@ -20,6 +20,7 @@ import { useTabs } from '@app/providers/TabContext';
 import { ICON_MAP } from './sidebarConfig';
 import type { SidebarGroupConfig, SidebarItemConfig } from '@shared/types/sidebar-config';
 import { UpdateBanner } from '@modules/core/components/UpdateBanner';
+import { useCurrencyContext } from '@app/providers/CurrencyContext';
 
 interface TopBarProps {
   onToggleSidebar?: () => void;
@@ -41,6 +42,7 @@ export function TopBar({
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const { openTab, updateMainTab, activeTabId } = useTabs();
+  const { hasMultipleCurrencies } = useCurrencyContext();
   const { settings: appearance } = useAppearance();
   const showSearch = appearance.show.search;
   const showNotifications = appearance.show.notifications;
@@ -242,15 +244,17 @@ export function TopBar({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Button
-        variant={isExchangeVisible ? "secondary" : "ghost"}
-        size="icon"
-        onClick={onToggleExchange}
-        title={isExchangeVisible ? "إخفاء سعر الصرف" : "إظهار سعر الصرف"}
-        className={cn(isExchangeVisible && "bg-blue-50 text-blue-600 hover:bg-blue-100")}
-      >
-        <DollarSign className="w-5 h-5" />
-      </Button>
+      {hasMultipleCurrencies && (
+        <Button
+          variant={isExchangeVisible ? "secondary" : "ghost"}
+          size="icon"
+          onClick={onToggleExchange}
+          title={isExchangeVisible ? "إخفاء سعر الصرف" : "إظهار سعر الصرف"}
+          className={cn(isExchangeVisible && "bg-blue-50 text-blue-600 hover:bg-blue-100")}
+        >
+          <DollarSign className="w-5 h-5" />
+        </Button>
+      )}
 
       {merged && showSearch && (
         <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)} title="بحث شامل">

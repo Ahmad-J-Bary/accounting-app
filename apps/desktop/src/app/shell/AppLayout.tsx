@@ -8,6 +8,7 @@ import { cn } from '@shared/lib/utils';
 import { useKeyboardShortcuts } from '@shared/hooks/useKeyboardShortcuts';
 import { useAppearance } from '@shared/hooks/useAppearance';
 import { FloatingExchangeRateWidget } from '@modules/core/components/FloatingExchangeRateWidget';
+import { useCurrencyContext } from '@app/providers/CurrencyContext';
 import { warehouseService } from '@modules/inventory/api/warehouseService';
 import { VerticalLayout } from './layouts/VerticalLayout';
 import { TopNavLayout } from './layouts/TopNavLayout';
@@ -26,6 +27,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
   const navigate = useNavigate();
   const { activeLayout, settings } = useAppearance();
   const location = useLocation();
+  const { hasMultipleCurrencies } = useCurrencyContext();
 
   useEffect(() => {
     warehouseService.ensureDefaultWarehouse().catch(() => {});
@@ -114,7 +116,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
             </div>
           </div>
         ))}
-        <FloatingExchangeRateWidget isVisible={isExchangeVisible} onClose={() => toggleExchange()} />
+        {hasMultipleCurrencies && <FloatingExchangeRateWidget isVisible={isExchangeVisible} onClose={() => toggleExchange()} />}
       </main>
     </>
   ), [tabs, isExchangeVisible, title, subtitle]);

@@ -62,6 +62,11 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     [currencies]
   );
 
+  const hasMultipleCurrencies = useMemo(
+    () => currencies.filter((c) => c.is_active !== false).length > 1,
+    [currencies]
+  );
+
   const setDisplayCurrencyCode = useCallback((code: string) => {
     localStorage.setItem("currency-display-code", code);
     setDisplayCurrencyCodeState(code);
@@ -202,6 +207,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       displayCurrencyCode,
       displayMode,
       currencies,
+      hasMultipleCurrencies,
       todayStatus,
       rateMap,
       setDisplayCurrencyCode,
@@ -223,6 +229,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       displayCurrencyCode,
       displayMode,
       currencies,
+      hasMultipleCurrencies,
       todayStatus,
       rateMap,
       setDisplayCurrencyCode,
