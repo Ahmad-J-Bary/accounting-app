@@ -110,6 +110,7 @@ export function useBalanceSheetReport(filters: IncomeStatementFilters) {
 
       let totalDrawings = 0;
 
+      const accountMap = new Map(accounts.map((a) => [a.id, a]));
       const ledgerTotals = new Map<string, { debit: number; credit: number }>();
 
       for (const account of accounts) {
@@ -130,6 +131,12 @@ export function useBalanceSheetReport(filters: IncomeStatementFilters) {
           const amt = parseFloat(line.debit_base || line.debit || "0") - parseFloat(line.credit_base || line.credit || "0");
           if (line.account_id === SYSTEM_ACCOUNT_IDS.DRAWINGS) {
             totalDrawings += Math.abs(amt);
+          }
+
+          const account = accountMap.get(line.account_id);
+          const isConsolidatedCapitalEntry = entry.source_id === "consolidated_capital";
+          if (isConsolidatedCapitalEntry && account?.code !== "122") {
+            continue;
           }
 
           const cur = ledgerTotals.get(line.account_id) || { debit: 0, credit: 0 };

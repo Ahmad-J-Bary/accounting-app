@@ -53,9 +53,8 @@ async function computeLedgerTotals(accounts: AccountDto[]): Promise<Map<string, 
   for (const entry of entries) {
     for (const line of entry.lines) {
       const account = accountMap.get(line.account_id);
-      const isConsolidatedCapitalParent =
-        entry.source_id === "consolidated_capital" && account?.code === "222";
-      if (isConsolidatedCapitalParent) {
+      const isConsolidatedCapitalEntry = entry.source_id === "consolidated_capital";
+      if (isConsolidatedCapitalEntry && account?.code !== "122") {
         continue;
       }
 

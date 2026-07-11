@@ -786,31 +786,28 @@ impl PostInvoiceUseCase {
 
         // --- Create separate CashReceipt entry for sales payments received ---
         // Only create when there's a customer (otherwise cash is already in the main entry)
-        if invoice.invoice_type == InvoiceType::Sales && amount_paid > Decimal::ZERO && invoice.customer_id.is_some() {
-            let mut receipt_lines = Vec::new();
-            receipt_lines.push(JournalLine::new(
-                cash_account.id,
-                MonetaryAmount::new(Money::new(amount_paid, doc_currency.clone()), fx_rate),
-                MonetaryAmount::zero(doc_currency.clone()),
-                format!("تحصيل نقدي - فاتورة مبيعات رقم {}", invoice.invoice_number)
-            ));
-
-            let mut cust_acc_for_receipt = None;
-            if let Some(cid) = &invoice.customer_id {
-                cust_acc_for_receipt = self.customer_repo.find_by_id(cid).await?
-                    .and_then(|c| c.account_id);
-            }
-
-            if let Some(cust_acc_id) = cust_acc_for_receipt {
+        if invoice.invoice_type == InvoiceType::Sales && amount_paid > Decimal::ZERO {
+            if let Some(customer_id) = &invoice.customer_id {
+                let mut receipt_lines = Vec::new();
                 receipt_lines.push(JournalLine::new(
-                    cust_acc_id,
-                    MonetaryAmount::zero(doc_currency.clone()),
+                    cash_account.id,
                     MonetaryAmount::new(Money::new(amount_paid, doc_currency.clone()), fx_rate),
+                    MonetaryAmount::zero(doc_currency.clone()),
                     format!("تحصيل نقدي - فاتورة مبيعات رقم {}", invoice.invoice_number)
-                ).with_partner(invoice.customer_id.as_ref().unwrap().0));
+                ));
 
-                if let Some(cid) = &invoice.customer_id {
-                    if let Some(mut customer) = self.customer_repo.find_by_id(cid).await? {
+                let cust_acc_for_receipt = self.customer_repo.find_by_id(customer_id).await?
+                    .and_then(|c| c.account_id);
+
+                if let Some(cust_acc_id) = cust_acc_for_receipt {
+                    receipt_lines.push(JournalLine::new(
+                        cust_acc_id,
+                        MonetaryAmount::zero(doc_currency.clone()),
+                        MonetaryAmount::new(Money::new(amount_paid, doc_currency.clone()), fx_rate),
+                        format!("تحصيل نقدي - فاتورة مبيعات رقم {}", invoice.invoice_number)
+                    ).with_partner(customer_id.0));
+
+                    if let Some(mut customer) = self.customer_repo.find_by_id(customer_id).await? {
                         let converted_paid = convert_to_partner_currency(
                             amount_paid,
                             &invoice.currency_code,
@@ -822,27 +819,27 @@ impl PostInvoiceUseCase {
                         customer.decrease_debit(converted_paid).map_err(|e| AppError::Invalid(e.to_string()))?;
                         self.customer_repo.update(&customer).await?;
                     }
+                } else {
+                    receipt_lines.push(JournalLine::new(
+                        cash_account.id,
+                        MonetaryAmount::zero(doc_currency.clone()),
+                        MonetaryAmount::new(Money::new(amount_paid, doc_currency.clone()), fx_rate),
+                        format!("تحصيل نقدي (زبون غير مسجل) - فاتورة مبيعات رقم {}", invoice.invoice_number)
+                    ));
                 }
-            } else {
-                receipt_lines.push(JournalLine::new(
-                    cash_account.id,
-                    MonetaryAmount::zero(doc_currency.clone()),
-                    MonetaryAmount::new(Money::new(amount_paid, doc_currency.clone()), fx_rate),
-                    format!("تحصيل نقدي (زبون غير مسجل) - فاتورة مبيعات رقم {}", invoice.invoice_number)
-                ));
+
+                let mut receipt_entry = JournalEntry::new(
+                    self.journal_repo.get_next_entry_number().await?,
+                    domain::accounting::JournalType::CashReceipt,
+                    receipt_lines,
+                    Utc::now(),
+                    format!("تحصيل نقدي بموجب فاتورة مبيعات رقم {}", invoice.invoice_number),
+                    Some(invoice.id.to_string()),
+                ).map_err(|e| AppError::Invalid(e.to_string()))?;
+
+                receipt_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
+                self.journal_repo.save(&receipt_entry).await?;
             }
-
-            let mut receipt_entry = JournalEntry::new(
-                self.journal_repo.get_next_entry_number().await?,
-                domain::accounting::JournalType::CashReceipt,
-                receipt_lines,
-                Utc::now(),
-                format!("تحصيل نقدي بموجب فاتورة مبيعات رقم {}", invoice.invoice_number),
-                Some(invoice.id.to_string()),
-            ).map_err(|e| AppError::Invalid(e.to_string()))?;
-
-            receipt_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-            self.journal_repo.save(&receipt_entry).await?;
         }
 
         // Entry: Discount Granted (DiscountGrantedJournal) — Dr 47, Cr Customer (if discount on sales)
