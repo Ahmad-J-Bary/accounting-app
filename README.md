@@ -1,4 +1,4 @@
-# المواكب (Almowakeb) - ERP Accounting & Inventory System
+# المُواكب (Almowakeb) - ERP Accounting & Inventory System
 
 نظام متكامل للمحاسبة والمخزون
 

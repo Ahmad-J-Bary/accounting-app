@@ -28,7 +28,7 @@ export function AboutSettings() {
               <Info className="w-8 h-8 text-blue-600" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-slate-800">المواكب</h3>
+              <h3 className="text-lg font-black text-slate-800">المُواكب</h3>
               <p className="text-sm text-slate-500">نظام إدارة المنشآت</p>
             </div>
           </div>

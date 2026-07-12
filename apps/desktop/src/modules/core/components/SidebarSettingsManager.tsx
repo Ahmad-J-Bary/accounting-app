@@ -465,7 +465,7 @@ export const SidebarSettingsManager: React.FC = () => {
                     <SidebarFieldGroup>
                       <div className="space-y-1">
                         <span className="text-[10px] text-slate-500 font-bold">اسم العميل *</span>
-                        <div className="h-9 border border-slate-200 rounded bg-white px-3 flex items-center text-xs text-slate-400">شركة المواكب التجارية</div>
+                        <div className="h-9 border border-slate-200 rounded bg-white px-3 flex items-center text-xs text-slate-400">شركة المُواكب التجارية</div>
                       </div>
                     </SidebarFieldGroup>
                   </SidebarSection>
@@ -480,7 +480,7 @@ export const SidebarSettingsManager: React.FC = () => {
                     <SidebarFieldGroup>
                       <div className="space-y-1">
                         <span className="text-[10px] text-slate-500 font-bold">اسم العميل *</span>
-                        <div className="h-9 border border-slate-200 rounded bg-white px-3 flex items-center text-xs text-slate-400">شركة المواكب التجارية</div>
+                        <div className="h-9 border border-slate-200 rounded bg-white px-3 flex items-center text-xs text-slate-400">شركة المُواكب التجارية</div>
                       </div>
                     </SidebarFieldGroup>
                   </SidebarSection>

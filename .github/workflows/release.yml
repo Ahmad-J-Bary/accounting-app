@@ -77,8 +77,8 @@ jobs:
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: "المواكب ${{ github.ref_name }}"
-          releaseBody: "الإصدار الرسمي لتطبيق المواكب"
+          releaseName: "المُواكب ${{ github.ref_name }}"
+          releaseBody: "الإصدار الرسمي لتطبيق المُواكب"
           releaseDraft: true
           prerelease: false
           includeUpdaterJson: true

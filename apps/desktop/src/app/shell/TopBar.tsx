@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { Bell, Search, Plus, Layers, LogOut, Settings as SettingsIcon, DollarSign, ChevronDown } from "lucide-react";
+import { Bell, Search, Plus, Building2, LogOut, Settings as SettingsIcon, DollarSign, ChevronDown } from "lucide-react";
 import { useAppearance } from '@shared/hooks/useAppearance';
 import { useSidebarLayout } from '@shared/hooks';
 import { cn } from '@shared/lib/utils';
@@ -21,6 +21,8 @@ import { ICON_MAP } from './sidebarConfig';
 import type { SidebarGroupConfig, SidebarItemConfig } from '@shared/types/sidebar-config';
 import { UpdateBanner } from '@modules/core/components/UpdateBanner';
 import { useCurrencyContext } from '@app/providers/CurrencyContext';
+import { settingsService } from '@modules/core/api/settingsService';
+import type { CompanySettings } from "@erp/shared-types";
 
 interface TopBarProps {
   onToggleSidebar?: () => void;
@@ -41,12 +43,26 @@ export function TopBar({
 }: TopBarProps) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [settings, setSettings] = useState<CompanySettings | null>(null);
   const { openTab, updateMainTab, activeTabId } = useTabs();
   const { hasMultipleCurrencies } = useCurrencyContext();
   const { settings: appearance } = useAppearance();
   const showSearch = appearance.show.search;
   const showNotifications = appearance.show.notifications;
   const isHorizontalDark = appearance.horizontalNavbarAppearance === 'dark';
+
+  const loadSettings = () => {
+    settingsService.getSettings()
+      .then(setSettings)
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadSettings();
+    const handler = () => loadSettings();
+    window.addEventListener("erp:settings-updated", handler);
+    return () => window.removeEventListener("erp:settings-updated", handler);
+  }, []);
 
   // ── Merged nav items ──
   const { layout } = useSidebarLayout();
@@ -226,7 +242,7 @@ export function TopBar({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button size="sm" className="gap-2 bg-primary hover:bg-primary/90">
+          <Button size="sm" className="gap-2 bg-primary hover:bg-primary/90 active:scale-95 transition-all">
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">إجراء سريع</span>
           </Button>
@@ -303,24 +319,26 @@ export function TopBar({
   return (
     <>
       <header className={cn(
-        "flex items-center px-4 md:px-6 gap-2 sticky top-0 z-30",
+        "flex items-center px-4 md:px-6 gap-2 sticky top-0 z-30 backdrop-blur-sm",
         isHorizontalDark
-          ? "bg-slate-900 text-slate-200 border-b border-slate-700/50"
-          : "bg-white border-b border-border",
-        merged ? (mergedSlim ? "h-10" : "h-16") : "h-16"
+          ? "bg-slate-900/95 text-slate-200 border-b border-slate-700/50 shadow-sm shadow-slate-900/10"
+          : "bg-white/95 border-b border-slate-200/70 shadow-sm shadow-slate-200/50",
+        merged ? (mergedSlim ? "h-10" : "h-14") : "h-14"
       )}>
-        {/* يسار: اللوغو */}
+        {/* يسار: اسم الشركة */}
         <div className={cn("flex items-center gap-2.5 shrink-0", merged && "flex-1 justify-start")}>
-          <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center shadow-sm shrink-0">
-            <Layers className="w-4 h-4 text-primary-foreground" />
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-sm ring-1 ring-primary/20 shrink-0">
+            <Building2 className="w-4 h-4 text-primary-foreground" />
           </div>
-          <div className="min-w-0 hidden sm:block">
-            <div className={cn("text-sm font-bold leading-tight truncate", isHorizontalDark ? "text-slate-200" : "text-slate-800")}>المُواكِب</div>
+          <div className="min-w-0 hidden sm:flex items-center gap-1.5">
+            <span className={cn("text-sm font-extrabold leading-tight", isHorizontalDark ? "text-slate-100" : "text-slate-800")}>المُواكِب</span>
+            <span className={cn("text-xs select-none", isHorizontalDark ? "text-slate-600" : "text-slate-300")}>|</span>
+            <span className={cn("text-sm font-semibold leading-tight truncate", isHorizontalDark ? "text-slate-400" : "text-slate-500")}>{settings?.company_name || "المنشأة"}</span>
           </div>
           {merged && <UpdateBanner variant="slim" dark={isHorizontalDark} />}
         </div>
 
-        {!merged && <UpdateBanner variant="stacked" dark={isHorizontalDark} />}
+          {!merged && <UpdateBanner variant="stacked" dark={isHorizontalDark} />}
         {merged ? (
           /* مدمج: عناصر التنقل في المنتصف */
           <div className="flex items-center gap-0.5 overflow-visible">
@@ -332,7 +350,7 @@ export function TopBar({
             {showSearch && (
               <Button
                 variant="outline"
-                className="w-full max-w-md justify-start text-muted-foreground"
+                className="w-full max-w-md justify-start text-muted-foreground hover:shadow-sm active:scale-[0.98] transition-all"
                 onClick={() => setSearchOpen(true)}
               >
                 <Search className="w-4 h-4 ml-2" />

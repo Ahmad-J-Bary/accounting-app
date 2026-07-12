@@ -91,6 +91,7 @@ export function UpdateBanner({ variant = 'stacked', dark = false }: UpdateBanner
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const downloadStartRef = useRef<number | null>(null);
+  const dropdownPanelRef = useRef<HTMLDivElement>(null);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
   const phase = checker.phase;
@@ -112,7 +113,10 @@ export function UpdateBanner({ variant = 'stacked', dark = false }: UpdateBanner
   useEffect(() => {
     if (!open) return;
     const handleClick = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) setOpen(false);
+      const isOutside =
+        panelRef.current && !panelRef.current.contains(e.target as Node) &&
+        dropdownPanelRef.current && !dropdownPanelRef.current.contains(e.target as Node);
+      if (isOutside) setOpen(false);
     };
     const handleScroll = () => setOpen(false);
     document.addEventListener("mousedown", handleClick);
@@ -210,6 +214,7 @@ export function UpdateBanner({ variant = 'stacked', dark = false }: UpdateBanner
       {/* Dropdown panel */}
       {open && createPortal(
         <div
+          ref={dropdownPanelRef}
           style={dropdownStyle}
           className={cn(
             "fixed z-[9999] w-80 rounded-xl shadow-2xl border overflow-hidden",
@@ -249,7 +254,7 @@ export function UpdateBanner({ variant = 'stacked', dark = false }: UpdateBanner
           {/* Body */}
           <div className="p-4 space-y-3">
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              {phase === "available" && "يتوفر إصدار أحدث من تطبيق المواكب. نوصي بالتحديث للحصول على آخر التحسينات والإصلاحات."}
+              {phase === "available" && "يتوفر إصدار أحدث من تطبيق المُواكب. نوصي بالتحديث للحصول على آخر التحسينات والإصلاحات."}
               {phase === "downloading" && `جارٍ التنزيل... ${pct}% من إجمالي الحزمة.`}
               {phase === "preparing" && "يتم تحضير ملفات التثبيت. الرجاء عدم إغلاق التطبيق."}
               {phase === "ready" && "اكتمل التنزيل. انقر على التثبيت لإعادة التشغيل وتطبيق التحديث."}
