@@ -17,7 +17,10 @@ import { ReturnFromMaterialPanel } from '@modules/inventory/components/ReturnFro
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { PartnerDetailPanel } from '@modules/partners/components/PartnerDetailPanel';
 import { PartnerFormPanel } from '@modules/partners/components/PartnerFormPanel';
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
+
+// ── Side panel mode type ─────────────────────────────────────────────────────────
+
+type PanelMode = 'form' | 'return' | 'payment' | 'detail' | null;
 
 // ── Entity-specific configuration ──────────────────────────────────────────────
 
@@ -61,7 +64,7 @@ const PARTY_CONFIGS: Record<string, PartyPageConfig> = {
     returnReturnType: "purchase",
     paymentConfig: (entity) => PAYMENT_CONFIGS.supplier(entity as SupplierDto),
     statementPath: (id, name) => ({
-      id: `statement-supplier-${id}`,
+      id: `statement-${id}`,
       title: `كشف: ${name}`,
       path: `/partners/supplier-statement/${id}`,
     }),
@@ -83,12 +86,6 @@ interface PartyPageProps {
 export default function PartyPage({ entityName }: PartyPageProps) {
   const cfg = PARTY_CONFIGS[entityName];
   const { openTab } = useTabs();
-  const { rateMap } = useCurrencyContext();
-  const [rateMapKey, setRateMapKey] = useState(0);
-
-  useEffect(() => {
-    setRateMapKey(k => k + 1);
-  }, [rateMap]);
 
   // ── CRUD via useEntityList ──
 
@@ -103,8 +100,6 @@ export default function PartyPage({ entityName }: PartyPageProps) {
     setSelectedId,
     selectedItem,
     editItem,
-    isFormOpen,
-    setIsFormOpen,
     saving,
     handleOpenAdd,
     handleOpenEdit,
@@ -115,6 +110,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
     fetchData: entityName === "customer"
       ? () => customerService.listCustomers()
       : () => supplierService.listSuppliers(),
+    manageFormState: false,
     saveData: async (payload) => {
       if (entityName === "customer") {
         const customerPayload = payload as CreateCustomerRequest | UpdateCustomerRequest;
@@ -140,9 +136,9 @@ export default function PartyPage({ entityName }: PartyPageProps) {
     searchFields: ["name", "phone", "code"],
   });
 
-  // ── Payment (receipt / payment voucher) ──
+  // ── Side panel state ──
 
-  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [panelMode, setPanelMode] = useState<PanelMode>(null);
   const [paymentSaving, setPaymentSaving] = useState(false);
 
   const handleSavePayment = async (payload: CreatePaymentRequest) => {
@@ -151,19 +147,13 @@ export default function PartyPage({ entityName }: PartyPageProps) {
       await paymentService.createPayment(payload);
       await refresh(true);
       toast.success(cfg.successMessage);
-      setIsPaymentOpen(false);
+      setPanelMode(null);
     } catch (error) {
       toast.error("فشل تسجيل السند: " + error);
     } finally {
       setPaymentSaving(false);
     }
   };
-
-  // ── Rate-map refresh ──
-
-  useEffect(() => {
-    if (rateMapKey > 0) refresh(true);
-  }, [rateMapKey, refresh]);
 
   const isLoading = loading || refreshing;
 
@@ -177,17 +167,42 @@ export default function PartyPage({ entityName }: PartyPageProps) {
     } catch (e) { console.error(e); }
   }, []);
 
+  const handleOpenAddWithAccounts = useCallback(async () => {
+    await loadAccounts();
+    handleOpenAdd();
+    setPanelMode('form');
+  }, [loadAccounts, handleOpenAdd]);
+
+  const handleOpenEditWithAccounts = useCallback(
+    async (item: CustomerDto | SupplierDto) => {
+      await loadAccounts();
+      handleOpenEdit(item);
+      setPanelMode('form');
+    },
+    [loadAccounts, handleOpenEdit],
+  );
+
+  const handlePartnerSave = useCallback(
+    async (
+      payload:
+        | CreateCustomerRequest
+        | UpdateCustomerRequest
+        | CreateSupplierRequest
+        | UpdateSupplierRequest,
+    ) => {
+      await handleSave(payload);
+      setPanelMode(null);
+    },
+    [handleSave],
+  );
+
   // ── Custom event listener ──
 
   useEffect(() => {
-    const handler = () => handleOpenAdd();
+    const handler = () => handleOpenAddWithAccounts();
     window.addEventListener(cfg.eventType, handler);
     return () => window.removeEventListener(cfg.eventType, handler);
-  }, [cfg.eventType, handleOpenAdd]);
-
-  // ── Return panel state ──
-
-  const [isReturnOpen, setIsReturnOpen] = useState(false);
+  }, [cfg.eventType, handleOpenAddWithAccounts]);
 
   // ── Toolbar ──
 
@@ -246,9 +261,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
         className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
         disabled={!selectedId}
         onClick={() => {
-          setIsReturnOpen(true);
-          setIsFormOpen(false);
-          setIsPaymentOpen(false);
+          setPanelMode('return');
         }}
       >
         <Undo2 className="w-4 h-4 ml-2 text-amber-500" />
@@ -261,8 +274,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
         className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
         disabled={!selectedId}
         onClick={() => {
-          setIsPaymentOpen(true);
-          setIsFormOpen(false);
+          setPanelMode('payment');
         }}
       >
         {entityName === "customer"
@@ -283,7 +295,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
 
       <div className="h-6 w-px bg-slate-200 mx-1" />
 
-      <Button size="sm" onClick={handleOpenAdd} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
+      <Button size="sm" onClick={handleOpenAddWithAccounts} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100">
         <Plus className="w-4 h-4 ml-2" /> {cfg.addButtonLabel}
       </Button>
     </div>
@@ -291,39 +303,39 @@ export default function PartyPage({ entityName }: PartyPageProps) {
 
   // ── Side panel ──
 
-  const sidePanel = isFormOpen ? (
+  const sidePanel = panelMode === 'form' ? (
     <PartnerFormPanel
       type={entityName}
       partner={editItem}
       accounts={accounts}
-      onSave={handleSave}
-      onClose={() => setIsFormOpen(false)}
+      onSave={handlePartnerSave}
+      onClose={() => setPanelMode(null)}
       saving={saving}
     />
-  ) : isReturnOpen && selectedItem ? (
+  ) : panelMode === 'return' && selectedItem ? (
     <ReturnFromMaterialPanel
-      onClose={() => setIsReturnOpen(false)}
+      onClose={() => setPanelMode(null)}
       onSaved={() => refresh(true)}
       initialReturnType={cfg.returnReturnType}
       initialPartyId={selectedItem.id}
     />
-  ) : isPaymentOpen && selectedItem ? (
+  ) : panelMode === 'payment' && selectedItem ? (
     <PaymentForm
       config={cfg.paymentConfig(selectedItem)}
       onSave={handleSavePayment}
-      onClose={() => setIsPaymentOpen(false)}
+      onClose={() => setPanelMode(null)}
       saving={paymentSaving}
     />
-  ) : (
+  ) : panelMode === 'detail' && selectedItem ? (
     <PartnerDetailPanel
       type={entityName}
       partner={selectedItem}
-      onClose={() => setSelectedId(null)}
-      onEdit={(p) => { loadAccounts(); handleOpenEdit(p as CustomerDto | SupplierDto); }}
+      onClose={() => { setSelectedId(null); setPanelMode(null); }}
+      onEdit={(p) => { void handleOpenEditWithAccounts(p as CustomerDto | SupplierDto); }}
       onDelete={(id) => { setSelectedId(null); handleDelete(id); }}
       onRefresh={() => refresh(true)}
     />
-  );
+  ) : null;
 
   return (
     <OperationalTableTemplate
@@ -336,8 +348,8 @@ export default function PartyPage({ entityName }: PartyPageProps) {
           loading={isLoading}
           search={search}
           onSearchChange={setSearch}
-          onView={(item) => setSelectedId(item.id)}
-          onEdit={(item) => { loadAccounts(); handleOpenEdit(item); }}
+          onView={(item) => { setSelectedId(item.id); setPanelMode('detail'); }}
+          onEdit={(item) => { void handleOpenEditWithAccounts(item); }}
           onDelete={(id) => { setSelectedId(null); handleDelete(id); }}
           onJournal={(item) => {
             const party = item as CustomerDto | SupplierDto;
@@ -350,12 +362,12 @@ export default function PartyPage({ entityName }: PartyPageProps) {
               });
             }
           }}
-          onDocument={(item) => { setSelectedId(item.id); setIsPaymentOpen(true); setIsFormOpen(false); }}
+          onDocument={(item) => { setSelectedId(item.id); setPanelMode('payment'); }}
           selectedId={selectedId}
         />
       }
       sidePanel={sidePanel}
-      isPanelOpen={isFormOpen || isReturnOpen || isPaymentOpen || !!selectedId}
+      isPanelOpen={!!sidePanel}
     />
   );
 }

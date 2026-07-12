@@ -10,6 +10,7 @@ interface UseEntityListProps<T, Req> {
   searchFields: (keyof T)[];
   errorLabel?: string;
   successLabel?: string;
+  manageFormState?: boolean;
 }
 
 export function useEntityList<T extends { id: string }, Req>({
@@ -20,6 +21,7 @@ export function useEntityList<T extends { id: string }, Req>({
   searchFields,
   errorLabel = "فشل تحميل البيانات",
   successLabel = "تم الحفظ بنجاح",
+  manageFormState = true,
 }: UseEntityListProps<T, Req>) {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
@@ -38,8 +40,8 @@ export function useEntityList<T extends { id: string }, Req>({
   });
 
   const refresh = useCallback(
-    (_silent = false) => {
-      refetch();
+    async (_silent = false) => {
+      await refetch();
     },
     [refetch]
   );
@@ -49,7 +51,9 @@ export function useEntityList<T extends { id: string }, Req>({
     onSuccess: () => {
       qc.invalidateQueries({ queryKey });
       toast.success(successLabel);
-      setIsFormOpen(false);
+      if (manageFormState) {
+        setIsFormOpen(false);
+      }
     },
     onError: (e: Error) => {
       toast.error("فشل الحفظ: " + e.message);
@@ -87,13 +91,17 @@ export function useEntityList<T extends { id: string }, Req>({
   const handleOpenAdd = useCallback(() => {
     setEditItem(null);
     setSelectedId(null);
-    setIsFormOpen(true);
-  }, []);
+    if (manageFormState) {
+      setIsFormOpen(true);
+    }
+  }, [manageFormState]);
 
   const handleOpenEdit = useCallback((item: T) => {
     setEditItem(item);
-    setIsFormOpen(true);
-  }, []);
+    if (manageFormState) {
+      setIsFormOpen(true);
+    }
+  }, [manageFormState]);
 
   const handleSave = useCallback(
     async (payload: Req) => {

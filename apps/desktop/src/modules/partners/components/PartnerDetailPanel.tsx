@@ -67,6 +67,9 @@ export function PartnerDetailPanel({
   const statementPath = isCustomer
     ? `/partners/customer-statement/${partner.id}`
     : `/partners/supplier-statement/${partner.id}`;
+  const statementTabId = isCustomer
+    ? `statement-${partner.id}`
+    : `statement-supplier-${partner.id}`;
 
   const actions: SidebarAction[] = [
     {
@@ -105,7 +108,7 @@ export function PartnerDetailPanel({
       hidden: isPartner || !partnerAccountId,
       onClick: () =>
         openTab({
-          id: `statement-${partner.id}`,
+          id: statementTabId,
           title: `كشف: ${partner.name}`,
           path: statementPath,
           closable: true,
