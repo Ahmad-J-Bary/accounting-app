@@ -15,3 +15,4 @@ export * from './assets';
 export * from './partner';
 export * from './returns';
 export * from './warehouse';
+export * from './currency';

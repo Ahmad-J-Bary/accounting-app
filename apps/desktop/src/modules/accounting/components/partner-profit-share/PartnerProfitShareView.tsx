@@ -1,6 +1,8 @@
 import type { PartnerProfitShareComputed } from "@modules/accounting/lib/partnerProfitShare";
 import { cn } from "@shared/lib/utils";
 import { Users, TrendingUp, Package, CreditCard } from "lucide-react";
+import { ReportTableHeader, ReportTableCell } from "@widgets/table-shell/ReportTableCells";
+import { ReportTableWrapper } from "@widgets/table-shell/ReportTableWrapper";
 
 type PartnerProfitShareViewProps = {
   computed: PartnerProfitShareComputed;
@@ -41,64 +43,56 @@ function SummaryCards({ computed, formatValue }: { computed: PartnerProfitShareC
   );
 }
 
-function TableHeader({ children }: { children: React.ReactNode }) {
-  return <th className="whitespace-nowrap px-3 py-2.5 text-right text-[11px] font-black text-slate-500 border-b border-slate-200">{children}</th>;
-}
-
-function TableCell({ children, highlight, className }: { children: React.ReactNode; highlight?: boolean; className?: string }) {
-  return <td className={cn("whitespace-nowrap px-3 py-2 text-sm border-b border-slate-100", highlight ? "font-bold text-slate-900" : "font-medium text-slate-700", className)}>{children}</td>;
-}
-
 function PartnerTable({ computed, formatValue }: { computed: PartnerProfitShareComputed; formatValue: (value: number) => string }) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <ReportTableWrapper>
       <table className="w-full">
         <thead>
           <tr className="bg-slate-50/80">
-            <TableHeader>اسم الشريك</TableHeader>
-            <TableHeader>نسبة المشاركة برأس المال</TableHeader>
-            <TableHeader>المبلغ المشارك به في رأس المال</TableHeader>
-            <TableHeader>نسبة تقاسم الأرباح</TableHeader>
-            <TableHeader>حصته من الأرباح</TableHeader>
-            <TableHeader>المسحوبات</TableHeader>
-            <TableHeader>المبلغ النهائي للشريك</TableHeader>
-            <TableHeader>حصته من البضاعة المتوفرة</TableHeader>
-            <TableHeader>حصته من الأصول الثابتة</TableHeader>
-            <TableHeader>حصته من الأصول التشغيلية</TableHeader>
+            <ReportTableHeader>اسم الشريك</ReportTableHeader>
+            <ReportTableHeader>نسبة المشاركة برأس المال</ReportTableHeader>
+            <ReportTableHeader>المبلغ المشارك به في رأس المال</ReportTableHeader>
+            <ReportTableHeader>نسبة تقاسم الأرباح</ReportTableHeader>
+            <ReportTableHeader>حصته من الأرباح</ReportTableHeader>
+            <ReportTableHeader>المسحوبات</ReportTableHeader>
+            <ReportTableHeader>المبلغ النهائي للشريك</ReportTableHeader>
+            <ReportTableHeader>حصته من البضاعة المتوفرة</ReportTableHeader>
+            <ReportTableHeader>حصته من الأصول الثابتة</ReportTableHeader>
+            <ReportTableHeader>حصته من الأصول التشغيلية</ReportTableHeader>
           </tr>
         </thead>
         <tbody>
           {computed.rows.map((row) => (
             <tr key={row.partnerId} className="hover:bg-slate-50/50 transition-colors">
-              <TableCell highlight>{row.partnerName}</TableCell>
-              <TableCell>{row.capitalRatio.toFixed(2)}%</TableCell>
-              <TableCell>{formatValue(row.capitalAmount)}</TableCell>
-              <TableCell>{row.profitShareRatio.toFixed(2)}%</TableCell>
-              <TableCell>{formatValue(row.profitShareAmount)}</TableCell>
-              <TableCell className="text-rose-600 font-bold">{formatValue(row.drawings)}</TableCell>
-              <TableCell highlight>{formatValue(row.finalAmount)}</TableCell>
-              <TableCell>{formatValue(row.inventoryShare)}</TableCell>
-              <TableCell>{formatValue(row.fixedAssetsShare)}</TableCell>
-              <TableCell highlight>{formatValue(row.operationalAssetShare)}</TableCell>
+              <ReportTableCell highlight>{row.partnerName}</ReportTableCell>
+              <ReportTableCell>{row.capitalRatio.toFixed(2)}%</ReportTableCell>
+              <ReportTableCell>{formatValue(row.capitalAmount)}</ReportTableCell>
+              <ReportTableCell>{row.profitShareRatio.toFixed(2)}%</ReportTableCell>
+              <ReportTableCell>{formatValue(row.profitShareAmount)}</ReportTableCell>
+              <ReportTableCell className="text-rose-600 font-bold">{formatValue(row.drawings)}</ReportTableCell>
+              <ReportTableCell highlight>{formatValue(row.finalAmount)}</ReportTableCell>
+              <ReportTableCell>{formatValue(row.inventoryShare)}</ReportTableCell>
+              <ReportTableCell>{formatValue(row.fixedAssetsShare)}</ReportTableCell>
+              <ReportTableCell highlight>{formatValue(row.operationalAssetShare)}</ReportTableCell>
             </tr>
           ))}
         </tbody>
         <tfoot>
           <tr className="bg-slate-50/80 border-t-2 border-slate-200">
-            <TableCell highlight>الإجمالي</TableCell>
-            <TableCell highlight>{computed.rows.reduce((s, r) => s + r.capitalRatio, 0).toFixed(2)}%</TableCell>
-            <TableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.capitalAmount, 0))}</TableCell>
-            <TableCell highlight>-</TableCell>
-            <TableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.profitShareAmount, 0))}</TableCell>
-            <TableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.drawings, 0))}</TableCell>
-            <TableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.finalAmount, 0))}</TableCell>
-            <TableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.inventoryShare, 0))}</TableCell>
-            <TableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.fixedAssetsShare, 0))}</TableCell>
-            <TableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.operationalAssetShare, 0))}</TableCell>
+            <ReportTableCell highlight>الإجمالي</ReportTableCell>
+            <ReportTableCell highlight>{computed.rows.reduce((s, r) => s + r.capitalRatio, 0).toFixed(2)}%</ReportTableCell>
+            <ReportTableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.capitalAmount, 0))}</ReportTableCell>
+            <ReportTableCell highlight>-</ReportTableCell>
+            <ReportTableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.profitShareAmount, 0))}</ReportTableCell>
+            <ReportTableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.drawings, 0))}</ReportTableCell>
+            <ReportTableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.finalAmount, 0))}</ReportTableCell>
+            <ReportTableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.inventoryShare, 0))}</ReportTableCell>
+            <ReportTableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.fixedAssetsShare, 0))}</ReportTableCell>
+            <ReportTableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.operationalAssetShare, 0))}</ReportTableCell>
           </tr>
         </tfoot>
       </table>
-    </div>
+    </ReportTableWrapper>
   );
 }
 

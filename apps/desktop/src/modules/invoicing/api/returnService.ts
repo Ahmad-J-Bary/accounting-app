@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '@shared/lib/invoke';
 import type {
   SalesReturnDto,
   PurchaseReturnDto,
@@ -18,7 +18,7 @@ export const returnService = {
   },
 
   async updateSalesReturn(req: CreateSalesReturnRequest): Promise<SalesReturnDto> {
-    return invoke('create_sales_return', {
+    return invoke('update_sales_return', {
       request: {
         ...req,
         settlement_mode: req.settlement_mode ?? null,
@@ -50,7 +50,7 @@ export const returnService = {
   },
 
   async updatePurchaseReturn(req: CreatePurchaseReturnRequest): Promise<PurchaseReturnDto> {
-    return invoke('create_purchase_return', {
+    return invoke('update_purchase_return', {
       request: {
         ...req,
         settlement_mode: req.settlement_mode ?? null,
