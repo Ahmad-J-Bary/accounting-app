@@ -2,6 +2,7 @@ import type {
   AccountDto,
   AccountLedgerDto,
   InvoiceDto,
+  JournalEntryDto,
   MaterialDto,
   PurchaseReturnDto,
   SalesReturnDto,
@@ -22,6 +23,8 @@ export type LoadedIncomeStatementData = {
   expenseLedgers: Map<string, AccountLedgerDto>;
   stockMovementsByMaterial: Map<string, StockMovementDetailDto[]>;
   materials: MaterialDto[];
+  accounts?: AccountDto[];
+  entries?: JournalEntryDto[];
 };
 
 export type IncomeStatementRow = {
@@ -69,6 +72,8 @@ export const emptyIncomeStatementData: LoadedIncomeStatementData = {
   expenseLedgers: new Map(),
   stockMovementsByMaterial: new Map(),
   materials: [],
+  accounts: [],
+  entries: [],
 };
 
 export function parseNumber(value?: string | number | null) {
@@ -151,6 +156,9 @@ export function computeIncomeStatement(
     return sum + disc;
   }, 0);
 
+  // 1. استثناء التسويات والتالف من حركات المخزون الفعلية للحصول على بضاعة آخر المدة قبل التسوية
+  const isAdjustmentOrDamage = (type: string) => type === "Adjustment" || type === "Damaged";
+
   // OpeningBalance movements always count toward opening inventory (regardless of date)
   const openingInventory = Array.from(data.stockMovementsByMaterial.values()).reduce((sum, movements) => {
     return sum + movements.reduce((materialSum, movement) => {
@@ -164,21 +172,54 @@ export function computeIncomeStatement(
     }, 0);
   }, 0);
 
-  const periodMovements = Array.from(data.stockMovementsByMaterial.values()).reduce((sum, movements) => {
+  const periodMovementsBefore = Array.from(data.stockMovementsByMaterial.values()).reduce((sum, movements) => {
     const movementTotal = movements.reduce((materialSum, movement) => {
       const movementTs = new Date(movement.movement_date).getTime();
       if (!Number.isFinite(movementTs) || movementTs < fromTs || movementTs > toTs) {
         return materialSum;
       }
-      if (movement.movement_type === "OpeningBalance") return materialSum;
+      if (movement.movement_type === "OpeningBalance" || isAdjustmentOrDamage(movement.movement_type)) {
+        return materialSum;
+      }
       return materialSum + getSignedMovementValue(movement);
     }, 0);
     return sum + movementTotal;
   }, 0);
 
-  const closingInventory = openingInventory + periodMovements;
+  const closingInventoryBefore = openingInventory + periodMovementsBefore;
 
-  const expenseRows: IncomeStatementRow[] = data.expenseAccounts
+  // 2. حساب القيم التشغيلية للحسابات المخصصة من قيود اليومية للفترة المحددة
+  const accountMap = new Map((data.accounts || []).map((acc) => [acc.id, acc]));
+  const entries = data.entries || [];
+
+  const getAccountPeriodNet = (code: string) => {
+    let debit = 0;
+    let credit = 0;
+    for (const entry of entries) {
+      if (!isWithinRange(entry.entry_date, fromTs, toTs)) continue;
+      for (const line of entry.lines) {
+        const acc = accountMap.get(line.account_id);
+        if (acc?.code === code) {
+          debit += parseFloat(line.debit_base || line.debit || "0");
+          credit += parseFloat(line.credit_base || line.credit || "0");
+        }
+      }
+    }
+    if (code.startsWith("3")) {
+      return credit - debit;
+    }
+    return debit - credit;
+  };
+
+  const adjustmentGains = getAccountPeriodNet("331");
+  const adjustmentLosses = getAccountPeriodNet("45");
+  const depreciationExpense = getAccountPeriodNet("46");
+
+  // 3. احتساب بضاعة آخر المدة النهائية بعد التسويات والتالف
+  const closingInventory = closingInventoryBefore + adjustmentGains - adjustmentLosses;
+
+  // 4. مصاريف التشغيل الأساسية من API المصاريف
+  const baseExpenseRows = data.expenseAccounts
     .map((account) => {
       const ledger = data.expenseLedgers.get(account.id);
       if (!ledger) return { label: account.name_ar, value: 0 };
@@ -190,11 +231,16 @@ export function computeIncomeStatement(
     })
     .filter((r) => r.value !== 0);
 
-  const totalExpenses = expenseRows.reduce((s, r) => s + r.value, 0);
+  // 5. إجمالي المصاريف = مصاريف التشغيل الأساسية + مصروف الإهلاك السنوي
+  const expenseRows = [...baseExpenseRows];
+  const totalExpenses = expenseRows.reduce((s, r) => s + r.value, 0) + depreciationExpense;
 
+  // 6. حساب مجاميع المتاجرة (باستخدام بضاعة آخر المدة بعد التسوية لتتدفق التسويات عبر المخزون → COGS)
   const totalRevenue = salesTotal + closingInventory + purchaseReturnsTotal + discountsEarned;
   const totalLiabilities = openingInventory + purchaseTotal + salesReturnsTotal + discountsGranted;
   const grossProfit = totalRevenue - totalLiabilities;
+
+  // 7. صافي الأرباح (أثر التسويات ضمن مجمل الربح عبر بضاعة آخر المدة)
   const netProfit = grossProfit - totalExpenses;
 
   const sections: IncomeStatementSection[] = [
@@ -239,7 +285,7 @@ export function computeIncomeStatement(
       totalValue: netProfit,
       rows: [
         { label: "إجمالي الأرباح", value: grossProfit },
-        ...expenseRows,
+         ...expenseRows,
         { label: `إجمالي المصاريف`, value: totalExpenses },
       ],
     },
@@ -261,7 +307,7 @@ export function computeIncomeStatement(
     netProfit,
     salesCount: postedSales.length,
     purchaseCount: postedPurchases.length,
-    expenseAccountsCount: data.expenseLedgers.size,
+    expenseAccountsCount: expenseRows.length,
     expenseRows,
     sections,
   };

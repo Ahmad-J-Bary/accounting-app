@@ -104,6 +104,8 @@ export function useBalanceSheetReport(filters: IncomeStatementFilters) {
         expenseLedgers,
         stockMovementsByMaterial,
         materials,
+        accounts,
+        entries,
       };
 
       const incomeStatementResult = computeIncomeStatement(filters, incomeStatementData);
@@ -126,7 +128,57 @@ export function useBalanceSheetReport(filters: IncomeStatementFilters) {
         }
       }
 
+      // تحديد حسابات الشركاء (51xx) ونسب رأس مالهم
+      const partnerAccounts = accounts.filter(
+        (a) => a.code !== "51" && a.code.startsWith("51") && ["Liabilities", "Equity", "Revenue"].includes(a.account_type)
+      );
+      const totalPartnerCapital = partnerAccounts.reduce(
+        (sum, a) => sum + Math.abs(parseFloat(a.opening_balance || "0")),
+        0,
+      );
+
+      // تجميع قيم الجانب الدائن لرأس المال من قيود الأرصدة الافتتاحية العينية
+      let capitalCreditsFromInKind = 0;
       for (const entry of entries) {
+        const desc = entry.description || "";
+        const isMaterialOpening = entry.journal_type === "MaterialOpeningBalance" || desc.includes("بضاعة أول المدة");
+        const isFixedAssetOpening = desc.includes("إضافة أصل سابق") || desc.includes("رصيد افتتاحي للأصول الثابتة");
+
+        if (!isMaterialOpening && !isFixedAssetOpening) continue;
+
+        for (const line of entry.lines) {
+          const account = accountMap.get(line.account_id);
+          if (account?.code === "51" || account?.code?.startsWith("51")) {
+            capitalCreditsFromInKind += parseFloat(line.credit_base || line.credit || "0");
+          }
+        }
+      }
+
+      // توزيع القيمة العينية على حسابات الشركاء بنسبهم (أو على الأب 51 إن لم يوجد شركاء)
+      if (capitalCreditsFromInKind > 0) {
+        if (partnerAccounts.length > 0 && totalPartnerCapital > 0) {
+          for (const partnerAcc of partnerAccounts) {
+            const ratio = Math.abs(parseFloat(partnerAcc.opening_balance || "0")) / totalPartnerCapital;
+            const share = capitalCreditsFromInKind * ratio;
+            const cur = ledgerTotals.get(partnerAcc.id) || { debit: 0, credit: 0 };
+            cur.credit += share;
+            ledgerTotals.set(partnerAcc.id, cur);
+          }
+        } else {
+          const capitalParent = accounts.find((a) => a.code === "51");
+          if (capitalParent) {
+            const cur = ledgerTotals.get(capitalParent.id) || { debit: 0, credit: 0 };
+            cur.credit += capitalCreditsFromInKind;
+            ledgerTotals.set(capitalParent.id, cur);
+          }
+        }
+      }
+
+      for (const entry of entries) {
+        const desc = entry.description || "";
+        const isMaterialOpening = entry.journal_type === "MaterialOpeningBalance" || desc.includes("بضاعة أول المدة");
+        const isFixedAssetOpening = desc.includes("إضافة أصل سابق") || desc.includes("رصيد افتتاحي للأصول الثابتة");
+
         for (const line of entry.lines) {
           const amt = parseFloat(line.debit_base || line.debit || "0") - parseFloat(line.credit_base || line.credit || "0");
           if (line.account_id === SYSTEM_ACCOUNT_IDS.DRAWINGS) {
@@ -134,6 +186,12 @@ export function useBalanceSheetReport(filters: IncomeStatementFilters) {
           }
 
           const account = accountMap.get(line.account_id);
+
+          // تخطي الجانب الدائن لرأس المال من قيود الأرصدة العينية (تمت معالجته بالتوزيع أعلاه)
+          if ((isMaterialOpening || isFixedAssetOpening) && (account?.code === "51" || account?.code?.startsWith("51"))) {
+            continue;
+          }
+
           const isConsolidatedCapitalEntry = entry.source_id === "consolidated_capital";
           if (isConsolidatedCapitalEntry && account?.code !== "122") {
             continue;

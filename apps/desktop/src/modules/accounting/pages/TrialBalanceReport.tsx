@@ -37,6 +37,8 @@ async function computeLedgerTotals(accounts: AccountDto[]): Promise<Map<string, 
   const entries = await journalEntryService.listJournalEntries({});
 
   const totals = new Map<string, { debit: number; credit: number }>();
+
+  // 1. احتساب الأرصدة الافتتاحية لجميع الحسابات
   for (const account of accounts) {
     const openingBalance = parseNumber(account.opening_balance);
     if (openingBalance === 0) continue;
@@ -50,9 +52,72 @@ async function computeLedgerTotals(accounts: AccountDto[]): Promise<Map<string, 
     totals.set(account.id, existing);
   }
 
+  // 2. تحديد حسابات الشركاء (51xx) ونسب رأس مالهم لتوزيع الأرصدة الافتتاحية العينية
+  const partnerAccounts = accounts.filter(
+    (a) => a.code !== "51" && a.code.startsWith("51") && isCreditNatureAccount(a)
+  );
+  const totalPartnerCapital = partnerAccounts.reduce(
+    (sum, a) => sum + Math.abs(parseNumber(a.opening_balance)),
+    0,
+  );
+
+  // 3. تجميع قيم الجانب الدائن لرأس المال الواردة من قيود الأرصدة الافتتاحية العينية
+  let capitalCreditsFromInKind = 0;
+
   for (const entry of entries) {
+    const desc = entry.description || "";
+    const isMaterialOpening = entry.journal_type === "MaterialOpeningBalance" || desc.includes("بضاعة أول المدة");
+    const isFixedAssetOpening = desc.includes("إضافة أصل سابق") || desc.includes("رصيد افتتاحي للأصول الثابتة");
+
+    if (!isMaterialOpening && !isFixedAssetOpening) continue;
+
     for (const line of entry.lines) {
       const account = accountMap.get(line.account_id);
+      if (account?.code === "51" || account?.code?.startsWith("51")) {
+        capitalCreditsFromInKind += parseFloat(line.credit_base || line.credit || "0");
+      }
+    }
+  }
+
+  // 4. توزيع القيمة العينية على حسابات الشركاء بنسبهم (أو على الأب 51 إن لم يوجد شركاء)
+  if (capitalCreditsFromInKind > 0) {
+    if (partnerAccounts.length > 0 && totalPartnerCapital > 0) {
+      for (const partnerAcc of partnerAccounts) {
+        const ratio = Math.abs(parseNumber(partnerAcc.opening_balance)) / totalPartnerCapital;
+        const share = capitalCreditsFromInKind * ratio;
+        const cur = totals.get(partnerAcc.id) || { debit: 0, credit: 0 };
+        cur.credit += share;
+        totals.set(partnerAcc.id, cur);
+      }
+    } else {
+      // لا يوجد شركاء → تبقى القيمة على حساب رأس المال الأب (51)
+      const capitalParent = accounts.find((a) => a.code === "51");
+      if (capitalParent) {
+        const cur = totals.get(capitalParent.id) || { debit: 0, credit: 0 };
+        cur.credit += capitalCreditsFromInKind;
+        totals.set(capitalParent.id, cur);
+      }
+    }
+  }
+
+  // 5. معالجة بقية القيود اليومية (باستثناء الجانب الدائن لـ51 من قيود الأرصدة العينية المعالجة أعلاه)
+  for (const entry of entries) {
+    const desc = entry.description || "";
+    const isMaterialOpening = entry.journal_type === "MaterialOpeningBalance" || desc.includes("بضاعة أول المدة");
+    const isFixedAssetOpening = desc.includes("إضافة أصل سابق") || desc.includes("رصيد افتتاحي للأصول الثابتة");
+
+    for (const line of entry.lines) {
+      const account = accountMap.get(line.account_id);
+
+      // تخطي الجانب الدائن لرأس المال من قيود الأرصدة العينية (تمت معالجته في الخطوة 4)
+      if (
+        (isMaterialOpening || isFixedAssetOpening) &&
+        (account?.code === "51" || account?.code?.startsWith("51"))
+      ) {
+        continue;
+      }
+
+      // تخطي كل سطور قيد رأس المال المجمع ما عدا جانب مدين الصندوق (122)
       const isConsolidatedCapitalEntry = entry.source_id === "consolidated_capital";
       if (isConsolidatedCapitalEntry && account?.code !== "122") {
         continue;
@@ -74,13 +139,13 @@ async function computeLedgerTotals(accounts: AccountDto[]): Promise<Map<string, 
       netPurchaseCost += parseFloat(inv.extra_costs || "0");
     }
 
-        for (const account of accounts) {
-          if (account.name_ar === "تكاليف إضافية على المشتريات") {
-            const debit = Math.abs(netPurchaseCost);
-            const credit = Math.abs(netPurchaseCost);
-            totals.set(account.id, { debit, credit });
-          }
-        }
+    for (const account of accounts) {
+      if (account.name_ar === "تكاليف إضافية على المشتريات") {
+        const debit = Math.abs(netPurchaseCost);
+        const credit = Math.abs(netPurchaseCost);
+        totals.set(account.id, { debit, credit });
+      }
+    }
   } catch (_e) {
     console.warn("Stock override failed, using journal entries only");
   }

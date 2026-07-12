@@ -4,6 +4,7 @@ import { accountingService } from "@modules/accounting/api/accountingService";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { returnService } from "@modules/invoicing/api/returnService";
 import { materialService } from "@modules/inventory/api/materialService";
+import { journalEntryService } from "@modules/accounting/api/journalEntryService";
 import type { MaterialDto } from "@erp/shared-types";
 import {
   emptyIncomeStatementData,
@@ -27,6 +28,8 @@ export function useIncomeStatementReport() {
 
     try {
       const [
+        accounts,
+        entries,
         salesInvoices,
         purchaseInvoices,
         purchaseReturns,
@@ -34,6 +37,8 @@ export function useIncomeStatementReport() {
         expenseAccounts,
         materials,
       ] = await Promise.all([
+        accountingService.getChartOfAccounts(),
+        journalEntryService.listJournalEntries({}),
         invoiceService.listInvoicesByType("Sales"),
         invoiceService.listInvoicesByType("Purchase"),
         returnService.listPurchaseReturns(),
@@ -79,6 +84,8 @@ export function useIncomeStatementReport() {
         expenseLedgers,
         stockMovementsByMaterial,
         materials,
+        accounts: accounts ?? [],
+        entries: entries ?? [],
       });
 
       hasLoadedOnceRef.current = true;

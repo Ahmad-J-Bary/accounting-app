@@ -69,16 +69,74 @@ export function AccountMovementTable({
     return [baseCurrency, ...currencies.filter(c => c.code !== baseCurrency.code)];
   }, [currencies, baseCurrency]);
 
-  // إثراء قائمة الحركات الأصلية لاستخدامها في الفرز
+  // إثراء قائمة الحركات الأصلية لاستخدامها في الفرز وتخصيص التسميات
   const enrichedLines = useMemo(() => {
     return lines.map((line) => {
-      const typeLabel = line.journal_type;
+      let typeLabel = line.journal_type;
+
+      if (typeLabel === "GeneralJournal" || typeLabel === "اليومية العامة") {
+        const desc = line.description || "";
+        const isDepreciation = desc.includes("إهلاك سنوي") || desc.includes("إهلاك");
+        const isOpening = desc.includes("إضافة أصل سابق") || desc.includes("أول المدة");
+        const isPurchase = desc.includes("شراء أصل ثابت") || desc.includes("اثبات شراء");
+
+        if (isDepreciation || isOpening || isPurchase) {
+          let assetType = "أصول ثابتة";
+          const opposite = line.opposite_account_name || "";
+
+          if (
+            opposite.includes("أبنية") || 
+            opposite.includes("أراضي") || 
+            opposite.includes("المباني") || 
+            opposite.includes("الأراضي") ||
+            accountName.includes("أبنية") ||
+            accountName.includes("أراضي") ||
+            accountName.includes("المباني") ||
+            accountName.includes("الأراضي")
+          ) {
+            assetType = "أبنية وأراضي";
+          } else if (
+            opposite.includes("معدات") || 
+            opposite.includes("تجهيزات") || 
+            opposite.includes("الآلات") || 
+            opposite.includes("المعدات") ||
+            accountName.includes("معدات") ||
+            accountName.includes("تجهيزات") ||
+            accountName.includes("الآلات") ||
+            accountName.includes("المعدات")
+          ) {
+            assetType = "معدات وتجهيزات";
+          } else if (
+            opposite.includes("أثاث") || 
+            opposite.includes("مفروشات") || 
+            opposite.includes("المفروشات") ||
+            accountName.includes("أثاث") ||
+            accountName.includes("مفروشات") ||
+            accountName.includes("المفروشات")
+          ) {
+            assetType = "أثاث ومفروشات";
+          }
+
+          if (isDepreciation) {
+            typeLabel = "إهلاك سنوي";
+          } else if (isOpening) {
+            typeLabel = `رصيد افتتاحي للأصول الثابتة / ${assetType}`;
+          } else if (isPurchase) {
+            typeLabel = `شراء أصل ثابت / ${assetType}`;
+          }
+        } else {
+          typeLabel = "اليومية العامة";
+        }
+      } else {
+        if (typeLabel === "GeneralJournal") typeLabel = "اليومية العامة";
+      }
+
       return {
         ...line,
         typeLabel,
       } satisfies EnrichedOriginalLine;
     });
-  }, [lines]);
+  }, [lines, accountName]);
 
   // فرز الحركات الأصلية أولاً لضمان عدم انفصال أسطر الحركة الواحدة بعد التقسيم
   const { sortedData: sortedOriginalLines, sortField, sortDirection, handleSort } = useSortable({

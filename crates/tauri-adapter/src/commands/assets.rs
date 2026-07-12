@@ -31,7 +31,7 @@ pub async fn create_fixed_asset(
     state: State<'_, AppState>,
 ) -> Result<String, String> {
     let base_curr = state.currency_repo.get_base_currency().await.map_err(|e| e.to_string())?;
-    let is_base = base_curr.as_ref().map_or(false, |bc| bc.code == currency);
+    let is_base = base_curr.as_ref().is_some_and(|bc| bc.code == currency);
 
     let category_uuid = Uuid::parse_str(&category_id).map_err(|e| e.to_string())?;
     let warehouse_uuid = warehouse_id.and_then(|s| Uuid::parse_str(&s).ok());
@@ -107,7 +107,7 @@ pub async fn update_fixed_asset(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let base_curr = state.currency_repo.get_base_currency().await.map_err(|e| e.to_string())?;
-    let is_base = base_curr.as_ref().map_or(false, |bc| bc.code == currency);
+    let is_base = base_curr.as_ref().is_some_and(|bc| bc.code == currency);
 
     let asset_id = FixedAssetId(Uuid::parse_str(&id).map_err(|e| e.to_string())?);
     let category_uuid = Uuid::parse_str(&category_id).map_err(|e| e.to_string())?;
@@ -190,7 +190,7 @@ pub async fn create_consumable(
     state: State<'_, AppState>,
 ) -> Result<String, String> {
     let base_curr = state.currency_repo.get_base_currency().await.map_err(|e| e.to_string())?;
-    let is_base = base_curr.as_ref().map_or(false, |bc| bc.code == currency);
+    let is_base = base_curr.as_ref().is_some_and(|bc| bc.code == currency);
 
     let category_uuid = Uuid::parse_str(&category_id).map_err(|e| e.to_string())?;
     let amount = Decimal::from_str(&unit_cost).map_err(|e: rust_decimal::Error| e.to_string())?;

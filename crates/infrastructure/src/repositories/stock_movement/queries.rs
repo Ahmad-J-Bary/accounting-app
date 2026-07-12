@@ -92,7 +92,9 @@ pub async fn get_material_summary(pool: &SqlitePool, material_id: &MaterialId) -
     let mut found_last_sale = false;
 
     for m in &movements {
-        if m.is_inflow() {
+        if let Some(sq) = m.signed_quantity {
+            total_available += sq;
+        } else if m.is_inflow() {
             if matches!(m.movement_type, domain::inventory::stock_movement::MovementType::SalesReturn) {
                 total_available += m.quantity;
             } else {

@@ -73,12 +73,10 @@ export function FixedAssetDetailPanel({ asset, movements, onClose, onEdit, onDel
   if (asset.salvage_value) {
     infoFields.push({ label: "قيمة الخردة", value: formatInBase(asset.salvage_value) });
   }
-  if (canDepreciate) {
-    infoFields.push({ label: "العمر الإنتاجي", value: `${asset.useful_life_months} شهر` });
-  }
   if (asset.location) {
     infoFields.push({ label: "الموقع", value: asset.location });
   }
+  infoFields.push({ label: "الملاحظات", value: asset.notes || "-" });
 
   const actions: SidebarAction[] = [];
   if (onEdit) {
@@ -114,15 +112,6 @@ export function FixedAssetDetailPanel({ asset, movements, onClose, onEdit, onDel
             className="p-3"
           />
         )}
-
-        <SidebarDetailGrid
-          title="الحالة"
-          fields={[
-            { label: "الحالة", value: statusLabels[asset.status] || asset.status },
-            { label: "الملاحظات", value: asset.notes || "-" },
-          ]}
-          className="p-3"
-        />
 
         {fixedMovements.length > 0 && (
           <SidebarDetailGrid

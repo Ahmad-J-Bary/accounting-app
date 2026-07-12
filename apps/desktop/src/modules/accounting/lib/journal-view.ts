@@ -43,23 +43,82 @@ export function toJournalLines(entry: JournalEntryDto): JournalRowLine[] {
   }
 
   if (entry.journal_type === "GeneralJournal") {
-    const debits = entry.lines.filter((l) => parseFloat(l.debit || "0") > 0);
-    const credits = entry.lines.filter((l) => parseFloat(l.credit || "0") > 0);
-    if (debits.length === 1 && credits.length === 1) {
-      const drLine = debits[0];
-      const crLine = credits[0];
-      if (
-        (drLine.partner_id && !crLine.partner_id) ||
-        crLine.account_code?.startsWith("332") ||
-        crLine.account_name?.includes("خصوم مكتسبة")
-      ) {
-        journalTypeDisplay = "حسم مكتسب";
-      } else if (
-        (!drLine.partner_id && crLine.partner_id) ||
-        drLine.account_code?.startsWith("47") ||
-        drLine.account_name?.includes("خصوم ممنوحة")
-      ) {
-        journalTypeDisplay = "حسم ممنوح";
+    const desc = entry.description || "";
+    const isDepreciation = desc.includes("إهلاك سنوي") || desc.includes("إهلاك");
+    const isOpening = desc.includes("إضافة أصل سابق") || desc.includes("أول المدة");
+    const isPurchase = desc.includes("شراء أصل ثابت") || desc.includes("اثبات شراء");
+
+    if (isDepreciation || isOpening || isPurchase) {
+      let assetType = "أصول ثابتة";
+      for (const line of entry.lines) {
+        const accName = line.account_name || "";
+        const accCode = line.account_code || "";
+        if (
+          accName.includes("أبنية") || 
+          accName.includes("أراضي") || 
+          accName.includes("المباني") || 
+          accName.includes("الأراضي")
+        ) {
+          assetType = "أبنية وأراضي";
+          break;
+        }
+        if (
+          accName.includes("معدات") || 
+          accName.includes("تجهيزات") || 
+          accName.includes("الآلات") || 
+          accName.includes("المعدات")
+        ) {
+          assetType = "معدات وتجهيزات";
+          break;
+        }
+        if (
+          accName.includes("أثاث") || 
+          accName.includes("مفروشات") || 
+          accName.includes("المفروشات")
+        ) {
+          assetType = "أثاث ومفروشات";
+          break;
+        }
+        if (accCode.startsWith("1101") || accCode.startsWith("111")) {
+          assetType = "أبنية وأراضي";
+          break;
+        }
+        if (accCode.startsWith("1102") || accCode.startsWith("112")) {
+          assetType = "معدات وتجهيزات";
+          break;
+        }
+        if (accCode.startsWith("1103") || accCode.startsWith("113")) {
+          assetType = "أثاث ومفروشات";
+          break;
+        }
+      }
+
+      if (isDepreciation) {
+        journalTypeDisplay = "إهلاك سنوي";
+      } else if (isOpening) {
+        journalTypeDisplay = `رصيد افتتاحي للأصول الثابتة / ${assetType}`;
+      } else if (isPurchase) {
+        journalTypeDisplay = `شراء أصل ثابت / ${assetType}`;
+      }
+    } else {
+      const debits = entry.lines.filter((l) => parseFloat(l.debit || "0") > 0);
+      const credits = entry.lines.filter((l) => parseFloat(l.credit || "0") > 0);
+      if (debits.length === 1 && credits.length === 1) {
+        const drLine = debits[0];
+        const crLine = credits[0];
+        if (
+          (drLine.partner_id && !crLine.partner_id) ||
+          crLine.account_code?.startsWith("332") ||
+          crLine.account_name?.includes("خصوم مكتسبة")
+        ) {
+          journalTypeDisplay = "حسم مكتسب";
+        } else if (
+          (!drLine.partner_id && crLine.partner_id) ||
+          drLine.account_code?.startsWith("47") ||
+          drLine.account_name?.includes("خصوم ممنوحة")
+        ) {
+          journalTypeDisplay = "حسم ممنوح";
+        }
       }
     }
   }

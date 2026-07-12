@@ -6,6 +6,7 @@ interface StockMovementLike {
   material_id: string;
   quantity: string;
   movement_type: string;
+  signed_quantity?: string | null;
 }
 
 export function buildStockByWarehouse(
@@ -17,13 +18,19 @@ export function buildStockByWarehouse(
     const mid = m.material_id;
     const wid = m.warehouse_id;
     const qty = parseFloat(m.quantity || "0");
-    const isInflow = getMovementType(m.movement_type).inflow;
+    let delta: number;
+    if (m.signed_quantity != null) {
+      delta = parseFloat(m.signed_quantity);
+    } else {
+      const isInflow = getMovementType(m.movement_type).inflow;
+      delta = isInflow ? qty : -qty;
+    }
     let mat = map.get(mid);
     if (!mat) {
       mat = new Map();
       map.set(mid, mat);
     }
-    mat.set(wid, (mat.get(wid) || 0) + (isInflow ? qty : -qty));
+    mat.set(wid, (mat.get(wid) || 0) + delta);
   }
   return map;
 }
