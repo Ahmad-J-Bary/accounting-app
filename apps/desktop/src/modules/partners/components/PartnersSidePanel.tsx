@@ -2,7 +2,7 @@ import type { PartnerDto, CreatePaymentRequest } from "@erp/shared-types";
 import type { Currency } from "@modules/core/api/currencyService";
 import type { PartnerRequest } from "@modules/partners/api/partnerService";
 import { PartnerForm } from '@modules/partners/components/PartnerForm';
-import { PartnerDrawingsForm } from '@modules/partners/components/PartnerDrawingsForm';
+import { PaymentForm, PAYMENT_CONFIGS } from '@modules/partners/components/PaymentForm';
 import { PartnerDetailView } from '@modules/partners/components/PartnerDetailView';
 
 type PartnerWithRatios = PartnerDto & {
@@ -56,8 +56,8 @@ export function PartnersSidePanel({
 
   if (activePanel === "drawings" && selectedPartner) {
     return (
-      <PartnerDrawingsForm
-        partner={selectedPartner}
+      <PaymentForm
+        config={PAYMENT_CONFIGS.partner(selectedPartner)}
         onSave={onSaveDrawings}
         onClose={onClose}
         saving={drawingsSaving}

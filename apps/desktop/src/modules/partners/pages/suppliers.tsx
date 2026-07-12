@@ -11,8 +11,8 @@ import type { SupplierDto, AccountDto, Payment, InvoiceDto, CreateSupplierReques
 
 import { useTabs } from "@app/providers/TabContext";
 import { useEntityList } from '@shared/hooks/useEntityList';
-import { SupplierTable } from '@modules/partners/components/SupplierTable';
-import { SupplierPaymentForm } from '@modules/partners/components/SupplierPaymentForm';
+import { PartyTable } from '@modules/partners/components/PartyTable';
+import { PaymentForm, PAYMENT_CONFIGS } from '@modules/partners/components/PaymentForm';
 import { ReturnFromMaterialPanel } from '@modules/inventory/components/ReturnFromMaterialPanel';
 
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
@@ -220,8 +220,9 @@ export default function Suppliers() {
         </div>
       }
       tableContent={
-          <SupplierTable 
-            suppliers={suppliers}
+          <PartyTable 
+            entityName="supplier"
+            data={suppliers}
             loading={isLoading}
             search={search}
             onSearchChange={setSearch}
@@ -256,8 +257,8 @@ export default function Suppliers() {
             initialPartyId={selectedSupplier?.id}
           />
         ) : isPaymentOpen && selectedSupplier ? (
-          <SupplierPaymentForm
-            supplier={selectedSupplier}
+          <PaymentForm
+            config={PAYMENT_CONFIGS.supplier(selectedSupplier)}
             onSave={handleSavePayment}
             onClose={() => setIsPaymentOpen(false)}
             saving={paymentSaving}

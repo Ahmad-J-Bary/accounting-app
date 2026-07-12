@@ -22,11 +22,8 @@ import { AccountMovementTable } from "../components/AccountMovementTable";
 import { useDataTable } from "@shared/hooks";
 import { toast } from "sonner";
 
-// Forms
-import { CustomerReceiptForm } from "@modules/partners/components/CustomerReceiptForm";
-import { SupplierPaymentForm } from "@modules/partners/components/SupplierPaymentForm";
+import { PaymentForm, PAYMENT_CONFIGS } from "@modules/partners/components/PaymentForm";
 import { ExpenseVoucherForm } from "@modules/accounting/components/ExpenseVoucherForm";
-import { PartnerDrawingsForm } from "@modules/partners/components/PartnerDrawingsForm";
 
 const OUTLINE_BUTTON_CLASS = "border-slate-200 text-slate-700 hover:bg-slate-50";
 const TOOLBAR_CLASS_BY_TYPE = {
@@ -247,24 +244,24 @@ export default function AccountMovement() {
         isVoucherOpen && (
           <>
             {accountType === 'partner' && linkedEntity && (
-              <PartnerDrawingsForm 
-                partner={linkedEntity as PartnerDto}
+              <PaymentForm 
+                config={PAYMENT_CONFIGS.partner(linkedEntity as PartnerDto)}
                 onSave={handleSaveVoucher}
                 onClose={() => setIsVoucherOpen(false)}
                 saving={savingVoucher}
               />
             )}
             {accountType === 'customer' && linkedEntity && (
-              <CustomerReceiptForm 
-                customer={linkedEntity as CustomerDto}
+              <PaymentForm 
+                config={PAYMENT_CONFIGS.customer(linkedEntity as CustomerDto)}
                 onSave={handleSaveVoucher}
                 onClose={() => setIsVoucherOpen(false)}
                 saving={savingVoucher}
               />
             )}
             {accountType === 'supplier' && linkedEntity && (
-              <SupplierPaymentForm 
-                supplier={linkedEntity as SupplierDto}
+              <PaymentForm 
+                config={PAYMENT_CONFIGS.supplier(linkedEntity as SupplierDto)}
                 onSave={handleSaveVoucher}
                 onClose={() => setIsVoucherOpen(false)}
                 saving={savingVoucher}

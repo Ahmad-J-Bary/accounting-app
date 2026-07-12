@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom';
-import { SupplierStatement } from '../components/SupplierStatement';
+import { PartnerStatement } from '../components/PartnerStatement';
 import { useState, useEffect } from 'react';
 import { supplierService } from '../api/supplierService';
 import type { SupplierDto } from '@erp/shared-types';
@@ -34,7 +34,7 @@ export default function SupplierStatementPage() {
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
-      <SupplierStatement partnerId={id} partnerName={supplier.name} />
+      <PartnerStatement partnerId={id} partnerName={supplier.name} partnerType="supplier" />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom';
-import { CustomerStatement } from '../components/CustomerStatement';
+import { PartnerStatement } from '../components/PartnerStatement';
 import { useState, useEffect } from 'react';
 import { customerService } from '../api/customerService';
 import type { CustomerDto } from '@erp/shared-types';
@@ -34,7 +34,7 @@ export default function CustomerStatementPage() {
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
-      <CustomerStatement partnerId={id} partnerName={customer.name} />
+      <PartnerStatement partnerId={id} partnerName={customer.name} partnerType="customer" />
     </div>
   );
 }

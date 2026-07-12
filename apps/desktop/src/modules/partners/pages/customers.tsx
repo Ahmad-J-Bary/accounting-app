@@ -11,8 +11,8 @@ import type { CustomerDto, AccountDto, Payment, InvoiceDto, CreateCustomerReques
 
 import { useTabs } from "@app/providers/TabContext";
 import { useEntityList } from '@shared/hooks/useEntityList';
-import { CustomerTable } from '@modules/partners/components/CustomerTable';
-import { CustomerReceiptForm } from '@modules/partners/components/CustomerReceiptForm';
+import { PartyTable } from '@modules/partners/components/PartyTable';
+import { PaymentForm, PAYMENT_CONFIGS } from '@modules/partners/components/PaymentForm';
 import { ReturnFromMaterialPanel } from '@modules/inventory/components/ReturnFromMaterialPanel';
 
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
@@ -220,8 +220,9 @@ export default function Customers() {
         </div>
       }
       tableContent={
-        <CustomerTable 
-          customers={customers}
+        <PartyTable 
+          entityName="customer"
+          data={customers}
           loading={isLoading}
           search={search}
           onSearchChange={setSearch}
@@ -256,8 +257,8 @@ export default function Customers() {
             initialPartyId={selectedCustomer?.id}
           />
         ) : isReceiptOpen && selectedCustomer ? (
-          <CustomerReceiptForm
-            customer={selectedCustomer}
+          <PaymentForm
+            config={PAYMENT_CONFIGS.customer(selectedCustomer)}
             onSave={handleSaveReceipt}
             onClose={() => setIsReceiptOpen(false)}
             saving={receiptSaving}

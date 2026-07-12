@@ -10,6 +10,7 @@ import {
 } from "@shared/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
 import { journalEntryService } from "@modules/accounting/api/journalEntryService";
+import { JOURNAL_TYPE_LABELS } from "@modules/accounting/lib/journal-config";
 import type { JournalEntryDto } from "@erp/shared-types";
 import { format } from "date-fns";
 import { Loader2, ArrowRightLeft, TrendingUp, TrendingDown } from "lucide-react";
@@ -22,6 +23,28 @@ interface PartnerStatementProps {
   partnerType: "customer" | "supplier";
 }
 
+function getJournalDisplay(entry: JournalEntryDto): string {
+  if (entry.journal_type === "GeneralJournal") {
+    const desc = entry.description || "";
+    const hasDebit = entry.lines.some((l) => {
+      const accCode = l.account_code || "";
+      return (accCode.startsWith("47") || accCode.startsWith("332")) && parseFloat(l.debit || "0") > 0;
+    });
+    if (hasDebit) {
+      const matchedAccount = entry.lines.find((l) => {
+        const accCode = l.account_code || "";
+        return (accCode.startsWith("47") || accCode.startsWith("332")) && parseFloat(l.debit || "0") > 0;
+      });
+      if (matchedAccount) {
+        const code = matchedAccount.account_code || "";
+        if (code.startsWith("332")) return "خصوم مكتسب";
+        if (code.startsWith("47")) return "خصوم ممنوح";
+      }
+    }
+  }
+  return JOURNAL_TYPE_LABELS[entry.journal_type] || entry.journal_type_display || entry.journal_type || "";
+}
+
 export const PartnerStatement: React.FC<PartnerStatementProps> = ({
   partnerId,
   partnerName,
@@ -32,9 +55,11 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
   const [error, setError] = useState<string | null>(null);
   const { currencies, baseCurrency } = useCurrencyContext();
 
+  const balanceDirection = partnerType === "customer" ? 1 : -1;
+
   const sortedCurrencies = useMemo(() => {
     if (!baseCurrency) return currencies;
-    return [baseCurrency, ...currencies.filter(c => c.code !== baseCurrency.code)];
+    return [baseCurrency, ...currencies.filter((c) => c.code !== baseCurrency.code)];
   }, [currencies, baseCurrency]);
 
   useEffect(() => {
@@ -61,11 +86,13 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
 
   const totals = useMemo(() => {
     const acc: Record<string, { debit: number; credit: number }> = {};
-    sortedCurrencies.forEach(c => { acc[c.code] = { debit: 0, credit: 0 }; });
+    sortedCurrencies.forEach((c) => {
+      acc[c.code] = { debit: 0, credit: 0 };
+    });
 
-    entries.forEach(entry => {
-      const partnerLines = entry.lines.filter(l => l.partner_id === partnerId);
-      partnerLines.forEach(line => {
+    entries.forEach((entry) => {
+      const partnerLines = entry.lines.filter((l) => l.partner_id === partnerId);
+      partnerLines.forEach((line) => {
         const d = parseFloat(line.debit || "0");
         const c = parseFloat(line.credit || "0");
         if (acc[line.currency]) {
@@ -75,7 +102,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
       });
     });
 
-    return sortedCurrencies.map(c => ({
+    return sortedCurrencies.map((c) => ({
       currencyCode: c.code,
       currencySymbol: c.symbol,
       debit: acc[c.code]?.debit || 0,
@@ -124,7 +151,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
                 <TableHead className="text-right font-bold w-[120px]">التاريخ</TableHead>
                 <TableHead className="text-right font-bold w-[100px]">رقم القيد</TableHead>
                 <TableHead className="text-right font-bold">البيان / الحركة</TableHead>
-                {sortedCurrencies.map(c => (
+                {sortedCurrencies.map((c) => (
                   <React.Fragment key={c.code}>
                     <TableHead className="text-left font-bold w-[100px]">مدين ({c.symbol})</TableHead>
                     <TableHead className="text-left font-bold w-[100px]">دائن ({c.symbol})</TableHead>
@@ -136,23 +163,36 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
             <TableBody>
               {entries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3 + sortedCurrencies.length * 3} className="text-center py-12 text-slate-400 font-medium italic">
+                  <TableCell
+                    colSpan={3 + sortedCurrencies.length * 3}
+                    className="text-center py-12 text-slate-400 font-medium italic"
+                  >
                     {emptyText}
                   </TableCell>
                 </TableRow>
               ) : (
                 entries.map((entry) => {
-                  const partnerLines = entry.lines.filter(l => l.partner_id === partnerId);
-                  const perCurrency = sortedCurrencies.map(c => {
-                    const lines = partnerLines.filter(l => l.currency === c.code);
+                  const partnerLines = entry.lines.filter((l) => l.partner_id === partnerId);
+                  const perCurrency = sortedCurrencies.map((c) => {
+                    const lines = partnerLines.filter((l) => l.currency === c.code);
                     const d = lines.reduce((sum, l) => sum + parseFloat(l.debit), 0);
                     const cr = lines.reduce((sum, l) => sum + parseFloat(l.credit), 0);
-                    runningBalances[c.code] = (runningBalances[c.code] || 0) + (d - cr);
-                    return { code: c.code, symbol: c.symbol, debit: d, credit: cr, balance: runningBalances[c.code] };
+                    runningBalances[c.code] =
+                      (runningBalances[c.code] || 0) + (d - cr) * balanceDirection;
+                    return {
+                      code: c.code,
+                      symbol: c.symbol,
+                      debit: d,
+                      credit: cr,
+                      balance: runningBalances[c.code],
+                    };
                   });
 
                   return (
-                    <TableRow key={entry.id} className="hover:bg-slate-50/30 transition-colors">
+                    <TableRow
+                      key={entry.id}
+                      className="hover:bg-slate-50/30 transition-colors"
+                    >
                       <TableCell className="font-medium text-slate-600">
                         {format(new Date(entry.entry_date), "yyyy/MM/dd")}
                       </TableCell>
@@ -160,7 +200,9 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="font-bold text-slate-800">{entry.description}</span>
-                          <span className="text-xs text-slate-400">{entry.journal_type_display}</span>
+                          <span className="text-xs text-slate-400">
+                            {getJournalDisplay(entry)}
+                          </span>
                         </div>
                       </TableCell>
                       {perCurrency.map(({ code, symbol, debit, credit, balance }) => (
@@ -171,7 +213,9 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
                                 {debit.toLocaleString()}
                                 <TrendingUp className="w-3 h-3" />
                               </div>
-                            ) : "-"}
+                            ) : (
+                              "-"
+                            )}
                           </TableCell>
                           <TableCell className="text-left">
                             {credit > 0 ? (
@@ -179,7 +223,9 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
                                 {credit.toLocaleString()}
                                 <TrendingDown className="w-3 h-3" />
                               </div>
-                            ) : "-"}
+                            ) : (
+                              "-"
+                            )}
                           </TableCell>
                           <TableCell className="text-left font-black text-slate-900 bg-slate-50/20">
                             {balance.toLocaleString()}
@@ -196,25 +242,35 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
         </div>
         <TableFooter>
           {sortedCurrencies.map((targetCurr, targetIdx) => {
-            const t = totals.find(t => t.currencyCode === targetCurr.code);
+            const t = totals.find((t) => t.currencyCode === targetCurr.code);
             if (!t) return null;
-            const bal = t.debit - t.credit;
+            const bal = (t.debit - t.credit) * balanceDirection;
             return (
               <TableRow key={targetCurr.code} className="bg-slate-50 font-bold">
-                <TableCell className="text-slate-400 text-xs" colSpan={3}>{`الإجمالي (${targetCurr.symbol})`}</TableCell>
+                <TableCell className="text-slate-400 text-xs" colSpan={3}>
+                  {`الإجمالي (${targetCurr.symbol})`}
+                </TableCell>
                 {sortedCurrencies.map((_, idx) => {
                   if (idx === targetIdx) {
                     return (
                       <React.Fragment key={targetCurr.code}>
-                        <TableCell className="text-left text-red-600">{t.debit.toLocaleString() || '0'}</TableCell>
-                        <TableCell className="text-left text-emerald-600">{t.credit.toLocaleString() || '0'}</TableCell>
-                        <TableCell className="text-left font-black text-slate-900">{bal.toLocaleString()}</TableCell>
+                        <TableCell className="text-left text-red-600">
+                          {t.debit.toLocaleString() || "0"}
+                        </TableCell>
+                        <TableCell className="text-left text-emerald-600">
+                          {t.credit.toLocaleString() || "0"}
+                        </TableCell>
+                        <TableCell className="text-left font-black text-slate-900">
+                          {bal.toLocaleString()}
+                        </TableCell>
                       </React.Fragment>
                     );
                   }
                   return (
                     <React.Fragment key={`${idx}`}>
-                      <TableCell /><TableCell /><TableCell />
+                      <TableCell />
+                      <TableCell />
+                      <TableCell />
                     </React.Fragment>
                   );
                 })}
@@ -226,4 +282,3 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
     </Card>
   );
 };
-
