@@ -1,5 +1,4 @@
-import { useCallback, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { toast } from "sonner";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import { journalEntryService } from "@modules/accounting/api/journalEntryService";
@@ -12,7 +11,9 @@ import { computeIncomeStatement, emptyIncomeStatementData } from "@modules/accou
 import type { LoadedIncomeStatementData, IncomeStatementFilters } from "@modules/accounting/lib/incomeStatement";
 import type { PartnerDto, MaterialDto, StockMovementDetailDto, AccountLedgerDto } from "@erp/shared-types";
 import { useMaterialExpenseLedgers } from "@shared/hooks/useMaterialExpenseLedgers";
+import { useReportData } from "@shared/hooks/useReportData";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
+import type { ReportState } from "@shared/types/report";
 
 export type LoadedPartnerProfitShareData = {
   partners: PartnerDto[];
@@ -34,9 +35,7 @@ const emptyData: LoadedPartnerProfitShareData = {
   partnerLedgers: {},
 };
 
-export function usePartnerProfitShareReport(filters: IncomeStatementFilters) {
-  const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
-  const hasLoadedOnceRef = useRef(false);
+export function usePartnerProfitShareReport(filters: IncomeStatementFilters): ReportState<LoadedPartnerProfitShareData> {
   const { loadMaterialExpenseLedgers } = useMaterialExpenseLedgers();
 
   const fetchReportData = useCallback(async (): Promise<LoadedPartnerProfitShareData> => {
@@ -104,7 +103,7 @@ export function usePartnerProfitShareReport(filters: IncomeStatementFilters) {
       partners.map(async (p) => {
         const accountIds = [p.linked_account_id, p.drawings_account_id].filter(Boolean) as string[];
         const ledgers = await Promise.allSettled(
-          accountIds.map((id) => accountingService.getAccountLedger(id)),
+          accountIds.map((id) => accountingService.getAccountLedger(id))
         );
         ledgers.forEach((result, i) => {
           if (result.status === "fulfilled") {
@@ -125,31 +124,10 @@ export function usePartnerProfitShareReport(filters: IncomeStatementFilters) {
     };
   }, [filters, loadMaterialExpenseLedgers]);
 
-  const { data: reportData, isLoading, isFetching, refetch } = useQuery({
-    queryKey: QUERY_KEYS.partnerProfitShare,
-    queryFn: fetchReportData,
-    initialData: emptyData,
+  return useReportData({
+    queryKey: [QUERY_KEYS.partnerProfitShare[0], QUERY_KEYS.partnerProfitShare[1], filters.from_date, filters.to_date] as const,
+    fetchData: fetchReportData,
+    emptyData: emptyData,
+    errorMessage: "تعذر تحميل بيانات الشركاء وتقاسم الأرباح",
   });
-
-  const loadReportData = useCallback(async () => {
-    try {
-      await refetch();
-      hasLoadedOnceRef.current = true;
-      setLastLoadedAt(new Date());
-    } catch (error) {
-      console.error(error);
-      toast.error("تعذر تحميل بيانات الشركاء وتقاسم الأرباح");
-    }
-  }, [refetch]);
-
-  const refreshing = isFetching && hasLoadedOnceRef.current;
-  const loading = isLoading && !hasLoadedOnceRef.current;
-
-  return {
-    loading,
-    refreshing,
-    lastLoadedAt,
-    reportData: reportData ?? emptyData,
-    loadReportData,
-  };
 }

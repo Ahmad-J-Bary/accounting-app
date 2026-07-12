@@ -1,21 +1,18 @@
-import { useCallback, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { toast } from "sonner";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { returnService } from "@modules/invoicing/api/returnService";
 import { materialService } from "@modules/inventory/api/materialService";
 import { journalEntryService } from "@modules/accounting/api/journalEntryService";
-import {
-  emptyIncomeStatementData,
-  type LoadedIncomeStatementData,
-} from "@modules/accounting/lib/incomeStatement";
+import { useReportData } from "@shared/hooks/useReportData";
 import { useMaterialExpenseLedgers } from "@shared/hooks/useMaterialExpenseLedgers";
+import { emptyIncomeStatementData } from "@modules/accounting/lib/incomeStatement";
+import type { LoadedIncomeStatementData } from "@modules/accounting/lib/incomeStatement";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
+import type { ReportState } from "@shared/types/report";
 
-export function useIncomeStatementReport() {
-  const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
-  const hasLoadedOnceRef = useRef(false);
+export function useIncomeStatementReport(): ReportState<LoadedIncomeStatementData> {
   const { loadMaterialExpenseLedgers } = useMaterialExpenseLedgers();
 
   const fetchReportData = useCallback(async (): Promise<LoadedIncomeStatementData> => {
@@ -55,31 +52,10 @@ export function useIncomeStatementReport() {
     };
   }, [loadMaterialExpenseLedgers]);
 
-  const { data: reportData, isLoading, isFetching, refetch } = useQuery({
+  return useReportData({
     queryKey: QUERY_KEYS.incomeStatement,
-    queryFn: fetchReportData,
-    initialData: emptyIncomeStatementData,
+    fetchData: fetchReportData,
+    emptyData: emptyIncomeStatementData,
+    errorMessage: "تعذر تحميل بيانات قائمة الدخل",
   });
-
-  const loadReportData = useCallback(async () => {
-    try {
-      await refetch();
-      hasLoadedOnceRef.current = true;
-      setLastLoadedAt(new Date());
-    } catch (error) {
-      console.error(error);
-      toast.error("تعذر تحميل بيانات قائمة الدخل");
-    }
-  }, [refetch]);
-
-  const refreshing = isFetching && hasLoadedOnceRef.current;
-  const loading = isLoading && !hasLoadedOnceRef.current;
-
-  return {
-    loading,
-    refreshing,
-    lastLoadedAt,
-    reportData: reportData ?? emptyIncomeStatementData,
-    loadReportData,
-  };
 }

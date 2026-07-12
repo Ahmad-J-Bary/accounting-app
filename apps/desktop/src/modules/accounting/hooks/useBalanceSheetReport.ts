@@ -1,21 +1,18 @@
-import { useCallback, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { toast } from "sonner";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import { journalEntryService } from "@modules/accounting/api/journalEntryService";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { returnService } from "@modules/invoicing/api/returnService";
 import { materialService } from "@modules/inventory/api/materialService";
-import {
-  computeIncomeStatement,
-  emptyIncomeStatementData,
-  type IncomeStatementFilters,
-  type LoadedIncomeStatementData,
-} from "@modules/accounting/lib/incomeStatement";
+import { useReportData } from "@shared/hooks/useReportData";
+import { useMaterialExpenseLedgers } from "@shared/hooks/useMaterialExpenseLedgers";
+import { computeIncomeStatement, emptyIncomeStatementData } from "@modules/accounting/lib/incomeStatement";
 import { SYSTEM_ACCOUNT_IDS } from "@erp/shared-types";
 import type { AccountDto, AccountLedgerDto, MaterialDto, StockMovementDetailDto } from "@erp/shared-types";
-import { useMaterialExpenseLedgers } from "@shared/hooks/useMaterialExpenseLedgers";
+import type { IncomeStatementFilters } from "@modules/accounting/lib/incomeStatement";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
+import type { ReportState } from "@shared/types/report";
 
 export type LoadedBalanceSheetData = {
   accounts: AccountDto[];
@@ -33,7 +30,7 @@ const emptyData: LoadedBalanceSheetData = {
   closingInventory: 0,
 };
 
-export async function computeLedgerTotals(
+async function computeLedgerTotals(
   accounts: AccountDto[],
   entries: { description?: string; journal_type?: string; source_id?: string; lines: Array<{ account_id: string; debit_base?: string; debit?: string; credit_base?: string; credit?: string }> }[],
   incomeStatementResult: { netProfit: number; closingInventory: number },
@@ -58,7 +55,7 @@ export async function computeLedgerTotals(
   }
 
   const partnerAccounts = accounts.filter(
-    (a) => a.code !== "51" && a.code.startsWith("51") && ["Liabilities", "Equity", "Revenue"].includes(a.account_type),
+    (a) => a.code !== "51" && a.code.startsWith("51") && ["Liabilities", "Equity", "Revenue"].includes(a.account_type)
   );
   const totalPartnerCapital = partnerAccounts.reduce(
     (sum, a) => sum + Math.abs(parseFloat(a.opening_balance || "0")),
@@ -146,9 +143,7 @@ export async function computeLedgerTotals(
   return { ledgerTotals, totalDrawings };
 }
 
-export function useBalanceSheetReport(filters: IncomeStatementFilters) {
-  const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
-  const hasLoadedOnceRef = useRef(false);
+export function useBalanceSheetReport(filters: IncomeStatementFilters): ReportState<LoadedBalanceSheetData> {
   const { loadMaterialExpenseLedgers } = useMaterialExpenseLedgers();
 
   const fetchReportData = useCallback(async (): Promise<LoadedBalanceSheetData> => {
@@ -177,7 +172,7 @@ export function useBalanceSheetReport(filters: IncomeStatementFilters) {
 
     const { stockMovementsByMaterial, expenseLedgers } = await loadMaterialExpenseLedgers(materials, expenseAccounts);
 
-    const incomeStatementData: LoadedIncomeStatementData = {
+    const incomeStatementData = {
       ...emptyIncomeStatementData,
       salesInvoices,
       purchaseInvoices,
@@ -209,31 +204,10 @@ export function useBalanceSheetReport(filters: IncomeStatementFilters) {
     };
   }, [filters, loadMaterialExpenseLedgers]);
 
-  const { data: reportData, isLoading, isFetching, refetch } = useQuery({
-    queryKey: QUERY_KEYS.balanceSheet,
-    queryFn: fetchReportData,
-    initialData: emptyData,
+  return useReportData({
+    queryKey: [QUERY_KEYS.balanceSheet[0], QUERY_KEYS.balanceSheet[1], filters.from_date, filters.to_date] as const,
+    fetchData: fetchReportData,
+    emptyData: emptyData,
+    errorMessage: "تعذر تحميل بيانات الميزانية العمومية",
   });
-
-  const loadReportData = useCallback(async () => {
-    try {
-      await refetch();
-      hasLoadedOnceRef.current = true;
-      setLastLoadedAt(new Date());
-    } catch (error) {
-      console.error(error);
-      toast.error("تعذر تحميل بيانات الميزانية العمومية");
-    }
-  }, [refetch]);
-
-  const refreshing = isFetching && hasLoadedOnceRef.current;
-  const loading = isLoading && !hasLoadedOnceRef.current;
-
-  return {
-    loading,
-    refreshing,
-    lastLoadedAt,
-    reportData: reportData ?? emptyData,
-    loadReportData,
-  };
 }

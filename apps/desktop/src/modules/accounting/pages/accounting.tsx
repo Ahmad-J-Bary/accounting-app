@@ -79,38 +79,13 @@ export default function Accounting() {
   const [searchQuery, setSearchQuery] = useState("");
   const hasLoadedOnceRef = useRef(false);
 
-  const { data, isLoading, isFetching, refetch } = useQuery({
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: QUERY_KEYS.chartOfAccounts,
     queryFn: fetchChartOfAccountsData,
-    initialData: { accounts: [], ledgerTotals: new Map() },
   });
 
-  const accounts = data.accounts;
-  const ledgerTotals = data.ledgerTotals;
-
-  const load = useCallback(async (isInitial = false) => {
-    await refetch();
-    if (isInitial) {
-      const defaultExpanded = new Set<string>();
-      defaultExpanded.add(ROOT_ACCOUNT_ID);
-      for (const account of accounts) {
-        if ((account.level ?? 1) <= 2) defaultExpanded.add(account.id);
-      }
-      setExpandedNodes(defaultExpanded);
-    }
-  }, [refetch, accounts]);
-
-  useEffect(() => {
-    if (!hasLoadedOnceRef.current && accounts.length > 0) {
-      hasLoadedOnceRef.current = true;
-      const defaultExpanded = new Set<string>();
-      defaultExpanded.add(ROOT_ACCOUNT_ID);
-      for (const account of accounts) {
-        if ((account.level ?? 1) <= 2) defaultExpanded.add(account.id);
-      }
-      setExpandedNodes(defaultExpanded);
-    }
-  }, [accounts]);
+  const accounts = useMemo(() => data?.accounts ?? [], [data?.accounts]);
+  const ledgerTotals = useMemo(() => data?.ledgerTotals ?? new Map(), [data?.ledgerTotals]);
 
   const toggleNode: ToggleNodeHandler = useCallback((id, event) => {
     event.stopPropagation();
@@ -156,6 +131,48 @@ const rootNode = useMemo<AccountTreeNode>(() => ({
   balance: String(rootBalance), notes: null, is_active: true, is_default: false, is_final: false,
   linked_customer_id: null, linked_supplier_id: null, debit: "0", credit: "0", children: visibleTree,
 }), [visibleTree, rootBalance]);
+
+  // Expand nodes and set root node as selected on initial load
+  useEffect(() => {
+    if (!hasLoadedOnceRef.current && accounts.length > 0) {
+      hasLoadedOnceRef.current = true;
+      const defaultExpanded = new Set<string>();
+      defaultExpanded.add(ROOT_ACCOUNT_ID);
+      for (const account of accounts) {
+        if ((account.level ?? 1) <= 2) defaultExpanded.add(account.id);
+      }
+      setExpandedNodes(defaultExpanded);
+      setSelected(rootNode);
+    }
+  }, [accounts, rootNode]);
+
+  // Keep the selected account in sync with any updates from queries
+  useEffect(() => {
+    if (accounts.length > 0 && selected && selected.id !== ROOT_ACCOUNT_ID) {
+      const updated = accounts.find((a) => a.id === selected.id);
+      if (updated) {
+        if (
+          updated.name_ar !== selected.name_ar ||
+          updated.name_en !== selected.name_en ||
+          updated.code !== selected.code ||
+          updated.account_type !== selected.account_type ||
+          updated.parent_id !== selected.parent_id ||
+          updated.opening_balance !== selected.opening_balance
+        ) {
+          setSelected((prev) => (prev ? { ...prev, ...updated } : null));
+        }
+      } else {
+        setSelected(null);
+      }
+    }
+  }, [accounts, selected]);
+
+  // Sync root node balance in selected state when rootBalance changes
+  useEffect(() => {
+    if (selected?.id === ROOT_ACCOUNT_ID && selected.balance !== String(rootBalance)) {
+      setSelected((prev) => (prev ? { ...prev, balance: String(rootBalance) } : null));
+    }
+  }, [rootBalance, selected?.id, selected?.balance]);
 
   const isRootSelected = selected?.id === ROOT_ACCOUNT_ID;
   const parentName = useMemo(() => {
