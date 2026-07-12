@@ -1,5 +1,5 @@
 import { Button } from "@shared/ui/button";
-import { Plus, History as HistoryIcon, PlusCircle, Download } from "lucide-react";
+import { Plus, History as HistoryIcon, PlusCircle, Download, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
 interface PartnersToolbarProps {
@@ -7,6 +7,7 @@ interface PartnersToolbarProps {
   onOpenDrawingsLedger: (partnerId: string, accountId: string, name: string) => void;
   onOpenDrawingsForm: (partnerId: string) => void;
   onAddPartner: () => void;
+  onOpenPartnerStatement: () => void;
 }
 
 export function PartnersToolbar({
@@ -14,6 +15,7 @@ export function PartnersToolbar({
   onOpenDrawingsLedger,
   onOpenDrawingsForm,
   onAddPartner,
+  onOpenPartnerStatement,
 }: PartnersToolbarProps) {
   return (
     <div className="flex items-center gap-2">
@@ -60,6 +62,15 @@ export function PartnersToolbar({
         className="border-slate-200 text-slate-700 hover:bg-slate-50"
       >
         <Download className="w-4 h-4 ml-2 text-emerald-500" /> تصدير إكسل
+      </Button>
+
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={onOpenPartnerStatement}
+        className="border-slate-200 text-slate-700 hover:bg-slate-50"
+      >
+        <TrendingUp className="w-4 h-4 ml-2 text-emerald-500" /> تقاسم الأرباح ومبالغ الشركاء
       </Button>
 
       <div className="w-px h-6 bg-slate-200 mx-1" />

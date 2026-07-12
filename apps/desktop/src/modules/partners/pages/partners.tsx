@@ -119,6 +119,14 @@ export default function Partners() {
           }
           onOpenDrawingsForm={() => setActivePanel("drawings")}
           onAddPartner={() => { setEditPartner(null); setActivePanel("edit"); setSelectedId("new"); }}
+          onOpenPartnerStatement={() =>
+            openTab({
+              id: "partner-statement",
+              title: "تقاسم الأرباح ومبالغ الشركاء",
+              path: "/accounting/reports/partner-statement",
+              closable: true,
+            })
+          }
         />
       }
 

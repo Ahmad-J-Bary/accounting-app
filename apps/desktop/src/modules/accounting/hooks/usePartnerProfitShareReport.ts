@@ -18,6 +18,7 @@ export type LoadedPartnerProfitShareData = {
   fixedAssetsValue: number;
   partnerDrawings: Record<string, number>;
   customerDebts: number;
+  partnerLedgers: Record<string, AccountLedgerDto>;
 };
 
 const emptyData: LoadedPartnerProfitShareData = {
@@ -27,6 +28,7 @@ const emptyData: LoadedPartnerProfitShareData = {
   fixedAssetsValue: 0,
   partnerDrawings: {},
   customerDebts: 0,
+  partnerLedgers: {},
 };
 
 export function usePartnerProfitShareReport(filters: IncomeStatementFilters) {
@@ -127,6 +129,21 @@ export function usePartnerProfitShareReport(filters: IncomeStatementFilters) {
           return sum + (purchaseCost - accumulated);
         }, 0);
 
+      const partnerLedgers: Record<string, AccountLedgerDto> = {};
+      await Promise.allSettled(
+        partners.map(async (p) => {
+          const accountIds = [p.linked_account_id, p.drawings_account_id].filter(Boolean) as string[];
+          const ledgers = await Promise.allSettled(
+            accountIds.map((id) => accountingService.getAccountLedger(id))
+          );
+          ledgers.forEach((result, i) => {
+            if (result.status === "fulfilled") {
+              partnerLedgers[accountIds[i]] = result.value;
+            }
+          });
+        })
+      );
+
       setReportData({
         partners,
         netProfit: incomeStatementResult.netProfit,
@@ -134,6 +151,7 @@ export function usePartnerProfitShareReport(filters: IncomeStatementFilters) {
         fixedAssetsValue,
         partnerDrawings,
         customerDebts,
+        partnerLedgers,
       });
       hasLoadedOnceRef.current = true;
       setLastLoadedAt(new Date());

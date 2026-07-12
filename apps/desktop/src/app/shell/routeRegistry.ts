@@ -20,6 +20,7 @@ export const ALL_SYSTEM_ROUTES: SystemRouteEntry[] = [
   { id: "trial-balance", to: "/accounting/reports/trial-balance", label: "ميزان المراجعة", icon: "Scale", groupId: "", groupLabel: "" },
   { id: "balance-sheet", to: "/accounting/reports/balance-sheet", label: "الميزانية العمومية", icon: "BarChart3", groupId: "", groupLabel: "" },
   { id: "partner-profit-share", to: "/accounting/reports/partner-profit-share", label: "الشركاء وتقاسم الأرباح", icon: "Users", groupId: "", groupLabel: "" },
+  { id: "partner-statement", to: "/accounting/reports/partner-statement", label: "كشف حساب الشريك", icon: "BookOpen", groupId: "", groupLabel: "" },
 
   // ── الجهات والعمليات المالية ──
   { id: "partners", to: "/partners", label: "الشركاء ورأس المال", icon: "Users", groupId: "parties", groupLabel: "الجهات والعمليات المالية" },
