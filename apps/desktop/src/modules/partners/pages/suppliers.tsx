@@ -48,6 +48,7 @@ export default function Suppliers() {
     handleSave,
     handleDelete,
   } = useEntityList<SupplierDto, CreateSupplierRequest | UpdateSupplierRequest>({
+    queryKey: ["partners", "suppliers"],
     fetchData: () => supplierService.listSuppliers(),
     saveData: async (payload) => {
       if ((payload as UpdateSupplierRequest).id) return supplierService.updateSupplier(payload as UpdateSupplierRequest);

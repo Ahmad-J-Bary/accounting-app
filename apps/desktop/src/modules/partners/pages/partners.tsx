@@ -29,10 +29,10 @@ export default function Partners() {
     filtered: partners,
     loading,
     refresh,
-    setData,
     search,
     setSearch,
   } = useDataTable<PartnerDto>({
+    queryKey: ["partners"],
     fetchData: () => partnerService.listPartners(),
     searchFields: ["name"],
     errorLabel: "فشل جلب الشركاء",
@@ -81,11 +81,11 @@ export default function Partners() {
     try {
       await partnerService.deletePartner(id);
       toast.success("تم الحذف بنجاح");
-      setData(prev => prev.filter(p => p.id !== id));
+      refresh(true);
     } catch (error) {
       toast.error("فشل الحذف: " + error);
     }
-  }, [setData]);
+  }, [refresh]);
 
   const handleSaveDrawings = async (payload: CreatePaymentRequest) => {
     try {

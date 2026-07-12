@@ -42,9 +42,9 @@ export default function Journal() {
     setSearch,
     refresh,
   } = useDataTable<JournalEntryDto>({
+    queryKey: ["journal-entries", JSON.stringify(filters)],
     fetchData,
     searchFields: ["entry_number", "description"],
-    dependencies: [filters],
   });
 
   const visibleColumns = useMemo(

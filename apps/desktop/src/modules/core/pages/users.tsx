@@ -25,6 +25,7 @@ export default function UsersPage() {
     setSearch,
     refresh: refreshUsers,
   } = useDataTable<User>({
+    queryKey: ["users"],
     fetchData: () => userService.listUsers(),
     searchFields: ["username", "full_name"],
     errorLabel: "فشل تحميل المستخدمين",

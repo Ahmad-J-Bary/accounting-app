@@ -22,6 +22,7 @@ export default function AdjustmentsPage() {
     setSearch,
     refresh,
   } = useDataTable<StockAdjustment>({
+    queryKey: ["stock-adjustments"],
     fetchData: () => adjustmentService.listStockAdjustments(),
     searchFields: ["material_name", "material_id", "notes", "reason", "reference"],
   });

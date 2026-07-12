@@ -39,6 +39,7 @@ export default function FixedAssetsPage() {
     setSearch,
     refresh,
   } = useDataTable<FixedAssetDto>({
+    queryKey: ["fixed-assets"],
     fetchData: () => fixedAssetService.list(),
     searchFields: ["code", "name", "location", "notes"],
   });

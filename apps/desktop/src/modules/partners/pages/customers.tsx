@@ -50,6 +50,7 @@ export default function Customers() {
     handleSave,
     handleDelete,
   } = useEntityList<CustomerDto, CreateCustomerRequest | UpdateCustomerRequest>({
+    queryKey: ["partners", "customers"],
     fetchData: () => customerService.listCustomers(),
     saveData: async (payload) => {
       if ((payload as UpdateCustomerRequest).id) return customerService.updateCustomer(payload as UpdateCustomerRequest);

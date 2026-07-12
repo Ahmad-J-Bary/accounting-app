@@ -53,13 +53,13 @@ export default function AccountMovement() {
     search,
     setSearch,
   } = useDataTable<AccountLedgerLineDto>({
+    queryKey: ["account-ledger", accountId ?? ""],
     fetchData: async () => {
       if (!accountId) return [];
       const data = await accountingService.getAccountLedger(accountId);
       setLedger(data);
       return data.lines;
     },
-    dependencies: [accountId],
     searchFields: ["description", "entry_number", "opposite_account_name"]
   });
 

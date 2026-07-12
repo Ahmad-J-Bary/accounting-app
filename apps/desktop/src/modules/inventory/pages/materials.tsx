@@ -46,6 +46,7 @@ export default function Materials() {
     handleSave,
     handleDelete,
   } = useEntityList<MaterialDto, CreateMaterialRequest | UpdateMaterialRequest>({
+    queryKey: ["inventory", "materials"],
     fetchData: () => materialService.listMaterials(),
     saveData: async (payload) => {
       if ((payload as UpdateMaterialRequest).id) return materialService.updateMaterial(payload as UpdateMaterialRequest);

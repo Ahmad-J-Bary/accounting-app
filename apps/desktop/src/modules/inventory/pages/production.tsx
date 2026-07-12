@@ -15,6 +15,7 @@ export default function ProductionPage() {
     search,
     setSearch,
   } = useDataTable<ProductionOrder>({
+    queryKey: ["production-orders"],
     fetchData: () => productionService.listProductionOrders(),
     searchFields: ["order_number"],
   });

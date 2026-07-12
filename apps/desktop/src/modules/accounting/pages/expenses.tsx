@@ -70,6 +70,7 @@ export default function Expenses() {
     handleSave,
     handleDelete,
   } = useEntityList<AccountDto, ExpenseSavePayload>({
+    queryKey: ["accounting", "expenseItems"],
     fetchData: () => accountingService.getExpenseItems(),
     saveData: async (payload) => {
       const { _id, ...cmd } = payload;

@@ -1,6 +1,6 @@
 import { Toaster } from '@shared/ui/sonner';
 import { TooltipProvider } from '@shared/ui/tooltip';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { AppearanceProvider } from '@app/providers/AppearanceProvider';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from '@app/shell/AppLayout';
@@ -15,8 +15,7 @@ import AuthCallback from '@modules/core/pages/authCallback';
 import AuthError from '@modules/core/pages/authError';
 import Index from '@modules/core/pages/index';
 import SetupWizard from '@modules/core/pages/setupWizard';
-
-const queryClient = new QueryClient();
+import { queryClient } from '@shared/hooks/queryClient';
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

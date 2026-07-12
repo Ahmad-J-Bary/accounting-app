@@ -1,7 +1,9 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 interface UseEntityListProps<T, Req> {
+  queryKey: string[];
   fetchData: () => Promise<T[]>;
   saveData: (payload: Req) => Promise<T>;
   deleteData: (id: string) => Promise<void>;
@@ -10,10 +12,8 @@ interface UseEntityListProps<T, Req> {
   successLabel?: string;
 }
 
-/**
- * Standardized hook for managing entity lists (Customers, Suppliers, Materials, etc.).
- */
 export function useEntityList<T extends { id: string }, Req>({
+  queryKey,
   fetchData,
   saveData,
   deleteData,
@@ -21,66 +21,68 @@ export function useEntityList<T extends { id: string }, Req>({
   errorLabel = "فشل تحميل البيانات",
   successLabel = "تم الحفظ بنجاح",
 }: UseEntityListProps<T, Req>) {
-  const propsRef = useRef({ fetchData, saveData, deleteData, searchFields, errorLabel, successLabel });
-  propsRef.current = { fetchData, saveData, deleteData, searchFields, errorLabel, successLabel };
-
-  const [items, setItems] = useState<T[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editItem, setEditItem] = useState<T | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
-  const activeRequestRef = useRef<number>(0);
+  const {
+    data: items = [],
+    isLoading: loading,
+    isRefetching: refreshing,
+    refetch,
+  } = useQuery<T[]>({
+    queryKey,
+    queryFn: fetchData,
+  });
 
-  const refresh = useCallback(async (silent = false) => {
-    const requestId = ++activeRequestRef.current;
-    try {
-      if (silent) setRefreshing(true);
-      else setLoading(true);
+  const refresh = useCallback(
+    (_silent = false) => {
+      refetch();
+    },
+    [refetch]
+  );
 
-      const data = await propsRef.current.fetchData();
-      
-      if (requestId === activeRequestRef.current) {
-        setItems(data);
-      }
-    } catch (e) {
-      if (requestId === activeRequestRef.current) {
-        toast.error(propsRef.current.errorLabel + ": " + e);
-      }
-    } finally {
-      if (requestId === activeRequestRef.current) {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    }
-  }, []);
+  const createMutation = useMutation({
+    mutationFn: saveData,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey });
+      toast.success(successLabel);
+      setIsFormOpen(false);
+    },
+    onError: (e: Error) => {
+      toast.error("فشل الحفظ: " + e.message);
+    },
+  });
 
-  const initialFetchRef = useRef(false);
-  useEffect(() => { 
-    if (!initialFetchRef.current) {
-      initialFetchRef.current = true;
-      refresh(); 
-    }
-  }, [refresh]);
+  const deleteMutation = useMutation({
+    mutationFn: deleteData,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey });
+      toast.success("تم الحذف بنجاح");
+      setSelectedId(null);
+    },
+    onError: (e: Error) => {
+      toast.error("فشل الحذف: " + e.message);
+    },
+  });
 
   const filtered = useMemo(() => {
     const s = search.toLowerCase().trim();
     if (!s) return items;
-    
-    return items.filter(item => 
-      propsRef.current.searchFields.some(field => {
+    return items.filter((item) =>
+      searchFields.some((field) => {
         const val = item[field];
         return val && String(val).toLowerCase().includes(s);
       })
     );
-  }, [items, search]);
+  }, [items, search, searchFields]);
 
-  const selectedItem = useMemo(() => 
-    items.find(i => i.id === selectedId) || null,
-  [items, selectedId]);
+  const selectedItem = useMemo(
+    () => items.find((i) => i.id === selectedId) || null,
+    [items, selectedId]
+  );
 
   const handleOpenAdd = useCallback(() => {
     setEditItem(null);
@@ -93,40 +95,27 @@ export function useEntityList<T extends { id: string }, Req>({
     setIsFormOpen(true);
   }, []);
 
-  const handleSave = useCallback(async (payload: Req) => {
-    setSaving(true);
-    try {
-      await propsRef.current.saveData(payload);
-      toast.success(propsRef.current.successLabel);
-      setIsFormOpen(false);
-      refresh(true);
-    } catch (e) {
-      console.error("[useEntityList] Save Error:", e);
-      toast.error("فشل الحفظ: " + e);
-    } finally {
-      setSaving(false);
-    }
-  }, [refresh]);
+  const handleSave = useCallback(
+    async (payload: Req) => {
+      await createMutation.mutateAsync(payload);
+    },
+    [createMutation]
+  );
 
-  const handleDelete = useCallback(async (id: string) => {
-    if (!confirm("هل أنت متأكد من الحذف؟")) return;
-    try {
-      await propsRef.current.deleteData(id);
-      toast.success("تم الحذف بنجاح");
-      if (selectedId === id) setSelectedId(null);
-      refresh(true);
-    } catch (e) {
-      console.error("[useEntityList] Delete Error:", e);
-      toast.error("فشل الحذف: " + e);
-    }
-  }, [selectedId, refresh]);
+  const handleDelete = useCallback(
+    (id: string) => {
+      if (!confirm("هل أنت متأكد من الحذف؟")) return;
+      deleteMutation.mutate(id);
+    },
+    [deleteMutation]
+  );
 
   return {
     items,
     filtered,
     loading,
     refreshing,
-    saving,
+    saving: createMutation.isPending,
     search,
     setSearch,
     refresh,

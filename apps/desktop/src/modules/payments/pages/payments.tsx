@@ -42,6 +42,7 @@ export default function PaymentsPage() {
     setSearch,
     refresh,
   } = useDataTable<Payment>({
+    queryKey: ["payments"],
     fetchData: () => paymentService.listPayments(),
     searchFields: ["customer_name", "supplier_name", "reference", "notes"],
   });

@@ -22,6 +22,7 @@ export default function DamagedPage() {
     setSearch,
     refresh,
   } = useDataTable<DamagedItem>({
+    queryKey: ["damaged-items"],
     fetchData: () => damagedService.listDamagedItems(),
     searchFields: ["material_name", "material_id", "reason"],
   });

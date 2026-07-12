@@ -38,9 +38,9 @@ export default function AccountingJournalsReport() {
     loading,
     refresh,
   } = useDataTable<JournalEntryDto>({
+    queryKey: ["journal-entries", JSON.stringify(filters)],
     fetchData: () => journalEntryService.listJournalEntries(filters),
     searchFields: ['entry_number', 'description'],
-    dependencies: [filters],
   });
 
   const selectedJournal = useMemo(() => 
