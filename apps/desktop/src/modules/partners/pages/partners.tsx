@@ -22,7 +22,8 @@ import { usePartnerRatios } from '@modules/partners/hooks/usePartnerRatios';
 export default function Partners() {
   const { openTab } = useTabs();
   const { formatAmount, baseCurrency, currencies } = useCurrencyContext();
-  const [globalStrategy, setGlobalStrategy] = useState("BasedOnCapital");
+  const [globalStrategy, setGlobalStrategy] = useState(() => localStorage.getItem("partnerProfitStrategy") || "BasedOnCapital");
+  const persistStrategy = (v: string) => { setGlobalStrategy(v); localStorage.setItem("partnerProfitStrategy", v); };
 
   const {
     filtered: partners,
@@ -130,7 +131,7 @@ export default function Partners() {
           filterBar={
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap">التوزيع:</span>
-              <Select value={globalStrategy} onValueChange={setGlobalStrategy}>
+              <Select value={globalStrategy} onValueChange={persistStrategy}>
                 <SelectTrigger className="w-[120px] h-8 bg-white font-bold shadow-sm border-slate-200 text-xs">
                   <SelectValue placeholder="اختر" />
                 </SelectTrigger>

@@ -19,8 +19,6 @@ type PartnerWithRatios = PartnerDto & {
 interface PartnerDetailViewProps {
   partner: PartnerWithRatios;
   baseCurrency: Currency | null;
-  currencies: Currency[];
-  formatAmount: (val: number, opts: { currencyCode: string }) => string;
   onEdit?: () => void;
   onDelete?: (id: string) => void;
   onClose: () => void;
@@ -29,12 +27,16 @@ interface PartnerDetailViewProps {
 export function PartnerDetailView({
   partner,
   baseCurrency,
-  currencies,
   onEdit,
   onDelete,
   onClose,
 }: PartnerDetailViewProps) {
   const { formatAmount } = useCurrencyContext();
+
+  const actualProfitRatio = partner.profit_sharing_type === "Manual"
+    ? parseFloat(partner.profit_sharing_ratio || "0")
+    : partner.calculatedCapitalRatio;
+
   const actions: SidebarAction[] = [
     ...(onEdit
       ? [
@@ -77,16 +79,22 @@ export function PartnerDetailView({
               معلومات الاستثمار
             </h4>
             <div className="grid grid-cols-2 gap-3">
-              {currencies.map(curr => (
-                <div key={curr.code} className="p-3 bg-white rounded-xl border border-slate-100">
-                  <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
-                    {`المبلغ (${curr.symbol || curr.code})`}
-                  </div>
-                  <div className="text-lg font-black text-slate-900 tabular-nums">
-                    {formatAmount(partner.displayAmountBase, { currencyCode: curr.code })}
-                  </div>
+              <div className="p-3 bg-white rounded-xl border border-slate-100">
+                <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
+                  المبلغ الأصلي
                 </div>
-              ))}
+                <div className="text-lg font-black text-slate-900 tabular-nums">
+                  {formatAmount(parseFloat(partner.amount_original || "0"), { currencyCode: partner.currency })}
+                </div>
+              </div>
+              <div className="p-3 bg-white rounded-xl border border-slate-100">
+                <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">
+                  {`المعادل بالعملة الأساسية (${baseCurrency?.symbol || baseCurrency?.code || ""})`}
+                </div>
+                <div className="text-lg font-black text-slate-900 tabular-nums">
+                  {formatAmount(partner.displayAmountBase, { currencyCode: baseCurrency?.code || "" })}
+                </div>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3 mt-4">
               <div className="p-3 bg-white rounded-xl border border-slate-100">
@@ -102,7 +110,7 @@ export function PartnerDetailView({
                   نسبة الأرباح
                 </div>
                 <div className="text-sm font-black text-emerald-700 tabular-nums">
-                  {partner.calculatedRatio?.toFixed(2) || "0.00"}%
+                  {actualProfitRatio.toFixed(2)}%
                 </div>
               </div>
             </div>

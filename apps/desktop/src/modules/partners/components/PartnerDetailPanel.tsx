@@ -172,9 +172,11 @@ export function PartnerDetailPanel({
             <SidebarDetailGrid
               columns={2}
               fields={[
-                { label: `المبلغ (${baseCurrency?.symbol || baseCurrency?.code || ""})`, value: partner.amount_original || "0" },
-                { label: "المبلغ (محلي)", value: partner.amount_local || "0" },
-                { label: "نسبة الأرباح (%)", value: partner.profit_sharing_ratio || "تلقائي" },
+                { label: "المبلغ الأصلي", value: `${partner.amount_original || "0"} ${currencyName?.symbol || partner.currency || ""}` },
+                { label: `المعادل (${baseCurrency?.symbol || baseCurrency?.code || ""})`, value: partner.amount_local || "0" },
+                { label: "نسبة الأرباح", value: partner.profit_sharing_type === "Manual" && partner.profit_sharing_ratio
+                  ? `${parseFloat(partner.profit_sharing_ratio).toFixed(2)}%`
+                  : "تلقائي (حسب رأس المال)" },
                 { label: "طريقة التوزيع", value: PROFIT_TYPE_LABELS[partner.profit_sharing_type || "BasedOnCapitalLocal"] },
               ]}
             />

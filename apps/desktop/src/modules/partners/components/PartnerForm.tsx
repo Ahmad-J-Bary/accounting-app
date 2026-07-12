@@ -56,10 +56,8 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
       ? partner.exchange_rate
       : getExchangeRate(formData.currency, rateMap, baseCurrency?.code).toString();
 
-    // Preserve the partner's stored sharing type on edit.
-    const sharingType = partner
-      ? partner.profit_sharing_type
-      : "BasedOnCapitalLocal";
+    // إذا أدخل المستخدم نسبة مخصصة → Manual، وإلا → تلقائي (نسبة الأرباح = نسبة رأس المال)
+    const sharingType = formData.manualRatio ? "Manual" : "BasedOnCapitalLocal";
 
     onSave({
       id: partner?.id,

@@ -71,8 +71,6 @@ export function PartnersSidePanel({
         key={selectedPartner.id}
         partner={selectedPartner}
         baseCurrency={baseCurrency}
-        currencies={currencies}
-        formatAmount={formatAmount}
         onEdit={() => onEdit(selectedPartner)}
         onDelete={onDelete}
         onClose={onClose}
