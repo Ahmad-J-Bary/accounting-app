@@ -1,3 +1,4 @@
+import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
 import type {
   AccountDto,
   AccountLedgerDto,
@@ -77,11 +78,7 @@ export const emptyIncomeStatementData: LoadedIncomeStatementData = {
 };
 
 export function parseNumber(value?: string | number | null) {
-  if (typeof value === "number") {
-    return Number.isFinite(value) ? value : 0;
-  }
-  const parsed = Number.parseFloat(value ?? "0");
-  return Number.isFinite(parsed) ? parsed : 0;
+  return parseSafeNumber(value);
 }
 
 function startOfDay(dateValue: string) {

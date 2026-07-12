@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Pencil, Trash2, BookOpen, FileText, Scale } from "lucide-react";
-import type { InvoiceDto, Payment, CustomerDto, SupplierDto, PartnerDto } from "@erp/shared-types";
+import type { CustomerDto, SupplierDto, PartnerDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useTabs } from "@app/providers/TabContext";
 import { toast } from "sonner";
@@ -27,9 +27,6 @@ interface PartnerDetailPanelProps {
   onEdit: (partner: CustomerDto | SupplierDto | PartnerDto) => void;
   onDelete: (id: string, name: string) => void;
   onRefresh?: () => void;
-  invoices: InvoiceDto[];
-  payments: Payment[];
-  loadingDetails: boolean;
 }
 
 export function PartnerDetailPanel({

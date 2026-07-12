@@ -1,4 +1,5 @@
 import type { AccountDto } from "@erp/shared-types";
+import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
 
 export type BalanceSheetFilters = {
   from_date: string;
@@ -46,9 +47,7 @@ type AccountBalance = {
 };
 
 function parseNum(value?: string | number | null): number {
-  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
-  const parsed = Number.parseFloat(value ?? "0");
-  return Number.isFinite(parsed) ? parsed : 0;
+  return parseSafeNumber(value);
 }
 
 function isFixedAsset(code: string, name: string): boolean {

@@ -2,8 +2,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from '@modules/core/pages/dashboard';
 import Accounting from '@modules/accounting/pages/accounting';
 import Journal from '@modules/accounting/pages/journal';
-import Customers from '@modules/partners/pages/customers';
-import Suppliers from '@modules/partners/pages/suppliers';
+import PartyPage from '@modules/partners/pages/PartyPage';
+import PartyStatementPage from '@modules/partners/pages/PartyStatementPage';
 import SalesInvoices from '@modules/invoicing/pages/salesInvoices';
 import PurchaseInvoices from '@modules/invoicing/pages/purchaseInvoices';
 import SalesReturns from '@modules/invoicing/pages/salesReturns';
@@ -24,8 +24,7 @@ import Users from '@modules/core/pages/users';
 import Settings from '@modules/core/pages/settings';
 import AuditLog from '@modules/core/pages/auditLog';
 import Partners from '@modules/partners/pages/partners';
-import CustomerStatementPage from '@modules/partners/pages/customerStatementPage';
-import SupplierStatementPage from '@modules/partners/pages/supplierStatementPage';
+
 import FixedAssets from '@modules/fixed-assets/pages/fixedAssets';
 
 import Expenses from '@modules/accounting/pages/expenses';
@@ -55,10 +54,10 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/accounting/reports/partner-statement" element={<PartnerStatementReport />} />
       <Route path="/accounting/account-ledger/:accountId" element={<AccountMovement />} />
       <Route path="/journal" element={<Journal />} />
-      <Route path="/customers" element={<Customers />} />
-      <Route path="/partners/customer-statement/:id" element={<CustomerStatementPage />} />
-      <Route path="/suppliers" element={<Suppliers />} />
-      <Route path="/partners/supplier-statement/:id" element={<SupplierStatementPage />} />
+      <Route path="/customers" element={<PartyPage entityName="customer" />} />
+      <Route path="/partners/customer-statement/:id" element={<PartyStatementPage entityName="customer" />} />
+      <Route path="/suppliers" element={<PartyPage entityName="supplier" />} />
+      <Route path="/partners/supplier-statement/:id" element={<PartyStatementPage entityName="supplier" />} />
       <Route path="/expenses" element={<Expenses />} />
       <Route path="/sales-invoices" element={<SalesInvoices />} />
       <Route path="/sales-invoices/new/*" element={<SalesInvoices />} />

@@ -13,6 +13,7 @@ import type { GridResizeContent } from "@shared/hooks/useGridResize";
 import type { AccountLedgerLineDto } from "@erp/shared-types";
 import { formatDateTime } from "@shared/lib/format";
 import { GroupedEntrySharedCell } from "./GroupedEntrySharedCell";
+import { getHeaderText, getPrimitiveCellValue, SHARED_COLUMN_IDS } from "./groupedTableUtils";
 
 type SortField = "entry_number" | "date" | "journal_type" | "account";
 
@@ -38,19 +39,6 @@ type LedgerTableRow = EnrichedLine & { isFirstInGroup: boolean };
 type EnrichedOriginalLine = AccountLedgerLineDto & {
   typeLabel: string;
 };
-
-const SHARED_COLUMN_IDS = new Set(["entry_number", "journal_type", "description", "date"]);
-
-function getHeaderText<T>(col: UnifiedColumn<T>): string {
-  if (typeof col.header === "string") return col.header;
-  if (typeof col.label === "string") return col.label;
-  return col.id;
-}
-
-function getPrimitiveCellValue(value: ReactNode): string {
-  if (typeof value === "string" || typeof value === "number") return String(value);
-  return "";
-}
 
 export function AccountMovementTable({
   lines,

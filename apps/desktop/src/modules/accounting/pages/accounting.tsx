@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { accountingService } from '@modules/accounting/api/accountingService';
 import { journalEntryService } from '@modules/accounting/api/journalEntryService';
@@ -10,8 +11,51 @@ import { AccountTreeNodeItem } from "./accounting/AccountTreeNodeItem";
 import { AccountDetailsSidebar } from "./accounting/AccountDetailsSidebar";
 import { HierarchicalTreeTemplate } from '@widgets/templates/HierarchicalTreeTemplate';
 import { toast } from "sonner";
+import { QUERY_KEYS } from "@shared/hooks/queryClient";
 
 const ROOT_ACCOUNT_ID = "__chart_of_accounts_root__";
+
+interface ChartOfAccountsData {
+  accounts: AccountDto[];
+  ledgerTotals: Map<string, { debit: number; credit: number }>;
+}
+
+async function fetchChartOfAccountsData(): Promise<ChartOfAccountsData> {
+  const [data, entries] = await Promise.all([
+    accountingService.getChartOfAccounts(),
+    journalEntryService.listJournalEntries({}),
+  ]);
+
+  const totals = new Map<string, { debit: number; credit: number }>();
+  for (const entry of entries) {
+    for (const line of entry.lines) {
+      const cur = totals.get(line.account_id) || { debit: 0, credit: 0 };
+      cur.debit += parseFloat(line.debit_base || line.debit || "0");
+      cur.credit += parseFloat(line.credit_base || line.credit || "0");
+      totals.set(line.account_id, cur);
+    }
+  }
+
+  try {
+    const purchaseInvoices = await invoiceService.listInvoicesByType("Purchase").catch(() => []);
+    let netPurchaseCost = 0;
+    for (const inv of purchaseInvoices) {
+      if (inv.status !== "Posted" && inv.status !== "Paid") continue;
+      netPurchaseCost += parseFloat(inv.extra_costs || "0");
+    }
+    for (const account of data) {
+      if (account.name_ar === "تكاليف إضافية على المشتريات") {
+        const debit = Math.abs(netPurchaseCost);
+        const credit = Math.abs(netPurchaseCost);
+        totals.set(account.id, { debit, credit });
+      }
+    }
+  } catch (e) {
+    console.warn("Purchase-cost override failed, using journal entries only:", e);
+  }
+
+  return { accounts: data, ledgerTotals: totals };
+}
 
 // Compute balances from actual general ledger totals, then propagate up the tree
 // so every parent's balance = sum of its direct children's balances.
@@ -29,90 +73,44 @@ function computeTreeBalances(nodes: AccountTreeNode[], ltMap: Map<string, { debi
 }
 
 export default function Accounting() {
-  const [accounts, setAccounts] = useState<AccountDto[]>([]);
-  const [ledgerTotals, setLedgerTotals] = useState<Map<string, { debit: number; credit: number }>>(new Map());
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
   const [selected, setSelected] = useState<AccountTreeNode | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
+  const hasLoadedOnceRef = useRef(false);
+
+  const { data, isLoading, isFetching, refetch } = useQuery({
+    queryKey: QUERY_KEYS.chartOfAccounts,
+    queryFn: fetchChartOfAccountsData,
+    initialData: { accounts: [], ledgerTotals: new Map() },
+  });
+
+  const accounts = data.accounts;
+  const ledgerTotals = data.ledgerTotals;
 
   const load = useCallback(async (isInitial = false) => {
-    try {
-      if (isInitial) setLoading(true);
-      else setRefreshing(true);
-      
-      const [data, entries] = await Promise.all([
-        accountingService.getChartOfAccounts(),
-        journalEntryService.listJournalEntries({}),
-      ]);
-      setAccounts(data);
-
-      // Aggregate debit/credit per account from all journal entry lines
-      const totals = new Map<string, { debit: number; credit: number }>();
-      for (const entry of entries) {
-        for (const line of entry.lines) {
-          const cur = totals.get(line.account_id) || { debit: 0, credit: 0 };
-          cur.debit += parseFloat(line.debit_base || line.debit || "0");
-          cur.credit += parseFloat(line.credit_base || line.credit || "0");
-          totals.set(line.account_id, cur);
-        }
+    await refetch();
+    if (isInitial) {
+      const defaultExpanded = new Set<string>();
+      defaultExpanded.add(ROOT_ACCOUNT_ID);
+      for (const account of accounts) {
+        if ((account.level ?? 1) <= 2) defaultExpanded.add(account.id);
       }
-
-      // Override for purchase-cost accounts that may not have journal postings
-      try {
-        const purchaseInvoices = await invoiceService.listInvoicesByType("Purchase").catch(() => []);
-
-        let netPurchaseCost = 0;
-        for (const inv of purchaseInvoices) {
-          if (inv.status !== "Posted" && inv.status !== "Paid") continue;
-          netPurchaseCost += parseFloat(inv.extra_costs || "0");
-        }
-
-        for (const account of data) {
-          if (account.name_ar === "تكاليف إضافية على المشتريات") {
-            const debit = Math.abs(netPurchaseCost);
-            const credit = Math.abs(netPurchaseCost);
-            totals.set(account.id, { debit, credit });
-          }
-        }
-      } catch (e) {
-        console.warn("Purchase-cost override failed, using journal entries only:", e);
-      }
-
-      setLedgerTotals(totals);
-      
-      if (isInitial) {
-        const defaultExpanded = new Set<string>();
-        defaultExpanded.add(ROOT_ACCOUNT_ID);
-        for (const account of data) {
-          if ((account.level ?? 1) <= 2) defaultExpanded.add(account.id);
-        }
-        setExpandedNodes(defaultExpanded);
-      }
-      
-      setSelected((prev) => {
-        const rootNode: AccountTreeNode = {
-          id: ROOT_ACCOUNT_ID, code: "", name_ar: "دليل الحسابات", name_en: "Chart of Accounts",
-          account_type: "Assets", parent_id: null, category: "Summary", level: 0, opening_balance: "0",
-          balance: "0", notes: null, is_active: true, is_default: false, is_final: false,
-          linked_customer_id: null, linked_supplier_id: null, debit: "0", credit: "0", children: [],
-        };
-        if (prev?.id === ROOT_ACCOUNT_ID) return rootNode;
-        if (prev) {
-          const updated = data.find((a) => a.id === prev.id);
-          return updated ? { ...updated, children: [] } : null;
-        }
-        return rootNode;
-      });
-    } catch (error) { toast.error("فشل تحميل البيانات: " + error); }
-    finally { 
-      setLoading(false);
-      setRefreshing(false);
+      setExpandedNodes(defaultExpanded);
     }
-  }, []);
+  }, [refetch, accounts]);
 
-  useEffect(() => { void load(true); }, [load]);
+  useEffect(() => {
+    if (!hasLoadedOnceRef.current && accounts.length > 0) {
+      hasLoadedOnceRef.current = true;
+      const defaultExpanded = new Set<string>();
+      defaultExpanded.add(ROOT_ACCOUNT_ID);
+      for (const account of accounts) {
+        if ((account.level ?? 1) <= 2) defaultExpanded.add(account.id);
+      }
+      setExpandedNodes(defaultExpanded);
+    }
+  }, [accounts]);
 
   const toggleNode: ToggleNodeHandler = useCallback((id, event) => {
     event.stopPropagation();
@@ -169,15 +167,13 @@ const rootNode = useMemo<AccountTreeNode>(() => ({
     if (!selected || isRootSelected) return;
     if (!window.confirm(`هل تريد حذف/تعطيل الحساب "${selected.name_ar}"؟`)) return;
     try {
-      setLoading(true);
       await accountingService.deleteAccount(selected.id);
-      await load();
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts });
       toast.success("تم حذف الحساب بنجاح");
     } catch (error) { toast.error(`فشلت العملية: ${getErrorMessage(error)}`); }
-    finally { setLoading(false); }
-  }, [selected, isRootSelected, load]);
+  }, [selected, isRootSelected, queryClient]);
 
-  const isLoading = loading || refreshing;
+  const isLoadingNow = isLoading;
 
   return (
     <HierarchicalTreeTemplate
@@ -201,7 +197,7 @@ const rootNode = useMemo<AccountTreeNode>(() => ({
       }
       treeSidebar={
         <div className="space-y-1">
-          {loading ? (
+          {isLoadingNow ? (
              Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="h-10 bg-slate-50 animate-pulse rounded-lg mb-2" />
             ))
@@ -223,7 +219,7 @@ const rootNode = useMemo<AccountTreeNode>(() => ({
           selected={isRootSelected ? null : selected}
           allAccounts={accounts}
           parentName={parentName}
-          onSaved={() => void load(false)}
+          onSaved={() => void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts })}
           onDelete={() => void handleDelete()}
           canEdit={!isRootSelected && !!selected}
           canDelete={!isRootSelected && !!selected}

@@ -1,59 +1,37 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ReportLayout } from "@widgets/templates/ReportLayout";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { Label } from "@shared/ui/label";
-import { accountingService } from "@modules/accounting/api/accountingService";
-import type { AccountDto, AccountLedgerDto } from "@erp/shared-types";
+import type { AccountDto } from "@erp/shared-types";
 import { formatCurrency, formatDateTime } from "@shared/lib/format";
 import { cn } from "@shared/lib/utils";
 import { FileText, Calendar, Filter, ArrowUpRight, ArrowDownLeft, Printer, Download, BookOpen, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useChartOfAccounts, useAccountLedger } from "@shared/hooks/queries/useAccountQueries";
 
 export default function AccountMovementsReport() {
   const { baseCurrency } = useCurrencyContext();
   const [searchParams] = useSearchParams();
-  const [accounts, setAccounts] = useState<AccountDto[]>([]);
+  const { data: accounts = [] } = useChartOfAccounts();
   const [selectedAccountId, setSelectedAccountId] = useState<string>(searchParams.get('accountId') || '');
   const [filters, setFilters] = useState({
     from_date: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
     to_date: new Date().toISOString().split('T')[0],
   });
-  
-  const [ledger, setLedger] = useState<AccountLedgerDto | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    accountingService.getChartOfAccounts().then(setAccounts);
-  }, []);
+  const { data: ledger, isLoading: loading, refetch } = useAccountLedger(selectedAccountId);
 
-  const fetchLedger = useCallback(async () => {
+  const handleUpdate = () => {
     if (!selectedAccountId) {
       toast.error("الرجاء اختيار الحساب أولاً");
       return;
     }
-    setLoading(true);
-    try {
-      const data = await accountingService.getAccountLedger(selectedAccountId);
-      // Backend doesn't support date filtering in get_account_ledger yet in this snippet, 
-      // but we can filter the lines in the frontend for now if needed, 
-      // or assume the backend will be updated.
-      setLedger(data);
-    } catch (e) {
-      toast.error("فشل تحميل كشف الحساب");
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedAccountId]);
-
-  useEffect(() => {
-    if (selectedAccountId) {
-      fetchLedger();
-    }
-  }, [selectedAccountId, fetchLedger]);
+    refetch();
+  };
 
   const filteredLines = useMemo(() => {
     if (!ledger) return [];
@@ -122,7 +100,7 @@ export default function AccountMovementsReport() {
           <div className="flex items-end">
             <Button 
               className="h-11 w-full bg-slate-900 text-white rounded-xl font-black gap-2"
-              onClick={fetchLedger}
+              onClick={handleUpdate}
             >
               <Filter className="w-4 h-4" />تحديث البيانات
             </Button>

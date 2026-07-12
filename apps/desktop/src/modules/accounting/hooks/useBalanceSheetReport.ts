@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import { journalEntryService } from "@modules/accounting/api/journalEntryService";
@@ -13,6 +14,8 @@ import {
 } from "@modules/accounting/lib/incomeStatement";
 import { SYSTEM_ACCOUNT_IDS } from "@erp/shared-types";
 import type { AccountDto, AccountLedgerDto, MaterialDto, StockMovementDetailDto } from "@erp/shared-types";
+import { useMaterialExpenseLedgers } from "@shared/hooks/useMaterialExpenseLedgers";
+import { QUERY_KEYS } from "@shared/hooks/queryClient";
 
 export type LoadedBalanceSheetData = {
   accounts: AccountDto[];
@@ -30,215 +33,207 @@ const emptyData: LoadedBalanceSheetData = {
   closingInventory: 0,
 };
 
+export async function computeLedgerTotals(
+  accounts: AccountDto[],
+  entries: { description?: string; journal_type?: string; source_id?: string; lines: Array<{ account_id: string; debit_base?: string; debit?: string; credit_base?: string; credit?: string }> }[],
+  incomeStatementResult: { netProfit: number; closingInventory: number },
+  purchaseInvoices: Array<{ status?: string; extra_costs?: string }>,
+): Promise<Omit<LoadedBalanceSheetData, "accounts" | "netProfit" | "closingInventory">> {
+  let totalDrawings = 0;
+
+  const accountMap = new Map(accounts.map((a) => [a.id, a]));
+  const ledgerTotals = new Map<string, { debit: number; credit: number }>();
+
+  for (const account of accounts) {
+    const openingBalance = parseFloat(account.opening_balance || "0");
+    if (openingBalance !== 0) {
+      const existing = ledgerTotals.get(account.id) || { debit: 0, credit: 0 };
+      if (["Liabilities", "Equity", "Revenue"].includes(account.account_type)) {
+        existing.credit += Math.abs(openingBalance);
+      } else {
+        existing.debit += Math.abs(openingBalance);
+      }
+      ledgerTotals.set(account.id, existing);
+    }
+  }
+
+  const partnerAccounts = accounts.filter(
+    (a) => a.code !== "51" && a.code.startsWith("51") && ["Liabilities", "Equity", "Revenue"].includes(a.account_type),
+  );
+  const totalPartnerCapital = partnerAccounts.reduce(
+    (sum, a) => sum + Math.abs(parseFloat(a.opening_balance || "0")),
+    0,
+  );
+
+  let capitalCreditsFromInKind = 0;
+  for (const entry of entries) {
+    const desc = entry.description || "";
+    const isMaterialOpening = entry.journal_type === "MaterialOpeningBalance" || desc.includes("بضاعة أول المدة");
+    const isFixedAssetOpening = desc.includes("إضافة أصل سابق") || desc.includes("رصيد افتتاحي للأصول الثابتة");
+
+    if (!isMaterialOpening && !isFixedAssetOpening) continue;
+
+    for (const line of entry.lines) {
+      const account = accountMap.get(line.account_id);
+      if (account?.code === "51" || account?.code?.startsWith("51")) {
+        capitalCreditsFromInKind += parseFloat(line.credit_base || line.credit || "0");
+      }
+    }
+  }
+
+  if (capitalCreditsFromInKind > 0) {
+    if (partnerAccounts.length > 0 && totalPartnerCapital > 0) {
+      for (const partnerAcc of partnerAccounts) {
+        const ratio = Math.abs(parseFloat(partnerAcc.opening_balance || "0")) / totalPartnerCapital;
+        const share = capitalCreditsFromInKind * ratio;
+        const cur = ledgerTotals.get(partnerAcc.id) || { debit: 0, credit: 0 };
+        cur.credit += share;
+        ledgerTotals.set(partnerAcc.id, cur);
+      }
+    } else {
+      const capitalParent = accounts.find((a) => a.code === "51");
+      if (capitalParent) {
+        const cur = ledgerTotals.get(capitalParent.id) || { debit: 0, credit: 0 };
+        cur.credit += capitalCreditsFromInKind;
+        ledgerTotals.set(capitalParent.id, cur);
+      }
+    }
+  }
+
+  for (const entry of entries) {
+    const desc = entry.description || "";
+    const isMaterialOpening = entry.journal_type === "MaterialOpeningBalance" || desc.includes("بضاعة أول المدة");
+    const isFixedAssetOpening = desc.includes("إضافة أصل سابق") || desc.includes("رصيد افتتاحي للأصول الثابتة");
+
+    for (const line of entry.lines) {
+      const amt = parseFloat(line.debit_base || line.debit || "0") - parseFloat(line.credit_base || line.credit || "0");
+      if (line.account_id === SYSTEM_ACCOUNT_IDS.DRAWINGS) {
+        totalDrawings += Math.abs(amt);
+      }
+
+      const account = accountMap.get(line.account_id);
+
+      if ((isMaterialOpening || isFixedAssetOpening) && (account?.code === "51" || account?.code?.startsWith("51"))) {
+        continue;
+      }
+
+      const isConsolidatedCapitalEntry = entry.source_id === "consolidated_capital";
+      if (isConsolidatedCapitalEntry && account?.code !== "122") {
+        continue;
+      }
+
+      const cur = ledgerTotals.get(line.account_id) || { debit: 0, credit: 0 };
+      cur.debit += parseFloat(line.debit_base || line.debit || "0");
+      cur.credit += parseFloat(line.credit_base || line.credit || "0");
+      ledgerTotals.set(line.account_id, cur);
+    }
+  }
+
+  let netPurchaseCost = 0;
+  for (const inv of purchaseInvoices) {
+    if (inv.status !== "Posted" && inv.status !== "Paid") continue;
+    netPurchaseCost += parseFloat(inv.extra_costs || "0");
+  }
+
+  for (const account of accounts) {
+    if (account.name_ar === "تكاليف إضافية على المشتريات") {
+      const debit = Math.abs(netPurchaseCost);
+      const credit = Math.abs(netPurchaseCost);
+      ledgerTotals.set(account.id, { debit, credit });
+    }
+  }
+
+  return { ledgerTotals, totalDrawings };
+}
+
 export function useBalanceSheetReport(filters: IncomeStatementFilters) {
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
-  const [reportData, setReportData] = useState<LoadedBalanceSheetData>(emptyData);
   const hasLoadedOnceRef = useRef(false);
+  const { loadMaterialExpenseLedgers } = useMaterialExpenseLedgers();
+
+  const fetchReportData = useCallback(async (): Promise<LoadedBalanceSheetData> => {
+    const [
+      accounts,
+      entries,
+      salesInvoices,
+      purchaseInvoices,
+      purchaseReturns,
+      salesReturns,
+      expenseAccounts,
+      materials,
+    ] = await Promise.all([
+      accountingService.getChartOfAccounts(),
+      journalEntryService.listJournalEntries({
+        from_date: filters.from_date,
+        to_date: filters.to_date,
+      }),
+      invoiceService.listInvoicesByType("Sales"),
+      invoiceService.listInvoicesByType("Purchase"),
+      returnService.listPurchaseReturns(),
+      returnService.listSalesReturns(),
+      accountingService.getExpenseItems(),
+      materialService.listMaterials(),
+    ]);
+
+    const { stockMovementsByMaterial, expenseLedgers } = await loadMaterialExpenseLedgers(materials, expenseAccounts);
+
+    const incomeStatementData: LoadedIncomeStatementData = {
+      ...emptyIncomeStatementData,
+      salesInvoices,
+      purchaseInvoices,
+      purchaseReturns,
+      salesReturns,
+      expenseAccounts,
+      expenseLedgers,
+      stockMovementsByMaterial,
+      materials,
+      accounts,
+      entries,
+    };
+
+    const incomeStatementResult = computeIncomeStatement(filters, incomeStatementData);
+
+    const { ledgerTotals, totalDrawings } = await computeLedgerTotals(
+      accounts,
+      entries,
+      incomeStatementResult,
+      purchaseInvoices,
+    );
+
+    return {
+      accounts,
+      netProfit: incomeStatementResult.netProfit,
+      totalDrawings,
+      ledgerTotals,
+      closingInventory: incomeStatementResult.closingInventory,
+    };
+  }, [filters, loadMaterialExpenseLedgers]);
+
+  const { data: reportData, isLoading, isFetching, refetch } = useQuery({
+    queryKey: QUERY_KEYS.balanceSheet,
+    queryFn: fetchReportData,
+    initialData: emptyData,
+  });
 
   const loadReportData = useCallback(async () => {
-    const isFirstLoad = !hasLoadedOnceRef.current;
-    if (isFirstLoad) setLoading(true);
-    else setRefreshing(true);
-
     try {
-      const [
-        accounts,
-        entries,
-        salesInvoices,
-        purchaseInvoices,
-        purchaseReturns,
-        salesReturns,
-        expenseAccounts,
-        materials,
-      ] = await Promise.all([
-        accountingService.getChartOfAccounts(),
-        journalEntryService.listJournalEntries({
-          from_date: filters.from_date,
-          to_date: filters.to_date,
-        }),
-        invoiceService.listInvoicesByType("Sales"),
-        invoiceService.listInvoicesByType("Purchase"),
-        returnService.listPurchaseReturns(),
-        returnService.listSalesReturns(),
-        accountingService.getExpenseItems(),
-        materialService.listMaterials(),
-      ]);
-
-      const movementResults = await Promise.allSettled(
-        materials.map(async (material: MaterialDto) => ({
-          materialId: material.id,
-          movements: await materialService.listMovementsByMaterial(material.id),
-        })),
-      );
-
-      const ledgerResults = await Promise.allSettled(
-        expenseAccounts.map(async (account) => ({
-          accountId: account.id,
-          ledger: await accountingService.getAccountLedger(account.id),
-        })),
-      );
-
-      const stockMovementsByMaterial = new Map<string, StockMovementDetailDto[]>();
-      movementResults.forEach((result) => {
-        if (result.status === "fulfilled") {
-          stockMovementsByMaterial.set(result.value.materialId, result.value.movements ?? []);
-        }
-      });
-
-      const expenseLedgers = new Map<string, AccountLedgerDto>();
-      ledgerResults.forEach((result) => {
-        if (result.status === "fulfilled") {
-          expenseLedgers.set(result.value.accountId, result.value.ledger);
-        }
-      });
-
-      const incomeStatementData: LoadedIncomeStatementData = {
-        ...emptyIncomeStatementData,
-        salesInvoices,
-        purchaseInvoices,
-        purchaseReturns,
-        salesReturns,
-        expenseAccounts,
-        expenseLedgers,
-        stockMovementsByMaterial,
-        materials,
-        accounts,
-        entries,
-      };
-
-      const incomeStatementResult = computeIncomeStatement(filters, incomeStatementData);
-
-      let totalDrawings = 0;
-
-      const accountMap = new Map(accounts.map((a) => [a.id, a]));
-      const ledgerTotals = new Map<string, { debit: number; credit: number }>();
-
-      for (const account of accounts) {
-        const openingBalance = parseFloat(account.opening_balance || "0");
-        if (openingBalance !== 0) {
-          const existing = ledgerTotals.get(account.id) || { debit: 0, credit: 0 };
-          if (["Liabilities", "Equity", "Revenue"].includes(account.account_type)) {
-            existing.credit += Math.abs(openingBalance);
-          } else {
-            existing.debit += Math.abs(openingBalance);
-          }
-          ledgerTotals.set(account.id, existing);
-        }
-      }
-
-      // تحديد حسابات الشركاء (51xx) ونسب رأس مالهم
-      const partnerAccounts = accounts.filter(
-        (a) => a.code !== "51" && a.code.startsWith("51") && ["Liabilities", "Equity", "Revenue"].includes(a.account_type)
-      );
-      const totalPartnerCapital = partnerAccounts.reduce(
-        (sum, a) => sum + Math.abs(parseFloat(a.opening_balance || "0")),
-        0,
-      );
-
-      // تجميع قيم الجانب الدائن لرأس المال من قيود الأرصدة الافتتاحية العينية
-      let capitalCreditsFromInKind = 0;
-      for (const entry of entries) {
-        const desc = entry.description || "";
-        const isMaterialOpening = entry.journal_type === "MaterialOpeningBalance" || desc.includes("بضاعة أول المدة");
-        const isFixedAssetOpening = desc.includes("إضافة أصل سابق") || desc.includes("رصيد افتتاحي للأصول الثابتة");
-
-        if (!isMaterialOpening && !isFixedAssetOpening) continue;
-
-        for (const line of entry.lines) {
-          const account = accountMap.get(line.account_id);
-          if (account?.code === "51" || account?.code?.startsWith("51")) {
-            capitalCreditsFromInKind += parseFloat(line.credit_base || line.credit || "0");
-          }
-        }
-      }
-
-      // توزيع القيمة العينية على حسابات الشركاء بنسبهم (أو على الأب 51 إن لم يوجد شركاء)
-      if (capitalCreditsFromInKind > 0) {
-        if (partnerAccounts.length > 0 && totalPartnerCapital > 0) {
-          for (const partnerAcc of partnerAccounts) {
-            const ratio = Math.abs(parseFloat(partnerAcc.opening_balance || "0")) / totalPartnerCapital;
-            const share = capitalCreditsFromInKind * ratio;
-            const cur = ledgerTotals.get(partnerAcc.id) || { debit: 0, credit: 0 };
-            cur.credit += share;
-            ledgerTotals.set(partnerAcc.id, cur);
-          }
-        } else {
-          const capitalParent = accounts.find((a) => a.code === "51");
-          if (capitalParent) {
-            const cur = ledgerTotals.get(capitalParent.id) || { debit: 0, credit: 0 };
-            cur.credit += capitalCreditsFromInKind;
-            ledgerTotals.set(capitalParent.id, cur);
-          }
-        }
-      }
-
-      for (const entry of entries) {
-        const desc = entry.description || "";
-        const isMaterialOpening = entry.journal_type === "MaterialOpeningBalance" || desc.includes("بضاعة أول المدة");
-        const isFixedAssetOpening = desc.includes("إضافة أصل سابق") || desc.includes("رصيد افتتاحي للأصول الثابتة");
-
-        for (const line of entry.lines) {
-          const amt = parseFloat(line.debit_base || line.debit || "0") - parseFloat(line.credit_base || line.credit || "0");
-          if (line.account_id === SYSTEM_ACCOUNT_IDS.DRAWINGS) {
-            totalDrawings += Math.abs(amt);
-          }
-
-          const account = accountMap.get(line.account_id);
-
-          // تخطي الجانب الدائن لرأس المال من قيود الأرصدة العينية (تمت معالجته بالتوزيع أعلاه)
-          if ((isMaterialOpening || isFixedAssetOpening) && (account?.code === "51" || account?.code?.startsWith("51"))) {
-            continue;
-          }
-
-          const isConsolidatedCapitalEntry = entry.source_id === "consolidated_capital";
-          if (isConsolidatedCapitalEntry && account?.code !== "122") {
-            continue;
-          }
-
-          const cur = ledgerTotals.get(line.account_id) || { debit: 0, credit: 0 };
-          cur.debit += parseFloat(line.debit_base || line.debit || "0");
-          cur.credit += parseFloat(line.credit_base || line.credit || "0");
-          ledgerTotals.set(line.account_id, cur);
-        }
-      }
-
-      let netPurchaseCost = 0;
-      for (const inv of purchaseInvoices) {
-        if (inv.status !== "Posted" && inv.status !== "Paid") continue;
-        netPurchaseCost += parseFloat(inv.extra_costs || "0");
-      }
-
-      for (const account of accounts) {
-        if (account.name_ar === "تكاليف إضافية على المشتريات") {
-          const debit = Math.abs(netPurchaseCost);
-          const credit = Math.abs(netPurchaseCost);
-          ledgerTotals.set(account.id, { debit, credit });
-        }
-      }
-
-      setReportData({
-        accounts,
-        netProfit: incomeStatementResult.netProfit,
-        totalDrawings,
-        ledgerTotals,
-        closingInventory: incomeStatementResult.closingInventory,
-      });
+      await refetch();
       hasLoadedOnceRef.current = true;
       setLastLoadedAt(new Date());
     } catch (error) {
       console.error(error);
       toast.error("تعذر تحميل بيانات الميزانية العمومية");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
     }
-  }, [filters]);
+  }, [refetch]);
 
-  useEffect(() => {
-    void loadReportData();
-  }, [loadReportData]);
+  const refreshing = isFetching && hasLoadedOnceRef.current;
+  const loading = isLoading && !hasLoadedOnceRef.current;
 
-  return { loading, refreshing, lastLoadedAt, reportData, loadReportData };
+  return {
+    loading,
+    refreshing,
+    lastLoadedAt,
+    reportData: reportData ?? emptyData,
+    loadReportData,
+  };
 }

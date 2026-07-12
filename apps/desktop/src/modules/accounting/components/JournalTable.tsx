@@ -12,6 +12,7 @@ import { cn } from "@shared/lib/utils";
 import { getLeftBorderClass, getRowBorderClass, getRowBackgroundClass } from "@shared/lib/table-utils";
 import type { GridResizeContent } from "@shared/hooks/useGridResize";
 import { GroupedEntrySharedCell } from "./GroupedEntrySharedCell";
+import { getHeaderText, getPrimitiveCellValue, SHARED_COLUMN_IDS } from "./groupedTableUtils";
 
 import type { JournalEntryDto } from "@erp/shared-types";
 import type { JournalFilters } from "../api/journalEntryService";
@@ -28,19 +29,6 @@ interface JournalTableProps {
 
 type SortField = "entry_number" | "created_at" | "journal_type" | "account";
 type JournalTableRow = JournalRowLine & { isFirstInGroup: boolean };
-
-const SHARED_COLUMN_IDS = new Set(["entry_number", "journal_type", "description", "entry_date"]);
-
-function getHeaderText<T>(col: UnifiedColumn<T>): string {
-  if (typeof col.header === "string") return col.header;
-  if (typeof col.label === "string") return col.label;
-  return col.id;
-}
-
-function getPrimitiveCellValue(value: ReactNode): string {
-  if (typeof value === "string" || typeof value === "number") return String(value);
-  return "";
-}
 
 export function JournalTable({ entries, loading, search, onSearchChange, filters, filterBar }: JournalTableProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();

@@ -10,23 +10,7 @@ import { computePartnerProfitShare } from "@modules/accounting/lib/partnerProfit
 import { computePartnerStatement } from "@modules/accounting/lib/partnerStatement";
 import { usePartnerProfitShareReport } from "@modules/accounting/hooks/usePartnerProfitShareReport";
 import { PartnerStatementView } from "@modules/accounting/components/partner-statement/PartnerStatementView";
-
-function DateField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return (
-    <div className="space-y-2">
-      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">{label}</Label>
-      <div className="relative">
-        <Calendar className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-        <Input
-          type="date"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-11 rounded-xl border-slate-200 bg-slate-50/50 pr-10 font-bold tabular-nums"
-        />
-      </div>
-    </div>
-  );
-}
+import { DateField } from "@widgets/form-shell/DateField";
 
 export default function PartnerStatementReport() {
   const { baseCurrency, currencies, formatAmount } = useCurrencyContext();

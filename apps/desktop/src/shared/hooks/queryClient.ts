@@ -60,6 +60,11 @@ export const QUERY_KEYS = {
   salesReturns: ["sales-returns"] as const,
   purchaseReturns: ["purchase-returns"] as const,
 
+  incomeStatement: ["reports", "income-statement"] as const,
+  balanceSheet: ["reports", "balance-sheet"] as const,
+  partnerProfitShare: ["reports", "partner-profit-share"] as const,
+  trialBalance: ["reports", "trial-balance"] as const,
+
   fixedAssets: ["fixed-assets"] as const,
   productionOrders: ["production-orders"] as const,
   auditLog: ["audit-log"] as const,

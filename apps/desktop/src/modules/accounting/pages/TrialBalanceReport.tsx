@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ReportLayout } from "@widgets/templates/ReportLayout";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import { journalEntryService } from "@modules/accounting/api/journalEntryService";
@@ -10,10 +11,12 @@ import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useUnifiedColumns } from "@shared/hooks";
 import { cn } from "@shared/lib/utils";
+import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
 import { Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { computeTreeTotals, flattenTreeRows, isBalanceDebit } from "../lib/trialBalance";
 import type { TrialBalanceTreeRow } from "../lib/trialBalance";
+import { QUERY_KEYS } from "@shared/hooks/queryClient";
 
 const DETAIL_LEVELS = [
   { level: 1, maxDepth: 0, label: "مستوى 1", desc: "التصنيفات الرئيسية" },
@@ -23,9 +26,7 @@ const DETAIL_LEVELS = [
 ];
 
 function parseNumber(value?: string | number | null) {
-  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
-  const parsed = Number.parseFloat(value ?? "0");
-  return Number.isFinite(parsed) ? parsed : 0;
+  return parseSafeNumber(value);
 }
 
 function isCreditNatureAccount(account: AccountDto) {
@@ -155,27 +156,24 @@ async function computeLedgerTotals(accounts: AccountDto[]): Promise<Map<string, 
 
 export default function TrialBalanceReport() {
   const { baseCurrency, currencies, formatAmount, convertFromBase } = useCurrencyContext();
-  const [accounts, setAccounts] = useState<AccountDto[]>([]);
-  const [ledgerTotals, setLedgerTotals] = useState<Map<string, { debit: number; credit: number }>>(new Map());
-  const [loading, setLoading] = useState(true);
   const [detailLevel, setDetailLevel] = useState(3);
+
+  const { data, isLoading } = useQuery({
+    queryKey: QUERY_KEYS.trialBalance,
+    queryFn: async () => {
+      const accounts = await accountingService.getChartOfAccounts();
+      const ledgerTotals = await computeLedgerTotals(accounts);
+      return { accounts, ledgerTotals };
+    },
+  });
+
+  const accounts = useMemo(() => data?.accounts ?? [], [data?.accounts]);
+  const ledgerTotals = useMemo(() => data?.ledgerTotals ?? new Map(), [data?.ledgerTotals]);
 
   const secondaryCurrency = useMemo(() => {
     if (!baseCurrency) return null;
     return currencies.find(c => c.code !== baseCurrency.code) ?? null;
   }, [currencies, baseCurrency]);
-
-  useEffect(() => {
-    setLoading(true);
-    accountingService.getChartOfAccounts()
-      .then(async (data) => {
-        setAccounts(data);
-        const totals = await computeLedgerTotals(data);
-        setLedgerTotals(totals);
-      })
-      .catch(() => toast.error("فشل تحميل بيانات ميزان المراجعة"))
-      .finally(() => setLoading(false));
-  }, []);
 
   const treeTotals = useMemo(() => computeTreeTotals(accounts, ledgerTotals), [accounts, ledgerTotals]);
 
@@ -492,7 +490,7 @@ export default function TrialBalanceReport() {
             <UnifiedTable
               data={rows}
               columns={enrichedColumns}
-              loading={loading}
+              loading={isLoading}
               tableId="trial-balance"
               emptyMessage="لا توجد حسابات مسجلة"
               summary={summaryColumns}
