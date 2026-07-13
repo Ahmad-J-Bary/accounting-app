@@ -13,7 +13,6 @@ export default function BalanceSheetReport() {
     filters,
     setFilters,
     selectedCurrency,
-    setSelectedCurrency,
   } = useReportFilters(
     new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
     new Date().toISOString().split("T")[0]

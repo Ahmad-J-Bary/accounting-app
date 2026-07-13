@@ -3,7 +3,6 @@ import { Sidebar } from '../Sidebar';
 import { TopBar } from '../TopBar';
 import { TabBar } from '../TabBar';
 import { useAppearance } from '@shared/hooks/useAppearance';
-import { cn } from '@shared/lib/utils';
 
 interface VerticalLayoutProps {
   children: React.ReactNode;

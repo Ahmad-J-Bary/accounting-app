@@ -28,7 +28,6 @@ export function HierarchicalTreeTemplate({
   treeSidebar,
   detailContent,
   treeHeaderActions,
-  extraContent,
   className
 }: HierarchicalTreeTemplateProps) {
   return (

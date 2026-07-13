@@ -7,7 +7,7 @@ import { customerService } from "@modules/partners/api/customerService";
 import { supplierService } from "@modules/partners/api/supplierService";
 import { materialService } from "@modules/inventory/api/materialService";
 import { lotService } from "@modules/inventory/api/lotService";
-import { currencyService } from "@modules/core/api/currencyService";
+
 import { settingsService } from "@modules/core/api/settingsService";
 import { warehouseService } from "@modules/inventory/api/warehouseService";
 import type {

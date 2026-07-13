@@ -1,4 +1,3 @@
-import React, { ReactNode } from "react";
 import { cn } from "@shared/lib/utils";
 import type { SidebarFieldGroupProps } from "./types";
 

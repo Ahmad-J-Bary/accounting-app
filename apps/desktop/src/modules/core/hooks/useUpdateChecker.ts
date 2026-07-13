@@ -75,7 +75,7 @@ export function useUpdateChecker() {
       // Simulate download progress in development mode (10MB total)
       let currentProgress = 0;
       const totalBytes = 10 * 1024 * 1024;
-      const startTime = Date.now();
+
       
       const interval = setInterval(() => {
         // Increment between 300KB and 800KB

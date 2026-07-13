@@ -2,9 +2,8 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { UpdateService } from './UpdateService';
-import { UpdateVerification } from './UpdateVerification';
 import type { UpdateState, UpdateChannel } from './types';
-import { UPDATE_CHECK_INTERVAL_MS, STORAGE_KEYS } from './constants';
+import { UPDATE_CHECK_INTERVAL_MS } from './constants';
 import pkg from '../../../../package.json';
 
 const initialState: UpdateState = {

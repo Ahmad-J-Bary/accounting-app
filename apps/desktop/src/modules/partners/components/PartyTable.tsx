@@ -124,7 +124,7 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
 
     cols.push(getAccountStatusColumn("حالة الحساب", cfg.isCreditFirst ? { isCreditFirst: true } : undefined) as UnifiedColumn<T>);
 
-    const balanceCols = getBalanceColumns("الرصيد").map((c) => {
+    const balanceCols = getBalanceColumns().map((c) => {
       const m = c.id.match(/^balance_(.+)$/);
       if (m && !isBaseCurrency(m[1])) {
         return {

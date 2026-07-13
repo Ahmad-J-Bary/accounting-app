@@ -34,13 +34,10 @@ interface TableSummaryProps {
 
 export const TableSummary: React.FC<TableSummaryProps> = ({
   columns,
-  colSpan,
   className,
   columnWidths,
   gridTemplate,
   sticky,
-  beforeContent,
-  afterContent,
   asPageFooter = false,
 }) => {
   const { settings, getDensityPadding } = useTableSettings();

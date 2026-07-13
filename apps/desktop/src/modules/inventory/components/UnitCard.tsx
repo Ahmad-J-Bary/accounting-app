@@ -12,7 +12,6 @@ interface UnitItem {
 
 interface UnitCardProps {
   unit: UnitItem;
-  index: number;
   isBase: boolean;
   baseUnitName?: string;
   mode: "view" | "edit";
@@ -27,7 +26,7 @@ interface UnitCardProps {
 }
 
 export function UnitCard({
-  unit, index, isBase, baseUnitName, mode,
+  unit, isBase, baseUnitName, mode,
   onUpdate, onEdit, onDelete, onCancelEdit, deleteDisabled, disabled,
   showDeleteOnHover = false,
   defaultCollapsed = false,

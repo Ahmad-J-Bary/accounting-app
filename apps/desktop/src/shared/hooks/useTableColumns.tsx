@@ -34,7 +34,6 @@ export function useTableColumns() {
   }, []);
 
   const getBalanceColumns = useCallback(<T extends { balance?: number | string; debit?: number | string; credit?: number | string; currency?: string }>(
-    sortableHeader: React.ReactNode
   ): UnifiedColumn<T>[] => {
     return currencies.map(curr => {
       const symbol = curr.symbol || curr.code;
@@ -45,13 +44,13 @@ export function useTableColumns() {
         accessor: (item) => {
           const absBal = Math.abs(Number(item.balance || 0));
           if (absBal === 0) return "";
-          const baseAmount = toBase(absBal, item.currency);
+          const baseAmount = toBase(absBal, item.currency || baseCurrency?.code || "");
           return formatAmount(baseAmount, { currencyCode: curr.code });
         },
         className: "tabular-nums font-black text-slate-900"
       };
     });
-  }, [currencies, formatAmount, toBase]);
+  }, [currencies, formatAmount, toBase, baseCurrency?.code]);
 
   const getSummaryColumns = useCallback(<T extends { balance?: number | string; debit?: number | string; credit?: number | string; currency?: string }>(
     enrichedColumns: UnifiedColumn<T>[],
@@ -74,7 +73,7 @@ export function useTableColumns() {
     const baseTotal = items.reduce((sum, item) => {
       const bal = Math.abs(Number(item.balance || 0));
       if (bal === 0) return sum;
-      return sum + toBase(bal, item.currency);
+      return sum + toBase(bal, item.currency || baseCurrency?.code || "");
     }, 0);
 
     const colIds = enrichedColumns.map(c => c.id);

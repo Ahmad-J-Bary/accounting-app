@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTabs } from '@app/providers/TabContext';
 import { useNavSidebarSettings, useSidebarLayout } from '@shared/hooks';
@@ -10,7 +10,7 @@ import { SidebarGroup } from './sidebar/SidebarGroup';
 import { SidebarPinnedSection } from './sidebar/SidebarPinnedSection';
 import { SidebarShortcutsSection } from './sidebar/SidebarShortcutsSection';
 import { SidebarItem } from './sidebar/SidebarItem';
-import { FolderPlus, ChevronLeft } from 'lucide-react';
+import { FolderPlus } from 'lucide-react';
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -24,7 +24,6 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
   const location = useLocation();
 
   const {
-    navLayoutType,
     navCollapsed,
     navIconOnly,
     navActiveBg,

@@ -63,7 +63,7 @@ export function WarehouseSettings({ settings, onChange }: WarehouseSettingsProps
           </Label>
           <Select
             value={toSelectValue(settings.purchase_warehouse_id)}
-            onValueChange={(v) => onChange("purchase_warehouse_id", fromSelectValue(v))}
+            onValueChange={(v) => onChange("purchase_warehouse_id", fromSelectValue(v) ?? "")}
           >
             <SelectTrigger className="h-12 rounded-lg border-slate-200 font-bold">
               <SelectValue placeholder="اختر المستودع" />
@@ -84,7 +84,7 @@ export function WarehouseSettings({ settings, onChange }: WarehouseSettingsProps
           </Label>
           <Select
             value={toSelectValue(settings.sales_warehouse_id)}
-            onValueChange={(v) => onChange("sales_warehouse_id", fromSelectValue(v))}
+            onValueChange={(v) => onChange("sales_warehouse_id", fromSelectValue(v) ?? "")}
           >
             <SelectTrigger className="h-12 rounded-lg border-slate-200 font-bold">
               <SelectValue placeholder="اختر المستودع" />

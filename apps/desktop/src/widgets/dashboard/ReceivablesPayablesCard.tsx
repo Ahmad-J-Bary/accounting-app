@@ -18,7 +18,6 @@ export function ReceivablesPayablesCard({
   total,
   debit,
   credit,
-  icon: Icon,
   color,
   unlinkedCount,
   type

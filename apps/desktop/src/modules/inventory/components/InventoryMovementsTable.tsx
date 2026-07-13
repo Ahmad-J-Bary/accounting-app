@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { cn } from '@shared/lib/utils';
 import type { StockMovement, WarehouseDto } from "@erp/shared-types";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
@@ -288,7 +288,7 @@ export function InventoryMovementsTable({
               </span>
               {showOrig && (
                 <span className="tabular-nums text-[10px] text-slate-400 font-medium">
-                  {parseFloat(info.original).toLocaleString()} {info.currency}
+                  {parseFloat(info.original ?? "0").toLocaleString()} {info.currency}
                 </span>
               )}
             </div>

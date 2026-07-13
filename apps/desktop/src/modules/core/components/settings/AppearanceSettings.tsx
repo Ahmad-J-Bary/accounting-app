@@ -3,7 +3,7 @@ import { useNavSidebarSettings } from '@shared/hooks/useNavSidebarSettings';
 import { THEME_LIST } from '@shared/config/themeRegistry';
 import { PRIMARY_COLORS } from '@shared/config/primaryColors';
 import { computeLayoutType } from '@shared/config/computeLayoutType';
-import type { ThemeId, ColorMode, DensityMode, NavMenuType, SidenavShape, TopnavShape, NavbarAppearance } from '@shared/types/appearance';
+import type { ColorMode, DensityMode, NavMenuType, SidenavShape, TopnavShape, NavbarAppearance } from '@shared/types/appearance';
 import { SettingsSection } from '@widgets/templates/SettingsLayout';
 import { Switch } from '@shared/ui/switch';
 import { cn } from '@shared/lib/utils';

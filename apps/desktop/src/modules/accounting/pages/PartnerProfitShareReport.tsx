@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ReportLayout } from "@widgets/templates/ReportLayout";
 import { Button } from "@shared/ui/button";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { RefreshCw, Users, BookOpen } from "lucide-react";
+import { Users, BookOpen } from "lucide-react";
 import { computePartnerProfitShare } from "@modules/accounting/lib/partnerProfitShare";
 import { usePartnerProfitShareReport } from "@modules/accounting/hooks/usePartnerProfitShareReport";
 import { PartnerProfitShareView } from "@modules/accounting/components/partner-profit-share/PartnerProfitShareView";
@@ -13,7 +13,7 @@ import { useReportFilters } from "@shared/hooks/useReportFilters";
 export default function PartnerProfitShareReport() {
   const navigate = useNavigate();
   const { baseCurrency, currencies, formatAmount } = useCurrencyContext();
-  const { filters, setFilters, selectedCurrency, setSelectedCurrency } = useReportFilters(
+  const { filters, setFilters, selectedCurrency } = useReportFilters(
     new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
     new Date().toISOString().split("T")[0]
   );

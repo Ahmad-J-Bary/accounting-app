@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@shared/ui/button";
 import { Plus, Eye, Settings2, Trash2 } from "lucide-react";
 import { adjustmentService } from '@modules/inventory/api/inventoryService';
@@ -14,7 +14,6 @@ import { AdjustmentDetailPanel } from '@modules/inventory/components/AdjustmentD
 
 export default function AdjustmentsPage() {
   const {
-    data,
     filtered: adjustments,
     loading: adjLoading,
     refreshing,

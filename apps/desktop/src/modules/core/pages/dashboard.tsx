@@ -8,14 +8,13 @@ import {
 import { formatDate } from '@shared/lib/format';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  Legend, PieChart, Pie, Cell
+  PieChart, Pie, Cell
 } from "recharts";
 import { cn } from "@shared/lib/utils";
 
 import { DashboardLayout, DashboardCard } from "@widgets/templates/DashboardLayout";
 import { StatusBadge } from '@widgets/stats/StatusBadge';
 import { QuickActions } from '@app/shell/QuickActions';
-import { ReceivablesPayablesCard } from '@widgets/dashboard/ReceivablesPayablesCard';
 
 import { journalEntryService } from '@modules/accounting/api/journalEntryService';
 import { invoiceService } from '@modules/invoicing/api/invoiceService';
@@ -25,7 +24,7 @@ import { materialService } from '@modules/inventory/api/materialService';
 import { categoryService } from '@modules/inventory/api/categoryService';
 import { accountingService } from '@modules/accounting/api/accountingService';
 
-import type { InvoiceDto, JournalEntryDto, Payment, MaterialDto, ReceivablesPayablesSummary, CustomerDto, SupplierDto, CategoryDto } from "@erp/shared-types";
+import type { InvoiceDto, JournalEntryDto, Payment, MaterialDto, ReceivablesPayablesSummary, CategoryDto } from "@erp/shared-types";
 
 import { useCurrencyContext, type CurrencyDisplayMode } from "@app/providers/CurrencyContext";
 
@@ -35,7 +34,7 @@ const MONTH_NAMES = ["يناير", "فبراير", "مارس", "أبريل", "م
 const CHART_COLORS = ["#2563eb", "#10b981", "#f59e0b", "#64748b", "#8b5cf6", "#ec4899"];
 
 export default function Dashboard() {
-  const { formatAmount, displayMode, setDisplayMode, baseCurrency, currencies } = useCurrencyContext();
+  const { formatAmount, displayMode, baseCurrency, currencies } = useCurrencyContext();
   const [localDisplayMode, setLocalDisplayMode] = useState<CurrencyDisplayMode | "both">(displayMode);
   const [recentJournals, setRecentJournals] = useState<JournalEntryDto[]>([]);
   const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
@@ -46,7 +45,7 @@ export default function Dashboard() {
   const [rpSummary, setRpSummary] = useState<ReceivablesPayablesSummary | null>(null);
   const [totalSalesReturns, setTotalSalesReturns] = useState(0);
   const [totalPurchaseReturns, setTotalPurchaseReturns] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
 
   const toNumber = (value?: string | null) => {
     const parsed = Number.parseFloat(value ?? "0");
@@ -140,7 +139,6 @@ export default function Dashboard() {
     const now = new Date();
     for (let i = 0; i < 6; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${d.getFullYear()}-${d.getMonth()}`;
       monthly.set(MONTH_NAMES[d.getMonth()], { revenue: 0, expenses: 0 });
     }
     invoices.filter(i => i.status === "Posted").forEach(inv => {
@@ -209,13 +207,6 @@ export default function Dashboard() {
     DrawingsVoucher: "سند مسحوبات",
     CashIn: "إيداع خزينة",
     CashOut: "سحب خزينة",
-  };
-
-  // The total_debit / total_credit for display
-  const formatDebit = (entry: JournalEntryDto) => {
-    const d = toNumber(entry.total_base_debit);
-    const c = toNumber(entry.total_base_credit);
-    return d > c ? formatAmount(d, { mode: localDisplayMode }) : "";
   };
 
   return (

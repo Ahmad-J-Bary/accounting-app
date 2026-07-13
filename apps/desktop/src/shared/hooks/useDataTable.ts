@@ -36,7 +36,7 @@ export function useDataTable<T>({
   });
 
   const refresh = useCallback(
-    (silent = false) => {
+    (_silent = false) => {
       refetch();
     },
     [refetch]

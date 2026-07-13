@@ -1,7 +1,7 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { AlertCircle, Shuffle, Package, Hash, Barcode, Layers, Scale, Boxes } from "lucide-react";
+import { AlertCircle, Shuffle, Package, Scale } from "lucide-react";
 import type { CategoryDto, MaterialDto } from "@erp/shared-types";
 import { categoryService } from '@modules/inventory/api/categoryService';
 import { materialService } from '@modules/inventory/api/materialService';
@@ -20,7 +20,6 @@ interface CategoryTreeNode extends CategoryDto {
 interface CategoryDetailsSidebarProps {
   selected: CategoryTreeNode | null; 
   allCategories: CategoryDto[];
-  parentName?: string | null;
   onSaved: () => void;
   onDelete: () => void;
   canEdit?: boolean;
@@ -33,7 +32,6 @@ const DEFAULT_CATEGORY_NAME = "غير مصنف";
 export function CategoryDetailsSidebar({
   selected,
   allCategories,
-  parentName,
   onSaved,
   onDelete,
   canEdit = true,
@@ -189,7 +187,7 @@ export function CategoryDetailsSidebar({
             code: finalCode,
             minimum_stock: minimumStock,
             units: [{ name: baseUnitName, conversion_factor: "1", barcode: barcode.trim() || null }],
-            category_ids: [selected.id],
+            category_ids: [selected!.id],
             purchase_prices: [],
             sale_prices: [],
           });
@@ -202,7 +200,7 @@ export function CategoryDetailsSidebar({
           return;
         }
         await materialService.addMaterialUnit({
-          material_id: materialData?.id,
+          material_id: materialData!.id,
           name: unitName.trim(),
           conversion_factor: unitFactor.trim(),
           barcode: unitBarcode.trim() || null

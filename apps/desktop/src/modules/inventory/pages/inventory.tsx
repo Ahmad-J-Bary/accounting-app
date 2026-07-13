@@ -17,7 +17,7 @@ import { MOVEMENT_TYPE_KEYS, getTransferRefs } from '@modules/inventory/constant
 export default function Inventory() {
   const { openTab } = useTabs();
 
-  const { data: movements = [], isLoading: movementsLoading, refetch: refreshMovements, isRefetching: movementsRefetching } = useQuery<StockMovement[]>({
+  const { data: movements = [], isLoading: movementsLoading, isRefetching: movementsRefetching } = useQuery<StockMovement[]>({
     queryKey: ['stock-movements'],
     queryFn: () => inventoryService.listStockMovements(),
   });
@@ -59,7 +59,7 @@ export default function Inventory() {
   const toDamagedItem = useCallback((m: StockMovement): DamagedItem => ({
     id: m.id,
     material_id: m.material_id,
-    material_name: m.material_name,
+    material_name: m.material_name ?? undefined,
     quantity: m.quantity,
     reason: m.reason || '',
     damage_date: m.movement_date,
@@ -81,16 +81,16 @@ export default function Inventory() {
   const toStockAdjustment = useCallback((m: StockMovement): StockAdjustment => ({
     id: m.id,
     material_id: m.material_id,
-    material_name: m.material_name,
+    material_name: m.material_name ?? undefined,
     system_quantity: '0',
     actual_quantity: '0',
     difference: m.signed_quantity || m.quantity,
-    reason: m.reason,
+    reason: m.reason ?? undefined,
     unit_cost: m.unit_cost || '0',
     unit_cost_base: m.unit_cost_base || '0',
     total_cost: m.total_cost || '0',
     total_cost_base: m.total_cost_base || '0',
-    notes: m.reason,
+    notes: m.reason ?? undefined,
     reference: m.reference,
     adjustment_date: m.movement_date,
     created_at: m.created_at,

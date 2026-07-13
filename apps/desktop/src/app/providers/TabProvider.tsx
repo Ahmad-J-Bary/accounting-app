@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useRef, ReactNode, useEffect } from 'react';
+import { useState, useCallback, useRef, ReactNode, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-import { Tab, TabContextType } from '@shared/types/tabs';
+import { Tab } from '@shared/types/tabs';
 
 import { TabContext } from './TabContext';
 

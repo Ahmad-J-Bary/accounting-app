@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Input } from "@shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
-import type { WarehouseDto, MaterialDto, MaterialUnitDto } from "@erp/shared-types";
+import type { WarehouseDto, MaterialDto } from "@erp/shared-types";
 import type { CreateTransferRequest } from "@erp/shared-types";
 import { FormPanel } from "@widgets/form-shell/FormPanel";
 import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
@@ -170,11 +170,6 @@ export function TransferForm({
     if (!selectedMaterial || availableQtyBase === 0) return '';
     return formatDecomposition(availableParts);
   }, [availableParts, availableQtyBase, selectedMaterial]);
-
-  const inputParts = useMemo(() => {
-    if (!selectedMaterial || totalBase === 0) return [];
-    return decomposeUnits(totalBase, selectedMaterial.units);
-  }, [selectedMaterial, totalBase]);
 
   const handleSave = async () => {
     if (!valid) return;

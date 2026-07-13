@@ -13,7 +13,6 @@ import { useUnifiedColumns } from "@shared/hooks";
 import { cn } from "@shared/lib/utils";
 import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
 import { Minus, Plus } from "lucide-react";
-import { toast } from "sonner";
 import { computeTreeTotals, flattenTreeRows, isBalanceDebit } from "../lib/trialBalance";
 import type { TrialBalanceTreeRow } from "../lib/trialBalance";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";

@@ -16,11 +16,7 @@ function SectionHeader({ title }: { title: string }) {
   return <h3 className="text-base font-black text-slate-900">{title}</h3>;
 }
 
-function ReportMeta({
-  filters,
-  selectedCurrencyLabel,
-  lastLoadedAt,
-}: Pick<IncomeStatementViewProps, "filters" | "selectedCurrencyLabel" | "lastLoadedAt">) {
+function ReportMeta() {
   return (
     <div className="rounded-3xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-center text-sm text-slate-600">
       <span className="text-lg font-black text-slate-900">قائمة الدخل</span>
@@ -114,10 +110,10 @@ function InlineSection({
 }
 
 export function IncomeStatementView(props: IncomeStatementViewProps) {
-  const { computed, formatValue, filters, selectedCurrencyLabel, lastLoadedAt } = props;
+  const { computed, formatValue } = props;
   return (
     <div className="space-y-4">
-      <ReportMeta filters={filters} selectedCurrencyLabel={selectedCurrencyLabel} lastLoadedAt={lastLoadedAt} />
+      <ReportMeta />
       <SummaryCards computed={computed} formatValue={formatValue} />
       <div className="space-y-4">
         {computed.sections.map((section) => (

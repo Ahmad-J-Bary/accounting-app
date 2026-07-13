@@ -10,7 +10,7 @@ import type {
 } from '@shared/types/appearance';
 import { DEFAULT_APPEARANCE } from '@shared/types/appearance';
 import { getLayoutDefinition } from '@shared/config/layoutRegistry';
-import { getThemeDefinition, THEME_REGISTRY } from '@shared/config/themeRegistry';
+import { getThemeDefinition } from '@shared/config/themeRegistry';
 import { getPrimaryColor, applyPrimaryColor } from '@shared/config/primaryColors';
 import { deriveCompoundFromLayout } from '@shared/config/computeLayoutType';
 

@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Button } from "@shared/ui/button";
-import { Plus, Eye, Printer, Settings2, Trash2 } from "lucide-react";
+import { Plus, Eye, Settings2, Trash2 } from "lucide-react";
 import type { SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import type { CurrencyDisplayMode } from "@app/providers/CurrencyContext";
 import { ReturnsTable } from "./ReturnsTable";
 
 interface ReturnsListProps {
@@ -17,7 +17,7 @@ interface ReturnsListProps {
   onEdit: (ret: SalesReturnDto | PurchaseReturnDto) => void;
   onView: (ret: SalesReturnDto | PurchaseReturnDto) => void;
   onDelete: (id: string) => Promise<void>;
-  formatMonetaryAmount: (amount: string | number | null | undefined, mode: string) => string;
+  formatMonetaryAmount: (amount: string | number | null | undefined, mode?: CurrencyDisplayMode | "both") => string;
   partyType: "customer" | "supplier";
   title: string;
   createLabel: string;
@@ -40,19 +40,11 @@ export function ReturnsList({
   onEdit,
   onView,
   onDelete,
-  formatMonetaryAmount,
   partyType,
   title,
   createLabel,
-  searchPlaceholder,
   emptyMessage,
-  statsLabel,
-  statsColor,
-  preferenceKey,
-  showSubtotal = false,
-  showExtraCosts = false,
 }: ReturnsListProps) {
-  const { baseCurrency, formatAmount } = useCurrencyContext();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const filtered = useMemo(() =>
@@ -71,9 +63,6 @@ export function ReturnsList({
     }), [returns, search, partyIdFilter, partyType]);
 
   const partyLabel = partyType === "supplier" ? "المورد" : "الزبون";
-
-  const totalAmount = useMemo(() =>
-    filtered.reduce((sum, ret) => sum + parseFloat(ret.total_amount || "0"), 0), [filtered]);
 
   const handleDeleteSelected = async () => {
     if (!selectedId) return;

@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
 import { ErpRoutes } from '@app/router/ErpRoutes';
 import { useTabs } from '@app/providers/TabContext';
 import { ErrorBoundary } from '@shared/ui/ErrorBoundary';
@@ -14,7 +13,6 @@ import { VerticalLayout } from './layouts/VerticalLayout';
 import { TopNavLayout } from './layouts/TopNavLayout';
 import { HorizontalLayout } from './layouts/HorizontalLayout';
 import { ComboLayout } from './layouts/ComboLayout';
-import { TabBar } from './TabBar';
 
 interface AppLayoutProps {
   title?: string;
@@ -24,9 +22,7 @@ interface AppLayoutProps {
 export function AppLayout({ title, subtitle }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { tabs, openTab } = useTabs();
-  const navigate = useNavigate();
-  const { activeLayout, settings } = useAppearance();
-  const location = useLocation();
+  const { activeLayout } = useAppearance();
   const { hasMultipleCurrencies } = useCurrencyContext();
 
   useEffect(() => {
@@ -119,7 +115,7 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
         {hasMultipleCurrencies && <FloatingExchangeRateWidget isVisible={isExchangeVisible} onClose={() => toggleExchange()} />}
       </main>
     </>
-  ), [tabs, isExchangeVisible, title, subtitle]);
+  ), [tabs, isExchangeVisible, title, subtitle, hasMultipleCurrencies]);
 
   switch (activeLayout.shellVariant) {
     case 'topnav':

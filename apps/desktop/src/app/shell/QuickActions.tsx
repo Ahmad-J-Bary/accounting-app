@@ -2,7 +2,7 @@ import { Button } from '@shared/ui/button';
 import { Card } from '@shared/ui/card';
 import { 
   Receipt, ShoppingCart, Wallet, FileText, Plus, User, Package, 
-  ArrowRight, ChevronRight 
+  ChevronRight 
 } from 'lucide-react';
 import { useTabs } from '@app/providers/TabContext';
 

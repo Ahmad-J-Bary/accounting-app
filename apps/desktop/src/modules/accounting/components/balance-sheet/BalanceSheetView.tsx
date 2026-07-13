@@ -13,7 +13,7 @@ function SectionHeader({ title }: { title: string }) {
   return <h3 className="text-base font-black text-slate-900">{title}</h3>;
 }
 
-function ReportMeta({ computed, formatValue }: { computed: BalanceSheetComputed; formatValue: (value: number) => string }) {
+function ReportMeta() {
   return (
     <div className="rounded-3xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-center text-sm text-slate-600">
       <span className="text-lg font-black text-slate-900">الميزانية العمومية</span>
@@ -174,7 +174,7 @@ export function BalanceSheetView(props: BalanceSheetViewProps) {
 
   return (
     <div className="space-y-4">
-      <ReportMeta computed={computed} formatValue={formatValue} />
+      <ReportMeta />
       <SummaryCards computed={computed} formatValue={formatValue} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

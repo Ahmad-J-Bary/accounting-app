@@ -17,12 +17,6 @@ const AUTO_FIT_FONT_FAMILY =
  *  2 lines when the container is narrower than the sum of min widths. */
 const AUTO_FIT_PADDING = 16;
 
-/** Extra headroom baked into every column's minimum width. Kept small (8px)
- *  so the column can actually reach a width where the header text needs
- *  to wrap to 2 lines — instead of always having so much padding that the
- *  text fits on a single line forever. */
-const COLUMN_MIN_HEADROOM = 8;
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────

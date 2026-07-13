@@ -25,8 +25,6 @@ interface TreeSidebarProps {
 
 export function TreeSidebar({
   title,
-  subtitle,
-  selected,
   formMode,
   onOpenCreate,
   onOpenEdit,

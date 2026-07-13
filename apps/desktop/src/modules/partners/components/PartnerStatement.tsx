@@ -25,7 +25,6 @@ interface PartnerStatementProps {
 
 function getJournalDisplay(entry: JournalEntryDto): string {
   if (entry.journal_type === "GeneralJournal") {
-    const desc = entry.description || "";
     const hasDebit = entry.lines.some((l) => {
       const accCode = l.account_code || "";
       return (accCode.startsWith("47") || accCode.startsWith("332")) && parseFloat(l.debit || "0") > 0;

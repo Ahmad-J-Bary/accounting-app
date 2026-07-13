@@ -14,14 +14,13 @@ export interface CategoryDeleteDialogProps {
   open: boolean;
   kind: CategoryDeleteKind | null;
   categoryName: string;
-  isGeneralSub: boolean;
   onCancel: () => void;
   onConfirm: () => void;
   confirming: boolean;
 }
 
 export function CategoryDeleteDialog({
-  open, kind, categoryName, isGeneralSub, onCancel, onConfirm, confirming,
+  open, kind, categoryName, onCancel, onConfirm, confirming,
 }: CategoryDeleteDialogProps) {
   if (!kind) return null;
 

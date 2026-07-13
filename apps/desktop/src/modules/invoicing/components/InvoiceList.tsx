@@ -3,9 +3,9 @@ import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTem
 import { Button } from "@shared/ui/button";
 import { Plus, Eye, Printer, Settings2, Trash2 } from "lucide-react";
 import { InvoiceDto } from "@erp/shared-types";
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import type { CurrencyDisplayMode } from "@app/providers/CurrencyContext";
 import { InvoiceTable } from "./InvoiceTable";
-import { getInvoiceBaseAmount } from "../lib/invoiceHelpers";
+
 
 export interface ExtraColumn {
   key: string;
@@ -30,7 +30,7 @@ interface InvoiceListProps {
   onPost: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onReopen: (id: string) => Promise<void>;
-  formatMonetaryAmount: (amount: string | number | { base_amount?: string } | null | undefined, mode: string) => string;
+  formatMonetaryAmount: (amount: string | number | { base_amount?: string } | null | undefined, mode?: CurrencyDisplayMode | "both") => string;
   partyType: "supplier" | "customer";
   title: string;
   createLabel: string;
@@ -60,14 +60,11 @@ export function InvoiceList({
   onPost,
   onDelete,
   onReopen,
-  formatMonetaryAmount,
   partyType,
   title,
   createLabel,
   searchPlaceholder,
   emptyMessage,
-  statsLabel,
-  statsColor,
   preferenceKey,
   showSubtotal = false,
   showExtraCosts = false,
@@ -75,7 +72,6 @@ export function InvoiceList({
   showDiscount = false,
   extraColumns = [],
 }: InvoiceListProps) {
-  const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
 

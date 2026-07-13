@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { useSidebarLayout } from '@shared/hooks';
-import { Label } from "@shared/ui/label";
-import { Switch } from "@shared/ui/switch";
 import { Button } from "@shared/ui/button";
 import { ICON_MAP } from '@app/shell/sidebarConfig';
 import { ALL_SYSTEM_ROUTES, findRouteById } from '@app/shell/routeRegistry';
@@ -25,7 +23,6 @@ export const SidebarContentManager: React.FC = () => {
     moveItemToGroup,
     reorderItems,
     // Custom item actions
-    addCustomShortcut,
     deleteCustomShortcut,
     // Group actions
     toggleGroupVisible,

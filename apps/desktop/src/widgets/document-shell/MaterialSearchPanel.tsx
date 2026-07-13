@@ -37,7 +37,6 @@ export function MaterialSearchPanel({
   searchType,
   onSelect,
   onClose,
-  columns,
   visibleColumnKeys,
   baseCurrency,
   style,

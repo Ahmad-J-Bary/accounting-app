@@ -16,7 +16,7 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { JournalTable } from "@modules/accounting/components/JournalTable";
 
 export default function AccountingJournalsReport() {
-  const { convertBetween, currencies, baseCurrency, formatAmount } = useCurrencyContext();
+  const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
   const [searchParams] = useSearchParams();
   const [filters, setFilters] = useState<JournalFilters>({
     journal_type: (searchParams.get('type') as JournalType) || 'GeneralJournal',

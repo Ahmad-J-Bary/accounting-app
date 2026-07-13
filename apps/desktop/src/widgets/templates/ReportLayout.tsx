@@ -51,7 +51,7 @@ export function ReportLayout({ title, subtitle, filters, children, actions, clas
   );
 }
 
-export function ReportTable({ children, footer }: { children: ReactNode; footer?: ReactNode }) {
+export function ReportTable({ children }: { children: ReactNode; footer?: ReactNode }) {
   return (
     <div className="flex-1 overflow-auto">
       <table className="w-full text-sm">

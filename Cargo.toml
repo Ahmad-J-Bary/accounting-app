@@ -4,7 +4,6 @@ members = [
     "crates/domain",
     "crates/application",
     "crates/infrastructure",
-    "crates/ports",
     "crates/tauri-adapter",
     "apps/desktop/src-tauri",
 ]

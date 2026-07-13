@@ -45,12 +45,6 @@ interface FixedAssetFormProps {
   initialCategoryId?: string;
 }
 
-const labelByAssetType: Record<string, string> = {
-  buildings_land: "أبنية وأراضي",
-  equipment: "معدات وتجهيزات",
-  furniture: "أثاث ومفروشات",
-};
-
 function detectAssetTypeFromCategory(catName: string): "buildings_land" | "equipment" | "furniture" | "" {
   const lower = catName.toLowerCase();
   if (lower.includes("أبنية") || lower.includes("أراضي") || lower.includes("land") || lower.includes("building")) return "buildings_land";

@@ -1,5 +1,4 @@
 import { cn } from "@shared/lib/utils";
-import { getAlignmentClass } from "@shared/lib/table-utils";
 import type { MaterialDto, WarehouseDto } from "@erp/shared-types";
 import {
   DropdownMenu,
@@ -103,7 +102,6 @@ function EditableInput({
   value,
   fontSize,
   fontFamily,
-  align,
   onChange,
   onFocus,
   onKeyDown,
@@ -155,7 +153,7 @@ export function DocumentGridCell({
   config,
   callbacks,
 }: DocumentGridCellProps) {
-  const { densityPadding: dp, fontSize, readOnly, materials, warehouses, getCellValue, searchRow, cellBorderClass } = config;
+  const { fontSize, readOnly, materials, warehouses, getCellValue } = config;
   const { onUpdateLine, onCellChange, onKeyDown, onActiveCellChange, onSearchRowChange, onSearchTypeChange, onSearchTermChange, inputRefs } = callbacks;
 
   if (col.type === "tier_select") {

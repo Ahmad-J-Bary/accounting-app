@@ -29,7 +29,7 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
   });
   const [systemQuantity, setSystemQuantity] = useState<number>(0);
   const [unitCostPerUnit, setUnitCostPerUnit] = useState<number>(0);
-  const [loadingBalance, setLoadingBalance] = useState(false);
+  const [, setLoadingBalance] = useState(false);
 
   const formRef = useRef(form);
   formRef.current = form;

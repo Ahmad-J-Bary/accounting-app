@@ -88,7 +88,6 @@ export function MaterialTable({
     if (total > 0 && raw > 0 && total > raw) return total - raw;
     return 0;
   }, [rawPriceBase, unitCostBase]);
-  const salePriceBase = useCallback((m: MaterialDto) => parseFloat(m.last_sale_price_base || "0"), []);
   const totalReceived = useCallback((m: MaterialDto) => stockTotal?.get(m.id) ?? parseFloat(m.total_received || "0"), [stockTotal]);
   const totalAvailable = useCallback((m: MaterialDto) => parseFloat(m.total_available || "0"), []);
 
@@ -473,7 +472,7 @@ export function MaterialTable({
     });
 
     return cols;
-  }, [categories, onManageUnits, formatAmount, currencies, onEdit, onDelete, onRowClick, rawPriceBase, unitCostBase, extraCostBase, totalReceived, totalAvailable, isBaseCurrency, stockTotal]);
+  }, [categories, onManageUnits, formatAmount, currencies, onEdit, onDelete, onRowClick, rawPriceBase, unitCostBase, extraCostBase, totalReceived, totalAvailable, isBaseCurrency]);
 
   // Default visible: only base currency's money columns are shown.
   const defaultVisible = useMemo(() => {

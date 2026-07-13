@@ -11,7 +11,7 @@ import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { toast } from "sonner";
 import { cn } from "@shared/lib/utils";
-import { Plus, Edit, Hash, Barcode, Package, Layers, Shuffle, Check, Scale, Boxes, Package2, FileText, Globe, Image as ImageIcon, DollarSign, Tag, ShoppingCart, TrendingUp, Search, ChevronDown, Warehouse } from "lucide-react";
+import { Plus, Edit, Hash, Barcode, Package, Layers, Shuffle, Check, Scale, Package2, FileText, Globe, Image as ImageIcon, DollarSign, Tag, TrendingUp, Search, ChevronDown, Warehouse } from "lucide-react";
 import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest } from "@erp/shared-types";
 import { materialCodeService } from "@modules/inventory/api/materialCodeService";
 import { categoryService } from "@modules/inventory/api/categoryService";
@@ -436,14 +436,6 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
       ...prev,
       units: prev.units.filter((_, i) => i !== index)
     }));
-  };
-
-  const updateUnit = (index: number, field: string, value: string) => {
-    setFormData(prev => {
-      const nextUnits = [...prev.units];
-      nextUnits[index] = { ...nextUnits[index], [field]: value };
-      return { ...prev, units: nextUnits };
-    });
   };
 
   const handleEditUnit = (idx: number) => {
@@ -910,7 +902,6 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
                   key={`${idx}-${isEditing ? 'edit' : 'view'}`}
                   mode={isEditing ? "edit" : "view"}
                   unit={isEditing && editingUnitData ? editingUnitData : unit}
-                  index={idx}
                   isBase={idx === 0}
                   baseUnitName={formData.units[0]?.name}
                   onUpdate={isEditing ? (field, value) => setEditingUnitData(prev => prev ? { ...prev, [field]: value } : prev) : undefined}

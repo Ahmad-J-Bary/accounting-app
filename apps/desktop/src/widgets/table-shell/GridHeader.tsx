@@ -62,24 +62,6 @@ interface GridHeaderProps {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-function getHeaderText(col: GridHeaderColumn): string {
-  if (typeof col.header === 'string') return col.header;
-  if (typeof col.label === 'string') return col.label;
-  return col.id;
-}
-
-function getTextAlign(
-  align?: 'right' | 'left' | 'center',
-): React.CSSProperties['textAlign'] {
-  if (align === 'left') return 'left';
-  if (align === 'center') return 'center';
-  return 'right';
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -126,7 +108,7 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
         'transition-colors',
         useGrid ? 'grid' : 'flex',
         headerColor || 'bg-slate-50/50 backdrop-blur-md',
-        getRowBorderClass(borderStyle),
+        getRowBorderClass(borderStyle ?? ""),
         stickyHeader && 'sticky top-0 z-10 backdrop-blur-sm shadow-sm',
       )}
       style={useGrid ? { gridTemplateColumns: gridTemplate } : undefined}
@@ -141,7 +123,7 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
             getDensityPadding(),
             'relative text-slate-700 font-black uppercase tracking-wider select-text flex items-center',
             'justify-center',
-            getLeftBorderClass(borderStyle),
+            getLeftBorderClass(borderStyle ?? ""),
             !useGrid && !columnWidths[col.id] && col.width,
           )}
           style={{

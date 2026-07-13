@@ -245,7 +245,7 @@ export default function AccountMovement() {
           <>
             {accountType === 'partner' && linkedEntity && (
               <PaymentForm 
-                config={PAYMENT_CONFIGS.partner(linkedEntity as PartnerDto)}
+                config={PAYMENT_CONFIGS.partner({ ...(linkedEntity as PartnerDto), drawings_account_id: (linkedEntity as PartnerDto).drawings_account_id ?? undefined })}
                 onSave={handleSaveVoucher}
                 onClose={() => setIsVoucherOpen(false)}
                 saving={savingVoucher}

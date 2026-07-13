@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { DocumentToolbar } from "@widgets/document-shell/DocumentToolbar";
-import type { SupplierDto, CategoryDto, CreateMaterialRequest } from "@erp/shared-types";
+import type { SupplierDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest } from "@erp/shared-types";
 import { materialService } from "@modules/inventory/api/materialService";
 import { categoryService } from "@modules/inventory/api/categoryService";
 import { MaterialForm } from "@modules/inventory/components/MaterialForm";
@@ -73,10 +73,10 @@ export default function PurchaseInvoices() {
     categoryService.listCategories().then(setCategories).catch(() => {});
   }, []);
 
-  const handleSaveMaterial = async (data: CreateMaterialRequest) => {
+  const handleSaveMaterial = async (data: CreateMaterialRequest | UpdateMaterialRequest) => {
     setSavingMaterial(true);
     try {
-      await materialService.createMaterial(data);
+      await materialService.createMaterial(data as CreateMaterialRequest);
       toast.success("تم إضافة المادة بنجاح");
       setMaterialFormOpen(false);
       loadData(false);

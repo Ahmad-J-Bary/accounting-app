@@ -1,5 +1,4 @@
 import { useCallback } from "react";
-import { toast } from "sonner";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import { journalEntryService } from "@modules/accounting/api/journalEntryService";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
@@ -9,7 +8,7 @@ import { useReportData } from "@shared/hooks/useReportData";
 import { useMaterialExpenseLedgers } from "@shared/hooks/useMaterialExpenseLedgers";
 import { computeIncomeStatement, emptyIncomeStatementData } from "@modules/accounting/lib/incomeStatement";
 import { SYSTEM_ACCOUNT_IDS } from "@erp/shared-types";
-import type { AccountDto, AccountLedgerDto, MaterialDto, StockMovementDetailDto } from "@erp/shared-types";
+import type { AccountDto } from "@erp/shared-types";
 import type { IncomeStatementFilters } from "@modules/accounting/lib/incomeStatement";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import type { ReportState } from "@shared/types/report";
@@ -33,7 +32,7 @@ const emptyData: LoadedBalanceSheetData = {
 async function computeLedgerTotals(
   accounts: AccountDto[],
   entries: { description?: string; journal_type?: string; source_id?: string; lines: Array<{ account_id: string; debit_base?: string; debit?: string; credit_base?: string; credit?: string }> }[],
-  incomeStatementResult: { netProfit: number; closingInventory: number },
+  _incomeStatementResult: { netProfit: number; closingInventory: number },
   purchaseInvoices: Array<{ status?: string; extra_costs?: string }>,
 ): Promise<Omit<LoadedBalanceSheetData, "accounts" | "netProfit" | "closingInventory">> {
   let totalDrawings = 0;

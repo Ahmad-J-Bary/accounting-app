@@ -19,7 +19,6 @@ export function useEntityList<T extends { id: string }, Req>({
   saveData,
   deleteData,
   searchFields,
-  errorLabel = "فشل تحميل البيانات",
   successLabel = "تم الحفظ بنجاح",
   manageFormState = true,
 }: UseEntityListProps<T, Req>) {

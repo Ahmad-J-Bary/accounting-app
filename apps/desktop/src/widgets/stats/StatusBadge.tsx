@@ -33,7 +33,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
     }
   };
 
-  const config = getStatusConfig(status);
+  const config = getStatusConfig(status || "");
 
   return (
     <span className={cn('px-2.5 py-0.5 rounded-full text-xs font-semibold', config.className, className)}>

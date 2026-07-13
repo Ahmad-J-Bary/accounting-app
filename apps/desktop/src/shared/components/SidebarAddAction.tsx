@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useSidebarQuickAdd } from '@shared/hooks/useSidebarQuickAdd';
 import { Pin, Zap, Plus, Check, ChevronDown, Trash2 } from 'lucide-react';

@@ -13,7 +13,6 @@ export default function IncomeStatementReport() {
     filters,
     setFilters,
     selectedCurrency,
-    setSelectedCurrency,
   } = useReportFilters(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0],
     new Date().toISOString().split("T")[0]

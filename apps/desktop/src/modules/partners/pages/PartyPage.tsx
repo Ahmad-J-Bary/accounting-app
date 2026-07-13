@@ -344,12 +344,12 @@ export default function PartyPage({ entityName }: PartyPageProps) {
       tableContent={
         <PartyTable
           entityName={entityName}
-          data={items}
+          data={items.map(i => ({ ...i, phone: i.phone ?? undefined }))}
           loading={isLoading}
           search={search}
           onSearchChange={setSearch}
           onView={(item) => { setSelectedId(item.id); setPanelMode('detail'); }}
-          onEdit={(item) => { void handleOpenEditWithAccounts(item); }}
+          onEdit={(item) => { void handleOpenEditWithAccounts(item as CustomerDto | SupplierDto); }}
           onDelete={(id) => { setSelectedId(null); handleDelete(id); }}
           onJournal={(item) => {
             const party = item as CustomerDto | SupplierDto;

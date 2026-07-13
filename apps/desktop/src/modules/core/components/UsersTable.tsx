@@ -62,7 +62,7 @@ export function UsersTable({ data, loading, search, onSearchChange, roles }: Use
       id: "actions",
       header: "إجراءات",
       label: "إجراءات",
-      accessor: (u) => (
+      accessor: () => (
         <TableActions
           onEdit={() => toast.info("تعديل المستخدم قيد التطوير")}
           onDelete={() => toast.warning("حذف المستخدم قيد التطوير")}

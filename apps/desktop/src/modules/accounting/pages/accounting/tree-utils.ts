@@ -2,7 +2,7 @@ import type { AccountDto } from "@erp/shared-types";
 import type { AccountTreeNode } from "./types";
 
 export const isSummaryAccount = (
-  account: Pick<AccountDto, "category" | "level">,
+  _account: Pick<AccountDto, "category" | "level">,
 ): boolean => true; // All accounts are Summary (can have children)
 
 export const parseAmount = (

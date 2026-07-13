@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useSidebarLayout } from '@shared/hooks';
 import { useNavSidebarSettings } from '@shared/hooks';
 import { cn } from '@shared/lib/utils';

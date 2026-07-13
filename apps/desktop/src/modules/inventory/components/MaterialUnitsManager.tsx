@@ -4,7 +4,6 @@ import { X, Plus, Scale, Boxes, Shuffle } from "lucide-react";
 import { toast } from "sonner";
 import { materialService } from '@modules/inventory/api/materialService';
 import type { MaterialDto, MaterialUnitDto } from "@erp/shared-types";
-import { cn } from '@shared/lib/utils';
 import { UnitCard } from './UnitCard';
 import { AddUnitForm } from './AddUnitForm';
 
@@ -76,7 +75,7 @@ export function MaterialUnitsManager({ material, onClose, onUnitsUpdated }: Mate
         material_id: material.id,
         name: unit.name,
         conversion_factor: unit.conversion_factor,
-        barcode: unit.barcode || undefined,
+        barcode: unit.barcode || null,
       });
       toast.success("تمت إضافة الوحدة بنجاح");
       onUnitsUpdated();
@@ -123,7 +122,6 @@ export function MaterialUnitsManager({ material, onClose, onUnitsUpdated }: Mate
           key={`base-${editingUnitId === '__base__' ? 'edit' : 'view'}`}
           mode={editingUnitId === '__base__' ? "edit" : "view"}
           unit={editingUnitId === '__base__' && editingUnitData ? { name: editingUnitData.name, conversion_factor: editingUnitData.conversion_factor, barcode: editingUnitData.barcode || "" } : { name: baseUnit?.name || "قطعة", conversion_factor: baseUnit?.conversion_factor || "1", barcode: baseUnit?.barcode || "" }}
-          index={0}
           isBase={true}
           baseUnitName={baseUnit?.name}
           onEdit={editingUnitId === '__base__' ? undefined : () => { setEditingUnitId('__base__'); setEditingUnitData(baseUnit ? { ...baseUnit } : null); }}
@@ -156,7 +154,6 @@ export function MaterialUnitsManager({ material, onClose, onUnitsUpdated }: Mate
                     key={`${u.id}-${isEditing ? 'edit' : 'view'}`}
                     mode={isEditing ? "edit" : "view"}
                     unit={isEditing && editingUnitData ? { name: editingUnitData.name, conversion_factor: editingUnitData.conversion_factor, barcode: editingUnitData.barcode || "" } : { name: u.name, conversion_factor: u.conversion_factor, barcode: u.barcode || "" }}
-                    index={0}
                     isBase={false}
                     baseUnitName={baseUnit?.name}
                     onUpdate={isEditing ? handleUpdateEditingUnit : undefined}

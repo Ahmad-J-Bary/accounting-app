@@ -35,17 +35,13 @@ interface SummaryPanelProps {
 
 export function SummaryPanel({
   subtotal,
-  tax = 0,
   extraCosts,
   net,
-  paid = 0,
   currency,
-  compact = false,
   invoiceType,
   children,
   currencies,
   onCurrencyChange,
-  exchangeRate = 1,
   isReadOnly = false,
   paymentMethod,
   onPaymentMethodChange,

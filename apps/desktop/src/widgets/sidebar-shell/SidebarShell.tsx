@@ -1,4 +1,3 @@
-import React, { ReactNode } from "react";
 import { useSidePanelSettings } from "@shared/hooks";
 import { cn } from "@shared/lib/utils";
 import { Sheet, SheetContent } from "@shared/ui/sheet";

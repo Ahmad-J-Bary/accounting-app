@@ -20,13 +20,6 @@ interface FixedAssetDetailPanelProps {
   warehouseName?: string;
 }
 
-const statusLabels: Record<string, string> = {
-  Active: "نشط",
-  Disposed: "مستبعد",
-  Sold: "مباع",
-  Damaged: "تالف",
-};
-
 const FIXED_ASSET_MOVEMENT_TYPES = new Set([
   "Acquisition", "Depreciation", "Disposal", "Sale", "Adjustment", "Damage", "Revaluation",
 ]);

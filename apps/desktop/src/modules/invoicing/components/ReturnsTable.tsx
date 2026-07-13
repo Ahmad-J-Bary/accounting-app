@@ -5,7 +5,7 @@ import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
 import { formatDateTime } from "@shared/lib/format";
-import { Button } from "@shared/ui/button";
+
 import type { SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
 import { TableActions } from "@widgets/table-shell/TableActions";
 
@@ -102,7 +102,7 @@ export function ReturnsTable({
         id: "actions",
         header: "إجراءات",
         label: "إجراءات",
-        accessor: (ret) => {
+        accessor: (ret: SalesReturnDto | PurchaseReturnDto) => {
           return (
             <TableActions
               onView={onView ? () => onView(ret) : undefined}

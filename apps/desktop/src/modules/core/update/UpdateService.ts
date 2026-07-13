@@ -1,4 +1,4 @@
-import type { UpdateManifest, UpdateState, UpdateChannel } from './types';
+import type { UpdateManifest, UpdateChannel } from './types';
 import { UPDATE_MANIFEST_URL, STORAGE_KEYS } from './constants';
 import pkg from '../../../../package.json';
 
@@ -14,7 +14,7 @@ export class UpdateService {
     return UpdateService.instance;
   }
 
-  async fetchManifest(channel: UpdateChannel = 'stable'): Promise<UpdateManifest | null> {
+  async fetchManifest(_channel: UpdateChannel = 'stable'): Promise<UpdateManifest | null> {
     if (!UPDATE_MANIFEST_URL) return null;
     try {
       const response = await fetch(UPDATE_MANIFEST_URL);

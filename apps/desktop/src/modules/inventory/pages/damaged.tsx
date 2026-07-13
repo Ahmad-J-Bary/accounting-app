@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@shared/ui/button";
 import { Plus } from "lucide-react";
 import { damagedService } from '@modules/inventory/api/inventoryService';
@@ -10,10 +10,8 @@ import { useDataTable } from '@shared/hooks';
 import { DamagedTable } from '@modules/inventory/components/DamagedTable';
 import { DamagedForm } from '@modules/inventory/components/DamagedForm';
 import { DamagedDetailPanel } from '@modules/inventory/components/DamagedDetailPanel';
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 export default function DamagedPage() {
-  const { formatMonetaryAmount } = useCurrencyContext();
   const {
     filtered: items,
     loading: itemsLoading,

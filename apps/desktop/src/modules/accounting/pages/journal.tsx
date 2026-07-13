@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Input } from "@shared/ui/input";
-import { Search, Filter } from "lucide-react";
+import { Filter } from "lucide-react";
 import { journalEntryService, type JournalFilters } from '@modules/accounting/api/journalEntryService';
 import type { JournalEntryDto, JournalType } from "@erp/shared-types";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
@@ -10,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 // Refactored Components & Hooks
 import { useDataTable } from '@shared/hooks';
 import { JournalTable } from '@modules/accounting/components/JournalTable';
-import { JOURNAL_TYPES, getJournalColumnsByType } from "@modules/accounting/lib/journal-config";
+import { JOURNAL_TYPES } from "@modules/accounting/lib/journal-config";
 
 export default function Journal() {
   const [searchParams] = useSearchParams();
@@ -37,20 +36,13 @@ export default function Journal() {
   const {
     filtered: entries,
     loading,
-    refreshing,
     search,
     setSearch,
-    refresh,
   } = useDataTable<JournalEntryDto>({
     queryKey: ["journal-entries", JSON.stringify(filters)],
     fetchData,
     searchFields: ["entry_number", "description"],
   });
-
-  const visibleColumns = useMemo(
-    () => getJournalColumnsByType(),
-    []
-  );
 
   const displayEntries = useMemo(() => {
     const jt = filters.journal_type;

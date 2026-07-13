@@ -21,7 +21,6 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuItem,
 } from "@shared/ui/dropdown-menu";
-import { Button } from "@shared/ui/button";
 import {
   formatWithLocale,
   useCurrencyContext,
@@ -90,7 +89,6 @@ export function GenericDocumentGrid({
   readOnly = false,
   preferenceKey = "generic_grid",
   docCurrency = "",
-  exchangeRate = "1",
   dynamicVisibleColumns,
   searchPanelRenderer,
   priceHistoryMap,

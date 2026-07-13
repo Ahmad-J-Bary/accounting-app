@@ -1,4 +1,3 @@
-import React from 'react';
 import { ICON_MAP } from '@app/shell/sidebarConfig';
 import { cn } from '@shared/lib/utils';
 

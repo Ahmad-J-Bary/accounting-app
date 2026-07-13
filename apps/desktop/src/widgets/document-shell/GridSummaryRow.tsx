@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { cn } from "@shared/lib/utils";
 import { TableSummary, type SummaryColumn } from "@widgets/table-shell/TableSummary";
 import type { DocumentColumn } from "./GenericDocumentGrid";
 import type { GridLine } from "@modules/invoicing/lib/invoiceUtils";
@@ -18,10 +17,7 @@ interface GridSummaryRowProps {
 export function GridSummaryRow({
   filteredColumns,
   lines,
-  cellBorderClass,
   formatRawAmount,
-  docCurrency,
-  baseCurrency,
   asPageFooter = false,
   gridTemplate,
 }: GridSummaryRowProps) {

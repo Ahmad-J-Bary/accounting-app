@@ -31,7 +31,6 @@ export function CategoryTreeNodeItem({
   const isVirtualRoot = node.id === VIRTUAL_ROOT_ID;
   const isDefault = node.name === "غير مصنف" && !node.parent_id;
   const isRoot = !node.parent_id && !isVirtualRoot;
-  const isMaterial = node.isMaterial;
 
   const renderIcon = (n: CategoryTreeNode, expanded: boolean) => {
     if (n.isMaterial) {

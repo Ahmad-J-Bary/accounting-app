@@ -13,7 +13,6 @@ import { TransferTable } from '@modules/inventory/components/TransferTable';
 import { TransferForm } from '@modules/inventory/components/TransferForm';
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { buildStockByWarehouse } from '@modules/inventory/lib/stockUtils';
-import { getTransferRefs } from '@modules/inventory/constants/movementTypes';
 
 export default function Transfers() {
   const { data: movements = [] } = useQuery<StockMovement[]>({
@@ -33,14 +32,13 @@ export default function Transfers() {
 
   const queryClient = useQueryClient();
   const stockByWarehouse = useMemo(() => buildStockByWarehouse(movements), [movements]);
-  const transferRefs = useMemo(() => getTransferRefs(movements), [movements]);
 
   const [transferFormOpen, setTransferFormOpen] = useState(false);
   const [savingTransfer, setSavingTransfer] = useState(false);
   const [transferFormMode, setTransferFormMode] = useState<'create' | 'edit' | 'view'>('create');
   const [transferFormData, setTransferFormData] = useState<{ request: CreateTransferRequest; reference: string } | null>(null);
   const [transferDetailData, setTransferDetailData] = useState<TransferRow | null>(null);
-  const [warehouseTransferPreset, setWarehouseTransferPreset] = useState<{ materialId: string; sourceWarehouseId: string } | null>(null);
+  const [, setWarehouseTransferPreset] = useState<{ materialId: string; sourceWarehouseId: string } | null>(null);
 
   const handleCreateTransfer = useCallback(async (req: CreateTransferRequest) => {
     setSavingTransfer(true);

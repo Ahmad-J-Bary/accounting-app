@@ -34,8 +34,6 @@ interface TopBarProps {
 }
 
 export function TopBar({ 
-  onToggleSidebar, 
-  sidebarOpen = true,
   isExchangeVisible,
   onToggleExchange,
   merged = false,
@@ -67,7 +65,6 @@ export function TopBar({
   // ── Merged nav items ──
   const { layout } = useSidebarLayout();
   const location = useLocation();
-  const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
   const visibleNavGroups = layout.groups.filter(g => g.visible).sort((a, b) => a.order - b.order);
 
   const handleNewInvoice = () => {
@@ -168,7 +165,7 @@ export function TopBar({
     const displayTitle = group.customTitle ?? group.defaultTitle;
     const visibleItems = group.items.filter((i: SidebarItemConfig) => i.visible).sort((a: SidebarItemConfig, b: SidebarItemConfig) => a.order - b.order);
     if (visibleItems.length === 0) return null;
-    const GroupIcon = ICON_MAP[group.icon] ?? null;
+    const GroupIcon = group.icon ? ICON_MAP[group.icon] ?? null : null;
 
     if (visibleItems.length === 1) {
       return renderNavItem(visibleItems[0], mergedSlim);

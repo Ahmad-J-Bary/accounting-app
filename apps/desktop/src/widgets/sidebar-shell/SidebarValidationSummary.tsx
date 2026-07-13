@@ -1,4 +1,3 @@
-import React from "react";
 import { cn } from "@shared/lib/utils";
 import { AlertCircle } from "lucide-react";
 import type { SidebarValidationSummaryProps } from "./types";

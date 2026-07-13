@@ -79,7 +79,6 @@ interface MaterialDetailPanelProps {
   onClose: () => void;
   onEdit?: (m: MaterialDto) => void;
   onDelete?: (id: string, name: string) => void;
-  loadingDetails?: boolean;
   onOpenTransfer?: (opts: { sourceWarehouseId?: string }) => void;
   initialTab?: string;
 }
@@ -89,7 +88,6 @@ export function MaterialDetailPanel({
   onClose,
   onEdit,
   onDelete,
-  loadingDetails = false,
   onOpenTransfer,
   initialTab = "units",
 }: MaterialDetailPanelProps) {

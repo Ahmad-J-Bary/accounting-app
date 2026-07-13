@@ -3,7 +3,7 @@ import { Input } from "@shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { Button } from "@shared/ui/button";
 import { Undo2, X, ShoppingBag, ShoppingCart, Search, Plus, Building2, Calendar, FileText, Package, CheckCircle2, Ruler } from "lucide-react";
-import type { CustomerDto, SupplierDto, InvoiceDto, InvoiceLineDto, SalesReturnLineDto, PurchaseReturnLineDto, CreateSalesReturnRequest, CreatePurchaseReturnRequest, SalesReturnDto, PurchaseReturnDto, MaterialDto } from "@erp/shared-types";
+import type { CustomerDto, SupplierDto, InvoiceDto, InvoiceLineDto, SalesReturnLineDto, PurchaseReturnLineDto, SalesReturnDto, PurchaseReturnDto, MaterialDto } from "@erp/shared-types";
 import { FormPanel } from "@widgets/form-shell/FormPanel";
 import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
@@ -19,7 +19,7 @@ import { cn } from "@shared/lib/utils";
 // ── Helpers ──
 
 const getPartyId = (inv: InvoiceDto, isSales: boolean): string =>
-  isSales ? (inv as InvoiceDto).customer_id : (inv as InvoiceDto).supplier_id;
+  isSales ? (inv as InvoiceDto).customer_id ?? "" : (inv as InvoiceDto).supplier_id ?? "";
 
 const getReturnPartyId = (ret: SalesReturnDto | PurchaseReturnDto, isSales: boolean): string =>
   isSales ? (ret as SalesReturnDto).customer_id : (ret as PurchaseReturnDto).supplier_id;

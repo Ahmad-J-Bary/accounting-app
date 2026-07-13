@@ -33,7 +33,6 @@ interface PaymentFormProps {
 
 export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProps) {
   const { currencies, baseCurrency, rateMap } = useCurrencyContext();
-
   const defaultCurrency = config.entityCurrency || baseCurrency?.code || "";
   const idField = config.getIdField(config);
 
@@ -191,6 +190,6 @@ export const PAYMENT_CONFIGS = {
     debitLabel: "إلى الحساب المدين (مسحوبات)",
     debitValue: `مسحوبات ${partner.name}`,
     notesPrefix: "مسحوبات شريك: ",
-    getIdField: (cfg) => "debit_account_id",
+    getIdField: () => "debit_account_id",
   }),
 } as const;

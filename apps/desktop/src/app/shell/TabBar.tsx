@@ -5,7 +5,7 @@ import { Button } from "@shared/ui/button";
 import { useRef } from "react";
 
 export function TabBar() {
-  const { tabs, activeTabId, switchTab, closeTab } = useTabs();
+  const { tabs, switchTab, closeTab } = useTabs();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: "left" | "right") => {

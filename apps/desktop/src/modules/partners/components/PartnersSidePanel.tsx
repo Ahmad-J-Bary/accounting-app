@@ -32,8 +32,6 @@ export function PartnersSidePanel({
   selectedPartner,
   editPartner,
   baseCurrency,
-  currencies,
-  formatAmount,
   saving,
   drawingsSaving,
   onEdit,
@@ -57,7 +55,7 @@ export function PartnersSidePanel({
   if (activePanel === "drawings" && selectedPartner) {
     return (
       <PaymentForm
-        config={PAYMENT_CONFIGS.partner(selectedPartner)}
+        config={PAYMENT_CONFIGS.partner({ ...selectedPartner, drawings_account_id: selectedPartner.drawings_account_id ?? undefined })}
         onSave={onSaveDrawings}
         onClose={onClose}
         saving={drawingsSaving}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppearance } from '@shared/hooks/useAppearance';
-import { useNavSidebarSettings, useSidebarLayout } from '@shared/hooks';
+import { useSidebarLayout } from '@shared/hooks';
 import { cn } from '@shared/lib/utils';
 import type { SidebarGroupConfig } from '@shared/types/sidebar-config';
 
@@ -24,7 +24,6 @@ export function DualLayout({
   onToggleExchange,
 }: DualLayoutProps) {
   const { settings, activeLayout } = useAppearance();
-  const { settings: navSettings } = useNavSidebarSettings();
   const { layout } = useSidebarLayout();
 
   const showTopBar = settings.show.topBar && activeLayout.topBarMode !== 'hidden';
@@ -53,7 +52,7 @@ export function DualLayout({
           style={{ background: 'hsl(var(--sidebar-background))' }}
         >
           {visibleGroups.map((group: SidebarGroupConfig) => {
-            const Icon = ICON_MAP[group.icon] ?? null;
+            const Icon = group.icon ? ICON_MAP[group.icon] ?? null : null;
             const isActive = activeGroup === group.id;
             return (
               <button

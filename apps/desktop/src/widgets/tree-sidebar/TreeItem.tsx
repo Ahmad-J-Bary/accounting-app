@@ -114,10 +114,10 @@ export function TreeItem<T extends BaseTreeNode>({
 
       {hasChildren && isExpanded && (
         <div className="bg-white/50">
-          {node.children.map((child: T, idx, arr) => (
+          {node.children.map((child, idx, arr) => (
             <TreeItem
               key={child.id}
-              node={child}
+              node={child as T}
               level={level + 1}
               selectedId={selectedId}
               onSelect={onSelect}

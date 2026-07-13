@@ -5,7 +5,6 @@ import { ReturnsEditor } from "../components/ReturnsEditor";
 import { useReturnLifecycle } from "../hooks/useReturnLifecycle";
 import { returnService } from "@modules/invoicing/api/returnService";
 import { toast } from "sonner";
-import type { SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
 
 export default function SalesReturns() {
   const location = useLocation();

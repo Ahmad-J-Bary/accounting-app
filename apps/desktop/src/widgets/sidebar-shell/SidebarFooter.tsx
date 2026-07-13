@@ -1,4 +1,3 @@
-import React, { ReactNode } from "react";
 import { useSidePanelSettings } from "@shared/hooks/useSidePanelSettings";
 import { cn } from "@shared/lib/utils";
 import { Button } from "@shared/ui/button";

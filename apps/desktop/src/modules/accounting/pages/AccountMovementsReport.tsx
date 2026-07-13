@@ -5,7 +5,6 @@ import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { Label } from "@shared/ui/label";
-import type { AccountDto } from "@erp/shared-types";
 import { formatCurrency, formatDateTime } from "@shared/lib/format";
 import { cn } from "@shared/lib/utils";
 import { FileText, Calendar, Filter, ArrowUpRight, ArrowDownLeft, Printer, Download, BookOpen, Search } from "lucide-react";

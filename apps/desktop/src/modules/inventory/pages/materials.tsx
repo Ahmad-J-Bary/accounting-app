@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@shared/ui/button";
-import { Plus, RefreshCw, Layers, ShoppingCart, TrendingUp, AlertTriangle, Undo2, ArrowRightLeft, Scale } from "lucide-react";
+import { Plus, Layers, ShoppingCart, TrendingUp, AlertTriangle, Undo2, ArrowRightLeft, Scale } from "lucide-react";
 import { materialService } from '@modules/inventory/api/materialService';
 import { categoryService } from '@modules/inventory/api/categoryService';
 import { damagedService, transferService, adjustmentService, inventoryService } from '@modules/inventory/api/inventoryService';
 import { warehouseService } from '@modules/inventory/api/warehouseService';
 import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest, CreateDamagedItemRequest, CreateStockAdjustmentRequest, WarehouseDto, CreateTransferRequest, StockMovement } from "@erp/shared-types";
-import { cn } from '@shared/lib/utils';
 import { toast } from 'sonner';
 
 // Refactored Components & Hooks
@@ -20,12 +19,10 @@ import { DamagedForm } from '@modules/inventory/components/DamagedForm';
 import { TransferForm } from '@modules/inventory/components/TransferForm';
 import { ReturnFromMaterialPanel } from '@modules/inventory/components/ReturnFromMaterialPanel';
 import { AdjustmentForm } from '@modules/inventory/components/AdjustmentForm';
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useTabs } from "@app/providers/TabContext";
 import { buildStockByWarehouse } from '@modules/inventory/lib/stockUtils';
 
 export default function Materials() {
-  const { currencies, baseCurrency } = useCurrencyContext();
   const { openTab } = useTabs();
   const {
     filtered: materials,
@@ -60,11 +57,10 @@ export default function Materials() {
 
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [managingUnitsMaterial, setManagingUnitsMaterial] = useState<MaterialDto | null>(null);
-  const [showUnitsPanel, setShowUnitsPanel] = useState(false);
+  const [, setShowUnitsPanel] = useState(false);
   const [showDamagedPanel, setShowDamagedPanel] = useState(false);
   const [savingDamaged, setSavingDamaged] = useState(false);
   const [isReturnOpen, setIsReturnOpen] = useState(false);
-  const [returnSaving, setReturnSaving] = useState(false);
   const [transferFormOpen, setTransferFormOpen] = useState(false);
   const [savingTransfer, setSavingTransfer] = useState(false);
   const [transferPreset, setTransferPreset] = useState<{ sourceWarehouseId?: string } | null>(null);

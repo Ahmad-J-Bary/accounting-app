@@ -189,25 +189,6 @@ export function AccountDetailsSidebar({
     fetchLinkedDetails();
   }, [formMode, selected, isSyncAccount, activeCurrencies]);
 
-  const getDescendantIds = useCallback(
-    (accountId: string): Set<string> => {
-      const descendants = new Set<string>();
-      const queue = [accountId];
-      while (queue.length > 0) {
-        const current = queue.shift();
-        if (!current) continue;
-        for (const account of allAccounts) {
-          if (account.parent_id === current && !descendants.has(account.id)) {
-            descendants.add(account.id);
-            queue.push(account.id);
-          }
-        }
-      }
-      return descendants;
-    },
-    [allAccounts],
-  );
-
   const openEditDialog = () => {
     if (!selected || !canEdit) return;
     setFormMode("edit");

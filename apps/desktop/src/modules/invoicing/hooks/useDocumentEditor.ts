@@ -23,7 +23,7 @@ export function useDocumentEditor({
   onLinesChange,
   priceField = "last_sale_price",
   materials = [],
-  invoiceType = "Purchase",
+  invoiceType: _invoiceType = "Purchase",
   defaultWarehouseId,
   getDefaultExpiryDate,
 }: UseDocumentEditorProps & { materials?: MaterialDto[] } = {}) {
@@ -108,8 +108,6 @@ export function useDocumentEditor({
         if (material) {
           const retailPrice = material.sale_prices?.find(p => p.unit_id === updatedLine.unit_id && p.tier === 'retail');
           const semiPrice = material.sale_prices?.find(p => p.unit_id === updatedLine.unit_id && p.tier === 'semi_wholesale');
-          const wholePrice = material.sale_prices?.find(p => p.unit_id === updatedLine.unit_id && p.tier === 'wholesale');
-
           const retailMax = retailPrice?.max_quantity ? parseInt(retailPrice.max_quantity) : 0;
           const semiMax = semiPrice?.max_quantity ? parseInt(semiPrice.max_quantity) : 0;
           // 0 means "no limit" (unset by user)
@@ -136,7 +134,7 @@ export function useDocumentEditor({
           updatedLine.cost_price = updates.unit_price;
         }
         if ('cost_price' in updates && !('unit_price' in updates)) {
-          updatedLine.unit_price = updates.cost_price;
+          updatedLine.unit_price = updates.cost_price ?? "0";
         }
       }
 
@@ -209,7 +207,7 @@ export function useDocumentEditor({
       onLinesChange?.(next);
       return next;
     });
-  }, [onLinesChange, materials, priceField, invoiceType, setLines]);
+  }, [onLinesChange, materials, priceField, setLines]);
 
   const addLine = useCallback(() => {
     setLines(prev => {

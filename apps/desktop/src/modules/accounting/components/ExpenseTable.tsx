@@ -31,9 +31,9 @@ const codeSuffix = (code: string, prefix?: string) => {
 };
 
 export function ExpenseTable({ expenses, loading, search, onSearchChange, onView, onEdit, onDelete, onJournal, onDocument, selectedId, parentCode }: ExpenseTableProps) {
-  const { currencies, baseCurrency, formatAmount, toBase } = useCurrencyContext();
-  const { baseCurrencyCode, isBaseCurrency } = useBaseCurrencyColumns();
-  const { getAccountStatusColumn, getBalanceColumns, getSummaryColumns } = useTableColumns();
+  const { currencies, formatAmount, toBase } = useCurrencyContext();
+  const { isBaseCurrency } = useBaseCurrencyColumns();
+  const { getAccountStatusColumn } = useTableColumns();
 
   const { sortedData: sortedExpenses, sortField, sortDirection, handleSort } = useSortable({
     data: expenses,
@@ -85,7 +85,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
         accessor: (c) => {
           const absBal = Math.abs(Number(c.balance || 0));
           if (absBal === 0) return "";
-          const baseAmount = toBase(absBal, c.currency);
+          const baseAmount = toBase(absBal, c.currency || "");
           return formatAmount(baseAmount, { currencyCode: curr.code });
         },
         className: isBase
@@ -140,7 +140,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
     const baseTotal = sortedExpenses.reduce((sum, e) => {
       const bal = Math.abs(Number(e.balance || 0));
       if (bal === 0) return sum;
-      return sum + toBase(bal, e.currency);
+      return sum + toBase(bal, e.currency || "");
     }, 0);
 
     return enrichedColumns.map((col) => {

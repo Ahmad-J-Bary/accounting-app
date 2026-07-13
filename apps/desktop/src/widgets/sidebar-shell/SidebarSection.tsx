@@ -1,4 +1,4 @@
-import React, { ReactNode, useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import { cn } from "@shared/lib/utils";
 import { ChevronDown } from "lucide-react";
 import type { SidebarSectionProps } from "./types";

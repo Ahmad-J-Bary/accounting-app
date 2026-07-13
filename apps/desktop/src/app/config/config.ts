@@ -38,7 +38,7 @@ export async function loadRuntimeConfig(): Promise<void> {
     } else {
       console.log(
         '🔧 DEBUG: Config fetch failed with status:',
-        response.status
+        response?.status
       );
     }
   } catch (error) {

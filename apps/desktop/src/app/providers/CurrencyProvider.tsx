@@ -67,8 +67,12 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     [currencies]
   );
 
-  const setDisplayCurrencyCode = useCallback((code: string) => {
-    localStorage.setItem("currency-display-code", code);
+  const setDisplayCurrencyCode = useCallback((code: string | null) => {
+    if (code) {
+      localStorage.setItem("currency-display-code", code);
+    } else {
+      localStorage.removeItem("currency-display-code");
+    }
     setDisplayCurrencyCodeState(code);
   }, []);
 

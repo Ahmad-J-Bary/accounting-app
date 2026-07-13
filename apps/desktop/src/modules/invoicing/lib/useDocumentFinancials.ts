@@ -29,7 +29,6 @@ interface UseDocumentFinancialsProps<T extends BaseFinancialState> {
 
 export function useDocumentFinancials<T extends BaseFinancialState>({
   lines,
-  setLines,
   headerState,
   setHeaderState,
   currencies,

@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { Button } from "@shared/ui/button";
-import { Badge } from "@shared/ui/badge";
+
 import { Save, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { HeaderField } from '@shared/ui/header-field';
@@ -57,10 +57,11 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
   // Wrapped removeLine that also removes occurrence key
   const removeLine = useCallback((index: number) => {
     const line = lines[index];
-    if (line?.occurrence_key) {
+    const occKey = line?.occurrence_key;
+    if (occKey) {
       setSelectedOccurrenceKeys(prev => {
         const next = new Set(prev);
-        next.delete(line.occurrence_key);
+        next.delete(occKey);
         return next;
       });
     }
@@ -186,7 +187,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
         const gridLines: GridLine[] = ret.lines.map((line) => {
           const mat = materials.find((m) => m.id === line.material_id);
           const unit = mat?.units.find((u) => u.id === line.unit_id);
-          const unitName = unit?.name || line.unit_name || "";
+          const unitName = unit?.name || "";
           const convFactor = unit?.conversion_factor || "1";
           const basePrice = parseFloat(line.unit_price) / parseFloat(convFactor);
           return {
@@ -215,7 +216,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
         }
         setLines(gridLines);
       })
-      .catch((e) => {
+      .catch(() => {
         toast.error("فشل تحميل بيانات المرتجع");
       })
       .finally(() => setLoadingExisting(false));
@@ -326,7 +327,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
     const filteredOccurrences = occurrences.filter(occ => {
       const occKey = `${occ.invoice_id}_${occ.material.id}_${occ.original_quantity}_${occ.original_price}`;
       if (selectedOccurrenceKeys.has(occKey)) return false;
-      if (existingInvoiceLineIds.has(occ.id)) return false;
+      if (occ.id && existingInvoiceLineIds.has(occ.id)) return false;
       return true;
     });
 
@@ -341,7 +342,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
         occurrences={filteredOccurrences}
         search={props.search}
         searchType={props.searchType}
-        style={props.style}
+        style={props.style ?? undefined}
         onSelect={(occ) => {
           pendingOccurrenceRef.current = occ;
           props.onSelect(occ.material);
@@ -475,9 +476,9 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
           columns={columns}
           lines={lines}
           onUpdateLine={wrappedUpdateLine}
-          onRemoveLine={readOnly ? undefined : removeLine}
-          onAddLine={readOnly ? undefined : addLine}
-          onSelectMaterial={readOnly ? undefined : handleSelectMaterial}
+          onRemoveLine={readOnly ? () => {} : removeLine}
+          onAddLine={readOnly ? () => {} : addLine}
+          onSelectMaterial={readOnly ? () => {} : handleSelectMaterial}
           materials={materials}
           warehouses={warehouses}
           preferenceKey={`${returnType === "SalesReturn" ? "sales" : "purchase"}-returns-editor`}

@@ -9,12 +9,12 @@ export default function AuditLogPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [error, setError] = useState<string | null>(null);
+
 
   const load = async () => {
     setLoading(true);
     try { setLogs(await auditService.listAuditLogs(500)); }
-    catch (e) { setError(String(e)); }
+    catch { /* errors handled silently */ }
     finally { setLoading(false); }
   };
 

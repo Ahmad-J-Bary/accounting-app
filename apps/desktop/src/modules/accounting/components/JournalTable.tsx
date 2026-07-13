@@ -30,7 +30,7 @@ interface JournalTableProps {
 type SortField = "entry_number" | "created_at" | "journal_type" | "account";
 type JournalTableRow = JournalRowLine & { isFirstInGroup: boolean };
 
-export function JournalTable({ entries, loading, search, onSearchChange, filters, filterBar }: JournalTableProps) {
+export function JournalTable({ entries, loading, search, onSearchChange, filterBar }: JournalTableProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
   const { isBaseCurrency } = useBaseCurrencyColumns();
   const { settings, getDensityPadding } = useTableSettings();

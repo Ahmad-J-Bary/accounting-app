@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { journalEntryService } from "@modules/accounting/api/journalEntryService";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
-import type { JournalEntryDto, AccountDto, ReceivablesPayablesSummary } from "@erp/shared-types";
+import type { JournalEntryDto, ReceivablesPayablesSummary } from "@erp/shared-types";
 
 export function useJournalEntries(filters: { from_date: string; to_date: string }) {
   return useQuery<JournalEntryDto[]>({

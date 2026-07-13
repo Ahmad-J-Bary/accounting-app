@@ -80,8 +80,6 @@ export function ProductionTable({ data, loading, search, onSearchChange }: Produ
     }
   ], []);
 
-  type SortField = "order_number" | "production_date" | "materials_count" | "outputs_count" | "total_cost" | "status";
-
   const filtered = useMemo(() =>
     data.filter(o =>
       o.order_number.toLowerCase().includes(search.toLowerCase())

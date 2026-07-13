@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { categoryService } from '@modules/inventory/api/categoryService';
@@ -19,8 +19,8 @@ export default function Categories() {
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [materials, setMaterials] = useState<MaterialDto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [search, setSearch] = useState("");
+  const [, setRefreshing] = useState(false);
+  const [search] = useState("");
   const [selected, setSelected] = useState<CategoryTreeNode | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set([VIRTUAL_ROOT_ID]));
 
@@ -246,17 +246,6 @@ export default function Categories() {
     setPendingCategoryDelete(null);
   }, [deleting]);
 
-  const parentName = useMemo(() => {
-    if (!selected?.parent_id) return null;
-    return categories.find(c => c.id === selected.parent_id)?.name ?? null;
-  }, [selected, categories]);
-
-  const selectedIsGeneralSub = useMemo(() => {
-    if (!selected || selected.parent_id == null) return false;
-    const root = categories.find(c => c.id === selected.parent_id);
-    return !!root && selected.name === `${root.name} عام`;
-  }, [selected, categories]);
-
   return (
     <>
       <HierarchicalTreeTemplate
@@ -300,7 +289,6 @@ export default function Categories() {
         <CategoryDetailsSidebar
           selected={selected?.id === VIRTUAL_ROOT_ID ? null : selected}
           allCategories={categories}
-          parentName={parentName}
           onSaved={() => void fetchData(false)}
           onDelete={handleDelete}
           isVirtualRootSelected={selected?.id === VIRTUAL_ROOT_ID}
@@ -311,7 +299,6 @@ export default function Categories() {
         open={deleteOpen}
         kind={deleteKind}
         categoryName={pendingCategoryDelete?.name ?? ""}
-        isGeneralSub={selectedIsGeneralSub}
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
         confirming={deleting}

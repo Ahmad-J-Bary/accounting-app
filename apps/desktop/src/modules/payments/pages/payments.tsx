@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@shared/ui/button";
 import { Plus } from "lucide-react";
@@ -27,9 +27,7 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 export default function PaymentsPage() {
   const {
-    convertBetween,
     formatAmount,
-    formatMonetaryAmount,
     currencies,
     baseCurrency,
     toBase,
@@ -72,7 +70,7 @@ export default function PaymentsPage() {
       setCustomers(cData);
       setSuppliers(sData);
       setAccounts(aData);
-    } catch (e) {
+    } catch {
       toast.error("فشل تحميل البيانات الإضافية");
     }
   }, []);
@@ -94,7 +92,7 @@ export default function PaymentsPage() {
         toast.success("تم الحذف بنجاح");
         setSelectedPayment(null);
         refresh(true);
-      } catch (e) {
+    } catch (e) {
         toast.error("فشل الحذف: " + e);
       }
     },
@@ -164,7 +162,7 @@ export default function PaymentsPage() {
           payments={payments}
           accounts={accounts}
           currencies={currencies}
-          baseCurrency={baseCurrency}
+          baseCurrency={baseCurrency ?? undefined}
           formatAmount={formatAmount}
           toBase={toBase}
           loading={paymentsLoading}

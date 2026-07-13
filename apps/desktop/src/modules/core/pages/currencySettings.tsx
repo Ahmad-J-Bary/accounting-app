@@ -22,7 +22,7 @@ import {
 import { Badge } from "@shared/ui/badge";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis,
-  CartesianGrid, Tooltip, Legend
+  CartesianGrid, Tooltip
 } from "recharts";
 
 export default function CurrencySettings() {

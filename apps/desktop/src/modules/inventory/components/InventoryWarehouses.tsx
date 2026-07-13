@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Warehouse, Plus, Pencil, Trash2, MapPin, Package, LayoutGrid, List, AlignJustify, Hash } from "lucide-react";
+import { Warehouse, Plus, Pencil, Trash2, MapPin, Package, Hash } from "lucide-react";
 import { cn } from "@shared/lib/utils";
 import { Button } from "@shared/ui/button";
 import { Skeleton } from "@shared/ui/skeleton";
@@ -21,14 +21,6 @@ interface InventoryWarehousesProps {
   products?: MaterialDto[];
   stockByWarehouse?: Map<string, Map<string, number>>;
 }
-
-const DISPLAY_STYLE_OPTIONS: { value: DisplayStyle; label: string; icon: React.ReactNode }[] = [
-  { value: 'cards-small', label: 'بطاقات صغيرة', icon: <LayoutGrid className="w-3.5 h-3.5" /> },
-  { value: 'cards-medium', label: 'بطاقات متوسطة', icon: <LayoutGrid className="w-4 h-4" /> },
-  { value: 'cards-large', label: 'بطاقات كبيرة', icon: <LayoutGrid className="w-5 h-5" /> },
-  { value: 'list', label: 'قائمة', icon: <List className="w-4 h-4" /> },
-  { value: 'rows', label: 'أسطر', icon: <AlignJustify className="w-4 h-4" /> },
-];
 
 export function InventoryWarehouses({
   warehouses, loading, onRefresh, onAdd, onEdit, onViewMaterials,

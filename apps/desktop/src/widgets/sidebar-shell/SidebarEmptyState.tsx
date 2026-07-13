@@ -1,4 +1,3 @@
-import React, { ReactNode } from "react";
 import { cn } from "@shared/lib/utils";
 import { AlertCircle } from "lucide-react";
 import type { SidebarEmptyStateProps } from "./types";

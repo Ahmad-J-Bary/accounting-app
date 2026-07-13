@@ -76,10 +76,10 @@ export default function Accounting() {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<AccountTreeNode | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery] = useState("");
   const hasLoadedOnceRef = useRef(false);
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: QUERY_KEYS.chartOfAccounts,
     queryFn: fetchChartOfAccountsData,
   });

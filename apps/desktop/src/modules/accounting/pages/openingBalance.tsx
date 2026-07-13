@@ -6,7 +6,7 @@ import { DocumentToolbar } from "@widgets/document-shell/DocumentToolbar";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { materialService } from "@modules/inventory/api/materialService";
 import { categoryService } from "@modules/inventory/api/categoryService";
-import type { MaterialDto, CategoryDto, CreateMaterialRequest, WarehouseDto, CompanySettings } from "@erp/shared-types";
+import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest, WarehouseDto, CompanySettings } from "@erp/shared-types";
 import { settingsService } from "@modules/core/api/settingsService";
 import { warehouseService } from "@modules/inventory/api/warehouseService";
 import { toast } from "sonner";
@@ -64,8 +64,8 @@ export default function OpeningBalance() {
   const [materials, setMaterials] = useState<MaterialDto[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
   const [appSettings, setAppSettings] = useState<CompanySettings | null>(null);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [, setLoading] = useState(false);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [materialFormOpen, setMaterialFormOpen] = useState(false);
   const [savingMaterial, setSavingMaterial] = useState(false);
@@ -82,7 +82,6 @@ export default function OpeningBalance() {
     removeLine,
     addLine,
     selectMaterial,
-    totals,
   } = useDocumentEditor({
     priceField: "last_purchase_price",
     materials,
@@ -90,7 +89,6 @@ export default function OpeningBalance() {
     defaultWarehouseId,
   });
 
-  const isNew = !id || tabLocation.includes("/new");
   const isReadOnly = tabLocation.includes("mode=view");
 
   const loadData = useCallback(async () => {
@@ -178,10 +176,10 @@ export default function OpeningBalance() {
     }
   }, [baseCurrency, header.currency_code]);
 
-  const handleSaveMaterial = useCallback(async (data: CreateMaterialRequest) => {
+  const handleSaveMaterial = useCallback(async (data: CreateMaterialRequest | UpdateMaterialRequest) => {
     setSavingMaterial(true);
     try {
-      await materialService.createMaterial(data);
+      await materialService.createMaterial(data as CreateMaterialRequest);
       toast.success("تم إضافة المادة بنجاح");
       setMaterialFormOpen(false);
       loadData();

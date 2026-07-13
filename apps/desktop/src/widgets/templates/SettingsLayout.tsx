@@ -10,7 +10,7 @@ interface SettingsLayoutProps {
   className?: string;
 }
 
-export function SettingsLayout({ title, description, sidebar, children, actions, className }: SettingsLayoutProps) {
+export function SettingsLayout({ title, description, sidebar, children, className }: SettingsLayoutProps) {
   return (
     <div className={cn("min-h-screen bg-slate-50/30 p-4 lg:p-6 space-y-6", className)} dir="rtl">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-1">

@@ -45,7 +45,6 @@ export default function Partners() {
   const [drawingsSaving, setDrawingsSaving] = useState(false);
 
   const {
-    totals,
     partnersWithRatios,
   } = usePartnerRatios({ 
     partners, 
@@ -109,7 +108,7 @@ export default function Partners() {
       toolbar={
         <PartnersToolbar
           selectedPartner={selectedPartner}
-          onOpenDrawingsLedger={(id, accountId, name) =>
+          onOpenDrawingsLedger={(_id, accountId, name) =>
             openTab({
               id: `ledger-${accountId}`,
               title: `مسحوبات ${name}`,

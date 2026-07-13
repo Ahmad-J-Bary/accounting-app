@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@shared/ui/button";
-import { Plus, History, Download, Receipt, DollarSign } from "lucide-react";
+import { Plus, History, Download, DollarSign } from "lucide-react";
 
 import { accountingService } from '@modules/accounting/api/accountingService';
 import { SYSTEM_ACCOUNT_IDS, type AccountDto, type SaveAccountCommand } from "@erp/shared-types";
@@ -18,7 +18,6 @@ import { type CreatePaymentRequest } from "@erp/shared-types";
 
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { exportToCSV } from "@shared/lib/export";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
 import { toast as toastSonner } from "sonner";
 
@@ -29,7 +28,7 @@ const OTHER_EXPENSES_PARENT_ID = SYSTEM_ACCOUNT_IDS.OTHER_EXPENSES;
 type ExpenseSavePayload = SaveAccountCommand & { _id?: string };
 
 export default function Expenses() {
-  const { currencies, formatMonetaryAmount, baseCurrency, rateMap } = useCurrencyContext();
+  const { baseCurrency, rateMap } = useCurrencyContext();
   const { openTab } = useTabs();
   const [rateMapKey, setRateMapKey] = useState(0);
   const [expensesParent, setExpensesParent] = useState<AccountDto | null>(null);

@@ -15,7 +15,7 @@ interface UsePartnerRatiosProps {
  * to ensure partners with different currencies are compared correctly!
  */
 export function usePartnerRatios({ partners, strategy }: UsePartnerRatiosProps) {
-  const { toBase, baseCurrency, convertFromBase, currencies } = useCurrencyContext();
+  const { toBase } = useCurrencyContext();
   
   // Calculate all totals in base currency for consistency
   const totals = useMemo(() => {

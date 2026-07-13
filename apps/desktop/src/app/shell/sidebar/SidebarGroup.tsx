@@ -1,4 +1,3 @@
-import React from 'react';
 import { useNavSidebarSettings } from '@shared/hooks';
 import { cn } from '@shared/lib/utils';
 import { ICON_MAP } from '@app/shell/sidebarConfig';

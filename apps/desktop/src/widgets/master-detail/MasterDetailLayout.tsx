@@ -13,7 +13,6 @@ export function MasterDetailLayout({
   masterContent,
   detailContent,
   isDetailOpen,
-  masterWidthClass = "w-full",
   detailWidthClass = "w-[400px] xl:w-[500px]",
 }: MasterDetailLayoutProps) {
   return (

@@ -75,7 +75,7 @@ export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hove
         const visibleItems = group.items.filter(i => i.visible).sort((a, b) => a.order - b.order);
         if (visibleItems.length === 0) return null;
 
-        const GroupIcon = ICON_MAP[group.icon] ?? null;
+        const GroupIcon = group.icon ? ICON_MAP[group.icon] ?? null : null;
 
         // If the group contains exactly 1 item, render it directly without a dropdown
         if (visibleItems.length === 1) {

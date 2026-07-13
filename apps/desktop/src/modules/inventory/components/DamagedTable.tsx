@@ -19,8 +19,6 @@ interface DamagedTableProps {
   onDelete?: (id: string) => void;
 }
 
-type SortField = "material_name" | "quantity" | "damage_date" | "cost_impact";
-
 export function DamagedTable({
   items,
   loading,
