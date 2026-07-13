@@ -11,6 +11,7 @@ use uuid::Uuid;
 use rust_decimal::Decimal;
 use super::models::{InvoiceRow, LineRow};
 use super::mappers::row_to_invoice;
+use std::collections::HashMap;
 
 pub async fn find_by_id(pool: &SqlitePool, id: &InvoiceId) -> Result<Option<UnifiedInvoice>, AppError> {
     let row = sqlx::query_as::<_, InvoiceRow>(
@@ -30,55 +31,42 @@ pub async fn find_by_id(pool: &SqlitePool, id: &InvoiceId) -> Result<Option<Unif
     }
 }
 
-pub async fn list_all(pool: &SqlitePool) -> Result<Vec<UnifiedInvoice>, AppError> {
-    let rows = sqlx::query_as::<_, InvoiceRow>(
-        "SELECT * FROM unified_invoices ORDER BY issued_at DESC"
-    )
-    .fetch_all(pool)
-    .await
-    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
-
-    let mut invoices = vec![];
-    for r in rows {
-        let fx_rate = Decimal::from_str(&r.exchange_rate).unwrap_or(Decimal::ONE);
-        let lines = get_lines(pool, &r.id, &r.currency_code, fx_rate).await?;
-        invoices.push(row_to_invoice(r, lines)?);
+pub async fn get_lines_for_multiple_invoices(
+    pool: &SqlitePool,
+    invoice_ids: &[String],
+) -> Result<HashMap<String, Vec<LineRow>>, AppError> {
+    if invoice_ids.is_empty() {
+        return Ok(HashMap::new());
     }
-    Ok(invoices)
-}
 
-pub async fn list_by_type(pool: &SqlitePool, invoice_type: InvoiceType) -> Result<Vec<UnifiedInvoice>, AppError> {
-    let itype = match invoice_type {
-        InvoiceType::Sales => "Sales",
-        InvoiceType::Purchase => "Purchase",
-        InvoiceType::PurchaseCosts => "PurchaseCosts",
-        InvoiceType::OpeningBalance => "OpeningBalance",
-    };
+    let placeholders: Vec<&str> = vec!["?"; invoice_ids.len()];
+    let sql = format!(
+        "SELECT * FROM unified_invoice_lines WHERE invoice_id IN ({})",
+        placeholders.join(", ")
+    );
 
-    let rows = sqlx::query_as::<_, InvoiceRow>(
-        "SELECT * FROM unified_invoices WHERE invoice_type = ? ORDER BY issued_at DESC"
-    )
-    .bind(itype)
-    .fetch_all(pool)
-    .await
-    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
-
-    let mut invoices = vec![];
-    for r in rows {
-        let fx_rate = Decimal::from_str(&r.exchange_rate).unwrap_or(Decimal::ONE);
-        let lines = get_lines(pool, &r.id, &r.currency_code, fx_rate).await?;
-        invoices.push(row_to_invoice(r, lines)?);
+    let mut query = sqlx::query_as::<_, LineRow>(&sql);
+    for id in invoice_ids {
+        query = query.bind(id);
     }
-    Ok(invoices)
-}
 
-pub async fn get_lines(pool: &SqlitePool, invoice_id: &str, currency_code: &str, fx_rate: Decimal) -> Result<Vec<InvoiceLine>, AppError> {
-    let rows = sqlx::query_as::<_, LineRow>("SELECT * FROM unified_invoice_lines WHERE invoice_id = ?")
-        .bind(invoice_id)
+    let rows = query
         .fetch_all(pool)
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
+    let mut map: HashMap<String, Vec<LineRow>> = HashMap::new();
+    for r in rows {
+        map.entry(r.invoice_id.clone()).or_default().push(r);
+    }
+    Ok(map)
+}
+
+pub fn map_line_rows_to_invoice_lines(
+    rows: Vec<LineRow>,
+    currency_code: &str,
+    fx_rate: Decimal,
+) -> Result<Vec<InvoiceLine>, AppError> {
     let mut lines = vec![];
     for r in rows {
         let material_id = MaterialId(Uuid::parse_str(&r.material_id).map_err(|e| AppError::Infrastructure(e.to_string()))?);
@@ -116,6 +104,74 @@ pub async fn get_lines(pool: &SqlitePool, invoice_id: &str, currency_code: &str,
         ));
     }
     Ok(lines)
+}
+
+pub async fn list_all(pool: &SqlitePool) -> Result<Vec<UnifiedInvoice>, AppError> {
+    let rows = sqlx::query_as::<_, InvoiceRow>(
+        "SELECT * FROM unified_invoices ORDER BY issued_at DESC"
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    if rows.is_empty() {
+        return Ok(vec![]);
+    }
+
+    let invoice_ids: Vec<String> = rows.iter().map(|r| r.id.clone()).collect();
+    let mut lines_map = get_lines_for_multiple_invoices(pool, &invoice_ids).await?;
+
+    let mut invoices = vec![];
+    for r in rows {
+        let fx_rate = Decimal::from_str(&r.exchange_rate).unwrap_or(Decimal::ONE);
+        let line_rows = lines_map.remove(&r.id).unwrap_or_default();
+        let lines = map_line_rows_to_invoice_lines(line_rows, &r.currency_code, fx_rate)?;
+        invoices.push(row_to_invoice(r, lines)?);
+    }
+    Ok(invoices)
+}
+
+pub async fn list_by_type(pool: &SqlitePool, invoice_type: InvoiceType) -> Result<Vec<UnifiedInvoice>, AppError> {
+    let itype = match invoice_type {
+        InvoiceType::Sales => "Sales",
+        InvoiceType::Purchase => "Purchase",
+        InvoiceType::PurchaseCosts => "PurchaseCosts",
+        InvoiceType::OpeningBalance => "OpeningBalance",
+    };
+
+    let rows = sqlx::query_as::<_, InvoiceRow>(
+        "SELECT * FROM unified_invoices WHERE invoice_type = ? ORDER BY issued_at DESC"
+    )
+    .bind(itype)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    if rows.is_empty() {
+        return Ok(vec![]);
+    }
+
+    let invoice_ids: Vec<String> = rows.iter().map(|r| r.id.clone()).collect();
+    let mut lines_map = get_lines_for_multiple_invoices(pool, &invoice_ids).await?;
+
+    let mut invoices = vec![];
+    for r in rows {
+        let fx_rate = Decimal::from_str(&r.exchange_rate).unwrap_or(Decimal::ONE);
+        let line_rows = lines_map.remove(&r.id).unwrap_or_default();
+        let lines = map_line_rows_to_invoice_lines(line_rows, &r.currency_code, fx_rate)?;
+        invoices.push(row_to_invoice(r, lines)?);
+    }
+    Ok(invoices)
+}
+
+pub async fn get_lines(pool: &SqlitePool, invoice_id: &str, currency_code: &str, fx_rate: Decimal) -> Result<Vec<InvoiceLine>, AppError> {
+    let rows = sqlx::query_as::<_, LineRow>("SELECT * FROM unified_invoice_lines WHERE invoice_id = ?")
+        .bind(invoice_id)
+        .fetch_all(pool)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    map_line_rows_to_invoice_lines(rows, currency_code, fx_rate)
 }
 
 pub async fn get_last_original_prices(pool: &SqlitePool, material_id: &str) -> Result<(String, String), AppError> {

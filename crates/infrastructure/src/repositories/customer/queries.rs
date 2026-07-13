@@ -78,33 +78,26 @@ pub async fn list_all(pool: &SqlitePool) -> Result<Vec<Customer>, AppError> {
 }
 
 pub async fn get_next_customer_number(pool: &SqlitePool) -> Result<i32, AppError> {
-    // Find the next available customer number starting from 1
-    // (0 is reserved for cash customer: 1230)
-    let mut num = 1;
-    loop {
-        // Check if this number exists in customers table or in accounts table with code like "123{num}"
-        let customer_exists: Option<(i32,)> = sqlx::query_as::<_, (i32,)>(
-            "SELECT 1 FROM customers WHERE code = ? LIMIT 1"
+    let next_num: i32 = sqlx::query_scalar(
+        r#"
+        SELECT COALESCE(MIN(candidate), 1)
+        FROM (
+            SELECT 1 as candidate
+            UNION ALL
+            SELECT CAST(code AS INTEGER) + 1 as candidate FROM customers WHERE code GLOB '[0-9]*'
+            UNION ALL
+            SELECT CAST(SUBSTR(code, 4) AS INTEGER) + 1 as candidate FROM accounts WHERE code LIKE '123%' AND code GLOB '123[0-9]*' AND code != '1230'
         )
-        .bind(num.to_string())
-        .fetch_optional(pool)
-        .await
-        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
-
-        let account_exists: Option<(i32,)> = sqlx::query_as::<_, (i32,)>(
-            "SELECT 1 FROM accounts WHERE code = ? LIMIT 1"
+        WHERE candidate NOT IN (
+            SELECT CAST(code AS INTEGER) FROM customers WHERE code GLOB '[0-9]*'
+            UNION
+            SELECT CAST(SUBSTR(code, 4) AS INTEGER) FROM accounts WHERE code LIKE '123%' AND code GLOB '123[0-9]*' AND code != '1230'
         )
-        .bind(format!("123{}", num))
-        .fetch_optional(pool)
-        .await
-        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+        "#
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-        if customer_exists.is_none() && account_exists.is_none() {
-            return Ok(num);
-        }
-        num += 1;
-        if num > 10000 {
-            return Err(AppError::Infrastructure("Cannot find available customer number".into()));
-        }
-    }
+    Ok(next_num)
 }
