@@ -1,3 +1,4 @@
+pub mod shared;
 pub mod journal;
 pub mod customer;
 pub mod material;

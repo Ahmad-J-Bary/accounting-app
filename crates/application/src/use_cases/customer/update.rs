@@ -1,15 +1,13 @@
 use std::sync::Arc;
 use chrono::Utc;
-use rust_decimal::Decimal;
-use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::shared::ids::{AccountId, CustomerId};
-use domain::shared::{Currency, MonetaryAmount};
 
 use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::dto::customer_dto::{UpdateCustomerRequest, CustomerDto};
 use crate::errors::AppError;
+use crate::use_cases::shared::partner_account::{PartnerKind, create_balance_adjustment_entry};
 
 pub struct UpdateCustomerUseCase {
     customer_repo: Arc<dyn CustomerRepository>,
@@ -27,7 +25,8 @@ impl UpdateCustomerUseCase {
     }
 
     pub async fn execute(&self, req: UpdateCustomerRequest) -> Result<CustomerDto, AppError> {
-        let cid = req.id.parse::<CustomerId>().map_err(|_| AppError::NotFound("معرف العميل غير صالح".into()))?;
+        let cid = req.id.parse::<CustomerId>()
+            .map_err(|_| AppError::NotFound("معرف العميل غير صالح".into()))?;
         let mut customer = self.customer_repo.find_by_id(&cid).await?
             .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
 
@@ -68,68 +67,27 @@ impl UpdateCustomerUseCase {
             customer.deactivate();
         }
 
+        // balance = debit − credit for customers
         let new_balance = customer.debit - customer.credit;
         let old_balance = old_debit - old_credit;
         let balance_change = new_balance - old_balance;
 
-        // Create journal entry if balance changed
-        if balance_change != Decimal::ZERO {
-            if let Some(ref account_id) = &customer.account_id {
-                let adjustment_account = self.account_repo.find_by_code("53").await?
-                    .ok_or_else(|| AppError::NotFound("حساب الرصيد الافتتاحي غير موجود: 53".into()))?;
-
-                let base_currency = Currency::new("SAR", "SAR", "ريال", "ر.س", 2, false);
-                let amount = MonetaryAmount::from_base(balance_change.abs(), base_currency.clone());
-                let zero = MonetaryAmount::zero(base_currency);
-
-                let lines = if balance_change > Decimal::ZERO {
-                    vec![
-                        JournalLine::new(
-                            *account_id,
-                            amount.clone(),
-                            zero.clone(),
-                            format!("تسوية رصيد العميل (مدين) - {}", customer.name),
-                        ),
-                        JournalLine::new(
-                            adjustment_account.id,
-                            zero,
-                            amount,
-                            format!("تسوية رصيد العميل (دائن) - {}", customer.name),
-                        ),
-                    ]
-                } else {
-                    vec![
-                        JournalLine::new(
-                            adjustment_account.id,
-                            amount.clone(),
-                            zero.clone(),
-                            format!("تسوية رصيد العميل (مدين) - {}", customer.name),
-                        ),
-                        JournalLine::new(
-                            *account_id,
-                            zero,
-                            amount,
-                            format!("تسوية رصيد العميل (دائن) - {}", customer.name),
-                        ),
-                    ]
-                };
-
-                let mut entry = JournalEntry::new(
-                    self.journal_repo.get_next_entry_number().await?,
-                    JournalType::AccountOpeningBalance,
-                    lines,
-                    Utc::now(),
-                    format!("تعديل رصيد العميل: {}", customer.name),
-                    Some(customer.id.to_string()),
-                ).map_err(|e| AppError::Invalid(e.to_string()))?;
-
-                entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-                self.journal_repo.save(&entry).await?;
-            }
+        // Create adjustment journal entry if balance changed
+        if let Some(ref account_id) = &customer.account_id {
+            create_balance_adjustment_entry(
+                *account_id,
+                &customer.name,
+                &customer.id.to_string(),
+                balance_change,
+                PartnerKind::Customer,
+                &self.account_repo,
+                &self.journal_repo,
+            ).await?;
         }
 
         self.customer_repo.update(&customer).await?;
 
+        // Keep linked account name/balance in sync
         if let Some(ref account_id) = &customer.account_id {
             if let Some(mut account) = self.account_repo.find_by_id(account_id).await
                 .map_err(|e| AppError::Infrastructure(e.to_string()))? {

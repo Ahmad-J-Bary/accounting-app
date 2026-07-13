@@ -1,20 +1,20 @@
-use chrono::Utc;
-use domain::accounting::account::{Account, AccountCategory, AccountType};
-use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
-use domain::shared::ids::{AccountId, SupplierId};
-use domain::shared::{Currency, MonetaryAmount, Money};
+use domain::shared::ids::SupplierId;
+use domain::shared::Currency;
 use domain::suppliers::Supplier;
 use rust_decimal::Decimal;
 use std::sync::Arc;
+use std::str::FromStr;
 
 use crate::dto::supplier_dto::{CreateSupplierRequest, SupplierDto};
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
-
-use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::supplier_repository::SupplierRepository;
+use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::constants::PAYABLES_PARENT_ID;
-use std::str::FromStr;
+use crate::use_cases::shared::partner_account::{
+    PartnerAccountParams, PartnerKind,
+    create_partner_account, create_opening_balance_entry,
+};
 
 pub struct CreateSupplierUseCase {
     supplier_repo: Arc<dyn SupplierRepository>,
@@ -28,27 +28,20 @@ impl CreateSupplierUseCase {
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
     ) -> Self {
-        Self {
-            supplier_repo,
-            account_repo,
-            journal_repo,
-        }
+        Self { supplier_repo, account_repo, journal_repo }
     }
 
     pub async fn execute(&self, req: CreateSupplierRequest) -> Result<SupplierDto, AppError> {
         let supplier_id = SupplierId::new();
 
-        // Get next sequential supplier number (starting from 1, as 0 is reserved for cash supplier)
-        let next_supplier_num = self.supplier_repo.get_next_supplier_number().await?;
-        let code = next_supplier_num.to_string();
-        let code_for_account = code.clone();
+        // Sequential code (0 is reserved for cash supplier)
+        let next_num = self.supplier_repo.get_next_supplier_number().await?;
+        let code = next_num.to_string();
 
         let debit = crate::utils::parse_decimal(req.debit.as_deref(), "المدين")?;
         let credit = crate::utils::parse_decimal(req.credit.as_deref(), "الدائن")?;
-        let opening_balance =
-            crate::utils::parse_decimal(req.opening_balance.as_deref(), "رصيد الافتتاح")?;
+        let opening_balance = crate::utils::parse_decimal(req.opening_balance.as_deref(), "رصيد الافتتاح")?;
 
-        // Use currency from request
         let currency_code = req.currency.clone().unwrap_or_default();
         let currency = Currency::new(&currency_code, &currency_code, &currency_code, "", 2, false);
         let fx_rate = if currency.is_base {
@@ -63,7 +56,7 @@ impl CreateSupplierUseCase {
 
         let mut supplier = Supplier::new_with_id(
             supplier_id,
-            code,
+            code.clone(),
             req.name.clone(),
             req.phone.clone(),
             req.address.clone(),
@@ -78,114 +71,42 @@ impl CreateSupplierUseCase {
 
         self.supplier_repo.save(&supplier).await?;
 
-        // Find the parent account dynamically using its fixed System ID
-        let parent_id = AccountId::from_str(PAYABLES_PARENT_ID).unwrap();
-        let parent = self
-            .account_repo
-            .find_by_id(&parent_id)
-            .await
-            .map_err(|e| AppError::Infrastructure(e.to_string()))?
-            .ok_or_else(|| AppError::NotFound("حساب ذمم الموردين الرئيسي غير موجود في النظام".into()))?;
-
-        // Generate account code dynamically based on the CURRENT parent code
-        let account_code = format!("{}{}", parent.code, code_for_account);
-
-        // Add "رقم الحساب" suffix to the account name
-        let account_name = req.name.clone();
-
-        let new_account_id = AccountId::new();
-        let new_account = Account {
-            id: new_account_id,
-            code: account_code.clone(),
-            name_ar: account_name,
-            name_en: req.name,
-            account_type: AccountType::Liabilities,
-            parent_id: Some(parent.id),
-            category: AccountCategory::Detail,
-            level: parent.level + 1,
-            opening_balance,
-            balance: credit - debit,
-            debit,
-            credit,
-            currency: currency.clone(),
-            exchange_rate: fx_rate,
-            notes: None,
-            is_active: true,
-            is_default: false,
-            is_final: true,
-            linked_customer_id: None,
-            linked_supplier_id: Some(supplier_id),
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-        };
-
-        self.account_repo
-            .save(&new_account)
-            .await
-            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+        // Create linked ledger account
+        let new_account_id = create_partner_account(
+            PartnerAccountParams {
+                partner_id_str: supplier_id.to_string(),
+                code: &code,
+                code_for_account: &code,
+                name: &req.name,
+                opening_balance,
+                debit,
+                credit,
+                currency: currency.clone(),
+                fx_rate,
+                parent_account_id: PAYABLES_PARENT_ID,
+                kind: PartnerKind::Supplier,
+            },
+            &self.account_repo,
+        ).await?;
 
         supplier.link_account(new_account_id);
         self.supplier_repo.save(&supplier).await?;
 
-        // --- Accounting Integration: Opening Balance ---
-        let total_opening = credit - debit;
-        let equity_account = self
-            .account_repo
-            .find_by_code("53")
-            .await?
-            .ok_or_else(|| {
-                AppError::NotFound("حساب الرصيد الافتتاحي غير موجود: 53".into())
-            })?;
-
-        let amount_ma = MonetaryAmount::new(
-            Money::new(total_opening.abs(), currency.clone()),
+        // Create opening balance journal entry
+        // For suppliers: net_balance = credit − debit (positive = we owe them)
+        let net_balance = credit - debit;
+        create_opening_balance_entry(
+            new_account_id,
+            &supplier.name,
+            &supplier.id.to_string(),
+            net_balance,
+            currency,
             fx_rate,
-        );
-        let zero_ma = MonetaryAmount::zero(currency.clone());
-
-        let mut lines = Vec::new();
-        if total_opening > Decimal::ZERO {
-            // Opening Balance Equity Debit, Supplier Credit
-            lines.push(JournalLine::new(
-                equity_account.id,
-                amount_ma.clone(),
-                zero_ma.clone(),
-                format!("رصيد افتتاحي للمورد: {}", supplier.name),
-            ));
-            lines.push(JournalLine::new(
-                new_account_id,
-                zero_ma,
-                amount_ma,
-                format!("رصيد افتتاحي دائن للمورد: {}", supplier.name),
-            ));
-        } else {
-            // Supplier Debit, Opening Balance Equity Credit
-            lines.push(JournalLine::new(
-                new_account_id,
-                amount_ma.clone(),
-                zero_ma.clone(),
-                format!("رصيد افتتاحي للمورد: {}", supplier.name),
-            ));
-            lines.push(JournalLine::new(
-                equity_account.id,
-                zero_ma,
-                amount_ma,
-                format!("رصيد افتتاحي مدين للمورد: {}", supplier.name),
-            ));
-        }
-
-        let mut entry = JournalEntry::new(
-            self.journal_repo.get_next_entry_number().await?,
-            JournalType::AccountOpeningBalance,
-            lines,
-            Utc::now(),
-            format!("قيد افتتاح رصيد المورد: {}", supplier.name),
-            Some(supplier.id.to_string()),
-        )
-        .map_err(|e| AppError::Invalid(e.to_string()))?;
-
-        entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-        self.journal_repo.save(&entry).await?;
+            "53",
+            PartnerKind::Supplier,
+            &self.account_repo,
+            &self.journal_repo,
+        ).await?;
 
         Ok(SupplierDto::from(supplier))
     }
