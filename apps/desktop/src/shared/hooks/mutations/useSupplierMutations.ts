@@ -7,7 +7,7 @@ import type { CreateSupplierRequest, UpdateSupplierRequest } from "@erp/shared-t
 export function useCreateSupplier() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (req: CreateSupplierRequest) => supplierService.createSupplier(req),
+    mutationFn: (req: CreateSupplierRequest) => supplierService.create(req),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.suppliers });
       toast.success("تم إضافة المورد بنجاح");
@@ -19,7 +19,7 @@ export function useCreateSupplier() {
 export function useUpdateSupplier() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (req: UpdateSupplierRequest) => supplierService.updateSupplier(req),
+    mutationFn: (req: UpdateSupplierRequest) => supplierService.update(req),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.suppliers });
       toast.success("تم تحديث المورد بنجاح");
@@ -31,7 +31,7 @@ export function useUpdateSupplier() {
 export function useDeleteSupplier() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => supplierService.deleteSupplier(id),
+    mutationFn: (id: string) => supplierService.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.suppliers });
       toast.success("تم حذف المورد بنجاح");

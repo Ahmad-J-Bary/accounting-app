@@ -155,7 +155,7 @@ export function ReturnFromMaterialPanel({
   // Load parties
   useEffect(() => {
     setLoadingParties(true);
-    Promise.all([customerService.listCustomers(), supplierService.listSuppliers()])
+    Promise.all([customerService.list(), supplierService.list()])
       .then(([custs, supps]) => { setCustomers(custs); setSuppliers(supps); })
       .catch(() => toast.error("فشل تحميل العملاء والموردين"))
       .finally(() => setLoadingParties(false));

@@ -113,10 +113,12 @@ export function InvoicePartySelector({
       setLoadingBalance(true);
       try {
         if (type === "customer") {
-          const c = await customerService.getCustomer(selectedId);
+          const c = await customerService.get(selectedId);
+          if (!c) return;
           setCurrentBalance({ debit: c.debit, credit: c.credit });
         } else {
-          const s = await supplierService.getSupplier(selectedId);
+          const s = await supplierService.get(selectedId);
+          if (!s) return;
           setCurrentBalance({ debit: s.debit, credit: s.credit });
         }
       } catch (e) {

@@ -24,7 +24,7 @@ export default function Inventory() {
 
   const { data: warehouses = [] } = useQuery<WarehouseDto[]>({
     queryKey: ['warehouses'],
-    queryFn: () => warehouseService.listWarehouses(),
+    queryFn: () => warehouseService.list(),
   });
 
   const { data: materials = [] } = useQuery<MaterialDto[]>({

@@ -169,15 +169,15 @@ export function useInvoiceLifecycle({
 
         const listPartiesPromise =
           partyType === "customer"
-            ? customerService.listCustomers()
-            : supplierService.listSuppliers();
+            ? customerService.list()
+            : supplierService.list();
 
         const [invData, purchaseExpiryData, partyData, matData, whData, settingsData] = await Promise.all([
           listInvoicesPromise,
           purchaseExpiryPromise,
           listPartiesPromise,
           materialService.listMaterials(),
-          warehouseService.listWarehouses(),
+          warehouseService.list(),
           settingsService.getSettings(),
         ]);
 

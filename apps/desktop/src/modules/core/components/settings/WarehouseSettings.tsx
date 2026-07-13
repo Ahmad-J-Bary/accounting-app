@@ -18,7 +18,7 @@ export function WarehouseSettings({ settings, onChange }: WarehouseSettingsProps
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
 
   useEffect(() => {
-    warehouseService.listWarehouses().then(setWarehouses).catch(() => {});
+    warehouseService.list().then(setWarehouses).catch(() => {});
   }, []);
 
   const handleSave = async () => {

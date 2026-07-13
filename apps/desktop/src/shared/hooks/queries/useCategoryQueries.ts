@@ -6,6 +6,6 @@ import type { CategoryDto } from "@erp/shared-types";
 export function useCategories() {
   return useQuery<CategoryDto[]>({
     queryKey: QUERY_KEYS.categories,
-    queryFn: () => categoryService.listCategories(),
+    queryFn: () => categoryService.list(),
   });
 }

@@ -22,7 +22,7 @@ export default function Warehouses() {
     isRefetching: warehousesRefetching,
   } = useQuery<WarehouseDto[]>({
     queryKey: ['warehouses'],
-    queryFn: () => warehouseService.listWarehouses(),
+    queryFn: () => warehouseService.list(),
   });
 
   const { data: products = [] } = useQuery<MaterialDto[]>({

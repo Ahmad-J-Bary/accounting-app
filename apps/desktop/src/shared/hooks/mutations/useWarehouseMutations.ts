@@ -6,8 +6,8 @@ import { toast } from "sonner";
 export function useCreateWarehouse() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Parameters<typeof warehouseService.createWarehouse>[0]) =>
-      warehouseService.createWarehouse(data),
+    mutationFn: (data: Parameters<typeof warehouseService.create>[0]) =>
+      warehouseService.create(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.warehouses });
       toast.success("تم إضافة المستودع بنجاح");
@@ -19,8 +19,8 @@ export function useCreateWarehouse() {
 export function useUpdateWarehouse() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Parameters<typeof warehouseService.updateWarehouse>[0]) =>
-      warehouseService.updateWarehouse(data),
+    mutationFn: (data: Parameters<typeof warehouseService.update>[0]) =>
+      warehouseService.update(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.warehouses });
       toast.success("تم تحديث المستودع بنجاح");
@@ -32,7 +32,7 @@ export function useUpdateWarehouse() {
 export function useDeleteWarehouse() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => warehouseService.deleteWarehouse(id),
+    mutationFn: (id: string) => warehouseService.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.warehouses });
       toast.success("تم حذف المستودع بنجاح");

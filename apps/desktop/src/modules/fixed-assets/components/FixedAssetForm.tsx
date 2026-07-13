@@ -186,7 +186,7 @@ export function FixedAssetForm({
 
       const [accs, whs] = await Promise.all([
         accountingService.getChartOfAccounts(),
-        warehouseService.listWarehouses(),
+        warehouseService.list(),
       ]);
 
       setCategories(cats);

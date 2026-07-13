@@ -55,14 +55,14 @@ export function WarehouseForm({ open, onClose, onSaved, editItem }: WarehouseFor
           is_active: isActive,
           is_default: isDefault,
         };
-        await warehouseService.updateWarehouse(req);
+        await warehouseService.update(req);
         toast.success('تم تحديث المستودع');
       } else {
         const req: CreateWarehouseRequest = {
           name: name.trim(),
           address: address.trim() || null
         };
-        await warehouseService.createWarehouse(req);
+        await warehouseService.create(req);
         toast.success('تم إنشاء المستودع');
       }
       onSaved();

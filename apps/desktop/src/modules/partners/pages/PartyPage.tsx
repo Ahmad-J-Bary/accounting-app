@@ -108,29 +108,29 @@ export default function PartyPage({ entityName }: PartyPageProps) {
   } = useEntityList<CustomerDto | SupplierDto, CreateCustomerRequest | UpdateCustomerRequest | CreateSupplierRequest | UpdateSupplierRequest>({
     queryKey: ["partners", entityName === "customer" ? "customers" : "suppliers"],
     fetchData: entityName === "customer"
-      ? () => customerService.listCustomers()
-      : () => supplierService.listSuppliers(),
+      ? () => customerService.list()
+      : () => supplierService.list(),
     manageFormState: false,
     saveData: async (payload) => {
       if (entityName === "customer") {
         const customerPayload = payload as CreateCustomerRequest | UpdateCustomerRequest;
         if ("id" in customerPayload && customerPayload.id) {
-          return customerService.updateCustomer(customerPayload);
+          return customerService.update(customerPayload);
         }
-        return customerService.createCustomer(customerPayload);
+        return customerService.create(customerPayload);
       } else {
         const supplierPayload = payload as CreateSupplierRequest | UpdateSupplierRequest;
         if ("id" in supplierPayload && supplierPayload.id) {
-          return supplierService.updateSupplier(supplierPayload);
+          return supplierService.update(supplierPayload);
         }
-        return supplierService.createSupplier(supplierPayload);
+        return supplierService.create(supplierPayload);
       }
     },
     deleteData: async (id) => {
       if (entityName === "customer") {
-        return customerService.deleteCustomer(id);
+        return customerService.delete(id);
       } else {
-        return supplierService.deleteSupplier(id);
+        return supplierService.delete(id);
       }
     },
     searchFields: ["name", "phone", "code"],

@@ -7,7 +7,7 @@ import type { CreateCustomerRequest, UpdateCustomerRequest } from "@erp/shared-t
 export function useCreateCustomer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (req: CreateCustomerRequest) => customerService.createCustomer(req),
+    mutationFn: (req: CreateCustomerRequest) => customerService.create(req),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.customers });
       toast.success("تم إضافة العميل بنجاح");
@@ -19,7 +19,7 @@ export function useCreateCustomer() {
 export function useUpdateCustomer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (req: UpdateCustomerRequest) => customerService.updateCustomer(req),
+    mutationFn: (req: UpdateCustomerRequest) => customerService.update(req),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.customers });
       toast.success("تم تحديث العميل بنجاح");
@@ -31,7 +31,7 @@ export function useUpdateCustomer() {
 export function useDeleteCustomer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => customerService.deleteCustomer(id),
+    mutationFn: (id: string) => customerService.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.customers });
       toast.success("تم حذف العميل بنجاح");

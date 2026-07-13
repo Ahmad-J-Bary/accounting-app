@@ -56,7 +56,7 @@ export default function FixedAssetsPage() {
   useEffect(() => {
     Promise.all([
       fixedAssetService.listCategories("Fixed"),
-      warehouseService.listWarehouses(),
+      warehouseService.list(),
     ])
       .then(([cats, whs]) => {
         setCategories(cats);

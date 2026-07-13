@@ -63,8 +63,8 @@ export default function PaymentsPage() {
   const loadExtras = useCallback(async () => {
     try {
       const [cData, sData, aData] = await Promise.all([
-        customerService.listCustomers(),
-        supplierService.listSuppliers(),
+        customerService.list(),
+        supplierService.list(),
         accountingService.getChartOfAccounts(),
       ]);
       setCustomers(cData);

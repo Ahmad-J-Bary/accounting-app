@@ -8,7 +8,7 @@ import type { CustomerDto } from "@erp/shared-types";
 export function useCustomers() {
   return useQuery<CustomerDto[]>({
     queryKey: QUERY_KEYS.customers,
-    queryFn: () => customerService.listCustomers(),
+    queryFn: () => customerService.list(),
   });
 }
 
@@ -16,7 +16,7 @@ export function useCustomer(id: string | undefined) {
   return useQuery<CustomerDto | undefined>({
     queryKey: QUERY_KEYS.customer(id ?? ""),
     queryFn: async () => {
-      const customers = await customerService.listCustomers();
+      const customers = await customerService.list();
       return customers.find((c) => c.id === id);
     },
     enabled: !!id,

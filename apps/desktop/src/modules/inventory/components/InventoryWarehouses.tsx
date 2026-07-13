@@ -30,7 +30,7 @@ export function InventoryWarehouses({
   const handleDelete = async (id: string, name: string) => {
     if (!window.confirm(`هل أنت متأكد من حذف المستودع "${name}"؟`)) return;
     try {
-      await warehouseService.deleteWarehouse(id);
+      await warehouseService.delete(id);
       toast.success(`تم حذف المستودع "${name}"`);
       onRefresh();
     } catch (e) {

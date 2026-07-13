@@ -8,7 +8,7 @@ import type { SupplierDto } from "@erp/shared-types";
 export function useSuppliers() {
   return useQuery<SupplierDto[]>({
     queryKey: QUERY_KEYS.suppliers,
-    queryFn: () => supplierService.listSuppliers(),
+    queryFn: () => supplierService.list(),
   });
 }
 
@@ -16,7 +16,7 @@ export function useSupplier(id: string | undefined) {
   return useQuery<SupplierDto | undefined>({
     queryKey: QUERY_KEYS.supplier(id ?? ""),
     queryFn: async () => {
-      const suppliers = await supplierService.listSuppliers();
+      const suppliers = await supplierService.list();
       return suppliers.find((s) => s.id === id);
     },
     enabled: !!id,

@@ -159,7 +159,7 @@ export function AccountDetailsSidebar({
       if (formMode === "edit" && selected && isSyncAccount) {
         try {
           if (selected.linked_customer_id) {
-            const customer = await customerService.getCustomer(
+            const customer = await customerService.get(
               selected.linked_customer_id,
             );
             if (customer) {
@@ -170,7 +170,7 @@ export function AccountDetailsSidebar({
               setCurrency(customer.currency || "");
             }
           } else if (selected.linked_supplier_id) {
-            const supplier = await supplierService.getSupplier(
+            const supplier = await supplierService.get(
               selected.linked_supplier_id,
             );
             if (supplier) {

@@ -96,7 +96,7 @@ export default function OpeningBalance() {
     try {
       const [mats, whData, settingsData] = await Promise.all([
         materialService.listMaterials(),
-        warehouseService.listWarehouses(),
+        warehouseService.list(),
         settingsService.getSettings(),
       ]);
       setMaterials(mats);
@@ -167,7 +167,7 @@ export default function OpeningBalance() {
   }, [id, setLines, defaultWarehouseId]);
 
   useEffect(() => {
-    categoryService.listCategories().then(setCategories).catch(() => {});
+    categoryService.list().then(setCategories).catch(() => {});
   }, []);
 
   useEffect(() => {

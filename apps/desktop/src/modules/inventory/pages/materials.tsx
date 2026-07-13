@@ -83,7 +83,7 @@ export default function Materials() {
 
   const loadCategories = useCallback(async () => {
     try {
-      const cats = await categoryService.listCategories();
+      const cats = await categoryService.list();
       setCategories(cats);
     } catch (e) { console.error(e); }
   }, []);
@@ -91,7 +91,7 @@ export default function Materials() {
   const loadInventoryData = useCallback(async () => {
     try {
       const [whs, mvs] = await Promise.all([
-        warehouseService.listWarehouses(),
+        warehouseService.list(),
         inventoryService.listStockMovements(),
       ]);
       setWarehouses(whs);

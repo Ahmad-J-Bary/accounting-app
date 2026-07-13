@@ -6,8 +6,8 @@ import { toast } from "sonner";
 export function useCreateCategory() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Parameters<typeof categoryService.createCategory>[0]) =>
-      categoryService.createCategory(data),
+    mutationFn: (data: Parameters<typeof categoryService.create>[0]) =>
+      categoryService.create(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.categories });
       toast.success("تم إضافة التصنيف بنجاح");
@@ -19,8 +19,8 @@ export function useCreateCategory() {
 export function useUpdateCategory() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Parameters<typeof categoryService.updateCategory>[0]) =>
-      categoryService.updateCategory(data),
+    mutationFn: (data: Parameters<typeof categoryService.update>[0]) =>
+      categoryService.update(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.categories });
       toast.success("تم تحديث التصنيف بنجاح");
@@ -32,7 +32,7 @@ export function useUpdateCategory() {
 export function useDeleteCategory() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => categoryService.deleteCategory(id),
+    mutationFn: (id: string) => categoryService.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.categories });
       toast.success("تم حذف التصنيف بنجاح");

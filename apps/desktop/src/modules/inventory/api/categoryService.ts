@@ -1,4 +1,5 @@
 import { invoke } from '@shared/lib/invoke';
+import { createCrudService } from '@shared/lib/createService';
 import type {
   CategoryDto,
   CreateCategoryRequest,
@@ -10,22 +11,13 @@ export interface DeleteCategoryCascadeResult {
   subs_deleted: number;
 }
 
+const crud = createCrudService<CategoryDto, CreateCategoryRequest, UpdateCategoryRequest>({
+  name: 'category',
+  pluralName: 'categories',
+});
+
 export const categoryService = {
-  async createCategory(request: CreateCategoryRequest): Promise<CategoryDto> {
-    return await invoke<CategoryDto>('create_category', { request });
-  },
-
-  async listCategories(): Promise<CategoryDto[]> {
-    return await invoke<CategoryDto[]>('list_categories');
-  },
-
-  async updateCategory(request: UpdateCategoryRequest): Promise<CategoryDto> {
-    return await invoke<CategoryDto>('update_category', { request });
-  },
-
-  async deleteCategory(id: string): Promise<void> {
-    return await invoke<void>('delete_category', { id });
-  },
+  ...crud,
 
   async deleteCategoryWithReassignment(
     id: string,

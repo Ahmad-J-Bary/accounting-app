@@ -62,14 +62,14 @@ export function useReturnLifecycle({
 
         const listPartiesPromise =
           partyType === "customer"
-            ? customerService.listCustomers()
-            : supplierService.listSuppliers();
+            ? customerService.list()
+            : supplierService.list();
 
         const [retData, partyData, matData, whData] = await Promise.all([
           listReturnsPromise,
           listPartiesPromise,
           materialService.listMaterials(),
-          warehouseService.listWarehouses(),
+          warehouseService.list(),
         ]);
 
         setReturns(retData);

@@ -22,7 +22,7 @@ export default function Transfers() {
 
   const { data: warehouses = [] } = useQuery<WarehouseDto[]>({
     queryKey: ['warehouses'],
-    queryFn: () => warehouseService.listWarehouses(),
+    queryFn: () => warehouseService.list(),
   });
 
   const { data: products = [] } = useQuery<MaterialDto[]>({

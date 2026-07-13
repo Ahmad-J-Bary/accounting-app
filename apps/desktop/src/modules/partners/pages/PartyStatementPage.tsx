@@ -7,17 +7,17 @@ import { supplierService } from '../api/supplierService';
 
 interface StatementConfig {
   notFoundMessage: string;
-  fetchFn: (id: string) => Promise<{ name: string }>;
+  fetchFn: (id: string) => Promise<{ name: string } | null>;
 }
 
 const STATEMENT_CONFIGS: Record<string, StatementConfig> = {
   customer: {
     notFoundMessage: "العميل غير موجود",
-    fetchFn: (id) => customerService.getCustomer(id),
+    fetchFn: (id) => customerService.get(id),
   },
   supplier: {
     notFoundMessage: "المورد غير موجود",
-    fetchFn: (id) => supplierService.getSupplier(id),
+    fetchFn: (id) => supplierService.get(id),
   },
 };
 

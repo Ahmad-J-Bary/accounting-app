@@ -101,7 +101,7 @@ export default function SalesInvoices() {
                 noBorder
                 onSearchActive={setIsSearchingParty}
                 onCreateParty={async (name) => {
-                  const c = await customerService.createCustomer({ code: "", name, phone: null, address: null });
+                  const c = await customerService.create({ code: "", name, phone: null, address: null });
                   loadData(false);
                   return { id: c.id, name: c.name };
                 }}

@@ -70,7 +70,7 @@ export default function PurchaseInvoices() {
   const [savingMaterial, setSavingMaterial] = useState(false);
 
   useEffect(() => {
-    categoryService.listCategories().then(setCategories).catch(() => {});
+    categoryService.list().then(setCategories).catch(() => {});
   }, []);
 
   const handleSaveMaterial = async (data: CreateMaterialRequest | UpdateMaterialRequest) => {
@@ -131,7 +131,7 @@ export default function PurchaseInvoices() {
                 noBorder
                 onSearchActive={setIsSearchingParty}
                 onCreateParty={async (name) => {
-                  const s = await supplierService.createSupplier({ code: "", name, phone: null, address: null });
+                  const s = await supplierService.create({ code: "", name, phone: null, address: null });
                   loadData(false);
                   return { id: s.id, name: s.name };
                 }}

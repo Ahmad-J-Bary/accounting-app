@@ -78,11 +78,11 @@ export default function AccountMovement() {
           setLinkedEntity(partnerMatch);
           setAccountType('partner');
         } else if (account.linked_customer_id) {
-          const cust = await customerService.getCustomer(account.linked_customer_id);
+          const cust = await customerService.get(account.linked_customer_id);
           setLinkedEntity(cust);
           setAccountType('customer');
         } else if (account.linked_supplier_id) {
-          const supp = await supplierService.getSupplier(account.linked_supplier_id);
+          const supp = await supplierService.get(account.linked_supplier_id);
           setLinkedEntity(supp);
           setAccountType('supplier');
         } else if (account.code.startsWith('4')) {
