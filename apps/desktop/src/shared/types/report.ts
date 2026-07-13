@@ -1,7 +1,5 @@
-export type ReportFilters = {
-  from_date: string;
-  to_date: string;
-};
+export type { ReportFilters } from "@shared/types/filters";
+import type { ReportFilters } from "@shared/types/filters";
 
 export type ReportConfig<TData, TFilters = ReportFilters> = {
   queryKey: readonly unknown[];
@@ -29,11 +27,3 @@ export type ReportFilterBarProps = {
   selectedCurrencyLabel?: string;
   lastLoadedAt?: Date | null;
 };
-
-export type IncomeStatementFilters = ReportFilters;
-
-export type BalanceSheetFilters = ReportFilters;
-
-export type PartnerProfitShareFilters = ReportFilters;
-
-export type TrialBalanceFilters = ReportFilters;

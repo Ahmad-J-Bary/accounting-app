@@ -1,4 +1,5 @@
 import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
+import type { ReportFilters } from "@shared/types/filters";
 import type {
   AccountDto,
   AccountLedgerDto,
@@ -10,10 +11,8 @@ import type {
   StockMovementDetailDto,
 } from "@erp/shared-types";
 
-export type IncomeStatementFilters = {
-  from_date: string;
-  to_date: string;
-};
+/** Alias kept for backward compatibility with hooks that import from this module. */
+export type IncomeStatementFilters = ReportFilters;
 
 export type LoadedIncomeStatementData = {
   salesInvoices: InvoiceDto[];

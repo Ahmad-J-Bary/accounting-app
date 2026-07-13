@@ -1,18 +1,11 @@
 import { invoke } from '@shared/lib/invoke';
+import type { JournalFilters } from '@shared/types/filters';
 import type { 
   JournalEntryDto, 
   CreateJournalEntryRequest 
 } from '@erp/shared-types';
 
-export interface JournalFilters {
-  from_date?: string;
-  to_date?: string;
-  journal_type?: string;
-  account_id?: string;
-  partner_id?: string;
-  status?: string;
-  [key: string]: unknown;
-}
+export type { JournalFilters };
 
 export const journalEntryService = {
   async createJournalEntry(request: CreateJournalEntryRequest): Promise<JournalEntryDto> {

@@ -32,4 +32,21 @@ export const categoryService = {
   async getOrCreateHybridCategory(prefixes: string[]): Promise<CategoryDto> {
     return await invoke<CategoryDto>('get_or_create_hybrid_category', { prefixes });
   },
+
+  // Backward compatibility aliases for raw CRUD methods
+  createCategory(request: CreateCategoryRequest): Promise<CategoryDto> {
+    return this.create(request);
+  },
+
+  listCategories(): Promise<CategoryDto[]> {
+    return this.list();
+  },
+
+  updateCategory(request: UpdateCategoryRequest): Promise<CategoryDto> {
+    return this.update(request);
+  },
+
+  deleteCategory(id: string): Promise<void> {
+    return this.delete(id);
+  },
 };

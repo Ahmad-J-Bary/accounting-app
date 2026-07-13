@@ -1,16 +1,10 @@
-import { useCallback } from "react";
-import { accountingService } from "@modules/accounting/api/accountingService";
-import { journalEntryService } from "@modules/accounting/api/journalEntryService";
-import { invoiceService } from "@modules/invoicing/api/invoiceService";
-import { returnService } from "@modules/invoicing/api/returnService";
-import { materialService } from "@modules/inventory/api/materialService";
-import { useReportData } from "@shared/hooks/useReportData";
+import { useEffect, useState } from "react";
+import { useReportBaseData } from "@modules/accounting/hooks/useReportBaseData";
 import { useMaterialExpenseLedgers } from "@shared/hooks/useMaterialExpenseLedgers";
 import { computeIncomeStatement, emptyIncomeStatementData } from "@modules/accounting/lib/incomeStatement";
-import { SYSTEM_ACCOUNT_IDS } from "@erp/shared-types";
+import { computeLedgerTotals } from "@modules/accounting/lib/ledgerTotals";
 import type { AccountDto } from "@erp/shared-types";
 import type { IncomeStatementFilters } from "@modules/accounting/lib/incomeStatement";
-import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import type { ReportState } from "@shared/types/report";
 
 export type LoadedBalanceSheetData = {
@@ -29,184 +23,67 @@ const emptyData: LoadedBalanceSheetData = {
   closingInventory: 0,
 };
 
-async function computeLedgerTotals(
-  accounts: AccountDto[],
-  entries: { description?: string; journal_type?: string; source_id?: string; lines: Array<{ account_id: string; debit_base?: string; debit?: string; credit_base?: string; credit?: string }> }[],
-  _incomeStatementResult: { netProfit: number; closingInventory: number },
-  purchaseInvoices: Array<{ status?: string; extra_costs?: string }>,
-): Promise<Omit<LoadedBalanceSheetData, "accounts" | "netProfit" | "closingInventory">> {
-  let totalDrawings = 0;
-
-  const accountMap = new Map(accounts.map((a) => [a.id, a]));
-  const ledgerTotals = new Map<string, { debit: number; credit: number }>();
-
-  for (const account of accounts) {
-    const openingBalance = parseFloat(account.opening_balance || "0");
-    if (openingBalance !== 0) {
-      const existing = ledgerTotals.get(account.id) || { debit: 0, credit: 0 };
-      if (["Liabilities", "Equity", "Revenue"].includes(account.account_type)) {
-        existing.credit += Math.abs(openingBalance);
-      } else {
-        existing.debit += Math.abs(openingBalance);
-      }
-      ledgerTotals.set(account.id, existing);
-    }
-  }
-
-  const partnerAccounts = accounts.filter(
-    (a) => a.code !== "51" && a.code.startsWith("51") && ["Liabilities", "Equity", "Revenue"].includes(a.account_type)
-  );
-  const totalPartnerCapital = partnerAccounts.reduce(
-    (sum, a) => sum + Math.abs(parseFloat(a.opening_balance || "0")),
-    0,
-  );
-
-  let capitalCreditsFromInKind = 0;
-  for (const entry of entries) {
-    const desc = entry.description || "";
-    const isMaterialOpening = entry.journal_type === "MaterialOpeningBalance" || desc.includes("بضاعة أول المدة");
-    const isFixedAssetOpening = desc.includes("إضافة أصل سابق") || desc.includes("رصيد افتتاحي للأصول الثابتة");
-
-    if (!isMaterialOpening && !isFixedAssetOpening) continue;
-
-    for (const line of entry.lines) {
-      const account = accountMap.get(line.account_id);
-      if (account?.code === "51" || account?.code?.startsWith("51")) {
-        capitalCreditsFromInKind += parseFloat(line.credit_base || line.credit || "0");
-      }
-    }
-  }
-
-  if (capitalCreditsFromInKind > 0) {
-    if (partnerAccounts.length > 0 && totalPartnerCapital > 0) {
-      for (const partnerAcc of partnerAccounts) {
-        const ratio = Math.abs(parseFloat(partnerAcc.opening_balance || "0")) / totalPartnerCapital;
-        const share = capitalCreditsFromInKind * ratio;
-        const cur = ledgerTotals.get(partnerAcc.id) || { debit: 0, credit: 0 };
-        cur.credit += share;
-        ledgerTotals.set(partnerAcc.id, cur);
-      }
-    } else {
-      const capitalParent = accounts.find((a) => a.code === "51");
-      if (capitalParent) {
-        const cur = ledgerTotals.get(capitalParent.id) || { debit: 0, credit: 0 };
-        cur.credit += capitalCreditsFromInKind;
-        ledgerTotals.set(capitalParent.id, cur);
-      }
-    }
-  }
-
-  for (const entry of entries) {
-    const desc = entry.description || "";
-    const isMaterialOpening = entry.journal_type === "MaterialOpeningBalance" || desc.includes("بضاعة أول المدة");
-    const isFixedAssetOpening = desc.includes("إضافة أصل سابق") || desc.includes("رصيد افتتاحي للأصول الثابتة");
-
-    for (const line of entry.lines) {
-      const amt = parseFloat(line.debit_base || line.debit || "0") - parseFloat(line.credit_base || line.credit || "0");
-      if (line.account_id === SYSTEM_ACCOUNT_IDS.DRAWINGS) {
-        totalDrawings += Math.abs(amt);
-      }
-
-      const account = accountMap.get(line.account_id);
-
-      if ((isMaterialOpening || isFixedAssetOpening) && (account?.code === "51" || account?.code?.startsWith("51"))) {
-        continue;
-      }
-
-      const isConsolidatedCapitalEntry = entry.source_id === "consolidated_capital";
-      if (isConsolidatedCapitalEntry && account?.code !== "122") {
-        continue;
-      }
-
-      const cur = ledgerTotals.get(line.account_id) || { debit: 0, credit: 0 };
-      cur.debit += parseFloat(line.debit_base || line.debit || "0");
-      cur.credit += parseFloat(line.credit_base || line.credit || "0");
-      ledgerTotals.set(line.account_id, cur);
-    }
-  }
-
-  let netPurchaseCost = 0;
-  for (const inv of purchaseInvoices) {
-    if (inv.status !== "Posted" && inv.status !== "Paid") continue;
-    netPurchaseCost += parseFloat(inv.extra_costs || "0");
-  }
-
-  for (const account of accounts) {
-    if (account.name_ar === "تكاليف إضافية على المشتريات") {
-      const debit = Math.abs(netPurchaseCost);
-      const credit = Math.abs(netPurchaseCost);
-      ledgerTotals.set(account.id, { debit, credit });
-    }
-  }
-
-  return { ledgerTotals, totalDrawings };
-}
-
 export function useBalanceSheetReport(filters: IncomeStatementFilters): ReportState<LoadedBalanceSheetData> {
+  const { data: baseData, isLoading, isError, isRefetching, refetch } = useReportBaseData(filters);
   const { loadMaterialExpenseLedgers } = useMaterialExpenseLedgers();
 
-  const fetchReportData = useCallback(async (): Promise<LoadedBalanceSheetData> => {
-    const [
-      accounts,
-      entries,
-      salesInvoices,
-      purchaseInvoices,
-      purchaseReturns,
-      salesReturns,
-      expenseAccounts,
-      materials,
-    ] = await Promise.all([
-      accountingService.getChartOfAccounts(),
-      journalEntryService.listJournalEntries({
-        from_date: filters.from_date,
-        to_date: filters.to_date,
-      }),
-      invoiceService.listInvoicesByType("Sales"),
-      invoiceService.listInvoicesByType("Purchase"),
-      returnService.listPurchaseReturns(),
-      returnService.listSalesReturns(),
-      accountingService.getExpenseItems(),
-      materialService.listMaterials(),
-    ]);
+  const [resolvedData, setResolvedData] = useState<LoadedBalanceSheetData>(emptyData);
+  const [loadingLedgers, setLoadingLedgers] = useState(false);
 
-    const { stockMovementsByMaterial, expenseLedgers } = await loadMaterialExpenseLedgers(materials, expenseAccounts);
+  useEffect(() => {
+    if (isLoading || isError || !baseData.materials.length) return;
 
-    const incomeStatementData = {
-      ...emptyIncomeStatementData,
-      salesInvoices,
-      purchaseInvoices,
-      purchaseReturns,
-      salesReturns,
-      expenseAccounts,
-      expenseLedgers,
-      stockMovementsByMaterial,
-      materials,
-      accounts,
-      entries,
+    let active = true;
+    const run = async () => {
+      setLoadingLedgers(true);
+      try {
+        const { stockMovementsByMaterial, expenseLedgers } = await loadMaterialExpenseLedgers(
+          baseData.materials,
+          baseData.expenseAccounts
+        );
+        if (!active) return;
+
+        const incomeStatementData = {
+          ...emptyIncomeStatementData,
+          ...baseData,
+          expenseLedgers,
+          stockMovementsByMaterial,
+        };
+
+        const incomeStatementResult = computeIncomeStatement(filters, incomeStatementData);
+
+        const { ledgerTotals, totalDrawings } = computeLedgerTotals(
+          baseData.accounts,
+          baseData.entries,
+          baseData.purchaseInvoices
+        );
+
+        setResolvedData({
+          accounts: baseData.accounts,
+          netProfit: incomeStatementResult.netProfit,
+          totalDrawings,
+          ledgerTotals,
+          closingInventory: incomeStatementResult.closingInventory,
+        });
+      } catch (e) {
+        console.error("Failed to load balance sheet calculations:", e);
+      } finally {
+        if (active) setLoadingLedgers(false);
+      }
     };
 
-    const incomeStatementResult = computeIncomeStatement(filters, incomeStatementData);
+    run();
 
-    const { ledgerTotals, totalDrawings } = await computeLedgerTotals(
-      accounts,
-      entries,
-      incomeStatementResult,
-      purchaseInvoices,
-    );
-
-    return {
-      accounts,
-      netProfit: incomeStatementResult.netProfit,
-      totalDrawings,
-      ledgerTotals,
-      closingInventory: incomeStatementResult.closingInventory,
+    return () => {
+      active = false;
     };
-  }, [filters, loadMaterialExpenseLedgers]);
+  }, [baseData, isLoading, isError, filters, loadMaterialExpenseLedgers]);
 
-  return useReportData({
-    queryKey: [QUERY_KEYS.balanceSheet[0], QUERY_KEYS.balanceSheet[1], filters.from_date, filters.to_date] as const,
-    fetchData: fetchReportData,
-    emptyData: emptyData,
-    errorMessage: "تعذر تحميل بيانات الميزانية العمومية",
-  });
+  return {
+    loading: isLoading || loadingLedgers,
+    refreshing: isRefetching,
+    lastLoadedAt: baseData.materials.length ? new Date() : null,
+    reportData: resolvedData,
+    loadReportData: refetch,
+  };
 }

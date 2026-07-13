@@ -32,6 +32,7 @@ export const QUERY_KEYS = {
   stockMovements: ["stock-movements"] as const,
 
   chartOfAccounts: ["chart-of-accounts"] as const,
+  chartOfAccountsTree: ["chart-of-accounts-tree"] as const,
   accountLedger: (id: string) => ["account-ledger", id] as const,
   expenseItems: ["expense-items"] as const,
 

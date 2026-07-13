@@ -1,41 +1,18 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supplierService } from "@modules/partners/api/supplierService";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
-import { toast } from "sonner";
+import { createEntityMutations } from "./createEntityMutations";
 import type { CreateSupplierRequest, UpdateSupplierRequest } from "@erp/shared-types";
 
-export function useCreateSupplier() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (req: CreateSupplierRequest) => supplierService.create(req),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.suppliers });
-      toast.success("تم إضافة المورد بنجاح");
-    },
-    onError: (e: Error) => toast.error("فشل إضافة المورد: " + e.message),
-  });
-}
+const { useCreate, useUpdate, useDelete } = createEntityMutations<
+  CreateSupplierRequest,
+  UpdateSupplierRequest
+>({
+  queryKey: QUERY_KEYS.suppliers,
+  mutations: {
+    create: { fn: (req) => supplierService.create(req), successMsg: "تم إضافة المورد بنجاح",   errorMsg: "فشل إضافة المورد" },
+    update: { fn: (req) => supplierService.update(req), successMsg: "تم تحديث المورد بنجاح",  errorMsg: "فشل تحديث المورد" },
+    delete: { fn: (id)  => supplierService.delete(id),  successMsg: "تم حذف المورد بنجاح",    errorMsg: "فشل حذف المورد" },
+  },
+});
 
-export function useUpdateSupplier() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (req: UpdateSupplierRequest) => supplierService.update(req),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.suppliers });
-      toast.success("تم تحديث المورد بنجاح");
-    },
-    onError: (e: Error) => toast.error("فشل تحديث المورد: " + e.message),
-  });
-}
-
-export function useDeleteSupplier() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => supplierService.delete(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.suppliers });
-      toast.success("تم حذف المورد بنجاح");
-    },
-    onError: (e: Error) => toast.error("فشل حذف المورد: " + e.message),
-  });
-}
+export { useCreate as useCreateSupplier, useUpdate as useUpdateSupplier, useDelete as useDeleteSupplier };

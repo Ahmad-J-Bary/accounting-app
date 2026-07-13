@@ -1,29 +1,14 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { paymentService } from "@modules/payments/api/paymentService";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
-import { toast } from "sonner";
+import { createEntityMutations } from "./createEntityMutations";
 import type { CreatePaymentRequest } from "@erp/shared-types";
 
-export function useCreatePayment() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (req: CreatePaymentRequest) => paymentService.createPayment(req),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.payments });
-      toast.success("تم تسجيل السند بنجاح");
-    },
-    onError: (e: Error) => toast.error("فشل تسجيل السند: " + e.message),
-  });
-}
+const { useCreate, useDelete } = createEntityMutations<CreatePaymentRequest, unknown>({
+  queryKey: QUERY_KEYS.payments,
+  mutations: {
+    create: { fn: (req) => paymentService.createPayment(req), successMsg: "تم تسجيل السند بنجاح", errorMsg: "فشل تسجيل السند" },
+    delete: { fn: (id)  => paymentService.deletePayment(id),  successMsg: "تم حذف السند بنجاح",    errorMsg: "فشل حذف السند" },
+  },
+});
 
-export function useDeletePayment() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => paymentService.deletePayment(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.payments });
-      toast.success("تم حذف السند بنجاح");
-    },
-    onError: (e: Error) => toast.error("فشل حذف السند: " + e.message),
-  });
-}
+export { useCreate as useCreatePayment, useDelete as useDeletePayment };

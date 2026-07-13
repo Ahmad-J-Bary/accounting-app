@@ -1,60 +1,54 @@
-import { useCallback } from "react";
-import { accountingService } from "@modules/accounting/api/accountingService";
-import { invoiceService } from "@modules/invoicing/api/invoiceService";
-import { returnService } from "@modules/invoicing/api/returnService";
-import { materialService } from "@modules/inventory/api/materialService";
-import { journalEntryService } from "@modules/accounting/api/journalEntryService";
-import { useReportData } from "@shared/hooks/useReportData";
+import { useEffect, useState } from "react";
+import { useReportBaseData } from "@modules/accounting/hooks/useReportBaseData";
 import { useMaterialExpenseLedgers } from "@shared/hooks/useMaterialExpenseLedgers";
 import { emptyIncomeStatementData } from "@modules/accounting/lib/incomeStatement";
 import type { LoadedIncomeStatementData } from "@modules/accounting/lib/incomeStatement";
-import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import type { ReportState } from "@shared/types/report";
 
 export function useIncomeStatementReport(): ReportState<LoadedIncomeStatementData> {
+  const { data: baseData, isLoading, isError, isRefetching, refetch } = useReportBaseData();
   const { loadMaterialExpenseLedgers } = useMaterialExpenseLedgers();
 
-  const fetchReportData = useCallback(async (): Promise<LoadedIncomeStatementData> => {
-    const [
-      accounts,
-      entries,
-      salesInvoices,
-      purchaseInvoices,
-      purchaseReturns,
-      salesReturns,
-      expenseAccounts,
-      materials,
-    ] = await Promise.all([
-      accountingService.getChartOfAccounts(),
-      journalEntryService.listJournalEntries({}),
-      invoiceService.listInvoicesByType("Sales"),
-      invoiceService.listInvoicesByType("Purchase"),
-      returnService.listPurchaseReturns(),
-      returnService.listSalesReturns(),
-      accountingService.getExpenseItems(),
-      materialService.listMaterials(),
-    ]);
+  const [resolvedData, setResolvedData] = useState<LoadedIncomeStatementData>(emptyIncomeStatementData);
+  const [loadingLedgers, setLoadingLedgers] = useState(false);
 
-    const { stockMovementsByMaterial, expenseLedgers } = await loadMaterialExpenseLedgers(materials, expenseAccounts);
+  useEffect(() => {
+    if (isLoading || isError || !baseData.materials.length) return;
 
-    return {
-      salesInvoices: salesInvoices ?? [],
-      purchaseInvoices: purchaseInvoices ?? [],
-      purchaseReturns: purchaseReturns ?? [],
-      salesReturns: salesReturns ?? [],
-      expenseAccounts: expenseAccounts ?? [],
-      expenseLedgers,
-      stockMovementsByMaterial,
-      materials,
-      accounts: accounts ?? [],
-      entries: entries ?? [],
+    let active = true;
+    const run = async () => {
+      setLoadingLedgers(true);
+      try {
+        const { stockMovementsByMaterial, expenseLedgers } = await loadMaterialExpenseLedgers(
+          baseData.materials,
+          baseData.expenseAccounts
+        );
+        if (active) {
+          setResolvedData({
+            ...baseData,
+            expenseLedgers,
+            stockMovementsByMaterial,
+          });
+        }
+      } catch (e) {
+        console.error("Failed to load material expense ledgers:", e);
+      } finally {
+        if (active) setLoadingLedgers(false);
+      }
     };
-  }, [loadMaterialExpenseLedgers]);
 
-  return useReportData({
-    queryKey: QUERY_KEYS.incomeStatement,
-    fetchData: fetchReportData,
-    emptyData: emptyIncomeStatementData,
-    errorMessage: "تعذر تحميل بيانات قائمة الدخل",
-  });
+    run();
+
+    return () => {
+      active = false;
+    };
+  }, [baseData, isLoading, isError, loadMaterialExpenseLedgers]);
+
+  return {
+    loading: isLoading || loadingLedgers,
+    refreshing: isRefetching,
+    lastLoadedAt: baseData.materials.length ? new Date() : null,
+    reportData: resolvedData,
+    loadReportData: refetch,
+  };
 }

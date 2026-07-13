@@ -1,21 +1,15 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { ReportLayout } from "@widgets/templates/ReportLayout";
-import { accountingService } from "@modules/accounting/api/accountingService";
-import { journalEntryService } from "@modules/accounting/api/journalEntryService";
-import { invoiceService } from "@modules/invoicing/api/invoiceService";
-import type { AccountDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useUnifiedColumns } from "@shared/hooks";
 import { cn } from "@shared/lib/utils";
-import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
 import { Minus, Plus } from "lucide-react";
 import { computeTreeTotals, flattenTreeRows, isBalanceDebit } from "../lib/trialBalance";
 import type { TrialBalanceTreeRow } from "../lib/trialBalance";
-import { QUERY_KEYS } from "@shared/hooks/queryClient";
+import { useTrialBalance } from "@shared/hooks/queries/useReportQueries";
 
 const DETAIL_LEVELS = [
   { level: 1, maxDepth: 0, label: "مستوى 1", desc: "التصنيفات الرئيسية" },
@@ -24,147 +18,11 @@ const DETAIL_LEVELS = [
   { level: 4, maxDepth: Infinity, label: "مستوى 4", desc: "+ كافة التفاصيل" },
 ];
 
-function parseNumber(value?: string | number | null) {
-  return parseSafeNumber(value);
-}
-
-function isCreditNatureAccount(account: AccountDto) {
-  return ["Liabilities", "Equity", "Revenue"].includes(account.account_type);
-}
-
-async function computeLedgerTotals(accounts: AccountDto[]): Promise<Map<string, { debit: number; credit: number }>> {
-  const accountMap = new Map(accounts.map((account) => [account.id, account]));
-  const entries = await journalEntryService.listJournalEntries({});
-
-  const totals = new Map<string, { debit: number; credit: number }>();
-
-  // 1. احتساب الأرصدة الافتتاحية لجميع الحسابات
-  for (const account of accounts) {
-    const openingBalance = parseNumber(account.opening_balance);
-    if (openingBalance === 0) continue;
-
-    const existing = totals.get(account.id) || { debit: 0, credit: 0 };
-    if (isCreditNatureAccount(account)) {
-      existing.credit += Math.abs(openingBalance);
-    } else {
-      existing.debit += Math.abs(openingBalance);
-    }
-    totals.set(account.id, existing);
-  }
-
-  // 2. تحديد حسابات الشركاء (51xx) ونسب رأس مالهم لتوزيع الأرصدة الافتتاحية العينية
-  const partnerAccounts = accounts.filter(
-    (a) => a.code !== "51" && a.code.startsWith("51") && isCreditNatureAccount(a)
-  );
-  const totalPartnerCapital = partnerAccounts.reduce(
-    (sum, a) => sum + Math.abs(parseNumber(a.opening_balance)),
-    0,
-  );
-
-  // 3. تجميع قيم الجانب الدائن لرأس المال الواردة من قيود الأرصدة الافتتاحية العينية
-  let capitalCreditsFromInKind = 0;
-
-  for (const entry of entries) {
-    const desc = entry.description || "";
-    const isMaterialOpening = entry.journal_type === "MaterialOpeningBalance" || desc.includes("بضاعة أول المدة");
-    const isFixedAssetOpening = desc.includes("إضافة أصل سابق") || desc.includes("رصيد افتتاحي للأصول الثابتة");
-
-    if (!isMaterialOpening && !isFixedAssetOpening) continue;
-
-    for (const line of entry.lines) {
-      const account = accountMap.get(line.account_id);
-      if (account?.code === "51" || account?.code?.startsWith("51")) {
-        capitalCreditsFromInKind += parseFloat(line.credit_base || line.credit || "0");
-      }
-    }
-  }
-
-  // 4. توزيع القيمة العينية على حسابات الشركاء بنسبهم (أو على الأب 51 إن لم يوجد شركاء)
-  if (capitalCreditsFromInKind > 0) {
-    if (partnerAccounts.length > 0 && totalPartnerCapital > 0) {
-      for (const partnerAcc of partnerAccounts) {
-        const ratio = Math.abs(parseNumber(partnerAcc.opening_balance)) / totalPartnerCapital;
-        const share = capitalCreditsFromInKind * ratio;
-        const cur = totals.get(partnerAcc.id) || { debit: 0, credit: 0 };
-        cur.credit += share;
-        totals.set(partnerAcc.id, cur);
-      }
-    } else {
-      // لا يوجد شركاء → تبقى القيمة على حساب رأس المال الأب (51)
-      const capitalParent = accounts.find((a) => a.code === "51");
-      if (capitalParent) {
-        const cur = totals.get(capitalParent.id) || { debit: 0, credit: 0 };
-        cur.credit += capitalCreditsFromInKind;
-        totals.set(capitalParent.id, cur);
-      }
-    }
-  }
-
-  // 5. معالجة بقية القيود اليومية (باستثناء الجانب الدائن لـ51 من قيود الأرصدة العينية المعالجة أعلاه)
-  for (const entry of entries) {
-    const desc = entry.description || "";
-    const isMaterialOpening = entry.journal_type === "MaterialOpeningBalance" || desc.includes("بضاعة أول المدة");
-    const isFixedAssetOpening = desc.includes("إضافة أصل سابق") || desc.includes("رصيد افتتاحي للأصول الثابتة");
-
-    for (const line of entry.lines) {
-      const account = accountMap.get(line.account_id);
-
-      // تخطي الجانب الدائن لرأس المال من قيود الأرصدة العينية (تمت معالجته في الخطوة 4)
-      if (
-        (isMaterialOpening || isFixedAssetOpening) &&
-        (account?.code === "51" || account?.code?.startsWith("51"))
-      ) {
-        continue;
-      }
-
-      // تخطي كل سطور قيد رأس المال المجمع ما عدا جانب مدين الصندوق (122)
-      const isConsolidatedCapitalEntry = entry.source_id === "consolidated_capital";
-      if (isConsolidatedCapitalEntry && account?.code !== "122") {
-        continue;
-      }
-
-      const cur = totals.get(line.account_id) || { debit: 0, credit: 0 };
-      cur.debit += parseFloat(line.debit_base || line.debit || "0");
-      cur.credit += parseFloat(line.credit_base || line.credit || "0");
-      totals.set(line.account_id, cur);
-    }
-  }
-
-  try {
-    const purchaseInvoices = await invoiceService.listInvoicesByType("Purchase").catch(() => []);
-
-    let netPurchaseCost = 0;
-    for (const inv of purchaseInvoices) {
-      if (inv.status !== "Posted" && inv.status !== "Paid") continue;
-      netPurchaseCost += parseFloat(inv.extra_costs || "0");
-    }
-
-    for (const account of accounts) {
-      if (account.name_ar === "تكاليف إضافية على المشتريات") {
-        const debit = Math.abs(netPurchaseCost);
-        const credit = Math.abs(netPurchaseCost);
-        totals.set(account.id, { debit, credit });
-      }
-    }
-  } catch (_e) {
-    console.warn("Stock override failed, using journal entries only");
-  }
-
-  return totals;
-}
-
 export default function TrialBalanceReport() {
   const { baseCurrency, currencies, formatAmount, convertFromBase } = useCurrencyContext();
   const [detailLevel, setDetailLevel] = useState(3);
 
-  const { data, isLoading } = useQuery({
-    queryKey: QUERY_KEYS.trialBalance,
-    queryFn: async () => {
-      const accounts = await accountingService.getChartOfAccounts();
-      const ledgerTotals = await computeLedgerTotals(accounts);
-      return { accounts, ledgerTotals };
-    },
-  });
+  const { data, isLoading } = useTrialBalance();
 
   const accounts = useMemo(() => data?.accounts ?? [], [data?.accounts]);
   const ledgerTotals = useMemo(() => data?.ledgerTotals ?? new Map(), [data?.ledgerTotals]);

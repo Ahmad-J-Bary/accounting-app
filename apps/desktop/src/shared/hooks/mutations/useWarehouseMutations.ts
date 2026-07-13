@@ -1,42 +1,18 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { warehouseService } from "@modules/inventory/api/warehouseService";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
-import { toast } from "sonner";
+import { createEntityMutations } from "./createEntityMutations";
+import type { CreateWarehouseRequest, UpdateWarehouseRequest } from "@erp/shared-types";
 
-export function useCreateWarehouse() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: Parameters<typeof warehouseService.create>[0]) =>
-      warehouseService.create(data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.warehouses });
-      toast.success("تم إضافة المستودع بنجاح");
-    },
-    onError: (e: Error) => toast.error("فشل إضافة المستودع: " + e.message),
-  });
-}
+const { useCreate, useUpdate, useDelete } = createEntityMutations<
+  CreateWarehouseRequest,
+  UpdateWarehouseRequest
+>({
+  queryKey: QUERY_KEYS.warehouses,
+  mutations: {
+    create: { fn: (data) => warehouseService.create(data), successMsg: "تم إضافة المستودع بنجاح",   errorMsg: "فشل إضافة المستودع" },
+    update: { fn: (data) => warehouseService.update(data), successMsg: "تم تحديث المستودع بنجاح",  errorMsg: "فشل تحديث المستودع" },
+    delete: { fn: (id)   => warehouseService.delete(id),   successMsg: "تم حذف المستودع بنجاح",    errorMsg: "فشل حذف المستودع" },
+  },
+});
 
-export function useUpdateWarehouse() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: Parameters<typeof warehouseService.update>[0]) =>
-      warehouseService.update(data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.warehouses });
-      toast.success("تم تحديث المستودع بنجاح");
-    },
-    onError: (e: Error) => toast.error("فشل تحديث المستودع: " + e.message),
-  });
-}
-
-export function useDeleteWarehouse() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => warehouseService.delete(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.warehouses });
-      toast.success("تم حذف المستودع بنجاح");
-    },
-    onError: (e: Error) => toast.error("فشل حذف المستودع: " + e.message),
-  });
-}
+export { useCreate as useCreateWarehouse, useUpdate as useUpdateWarehouse, useDelete as useDeleteWarehouse };

@@ -1,42 +1,18 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { categoryService } from "@modules/inventory/api/categoryService";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
-import { toast } from "sonner";
+import { createEntityMutations } from "./createEntityMutations";
+import type { CreateCategoryRequest, UpdateCategoryRequest } from "@erp/shared-types";
 
-export function useCreateCategory() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: Parameters<typeof categoryService.create>[0]) =>
-      categoryService.create(data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.categories });
-      toast.success("تم إضافة التصنيف بنجاح");
-    },
-    onError: (e: Error) => toast.error("فشل إضافة التصنيف: " + e.message),
-  });
-}
+const { useCreate, useUpdate, useDelete } = createEntityMutations<
+  CreateCategoryRequest,
+  UpdateCategoryRequest
+>({
+  queryKey: QUERY_KEYS.categories,
+  mutations: {
+    create: { fn: (data) => categoryService.create(data), successMsg: "تم إضافة التصنيف بنجاح",   errorMsg: "فشل إضافة التصنيف" },
+    update: { fn: (data) => categoryService.update(data), successMsg: "تم تحديث التصنيف بنجاح",  errorMsg: "فشل تحديث التصنيف" },
+    delete: { fn: (id)   => categoryService.delete(id),   successMsg: "تم حذف التصنيف بنجاح",    errorMsg: "فشل حذف التصنيف" },
+  },
+});
 
-export function useUpdateCategory() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: Parameters<typeof categoryService.update>[0]) =>
-      categoryService.update(data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.categories });
-      toast.success("تم تحديث التصنيف بنجاح");
-    },
-    onError: (e: Error) => toast.error("فشل تحديث التصنيف: " + e.message),
-  });
-}
-
-export function useDeleteCategory() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => categoryService.delete(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.categories });
-      toast.success("تم حذف التصنيف بنجاح");
-    },
-    onError: (e: Error) => toast.error("فشل حذف التصنيف: " + e.message),
-  });
-}
+export { useCreate as useCreateCategory, useUpdate as useUpdateCategory, useDelete as useDeleteCategory };

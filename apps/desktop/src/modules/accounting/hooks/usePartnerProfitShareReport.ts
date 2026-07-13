@@ -1,17 +1,15 @@
-import { useCallback } from "react";
-import { accountingService } from "@modules/accounting/api/accountingService";
-import { journalEntryService } from "@modules/accounting/api/journalEntryService";
-import { invoiceService } from "@modules/invoicing/api/invoiceService";
-import { returnService } from "@modules/invoicing/api/returnService";
-import { materialService } from "@modules/inventory/api/materialService";
-import { partnerService } from "@modules/partners/api/partnerService";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useReportBaseData } from "@modules/accounting/hooks/useReportBaseData";
+import { usePartners } from "@shared/hooks/queries/usePartnerQueries";
+import { useReceivablesPayables } from "@shared/hooks/queries/useReportQueries";
 import { fixedAssetService } from "@modules/fixed-assets/api/fixedAssetService";
+import { accountingService } from "@modules/accounting/api/accountingService";
 import { computeIncomeStatement } from "@modules/accounting/lib/incomeStatement";
+import { useMaterialExpenseLedgers } from "@shared/hooks/useMaterialExpenseLedgers";
+import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import type { LoadedIncomeStatementData, IncomeStatementFilters } from "@modules/accounting/lib/incomeStatement";
 import type { PartnerDto, AccountLedgerDto } from "@erp/shared-types";
-import { useMaterialExpenseLedgers } from "@shared/hooks/useMaterialExpenseLedgers";
-import { useReportData } from "@shared/hooks/useReportData";
-import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import type { ReportState } from "@shared/types/report";
 
 export type LoadedPartnerProfitShareData = {
@@ -35,98 +33,145 @@ const emptyData: LoadedPartnerProfitShareData = {
 };
 
 export function usePartnerProfitShareReport(filters: IncomeStatementFilters): ReportState<LoadedPartnerProfitShareData> {
+  const { data: baseData, isLoading: baseLoading, isError: baseError, isRefetching: baseRefetching, refetch: baseRefetch } = useReportBaseData(filters);
+  
+  const partnersQuery = usePartners();
+  const receivablesQuery = useReceivablesPayables();
+  const fixedAssetsQuery = useQuery({
+    queryKey: QUERY_KEYS.fixedAssets,
+    queryFn: () => fixedAssetService.list(),
+  });
+
   const { loadMaterialExpenseLedgers } = useMaterialExpenseLedgers();
 
-  const fetchReportData = useCallback(async (): Promise<LoadedPartnerProfitShareData> => {
-    const [partners, entries, salesInvoices, purchaseInvoices, purchaseReturns, salesReturns, expenseItems, materials, receivables, fixedAssets] = await Promise.all([
-      partnerService.listPartners(),
-      journalEntryService.listJournalEntries({
-        from_date: filters.from_date,
-        to_date: filters.to_date,
-      }),
-      invoiceService.listInvoicesByType("Sales"),
-      invoiceService.listInvoicesByType("Purchase"),
-      returnService.listPurchaseReturns(),
-      returnService.listSalesReturns(),
-      accountingService.getExpenseItems(),
-      materialService.listMaterials(),
-      accountingService.getReceivablesPayablesSummary(),
-      fixedAssetService.list(),
-    ]);
+  const [resolvedData, setResolvedData] = useState<LoadedPartnerProfitShareData>(emptyData);
+  const [loadingLedgers, setLoadingLedgers] = useState(false);
 
-    const { stockMovementsByMaterial, expenseLedgers } = await loadMaterialExpenseLedgers(materials, expenseItems);
+  const isLoading = baseLoading || partnersQuery.isLoading || receivablesQuery.isLoading || fixedAssetsQuery.isLoading;
+  const isError = baseError || partnersQuery.isError || receivablesQuery.isError || fixedAssetsQuery.isError;
+  const isRefetching = baseRefetching || partnersQuery.isRefetching || receivablesQuery.isRefetching || fixedAssetsQuery.isRefetching;
 
-    const incomeStatementData: LoadedIncomeStatementData = {
-      salesInvoices,
-      purchaseInvoices,
-      purchaseReturns,
-      salesReturns,
-      expenseAccounts: expenseItems,
-      expenseLedgers,
-      stockMovementsByMaterial,
-      materials,
-    };
+  useEffect(() => {
+    if (isLoading || isError || !baseData.materials.length) return;
 
-    const incomeStatementResult = computeIncomeStatement(filters, incomeStatementData);
-
-    const partnerDrawings: Record<string, number> = {};
-    const drawingsAccountMap: Record<string, string> = {};
-    for (const p of partners) {
-      if (p.drawings_account_id) {
-        drawingsAccountMap[p.drawings_account_id] = p.id;
-        partnerDrawings[p.id] = 0;
-      }
-    }
-
-    for (const entry of entries) {
-      for (const line of entry.lines) {
-        const amt = parseFloat(line.debit_base || line.debit || "0") - parseFloat(line.credit_base || line.credit || "0");
-        const pId = drawingsAccountMap[line.account_id];
-        if (pId) {
-          partnerDrawings[pId] = (partnerDrawings[pId] || 0) + Math.abs(amt);
-        }
-      }
-    }
-
-    const customerDebts = parseFloat(receivables?.customers_debit || "0");
-    const fixedAssetsValue = (fixedAssets ?? [])
-      .filter((asset) => asset.status === "Active")
-      .reduce((sum, asset) => {
-        const purchaseCost = parseFloat(asset.purchase_cost.amount || "0");
-        const accumulated = parseFloat(asset.accumulated_depreciation.amount || "0");
-        return sum + (purchaseCost - accumulated);
-      }, 0);
-
-    const partnerLedgers: Record<string, AccountLedgerDto> = {};
-    await Promise.allSettled(
-      partners.map(async (p) => {
-        const accountIds = [p.linked_account_id, p.drawings_account_id].filter(Boolean) as string[];
-        const ledgers = await Promise.allSettled(
-          accountIds.map((id) => accountingService.getAccountLedger(id))
+    let active = true;
+    const run = async () => {
+      setLoadingLedgers(true);
+      try {
+        const expenseItems = baseData.expenseAccounts;
+        const { stockMovementsByMaterial, expenseLedgers } = await loadMaterialExpenseLedgers(
+          baseData.materials,
+          expenseItems
         );
-        ledgers.forEach((result, i) => {
-          if (result.status === "fulfilled") {
-            partnerLedgers[accountIds[i]] = result.value;
+        if (!active) return;
+
+        const incomeStatementData: LoadedIncomeStatementData = {
+          salesInvoices: baseData.salesInvoices,
+          purchaseInvoices: baseData.purchaseInvoices,
+          purchaseReturns: baseData.purchaseReturns,
+          salesReturns: baseData.salesReturns,
+          expenseAccounts: expenseItems,
+          expenseLedgers,
+          stockMovementsByMaterial,
+          materials: baseData.materials,
+        };
+
+        const incomeStatementResult = computeIncomeStatement(filters, incomeStatementData);
+
+        const partners = partnersQuery.data ?? [];
+        const entries = baseData.entries;
+        const receivables = receivablesQuery.data;
+        const fixedAssets = fixedAssetsQuery.data ?? [];
+
+        const partnerDrawings: Record<string, number> = {};
+        const drawingsAccountMap: Record<string, string> = {};
+        for (const p of partners) {
+          if (p.drawings_account_id) {
+            drawingsAccountMap[p.drawings_account_id] = p.id;
+            partnerDrawings[p.id] = 0;
           }
-        });
-      }),
-    );
+        }
 
-    return {
-      partners,
-      netProfit: incomeStatementResult.netProfit,
-      inventoryValue: incomeStatementResult.closingInventory,
-      fixedAssetsValue,
-      partnerDrawings,
-      customerDebts,
-      partnerLedgers,
+        for (const entry of entries) {
+          for (const line of entry.lines) {
+            const amt = parseFloat(line.debit_base || line.debit || "0") - parseFloat(line.credit_base || line.credit || "0");
+            const pId = drawingsAccountMap[line.account_id];
+            if (pId) {
+              partnerDrawings[pId] = (partnerDrawings[pId] || 0) + Math.abs(amt);
+            }
+          }
+        }
+
+        const customerDebts = parseFloat(receivables?.customers_debit || "0");
+        const fixedAssetsValue = fixedAssets
+          .filter((asset) => asset.status === "Active")
+          .reduce((sum, asset) => {
+            const purchaseCost = parseFloat(asset.purchase_cost.amount || "0");
+            const accumulated = parseFloat(asset.accumulated_depreciation.amount || "0");
+            return sum + (purchaseCost - accumulated);
+          }, 0);
+
+        const partnerLedgers: Record<string, AccountLedgerDto> = {};
+        await Promise.allSettled(
+          partners.map(async (p) => {
+            const accountIds = [p.linked_account_id, p.drawings_account_id].filter(Boolean) as string[];
+            const ledgers = await Promise.allSettled(
+              accountIds.map((id) => accountingService.getAccountLedger(id))
+            );
+            ledgers.forEach((result, i) => {
+              if (result.status === "fulfilled") {
+                partnerLedgers[accountIds[i]] = result.value;
+              }
+            });
+          })
+        );
+
+        if (active) {
+          setResolvedData({
+            partners,
+            netProfit: incomeStatementResult.netProfit,
+            inventoryValue: incomeStatementResult.closingInventory,
+            fixedAssetsValue,
+            partnerDrawings,
+            customerDebts,
+            partnerLedgers,
+          });
+        }
+      } catch (e) {
+        console.error("Failed to load partner profit share report calculations:", e);
+      } finally {
+        if (active) setLoadingLedgers(false);
+      }
     };
-  }, [filters, loadMaterialExpenseLedgers]);
 
-  return useReportData({
-    queryKey: [QUERY_KEYS.partnerProfitShare[0], QUERY_KEYS.partnerProfitShare[1], filters.from_date, filters.to_date] as const,
-    fetchData: fetchReportData,
-    emptyData: emptyData,
-    errorMessage: "تعذر تحميل بيانات الشركاء وتقاسم الأرباح",
-  });
+    run();
+
+    return () => {
+      active = false;
+    };
+  }, [
+    baseData,
+    isLoading,
+    isError,
+    filters,
+    loadMaterialExpenseLedgers,
+    partnersQuery.data,
+    receivablesQuery.data,
+    fixedAssetsQuery.data,
+  ]);
+
+  return {
+    loading: isLoading || loadingLedgers,
+    refreshing: isRefetching,
+    lastLoadedAt: baseData.materials.length ? new Date() : null,
+    reportData: resolvedData,
+    loadReportData: async () => {
+      await Promise.all([
+        baseRefetch(),
+        partnersQuery.refetch(),
+        receivablesQuery.refetch(),
+        fixedAssetsQuery.refetch(),
+      ]);
+    },
+  };
 }

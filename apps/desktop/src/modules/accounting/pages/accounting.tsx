@@ -1,61 +1,17 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { accountingService } from '@modules/accounting/api/accountingService';
-import { journalEntryService } from '@modules/accounting/api/journalEntryService';
-import { invoiceService } from '@modules/invoicing/api/invoiceService';
-import type { AccountDto } from "@erp/shared-types";
 import { buildTree, getVisibleRootTree, getErrorMessage, parseAmount } from "./accounting/tree-utils";
 import type { AccountTreeNode, ToggleNodeHandler } from "./accounting/types";
 import { AccountTreeNodeItem } from "./accounting/AccountTreeNodeItem";
 import { AccountDetailsSidebar } from "./accounting/AccountDetailsSidebar";
 import { HierarchicalTreeTemplate } from '@widgets/templates/HierarchicalTreeTemplate';
 import { toast } from "sonner";
+import { useChartOfAccountsTree } from "@shared/hooks/queries/useAccountQueries";
+import { accountingService } from '@modules/accounting/api/accountingService';
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 
 const ROOT_ACCOUNT_ID = "__chart_of_accounts_root__";
-
-interface ChartOfAccountsData {
-  accounts: AccountDto[];
-  ledgerTotals: Map<string, { debit: number; credit: number }>;
-}
-
-async function fetchChartOfAccountsData(): Promise<ChartOfAccountsData> {
-  const [data, entries] = await Promise.all([
-    accountingService.getChartOfAccounts(),
-    journalEntryService.listJournalEntries({}),
-  ]);
-
-  const totals = new Map<string, { debit: number; credit: number }>();
-  for (const entry of entries) {
-    for (const line of entry.lines) {
-      const cur = totals.get(line.account_id) || { debit: 0, credit: 0 };
-      cur.debit += parseFloat(line.debit_base || line.debit || "0");
-      cur.credit += parseFloat(line.credit_base || line.credit || "0");
-      totals.set(line.account_id, cur);
-    }
-  }
-
-  try {
-    const purchaseInvoices = await invoiceService.listInvoicesByType("Purchase").catch(() => []);
-    let netPurchaseCost = 0;
-    for (const inv of purchaseInvoices) {
-      if (inv.status !== "Posted" && inv.status !== "Paid") continue;
-      netPurchaseCost += parseFloat(inv.extra_costs || "0");
-    }
-    for (const account of data) {
-      if (account.name_ar === "تكاليف إضافية على المشتريات") {
-        const debit = Math.abs(netPurchaseCost);
-        const credit = Math.abs(netPurchaseCost);
-        totals.set(account.id, { debit, credit });
-      }
-    }
-  } catch (e) {
-    console.warn("Purchase-cost override failed, using journal entries only:", e);
-  }
-
-  return { accounts: data, ledgerTotals: totals };
-}
 
 // Compute balances from actual general ledger totals, then propagate up the tree
 // so every parent's balance = sum of its direct children's balances.
@@ -79,10 +35,7 @@ export default function Accounting() {
   const [searchQuery] = useState("");
   const hasLoadedOnceRef = useRef(false);
 
-  const { data, isLoading } = useQuery({
-    queryKey: QUERY_KEYS.chartOfAccounts,
-    queryFn: fetchChartOfAccountsData,
-  });
+  const { data, isLoading } = useChartOfAccountsTree();
 
   const accounts = useMemo(() => data?.accounts ?? [], [data?.accounts]);
   const ledgerTotals = useMemo(() => data?.ledgerTotals ?? new Map(), [data?.ledgerTotals]);
@@ -186,6 +139,7 @@ const rootNode = useMemo<AccountTreeNode>(() => ({
     try {
       await accountingService.deleteAccount(selected.id);
       await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts });
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccountsTree });
       toast.success("تم حذف الحساب بنجاح");
     } catch (error) { toast.error(`فشلت العملية: ${getErrorMessage(error)}`); }
   }, [selected, isRootSelected, queryClient]);
@@ -236,7 +190,10 @@ const rootNode = useMemo<AccountTreeNode>(() => ({
           selected={isRootSelected ? null : selected}
           allAccounts={accounts}
           parentName={parentName}
-          onSaved={() => void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts })}
+          onSaved={async () => {
+            await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts });
+            await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccountsTree });
+          }}
           onDelete={() => void handleDelete()}
           canEdit={!isRootSelected && !!selected}
           canDelete={!isRootSelected && !!selected}
