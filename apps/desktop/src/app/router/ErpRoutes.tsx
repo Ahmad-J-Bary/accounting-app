@@ -29,7 +29,6 @@ import FixedAssets from '@modules/fixed-assets/pages/fixedAssets';
 
 import Expenses from '@modules/accounting/pages/expenses';
 
-import AccountingJournalsReport from '@modules/accounting/pages/AccountingJournalsReport';
 import AccountMovementsReport from '@modules/accounting/pages/AccountMovementsReport';
 import AccountMovement from '@modules/accounting/pages/accountMovement';
 import IncomeStatementReport from '@modules/accounting/pages/IncomeStatementReport';
@@ -44,7 +43,6 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/partners" element={<Partners />} />
       <Route path="/accounting" element={<Accounting />} />
-      <Route path="/accounting/journals" element={<AccountingJournalsReport />} />
       <Route path="/accounting/reports/ledger" element={<AccountMovementsReport />} />
       <Route path="/accounting/reports/movements" element={<AccountMovementsReport />} />
       <Route path="/accounting/reports/income" element={<IncomeStatementReport />} />

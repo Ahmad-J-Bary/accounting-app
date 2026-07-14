@@ -2,15 +2,10 @@ import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle,
   BookOpen,
-  FileText,
   Package,
-  Receipt,
   Scale,
-  ShoppingCart,
   TrendingUp,
-  Truck,
   Users,
-  Wallet,
 } from "lucide-react";
 
 export type ReportCatalogItem = {
@@ -28,17 +23,6 @@ export type ReportCatalogGroup = {
 };
 
 export const reportCatalog: ReportCatalogGroup[] = [
-  {
-    category: "اليوميات المحاسبية",
-    items: [
-      { name: "حركة اليومية العامة", desc: "سجل كامل للقيود اليدوية والتسويات العامة", icon: FileText, color: "text-slate-600", bg: "bg-slate-50", to: "/accounting/journals?type=GeneralJournal" },
-      { name: "يومية الصندوق / الخزينة", desc: "تتبع المقبوضات والمدفوعات النقدية والتحويلات", icon: Wallet, color: "text-teal-600", bg: "bg-teal-50", to: "/accounting/journals?type=CashJournal" },
-      { name: "يومية المبيعات النقدية", desc: "سجل مبيعات الكاش اليومية وحركة النقدية", icon: Receipt, color: "text-blue-600", bg: "bg-blue-50", to: "/accounting/journals?type=CashSalesJournal" },
-      { name: "يومية المبيعات الآجلة", desc: "سجل مبيعات العملاء بالدين وحركة الذمم المدينة", icon: Users, color: "text-indigo-600", bg: "bg-indigo-50", to: "/accounting/journals?type=CreditSalesJournal" },
-      { name: "يومية المشتريات", desc: "توثيق فواتير المشتريات وحركات الموردين", icon: ShoppingCart, color: "text-amber-600", bg: "bg-amber-50", to: "/accounting/journals?type=PurchaseJournal" },
-      { name: "يومية التكاليف الإضافية", desc: "مصاريف الشحن والتخليص وتكاليف الاستيراد", icon: Truck, color: "text-rose-600", bg: "bg-rose-50", to: "/accounting/journals?type=PurchaseCostsJournal" },
-    ],
-  },
   {
     category: "الدفاتر والتقارير المالية",
     items: [

@@ -42,7 +42,7 @@ export function useChartOfAccountsTree() {
         journalEntryService.listJournalEntries({}),
       ]);
 
-      let purchaseInvoices = [];
+      let purchaseInvoices: Awaited<ReturnType<typeof invoiceService.listInvoicesByType>> = [];
       try {
         purchaseInvoices = await invoiceService.listInvoicesByType("Purchase");
       } catch (e) {

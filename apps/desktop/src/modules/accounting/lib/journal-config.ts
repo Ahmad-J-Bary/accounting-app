@@ -5,10 +5,6 @@ export interface JournalTypeOption {
   label: string;
 }
 
-export interface JournalReportTypeOption extends JournalTypeOption {
-  desc: string;
-}
-
 export const JOURNAL_TYPES: JournalTypeOption[] = [
   { value: "GeneralJournal", label: "اليومية العامة" },
   { value: "CashJournal", label: "يومية الصندوق" },
@@ -44,17 +40,6 @@ export const JOURNAL_TYPE_LABELS: Record<string, string> = {
   DiscountEarnedJournal: "حسم مكتسب",
   DiscountGrantedJournal: "حسم ممنوح",
 };
-
-export const JOURNAL_REPORT_TYPES: JournalReportTypeOption[] = [
-  { value: "GeneralJournal", label: "حركة اليومية العامة", desc: "سجل كامل للقيود اليومية" },
-  { value: "CashJournal", label: "يومية الصندوق / الخزينة", desc: "كل القيود التي يظهر فيها حساب الصندوق" },
-  { value: "CashSalesJournal", label: "يومية المبيعات النقدية", desc: "قيود المبيعات النقدية" },
-  { value: "CreditSalesJournal", label: "يومية المبيعات الآجلة", desc: "قيود المبيعات الآجلة والذمم" },
-  { value: "PurchaseJournal", label: "مشتريات", desc: "قيود المشتريات النقدية والآجلة" },
-  { value: "PurchaseCostsJournal", label: "تكاليف إضافية للمشتريات", desc: "قيود التكاليف الإضافية للمشتريات" },
-  { value: "SalesReturnJournal", label: "مرتجع مبيعات", desc: "مرتجعات المبيعات" },
-  { value: "PurchaseReturnJournal", label: "مرتجع مشتريات", desc: "مرتجعات المشتريات" },
-];
 
 // Unified column order for ALL journal types:
 // رقم القيد, نوع الحركة, مدين (أساسي), مدين (أصلي), دائن (أساسي), دائن (أصلي), البيان, الدائن/المصدر, المدين/الوجهة, التاريخ
