@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import { accountingService } from "@modules/accounting/api/accountingService";
@@ -78,20 +79,31 @@ export function useReportBaseData(filters?: ReportFilters) {
     expenseAccountsQuery.isRefetching ||
     materialsQuery.isRefetching;
 
+  const data = useMemo(() => ({
+    accounts: accountsQuery.data ?? [],
+    entries: journalEntriesQuery.data ?? [],
+    salesInvoices: salesInvoicesQuery.data ?? [],
+    purchaseInvoices: purchaseInvoicesQuery.data ?? [],
+    salesReturns: salesReturnsQuery.data ?? [],
+    purchaseReturns: purchaseReturnsQuery.data ?? [],
+    expenseAccounts: expenseAccountsQuery.data ?? [],
+    materials: materialsQuery.data ?? [],
+  }), [
+    accountsQuery.data,
+    journalEntriesQuery.data,
+    salesInvoicesQuery.data,
+    purchaseInvoicesQuery.data,
+    salesReturnsQuery.data,
+    purchaseReturnsQuery.data,
+    expenseAccountsQuery.data,
+    materialsQuery.data,
+  ]);
+
   return {
     isLoading,
     isError,
     isRefetching,
-    data: {
-      accounts: accountsQuery.data ?? [],
-      entries: journalEntriesQuery.data ?? [],
-      salesInvoices: salesInvoicesQuery.data ?? [],
-      purchaseInvoices: purchaseInvoicesQuery.data ?? [],
-      salesReturns: salesReturnsQuery.data ?? [],
-      purchaseReturns: purchaseReturnsQuery.data ?? [],
-      expenseAccounts: expenseAccountsQuery.data ?? [],
-      materials: materialsQuery.data ?? [],
-    },
+    data,
     refetch: async () => {
       await Promise.all([
         accountsQuery.refetch(),

@@ -29,9 +29,10 @@ export function useBalanceSheetReport(filters: IncomeStatementFilters): ReportSt
 
   const [resolvedData, setResolvedData] = useState<LoadedBalanceSheetData>(emptyData);
   const [loadingLedgers, setLoadingLedgers] = useState(false);
+  const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
 
   useEffect(() => {
-    if (isLoading || isError || !baseData.materials.length) return;
+    if (isLoading || isError) return;
 
     let active = true;
     const run = async () => {
@@ -65,6 +66,7 @@ export function useBalanceSheetReport(filters: IncomeStatementFilters): ReportSt
           ledgerTotals,
           closingInventory: incomeStatementResult.closingInventory,
         });
+        setLastLoadedAt(new Date());
       } catch (e) {
         console.error("Failed to load balance sheet calculations:", e);
       } finally {
@@ -82,7 +84,7 @@ export function useBalanceSheetReport(filters: IncomeStatementFilters): ReportSt
   return {
     loading: isLoading || loadingLedgers,
     refreshing: isRefetching,
-    lastLoadedAt: baseData.materials.length ? new Date() : null,
+    lastLoadedAt,
     reportData: resolvedData,
     loadReportData: refetch,
   };

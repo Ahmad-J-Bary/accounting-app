@@ -2,18 +2,21 @@ import { useState, useMemo, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useTabs } from "@app/providers/TabContext";
 import { Button } from "@shared/ui/button";
-import { Download, Printer, PlusCircle, ShoppingCart} from "lucide-react";
+import { Input } from "@shared/ui/input";
+import { Download, Printer, PlusCircle, ShoppingCart, Calendar, ArrowUpRight, ArrowDownLeft, BookOpen, FileText, Landmark } from "lucide-react";
+import { cn } from "@shared/lib/utils";
+import { formatCurrency } from "@shared/lib/format";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import { customerService } from "@modules/partners/api/customerService";
 import { supplierService } from "@modules/partners/api/supplierService";
 import { partnerService } from "@modules/partners/api/partnerService";
 import { paymentService } from "@modules/payments/api/paymentService";
-import type { 
-  AccountLedgerDto, 
-  AccountLedgerLineDto, 
+import type {
+  AccountLedgerDto,
+  AccountLedgerLineDto,
   AccountDto,
-  CustomerDto, 
-  SupplierDto, 
+  CustomerDto,
+  SupplierDto,
   PartnerDto,
   CreatePaymentRequest
 } from "@erp/shared-types";
@@ -21,6 +24,7 @@ import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTem
 import { AccountMovementTable } from "../components/AccountMovementTable";
 import { useDataTable } from "@shared/hooks";
 import { toast } from "sonner";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
 import { PaymentForm, PAYMENT_CONFIGS } from "@modules/partners/components/PaymentForm";
 import { ExpenseVoucherForm } from "@modules/accounting/components/ExpenseVoucherForm";
@@ -36,8 +40,15 @@ const TOOLBAR_CLASS_BY_TYPE = {
 export default function AccountMovement() {
   const { accountId } = useParams<{ accountId: string }>();
   const { openTab } = useTabs();
+  const { baseCurrency } = useCurrencyContext();
   const [ledger, setLedger] = useState<AccountLedgerDto | null>(null);
-  
+
+  // Date Filters
+  const [dateFilters, setDateFilters] = useState({
+    from_date: "",
+    to_date: "",
+  });
+
   // Entity Detection
   const [accountType, setAccountType] = useState<'partner' | 'customer' | 'supplier' | 'expense' | 'other'>('other');
   const [linkedEntity, setLinkedEntity] = useState<PartnerDto | CustomerDto | SupplierDto | null>(null);
@@ -55,6 +66,14 @@ export default function AccountMovement() {
       if (!accountId) return [];
       const data = await accountingService.getAccountLedger(accountId);
       setLedger(data);
+      // Set default date range to cover all data
+      if (data.lines.length > 0) {
+        const dates = data.lines.map(l => l.date.split("T")[0]).sort();
+        setDateFilters({
+          from_date: dates[0],
+          to_date: dates[dates.length - 1],
+        });
+      }
       return data.lines;
     },
     searchFields: ["description", "entry_number", "opposite_account_name"]
@@ -64,11 +83,11 @@ export default function AccountMovement() {
   useEffect(() => {
     const detectType = async () => {
       if (!accountId) return;
-      
+
       try {
         const accounts = await accountingService.getChartOfAccounts();
         const account = accounts.find(a => a.id === accountId);
-        
+
         if (!account) return;
 
         const partners = await partnerService.listPartners();
@@ -99,14 +118,45 @@ export default function AccountMovement() {
     detectType();
   }, [accountId]);
 
-  // Filter out PurchaseCostsJournal entries for supplier accounts
-  const filteredLines = useMemo(() => {
-    const lines = ledger?.lines || [];
+  const openingBalance = useMemo(
+    () => parseFloat(ledger?.opening_balance_base || "0"),
+    [ledger],
+  );
+
+  // Filter lines by account type AND date range
+  const { filteredLines, totals, periodClosingBalance } = useMemo(() => {
+    const allLines = ledger?.lines || [];
+
+    let lines = allLines;
     if (accountType === 'supplier') {
-      return lines.filter(l => l.journal_type !== 'PurchaseCostsJournal');
+      lines = lines.filter(l => l.journal_type !== 'PurchaseCostsJournal');
     }
-    return lines;
-  }, [ledger, accountType]);
+
+    // Apply date filter if dates are set
+    if (dateFilters.from_date && dateFilters.to_date) {
+      lines = lines.filter(l => {
+        const d = l.date.split("T")[0];
+        return d >= dateFilters.from_date && d <= dateFilters.to_date;
+      });
+    }
+
+    const tots = lines.reduce(
+      (acc, l) => {
+        acc.debit += parseFloat(l.debit_base || "0");
+        acc.credit += parseFloat(l.credit_base || "0");
+        return acc;
+      },
+      { debit: 0, credit: 0 },
+    );
+
+    return {
+      filteredLines: lines,
+      totals: tots,
+      periodClosingBalance: openingBalance + tots.debit - tots.credit,
+    };
+  }, [ledger, accountType, dateFilters, openingBalance]);
+
+  const symbol = baseCurrency?.symbol || baseCurrency?.code || "";
 
   const handleSaveVoucher = async (payload: CreatePaymentRequest) => {
     try {
@@ -227,24 +277,118 @@ export default function AccountMovement() {
     <OperationalTableTemplate
       title={accountTitle}
       toolbar={
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {toolbarButtons}
+
+          {/* Date Filters */}
+          <div className="flex items-center gap-2 mr-auto">
+            <div className="relative">
+              <Calendar className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+              <Input
+                type="date"
+                value={dateFilters.from_date}
+                onChange={e => setDateFilters(f => ({ ...f, from_date: e.target.value }))}
+                className="h-9 w-36 pr-8 text-xs rounded-lg border-slate-200 bg-white font-bold tabular-nums"
+              />
+            </div>
+            <span className="text-xs text-slate-400 font-bold">إلى</span>
+            <div className="relative">
+              <Calendar className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+              <Input
+                type="date"
+                value={dateFilters.to_date}
+                onChange={e => setDateFilters(f => ({ ...f, to_date: e.target.value }))}
+                className="h-9 w-36 pr-8 text-xs rounded-lg border-slate-200 bg-white font-bold tabular-nums"
+              />
+            </div>
+          </div>
         </div>
       }
       tableContent={
-        <AccountMovementTable
-          lines={filteredLines}
-          loading={loading}
-          search={search}
-          onSearchChange={setSearch}
-          accountName={ledger?.account_name || ""}
-        />
+        <div className="flex flex-col h-full">
+          {/* Statistics Bar */}
+          {ledger && (
+            <div className="grid grid-cols-5 gap-3 px-4 pt-4 pb-2">
+              <div className="bg-indigo-50 p-3 rounded-xl border border-indigo-100 flex items-center gap-3">
+                <div className="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+                  <Landmark className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest block">الافتتاحي</span>
+                  <div className="text-sm font-black text-indigo-900 tabular-nums">{formatCurrency(openingBalance, symbol)}</div>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-3">
+                <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+                  <ArrowUpRight className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">المدين</span>
+                  <div className="text-sm font-black text-slate-900 tabular-nums">{formatCurrency(totals.debit, symbol)}</div>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-3">
+                <div className="w-9 h-9 bg-emerald-600 rounded-lg flex items-center justify-center text-white">
+                  <ArrowDownLeft className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">الدائن</span>
+                  <div className="text-sm font-black text-slate-900 tabular-nums">{formatCurrency(totals.credit, symbol)}</div>
+                </div>
+              </div>
+
+              <div className={cn(
+                "p-3 rounded-xl border flex items-center gap-3",
+                (totals.debit - totals.credit) >= 0
+                  ? "bg-amber-50 border-amber-100"
+                  : "bg-red-50 border-red-100"
+              )}>
+                <div className={cn(
+                  "w-9 h-9 rounded-lg flex items-center justify-center text-white",
+                  (totals.debit - totals.credit) >= 0 ? "bg-amber-600" : "bg-red-600"
+                )}>
+                  <BookOpen className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">صافي</span>
+                  <div className={cn(
+                    "text-sm font-black tabular-nums",
+                    (totals.debit - totals.credit) >= 0 ? "text-amber-700" : "text-red-700"
+                  )}>
+                    {formatCurrency(totals.debit - totals.credit, symbol)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 flex items-center gap-3">
+                <div className="w-9 h-9 bg-white/10 rounded-lg flex items-center justify-center text-white backdrop-blur-md">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">الختامي</span>
+                  <div className="text-sm font-black text-white tabular-nums">{formatCurrency(periodClosingBalance, symbol)}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <AccountMovementTable
+            lines={filteredLines}
+            loading={loading}
+            search={search}
+            onSearchChange={setSearch}
+            accountName={ledger?.account_name || ""}
+            openingBalance={openingBalance}
+          />
+        </div>
       }
       sidePanel={
         isVoucherOpen && (
           <>
             {accountType === 'partner' && linkedEntity && (
-              <PaymentForm 
+              <PaymentForm
                 config={PAYMENT_CONFIGS.partner({ ...(linkedEntity as PartnerDto), drawings_account_id: (linkedEntity as PartnerDto).drawings_account_id ?? undefined })}
                 onSave={handleSaveVoucher}
                 onClose={() => setIsVoucherOpen(false)}
@@ -252,7 +396,7 @@ export default function AccountMovement() {
               />
             )}
             {accountType === 'customer' && linkedEntity && (
-              <PaymentForm 
+              <PaymentForm
                 config={PAYMENT_CONFIGS.customer(linkedEntity as CustomerDto)}
                 onSave={handleSaveVoucher}
                 onClose={() => setIsVoucherOpen(false)}
@@ -260,7 +404,7 @@ export default function AccountMovement() {
               />
             )}
             {accountType === 'supplier' && linkedEntity && (
-              <PaymentForm 
+              <PaymentForm
                 config={PAYMENT_CONFIGS.supplier(linkedEntity as SupplierDto)}
                 onSave={handleSaveVoucher}
                 onClose={() => setIsVoucherOpen(false)}
@@ -268,11 +412,11 @@ export default function AccountMovement() {
               />
             )}
             {accountType === 'expense' && (
-              <ExpenseVoucherForm 
-                expenseAccount={{ 
-                  id: accountId!, 
+              <ExpenseVoucherForm
+                expenseAccount={{
+                  id: accountId!,
                   name_ar: ledger?.account_name || "",
-                  code: "", 
+                  code: "",
                   parent_id: null,
                   account_type: "Expense",
                   is_system: false,

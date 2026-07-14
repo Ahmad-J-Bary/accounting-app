@@ -29,7 +29,7 @@ interface MutationDef<TArg> {
   /** Prefix for the toast error message (": " + error.message is appended). */
   errorMsg: string;
   /** Extra query keys to invalidate in addition to the primary `queryKey`. */
-  extraInvalidations?: readonly unknown[][];
+  extraInvalidations?: ReadonlyArray<readonly unknown[]>;
 }
 
 interface EntityMutationsConfig<TCreate, TUpdate> {

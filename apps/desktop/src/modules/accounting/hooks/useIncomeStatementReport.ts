@@ -11,9 +11,10 @@ export function useIncomeStatementReport(): ReportState<LoadedIncomeStatementDat
 
   const [resolvedData, setResolvedData] = useState<LoadedIncomeStatementData>(emptyIncomeStatementData);
   const [loadingLedgers, setLoadingLedgers] = useState(false);
+  const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
 
   useEffect(() => {
-    if (isLoading || isError || !baseData.materials.length) return;
+    if (isLoading || isError) return;
 
     let active = true;
     const run = async () => {
@@ -29,6 +30,7 @@ export function useIncomeStatementReport(): ReportState<LoadedIncomeStatementDat
             expenseLedgers,
             stockMovementsByMaterial,
           });
+          setLastLoadedAt(new Date());
         }
       } catch (e) {
         console.error("Failed to load material expense ledgers:", e);
@@ -47,7 +49,7 @@ export function useIncomeStatementReport(): ReportState<LoadedIncomeStatementDat
   return {
     loading: isLoading || loadingLedgers,
     refreshing: isRefetching,
-    lastLoadedAt: baseData.materials.length ? new Date() : null,
+    lastLoadedAt,
     reportData: resolvedData,
     loadReportData: refetch,
   };

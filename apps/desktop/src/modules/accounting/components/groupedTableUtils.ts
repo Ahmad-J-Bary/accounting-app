@@ -13,4 +13,4 @@ export function getPrimitiveCellValue(value: ReactNode): string {
 }
 
 /** Default column ids that should be shared (merged) across grouped rows. */
-export const SHARED_COLUMN_IDS = new Set(["entry_number", "journal_type", "description", "entry_date", "date"]);
+export const SHARED_COLUMN_IDS = new Set(["entry_number", "journal_type", "description", "entry_date", "date", "balance"]);

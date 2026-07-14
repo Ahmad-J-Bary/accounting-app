@@ -72,3 +72,14 @@ export const QUERY_KEYS = {
   users: ["users"] as const,
   roles: ["roles"] as const,
 } as const;
+
+/** All report query keys that should be invalidated after any accounting mutation. */
+export const ALL_REPORT_KEYS: readonly (readonly unknown[])[] = [
+  QUERY_KEYS.trialBalance,
+  QUERY_KEYS.incomeStatement,
+  QUERY_KEYS.balanceSheet,
+  QUERY_KEYS.partnerProfitShare,
+  QUERY_KEYS.journalEntries({}),
+  QUERY_KEYS.chartOfAccounts,
+  QUERY_KEYS.receivablesPayables,
+];

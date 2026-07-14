@@ -46,13 +46,14 @@ export function usePartnerProfitShareReport(filters: IncomeStatementFilters): Re
 
   const [resolvedData, setResolvedData] = useState<LoadedPartnerProfitShareData>(emptyData);
   const [loadingLedgers, setLoadingLedgers] = useState(false);
+  const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
 
   const isLoading = baseLoading || partnersQuery.isLoading || receivablesQuery.isLoading || fixedAssetsQuery.isLoading;
   const isError = baseError || partnersQuery.isError || receivablesQuery.isError || fixedAssetsQuery.isError;
   const isRefetching = baseRefetching || partnersQuery.isRefetching || receivablesQuery.isRefetching || fixedAssetsQuery.isRefetching;
 
   useEffect(() => {
-    if (isLoading || isError || !baseData.materials.length) return;
+    if (isLoading || isError) return;
 
     let active = true;
     const run = async () => {
@@ -136,6 +137,7 @@ export function usePartnerProfitShareReport(filters: IncomeStatementFilters): Re
             customerDebts,
             partnerLedgers,
           });
+          setLastLoadedAt(new Date());
         }
       } catch (e) {
         console.error("Failed to load partner profit share report calculations:", e);
@@ -163,7 +165,7 @@ export function usePartnerProfitShareReport(filters: IncomeStatementFilters): Re
   return {
     loading: isLoading || loadingLedgers,
     refreshing: isRefetching,
-    lastLoadedAt: baseData.materials.length ? new Date() : null,
+    lastLoadedAt,
     reportData: resolvedData,
     loadReportData: async () => {
       await Promise.all([

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTabs } from "@app/providers/TabContext";
 import { useTabLocation } from "@app/providers/TabLocationContext";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
@@ -29,6 +30,7 @@ import {
 } from "../lib/invoiceUtils";
 import { useDocumentFinancials } from "../lib/useDocumentFinancials";
 import { type DocumentColumn } from "@widgets/document-shell/GenericDocumentGrid";
+import { ALL_REPORT_KEYS } from "@shared/hooks/queryClient";
 
 export interface InvoiceHeaderState {
   id?: string;
@@ -82,6 +84,7 @@ export function useInvoiceLifecycle({
   priceField,
 }: UseInvoiceLifecycleProps) {
   const { id } = useParams();
+  const queryClient = useQueryClient();
   const { openTab, closeTab, activeTabId } = useTabs();
   const {
     baseCurrency,
@@ -532,6 +535,9 @@ export function useInvoiceLifecycle({
 
       if (andPost) {
         await invoiceService.postInvoice(result.id);
+        for (const key of ALL_REPORT_KEYS) {
+          queryClient.invalidateQueries({ queryKey: key });
+        }
         toast.success("تم الحفظ والترحيل بنجاح");
       } else {
         toast.success("تم حفظ المسودة");

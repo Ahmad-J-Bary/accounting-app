@@ -12,10 +12,9 @@ import { getLeftBorderClass, getRowBorderClass, getRowBackgroundClass } from "@s
 import type { GridResizeContent } from "@shared/hooks/useGridResize";
 import type { AccountLedgerLineDto } from "@erp/shared-types";
 import { formatDateTime } from "@shared/lib/format";
-import { GroupedEntrySharedCell } from "./GroupedEntrySharedCell";
-import { getHeaderText, getPrimitiveCellValue, SHARED_COLUMN_IDS } from "./groupedTableUtils";
+import { getHeaderText, getPrimitiveCellValue } from "./groupedTableUtils";
 
-type SortField = "entry_number" | "date" | "journal_type" | "account";
+type SortField = "entry_number" | "date" | "journal_type";
 
 interface AccountMovementTableProps {
   lines: AccountLedgerLineDto[];
@@ -23,18 +22,15 @@ interface AccountMovementTableProps {
   search: string;
   onSearchChange: (val: string) => void;
   accountName: string;
+  openingBalance?: number;
 }
 
-type EnrichedLine = AccountLedgerLineDto & {
+type MovementRow = AccountLedgerLineDto & {
   typeLabel: string;
-  account_name: string;
   side: "debit" | "credit";
   amount_base: number;
-  amount_original: number;
-  group_key: string;
+  running_balance: number;
 };
-
-type LedgerTableRow = EnrichedLine & { isFirstInGroup: boolean };
 
 type EnrichedOriginalLine = AccountLedgerLineDto & {
   typeLabel: string;
@@ -45,7 +41,8 @@ export function AccountMovementTable({
   loading,
   search,
   onSearchChange,
-  accountName
+  accountName,
+  openingBalance = 0,
 }: AccountMovementTableProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
   const { isBaseCurrency } = useBaseCurrencyColumns();
@@ -57,7 +54,6 @@ export function AccountMovementTable({
     return [baseCurrency, ...currencies.filter(c => c.code !== baseCurrency.code)];
   }, [currencies, baseCurrency]);
 
-  // إثراء قائمة الحركات الأصلية لاستخدامها في الفرز وتخصيص التسميات
   const enrichedLines = useMemo(() => {
     return lines.map((line) => {
       let typeLabel = line.journal_type;
@@ -73,9 +69,9 @@ export function AccountMovementTable({
           const opposite = line.opposite_account_name || "";
 
           if (
-            opposite.includes("أبنية") || 
-            opposite.includes("أراضي") || 
-            opposite.includes("المباني") || 
+            opposite.includes("أبنية") ||
+            opposite.includes("أراضي") ||
+            opposite.includes("المباني") ||
             opposite.includes("الأراضي") ||
             accountName.includes("أبنية") ||
             accountName.includes("أراضي") ||
@@ -84,9 +80,9 @@ export function AccountMovementTable({
           ) {
             assetType = "أبنية وأراضي";
           } else if (
-            opposite.includes("معدات") || 
-            opposite.includes("تجهيزات") || 
-            opposite.includes("الآلات") || 
+            opposite.includes("معدات") ||
+            opposite.includes("تجهيزات") ||
+            opposite.includes("الآلات") ||
             opposite.includes("المعدات") ||
             accountName.includes("معدات") ||
             accountName.includes("تجهيزات") ||
@@ -95,8 +91,8 @@ export function AccountMovementTable({
           ) {
             assetType = "معدات وتجهيزات";
           } else if (
-            opposite.includes("أثاث") || 
-            opposite.includes("مفروشات") || 
+            opposite.includes("أثاث") ||
+            opposite.includes("مفروشات") ||
             opposite.includes("المفروشات") ||
             accountName.includes("أثاث") ||
             accountName.includes("مفروشات") ||
@@ -126,7 +122,6 @@ export function AccountMovementTable({
     });
   }, [lines, accountName]);
 
-  // فرز الحركات الأصلية أولاً لضمان عدم انفصال أسطر الحركة الواحدة بعد التقسيم
   const { sortedData: sortedOriginalLines, sortField, sortDirection, handleSort } = useSortable({
     data: enrichedLines,
     defaultField: "entry_number" as SortField,
@@ -143,74 +138,51 @@ export function AccountMovementTable({
         case "journal_type":
           comparison = (a.typeLabel || "").localeCompare(b.typeLabel || "", "ar");
           break;
-        case "account":
-          comparison = (a.opposite_account_name || "").localeCompare(b.opposite_account_name || "", "ar");
-          break;
       }
       return direction === "asc" ? comparison : -comparison;
     }
   });
 
-  // تقسيم كل حركة أصلية مفروزة إلى سطرين: مدين ودائن
   const tableData = useMemo(() => {
-    const rows: EnrichedLine[] = [];
-    sortedOriginalLines.forEach((line, idx) => {
+    const rows: MovementRow[] = [];
+    let running = openingBalance;
+
+    for (const line of sortedOriginalLines) {
       const debitBase = parseFloat(line.debit_base || "0");
       const creditBase = parseFloat(line.credit_base || "0");
-      const isDebit = debitBase > 0 || parseFloat(line.debit_original || "0") > 0;
 
-      const amtBase = debitBase > 0 ? debitBase : creditBase;
-      const amtOrig = parseFloat(line.debit_original || "0") > 0
-        ? parseFloat(line.debit_original || "0")
-        : parseFloat(line.credit_original || "0");
+      running += debitBase - creditBase;
 
-      const groupKey = `${line.journal_id || idx}-${line.entry_number}-${idx}`;
-
-      // سطر المدين (Debit)
       rows.push({
         ...line,
-        account_name: isDebit ? accountName : line.opposite_account_name,
-        side: "debit",
-        amount_base: amtBase,
-        amount_original: amtOrig,
-        group_key: groupKey,
+        typeLabel: line.typeLabel,
+        side: debitBase > 0 ? "debit" : "credit",
+        amount_base: debitBase > 0 ? debitBase : creditBase,
+        running_balance: running,
       });
+    }
 
-      // سطر الدائن (Credit)
-      rows.push({
-        ...line,
-        account_name: isDebit ? line.opposite_account_name : accountName,
-        side: "credit",
-        amount_base: amtBase,
-        amount_original: amtOrig,
-        group_key: groupKey,
-      });
-    });
+    return rows;
+  }, [sortedOriginalLines, openingBalance]);
 
-    return rows.map((row, idx) => ({
-      ...row,
-      isFirstInGroup: idx % 2 === 0,
-    })) as LedgerTableRow[];
-  }, [sortedOriginalLines, accountName]);
-
-  const allColumns = useMemo<UnifiedColumn<LedgerTableRow>[]>(() => {
-    const cols: UnifiedColumn<LedgerTableRow>[] = [
+  const allColumns = useMemo<UnifiedColumn<MovementRow>[]>(() => {
+    const cols: UnifiedColumn<MovementRow>[] = [
       {
         id: "entry_number",
         header: "رقم القيد",
         label: "رقم القيد",
-        accessor: (r) => r.isFirstInGroup ? r.entry_number : "",
+        accessor: (r) => r.entry_number,
         className: "font-black text-slate-900 text-center"
       },
       {
         id: "journal_type",
         header: "نوع الحركة",
         label: "نوع الحركة",
-        accessor: (r) => r.isFirstInGroup ? (
+        accessor: (r) => (
           <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">
             {r.typeLabel}
           </span>
-        ) : "",
+        ),
       },
     ];
 
@@ -221,6 +193,7 @@ export function AccountMovementTable({
         id: `debit_${curr.code}`,
         header: `عليه / مدين (${symbol})`,
         label: `عليه / مدين (${symbol})`,
+        align: "center",
         accessor: (r) => {
           if (r.side !== "debit") return "";
           return r.amount_base > 0 ? formatAmount(r.amount_base, { currencyCode: curr.code }) : "";
@@ -238,6 +211,7 @@ export function AccountMovementTable({
         id: `credit_${curr.code}`,
         header: `له / دائن (${symbol})`,
         label: `له / دائن (${symbol})`,
+        align: "center",
         accessor: (r) => {
           if (r.side !== "credit") return "";
           return r.amount_base > 0 ? formatAmount(r.amount_base, { currencyCode: curr.code }) : "";
@@ -253,29 +227,26 @@ export function AccountMovementTable({
         id: "description",
         header: "البيان",
         label: "البيان",
-        accessor: (r) => r.isFirstInGroup ? r.description : "",
+        accessor: (r) => r.description,
         className: "text-slate-700 font-bold"
-      },
-      {
-        id: "account",
-        header: "الحساب",
-        label: "الحساب",
-        accessor: (r) => (
-          <span className={r.side === "debit" ? "text-blue-600 font-bold" : "text-emerald-600 font-bold"}>
-            {r.account_name}
-          </span>
-        ),
       },
       {
         id: "date",
         header: "التاريخ",
         label: "التاريخ",
-        accessor: (r) => r.isFirstInGroup ? formatDateTime(r.date) : "",
+        accessor: (r) => formatDateTime(r.date),
         className: "text-slate-500 tabular-nums"
+      },
+      {
+        id: "balance",
+        header: "الرصيد",
+        label: "الرصيد",
+        accessor: (r) => formatAmount(r.running_balance, { currencyCode: baseCurrency?.code || "" }),
+        className: "tabular-nums font-black bg-slate-50/30"
       },
     );
     return cols;
-  }, [sortedCurrencies, formatAmount, isBaseCurrency]);
+  }, [sortedCurrencies, formatAmount, isBaseCurrency, baseCurrency]);
 
   const defaultVisible = useMemo(() => {
     const def: string[] = ["entry_number", "journal_type"];
@@ -289,7 +260,7 @@ export function AccountMovementTable({
         def.push(`credit_${curr.code}`);
       }
     });
-    def.push("description", "account", "date");
+    def.push("description", "date", "balance");
     return def;
   }, [sortedCurrencies, isBaseCurrency]);
 
@@ -315,13 +286,13 @@ export function AccountMovementTable({
   );
 
   const getColumnSampleValues = useCallback(
-    (col: UnifiedColumn<LedgerTableRow>): string[] =>
+    (col: UnifiedColumn<MovementRow>): string[] =>
       tableData
         .slice(0, 30)
         .map((row, idx) =>
           typeof col.accessor === "function"
             ? getPrimitiveCellValue(col.accessor(row, idx))
-            : getPrimitiveCellValue(row[col.accessor as keyof LedgerTableRow] as ReactNode),
+            : getPrimitiveCellValue(row[col.accessor as keyof MovementRow] as ReactNode),
         )
         .filter(Boolean),
     [tableData],
@@ -346,16 +317,7 @@ export function AccountMovementTable({
     settings.fontSize,
   );
 
-  const groupedData = useMemo(() => {
-    const groups: LedgerTableRow[][] = [];
-    for (let i = 0; i < tableData.length; i += 2) {
-      groups.push([tableData[i], tableData[i + 1]]);
-    }
-    return groups;
-  }, [tableData]);
-
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
-    // حساب الإجماليات من البيانات الأصلية لمنع تضاعف المبالغ بسبب التقسيم
     const baseDebitTotal = lines.reduce(
       (s, l) => s + parseFloat(l.debit_base || "0"),
       0,
@@ -364,7 +326,7 @@ export function AccountMovementTable({
       (s, l) => s + parseFloat(l.credit_base || "0"),
       0,
     );
-    const baseBalance = baseDebitTotal - baseCreditTotal;
+    const closingBalance = openingBalance + baseDebitTotal - baseCreditTotal;
     const baseSymbol = baseCurrency?.symbol || baseCurrency?.code || "";
 
     return enrichedColumns.map((col) => {
@@ -372,35 +334,20 @@ export function AccountMovementTable({
       if (id === "entry_number") {
         return { id: "count", columnId: "entry_number", label: "", value: `${lines.length} حركة`, className: "text-slate-500 font-medium" };
       }
-      if (id === "journal_type" || id === "description") {
+      if (id === "journal_type" || id === "description" || id === "date") {
         return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
       }
 
-      if (id === "account") {
-        const sign = baseBalance > 0 ? "مدين" : baseBalance < 0 ? "دائن" : "متزن";
-        const label = `الرصيد / ${sign} (${baseSymbol})`;
-        const value = formatAmount(Math.abs(baseBalance), { currencyCode: baseCurrency?.code || "" });
-        const valueClass = baseBalance > 0
+      if (id === "balance") {
+        const sign = closingBalance > 0 ? "مدين" : closingBalance < 0 ? "دائن" : "متزن";
+        const label = `الرصيد الختامي / ${sign} (${baseSymbol})`;
+        const value = formatAmount(Math.abs(closingBalance), { currencyCode: baseCurrency?.code || "" });
+        const valueClass = closingBalance > 0
           ? "text-blue-700 font-black"
-          : baseBalance < 0
+          : closingBalance < 0
           ? "text-emerald-700 font-black"
           : "text-slate-500 font-bold";
-        return { id: `${id}_balance`, columnId: id, label, value, className: valueClass };
-      }
-      if (id === "date") {
-        const sec = sortedCurrencies.length > 1 ? sortedCurrencies[1] : null;
-        const curr = sec || baseCurrency;
-        const code = curr?.code || "";
-        const sym = curr?.symbol || code;
-        const sign = baseBalance > 0 ? "مدين" : baseBalance < 0 ? "دائن" : "متزن";
-        const label = `الرصيد / ${sign} (${sym})`;
-        const value = formatAmount(Math.abs(baseBalance), { currencyCode: code });
-        const valueClass = baseBalance > 0
-          ? "text-blue-700 font-black"
-          : baseBalance < 0
-          ? "text-emerald-700 font-black"
-          : "text-slate-500 font-bold";
-        return { id: `${id}_balance`, columnId: id, label, value, className: valueClass };
+        return { id: `${id}_closing`, columnId: id, label, value, className: valueClass };
       }
 
       const debitMatch = id.match(/^debit_(.+)$/);
@@ -437,7 +384,7 @@ export function AccountMovementTable({
 
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [lines, formatAmount, enrichedColumns, isBaseCurrency, baseCurrency, sortedCurrencies]);
+  }, [lines, formatAmount, enrichedColumns, isBaseCurrency, baseCurrency, openingBalance]);
 
   const visibleColumnIds = useMemo(
     () => new Set(visibleColumns.map(c => c.id)),
@@ -453,23 +400,13 @@ export function AccountMovementTable({
   }, [summaryColumns, visibleColumnIds]);
 
   const showSummary = !!(
-    filteredSummary?.length && settings.showSummary && groupedData.length > 0
+    filteredSummary?.length && settings.showSummary && tableData.length > 0
   );
 
   const cellBorderClass = getLeftBorderClass(settings.borderStyle);
 
-  const getCellStyle = useCallback((): React.CSSProperties => ({
-    minWidth: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    textAlign: "center",
-    fontSize: `${settings.fontSize}px`,
-    fontFamily: settings.fontFamily,
-  }), [settings.fontSize, settings.fontFamily]);
-
   const handleHeaderCellClick = useCallback((colId: string) => {
-    if (["entry_number", "journal_type", "account", "date"].includes(colId)) {
+    if (["entry_number", "journal_type", "date"].includes(colId)) {
       handleSort(colId as SortField);
     }
   }, [handleSort]);
@@ -505,66 +442,90 @@ export function AccountMovementTable({
       ));
     }
 
-    if (groupedData.length === 0) {
+    if (tableData.length === 0) {
       return <EmptyState message={search ? "لا توجد حركات تطابق معايير البحث" : "لا توجد حركات مسجلة لهذا الحساب"} />;
     }
 
-    return groupedData.map((group, groupIdx) => {
-      const first = group[0];
-      const rowCount = group.length;
-
-      return (
+    return (
+      <>
+        {/* Opening Balance Row */}
         <div
-          key={`group-${first.group_key}-${groupIdx}`}
+          key="opening-balance"
           dir="rtl"
           className={cn(
-            "transition-all duration-75",
+            "transition-all duration-75 bg-indigo-50/40 border-b border-indigo-100",
             getRowBorderClass(settings.borderStyle),
-            getRowBackgroundClass(false, groupIdx, settings.zebraRows, settings.rowHoverEffect),
           )}
           style={{
             display: "grid",
             gridTemplateColumns,
-            gridTemplateRows: `repeat(${rowCount}, auto)`,
           }}
         >
-          {visibleColumns.flatMap((col, colIdx) => {
+          {visibleColumns.map((col, colIdx) => {
             const columnPosition = colIdx + 1;
-            const isShared = SHARED_COLUMN_IDS.has(col.id);
+            let content: ReactNode = "";
+            if (col.id === "entry_number") content = "—";
+            else if (col.id === "journal_type") content = <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-indigo-100 text-indigo-700 uppercase tracking-tighter">رصيد افتتاحي</span>;
+            else if (col.id === "balance") content = formatAmount(openingBalance, { currencyCode: baseCurrency?.code || "" });
 
-            if (isShared) {
-              const value = typeof col.accessor === "function"
-                ? col.accessor(first, 0)
-                : (first[col.accessor as keyof LedgerTableRow] as ReactNode);
+            return (
+              <div
+                key={`opening-${col.id}`}
+                style={{
+                  gridColumn: String(columnPosition),
+                  minWidth: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: col.align === "left" ? "flex-start" : col.align === "center" ? "center" : "flex-end",
+                  textAlign: col.align || "right",
+                  fontSize: `${settings.fontSize}px`,
+                  fontFamily: settings.fontFamily,
+                }}
+                className={cn(
+                  getDensityPadding(),
+                  cellBorderClass,
+                  col.id === "balance" ? "text-indigo-700 font-black" : "text-indigo-600 font-bold",
+                )}
+              >
+                {content}
+              </div>
+            );
+          })}
+        </div>
 
-              return (
-                <GroupedEntrySharedCell
-                  key={col.id}
-                  rowCount={rowCount}
-                  columnPosition={columnPosition}
-                  densityClassName={getDensityPadding()}
-                  borderClassName={cellBorderClass}
-                  className={col.className}
-                  fontSize={settings.fontSize}
-                  fontFamily={settings.fontFamily}
-                >
-                  {value}
-                </GroupedEntrySharedCell>
-              );
-            }
-
-            return group.map((row, rowIdx) => {
+        {/* Movement Rows — one row per movement */}
+        {tableData.map((row, rowIdx) => (
+          <div
+            key={`row-${row.entry_number}-${rowIdx}`}
+            dir="rtl"
+            className={cn(
+              "transition-all duration-75",
+              getRowBorderClass(settings.borderStyle),
+              getRowBackgroundClass(false, rowIdx, settings.zebraRows, settings.rowHoverEffect),
+            )}
+            style={{
+              display: "grid",
+              gridTemplateColumns,
+            }}
+          >
+            {visibleColumns.map((col, colIdx) => {
+              const columnPosition = colIdx + 1;
               const val = typeof col.accessor === "function"
-                ? col.accessor(row, 0)
-                : (row[col.accessor as keyof LedgerTableRow] as ReactNode);
+                ? col.accessor(row, rowIdx)
+                : (row[col.accessor as keyof MovementRow] as ReactNode);
 
               return (
                 <div
-                  key={`${col.id}-${rowIdx}`}
+                  key={col.id}
                   style={{
-                    gridRow: rowIdx + 1,
                     gridColumn: String(columnPosition),
-                    ...getCellStyle(),
+                    minWidth: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: col.align === "left" ? "flex-start" : col.align === "center" ? "center" : "flex-end",
+                    textAlign: col.align || "right",
+                    fontSize: `${settings.fontSize}px`,
+                    fontFamily: settings.fontFamily,
                   }}
                   className={cn(
                     getDensityPadding(),
@@ -576,11 +537,11 @@ export function AccountMovementTable({
                   {val || ""}
                 </div>
               );
-            });
-          })}
-        </div>
-      );
-    });
+            })}
+          </div>
+        ))}
+      </>
+    );
   };
 
   return (

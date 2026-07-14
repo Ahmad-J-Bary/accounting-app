@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ReportLayout } from "@widgets/templates/ReportLayout";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
@@ -6,10 +7,11 @@ import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useUnifiedColumns } from "@shared/hooks";
 import { cn } from "@shared/lib/utils";
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, RefreshCw } from "lucide-react";
 import { computeTreeTotals, flattenTreeRows, isBalanceDebit } from "../lib/trialBalance";
 import type { TrialBalanceTreeRow } from "../lib/trialBalance";
 import { useTrialBalance } from "@shared/hooks/queries/useReportQueries";
+import { QUERY_KEYS } from "@shared/hooks/queryClient";
 
 const DETAIL_LEVELS = [
   { level: 1, maxDepth: 0, label: "مستوى 1", desc: "التصنيفات الرئيسية" },
@@ -20,6 +22,7 @@ const DETAIL_LEVELS = [
 
 export default function TrialBalanceReport() {
   const { baseCurrency, currencies, formatAmount, convertFromBase } = useCurrencyContext();
+  const queryClient = useQueryClient();
   const [detailLevel, setDetailLevel] = useState(3);
 
   const { data, isLoading } = useTrialBalance();
@@ -333,6 +336,14 @@ export default function TrialBalanceReport() {
           <span className="text-[11px] font-bold text-slate-400 tracking-wider">
             {detailLevel === 1 ? "مختصر" : detailLevel === 4 ? "مفصل" : "مستوى " + detailLevel}
           </span>
+
+          <button
+            onClick={() => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.trialBalance })}
+            className="ml-2 p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            title="تحديث البيانات"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
         </div>
 
         {/* Table */}
