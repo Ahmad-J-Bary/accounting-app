@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, Search, LayoutGrid } from "lucide-react";
-import { inventoryService } from '@modules/inventory/api/inventoryService';
+import { stockMovementService } from '@modules/inventory/api/stockMovementService';
 import { warehouseService } from '@modules/inventory/api/warehouseService';
 import { materialService } from '@modules/inventory/api/materialService';
 import { Button } from "@shared/ui/button";
@@ -27,12 +27,12 @@ export default function Warehouses() {
 
   const { data: products = [] } = useQuery<MaterialDto[]>({
     queryKey: ['materials'],
-    queryFn: () => materialService.listMaterials(),
+    queryFn: () => materialService.list(),
   });
 
   const { data: movements = [] } = useQuery<StockMovement[]>({
     queryKey: ['stock-movements'],
-    queryFn: () => inventoryService.listStockMovements(),
+    queryFn: () => stockMovementService.list(),
   });
 
   const stockByWarehouse = useMemo(() => buildStockByWarehouse(movements), [movements]);

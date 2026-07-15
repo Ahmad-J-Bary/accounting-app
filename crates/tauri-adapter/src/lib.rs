@@ -6,6 +6,7 @@ use tauri::Manager;
 pub fn run() -> tauri::Builder<tauri::Wry> {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             // Unified Invoices
             commands::unified_invoice::create_unified_invoice,
@@ -175,6 +176,8 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::transfer::delete_transfer,
             commands::transfer::update_transfer,
             commands::settle::settle_partner_balance,
+            // Export commands
+            commands::export::save_file,
         ])
         .setup(|app| {
             let app_data_dir = app

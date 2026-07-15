@@ -95,7 +95,7 @@ export default function OpeningBalance() {
     setLoading(true);
     try {
       const [mats, whData, settingsData] = await Promise.all([
-        materialService.listMaterials(),
+        materialService.list(),
         warehouseService.list(),
         settingsService.getSettings(),
       ]);
@@ -179,7 +179,7 @@ export default function OpeningBalance() {
   const handleSaveMaterial = useCallback(async (data: CreateMaterialRequest | UpdateMaterialRequest) => {
     setSavingMaterial(true);
     try {
-      await materialService.createMaterial(data as CreateMaterialRequest);
+      await materialService.create(data as CreateMaterialRequest);
       toast.success("تم إضافة المادة بنجاح");
       setMaterialFormOpen(false);
       loadData();

@@ -172,7 +172,7 @@ export function CategoryDetailsSidebar({
         }
 
         if (formMode === "edit_mat" && materialData) {
-          await materialService.updateMaterial({
+          await materialService.update({
             ...materialData,
             name: name.trim(),
             barcode: barcode.trim(),
@@ -181,7 +181,7 @@ export function CategoryDetailsSidebar({
           });
           toast.success("تم تحديث المادة");
         } else {
-          await materialService.createMaterial({
+          await materialService.create({
             name: name.trim(),
             barcode: barcode.trim(),
             code: finalCode,

@@ -59,7 +59,7 @@ export default function Dashboard() {
       invoiceService.listInvoicesByType("Sales"),
       invoiceService.listInvoicesByType("Purchase"),
       paymentService.listPayments(),
-      materialService.listMaterials(),
+      materialService.list(),
       categoryService.list(),
       accountingService.getReceivablesPayablesSummary(),
       returnService.listSalesReturns(),

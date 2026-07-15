@@ -30,7 +30,7 @@ import {
 } from "../lib/invoiceUtils";
 import { useDocumentFinancials } from "../lib/useDocumentFinancials";
 import { type DocumentColumn } from "@widgets/document-shell/GenericDocumentGrid";
-import { ALL_REPORT_KEYS } from "@shared/hooks/queryClient";
+import { invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
 
 export interface InvoiceHeaderState {
   id?: string;
@@ -179,7 +179,7 @@ export function useInvoiceLifecycle({
           listInvoicesPromise,
           purchaseExpiryPromise,
           listPartiesPromise,
-          materialService.listMaterials(),
+          materialService.list(),
           warehouseService.list(),
           settingsService.getSettings(),
         ]);
@@ -199,6 +199,10 @@ export function useInvoiceLifecycle({
     },
     [invoiceType, partyType],
   );
+
+  const onPartyCreated = useCallback((party: CustomerDto | SupplierDto) => {
+    setParties(prev => prev.some(p => p.id === party.id) ? prev : [...prev, party]);
+  }, []);
 
   const prevActiveTabRef = useRef(activeTabId);
   useEffect(() => {
@@ -533,11 +537,29 @@ export function useInvoiceLifecycle({
         result = await invoiceService.createInvoice(payload);
       }
 
+      if (invoiceType === "Sales") {
+        const returnedId = result.customer_id || headerState.customer_id;
+        const returnedName = result.customer_name || headerState.customer_name;
+        if (returnedId && returnedId !== headerState.customer_id) {
+          setHeaderState(s => ({ ...s, customer_id: returnedId, customer_name: returnedName }));
+          if (!parties.some(p => p.id === returnedId)) {
+            customerService.get(returnedId).then(c => { if (c) onPartyCreated(c); });
+          }
+        }
+      } else {
+        const returnedId = result.supplier_id || headerState.supplier_id;
+        const returnedName = result.supplier_name || headerState.supplier_name;
+        if (returnedId && returnedId !== headerState.supplier_id) {
+          setHeaderState(s => ({ ...s, supplier_id: returnedId, supplier_name: returnedName }));
+          if (!parties.some(p => p.id === returnedId)) {
+            supplierService.get(returnedId).then(s => { if (s) onPartyCreated(s); });
+          }
+        }
+      }
+
       if (andPost) {
         await invoiceService.postInvoice(result.id);
-        for (const key of ALL_REPORT_KEYS) {
-          queryClient.invalidateQueries({ queryKey: key });
-        }
+        await invalidateAccountingMutationQueries(queryClient);
         toast.success("تم الحفظ والترحيل بنجاح");
       } else {
         toast.success("تم حفظ المسودة");
@@ -564,6 +586,7 @@ export function useInvoiceLifecycle({
     setSaving(true);
     try {
       await invoiceService.reopenInvoice(headerState.id);
+      await invalidateAccountingMutationQueries(queryClient);
       toast.success("تم إلغاء الترحيل بنجاح. الفاتورة الآن مسودة.");
       setHeaderState((s) => ({ ...s, status: "Draft" }));
       const invoicePath = invoiceType === "Sales"
@@ -608,6 +631,7 @@ export function useInvoiceLifecycle({
     isNew,
     isReadOnly,
     loadData,
+    onPartyCreated,
     handleSave,
     handleReopen,
     enrichedLines,

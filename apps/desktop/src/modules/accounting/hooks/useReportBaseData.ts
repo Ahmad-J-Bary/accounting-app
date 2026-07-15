@@ -46,7 +46,7 @@ export function useReportBaseData(filters?: ReportFilters) {
 
   const materialsQuery = useQuery({
     queryKey: QUERY_KEYS.materials,
-    queryFn: () => materialService.listMaterials(),
+    queryFn: () => materialService.list(),
   });
 
   const isLoading =

@@ -3,7 +3,10 @@ import { Button } from "@shared/ui/button";
 import { Plus, Layers, ShoppingCart, TrendingUp, AlertTriangle, Undo2, ArrowRightLeft, Scale } from "lucide-react";
 import { materialService } from '@modules/inventory/api/materialService';
 import { categoryService } from '@modules/inventory/api/categoryService';
-import { damagedService, transferService, adjustmentService, inventoryService } from '@modules/inventory/api/inventoryService';
+import { damagedService } from '@modules/inventory/api/damagedService';
+import { transferService } from '@modules/inventory/api/transferService';
+import { adjustmentService } from '@modules/inventory/api/adjustmentService';
+import { stockMovementService } from '@modules/inventory/api/stockMovementService';
 import { warehouseService } from '@modules/inventory/api/warehouseService';
 import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest, CreateDamagedItemRequest, CreateStockAdjustmentRequest, WarehouseDto, CreateTransferRequest, StockMovement } from "@erp/shared-types";
 import { toast } from 'sonner';
@@ -44,12 +47,12 @@ export default function Materials() {
     handleDelete,
   } = useEntityList<MaterialDto, CreateMaterialRequest | UpdateMaterialRequest>({
     queryKey: ["inventory", "materials"],
-    fetchData: () => materialService.listMaterials(),
+    fetchData: () => materialService.list(),
     saveData: async (payload) => {
-      if ((payload as UpdateMaterialRequest).id) return materialService.updateMaterial(payload as UpdateMaterialRequest);
-      return materialService.createMaterial(payload as CreateMaterialRequest);
+      if ((payload as UpdateMaterialRequest).id) return materialService.update(payload as UpdateMaterialRequest);
+      return materialService.create(payload as CreateMaterialRequest);
     },
-    deleteData: (id) => materialService.deleteMaterial(id),
+    deleteData: (id) => materialService.delete(id),
     searchFields: ["name", "code", "barcode"],
   });
 
@@ -92,7 +95,7 @@ export default function Materials() {
     try {
       const [whs, mvs] = await Promise.all([
         warehouseService.list(),
-        inventoryService.listStockMovements(),
+        stockMovementService.list(),
       ]);
       setWarehouses(whs);
       setMovements(mvs);
@@ -102,7 +105,7 @@ export default function Materials() {
   const handleCreateTransfer = useCallback(async (req: CreateTransferRequest) => {
     setSavingTransfer(true);
     try {
-      await transferService.createTransfer(req);
+      await transferService.create(req);
       toast.success('تم إنشاء التحويل بنجاح');
       setTransferFormOpen(false);
       setTransferPreset(null);
@@ -127,7 +130,7 @@ export default function Materials() {
   const handleCreateDamaged = useCallback(async (payload: CreateDamagedItemRequest) => {
     setSavingDamaged(true);
     try {
-      await damagedService.createDamagedItem(payload);
+      await damagedService.create(payload);
       setShowDamagedPanel(false);
       refresh();
       toast.success(`تم تسجيل التالف للمادة بنجاح`);
@@ -141,7 +144,7 @@ export default function Materials() {
   const handleCreateAdjustment = useCallback(async (payload: CreateStockAdjustmentRequest) => {
     setSavingAdjustment(true);
     try {
-      await adjustmentService.createStockAdjustment(payload);
+      await adjustmentService.create(payload);
       setShowAdjustmentPanel(false);
       refresh();
       toast.success('تم إنشاء التسوية بنجاح');

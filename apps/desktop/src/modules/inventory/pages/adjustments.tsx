@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@shared/ui/button";
 import { Plus, Eye, Settings2, Trash2 } from "lucide-react";
-import { adjustmentService } from '@modules/inventory/api/inventoryService';
+import { adjustmentService } from '@modules/inventory/api/adjustmentService';
 import { materialService } from '@modules/inventory/api/materialService';
 import type { StockAdjustment, CreateStockAdjustmentRequest, UpdateStockAdjustmentRequest, MaterialDto } from "@erp/shared-types";
 import { toast } from "sonner";
@@ -22,7 +22,7 @@ export default function AdjustmentsPage() {
     refresh,
   } = useDataTable<StockAdjustment>({
     queryKey: ["stock-adjustments"],
-    fetchData: () => adjustmentService.listStockAdjustments(),
+    fetchData: () => adjustmentService.list(),
     searchFields: ["material_name", "material_id", "notes", "reason", "reference"],
   });
 
@@ -35,7 +35,7 @@ export default function AdjustmentsPage() {
   const loadProducts = useCallback(async () => {
     try {
       setLoadingProducts(true);
-      const pData = await materialService.listMaterials();
+      const pData = await materialService.list();
       setProducts(pData);
     } catch {
       toast.error("فشل تحميل المنتجات");
@@ -49,7 +49,7 @@ export default function AdjustmentsPage() {
   const handleCreate = useCallback(async (payload: CreateStockAdjustmentRequest) => {
     setSaving(true);
     try {
-      await adjustmentService.createStockAdjustment(payload);
+      await adjustmentService.create(payload);
       setShowDialog(false);
       refresh(true);
       toast.success("تم تسجيل تسوية الجرد بنجاح");
@@ -73,7 +73,7 @@ export default function AdjustmentsPage() {
         notes: payload.notes,
         adjustment_date: payload.adjustment_date,
       };
-      await adjustmentService.updateStockAdjustment(updateReq);
+      await adjustmentService.update(updateReq);
       setShowDialog(false);
       setSelectedItem(null);
       refresh(true);
@@ -96,7 +96,7 @@ export default function AdjustmentsPage() {
   const handleDelete = useCallback(async (id: string) => {
     if (!confirm("هل أنت متأكد من حذف سجل التسوية هذا؟ سيتم حذف حركة المخزون المرتبطة به.")) return;
     try {
-      await adjustmentService.deleteStockAdjustment(id);
+      await adjustmentService.delete(id);
       toast.success("تم الحذف بنجاح");
       setSelectedItem(null);
       setShowDialog(false);

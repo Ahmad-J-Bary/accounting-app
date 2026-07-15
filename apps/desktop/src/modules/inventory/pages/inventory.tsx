@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from "sonner";
 import { useTabs } from "@app/providers/TabContext";
-import { inventoryService } from '@modules/inventory/api/inventoryService';
+import { stockMovementService } from '@modules/inventory/api/stockMovementService';
 import { warehouseService } from '@modules/inventory/api/warehouseService';
 import { materialService } from '@modules/inventory/api/materialService';
 import type { StockMovement, WarehouseDto, MaterialDto, DamagedItem, StockAdjustment } from '@erp/shared-types';
@@ -19,7 +19,7 @@ export default function Inventory() {
 
   const { data: movements = [], isLoading: movementsLoading, isRefetching: movementsRefetching } = useQuery<StockMovement[]>({
     queryKey: ['stock-movements'],
-    queryFn: () => inventoryService.listStockMovements(),
+    queryFn: () => stockMovementService.list(),
   });
 
   const { data: warehouses = [] } = useQuery<WarehouseDto[]>({
@@ -29,7 +29,7 @@ export default function Inventory() {
 
   const { data: materials = [] } = useQuery<MaterialDto[]>({
     queryKey: ['materials'],
-    queryFn: () => materialService.listMaterials(),
+    queryFn: () => materialService.list(),
   });
 
   const [search, setSearch] = useState('');

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { DocumentToolbar } from "@widgets/document-shell/DocumentToolbar";
 import type { SupplierDto, CategoryDto, CreateMaterialRequest, UpdateMaterialRequest } from "@erp/shared-types";
 import { materialService } from "@modules/inventory/api/materialService";
@@ -17,9 +18,11 @@ import { InvoiceList } from "../components/InvoiceList";
 import { useInvoiceLifecycle } from "../hooks/useInvoiceLifecycle";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { supplierService } from "@modules/partners/api/supplierService";
+import { invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
 
 export default function PurchaseInvoices() {
   const location = useLocation();
+  const queryClient = useQueryClient();
   
   const {
     view,
@@ -52,6 +55,7 @@ export default function PurchaseInvoices() {
     dynamicVisibleColumns,
     priceHistoryMap,
     formatMonetaryAmount,
+    onPartyCreated,
     openTab,
     closeTab,
     activeTabId,
@@ -76,7 +80,7 @@ export default function PurchaseInvoices() {
   const handleSaveMaterial = async (data: CreateMaterialRequest | UpdateMaterialRequest) => {
     setSavingMaterial(true);
     try {
-      await materialService.createMaterial(data as CreateMaterialRequest);
+      await materialService.create(data as CreateMaterialRequest);
       toast.success("تم إضافة المادة بنجاح");
       setMaterialFormOpen(false);
       loadData(false);
@@ -132,7 +136,7 @@ export default function PurchaseInvoices() {
                 onSearchActive={setIsSearchingParty}
                 onCreateParty={async (name) => {
                   const s = await supplierService.create({ code: "", name, phone: null, address: null });
-                  loadData(false);
+                  onPartyCreated(s);
                   return { id: s.id, name: s.name };
                 }}
               />
@@ -230,13 +234,27 @@ export default function PurchaseInvoices() {
       onViewOpeningBalance={(inv) => {
         openTab({ id: `/opening-balance/${inv.id}-view`, title: `عرض بضاعة أول المدة`, path: `/opening-balance/${inv.id}?mode=view`, closable: true });
       }}
-      onPost={async (id) => { await invoiceService.postInvoice(id); loadData(false); }}
+      onPost={async (id) => {
+        await invoiceService.postInvoice(id);
+        await invalidateAccountingMutationQueries(queryClient);
+        await loadData(false);
+      }}
       onDelete={async (id) => {
-        try { await invoiceService.deleteInvoice(id); toast.success("تم حذف الفاتورة والقيود المرتبطة بها"); loadData(false); }
+        try {
+          await invoiceService.deleteInvoice(id);
+          await invalidateAccountingMutationQueries(queryClient);
+          toast.success("تم حذف الفاتورة والقيود المرتبطة بها");
+          await loadData(false);
+        }
         catch (e) { toast.error("فشل الحذف: " + e); }
       }}
       onReopen={async (id) => {
-        try { await invoiceService.reopenInvoice(id); toast.success("تم إلغاء الترحيل وإعادة الفاتورة لمسودة"); loadData(false); }
+        try {
+          await invoiceService.reopenInvoice(id);
+          await invalidateAccountingMutationQueries(queryClient);
+          toast.success("تم إلغاء الترحيل وإعادة الفاتورة لمسودة");
+          await loadData(false);
+        }
         catch (e) { toast.error("فشل العملية: " + e); }
       }}
       formatMonetaryAmount={formatMonetaryAmount}

@@ -9,8 +9,13 @@ import { accountingService } from '@modules/accounting/api/accountingService';
 import { paymentService } from '@modules/payments/api/paymentService';
 import type { AccountDto, CreatePaymentRequest, CustomerDto, SupplierDto, CreateCustomerRequest, UpdateCustomerRequest, CreateSupplierRequest, UpdateSupplierRequest } from "@erp/shared-types";
 
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useBaseCurrencyColumns } from "@shared/hooks";
 import { useTabs } from "@app/providers/TabContext";
 import { useEntityList } from '@shared/hooks/useEntityList';
+import { saveExcelFile } from '@shared/lib/excel';
+import type { ExcelExportColumn } from '@shared/lib/excel';
+import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import { PartyTable } from '@modules/partners/components/PartyTable';
 import { PaymentForm, PAYMENT_CONFIGS } from '@modules/partners/components/PaymentForm';
 import { ReturnFromMaterialPanel } from '@modules/inventory/components/ReturnFromMaterialPanel';
@@ -86,6 +91,8 @@ interface PartyPageProps {
 export default function PartyPage({ entityName }: PartyPageProps) {
   const cfg = PARTY_CONFIGS[entityName];
   const { openTab } = useTabs();
+  const { currencies, baseCurrency, toBase, formatAmount } = useCurrencyContext();
+  const { isBaseCurrency } = useBaseCurrencyColumns();
 
   // ── CRUD via useEntityList ──
 
@@ -106,7 +113,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
     handleSave,
     handleDelete,
   } = useEntityList<CustomerDto | SupplierDto, CreateCustomerRequest | UpdateCustomerRequest | CreateSupplierRequest | UpdateSupplierRequest>({
-    queryKey: ["partners", entityName === "customer" ? "customers" : "suppliers"],
+    queryKey: entityName === "customer" ? [...QUERY_KEYS.customers] : [...QUERY_KEYS.suppliers],
     fetchData: entityName === "customer"
       ? () => customerService.list()
       : () => supplierService.list(),
@@ -204,6 +211,43 @@ export default function PartyPage({ entityName }: PartyPageProps) {
     return () => window.removeEventListener(cfg.eventType, handler);
   }, [cfg.eventType, handleOpenAddWithAccounts]);
 
+  // ── Handle Excel Export ──
+
+  const handleExport = useCallback(async () => {
+    const isCreditFirst = entityName === 'supplier';
+    const colDefs: ExcelExportColumn[] = [
+      { id: 'code', label: '#', width: 8, accessor: (row) => String(row.code ?? '') },
+      { id: 'name', label: entityName === 'customer' ? 'اسم العميل' : 'اسم المورد', width: 25, accessor: (row) => String(row.name ?? '') },
+      { id: 'phone', label: 'رقم الهاتف', hidden: true, width: 15, accessor: (row) => String(row.phone ?? '') },
+      {
+        id: 'status', label: 'حالة الحساب', width: 12,
+        accessor: (row) => {
+          const debit = Number(row.debit || 0);
+          const credit = Number(row.credit || 0);
+          const effectiveBalance = (debit - credit) * (isCreditFirst ? -1 : 1);
+          if (effectiveBalance === 0) return '—';
+          return effectiveBalance > 0 ? 'دائن' : 'مدين';
+        },
+      },
+      ...currencies.map((curr) => ({
+        id: `balance_${curr.code}`,
+        label: `الرصيد (${curr.symbol || curr.code})`,
+        hidden: !isBaseCurrency(curr.code),
+        width: 15,
+        accessor: (row: Record<string, unknown>) => {
+          const absBal = Math.abs(Number(row.balance || 0));
+          if (absBal === 0) return '';
+          const baseAmount = toBase(absBal, String(row.currency ?? baseCurrency?.code ?? ''));
+          return formatAmount(baseAmount, { currencyCode: curr.code });
+        },
+      })),
+      { id: 'notes', label: 'ملاحظات', width: 20, accessor: (row) => String(row.notes ?? '') },
+    ];
+
+    const ok = await saveExcelFile(items as unknown as Record<string, unknown>[], colDefs, entityName === 'supplier' ? 'الموردين' : 'العملاء');
+    if (ok) toast.success("تم الحفظ بنجاح");
+  }, [items, currencies, isBaseCurrency, entityName, toBase, formatAmount, baseCurrency?.code]);
+
   // ── Toolbar ──
 
   const toolbar = (
@@ -288,7 +332,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
         size="sm"
         variant="outline"
         className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
-        onClick={() => toast.info("جاري التصدير...")}
+        onClick={handleExport}
       >
         <Download className="w-4 h-4 ml-2 text-slate-500" /> تصدير إكسل
       </Button>

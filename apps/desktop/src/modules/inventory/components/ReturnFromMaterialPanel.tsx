@@ -133,7 +133,7 @@ export function ReturnFromMaterialPanel({
   // Fetch materials internally if not passed via props
   const { data: fetchedMaterials = [] } = useQuery<MaterialDto[]>({
     queryKey: ["materials"],
-    queryFn: () => materialService.listMaterials(),
+    queryFn: () => materialService.list(),
     enabled: !materialsProp || materialsProp.length === 0,
   });
 

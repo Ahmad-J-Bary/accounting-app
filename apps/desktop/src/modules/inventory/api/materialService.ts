@@ -1,12 +1,13 @@
-import { invoke } from '@shared/lib/invoke';
-import type { 
-  MaterialDto, 
+import { createCrudService } from '@shared/lib/createService';
+import type {
+  MaterialDto,
   CreateMaterialRequest,
   UpdateMaterialRequest,
   CreateMaterialPriceRequest,
   CreateMaterialSalePriceRequest,
   StockMovementDetailDto,
 } from '@erp/shared-types';
+import { invoke } from '@shared/lib/invoke';
 
 export interface AddMaterialUnitRequest {
   material_id: string;
@@ -85,27 +86,15 @@ function normalizeUpdateRequest(request: UpdateMaterialRequest): UpdateMaterialR
   };
 }
 
+const base = createCrudService<MaterialDto, CreateMaterialRequest, UpdateMaterialRequest>({
+  name: 'material',
+  createTransform: normalizeCreateRequest,
+  updateTransform: normalizeUpdateRequest,
+});
+
 export const materialService = {
-  async createMaterial(request: CreateMaterialRequest): Promise<MaterialDto> {
-    return await invoke<MaterialDto>('create_material', { request: normalizeCreateRequest(request) });
-  },
+  ...base,
 
-  async listMaterials(): Promise<MaterialDto[]> {
-    return await invoke<MaterialDto[]>('list_materials');
-  },
-
-  async getMaterial(id: string): Promise<MaterialDto> {
-    return await invoke<MaterialDto>('get_material', { id });
-  },
-
-  async updateMaterial(request: UpdateMaterialRequest): Promise<MaterialDto> {
-    return await invoke<MaterialDto>('update_material', { request: normalizeUpdateRequest(request) });
-  },
-
-  async deleteMaterial(id: string): Promise<void> {
-    return await invoke<void>('delete_material', { id });
-  },
-  
   async addMaterialUnit(request: AddMaterialUnitRequest): Promise<void> {
     return await invoke<void>('add_material_unit', { request });
   },

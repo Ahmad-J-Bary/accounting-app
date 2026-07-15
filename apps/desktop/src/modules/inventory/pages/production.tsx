@@ -1,6 +1,6 @@
 import { Button } from "@shared/ui/button";
 import { Plus } from "lucide-react";
-import { productionService } from '@modules/inventory/api/inventoryService';
+import { productionService } from '@modules/inventory/api/productionService';
 import type { ProductionOrder } from "@erp/shared-types";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 
@@ -16,7 +16,7 @@ export default function ProductionPage() {
     setSearch,
   } = useDataTable<ProductionOrder>({
     queryKey: ["production-orders"],
-    fetchData: () => productionService.listProductionOrders(),
+    fetchData: () => productionService.list(),
     searchFields: ["order_number"],
   });
 

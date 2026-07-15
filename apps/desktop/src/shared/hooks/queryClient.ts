@@ -83,3 +83,35 @@ export const ALL_REPORT_KEYS: readonly (readonly unknown[])[] = [
   QUERY_KEYS.chartOfAccounts,
   QUERY_KEYS.receivablesPayables,
 ];
+
+export const ALL_PARTY_KEYS: readonly (readonly unknown[])[] = [
+  QUERY_KEYS.customers,
+  QUERY_KEYS.suppliers,
+  QUERY_KEYS.partners,
+];
+
+export const ALL_INVENTORY_KEYS: readonly (readonly unknown[])[] = [
+  QUERY_KEYS.materials,
+  QUERY_KEYS.stockMovements,
+];
+
+export const ALL_INVOICE_KEYS: readonly (readonly unknown[])[] = [
+  QUERY_KEYS.salesInvoices,
+  QUERY_KEYS.purchaseInvoices,
+  QUERY_KEYS.payments,
+];
+
+export const ALL_ACCOUNTING_MUTATION_KEYS: readonly (readonly unknown[])[] = [
+  ...ALL_REPORT_KEYS,
+  ...ALL_PARTY_KEYS,
+  ...ALL_INVENTORY_KEYS,
+  ...ALL_INVOICE_KEYS,
+];
+
+export async function invalidateAccountingMutationQueries(queryClient: QueryClient) {
+  await Promise.all(
+    ALL_ACCOUNTING_MUTATION_KEYS.map((queryKey) =>
+      queryClient.invalidateQueries({ queryKey, refetchType: "all" }),
+    ),
+  );
+}

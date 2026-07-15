@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { DocumentToolbar } from "@widgets/document-shell/DocumentToolbar";
 import type { CustomerDto } from "@erp/shared-types";
 
@@ -12,9 +13,11 @@ import { InvoicePartySelector } from '../components/InvoicePartySelector';
 import { useInvoiceLifecycle } from '../hooks/useInvoiceLifecycle';
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { customerService } from "@modules/partners/api/customerService";
+import { invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
 
 export default function SalesInvoices() {
   const location = useLocation();
+  const queryClient = useQueryClient();
   
   const {
     view,
@@ -45,6 +48,7 @@ export default function SalesInvoices() {
     gridColumns,
     dynamicVisibleColumns,
     formatMonetaryAmount,
+    onPartyCreated,
     openTab,
     closeTab,
     activeTabId,
@@ -102,7 +106,7 @@ export default function SalesInvoices() {
                 onSearchActive={setIsSearchingParty}
                 onCreateParty={async (name) => {
                   const c = await customerService.create({ code: "", name, phone: null, address: null });
-                  loadData(false);
+                  onPartyCreated(c);
                   return { id: c.id, name: c.name };
                 }}
               />
@@ -180,9 +184,21 @@ export default function SalesInvoices() {
       onView={(inv) => {
         openTab({ id: `/sales-invoices/${inv.id}-view`, title: `عرض ${inv.invoice_number}`, path: `/sales-invoices/${inv.id}?mode=view`, closable: true });
       }}
-      onPost={(id) => invoiceService.postInvoice(id).then(() => loadData(false))}
-      onDelete={(id) => invoiceService.deleteInvoice(id).then(() => loadData(false))}
-      onReopen={(id) => invoiceService.reopenInvoice(id).then(() => loadData(false))}
+      onPost={async (id) => {
+        await invoiceService.postInvoice(id);
+        await invalidateAccountingMutationQueries(queryClient);
+        await loadData(false);
+      }}
+      onDelete={async (id) => {
+        await invoiceService.deleteInvoice(id);
+        await invalidateAccountingMutationQueries(queryClient);
+        await loadData(false);
+      }}
+      onReopen={async (id) => {
+        await invoiceService.reopenInvoice(id);
+        await invalidateAccountingMutationQueries(queryClient);
+        await loadData(false);
+      }}
       formatMonetaryAmount={formatMonetaryAmount}
       partyType="customer"
       showSubtotal={true}

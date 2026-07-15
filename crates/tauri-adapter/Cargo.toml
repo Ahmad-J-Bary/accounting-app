@@ -19,6 +19,7 @@ sha2 = "0.10"
 domain = { path = "../domain" }
 application = { path = "../application" }
 infrastructure = { path = "../infrastructure" }
+tauri-plugin-dialog = "2.7.1"
 
 [features]
 default = ["custom-protocol"]

@@ -6,7 +6,7 @@ import type { MaterialDto, StockMovementDetailDto } from "@erp/shared-types";
 export function useMaterials() {
   return useQuery<MaterialDto[]>({
     queryKey: QUERY_KEYS.materials,
-    queryFn: () => materialService.listMaterials(),
+    queryFn: () => materialService.list(),
   });
 }
 
@@ -22,7 +22,7 @@ export function useMaterialsStock() {
   return useQuery({
     queryKey: ["materials-stock"],
     queryFn: async () => {
-      const materials = await materialService.listMaterials();
+      const materials = await materialService.list();
       const results = await Promise.allSettled(
         materials.map(async (m: MaterialDto) => ({
           materialId: m.id,

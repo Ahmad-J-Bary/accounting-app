@@ -6,7 +6,7 @@ import type { CreateStockAdjustmentRequest, StockAdjustment, MaterialDto } from 
 import { FormPanel } from "@widgets/form-shell/FormPanel";
 import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
-import { inventoryService } from '@modules/inventory/api/inventoryService';
+import { stockMovementService } from '@modules/inventory/api/stockMovementService';
 import { Calculator } from "lucide-react";
 import { toast } from "sonner";
 
@@ -37,7 +37,7 @@ export function AdjustmentForm({ onClose, products, onSave, saving, initialValue
   const fetchBalance = useCallback(async (materialId: string, actualQuantity?: number) => {
     setLoadingBalance(true);
     try {
-      const balance = await inventoryService.getStockBalance(materialId);
+      const balance = await stockMovementService.getStockBalance(materialId);
       const balNum = parseFloat(balance);
       setSystemQuantity(balNum);
       const mat = products.find(p => p.id === materialId);

@@ -21,7 +21,7 @@ export default function MaterialMovementsPage() {
     if (!materialId) return;
     setLoading(true);
     Promise.all([
-      materialService.getMaterial(materialId),
+      materialService.get(materialId),
       materialService.listMovementsByMaterial(materialId),
     ])
       .then(([mat, movs]) => {

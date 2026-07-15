@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@shared/ui/button";
 import { Plus } from "lucide-react";
-import { damagedService } from '@modules/inventory/api/inventoryService';
+import { damagedService } from '@modules/inventory/api/damagedService';
 import { materialService } from '@modules/inventory/api/materialService';
 import type { DamagedItem, CreateDamagedItemRequest, UpdateDamagedItemRequest, MaterialDto } from "@erp/shared-types";
 import { toast } from "sonner";
@@ -21,7 +21,7 @@ export default function DamagedPage() {
     refresh,
   } = useDataTable<DamagedItem>({
     queryKey: ["damaged-items"],
-    fetchData: () => damagedService.listDamagedItems(),
+    fetchData: () => damagedService.list(),
     searchFields: ["material_name", "material_id", "reason"],
   });
 
@@ -34,7 +34,7 @@ export default function DamagedPage() {
   const loadProducts = useCallback(async () => {
     try {
       setLoadingProducts(true);
-      const pData = await materialService.listMaterials();
+      const pData = await materialService.list();
       setProducts(pData);
     } catch {
       toast.error("فشل تحميل المنتجات");
@@ -48,7 +48,7 @@ export default function DamagedPage() {
   const handleCreate = useCallback(async (payload: CreateDamagedItemRequest) => {
     setSaving(true);
     try {
-      await damagedService.createDamagedItem(payload);
+      await damagedService.create(payload);
       setShowDialog(false);
       refresh(true);
       toast.success("تم تسجيل التالف بنجاح");
@@ -67,7 +67,7 @@ export default function DamagedPage() {
         id: selectedItem.id,
         ...payload,
       };
-      await damagedService.updateDamagedItem(updateReq);
+      await damagedService.update(updateReq);
       setShowDialog(false);
       setSelectedItem(null);
       refresh(true);
@@ -90,7 +90,7 @@ export default function DamagedPage() {
   const handleDelete = useCallback(async (id: string) => {
     if (!confirm("هل أنت متأكد من حذف سجل التالف هذا؟ سيتم حذف حركة المخزون المرتبطة به.")) return;
     try {
-      await damagedService.deleteDamagedItem(id);
+      await damagedService.delete(id);
       toast.success("تم الحذف بنجاح");
       setSelectedItem(null);
       setShowDialog(false);

@@ -2,7 +2,8 @@ import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
-import { inventoryService, transferService } from '@modules/inventory/api/inventoryService';
+import { transferService } from '@modules/inventory/api/transferService';
+import { stockMovementService } from '@modules/inventory/api/stockMovementService';
 import { warehouseService } from '@modules/inventory/api/warehouseService';
 import { materialService } from '@modules/inventory/api/materialService';
 import { Button } from "@shared/ui/button";
@@ -17,7 +18,7 @@ import { buildStockByWarehouse } from '@modules/inventory/lib/stockUtils';
 export default function Transfers() {
   const { data: movements = [] } = useQuery<StockMovement[]>({
     queryKey: ['stock-movements'],
-    queryFn: () => inventoryService.listStockMovements(),
+    queryFn: () => stockMovementService.list(),
   });
 
   const { data: warehouses = [] } = useQuery<WarehouseDto[]>({
@@ -27,7 +28,7 @@ export default function Transfers() {
 
   const { data: products = [] } = useQuery<MaterialDto[]>({
     queryKey: ['materials'],
-    queryFn: () => materialService.listMaterials(),
+    queryFn: () => materialService.list(),
   });
 
   const queryClient = useQueryClient();
@@ -43,7 +44,7 @@ export default function Transfers() {
   const handleCreateTransfer = useCallback(async (req: CreateTransferRequest) => {
     setSavingTransfer(true);
     try {
-      await transferService.createTransfer(req);
+      await transferService.create(req);
       toast.success('تم إنشاء التحويل بنجاح');
       setTransferFormOpen(false);
       setTransferFormData(null);
@@ -60,7 +61,7 @@ export default function Transfers() {
     if (!transferFormData) return;
     setSavingTransfer(true);
     try {
-      await transferService.updateTransfer({ ...req, reference: transferFormData.reference });
+      await transferService.update({ ...req, reference: transferFormData.reference });
       toast.success('تم تحديث التحويل بنجاح');
       setTransferFormOpen(false);
       setTransferFormData(null);
@@ -75,7 +76,7 @@ export default function Transfers() {
 
   const handleDeleteTransfer = useCallback(async (reference: string) => {
     try {
-      await transferService.deleteTransfer(reference);
+      await transferService.delete(reference);
       toast.success('تم حذف التحويل بنجاح');
       setTransferDetailData(null);
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });

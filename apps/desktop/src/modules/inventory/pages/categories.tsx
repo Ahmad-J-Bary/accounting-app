@@ -31,7 +31,7 @@ export default function Categories() {
 
       const [catData, matData] = await Promise.all([
         categoryService.listCategories(),
-        materialService.listMaterials(),
+        materialService.list(),
       ]);
       setCategories(catData);
       setMaterials(matData);
@@ -161,7 +161,7 @@ export default function Categories() {
       (async () => {
         try {
           setLoading(true);
-          await materialService.deleteMaterial(id);
+          await materialService.delete(id);
           toast.success("تم الحذف بنجاح");
           setSelected(null);
           await fetchData(false);

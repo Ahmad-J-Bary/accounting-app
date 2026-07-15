@@ -9,9 +9,9 @@ const { useCreate, useUpdate, useDelete } = createEntityMutations<
 >({
   queryKey: QUERY_KEYS.materials,
   mutations: {
-    create: { fn: (req) => materialService.createMaterial(req), successMsg: "تم إضافة المادة بنجاح",   errorMsg: "فشل إضافة المادة",   extraInvalidations: ALL_REPORT_KEYS },
-    update: { fn: (req) => materialService.updateMaterial(req), successMsg: "تم تحديث المادة بنجاح",  errorMsg: "فشل تحديث المادة",  extraInvalidations: ALL_REPORT_KEYS },
-    delete: { fn: (id)  => materialService.deleteMaterial(id),  successMsg: "تم حذف المادة بنجاح",    errorMsg: "فشل حذف المادة",    extraInvalidations: ALL_REPORT_KEYS },
+    create: { fn: (req) => materialService.create(req), successMsg: "تم إضافة المادة بنجاح",   errorMsg: "فشل إضافة المادة",   extraInvalidations: ALL_REPORT_KEYS },
+    update: { fn: (req) => materialService.update(req), successMsg: "تم تحديث المادة بنجاح",  errorMsg: "فشل تحديث المادة",  extraInvalidations: ALL_REPORT_KEYS },
+    delete: { fn: (id)  => materialService.delete(id),  successMsg: "تم حذف المادة بنجاح",    errorMsg: "فشل حذف المادة",    extraInvalidations: ALL_REPORT_KEYS },
   },
 });
 
