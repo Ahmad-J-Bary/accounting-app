@@ -20,7 +20,6 @@ export function SidebarDragContext({ children }: SidebarDragContextProps) {
     reorderItems,
     reorderGroups,
     reorderPinned,
-    reorderShortcuts,
     moveItemToGroup,
   } = useSidebarLayout();
 
@@ -68,15 +67,7 @@ export function SidebarDragContext({ children }: SidebarDragContextProps) {
       return;
     }
 
-    // ─── حالة 3: إعادة ترتيب في الاختصارات ────────────────────
-    if (layout.shortcutIds.includes(activeId) && layout.shortcutIds.includes(overId)) {
-      const oldIdx = layout.shortcutIds.indexOf(activeId);
-      const newIdx = layout.shortcutIds.indexOf(overId);
-      reorderShortcuts(arrayMove(layout.shortcutIds, oldIdx, newIdx));
-      return;
-    }
-
-    // ─── حالة 4: إعادة ترتيب داخل مجموعة / نقل بين مجموعات ──
+    // ─── حالة 3: إعادة ترتيب داخل مجموعة / نقل بين مجموعات ──
     let activeGroupId: string | null = null;
     let overGroupId: string | null = null;
 

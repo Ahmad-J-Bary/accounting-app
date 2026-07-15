@@ -65,13 +65,12 @@ export function buildDefaultLayout(): import('@shared/types/sidebar-config').Sid
       icon: Object.keys(ICON_MAP).find(k => ICON_MAP[k] === item.icon) ?? 'Settings',
       visible: true,
       pinned: false,
-      isShortcut: false,
       order: ii,
       isSeparator: item.isSeparator ?? false,
     } satisfies SidebarItemConfig)),
   }));
 
-  return { groups, pinnedItemIds: [], shortcutIds: [], version: 1 };
+  return { groups, pinnedItemIds: [], version: 3 };
 }
 
 // ─── LAYOUT_PRESETS ──────────────────────────────────────────

@@ -8,8 +8,8 @@ import type {
 } from '@shared/types/sidebar-config';
 import { buildDefaultLayout, NAV_GROUPS, ICON_MAP } from '@app/shell/sidebarConfig';
 
-const STORAGE_KEY = 'erp_sidebar_layout_v2'; // ترقية الإصدار لدعم المجموعات والاختصارات المخصصة
-const CURRENT_VERSION = 2;
+const STORAGE_KEY = 'erp_sidebar_layout_v3'; // ترقية: دمج isShortcut ← pinned
+const CURRENT_VERSION = 3;
 
 // ── Merge: يدمج layout المحفوظ مع NAV_GROUPS الحالية ──────────────────────
 function mergeWithDefaults(saved: SidebarLayoutConfig): SidebarLayoutConfig {
@@ -69,12 +69,12 @@ function mergeWithDefaults(saved: SidebarLayoutConfig): SidebarLayoutConfig {
   ].sort((a, b) => a.order - b.order)
    .map((g, i) => ({ ...g, order: i }));
 
-  // تنظيف المعرفات للمثبتات والاختصارات
+  // تنظيف المعرفات للمثبتات + ترحيل shortcutIds ← pinnedItemIds
   const allFinalItemIds = new Set(allGroups.flatMap(g => g.items.map(i => i.id)));
-  const pinnedItemIds = saved.pinnedItemIds.filter(id => allFinalItemIds.has(id));
-  const shortcutIds = saved.shortcutIds.filter(id => allFinalItemIds.has(id));
+  const migratedPinned = [...saved.pinnedItemIds, ...((saved as SidebarLayoutConfig & { shortcutIds?: SidebarItemId[] }).shortcutIds ?? [])];
+  const pinnedItemIds = [...new Set(migratedPinned)].filter(id => allFinalItemIds.has(id));
 
-  return { groups: allGroups, pinnedItemIds, shortcutIds, version: CURRENT_VERSION };
+  return { groups: allGroups, pinnedItemIds, version: CURRENT_VERSION };
 }
 
 function loadFromStorage(): SidebarLayoutConfig {
@@ -83,8 +83,8 @@ function loadFromStorage(): SidebarLayoutConfig {
     if (!raw) return buildDefaultLayout();
     const parsed = JSON.parse(raw) as SidebarLayoutConfig;
     if (parsed.version !== CURRENT_VERSION) {
-      // محاولة ترقية الإصدار 1
-      if (parsed.version === 1) {
+      // ترقية الإصدار 1 أو 2 ← 3
+      if (parsed.version === 1 || parsed.version === 2) {
         return mergeWithDefaults({ ...parsed, version: CURRENT_VERSION });
       }
       return buildDefaultLayout();
@@ -152,26 +152,6 @@ export function useSidebarLayout() {
     });
   }, []);
 
-  const toggleItemShortcut = useCallback((itemId: SidebarItemId) => {
-    setLayout(prev => {
-      const found = findItem(prev, itemId);
-      if (!found) return prev;
-      const nowShortcut = !found.item.isShortcut;
-      return {
-        ...prev,
-        groups: prev.groups.map(g => ({
-          ...g,
-          items: g.items.map(i =>
-            i.id === itemId ? { ...i, isShortcut: nowShortcut } : i
-          ),
-        })),
-        shortcutIds: nowShortcut
-          ? [...prev.shortcutIds, itemId]
-          : prev.shortcutIds.filter(id => id !== itemId),
-      };
-    });
-  }, []);
-
   const renameItem = useCallback((itemId: SidebarItemId, label: string) => {
     setLayout(prev => ({
       ...prev,
@@ -222,93 +202,65 @@ export function useSidebarLayout() {
     setLayout(prev => ({ ...prev, pinnedItemIds: orderedIds }));
   }, []);
 
-  const reorderShortcuts = useCallback((orderedIds: SidebarItemId[]) => {
-    setLayout(prev => ({ ...prev, shortcutIds: orderedIds }));
-  }, []);
-
   // ── Custom Item actions ───────────────────────────────────────────────────
-  const addCustomShortcut = useCallback((item: { label: string; to: string; icon?: string; pinDirectly?: boolean }) => {
+  const addCustomShortcut = useCallback((item: { label: string; to: string; icon?: string }) => {
     setLayout(prev => {
-      // 1. تحقق مما إذا كان هناك بالفعل اختصار بنفس العنوان والمسار
       const allItemsFlat = prev.groups.flatMap(g => g.items);
       const existing = allItemsFlat.find(i => i.to === item.to);
 
       if (existing) {
-        // تفعيل الظهور وتحديث التثبيت/الاختصار
         return {
           ...prev,
           groups: prev.groups.map(g => ({
             ...g,
-            items: g.items.map(i => {
-              if (i.id === existing.id) {
-                return {
-                  ...i,
-                  visible: true,
-                  pinned: item.pinDirectly ? true : i.pinned,
-                  isShortcut: !item.pinDirectly ? true : i.isShortcut,
-                };
-              }
-              return i;
-            })
+            items: g.items.map(i =>
+              i.id === existing.id ? { ...i, visible: true, pinned: true } : i
+            )
           })),
-          pinnedItemIds: item.pinDirectly && !prev.pinnedItemIds.includes(existing.id)
-            ? [...prev.pinnedItemIds, existing.id]
-            : prev.pinnedItemIds,
-          shortcutIds: !item.pinDirectly && !prev.shortcutIds.includes(existing.id)
-            ? [...prev.shortcutIds, existing.id]
-            : prev.shortcutIds,
+          pinnedItemIds: prev.pinnedItemIds.includes(existing.id)
+            ? prev.pinnedItemIds
+            : [...prev.pinnedItemIds, existing.id],
         };
       }
 
-      // 2. إنشاء عنصر مخصص جديد
       const newItemId = `custom_item_${Date.now()}`;
       const newCustomItem: SidebarItemConfig = {
         id: newItemId,
         to: item.to,
         defaultLabel: item.label,
-        customLabel: undefined,
         icon: item.icon || 'Layers',
         visible: true,
-        pinned: !!item.pinDirectly,
-        isShortcut: !item.pinDirectly,
+        pinned: true,
         isCustom: true,
         order: 0,
       };
 
-      // 3. البحث عن مجموعة "روابط سريعة" المخصصة أو إنشاؤها
       const hasCustomGroup = prev.groups.some(g => g.id === 'custom_group_links');
       let updatedGroups = [...prev.groups];
 
       if (!hasCustomGroup) {
-        const newGroup: SidebarGroupConfig = {
+        updatedGroups.push({
           id: 'custom_group_links',
           defaultTitle: 'روابط سريعة',
-          customTitle: undefined,
           icon: 'Link',
           visible: true,
           collapsed: false,
           items: [newCustomItem],
           isCustom: true,
           order: prev.groups.length,
-        };
-        updatedGroups.push(newGroup);
-      } else {
-        updatedGroups = updatedGroups.map(g => {
-          if (g.id === 'custom_group_links') {
-            return {
-              ...g,
-              items: [...g.items, { ...newCustomItem, order: g.items.length }],
-            };
-          }
-          return g;
         });
+      } else {
+        updatedGroups = updatedGroups.map(g =>
+          g.id === 'custom_group_links'
+            ? { ...g, items: [...g.items, { ...newCustomItem, order: g.items.length }] }
+            : g
+        );
       }
 
       return {
         ...prev,
         groups: updatedGroups,
-        pinnedItemIds: item.pinDirectly ? [...prev.pinnedItemIds, newItemId] : prev.pinnedItemIds,
-        shortcutIds: !item.pinDirectly ? [...prev.shortcutIds, newItemId] : prev.shortcutIds,
+        pinnedItemIds: [...prev.pinnedItemIds, newItemId],
       };
     });
   }, []);
@@ -321,7 +273,6 @@ export function useSidebarLayout() {
         items: g.items.filter(i => i.id !== itemId).map((item, idx) => ({ ...item, order: idx })),
       })),
       pinnedItemIds: prev.pinnedItemIds.filter(id => id !== itemId),
-      shortcutIds: prev.shortcutIds.filter(id => id !== itemId),
     }));
   }, []);
 
@@ -469,7 +420,6 @@ export function useSidebarLayout() {
         icon: customIcon || Object.keys(ICON_MAP).find(k => ICON_MAP[k] === navItem.icon) || 'Layers',
         visible: true,
         pinned: false,
-        isShortcut: false,
         order: 0,
       };
 
@@ -499,25 +449,17 @@ export function useSidebarLayout() {
       .map(id => allItems.find(i => i.id === id))
       .filter(Boolean) as SidebarItemConfig[], [layout.pinnedItemIds, allItems]);
 
-  const getShortcutItems = useCallback(() =>
-    layout.shortcutIds
-      .map(id => allItems.find(i => i.id === id))
-      .filter(Boolean) as SidebarItemConfig[], [layout.shortcutIds, allItems]);
-
   return {
     layout,
     allItems,
     getPinnedItems,
-    getShortcutItems,
     // Item actions
     toggleItemVisible,
     toggleItemPinned,
-    toggleItemShortcut,
     renameItem,
     reorderItems,
     moveItemToGroup,
     reorderPinned,
-    reorderShortcuts,
     // Custom Item actions
     addCustomShortcut,
     deleteCustomShortcut,

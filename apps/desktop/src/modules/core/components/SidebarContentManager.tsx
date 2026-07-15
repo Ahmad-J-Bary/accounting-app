@@ -5,7 +5,7 @@ import { ICON_MAP } from '@app/shell/sidebarConfig';
 import { ALL_SYSTEM_ROUTES, findRouteById } from '@app/shell/routeRegistry';
 import { IconPicker } from '@widgets/IconPicker/IconPicker';
 import {
-  Plus, Trash2, Edit2, Eye, EyeOff, Pin, PinOff, Zap, ZapOff,
+  Plus, Trash2, Edit2, Eye, EyeOff, Pin, PinOff,
   ArrowUp, ArrowDown, FolderPlus, Save, X, Settings2, FolderOpen,
   Link
 } from "lucide-react";
@@ -18,7 +18,6 @@ export const SidebarContentManager: React.FC = () => {
     allItems,
     toggleItemVisible,
     toggleItemPinned,
-    toggleItemShortcut,
     renameItem,
     moveItemToGroup,
     reorderItems,
@@ -364,15 +363,6 @@ export const SidebarContentManager: React.FC = () => {
                                 title={item.pinned ? "إلغاء التثبيت في الأعلى" : "تثبيت في الأعلى"}
                               >
                                 {item.pinned ? <Pin className="w-3.5 h-3.5 fill-amber-500" /> : <PinOff className="w-3.5 h-3.5" />}
-                              </button>
-
-                              {/* اختصار سريع */}
-                              <button
-                                onClick={() => toggleItemShortcut(item.id)}
-                                className={cn("p-1 rounded transition-colors", item.isShortcut ? "text-blue-500 hover:bg-blue-50/50" : "text-slate-350 hover:bg-slate-50")}
-                                title={item.isShortcut ? "إلغاء الاختصار السريع" : "إضافة للاختصارات السريعة"}
-                              >
-                                {item.isShortcut ? <Zap className="w-3.5 h-3.5 fill-blue-500" /> : <ZapOff className="w-3.5 h-3.5" />}
                               </button>
 
                               {/* حذف إذا كان مخصصاً */}

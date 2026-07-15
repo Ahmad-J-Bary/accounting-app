@@ -8,7 +8,6 @@ import { ICON_MAP } from './sidebarConfig';
 import { SidebarCollapseBtn } from './components/SidebarCollapseBtn';
 import { SidebarGroup } from './sidebar/SidebarGroup';
 import { SidebarPinnedSection } from './sidebar/SidebarPinnedSection';
-import { SidebarShortcutsSection } from './sidebar/SidebarShortcutsSection';
 import { SidebarItem } from './sidebar/SidebarItem';
 import { FolderPlus } from 'lucide-react';
 
@@ -218,16 +217,6 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
       )}>
         {/* قسم المثبتات */}
         <SidebarPinnedSection
-          collapsed={isCollapsed}
-          iconOnly={isIconOnly}
-          activeBg={effectiveActiveBg}
-          hoverBg={effectiveHoverBg}
-          onClose={onClose}
-          verticalAppearance={verticalNavbarAppearance}
-        />
-
-        {/* قسم الاختصارات السريعة */}
-        <SidebarShortcutsSection
           collapsed={isCollapsed}
           iconOnly={isIconOnly}
           activeBg={effectiveActiveBg}

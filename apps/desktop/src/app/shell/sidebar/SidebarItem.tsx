@@ -4,7 +4,7 @@ import { useNavSidebarSettings } from '@shared/hooks';
 import { cn } from '@shared/lib/utils';
 import { ICON_MAP } from '@app/shell/sidebarConfig';
 import type { SidebarItemConfig } from '@shared/types/sidebar-config';
-import { Pin, Zap } from 'lucide-react';
+import { Pin } from 'lucide-react';
 
 interface SidebarItemProps {
   item: SidebarItemConfig;
@@ -13,8 +13,8 @@ interface SidebarItemProps {
   iconOnly: boolean;
   activeBg: string;
   hoverBg: string;
-  /** Badge اختياري (مثبّت / اختصار) */
-  badge?: 'pinned' | 'shortcut';
+  /** Badge اختياري للمثبت */
+  badge?: 'pinned';
   onClose?: () => void;
   /** تجاوز المظهر (فاتح/داكن) من AppearanceProvider */
   verticalAppearance?: 'light' | 'dark';
@@ -62,11 +62,7 @@ export function SidebarItem({
     if (onClose && window.innerWidth < 1024) onClose();
   };
 
-  const badgeClass = badge === 'pinned'
-    ? 'text-amber-400'
-    : badge === 'shortcut'
-    ? 'text-blue-400'
-    : '';
+  const badgeClass = badge === 'pinned' ? 'text-amber-400' : '';
 
   return (
     <li className="group/item relative">
@@ -92,13 +88,10 @@ export function SidebarItem({
               <span className="truncate flex-1">{displayLabel}</span>
               {badge && (
                 <span className={cn("shrink-0", badgeClass)}>
-                  {badge === 'pinned'
-                    ? <Pin className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-                    : <Zap className="w-2.5 h-2.5 fill-blue-400 text-blue-400" />
-                  }
+                  <Pin className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
                 </span>
               )}
-              {isActive && !badge && (
+              {isActive && (
                 <div className="mr-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
               )}
             </>

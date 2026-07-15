@@ -3,7 +3,7 @@ import { useSidebarLayout } from '@shared/hooks';
 import { useNavSidebarSettings } from '@shared/hooks';
 import { cn } from '@shared/lib/utils';
 import { ICON_MAP } from '@app/shell/sidebarConfig';
-import { Eye, EyeOff, Pin, PinOff, Zap, ZapOff, RotateCcw, X, Settings2 } from 'lucide-react';
+import { Eye, EyeOff, Pin, PinOff, RotateCcw, X, Settings2 } from 'lucide-react';
 import { Button } from '@shared/ui/button';
 
 interface SidebarCustomizeDrawerProps {
@@ -16,7 +16,6 @@ export function SidebarCustomizeDrawer({ open, onClose }: SidebarCustomizeDrawer
     layout,
     toggleItemVisible,
     toggleItemPinned,
-    toggleItemShortcut,
     toggleGroupVisible,
     resetToDefault,
   } = useSidebarLayout();
@@ -79,7 +78,7 @@ export function SidebarCustomizeDrawer({ open, onClose }: SidebarCustomizeDrawer
         {tab === 'items' ? (
           <div className="p-2 space-y-1">
             <p className={cn("text-[10px] px-2 py-1", subtextClass)}>
-              تحكم في ظهور العناصر وتثبيتها واختصاراتها
+              تحكم في ظهور العناصر وتثبيتها
             </p>
             {allItems.map(item => {
               const IconComp = ICON_MAP[item.icon] ?? ICON_MAP['Settings'];
@@ -115,16 +114,6 @@ export function SidebarCustomizeDrawer({ open, onClose }: SidebarCustomizeDrawer
                       title={item.pinned ? "إلغاء التثبيت" : "تثبيت"}
                     >
                       {item.pinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
-                    </button>
-                    <button
-                      onClick={() => toggleItemShortcut(item.id)}
-                      className={cn(
-                        "p-1 rounded transition-colors",
-                        item.isShortcut ? "text-blue-400" : subtextClass
-                      )}
-                      title={item.isShortcut ? "إزالة الاختصار" : "اختصار"}
-                    >
-                      {item.isShortcut ? <ZapOff className="w-3 h-3" /> : <Zap className="w-3 h-3" />}
                     </button>
                   </div>
                 </div>

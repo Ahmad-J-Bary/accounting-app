@@ -24,8 +24,6 @@ export interface SidebarItemConfig {
   visible: boolean;
   /** مثبّت في قسم المثبتات؟ */
   pinned: boolean;
-  /** مضاف كاختصار سريع؟ */
-  isShortcut: boolean;
   /** ترتيب العنصر داخل مجموعته */
   order: number;
   /** هل هذا عنصر مخصص أضافه المستخدم؟ */
@@ -62,8 +60,6 @@ export interface SidebarLayoutConfig {
   groups: SidebarGroupConfig[];
   /** IDs العناصر المثبتة بالترتيب */
   pinnedItemIds: SidebarItemId[];
-  /** IDs الاختصارات السريعة بالترتيب */
-  shortcutIds: SidebarItemId[];
   /** رقم الإصدار للـ migration التلقائي */
   version: number;
 }
@@ -74,26 +70,21 @@ export type SidebarItemAction =
   | 'unpin'
   | 'hide'
   | 'show'
-  | 'addShortcut'
-  | 'removeShortcut'
   | 'rename';
 
 export interface SidebarLayoutContextType {
   layout: SidebarLayoutConfig;
   allItems: SidebarItemConfig[];
   getPinnedItems: () => SidebarItemConfig[];
-  getShortcutItems: () => SidebarItemConfig[];
   // ── Item actions ──────────────────────────────────────────
   toggleItemVisible: (itemId: SidebarItemId) => void;
   toggleItemPinned: (itemId: SidebarItemId) => void;
-  toggleItemShortcut: (itemId: SidebarItemId) => void;
   renameItem: (itemId: SidebarItemId, label: string) => void;
   reorderItems: (groupId: SidebarGroupId, orderedIds: SidebarItemId[]) => void;
   moveItemToGroup: (itemId: SidebarItemId, targetGroupId: SidebarGroupId) => void;
   reorderPinned: (orderedIds: SidebarItemId[]) => void;
-  reorderShortcuts: (orderedIds: SidebarItemId[]) => void;
   // ── Custom Item actions ───────────────────────────────────
-  addCustomShortcut: (item: { label: string; to: string; icon?: string; pinDirectly?: boolean }) => void;
+  addCustomShortcut: (item: { label: string; to: string; icon?: string }) => void;
   deleteCustomShortcut: (itemId: SidebarItemId) => void;
   // ── Group actions ─────────────────────────────────────────
   toggleGroupVisible: (groupId: SidebarGroupId) => void;

@@ -1,38 +1,24 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useSidebarLayout } from './useSidebarLayoutContext';
 
 export function useSidebarQuickAdd() {
-  const { addCustomShortcut, layout, deleteCustomShortcut } = useSidebarLayout();
+  const { addCustomShortcut, layout, toggleItemPinned } = useSidebarLayout();
 
-  const addShortcut = useCallback((label: string, to: string, icon?: string, pinDirectly?: boolean) => {
-    addCustomShortcut({ label, to, icon, pinDirectly });
-  }, [addCustomShortcut]);
+  const allItems = useMemo(() => layout.groups.flatMap(g => g.items), [layout.groups]);
 
-  const removeShortcutByPath = useCallback((to: string) => {
-    const item = layout.groups.flatMap(g => g.items).find(i => i.to === to);
-    if (item) {
-      deleteCustomShortcut(item.id);
+  const toggleInSidebar = useCallback((label: string, to: string, icon?: string) => {
+    const existing = allItems.find(i => i.to === to);
+    if (existing) {
+      toggleItemPinned(existing.id);
+    } else {
+      addCustomShortcut({ label, to, icon });
     }
-  }, [layout.groups, deleteCustomShortcut]);
+  }, [allItems, addCustomShortcut, toggleItemPinned]);
 
-  const isAdded = useCallback((to: string) => {
-    return layout.groups.flatMap(g => g.items).some(item => item.to === to);
-  }, [layout.groups]);
+  const isInSidebar = useCallback((to: string) => {
+    return allItems.some(i => i.to === to && i.pinned);
+  }, [allItems]);
 
-  const isPinned = useCallback((to: string) => {
-    return layout.groups.flatMap(g => g.items).some(item => item.to === to && item.pinned);
-  }, [layout.groups]);
-
-  const isShortcut = useCallback((to: string) => {
-    return layout.groups.flatMap(g => g.items).some(item => item.to === to && item.isShortcut);
-  }, [layout.groups]);
-
-  return {
-    addShortcut,
-    removeShortcutByPath,
-    isAdded,
-    isPinned,
-    isShortcut,
-  };
+  return { toggleInSidebar, isInSidebar };
 }
 export default useSidebarQuickAdd;
