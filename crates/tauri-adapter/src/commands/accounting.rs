@@ -27,13 +27,19 @@ pub async fn get_expense_items(state: State<'_, AppState>) -> Result<Vec<Account
 
 #[tauri::command]
 pub async fn get_account_ledger(
-    account_id: String,
+    account_ids: Vec<String>,
     state: State<'_, AppState>,
 ) -> Result<AccountLedgerDto, String> {
-    let aid = AccountId(Uuid::from_str(&account_id).map_err(|e| e.to_string())?);
+    let aids: Vec<AccountId> = account_ids
+        .iter()
+        .map(|id| {
+            let uuid = Uuid::from_str(id).map_err(|e| e.to_string())?;
+            Ok(AccountId(uuid))
+        })
+        .collect::<Result<Vec<_>, String>>()?;
     
     let ledger = AccountQueries::new(state.account_repo.clone(), state.journal_entry_repo.clone())
-        .get_ledger(&aid)
+        .get_ledger(&aids)
         .await
         .map_err(|e| e.to_string())?;
         

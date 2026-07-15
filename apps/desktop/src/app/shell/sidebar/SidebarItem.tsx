@@ -27,6 +27,17 @@ export function SidebarItem({
   const { openTab, updateMainTab, activeTabId } = useTabs();
   const { settings, getNavFontSizeClass } = useNavSidebarSettings();
 
+  if (item.isSeparator) {
+    return (
+      <li className="py-1.5">
+        <div className={cn(
+          "h-px mx-2",
+          verticalAppearance === 'light' ? "bg-slate-200" : "bg-white/10"
+        )} />
+      </li>
+    );
+  }
+
   const isActive = activeTabId === item.to;
   const isBgLight = verticalAppearance
     ? verticalAppearance === 'light'

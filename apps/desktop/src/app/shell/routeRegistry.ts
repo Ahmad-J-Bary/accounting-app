@@ -5,6 +5,7 @@ export interface SystemRouteEntry {
   icon: string;
   groupId: string;
   groupLabel: string;
+  isSeparator?: boolean;
 }
 
 export const ALL_SYSTEM_ROUTES: SystemRouteEntry[] = [
@@ -48,11 +49,22 @@ export const ALL_SYSTEM_ROUTES: SystemRouteEntry[] = [
   { id: "production", to: "/production", label: "الإنتاج", icon: "Factory", groupId: "inventory", groupLabel: "المخزون" },
   { id: "adjustments", to: "/adjustments", label: "تسويات المخزون", icon: "ClipboardCheck", groupId: "inventory", groupLabel: "المخزون" },
 
-  // ── التقارير والإدارة ──
-  { id: "reports", to: "/reports", label: "التقارير", icon: "BarChart3", groupId: "admin", groupLabel: "التقارير والإدارة" },
-  { id: "users", to: "/users", label: "المستخدمون والصلاحيات", icon: "Shield", groupId: "admin", groupLabel: "التقارير والإدارة" },
-  { id: "settings", to: "/settings", label: "الإعدادات", icon: "Settings", groupId: "admin", groupLabel: "التقارير والإدارة" },
-  { id: "audit-log", to: "/audit-log", label: "سجل النشاط", icon: "History", groupId: "admin", groupLabel: "التقارير والإدارة" },
+  // ── التقارير ──
+  { id: "report-ledger", to: "/accounting/reports/ledger", label: "دفتر الأستاذ العام", icon: "BookOpen", groupId: "reports", groupLabel: "التقارير" },
+  { id: "sep-reports-1", to: "", label: "", icon: "", groupId: "reports", groupLabel: "التقارير", isSeparator: true },
+  { id: "report-income", to: "/accounting/reports/income", label: "قائمة الدخل", icon: "TrendingUp", groupId: "reports", groupLabel: "التقارير" },
+  { id: "report-trial-balance", to: "/accounting/reports/trial-balance", label: "ميزان المراجعة", icon: "Scale", groupId: "reports", groupLabel: "التقارير" },
+  { id: "report-balance-sheet", to: "/accounting/reports/balance-sheet", label: "الميزانية العمومية", icon: "BarChart3", groupId: "reports", groupLabel: "التقارير" },
+  { id: "sep-reports-2", to: "", label: "", icon: "", groupId: "reports", groupLabel: "التقارير", isSeparator: true },
+  { id: "report-partner-profit", to: "/accounting/reports/partner-profit-share", label: "الشركاء وتقاسم الأرباح", icon: "Users", groupId: "reports", groupLabel: "التقارير" },
+  { id: "sep-reports-3", to: "", label: "", icon: "", groupId: "reports", groupLabel: "التقارير", isSeparator: true },
+  { id: "report-inventory-valuation", to: "/inventory/reports/valuation", label: "جرد وقيمة المخزون", icon: "Package", groupId: "reports", groupLabel: "التقارير" },
+  { id: "report-low-stock", to: "/inventory/reports/low-stock", label: "نواقص المخزون", icon: "AlertTriangle", groupId: "reports", groupLabel: "التقارير" },
+
+  // ── الإدارة ──
+  { id: "users", to: "/users", label: "المستخدمون والصلاحيات", icon: "Shield", groupId: "admin", groupLabel: "الإدارة" },
+  { id: "settings", to: "/settings", label: "الإعدادات", icon: "Settings", groupId: "admin", groupLabel: "الإدارة" },
+  { id: "audit-log", to: "/audit-log", label: "سجل النشاط", icon: "History", groupId: "admin", groupLabel: "الإدارة" },
 ];
 
 export interface SystemRouteGroup {
@@ -94,8 +106,14 @@ export const SYSTEM_ROUTE_GROUPS: SystemRouteGroup[] = [
     items: ALL_SYSTEM_ROUTES.filter(r => r.groupId === "inventory"),
   },
   {
+    id: "reports",
+    title: "التقارير",
+    icon: "BarChart3",
+    items: ALL_SYSTEM_ROUTES.filter(r => r.groupId === "reports"),
+  },
+  {
     id: "admin",
-    title: "التقارير والإدارة",
+    title: "الإدارة",
     icon: "Settings",
     items: ALL_SYSTEM_ROUTES.filter(r => r.groupId === "admin"),
   },

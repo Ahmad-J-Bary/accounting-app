@@ -103,11 +103,15 @@ impl AccountQueries {
 
     pub async fn get_ledger(
         &self,
-        account_id: &AccountId,
+        account_ids: &[AccountId],
     ) -> Result<AccountLedger, AccountUseCaseError> {
-        let account = self
+        if account_ids.is_empty() {
+            return Err(AccountUseCaseError::AccountNotFound);
+        }
+
+        let first_account = self
             .account_repo
-            .find_by_id(account_id)
+            .find_by_id(&account_ids[0])
             .await
             .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?
             .ok_or(AccountUseCaseError::AccountNotFound)?;
@@ -118,18 +122,27 @@ impl AccountQueries {
             .await
             .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
         let mut account_info_map: HashMap<AccountId, (String, String)> = HashMap::new();
-        for acc in all_accounts {
-            account_info_map.insert(acc.id, (acc.code, acc.name_ar));
+        let mut opening_balance_map: HashMap<AccountId, Decimal> = HashMap::new();
+        for acc in &all_accounts {
+            account_info_map.insert(acc.id, (acc.code.clone(), acc.name_ar.clone()));
+            opening_balance_map.insert(acc.id, acc.opening_balance);
         }
+
+        let id_set: std::collections::HashSet<AccountId> = account_ids.iter().copied().collect();
+
+        let opening_balance: Decimal = account_ids
+            .iter()
+            .map(|id| opening_balance_map.get(id).copied().unwrap_or(Decimal::ZERO))
+            .sum();
 
         let journal_entries = self
             .journal_repo
-            .list_by_account(account_id)
+            .list_by_accounts(account_ids)
             .await
             .map_err(|e| AccountUseCaseError::JournalRepositoryError(e.to_string()))?;
 
         let mut lines = Vec::new();
-        let mut running_balance_base = account.opening_balance;
+        let mut running_balance_base = opening_balance;
         let mut running_balance_original = Decimal::ZERO;
 
         let mut sorted_entries = journal_entries;
@@ -139,7 +152,7 @@ impl AccountQueries {
             let account_lines: Vec<_> = entry
                 .lines
                 .iter()
-                .filter(|l| l.account_id == *account_id)
+                .filter(|l| id_set.contains(&l.account_id))
                 .collect();
             if account_lines.is_empty() {
                 continue;
@@ -148,7 +161,7 @@ impl AccountQueries {
             let opposite_lines: Vec<_> = entry
                 .lines
                 .iter()
-                .filter(|l| l.account_id != *account_id)
+                .filter(|l| !id_set.contains(&l.account_id))
                 .collect();
             let opposite_account_name = if opposite_lines.len() == 1 {
                 account_info_map
@@ -237,10 +250,16 @@ impl AccountQueries {
         let total_debit_original = lines.iter().map(|l| l.debit_original).sum();
         let total_credit_original = lines.iter().map(|l| l.credit_original).sum();
 
+        let account_name = if account_ids.len() == 1 {
+            first_account.name_ar.clone()
+        } else {
+            format!("{} + {} حسابات فرعية", first_account.name_ar, account_ids.len() - 1)
+        };
+
         Ok(AccountLedger {
-            account_id: account.id,
-            account_name: account.name_ar,
-            opening_balance_base: account.opening_balance,
+            account_id: first_account.id,
+            account_name,
+            opening_balance_base: opening_balance,
             opening_balance_original: Decimal::ZERO,
             lines,
             total_debit_base,

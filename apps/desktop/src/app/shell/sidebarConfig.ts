@@ -3,7 +3,7 @@ import {
   ShoppingCart, Wallet, Package, Warehouse, AlertTriangle,
   Factory, ClipboardCheck, BarChart3, Shield, Settings, History, Layers,
   HardDrive, Folders, DollarSign, Undo2, GitMerge, ArrowLeftRight,
-  Link, FolderPlus, Building2
+  Link, FolderPlus, Building2, Minus
 } from "lucide-react";
 import type { NavLayoutType, NavSidebarSettings } from '@shared/types/sidebar-settings';
 import type { SidebarGroupConfig, SidebarItemConfig } from '@shared/types/sidebar-config';
@@ -15,7 +15,7 @@ export const ICON_MAP: Record<string, React.ElementType> = {
   ShoppingCart, Wallet, Package, Warehouse, AlertTriangle,
   Factory, ClipboardCheck, BarChart3, Shield, Settings, History, Layers,
   HardDrive, Folders, DollarSign, Undo2, GitMerge, ArrowLeftRight,
-  Link, FolderPlus, Building2,
+  Link, FolderPlus, Building2, Minus,
 };
 
 export interface NavItem {
@@ -23,6 +23,7 @@ export interface NavItem {
   to: string;
   label: string;
   icon: React.ElementType;
+  isSeparator?: boolean;
 }
 
 export interface NavGroup {
@@ -42,6 +43,7 @@ export const NAV_GROUPS: NavGroup[] = SYSTEM_ROUTE_GROUPS.map(group => ({
     to: item.to,
     label: item.label,
     icon: ICON_MAP[item.icon] ?? LayoutDashboard,
+    isSeparator: item.isSeparator,
   })),
 }));
 
@@ -65,6 +67,7 @@ export function buildDefaultLayout(): import('@shared/types/sidebar-config').Sid
       pinned: false,
       isShortcut: false,
       order: ii,
+      isSeparator: item.isSeparator ?? false,
     } satisfies SidebarItemConfig)),
   }));
 

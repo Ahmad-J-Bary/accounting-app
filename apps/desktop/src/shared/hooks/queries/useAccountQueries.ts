@@ -18,11 +18,11 @@ export function useChartOfAccounts() {
   });
 }
 
-export function useAccountLedger(accountId: string | undefined) {
+export function useAccountLedger(accountIds: string[] | undefined) {
   return useQuery<AccountLedgerDto>({
-    queryKey: QUERY_KEYS.accountLedger(accountId ?? ""),
-    queryFn: () => accountingService.getAccountLedger(accountId!),
-    enabled: !!accountId,
+    queryKey: QUERY_KEYS.accountLedger(accountIds?.join(",") ?? ""),
+    queryFn: () => accountingService.getAccountLedger(accountIds!),
+    enabled: !!accountIds?.length,
   });
 }
 

@@ -111,6 +111,39 @@ pub async fn list_by_account(pool: &SqlitePool, account_id: &AccountId) -> Resul
     Ok(entries)
 }
 
+pub async fn list_by_accounts(pool: &SqlitePool, account_ids: &[AccountId]) -> Result<Vec<JournalEntry>, AppError> {
+    if account_ids.is_empty() {
+        return Ok(vec![]);
+    }
+
+    let placeholders: Vec<String> = account_ids.iter().map(|_| "?".to_string()).collect();
+    let sql = format!(
+        "SELECT DISTINCT je.id, je.entry_number, je.journal_type, je.source_id, je.entry_date, je.description, je.status, je.created_at, je.posted_at, je.updated_at 
+         FROM journal_entries je
+         JOIN journal_lines jl ON je.id = jl.journal_entry_id
+         WHERE jl.account_id IN ({})
+         ORDER BY je.entry_date DESC",
+        placeholders.join(",")
+    );
+
+    let mut query = sqlx::query_as::<_, JournalEntryRow>(&sql);
+    for aid in account_ids {
+        query = query.bind(aid.0.to_string());
+    }
+
+    let rows = query
+        .fetch_all(pool)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    let mut entries = Vec::new();
+    for row in rows {
+        let lines = load_lines(pool, &row.id).await?;
+        entries.push(row_to_entry(row, lines)?);
+    }
+    Ok(entries)
+}
+
 pub async fn list_with_filters(
     pool: &SqlitePool,
     from_date: Option<DateTime<Utc>>,

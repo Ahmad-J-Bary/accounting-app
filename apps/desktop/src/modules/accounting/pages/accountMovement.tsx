@@ -29,6 +29,11 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { PaymentForm, PAYMENT_CONFIGS } from "@modules/partners/components/PaymentForm";
 import { ExpenseVoucherForm } from "@modules/accounting/components/ExpenseVoucherForm";
 
+function getDescendantIds(accountId: string, accounts: AccountDto[]): string[] {
+  const children = accounts.filter(a => a.parent_id === accountId);
+  return [accountId, ...children.flatMap(c => getDescendantIds(c.id, accounts))];
+}
+
 const OUTLINE_BUTTON_CLASS = "border-slate-200 text-slate-700 hover:bg-slate-50";
 const TOOLBAR_CLASS_BY_TYPE = {
   partner: "bg-amber-600 hover:bg-amber-700 text-white",
@@ -64,7 +69,9 @@ export default function AccountMovement() {
     queryKey: ["account-ledger", accountId ?? ""],
     fetchData: async () => {
       if (!accountId) return [];
-      const data = await accountingService.getAccountLedger(accountId);
+      const allAccounts = await accountingService.getChartOfAccounts();
+      const descendantIds = getDescendantIds(accountId, allAccounts);
+      const data = await accountingService.getAccountLedger(descendantIds);
       setLedger(data);
       // Set default date range to cover all data
       if (data.lines.length > 0) {

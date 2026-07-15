@@ -12,6 +12,12 @@ import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useChartOfAccounts, useAccountLedger } from "@shared/hooks/queries/useAccountQueries";
 import { AccountMovementTable } from "../components/AccountMovementTable";
+import type { AccountDto } from "@erp/shared-types";
+
+function getDescendantIds(accountId: string, accounts: AccountDto[]): string[] {
+  const children = accounts.filter(a => a.parent_id === accountId);
+  return [accountId, ...children.flatMap(c => getDescendantIds(c.id, accounts))];
+}
 
 export default function AccountMovementsReport() {
   const { baseCurrency } = useCurrencyContext();
@@ -24,7 +30,12 @@ export default function AccountMovementsReport() {
     to_date: new Date().toISOString().split('T')[0],
   });
 
-  const { data: ledger, isLoading: loading, refetch } = useAccountLedger(selectedAccountId);
+  const accountIds = useMemo(() => {
+    if (!selectedAccountId) return undefined;
+    return getDescendantIds(selectedAccountId, accounts);
+  }, [selectedAccountId, accounts]);
+
+  const { data: ledger, isLoading: loading, refetch } = useAccountLedger(accountIds);
 
   const filteredLines = useMemo(() => {
     if (!ledger) return [];

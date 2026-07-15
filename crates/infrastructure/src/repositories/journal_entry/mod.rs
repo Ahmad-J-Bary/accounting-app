@@ -43,6 +43,10 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
         queries::list_by_account(&self.pool, account_id).await
     }
 
+    async fn list_by_accounts(&self, account_ids: &[AccountId]) -> Result<Vec<JournalEntry>, AppError> {
+        queries::list_by_accounts(&self.pool, account_ids).await
+    }
+
     async fn list_with_filters(
         &self,
         from_date: Option<chrono::DateTime<chrono::Utc>>,

@@ -123,6 +123,7 @@ pub async fn create_partner_account(
 /// The `balance_sign` convention:
 /// - Customer: positive means debit (receivable), negative means credit.
 /// - Supplier: positive means credit (payable), negative means debit.
+#[allow(clippy::too_many_arguments)]
 pub async fn create_opening_balance_entry(
     account_id: AccountId,
     partner_name: &str,

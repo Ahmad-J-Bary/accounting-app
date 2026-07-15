@@ -19,7 +19,6 @@ import Production from '@modules/inventory/pages/production';
 import OpeningBalance from '@modules/accounting/pages/openingBalance';
 import Adjustments from '@modules/inventory/pages/adjustments';
 import MaterialMovementsPage from '@modules/inventory/pages/MaterialMovementsPage';
-import Reports from '@modules/core/pages/reports';
 import Users from '@modules/core/pages/users';
 import Settings from '@modules/core/pages/settings';
 import AuditLog from '@modules/core/pages/auditLog';
@@ -83,7 +82,6 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/opening-balance/new/*" element={<OpeningBalance />} />
       <Route path="/opening-balance/:id" element={<OpeningBalance />} />
       <Route path="/adjustments" element={<Adjustments />} />
-      <Route path="/reports" element={<Reports />} />
       <Route path="/users" element={<Users />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/audit-log" element={<AuditLog />} />

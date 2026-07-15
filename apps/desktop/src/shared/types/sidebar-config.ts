@@ -30,6 +30,8 @@ export interface SidebarItemConfig {
   order: number;
   /** هل هذا عنصر مخصص أضافه المستخدم؟ */
   isCustom?: boolean;
+  /** هل هذا فاصل بين العناصر؟ */
+  isSeparator?: boolean;
 }
 
 /** مجموعة عناصر داخل الـ Sidebar */

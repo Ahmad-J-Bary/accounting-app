@@ -35,7 +35,7 @@ export function useMaterialExpenseLedgers() {
       const ledgerResults = await Promise.allSettled(
         expenseAccounts.map(async (account) => ({
           accountId: account.id,
-          ledger: await accountingService.getAccountLedger(account.id),
+          ledger: await accountingService.getAccountLedger([account.id]),
         })),
       );
 

@@ -107,6 +107,7 @@ impl JournalEntryRepository for MockJournalRepository {
     async fn find_by_number(&self, _number: &str) -> Result<Option<JournalEntry>, AppError> { Ok(None) }
     async fn list_all(&self) -> Result<Vec<JournalEntry>, AppError> { Ok(self.entries.lock().unwrap().clone()) }
     async fn list_by_account(&self, _account_id: &domain::shared::AccountId) -> Result<Vec<JournalEntry>, AppError> { Ok(vec![]) }
+    async fn list_by_accounts(&self, _account_ids: &[domain::shared::AccountId]) -> Result<Vec<JournalEntry>, AppError> { Ok(vec![]) }
     async fn list_with_filters(
         &self,
         _from_date: Option<chrono::DateTime<chrono::Utc>>,

@@ -117,7 +117,7 @@ export function usePartnerProfitShareReport(filters: IncomeStatementFilters): Re
           partners.map(async (p) => {
             const accountIds = [p.linked_account_id, p.drawings_account_id].filter(Boolean) as string[];
             const ledgers = await Promise.allSettled(
-              accountIds.map((id) => accountingService.getAccountLedger(id))
+              accountIds.map((id) => accountingService.getAccountLedger([id]))
             );
             ledgers.forEach((result, i) => {
               if (result.status === "fulfilled") {

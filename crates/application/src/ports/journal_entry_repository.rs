@@ -11,6 +11,7 @@ pub trait JournalEntryRepository: Send + Sync {
     async fn find_by_number(&self, number: &str) -> Result<Option<JournalEntry>, AppError>;
     async fn list_all(&self) -> Result<Vec<JournalEntry>, AppError>;
     async fn list_by_account(&self, account_id: &AccountId) -> Result<Vec<JournalEntry>, AppError>;
+    async fn list_by_accounts(&self, account_ids: &[AccountId]) -> Result<Vec<JournalEntry>, AppError>;
     async fn list_with_filters(
         &self,
         from_date: Option<DateTime<Utc>>,
