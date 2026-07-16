@@ -120,6 +120,8 @@ async function buildExcelJsWorkbook(
     }
   }
 
+  applyExcelJsMerges(ws, columns, options?.mergeCells);
+
   return workbook.xlsx.writeBuffer() as Promise<ExcelJS.Buffer>;
 }
 
@@ -130,11 +132,57 @@ function hasImageColumns(columns: ExcelExportColumn[]): boolean {
 export interface ExcelExportOptions {
   sheetName?: string;
   autoFilter?: boolean;
+  mergeCells?: Array<{
+    columnId: string;
+    startRow: number;
+    endRow: number;
+  }>;
   sortBy?: {
     columnId: string;
     direction?: 'asc' | 'desc';
     compare?: (a: Record<string, unknown>, b: Record<string, unknown>) => number;
   };
+}
+
+function getVisibleColumnIndex(columns: ExcelExportColumn[], columnId: string): number {
+  return columns.findIndex((column) => column.id === columnId);
+}
+
+function applyExcelJsMerges(
+  ws: ExcelJS.Worksheet,
+  columns: ExcelExportColumn[],
+  merges?: ExcelExportOptions['mergeCells'],
+) {
+  if (!merges?.length) return;
+
+  merges.forEach((merge) => {
+    const columnIndex = getVisibleColumnIndex(columns, merge.columnId);
+    if (columnIndex === -1 || merge.endRow <= merge.startRow) return;
+
+    ws.mergeCells(merge.startRow + 2, columnIndex + 1, merge.endRow + 2, columnIndex + 1);
+  });
+}
+
+function applySheetMerges(
+  ws: XLSX.WorkSheet,
+  columns: ExcelExportColumn[],
+  merges?: ExcelExportOptions['mergeCells'],
+) {
+  if (!merges?.length) return;
+
+  const sheetMerges = merges.flatMap((merge) => {
+    const columnIndex = getVisibleColumnIndex(columns, merge.columnId);
+    if (columnIndex === -1 || merge.endRow <= merge.startRow) return [];
+
+    return [{
+      s: { r: merge.startRow + 1, c: columnIndex },
+      e: { r: merge.endRow + 1, c: columnIndex },
+    }];
+  });
+
+  if (sheetMerges.length > 0) {
+    ws['!merges'] = [...(ws['!merges'] || []), ...sheetMerges];
+  }
 }
 
 const HEADER_STYLE = {
@@ -225,6 +273,7 @@ function buildWorkbook(
     wch: col.width ?? (col.hidden ? 0 : 12),
   }));
   ws['!autofilter'] = options?.autoFilter === false ? undefined : { ref: ws['!ref'] || 'A1' };
+  applySheetMerges(ws, columns, options?.mergeCells);
 
   const wb = XLSX.utils.book_new();
   wb.Workbook = { Views: [{ RTL: true }] };

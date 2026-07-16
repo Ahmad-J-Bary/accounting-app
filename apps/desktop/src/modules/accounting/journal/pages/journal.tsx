@@ -1,6 +1,6 @@
 ﻿import { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Filter } from "lucide-react";
+import { Filter, LayoutList, LayoutGrid } from "lucide-react";
 import { journalEntryService, type JournalFilters } from '@modules/accounting/api/journalEntryService';
 import type { JournalEntryDto, JournalType } from "@erp/shared-types";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
@@ -11,6 +11,8 @@ import { useDataTable } from '@shared/hooks';
 import { JournalTable } from '@modules/accounting/journal/components/JournalTable';
 import { JOURNAL_TYPES } from "@modules/accounting/journal/lib/journal-config";
 
+type DisplayMode = "two-line" | "one-line";
+
 export default function Journal() {
   const [searchParams] = useSearchParams();
   const typeParam = searchParams.get('type') as JournalType | null;
@@ -20,6 +22,8 @@ export default function Journal() {
     from_date: undefined,
     to_date: undefined,
   });
+
+  const [displayMode, setDisplayMode] = useState<DisplayMode>("two-line");
 
   useEffect(() => {
     // Sync from URL only when the query param exists.
@@ -74,12 +78,13 @@ export default function Journal() {
       toolbar={<></>}
       tableContent={
         <JournalTable
-          key={`journal-table-${filters.journal_type || 'GeneralJournal'}`}
+          key={`journal-table-${filters.journal_type || 'GeneralJournal'}-${displayMode}`}
           entries={displayEntries}
           loading={loading}
           search={search}
           onSearchChange={setSearch}
           filters={filters as JournalFilters}
+          displayMode={displayMode}
           filterBar={
             <div className="flex flex-wrap items-center gap-2">
               <Select 
@@ -96,6 +101,33 @@ export default function Journal() {
                   ))}
                 </SelectContent>
               </Select>
+              
+              <div className="flex items-center gap-1 ml-2 border-slate-200 border rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setDisplayMode("two-line")}
+                  className={`p-2 transition-colors ${
+                    displayMode === "two-line"
+                      ? "bg-blue-600 text-white"
+                      : "text-slate-500 hover:bg-slate-100"
+                  }`}
+                  title="شكل السطرين (افتراضي)"
+                >
+                  <LayoutList className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDisplayMode("one-line")}
+                  className={`p-2 transition-colors ${
+                    displayMode === "one-line"
+                      ? "bg-blue-600 text-white"
+                      : "text-slate-500 hover:bg-slate-100"
+                  }`}
+                  title="شكل السطر الواحد"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           }
         />
