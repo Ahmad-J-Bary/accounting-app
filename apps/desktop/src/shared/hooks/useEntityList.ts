@@ -8,6 +8,7 @@ interface UseEntityListProps<T, Req> {
   saveData: (payload: Req) => Promise<T>;
   deleteData: (id: string) => Promise<void>;
   searchFields: (keyof T)[];
+  searchPredicate?: (item: T, search: string) => boolean;
   errorLabel?: string;
   successLabel?: string;
   manageFormState?: boolean;
@@ -19,6 +20,7 @@ export function useEntityList<T extends { id: string }, Req>({
   saveData,
   deleteData,
   searchFields,
+  searchPredicate,
   successLabel = "تم الحفظ بنجاح",
   manageFormState = true,
 }: UseEntityListProps<T, Req>) {
@@ -74,13 +76,16 @@ export function useEntityList<T extends { id: string }, Req>({
   const filtered = useMemo(() => {
     const s = search.toLowerCase().trim();
     if (!s) return items;
+    if (searchPredicate) {
+      return items.filter((item) => searchPredicate(item, s));
+    }
     return items.filter((item) =>
       searchFields.some((field) => {
         const val = item[field];
         return val && String(val).toLowerCase().includes(s);
       })
     );
-  }, [items, search, searchFields]);
+  }, [items, search, searchFields, searchPredicate]);
 
   const selectedItem = useMemo(
     () => items.find((i) => i.id === selectedId) || null,

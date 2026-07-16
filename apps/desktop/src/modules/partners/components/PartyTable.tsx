@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { TableShell } from "@widgets/table-shell/TableShell";
@@ -7,7 +7,7 @@ import { useUnifiedColumns, useSortable, useTableColumns, useBaseCurrencyColumns
 import { NotebookText, Receipt, User, Truck } from "lucide-react";
 import { TableActions } from "@widgets/table-shell/TableActions";
 
-interface PartyTableProps<T extends { id: string; name: string; code?: string; phone?: string; balance?: string | number }> {
+interface PartyTableProps<T extends { id: string; name: string; code?: string; phone?: string; balance?: string | number; notes?: string | null }> {
   entityName: "customer" | "supplier";
   data: T[];
   loading: boolean;
@@ -19,6 +19,7 @@ interface PartyTableProps<T extends { id: string; name: string; code?: string; p
   onJournal?: (item: T) => void;
   onDocument?: (item: T) => void;
   selectedId?: string | null;
+  onVisibleColumnsChange?: (ids: string[]) => void;
 }
 
 const ENTITY_CONFIG = {
@@ -52,7 +53,7 @@ const ENTITY_CONFIG = {
   },
 } as const;
 
-export function PartyTable<T extends { id: string; name: string; code?: string; phone?: string; balance?: string | number }>({
+export function PartyTable<T extends { id: string; name: string; code?: string; phone?: string; balance?: string | number; notes?: string | null }>({
   entityName,
   data,
   loading,
@@ -64,6 +65,7 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
   onJournal,
   onDocument,
   selectedId,
+  onVisibleColumnsChange,
 }: PartyTableProps<T>) {
   const cfg = ENTITY_CONFIG[entityName];
   const Icon = cfg.icon;
@@ -71,7 +73,7 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
   const { isBaseCurrency } = useBaseCurrencyColumns();
   const { getAccountStatusColumn, getBalanceColumns, getSummaryColumns } = useTableColumns();
 
-  const { sortedData: sortedData, sortField, sortDirection, handleSort } = useSortable({
+  const { sortedData, sortField, sortDirection, handleSort } = useSortable({
     data,
     defaultField: "code" as string,
     sortFn: (a, b, field, direction) => {
@@ -138,6 +140,17 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
     cols.push(...(balanceCols as UnifiedColumn<T>[]));
 
     cols.push({
+      id: "notes",
+      header: "ملاحظات",
+      label: "ملاحظات",
+      accessor: (item) => (
+        <span className="text-slate-500 text-xs truncate max-w-[200px] block" title={item.notes || ""}>
+          {item.notes || ""}
+        </span>
+      ),
+    });
+
+    cols.push({
       id: "actions",
       header: "إجراءات",
       label: "إجراءات",
@@ -166,15 +179,19 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
         ids.push(`balance_${curr.code}`);
       }
     });
-    ids.push("actions");
+    ids.push("notes", "actions");
     return ids;
   }, [currencies, isBaseCurrency]);
 
-  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
+  const { enrichedColumns, visibleColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: cfg.unifiedId,
     columns: allColumns,
     defaultVisible,
   });
+
+  useEffect(() => {
+    onVisibleColumnsChange?.(visibleColumns);
+  }, [visibleColumns, onVisibleColumnsChange]);
 
   const summaryColumns: SummaryColumn[] = getSummaryColumns(
     enrichedColumns as UnifiedColumn<{ balance?: number | string; debit?: number | string; credit?: number | string; currency?: string }>[],

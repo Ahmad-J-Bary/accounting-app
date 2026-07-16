@@ -10,11 +10,10 @@ import { paymentService } from '@modules/payments/api/paymentService';
 import type { AccountDto, CreatePaymentRequest, CustomerDto, SupplierDto, CreateCustomerRequest, UpdateCustomerRequest, CreateSupplierRequest, UpdateSupplierRequest } from "@erp/shared-types";
 
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useBaseCurrencyColumns } from "@shared/hooks";
 import { useTabs } from "@app/providers/TabContext";
 import { useEntityList } from '@shared/hooks/useEntityList';
 import { saveExcelFile } from '@shared/lib/excel';
-import type { ExcelExportColumn } from '@shared/lib/excel';
+import type { ExcelExportColumn, ExcelExportOptions } from '@shared/lib/excel';
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import { PartyTable } from '@modules/partners/components/PartyTable';
 import { PaymentForm, PAYMENT_CONFIGS } from '@modules/partners/components/PaymentForm';
@@ -35,6 +34,7 @@ interface PartyPageConfig {
   eventType: string;
   invoiceType: "Sales" | "Purchase";
   returnReturnType: "sales" | "purchase";
+  isCreditFirst: boolean;
   paymentConfig: (entity: CustomerDto | SupplierDto) => ReturnType<typeof PAYMENT_CONFIGS.customer>;
   statementPath: (id: string, name: string) => { id: string; title: string; path: string };
   invoicesTab: (id: string, name: string) => { id: string; title: string; path: string };
@@ -48,6 +48,7 @@ const PARTY_CONFIGS: Record<string, PartyPageConfig> = {
     eventType: "erp:open-new-customer",
     invoiceType: "Sales",
     returnReturnType: "sales",
+    isCreditFirst: false,
     paymentConfig: (entity) => PAYMENT_CONFIGS.customer(entity as CustomerDto),
     statementPath: (id, name) => ({
       id: `statement-${id}`,
@@ -67,6 +68,7 @@ const PARTY_CONFIGS: Record<string, PartyPageConfig> = {
     eventType: "erp:open-new-supplier",
     invoiceType: "Purchase",
     returnReturnType: "purchase",
+    isCreditFirst: true,
     paymentConfig: (entity) => PAYMENT_CONFIGS.supplier(entity as SupplierDto),
     statementPath: (id, name) => ({
       id: `statement-${id}`,
@@ -92,7 +94,6 @@ export default function PartyPage({ entityName }: PartyPageProps) {
   const cfg = PARTY_CONFIGS[entityName];
   const { openTab } = useTabs();
   const { currencies, baseCurrency, toBase, formatAmount } = useCurrencyContext();
-  const { isBaseCurrency } = useBaseCurrencyColumns();
 
   // ── CRUD via useEntityList ──
 
@@ -141,12 +142,31 @@ export default function PartyPage({ entityName }: PartyPageProps) {
       }
     },
     searchFields: ["name", "phone", "code"],
+    searchPredicate: (item, rawSearch) => {
+      const searchValue = rawSearch.trim().toLowerCase();
+      if (!searchValue) return true;
+
+      const debit = Number(item.debit || 0);
+      const credit = Number(item.credit || 0);
+      const effectiveBalance = (debit - credit) * (cfg.isCreditFirst ? -1 : 1);
+      const statusLabel = effectiveBalance === 0 ? "" : effectiveBalance > 0 ? "مدين" : "دائن";
+
+      return [
+        item.code,
+        item.name,
+        item.phone,
+        item.balance,
+        item.notes,
+        statusLabel,
+      ].some((value) => String(value ?? "").toLowerCase().includes(searchValue));
+    },
   });
 
   // ── Side panel state ──
 
   const [panelMode, setPanelMode] = useState<PanelMode>(null);
   const [paymentSaving, setPaymentSaving] = useState(false);
+  const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>([]);
 
   const handleSavePayment = async (payload: CreatePaymentRequest) => {
     try {
@@ -216,11 +236,11 @@ export default function PartyPage({ entityName }: PartyPageProps) {
   const handleExport = useCallback(async () => {
     const isCreditFirst = entityName === 'supplier';
     const colDefs: ExcelExportColumn[] = [
-      { id: 'code', label: '#', width: 8, accessor: (row) => String(row.code ?? '') },
-      { id: 'name', label: entityName === 'customer' ? 'اسم العميل' : 'اسم المورد', width: 25, accessor: (row) => String(row.name ?? '') },
-      { id: 'phone', label: 'رقم الهاتف', hidden: true, width: 15, accessor: (row) => String(row.phone ?? '') },
+      { id: 'code', label: '#', width: 8, hidden: !visibleColumnIds.includes('code'), accessor: (row) => String(row.code ?? '') },
+      { id: 'name', label: entityName === 'customer' ? 'اسم العميل' : 'اسم المورد', width: 25, hidden: !visibleColumnIds.includes('name'), accessor: (row) => String(row.name ?? '') },
+      { id: 'phone', label: 'رقم الهاتف', width: 15, hidden: !visibleColumnIds.includes('phone'), accessor: (row) => String(row.phone ?? '') },
       {
-        id: 'status', label: 'حالة الحساب', width: 12,
+        id: 'status', label: 'حالة الحساب', width: 12, hidden: !visibleColumnIds.includes('status'),
         accessor: (row) => {
           const debit = Number(row.debit || 0);
           const credit = Number(row.credit || 0);
@@ -232,7 +252,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
       ...currencies.map((curr) => ({
         id: `balance_${curr.code}`,
         label: `الرصيد (${curr.symbol || curr.code})`,
-        hidden: !isBaseCurrency(curr.code),
+        hidden: !visibleColumnIds.includes(`balance_${curr.code}`),
         width: 15,
         accessor: (row: Record<string, unknown>) => {
           const absBal = Math.abs(Number(row.balance || 0));
@@ -244,9 +264,24 @@ export default function PartyPage({ entityName }: PartyPageProps) {
       { id: 'notes', label: 'ملاحظات', width: 20, accessor: (row) => String(row.notes ?? '') },
     ];
 
-    const ok = await saveExcelFile(items as unknown as Record<string, unknown>[], colDefs, entityName === 'supplier' ? 'الموردين' : 'العملاء');
+    const exportOptions: ExcelExportOptions = {
+      sheetName: entityName === 'supplier' ? 'الموردين' : 'العملاء',
+      autoFilter: true,
+      sortBy: {
+        columnId: 'code',
+        direction: 'asc',
+        compare: (a, b) => (parseInt(String(a.code ?? '0'), 10) || 0) - (parseInt(String(b.code ?? '0'), 10) || 0),
+      },
+    };
+
+    const ok = await saveExcelFile(
+      items as unknown as Record<string, unknown>[],
+      colDefs,
+      entityName === 'supplier' ? 'الموردين' : 'العملاء',
+      exportOptions,
+    );
     if (ok) toast.success("تم الحفظ بنجاح");
-  }, [items, currencies, isBaseCurrency, entityName, toBase, formatAmount, baseCurrency?.code]);
+  }, [items, currencies, entityName, toBase, formatAmount, baseCurrency?.code, visibleColumnIds]);
 
   // ── Toolbar ──
 
@@ -388,15 +423,15 @@ export default function PartyPage({ entityName }: PartyPageProps) {
       tableContent={
         <PartyTable
           entityName={entityName}
-          data={items.map(i => ({ ...i, phone: i.phone ?? undefined }))}
+          data={items}
           loading={isLoading}
           search={search}
           onSearchChange={setSearch}
           onView={(item) => { setSelectedId(item.id); setPanelMode('detail'); }}
-          onEdit={(item) => { void handleOpenEditWithAccounts(item as CustomerDto | SupplierDto); }}
+          onEdit={(item) => { void handleOpenEditWithAccounts(item as unknown as CustomerDto | SupplierDto); }}
           onDelete={(id) => { setSelectedId(null); handleDelete(id); }}
           onJournal={(item) => {
-            const party = item as CustomerDto | SupplierDto;
+            const party = item as unknown as CustomerDto | SupplierDto;
             if (party.account_id) {
               openTab({
                 id: `ledger-${party.account_id}`,
@@ -408,6 +443,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
           }}
           onDocument={(item) => { setSelectedId(item.id); setPanelMode('payment'); }}
           selectedId={selectedId}
+          onVisibleColumnsChange={setVisibleColumnIds}
         />
       }
       sidePanel={sidePanel}

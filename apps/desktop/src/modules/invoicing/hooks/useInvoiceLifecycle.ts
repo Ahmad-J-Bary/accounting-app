@@ -563,6 +563,7 @@ export function useInvoiceLifecycle({
         toast.success("تم الحفظ والترحيل بنجاح");
       } else {
         toast.success("تم حفظ المسودة");
+        await invalidateAccountingMutationQueries(queryClient);
       }
 
       const listTabId =
