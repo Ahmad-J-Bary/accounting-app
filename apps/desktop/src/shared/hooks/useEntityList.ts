@@ -47,31 +47,8 @@ export function useEntityList<T extends { id: string }, Req>({
     [refetch]
   );
 
-  const createMutation = useMutation({
-    mutationFn: saveData,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey });
-      toast.success(successLabel);
-      if (manageFormState) {
-        setIsFormOpen(false);
-      }
-    },
-    onError: (e: Error) => {
-      toast.error("فشل الحفظ: " + e.message);
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteData,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey });
-      toast.success("تم الحذف بنجاح");
-      setSelectedId(null);
-    },
-    onError: (e: Error) => {
-      toast.error("فشل الحذف: " + e.message);
-    },
-  });
+  const createMutation = useMutation({ mutationFn: saveData });
+  const deleteMutation = useMutation({ mutationFn: deleteData });
 
   const filtered = useMemo(() => {
     const s = search.toLowerCase().trim();
@@ -109,17 +86,37 @@ export function useEntityList<T extends { id: string }, Req>({
 
   const handleSave = useCallback(
     async (payload: Req) => {
-      await createMutation.mutateAsync(payload);
+      await createMutation.mutateAsync(payload, {
+        onSuccess: () => {
+          qc.invalidateQueries({ queryKey });
+          toast.success(successLabel);
+          if (manageFormState) {
+            setIsFormOpen(false);
+          }
+        },
+        onError: (e: Error) => {
+          toast.error("فشل الحفظ: " + e.message);
+        },
+      });
     },
-    [createMutation]
+    [createMutation, qc, queryKey, successLabel, manageFormState]
   );
 
   const handleDelete = useCallback(
-    (id: string) => {
+    async (id: string) => {
       if (!confirm("هل أنت متأكد من الحذف؟")) return;
-      deleteMutation.mutate(id);
+      await deleteMutation.mutateAsync(id, {
+        onSuccess: () => {
+          qc.invalidateQueries({ queryKey });
+          toast.success("تم الحذف بنجاح");
+          setSelectedId(null);
+        },
+        onError: (e: Error) => {
+          toast.error("فشل الحذف: " + e.message);
+        },
+      });
     },
-    [deleteMutation]
+    [deleteMutation, qc, queryKey]
   );
 
   return {

@@ -7,7 +7,7 @@ import { useUnifiedColumns, useSortable, useTableColumns, useBaseCurrencyColumns
 import { NotebookText, Receipt, User, Truck } from "lucide-react";
 import { TableActions } from "@widgets/table-shell/TableActions";
 
-interface PartyTableProps<T extends { id: string; name: string; code?: string; phone?: string; balance?: string | number; notes?: string | null }> {
+interface PartyTableProps<T extends { id: string; name: string; code?: string; phone?: string | null; balance?: string | number; notes?: string | null }> {
   entityName: "customer" | "supplier";
   data: T[];
   loading: boolean;
@@ -53,7 +53,7 @@ const ENTITY_CONFIG = {
   },
 } as const;
 
-export function PartyTable<T extends { id: string; name: string; code?: string; phone?: string; balance?: string | number; notes?: string | null }>({
+export function PartyTable<T extends { id: string; name: string; code?: string; phone?: string | null; balance?: string | number; notes?: string | null }>({
   entityName,
   data,
   loading,

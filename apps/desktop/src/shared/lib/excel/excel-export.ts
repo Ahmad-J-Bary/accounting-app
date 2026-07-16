@@ -1,4 +1,5 @@
 import XLSX from 'xlsx-js-style';
+import ExcelJS from 'exceljs';
 import { save } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@shared/lib/invoke';
 
@@ -8,6 +9,120 @@ export interface ExcelExportColumn {
   hidden?: boolean;
   width?: number;
   accessor?: (row: Record<string, unknown>) => string | number | null | undefined;
+  imageDataUrl?: (row: Record<string, unknown>) => string | null | undefined;
+  imageWidth?: number;
+  imageHeight?: number;
+}
+
+function extractBase64(dataUrl: string): { base64: string; extension: string } | null {
+  const match = dataUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+  if (!match) return null;
+  return { base64: match[2], extension: match[1] };
+}
+
+async function buildExcelJsWorkbook(
+  data: Record<string, unknown>[],
+  columns: ExcelExportColumn[],
+  sheetName: string,
+  options?: ExcelExportOptions,
+): Promise<ExcelJS.Buffer> {
+  const sortedData = sortExportRows(data, columns, options?.sortBy);
+  const visibleColumns = columns.filter(c => !c.hidden);
+  const hasImages = visibleColumns.some(c => c.imageDataUrl);
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.created = new Date();
+  workbook.creator = 'ERP System';
+
+  const ws = workbook.addWorksheet(sheetName, {
+    views: [{ state: 'frozen', ySplit: 1, xSplit: 0 } as unknown as ExcelJS.WorksheetView],
+  });
+  ws.views[0].rightToLeft = true;
+
+  ws.columns = visibleColumns.map(col => ({
+    width: col.imageDataUrl ? Math.ceil((col.imageWidth ?? 80) / 7) : (col.width ?? 12),
+    hidden: col.hidden || false,
+  }));
+
+  const headerRow = ws.getRow(1);
+  visibleColumns.forEach((col, i) => {
+    const cell = headerRow.getCell(i + 1);
+    cell.value = col.label;
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.border = {
+      top: { style: 'thin' },
+      bottom: { style: 'thin' },
+      left: { style: 'thin' },
+      right: { style: 'thin' },
+    };
+  });
+  headerRow.height = hasImages ? 30 : 20;
+
+  const maxImageHeight = hasImages
+    ? Math.max(...visibleColumns.filter(c => c.imageDataUrl).map(c => c.imageHeight ?? 80))
+    : 0;
+  const imageRowHeight = hasImages ? Math.ceil(maxImageHeight * 0.75) + 5 : 0;
+
+  sortedData.forEach((row, rowIdx) => {
+    const excelRow = ws.getRow(rowIdx + 2);
+    if (imageRowHeight) excelRow.height = imageRowHeight;
+
+    visibleColumns.forEach((col, colIdx) => {
+      const cell = excelRow.getCell(colIdx + 1);
+      const val = getCellValue(row, col);
+      cell.value = val ?? '';
+      cell.font = { size: 10 };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border = {
+        top: { style: 'thin' },
+        bottom: { style: 'thin' },
+        left: { style: 'thin' },
+        right: { style: 'thin' },
+      };
+    });
+  });
+
+  if (hasImages) {
+    for (let rowIdx = 0; rowIdx < sortedData.length; rowIdx++) {
+      const row = sortedData[rowIdx];
+      visibleColumns.forEach((col, colIdx) => {
+        if (!col.imageDataUrl) return;
+        const dataUrl = col.imageDataUrl(row);
+        if (!dataUrl) return;
+
+        const parsed = extractBase64(dataUrl);
+        if (!parsed) return;
+
+        const imageId = workbook.addImage({
+          base64: parsed.base64,
+          extension: parsed.extension as 'png' | 'jpeg' | 'gif',
+        });
+
+        ws.addImage(imageId, {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ExcelJS Anchor class not exported; plain {col,row} works at runtime
+          tl: { col: colIdx, row: rowIdx + 1 } as any,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- same reason
+          br: { col: colIdx + 1, row: rowIdx + 2 } as any,
+          editAs: 'twoCell',
+        });
+      });
+    }
+  }
+
+  if (options?.autoFilter !== false && visibleColumns.length > 0) {
+    ws.autoFilter = {
+      from: { row: 1, column: 1 },
+      to: { row: sortedData.length + 1, column: visibleColumns.length },
+    };
+  }
+
+  return workbook.xlsx.writeBuffer() as Promise<ExcelJS.Buffer>;
+}
+
+function hasImageColumns(columns: ExcelExportColumn[]): boolean {
+  return columns.some(c => !c.hidden && c.imageDataUrl);
 }
 
 export interface ExcelExportOptions {
@@ -167,7 +282,14 @@ export async function saveExcelFile(
 
   if (!path) return false;
 
-  const buffer = exportToExcelBuffer(data, columns, options);
+  let buffer: Uint8Array;
+  if (hasImageColumns(columns)) {
+    const excelBuf = await buildExcelJsWorkbook(data, columns, options?.sheetName || 'Sheet1', options);
+    buffer = new Uint8Array(excelBuf);
+  } else {
+    buffer = exportToExcelBuffer(data, columns, options);
+  }
+
   await invoke<string>('save_file', { path, data: Array.from(buffer) });
 
   return true;

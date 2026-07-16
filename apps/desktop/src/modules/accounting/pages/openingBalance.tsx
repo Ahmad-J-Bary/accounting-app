@@ -11,6 +11,7 @@ import { settingsService } from "@modules/core/api/settingsService";
 import { warehouseService } from "@modules/inventory/api/warehouseService";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { queryClient, invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
 
 import { HeaderField } from '@shared/ui/header-field';
 import { FinancialDocumentTemplate } from "@widgets/templates/FinancialDocumentTemplate";
@@ -182,6 +183,7 @@ export default function OpeningBalance() {
       await materialService.create(data as CreateMaterialRequest);
       toast.success("تم إضافة المادة بنجاح");
       setMaterialFormOpen(false);
+      invalidateAccountingMutationQueries(queryClient);
       loadData();
     } catch (e) {
       toast.error("فشل إضافة المادة: " + e);
@@ -231,6 +233,8 @@ export default function OpeningBalance() {
         toast.success("تم حفظ المسودة");
       }
 
+      invalidateAccountingMutationQueries(queryClient);
+
       closeTab(activeTabId);
       openTab({
         id: "purchase-invoices",
@@ -252,6 +256,7 @@ export default function OpeningBalance() {
       await invoiceService.reopenInvoice(header.id);
       toast.success("تم إلغاء الترحيل بنجاح");
       setHeader(s => ({ ...s, status: "Draft" }));
+      invalidateAccountingMutationQueries(queryClient);
     } catch (e: unknown) {
       toast.error("فشل إلغاء الترحيل: " + e);
     } finally {

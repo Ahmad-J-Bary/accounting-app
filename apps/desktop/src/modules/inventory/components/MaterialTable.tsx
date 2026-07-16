@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useEffect } from "react";
 import { Plus, Shuffle, Image } from "lucide-react";
 import { cn } from '@shared/lib/utils';
 import type { MaterialDto, CategoryDto } from "@erp/shared-types";
@@ -23,6 +23,7 @@ interface MaterialTableProps {
   selectedId?: string | null;
   onRowClick?: (material: MaterialDto) => void;
   stockTotal?: Map<string, number>;
+  onVisibleColumnsChange?: (ids: string[]) => void;
 }
 
 type SortField = "code" | "name" | "total_available" | "total_received" | "total_sold" | "minimum_stock" | "average_cost" | "unit_price" | "sale_price";
@@ -38,7 +39,8 @@ export function MaterialTable({
   onManageUnits,
   selectedId,
   onRowClick,
-  stockTotal
+  stockTotal,
+  onVisibleColumnsChange,
 }: MaterialTableProps) {
   const { formatAmount, currencies } = useCurrencyContext();
   const { isBaseCurrency } = useBaseCurrencyColumns();
@@ -510,11 +512,15 @@ export function MaterialTable({
     return ids;
   }, [currencies, isBaseCurrency, materials]);
 
-  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
+  const { enrichedColumns, visibleColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "materials-unified",
     columns: allColumns,
     defaultVisible,
   });
+
+  useEffect(() => {
+    onVisibleColumnsChange?.(visibleColumns);
+  }, [visibleColumns, onVisibleColumnsChange]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     const totalValueBase = sortedMaterials.reduce((sum, m) => sum + totalReceived(m) * unitCostBase(m), 0);
