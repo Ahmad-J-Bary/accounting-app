@@ -16,19 +16,19 @@ function SectionHeader({ title }: { title: string }) {
 function ReportMeta() {
   return (
     <div className="rounded-3xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-center text-sm text-slate-600">
-      <span className="text-lg font-black text-slate-900">????????? ????????</span>
+      <span className="text-lg font-black text-slate-900">الميزانية العمومية</span>
       <span className="mx-2 text-slate-300">|</span>
-      <span>????? ???? ?????? ?????? ?????? ??? ???? (?????? = ?????? + ???? ???????)</span>
+      <span>قائمة تبين الموقف المالي للشركة على مبدأ (الأصول = الخصوم + حقوق الملكية)</span>
     </div>
   );
 }
 
 function SummaryCards({ computed, formatValue }: { computed: BalanceSheetComputed; formatValue: (value: number) => string }) {
   const cards = [
-    { label: "?????? ??????", value: computed.totalAssets },
-    { label: "?????? ??????", value: computed.totalLiabilities },
-    { label: "???? ???????", value: computed.totalEquity },
-    { label: "?????? + ???? ???????", value: computed.totalLiabilitiesEquity },
+    { label: "إجمالي الأصول", value: computed.totalAssets },
+    { label: "إجمالي الخصوم", value: computed.totalLiabilities },
+    { label: "حقوق الملكية", value: computed.totalEquity },
+    { label: "الخصوم + حقوق الملكية", value: computed.totalLiabilitiesEquity },
   ];
 
   const isBalanced = computed.isBalanced;
@@ -39,7 +39,7 @@ function SummaryCards({ computed, formatValue }: { computed: BalanceSheetCompute
       {cards.map((card) => (
         <div key={card.label} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
           <div className="text-xs font-black text-slate-400">{card.label}</div>
-          <div className={cn("mt-1 text-xl font-black tabular-nums", card.label === "?????? ??????" ? "text-blue-700" : "text-slate-900")}>
+          <div className={cn("mt-1 text-xl font-black tabular-nums", card.label === "إجمالي الأصول" ? "text-blue-700" : "text-slate-900")}>
             {formatValue(card.value)}
           </div>
         </div>
@@ -66,11 +66,11 @@ function SummaryCards({ computed, formatValue }: { computed: BalanceSheetCompute
           "text-[11px] font-black leading-tight",
           isBalanced ? "text-emerald-800" : "text-rose-800",
         )}>
-          {isBalanced ? "???????" : "??? ???????"}
+          {isBalanced ? "متوازنة" : "غير متوازنة"}
         </span>
         {!isBalanced && (
           <span className="text-[9px] text-rose-500 font-bold">
-            ??? {formatValue(diff)}
+            فرق {formatValue(diff)}
           </span>
         )}
       </div>
@@ -187,7 +187,7 @@ export function BalanceSheetView(props: BalanceSheetViewProps) {
               <SectionCard key={s.id} section={s} formatValue={formatValue} />
             ))}
           </div>
-          <TotalRow label="?????? ??????" value={computed.totalAssets} formatValue={formatValue} highlight />
+          <TotalRow label="إجمالي الأصول" value={computed.totalAssets} formatValue={formatValue} highlight />
         </div>
 
         <div className="flex flex-col gap-3 h-full">
@@ -202,7 +202,7 @@ export function BalanceSheetView(props: BalanceSheetViewProps) {
               <SectionCard key={s.id} section={s} formatValue={formatValue} />
             ))}
           </div>
-          <TotalRow label="?????? ?????? + ???? ???????" value={computed.totalLiabilitiesEquity} formatValue={formatValue} highlight />
+          <TotalRow label="إجمالي الخصوم + حقوق الملكية" value={computed.totalLiabilitiesEquity} formatValue={formatValue} highlight />
         </div>
       </div>
 

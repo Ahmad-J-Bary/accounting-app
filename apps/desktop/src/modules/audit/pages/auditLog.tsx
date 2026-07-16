@@ -22,7 +22,7 @@ export default function AuditLogPage() {
 
   return (
     <OperationalTableTemplate
-      title="??? ?????? ??????"
+      title="سجل مراقبة النظام"
       tableContent={
         <AuditTable
           data={logs}

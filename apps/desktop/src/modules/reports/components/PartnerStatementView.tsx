@@ -13,14 +13,14 @@ export function PartnerStatementView({ computed, formatValue }: PartnerStatement
       <table className="w-full">
         <thead>
           <tr className="bg-slate-50/80">
-            <ReportTableHeader>??? ??????</ReportTableHeader>
-            <ReportTableHeader>???? ???????? ???? ?????</ReportTableHeader>
-            <ReportTableHeader>????? ????? ????? ?????</ReportTableHeader>
-            <ReportTableHeader>????? ??????? ????? ?????</ReportTableHeader>
-            <ReportTableHeader>?????? ?????? ??????</ReportTableHeader>
-            <ReportTableHeader>???? ?? ????? ??? ?????</ReportTableHeader>
-            <ReportTableHeader>??????? ??? ?????</ReportTableHeader>
-            <ReportTableHeader>?????? ???????</ReportTableHeader>
+            <ReportTableHeader>اسم الشريك</ReportTableHeader>
+            <ReportTableHeader>مبلغ المشاركة برأس المال</ReportTableHeader>
+            <ReportTableHeader>تراكم أرباح سنوات سابقة</ReportTableHeader>
+            <ReportTableHeader>تراكم مسحوبات سنوات سابقة</ReportTableHeader>
+            <ReportTableHeader>الحساب الجاري للشريك</ReportTableHeader>
+            <ReportTableHeader>حصته من أرباح هذه السنة</ReportTableHeader>
+            <ReportTableHeader>مسحوبات هذه السنة</ReportTableHeader>
+            <ReportTableHeader>المبلغ النهائي</ReportTableHeader>
           </tr>
         </thead>
         <tbody>
@@ -39,7 +39,7 @@ export function PartnerStatementView({ computed, formatValue }: PartnerStatement
         </tbody>
         <tfoot>
           <tr className="bg-slate-50/80 border-t-2 border-slate-200">
-            <ReportTableCell highlight>????????</ReportTableCell>
+            <ReportTableCell highlight>الإجمالي</ReportTableCell>
             <ReportTableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.capitalAmount, 0))}</ReportTableCell>
             <ReportTableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.accumulatedProfits, 0))}</ReportTableCell>
             <ReportTableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.accumulatedDrawings, 0))}</ReportTableCell>

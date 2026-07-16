@@ -10,12 +10,12 @@ type PartnerProfitShareViewProps = {
 };
 
 const summaryCards = [
-  { label: "??? ?????", key: "totalCapital" as const, icon: Users, color: "text-blue-700", bg: "bg-blue-50" },
-  { label: "???? ???????", key: "netProfit" as const, icon: TrendingUp, color: "text-emerald-700", bg: "bg-emerald-50" },
-  { label: "???? ??????? ???????? ?????", key: "inventoryValue" as const, icon: Package, color: "text-amber-700", bg: "bg-amber-50" },
-  { label: "????? ????? ???????? ??? ???????", key: "totalCustomerDebts" as const, icon: CreditCard, color: "text-rose-700", bg: "bg-rose-50" },
-  { label: "???? ?????? ???????", key: "fixedAssetsValue" as const, icon: Package, color: "text-violet-700", bg: "bg-violet-50" },
-  { label: "?????? ?????? ?????????", key: "totalOperationalAssets" as const, icon: TrendingUp, color: "text-slate-700", bg: "bg-slate-100" },
+  { label: "رأس المال", key: "totalCapital" as const, icon: Users, color: "text-blue-700", bg: "bg-blue-50" },
+  { label: "صافي الأرباح", key: "netProfit" as const, icon: TrendingUp, color: "text-emerald-700", bg: "bg-emerald-50" },
+  { label: "قيمة البضاعة المتوفرة حاليا", key: "inventoryValue" as const, icon: Package, color: "text-amber-700", bg: "bg-amber-50" },
+  { label: "مجموع الدين المترتبة على العملاء", key: "totalCustomerDebts" as const, icon: CreditCard, color: "text-rose-700", bg: "bg-rose-50" },
+  { label: "صافي الأصول الثابتة", key: "fixedAssetsValue" as const, icon: Package, color: "text-violet-700", bg: "bg-violet-50" },
+  { label: "إجمالي الأصول التشغيلية", key: "totalOperationalAssets" as const, icon: TrendingUp, color: "text-slate-700", bg: "bg-slate-100" },
 ];
 
 function SummaryCards({ computed, formatValue }: { computed: PartnerProfitShareComputed; formatValue: (value: number) => string }) {
@@ -49,16 +49,16 @@ function PartnerTable({ computed, formatValue }: { computed: PartnerProfitShareC
       <table className="w-full">
         <thead>
           <tr className="bg-slate-50/80">
-            <ReportTableHeader>??? ??????</ReportTableHeader>
-            <ReportTableHeader>???? ???????? ???? ?????</ReportTableHeader>
-            <ReportTableHeader>?????? ??????? ?? ?? ??? ?????</ReportTableHeader>
-            <ReportTableHeader>???? ????? ???????</ReportTableHeader>
-            <ReportTableHeader>???? ?? ???????</ReportTableHeader>
-            <ReportTableHeader>?????????</ReportTableHeader>
-            <ReportTableHeader>?????? ??????? ??????</ReportTableHeader>
-            <ReportTableHeader>???? ?? ??????? ????????</ReportTableHeader>
-            <ReportTableHeader>???? ?? ?????? ???????</ReportTableHeader>
-            <ReportTableHeader>???? ?? ?????? ?????????</ReportTableHeader>
+            <ReportTableHeader>اسم الشريك</ReportTableHeader>
+            <ReportTableHeader>نسبة المشاركة برأس المال</ReportTableHeader>
+            <ReportTableHeader>المبلغ المشارك به في رأس المال</ReportTableHeader>
+            <ReportTableHeader>نسبة تقاسم الأرباح</ReportTableHeader>
+            <ReportTableHeader>حصته من الأرباح</ReportTableHeader>
+            <ReportTableHeader>المسحوبات</ReportTableHeader>
+            <ReportTableHeader>المبلغ النهائي للشريك</ReportTableHeader>
+            <ReportTableHeader>حصته من البضاعة المتوفرة</ReportTableHeader>
+            <ReportTableHeader>حصته من الأصول الثابتة</ReportTableHeader>
+            <ReportTableHeader>حصته من الأصول التشغيلية</ReportTableHeader>
           </tr>
         </thead>
         <tbody>
@@ -79,7 +79,7 @@ function PartnerTable({ computed, formatValue }: { computed: PartnerProfitShareC
         </tbody>
         <tfoot>
           <tr className="bg-slate-50/80 border-t-2 border-slate-200">
-            <ReportTableCell highlight>????????</ReportTableCell>
+            <ReportTableCell highlight>الإجمالي</ReportTableCell>
             <ReportTableCell highlight>{computed.rows.reduce((s, r) => s + r.capitalRatio, 0).toFixed(2)}%</ReportTableCell>
             <ReportTableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.capitalAmount, 0))}</ReportTableCell>
             <ReportTableCell highlight>-</ReportTableCell>

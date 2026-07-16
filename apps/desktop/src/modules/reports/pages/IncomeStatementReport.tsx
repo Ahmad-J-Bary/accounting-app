@@ -34,14 +34,14 @@ export default function IncomeStatementReport() {
 
   const selectedCurrencyLabel = useMemo(() => {
     const activeCurrency = currencies.find((currency) => currency.code === (selectedCurrency || baseCurrency?.code));
-    return activeCurrency
-      ? `${activeCurrency.name} (${activeCurrency.symbol || activeCurrency.code})`
-      : selectedCurrency || baseCurrency?.code || "�";
+return activeCurrency
+        ? `${activeCurrency.name} (${activeCurrency.symbol || activeCurrency.code})`
+        : selectedCurrency || baseCurrency?.code || "—";
   }, [currencies, selectedCurrency, baseCurrency]);
 
   return (
     <ReportLayout
-      title="????? ?????"
+      title="قائمة الدخل"
       filters={
         <ReportFilterBar
           filters={filters}

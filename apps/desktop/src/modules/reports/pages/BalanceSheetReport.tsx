@@ -42,7 +42,7 @@ export default function BalanceSheetReport() {
 
   return (
     <ReportLayout
-      title="????????? ????????"
+      title="الميزانية العمومية"
       filters={
         <ReportFilterBar
           filters={filters}

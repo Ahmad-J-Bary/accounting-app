@@ -38,14 +38,14 @@ export default function PartnerProfitShareReport() {
 
   const selectedCurrencyLabel = useMemo(() => {
     const activeCurrency = currencies.find((currency) => currency.code === (selectedCurrency || baseCurrency?.code));
-    return activeCurrency
-      ? `${activeCurrency.name} (${activeCurrency.symbol || activeCurrency.code})`
-      : selectedCurrency || baseCurrency?.code || "�";
+return activeCurrency
+        ? `${activeCurrency.name} (${activeCurrency.symbol || activeCurrency.code})`
+        : selectedCurrency || baseCurrency?.code || "—";
   }, [currencies, selectedCurrency, baseCurrency]);
 
   return (
     <ReportLayout
-      title="??????? ?????? ???????"
+      title="الشركاء وتقاسم الأرباح"
       filters={
         <ReportFilterBar
           filters={filters}
@@ -62,7 +62,7 @@ export default function PartnerProfitShareReport() {
                 onClick={() => navigate("/accounting/reports/partner-statement")}
               >
                 <BookOpen className="ml-2 h-4 w-4" />
-                ??? ???? ??????
+                كشف حساب تفصيلي
               </Button>
             </div>
           }
@@ -79,7 +79,7 @@ export default function PartnerProfitShareReport() {
         ) : computed.rows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-slate-400">
             <Users className="mb-3 h-12 w-12" />
-            <p className="text-sm font-bold">?? ???? ????? ????? ???? ???????</p>
+            <p className="text-sm font-bold">لا يوجد شركاء نشطون لعرض التقرير</p>
           </div>
         ) : (
           <PartnerProfitShareView

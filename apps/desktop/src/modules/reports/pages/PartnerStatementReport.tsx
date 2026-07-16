@@ -63,14 +63,14 @@ export default function PartnerStatementReport() {
 
   const selectedCurrencyLabel = useMemo(() => {
     const activeCurrency = currencies.find((currency) => currency.code === (selectedCurrency || baseCurrency?.code));
-    return activeCurrency
-      ? `${activeCurrency.name} (${activeCurrency.symbol || activeCurrency.code})`
-      : selectedCurrency || baseCurrency?.code || "�";
+return activeCurrency
+        ? `${activeCurrency.name} (${activeCurrency.symbol || activeCurrency.code})`
+        : selectedCurrency || baseCurrency?.code || "—";
   }, [currencies, selectedCurrency, baseCurrency]);
 
   return (
     <ReportLayout
-      title="??? ???? ??????"
+      title="كشف حساب الشريك"
       filters={
         <ReportFilterBar
           filters={filters}
@@ -93,7 +93,7 @@ export default function PartnerStatementReport() {
         ) : computed.rows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-slate-400">
             <Users className="mb-3 h-12 w-12" />
-            <p className="text-sm font-bold">?? ???? ????? ???? ??? ??????</p>
+            <p className="text-sm font-bold">لا يوجد شركاء لعرض كشف الحساب</p>
           </div>
         ) : (
           <PartnerStatementView

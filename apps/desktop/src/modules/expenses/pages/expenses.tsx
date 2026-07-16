@@ -21,7 +21,7 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
 import { toast as toastSonner } from "sonner";
 
-// The "?????? ????" parent account ID in the chart of accounts
+// The "مصاريف أخرى" parent account ID in the chart of accounts
 const OTHER_EXPENSES_PARENT_ID = SYSTEM_ACCOUNT_IDS.OTHER_EXPENSES;
 
 // Internal payload type that can carry an optional id for updates
@@ -37,7 +37,7 @@ export default function Expenses() {
     setRateMapKey(k => k + 1);
   }, [rateMap]);
 
-  // Load the "?????? ????" parent account by its known ID
+  // Load the "مصاريف أخرى" parent account by its known ID
   const loadExpensesParent = useCallback(async () => {
     try {
       const all = await accountingService.getChartOfAccounts();
@@ -88,10 +88,10 @@ export default function Expenses() {
       setVoucherSaving(true);
       await paymentService.createPayment(payload);
       await refresh(true);
-      toastSonner.success("?? ????? ??? ????? ?????");
+      toastSonner.success("تم تسجيل سند الصرف بنجاح");
       setIsVoucherOpen(false);
     } catch (error) {
-      toastSonner.error("??? ????? ?????: " + error);
+      toastSonner.error("فشل تسجيل السند: " + error);
     } finally {
       setVoucherSaving(false);
     }
@@ -103,7 +103,7 @@ export default function Expenses() {
     }
   }, [rateMapKey, refresh]);
 
-  // Map ExpenseFormPayload ? ExpenseSavePayload and call handleSave
+  // Map ExpenseFormPayload → ExpenseSavePayload and call handleSave
   const handleExpenseSave = useCallback(async (payload: ExpenseFormPayload) => {
     const exchangeRate = getExchangeRate(payload.currency, rateMap, baseCurrency?.code);
     const cmd: ExpenseSavePayload = {
@@ -131,7 +131,7 @@ export default function Expenses() {
 
   return (
     <OperationalTableTemplate
-      title="???? ????????"
+      title="بنود المصاريف"
       toolbar={
         <div className="flex items-center gap-2">
           <Button
@@ -141,12 +141,12 @@ export default function Expenses() {
             disabled={!selectedId || !selectedExpense?.id}
             onClick={() => selectedExpense?.id && openTab({
               id: `ledger-${selectedExpense.id}`,
-              title: `????: ${selectedExpense.name_ar}`,
+              title: `حركة: ${selectedExpense.name_ar}`,
               path: `/accounting/account-ledger/${selectedExpense.id}`,
               closable: true
             })}
           >
-            <History className="w-4 h-4 ml-2 text-slate-500" /> ???? ???????
+            <History className="w-4 h-4 ml-2 text-slate-500" /> حركة اليومية
           </Button>
 
           <Button
@@ -159,7 +159,7 @@ export default function Expenses() {
               setIsFormOpen(false);
             }}
           >
-            <DollarSign className="w-4 h-4 ml-2 text-rose-500" /> ????? ??? ???
+            <DollarSign className="w-4 h-4 ml-2 text-rose-500" /> إنشاء سند صرف
           </Button>
 
           <Button
@@ -167,16 +167,16 @@ export default function Expenses() {
             variant="outline"
             className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
             onClick={() => {
-              toastSonner.info("???? ???????...");
+              toastSonner.info("جاري التصدير...");
             }}
           >
-            <Download className="w-4 h-4 ml-2 text-slate-500" /> ????? ????
+            <Download className="w-4 h-4 ml-2 text-slate-500" /> تصدير إكسل
           </Button>
 
           <div className="h-6 w-px bg-slate-200 mx-1" />
 
           <Button size="sm" onClick={handleOpenAdd} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100 font-bold">
-            <Plus className="w-4 h-4 ml-2" /> ????? ??? ?????
+            <Plus className="w-4 h-4 ml-2" /> إضافة بند مصروف
           </Button>
         </div>
       }
@@ -191,7 +191,7 @@ export default function Expenses() {
           onDelete={(id) => { setSelectedId(null); handleDelete(id); }}
           onJournal={(acc) => acc.id && openTab({
             id: `ledger-${acc.id}`,
-            title: `????: ${acc.name_ar}`,
+            title: `حركة: ${acc.name_ar}`,
             path: `/accounting/account-ledger/${acc.id}`,
             closable: true
           })}
