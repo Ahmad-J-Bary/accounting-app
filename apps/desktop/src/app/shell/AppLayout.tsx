@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+﻿import { useState, useMemo, useEffect, useCallback } from 'react';
 import { ErpRoutes } from '@app/router/ErpRoutes';
 import { useTabs } from '@app/providers/TabContext';
 import { ErrorBoundary } from '@shared/ui/ErrorBoundary';
@@ -6,7 +6,7 @@ import { TabLocationContext } from '@app/providers/TabLocationContext';
 import { cn } from '@shared/lib/utils';
 import { useKeyboardShortcuts } from '@shared/hooks/useKeyboardShortcuts';
 import { useAppearance } from '@shared/hooks/useAppearance';
-import { FloatingExchangeRateWidget } from '@modules/core/components/FloatingExchangeRateWidget';
+import { FloatingExchangeRateWidget } from '@modules/core/currencies/components/FloatingExchangeRateWidget';
 import { useCurrencyContext } from '@app/providers/CurrencyContext';
 import { warehouseService } from '@modules/inventory/api/warehouseService';
 import { VerticalLayout } from './layouts/VerticalLayout';

@@ -1,8 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+﻿import { useQuery } from "@tanstack/react-query";
 import { journalEntryService } from "@modules/accounting/api/journalEntryService";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
-import { computeLedgerTotals } from "@modules/accounting/lib/ledgerTotals";
+import { computeLedgerTotals } from "@modules/reports/lib/ledgerTotals";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import type { JournalEntryDto, ReceivablesPayablesSummary, AccountDto, InvoiceDto } from "@erp/shared-types";
 

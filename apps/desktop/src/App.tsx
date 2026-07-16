@@ -1,4 +1,4 @@
-import { Toaster } from '@shared/ui/sonner';
+﻿import { Toaster } from '@shared/ui/sonner';
 import { TooltipProvider } from '@shared/ui/tooltip';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { AppearanceProvider } from '@app/providers/AppearanceProvider';
@@ -10,10 +10,10 @@ import { TableSettingsProvider } from '@app/providers/TableSettingsProvider';
 import { SidePanelSettingsProvider } from '@app/providers/SidePanelSettingsProvider';
 import { NavSidebarSettingsProvider } from '@app/providers/NavSidebarSettingsProvider';
 import { SidebarLayoutProvider } from '@app/providers/SidebarLayoutProvider';
-import AuthCallback from '@modules/core/pages/authCallback';
-import AuthError from '@modules/core/pages/authError';
-import Index from '@modules/core/pages/index';
-import SetupWizard from '@modules/core/pages/setupWizard';
+import AuthCallback from '@modules/auth/pages/authCallback';
+import AuthError from '@modules/auth/pages/authError';
+import Index from '@modules/auth/pages/index';
+import SetupWizard from '@modules/core/setup/pages/setupWizard';
 import { queryClient } from '@shared/hooks/queryClient';
 
 const App = () => (

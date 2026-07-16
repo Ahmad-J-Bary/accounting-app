@@ -1,5 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEntityList } from './useEntityList';
 
 interface UseDataTableOptions<T> {
   queryKey: string[];
@@ -20,51 +19,26 @@ export function useDataTable<T>({
   dependencies = [],
   enabled = true,
 }: UseDataTableOptions<T>) {
-  const [search, setSearch] = useState(initialSearch);
-
-  const {
-    data: rawData = [],
-    isLoading: loading,
-    isRefetching: refreshing,
-    refetch,
-    error,
-  } = useQuery<T[]>({
-    queryKey: [...queryKey, ...dependencies],
-    queryFn: fetchData,
+  const result = useEntityList<T, never>({
+    queryKey,
+    fetchData,
+    searchFields,
+    errorLabel,
+    readonly: true,
     enabled,
-    meta: { errorMessage: errorLabel },
+    dependencies,
+    initialSearch,
   });
 
-  const refresh = useCallback(
-    (_silent = false) => {
-      refetch();
-    },
-    [refetch]
-  );
-
-  const filtered = useMemo(() => {
-    const s = search.toLowerCase().trim();
-    if (!s) return rawData;
-    return rawData.filter((item) =>
-      searchFields.some((field) => {
-        const value = item[field as keyof T];
-        return value && String(value).toLowerCase().includes(s);
-      })
-    );
-  }, [rawData, search, searchFields]);
-
-  return useMemo(
-    () => ({
-      data: rawData,
-      filtered,
-      loading,
-      refreshing,
-      search,
-      setSearch,
-      refresh,
-      error: error ? String(error) : null,
-      setData: () => {},
-    }),
-    [rawData, filtered, loading, refreshing, search, refresh, error]
-  );
+  return {
+    data: result.items,
+    filtered: result.filtered,
+    loading: result.loading,
+    refreshing: result.refreshing,
+    search: result.search,
+    setSearch: result.setSearch,
+    refresh: result.refresh,
+    error: result.error,
+    setData: () => {},
+  };
 }

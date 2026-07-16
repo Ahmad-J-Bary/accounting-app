@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import {
   Table,
   TableBody,
@@ -10,7 +10,7 @@ import {
 } from "@shared/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
 import { journalEntryService } from "@modules/accounting/api/journalEntryService";
-import { JOURNAL_TYPE_LABELS } from "@modules/accounting/lib/journal-config";
+import { JOURNAL_TYPE_LABELS } from "@modules/accounting/journal/lib/journal-config";
 import type { JournalEntryDto } from "@erp/shared-types";
 import { format } from "date-fns";
 import { Loader2, ArrowRightLeft, TrendingUp, TrendingDown } from "lucide-react";

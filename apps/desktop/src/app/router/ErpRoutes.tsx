@@ -1,7 +1,7 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import Dashboard from '@modules/core/pages/dashboard';
-import Accounting from '@modules/accounting/pages/accounting';
-import Journal from '@modules/accounting/pages/journal';
+﻿import { Routes, Route, Navigate } from 'react-router-dom';
+import Dashboard from '@modules/dashboard/pages/dashboard';
+import Accounting from '@modules/accounting/chart-of-accounts/pages/accounting';
+import Journal from '@modules/accounting/journal/pages/journal';
 import PartyPage from '@modules/partners/pages/PartyPage';
 import PartyStatementPage from '@modules/partners/pages/PartyStatementPage';
 import SalesInvoices from '@modules/invoicing/pages/salesInvoices';
@@ -16,25 +16,25 @@ import Transfers from '@modules/inventory/pages/transfers';
 import Warehouses from '@modules/inventory/pages/warehouses';
 import Damaged from '@modules/inventory/pages/damaged';
 import Production from '@modules/inventory/pages/production';
-import OpeningBalance from '@modules/accounting/pages/openingBalance';
+import OpeningBalance from '@modules/opening-balance/pages/openingBalance';
 import Adjustments from '@modules/inventory/pages/adjustments';
 import MaterialMovementsPage from '@modules/inventory/pages/MaterialMovementsPage';
-import Users from '@modules/core/pages/users';
-import Settings from '@modules/core/pages/settings';
-import AuditLog from '@modules/core/pages/auditLog';
+import Users from '@modules/users/pages/users';
+import Settings from '@modules/core/settings/pages/settings';
+import AuditLog from '@modules/audit/pages/auditLog';
 import Partners from '@modules/partners/pages/partners';
 
 import FixedAssets from '@modules/fixed-assets/pages/fixedAssets';
 
-import Expenses from '@modules/accounting/pages/expenses';
+import Expenses from '@modules/expenses/pages/expenses';
 
-import AccountMovementsReport from '@modules/accounting/pages/AccountMovementsReport';
-import AccountMovement from '@modules/accounting/pages/accountMovement';
-import IncomeStatementReport from '@modules/accounting/pages/IncomeStatementReport';
-import TrialBalanceReport from '@modules/accounting/pages/TrialBalanceReport';
-import BalanceSheetReport from '@modules/accounting/pages/BalanceSheetReport';
-import PartnerProfitShareReport from '@modules/accounting/pages/PartnerProfitShareReport';
-import PartnerStatementReport from '@modules/accounting/pages/PartnerStatementReport';
+import AccountMovementsReport from '@modules/accounting/account-movements/pages/AccountMovementsReport';
+import AccountMovement from '@modules/accounting/account-movements/pages/accountMovement';
+import IncomeStatementReport from '@modules/reports/pages/IncomeStatementReport';
+import TrialBalanceReport from '@modules/reports/pages/TrialBalanceReport';
+import BalanceSheetReport from '@modules/reports/pages/BalanceSheetReport';
+import PartnerProfitShareReport from '@modules/reports/pages/PartnerProfitShareReport';
+import PartnerStatementReport from '@modules/reports/pages/PartnerStatementReport';
 
 export function ErpRoutes({ location }: { location?: string | Partial<Location> }) {
   return (

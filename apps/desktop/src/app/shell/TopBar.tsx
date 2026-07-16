@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Bell, Search, Plus, Building2, LogOut, Settings as SettingsIcon, DollarSign, ChevronDown } from "lucide-react";
 import { useAppearance } from '@shared/hooks/useAppearance';
@@ -19,7 +19,7 @@ import { GlobalSearch } from '@app/shell/GlobalSearch';
 import { useTabs } from '@app/providers/TabContext';
 import { ICON_MAP } from './sidebarConfig';
 import type { SidebarGroupConfig, SidebarItemConfig } from '@shared/types/sidebar-config';
-import { UpdateBanner } from '@modules/core/components/UpdateBanner';
+import { UpdateBanner } from '@modules/core/update/components/UpdateBanner';
 import { useCurrencyContext } from '@app/providers/CurrencyContext';
 import { settingsService } from '@modules/core/api/settingsService';
 import type { CompanySettings } from "@erp/shared-types";

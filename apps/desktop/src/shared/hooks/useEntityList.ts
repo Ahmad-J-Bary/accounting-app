@@ -5,27 +5,36 @@ import { toast } from "sonner";
 interface UseEntityListProps<T, Req> {
   queryKey: string[];
   fetchData: () => Promise<T[]>;
-  saveData: (payload: Req) => Promise<T>;
-  deleteData: (id: string) => Promise<void>;
+  saveData?: (payload: Req) => Promise<T>;
+  deleteData?: (id: string) => Promise<void>;
   searchFields: (keyof T)[];
   searchPredicate?: (item: T, search: string) => boolean;
   errorLabel?: string;
   successLabel?: string;
   manageFormState?: boolean;
+  readonly?: boolean;
+  enabled?: boolean;
+  dependencies?: unknown[];
+  initialSearch?: string;
 }
 
-export function useEntityList<T extends { id: string }, Req>({
+export function useEntityList<T, Req>({
   queryKey,
   fetchData,
   saveData,
   deleteData,
   searchFields,
   searchPredicate,
+  errorLabel = "خطأ في جلب البيانات",
   successLabel = "تم الحفظ بنجاح",
   manageFormState = true,
+  readonly = false,
+  enabled = true,
+  dependencies = [],
+  initialSearch = "",
 }: UseEntityListProps<T, Req>) {
   const qc = useQueryClient();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editItem, setEditItem] = useState<T | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -35,9 +44,12 @@ export function useEntityList<T extends { id: string }, Req>({
     isLoading: loading,
     isRefetching: refreshing,
     refetch,
+    error,
   } = useQuery<T[]>({
-    queryKey,
+    queryKey: [...queryKey, ...dependencies],
     queryFn: fetchData,
+    enabled,
+    meta: { errorMessage: errorLabel },
   });
 
   const refresh = useCallback(
@@ -47,8 +59,12 @@ export function useEntityList<T extends { id: string }, Req>({
     [refetch]
   );
 
-  const createMutation = useMutation({ mutationFn: saveData });
-  const deleteMutation = useMutation({ mutationFn: deleteData });
+  const createMutation = useMutation({
+    mutationFn: readonly ? (undefined as never) : saveData!,
+  });
+  const deleteMutation = useMutation({
+    mutationFn: readonly ? (undefined as never) : deleteData!,
+  });
 
   const filtered = useMemo(() => {
     const s = search.toLowerCase().trim();
@@ -65,7 +81,7 @@ export function useEntityList<T extends { id: string }, Req>({
   }, [items, search, searchFields, searchPredicate]);
 
   const selectedItem = useMemo(
-    () => items.find((i) => i.id === selectedId) || null,
+    () => items.find((i) => (i as { id?: string }).id === selectedId) || null,
     [items, selectedId]
   );
 
@@ -86,6 +102,7 @@ export function useEntityList<T extends { id: string }, Req>({
 
   const handleSave = useCallback(
     async (payload: Req) => {
+      if (readonly || !saveData) return;
       await createMutation.mutateAsync(payload, {
         onSuccess: () => {
           qc.invalidateQueries({ queryKey });
@@ -99,11 +116,12 @@ export function useEntityList<T extends { id: string }, Req>({
         },
       });
     },
-    [createMutation, qc, queryKey, successLabel, manageFormState]
+    [readonly, saveData, createMutation, qc, queryKey, successLabel, manageFormState]
   );
 
   const handleDelete = useCallback(
     async (id: string) => {
+      if (readonly || !deleteData) return;
       if (!confirm("هل أنت متأكد من الحذف؟")) return;
       await deleteMutation.mutateAsync(id, {
         onSuccess: () => {
@@ -116,7 +134,7 @@ export function useEntityList<T extends { id: string }, Req>({
         },
       });
     },
-    [deleteMutation, qc, queryKey]
+    [readonly, deleteData, deleteMutation, qc, queryKey]
   );
 
   return {
@@ -124,7 +142,8 @@ export function useEntityList<T extends { id: string }, Req>({
     filtered,
     loading,
     refreshing,
-    saving: createMutation.isPending,
+    saving: readonly ? false : createMutation.isPending,
+    error: error ? String(error) : null,
     search,
     setSearch,
     refresh,
