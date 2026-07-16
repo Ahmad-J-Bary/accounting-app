@@ -27,8 +27,7 @@ async function buildExcelJsWorkbook(
   options?: ExcelExportOptions,
 ): Promise<ExcelJS.Buffer> {
   const sortedData = sortExportRows(data, columns, options?.sortBy);
-  const visibleColumns = columns.filter(c => !c.hidden);
-  const hasImages = visibleColumns.some(c => c.imageDataUrl);
+  const hasImages = columns.some(c => c.imageDataUrl);
 
   const workbook = new ExcelJS.Workbook();
   workbook.created = new Date();
@@ -39,13 +38,13 @@ async function buildExcelJsWorkbook(
   });
   ws.views[0].rightToLeft = true;
 
-  ws.columns = visibleColumns.map(col => ({
+  ws.columns = columns.map(col => ({
     width: col.imageDataUrl ? Math.ceil((col.imageWidth ?? 80) / 7) : (col.width ?? 12),
     hidden: col.hidden || false,
   }));
 
   const headerRow = ws.getRow(1);
-  visibleColumns.forEach((col, i) => {
+  columns.forEach((col, i) => {
     const cell = headerRow.getCell(i + 1);
     cell.value = col.label;
     cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
@@ -61,7 +60,7 @@ async function buildExcelJsWorkbook(
   headerRow.height = hasImages ? 30 : 20;
 
   const maxImageHeight = hasImages
-    ? Math.max(...visibleColumns.filter(c => c.imageDataUrl).map(c => c.imageHeight ?? 80))
+    ? Math.max(...columns.filter(c => c.imageDataUrl).map(c => c.imageHeight ?? 80))
     : 0;
   const imageRowHeight = hasImages ? Math.ceil(maxImageHeight * 0.75) + 5 : 0;
 
@@ -69,7 +68,7 @@ async function buildExcelJsWorkbook(
     const excelRow = ws.getRow(rowIdx + 2);
     if (imageRowHeight) excelRow.height = imageRowHeight;
 
-    visibleColumns.forEach((col, colIdx) => {
+    columns.forEach((col, colIdx) => {
       const cell = excelRow.getCell(colIdx + 1);
       const val = getCellValue(row, col);
       cell.value = val ?? '';
@@ -87,7 +86,7 @@ async function buildExcelJsWorkbook(
   if (hasImages) {
     for (let rowIdx = 0; rowIdx < sortedData.length; rowIdx++) {
       const row = sortedData[rowIdx];
-      visibleColumns.forEach((col, colIdx) => {
+      columns.forEach((col, colIdx) => {
         if (!col.imageDataUrl) return;
         const dataUrl = col.imageDataUrl(row);
         if (!dataUrl) return;
@@ -111,18 +110,21 @@ async function buildExcelJsWorkbook(
     }
   }
 
-  if (options?.autoFilter !== false && visibleColumns.length > 0) {
-    ws.autoFilter = {
-      from: { row: 1, column: 1 },
-      to: { row: sortedData.length + 1, column: visibleColumns.length },
-    };
+  if (options?.autoFilter !== false) {
+    const firstNonImageCol = columns.findIndex(c => !c.imageDataUrl) + 1;
+    if (firstNonImageCol > 0 && firstNonImageCol <= columns.length) {
+      ws.autoFilter = {
+        from: { row: 1, column: firstNonImageCol },
+        to: { row: sortedData.length + 1, column: columns.length },
+      };
+    }
   }
 
   return workbook.xlsx.writeBuffer() as Promise<ExcelJS.Buffer>;
 }
 
 function hasImageColumns(columns: ExcelExportColumn[]): boolean {
-  return columns.some(c => !c.hidden && c.imageDataUrl);
+  return columns.some(c => c.imageDataUrl);
 }
 
 export interface ExcelExportOptions {
