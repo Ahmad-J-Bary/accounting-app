@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@shared/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Download } from "lucide-react";
 import { fixedAssetService } from "@modules/fixed-assets/api/fixedAssetService";
 import { warehouseService } from "@modules/inventory/api/warehouseService";
 import type {
@@ -10,6 +10,7 @@ import type {
   AssetCategoryDto,
 } from "@erp/shared-types";
 import { toast } from "sonner";
+import { saveExcelFile, type ExcelExportColumn, type ExcelExportOptions } from "@shared/lib/excel";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { SharedTable } from "@widgets/table-shell/SharedTable";
 import { useDataTable } from "@shared/hooks";
@@ -27,6 +28,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@shared/ui/select";
+
+const TYPE_CATEGORY_NAMES: Record<string, string[]> = {
+  buildings_land: ["أبنية وأراضي"],
+  equipment: ["معدات وتجهيزات"],
+  furniture: ["أثاث ومفروشات"],
+};
 
 export default function FixedAssetsPage() {
   const { currencies, formatAmount } = useCurrencyContext();
@@ -71,6 +78,18 @@ export default function FixedAssetsPage() {
     return m;
   }, [categories]);
 
+  const typeCategoryIds = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    Object.entries(TYPE_CATEGORY_NAMES).forEach(([type, names]) => {
+      const ids = new Set<string>();
+      categories.forEach((c) => {
+        if (names.includes(c.name)) ids.add(c.id);
+      });
+      map.set(type, ids);
+    });
+    return map;
+  }, [categories]);
+
   const activeWarehouses = useMemo(
     () => warehouses.filter((w) => w.is_active),
     [warehouses]
@@ -91,34 +110,12 @@ export default function FixedAssetsPage() {
   const assets = useMemo(() => {
     let filtered = allAssets;
 
-    // 1. Filter by Asset Type
+    // 1. Filter by Asset Type (via category_id matching)
     if (assetTypeFilter !== "all") {
-      filtered = filtered.filter((a) => {
-        const categoryName = categoryMap.get(a.category_id)?.toLowerCase() || "";
-        if (assetTypeFilter === "buildings_land") {
-          return (
-            categoryName.includes("أبنية") ||
-            categoryName.includes("أراضي") ||
-            categoryName.includes("land") ||
-            categoryName.includes("building")
-          );
-        }
-        if (assetTypeFilter === "equipment") {
-          return (
-            categoryName.includes("معدات") ||
-            categoryName.includes("تجهيزات") ||
-            categoryName.includes("equipment")
-          );
-        }
-        if (assetTypeFilter === "furniture") {
-          return (
-            categoryName.includes("أثاث") ||
-            categoryName.includes("مفروشات") ||
-            categoryName.includes("furniture")
-          );
-        }
-        return true;
-      });
+      const matchingIds = typeCategoryIds.get(assetTypeFilter);
+      if (matchingIds && matchingIds.size > 0) {
+        filtered = filtered.filter((a) => matchingIds.has(a.category_id));
+      }
     }
 
     // 2. Filter by Warehouse (only if applicable)
@@ -127,7 +124,7 @@ export default function FixedAssetsPage() {
     }
 
     return filtered;
-  }, [allAssets, assetTypeFilter, warehouseFilter, categoryMap, isWarehouseApplicable]);
+  }, [allAssets, assetTypeFilter, warehouseFilter, typeCategoryIds, isWarehouseApplicable]);
 
   const loadMovements = useCallback(async (assetId: string) => {
     try {
@@ -306,6 +303,84 @@ export default function FixedAssetsPage() {
     }
   }, [refresh]);
 
+  const handleExport = useCallback(async () => {
+    if (assets.length === 0) {
+      toast.error("لا توجد بيانات لتصديرها");
+      return;
+    }
+
+    const exportColumns: ExcelExportColumn[] = [
+      { id: "code", label: "الكود", accessor: (row) => String((row as Record<string, unknown>).code ?? "") },
+      { id: "name", label: "الاسم", accessor: (row) => String((row as Record<string, unknown>).name ?? "") },
+      { id: "category", label: "التصنيف", accessor: (row) => categoryMap.get((row as Record<string, unknown>).category_id as string) ?? "" },
+      { id: "warehouse", label: "المستودع", accessor: (row) => {
+        const r = row as Record<string, unknown>;
+        return r.warehouse_id ? warehouseMap.get(r.warehouse_id as string) ?? "" : "";
+      }},
+      ...currencies.map(curr => ({
+        id: `purchase_cost_${curr.code}`,
+        label: `التكلفة (${curr.symbol || curr.code})`,
+        accessor: (row: Record<string, unknown>) => {
+          const r = row as unknown as FixedAssetDto;
+          const val = parseFloat(r.purchase_cost.amount);
+          if (Math.abs(val) === 0) return "";
+          if (curr.code === r.purchase_cost.currency.code) {
+            return formatAmount(val, { currencyCode: curr.code });
+          }
+          const rate = parseFloat(r.fx_rate) || 1;
+          return formatAmount(val / rate, { currencyCode: curr.code });
+        },
+      })),
+      ...currencies.map(curr => ({
+        id: `accumulated_depreciation_${curr.code}`,
+        label: `مجمع الإهلاك (${curr.symbol || curr.code})`,
+        accessor: (row: Record<string, unknown>) => {
+          const r = row as unknown as FixedAssetDto;
+          const val = parseFloat(r.accumulated_depreciation.amount);
+          if (val === 0 && r.useful_life_months === 0) return "لا ينطبق";
+          if (Math.abs(val) === 0) return "";
+          if (curr.code === r.accumulated_depreciation.currency.code) {
+            return formatAmount(val, { currencyCode: curr.code });
+          }
+          const rate = parseFloat(r.fx_rate) || 1;
+          return formatAmount(val / rate, { currencyCode: curr.code });
+        },
+      })),
+      ...currencies.map(curr => ({
+        id: `net_book_value_${curr.code}`,
+        label: `صافي القيمة (${curr.symbol || curr.code})`,
+        accessor: (row: Record<string, unknown>) => {
+          const r = row as unknown as FixedAssetDto;
+          const nbv = parseFloat(r.purchase_cost.amount) - parseFloat(r.accumulated_depreciation.amount);
+          if (Math.abs(nbv) === 0) return "";
+          if (curr.code === r.purchase_cost.currency.code) {
+            return formatAmount(nbv, { currencyCode: curr.code });
+          }
+          const rate = parseFloat(r.fx_rate) || 1;
+          return formatAmount(nbv / rate, { currencyCode: curr.code });
+        },
+      })),
+      { id: "notes", label: "التوصيف", accessor: (row) => String((row as Record<string, unknown>).notes ?? "") },
+      { id: "created_at", label: "التاريخ", accessor: (row) => new Date((row as Record<string, unknown>).created_at as string).toLocaleString("ar-SA") },
+    ];
+
+    const exportOptions: ExcelExportOptions = {
+      sheetName: "الأصول الثابتة",
+      autoFilter: true,
+    };
+
+    const ok = await saveExcelFile(
+      assets as unknown as Record<string, unknown>[],
+      exportColumns,
+      "الأصول الثابتة",
+      exportOptions,
+    );
+
+    if (ok) {
+      toast.success("تم حفظ ملف Excel بنجاح");
+    }
+  }, [assets, currencies, formatAmount, categoryMap, warehouseMap]);
+
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["code", "name", "category"];
     if (!(assetTypeFilter === "buildings_land")) {
@@ -327,21 +402,10 @@ export default function FixedAssetsPage() {
   // Determine the default category ID to pass to Form if filtering by type
   const selectedCategoryId = useMemo(() => {
     if (assetTypeFilter === "all") return undefined;
-    const cat = categories.find((c) => {
-      const lower = c.name.toLowerCase();
-      if (assetTypeFilter === "buildings_land") {
-        return lower.includes("أبنية") || lower.includes("أراضي") || lower.includes("land") || lower.includes("building");
-      }
-      if (assetTypeFilter === "equipment") {
-        return lower.includes("معدات") || lower.includes("تجهيزات") || lower.includes("equipment");
-      }
-      if (assetTypeFilter === "furniture") {
-        return lower.includes("أثاث") || lower.includes("مفروشات") || lower.includes("furniture");
-      }
-      return false;
-    });
-    return cat?.id;
-  }, [assetTypeFilter, categories]);
+    const ids = typeCategoryIds.get(assetTypeFilter);
+    if (ids && ids.size > 0) return ids.values().next().value;
+    return undefined;
+  }, [assetTypeFilter, typeCategoryIds]);
 
   return (
     <OperationalTableTemplate
@@ -355,6 +419,14 @@ export default function FixedAssetsPage() {
             onClick={handleRunRotation}
           >
             تدوير الحسابات
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            onClick={handleExport}
+          >
+            <Download className="w-4 h-4 ml-2 text-slate-500" /> تصدير إكسل
           </Button>
           <Button
             size="sm"

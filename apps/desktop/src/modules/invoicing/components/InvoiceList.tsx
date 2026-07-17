@@ -1,9 +1,13 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Button } from "@shared/ui/button";
-import { Plus, Eye, Printer, Settings2, Trash2 } from "lucide-react";
+import { Plus, Eye, Printer, Settings2, Trash2, Download } from "lucide-react";
 import { InvoiceDto } from "@erp/shared-types";
 import type { CurrencyDisplayMode } from "@app/providers/CurrencyContext";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { saveExcelFile, type ExcelExportColumn, type ExcelExportOptions } from "@shared/lib/excel";
+import { getInvoiceBaseAmount } from "../lib/invoiceHelpers";
+import { formatDateTime } from "@shared/lib/format";
 import { InvoiceTable } from "./InvoiceTable";
 
 
@@ -101,6 +105,134 @@ export function InvoiceList({
   const partyLabel = partyType === "supplier" ? "المورد" : "الزبون";
   const defaultName = partyType === "supplier" ? "مورد نقدي" : "زبون نقدي";
 
+  const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
+
+  const handleExport = useCallback(async () => {
+    if (filtered.length === 0) return;
+
+    const currencyCols: ExcelExportColumn[] = [];
+
+    if (showSubtotal) {
+      currencies.forEach(curr => {
+        currencyCols.push({
+          id: `subtotal_${curr.code}`,
+          label: `مجموع الأسعار (${curr.symbol || curr.code})`,
+          accessor: (row) => {
+            const inv = row as unknown as InvoiceDto;
+            const baseAmt = getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+            if (baseAmt === 0) return "";
+            return formatAmount(baseAmt, { currencyCode: curr.code });
+          },
+        });
+      });
+    }
+
+    if (showDiscountGranted) {
+      currencies.forEach(curr => {
+        currencyCols.push({
+          id: `discount_granted_${curr.code}`,
+          label: `خصوم ممنوحة (${curr.symbol || curr.code})`,
+          accessor: (row) => {
+            const inv = row as unknown as InvoiceDto;
+            const baseAmt = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+            if (baseAmt === 0) return "";
+            return formatAmount(baseAmt, { currencyCode: curr.code });
+          },
+        });
+      });
+    }
+
+    if (showDiscount) {
+      currencies.forEach(curr => {
+        currencyCols.push({
+          id: `discount_${curr.code}`,
+          label: `خصوم مكتسبة (${curr.symbol || curr.code})`,
+          accessor: (row) => {
+            const inv = row as unknown as InvoiceDto;
+            const baseAmt = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+            if (baseAmt === 0) return "";
+            return formatAmount(baseAmt, { currencyCode: curr.code });
+          },
+        });
+      });
+    }
+
+    if (showExtraCosts) {
+      currencies.forEach(curr => {
+        currencyCols.push({
+          id: `extra_costs_${curr.code}`,
+          label: `التكاليف الإضافية (${curr.symbol || curr.code})`,
+          accessor: (row) => {
+            const inv = row as unknown as InvoiceDto;
+            const baseAmt = getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+            if (baseAmt === 0) return "";
+            return formatAmount(baseAmt, { currencyCode: curr.code });
+          },
+        });
+      });
+    }
+
+    currencies.forEach(curr => {
+      currencyCols.push({
+        id: `total_${curr.code}`,
+        label: `المجموع الكلي (${curr.symbol || curr.code})`,
+        accessor: (row) => {
+          const inv = row as unknown as InvoiceDto;
+          const s = getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+          const d = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+          const e = getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+          const total = s - d + e;
+          if (total === 0) return "";
+          return formatAmount(total, { currencyCode: curr.code });
+        },
+      });
+      currencyCols.push({
+        id: `paid_${curr.code}`,
+        label: `المبلغ المدفوع (${curr.symbol || curr.code})`,
+        accessor: (row) => {
+          const inv = row as unknown as InvoiceDto;
+          const baseAmt = getInvoiceBaseAmount(inv.amount_paid, inv.amount_paid_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+          if (baseAmt === 0) return "";
+          return formatAmount(baseAmt, { currencyCode: curr.code });
+        },
+      });
+      currencyCols.push({
+        id: `remaining_${curr.code}`,
+        label: `المبلغ المتبقي (${curr.symbol || curr.code})`,
+        accessor: (row) => {
+          const inv = row as unknown as InvoiceDto;
+          const s = getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+          const d = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+          const e = getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+          const p = getInvoiceBaseAmount(inv.amount_paid, inv.amount_paid_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+          const total = s - d + e;
+          const remaining = total - p;
+          if (remaining === 0) return "";
+          return formatAmount(remaining, { currencyCode: curr.code });
+        },
+      });
+    });
+
+    const columns: ExcelExportColumn[] = [
+      { id: "invoice_number", label: "رقم الفاتورة", accessor: (row) => String((row as unknown as InvoiceDto).invoice_number ?? "") },
+      { id: "party", label: partyLabel, accessor: (row) => {
+        const inv = row as unknown as InvoiceDto;
+        return partyType === "supplier" ? (inv.supplier_name || defaultName) : (inv.customer_name || defaultName);
+      }},
+      ...currencyCols,
+      { id: "status", label: "الحالة", accessor: (row) => (row as unknown as InvoiceDto).status === "Posted" ? "مرحلة" : "مسودة" },
+      { id: "notes", label: "التوصيف", accessor: (row) => String((row as unknown as InvoiceDto).notes ?? "") },
+      { id: "issued_at", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as InvoiceDto).issued_at) },
+    ];
+
+    const opts: ExcelExportOptions = { sheetName: title, autoFilter: true };
+    const ok = await saveExcelFile(filtered as unknown as Record<string, unknown>[], columns, title, opts);
+    if (ok) {
+      const { toast } = await import("sonner");
+      toast.success("تم حفظ ملف Excel بنجاح");
+    }
+  }, [filtered, currencies, baseCurrency, formatAmount, partyType, partyLabel, defaultName, showSubtotal, showDiscountGranted, showDiscount, showExtraCosts, title]);
+
   return (
     <OperationalTableTemplate
       title={title}
@@ -144,6 +276,11 @@ export function InvoiceList({
             onClick={() => window.print()}
             className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
             <Printer className="w-4 h-4 ml-2 text-slate-500" /> طباعة
+          </Button>
+          <Button variant="outline" size="sm"
+            onClick={handleExport}
+            className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
+            <Download className="w-4 h-4 ml-2 text-slate-500" /> تصدير إكسل
           </Button>
         </div>
       }

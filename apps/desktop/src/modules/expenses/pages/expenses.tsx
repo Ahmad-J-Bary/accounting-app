@@ -19,6 +19,7 @@ import { type CreatePaymentRequest } from "@erp/shared-types";
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
+import { saveExcelFile, type ExcelExportColumn, type ExcelExportOptions } from "@shared/lib/excel";
 import { toast as toastSonner } from "sonner";
 
 // The "مصاريف أخرى" parent account ID in the chart of accounts
@@ -28,7 +29,7 @@ const OTHER_EXPENSES_PARENT_ID = SYSTEM_ACCOUNT_IDS.OTHER_EXPENSES;
 type ExpenseSavePayload = SaveAccountCommand & { _id?: string };
 
 export default function Expenses() {
-  const { baseCurrency, rateMap } = useCurrencyContext();
+  const { baseCurrency, rateMap, currencies, formatAmount, toBase } = useCurrencyContext();
   const { openTab } = useTabs();
   const [rateMapKey, setRateMapKey] = useState(0);
   const [expensesParent, setExpensesParent] = useState<AccountDto | null>(null);
@@ -127,6 +128,57 @@ export default function Expenses() {
     await handleSave(cmd);
   }, [expensesParent, handleSave, baseCurrency, rateMap]);
 
+  const handleExport = useCallback(async () => {
+    if (expenses.length === 0) {
+      toastSonner.error("لا توجد بيانات لتصديرها");
+      return;
+    }
+
+    const exportColumns: ExcelExportColumn[] = [
+      { id: "code", label: "#", accessor: (row) => {
+        const c = row as unknown as AccountDto;
+        const prefix = expensesParent?.code || "";
+        return prefix && c.code?.startsWith(prefix) ? c.code.substring(prefix.length) : c.code || "";
+      }},
+      { id: "name", label: "اسم البند", accessor: (row) => String((row as unknown as AccountDto).name_ar ?? "") },
+      { id: "status", label: "حالة الحساب", accessor: (row) => {
+        const c = row as unknown as AccountDto;
+        const bal = c.debit !== undefined && c.credit !== undefined
+          ? Number(c.debit || 0) - Number(c.credit || 0)
+          : Number(c.balance || 0);
+        if (bal === 0) return "";
+        return bal > 0 ? "مدين" : "دائن";
+      } },
+      ...currencies.map(curr => ({
+        id: `balance_${curr.code}`,
+        label: `الرصيد (${curr.symbol || curr.code})`,
+        accessor: (row: Record<string, unknown>) => {
+          const c = row as unknown as AccountDto;
+          const absBal = Math.abs(Number(c.balance || 0));
+          if (absBal === 0) return "";
+          const baseAmount = toBase(absBal, c.currency || "");
+          return formatAmount(baseAmount, { currencyCode: curr.code });
+        },
+      })),
+    ];
+
+    const exportOptions: ExcelExportOptions = {
+      sheetName: "بنود المصاريف",
+      autoFilter: true,
+    };
+
+    const ok = await saveExcelFile(
+      expenses as unknown as Record<string, unknown>[],
+      exportColumns,
+      "بنود المصاريف",
+      exportOptions,
+    );
+
+    if (ok) {
+      toastSonner.success("تم حفظ ملف Excel بنجاح");
+    }
+  }, [expenses, currencies, formatAmount, toBase, expensesParent]);
+
   const isLoading = loading || refreshing;
 
   return (
@@ -166,9 +218,7 @@ export default function Expenses() {
             size="sm"
             variant="outline"
             className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
-            onClick={() => {
-              toastSonner.info("جاري التصدير...");
-            }}
+            onClick={handleExport}
           >
             <Download className="w-4 h-4 ml-2 text-slate-500" /> تصدير إكسل
           </Button>

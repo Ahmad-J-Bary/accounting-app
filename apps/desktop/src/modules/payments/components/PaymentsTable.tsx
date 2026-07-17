@@ -1,14 +1,17 @@
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
 import { TableActions } from '@widgets/table-shell/TableActions';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
 import { formatDate } from "@shared/lib/format";
+import { saveExcelFile, type ExcelExportColumn, type ExcelExportOptions } from "@shared/lib/excel";
 import { PAYMENT_TYPE_LABELS } from "@modules/payments/lib/constants";
-import { ArrowDownCircle, ArrowUpCircle, Filter } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, Download, Filter } from "lucide-react";
+import { Button } from "@shared/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@shared/ui/select";
 import type { Payment, AccountDto } from "@erp/shared-types";
+import { toast } from "sonner";
 
 type SortField = "journal_entry_number" | "payment_date" | "payment_type" | "credit_account" | "debit_account";
 
@@ -117,6 +120,58 @@ export function PaymentsTable({
       return direction === "asc" ? comparison : -comparison;
     },
   });
+
+  const handleExport = useCallback(async () => {
+    if (sortedData.length === 0) {
+      toast.error("لا توجد بيانات لتصديرها");
+      return;
+    }
+
+    const exportColumns: ExcelExportColumn[] = [
+      { id: "journal_entry_number", label: "رقم القيد", accessor: (row) => { const v = (row as Record<string, unknown>).journal_entry_number; return v ? parseInt(String(v), 10) || 0 : 0; } },
+      { id: "payment_type", label: "النوع", accessor: (row) => {
+        const p = row as unknown as Payment;
+        return PAYMENT_TYPE_LABELS[p.payment_type as keyof typeof PAYMENT_TYPE_LABELS] || p.payment_type;
+      }},
+      ...sortedCurrencies.map(curr => ({
+        id: `amount_${curr.code}`,
+        label: `المبلغ (${curr.symbol || curr.code})`,
+        accessor: (row: Record<string, unknown>) => {
+          const p = row as unknown as Payment;
+          const amount = parseFloat(p.amount) || 0;
+          if (amount === 0) return "";
+          const baseAmount = toBase(amount, p.currency_code);
+          return formatAmount(baseAmount, { currencyCode: curr.code });
+        },
+      })),
+      { id: "notes", label: "البيان", accessor: (row) => String((row as Record<string, unknown>).notes ?? "") },
+      { id: "credit_account", label: "الحساب الدائن / المصدر", accessor: (row) => {
+        const p = row as unknown as Payment;
+        return p.credit_account_id ? accounts.find((a) => a.id === p.credit_account_id)?.name_ar ?? "" : "";
+      }},
+      { id: "debit_account", label: "الحساب المدين / الوجهة", accessor: (row) => {
+        const p = row as unknown as Payment;
+        return p.debit_account_id ? accounts.find((a) => a.id === p.debit_account_id)?.name_ar ?? "" : "";
+      }},
+      { id: "payment_date", label: "التاريخ", accessor: (row) => formatDate((row as unknown as Payment).payment_date) },
+    ];
+
+    const exportOptions: ExcelExportOptions = {
+      sheetName: "السندات المالية",
+      autoFilter: true,
+    };
+
+    const ok = await saveExcelFile(
+      sortedData as unknown as Record<string, unknown>[],
+      exportColumns,
+      "السندات المالية",
+      exportOptions,
+    );
+
+    if (ok) {
+      toast.success("تم حفظ ملف Excel بنجاح");
+    }
+  }, [sortedData, sortedCurrencies, accounts, formatAmount, toBase]);
 
   const allColumns = useMemo<UnifiedColumn<Payment>[]>(
     () => {
@@ -300,6 +355,17 @@ export function PaymentsTable({
       onColumnsReset={resetToDefault}
       columnsModified={isModified}
       showToolbar={true}
+      actions={
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+          onClick={handleExport}
+        >
+          <Download className="w-3.5 h-3.5 ml-1.5 text-slate-500" />
+          تصدير إكسل
+        </Button>
+      }
       filterBar={
         <Select value={typeFilter} onValueChange={onTypeFilterChange}>
           <SelectTrigger className="w-[130px] h-8 bg-white font-bold shadow-sm border-slate-200 text-xs">

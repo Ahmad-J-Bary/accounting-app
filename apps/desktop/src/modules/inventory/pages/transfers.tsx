@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Download } from "lucide-react";
 import { transferService } from '@modules/inventory/api/transferService';
 import { stockMovementService } from '@modules/inventory/api/stockMovementService';
 import { warehouseService } from '@modules/inventory/api/warehouseService';
@@ -14,6 +14,8 @@ import { TransferTable } from '@modules/inventory/components/TransferTable';
 import { TransferForm } from '@modules/inventory/components/TransferForm';
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { buildStockByWarehouse } from '@modules/inventory/lib/stockUtils';
+import { saveExcelFile, type ExcelExportColumn, type ExcelExportOptions } from "@shared/lib/excel";
+import { formatDateTime } from "@shared/lib/format";
 
 export default function Transfers() {
   const { data: movements = [] } = useQuery<StockMovement[]>({
@@ -124,13 +126,66 @@ export default function Transfers() {
     setTransferFormOpen(true);
   }, []);
 
+  const exportRows = useMemo<TransferRow[]>(() => {
+    const groups = new Map<string, { out?: StockMovement; in?: StockMovement }>();
+    for (const m of movements) {
+      if (!m.reference) continue;
+      let g = groups.get(m.reference);
+      if (!g) { g = {}; groups.set(m.reference, g); }
+      const clean = m.movement_type.replace('MovementType::', '');
+      if (clean === 'Out') g.out = m;
+      else if (clean === 'In') g.in = m;
+    }
+    const result: TransferRow[] = [];
+    for (const [ref, pair] of groups) {
+      if (!pair.out || !pair.in) continue;
+      result.push({
+        reference: ref,
+        material_id: pair.out.material_id,
+        material_name: pair.out.material_name || pair.in.material_name || '',
+        source_warehouse_id: pair.out.warehouse_id || '',
+        source_warehouse_name: warehouses.find(w => w.id === pair.out!.warehouse_id)?.name || pair.out.warehouse_id || '',
+        dest_warehouse_id: pair.in.warehouse_id || '',
+        dest_warehouse_name: warehouses.find(w => w.id === pair.in!.warehouse_id)?.name || pair.in.warehouse_id || '',
+        quantity: pair.out.quantity,
+        notes: pair.out.reason || pair.in.reason || '',
+        transfer_date: pair.out.movement_date,
+      });
+    }
+    return result;
+  }, [movements, warehouses]);
+
+  const handleExport = useCallback(async () => {
+    if (exportRows.length === 0) {
+      toast.error("لا توجد بيانات لتصديرها");
+      return;
+    }
+    const columns: ExcelExportColumn[] = [
+      { id: "material_name", label: "المادة", accessor: (row) => String((row as unknown as TransferRow).material_name ?? "") },
+      { id: "source", label: "من مستودع", accessor: (row) => String((row as unknown as TransferRow).source_warehouse_name ?? "") },
+      { id: "dest", label: "إلى مستودع", accessor: (row) => String((row as unknown as TransferRow).dest_warehouse_name ?? "") },
+      { id: "quantity", label: "الكمية", accessor: (row) => parseFloat((row as unknown as TransferRow).quantity || "0") },
+      { id: "reference", label: "المرجع", accessor: (row) => String((row as unknown as TransferRow).reference ?? "") },
+      { id: "notes", label: "ملاحظة", accessor: (row) => String((row as unknown as TransferRow).notes ?? "") },
+      { id: "date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as TransferRow).transfer_date) },
+    ];
+    const opts: ExcelExportOptions = { sheetName: "التحويلات", autoFilter: true };
+    const ok = await saveExcelFile(exportRows as unknown as Record<string, unknown>[], columns, "التحويلات", opts);
+    if (ok) toast.success("تم حفظ ملف Excel بنجاح");
+  }, [exportRows]);
+
   return (
     <OperationalTableTemplate
       title="التحويلات"
       toolbar={
-        <Button size="sm" onClick={() => { setTransferDetailData(null); setTransferFormMode('create'); setTransferFormData(null); setWarehouseTransferPreset(null); setTransferFormOpen(true); }} className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-100 font-bold">
-          <Plus className="w-4 h-4 ml-2" />إضافة تحويل
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => { setTransferDetailData(null); setTransferFormMode('create'); setTransferFormData(null); setWarehouseTransferPreset(null); setTransferFormOpen(true); }} className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-100 font-bold">
+            <Plus className="w-4 h-4 ml-2" />إضافة تحويل
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExport} className="border-slate-200 hover:bg-slate-50 font-bold">
+            <Download className="w-4 h-4 ml-2 text-slate-500" /> تصدير إكسل
+          </Button>
+        </div>
       }
       tableContent={
         <TransferTable

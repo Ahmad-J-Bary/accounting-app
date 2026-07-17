@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Search, LayoutGrid } from "lucide-react";
+import { Plus, Search, LayoutGrid, Download } from "lucide-react";
 import { stockMovementService } from '@modules/inventory/api/stockMovementService';
 import { warehouseService } from '@modules/inventory/api/warehouseService';
 import { materialService } from '@modules/inventory/api/materialService';
@@ -13,6 +13,8 @@ import { WarehouseForm } from '@modules/inventory/components/WarehouseForm';
 import { WarehouseMaterialList } from '@modules/inventory/components/WarehouseMaterialList';
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { buildStockByWarehouse } from '@modules/inventory/lib/stockUtils';
+import { saveExcelFile, type ExcelExportColumn, type ExcelExportOptions } from "@shared/lib/excel";
+import { toast } from "sonner";
 
 export default function Warehouses() {
   const {
@@ -75,13 +77,34 @@ export default function Warehouses() {
 
   const warehousesLoading_ = warehousesLoading || warehousesRefetching;
 
+  const handleExport = useCallback(async () => {
+    if (filteredWarehouses.length === 0) {
+      toast.error("لا توجد بيانات لتصديرها");
+      return;
+    }
+    const columns: ExcelExportColumn[] = [
+      { id: "name", label: "الاسم", accessor: (row) => String((row as unknown as WarehouseDto).name ?? "") },
+      { id: "address", label: "العنوان", accessor: (row) => String((row as unknown as WarehouseDto).address ?? "—") },
+      { id: "is_active", label: "الحالة", accessor: (row) => (row as unknown as WarehouseDto).is_active ? "نشط" : "غير نشط" },
+      { id: "is_default", label: "افتراضي", accessor: (row) => (row as unknown as WarehouseDto).is_default ? "نعم" : "لا" },
+    ];
+    const opts: ExcelExportOptions = { sheetName: "المستودعات", autoFilter: true };
+    const ok = await saveExcelFile(filteredWarehouses as unknown as Record<string, unknown>[], columns, "المستودعات", opts);
+    if (ok) toast.success("تم حفظ ملف Excel بنجاح");
+  }, [filteredWarehouses]);
+
   return (
     <OperationalTableTemplate
       title="المستودعات"
       toolbar={
-        <Button size="sm" onClick={() => { setWarehouseEditItem(null); setWarehouseFormOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-100 font-bold">
-          <Plus className="w-4 h-4 ml-2" />مستودع جديد
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => { setWarehouseEditItem(null); setWarehouseFormOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-100 font-bold">
+            <Plus className="w-4 h-4 ml-2" />مستودع جديد
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExport} className="border-slate-200 hover:bg-slate-50 font-bold">
+            <Download className="w-4 h-4 ml-2 text-slate-500" /> تصدير إكسل
+          </Button>
+        </div>
       }
       tableContent={
         <div className="flex flex-col h-full">

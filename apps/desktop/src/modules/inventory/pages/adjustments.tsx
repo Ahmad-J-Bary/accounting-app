@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@shared/ui/button";
-import { Plus, Eye, Settings2, Trash2 } from "lucide-react";
+import { Plus, Eye, Settings2, Trash2, Download } from "lucide-react";
 import { adjustmentService } from '@modules/inventory/api/adjustmentService';
 import { materialService } from '@modules/inventory/api/materialService';
 import type { StockAdjustment, CreateStockAdjustmentRequest, UpdateStockAdjustmentRequest, MaterialDto } from "@erp/shared-types";
@@ -11,6 +11,9 @@ import { useDataTable } from '@shared/hooks';
 import { AdjustmentsTable } from '@modules/inventory/components/AdjustmentsTable';
 import { AdjustmentForm } from '@modules/inventory/components/AdjustmentForm';
 import { AdjustmentDetailPanel } from '@modules/inventory/components/AdjustmentDetailPanel';
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { saveExcelFile, type ExcelExportColumn, type ExcelExportOptions } from "@shared/lib/excel";
+import { formatDateTime } from "@shared/lib/format";
 
 export default function AdjustmentsPage() {
   const {
@@ -128,6 +131,38 @@ export default function AdjustmentsPage() {
 
   const isLoading = adjLoading || refreshing || loadingProducts;
 
+  const { currencies, formatAmount } = useCurrencyContext();
+
+  const handleExport = useCallback(async () => {
+    if (adjustments.length === 0) {
+      toast.error("لا توجد بيانات لتصديرها");
+      return;
+    }
+    const currencyCols: ExcelExportColumn[] = currencies.map(curr => ({
+      id: `total_cost_${curr.code}`,
+      label: `التكلفة (${curr.symbol || curr.code})`,
+      accessor: (row) => {
+        const a = row as unknown as StockAdjustment;
+        const cost = parseFloat(a.total_cost_base || "0");
+        if (Math.abs(cost) === 0) return "";
+        return formatAmount(Math.abs(cost), { currencyCode: curr.code });
+      },
+    }));
+    const columns: ExcelExportColumn[] = [
+      { id: "id", label: "الرقم", accessor: (row) => String((row as unknown as StockAdjustment).reference ?? "") },
+      { id: "material_name", label: "المادة", accessor: (row) => String((row as unknown as StockAdjustment).material_name ?? "") },
+      { id: "system_quantity", label: "كمية النظام", accessor: (row) => parseFloat((row as unknown as StockAdjustment).system_quantity || "0") },
+      { id: "actual_quantity", label: "الكمية المجرودة", accessor: (row) => parseFloat((row as unknown as StockAdjustment).actual_quantity || "0") },
+      { id: "difference", label: "الفارق", accessor: (row) => parseFloat((row as unknown as StockAdjustment).difference || "0") },
+      ...currencyCols,
+      { id: "notes", label: "ملاحظة", accessor: (row) => String((row as unknown as StockAdjustment).notes ?? (row as unknown as StockAdjustment).reason ?? "") },
+      { id: "adjustment_date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as StockAdjustment).adjustment_date) },
+    ];
+    const opts: ExcelExportOptions = { sheetName: "تسويات الجرد", autoFilter: true };
+    const ok = await saveExcelFile(adjustments as unknown as Record<string, unknown>[], columns, "تسويات الجرد", opts);
+    if (ok) toast.success("تم حفظ ملف Excel بنجاح");
+  }, [adjustments, currencies, formatAmount]);
+
   const handleCloseForm = useCallback(() => {
     setShowDialog(false);
     if (!selectedItem) setSelectedItem(null);
@@ -156,6 +191,10 @@ export default function AdjustmentsPage() {
             onClick={() => selectedItem && handleDelete(selectedItem.id)}
             className="h-9 border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 font-bold transition-all">
             <Trash2 className="w-4 h-4 ml-2 text-rose-500" /> حذف
+          </Button>
+          <div className="h-6 w-px bg-slate-200 mx-1" />
+          <Button variant="outline" size="sm" onClick={handleExport} className="h-9 border-slate-200 hover:bg-slate-50 font-bold">
+            <Download className="w-4 h-4 ml-2 text-slate-500" /> تصدير إكسل
           </Button>
         </div>
       }

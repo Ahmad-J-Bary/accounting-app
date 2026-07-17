@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@shared/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Download } from "lucide-react";
 import { damagedService } from '@modules/inventory/api/damagedService';
 import { materialService } from '@modules/inventory/api/materialService';
 import type { DamagedItem, CreateDamagedItemRequest, UpdateDamagedItemRequest, MaterialDto } from "@erp/shared-types";
@@ -10,6 +10,9 @@ import { useDataTable } from '@shared/hooks';
 import { DamagedTable } from '@modules/inventory/components/DamagedTable';
 import { DamagedForm } from '@modules/inventory/components/DamagedForm';
 import { DamagedDetailPanel } from '@modules/inventory/components/DamagedDetailPanel';
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { saveExcelFile, type ExcelExportColumn, type ExcelExportOptions } from "@shared/lib/excel";
+import { formatDateTime } from "@shared/lib/format";
 
 export default function DamagedPage() {
   const {
@@ -117,6 +120,41 @@ export default function DamagedPage() {
 
   const isLoading = itemsLoading || refreshing || loadingProducts;
 
+  const { currencies, formatAmount } = useCurrencyContext();
+
+  const handleExport = useCallback(async () => {
+    if (items.length === 0) {
+      toast.error("لا توجد بيانات لتصديرها");
+      return;
+    }
+    const currencyCols: ExcelExportColumn[] = currencies.map(curr => ({
+      id: `cost_${curr.code}`,
+      label: `الخسارة (${curr.symbol || curr.code})`,
+      accessor: (row) => {
+        const i = row as unknown as DamagedItem;
+        const val = parseFloat(i.cost_impact || "0");
+        if (val === 0) return "";
+        return formatAmount(val, { currencyCode: curr.code });
+      },
+    }));
+    const columns: ExcelExportColumn[] = [
+      { id: "id", label: "الرقم", accessor: (row) => {
+        const i = row as unknown as DamagedItem;
+        if (i.reference) return i.reference;
+        const idx = items.findIndex(x => x.id === i.id);
+        return String(idx >= 0 ? idx + 1 : 1);
+      } },
+      { id: "material_name", label: "المادة", accessor: (row) => String((row as unknown as DamagedItem).material_name ?? "") },
+      { id: "quantity", label: "الكمية", accessor: (row) => Math.round(parseFloat((row as unknown as DamagedItem).quantity || "0")) },
+      ...currencyCols,
+      { id: "reason", label: "السبب", accessor: (row) => String((row as unknown as DamagedItem).reason ?? "") },
+      { id: "damage_date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as DamagedItem).damage_date) },
+    ];
+    const opts: ExcelExportOptions = { sheetName: "إدارة المواد التالفة", autoFilter: true };
+    const ok = await saveExcelFile(items as unknown as Record<string, unknown>[], columns, "إدارة المواد التالفة", opts);
+    if (ok) toast.success("تم حفظ ملف Excel بنجاح");
+  }, [items, currencies, formatAmount]);
+
   // Build initial values for form when editing
   const formInitialValues = selectedItem
     ? {
@@ -133,13 +171,18 @@ export default function DamagedPage() {
     <OperationalTableTemplate
       title="إدارة المواد التالفة"
       toolbar={
-        <Button
-          size="sm"
-          onClick={handleNewClick}
-          className="bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-100 font-bold"
-        >
-          <Plus className="w-4 h-4 ml-2" /> تسجيل تالف
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={handleNewClick}
+            className="bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-100 font-bold"
+          >
+            <Plus className="w-4 h-4 ml-2" /> تسجيل تالف
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExport} className="border-slate-200 hover:bg-slate-50 font-bold">
+            <Download className="w-4 h-4 ml-2 text-slate-500" /> تصدير إكسل
+          </Button>
+        </div>
       }
       tableContent={
         <DamagedTable
