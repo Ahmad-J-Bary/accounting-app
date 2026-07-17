@@ -5,7 +5,9 @@ import { Plus, Eye, Settings2, Trash2, Download } from "lucide-react";
 import type { SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
 import type { CurrencyDisplayMode } from "@app/providers/CurrencyContext";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { saveExcelFile, type ExcelExportColumn, type ExcelExportOptions } from "@shared/lib/excel";
+import { useExcelExport } from "@shared/hooks";
+import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
+import type { ExcelExportColumn } from "@shared/lib/excel";
 import { formatDateTime } from "@shared/lib/format";
 import { ReturnsTable } from "./ReturnsTable";
 
@@ -69,19 +71,10 @@ export function ReturnsList({
 
   const { currencies, formatAmount } = useCurrencyContext();
 
-  const handleExport = useCallback(async () => {
-    if (filtered.length === 0) return;
+  const { exportData } = useExcelExport();
 
-    const currencyCols: ExcelExportColumn[] = currencies.map(curr => ({
-      id: `total_amount_${curr.code}`,
-      label: `الإجمالي (${curr.symbol || curr.code})`,
-      accessor: (row) => {
-        const ret = row as unknown as SalesReturnDto | PurchaseReturnDto;
-        const val = parseFloat(ret.total_amount || "0");
-        if (val === 0) return "";
-        return formatAmount(val, { currencyCode: curr.code });
-      },
-    }));
+  const handleExport = useCallback(async () => {
+    const currCols = currencyAmountCols("total_amount", "الإجمالي", (row) => parseFloat((row as unknown as SalesReturnDto | PurchaseReturnDto).total_amount || "0"), currencies, formatAmount);
 
     const columns: ExcelExportColumn[] = [
       { id: "return_number", label: "رقم المرتجع", accessor: (row) => String((row as unknown as SalesReturnDto | PurchaseReturnDto).return_number ?? "") },
@@ -90,18 +83,13 @@ export function ReturnsList({
         if ("customer_name" in ret) return (ret as SalesReturnDto).customer_name || "";
         return (ret as PurchaseReturnDto).supplier_name || "";
       }},
-      ...currencyCols,
+      ...currCols,
       { id: "notes", label: "التوصيف", accessor: (row) => String((row as unknown as SalesReturnDto | PurchaseReturnDto).notes ?? "") },
       { id: "return_date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as SalesReturnDto | PurchaseReturnDto).return_date) },
     ];
 
-    const opts: ExcelExportOptions = { sheetName: title, autoFilter: true };
-    const ok = await saveExcelFile(filtered as unknown as Record<string, unknown>[], columns, title, opts);
-    if (ok) {
-      const { toast } = await import("sonner");
-      toast.success("تم حفظ ملف Excel بنجاح");
-    }
-  }, [filtered, currencies, formatAmount, partyLabel, title]);
+    await exportData(filtered as unknown as Record<string, unknown>[], columns, title, { sheetName: title, autoFilter: true });
+  }, [filtered, currencies, formatAmount, partyLabel, title, exportData]);
 
   const handleDeleteSelected = async () => {
     if (!selectedId) return;

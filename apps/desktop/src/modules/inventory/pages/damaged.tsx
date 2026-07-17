@@ -11,7 +11,9 @@ import { DamagedTable } from '@modules/inventory/components/DamagedTable';
 import { DamagedForm } from '@modules/inventory/components/DamagedForm';
 import { DamagedDetailPanel } from '@modules/inventory/components/DamagedDetailPanel';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { saveExcelFile, type ExcelExportColumn, type ExcelExportOptions } from "@shared/lib/excel";
+import { useExcelExport } from "@shared/hooks";
+import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
+import type { ExcelExportColumn } from "@shared/lib/excel";
 import { formatDateTime } from "@shared/lib/format";
 
 export default function DamagedPage() {
@@ -121,22 +123,10 @@ export default function DamagedPage() {
   const isLoading = itemsLoading || refreshing || loadingProducts;
 
   const { currencies, formatAmount } = useCurrencyContext();
+  const { exportData } = useExcelExport();
 
   const handleExport = useCallback(async () => {
-    if (items.length === 0) {
-      toast.error("لا توجد بيانات لتصديرها");
-      return;
-    }
-    const currencyCols: ExcelExportColumn[] = currencies.map(curr => ({
-      id: `cost_${curr.code}`,
-      label: `الخسارة (${curr.symbol || curr.code})`,
-      accessor: (row) => {
-        const i = row as unknown as DamagedItem;
-        const val = parseFloat(i.cost_impact || "0");
-        if (val === 0) return "";
-        return formatAmount(val, { currencyCode: curr.code });
-      },
-    }));
+    const currCols = currencyAmountCols("cost", "الخسارة", (row) => parseFloat((row as unknown as DamagedItem).cost_impact || "0"), currencies, formatAmount);
     const columns: ExcelExportColumn[] = [
       { id: "id", label: "الرقم", accessor: (row) => {
         const i = row as unknown as DamagedItem;
@@ -146,14 +136,12 @@ export default function DamagedPage() {
       } },
       { id: "material_name", label: "المادة", accessor: (row) => String((row as unknown as DamagedItem).material_name ?? "") },
       { id: "quantity", label: "الكمية", accessor: (row) => Math.round(parseFloat((row as unknown as DamagedItem).quantity || "0")) },
-      ...currencyCols,
+      ...currCols,
       { id: "reason", label: "السبب", accessor: (row) => String((row as unknown as DamagedItem).reason ?? "") },
       { id: "damage_date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as DamagedItem).damage_date) },
     ];
-    const opts: ExcelExportOptions = { sheetName: "إدارة المواد التالفة", autoFilter: true };
-    const ok = await saveExcelFile(items as unknown as Record<string, unknown>[], columns, "إدارة المواد التالفة", opts);
-    if (ok) toast.success("تم حفظ ملف Excel بنجاح");
-  }, [items, currencies, formatAmount]);
+    await exportData(items as unknown as Record<string, unknown>[], columns, "إدارة المواد التالفة", { sheetName: "إدارة المواد التالفة", autoFilter: true });
+  }, [items, currencies, formatAmount, exportData]);
 
   // Build initial values for form when editing
   const formInitialValues = selectedItem

@@ -12,7 +12,8 @@ import type { AccountDto, CreatePaymentRequest, CustomerDto, SupplierDto, Create
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useTabs } from "@app/providers/TabContext";
 import { useEntityList } from '@shared/hooks/useEntityList';
-import { saveExcelFile } from '@shared/lib/excel';
+import { useExcelExport } from "@shared/hooks";
+import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import type { ExcelExportColumn, ExcelExportOptions } from '@shared/lib/excel';
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import { PartyTable } from '@modules/partners/components/PartyTable';
@@ -233,8 +234,16 @@ export default function PartyPage({ entityName }: PartyPageProps) {
 
   // ── Handle Excel Export ──
 
+  const { exportData } = useExcelExport();
+
   const handleExport = useCallback(async () => {
     const isCreditFirst = entityName === 'supplier';
+    const currCols = currencyAmountCols("balance", "الرصيد", (row) => {
+      const absBal = Math.abs(Number(row.balance || 0));
+      if (absBal === 0) return 0;
+      return toBase(absBal, String(row.currency ?? baseCurrency?.code ?? ''));
+    }, currencies, formatAmount);
+
     const colDefs: ExcelExportColumn[] = [
       { id: 'code', label: '#', width: 8, hidden: !visibleColumnIds.includes('code'), accessor: (row) => String(row.code ?? '') },
       { id: 'name', label: entityName === 'customer' ? 'اسم العميل' : 'اسم المورد', width: 25, hidden: !visibleColumnIds.includes('name'), accessor: (row) => String(row.name ?? '') },
@@ -249,18 +258,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
           return effectiveBalance > 0 ? 'دائن' : 'مدين';
         },
       },
-      ...currencies.map((curr) => ({
-        id: `balance_${curr.code}`,
-        label: `الرصيد (${curr.symbol || curr.code})`,
-        hidden: !visibleColumnIds.includes(`balance_${curr.code}`),
-        width: 15,
-        accessor: (row: Record<string, unknown>) => {
-          const absBal = Math.abs(Number(row.balance || 0));
-          if (absBal === 0) return '';
-          const baseAmount = toBase(absBal, String(row.currency ?? baseCurrency?.code ?? ''));
-          return formatAmount(baseAmount, { currencyCode: curr.code });
-        },
-      })),
+      ...currCols,
       { id: 'notes', label: 'ملاحظات', width: 20, accessor: (row) => String(row.notes ?? '') },
     ];
 
@@ -274,14 +272,13 @@ export default function PartyPage({ entityName }: PartyPageProps) {
       },
     };
 
-    const ok = await saveExcelFile(
+    await exportData(
       items as unknown as Record<string, unknown>[],
       colDefs,
       entityName === 'supplier' ? 'الموردين' : 'العملاء',
       exportOptions,
     );
-    if (ok) toast.success("تم الحفظ بنجاح");
-  }, [items, currencies, entityName, toBase, formatAmount, baseCurrency?.code, visibleColumnIds]);
+  }, [items, currencies, entityName, toBase, formatAmount, baseCurrency?.code, visibleColumnIds, exportData]);
 
   // ── Toolbar ──
 

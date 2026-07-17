@@ -5,7 +5,8 @@ import { Plus, Eye, Printer, Settings2, Trash2, Download } from "lucide-react";
 import { InvoiceDto } from "@erp/shared-types";
 import type { CurrencyDisplayMode } from "@app/providers/CurrencyContext";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { saveExcelFile, type ExcelExportColumn, type ExcelExportOptions } from "@shared/lib/excel";
+import { useExcelExport } from "@shared/hooks";
+import type { ExcelExportColumn } from "@shared/lib/excel";
 import { getInvoiceBaseAmount } from "../lib/invoiceHelpers";
 import { formatDateTime } from "@shared/lib/format";
 import { InvoiceTable } from "./InvoiceTable";
@@ -107,9 +108,9 @@ export function InvoiceList({
 
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
 
-  const handleExport = useCallback(async () => {
-    if (filtered.length === 0) return;
+  const { exportData } = useExcelExport();
 
+  const handleExport = useCallback(async () => {
     const currencyCols: ExcelExportColumn[] = [];
 
     if (showSubtotal) {
@@ -225,13 +226,8 @@ export function InvoiceList({
       { id: "issued_at", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as InvoiceDto).issued_at) },
     ];
 
-    const opts: ExcelExportOptions = { sheetName: title, autoFilter: true };
-    const ok = await saveExcelFile(filtered as unknown as Record<string, unknown>[], columns, title, opts);
-    if (ok) {
-      const { toast } = await import("sonner");
-      toast.success("تم حفظ ملف Excel بنجاح");
-    }
-  }, [filtered, currencies, baseCurrency, formatAmount, partyType, partyLabel, defaultName, showSubtotal, showDiscountGranted, showDiscount, showExtraCosts, title]);
+    await exportData(filtered as unknown as Record<string, unknown>[], columns, title, { sheetName: title, autoFilter: true });
+  }, [filtered, currencies, baseCurrency, formatAmount, partyType, partyLabel, defaultName, showSubtotal, showDiscountGranted, showDiscount, showExtraCosts, title, exportData]);
 
   return (
     <OperationalTableTemplate

@@ -6,12 +6,12 @@ import { TableShell } from '@widgets/table-shell/TableShell';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
 import { formatDateTime } from '@shared/lib/format';
-import { saveExcelFile, type ExcelExportColumn, type ExcelExportOptions } from "@shared/lib/excel";
+import { useExcelExport } from "@shared/hooks";
+import type { ExcelExportColumn } from "@shared/lib/excel";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { getMovementType } from '../constants/movementTypes';
 import { Download } from "lucide-react";
 import { Button } from "@shared/ui/button";
-import { toast } from "sonner";
 
 const getCleanNotes = (m: StockMovement): string => {
   const type = m.movement_type.replace('MovementType::', '');
@@ -197,12 +197,9 @@ export function InventoryMovementsTable({
     }
   });
 
-  const handleExport = useCallback(async () => {
-    if (sortedData.length === 0) {
-      toast.error("لا توجد بيانات لتصديرها");
-      return;
-    }
+  const { exportData } = useExcelExport();
 
+  const handleExport = useCallback(async () => {
     const exportColumns: ExcelExportColumn[] = [
       { id: "product_name", label: "المادة", accessor: (row) => String((row as unknown as StockMovement).material_name ?? "") },
       { id: "type", label: "النوع", accessor: (row) => {
@@ -238,22 +235,13 @@ export function InventoryMovementsTable({
       { id: "date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as StockMovement).movement_date) },
     ];
 
-    const exportOptions: ExcelExportOptions = {
-      sheetName: "حركات المخزون",
-      autoFilter: true,
-    };
-
-    const ok = await saveExcelFile(
+    await exportData(
       sortedData as unknown as Record<string, unknown>[],
       exportColumns,
       "حركات المخزون",
-      exportOptions,
+      { sheetName: "حركات المخزون", autoFilter: true },
     );
-
-    if (ok) {
-      toast.success("تم حفظ ملف Excel بنجاح");
-    }
-  }, [sortedData, currencies, formatAmount, warehouseName, baseCost, transferRefs]);
+  }, [sortedData, currencies, formatAmount, warehouseName, baseCost, transferRefs, exportData]);
 
   const allColumns = useMemo<UnifiedColumn<StockMovement>[]>(() => {
     const cols: UnifiedColumn<StockMovement>[] = [

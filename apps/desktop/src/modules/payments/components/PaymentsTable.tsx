@@ -5,13 +5,14 @@ import { TableActions } from '@widgets/table-shell/TableActions';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
 import { formatDate } from "@shared/lib/format";
-import { saveExcelFile, type ExcelExportColumn, type ExcelExportOptions } from "@shared/lib/excel";
+import { useExcelExport } from "@shared/hooks";
+import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
+import type { ExcelExportColumn } from "@shared/lib/excel";
 import { PAYMENT_TYPE_LABELS } from "@modules/payments/lib/constants";
 import { ArrowDownCircle, ArrowUpCircle, Download, Filter } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@shared/ui/select";
 import type { Payment, AccountDto } from "@erp/shared-types";
-import { toast } from "sonner";
 
 type SortField = "journal_entry_number" | "payment_date" | "payment_type" | "credit_account" | "debit_account";
 
@@ -121,11 +122,14 @@ export function PaymentsTable({
     },
   });
 
+  const { exportData } = useExcelExport();
+
   const handleExport = useCallback(async () => {
-    if (sortedData.length === 0) {
-      toast.error("لا توجد بيانات لتصديرها");
-      return;
-    }
+    const currCols = currencyAmountCols("amount", "المبلغ", (row) => {
+      const p = row as unknown as Payment;
+      const amount = parseFloat(p.amount) || 0;
+      return toBase(amount, p.currency_code);
+    }, sortedCurrencies, formatAmount);
 
     const exportColumns: ExcelExportColumn[] = [
       { id: "journal_entry_number", label: "رقم القيد", accessor: (row) => { const v = (row as Record<string, unknown>).journal_entry_number; return v ? parseInt(String(v), 10) || 0 : 0; } },
@@ -133,17 +137,7 @@ export function PaymentsTable({
         const p = row as unknown as Payment;
         return PAYMENT_TYPE_LABELS[p.payment_type as keyof typeof PAYMENT_TYPE_LABELS] || p.payment_type;
       }},
-      ...sortedCurrencies.map(curr => ({
-        id: `amount_${curr.code}`,
-        label: `المبلغ (${curr.symbol || curr.code})`,
-        accessor: (row: Record<string, unknown>) => {
-          const p = row as unknown as Payment;
-          const amount = parseFloat(p.amount) || 0;
-          if (amount === 0) return "";
-          const baseAmount = toBase(amount, p.currency_code);
-          return formatAmount(baseAmount, { currencyCode: curr.code });
-        },
-      })),
+      ...currCols,
       { id: "notes", label: "البيان", accessor: (row) => String((row as Record<string, unknown>).notes ?? "") },
       { id: "credit_account", label: "الحساب الدائن / المصدر", accessor: (row) => {
         const p = row as unknown as Payment;
@@ -156,22 +150,13 @@ export function PaymentsTable({
       { id: "payment_date", label: "التاريخ", accessor: (row) => formatDate((row as unknown as Payment).payment_date) },
     ];
 
-    const exportOptions: ExcelExportOptions = {
-      sheetName: "السندات المالية",
-      autoFilter: true,
-    };
-
-    const ok = await saveExcelFile(
+    await exportData(
       sortedData as unknown as Record<string, unknown>[],
       exportColumns,
       "السندات المالية",
-      exportOptions,
+      { sheetName: "السندات المالية", autoFilter: true },
     );
-
-    if (ok) {
-      toast.success("تم حفظ ملف Excel بنجاح");
-    }
-  }, [sortedData, sortedCurrencies, accounts, formatAmount, toBase]);
+  }, [sortedData, sortedCurrencies, accounts, formatAmount, toBase, exportData]);
 
   const allColumns = useMemo<UnifiedColumn<Payment>[]>(
     () => {

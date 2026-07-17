@@ -12,7 +12,9 @@ import { AdjustmentsTable } from '@modules/inventory/components/AdjustmentsTable
 import { AdjustmentForm } from '@modules/inventory/components/AdjustmentForm';
 import { AdjustmentDetailPanel } from '@modules/inventory/components/AdjustmentDetailPanel';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { saveExcelFile, type ExcelExportColumn, type ExcelExportOptions } from "@shared/lib/excel";
+import { useExcelExport } from "@shared/hooks";
+import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
+import type { ExcelExportColumn } from "@shared/lib/excel";
 import { formatDateTime } from "@shared/lib/format";
 
 export default function AdjustmentsPage() {
@@ -132,36 +134,22 @@ export default function AdjustmentsPage() {
   const isLoading = adjLoading || refreshing || loadingProducts;
 
   const { currencies, formatAmount } = useCurrencyContext();
+  const { exportData } = useExcelExport();
 
   const handleExport = useCallback(async () => {
-    if (adjustments.length === 0) {
-      toast.error("لا توجد بيانات لتصديرها");
-      return;
-    }
-    const currencyCols: ExcelExportColumn[] = currencies.map(curr => ({
-      id: `total_cost_${curr.code}`,
-      label: `التكلفة (${curr.symbol || curr.code})`,
-      accessor: (row) => {
-        const a = row as unknown as StockAdjustment;
-        const cost = parseFloat(a.total_cost_base || "0");
-        if (Math.abs(cost) === 0) return "";
-        return formatAmount(Math.abs(cost), { currencyCode: curr.code });
-      },
-    }));
+    const currCols = currencyAmountCols("total_cost", "التكلفة", (row) => Math.abs(parseFloat((row as unknown as StockAdjustment).total_cost_base || "0")), currencies, formatAmount);
     const columns: ExcelExportColumn[] = [
       { id: "id", label: "الرقم", accessor: (row) => String((row as unknown as StockAdjustment).reference ?? "") },
       { id: "material_name", label: "المادة", accessor: (row) => String((row as unknown as StockAdjustment).material_name ?? "") },
       { id: "system_quantity", label: "كمية النظام", accessor: (row) => parseFloat((row as unknown as StockAdjustment).system_quantity || "0") },
       { id: "actual_quantity", label: "الكمية المجرودة", accessor: (row) => parseFloat((row as unknown as StockAdjustment).actual_quantity || "0") },
       { id: "difference", label: "الفارق", accessor: (row) => parseFloat((row as unknown as StockAdjustment).difference || "0") },
-      ...currencyCols,
+      ...currCols,
       { id: "notes", label: "ملاحظة", accessor: (row) => String((row as unknown as StockAdjustment).notes ?? (row as unknown as StockAdjustment).reason ?? "") },
       { id: "adjustment_date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as StockAdjustment).adjustment_date) },
     ];
-    const opts: ExcelExportOptions = { sheetName: "تسويات الجرد", autoFilter: true };
-    const ok = await saveExcelFile(adjustments as unknown as Record<string, unknown>[], columns, "تسويات الجرد", opts);
-    if (ok) toast.success("تم حفظ ملف Excel بنجاح");
-  }, [adjustments, currencies, formatAmount]);
+    await exportData(adjustments as unknown as Record<string, unknown>[], columns, "تسويات الجرد", { sheetName: "تسويات الجرد", autoFilter: true });
+  }, [adjustments, currencies, formatAmount, exportData]);
 
   const handleCloseForm = useCallback(() => {
     setShowDialog(false);

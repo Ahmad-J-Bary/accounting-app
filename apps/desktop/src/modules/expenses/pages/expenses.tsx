@@ -19,8 +19,10 @@ import { type CreatePaymentRequest } from "@erp/shared-types";
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
-import { saveExcelFile, type ExcelExportColumn, type ExcelExportOptions } from "@shared/lib/excel";
-import { toast as toastSonner } from "sonner";
+import { useExcelExport } from "@shared/hooks";
+import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
+import type { ExcelExportColumn } from "@shared/lib/excel";
+import { toast } from "sonner";
 
 // The "مصاريف أخرى" parent account ID in the chart of accounts
 const OTHER_EXPENSES_PARENT_ID = SYSTEM_ACCOUNT_IDS.OTHER_EXPENSES;
@@ -89,10 +91,10 @@ export default function Expenses() {
       setVoucherSaving(true);
       await paymentService.createPayment(payload);
       await refresh(true);
-      toastSonner.success("تم تسجيل سند الصرف بنجاح");
+      toast.success("تم تسجيل سند الصرف بنجاح");
       setIsVoucherOpen(false);
     } catch (error) {
-      toastSonner.error("فشل تسجيل السند: " + error);
+      toast.error("فشل تسجيل السند: " + error);
     } finally {
       setVoucherSaving(false);
     }
@@ -128,12 +130,15 @@ export default function Expenses() {
     await handleSave(cmd);
   }, [expensesParent, handleSave, baseCurrency, rateMap]);
 
-  const handleExport = useCallback(async () => {
-    if (expenses.length === 0) {
-      toastSonner.error("لا توجد بيانات لتصديرها");
-      return;
-    }
+  const { exportData } = useExcelExport();
 
+  const handleExport = useCallback(async () => {
+    const currCols = currencyAmountCols("balance", "الرصيد", (row) => {
+      const c = row as unknown as AccountDto;
+      const absBal = Math.abs(Number(c.balance || 0));
+      if (absBal === 0) return 0;
+      return toBase(absBal, c.currency || "");
+    }, currencies, formatAmount);
     const exportColumns: ExcelExportColumn[] = [
       { id: "code", label: "#", accessor: (row) => {
         const c = row as unknown as AccountDto;
@@ -149,35 +154,10 @@ export default function Expenses() {
         if (bal === 0) return "";
         return bal > 0 ? "مدين" : "دائن";
       } },
-      ...currencies.map(curr => ({
-        id: `balance_${curr.code}`,
-        label: `الرصيد (${curr.symbol || curr.code})`,
-        accessor: (row: Record<string, unknown>) => {
-          const c = row as unknown as AccountDto;
-          const absBal = Math.abs(Number(c.balance || 0));
-          if (absBal === 0) return "";
-          const baseAmount = toBase(absBal, c.currency || "");
-          return formatAmount(baseAmount, { currencyCode: curr.code });
-        },
-      })),
+      ...currCols,
     ];
-
-    const exportOptions: ExcelExportOptions = {
-      sheetName: "بنود المصاريف",
-      autoFilter: true,
-    };
-
-    const ok = await saveExcelFile(
-      expenses as unknown as Record<string, unknown>[],
-      exportColumns,
-      "بنود المصاريف",
-      exportOptions,
-    );
-
-    if (ok) {
-      toastSonner.success("تم حفظ ملف Excel بنجاح");
-    }
-  }, [expenses, currencies, formatAmount, toBase, expensesParent]);
+    await exportData(expenses as unknown as Record<string, unknown>[], exportColumns, "بنود المصاريف", { sheetName: "بنود المصاريف", autoFilter: true });
+  }, [expenses, currencies, formatAmount, toBase, expensesParent, exportData]);
 
   const isLoading = loading || refreshing;
 

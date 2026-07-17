@@ -14,7 +14,8 @@ import { TransferTable } from '@modules/inventory/components/TransferTable';
 import { TransferForm } from '@modules/inventory/components/TransferForm';
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { buildStockByWarehouse } from '@modules/inventory/lib/stockUtils';
-import { saveExcelFile, type ExcelExportColumn, type ExcelExportOptions } from "@shared/lib/excel";
+import { useExcelExport } from "@shared/hooks";
+import type { ExcelExportColumn } from "@shared/lib/excel";
 import { formatDateTime } from "@shared/lib/format";
 
 export default function Transfers() {
@@ -155,11 +156,9 @@ export default function Transfers() {
     return result;
   }, [movements, warehouses]);
 
+  const { exportData } = useExcelExport();
+
   const handleExport = useCallback(async () => {
-    if (exportRows.length === 0) {
-      toast.error("لا توجد بيانات لتصديرها");
-      return;
-    }
     const columns: ExcelExportColumn[] = [
       { id: "material_name", label: "المادة", accessor: (row) => String((row as unknown as TransferRow).material_name ?? "") },
       { id: "source", label: "من مستودع", accessor: (row) => String((row as unknown as TransferRow).source_warehouse_name ?? "") },
@@ -169,10 +168,8 @@ export default function Transfers() {
       { id: "notes", label: "ملاحظة", accessor: (row) => String((row as unknown as TransferRow).notes ?? "") },
       { id: "date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as TransferRow).transfer_date) },
     ];
-    const opts: ExcelExportOptions = { sheetName: "التحويلات", autoFilter: true };
-    const ok = await saveExcelFile(exportRows as unknown as Record<string, unknown>[], columns, "التحويلات", opts);
-    if (ok) toast.success("تم حفظ ملف Excel بنجاح");
-  }, [exportRows]);
+    await exportData(exportRows as unknown as Record<string, unknown>[], columns, "التحويلات", { sheetName: "التحويلات", autoFilter: true });
+  }, [exportRows, exportData]);
 
   return (
     <OperationalTableTemplate

@@ -13,8 +13,8 @@ import { WarehouseForm } from '@modules/inventory/components/WarehouseForm';
 import { WarehouseMaterialList } from '@modules/inventory/components/WarehouseMaterialList';
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { buildStockByWarehouse } from '@modules/inventory/lib/stockUtils';
-import { saveExcelFile, type ExcelExportColumn, type ExcelExportOptions } from "@shared/lib/excel";
-import { toast } from "sonner";
+import { useExcelExport } from "@shared/hooks";
+import type { ExcelExportColumn } from "@shared/lib/excel";
 
 export default function Warehouses() {
   const {
@@ -77,21 +77,17 @@ export default function Warehouses() {
 
   const warehousesLoading_ = warehousesLoading || warehousesRefetching;
 
+  const { exportData } = useExcelExport();
+
   const handleExport = useCallback(async () => {
-    if (filteredWarehouses.length === 0) {
-      toast.error("لا توجد بيانات لتصديرها");
-      return;
-    }
     const columns: ExcelExportColumn[] = [
       { id: "name", label: "الاسم", accessor: (row) => String((row as unknown as WarehouseDto).name ?? "") },
       { id: "address", label: "العنوان", accessor: (row) => String((row as unknown as WarehouseDto).address ?? "—") },
       { id: "is_active", label: "الحالة", accessor: (row) => (row as unknown as WarehouseDto).is_active ? "نشط" : "غير نشط" },
       { id: "is_default", label: "افتراضي", accessor: (row) => (row as unknown as WarehouseDto).is_default ? "نعم" : "لا" },
     ];
-    const opts: ExcelExportOptions = { sheetName: "المستودعات", autoFilter: true };
-    const ok = await saveExcelFile(filteredWarehouses as unknown as Record<string, unknown>[], columns, "المستودعات", opts);
-    if (ok) toast.success("تم حفظ ملف Excel بنجاح");
-  }, [filteredWarehouses]);
+    await exportData(filteredWarehouses as unknown as Record<string, unknown>[], columns, "المستودعات", { sheetName: "المستودعات", autoFilter: true });
+  }, [filteredWarehouses, exportData]);
 
   return (
     <OperationalTableTemplate

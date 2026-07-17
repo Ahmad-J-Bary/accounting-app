@@ -14,7 +14,8 @@ import { toast } from 'sonner';
 // Refactored Components & Hooks
 import { useEntityList } from '@shared/hooks/useEntityList';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { saveExcelFile } from '@shared/lib/excel';
+import { useExcelExport } from "@shared/hooks";
+import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import type { ExcelExportColumn, ExcelExportOptions } from '@shared/lib/excel';
 import { MaterialForm } from '@modules/inventory/components/MaterialForm';
 import { MaterialTable } from '@modules/inventory/components/MaterialTable';
@@ -231,6 +232,8 @@ export default function Materials() {
 
   // ── Handle Excel Export ──
 
+  const { exportData } = useExcelExport();
+
   const handleExport = useCallback(async () => {
     const colDefs: ExcelExportColumn[] = [
       {
@@ -252,59 +255,16 @@ export default function Materials() {
           return ids.map(id => categories.find(c => c.id === id)?.name).filter(Boolean).join(', ');
         },
       },
-    ];
-
-    currencies.forEach(curr => {
-      const sym = curr.symbol || curr.code;
-      colDefs.push({
-        id: `unit_price_${curr.code}`, label: `السعر الإفرادي (${sym})`, width: 15,
-        hidden: !visibleColumnIds.includes(`unit_price_${curr.code}`),
-        accessor: (row) => { const val = rawPriceBase(row as unknown as MaterialDto); return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : ''; },
-      });
-    });
-
-    currencies.forEach(curr => {
-      const sym = curr.symbol || curr.code;
-      colDefs.push({
-        id: `extra_costs_${curr.code}`, label: `تكاليف إضافية (${sym})`, width: 15,
-        hidden: !visibleColumnIds.includes(`extra_costs_${curr.code}`),
-        accessor: (row) => { const val = extraCostBase(row as unknown as MaterialDto); return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : ''; },
-      });
-    });
-
-    currencies.forEach(curr => {
-      const sym = curr.symbol || curr.code;
-      colDefs.push({
-        id: `average_cost_${curr.code}`, label: `تكلفة الوحدة (${sym})`, width: 15,
-        hidden: !visibleColumnIds.includes(`average_cost_${curr.code}`),
-        accessor: (row) => { const val = unitCostBase(row as unknown as MaterialDto); return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : ''; },
-      });
-    });
-
-    currencies.forEach(curr => {
-      const sym = curr.symbol || curr.code;
-      colDefs.push({
-        id: `total_value_${curr.code}`, label: `المجموع (${sym})`, width: 15,
-        hidden: !visibleColumnIds.includes(`total_value_${curr.code}`),
-        accessor: (row) => { const m = row as unknown as MaterialDto; const val = totalReceived(m) * unitCostBase(m); return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : ''; },
-      });
-    });
-
-    colDefs.push(
+      ...currencyAmountCols("unit_price", "السعر الإفرادي", (row) => rawPriceBase(row as unknown as MaterialDto), currencies, formatAmount),
+      ...currencyAmountCols("extra_costs", "تكاليف إضافية", (row) => extraCostBase(row as unknown as MaterialDto), currencies, formatAmount),
+      ...currencyAmountCols("average_cost", "تكلفة الوحدة", (row) => unitCostBase(row as unknown as MaterialDto), currencies, formatAmount),
+      ...currencyAmountCols("total_value", "المجموع", (row) => { const m = row as unknown as MaterialDto; return totalReceived(m) * unitCostBase(m); }, currencies, formatAmount),
       { id: 'total_received', label: 'الكمية الكلية', width: 12, hidden: !visibleColumnIds.includes('total_received'), accessor: (row) => totalReceived(row as unknown as MaterialDto) },
       { id: 'total_sold', label: 'الكمية المباعة', width: 12, hidden: !visibleColumnIds.includes('total_sold'), accessor: (row) => parseFloat(String((row as unknown as MaterialDto).total_sold || '0')) },
       { id: 'total_damaged', label: 'الكمية التالفة', width: 12, hidden: !visibleColumnIds.includes('total_damaged'), accessor: (row) => parseFloat(String((row as unknown as MaterialDto).total_damaged || '0')) },
       { id: 'total_available', label: 'الكمية المتوفرة', width: 12, hidden: !visibleColumnIds.includes('total_available'), accessor: (row) => parseFloat(String((row as unknown as MaterialDto).total_available || '0')) },
-    );
-
-    currencies.forEach(curr => {
-      const sym = curr.symbol || curr.code;
-      colDefs.push({
-        id: `available_value_${curr.code}`, label: `المجموع للمتوفر (${sym})`, width: 15,
-        hidden: !visibleColumnIds.includes(`available_value_${curr.code}`),
-        accessor: (row) => { const m = row as unknown as MaterialDto; const val = totalAvailable(m) * unitCostBase(m); return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : ''; },
-      });
-    });
+      ...currencyAmountCols("available_value", "المجموع للمتوفر", (row) => { const m = row as unknown as MaterialDto; return totalAvailable(m) * unitCostBase(m); }, currencies, formatAmount),
+    ];
 
     const TIERS = [
       { id: 'retail', label: 'مفرق' },
@@ -384,14 +344,13 @@ export default function Materials() {
       },
     };
 
-    const ok = await saveExcelFile(
+    await exportData(
       materials as unknown as Record<string, unknown>[],
       colDefs,
       'بطاقات المواد',
       exportOptions,
     );
-    if (ok) toast.success('تم الحفظ بنجاح');
-  }, [materials, currencies, categories, formatAmount, visibleColumnIds, unitCostBase, rawPriceBase, extraCostBase, totalReceived, totalAvailable]);
+  }, [materials, currencies, categories, formatAmount, visibleColumnIds, unitCostBase, rawPriceBase, extraCostBase, totalReceived, totalAvailable, exportData]);
 
   const handleOpenReturn = () => {
     if (!selectedMaterial) return;

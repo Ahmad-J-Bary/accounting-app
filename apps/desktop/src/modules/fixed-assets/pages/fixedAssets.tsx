@@ -10,7 +10,8 @@ import type {
   AssetCategoryDto,
 } from "@erp/shared-types";
 import { toast } from "sonner";
-import { saveExcelFile, type ExcelExportColumn, type ExcelExportOptions } from "@shared/lib/excel";
+import { useExcelExport } from "@shared/hooks";
+import type { ExcelExportColumn } from "@shared/lib/excel";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { SharedTable } from "@widgets/table-shell/SharedTable";
 import { useDataTable } from "@shared/hooks";
@@ -303,12 +304,9 @@ export default function FixedAssetsPage() {
     }
   }, [refresh]);
 
-  const handleExport = useCallback(async () => {
-    if (assets.length === 0) {
-      toast.error("لا توجد بيانات لتصديرها");
-      return;
-    }
+  const { exportData } = useExcelExport();
 
+  const handleExport = useCallback(async () => {
     const exportColumns: ExcelExportColumn[] = [
       { id: "code", label: "الكود", accessor: (row) => String((row as Record<string, unknown>).code ?? "") },
       { id: "name", label: "الاسم", accessor: (row) => String((row as Record<string, unknown>).name ?? "") },
@@ -364,22 +362,8 @@ export default function FixedAssetsPage() {
       { id: "created_at", label: "التاريخ", accessor: (row) => new Date((row as Record<string, unknown>).created_at as string).toLocaleString("ar-SA") },
     ];
 
-    const exportOptions: ExcelExportOptions = {
-      sheetName: "الأصول الثابتة",
-      autoFilter: true,
-    };
-
-    const ok = await saveExcelFile(
-      assets as unknown as Record<string, unknown>[],
-      exportColumns,
-      "الأصول الثابتة",
-      exportOptions,
-    );
-
-    if (ok) {
-      toast.success("تم حفظ ملف Excel بنجاح");
-    }
-  }, [assets, currencies, formatAmount, categoryMap, warehouseMap]);
+    await exportData(assets as unknown as Record<string, unknown>[], exportColumns, "الأصول الثابتة", { sheetName: "الأصول الثابتة", autoFilter: true });
+  }, [assets, currencies, formatAmount, categoryMap, warehouseMap, exportData]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["code", "name", "category"];

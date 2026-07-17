@@ -7,15 +7,13 @@ import { TableShell } from "@widgets/table-shell/TableShell";
 import { Skeleton } from "@shared/ui/skeleton";
 import { Button } from "@shared/ui/button";
 import { EmptyState } from "@widgets/table-shell/EmptyState";
-import { saveExcelFile } from "@shared/lib/excel";
+import { useExcelExport, useUnifiedColumns, useSortable, useBaseCurrencyColumns, useTableSettings, useGridResize } from "@shared/hooks";
 import type { ExcelExportColumn, ExcelExportOptions } from "@shared/lib/excel";
 import { formatDateTime } from "@shared/lib/format";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns, useSortable, useBaseCurrencyColumns, useTableSettings, useGridResize } from "@shared/hooks";
 import { cn } from "@shared/lib/utils";
 import { getLeftBorderClass, getRowBorderClass, getRowBackgroundClass } from "@shared/lib/table-utils";
 import type { GridResizeContent } from "@shared/hooks/useGridResize";
-import { toast } from "sonner";
 import { GroupedEntrySharedCell } from "./GroupedEntrySharedCell";
 import { getHeaderText, getPrimitiveCellValue, SHARED_COLUMN_IDS } from "./groupedTableUtils";
 
@@ -672,12 +670,9 @@ export function JournalTable({
     [formatAmount, baseCurrency]
   );
 
-  const handleExport = useCallback(async () => {
-    if (sortedData.length === 0) {
-      toast.error("لا توجد بيانات لتصديرها");
-      return;
-    }
+  const { exportData } = useExcelExport();
 
+  const handleExport = useCallback(async () => {
     const exportColumns: ExcelExportColumn[] = visibleColumns.map((col) => {
       const twoLineCol = col as UnifiedColumn<JournalTableRow>;
       const singleLineCol = col as UnifiedColumn<JournalSingleLineTableRow>;
@@ -701,17 +696,13 @@ export function JournalTable({
       ) : [],
     };
 
-    const ok = await saveExcelFile(
+    await exportData(
       sortedData as unknown as Record<string, unknown>[],
       exportColumns,
       "القيود اليومية",
       exportOptions,
     );
-
-    if (ok) {
-      toast.success("تم حفظ ملف Excel بنجاح");
-    }
-  }, [getColumnSampleValues, getTwoLineExportValue, getSingleLineExportValue, sortedData, visibleColumns, isTwoLine]);
+  }, [getColumnSampleValues, getTwoLineExportValue, getSingleLineExportValue, sortedData, visibleColumns, isTwoLine, exportData]);
 
   // ============ RENDER BODY ============
   const renderBody = () => {

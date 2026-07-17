@@ -14,4 +14,5 @@ export * from './useGridResize';
 export * from './useBaseCurrencyColumns';
 export * from './useSidebarLayoutContext';
 export * from './useSidebarQuickAdd';
+export * from './useExcelExport';
 
