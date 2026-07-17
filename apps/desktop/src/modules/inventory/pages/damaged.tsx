@@ -130,9 +130,9 @@ export default function DamagedPage() {
     const columns: ExcelExportColumn[] = [
       { id: "id", label: "الرقم", accessor: (row) => {
         const i = row as unknown as DamagedItem;
-        if (i.reference) return i.reference;
+        if (i.reference) return parseInt(i.reference, 10) || 0;
         const idx = items.findIndex(x => x.id === i.id);
-        return String(idx >= 0 ? idx + 1 : 1);
+        return idx >= 0 ? idx + 1 : 1;
       } },
       { id: "material_name", label: "المادة", accessor: (row) => String((row as unknown as DamagedItem).material_name ?? "") },
       { id: "quantity", label: "الكمية", accessor: (row) => Math.round(parseFloat((row as unknown as DamagedItem).quantity || "0")) },

@@ -215,7 +215,7 @@ export function InvoiceList({
     });
 
     const columns: ExcelExportColumn[] = [
-      { id: "invoice_number", label: "رقم الفاتورة", accessor: (row) => String((row as unknown as InvoiceDto).invoice_number ?? "") },
+      { id: "invoice_number", label: "رقم الفاتورة", accessor: (row) => parseInt((row as unknown as InvoiceDto).invoice_number ?? "0", 10) || 0 },
       { id: "party", label: partyLabel, accessor: (row) => {
         const inv = row as unknown as InvoiceDto;
         return partyType === "supplier" ? (inv.supplier_name || defaultName) : (inv.customer_name || defaultName);

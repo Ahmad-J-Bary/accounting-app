@@ -77,7 +77,7 @@ export function ReturnsList({
     const currCols = currencyAmountCols("total_amount", "الإجمالي", (row) => parseFloat((row as unknown as SalesReturnDto | PurchaseReturnDto).total_amount || "0"), currencies, formatAmount);
 
     const columns: ExcelExportColumn[] = [
-      { id: "return_number", label: "رقم المرتجع", accessor: (row) => String((row as unknown as SalesReturnDto | PurchaseReturnDto).return_number ?? "") },
+      { id: "return_number", label: "رقم المرتجع", accessor: (row) => parseInt((row as unknown as SalesReturnDto | PurchaseReturnDto).return_number ?? "0", 10) || 0 },
       { id: "partner", label: partyLabel, accessor: (row) => {
         const ret = row as unknown as SalesReturnDto | PurchaseReturnDto;
         if ("customer_name" in ret) return (ret as SalesReturnDto).customer_name || "";

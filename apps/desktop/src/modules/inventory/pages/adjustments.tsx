@@ -139,7 +139,7 @@ export default function AdjustmentsPage() {
   const handleExport = useCallback(async () => {
     const currCols = currencyAmountCols("total_cost", "التكلفة", (row) => Math.abs(parseFloat((row as unknown as StockAdjustment).total_cost_base || "0")), currencies, formatAmount);
     const columns: ExcelExportColumn[] = [
-      { id: "id", label: "الرقم", accessor: (row) => String((row as unknown as StockAdjustment).reference ?? "") },
+      { id: "id", label: "الرقم", accessor: (row) => parseInt((row as unknown as StockAdjustment).reference ?? "0", 10) || 0 },
       { id: "material_name", label: "المادة", accessor: (row) => String((row as unknown as StockAdjustment).material_name ?? "") },
       { id: "system_quantity", label: "كمية النظام", accessor: (row) => parseFloat((row as unknown as StockAdjustment).system_quantity || "0") },
       { id: "actual_quantity", label: "الكمية المجرودة", accessor: (row) => parseFloat((row as unknown as StockAdjustment).actual_quantity || "0") },

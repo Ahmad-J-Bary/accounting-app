@@ -230,7 +230,7 @@ export function InventoryMovementsTable({
           return cost !== 0 ? formatAmount(cost, { currencyCode: curr.code }) : "—";
         },
       })),
-      { id: "reference", label: "المرجع", accessor: (row) => String((row as unknown as StockMovement).reference ?? "") },
+      { id: "reference", label: "المرجع", accessor: (row) => parseInt((row as unknown as StockMovement).reference ?? "0", 10) || 0 },
       { id: "notes", label: "ملاحظة / التوصيف / السبب", accessor: (row) => getCleanNotes(row as unknown as StockMovement) },
       { id: "date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as StockMovement).movement_date) },
     ];
