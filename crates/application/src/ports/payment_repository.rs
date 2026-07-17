@@ -11,4 +11,5 @@ pub trait PaymentRepository: Send + Sync {
     async fn list_by_customer(&self, customer_id: &CustomerId) -> Result<Vec<Payment>, AppError>;
     async fn list_by_supplier(&self, supplier_id: &SupplierId) -> Result<Vec<Payment>, AppError>;
     async fn delete(&self, id: &PaymentId) -> Result<(), AppError>;
+    async fn delete_by_invoice_id(&self, invoice_id: &str) -> Result<(), AppError>;
 }

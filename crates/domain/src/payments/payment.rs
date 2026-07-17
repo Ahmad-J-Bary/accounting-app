@@ -34,6 +34,7 @@ pub struct Payment {
     pub supplier_id: Option<SupplierId>,
     pub reference: Option<String>,
     pub notes: Option<String>,
+    pub invoice_id: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -53,6 +54,29 @@ impl Payment {
         supplier_id: Option<SupplierId>,
         reference: Option<String>,
         notes: Option<String>,
+    ) -> Result<Self, DomainError> {
+        Self::with_invoice_id(
+            voucher_number, payment_type, amount, currency_code, exchange_rate,
+            payment_date, debit_account_id, credit_account_id, customer_id,
+            supplier_id, reference, notes, None,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn with_invoice_id(
+        voucher_number: String,
+        payment_type: PaymentType,
+        amount: Decimal,
+        currency_code: String,
+        exchange_rate: Decimal,
+        payment_date: DateTime<Utc>,
+        debit_account_id: Option<AccountId>,
+        credit_account_id: Option<AccountId>,
+        customer_id: Option<CustomerId>,
+        supplier_id: Option<SupplierId>,
+        reference: Option<String>,
+        notes: Option<String>,
+        invoice_id: Option<String>,
     ) -> Result<Self, DomainError> {
         if amount <= Decimal::ZERO {
             return Err(DomainError::Invalid("مبلغ الدفعة يجب أن يكون موجبًا".into()));
@@ -89,6 +113,7 @@ impl Payment {
             supplier_id,
             reference,
             notes,
+            invoice_id,
             created_at: now,
             updated_at: now,
         })

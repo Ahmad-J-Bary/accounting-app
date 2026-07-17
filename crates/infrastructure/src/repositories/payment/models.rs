@@ -14,6 +14,7 @@ pub struct PaymentRow {
     pub supplier_id: Option<String>,
     pub reference: Option<String>,
     pub notes: Option<String>,
+    pub invoice_id: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }

@@ -46,4 +46,8 @@ impl PaymentRepository for SqlitePaymentRepository {
     async fn delete(&self, id: &PaymentId) -> Result<(), AppError> {
         commands::delete(&self.pool, id).await
     }
+
+    async fn delete_by_invoice_id(&self, invoice_id: &str) -> Result<(), AppError> {
+        queries::delete_by_invoice_id(&self.pool, invoice_id).await
+    }
 }

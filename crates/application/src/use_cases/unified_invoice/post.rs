@@ -19,7 +19,9 @@ use crate::ports::material_repository::MaterialRepository;
 use crate::ports::category_repository::CategoryRepository;
 use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::exchange_rate_repository::ExchangeRateRepository;
+use crate::ports::payment_repository::PaymentRepository;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine};
+use domain::payments::{Payment, PaymentType};
 use domain::shared::{Currency, Money, MonetaryAmount};
 use rust_decimal::Decimal;
 use uuid::Uuid;
@@ -38,6 +40,7 @@ pub struct PostInvoiceUseCase {
     category_repo: Arc<dyn CategoryRepository>,
     currency_repo: Arc<dyn CurrencyRepository>,
     exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
+    payment_repo: Arc<dyn PaymentRepository>,
 }
 
 pub struct PostInvoiceDependencies {
@@ -52,6 +55,7 @@ pub struct PostInvoiceDependencies {
     pub category_repo: Arc<dyn CategoryRepository>,
     pub currency_repo: Arc<dyn CurrencyRepository>,
     pub exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
+    pub payment_repo: Arc<dyn PaymentRepository>,
 }
 
 fn allocate_extra_cost(
@@ -129,6 +133,7 @@ impl PostInvoiceUseCase {
             category_repo: deps.category_repo,
             currency_repo: deps.currency_repo,
             exchange_rate_repo: deps.exchange_rate_repo,
+            payment_repo: deps.payment_repo,
         }
     }
 
@@ -148,6 +153,7 @@ impl PostInvoiceUseCase {
                 supplier_repo: self.supplier_repo.clone(),
                 currency_repo: self.currency_repo.clone(),
                 exchange_rate_repo: self.exchange_rate_repo.clone(),
+                payment_repo: self.payment_repo.clone(),
             };
             let reopener = crate::use_cases::unified_invoice::ReopenInvoiceUseCase::new(reopened_deps);
             reopener.execute(id.clone()).await?;
@@ -570,7 +576,7 @@ impl PostInvoiceUseCase {
                                     ),
                                 ];
                                 let mut payment_entry = JournalEntry::new(
-                                    payment_number,
+                                    payment_number.clone(),
                                     domain::accounting::JournalType::CashPayment,
                                     payment_lines,
                                     Utc::now(),
@@ -579,6 +585,25 @@ impl PostInvoiceUseCase {
                                 ).map_err(|e| AppError::Invalid(e.to_string()))?;
                                 payment_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
                                 self.journal_repo.save(&payment_entry).await?;
+
+                                // Create Payment record for the payment journal
+                                let mut payment = Payment::with_invoice_id(
+                                    payment_number,
+                                    PaymentType::SupplierPayment,
+                                    purchase_paid,
+                                    doc_currency.code.clone(),
+                                    fx_rate,
+                                    Utc::now(),
+                                    Some(p_acc_id),
+                                    Some(cash_account.id),
+                                    None,
+                                    Some(*supplier_id),
+                                    None,
+                                    None,
+                                    Some(invoice.id.to_string()),
+                                ).map_err(|e| AppError::Invalid(e.to_string()))?;
+                                payment.journal_entry_number = Some(payment_entry.entry_number.to_string());
+                                self.payment_repo.save(&payment).await?;
                             }
 
                             // Entry 3: Discount (DiscountEarnedJournal) — Dr Supplier, Cr 332 (if discount)
@@ -782,6 +807,28 @@ impl PostInvoiceUseCase {
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
             extra_pay_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
             self.journal_repo.save(&extra_pay_entry).await?;
+
+            // Create Payment record for extra costs
+            {
+                let extra_pay_voucher = self.journal_repo.get_next_entry_number().await?.to_string();
+                let mut payment = Payment::with_invoice_id(
+                    extra_pay_voucher,
+                    PaymentType::SupplierPayment,
+                    extra_costs_val,
+                    doc_currency.code.clone(),
+                    fx_rate,
+                    Utc::now(),
+                    Some(main_account.id),
+                    Some(cash_account.id),
+                    None,
+                    invoice.supplier_id,
+                    None,
+                    None,
+                    Some(invoice.id.to_string()),
+                ).map_err(|e| AppError::Invalid(e.to_string()))?;
+                payment.journal_entry_number = Some(extra_pay_entry.entry_number.to_string());
+                self.payment_repo.save(&payment).await?;
+            }
         }
 
         // --- Create separate CashReceipt entry for sales payments received ---
@@ -839,6 +886,26 @@ impl PostInvoiceUseCase {
 
                 receipt_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
                 self.journal_repo.save(&receipt_entry).await?;
+
+                // Create Payment record for the sales receipt
+                let receipt_voucher = self.journal_repo.get_next_entry_number().await?.to_string();
+                let mut payment = Payment::with_invoice_id(
+                    receipt_voucher,
+                    PaymentType::Receipt,
+                    amount_paid,
+                    doc_currency.code.clone(),
+                    fx_rate,
+                    Utc::now(),
+                    Some(cash_account.id),
+                    cust_acc_for_receipt,
+                    Some(*customer_id),
+                    None,
+                    None,
+                    None,
+                    Some(invoice.id.to_string()),
+                ).map_err(|e| AppError::Invalid(e.to_string()))?;
+                payment.journal_entry_number = Some(receipt_entry.entry_number.to_string());
+                self.payment_repo.save(&payment).await?;
             }
         }
 

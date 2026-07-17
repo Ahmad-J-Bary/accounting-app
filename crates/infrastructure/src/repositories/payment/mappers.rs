@@ -36,6 +36,7 @@ pub fn row_to_payment(row: PaymentRow) -> Result<Payment, AppError> {
         supplier_id: row.supplier_id.and_then(|id| id.parse::<SupplierId>().ok()),
         reference: row.reference,
         notes: row.notes,
+        invoice_id: row.invoice_id,
         created_at: DateTime::parse_from_rfc3339(&row.created_at).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
         updated_at: DateTime::parse_from_rfc3339(&row.updated_at).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
     })

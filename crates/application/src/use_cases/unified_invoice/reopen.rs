@@ -3,6 +3,7 @@ use std::str::FromStr;
 use rust_decimal::Decimal;
 use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::exchange_rate_repository::ExchangeRateRepository;
+use crate::ports::payment_repository::PaymentRepository;
 use domain::sales::unified_invoice::{InvoiceType, InvoiceStatus};
 use domain::shared::ids::{InvoiceId};
 use crate::ports::unified_invoice_repository::UnifiedInvoiceRepository;
@@ -36,6 +37,7 @@ pub struct ReopenInvoiceDependencies {
     pub supplier_repo: Arc<dyn SupplierRepository>,
     pub currency_repo: Arc<dyn CurrencyRepository>,
     pub exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
+    pub payment_repo: Arc<dyn PaymentRepository>,
 }
 
 pub struct ReopenInvoiceUseCase {
@@ -47,6 +49,7 @@ pub struct ReopenInvoiceUseCase {
     supplier_repo: Arc<dyn SupplierRepository>,
     currency_repo: Arc<dyn CurrencyRepository>,
     exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
+    payment_repo: Arc<dyn PaymentRepository>,
 }
 
 impl ReopenInvoiceUseCase {
@@ -60,6 +63,7 @@ impl ReopenInvoiceUseCase {
             supplier_repo: deps.supplier_repo,
             currency_repo: deps.currency_repo,
             exchange_rate_repo: deps.exchange_rate_repo,
+            payment_repo: deps.payment_repo,
         }
     }
 
@@ -175,13 +179,16 @@ impl ReopenInvoiceUseCase {
             }
         }
 
-        // 3. Delete all journal entries linked to this invoice
+        // 3. Delete all payment records linked to this invoice
+        self.payment_repo.delete_by_invoice_id(&invoice.id.to_string()).await?;
+
+        // 4. Delete all journal entries linked to this invoice
         let entries = self.journal_repo.find_all_by_source_id(&invoice.id.to_string()).await?;
         for entry in entries {
             self.journal_repo.delete(&entry.id).await?;
         }
 
-        // 4. Delete Stock Movements
+        // 5. Delete Stock Movements
         let mov_type = match invoice.invoice_type {
             InvoiceType::Sales => "Sale",
             InvoiceType::Purchase | InvoiceType::PurchaseCosts => "Purchase",
@@ -189,7 +196,7 @@ impl ReopenInvoiceUseCase {
         };
         self.movement_repo.delete_by_reference(&invoice.invoice_number, mov_type).await?;
 
-        // 5. Update Invoice Status
+        // 6. Update Invoice Status
         invoice.reopen().map_err(|e| AppError::Invalid(e.to_string()))?;
         self.repo.update(&invoice).await?;
 

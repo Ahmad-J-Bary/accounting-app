@@ -2,7 +2,7 @@ use tauri::State;
 use crate::bootstrap::container::AppState;
 use application::dto::invoice_dto::{CreateInvoiceRequest, UpdateInvoiceRequest, InvoiceDto};
 use application::use_cases::unified_invoice::{
-    CreateInvoiceUseCase, UpdateInvoiceUseCase, InvoiceQueries, PostInvoiceUseCase, PostInvoiceDependencies, DeleteInvoiceUseCase
+    CreateInvoiceUseCase, UpdateInvoiceUseCase, InvoiceQueries, PostInvoiceUseCase, PostInvoiceDependencies, ReopenInvoiceUseCase, ReopenInvoiceDependencies, DeleteInvoiceUseCase
 };
 
 #[tauri::command]
@@ -48,7 +48,7 @@ pub async fn update_unified_invoice(
         .map_err(|e| e.to_string())?
     {
         if existing.status == InvoiceStatus::Posted {
-            let reopen_deps = application::use_cases::unified_invoice::ReopenInvoiceDependencies {
+            let reopen_deps = ReopenInvoiceDependencies {
                 repo: state.unified_invoice_repo.clone(),
                 movement_repo: state.stock_movement_repo.clone(),
                 lot_repo: state.inventory_lot_repo.clone(),
@@ -57,8 +57,9 @@ pub async fn update_unified_invoice(
                 supplier_repo: state.supplier_repo.clone(),
                 currency_repo: state.currency_repo.clone(),
                 exchange_rate_repo: state.exchange_rate_repo.clone(),
+                payment_repo: state.payment_repo.clone(),
             };
-            application::use_cases::unified_invoice::ReopenInvoiceUseCase::new(reopen_deps)
+            ReopenInvoiceUseCase::new(reopen_deps)
             .execute(request.id.clone())
             .await
             .map_err(|e| e.to_string())?;
@@ -94,6 +95,7 @@ pub async fn post_unified_invoice(
         category_repo: state.category_repo.clone(),
         currency_repo: state.currency_repo.clone(),
         exchange_rate_repo: state.exchange_rate_repo.clone(),
+        payment_repo: state.payment_repo.clone(),
     })
     .execute(id).await.map_err(|e| e.to_string())
 }
@@ -144,7 +146,7 @@ pub async fn reopen_unified_invoice(
     state: State<'_, AppState>,
     id: String,
 ) -> Result<InvoiceDto, String> {
-    let reopen_deps = application::use_cases::unified_invoice::ReopenInvoiceDependencies {
+    let reopen_deps = ReopenInvoiceDependencies {
         repo: state.unified_invoice_repo.clone(),
         movement_repo: state.stock_movement_repo.clone(),
         lot_repo: state.inventory_lot_repo.clone(),
@@ -153,8 +155,9 @@ pub async fn reopen_unified_invoice(
         supplier_repo: state.supplier_repo.clone(),
         currency_repo: state.currency_repo.clone(),
         exchange_rate_repo: state.exchange_rate_repo.clone(),
+        payment_repo: state.payment_repo.clone(),
     };
-    application::use_cases::unified_invoice::ReopenInvoiceUseCase::new(reopen_deps)
+    ReopenInvoiceUseCase::new(reopen_deps)
     .execute(id).await.map_err(|e| e.to_string())
 }
 
@@ -185,6 +188,7 @@ pub async fn delete_unified_invoice(
         state.supplier_repo.clone(),
         state.currency_repo.clone(),
         state.exchange_rate_repo.clone(),
+        state.payment_repo.clone(),
     )
     .execute(id).await.map_err(|e| e.to_string())
 }

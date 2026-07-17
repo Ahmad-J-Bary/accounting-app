@@ -3,6 +3,7 @@ use std::str::FromStr;
 use rust_decimal::Decimal;
 use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::exchange_rate_repository::ExchangeRateRepository;
+use crate::ports::payment_repository::PaymentRepository;
 use domain::sales::unified_invoice::{InvoiceType, InvoiceStatus};
 use domain::shared::ids::{InvoiceId};
 use crate::ports::unified_invoice_repository::UnifiedInvoiceRepository;
@@ -35,6 +36,7 @@ pub struct DeleteInvoiceUseCase {
     supplier_repo: Arc<dyn SupplierRepository>,
     currency_repo: Arc<dyn CurrencyRepository>,
     exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
+    payment_repo: Arc<dyn PaymentRepository>,
 }
 
 impl DeleteInvoiceUseCase {
@@ -46,6 +48,7 @@ impl DeleteInvoiceUseCase {
         supplier_repo: Arc<dyn SupplierRepository>,
         currency_repo: Arc<dyn CurrencyRepository>,
         exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
+        payment_repo: Arc<dyn PaymentRepository>,
     ) -> Self {
         Self {
             repo,
@@ -55,6 +58,7 @@ impl DeleteInvoiceUseCase {
             supplier_repo,
             currency_repo,
             exchange_rate_repo,
+            payment_repo,
         }
     }
 
@@ -113,6 +117,9 @@ impl DeleteInvoiceUseCase {
                 },
                 _ => {}
             }
+
+            // Delete all payment records linked to this invoice
+            self.payment_repo.delete_by_invoice_id(&invoice.id.to_string()).await?;
 
             // Delete all journal entries linked to this invoice
             let entries = self.journal_repo.find_all_by_source_id(&invoice.id.to_string()).await?;
