@@ -55,7 +55,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     settingsService.getSettings().then((s) => {
-      setNumberingSystem(s.numeral_system || "arabic");
+      setNumberingSystem(s.numeral_system || "western");
     }).catch(() => {});
   }, []);
 

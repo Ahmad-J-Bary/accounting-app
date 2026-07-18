@@ -40,6 +40,7 @@ pub struct DeleteInvoiceUseCase {
 }
 
 impl DeleteInvoiceUseCase {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         repo: Arc<dyn UnifiedInvoiceRepository>,
         movement_repo: Arc<dyn StockMovementRepository>,
