@@ -1,5 +1,5 @@
 import { Pencil, Trash2 } from "lucide-react";
-import { formatDateTime } from "@shared/lib/format";
+import { formatDateTime, formatNumber } from "@shared/lib/format";
 import {
   SidebarShell,
   SidebarHeader,
@@ -77,7 +77,7 @@ export function TransferDetailPanel({
             title="معلومات إضافية"
             fields={[
               { label: "الكمية", value: quantity },
-              { label: "المرجع", value: reference },
+              { label: "المرجع", value: formatNumber(parseInt(reference) || 0) },
               ...(notes ? [{ label: "ملاحظات", value: notes }] : []),
             ]}
           />

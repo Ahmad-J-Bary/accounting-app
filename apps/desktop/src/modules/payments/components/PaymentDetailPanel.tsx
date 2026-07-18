@@ -11,6 +11,7 @@ import {
 } from "@app/providers/CurrencyContext";
 import { PAYMENT_TYPE_LABELS } from "../lib/constants";
 import { useMemo } from "react";
+import { formatNumber } from "@shared/lib/format";
 import {
   SidebarShell,
   SidebarHeader,
@@ -101,8 +102,8 @@ export function PaymentDetailPanel({
           <SidebarDetailGrid
             columns={2}
             fields={[
-              { label: "رقم السند", value: payment.voucher_number || "-" },
-              { label: "رقم القيد", value: payment.journal_entry_number || "-" },
+              { label: "رقم السند", value: payment.voucher_number ? formatNumber(parseInt(payment.voucher_number) || 0) : "-" },
+              { label: "رقم القيد", value: payment.journal_entry_number ? formatNumber(parseInt(payment.journal_entry_number) || 0) : "-" },
               { label: "نوع السند", value: PAYMENT_TYPE_LABELS[payment.payment_type as keyof typeof PAYMENT_TYPE_LABELS] || payment.payment_type },
               { label: "تاريخ السند", value: new Date(payment.payment_date).toLocaleDateString("ar-SA") },
             ]}

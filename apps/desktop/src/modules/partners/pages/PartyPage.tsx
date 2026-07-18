@@ -13,6 +13,7 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useTabs } from "@app/providers/TabContext";
 import { useEntityList } from '@shared/hooks/useEntityList';
 import { useExcelExport } from "@shared/hooks";
+import { formatNumber } from "@shared/lib/format";
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import type { ExcelExportColumn, ExcelExportOptions } from '@shared/lib/excel';
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
@@ -245,7 +246,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
     }, currencies, formatAmount);
 
     const colDefs: ExcelExportColumn[] = [
-      { id: 'code', label: '#', width: 8, hidden: !visibleColumnIds.includes('code'), accessor: (row) => String(row.code ?? '') },
+      { id: 'code', label: '#', width: 8, hidden: !visibleColumnIds.includes('code'), accessor: (row) => formatNumber(parseInt(String(row.code ?? "0"), 10) || 0) },
       { id: 'name', label: entityName === 'customer' ? 'اسم العميل' : 'اسم المورد', width: 25, hidden: !visibleColumnIds.includes('name'), accessor: (row) => String(row.name ?? '') },
       { id: 'phone', label: 'رقم الهاتف', width: 15, hidden: !visibleColumnIds.includes('phone'), accessor: (row) => String(row.phone ?? '') },
       {

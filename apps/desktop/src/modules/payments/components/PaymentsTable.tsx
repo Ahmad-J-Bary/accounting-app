@@ -4,7 +4,7 @@ import { TableShell } from '@widgets/table-shell/TableShell';
 import { TableActions } from '@widgets/table-shell/TableActions';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
-import { formatDate } from "@shared/lib/format";
+import { formatDate, formatNumber } from "@shared/lib/format";
 import { useExcelExport } from "@shared/hooks";
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import type { ExcelExportColumn } from "@shared/lib/excel";
@@ -132,7 +132,7 @@ export function PaymentsTable({
     }, sortedCurrencies, formatAmount);
 
     const exportColumns: ExcelExportColumn[] = [
-      { id: "journal_entry_number", label: "رقم القيد", accessor: (row) => { const v = (row as Record<string, unknown>).journal_entry_number; return v ? parseInt(String(v), 10) || 0 : 0; } },
+      { id: "journal_entry_number", label: "رقم القيد", accessor: (row) => formatNumber(parseInt(String((row as Record<string, unknown>).journal_entry_number ?? "0"), 10) || 0) },
       { id: "payment_type", label: "النوع", accessor: (row) => {
         const p = row as unknown as Payment;
         return PAYMENT_TYPE_LABELS[p.payment_type as keyof typeof PAYMENT_TYPE_LABELS] || p.payment_type;
@@ -165,7 +165,7 @@ export function PaymentsTable({
         id: "journal_entry_number",
         header: "رقم القيد",
         label: "رقم القيد",
-        accessor: (p) => p.journal_entry_number ?? "",
+        accessor: (p) => formatNumber(parseInt(p.journal_entry_number) || 0),
         className: "font-black text-indigo-700 tabular-nums",
       },
       {

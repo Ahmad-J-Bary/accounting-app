@@ -4,7 +4,7 @@ import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
-import { formatDateTime } from "@shared/lib/format";
+import { formatDateTime, formatNumber } from "@shared/lib/format";
 import { getInvoiceBaseAmount } from "../lib/invoiceHelpers";
 import type { InvoiceDto } from "@erp/shared-types";
 import { DocumentStatusBadge } from "./DocumentStatusBadge";
@@ -88,7 +88,7 @@ export function InvoiceTable({
         id: "invoice_number",
         header: "الرقم",
         label: "رقم الفاتورة",
-        accessor: (inv) => inv.invoice_number,
+        accessor: (inv) => formatNumber(parseInt(inv.invoice_number) || 0),
         className: "font-black text-slate-900 text-center"
       },
       {

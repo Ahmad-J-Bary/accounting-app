@@ -38,6 +38,7 @@ pub fn to_dto(s: domain::settings::CompanySettings) -> CompanySettingsDto {
         logo_path: s.logo_path,
         purchase_warehouse_id: s.purchase_warehouse_id,
         sales_warehouse_id: s.sales_warehouse_id,
+        numeral_system: s.numeral_system,
         updated_at: s.updated_at.to_rfc3339(),
     }
 }

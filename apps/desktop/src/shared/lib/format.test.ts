@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { formatCurrency, formatNumber, formatDate, formatDateTime } from "./format";
+import { describe, it, expect, beforeEach } from "vitest";
+import { formatCurrency, formatNumber, formatDate, formatDateTime, setNumberingSystem, getNumberingSystem } from "./format";
 
 describe("formatCurrency", () => {
   it("formats without forcing a default currency", () => {
@@ -26,19 +26,52 @@ describe("formatCurrency", () => {
 });
 
 describe("formatNumber", () => {
+  beforeEach(() => {
+    setNumberingSystem("arabic");
+  });
+
   it("formats number without currency", () => {
     const result = formatNumber(1000);
     expect(typeof result).toBe("string");
     expect(result.length).toBeGreaterThan(0);
   });
 
-  it("formats decimal", () => {
+  it("formats decimal with Arabic numerals", () => {
     const result = formatNumber(99.5);
-    expect(result).toContain("٩٩"); // Arabic-Indic digits
+    expect(result).toContain("٩٩");
   });
 
-  it("handles zero", () => {
-    expect(formatNumber(0)).toBe("٠"); // Arabic-Indic zero
+  it("handles zero with Arabic numerals", () => {
+    expect(formatNumber(0)).toBe("٠");
+  });
+
+  it("formats decimal with Western numerals", () => {
+    setNumberingSystem("western");
+    const result = formatNumber(99.5);
+    expect(result).toContain("99");
+  });
+
+  it("handles zero with Western numerals", () => {
+    setNumberingSystem("western");
+    expect(formatNumber(0)).toBe("0");
+  });
+});
+
+describe("setNumberingSystem / getNumberingSystem", () => {
+  it("defaults to arab", () => {
+    setNumberingSystem("arabic");
+    expect(getNumberingSystem()).toBe("arab");
+  });
+
+  it("switches to latn", () => {
+    setNumberingSystem("western");
+    expect(getNumberingSystem()).toBe("latn");
+  });
+
+  it("resets back to arab", () => {
+    setNumberingSystem("western");
+    setNumberingSystem("arabic");
+    expect(getNumberingSystem()).toBe("arab");
   });
 });
 

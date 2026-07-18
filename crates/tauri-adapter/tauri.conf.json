@@ -4,7 +4,7 @@
   "identifier": "com.almowakeb.erp",
   "build": {
     "frontendDist": "../../apps/desktop/dist",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://localhost:3000",
     "beforeDevCommand": "pnpm run dev",
     "beforeBuildCommand": "pnpm run build"
   },

@@ -2,6 +2,7 @@ import type { PartnerProfitShareComputed } from "@modules/reports/lib/partnerPro
 import { cn } from "@shared/lib/utils";
 import { Users, TrendingUp, Package, CreditCard } from "lucide-react";
 import { ReportTableHeader, ReportTableCell } from "@widgets/table-shell/ReportTableCells";
+import { toFixed } from "@shared/lib/format";
 import { ReportTableWrapper } from "@widgets/table-shell/ReportTableWrapper";
 
 type PartnerProfitShareViewProps = {
@@ -65,9 +66,9 @@ function PartnerTable({ computed, formatValue }: { computed: PartnerProfitShareC
           {computed.rows.map((row) => (
             <tr key={row.partnerId} className="hover:bg-slate-50/50 transition-colors">
               <ReportTableCell highlight>{row.partnerName}</ReportTableCell>
-              <ReportTableCell>{row.capitalRatio.toFixed(2)}%</ReportTableCell>
+              <ReportTableCell>{toFixed(row.capitalRatio, 2)}%</ReportTableCell>
               <ReportTableCell>{formatValue(row.capitalAmount)}</ReportTableCell>
-              <ReportTableCell>{row.profitShareRatio.toFixed(2)}%</ReportTableCell>
+              <ReportTableCell>{toFixed(row.profitShareRatio, 2)}%</ReportTableCell>
               <ReportTableCell>{formatValue(row.profitShareAmount)}</ReportTableCell>
               <ReportTableCell className="text-rose-600 font-bold">{formatValue(row.drawings)}</ReportTableCell>
               <ReportTableCell highlight>{formatValue(row.finalAmount)}</ReportTableCell>
@@ -80,7 +81,7 @@ function PartnerTable({ computed, formatValue }: { computed: PartnerProfitShareC
         <tfoot>
           <tr className="bg-slate-50/80 border-t-2 border-slate-200">
             <ReportTableCell highlight>الإجمالي</ReportTableCell>
-            <ReportTableCell highlight>{computed.rows.reduce((s, r) => s + r.capitalRatio, 0).toFixed(2)}%</ReportTableCell>
+            <ReportTableCell highlight>{toFixed(computed.rows.reduce((s, r) => s + r.capitalRatio, 0), 2)}%</ReportTableCell>
             <ReportTableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.capitalAmount, 0))}</ReportTableCell>
             <ReportTableCell highlight>-</ReportTableCell>
             <ReportTableCell highlight>{formatValue(computed.rows.reduce((s, r) => s + r.profitShareAmount, 0))}</ReportTableCell>

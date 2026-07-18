@@ -20,6 +20,7 @@ pub struct CompanySettingsDto {
     pub logo_path: Option<String>,
     pub purchase_warehouse_id: Option<String>,
     pub sales_warehouse_id: Option<String>,
+    pub numeral_system: String,
     pub updated_at: String,
 }
 
@@ -41,4 +42,5 @@ pub struct UpdateSettingsRequest {
     pub fiscal_year_start_month: u32,
     pub purchase_warehouse_id: Option<String>,
     pub sales_warehouse_id: Option<String>,
+    pub numeral_system: String,
 }

@@ -4,6 +4,7 @@ import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
+import { toFixed } from "@shared/lib/format";
 import type { PartnerDto } from "@erp/shared-types";
 import { NotebookText, Receipt, Users } from "lucide-react";
 import { TableActions } from "@widgets/table-shell/TableActions";
@@ -105,7 +106,7 @@ export function PartnerTable({
         label: "نسبة المساهمة في رأس المال",
         accessor: (p: PartnerWithRatios) => (
           <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-black tabular-nums">
-            {p.calculatedCapitalRatio.toFixed(2)}%
+            {toFixed(p.calculatedCapitalRatio, 2)}%
           </span>
         ),
       },
@@ -115,7 +116,7 @@ export function PartnerTable({
         label: "نسبة توزيع الأرباح",
         accessor: (p: PartnerWithRatios) => (
           <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black tabular-nums">
-            {p.calculatedRatio.toFixed(2)}%
+            {toFixed(p.calculatedRatio, 2)}%
           </span>
         ),
       },
@@ -169,9 +170,9 @@ export function PartnerTable({
         case "name":
           return { id: "count", columnId: "name", label: "", value: `${sortedPartners.length} شريك`, className: "text-slate-500 font-medium" };
         case "capital_ratio":
-          return { id: "total_capital_ratio", columnId: "capital_ratio", label: "المجموع", value: `${totalCapitalRatio.toFixed(2)}%`, className: "text-blue-700 font-black" };
+          return { id: "total_capital_ratio", columnId: "capital_ratio", label: "المجموع", value: `${toFixed(totalCapitalRatio, 2)}%`, className: "text-blue-700 font-black" };
         case "ratio":
-          return { id: "total_ratio", columnId: "ratio", label: "المجموع", value: `${totalRatio.toFixed(2)}%`, className: "text-emerald-700 font-black" };
+          return { id: "total_ratio", columnId: "ratio", label: "المجموع", value: `${toFixed(totalRatio, 2)}%`, className: "text-emerald-700 font-black" };
         default: {
           const match = id.match(/^amount_(.+)$/);
           if (match) {

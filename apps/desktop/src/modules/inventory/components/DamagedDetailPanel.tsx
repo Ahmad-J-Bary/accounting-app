@@ -1,7 +1,7 @@
 import { Pencil, Trash2 } from "lucide-react";
 import type { DamagedItem, MaterialDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { formatDateTime } from "@shared/lib/format";
+import { formatDateTime, formatNumber } from "@shared/lib/format";
 import {
   SidebarShell,
   SidebarHeader,
@@ -71,7 +71,7 @@ export function DamagedDetailPanel({
             title="معلومات إضافية"
             fields={[
               { label: "سبب التلف", value: item.reason || "—" },
-              { label: "المرجع", value: item.reference || "—" },
+              { label: "المرجع", value: item.reference ? formatNumber(parseInt(item.reference) || 0) : "—" },
               ...(item.notes ? [{ label: "ملاحظات", value: item.notes }] : []),
               { label: "تاريخ الإنشاء", value: formatDateTime(item.created_at) },
             ]}

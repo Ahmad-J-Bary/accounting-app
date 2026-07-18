@@ -7,6 +7,7 @@ import { FieldLabel } from '@widgets/sidebar-shell/FieldLabel';
 import { SidebarSection } from '@widgets/sidebar-shell/SidebarSection';
 import { User, Building2 } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { toFixed } from "@shared/lib/format";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
 import {
   AlertDialog,
@@ -156,9 +157,9 @@ export function PartnerFormPanel({
             <AlertDialogDescription className="space-y-3">
               <p>سيتم تعديل رصيد {isCustomer ? "العميل" : "المورد"} مع إنشاء قيد يومية مقابل للتسوية.</p>
               <div className="bg-muted p-3 rounded-lg text-sm space-y-1">
-                <p><span className="font-bold">الرصيد القديم:</span> {oldBal.toFixed(2)}</p>
-                <p><span className="font-bold">الرصيد الجديد:</span> {newBal.toFixed(2)}</p>
-                <p><span className="font-bold">الفرق:</span> {(newBal - oldBal).toFixed(2)}</p>
+                <p><span className="font-bold">الرصيد القديم:</span> {toFixed(oldBal, 2)}</p>
+                <p><span className="font-bold">الرصيد الجديد:</span> {toFixed(newBal, 2)}</p>
+                <p><span className="font-bold">الفرق:</span> {toFixed(newBal - oldBal, 2)}</p>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
                 سيتم إنشاء قيد محاسبي من نوع "رصيد افتتاحي لحساب" بين حساب {isCustomer ? "العميل" : "المورد"} وحساب الرصيد الافتتاحي (224).

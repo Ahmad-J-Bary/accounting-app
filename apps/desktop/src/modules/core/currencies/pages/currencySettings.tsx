@@ -24,6 +24,7 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip
 } from "recharts";
+import { toLocalString } from "@shared/lib/format";
 
 export default function CurrencySettings() {
   const { refresh: refreshContext, updateRate } = useCurrencyContext();
@@ -451,7 +452,7 @@ export default function CurrencySettings() {
                       {history.map((h) => (
                         <TableRow key={h.id}>
                           <TableCell>{new Date(h.rate_date).toLocaleDateString("ar-SY")}</TableCell>
-                          <TableCell className="font-mono font-bold">{parseFloat(h.rate).toLocaleString()}</TableCell>
+                          <TableCell className="font-mono font-bold">{toLocalString(parseFloat(h.rate))}</TableCell>
                           <TableCell><Badge variant="outline">{h.rate_type === 'Market' ? 'سعر السوق' : 'سعر رسمي'}</Badge></TableCell>
                           <TableCell className="text-muted-foreground text-xs">{h.source || 'يدوي'}</TableCell>
                         </TableRow>

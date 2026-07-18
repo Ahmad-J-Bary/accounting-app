@@ -12,6 +12,8 @@ import {
   fromBase as strategyFromBase,
   convertBetween as strategyConvertBetween,
 } from "@shared/lib/currency-strategy";
+import { setNumberingSystem } from "@shared/lib/format";
+import { settingsService } from "@modules/core/api/settingsService";
 
 export function CurrencyProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
@@ -50,6 +52,12 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    settingsService.getSettings().then((s) => {
+      setNumberingSystem(s.numeral_system || "arabic");
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!loading && currencies.length === 0) {

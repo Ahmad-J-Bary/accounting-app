@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, Package } from "lucide-react";
 import { materialService } from '@modules/inventory/api/materialService';
 import type { MaterialDto, StockMovementDetailDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { formatCurrency, formatDate } from '@shared/lib/format';
+import { formatCurrency, formatDate, toLocalString, toFixed } from '@shared/lib/format';
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Badge } from "@shared/ui/badge";
 
@@ -37,8 +37,8 @@ export default function MaterialMovementsPage() {
     movements.forEach(m => {
       if (isPurchase ? !m.is_inflow : m.is_inflow) return;
       if (!isPurchase && m.movement_type === "Damaged") return;
-      const qty = parseFloat(m.quantity).toFixed(2);
-      const cost = parseFloat(m.unit_cost).toFixed(2);
+      const qty = toFixed(parseFloat(m.quantity), 2);
+      const cost = toFixed(parseFloat(m.unit_cost), 2);
       const date = m.movement_date?.slice(0, 10) ?? "";
       const key = `${m.movement_type}|${qty}|${cost}|${date}`;
       if (groups.has(key)) {
@@ -93,7 +93,7 @@ export default function MaterialMovementsPage() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
                     <span className="text-slate-400 text-xs">الكمية</span>
-                    <p className="font-bold">{parseFloat(m.quantity).toLocaleString()}</p>
+                    <p className="font-bold">{toLocalString(parseFloat(m.quantity))}</p>
                   </div>
                   <div>
                     <span className="text-slate-400 text-xs">التكلفة</span>

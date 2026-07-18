@@ -3,6 +3,7 @@ import {
   type Currency,
   type TodayRateStatus,
 } from "@modules/core/api/currencyService";
+import { getNumberingSystem } from "@shared/lib/format";
 
 export type CurrencyDisplayMode = "base" | "selected";
 
@@ -50,6 +51,7 @@ export const CurrencyContext = createContext<CurrencyContextValue | null>(null);
 
 export function formatWithLocale(amount: number, decimals: number) {
   return new Intl.NumberFormat("ar-SY", {
+    numberingSystem: getNumberingSystem(),
     minimumFractionDigits: 0,
     maximumFractionDigits: Math.max(0, decimals),
   }).format(amount);

@@ -7,8 +7,8 @@ pub async fn save(pool: &SqlitePool, settings: &CompanySettings) -> Result<(), A
         "INSERT OR REPLACE INTO settings (id, company_name, company_name_en, tax_number, commercial_register,
          address, phone, email, currency, currency_symbol, tax_rate,
          invoice_prefix, purchase_prefix, journal_prefix, fiscal_year_start_month, logo_path,
-         purchase_warehouse_id, sales_warehouse_id, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+         purchase_warehouse_id, sales_warehouse_id, numeral_system, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(&settings.id)
     .bind(&settings.company_name)
@@ -28,6 +28,7 @@ pub async fn save(pool: &SqlitePool, settings: &CompanySettings) -> Result<(), A
     .bind(&settings.logo_path)
     .bind(&settings.purchase_warehouse_id)
     .bind(&settings.sales_warehouse_id)
+    .bind(&settings.numeral_system)
     .bind(settings.updated_at.to_rfc3339())
     .execute(pool)
     .await

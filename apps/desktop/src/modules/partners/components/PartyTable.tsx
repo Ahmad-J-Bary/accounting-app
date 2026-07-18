@@ -4,6 +4,7 @@ import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { TableShell } from "@widgets/table-shell/TableShell";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable, useTableColumns, useBaseCurrencyColumns } from "@shared/hooks";
+import { formatNumber } from "@shared/lib/format";
 import { NotebookText, Receipt, User, Truck } from "lucide-react";
 import { TableActions } from "@widgets/table-shell/TableActions";
 
@@ -99,7 +100,7 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
         id: "code",
         header: "#",
         label: "رقم الحساب",
-        accessor: (item) => item.code || "",
+        accessor: (item) => formatNumber(parseInt(item.code) || 0),
         className: "font-black text-slate-900 text-center",
       },
       {

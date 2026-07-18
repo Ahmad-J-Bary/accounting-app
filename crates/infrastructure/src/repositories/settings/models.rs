@@ -18,5 +18,6 @@ pub struct SettingsRow {
     pub logo_path: Option<String>,
     pub purchase_warehouse_id: Option<String>,
     pub sales_warehouse_id: Option<String>,
+    pub numeral_system: String,
     pub updated_at: String,
 }

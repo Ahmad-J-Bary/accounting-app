@@ -1,7 +1,7 @@
 import { Pencil, Trash2, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
 import type { StockAdjustment, MaterialDto } from "@erp/shared-types";
 import { cn } from "@shared/lib/utils";
-import { formatDateTime } from "@shared/lib/format";
+import { formatDateTime, formatNumber } from "@shared/lib/format";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import {
   SidebarShell,
@@ -84,7 +84,7 @@ export function AdjustmentDetailPanel({ item, materials: _materials, onClose, on
           <SidebarDetailGrid
             title="معلومات إضافية"
             fields={[
-              { label: "المرجع", value: item.reference || "—" },
+              { label: "المرجع", value: item.reference ? formatNumber(parseInt(item.reference) || 0) : "—" },
               { label: "ملاحظة", value: item.notes || item.reason || "—" },
               { label: "تاريخ الإنشاء", value: formatDateTime(item.created_at) },
             ]}

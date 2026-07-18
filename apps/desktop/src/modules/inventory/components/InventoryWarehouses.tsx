@@ -6,6 +6,7 @@ import { Skeleton } from "@shared/ui/skeleton";
 import type { WarehouseDto, MaterialDto } from "@erp/shared-types";
 import { warehouseService } from "@modules/inventory/api/warehouseService";
 import { toast } from "sonner";
+import { toLocalString } from "@shared/lib/format";
 
 export type DisplayStyle = 'cards-small' | 'cards-medium' | 'cards-large' | 'list' | 'rows';
 
@@ -56,7 +57,7 @@ export function InventoryWarehouses({
         const qty = whMap?.get(w.id) || 0;
         if (qty > 0) {
           const mat = products.find(p => p.id === mid);
-          items.push({ name: mat?.name || mid, qty, qtyText: qty.toLocaleString() });
+          items.push({ name: mat?.name || mid, qty, qtyText: toLocalString(qty) });
         }
       }
       if (items.length > 0) map.set(w.id, items);

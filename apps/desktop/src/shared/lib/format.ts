@@ -1,9 +1,20 @@
+let _numberingSystem: "arab" | "latn" = "latn";
+
+export function getNumberingSystem(): "arab" | "latn" {
+  return _numberingSystem;
+}
+
+export function setNumberingSystem(system: string) {
+  _numberingSystem = system === "western" ? "latn" : "arab";
+}
+
 export const formatCurrency = (
   amount: number,
   currency?: string | null,
   options?: { minimumFractionDigits?: number; maximumFractionDigits?: number }
 ): string => {
   const formatted = new Intl.NumberFormat("ar-SY", {
+    numberingSystem: _numberingSystem,
     minimumFractionDigits: options?.minimumFractionDigits ?? 0,
     maximumFractionDigits: options?.maximumFractionDigits ?? 2,
   }).format(amount);
@@ -11,7 +22,9 @@ export const formatCurrency = (
 };
 
 export const formatNumber = (n: number): string => {
-  return new Intl.NumberFormat("ar-SY").format(n);
+  return new Intl.NumberFormat("ar-SY", {
+    numberingSystem: _numberingSystem,
+  }).format(n);
 };
 
 export const formatDate = (date: string | Date): string => {
@@ -34,3 +47,17 @@ export const formatDateTime = (date: string | Date): string => {
     hour12: true,
   }).format(d);
 };
+
+export function toLocalString(n: number): string {
+  return new Intl.NumberFormat("ar-SY", {
+    numberingSystem: _numberingSystem,
+  }).format(n);
+}
+
+export function toFixed(n: number, digits: number): string {
+  return new Intl.NumberFormat("ar-SY", {
+    numberingSystem: _numberingSystem,
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(n);
+}

@@ -16,7 +16,7 @@ import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTem
 import { buildStockByWarehouse } from '@modules/inventory/lib/stockUtils';
 import { useExcelExport } from "@shared/hooks";
 import type { ExcelExportColumn } from "@shared/lib/excel";
-import { formatDateTime } from "@shared/lib/format";
+import { formatDateTime, formatNumber, toLocalString } from "@shared/lib/format";
 
 export default function Transfers() {
   const { data: movements = [] } = useQuery<StockMovement[]>({
@@ -164,7 +164,7 @@ export default function Transfers() {
       { id: "source", label: "من مستودع", accessor: (row) => String((row as unknown as TransferRow).source_warehouse_name ?? "") },
       { id: "dest", label: "إلى مستودع", accessor: (row) => String((row as unknown as TransferRow).dest_warehouse_name ?? "") },
       { id: "quantity", label: "الكمية", accessor: (row) => parseFloat((row as unknown as TransferRow).quantity || "0") },
-      { id: "reference", label: "المرجع", accessor: (row) => parseInt((row as unknown as TransferRow).reference ?? "0", 10) || 0 },
+      { id: "reference", label: "المرجع", accessor: (row) => formatNumber(parseInt((row as unknown as TransferRow).reference ?? "0", 10) || 0) },
       { id: "notes", label: "ملاحظة", accessor: (row) => String((row as unknown as TransferRow).notes ?? "") },
       { id: "date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as TransferRow).transfer_date) },
     ];
@@ -210,7 +210,7 @@ export default function Transfers() {
           <TransferDetailPanel
             reference={transferDetailData.reference}
             materialName={transferDetailData.material_name}
-            quantity={parseFloat(transferDetailData.quantity).toLocaleString()}
+            quantity={toLocalString(parseFloat(transferDetailData.quantity))}
             sourceWarehouseName={transferDetailData.source_warehouse_name}
             destWarehouseName={transferDetailData.dest_warehouse_name}
             transferDate={transferDetailData.transfer_date}

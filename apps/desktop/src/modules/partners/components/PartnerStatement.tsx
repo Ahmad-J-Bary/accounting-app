@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import { Loader2, ArrowRightLeft, TrendingUp, TrendingDown } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { toLocalString, formatNumber } from "@shared/lib/format";
 
 interface PartnerStatementProps {
   partnerId: string;
@@ -195,7 +196,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
                       <TableCell className="font-medium text-slate-600">
                         {format(new Date(entry.entry_date), "yyyy/MM/dd")}
                       </TableCell>
-                      <TableCell className="font-bold text-primary">{entry.entry_number}</TableCell>
+                      <TableCell className="font-bold text-primary">{formatNumber(parseInt(entry.entry_number) || 0)}</TableCell>
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="font-bold text-slate-800">{entry.description}</span>
@@ -209,7 +210,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
                           <TableCell className="text-left">
                             {debit > 0 ? (
                               <div className="flex items-center justify-end gap-1 text-red-600 font-bold">
-                                {debit.toLocaleString()}
+                                {toLocalString(debit)}
                                 <TrendingUp className="w-3 h-3" />
                               </div>
                             ) : (
@@ -219,7 +220,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
                           <TableCell className="text-left">
                             {credit > 0 ? (
                               <div className="flex items-center justify-end gap-1 text-emerald-600 font-bold">
-                                {credit.toLocaleString()}
+                                {toLocalString(credit)}
                                 <TrendingDown className="w-3 h-3" />
                               </div>
                             ) : (
@@ -227,7 +228,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
                             )}
                           </TableCell>
                           <TableCell className="text-left font-black text-slate-900 bg-slate-50/20">
-                            {balance.toLocaleString()}
+                            {toLocalString(balance)}
                             <span className="text-[10px] mr-1 text-slate-400">{symbol}</span>
                           </TableCell>
                         </React.Fragment>
@@ -254,13 +255,13 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
                     return (
                       <React.Fragment key={targetCurr.code}>
                         <TableCell className="text-left text-red-600">
-                          {t.debit.toLocaleString() || "0"}
+                          {toLocalString(t.debit) || "0"}
                         </TableCell>
                         <TableCell className="text-left text-emerald-600">
-                          {t.credit.toLocaleString() || "0"}
+                          {toLocalString(t.credit) || "0"}
                         </TableCell>
                         <TableCell className="text-left font-black text-slate-900">
-                          {bal.toLocaleString()}
+                          {toLocalString(bal)}
                         </TableCell>
                       </React.Fragment>
                     );

@@ -5,7 +5,7 @@ import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTa
 import { TableShell } from '@widgets/table-shell/TableShell';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
-import { formatDateTime } from '@shared/lib/format';
+import { formatDateTime, formatNumber, toLocalString } from '@shared/lib/format';
 import { useExcelExport } from "@shared/hooks";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
@@ -230,7 +230,7 @@ export function InventoryMovementsTable({
           return cost !== 0 ? formatAmount(cost, { currencyCode: curr.code }) : "—";
         },
       })),
-      { id: "reference", label: "المرجع", accessor: (row) => parseInt((row as unknown as StockMovement).reference ?? "0", 10) || 0 },
+      { id: "reference", label: "المرجع", accessor: (row) => formatNumber(parseInt((row as unknown as StockMovement).reference ?? "0", 10) || 0) },
       { id: "notes", label: "ملاحظة / التوصيف / السبب", accessor: (row) => getCleanNotes(row as unknown as StockMovement) },
       { id: "date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as StockMovement).movement_date) },
     ];
@@ -305,14 +305,14 @@ export function InventoryMovementsTable({
             const sq = parseFloat(m.signed_quantity);
             return (
               <span className={cn("tabular-nums font-black text-base", sq >= 0 ? "text-emerald-600" : "text-rose-600")}>
-                {sq >= 0 ? "+" : ""}{sq.toLocaleString()}
+                {sq >= 0 ? "+" : ""}{toLocalString(sq)}
               </span>
             );
           }
           const cfg = getMovementType(m.movement_type);
           return (
             <span className={cn("tabular-nums font-black text-base", cfg.inflow ? "text-emerald-600" : "text-rose-600")}>
-              {cfg.inflow ? "+" : "-"}{parseFloat(m.quantity).toLocaleString()}
+              {cfg.inflow ? "+" : "-"}{toLocalString(parseFloat(m.quantity))}
             </span>
           );
         },
@@ -338,7 +338,7 @@ export function InventoryMovementsTable({
               </span>
               {showOrig && (
                 <span className="tabular-nums text-[10px] text-slate-400 font-medium">
-                  {parseFloat(info.original ?? "0").toLocaleString()} {info.currency}
+                  {toLocalString(parseFloat(info.original ?? "0"))} {info.currency}
                 </span>
               )}
             </div>
@@ -357,7 +357,7 @@ export function InventoryMovementsTable({
         label: 'المرجع',
         accessor: (m) => m.reference ? (
           <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-blue-50 text-blue-700 border border-blue-100">
-            {m.reference}
+            {formatNumber(parseInt(m.reference) || 0)}
           </span>
         ) : '—',
       },

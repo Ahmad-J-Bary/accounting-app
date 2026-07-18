@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Pencil, Trash2, BookOpen, FileText, Scale } from "lucide-react";
 import type { CustomerDto, SupplierDto, PartnerDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { toFixed } from "@shared/lib/format";
 import { useTabs } from "@app/providers/TabContext";
 import { toast } from "sonner";
 import { partnerService } from "@modules/partners/api/partnerService";
@@ -172,10 +173,10 @@ export function PartnerDetailPanel({
             <SidebarDetailGrid
               columns={2}
               fields={[
-                { label: "المبلغ الأصلي", value: `${partner.amount_original || "0"} ${currencyName?.symbol || partner.currency || ""}` },
+                { label: "المبلغ الأصли", value: `${partner.amount_original || "0"} ${currencyName?.symbol || partner.currency || ""}` },
                 { label: `المعادل (${baseCurrency?.symbol || baseCurrency?.code || ""})`, value: partner.amount_local || "0" },
                 { label: "نسبة الأرباح", value: partner.profit_sharing_type === "Manual" && partner.profit_sharing_ratio
-                  ? `${parseFloat(partner.profit_sharing_ratio).toFixed(2)}%`
+                  ? `${toFixed(parseFloat(partner.profit_sharing_ratio), 2)}%`
                   : "تلقائي (حسب رأس المال)" },
                 { label: "طريقة التوزيع", value: PROFIT_TYPE_LABELS[partner.profit_sharing_type || "BasedOnCapitalLocal"] },
               ]}

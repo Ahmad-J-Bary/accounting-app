@@ -7,7 +7,7 @@ import { TableShell } from '@widgets/table-shell/TableShell';
 import { TableActions } from '@widgets/table-shell/TableActions';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useUnifiedColumns, useSortable } from "@shared/hooks";
-import { formatDateTime } from '@shared/lib/format';
+import { formatDateTime, formatNumber, toFixed } from '@shared/lib/format';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useBaseCurrencyColumns } from "@shared/hooks";
 
@@ -53,7 +53,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
         id: "id",
         header: "الرقم",
         label: "الرقم",
-        accessor: (a, idx) => a.reference ?? (idx + 1).toString(),
+        accessor: (a, idx) => a.reference ? formatNumber(parseInt(a.reference) || 0) : (idx + 1).toString(),
         className: "font-black text-slate-900 text-center"
       },
       {
@@ -67,14 +67,14 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
         id: "system_quantity",
         header: "كمية النظام",
         label: "كمية النظام",
-        accessor: (a) => parseFloat(a.system_quantity).toFixed(2),
+        accessor: (a) => toFixed(parseFloat(a.system_quantity), 2),
         className: "tabular-nums text-slate-600"
       },
       {
         id: "actual_quantity",
         header: "الكمية المجرودة",
         label: "الكمية المجرودة",
-        accessor: (a) => parseFloat(a.actual_quantity).toFixed(2),
+        accessor: (a) => toFixed(parseFloat(a.actual_quantity), 2),
         className: "tabular-nums font-bold text-slate-800"
       },
       {
@@ -89,7 +89,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
               diff > 0 ? "text-emerald-600" : diff < 0 ? "text-rose-600" : "text-slate-400"
             )}>
               {diff > 0 ? <ArrowUpCircle className="w-4 h-4" /> : diff < 0 ? <ArrowDownCircle className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
-              {diff > 0 ? "+" : ""}{diff.toFixed(2)}
+              {diff > 0 ? "+" : ""}{toFixed(diff, 2)}
             </span>
           );
         },

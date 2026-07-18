@@ -12,6 +12,7 @@ import { warehouseService } from "@modules/inventory/api/warehouseService";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { queryClient, invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
+import { formatNumber } from "@shared/lib/format";
 
 import { HeaderField } from '@shared/ui/header-field';
 import { FinancialDocumentTemplate } from "@widgets/templates/FinancialDocumentTemplate";
@@ -342,7 +343,7 @@ export default function OpeningBalance() {
       }
       headerFields={
         <>
-          <HeaderField label="رقم القيد" value={header.docNumber} readOnly inputClassName="font-mono font-bold" />
+          <HeaderField label="رقم القيد" value={formatNumber(parseInt(header.docNumber) || 0)} readOnly inputClassName="font-mono font-bold" />
 
           <HeaderField label="التاريخ" type="date" value={header.issued_at} onChange={v => setHeader(s => ({ ...s, issued_at: v }))} disabled={isReadOnly} inputClassName="font-bold" />
 

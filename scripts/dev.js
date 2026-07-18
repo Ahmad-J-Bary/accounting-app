@@ -46,7 +46,15 @@ switch (process.platform) {
     break;
 }
 
+function ensureDist() {
+  const distDir = path.join(desktopDir, 'dist');
+  if (!fs.existsSync(distDir)) {
+    fs.mkdirSync(distDir, { recursive: true });
+  }
+}
+
 function spawnDirect() {
+  ensureDist();
   const isWin = process.platform === 'win32';
   // Resolve pnpm path via where/which to avoid spawn EINVAL
   let pnpmPath;

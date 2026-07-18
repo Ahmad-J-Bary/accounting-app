@@ -34,6 +34,7 @@ impl UpdateSettingsUseCase {
         settings.fiscal_year_start_month = req.fiscal_year_start_month;
         settings.purchase_warehouse_id = req.purchase_warehouse_id;
         settings.sales_warehouse_id = req.sales_warehouse_id;
+        settings.numeral_system = req.numeral_system;
         settings.updated_at = chrono::Utc::now();
         self.repo.save(&settings).await?;
         Ok(to_dto(settings))

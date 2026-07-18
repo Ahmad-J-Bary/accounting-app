@@ -5,7 +5,7 @@ import { TableShell } from '@widgets/table-shell/TableShell';
 import { TableActions } from '@widgets/table-shell/TableActions';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useUnifiedColumns, useSortable } from "@shared/hooks";
-import { formatDateTime } from '@shared/lib/format';
+import { formatDateTime, formatNumber, toLocalString } from '@shared/lib/format';
 
 export interface TransferRow {
   reference: string;
@@ -127,7 +127,7 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
       id: 'quantity', header: 'الكمية', label: 'الكمية',
       accessor: (r) => (
         <span className="tabular-nums font-black text-base text-amber-600">
-          {parseFloat(r.quantity).toLocaleString()}
+          {toLocalString(parseFloat(r.quantity))}
         </span>
       ),
     },
@@ -135,7 +135,7 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
       id: 'reference', header: 'المرجع', label: 'المرجع',
       accessor: (r) => (
         <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-slate-100 text-slate-700 border border-slate-200">
-          {r.reference}
+          {formatNumber(parseInt(r.reference) || 0)}
         </span>
       ),
     },

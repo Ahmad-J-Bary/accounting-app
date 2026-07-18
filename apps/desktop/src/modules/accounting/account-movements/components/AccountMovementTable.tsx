@@ -11,7 +11,7 @@ import { cn } from "@shared/lib/utils";
 import { getLeftBorderClass, getRowBorderClass, getRowBackgroundClass } from "@shared/lib/table-utils";
 import type { GridResizeContent } from "@shared/hooks/useGridResize";
 import type { AccountLedgerLineDto } from "@erp/shared-types";
-import { formatDateTime } from "@shared/lib/format";
+import { formatDateTime, formatNumber } from "@shared/lib/format";
 import { getHeaderText, getPrimitiveCellValue } from "@modules/accounting/journal/components/groupedTableUtils";
 
 type SortField = "entry_number" | "date" | "journal_type";
@@ -171,7 +171,7 @@ export function AccountMovementTable({
         id: "entry_number",
         header: "رقم القيد",
         label: "رقم القيد",
-        accessor: (r) => r.entry_number,
+        accessor: (r) => formatNumber(parseInt(r.entry_number) || 0),
         className: "font-black text-slate-900 text-center"
       },
       {

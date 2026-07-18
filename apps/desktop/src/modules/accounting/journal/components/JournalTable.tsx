@@ -9,7 +9,7 @@ import { Button } from "@shared/ui/button";
 import { EmptyState } from "@widgets/table-shell/EmptyState";
 import { useExcelExport, useUnifiedColumns, useSortable, useBaseCurrencyColumns, useTableSettings, useGridResize } from "@shared/hooks";
 import type { ExcelExportColumn, ExcelExportOptions } from "@shared/lib/excel";
-import { formatDateTime } from "@shared/lib/format";
+import { formatDateTime, formatNumber } from "@shared/lib/format";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { cn } from "@shared/lib/utils";
 import { getLeftBorderClass, getRowBorderClass, getRowBackgroundClass } from "@shared/lib/table-utils";
@@ -177,7 +177,7 @@ export function JournalTable({
         id: "entry_number",
         header: "رقم القيد",
         label: "رقم القيد",
-        accessor: (e) => e.isFirstInGroup ? e.entry_number : "",
+        accessor: (e) => e.isFirstInGroup ? formatNumber(parseInt(e.entry_number) || 0) : "",
         className: "font-black text-slate-900 text-center"
       },
       {
@@ -261,7 +261,7 @@ export function JournalTable({
         id: "entry_number",
         header: "رقم القيد",
         label: "رقم القيد",
-        accessor: (e) => e.entry_number,
+        accessor: (e) => formatNumber(parseInt(e.entry_number) || 0),
         className: "font-black text-slate-900 text-center"
       },
       {
@@ -623,7 +623,7 @@ export function JournalTable({
   // ============ EXPORT VALUE FUNCTIONS (separate per mode) ============
   const getTwoLineExportValue = useCallback(
     (row: JournalTableRow, col: UnifiedColumn<JournalTableRow>): string | number => {
-      if (col.id === "entry_number") return parseInt(row.entry_number, 10) || 0;
+      if (col.id === "entry_number") return formatNumber(parseInt(row.entry_number, 10) || 0);
       if (col.id === "journal_type") return row.journal_type_display;
       if (col.id === "description") return row.description;
       if (col.id === "account") return row.account_name;
@@ -653,7 +653,7 @@ export function JournalTable({
 
   const getSingleLineExportValue = useCallback(
     (row: JournalSingleLineTableRow, col: UnifiedColumn<JournalSingleLineTableRow>): string | number => {
-      if (col.id === "entry_number") return parseInt(row.entry_number, 10) || 0;
+      if (col.id === "entry_number") return formatNumber(parseInt(row.entry_number, 10) || 0);
       if (col.id === "journal_type") return row.journal_type_display;
       if (col.id === "description") return row.description;
       if (col.id === "entry_date") return formatDateTime(row.created_at);

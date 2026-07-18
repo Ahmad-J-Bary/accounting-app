@@ -3,7 +3,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
 import { Badge } from "@shared/ui/badge";
 import { Button } from "@shared/ui/button";
 import { cn } from '@shared/lib/utils';
-import { formatCurrency, formatDate } from '@shared/lib/format';
+import { formatCurrency, formatDate, toLocalString, toFixed } from '@shared/lib/format';
 import { toast } from 'sonner';
 import { Package, TrendingUp, RefreshCw, Pencil, Trash2, Barcode, Hash, ArrowDown, ArrowUp, Layers, ArrowRightLeft, Warehouse as WarehouseIcon } from "lucide-react";
 import type { MaterialDto, StockMovementDetailDto, InventoryLotDto } from "@erp/shared-types";
@@ -45,10 +45,10 @@ function LotRow({ lot, baseSym, onUpdate }: {
   return (
     <tr className="hover:bg-slate-50/50 transition-colors">
       <td className="p-2 text-slate-600">{lot.purchase_date?.slice(0, 10) || "—"}</td>
-      <td className="p-2 text-center tabular-nums">{parseFloat(lot.quantity_original).toLocaleString()}</td>
+      <td className="p-2 text-center tabular-nums">{toLocalString(parseFloat(lot.quantity_original))}</td>
       <td className={cn("p-2 text-center tabular-nums font-bold",
         parseFloat(lot.quantity_remaining) > 0 ? "text-emerald-600" : "text-red-400"
-      )}>{parseFloat(lot.quantity_remaining).toLocaleString()}</td>
+      )}>{toLocalString(parseFloat(lot.quantity_remaining))}</td>
       <td className="p-2 text-left tabular-nums font-bold text-amber-600" title="تكلفة الوحدة (قبل التكاليف الإضافية)">
         {formatCurrency(parseFloat(lot.raw_unit_cost_base || lot.unit_cost_base), baseSym || undefined)}
       </td>
@@ -139,8 +139,8 @@ export function MaterialDetailPanel({
   const displayMovements = useMemo(() => {
     const groups = new Map<string, StockMovementDetailDto>();
     movements.forEach(m => {
-      const qty = parseFloat(m.quantity).toFixed(2);
-      const cost = parseFloat(m.unit_cost).toFixed(2);
+      const qty = toFixed(parseFloat(m.quantity), 2);
+      const cost = toFixed(parseFloat(m.unit_cost), 2);
       const date = m.movement_date?.slice(0, 10) ?? "";
       const key = `${m.movement_type}|${qty}|${cost}|${date}`;
       if (groups.has(key)) {
@@ -221,7 +221,7 @@ export function MaterialDetailPanel({
             <div className={statCard}>
               <div className={statLabel}>الكمية المتوفرة</div>
               <div className={statValue + " text-emerald-600"}>
-                {parseFloat(material.total_available).toLocaleString()}
+                {toLocalString(parseFloat(material.total_available))}
               </div>
             </div>
             <div className={statCard}>
@@ -467,7 +467,7 @@ export function MaterialDetailPanel({
                       </div>
                       <div className="flex items-center justify-between text-slate-500">
                         <span>
-                          الكمية: <span className="font-bold text-slate-700">{parseFloat(m.quantity).toLocaleString()}</span>
+                          الكمية: <span className="font-bold text-slate-700">{toLocalString(parseFloat(m.quantity))}</span>
                         </span>
                         <span>
                           {formatCurrency(parseFloat(m.is_inflow ? m.unit_cost : m.total_cost), baseSym || undefined)}
@@ -501,7 +501,7 @@ export function MaterialDetailPanel({
                         </div>
                         <div className="flex items-center gap-3">
                           <span className={cn("font-bold tabular-nums", ws.quantity > 0 ? "text-emerald-600" : "text-red-600")}>
-                            {ws.quantity.toLocaleString()}
+                            {toLocalString(ws.quantity)}
                           </span>
                           {onOpenTransfer && (
                             <Button variant="outline" size="sm" className="h-7 text-[10px] border-slate-200"

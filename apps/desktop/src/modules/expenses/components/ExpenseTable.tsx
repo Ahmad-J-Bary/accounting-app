@@ -4,6 +4,7 @@ import { TableShell } from '@widgets/table-shell/TableShell';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable, useTableColumns, useBaseCurrencyColumns } from "@shared/hooks";
+import { formatNumber } from "@shared/lib/format";
 import type { AccountDto } from "@erp/shared-types";
 import { NotebookText, Receipt } from "lucide-react";
 import { TableActions } from "@widgets/table-shell/TableActions";
@@ -60,7 +61,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
           const suffix = parentCode && code.startsWith(parentCode)
             ? code.substring(parentCode.length)
             : code;
-          return suffix || "";
+          return suffix ? formatNumber(parseInt(suffix) || 0) : "";
         },
         className: "font-black text-slate-900 text-center"
       },

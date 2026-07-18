@@ -4,7 +4,7 @@ import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
-import { formatDateTime } from "@shared/lib/format";
+import { formatDateTime, formatNumber } from "@shared/lib/format";
 
 import type { SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
 import { TableActions } from "@widgets/table-shell/TableActions";
@@ -54,7 +54,7 @@ export function ReturnsTable({
         id: "return_number",
         header: "الرقم",
         label: "رقم المرتجع",
-        accessor: (ret) => ret.return_number,
+        accessor: (ret) => formatNumber(parseInt(ret.return_number) || 0),
         className: "font-black text-slate-900 text-center"
       },
       {

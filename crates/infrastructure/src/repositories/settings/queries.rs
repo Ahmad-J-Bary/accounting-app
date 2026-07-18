@@ -9,7 +9,7 @@ pub async fn get(pool: &SqlitePool) -> Result<CompanySettings, AppError> {
         "SELECT id, company_name, company_name_en, tax_number, commercial_register,
          address, phone, email, currency, currency_symbol, tax_rate,
          invoice_prefix, purchase_prefix, journal_prefix, fiscal_year_start_month,
-         logo_path, purchase_warehouse_id, sales_warehouse_id, updated_at FROM settings LIMIT 1"
+         logo_path, purchase_warehouse_id, sales_warehouse_id, numeral_system, updated_at FROM settings LIMIT 1"
     )
     .fetch_optional(pool)
     .await

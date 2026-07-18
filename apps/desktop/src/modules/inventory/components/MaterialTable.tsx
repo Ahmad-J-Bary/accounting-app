@@ -10,6 +10,7 @@ import { TableShell } from '@widgets/table-shell/TableShell';
 import { TableActions } from '@widgets/table-shell/TableActions';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from '@shared/hooks';
+import { toLocalString } from '@shared/lib/format';
 
 interface MaterialTableProps {
   materials: MaterialDto[];
@@ -248,7 +249,7 @@ export function MaterialTable({
       id: "total_received",
       header: "الكمية الكلية",
       label: "الكمية الكلية",
-      accessor: (m) => totalReceived(m).toLocaleString(),
+      accessor: (m) => toLocalString(totalReceived(m)),
       className: "tabular-nums text-emerald-600 font-bold"
     });
 
@@ -256,7 +257,7 @@ export function MaterialTable({
       id: "total_sold",
       header: "الكمية المباعة",
       label: "الكمية المباعة",
-      accessor: (m) => parseFloat(m.total_sold || "0").toLocaleString(),
+      accessor: (m) => toLocalString(parseFloat(m.total_sold || "0")),
       className: "tabular-nums text-blue-600 font-bold"
     });
 
@@ -264,7 +265,7 @@ export function MaterialTable({
       id: "total_damaged",
       header: "الكمية التالفة",
       label: "الكمية التالفة",
-      accessor: (m) => parseFloat(m.total_damaged || "0").toLocaleString(),
+      accessor: (m) => toLocalString(parseFloat(m.total_damaged || "0")),
       className: "tabular-nums text-rose-600 font-bold"
     });
 
@@ -272,7 +273,7 @@ export function MaterialTable({
       id: "total_available",
       header: "الكمية المتوفرة",
       label: "الكمية المتوفرة",
-      accessor: (m) => parseFloat(m.total_available).toLocaleString(),
+      accessor: (m) => toLocalString(parseFloat(m.total_available)),
       className: "tabular-nums font-bold text-slate-700"
     });
 
@@ -363,7 +364,7 @@ export function MaterialTable({
         const min = parseFloat(m.minimum_stock);
         const avail = parseFloat(m.total_available);
         const isLow = avail <= min;
-        return <span className={cn("tabular-nums", isLow ? "text-rose-600 font-bold" : "text-slate-500 font-medium")}>{min.toLocaleString()}</span>;
+        return <span className={cn("tabular-nums", isLow ? "text-rose-600 font-bold" : "text-slate-500 font-medium")}>{toLocalString(min)}</span>;
       },
       className: "tabular-nums"
     });

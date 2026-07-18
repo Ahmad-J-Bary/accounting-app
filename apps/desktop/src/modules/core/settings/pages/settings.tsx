@@ -16,6 +16,7 @@ import { AboutSettings } from "../components/AboutSettings";
 import { UnderDevelopmentSection } from "../components/UnderDevelopmentSection";
 import { WarehouseSettings } from "../components/WarehouseSettings";
 import { AppearanceSettings } from "../components/AppearanceSettings";
+import { LocalizationSettings } from "../components/LocalizationSettings";
 
 import { SettingsLayout } from "@widgets/templates/SettingsLayout";
 
@@ -108,6 +109,7 @@ export default function Settings() {
         return <AboutSettings />;
 
       case "localization":
+        return <LocalizationSettings settings={settings} onChange={handleChange} />;
       case "security":
         break;
       default:

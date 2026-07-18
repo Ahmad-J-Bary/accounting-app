@@ -23,6 +23,7 @@ pub struct CompanySettings {
     pub logo_path: Option<String>,
     pub purchase_warehouse_id: Option<String>,
     pub sales_warehouse_id: Option<String>,
+    pub numeral_system: String,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -47,6 +48,7 @@ impl Default for CompanySettings {
             logo_path: None,
             purchase_warehouse_id: None,
             sales_warehouse_id: None,
+            numeral_system: "western".into(),
             updated_at: Utc::now(),
         }
     }

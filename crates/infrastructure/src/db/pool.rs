@@ -72,6 +72,7 @@ async fn ensure_currency_columns(pool: &SqlitePool) {
     add_column_if_missing(pool, "accounts", "exchange_rate", "TEXT", "'1'").await;
     // settings
     add_column_if_missing(pool, "settings", "base_currency_code", "TEXT", "''").await;
+    add_column_if_missing(pool, "settings", "numeral_system", "TEXT", "'western'").await;
     // partners
     add_column_if_missing(pool, "partners", "currency", "TEXT", "''").await;
     // material_purchase_prices

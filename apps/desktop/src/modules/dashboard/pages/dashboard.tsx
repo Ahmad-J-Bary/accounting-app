@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   TrendingUp, ShoppingCart, Wallet, Users, Truck, Package, Download, LayoutDashboard, Bell, DollarSign
 } from "lucide-react";
-import { formatDate } from '@shared/lib/format';
+import { formatDate, formatNumber } from '@shared/lib/format';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   PieChart, Pie, Cell
@@ -414,7 +414,7 @@ export default function Dashboard() {
                   <tbody className="divide-y divide-slate-50">
                     {recentSales.map((inv) => (
                       <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-4 font-black text-blue-600">{inv.invoice_number}</td>
+                        <td className="py-4 font-black text-blue-600">{formatNumber(parseInt(inv.invoice_number) || 0)}</td>
                         <td className="py-4 font-bold text-slate-700">{inv.customer_name || "زبون نقدي"}</td>
                         <td className="py-4 text-left tabular-nums font-black">{formatAmount(toNumber(inv.total_amount), { mode: localDisplayMode })}</td>
                         <td className="py-4 text-left"><StatusBadge status={inv.status} /></td>
@@ -446,7 +446,7 @@ export default function Dashboard() {
                   <tbody className="divide-y divide-slate-50">
                     {recentPayments.map((p) => (
                       <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-4 font-black text-blue-600">{p.voucher_number}</td>
+                        <td className="py-4 font-black text-blue-600">{formatNumber(parseInt(p.voucher_number) || 0)}</td>
                         <td className="py-4 font-bold text-slate-700">{paymentTypeLabel[p.payment_type] || p.payment_type}</td>
                         <td className="py-4 font-bold text-slate-700">{p.customer_name || p.supplier_name || "—"}</td>
                         <td className="py-4 text-left tabular-nums font-black">{formatAmount(toNumber(p.amount), { mode: localDisplayMode })}</td>
@@ -478,7 +478,7 @@ export default function Dashboard() {
                   <tbody className="divide-y divide-slate-50">
                     {recentJournals.map((j) => (
                       <tr key={j.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-4 font-black text-blue-600">{j.entry_number}</td>
+                        <td className="py-4 font-black text-blue-600">{formatNumber(parseInt(j.entry_number) || 0)}</td>
                         <td className="py-4 font-bold text-slate-700 truncate max-w-[200px]">{j.description}</td>
                         <td className="py-4 text-left tabular-nums font-black">
                           {toNumber(j.total_base_debit) > 0

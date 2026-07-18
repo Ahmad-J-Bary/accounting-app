@@ -9,6 +9,7 @@ import {
   type SidebarAction,
 } from "@widgets/sidebar-shell";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { toFixed } from "@shared/lib/format";
 
 type PartnerWithRatios = PartnerDto & {
   calculatedRatio: number;
@@ -102,7 +103,7 @@ export function PartnerDetailView({
                   نسبة رأس المال
                 </div>
                 <div className="text-sm font-black text-blue-700 tabular-nums">
-                  {partner.calculatedCapitalRatio?.toFixed(2) || "0.00"}%
+                  {toFixed(partner.calculatedCapitalRatio, 2) || "0.00"}%
                 </div>
               </div>
               <div className="p-3 bg-white rounded-xl border border-slate-100">
@@ -110,7 +111,7 @@ export function PartnerDetailView({
                   نسبة الأرباح
                 </div>
                 <div className="text-sm font-black text-emerald-700 tabular-nums">
-                  {actualProfitRatio.toFixed(2)}%
+                  {toFixed(actualProfitRatio, 2)}%
                 </div>
               </div>
             </div>
