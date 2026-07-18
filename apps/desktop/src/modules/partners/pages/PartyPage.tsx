@@ -246,7 +246,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
     }, currencies, formatAmount);
 
     const colDefs: ExcelExportColumn[] = [
-      { id: 'code', label: '#', width: 8, hidden: !visibleColumnIds.includes('code'), accessor: (row) => formatNumber(parseInt(String(row.code ?? "0"), 10) || 0) },
+      { id: 'code', label: '#', width: 8, hidden: !visibleColumnIds.includes('code'), accessor: (row) => parseInt(String(row.code ?? "0"), 10) || 0 },
       { id: 'name', label: entityName === 'customer' ? 'اسم العميل' : 'اسم المورد', width: 25, hidden: !visibleColumnIds.includes('name'), accessor: (row) => String(row.name ?? '') },
       { id: 'phone', label: 'رقم الهاتف', width: 15, hidden: !visibleColumnIds.includes('phone'), accessor: (row) => String(row.phone ?? '') },
       {

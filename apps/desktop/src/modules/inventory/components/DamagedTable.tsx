@@ -3,7 +3,7 @@ import { SharedTable } from '@widgets/table-shell/SharedTable';
 import type { UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableActions } from '@widgets/table-shell/TableActions';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
-import { formatDateTime, formatNumber } from '@shared/lib/format';
+import { formatDateTime, formatNumber, toLocalString } from '@shared/lib/format';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useBaseCurrencyColumns } from "@shared/hooks";
 import type { DamagedItem } from "@erp/shared-types";
@@ -48,11 +48,11 @@ export function DamagedTable({
         accessor: (i) => i.material_name || i.material_id || "",
         className: "font-bold text-slate-800"
       },
-      {
+{
         id: "quantity",
         header: "الكمية",
         label: "الكمية التالفة",
-        accessor: (i) => Math.round(parseFloat(i.quantity || "0")).toString(),
+        accessor: (i) => toLocalString(Math.round(parseFloat(i.quantity || "0"))),
         className: "tabular-nums font-black text-amber-600"
       },
     ];

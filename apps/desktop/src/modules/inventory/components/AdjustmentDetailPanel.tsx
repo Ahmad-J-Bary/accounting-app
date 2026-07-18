@@ -1,7 +1,7 @@
 import { Pencil, Trash2, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
 import type { StockAdjustment, MaterialDto } from "@erp/shared-types";
 import { cn } from "@shared/lib/utils";
-import { formatDateTime, formatNumber } from "@shared/lib/format";
+import { formatDateTime, formatNumber, toFixed } from "@shared/lib/format";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import {
   SidebarShell,
@@ -59,8 +59,8 @@ export function AdjustmentDetailPanel({ item, materials: _materials, onClose, on
           <SidebarDetailGrid
             columns={2}
             fields={[
-              { label: "كمية النظام", value: parseFloat(item.system_quantity).toFixed(2) },
-              { label: "الكمية المجرودة", value: parseFloat(item.actual_quantity).toFixed(2) },
+              { label: "كمية النظام", value: toFixed(parseFloat(item.system_quantity), 2) },
+              { label: "الكمية المجرودة", value: toFixed(parseFloat(item.actual_quantity), 2) },
             ]}
           />
           <SidebarDetailGrid
@@ -74,7 +74,7 @@ export function AdjustmentDetailPanel({ item, materials: _materials, onClose, on
                     diff > 0 ? "text-emerald-600" : diff < 0 ? "text-rose-600" : "text-slate-400"
                   )}>
                     {diff > 0 ? <ArrowUpCircle className="w-4 h-4" /> : diff < 0 ? <ArrowDownCircle className="w-4 h-4" /> : null}
-                    {diff > 0 ? "+" : ""}{diff.toFixed(2)}
+                    {diff > 0 ? "+" : ""}{toFixed(diff, 2)}
                   </span>
                 ),
               },

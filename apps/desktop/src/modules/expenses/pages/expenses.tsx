@@ -145,7 +145,7 @@ export default function Expenses() {
         const c = row as unknown as AccountDto;
         const prefix = expensesParent?.code || "";
         const suffix = prefix && c.code?.startsWith(prefix) ? c.code.substring(prefix.length) : c.code || "";
-        return suffix ? formatNumber(parseInt(suffix) || 0) : "";
+        return suffix ? parseInt(suffix) || 0 : 0;
       }},
       { id: "name", label: "اسم البند", accessor: (row) => String((row as unknown as AccountDto).name_ar ?? "") },
       { id: "status", label: "حالة الحساب", accessor: (row) => {

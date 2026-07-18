@@ -1,7 +1,7 @@
 import { Pencil, Trash2 } from "lucide-react";
 import type { DamagedItem, MaterialDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { formatDateTime, formatNumber } from "@shared/lib/format";
+import { formatDateTime, formatNumber, toLocalString } from "@shared/lib/format";
 import {
   SidebarShell,
   SidebarHeader,
@@ -63,7 +63,7 @@ export function DamagedDetailPanel({
           <SidebarDetailGrid
             columns={2}
             fields={[
-              { label: "الكمية التالفة", value: `${Math.round(parseFloat(item.quantity || "0"))}` },
+              { label: "الكمية التالفة", value: toLocalString(Math.round(parseFloat(item.quantity || "0"))) },
               { label: "تأثير التكلفة", value: formatMonetaryAmount(parseFloat(item.cost_impact || "0"), "base") },
             ]}
           />

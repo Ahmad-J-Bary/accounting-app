@@ -628,7 +628,7 @@ export function JournalTable({
   // ============ EXPORT VALUE FUNCTIONS (separate per mode) ============
   const getTwoLineExportValue = useCallback(
     (row: JournalTableRow, col: UnifiedColumn<JournalTableRow>): string | number => {
-      if (col.id === "entry_number") return formatNumber(parseInt(row.entry_number, 10) || 0);
+      if (col.id === "entry_number") return parseInt(row.entry_number, 10) || 0;
       if (col.id === "journal_type") return row.journal_type_display;
       if (col.id === "description") return row.description;
       if (col.id === "account") return row.account_name;
@@ -658,7 +658,7 @@ export function JournalTable({
 
   const getSingleLineExportValue = useCallback(
     (row: JournalSingleLineTableRow, col: UnifiedColumn<JournalSingleLineTableRow>): string | number => {
-      if (col.id === "entry_number") return formatNumber(parseInt(row.entry_number, 10) || 0);
+      if (col.id === "entry_number") return parseInt(row.entry_number, 10) || 0;
       if (col.id === "journal_type") return row.journal_type_display;
       if (col.id === "description") return row.description;
       if (col.id === "entry_date") return formatDateTime(row.created_at);

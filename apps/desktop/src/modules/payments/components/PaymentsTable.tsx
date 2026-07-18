@@ -132,7 +132,7 @@ export function PaymentsTable({
     }, sortedCurrencies, formatAmount);
 
     const exportColumns: ExcelExportColumn[] = [
-      { id: "journal_entry_number", label: "رقم القيد", accessor: (row) => formatNumber(parseInt(String((row as Record<string, unknown>).journal_entry_number ?? "0"), 10) || 0) },
+      { id: "journal_entry_number", label: "رقم القيد", accessor: (row) => parseInt(String((row as Record<string, unknown>).journal_entry_number ?? "0"), 10) || 0 },
       { id: "payment_type", label: "النوع", accessor: (row) => {
         const p = row as unknown as Payment;
         return PAYMENT_TYPE_LABELS[p.payment_type as keyof typeof PAYMENT_TYPE_LABELS] || p.payment_type;

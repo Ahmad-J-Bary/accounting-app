@@ -14,7 +14,7 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useExcelExport } from "@shared/hooks";
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import type { ExcelExportColumn } from "@shared/lib/excel";
-import { formatDateTime, formatNumber } from "@shared/lib/format";
+import { formatDateTime, formatNumber, toLocalString } from "@shared/lib/format";
 
 export default function DamagedPage() {
   const {
@@ -130,9 +130,9 @@ export default function DamagedPage() {
     const columns: ExcelExportColumn[] = [
       { id: "id", label: "الرقم", accessor: (row) => {
         const i = row as unknown as DamagedItem;
-        if (i.reference) return formatNumber(parseInt(i.reference, 10) || 0);
+        if (i.reference) return parseInt(i.reference, 10) || 0;
         const idx = items.findIndex(x => x.id === i.id);
-        return idx >= 0 ? formatNumber(idx + 1) : formatNumber(1);
+        return idx >= 0 ? idx + 1 : 1;
       } },
       { id: "material_name", label: "المادة", accessor: (row) => String((row as unknown as DamagedItem).material_name ?? "") },
       { id: "quantity", label: "الكمية", accessor: (row) => Math.round(parseFloat((row as unknown as DamagedItem).quantity || "0")) },
