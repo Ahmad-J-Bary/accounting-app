@@ -12,6 +12,7 @@ export interface ExcelExportColumn {
   imageDataUrl?: (row: Record<string, unknown>) => string | null | undefined;
   imageWidth?: number;
   imageHeight?: number;
+  numeric?: boolean;
 }
 
 function extractBase64(dataUrl: string): { base64: string; extension: string } | null {
@@ -64,24 +65,38 @@ async function buildExcelJsWorkbook(
     : 0;
   const imageRowHeight = hasImages ? Math.ceil(maxImageHeight * 0.75) + 5 : 0;
 
-  sortedData.forEach((row, rowIdx) => {
-    const excelRow = ws.getRow(rowIdx + 2);
-    if (imageRowHeight) excelRow.height = imageRowHeight;
+    const numeralSystem = options?.numeralSystem || "latn";
 
-    columns.forEach((col, colIdx) => {
-      const cell = excelRow.getCell(colIdx + 1);
-      const val = getCellValue(row, col);
-      cell.value = val ?? '';
-      cell.font = { size: 10 };
-      cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      cell.border = {
-        top: { style: 'thin' },
-        bottom: { style: 'thin' },
-        left: { style: 'thin' },
-        right: { style: 'thin' },
-      };
+  if (sortedData.length > 0) {
+    sortedData.forEach((row, rowIdx) => {
+      const excelRow = ws.getRow(rowIdx + 2);
+      if (imageRowHeight) excelRow.height = imageRowHeight;
+
+      columns.forEach((col, colIdx) => {
+        const cell = excelRow.getCell(colIdx + 1);
+        const val = getCellValue(row, col);
+
+        if (val !== null && val !== undefined && val !== "") {
+          const numVal = typeof val === "number" ? val : parseFloat(val as string) || 0;
+          if (!isNaN(numVal) && col.numeric) {
+            const locale = numeralSystem === "arab" ? "ar-SA" : "en-US";
+            const numFmt = numeralSystem === "arab" ? `[$-ar-SA]#,##0` : `[$-en-US]#,##0`;
+            cell.numFmt = numFmt;
+          }
+        }
+
+        cell.value = val ?? '';
+        cell.font = { size: 10 };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = {
+          top: { style: 'thin' },
+          bottom: { style: 'thin' },
+          left: { style: 'thin' },
+          right: { style: 'thin' },
+        };
+      });
     });
-  });
+  }
 
   if (hasImages) {
     for (let rowIdx = 0; rowIdx < sortedData.length; rowIdx++) {
@@ -142,6 +157,7 @@ export interface ExcelExportOptions {
     direction?: 'asc' | 'desc';
     compare?: (a: Record<string, unknown>, b: Record<string, unknown>) => number;
   };
+  numeralSystem?: 'arab' | 'latn';
 }
 
 function getVisibleColumnIndex(columns: ExcelExportColumn[], columnId: string): number {

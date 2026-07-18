@@ -17,6 +17,7 @@ import { buildStockByWarehouse } from '@modules/inventory/lib/stockUtils';
 import { useExcelExport } from "@shared/hooks";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { formatDateTime, formatNumber, toLocalString } from "@shared/lib/format";
+import { getNumberingSystem } from "@shared/lib/format";
 
 export default function Transfers() {
   const { data: movements = [] } = useQuery<StockMovement[]>({
@@ -168,7 +169,7 @@ export default function Transfers() {
       { id: "notes", label: "ملاحظة", accessor: (row) => String((row as unknown as TransferRow).notes ?? "") },
       { id: "date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as TransferRow).transfer_date) },
     ];
-    await exportData(exportRows as unknown as Record<string, unknown>[], columns, "التحويلات", { sheetName: "التحويلات", autoFilter: true });
+    await exportData(exportRows as unknown as Record<string, unknown>[], columns, "التحويلات", { sheetName: "التحويلات", autoFilter: true, numeralSystem: getNumberingSystem() });
   }, [exportRows, exportData]);
 
   return (

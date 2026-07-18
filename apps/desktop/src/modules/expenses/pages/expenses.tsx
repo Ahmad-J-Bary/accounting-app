@@ -20,7 +20,7 @@ import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTem
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
 import { useExcelExport } from "@shared/hooks";
-import { formatNumber } from "@shared/lib/format";
+import { getNumberingSystem } from "@shared/lib/format";
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { toast } from "sonner";
@@ -146,7 +146,7 @@ export default function Expenses() {
         const prefix = expensesParent?.code || "";
         const suffix = prefix && c.code?.startsWith(prefix) ? c.code.substring(prefix.length) : c.code || "";
         return suffix ? parseInt(suffix) || 0 : 0;
-      }},
+      }}, numeric: true,
       { id: "name", label: "اسم البند", accessor: (row) => String((row as unknown as AccountDto).name_ar ?? "") },
       { id: "status", label: "حالة الحساب", accessor: (row) => {
         const c = row as unknown as AccountDto;
