@@ -2,16 +2,16 @@ import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ReportLayout } from "@widgets/templates/ReportLayout";
 import { Button } from "@shared/ui/button";
-import { Input } from "@shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { Label } from "@shared/ui/label";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, formatDate } from "@shared/lib/format";
 import { cn } from "@shared/lib/utils";
-import { Calendar, Filter, ArrowUpRight, ArrowDownLeft, Printer, Download, BookOpen, Landmark, FileText } from "lucide-react";
+import { Filter, ArrowUpRight, ArrowDownLeft, Printer, Download, BookOpen, Landmark, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useChartOfAccounts, useAccountLedger } from "@shared/hooks/queries/useAccountQueries";
 import { AccountMovementTable } from "../components/AccountMovementTable";
+import { DatePicker } from "@shared/ui/date-picker";
 import type { AccountDto } from "@erp/shared-types";
 
 function getDescendantIds(accountId: string, accounts: AccountDto[]): string[] {
@@ -108,28 +108,18 @@ export default function AccountMovementsReport() {
 
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase tracking-widest text-slate-400">من تاريخ</Label>
-            <div className="relative">
-              <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input
-                type="date"
-                value={filters.from_date}
-                onChange={e => setFilters(f => ({ ...f, from_date: e.target.value }))}
-                className="h-11 pr-10 rounded-xl border-slate-200 bg-slate-50/50 font-bold tabular-nums"
-              />
-            </div>
+            <DatePicker
+              value={filters.from_date}
+              onChange={v => setFilters(f => ({ ...f, from_date: v }))}
+            />
           </div>
 
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase tracking-widest text-slate-400">إلى تاريخ</Label>
-            <div className="relative">
-              <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input
-                type="date"
-                value={filters.to_date}
-                onChange={e => setFilters(f => ({ ...f, to_date: e.target.value }))}
-                className="h-11 pr-10 rounded-xl border-slate-200 bg-slate-50/50 font-bold tabular-nums"
-              />
-            </div>
+            <DatePicker
+              value={filters.to_date}
+              onChange={v => setFilters(f => ({ ...f, to_date: v }))}
+            />
           </div>
 
           <div className="flex items-end">
@@ -144,6 +134,15 @@ export default function AccountMovementsReport() {
       }
     >
       <div className="p-8 space-y-8 flex-1 flex flex-col">
+        {/* Date Range Banner */}
+        {filters.from_date && filters.to_date && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="rounded-full bg-blue-50 text-blue-700 px-4 py-1.5 border border-blue-100 font-bold">
+              الفترة من {formatDate(filters.from_date)} إلى {formatDate(filters.to_date)}
+            </span>
+          </div>
+        )}
+
         {/* Statistics Bar */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-5">
            <div className="bg-indigo-50 p-5 rounded-3xl border border-indigo-100 flex items-center gap-4">

@@ -30,6 +30,7 @@ export const formatNumber = (n: number): string => {
 export const formatDate = (date: string | Date): string => {
   const d = typeof date === "string" ? new Date(date) : date;
   return new Intl.DateTimeFormat("ar-SY", {
+    numberingSystem: _numberingSystem,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -38,7 +39,8 @@ export const formatDate = (date: string | Date): string => {
 
 export const formatDateTime = (date: string | Date): string => {
   const d = typeof date === "string" ? new Date(date) : date;
-  return new Intl.DateTimeFormat("ar-SY", {
+  let formatted = new Intl.DateTimeFormat("ar-SY", {
+    numberingSystem: _numberingSystem,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -46,6 +48,10 @@ export const formatDateTime = (date: string | Date): string => {
     minute: "2-digit",
     hour12: true,
   }).format(d);
+  if (_numberingSystem === "latn") {
+    formatted = formatted.replace(/\s*ص/, " AM").replace(/\s*م/, " PM");
+  }
+  return formatted;
 };
 
 export function toLocalString(n: number): string {

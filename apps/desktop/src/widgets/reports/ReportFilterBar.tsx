@@ -1,12 +1,13 @@
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { Button } from "@shared/ui/button";
-import { Input } from "@shared/ui/input";
 import { Label } from "@shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
-import { RefreshCw, Calendar, Download, Printer } from "lucide-react";
+import { RefreshCw, Download, Printer } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { cn } from "@shared/lib/utils";
+import { formatDateTime, formatDate } from "@shared/lib/format";
+import { DatePicker } from "@shared/ui/date-picker";
 import type { ReportFilters } from "@shared/types/report";
 
 export interface ReportFilterBarProps {
@@ -82,41 +83,36 @@ export function ReportFilterBar({
           )}
           {lastLoadedAt && (
             <span className="rounded-full bg-slate-100 px-3 py-1">
-              آخر تحديث: {lastLoadedAt.toLocaleString("ar")}
+              آخر تحديث: {formatDateTime(lastLoadedAt)}
+            </span>
+          )}
+          {showDateRange && filters.from_date && filters.to_date && (
+            <span className="rounded-full bg-blue-50 text-blue-700 px-3 py-1 border border-blue-100">
+              الفترة من {formatDate(filters.from_date)} إلى {formatDate(filters.to_date)}
             </span>
           )}
         </div>
       )}
 
       <div className="flex flex-wrap items-end gap-4">
-        {showDateRange && (
-          <>
-            <div className="space-y-2 min-w-[180px]">
-              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">من تاريخ</Label>
-              <div className="relative">
-                <Calendar className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <Input
-                  type="date"
+          {showDateRange && (
+            <>
+              <div className="space-y-2 min-w-[180px]">
+                <Label className="text-xs font-black uppercase tracking-widest text-slate-400">من تاريخ</Label>
+                <DatePicker
                   value={filters.from_date}
-                  onChange={(e) => onFiltersChange({ from_date: e.target.value })}
-                  className="h-11 rounded-xl border-slate-200 bg-slate-50/50 pr-10 font-bold tabular-nums"
+                  onChange={(v) => onFiltersChange({ from_date: v })}
                 />
               </div>
-            </div>
-            <div className="space-y-2 min-w-[180px]">
-              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">إلى تاريخ</Label>
-              <div className="relative">
-                <Calendar className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <Input
-                  type="date"
+              <div className="space-y-2 min-w-[180px]">
+                <Label className="text-xs font-black uppercase tracking-widest text-slate-400">إلى تاريخ</Label>
+                <DatePicker
                   value={filters.to_date}
-                  onChange={(e) => onFiltersChange({ to_date: e.target.value })}
-                  className="h-11 rounded-xl border-slate-200 bg-slate-50/50 pr-10 font-bold tabular-nums"
+                  onChange={(v) => onFiltersChange({ to_date: v })}
                 />
               </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
 
         {showCurrencySelect && (
           <div className="space-y-2 min-w-[180px]">

@@ -2,10 +2,10 @@
 import { useParams } from "react-router-dom";
 import { useTabs } from "@app/providers/TabContext";
 import { Button } from "@shared/ui/button";
-import { Input } from "@shared/ui/input";
-import { Download, Printer, PlusCircle, ShoppingCart, Calendar, ArrowUpRight, ArrowDownLeft, BookOpen, FileText, Landmark } from "lucide-react";
+import { Download, Printer, PlusCircle, ShoppingCart, ArrowUpRight, ArrowDownLeft, BookOpen, FileText, Landmark } from "lucide-react";
 import { cn } from "@shared/lib/utils";
 import { formatCurrency } from "@shared/lib/format";
+import { DatePicker } from "@shared/ui/date-picker";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import { customerService } from "@modules/partners/api/customerService";
 import { supplierService } from "@modules/partners/api/supplierService";
@@ -289,25 +289,19 @@ export default function AccountMovement() {
 
           {/* Date Filters */}
           <div className="flex items-center gap-2 mr-auto">
-            <div className="relative">
-              <Calendar className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-              <Input
-                type="date"
-                value={dateFilters.from_date}
-                onChange={e => setDateFilters(f => ({ ...f, from_date: e.target.value }))}
-                className="h-9 w-36 pr-8 text-xs rounded-lg border-slate-200 bg-white font-bold tabular-nums"
-              />
-            </div>
+            <DatePicker
+              value={dateFilters.from_date}
+              onChange={v => setDateFilters(f => ({ ...f, from_date: v }))}
+              className="h-9 w-36 text-xs rounded-lg bg-white"
+              placeholder=""
+            />
             <span className="text-xs text-slate-400 font-bold">إلى</span>
-            <div className="relative">
-              <Calendar className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-              <Input
-                type="date"
-                value={dateFilters.to_date}
-                onChange={e => setDateFilters(f => ({ ...f, to_date: e.target.value }))}
-                className="h-9 w-36 pr-8 text-xs rounded-lg border-slate-200 bg-white font-bold tabular-nums"
-              />
-            </div>
+            <DatePicker
+              value={dateFilters.to_date}
+              onChange={v => setDateFilters(f => ({ ...f, to_date: v }))}
+              className="h-9 w-36 text-xs rounded-lg bg-white"
+              placeholder=""
+            />
           </div>
         </div>
       }
