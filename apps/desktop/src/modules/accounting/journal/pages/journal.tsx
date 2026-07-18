@@ -23,7 +23,13 @@ export default function Journal() {
     to_date: undefined,
   });
 
-  const [displayMode, setDisplayMode] = useState<DisplayMode>("two-line");
+  const [displayMode, setDisplayMode] = useState<DisplayMode>(
+    () => (localStorage.getItem("journal-display-mode") as DisplayMode) || "two-line"
+  );
+
+  useEffect(() => {
+    localStorage.setItem("journal-display-mode", displayMode);
+  }, [displayMode]);
 
   useEffect(() => {
     // Sync from URL only when the query param exists.

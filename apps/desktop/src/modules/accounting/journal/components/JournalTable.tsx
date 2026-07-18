@@ -1,4 +1,4 @@
-import { useMemo, useRef, useCallback, type ReactNode } from "react";
+import { useMemo, useRef, useCallback, useEffect, type ReactNode } from "react";
 import { Download } from "lucide-react";
 import { GridHeader, type GridHeaderColumn } from "@widgets/table-shell/GridHeader";
 import type { UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
@@ -121,7 +121,7 @@ export function JournalTable({
   // ============ SORTING (separate hooks per mode) ============
   const twoLineSort = useSortable({
     data: twoLineData,
-    defaultField: "created_at" as SortFieldTwoLine,
+    defaultField: (localStorage.getItem("journal-sort-field-two-line") as SortFieldTwoLine) || "entry_number",
     defaultDirection: "desc",
     sortFn: (a, b, field, direction) => {
       let comparison = 0;
@@ -145,7 +145,7 @@ export function JournalTable({
 
   const singleLineSort = useSortable({
     data: singleLineData,
-    defaultField: "created_at" as SortFieldOneLine,
+    defaultField: (localStorage.getItem("journal-sort-field-one-line") as SortFieldOneLine) || "entry_number",
     defaultDirection: "desc",
     sortFn: (a, b, field, direction) => {
       let comparison = 0;
@@ -333,6 +333,11 @@ export function JournalTable({
   const sortedData = isTwoLine ? twoLineSort.sortedData : singleLineSort.sortedData;
   const sortField = isTwoLine ? twoLineSort.sortField : singleLineSort.sortField;
   const sortDirection = isTwoLine ? twoLineSort.sortDirection : singleLineSort.sortDirection;
+
+  useEffect(() => {
+    const key = isTwoLine ? "journal-sort-field-two-line" : "journal-sort-field-one-line";
+    localStorage.setItem(key, sortField);
+  }, [sortField, isTwoLine]);
   
   // Unified handleSort that narrows the field type
   const handleSort = useCallback((field: string) => {
