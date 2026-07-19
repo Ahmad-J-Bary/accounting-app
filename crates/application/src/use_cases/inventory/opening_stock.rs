@@ -62,17 +62,19 @@ impl RecordOpeningStockUseCase {
             let unit_cost_base = Decimal::from_str(&item.unit_cost_base)
                 .map_err(|_| AppError::Invalid("سعر تكلفة (أساسي) غير صالح".into()))?;
 
-            let movement = StockMovement::new(
+            let ref_no = self.movement_repo.get_next_inventory_reference().await?;
+            let mut movement = StockMovement::new(
                 material.id,
                 MovementType::OpeningBalance,
                 quantity,
                 unit_cost,
                 quantity * unit_cost,
-                "OP-STOCK".to_string(),
+                ref_no,
                 req.notes.clone().unwrap_or_default(),
                 entry_date,
             )
             .map_err(|e| AppError::Invalid(e.to_string()))?;
+            movement.document_number = Some("OP-STOCK".to_string());
 
             // Record movement (dynamic balance)
             self.movement_repo.save(&movement).await?;

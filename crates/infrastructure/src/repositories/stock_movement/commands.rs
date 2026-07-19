@@ -19,8 +19,8 @@ pub async fn save(pool: &SqlitePool, movement: &StockMovement) -> Result<(), App
     let warehouse_id = resolve_warehouse_id(pool, movement).await?;
 
     sqlx::query(
-        "INSERT INTO stock_movements (id, material_id, quantity, unit_cost, unit_cost_base, total_cost, total_cost_base, raw_total_cost_base, original_currency, fx_rate, movement_type, reason, reference, warehouse_id, movement_date, created_at, signed_quantity)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO stock_movements (id, material_id, quantity, unit_cost, unit_cost_base, total_cost, total_cost_base, raw_total_cost_base, original_currency, fx_rate, movement_type, reason, reference, document_number, warehouse_id, movement_date, created_at, signed_quantity)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(movement.id.to_string())
     .bind(movement.material_id.to_string())
@@ -35,6 +35,7 @@ pub async fn save(pool: &SqlitePool, movement: &StockMovement) -> Result<(), App
     .bind(format!("{:?}", movement.movement_type))
     .bind(&movement.notes)
     .bind(&movement.reference)
+    .bind(&movement.document_number)
     .bind(warehouse_id)
     .bind(movement.movement_date.to_rfc3339())
     .bind(movement.created_at.to_rfc3339())
@@ -47,7 +48,8 @@ pub async fn save(pool: &SqlitePool, movement: &StockMovement) -> Result<(), App
 }
 
 pub async fn delete_by_reference(pool: &SqlitePool, reference: &str, movement_type: &str) -> Result<(), AppError> {
-    sqlx::query("DELETE FROM stock_movements WHERE reference = ? AND movement_type = ?")
+    sqlx::query("DELETE FROM stock_movements WHERE (reference = ? OR document_number = ?) AND movement_type = ?")
+        .bind(reference)
         .bind(reference)
         .bind(movement_type)
         .execute(pool)

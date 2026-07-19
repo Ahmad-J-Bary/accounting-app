@@ -272,16 +272,18 @@ impl PostPurchaseInvoiceUseCase {
                         invoice.notes.clone().filter(|n| !n.trim().is_empty())
                     })
                     .unwrap_or(auto_notes);
-                let movement = StockMovement::new(
+                let ref_no = self.movement_repo.get_next_inventory_reference().await?;
+                let mut movement = StockMovement::new(
                     material.id,
                     MovementType::Purchase,
                     effective_quantity,
                     item.unit_price,
                     item.line_total,
-                    invoice.invoice_number.clone(),
+                    ref_no,
                     movement_notes,
                     chrono::Utc::now(),
                 ).map_err(|e| AppError::Invalid(e.to_string()))?;
+                movement.document_number = Some(invoice.invoice_number.clone());
                 self.movement_repo.save(&movement).await?;
             }
         }

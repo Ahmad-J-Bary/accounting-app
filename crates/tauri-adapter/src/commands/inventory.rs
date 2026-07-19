@@ -46,11 +46,12 @@ pub async fn list_stock_movements(
 
     Ok(movements.into_iter().map(|m| {
         let mat_id = m.material_id.to_string();
+        let doc_num = m.document_number.unwrap_or_else(|| m.reference.clone());
         let ref_str = m.reference.clone();
-        let source_document_id = if ref_str.is_empty() {
+        let source_document_id = if doc_num.is_empty() {
             None
         } else {
-            source_ids.get(&ref_str).cloned()
+            source_ids.get(&doc_num).cloned()
         };
         StockMovementDto {
             id: m.id.to_string(),

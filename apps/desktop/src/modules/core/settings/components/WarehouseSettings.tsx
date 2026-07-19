@@ -40,6 +40,7 @@ export function WarehouseSettings({ settings, onChange }: WarehouseSettingsProps
         fiscal_year_start_month: settings.fiscal_year_start_month,
         purchase_warehouse_id: settings.purchase_warehouse_id,
         sales_warehouse_id: settings.sales_warehouse_id,
+        numeral_system: settings.numeral_system || "western",
       });
       window.dispatchEvent(new CustomEvent("erp:settings-updated"));
       toast.success("تم الحفظ", { description: "تم حفظ إعدادات المستودعات بنجاح" });

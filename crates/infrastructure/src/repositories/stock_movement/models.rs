@@ -13,6 +13,7 @@ pub struct StockMovementRow {
     pub movement_type: String,
     pub reason: Option<String>,
     pub reference: Option<String>,
+    pub document_number: Option<String>,
     pub warehouse_id: Option<String>,
     pub movement_date: String,
     pub created_at: String,

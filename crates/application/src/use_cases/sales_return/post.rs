@@ -103,16 +103,18 @@ impl PostSalesReturnUseCase {
                 })
                 .unwrap_or_default();
 
+            let ref_no = self.movement_repo.get_next_inventory_reference().await?;
             let mut movement = StockMovement::new(
                 line.material_id,
                 MovementType::SalesReturn,
                 effective_quantity,
                 unit_cost,
                 total_cost,
-                ret.return_number.clone(),
+                ref_no,
                 format!("مرتجع مبيعات رقم {} - {}", ret.return_number, custom_notes),
                 Utc::now(),
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
+            movement.document_number = Some(ret.return_number.clone());
             movement.unit_cost_base = unit_cost_base;
             movement.total_cost_base = total_cost_base;
             self.movement_repo.save(&movement).await?;

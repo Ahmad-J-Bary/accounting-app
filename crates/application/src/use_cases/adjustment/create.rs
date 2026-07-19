@@ -64,10 +64,7 @@ impl CreateStockAdjustmentUseCase {
             adjustment_date,
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
-        // Save initially to get count for reference
-        self.adjustment_repo.save(&adjustment).await?;
-        let count = self.adjustment_repo.count().await?;
-        let reference = format!("{}", count);
+        let reference = self.movement_repo.get_next_inventory_reference().await?;
         adjustment.reference = Some(reference.clone());
         self.adjustment_repo.save(&adjustment).await?;
 

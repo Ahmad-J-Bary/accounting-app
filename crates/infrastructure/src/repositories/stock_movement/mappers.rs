@@ -35,6 +35,7 @@ pub fn row_to_movement(row: StockMovementRow) -> Result<StockMovement, AppError>
         original_currency: row.original_currency,
         fx_rate: Decimal::from_str(&row.fx_rate).unwrap_or(Decimal::ONE),
         reference: row.reference.unwrap_or_default(),
+        document_number: row.document_number,
         notes: row.reason.unwrap_or_default(),
         movement_date: DateTime::parse_from_rfc3339(&row.movement_date).map_err(|e| AppError::Invalid(e.to_string()))?.with_timezone(&Utc),
         created_at: DateTime::parse_from_rfc3339(&row.created_at).map_err(|e| AppError::Invalid(e.to_string()))?.with_timezone(&Utc),

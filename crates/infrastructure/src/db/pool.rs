@@ -67,6 +67,7 @@ async fn ensure_currency_columns(pool: &SqlitePool) {
     add_column_if_missing(pool, "payments", "debit_account_id", "TEXT", "NULL").await;
     add_column_if_missing(pool, "payments", "credit_account_id", "TEXT", "NULL").await;
     add_column_if_missing(pool, "payments", "journal_entry_number", "TEXT", "NULL").await;
+    add_column_if_missing(pool, "payments", "invoice_id", "TEXT", "NULL").await;
     // accounts
     add_column_if_missing(pool, "accounts", "currency_code", "TEXT", "'USD'").await;
     add_column_if_missing(pool, "accounts", "exchange_rate", "TEXT", "'1'").await;
@@ -87,6 +88,8 @@ async fn ensure_currency_columns(pool: &SqlitePool) {
     add_column_if_missing(pool, "inventory_lots", "wholesale_price_base", "TEXT", "NULL").await;
     // unified_invoice_lines (for line-level discount)
     add_column_if_missing(pool, "unified_invoice_lines", "discount_percent", "TEXT", "'0'").await;
+    // stock_movements (for shared sequential reference)
+    add_column_if_missing(pool, "stock_movements", "document_number", "TEXT", "NULL").await;
 }
 
 /// Ensure the Discount Earned account (332) exists under "إيرادات أخرى" (33)

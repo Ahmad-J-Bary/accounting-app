@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::str::FromStr;
 use std::sync::Arc;
 use crate::dto::transfer_dto::{CreateTransferRequest, TransferResponse};
@@ -57,19 +56,7 @@ impl CreateTransferUseCase {
             .map_err(|_| AppError::Invalid("التاريخ غير صالح".into()))?
             .with_timezone(&Utc);
 
-        let all = self.movement_repo.list_all().await?;
-        let mut ref_ins: HashSet<&str> = HashSet::new();
-        let mut ref_outs: HashSet<&str> = HashSet::new();
-        for m in &all {
-            let r = m.reference.as_str();
-            match m.movement_type {
-                MovementType::In => { ref_ins.insert(r); }
-                MovementType::Out => { ref_outs.insert(r); }
-                _ => {}
-            }
-        }
-        let transfer_count = ref_ins.intersection(&ref_outs).count();
-        let reference = (transfer_count + 1).to_string();
+        let reference = self.movement_repo.get_next_inventory_reference().await?;
 
         let mut source_movement = StockMovement::new(
             material_id,

@@ -76,8 +76,8 @@ impl UpdateDamagedItemUseCase {
         item.notes = req.notes;
 
         if item.reference.is_none() {
-            let count = self.repo.count().await?;
-            item.reference = Some(format!("{}", count));
+            let reference = self.movement_repo.get_next_inventory_reference().await?;
+            item.reference = Some(reference);
         }
         let reference = item.reference.clone().unwrap_or_else(|| format!("DAM-{}", item.id));
 

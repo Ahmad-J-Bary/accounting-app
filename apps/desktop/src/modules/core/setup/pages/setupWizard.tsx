@@ -90,6 +90,7 @@ export default function SetupWizard() {
       purchase_prefix: "PUR",
       journal_prefix: "JRN",
       fiscal_year_start_month: 1,
+      numeral_system: "western",
     });
   };
 

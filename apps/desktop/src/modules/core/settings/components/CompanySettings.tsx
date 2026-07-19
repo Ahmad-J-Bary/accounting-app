@@ -30,6 +30,7 @@ export function CompanySettings({ settings, onChange }: CompanySettingsProps) {
         purchase_prefix: settings.purchase_prefix,
         journal_prefix: settings.journal_prefix,
         fiscal_year_start_month: settings.fiscal_year_start_month,
+        numeral_system: settings.numeral_system || "western",
       });
       window.dispatchEvent(new CustomEvent("erp:settings-updated"));
       toast.success("تم الحفظ", { description: "تم حفظ بيانات الشركة بنجاح" });

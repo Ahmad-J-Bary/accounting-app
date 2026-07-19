@@ -7,7 +7,7 @@ use rust_decimal::Decimal;
 use super::models::StockMovementRow;
 use super::mappers::row_to_movement;
 
-const COLUMNS: &str = "id, material_id, quantity, unit_cost, unit_cost_base, total_cost, total_cost_base, raw_total_cost_base, original_currency, fx_rate, movement_type, reason, reference, warehouse_id, movement_date, created_at, signed_quantity";
+const COLUMNS: &str = "id, material_id, quantity, unit_cost, unit_cost_base, total_cost, total_cost_base, raw_total_cost_base, original_currency, fx_rate, movement_type, reason, reference, document_number, warehouse_id, movement_date, created_at, signed_quantity";
 
 pub async fn find_by_id(pool: &SqlitePool, id: &StockMovementId) -> Result<Option<StockMovement>, AppError> {
     let row = sqlx::query_as::<_, StockMovementRow>(
@@ -46,8 +46,9 @@ pub async fn list_by_material(pool: &SqlitePool, material_id: &MaterialId) -> Re
 
 pub async fn list_by_reference(pool: &SqlitePool, reference: &str) -> Result<Vec<StockMovement>, AppError> {
     let rows = sqlx::query_as::<_, StockMovementRow>(
-        &format!("SELECT {} FROM stock_movements WHERE reference = ? ORDER BY movement_date ASC", COLUMNS)
+        &format!("SELECT {} FROM stock_movements WHERE reference = ? OR document_number = ? ORDER BY movement_date ASC", COLUMNS)
     )
+    .bind(reference)
     .bind(reference)
     .fetch_all(pool)
     .await
@@ -181,6 +182,8 @@ pub struct MovementDetailRow {
     pub original_currency: Option<String>,
     pub fx_rate: String,
     pub reference: Option<String>,
+    #[allow(dead_code)]
+    pub document_number: Option<String>,
     pub reason: Option<String>,
     pub movement_date: String,
     pub warehouse_id: Option<String>,
@@ -233,6 +236,7 @@ pub async fn list_detailed_by_material(
             sm.original_currency,
             sm.fx_rate,
             sm.reference,
+            sm.document_number,
             sm.reason,
             sm.movement_date,
             sm.warehouse_id,
@@ -242,16 +246,16 @@ pub async fn list_detailed_by_material(
             COALESCE(c.name, cr.name) AS customer_name,
             COALESCE(s.name, sr2.name) AS supplier_name
         FROM stock_movements sm
-        LEFT JOIN unified_invoices ui ON sm.reference = ui.invoice_number AND (
+        LEFT JOIN unified_invoices ui ON COALESCE(sm.document_number, sm.reference) = ui.invoice_number AND (
             (sm.movement_type = 'Purchase' AND ui.invoice_type IN ('Purchase', 'PurchaseCosts')) OR
             (sm.movement_type = 'Sale' AND ui.invoice_type = 'Sales') OR
             (sm.movement_type = 'OpeningBalance' AND ui.invoice_type = 'OpeningBalance')
         )
         LEFT JOIN customers c         ON ui.customer_id  = c.id
         LEFT JOIN suppliers s         ON ui.supplier_id  = s.id
-        LEFT JOIN sales_returns sr    ON sm.reference = sr.return_number AND sm.movement_type = 'SalesReturn'
+        LEFT JOIN sales_returns sr    ON COALESCE(sm.document_number, sm.reference) = sr.return_number AND sm.movement_type = 'SalesReturn'
         LEFT JOIN customers cr        ON sr.customer_id = cr.id
-        LEFT JOIN purchase_returns pr ON sm.reference = pr.return_number AND sm.movement_type = 'PurchaseReturn'
+        LEFT JOIN purchase_returns pr ON COALESCE(sm.document_number, sm.reference) = pr.return_number AND sm.movement_type = 'PurchaseReturn'
         LEFT JOIN suppliers sr2       ON pr.supplier_id = sr2.id
         LEFT JOIN warehouses w        ON sm.warehouse_id = w.id
         WHERE sm.material_id = ?
@@ -309,4 +313,16 @@ pub async fn list_detailed_by_material(
     }
 
     Ok(result)
+}
+
+pub async fn get_next_inventory_reference(pool: &SqlitePool) -> Result<String, AppError> {
+    let row: Option<(Option<i64>,)> = sqlx::query_as(
+        "SELECT MAX(CAST(reference AS INTEGER)) FROM stock_movements WHERE reference GLOB '[0-9]*'"
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    let max_val = row.and_then(|r| r.0).unwrap_or(0);
+    Ok((max_val + 1).to_string())
 }

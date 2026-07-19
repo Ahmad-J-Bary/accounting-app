@@ -71,8 +71,7 @@ impl CreateDamagedItemUseCase {
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
 
-        let count = self.repo.count().await?;
-        let reference = format!("{}", count + 1);
+        let reference = self.movement_repo.get_next_inventory_reference().await?;
         item.reference = Some(reference.clone());
         self.repo.save(&item).await?;
 

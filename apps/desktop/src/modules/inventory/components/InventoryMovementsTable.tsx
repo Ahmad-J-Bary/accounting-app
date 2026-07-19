@@ -201,6 +201,7 @@ export function InventoryMovementsTable({
 
   const handleExport = useCallback(async () => {
     const exportColumns: ExcelExportColumn[] = [
+      { id: "reference", label: "رقم", accessor: (row) => parseInt((row as unknown as StockMovement).reference ?? "0", 10) || 0 },
       { id: "product_name", label: "المادة", accessor: (row) => String((row as unknown as StockMovement).material_name ?? "") },
       { id: "type", label: "النوع", accessor: (row) => {
         const m = row as unknown as StockMovement;
@@ -230,7 +231,6 @@ export function InventoryMovementsTable({
           return cost !== 0 ? formatAmount(cost, { currencyCode: curr.code }) : "—";
         },
       })),
-      { id: "reference", label: "المرجع", accessor: (row) => parseInt((row as unknown as StockMovement).reference ?? "0", 10) || 0 },
       { id: "notes", label: "ملاحظة / التوصيف / السبب", accessor: (row) => getCleanNotes(row as unknown as StockMovement) },
       { id: "date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as StockMovement).movement_date) },
     ];
@@ -245,6 +245,16 @@ export function InventoryMovementsTable({
 
   const allColumns = useMemo<UnifiedColumn<StockMovement>[]>(() => {
     const cols: UnifiedColumn<StockMovement>[] = [
+      {
+        id: 'reference',
+        header: 'رقم',
+        label: 'رقم',
+        accessor: (m) => m.reference ? (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-blue-50 text-blue-700 border border-blue-100">
+            {formatNumber(parseInt(m.reference) || 0)}
+          </span>
+        ) : '—',
+      },
       {
         id: 'product_name',
         header: 'المادة',
@@ -351,16 +361,6 @@ export function InventoryMovementsTable({
     });
 
     cols.push(
-      {
-        id: 'reference',
-        header: 'المرجع',
-        label: 'المرجع',
-        accessor: (m) => m.reference ? (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-blue-50 text-blue-700 border border-blue-100">
-            {formatNumber(parseInt(m.reference) || 0)}
-          </span>
-        ) : '—',
-      },
       {
         id: 'notes',
         header: 'ملاحظة / التوصيف / السبب',

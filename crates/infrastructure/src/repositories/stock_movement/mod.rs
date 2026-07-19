@@ -25,6 +25,7 @@ pub struct StockMovementRow {
     pub movement_type: String,
     pub reason: Option<String>,
     pub reference: Option<String>,
+    pub document_number: Option<String>,
     pub movement_date: String,
     pub created_at: String,
 }
@@ -75,5 +76,9 @@ impl StockMovementRepository for SqliteStockMovementRepository {
 
     async fn delete_by_reference(&self, reference: &str, movement_type: &str) -> Result<(), AppError> {
         commands::delete_by_reference(&self.pool, reference, movement_type).await
+    }
+
+    async fn get_next_inventory_reference(&self) -> Result<String, AppError> {
+        queries::get_next_inventory_reference(&self.pool).await
     }
 }
