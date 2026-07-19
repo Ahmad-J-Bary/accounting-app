@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from "@shared/ui/button";
 import { Plus, Download } from "lucide-react";
 import { damagedService } from '@modules/inventory/api/damagedService';
@@ -17,6 +18,8 @@ import type { ExcelExportColumn } from "@shared/lib/excel";
     import { formatDateTime, formatNumber, toLocalString, getNumberingSystem } from "@shared/lib/format";
 
 export default function DamagedPage() {
+  const queryClient = useQueryClient();
+
   const {
     filtered: items,
     loading: itemsLoading,
@@ -56,13 +59,14 @@ export default function DamagedPage() {
       await damagedService.create(payload);
       setShowDialog(false);
       refresh(true);
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
       toast.success("تم تسجيل التالف بنجاح");
     } catch (e: unknown) {
       toast.error("فشل الحفظ: " + e);
     } finally {
       setSaving(false);
     }
-  }, [refresh]);
+  }, [refresh, queryClient]);
 
   const handleUpdate = useCallback(async (payload: CreateDamagedItemRequest) => {
     if (!selectedItem) return;
@@ -76,13 +80,14 @@ export default function DamagedPage() {
       setShowDialog(false);
       setSelectedItem(null);
       refresh(true);
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
       toast.success("تم التعديل بنجاح");
     } catch (e: unknown) {
       toast.error("فشل التعديل: " + e);
     } finally {
       setSaving(false);
     }
-  }, [selectedItem, refresh]);
+  }, [selectedItem, refresh, queryClient]);
 
   const handleSave = useCallback(async (payload: CreateDamagedItemRequest) => {
     if (selectedItem) {
@@ -100,10 +105,11 @@ export default function DamagedPage() {
       setSelectedItem(null);
       setShowDialog(false);
       refresh(true);
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
     } catch (e) {
       toast.error("فشل الحذف: " + e);
     }
-  }, [refresh]);
+  }, [refresh, queryClient]);
 
   const handleView = useCallback((item: DamagedItem) => {
     setSelectedItem(item);

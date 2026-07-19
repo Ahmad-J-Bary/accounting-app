@@ -47,6 +47,9 @@ impl UpdateTransferUseCase {
         self.movement_repo.delete_by_reference(&req.reference, "Out").await?;
         self.movement_repo.delete_by_reference(&req.reference, "In").await?;
 
+        let base_notes = req.notes.clone().unwrap_or_default();
+        let transfer_notes = format!("{} - رقم الفاتورة {}", base_notes, req.reference);
+
         let mut source_movement = StockMovement::new(
             material_id,
             MovementType::Out,
@@ -54,10 +57,11 @@ impl UpdateTransferUseCase {
             Decimal::ZERO,
             Decimal::ZERO,
             req.reference.clone(),
-            req.notes.clone().unwrap_or_default(),
+            transfer_notes.clone(),
             transfer_date,
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
         source_movement.warehouse_id = Some(source_wh_id);
+        source_movement.document_number = Some(req.reference.clone());
 
         let mut dest_movement = StockMovement::new(
             material_id,
@@ -66,10 +70,11 @@ impl UpdateTransferUseCase {
             Decimal::ZERO,
             Decimal::ZERO,
             req.reference.clone(),
-            req.notes.clone().unwrap_or_default(),
+            transfer_notes,
             transfer_date,
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
         dest_movement.warehouse_id = Some(dest_wh_id);
+        dest_movement.document_number = Some(req.reference.clone());
 
         let source_id = source_movement.id.to_string();
         let dest_id = dest_movement.id.to_string();

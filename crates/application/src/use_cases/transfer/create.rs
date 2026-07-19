@@ -57,6 +57,8 @@ impl CreateTransferUseCase {
             .with_timezone(&Utc);
 
         let reference = self.movement_repo.get_next_inventory_reference().await?;
+        let base_notes = req.notes.clone().unwrap_or_default();
+        let transfer_notes = format!("{} - رقم الفاتورة {}", base_notes, reference);
 
         let mut source_movement = StockMovement::new(
             material_id,
@@ -65,10 +67,11 @@ impl CreateTransferUseCase {
             Decimal::ZERO,
             Decimal::ZERO,
             reference.clone(),
-            req.notes.clone().unwrap_or_default(),
+            transfer_notes.clone(),
             transfer_date,
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
         source_movement.warehouse_id = Some(source_wh_id);
+        source_movement.document_number = Some(reference.clone());
 
         let mut dest_movement = StockMovement::new(
             material_id,
@@ -77,10 +80,11 @@ impl CreateTransferUseCase {
             Decimal::ZERO,
             Decimal::ZERO,
             reference.clone(),
-            req.notes.clone().unwrap_or_default(),
+            transfer_notes,
             transfer_date,
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
         dest_movement.warehouse_id = Some(dest_wh_id);
+        dest_movement.document_number = Some(reference.clone());
 
         let source_id = source_movement.id.to_string();
         let dest_id = dest_movement.id.to_string();

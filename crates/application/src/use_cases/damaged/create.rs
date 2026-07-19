@@ -71,26 +71,30 @@ impl CreateDamagedItemUseCase {
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
 
-        let reference = self.movement_repo.get_next_inventory_reference().await?;
-        item.reference = Some(reference.clone());
+        let display_ref = self.repo.get_next_reference().await?;
+        item.reference = Some(display_ref.clone());
         self.repo.save(&item).await?;
+
+        let inventory_ref = self.movement_repo.get_next_inventory_reference().await?;
 
         let unit_cost = if quantity > Decimal::ZERO {
             cost_impact / quantity
         } else {
             Decimal::ZERO
         };
-        let movement = StockMovement::new(
+        let movement_notes = format!("{} - رقم الفاتورة {}", req.reason.clone(), display_ref);
+        let mut movement = StockMovement::new(
             item.material_id,
             MovementType::Damaged,
             quantity,
             unit_cost,
             cost_impact,
-            reference.clone(),
-            req.reason.clone(),
+            inventory_ref.clone(),
+            movement_notes,
             damage_date,
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
+        movement.document_number = Some(display_ref.clone());
         self.movement_repo.save(&movement).await?;
 
         // Create journal entry: Dr 45 (خسائر المواد التالفة والتسويات), Cr 1241 (بضاعة آخر المدة)
@@ -98,11 +102,11 @@ impl CreateDamagedItemUseCase {
             &self.account_repo,
             &self.journal_repo,
             cost_impact,
-            &reference,
+            &display_ref,
             damage_date,
         ).await?;
 
-        Ok(to_dto(item, Some(reference)))
+        Ok(to_dto(item, Some(display_ref)))
     }
 }
 

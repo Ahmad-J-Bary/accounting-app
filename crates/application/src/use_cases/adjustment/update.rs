@@ -73,16 +73,18 @@ impl UpdateStockAdjustmentUseCase {
         adjustment.adjustment_date = adjustment_date;
 
         // Delete old stock movement
-        let reference = adjustment.reference.clone().unwrap_or_else(|| adjustment.id.to_string());
+        let display_ref = adjustment.reference.clone().unwrap_or_else(|| adjustment.id.to_string());
 
         // Delete old journal entry
-        if let Ok(Some(entry)) = self.journal_repo.find_by_source_id(&reference).await {
+        if let Ok(Some(entry)) = self.journal_repo.find_by_source_id(&display_ref).await {
             self.journal_repo.delete(&entry.id).await?;
         }
 
-        self.movement_repo.delete_by_reference(&reference, "Adjustment").await?;
+        self.movement_repo.delete_by_reference(&display_ref, "Adjustment").await?;
 
         self.adjustment_repo.save(&adjustment).await?;
+
+        let inventory_ref = self.movement_repo.get_next_inventory_reference().await?;
 
         // Create new stock movement
         let difference = adjustment.difference;
@@ -98,22 +100,24 @@ impl UpdateStockAdjustmentUseCase {
             } else {
                 Decimal::ZERO
             };
-            let movement_notes = if let Some(ref user_notes) = adjustment.notes {
+            let base_notes = if let Some(ref user_notes) = adjustment.notes {
                 format!("{} - {}", notes, user_notes)
             } else {
                 notes
             };
+            let movement_notes = format!("{} - رقم الفاتورة {}", base_notes, display_ref);
             let mut movement = StockMovement::new(
                 adjustment.material_id,
                 MovementType::Adjustment,
                 abs_diff,
                 quantity_unit_cost,
                 unit_cost,
-                reference.clone(),
+                inventory_ref.clone(),
                 movement_notes,
                 adjustment.adjustment_date,
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
             movement.signed_quantity = Some(difference);
+            movement.document_number = Some(display_ref.clone());
             self.movement_repo.save(&movement).await?;
 
             // Create journal entry for adjustment
@@ -122,7 +126,7 @@ impl UpdateStockAdjustmentUseCase {
                 &self.journal_repo,
                 unit_cost,
                 difference,
-                &reference,
+                &display_ref,
                 adjustment.adjustment_date,
             ).await?;
         }

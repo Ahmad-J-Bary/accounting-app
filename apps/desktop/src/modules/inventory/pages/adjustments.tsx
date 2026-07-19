@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from "@shared/ui/button";
 import { Plus, Eye, Settings2, Trash2, Download } from "lucide-react";
 import { adjustmentService } from '@modules/inventory/api/adjustmentService';
@@ -18,6 +19,8 @@ import type { ExcelExportColumn } from "@shared/lib/excel";
 import { formatDateTime, formatNumber, toFixed, getNumberingSystem } from "@shared/lib/format";
 
 export default function AdjustmentsPage() {
+  const queryClient = useQueryClient();
+
   const {
     filtered: adjustments,
     loading: adjLoading,
@@ -57,13 +60,14 @@ export default function AdjustmentsPage() {
       await adjustmentService.create(payload);
       setShowDialog(false);
       refresh(true);
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
       toast.success("تم تسجيل تسوية الجرد بنجاح");
     } catch (e: unknown) {
       toast.error("فشل الحفظ: " + e);
     } finally {
       setSaving(false);
     }
-  }, [refresh]);
+  }, [refresh, queryClient]);
 
   const handleUpdate = useCallback(async (payload: CreateStockAdjustmentRequest) => {
     if (!selectedItem) return;
@@ -82,13 +86,14 @@ export default function AdjustmentsPage() {
       setShowDialog(false);
       setSelectedItem(null);
       refresh(true);
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
       toast.success("تم تعديل التسوية بنجاح");
     } catch (e: unknown) {
       toast.error("فشل التعديل: " + e);
     } finally {
       setSaving(false);
     }
-  }, [selectedItem, refresh]);
+  }, [selectedItem, refresh, queryClient]);
 
   const handleSave = useCallback(async (payload: CreateStockAdjustmentRequest) => {
     if (selectedItem) {
@@ -106,10 +111,11 @@ export default function AdjustmentsPage() {
       setSelectedItem(null);
       setShowDialog(false);
       refresh(true);
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
     } catch (e) {
       toast.error("فشل الحذف: " + e);
     }
-  }, [refresh]);
+  }, [refresh, queryClient]);
 
   const handleView = useCallback((item: StockAdjustment) => {
     setSelectedItem(item);

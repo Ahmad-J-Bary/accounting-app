@@ -63,6 +63,8 @@ impl RecordOpeningStockUseCase {
                 .map_err(|_| AppError::Invalid("سعر تكلفة (أساسي) غير صالح".into()))?;
 
             let ref_no = self.movement_repo.get_next_inventory_reference().await?;
+            let base_notes = req.notes.clone().unwrap_or_default();
+            let movement_notes = format!("{} - رقم الفاتورة OP-STOCK", base_notes);
             let mut movement = StockMovement::new(
                 material.id,
                 MovementType::OpeningBalance,
@@ -70,7 +72,7 @@ impl RecordOpeningStockUseCase {
                 unit_cost,
                 quantity * unit_cost,
                 ref_no,
-                req.notes.clone().unwrap_or_default(),
+                movement_notes,
                 entry_date,
             )
             .map_err(|e| AppError::Invalid(e.to_string()))?;

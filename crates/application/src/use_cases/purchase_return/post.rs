@@ -93,6 +93,11 @@ impl PostPurchaseReturnUseCase {
                 .unwrap_or_default();
 
             let ref_no = self.movement_repo.get_next_inventory_reference().await?;
+            let movement_notes = if custom_notes.is_empty() {
+                format!("مرتجع مشتريات رقم {} - رقم الفاتورة {}", ret.return_number, ret.return_number)
+            } else {
+                format!("{} - رقم الفاتورة {}", custom_notes, ret.return_number)
+            };
             let mut movement = StockMovement::new(
                 line.material_id,
                 MovementType::PurchaseReturn,
@@ -100,7 +105,7 @@ impl PostPurchaseReturnUseCase {
                 unit_cost,
                 total_cost,
                 ref_no,
-                format!("مرتجع مشتريات رقم {} - {}", ret.return_number, custom_notes),
+                movement_notes,
                 Utc::now(),
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
             movement.document_number = Some(ret.return_number.clone());

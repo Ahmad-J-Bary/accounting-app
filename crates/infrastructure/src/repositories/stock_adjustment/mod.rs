@@ -42,4 +42,8 @@ impl StockAdjustmentRepository for SqliteStockAdjustmentRepository {
     async fn count(&self) -> Result<i64, AppError> {
         queries::count(&self.pool).await
     }
+
+    async fn get_next_reference(&self) -> Result<String, AppError> {
+        queries::get_next_reference(&self.pool).await
+    }
 }

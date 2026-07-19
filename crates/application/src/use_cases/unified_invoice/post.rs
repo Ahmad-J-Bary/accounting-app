@@ -330,13 +330,13 @@ impl PostInvoiceUseCase {
                 Decimal::ZERO
             };
 
-            let auto_notes = format!("{:?} بموجب فاتورة رقم {} ({} x {})", invoice.invoice_type, invoice.invoice_number, line.quantity, conversion_factor);
-            let movement_notes = line.notes.clone()
+            let base_notes = line.notes.clone()
                 .filter(|n| !n.trim().is_empty())
                 .or_else(|| {
                     invoice.notes.clone().filter(|n| !n.trim().is_empty())
                 })
-                .unwrap_or(auto_notes);
+                .unwrap_or_default();
+            let movement_notes = format!("{} - رقم الفاتورة {}", base_notes, invoice.invoice_number);
             let ref_no = self.movement_repo.get_next_inventory_reference().await?;
             let mut movement = StockMovement::new(
                 line.material_id,

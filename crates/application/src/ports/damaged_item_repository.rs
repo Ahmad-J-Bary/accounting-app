@@ -10,4 +10,5 @@ pub trait DamagedItemRepository: Send + Sync {
     async fn list_all(&self) -> Result<Vec<DamagedItem>, AppError>;
     async fn delete(&self, id: &DamagedItemId) -> Result<(), AppError>;
     async fn count(&self) -> Result<i64, AppError>;
+    async fn get_next_reference(&self) -> Result<String, AppError>;
 }

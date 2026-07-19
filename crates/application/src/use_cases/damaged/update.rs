@@ -95,17 +95,19 @@ impl UpdateDamagedItemUseCase {
         } else {
             Decimal::ZERO
         };
-        let movement = StockMovement::new(
+        let movement_notes = format!("{} - رقم الفاتورة {}", req.reason, reference);
+        let mut movement = StockMovement::new(
             item.material_id,
             MovementType::Damaged,
             quantity,
             unit_cost,
             cost_impact,
             reference.clone(),
-            req.reason,
+            movement_notes,
             damage_date,
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
+        movement.document_number = Some(reference.clone());
         self.movement_repo.save(&movement).await?;
 
         // Create new journal entry

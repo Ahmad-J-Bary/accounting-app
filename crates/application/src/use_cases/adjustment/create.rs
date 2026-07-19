@@ -64,9 +64,11 @@ impl CreateStockAdjustmentUseCase {
             adjustment_date,
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
-        let reference = self.movement_repo.get_next_inventory_reference().await?;
-        adjustment.reference = Some(reference.clone());
+        let display_ref = self.adjustment_repo.get_next_reference().await?;
+        adjustment.reference = Some(display_ref.clone());
         self.adjustment_repo.save(&adjustment).await?;
+
+        let inventory_ref = self.movement_repo.get_next_inventory_reference().await?;
 
         // Create a stock movement for inventory tracking
         let difference = adjustment.difference;
@@ -79,22 +81,24 @@ impl CreateStockAdjustmentUseCase {
             };
             let quantity_unit_cost = unit_cost / abs_diff;
             let total_cost_value = unit_cost;
-            let movement_notes = if let Some(ref user_notes) = req.notes {
+            let base_notes = if let Some(ref user_notes) = req.notes {
                 format!("{} - {}", notes, user_notes)
             } else {
                 notes
             };
+            let movement_notes = format!("{} - رقم الفاتورة {}", base_notes, display_ref);
             let mut movement = StockMovement::new(
                 adjustment.material_id,
                 MovementType::Adjustment,
                 abs_diff,
                 quantity_unit_cost,
                 total_cost_value,
-                reference.clone(),
+                inventory_ref.clone(),
                 movement_notes,
                 adjustment.adjustment_date,
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
             movement.signed_quantity = Some(difference);
+            movement.document_number = Some(display_ref.clone());
             self.movement_repo.save(&movement).await?;
 
             // Create journal entry for adjustment
@@ -103,7 +107,7 @@ impl CreateStockAdjustmentUseCase {
                 &self.journal_repo,
                 unit_cost,
                 difference,
-                &reference,
+                &display_ref,
                 adjustment.adjustment_date,
             ).await?;
         }

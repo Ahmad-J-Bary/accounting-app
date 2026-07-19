@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from "@shared/ui/button";
 
 import { Save, X, Loader2 } from "lucide-react";
@@ -30,6 +31,7 @@ interface ReturnsEditorProps {
 }
 
 export function ReturnsEditor({ returnType, partyType, parties, materials, warehouses, onSaved, onClose, returnId, readOnly = false }: ReturnsEditorProps) {
+  const queryClient = useQueryClient();
   const isSales = returnType === "SalesReturn";
   const [saving, setSaving] = useState(false);
   const [loadingExisting, setLoadingExisting] = useState(false);
@@ -402,6 +404,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
       }
 
       toast.success(returnId ? "تم تحديث المرتجع بنجاح" : "تم تسجيل المرتجع بنجاح");
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
       onSaved();
     } catch (e) {
       toast.error("فشل " + (returnId ? "تحديث" : "تسجيل") + " المرتجع: " + e);

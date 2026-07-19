@@ -25,6 +25,17 @@ pub async fn count(pool: &SqlitePool) -> Result<i64, AppError> {
         .map_err(|e| AppError::Infrastructure(e.to_string()))
 }
 
+pub async fn get_next_reference(pool: &SqlitePool) -> Result<String, AppError> {
+    let row: Option<(Option<i64>,)> = sqlx::query_as(
+        "SELECT COALESCE(MAX(CAST(reference AS INTEGER)), 0) + 1 FROM damaged_items WHERE reference GLOB '[0-9]*'"
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let max_val = row.and_then(|r| r.0).unwrap_or(1);
+    Ok(max_val.to_string())
+}
+
 pub async fn list_all(pool: &SqlitePool) -> Result<Vec<DamagedItem>, AppError> {
     let rows = sqlx::query_as::<_, DamagedItemRow>(
         &format!("SELECT {} FROM damaged_items ORDER BY damage_date DESC", COLUMNS)

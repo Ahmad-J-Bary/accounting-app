@@ -265,13 +265,13 @@ impl PostPurchaseInvoiceUseCase {
                 // Calculate effective quantity in base units
                 let effective_quantity = item.quantity * item.conversion_factor.unwrap_or(rust_decimal::Decimal::ONE);
 
-                let auto_notes = format!("شراء بموجب فاتورة مشتريات رقم {}", invoice.invoice_number);
-                let movement_notes = item.notes.clone()
+                let base_notes = item.notes.clone()
                     .filter(|n| !n.trim().is_empty())
                     .or_else(|| {
                         invoice.notes.clone().filter(|n| !n.trim().is_empty())
                     })
-                    .unwrap_or(auto_notes);
+                    .unwrap_or_default();
+                let movement_notes = format!("{} - رقم الفاتورة {}", base_notes, invoice.invoice_number);
                 let ref_no = self.movement_repo.get_next_inventory_reference().await?;
                 let mut movement = StockMovement::new(
                     material.id,
