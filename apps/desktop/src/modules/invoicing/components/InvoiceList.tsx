@@ -106,111 +106,125 @@ export function InvoiceList({
   const partyLabel = partyType === "supplier" ? "المورد" : "الزبون";
   const defaultName = partyType === "supplier" ? "مورد نقدي" : "زبون نقدي";
 
-  const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
+  const { currencies, baseCurrency } = useCurrencyContext();
 
   const { exportData } = useExcelExport();
 
   const handleExport = useCallback(async () => {
     const currencyCols: ExcelExportColumn[] = [];
+    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
 
     if (showSubtotal) {
       currencies.forEach(curr => {
+        const colId = `subtotal_${curr.code}`;
+        summary[colId] = 'subtotal';
         currencyCols.push({
-          id: `subtotal_${curr.code}`,
+          id: colId,
           label: `مجموع الأسعار (${curr.symbol || curr.code})`,
           accessor: (row) => {
             const inv = row as unknown as InvoiceDto;
-            const baseAmt = getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
-            if (baseAmt === 0) return "";
-            return formatAmount(baseAmt, { currencyCode: curr.code });
+            return getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
           },
+          numeric: true,
+          decimalPlaces: 2,
         });
       });
     }
 
     if (showDiscountGranted) {
       currencies.forEach(curr => {
+        const colId = `discount_granted_${curr.code}`;
+        summary[colId] = 'subtotal';
         currencyCols.push({
-          id: `discount_granted_${curr.code}`,
+          id: colId,
           label: `خصوم ممنوحة (${curr.symbol || curr.code})`,
           accessor: (row) => {
             const inv = row as unknown as InvoiceDto;
-            const baseAmt = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
-            if (baseAmt === 0) return "";
-            return formatAmount(baseAmt, { currencyCode: curr.code });
+            return getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
           },
+          numeric: true,
+          decimalPlaces: 2,
         });
       });
     }
 
     if (showDiscount) {
       currencies.forEach(curr => {
+        const colId = `discount_${curr.code}`;
+        summary[colId] = 'subtotal';
         currencyCols.push({
-          id: `discount_${curr.code}`,
+          id: colId,
           label: `خصوم مكتسبة (${curr.symbol || curr.code})`,
           accessor: (row) => {
             const inv = row as unknown as InvoiceDto;
-            const baseAmt = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
-            if (baseAmt === 0) return "";
-            return formatAmount(baseAmt, { currencyCode: curr.code });
+            return getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
           },
+          numeric: true,
+          decimalPlaces: 2,
         });
       });
     }
 
     if (showExtraCosts) {
       currencies.forEach(curr => {
+        const colId = `extra_costs_${curr.code}`;
+        summary[colId] = 'subtotal';
         currencyCols.push({
-          id: `extra_costs_${curr.code}`,
+          id: colId,
           label: `التكاليف الإضافية (${curr.symbol || curr.code})`,
           accessor: (row) => {
             const inv = row as unknown as InvoiceDto;
-            const baseAmt = getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
-            if (baseAmt === 0) return "";
-            return formatAmount(baseAmt, { currencyCode: curr.code });
+            return getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
           },
+          numeric: true,
+          decimalPlaces: 2,
         });
       });
     }
 
     currencies.forEach(curr => {
+      const totalId = `total_${curr.code}`;
+      const paidId = `paid_${curr.code}`;
+      const remainingId = `remaining_${curr.code}`;
+      summary[totalId] = 'subtotal';
+      summary[paidId] = 'subtotal';
+      summary[remainingId] = 'subtotal';
+
+      // Build formula: subtotal - discount(s) + extra_costs
+      let totalFormula = `{col('subtotal_${curr.code}')}{row}`;
+      if (showDiscount) {
+        totalFormula += `-{col('discount_${curr.code}')}{row}`;
+      } else if (showDiscountGranted) {
+        totalFormula += `-{col('discount_granted_${curr.code}')}{row}`;
+      }
+      if (showExtraCosts) {
+        totalFormula += `+{col('extra_costs_${curr.code}')}{row}`;
+      }
+
       currencyCols.push({
-        id: `total_${curr.code}`,
+        id: totalId,
         label: `المجموع الكلي (${curr.symbol || curr.code})`,
-        accessor: (row) => {
-          const inv = row as unknown as InvoiceDto;
-          const s = getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
-          const d = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
-          const e = getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
-          const total = s - d + e;
-          if (total === 0) return "";
-          return formatAmount(total, { currencyCode: curr.code });
-        },
+        formula: totalFormula,
+        numeric: true,
+        decimalPlaces: 2,
       });
       currencyCols.push({
-        id: `paid_${curr.code}`,
+        id: paidId,
         label: `المبلغ المدفوع (${curr.symbol || curr.code})`,
         accessor: (row) => {
           const inv = row as unknown as InvoiceDto;
-          const baseAmt = getInvoiceBaseAmount(inv.amount_paid, inv.amount_paid_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
-          if (baseAmt === 0) return "";
-          return formatAmount(baseAmt, { currencyCode: curr.code });
+          return getInvoiceBaseAmount(inv.amount_paid, inv.amount_paid_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
         },
+        numeric: true,
+        decimalPlaces: 2,
       });
+      // remaining = total - paid
       currencyCols.push({
-        id: `remaining_${curr.code}`,
+        id: remainingId,
         label: `المبلغ المتبقي (${curr.symbol || curr.code})`,
-        accessor: (row) => {
-          const inv = row as unknown as InvoiceDto;
-          const s = getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
-          const d = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
-          const e = getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
-          const p = getInvoiceBaseAmount(inv.amount_paid, inv.amount_paid_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
-          const total = s - d + e;
-          const remaining = total - p;
-          if (remaining === 0) return "";
-          return formatAmount(remaining, { currencyCode: curr.code });
-        },
+        formula: `{col('${totalId}')}{row}-{col('${paidId}')}{row}`,
+        numeric: true,
+        decimalPlaces: 2,
       });
     });
 
@@ -226,8 +240,8 @@ export function InvoiceList({
       { id: "issued_at", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as InvoiceDto).issued_at) },
     ];
 
-    await exportData(filtered as unknown as Record<string, unknown>[], columns, title, { sheetName: title, autoFilter: true });
-  }, [filtered, currencies, baseCurrency, formatAmount, partyType, partyLabel, defaultName, showSubtotal, showDiscountGranted, showDiscount, showExtraCosts, title, exportData]);
+    await exportData(filtered as unknown as Record<string, unknown>[], columns, title, { sheetName: title, autoFilter: true, summary, summaryLabel: "المجموع" });
+  }, [filtered, currencies, baseCurrency, partyType, partyLabel, defaultName, showSubtotal, showDiscountGranted, showDiscount, showExtraCosts, title, exportData]);
 
   return (
     <OperationalTableTemplate

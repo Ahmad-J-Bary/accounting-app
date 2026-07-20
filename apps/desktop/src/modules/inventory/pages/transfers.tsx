@@ -164,12 +164,12 @@ export default function Transfers() {
       { id: "material_name", label: "المادة", accessor: (row) => String((row as unknown as TransferRow).material_name ?? "") },
       { id: "source", label: "من مستودع", accessor: (row) => String((row as unknown as TransferRow).source_warehouse_name ?? "") },
       { id: "dest", label: "إلى مستودع", accessor: (row) => String((row as unknown as TransferRow).dest_warehouse_name ?? "") },
-      { id: "quantity", label: "الكمية", accessor: (row) => parseFloat((row as unknown as TransferRow).quantity || "0") },
+      { id: "quantity", label: "الكمية", accessor: (row) => parseFloat((row as unknown as TransferRow).quantity || "0"), numeric: true, decimalPlaces: 2 },
       { id: "reference", label: "المرجع", accessor: (row) => parseInt((row as unknown as TransferRow).reference ?? "0", 10) || 0 },
       { id: "notes", label: "ملاحظة", accessor: (row) => String((row as unknown as TransferRow).notes ?? "") },
       { id: "date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as TransferRow).transfer_date) },
     ];
-    await exportData(exportRows as unknown as Record<string, unknown>[], columns, "التحويلات", { sheetName: "التحويلات", autoFilter: true, numeralSystem: getNumberingSystem() });
+    await exportData(exportRows as unknown as Record<string, unknown>[], columns, "التحويلات", { sheetName: "التحويلات", autoFilter: true, numeralSystem: getNumberingSystem(), summary: { quantity: 'subtotal' }, summaryLabel: "المجموع" });
   }, [exportRows, exportData]);
 
   return (

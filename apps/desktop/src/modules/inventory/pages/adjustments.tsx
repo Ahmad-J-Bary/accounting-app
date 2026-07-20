@@ -16,7 +16,7 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useExcelExport } from "@shared/hooks";
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import type { ExcelExportColumn } from "@shared/lib/excel";
-import { formatDateTime, formatNumber, toFixed, getNumberingSystem } from "@shared/lib/format";
+import { formatDateTime, formatNumber, getNumberingSystem } from "@shared/lib/format";
 
 export default function AdjustmentsPage() {
   const queryClient = useQueryClient();
@@ -143,18 +143,24 @@ export default function AdjustmentsPage() {
   const { exportData } = useExcelExport();
 
   const handleExport = useCallback(async () => {
-    const currCols = currencyAmountCols("total_cost", "التكلفة", (row) => Math.abs(parseFloat((row as unknown as StockAdjustment).total_cost_base || "0")), currencies, formatAmount);
+    const currCols = currencyAmountCols("total_cost", "التكلفة", (row) => Math.abs(parseFloat((row as unknown as StockAdjustment).total_cost_base || "0")), currencies, formatAmount, "", true);
+    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {
+      system_quantity: 'subtotal',
+      actual_quantity: 'subtotal',
+      difference: 'subtotal',
+    };
+    currencies.forEach(curr => { summary[`total_cost_${curr.code}`] = 'subtotal'; });
     const columns: ExcelExportColumn[] = [
       { id: "id", label: "الرقم", accessor: (row) => formatNumber(parseInt((row as unknown as StockAdjustment).reference ?? "0", 10) || 0), numeric: true },
       { id: "material_name", label: "المادة", accessor: (row) => String((row as unknown as StockAdjustment).material_name ?? "") },
-      { id: "system_quantity", label: "كمية النظام", accessor: (row) => toFixed(parseFloat((row as unknown as StockAdjustment).system_quantity || "0"), 2), numeric: true },
-      { id: "actual_quantity", label: "الكمية المجرودة", accessor: (row) => toFixed(parseFloat((row as unknown as StockAdjustment).actual_quantity || "0"), 2), numeric: true },
-      { id: "difference", label: "الفارق", accessor: (row) => toFixed(parseFloat((row as unknown as StockAdjustment).difference || "0"), 2), numeric: true },
+      { id: "system_quantity", label: "كمية النظام", accessor: (row) => parseFloat((row as unknown as StockAdjustment).system_quantity || "0"), numeric: true, decimalPlaces: 2 },
+      { id: "actual_quantity", label: "الكمية المجرودة", accessor: (row) => parseFloat((row as unknown as StockAdjustment).actual_quantity || "0"), numeric: true, decimalPlaces: 2 },
+      { id: "difference", label: "الفارق", accessor: (row) => parseFloat((row as unknown as StockAdjustment).difference || "0"), numeric: true, decimalPlaces: 2 },
       ...currCols,
       { id: "notes", label: "ملاحظة", accessor: (row) => String((row as unknown as StockAdjustment).notes ?? (row as unknown as StockAdjustment).reason ?? "") },
       { id: "adjustment_date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as StockAdjustment).adjustment_date) },
     ];
-    await exportData(adjustments as unknown as Record<string, unknown>[], columns, "تسويات الجرد", { sheetName: "تسويات الجرد", autoFilter: true, numeralSystem: getNumberingSystem() });
+    await exportData(adjustments as unknown as Record<string, unknown>[], columns, "تسويات الجرد", { sheetName: "تسويات الجرد", autoFilter: true, numeralSystem: getNumberingSystem(), summary, summaryLabel: "المجموع" });
   }, [adjustments, currencies, formatAmount, exportData]);
 
   const handleCloseForm = useCallback(() => {

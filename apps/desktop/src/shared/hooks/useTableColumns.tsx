@@ -42,9 +42,11 @@ export function useTableColumns() {
         header: `الرصيد (${symbol})`,
         label: `الرصيد (${symbol})`,
         accessor: (item) => {
-          const absBal = Math.abs(Number(item.balance || 0));
-          if (absBal === 0) return "";
-          const baseAmount = toBase(absBal, item.currency || baseCurrency?.code || "");
+          const effectiveBalance = (item.debit !== undefined && item.credit !== undefined)
+            ? Number(item.debit || 0) - Number(item.credit || 0)
+            : Number(item.balance || 0);
+          if (effectiveBalance === 0) return "";
+          const baseAmount = toBase(effectiveBalance, item.currency || baseCurrency?.code || "");
           return formatAmount(baseAmount, { currencyCode: curr.code });
         },
         className: "tabular-nums font-black text-slate-900"
@@ -71,9 +73,11 @@ export function useTableColumns() {
     const overallColor = overallIsDebit ? 'text-red-600' : (totalBal !== 0 ? 'text-emerald-600' : 'text-slate-400');
 
     const baseTotal = items.reduce((sum, item) => {
-      const bal = Math.abs(Number(item.balance || 0));
-      if (bal === 0) return sum;
-      return sum + toBase(bal, item.currency || baseCurrency?.code || "");
+      const effectiveBalance = (item.debit !== undefined && item.credit !== undefined)
+        ? (Number(item.debit || 0) - Number(item.credit || 0)) * (isCreditFirst ? -1 : 1)
+        : Number(item.balance || 0);
+      if (effectiveBalance === 0) return sum;
+      return sum + toBase(effectiveBalance, item.currency || baseCurrency?.code || "");
     }, 0);
 
     const colIds = enrichedColumns.map(c => c.id);
@@ -102,7 +106,7 @@ export function useTableColumns() {
           id: `${id}_summary`,
           columnId: id,
           label: overall ? `الرصيد / ${overall}` : "—",
-          value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
+          value: baseTotal !== 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
           className: valueClass,
         };
       }

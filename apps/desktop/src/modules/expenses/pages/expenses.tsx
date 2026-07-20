@@ -138,7 +138,9 @@ export default function Expenses() {
       const absBal = Math.abs(Number(c.balance || 0));
       if (absBal === 0) return 0;
       return toBase(absBal, c.currency || "");
-    }, currencies, formatAmount);
+    }, currencies, formatAmount, "", true);
+    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
+    currencies.forEach(curr => { summary[`balance_${curr.code}`] = 'subtotal'; });
     const exportColumns: ExcelExportColumn[] = [
       { id: "code", label: "#", accessor: (row) => {
         const c = row as unknown as AccountDto;
@@ -157,7 +159,7 @@ export default function Expenses() {
       } },
       ...currCols,
     ];
-    await exportData(expenses as unknown as Record<string, unknown>[], exportColumns, "بنود المصاريف", { sheetName: "بنود المصاريف", autoFilter: true });
+    await exportData(expenses as unknown as Record<string, unknown>[], exportColumns, "بنود المصاريف", { sheetName: "بنود المصاريف", autoFilter: true, summary, summaryLabel: "المجموع" });
   }, [expenses, currencies, formatAmount, toBase, expensesParent, exportData]);
 
   const isLoading = loading || refreshing;

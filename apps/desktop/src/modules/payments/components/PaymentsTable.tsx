@@ -125,11 +125,15 @@ export function PaymentsTable({
   const { exportData } = useExcelExport();
 
   const handleExport = useCallback(async () => {
+    const INCOMING_TYPES = ["Receipt", "CashIn", "SupplierReceipt"];
     const currCols = currencyAmountCols("amount", "المبلغ", (row) => {
       const p = row as unknown as Payment;
       const amount = parseFloat(p.amount) || 0;
-      return toBase(amount, p.currency_code);
-    }, sortedCurrencies, formatAmount);
+      const baseAmount = toBase(amount, p.currency_code);
+      return INCOMING_TYPES.includes(p.payment_type) ? baseAmount : -baseAmount;
+    }, sortedCurrencies, formatAmount, "", true);
+    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
+    sortedCurrencies.forEach(curr => { summary[`amount_${curr.code}`] = 'subtotal'; });
 
     const exportColumns: ExcelExportColumn[] = [
       { id: "journal_entry_number", label: "رقم القيد", accessor: (row) => parseInt(String((row as Record<string, unknown>).journal_entry_number ?? "0"), 10) || 0 },
@@ -154,7 +158,7 @@ export function PaymentsTable({
       sortedData as unknown as Record<string, unknown>[],
       exportColumns,
       "السندات المالية",
-      { sheetName: "السندات المالية", autoFilter: true },
+      { sheetName: "السندات المالية", autoFilter: true, summary, summaryLabel: "المجموع" },
     );
   }, [sortedData, sortedCurrencies, accounts, formatAmount, toBase, exportData]);
 
@@ -198,7 +202,8 @@ export function PaymentsTable({
             const amount = parseFloat(p.amount) || 0;
             if (amount === 0) return "";
             const baseAmount = toBase(amount, p.currency_code);
-            return formatAmount(baseAmount, { currencyCode: curr.code });
+            const signed = ["Receipt", "CashIn", "SupplierReceipt"].includes(p.payment_type) ? baseAmount : -baseAmount;
+            return formatAmount(signed, { currencyCode: curr.code });
           },
           className: isBase
             ? "tabular-nums font-black text-slate-900"
@@ -293,10 +298,12 @@ export function PaymentsTable({
   });
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
+    const INCOMING_TYPES = ["Receipt", "CashIn", "SupplierReceipt"];
     const baseTotal = sortedData.reduce((sum, p) => {
       const amt = parseFloat(p.amount) || 0;
       if (amt === 0) return sum;
-      return sum + toBase(amt, p.currency_code);
+      const baseAmount = toBase(amt, p.currency_code);
+      return sum + (INCOMING_TYPES.includes(p.payment_type) ? baseAmount : -baseAmount);
     }, 0);
 
     return enrichedColumns.map((col) => {
@@ -318,7 +325,7 @@ export function PaymentsTable({
           id: `${id}_summary`,
           columnId: id,
           label: "الإجمالي",
-          value: baseTotal > 0
+          value: baseTotal !== 0
             ? formatAmount(baseTotal, { currencyCode: currCode })
             : "—",
           className: isBase

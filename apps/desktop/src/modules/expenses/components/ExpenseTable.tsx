@@ -139,9 +139,11 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
     const overallColor = totalBal > 0 ? 'text-red-600' : totalBal < 0 ? 'text-emerald-600' : 'text-slate-400';
 
     const baseTotal = sortedExpenses.reduce((sum, e) => {
-      const bal = Math.abs(Number(e.balance || 0));
-      if (bal === 0) return sum;
-      return sum + toBase(bal, e.currency || "");
+      const effBal = (e.debit !== undefined && e.credit !== undefined)
+        ? Number(e.debit || 0) - Number(e.credit || 0)
+        : Number(e.balance || 0);
+      if (effBal === 0) return sum;
+      return sum + toBase(effBal, e.currency || "");
     }, 0);
 
     return enrichedColumns.map((col) => {
@@ -161,7 +163,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
           id: `${id}_summary`,
           columnId: id,
           label: totalBal === 0 ? '—' : `الرصيد / ${statusLabel}`,
-          value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
+          value: baseTotal !== 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? `${overallColor} font-black`
             : 'text-slate-500 font-extrabold',

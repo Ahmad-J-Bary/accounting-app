@@ -200,6 +200,7 @@ export function InventoryMovementsTable({
   const { exportData } = useExcelExport();
 
   const handleExport = useCallback(async () => {
+    const summary: Record<string, string | null> = { quantity: 'subtotal' };
     const exportColumns: ExcelExportColumn[] = [
       { id: "reference", label: "رقم", accessor: (row) => parseInt((row as unknown as StockMovement).reference ?? "0", 10) || 0 },
       { id: "product_name", label: "المادة", accessor: (row) => String((row as unknown as StockMovement).material_name ?? "") },
@@ -220,17 +221,24 @@ export function InventoryMovementsTable({
       }},
       { id: "quantity", label: "الكمية", accessor: (row) => {
         const m = row as unknown as StockMovement;
-        return parseFloat(m.signed_quantity ?? m.quantity) || 0;
-      }},
-      ...currencies.map(curr => ({
-        id: `total_cost_${curr.code}`,
-        label: `التكلفة (${curr.symbol || curr.code})`,
-        accessor: (row: Record<string, unknown>) => {
-          const m = row as unknown as StockMovement;
-          const cost = baseCost(m);
-          return cost !== 0 ? formatAmount(cost, { currencyCode: curr.code }) : "—";
-        },
-      })),
+        if (m.signed_quantity != null) return parseFloat(m.signed_quantity) || 0;
+        const qty = parseFloat(m.quantity) || 0;
+        const cfg = getMovementType(m.movement_type);
+        return cfg.inflow ? qty : -qty;
+      }, numeric: true, decimalPlaces: 2 },
+      ...currencies.map(curr => {
+        summary[`total_cost_${curr.code}`] = `SUMPRODUCT(SIGN({col('quantity')}{firstRow}:{col('quantity')}{lastRow}), {col('total_cost_${curr.code}')}{firstRow}:{col('total_cost_${curr.code}')}{lastRow})`;
+        return {
+          id: `total_cost_${curr.code}`,
+          label: `التكلفة (${curr.symbol || curr.code})`,
+          accessor: (row: Record<string, unknown>) => {
+            const m = row as unknown as StockMovement;
+            return baseCost(m);
+          },
+          numeric: true,
+          decimalPlaces: 2,
+        };
+      }),
       { id: "notes", label: "ملاحظة / التوصيف / السبب", accessor: (row) => getCleanNotes(row as unknown as StockMovement) },
       { id: "date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as StockMovement).movement_date) },
     ];
@@ -239,9 +247,9 @@ export function InventoryMovementsTable({
       sortedData as unknown as Record<string, unknown>[],
       exportColumns,
       "حركات المخزون",
-      { sheetName: "حركات المخزون", autoFilter: true },
+      { sheetName: "حركات المخزون", autoFilter: true, summary, summaryLabel: "المجموع" },
     );
-  }, [sortedData, currencies, formatAmount, warehouseName, baseCost, transferRefs, exportData]);
+  }, [sortedData, currencies, warehouseName, baseCost, transferRefs, exportData]);
 
   const allColumns = useMemo<UnifiedColumn<StockMovement>[]>(() => {
     const cols: UnifiedColumn<StockMovement>[] = [
@@ -417,9 +425,14 @@ export function InventoryMovementsTable({
       if (costMatch) {
         const currCode = costMatch[1];
         const totalCost = sortedData.reduce((s, m) => {
-          const cfg = getMovementType(m.movement_type);
           const cost = baseCost(m);
-          return s + (cfg.inflow ? cost : -cost);
+          let sign = 0;
+          if (m.signed_quantity != null) {
+            sign = parseFloat(m.signed_quantity) >= 0 ? 1 : -1;
+          } else {
+            sign = getMovementType(m.movement_type).inflow ? 1 : -1;
+          }
+          return s + sign * cost;
         }, 0);
         const isBase = isBaseCurrency(currCode);
         return {

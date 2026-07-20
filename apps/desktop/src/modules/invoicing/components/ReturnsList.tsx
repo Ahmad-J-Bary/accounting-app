@@ -74,7 +74,9 @@ export function ReturnsList({
   const { exportData } = useExcelExport();
 
   const handleExport = useCallback(async () => {
-    const currCols = currencyAmountCols("total_amount", "الإجمالي", (row) => parseFloat((row as unknown as SalesReturnDto | PurchaseReturnDto).total_amount || "0"), currencies, formatAmount);
+    const currCols = currencyAmountCols("total_amount", "الإجمالي", (row) => parseFloat((row as unknown as SalesReturnDto | PurchaseReturnDto).total_amount || "0"), currencies, formatAmount, "", true);
+    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
+    currencies.forEach(curr => { summary[`total_amount_${curr.code}`] = 'subtotal'; });
 
     const columns: ExcelExportColumn[] = [
       { id: "return_number", label: "رقم المرتجع", accessor: (row) => parseInt((row as unknown as SalesReturnDto | PurchaseReturnDto).return_number ?? "0", 10) || 0 },
@@ -88,7 +90,7 @@ export function ReturnsList({
       { id: "return_date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as SalesReturnDto | PurchaseReturnDto).return_date) },
     ];
 
-    await exportData(filtered as unknown as Record<string, unknown>[], columns, title, { sheetName: title, autoFilter: true });
+    await exportData(filtered as unknown as Record<string, unknown>[], columns, title, { sheetName: title, autoFilter: true, summary, summaryLabel: "المجموع" });
   }, [filtered, currencies, formatAmount, partyLabel, title, exportData]);
 
   const handleDeleteSelected = async () => {

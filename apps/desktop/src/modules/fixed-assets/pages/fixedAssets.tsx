@@ -307,6 +307,7 @@ export default function FixedAssetsPage() {
   const { exportData } = useExcelExport();
 
   const handleExport = useCallback(async () => {
+    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
     const exportColumns: ExcelExportColumn[] = [
       { id: "code", label: "الكود", accessor: (row) => String((row as Record<string, unknown>).code ?? "") },
       { id: "name", label: "الاسم", accessor: (row) => String((row as Record<string, unknown>).name ?? "") },
@@ -315,55 +316,62 @@ export default function FixedAssetsPage() {
         const r = row as Record<string, unknown>;
         return r.warehouse_id ? warehouseMap.get(r.warehouse_id as string) ?? "" : "";
       }},
-      ...currencies.map(curr => ({
-        id: `purchase_cost_${curr.code}`,
-        label: `التكلفة (${curr.symbol || curr.code})`,
-        accessor: (row: Record<string, unknown>) => {
-          const r = row as unknown as FixedAssetDto;
-          const val = parseFloat(r.purchase_cost.amount);
-          if (Math.abs(val) === 0) return "";
-          if (curr.code === r.purchase_cost.currency.code) {
-            return formatAmount(val, { currencyCode: curr.code });
-          }
-          const rate = parseFloat(r.fx_rate) || 1;
-          return formatAmount(val / rate, { currencyCode: curr.code });
-        },
-      })),
-      ...currencies.map(curr => ({
-        id: `accumulated_depreciation_${curr.code}`,
-        label: `مجمع الإهلاك (${curr.symbol || curr.code})`,
-        accessor: (row: Record<string, unknown>) => {
-          const r = row as unknown as FixedAssetDto;
-          const val = parseFloat(r.accumulated_depreciation.amount);
-          if (val === 0 && r.useful_life_months === 0) return "لا ينطبق";
-          if (Math.abs(val) === 0) return "";
-          if (curr.code === r.accumulated_depreciation.currency.code) {
-            return formatAmount(val, { currencyCode: curr.code });
-          }
-          const rate = parseFloat(r.fx_rate) || 1;
-          return formatAmount(val / rate, { currencyCode: curr.code });
-        },
-      })),
-      ...currencies.map(curr => ({
-        id: `net_book_value_${curr.code}`,
-        label: `صافي القيمة (${curr.symbol || curr.code})`,
-        accessor: (row: Record<string, unknown>) => {
-          const r = row as unknown as FixedAssetDto;
-          const nbv = parseFloat(r.purchase_cost.amount) - parseFloat(r.accumulated_depreciation.amount);
-          if (Math.abs(nbv) === 0) return "";
-          if (curr.code === r.purchase_cost.currency.code) {
-            return formatAmount(nbv, { currencyCode: curr.code });
-          }
-          const rate = parseFloat(r.fx_rate) || 1;
-          return formatAmount(nbv / rate, { currencyCode: curr.code });
-        },
-      })),
+      ...currencies.map(curr => {
+        const purchaseId = `purchase_cost_${curr.code}`;
+        summary[purchaseId] = 'subtotal';
+        return {
+          id: purchaseId,
+          label: `التكلفة (${curr.symbol || curr.code})`,
+          accessor: (row: Record<string, unknown>) => {
+            const r = row as unknown as FixedAssetDto;
+            const val = parseFloat(r.purchase_cost.amount);
+            if (curr.code === r.purchase_cost.currency.code) {
+              return val;
+            }
+            const rate = parseFloat(r.fx_rate) || 1;
+            return val / rate;
+          },
+          numeric: true,
+          decimalPlaces: 2,
+        };
+      }),
+      ...currencies.map(curr => {
+        const depId = `accumulated_depreciation_${curr.code}`;
+        summary[depId] = 'subtotal';
+        return {
+          id: depId,
+          label: `مجمع الإهلاك (${curr.symbol || curr.code})`,
+          accessor: (row: Record<string, unknown>) => {
+            const r = row as unknown as FixedAssetDto;
+            const val = parseFloat(r.accumulated_depreciation.amount);
+            if (r.useful_life_months === 0) return 0;
+            if (curr.code === r.accumulated_depreciation.currency.code) {
+              return val;
+            }
+            const rate = parseFloat(r.fx_rate) || 1;
+            return val / rate;
+          },
+          numeric: true,
+          decimalPlaces: 2,
+        };
+      }),
+      ...currencies.map(curr => {
+        const nbvId = `net_book_value_${curr.code}`;
+        summary[nbvId] = 'subtotal';
+        return {
+          id: nbvId,
+          label: `صافي القيمة (${curr.symbol || curr.code})`,
+          formula: `{col('purchase_cost_${curr.code}')}{row}-{col('accumulated_depreciation_${curr.code}')}{row}`,
+          numeric: true,
+          decimalPlaces: 2,
+        };
+      }),
       { id: "notes", label: "التوصيف", accessor: (row) => String((row as Record<string, unknown>).notes ?? "") },
       { id: "created_at", label: "التاريخ", accessor: (row) => new Date((row as Record<string, unknown>).created_at as string).toLocaleString("ar-SA") },
     ];
 
-    await exportData(assets as unknown as Record<string, unknown>[], exportColumns, "الأصول الثابتة", { sheetName: "الأصول الثابتة", autoFilter: true });
-  }, [assets, currencies, formatAmount, categoryMap, warehouseMap, exportData]);
+    await exportData(assets as unknown as Record<string, unknown>[], exportColumns, "الأصول الثابتة", { sheetName: "الأصول الثابتة", autoFilter: true, summary, summaryLabel: "المجموع" });
+  }, [assets, currencies, categoryMap, warehouseMap, exportData]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["code", "name", "category"];

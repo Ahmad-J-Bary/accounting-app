@@ -546,7 +546,7 @@ export function JournalTable({
             id: `${id}_total`,
             columnId: id,
             label: col.label,
-            value: baseCreditTotal > 0 ? formatAmount(baseCreditTotal, { currencyCode: baseCurrency?.code }) : "—",
+            value: baseCreditTotal > 0 ? formatAmount(-baseCreditTotal, { currencyCode: baseCurrency?.code }) : "—",
             className: "text-emerald-700 font-black"
           };
         }
@@ -577,7 +577,7 @@ export function JournalTable({
           id: `${id}_total`,
           columnId: id,
           label,
-          value: baseCreditTotal > 0 ? formatAmount(baseCreditTotal, { currencyCode: currCode }) : "—",
+          value: baseCreditTotal > 0 ? formatAmount(-baseCreditTotal, { currencyCode: currCode }) : "—",
           className: isB
             ? "text-emerald-700 font-black"
             : "text-emerald-300 font-extrabold"
@@ -637,15 +637,15 @@ export function JournalTable({
       const debitMatch = col.id.match(/^debit_(.+)$/);
       if (debitMatch) {
         return row.side === "debit" && row.amount_base > 0
-          ? formatAmount(row.amount_base, { currencyCode: debitMatch[1] })
-          : "";
+          ? row.amount_base
+          : 0;
       }
 
       const creditMatch = col.id.match(/^credit_(.+)$/);
       if (creditMatch) {
         return row.side === "credit" && row.amount_base > 0
-          ? formatAmount(row.amount_base, { currencyCode: creditMatch[1] })
-          : "";
+          ? -row.amount_base
+          : 0;
       }
 
       const fallbackValue = typeof col.accessor === "function"
@@ -653,7 +653,7 @@ export function JournalTable({
         : row[col.accessor as keyof JournalTableRow];
       return getPrimitiveCellValue(fallbackValue as ReactNode);
     },
-    [formatAmount]
+    []
   );
 
   const getSingleLineExportValue = useCallback(
@@ -662,8 +662,8 @@ export function JournalTable({
       if (col.id === "journal_type") return row.journal_type_display;
       if (col.id === "description") return row.description;
       if (col.id === "entry_date") return formatDateTime(row.created_at);
-      if (col.id === "debit_base") return row.debit_amount_base > 0 ? formatAmount(row.debit_amount_base, { currencyCode: baseCurrency?.code }) : "";
-      if (col.id === "credit_base") return row.credit_amount_base > 0 ? formatAmount(row.credit_amount_base, { currencyCode: baseCurrency?.code }) : "";
+      if (col.id === "debit_base") return row.debit_amount_base > 0 ? row.debit_amount_base : 0;
+      if (col.id === "credit_base") return row.credit_amount_base > 0 ? -row.credit_amount_base : 0;
       if (col.id === "debit_accounts") return row.debit_account_names;
       if (col.id === "credit_accounts") return row.credit_account_names;
 
@@ -678,10 +678,21 @@ export function JournalTable({
   const { exportData } = useExcelExport();
 
   const handleExport = useCallback(async () => {
+    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
+
     const exportColumns: ExcelExportColumn[] = visibleColumns.map((col) => {
       const twoLineCol = col as UnifiedColumn<JournalTableRow>;
       const singleLineCol = col as UnifiedColumn<JournalSingleLineTableRow>;
       const label = getHeaderText(twoLineCol);
+
+      const isDebitCredit = isTwoLine
+        ? /^debit_|^credit_/.test(col.id)
+        : col.id === 'debit_base' || col.id === 'credit_base';
+
+      if (isDebitCredit) {
+        summary[col.id] = 'subtotal';
+      }
+
       return {
         id: col.id,
         label,
@@ -689,6 +700,7 @@ export function JournalTable({
         accessor: isTwoLine
           ? (record) => getTwoLineExportValue(record as unknown as JournalTableRow, twoLineCol)
           : (record) => getSingleLineExportValue(record as unknown as JournalSingleLineTableRow, singleLineCol),
+        ...(isDebitCredit ? { numeric: true, decimalPlaces: 2 } : {}),
       };
     });
 
@@ -699,6 +711,8 @@ export function JournalTable({
         sortedData as JournalTableRow[],
         visibleColumns.map((col) => col.id),
       ) : [],
+      summary: Object.keys(summary).length > 0 ? summary : undefined,
+      summaryLabel: "المجموع",
     };
 
     await exportData(

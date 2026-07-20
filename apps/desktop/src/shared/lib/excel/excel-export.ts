@@ -13,6 +13,8 @@ export interface ExcelExportColumn {
   imageWidth?: number;
   imageHeight?: number;
   numeric?: boolean;
+  decimalPlaces?: number;
+  formula?: string;
 }
 
 function extractBase64(dataUrl: string): { base64: string; extension: string } | null {
@@ -65,7 +67,7 @@ async function buildExcelJsWorkbook(
     : 0;
   const imageRowHeight = hasImages ? Math.ceil(maxImageHeight * 0.75) + 5 : 0;
 
-    const numeralSystem = options?.numeralSystem || "latn";
+  const numeralSystem = options?.numeralSystem || "latn";
 
   if (sortedData.length > 0) {
     sortedData.forEach((row, rowIdx) => {
@@ -74,18 +76,29 @@ async function buildExcelJsWorkbook(
 
       columns.forEach((col, colIdx) => {
         const cell = excelRow.getCell(colIdx + 1);
-        const val = getCellValue(row, col);
 
-        if (val !== null && val !== undefined && val !== "") {
-          const numVal = typeof val === "number" ? val : parseFloat(val as string) || 0;
-          if (!isNaN(numVal) && col.numeric) {
-            const locale = numeralSystem === "arab" ? "ar-SA" : "en-US";
-            const numFmt = numeralSystem === "arab" ? `[$-ar-SA]#,##0` : `[$-en-US]#,##0`;
-            cell.numFmt = numFmt;
+        if (col.formula) {
+          const excelRowNum = rowIdx + 2;
+          const formula = resolveFormula(col.formula, columns, excelRowNum);
+          cell.value = { formula };
+          const decimals = col.decimalPlaces ?? 0;
+          const fmt = numeralSystem === "arab" ? "[$-ar-SA]" : "[$-en-US]";
+          cell.numFmt = decimals > 0 ? fmt + `#,##0.${'0'.repeat(decimals)}` : fmt + '#,##0';
+        } else {
+          const val = getCellValue(row, col);
+
+          if (val !== null && val !== undefined && val !== "") {
+            const numVal = typeof val === "number" ? val : parseFloat(val as string) || 0;
+            if (!isNaN(numVal) && col.numeric) {
+              const decimals = col.decimalPlaces ?? 0;
+              const fmt = numeralSystem === "arab" ? "[$-ar-SA]" : "[$-en-US]";
+              cell.numFmt = decimals > 0 ? fmt + `#,##0.${'0'.repeat(decimals)}` : fmt + '#,##0';
+            }
           }
+
+          cell.value = val ?? '';
         }
 
-        cell.value = val ?? '';
         cell.font = { size: 10 };
         cell.alignment = { horizontal: 'center', vertical: 'middle' };
         cell.border = {
@@ -96,6 +109,32 @@ async function buildExcelJsWorkbook(
         };
       });
     });
+
+    if (options?.summary) {
+      const summaryRow = ws.getRow(sortedData.length + 2);
+      columns.forEach((col, colIdx) => {
+        const cell = summaryRow.getCell(colIdx + 1);
+        const cellValue = buildSummaryCellValue(col, colIdx, sortedData.length, columns, options);
+        if (cellValue.f) {
+          cell.value = { formula: cellValue.f.substring(1) };
+          cell.font = { bold: true, size: 10 };
+          const decimals = col.decimalPlaces ?? 0;
+          const fmt = numeralSystem === "arab" ? "[$-ar-SA]" : "[$-en-US]";
+          cell.numFmt = decimals > 0 ? fmt + `#,##0.${'0'.repeat(decimals)}` : fmt + '#,##0';
+        } else {
+          cell.value = cellValue.v ?? '';
+          cell.font = { bold: true, size: 10 };
+        }
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = {
+          top: { style: 'thin' },
+          bottom: { style: 'thin' },
+          left: { style: 'thin' },
+          right: { style: 'thin' },
+        };
+      });
+    }
   }
 
   if (hasImages) {
@@ -158,6 +197,8 @@ export interface ExcelExportOptions {
     compare?: (a: Record<string, unknown>, b: Record<string, unknown>) => number;
   };
   numeralSystem?: 'arab' | 'latn';
+  summary?: Record<string, string | null>;
+  summaryLabel?: string;
 }
 
 function getVisibleColumnIndex(columns: ExcelExportColumn[], columnId: string): number {
@@ -224,6 +265,18 @@ const DATA_STYLE = {
   },
 };
 
+const SUMMARY_STYLE = {
+  font: { bold: true, sz: 10 },
+  fill: { fgColor: { rgb: 'F1F5F9' } },
+  alignment: { horizontal: 'center' as const, vertical: 'center' as const },
+  border: {
+    top: { style: 'thin' as const, color: { auto: 1 } },
+    bottom: { style: 'thin' as const, color: { auto: 1 } },
+    left: { style: 'thin' as const, color: { auto: 1 } },
+    right: { style: 'thin' as const, color: { auto: 1 } },
+  },
+};
+
 function getCellValue(
   row: Record<string, unknown>,
   column: ExcelExportColumn,
@@ -266,6 +319,73 @@ function sortExportRows(
   });
 }
 
+function getExcelColumnLetter(index: number): string {
+  let letter = '';
+  let n = index;
+  while (n >= 0) {
+    letter = String.fromCharCode(65 + (n % 26)) + letter;
+    n = Math.floor(n / 26) - 1;
+  }
+  return letter;
+}
+
+function resolveFormula(template: string, columns: ExcelExportColumn[], rowIndex: number): string {
+  return template.replace(/\{col\('([^']+)'\)\}/g, (_, colId: string) => {
+    const idx = columns.findIndex(c => c.id === colId);
+    return idx >= 0 ? getExcelColumnLetter(idx) : '?';
+  }).replace(/\{row\}/g, String(rowIndex));
+}
+
+function buildSummaryCellValue(
+  col: ExcelExportColumn,
+  colIdx: number,
+  dataLength: number,
+  columns: ExcelExportColumn[],
+  options: ExcelExportOptions,
+): { v: string | number; f?: string } {
+  if (colIdx === 0 && options.summaryLabel) {
+    return { v: options.summaryLabel };
+  }
+
+  const aggType = options.summary?.[col.id];
+  if (!aggType) {
+    return { v: '' };
+  }
+
+  const colLetter = getExcelColumnLetter(colIdx);
+  const firstDataRow = 2;
+  const lastDataRow = dataLength + 1;
+
+  // Predefined aggregates
+  if (aggType === 'sum' || aggType === 'average' || aggType === 'subtotal') {
+    let formula: string;
+    switch (aggType) {
+      case 'sum':
+        formula = `SUM(${colLetter}${firstDataRow}:${colLetter}${lastDataRow})`;
+        break;
+      case 'average':
+        formula = `AVERAGE(${colLetter}${firstDataRow}:${colLetter}${lastDataRow})`;
+        break;
+      case 'subtotal':
+      default:
+        formula = `SUBTOTAL(109, ${colLetter}${firstDataRow}:${colLetter}${lastDataRow})`;
+        break;
+    }
+    return { v: 0, f: '=' + formula };
+  }
+
+  // Custom formula — resolve {col('id')}, {firstRow}, {lastRow}
+  const resolved = aggType
+    .replace(/\{col\('([^']+)'\)\}/g, (_, colId: string) => {
+      const idx = columns.findIndex(c => c.id === colId);
+      return idx >= 0 ? getExcelColumnLetter(idx) : '?';
+    })
+    .replace(/\{firstRow\}/g, String(firstDataRow))
+    .replace(/\{lastRow\}/g, String(lastDataRow));
+
+  return { v: 0, f: '=' + resolved };
+}
+
 function buildWorkbook(
   data: Record<string, unknown>[],
   columns: ExcelExportColumn[],
@@ -274,21 +394,57 @@ function buildWorkbook(
 ): XLSX.WorkBook {
   const sortedData = sortExportRows(data, columns, options?.sortBy);
   const headerRow = columns.map(col => ({ v: col.label, t: 's' as const, s: HEADER_STYLE }));
-  const dataRows = sortedData.map(row =>
+  const dataRows = sortedData.map((row, rowIdx) =>
     columns.map(col => {
+      if (col.formula) {
+        const excelRowNum = rowIdx + 2;
+        const formula = resolveFormula(col.formula, columns, excelRowNum);
+        return { f: '=' + formula, t: 'n' as const, s: DATA_STYLE };
+      }
+
       const val = getCellValue(row, col);
-      return { v: val ?? '', t: typeof val === 'number' ? ('n' as const) : ('s' as const), s: DATA_STYLE };
+      const cellStyle = { ...DATA_STYLE };
+      if (col.numeric && typeof val === 'number') {
+        const fmt = options?.numeralSystem === "arab" ? "[$-ar-SA]" : "[$-en-US]";
+        const decimals = col.decimalPlaces ?? 0;
+        cellStyle.numFmt = decimals > 0 ? fmt + `#,##0.${'0'.repeat(decimals)}` : fmt + '#,##0';
+      }
+      return { v: val ?? '', t: typeof val === 'number' ? ('n' as const) : ('s' as const), s: cellStyle };
     })
   );
 
-  const wsData = [headerRow, ...dataRows];
+  const wsData: (typeof headerRow) = [headerRow, ...dataRows];
+
+  if (options?.summary && sortedData.length > 0) {
+    const summaryRow = columns.map((col, colIdx) => {
+      const cellValue = buildSummaryCellValue(col, colIdx, sortedData.length, columns, options);
+      if (cellValue.f) {
+        const cellStyle = { ...SUMMARY_STYLE };
+        if (col.numeric) {
+          const fmt = options?.numeralSystem === "arab" ? "[$-ar-SA]" : "[$-en-US]";
+          const decimals = col.decimalPlaces ?? 0;
+          cellStyle.numFmt = decimals > 0 ? fmt + `#,##0.${'0'.repeat(decimals)}` : fmt + '#,##0';
+        }
+        return { f: cellValue.f, t: 'n' as const, s: cellStyle };
+      }
+      return { v: cellValue.v, t: typeof cellValue.v === 'number' ? ('n' as const) : ('s' as const), s: SUMMARY_STYLE };
+    });
+    wsData.push(summaryRow);
+  }
+
   const ws = XLSX.utils.aoa_to_sheet(wsData);
 
   ws['!cols'] = columns.map(col => ({
     hidden: col.hidden || false,
     wch: col.width ?? (col.hidden ? 0 : 12),
   }));
-  ws['!autofilter'] = options?.autoFilter === false ? undefined : { ref: ws['!ref'] || 'A1' };
+
+  if (options?.autoFilter !== false && sortedData.length > 0) {
+    const lastDataRow = sortedData.length + 1;
+    const lastColLetter = getExcelColumnLetter(columns.length - 1);
+    ws['!autofilter'] = { ref: `A1:${lastColLetter}${lastDataRow}` };
+  }
+
   applySheetMerges(ws, columns, options?.mergeCells);
 
   const wb = XLSX.utils.book_new();

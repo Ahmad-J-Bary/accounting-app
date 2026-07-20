@@ -132,9 +132,11 @@ export default function DamagedPage() {
   const { exportData } = useExcelExport();
 
   const handleExport = useCallback(async () => {
-    const currCols = currencyAmountCols("cost", "الخسارة", (row) => parseFloat((row as unknown as DamagedItem).cost_impact || "0"), currencies, formatAmount);
+    const currCols = currencyAmountCols("cost", "الخسارة", (row) => parseFloat((row as unknown as DamagedItem).cost_impact || "0"), currencies, formatAmount, "", true);
+    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = { quantity: 'subtotal' };
+    currencies.forEach(curr => { summary[`cost_${curr.code}`] = 'subtotal'; });
     const columns: ExcelExportColumn[] = [
-{ id: "id", label: "الرقم", accessor: (row) => {
+      { id: "id", label: "الرقم", accessor: (row) => {
         const i = row as unknown as DamagedItem;
         if (i.reference) return parseInt(i.reference, 10) || 0;
         const idx = items.findIndex(x => x.id === i.id);
@@ -146,7 +148,7 @@ export default function DamagedPage() {
       { id: "reason", label: "السبب", accessor: (row) => String((row as unknown as DamagedItem).reason ?? "") },
       { id: "damage_date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as DamagedItem).damage_date) },
     ];
-    await exportData(items as unknown as Record<string, unknown>[], columns, "إدارة المواد التالفة", { sheetName: "إدارة المواد التالفة", autoFilter: true, numeralSystem: getNumberingSystem() });
+    await exportData(items as unknown as Record<string, unknown>[], columns, "إدارة المواد التالفة", { sheetName: "إدارة المواد التالفة", autoFilter: true, numeralSystem: getNumberingSystem(), summary, summaryLabel: "المجموع" });
   }, [items, currencies, formatAmount, exportData]);
 
   // Build initial values for form when editing

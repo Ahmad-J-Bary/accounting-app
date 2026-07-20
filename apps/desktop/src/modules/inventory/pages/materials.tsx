@@ -228,13 +228,19 @@ export default function Materials() {
   }, [rawPriceBase, unitCostBase]);
 
   const totalReceived = useCallback((m: MaterialDto) => materialStockTotal.get(m.id) ?? parseFloat(m.total_received || "0"), [materialStockTotal]);
-  const totalAvailable = useCallback((m: MaterialDto) => parseFloat(m.total_available || "0"), []);
 
   // ── Handle Excel Export ──
 
   const { exportData } = useExcelExport();
 
   const handleExport = useCallback(async () => {
+    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {
+      total_received: 'subtotal',
+      total_sold: 'subtotal',
+      total_damaged: 'subtotal',
+      total_available: 'subtotal',
+      minimum_stock: 'subtotal',
+    };
     const colDefs: ExcelExportColumn[] = [
       {
         id: 'image', label: 'صورة', width: 8,
@@ -255,15 +261,35 @@ export default function Materials() {
           return ids.map(id => categories.find(c => c.id === id)?.name).filter(Boolean).join(', ');
         },
       },
-      ...currencyAmountCols("unit_price", "السعر الإفرادي", (row) => rawPriceBase(row as unknown as MaterialDto), currencies, formatAmount),
-      ...currencyAmountCols("extra_costs", "تكاليف إضافية", (row) => extraCostBase(row as unknown as MaterialDto), currencies, formatAmount),
-      ...currencyAmountCols("average_cost", "تكلفة الوحدة", (row) => unitCostBase(row as unknown as MaterialDto), currencies, formatAmount),
-      ...currencyAmountCols("total_value", "المجموع", (row) => { const m = row as unknown as MaterialDto; return totalReceived(m) * unitCostBase(m); }, currencies, formatAmount),
-      { id: 'total_received', label: 'الكمية الكلية', width: 12, hidden: !visibleColumnIds.includes('total_received'), accessor: (row) => totalReceived(row as unknown as MaterialDto) },
-      { id: 'total_sold', label: 'الكمية المباعة', width: 12, hidden: !visibleColumnIds.includes('total_sold'), accessor: (row) => parseFloat(String((row as unknown as MaterialDto).total_sold || '0')) },
-      { id: 'total_damaged', label: 'الكمية التالفة', width: 12, hidden: !visibleColumnIds.includes('total_damaged'), accessor: (row) => parseFloat(String((row as unknown as MaterialDto).total_damaged || '0')) },
-      { id: 'total_available', label: 'الكمية المتوفرة', width: 12, hidden: !visibleColumnIds.includes('total_available'), accessor: (row) => parseFloat(String((row as unknown as MaterialDto).total_available || '0')) },
-      ...currencyAmountCols("available_value", "المجموع للمتوفر", (row) => { const m = row as unknown as MaterialDto; return totalAvailable(m) * unitCostBase(m); }, currencies, formatAmount),
+      ...currencyAmountCols("unit_price", "السعر الإفرادي", (row) => rawPriceBase(row as unknown as MaterialDto), currencies, formatAmount, "", true).map(c => { summary[c.id] = 'subtotal'; return c; }),
+      ...currencyAmountCols("extra_costs", "تكاليف إضافية", (row) => extraCostBase(row as unknown as MaterialDto), currencies, formatAmount, "", true).map(c => { summary[c.id] = 'subtotal'; return c; }),
+      ...currencyAmountCols("average_cost", "تكلفة الوحدة", (row) => unitCostBase(row as unknown as MaterialDto), currencies, formatAmount, "", true).map(c => { summary[c.id] = 'subtotal'; return c; }),
+      ...currencies.map(curr => {
+        const totalValId = `total_value_${curr.code}`;
+        summary[totalValId] = 'subtotal';
+        return {
+          id: totalValId,
+          label: `المجموع (${curr.symbol || curr.code})`,
+          formula: `{col('total_received')}{row}*{col('average_cost_${curr.code}')}{row}`,
+          numeric: true,
+          decimalPlaces: 2,
+        };
+      }),
+      { id: 'total_received', label: 'الكمية الكلية', width: 12, hidden: !visibleColumnIds.includes('total_received'), accessor: (row) => totalReceived(row as unknown as MaterialDto), numeric: true, decimalPlaces: 2 },
+      { id: 'total_sold', label: 'الكمية المباعة', width: 12, hidden: !visibleColumnIds.includes('total_sold'), accessor: (row) => parseFloat(String((row as unknown as MaterialDto).total_sold || '0')), numeric: true, decimalPlaces: 2 },
+      { id: 'total_damaged', label: 'الكمية التالفة', width: 12, hidden: !visibleColumnIds.includes('total_damaged'), accessor: (row) => parseFloat(String((row as unknown as MaterialDto).total_damaged || '0')), numeric: true, decimalPlaces: 2 },
+      { id: 'total_available', label: 'الكمية المتوفرة', width: 12, hidden: !visibleColumnIds.includes('total_available'), accessor: (row) => parseFloat(String((row as unknown as MaterialDto).total_available || '0')), numeric: true, decimalPlaces: 2 },
+      ...currencies.map(curr => {
+        const availValId = `available_value_${curr.code}`;
+        summary[availValId] = 'subtotal';
+        return {
+          id: availValId,
+          label: `المجموع للمتوفر (${curr.symbol || curr.code})`,
+          formula: `{col('total_available')}{row}*{col('average_cost_${curr.code}')}{row}`,
+          numeric: true,
+          decimalPlaces: 2,
+        };
+      }),
     ];
 
     const TIERS = [
@@ -274,15 +300,17 @@ export default function Materials() {
     currencies.forEach(curr => {
       const sym = curr.symbol || curr.code;
       TIERS.forEach(tier => {
+        const colId = `sale_price_${tier.id}_${curr.code}`;
+        summary[colId] = 'subtotal';
         colDefs.push({
-          id: `sale_price_${tier.id}_${curr.code}`, label: `${tier.label} (${sym})`, width: 15,
-          hidden: !visibleColumnIds.includes(`sale_price_${tier.id}_${curr.code}`),
+          id: colId, label: `${tier.label} (${sym})`, width: 15,
+          hidden: !visibleColumnIds.includes(colId),
           accessor: (row) => {
             const m = row as unknown as MaterialDto;
             const salePrice = m.sale_prices?.find(p => p.unit_id === m.default_sale_unit_id && p.tier === tier.id);
-            const val = salePrice ? parseFloat(salePrice.price_base || '0') : 0;
-            return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : '';
+            return salePrice ? parseFloat(salePrice.price_base || '0') : 0;
           },
+          numeric: true, decimalPlaces: 2,
         });
       });
     });
@@ -295,6 +323,7 @@ export default function Materials() {
       {
         id: 'minimum_stock', label: 'حد الطلب', width: 10, hidden: !visibleColumnIds.includes('minimum_stock'),
         accessor: (row) => parseFloat(String((row as unknown as MaterialDto).minimum_stock || '0')),
+        numeric: true, decimalPlaces: 2,
       },
       {
         id: 'costing_method', label: 'طريقة التكلفة', width: 12, hidden: !visibleColumnIds.includes('costing_method'),
@@ -342,6 +371,8 @@ export default function Materials() {
         direction: 'asc',
         compare: (a, b) => String(a.code ?? '').localeCompare(String(b.code ?? ''), 'ar'),
       },
+      summary,
+      summaryLabel: "المجموع",
     };
 
     await exportData(
@@ -350,7 +381,7 @@ export default function Materials() {
       'بطاقات المواد',
       exportOptions,
     );
-  }, [materials, currencies, categories, formatAmount, visibleColumnIds, unitCostBase, rawPriceBase, extraCostBase, totalReceived, totalAvailable, exportData]);
+  }, [materials, currencies, categories, formatAmount, visibleColumnIds, unitCostBase, rawPriceBase, extraCostBase, totalReceived, exportData]);
 
   const handleOpenReturn = () => {
     if (!selectedMaterial) return;

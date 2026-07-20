@@ -243,7 +243,9 @@ export default function PartyPage({ entityName }: PartyPageProps) {
       const absBal = Math.abs(Number(row.balance || 0));
       if (absBal === 0) return 0;
       return toBase(absBal, String(row.currency ?? baseCurrency?.code ?? ''));
-    }, currencies, formatAmount);
+    }, currencies, formatAmount, "", true);
+    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
+    currencies.forEach(curr => { summary[`balance_${curr.code}`] = 'subtotal'; });
 
     const colDefs: ExcelExportColumn[] = [
       { id: 'code', label: '#', width: 8, hidden: !visibleColumnIds.includes('code'), accessor: (row) => parseInt(String(row.code ?? "0"), 10) || 0 },
@@ -271,6 +273,8 @@ export default function PartyPage({ entityName }: PartyPageProps) {
         direction: 'asc',
         compare: (a, b) => (parseInt(String(a.code ?? '0'), 10) || 0) - (parseInt(String(b.code ?? '0'), 10) || 0),
       },
+      summary,
+      summaryLabel: "المجموع",
     };
 
     await exportData(
