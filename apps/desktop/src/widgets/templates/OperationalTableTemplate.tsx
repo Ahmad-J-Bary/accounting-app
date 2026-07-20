@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { cn } from "@shared/lib/utils";
 import { useSidePanelSettings } from "@shared/hooks";
-import { SidebarAddAction } from "@shared/components/SidebarAddAction";
+import { PageHeader } from "./PageHeader";
 
 interface OperationalTableTemplateProps {
   /** Page Title */
@@ -44,22 +44,8 @@ export function OperationalTableTemplate({
   const { getSidebarWidth, settings } = useSidePanelSettings();
 
   return (
-    <div className={cn("flex flex-col h-full w-full bg-[#f8fafc]", className)} dir="rtl">
-      {/* 1. Page Header */}
-      <header className="flex items-center justify-between px-6 py-2.5 bg-white border-b border-slate-200/60 shadow-[0_1px_2px_rgba(0,0,0,0.02)] shrink-0 sticky top-0 z-20">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-md shadow-slate-200 shrink-0">
-            <span className="text-lg font-black">ERP</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-black text-slate-900 tracking-tight">{title}</h1>
-            <SidebarAddAction label={title} />
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          {toolbar}
-        </div>
-      </header>
+    <div className={cn("flex flex-col h-full w-full bg-muted/30", className)} dir="rtl">
+      <PageHeader title={title} actions={toolbar} pinAction pinLabel={title} />
 
       {/* 2. Main Layout Area */}
       <div className="flex-1 flex overflow-hidden p-4 gap-4">
@@ -82,8 +68,8 @@ export function OperationalTableTemplate({
           )}
 
           {/* Table Container */}
-          <div className="flex-1 flex flex-col bg-white rounded-xl border border-slate-200/70 shadow-sm overflow-hidden transition-all hover:shadow-md">
-            <div className="flex-1 overflow-x-hidden overflow-y-auto relative custom-scrollbar">
+          <div className="flex-1 flex flex-col bg-card rounded-xl border border-border shadow-sm overflow-hidden transition-all hover:shadow-md">
+            <div className="flex-1 overflow-x-hidden overflow-y-auto relative">
               {tableContent}
             </div>
           </div>
@@ -97,7 +83,7 @@ export function OperationalTableTemplate({
 
           {/* Optional Footer Summary */}
           {summaryContent && (
-            <div className="bg-white rounded-xl border border-slate-200/70 shadow-sm px-4 py-2 shrink-0 flex items-center justify-between transition-all hover:shadow-md">
+            <div className="bg-card rounded-xl border border-border shadow-sm px-4 py-2 shrink-0 flex items-center justify-between transition-all hover:shadow-md">
               {summaryContent}
             </div>
           )}
@@ -106,10 +92,10 @@ export function OperationalTableTemplate({
         {/* Optional Side Detail Panel */}
         {sidePanel && (
           <aside className={cn(
-            "bg-white rounded-xl border border-slate-200/70 shadow-xl flex flex-col overflow-hidden transition-all duration-300 shrink-0",
+            "bg-card rounded-xl border border-border shadow-xl flex flex-col overflow-hidden transition-all duration-300 shrink-0",
             isPanelOpen ? "opacity-100" : "w-0 opacity-0 border-none p-0 overflow-hidden"
           )} style={{ width: isPanelOpen ? getSidebarWidth() : '0px', transitionProperty: "width, opacity" }}>
-            <div className="flex-1 overflow-auto custom-scrollbar" style={{ minWidth: settings.customWidth + 'px' }}>
+            <div className="flex-1 overflow-auto" style={{ minWidth: settings.customWidth + 'px' }}>
               {sidePanel}
             </div>
           </aside>
