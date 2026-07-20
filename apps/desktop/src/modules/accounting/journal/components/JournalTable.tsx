@@ -90,7 +90,7 @@ export function JournalTable({
   displayMode = "two-line" 
 }: JournalTableProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
-  const { isBaseCurrency } = useBaseCurrencyColumns();
+  const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
   const { settings, getDensityPadding } = useTableSettings();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -197,8 +197,8 @@ export function JournalTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `debit_${curr.code}`,
-        header: `عليه / مدين (${symbol})`,
-        label: `عليه / مدين (${symbol})`,
+        header: `عليه / مدين${cs(symbol)}`,
+        label: `عليه / مدين${cs(symbol)}`,
         accessor: (e: JournalTableRow) => {
           if (e.side !== "debit") return "";
           return e.amount_base > 0 ? formatAmount(e.amount_base, { currencyCode: curr.code }) : "";
@@ -214,8 +214,8 @@ export function JournalTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `credit_${curr.code}`,
-        header: `له / دائن (${symbol})`,
-        label: `له / دائن (${symbol})`,
+        header: `له / دائن${cs(symbol)}`,
+        label: `له / دائن${cs(symbol)}`,
         accessor: (e: JournalTableRow) => {
           if (e.side !== "credit") return "";
           return e.amount_base > 0 ? formatAmount(e.amount_base, { currencyCode: curr.code }) : "";
@@ -253,7 +253,7 @@ export function JournalTable({
       },
     );
     return cols;
-  }, [sortedCurrencies, formatAmount, isBaseCurrency]);
+  }, [sortedCurrencies, formatAmount, isBaseCurrency, cs]);
 
   const singleLineColumns = useMemo<UnifiedColumn<JournalSingleLineTableRow>[]>(() => {
     const cols: UnifiedColumn<JournalSingleLineTableRow>[] = [
@@ -281,16 +281,16 @@ export function JournalTable({
     cols.push(
       {
         id: "debit_base",
-        header: `عليه / مدين (${baseSymbol})`,
-        label: `عليه / مدين (${baseSymbol})`,
+        header: `عليه / مدين${cs(baseSymbol)}`,
+        label: `عليه / مدين${cs(baseSymbol)}`,
         accessor: (e: JournalSingleLineTableRow) => 
           e.debit_amount_base > 0 ? formatAmount(e.debit_amount_base, { currencyCode: baseCurrency?.code }) : "",
         className: "tabular-nums font-black text-blue-700"
       },
       {
         id: "credit_base",
-        header: `له / دائن (${baseSymbol})`,
-        label: `له / دائن (${baseSymbol})`,
+        header: `له / دائن${cs(baseSymbol)}`,
+        label: `له / دائن${cs(baseSymbol)}`,
         accessor: (e: JournalSingleLineTableRow) => 
           e.credit_amount_base > 0 ? formatAmount(e.credit_amount_base, { currencyCode: baseCurrency?.code }) : "",
         className: "tabular-nums font-black text-emerald-700"
@@ -327,7 +327,7 @@ export function JournalTable({
       },
     );
     return cols;
-  }, [formatAmount, baseCurrency]);
+  }, [formatAmount, baseCurrency, cs]);
 
   // ============ SELECT ACTIVE DATA/COLUMNS/SORT ============
   const sortedData = isTwoLine ? twoLineSort.sortedData : singleLineSort.sortedData;
@@ -507,7 +507,7 @@ export function JournalTable({
       if (isTwoLine) {
         if (id === "account") {
           const sign = baseBalance > 0 ? "مدين" : baseBalance < 0 ? "دائن" : "متزن";
-          const label = `الرصيد / ${sign} (${baseSymbol})`;
+          const label = `الرصيد / ${sign}${cs(baseSymbol)}`;
           const value = formatAmount(Math.abs(baseBalance), { currencyCode: baseCurrency?.code || "" });
           const valueClass = baseBalance > 0
             ? "text-blue-700 font-black"
@@ -522,7 +522,7 @@ export function JournalTable({
           const code = curr?.code || "";
           const sym = curr?.symbol || code;
           const sign = baseBalance > 0 ? "مدين" : baseBalance < 0 ? "دائن" : "متزن";
-          const label = `الرصيد / ${sign} (${sym})`;
+          const label = `الرصيد / ${sign}${cs(sym)}`;
           const value = formatAmount(Math.abs(baseBalance), { currencyCode: code });
           const valueClass = baseBalance > 0
             ? "text-blue-700 font-black"
@@ -556,7 +556,7 @@ export function JournalTable({
       if (debitMatch) {
         const currCode = debitMatch[1];
         const isB = isBaseCurrency(currCode);
-        const label = col.label || `عليه / مدين (${currCode})`;
+        const label = col.label || `عليه / مدين${cs(currCode)}`;
         return {
           id: `${id}_total`,
           columnId: id,
@@ -572,7 +572,7 @@ export function JournalTable({
       if (creditMatch) {
         const currCode = creditMatch[1];
         const isB = isBaseCurrency(currCode);
-        const label = col.label || `له / دائن (${currCode})`;
+        const label = col.label || `له / دائن${cs(currCode)}`;
         return {
           id: `${id}_total`,
           columnId: id,
@@ -586,7 +586,7 @@ export function JournalTable({
 
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [enrichedColumns, formatAmount, isBaseCurrency, baseCurrency, sortedCurrencies, sortedData, isTwoLine, twoLineData, singleLineData]);
+  }, [enrichedColumns, formatAmount, isBaseCurrency, baseCurrency, sortedCurrencies, sortedData, isTwoLine, twoLineData, singleLineData, cs]);
 
   const visibleColumnIds = useMemo(
     () => new Set(visibleColumns.map(c => c.id)),
@@ -672,7 +672,7 @@ export function JournalTable({
         : row[col.accessor as keyof JournalSingleLineTableRow];
       return getPrimitiveCellValue(fallbackValue as ReactNode);
     },
-    [formatAmount, baseCurrency]
+    []
   );
 
   const { exportData } = useExcelExport();

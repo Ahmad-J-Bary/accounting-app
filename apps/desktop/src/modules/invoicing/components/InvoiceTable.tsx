@@ -78,7 +78,7 @@ export function InvoiceTable({
   tableId = "invoices-unified",
 }: InvoiceTableProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
-  const { isBaseCurrency } = useBaseCurrencyColumns();
+  const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
 
   const partyField = partyType === "supplier" ? "supplier_name" : "customer_name";
 
@@ -102,8 +102,8 @@ export function InvoiceTable({
         const isBase = isBaseCurrency(curr.code);
         return {
           id: `subtotal_${curr.code}`,
-          header: `مجموع الأسعار (${curr.symbol || curr.code})`,
-          label: `مجموع الأسعار (${curr.symbol || curr.code})`,
+          header: `مجموع الأسعار${cs(curr.symbol || curr.code)}`,
+          label: `مجموع الأسعار${cs(curr.symbol || curr.code)}`,
           accessor: (inv: InvoiceDto) => {
             const baseAmt = getInvoiceBaseAmount(
               inv.subtotal_amount,
@@ -124,8 +124,8 @@ export function InvoiceTable({
         const isBase = isBaseCurrency(curr.code);
         return {
           id: `discount_granted_${curr.code}`,
-          header: `خصوم ممنوحة (${curr.symbol || curr.code})`,
-          label: `خصوم ممنوحة (${curr.symbol || curr.code})`,
+          header: `خصوم ممنوحة${cs(curr.symbol || curr.code)}`,
+          label: `خصوم ممنوحة${cs(curr.symbol || curr.code)}`,
           accessor: (inv: InvoiceDto) => {
             const baseAmt = getInvoiceBaseAmount(
               inv.discount_amount,
@@ -146,8 +146,8 @@ export function InvoiceTable({
         const isBase = isBaseCurrency(curr.code);
         return {
           id: `discount_${curr.code}`,
-          header: `خصوم مكتسبة (${curr.symbol || curr.code})`,
-          label: `خصوم مكتسبة (${curr.symbol || curr.code})`,
+          header: `خصوم مكتسبة${cs(curr.symbol || curr.code)}`,
+          label: `خصوم مكتسبة${cs(curr.symbol || curr.code)}`,
           accessor: (inv: InvoiceDto) => {
             const baseAmt = getInvoiceBaseAmount(
               inv.discount_amount,
@@ -168,8 +168,8 @@ export function InvoiceTable({
         const isBase = isBaseCurrency(curr.code);
         return {
           id: `extra_costs_${curr.code}`,
-          header: `تكاليف إضافية (${curr.symbol || curr.code})`,
-          label: `التكاليف الإضافية (${curr.symbol || curr.code})`,
+          header: `تكاليف إضافية${cs(curr.symbol || curr.code)}`,
+          label: `التكاليف الإضافية${cs(curr.symbol || curr.code)}`,
           accessor: (inv: InvoiceDto) => {
             const baseAmt = getInvoiceBaseAmount(
               inv.extra_costs,
@@ -190,8 +190,8 @@ export function InvoiceTable({
         const isBase = isBaseCurrency(curr.code);
         return {
           id: `total_${curr.code}`,
-          header: `المجموع الكلي (${curr.symbol || curr.code})`,
-          label: `المجموع الكلي (${curr.symbol || curr.code})`,
+          header: `المجموع الكلي${cs(curr.symbol || curr.code)}`,
+          label: `المجموع الكلي${cs(curr.symbol || curr.code)}`,
           accessor: (inv: InvoiceDto) => {
             const baseSubtotal = getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
             const baseDiscount = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
@@ -209,8 +209,8 @@ export function InvoiceTable({
         const isBase = isBaseCurrency(curr.code);
         return {
           id: `paid_${curr.code}`,
-          header: `المبلغ المدفوع (${curr.symbol || curr.code})`,
-          label: `المبلغ المدفوع (${curr.symbol || curr.code})`,
+          header: `المبلغ المدفوع${cs(curr.symbol || curr.code)}`,
+          label: `المبلغ المدفوع${cs(curr.symbol || curr.code)}`,
           accessor: (inv: InvoiceDto) => {
             const baseAmt = getInvoiceBaseAmount(
               inv.amount_paid,
@@ -231,8 +231,8 @@ export function InvoiceTable({
         const isBase = isBaseCurrency(curr.code);
         return {
           id: `remaining_${curr.code}`,
-          header: `المبلغ المتبقي (${curr.symbol || curr.code})`,
-          label: `المبلغ المتبقي (${curr.symbol || curr.code})`,
+          header: `المبلغ المتبقي${cs(curr.symbol || curr.code)}`,
+          label: `المبلغ المتبقي${cs(curr.symbol || curr.code)}`,
           accessor: (inv: InvoiceDto) => {
             const baseSubtotal = getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
             const baseDiscount = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
@@ -312,7 +312,7 @@ export function InvoiceTable({
       },
     ];
     return cols;
-  }, [formatAmount, currencies, baseCurrency, partyField, partyLabel, partyType, defaultName, showSubtotal, showDiscountGranted, showDiscount, showExtraCosts, extraColumns, onView, onEdit, onViewOpeningBalance, onEditOpeningBalance, onPost, onReopen, onDelete, isBaseCurrency]);
+  }, [formatAmount, currencies, baseCurrency, partyField, partyLabel, partyType, defaultName, showSubtotal, showDiscountGranted, showDiscount, showExtraCosts, extraColumns, onView, onEdit, onViewOpeningBalance, onEditOpeningBalance, onPost, onReopen, onDelete, isBaseCurrency, cs]);
 
   // Default visible: hide secondary currency columns by default.
   // User can toggle them on.
@@ -455,7 +455,7 @@ export function InvoiceTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: `مجموع الأسعار (${sym})`,
+          label: `مجموع الأسعار${cs(sym)}`,
           value: baseSubtotalTotal > 0 ? formatAmount(baseSubtotalTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-bold text-slate-700'
@@ -471,7 +471,7 @@ export function InvoiceTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: `خصوم ممنوحة (${sym})`,
+          label: `خصوم ممنوحة${cs(sym)}`,
           value: baseDiscountTotal > 0 ? formatAmount(baseDiscountTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-bold text-rose-600'
@@ -487,7 +487,7 @@ export function InvoiceTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: `خصوم مكتسبة (${sym})`,
+          label: `خصوم مكتسبة${cs(sym)}`,
           value: baseDiscountTotal > 0 ? formatAmount(baseDiscountTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-bold text-blue-600'
@@ -503,7 +503,7 @@ export function InvoiceTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: `تكاليف إضافية (${sym})`,
+          label: `تكاليف إضافية${cs(sym)}`,
           value: baseExtraCostsTotal > 0 ? formatAmount(baseExtraCostsTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-bold text-rose-600'
@@ -519,7 +519,7 @@ export function InvoiceTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: `المجموع الكلي (${sym})`,
+          label: `المجموع الكلي${cs(sym)}`,
           value: baseComputedTotal > 0 ? formatAmount(baseComputedTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-black text-slate-900'
@@ -535,7 +535,7 @@ export function InvoiceTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: `المبلغ المدفوع (${sym})`,
+          label: `المبلغ المدفوع${cs(sym)}`,
           value: basePaidTotal > 0 ? formatAmount(basePaidTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-bold text-emerald-600'
@@ -551,7 +551,7 @@ export function InvoiceTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: `المبلغ المتبقي (${sym})`,
+          label: `المبلغ المتبقي${cs(sym)}`,
           value: baseComputedRemaining > 0 ? formatAmount(baseComputedRemaining, { currencyCode: currCode }) : "—",
           className: isBase
             ? 'font-bold text-orange-600'
@@ -561,7 +561,7 @@ export function InvoiceTable({
 
       return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
     });
-  }, [data, enrichedColumns, formatAmount, baseCurrency, isBaseCurrency, currencies]);
+  }, [data, enrichedColumns, formatAmount, baseCurrency, isBaseCurrency, currencies, cs]);
 
   return (
     <TableShell

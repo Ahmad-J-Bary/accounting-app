@@ -38,7 +38,7 @@ export function ReturnsTable({
   onDelete,
 }: ReturnsTableProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
-  const { isBaseCurrency } = useBaseCurrencyColumns();
+  const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
 
   // Type guards
   const isSalesReturn = (ret: SalesReturnDto | PurchaseReturnDto): ret is SalesReturnDto => {
@@ -72,8 +72,8 @@ export function ReturnsTable({
         const isBase = isBaseCurrency(curr.code);
         return {
           id: `total_amount_${curr.code}`,
-          header: `الإجمالي (${curr.symbol || curr.code})`,
-          label: `الإجمالي (${curr.symbol || curr.code})`,
+          header: `الإجمالي${cs(curr.symbol || curr.code)}`,
+          label: `الإجمالي${cs(curr.symbol || curr.code)}`,
           accessor: (ret: SalesReturnDto | PurchaseReturnDto) => {
             const val = parseFloat(ret.total_amount || "0");
             if (val === 0) return "";
@@ -119,7 +119,7 @@ export function ReturnsTable({
       }] : []),
     ];
     return cols;
-  }, [currencies, formatAmount, partnerLabel, onView, onEdit, onDelete, isBaseCurrency]);
+  }, [currencies, formatAmount, partnerLabel, onView, onEdit, onDelete, isBaseCurrency, cs]);
 
   // Default visible: only base currency's total column shown
   const defaultVisible = useMemo(() => {
@@ -191,7 +191,7 @@ export function ReturnsTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: "الإجمالي",
+          label: `الإجمالي${cs(currCode)}`,
           value: baseTotal > 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
           className: isBase
             ? "font-black text-slate-900"
@@ -200,7 +200,7 @@ export function ReturnsTable({
       }
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [enrichedColumns, baseTotal, formatAmount, sortedData, isBaseCurrency]);
+  }, [enrichedColumns, baseTotal, formatAmount, sortedData, isBaseCurrency, cs]);
 
   return (
     <TableShell

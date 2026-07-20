@@ -33,7 +33,7 @@ const codeSuffix = (code: string, prefix?: string) => {
 
 export function ExpenseTable({ expenses, loading, search, onSearchChange, onView, onEdit, onDelete, onJournal, onDocument, selectedId, parentCode }: ExpenseTableProps) {
   const { currencies, formatAmount, toBase } = useCurrencyContext();
-  const { isBaseCurrency } = useBaseCurrencyColumns();
+  const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
   const { getAccountStatusColumn } = useTableColumns();
 
   const { sortedData: sortedExpenses, sortField, sortDirection, handleSort } = useSortable({
@@ -81,8 +81,8 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `balance_${curr.code}`,
-        header: `الرصيد (${symbol})`,
-        label: `الرصيد (${symbol})`,
+        header: `الرصيد ${cs(symbol)}`,
+        label: `الرصيد ${cs(symbol)}`,
         accessor: (c) => {
           const absBal = Math.abs(Number(c.balance || 0));
           if (absBal === 0) return "";
@@ -113,7 +113,7 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
     });
 
     return cols;
-  }, [currencies, formatAmount, toBase, parentCode, onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, isBaseCurrency]);
+  }, [currencies, formatAmount, toBase, parentCode, onView, onEdit, onDelete, onJournal, onDocument, getAccountStatusColumn, isBaseCurrency, cs]);
 
   // Default visible: only base currency's balance column is visible.
   // Secondary currency balances are hidden by default (user can toggle on).

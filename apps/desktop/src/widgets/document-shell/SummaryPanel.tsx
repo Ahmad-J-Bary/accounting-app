@@ -208,33 +208,35 @@ export function SummaryPanel({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-4 overflow-x-auto no-scrollbar py-1">
           {/* Currency Selector */}
-          <div className="flex items-center gap-1.5 shrink-0 px-2.5 py-1 bg-muted rounded-md border border-border">
-            <span className="text-[10px] font-bold text-muted-foreground">
-              العملة:
-            </span>
-            {onCurrencyChange && currencies ? (
-              <select
-                value={safeCurrency}
-                disabled={isReadOnly}
-                onChange={(e) => onCurrencyChange(e.target.value)}
-                className="h-7 px-1 rounded border-none bg-transparent font-black text-blue-600 text-[11px] outline-none focus:ring-0 cursor-pointer"
-              >
-                {currencies.map((c) => (
-                  <option
-                    key={c.code}
-                    value={c.code}
-                    className="text-slate-800 font-bold"
-                  >
-                    {c.name_ar} ({c.symbol || resolveCurrencySymbol(c.code)})
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <span className="text-xs font-black text-blue-600">
-                {resolveCurrencyMeta(safeCurrency)?.symbol || safeCurrency}
+          {availableCurrencies.length > 1 && (
+            <div className="flex items-center gap-1.5 shrink-0 px-2.5 py-1 bg-muted rounded-md border border-border">
+              <span className="text-[10px] font-bold text-muted-foreground">
+                العملة:
               </span>
-            )}
-          </div>
+              {onCurrencyChange && currencies ? (
+                <select
+                  value={safeCurrency}
+                  disabled={isReadOnly}
+                  onChange={(e) => onCurrencyChange(e.target.value)}
+                  className="h-7 px-1 rounded border-none bg-transparent font-black text-blue-600 text-[11px] outline-none focus:ring-0 cursor-pointer"
+                >
+                  {currencies.map((c) => (
+                    <option
+                      key={c.code}
+                      value={c.code}
+                      className="text-slate-800 font-bold"
+                    >
+                      {c.name_ar} ({c.symbol || resolveCurrencySymbol(c.code)})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-xs font-black text-blue-600">
+                  {resolveCurrencyMeta(safeCurrency)?.symbol || safeCurrency}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* PURCHASE INVOICE TREE FLOW */}
           {invoiceType === "Purchase" && (

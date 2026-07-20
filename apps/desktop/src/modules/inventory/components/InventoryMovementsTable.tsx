@@ -76,7 +76,7 @@ export function InventoryMovementsTable({
   selectedId, onRowClick, onRowDoubleClick, transferRefs, className,
 }: InventoryMovementsTableProps) {
   const { formatAmount, currencies } = useCurrencyContext();
-  const { isBaseCurrency } = useBaseCurrencyColumns();
+  const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
   const defaultWh = useMemo(() => warehouses.find(wh => wh.is_default), [warehouses]);
 
   const warehouseName = useMemo(() => (m: StockMovement) => {
@@ -230,7 +230,7 @@ export function InventoryMovementsTable({
         summary[`total_cost_${curr.code}`] = `SUMPRODUCT(SIGN({col('quantity')}{firstRow}:{col('quantity')}{lastRow}), {col('total_cost_${curr.code}')}{firstRow}:{col('total_cost_${curr.code}')}{lastRow})`;
         return {
           id: `total_cost_${curr.code}`,
-          label: `التكلفة (${curr.symbol || curr.code})`,
+          label: `التكلفة${cs(curr.symbol || curr.code)}`,
           accessor: (row: Record<string, unknown>) => {
             const m = row as unknown as StockMovement;
             return baseCost(m);
@@ -249,7 +249,7 @@ export function InventoryMovementsTable({
       "حركات المخزون",
       { sheetName: "حركات المخزون", autoFilter: true, summary, summaryLabel: "المجموع" },
     );
-  }, [sortedData, currencies, warehouseName, baseCost, transferRefs, exportData]);
+  }, [sortedData, currencies, warehouseName, baseCost, transferRefs, exportData, cs]);
 
   const allColumns = useMemo<UnifiedColumn<StockMovement>[]>(() => {
     const cols: UnifiedColumn<StockMovement>[] = [
@@ -342,8 +342,8 @@ export function InventoryMovementsTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `total_cost_${curr.code}`,
-        header: `التكلفة (${sym})`,
-        label: `التكلفة (${sym})`,
+        header: `التكلفة${cs(sym)}`,
+        label: `التكلفة${cs(sym)}`,
         accessor: (m) => {
           const base = baseCost(m);
           if (base === 0) return '—';
@@ -390,7 +390,7 @@ export function InventoryMovementsTable({
       },
     );
     return cols;
-  }, [warehouseName, warehouseClass, currencies, formatAmount, isBaseCurrency, baseCost, transferRefs, costInfo]);
+  }, [warehouseName, warehouseClass, currencies, formatAmount, isBaseCurrency, baseCost, transferRefs, costInfo, cs]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["product_name", "type", "warehouse", "quantity"];

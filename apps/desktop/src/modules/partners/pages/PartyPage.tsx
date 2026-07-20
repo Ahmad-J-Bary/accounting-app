@@ -12,8 +12,7 @@ import type { AccountDto, CreatePaymentRequest, CustomerDto, SupplierDto, Create
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useTabs } from "@app/providers/TabContext";
 import { useEntityList } from '@shared/hooks/useEntityList';
-import { useExcelExport } from "@shared/hooks";
-import { formatNumber } from "@shared/lib/format";
+import { useExcelExport, useBaseCurrencyColumns } from "@shared/hooks";
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import type { ExcelExportColumn, ExcelExportOptions } from '@shared/lib/excel';
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
@@ -96,6 +95,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
   const cfg = PARTY_CONFIGS[entityName];
   const { openTab } = useTabs();
   const { currencies, baseCurrency, toBase, formatAmount } = useCurrencyContext();
+  const { hasSecondaryCurrencies } = useBaseCurrencyColumns();
 
   // ── CRUD via useEntityList ──
 
@@ -243,7 +243,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
       const absBal = Math.abs(Number(row.balance || 0));
       if (absBal === 0) return 0;
       return toBase(absBal, String(row.currency ?? baseCurrency?.code ?? ''));
-    }, currencies, formatAmount, "", true);
+    }, currencies, formatAmount, "", hasSecondaryCurrencies);
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
     currencies.forEach(curr => { summary[`balance_${curr.code}`] = 'subtotal'; });
 
@@ -283,7 +283,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
       entityName === 'supplier' ? 'الموردين' : 'العملاء',
       exportOptions,
     );
-  }, [items, currencies, entityName, toBase, formatAmount, baseCurrency?.code, visibleColumnIds, exportData]);
+  }, [items, currencies, entityName, toBase, formatAmount, baseCurrency?.code, visibleColumnIds, exportData, hasSecondaryCurrencies]);
 
   // ── Toolbar ──
 

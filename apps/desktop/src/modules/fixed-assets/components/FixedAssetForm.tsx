@@ -500,6 +500,7 @@ export function FixedAssetForm({
           </FormField>
         </div>
 
+        {currencies.length > 1 && (
         <div className="grid grid-cols-2 gap-3">
           <FormField label="العملة" required>
             <Select dir="rtl" value={currency} onValueChange={setCurrency}>
@@ -536,6 +537,8 @@ export function FixedAssetForm({
             </FormField>
           )}
         </div>
+      )}
+
       </SidebarSection>
 
       {/* Account mapping status - hidden informational */}

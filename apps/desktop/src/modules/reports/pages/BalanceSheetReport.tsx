@@ -8,11 +8,12 @@ import { BalanceSheetView } from "@modules/reports/components/BalanceSheetView";
 import { ReportFilterBar } from "@widgets/reports/ReportFilterBar";
 
 export default function BalanceSheetReport() {
-  const { baseCurrency, formatAmount } = useCurrencyContext();
+  const { baseCurrency, currencies, formatAmount, hasMultipleCurrencies } = useCurrencyContext();
   const {
     filters,
     setFilters,
     selectedCurrency,
+    setSelectedCurrency,
   } = useReportFilters(
     new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
     new Date().toISOString().split("T")[0]
@@ -50,7 +51,11 @@ export default function BalanceSheetReport() {
           loading={loading}
           refreshing={refreshing}
           onRefresh={loadReportData}
-          selectedCurrencyLabel={selectedCurrency}
+          selectedCurrencyLabel={hasMultipleCurrencies ? selectedCurrency : undefined}
+          showCurrencySelect={hasMultipleCurrencies}
+          onCurrencyChange={setSelectedCurrency}
+          currencies={currencies}
+          baseCurrencyCode={baseCurrency?.code}
           lastLoadedAt={lastLoadedAt}
         />
       }

@@ -45,7 +45,7 @@ export function AccountMovementTable({
   openingBalance = 0,
 }: AccountMovementTableProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
-  const { isBaseCurrency } = useBaseCurrencyColumns();
+  const { isBaseCurrency, currencySuffix } = useBaseCurrencyColumns();
   const { settings, getDensityPadding } = useTableSettings();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -191,8 +191,8 @@ export function AccountMovementTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `debit_${curr.code}`,
-        header: `عليه / مدين (${symbol})`,
-        label: `عليه / مدين (${symbol})`,
+        header: `عليه / مدين${currencySuffix(symbol)}`,
+        label: `عليه / مدين${currencySuffix(symbol)}`,
         align: "center",
         accessor: (r) => {
           if (r.side !== "debit") return "";
@@ -209,8 +209,8 @@ export function AccountMovementTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `credit_${curr.code}`,
-        header: `له / دائن (${symbol})`,
-        label: `له / دائن (${symbol})`,
+        header: `له / دائن${currencySuffix(symbol)}`,
+        label: `له / دائن${currencySuffix(symbol)}`,
         align: "center",
         accessor: (r) => {
           if (r.side !== "credit") return "";
@@ -246,7 +246,7 @@ export function AccountMovementTable({
       },
     );
     return cols;
-  }, [sortedCurrencies, formatAmount, isBaseCurrency, baseCurrency]);
+  }, [sortedCurrencies, formatAmount, isBaseCurrency, baseCurrency, currencySuffix]);
 
   const defaultVisible = useMemo(() => {
     const def: string[] = ["entry_number", "journal_type"];
@@ -340,7 +340,7 @@ export function AccountMovementTable({
 
       if (id === "balance") {
         const sign = closingBalance > 0 ? "مدين" : closingBalance < 0 ? "دائن" : "متزن";
-        const label = `الرصيد الختامي / ${sign} (${baseSymbol})`;
+        const label = `الرصيد الختامي / ${sign}${currencySuffix(baseSymbol)}`;
         const value = formatAmount(Math.abs(closingBalance), { currencyCode: baseCurrency?.code || "" });
         const valueClass = closingBalance > 0
           ? "text-blue-700 font-black"
@@ -354,7 +354,7 @@ export function AccountMovementTable({
       if (debitMatch) {
         const currCode = debitMatch[1];
         const isB = isBaseCurrency(currCode);
-        const label = col.label || `عليه / مدين (${currCode})`;
+        const label = col.label || `عليه / مدين${currencySuffix(currCode)}`;
         return {
           id: `${id}_total`,
           columnId: id,
@@ -370,7 +370,7 @@ export function AccountMovementTable({
       if (creditMatch) {
         const currCode = creditMatch[1];
         const isB = isBaseCurrency(currCode);
-        const label = col.label || `له / دائن (${currCode})`;
+        const label = col.label || `له / دائن${currencySuffix(currCode)}`;
         return {
           id: `${id}_total`,
           columnId: id,
@@ -384,7 +384,7 @@ export function AccountMovementTable({
 
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [lines, formatAmount, enrichedColumns, isBaseCurrency, baseCurrency, openingBalance]);
+  }, [lines, formatAmount, enrichedColumns, isBaseCurrency, baseCurrency, openingBalance, currencySuffix]);
 
   const visibleColumnIds = useMemo(
     () => new Set(visibleColumns.map(c => c.id)),

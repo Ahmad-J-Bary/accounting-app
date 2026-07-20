@@ -52,7 +52,7 @@ export function PaymentsTable({
   onDelete,
 }: PaymentsTableProps) {
 
-  const { isBaseCurrency } = useBaseCurrencyColumns();
+  const { isBaseCurrency, currencySuffix: cs, hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const sortedCurrencies = useMemo(() => {
     if (!baseCurrency) return currencies;
     return [baseCurrency, ...currencies.filter(c => c.code !== baseCurrency.code)];
@@ -131,7 +131,7 @@ export function PaymentsTable({
       const amount = parseFloat(p.amount) || 0;
       const baseAmount = toBase(amount, p.currency_code);
       return INCOMING_TYPES.includes(p.payment_type) ? baseAmount : -baseAmount;
-    }, sortedCurrencies, formatAmount, "", true);
+    }, sortedCurrencies, formatAmount, "", hasSecondaryCurrencies);
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
     sortedCurrencies.forEach(curr => { summary[`amount_${curr.code}`] = 'subtotal'; });
 
@@ -160,7 +160,7 @@ export function PaymentsTable({
       "السندات المالية",
       { sheetName: "السندات المالية", autoFilter: true, summary, summaryLabel: "المجموع" },
     );
-  }, [sortedData, sortedCurrencies, accounts, formatAmount, toBase, exportData]);
+  }, [sortedData, sortedCurrencies, accounts, formatAmount, toBase, exportData, hasSecondaryCurrencies]);
 
   const allColumns = useMemo<UnifiedColumn<Payment>[]>(
     () => {
@@ -196,8 +196,8 @@ export function PaymentsTable({
         const isBase = isBaseCurrency(curr.code);
         return {
           id: `amount_${curr.code}`,
-          header: `المبلغ (${symbol})`,
-          label: `المبلغ (${symbol})`,
+          header: `المبلغ ${cs(symbol)}`,
+          label: `المبلغ ${cs(symbol)}`,
           accessor: (p: Payment) => {
             const amount = parseFloat(p.amount) || 0;
             if (amount === 0) return "";
@@ -276,6 +276,7 @@ export function PaymentsTable({
       onEdit,
       onDelete,
       isBaseCurrency,
+      cs,
     ],
   );
 

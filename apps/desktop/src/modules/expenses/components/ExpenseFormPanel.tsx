@@ -122,6 +122,7 @@ export function ExpenseFormPanel({
       <div className="space-y-6 text-right">
         <SidebarSection title="المعلومات الأساسية">
           <div className="grid grid-cols-2 gap-3">
+            {currencies.length > 1 && (
             <div className="space-y-1.5">
               <FieldLabel>العملة الافتراضية</FieldLabel>
               <Select value={currency} onValueChange={setCurrency}>
@@ -133,6 +134,7 @@ export function ExpenseFormPanel({
                 </SelectContent>
               </Select>
             </div>
+            )}
           </div>
           <div className="space-y-1.5">
             <FieldLabel required>اسم البند</FieldLabel>

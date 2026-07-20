@@ -9,6 +9,8 @@ export interface BaseCurrencyColumnsResult {
   isBaseCurrency: (code: string | null | undefined) => boolean;
   hasBaseCurrency: boolean;
   hasSecondaryCurrencies: boolean;
+  /** Returns " (symbol)" when secondary currencies exist, or "" when single currency */
+  currencySuffix: (symbolOrCode: string) => string;
 }
 
 export function useBaseCurrencyColumns(): BaseCurrencyColumnsResult {
@@ -24,12 +26,16 @@ export function useBaseCurrencyColumns(): BaseCurrencyColumnsResult {
   const isBaseCurrency = (code: string | null | undefined): boolean =>
     code != null && code !== "" && code === baseCode;
 
+  const hasSecondary = secondaryCodes.length > 0;
+  const currencySuffix = (sym: string) => hasSecondary ? ` (${sym})` : '';
+
   return {
     baseCurrency,
     baseCurrencyCode: baseCode,
     secondaryCodes,
     isBaseCurrency,
     hasBaseCurrency: baseCode != null,
-    hasSecondaryCurrencies: secondaryCodes.length > 0,
+    hasSecondaryCurrencies: hasSecondary,
+    currencySuffix,
   };
 }

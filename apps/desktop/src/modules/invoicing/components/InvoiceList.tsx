@@ -106,13 +106,14 @@ export function InvoiceList({
   const partyLabel = partyType === "supplier" ? "المورد" : "الزبون";
   const defaultName = partyType === "supplier" ? "مورد نقدي" : "زبون نقدي";
 
-  const { currencies, baseCurrency } = useCurrencyContext();
+  const { currencies, baseCurrency, hasMultipleCurrencies } = useCurrencyContext();
 
   const { exportData } = useExcelExport();
 
   const handleExport = useCallback(async () => {
     const currencyCols: ExcelExportColumn[] = [];
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
+    const suf = (sym: string) => hasMultipleCurrencies ? ` (${sym})` : '';
 
     if (showSubtotal) {
       currencies.forEach(curr => {
@@ -120,7 +121,7 @@ export function InvoiceList({
         summary[colId] = 'subtotal';
         currencyCols.push({
           id: colId,
-          label: `مجموع الأسعار (${curr.symbol || curr.code})`,
+          label: `مجموع الأسعار${suf(curr.symbol || curr.code)}`,
           accessor: (row) => {
             const inv = row as unknown as InvoiceDto;
             return getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
@@ -137,7 +138,7 @@ export function InvoiceList({
         summary[colId] = 'subtotal';
         currencyCols.push({
           id: colId,
-          label: `خصوم ممنوحة (${curr.symbol || curr.code})`,
+          label: `خصوم ممنوحة${suf(curr.symbol || curr.code)}`,
           accessor: (row) => {
             const inv = row as unknown as InvoiceDto;
             return getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
@@ -154,7 +155,7 @@ export function InvoiceList({
         summary[colId] = 'subtotal';
         currencyCols.push({
           id: colId,
-          label: `خصوم مكتسبة (${curr.symbol || curr.code})`,
+          label: `خصوم مكتسبة${suf(curr.symbol || curr.code)}`,
           accessor: (row) => {
             const inv = row as unknown as InvoiceDto;
             return getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
@@ -171,7 +172,7 @@ export function InvoiceList({
         summary[colId] = 'subtotal';
         currencyCols.push({
           id: colId,
-          label: `التكاليف الإضافية (${curr.symbol || curr.code})`,
+          label: `التكاليف الإضافية${suf(curr.symbol || curr.code)}`,
           accessor: (row) => {
             const inv = row as unknown as InvoiceDto;
             return getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
@@ -203,14 +204,14 @@ export function InvoiceList({
 
       currencyCols.push({
         id: totalId,
-        label: `المجموع الكلي (${curr.symbol || curr.code})`,
+        label: `المجموع الكلي${suf(curr.symbol || curr.code)}`,
         formula: totalFormula,
         numeric: true,
         decimalPlaces: 2,
       });
       currencyCols.push({
         id: paidId,
-        label: `المبلغ المدفوع (${curr.symbol || curr.code})`,
+        label: `المبلغ المدفوع${suf(curr.symbol || curr.code)}`,
         accessor: (row) => {
           const inv = row as unknown as InvoiceDto;
           return getInvoiceBaseAmount(inv.amount_paid, inv.amount_paid_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
@@ -221,7 +222,7 @@ export function InvoiceList({
       // remaining = total - paid
       currencyCols.push({
         id: remainingId,
-        label: `المبلغ المتبقي (${curr.symbol || curr.code})`,
+        label: `المبلغ المتبقي${suf(curr.symbol || curr.code)}`,
         formula: `{col('${totalId}')}{row}-{col('${paidId}')}{row}`,
         numeric: true,
         decimalPlaces: 2,
@@ -241,7 +242,7 @@ export function InvoiceList({
     ];
 
     await exportData(filtered as unknown as Record<string, unknown>[], columns, title, { sheetName: title, autoFilter: true, summary, summaryLabel: "المجموع" });
-  }, [filtered, currencies, baseCurrency, partyType, partyLabel, defaultName, showSubtotal, showDiscountGranted, showDiscount, showExtraCosts, title, exportData]);
+  }, [filtered, currencies, baseCurrency, partyType, partyLabel, defaultName, showSubtotal, showDiscountGranted, showDiscount, showExtraCosts, title, exportData, hasMultipleCurrencies]);
 
   return (
     <OperationalTableTemplate

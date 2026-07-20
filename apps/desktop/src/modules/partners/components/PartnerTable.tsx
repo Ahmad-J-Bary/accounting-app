@@ -47,7 +47,7 @@ export function PartnerTable({
   filterBar
 }: PartnerTableProps) {
   const { currencies, formatAmount } = useCurrencyContext();
-  const { isBaseCurrency } = useBaseCurrencyColumns();
+  const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
   const { sortedData: sortedPartners, sortField, sortDirection, handleSort } = useSortable({
     data: partners,
     defaultField: "name" as SortField,
@@ -87,8 +87,8 @@ export function PartnerTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `amount_${curr.code}`,
-        header: `رأس المال (${symbol})`,
-        label: `رأس المال (${symbol})`,
+        header: `رأس المال ${cs(symbol)}`,
+        label: `رأس المال ${cs(symbol)}`,
         accessor: (p: PartnerWithRatios) => {
           if (p.displayAmountBase === 0) return "";
           return formatAmount(p.displayAmountBase, { currencyCode: curr.code });
@@ -139,7 +139,7 @@ export function PartnerTable({
     );
 
     return cols;
-  }, [currencies, formatAmount, onView, onEdit, onDelete, onJournal, onDocument, isBaseCurrency]);
+  }, [currencies, formatAmount, onView, onEdit, onDelete, onJournal, onDocument, isBaseCurrency, cs]);
 
   // Default visible: only base currency's amount column is shown; secondary amounts are hidden.
   const defaultVisible = useMemo(() => {

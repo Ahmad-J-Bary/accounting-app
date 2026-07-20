@@ -25,7 +25,7 @@ interface AdjustmentsTableProps {
 
 export function AdjustmentsTable({ data, loading, search, onSearchChange, selectedId, onView, onEdit, onDelete, onRowClick }: AdjustmentsTableProps) {
   const { currencies, formatAmount } = useCurrencyContext();
-  const { isBaseCurrency } = useBaseCurrencyColumns();
+  const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
   type SortField = "material_name" | "system_quantity" | "actual_quantity" | "difference" | "total_cost" | "adjustment_date" | "notes";
 
   const { sortedData, sortField, sortDirection, handleSort } = useSortable({
@@ -98,8 +98,8 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
         const symbol = curr.symbol || curr.code;
         return {
           id: `total_cost_${curr.code}`,
-          header: `التكلفة (${symbol})`,
-          label: `التكلفة (${symbol})`,
+          header: `التكلفة ${cs(symbol)}`,
+          label: `التكلفة ${cs(symbol)}`,
           accessor: (a: StockAdjustment) => {
             const cost = parseFloat(a.total_cost_base || "0");
             return Math.abs(cost) > 0 ? (
@@ -143,7 +143,7 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
     }
 
     return cols;
-  }, [onView, onEdit, onDelete, formatAmount, currencies]);
+  }, [onView, onEdit, onDelete, formatAmount, currencies, cs]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["id", "material_name", "system_quantity", "actual_quantity",

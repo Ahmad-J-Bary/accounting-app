@@ -207,6 +207,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
               </Select>
             </div>
 
+            {currencies.length > 1 && (
             <div className="space-y-1.5">
               <FieldLabel>العملة الافتراضية</FieldLabel>
               <Select value={form.currency_code} onValueChange={handleCurrencyChange}>
@@ -218,6 +219,7 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
                 </SelectContent>
               </Select>
             </div>
+            )}
 
             <div className="space-y-1.5">
               <FieldLabel required>المبلغ</FieldLabel>

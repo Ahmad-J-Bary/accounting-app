@@ -114,7 +114,7 @@ export function ReportFilterBar({
             </>
           )}
 
-        {showCurrencySelect && (
+        {showCurrencySelect && onCurrencyChange && (
           <div className="space-y-2 min-w-[180px]">
             <Label className="text-xs font-black uppercase tracking-widest text-slate-400">العملة</Label>
             <Select

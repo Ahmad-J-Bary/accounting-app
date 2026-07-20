@@ -80,6 +80,7 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
       <div className="space-y-6 text-right">
         <SidebarSection title="تفاصيل السند">
           <div className="grid grid-cols-2 gap-4">
+            {currencies.length > 1 && (
             <div className="space-y-1.5">
               <FieldLabel>العملة</FieldLabel>
               <Select value={form.currency_code} onValueChange={handleCurrencyChange}>
@@ -95,6 +96,7 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
                 </SelectContent>
               </Select>
             </div>
+            )}
 
             <div className="space-y-1.5">
               <FieldLabel required>المبلغ</FieldLabel>

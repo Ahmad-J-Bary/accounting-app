@@ -2,9 +2,11 @@ import React, { useCallback } from "react";
 import type { UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useBaseCurrencyColumns } from "./useBaseCurrencyColumns";
 
 export function useTableColumns() {
   const { currencies, baseCurrency, formatAmount, toBase } = useCurrencyContext();
+  const { currencySuffix: cs } = useBaseCurrencyColumns();
 
   const getAccountStatusColumn = useCallback(<T extends { balance?: number | string; debit?: number | string; credit?: number | string }>(
     sortableHeader: React.ReactNode,
@@ -39,8 +41,8 @@ export function useTableColumns() {
       const symbol = curr.symbol || curr.code;
       return {
         id: `balance_${curr.code}`,
-        header: `الرصيد (${symbol})`,
-        label: `الرصيد (${symbol})`,
+        header: `الرصيد${cs(symbol)}`,
+        label: `الرصيد${cs(symbol)}`,
         accessor: (item) => {
           const effectiveBalance = (item.debit !== undefined && item.credit !== undefined)
             ? Number(item.debit || 0) - Number(item.credit || 0)
@@ -52,7 +54,7 @@ export function useTableColumns() {
         className: "tabular-nums font-black text-slate-900"
       };
     });
-  }, [currencies, formatAmount, toBase, baseCurrency?.code]);
+  }, [currencies, formatAmount, toBase, baseCurrency?.code, cs]);
 
   const getSummaryColumns = useCallback(<T extends { balance?: number | string; debit?: number | string; credit?: number | string; currency?: string }>(
     enrichedColumns: UnifiedColumn<T>[],

@@ -19,7 +19,7 @@ import { type CreatePaymentRequest } from "@erp/shared-types";
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
-import { useExcelExport } from "@shared/hooks";
+import { useExcelExport, useBaseCurrencyColumns } from "@shared/hooks";
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { toast } from "sonner";
@@ -32,6 +32,7 @@ type ExpenseSavePayload = SaveAccountCommand & { _id?: string };
 
 export default function Expenses() {
   const { baseCurrency, rateMap, currencies, formatAmount, toBase } = useCurrencyContext();
+  const { hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { openTab } = useTabs();
   const [rateMapKey, setRateMapKey] = useState(0);
   const [expensesParent, setExpensesParent] = useState<AccountDto | null>(null);
@@ -138,7 +139,7 @@ export default function Expenses() {
       const absBal = Math.abs(Number(c.balance || 0));
       if (absBal === 0) return 0;
       return toBase(absBal, c.currency || "");
-    }, currencies, formatAmount, "", true);
+    }, currencies, formatAmount, "", hasSecondaryCurrencies);
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
     currencies.forEach(curr => { summary[`balance_${curr.code}`] = 'subtotal'; });
     const exportColumns: ExcelExportColumn[] = [
@@ -160,7 +161,7 @@ export default function Expenses() {
       ...currCols,
     ];
     await exportData(expenses as unknown as Record<string, unknown>[], exportColumns, "بنود المصاريف", { sheetName: "بنود المصاريف", autoFilter: true, summary, summaryLabel: "المجموع" });
-  }, [expenses, currencies, formatAmount, toBase, expensesParent, exportData]);
+  }, [expenses, currencies, formatAmount, toBase, expensesParent, exportData, hasSecondaryCurrencies]);
 
   const isLoading = loading || refreshing;
 

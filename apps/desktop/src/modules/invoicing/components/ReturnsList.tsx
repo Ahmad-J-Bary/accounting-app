@@ -5,7 +5,7 @@ import { Plus, Eye, Settings2, Trash2, Download } from "lucide-react";
 import type { SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
 import type { CurrencyDisplayMode } from "@app/providers/CurrencyContext";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useExcelExport } from "@shared/hooks";
+import { useExcelExport, useBaseCurrencyColumns } from "@shared/hooks";
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { formatDateTime } from "@shared/lib/format";
@@ -70,11 +70,12 @@ export function ReturnsList({
   const partyLabel = partyType === "supplier" ? "المورد" : "الزبون";
 
   const { currencies, formatAmount } = useCurrencyContext();
+  const { hasSecondaryCurrencies } = useBaseCurrencyColumns();
 
   const { exportData } = useExcelExport();
 
   const handleExport = useCallback(async () => {
-    const currCols = currencyAmountCols("total_amount", "الإجمالي", (row) => parseFloat((row as unknown as SalesReturnDto | PurchaseReturnDto).total_amount || "0"), currencies, formatAmount, "", true);
+    const currCols = currencyAmountCols("total_amount", "الإجمالي", (row) => parseFloat((row as unknown as SalesReturnDto | PurchaseReturnDto).total_amount || "0"), currencies, formatAmount, "", hasSecondaryCurrencies);
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
     currencies.forEach(curr => { summary[`total_amount_${curr.code}`] = 'subtotal'; });
 
@@ -91,7 +92,7 @@ export function ReturnsList({
     ];
 
     await exportData(filtered as unknown as Record<string, unknown>[], columns, title, { sheetName: title, autoFilter: true, summary, summaryLabel: "المجموع" });
-  }, [filtered, currencies, formatAmount, partyLabel, title, exportData]);
+  }, [filtered, currencies, formatAmount, partyLabel, title, exportData, hasSecondaryCurrencies]);
 
   const handleDeleteSelected = async () => {
     if (!selectedId) return;

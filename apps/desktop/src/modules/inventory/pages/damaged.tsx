@@ -12,10 +12,10 @@ import { DamagedTable } from '@modules/inventory/components/DamagedTable';
 import { DamagedForm } from '@modules/inventory/components/DamagedForm';
 import { DamagedDetailPanel } from '@modules/inventory/components/DamagedDetailPanel';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useExcelExport } from "@shared/hooks";
+import { useExcelExport, useBaseCurrencyColumns } from "@shared/hooks";
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import type { ExcelExportColumn } from "@shared/lib/excel";
-    import { formatDateTime, formatNumber, toLocalString, getNumberingSystem } from "@shared/lib/format";
+import { formatDateTime, getNumberingSystem } from "@shared/lib/format";
 
 export default function DamagedPage() {
   const queryClient = useQueryClient();
@@ -129,10 +129,11 @@ export default function DamagedPage() {
   const isLoading = itemsLoading || refreshing || loadingProducts;
 
   const { currencies, formatAmount } = useCurrencyContext();
+  const { hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { exportData } = useExcelExport();
 
   const handleExport = useCallback(async () => {
-    const currCols = currencyAmountCols("cost", "الخسارة", (row) => parseFloat((row as unknown as DamagedItem).cost_impact || "0"), currencies, formatAmount, "", true);
+    const currCols = currencyAmountCols("cost", "الخسارة", (row) => parseFloat((row as unknown as DamagedItem).cost_impact || "0"), currencies, formatAmount, "", hasSecondaryCurrencies);
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = { quantity: 'subtotal' };
     currencies.forEach(curr => { summary[`cost_${curr.code}`] = 'subtotal'; });
     const columns: ExcelExportColumn[] = [
@@ -149,7 +150,7 @@ export default function DamagedPage() {
       { id: "damage_date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as DamagedItem).damage_date) },
     ];
     await exportData(items as unknown as Record<string, unknown>[], columns, "إدارة المواد التالفة", { sheetName: "إدارة المواد التالفة", autoFilter: true, numeralSystem: getNumberingSystem(), summary, summaryLabel: "المجموع" });
-  }, [items, currencies, formatAmount, exportData]);
+  }, [items, currencies, formatAmount, exportData, hasSecondaryCurrencies]);
 
   // Build initial values for form when editing
   const formInitialValues = selectedItem

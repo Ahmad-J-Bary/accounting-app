@@ -8,11 +8,12 @@ import { IncomeStatementView } from "@modules/reports/components/IncomeStatement
 import { ReportFilterBar } from "@widgets/reports/ReportFilterBar";
 
 export default function IncomeStatementReport() {
-  const { baseCurrency, currencies, formatAmount } = useCurrencyContext();
+  const { baseCurrency, currencies, formatAmount, hasMultipleCurrencies } = useCurrencyContext();
   const {
     filters,
     setFilters,
     selectedCurrency,
+    setSelectedCurrency,
   } = useReportFilters(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0],
     new Date().toISOString().split("T")[0]
@@ -49,7 +50,11 @@ return activeCurrency
           loading={loading}
           refreshing={refreshing}
           onRefresh={loadReportData}
-          selectedCurrencyLabel={selectedCurrencyLabel}
+          selectedCurrencyLabel={hasMultipleCurrencies ? selectedCurrencyLabel : undefined}
+          showCurrencySelect={hasMultipleCurrencies}
+          onCurrencyChange={setSelectedCurrency}
+          currencies={currencies}
+          baseCurrencyCode={baseCurrency?.code}
           lastLoadedAt={lastLoadedAt}
         />
       }

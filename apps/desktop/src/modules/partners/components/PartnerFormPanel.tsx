@@ -204,6 +204,7 @@ export function PartnerFormPanel({
                 <FieldLabel>الرصيد الافتتاحي</FieldLabel>
                 <Input type="number" step="any" value={openingBalance} onChange={e => setOpeningBalance(e.target.value)} className="h-9 tabular-nums" />
               </div>
+              {currencies.length > 1 && (
               <div className="space-y-1.5 col-span-2 sm:col-span-1">
                 <FieldLabel>العملة الافتراضية</FieldLabel>
                 <Select value={currency} onValueChange={setCurrency}>
@@ -215,6 +216,7 @@ export function PartnerFormPanel({
                   </SelectContent>
                 </Select>
               </div>
+              )}
               <div className="space-y-1.5 col-span-2 sm:col-span-1">
                 <FieldLabel>مدين (حالي)</FieldLabel>
                 <Input type="number" step="any" value={debit} onChange={e => setDebit(e.target.value)} className="h-9 tabular-nums" />

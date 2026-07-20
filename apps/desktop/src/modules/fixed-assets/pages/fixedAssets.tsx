@@ -38,7 +38,7 @@ const TYPE_CATEGORY_NAMES: Record<string, string[]> = {
 
 export default function FixedAssetsPage() {
   const { currencies, formatAmount } = useCurrencyContext();
-  const { isBaseCurrency } = useBaseCurrencyColumns();
+  const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
 
   const {
     filtered: allAssets,
@@ -193,8 +193,8 @@ export default function FixedAssetsPage() {
         const symbol = curr.symbol || curr.code;
         cols.push({
           id: `purchase_cost_${curr.code}`,
-          header: `التكلفة (${symbol})`,
-          label: `التكلفة (${symbol})`,
+          header: `التكلفة${cs(symbol)}`,
+          label: `التكلفة${cs(symbol)}`,
           accessor: (r: FixedAssetDto) => {
             const val = parseFloat(r.purchase_cost.amount);
             if (Math.abs(val) === 0) return "";
@@ -212,8 +212,8 @@ export default function FixedAssetsPage() {
         const symbol = curr.symbol || curr.code;
         cols.push({
           id: `accumulated_depreciation_${curr.code}`,
-          header: `مجمع الإهلاك (${symbol})`,
-          label: `مجمع الإهلاك (${symbol})`,
+          header: `مجمع الإهلاك${cs(symbol)}`,
+          label: `مجمع الإهلاك${cs(symbol)}`,
           accessor: (r: FixedAssetDto) => {
             const val = parseFloat(r.accumulated_depreciation.amount);
             if (val === 0 && r.useful_life_months === 0)
@@ -233,8 +233,8 @@ export default function FixedAssetsPage() {
         const symbol = curr.symbol || curr.code;
         cols.push({
           id: `net_book_value_${curr.code}`,
-          header: `صافي القيمة (${symbol})`,
-          label: `صافي القيمة (${symbol})`,
+          header: `صافي القيمة${cs(symbol)}`,
+          label: `صافي القيمة${cs(symbol)}`,
           accessor: (r: FixedAssetDto) => {
             const nbv =
               parseFloat(r.purchase_cost.amount) -
@@ -281,7 +281,7 @@ export default function FixedAssetsPage() {
 
       return cols;
     },
-    [warehouseMap, categoryMap, handleRowClick, handleEdit, handleDelete, currencies, formatAmount]
+    [warehouseMap, categoryMap, handleRowClick, handleEdit, handleDelete, currencies, formatAmount, cs]
   );
 
   const columns = useMemo(() => {
@@ -321,7 +321,7 @@ export default function FixedAssetsPage() {
         summary[purchaseId] = 'subtotal';
         return {
           id: purchaseId,
-          label: `التكلفة (${curr.symbol || curr.code})`,
+          label: `التكلفة${cs(curr.symbol || curr.code)}`,
           accessor: (row: Record<string, unknown>) => {
             const r = row as unknown as FixedAssetDto;
             const val = parseFloat(r.purchase_cost.amount);
@@ -340,7 +340,7 @@ export default function FixedAssetsPage() {
         summary[depId] = 'subtotal';
         return {
           id: depId,
-          label: `مجمع الإهلاك (${curr.symbol || curr.code})`,
+          label: `مجمع الإهلاك${cs(curr.symbol || curr.code)}`,
           accessor: (row: Record<string, unknown>) => {
             const r = row as unknown as FixedAssetDto;
             const val = parseFloat(r.accumulated_depreciation.amount);
@@ -360,7 +360,7 @@ export default function FixedAssetsPage() {
         summary[nbvId] = 'subtotal';
         return {
           id: nbvId,
-          label: `صافي القيمة (${curr.symbol || curr.code})`,
+          label: `صافي القيمة${cs(curr.symbol || curr.code)}`,
           formula: `{col('purchase_cost_${curr.code}')}{row}-{col('accumulated_depreciation_${curr.code}')}{row}`,
           numeric: true,
           decimalPlaces: 2,
@@ -371,7 +371,7 @@ export default function FixedAssetsPage() {
     ];
 
     await exportData(assets as unknown as Record<string, unknown>[], exportColumns, "الأصول الثابتة", { sheetName: "الأصول الثابتة", autoFilter: true, summary, summaryLabel: "المجموع" });
-  }, [assets, currencies, categoryMap, warehouseMap, exportData]);
+  }, [assets, currencies, categoryMap, warehouseMap, exportData, cs]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["code", "name", "category"];

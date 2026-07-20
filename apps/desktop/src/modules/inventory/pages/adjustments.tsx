@@ -13,7 +13,7 @@ import { AdjustmentsTable } from '@modules/inventory/components/AdjustmentsTable
 import { AdjustmentForm } from '@modules/inventory/components/AdjustmentForm';
 import { AdjustmentDetailPanel } from '@modules/inventory/components/AdjustmentDetailPanel';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useExcelExport } from "@shared/hooks";
+import { useExcelExport, useBaseCurrencyColumns } from "@shared/hooks";
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { formatDateTime, formatNumber, getNumberingSystem } from "@shared/lib/format";
@@ -140,10 +140,11 @@ export default function AdjustmentsPage() {
   const isLoading = adjLoading || refreshing || loadingProducts;
 
   const { currencies, formatAmount } = useCurrencyContext();
+  const { hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { exportData } = useExcelExport();
 
   const handleExport = useCallback(async () => {
-    const currCols = currencyAmountCols("total_cost", "التكلفة", (row) => Math.abs(parseFloat((row as unknown as StockAdjustment).total_cost_base || "0")), currencies, formatAmount, "", true);
+    const currCols = currencyAmountCols("total_cost", "التكلفة", (row) => Math.abs(parseFloat((row as unknown as StockAdjustment).total_cost_base || "0")), currencies, formatAmount, "", hasSecondaryCurrencies);
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {
       system_quantity: 'subtotal',
       actual_quantity: 'subtotal',
@@ -161,7 +162,7 @@ export default function AdjustmentsPage() {
       { id: "adjustment_date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as StockAdjustment).adjustment_date) },
     ];
     await exportData(adjustments as unknown as Record<string, unknown>[], columns, "تسويات الجرد", { sheetName: "تسويات الجرد", autoFilter: true, numeralSystem: getNumberingSystem(), summary, summaryLabel: "المجموع" });
-  }, [adjustments, currencies, formatAmount, exportData]);
+  }, [adjustments, currencies, formatAmount, exportData, hasSecondaryCurrencies]);
 
   const handleCloseForm = useCallback(() => {
     setShowDialog(false);

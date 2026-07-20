@@ -8,10 +8,12 @@ export function currencyAmountCols(
   formatAmount: (amount: number, opts: { currencyCode: string }) => string,
   emptyValue: string | number = "",
   numeric?: boolean,
+  hasSecondaryCurrencies = true,
 ): ExcelExportColumn[] {
+  const cs = (sym: string) => hasSecondaryCurrencies ? ` (${sym})` : '';
   return currencies.map(curr => ({
     id: `${prefix}_${curr.code}`,
-    label: `${label} (${curr.symbol || curr.code})`,
+    label: `${label}${cs(curr.symbol || curr.code)}`,
     accessor: (row: Record<string, unknown>) => {
       const val = valueAccessor(row);
       if (val === 0) return numeric ? 0 : emptyValue;

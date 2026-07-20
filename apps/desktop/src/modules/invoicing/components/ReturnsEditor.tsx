@@ -14,6 +14,7 @@ import { useDocumentEditor } from "@modules/invoicing/hooks/useDocumentEditor";
 import { returnService } from "@modules/invoicing/api/returnService";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { toReturnBackendLines, newGridLine } from "@modules/invoicing/lib/invoiceUtils";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import type { GridLine } from "@modules/invoicing/lib/invoiceUtils";
 import type { CustomerDto, SupplierDto, MaterialDto, SalesReturnLineDto, PurchaseReturnLineDto, WarehouseDto, SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
 import type { DocumentColumn } from "@widgets/document-shell/GenericDocumentGrid";
@@ -33,8 +34,10 @@ interface ReturnsEditorProps {
 export function ReturnsEditor({ returnType, partyType, parties, materials, warehouses, onSaved, onClose, returnId, readOnly = false }: ReturnsEditorProps) {
   const queryClient = useQueryClient();
   const isSales = returnType === "SalesReturn";
+  const { currencies, baseCurrency } = useCurrencyContext();
   const [saving, setSaving] = useState(false);
   const [loadingExisting, setLoadingExisting] = useState(false);
+  const [selectedCurrency, setSelectedCurrency] = useState("");
   const [partyId, setPartyId] = useState("");
   const [partyName, setPartyName] = useState(isSales ? "زبون نقدي" : "مورد نقدي");
   const [returnDate, setReturnDate] = useState(new Date().toISOString().slice(0, 10));
@@ -43,6 +46,12 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
   const [settlementMode, setSettlementMode] = useState<"deduct_from_debt" | "full_cash_return" | "partial_settlement">("deduct_from_debt");
   const [settlementCash, setSettlementCash] = useState("0");
   const [isPaid, setIsPaid] = useState(true);
+
+  useEffect(() => {
+    if (baseCurrency?.code && !selectedCurrency) {
+      setSelectedCurrency(baseCurrency.code);
+    }
+  }, [baseCurrency?.code, selectedCurrency]);
 
   const {
     lines,
@@ -497,6 +506,9 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
               net={totalAmount}
               invoiceType={isSales ? "Sales" : "Purchase"}
               isReadOnly={true}
+              currencies={currencies}
+              currency={selectedCurrency}
+              onCurrencyChange={setSelectedCurrency}
             />
           ) : (
           <div className="flex flex-col gap-3">
@@ -510,6 +522,9 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
               onSettlementCashChange={setSettlementCash}
               isPaid={isPaid}
               onIsPaidChange={setIsPaid}
+              currencies={currencies}
+              selectedCurrency={selectedCurrency}
+              onCurrencyChange={setSelectedCurrency}
             />
 
             <SummaryPanel
@@ -518,6 +533,9 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
               net={totalAmount}
               invoiceType={isSales ? "Sales" : "Purchase"}
               isReadOnly={true}
+              currencies={currencies}
+              currency={selectedCurrency}
+              onCurrencyChange={setSelectedCurrency}
             />
           </div>
         )

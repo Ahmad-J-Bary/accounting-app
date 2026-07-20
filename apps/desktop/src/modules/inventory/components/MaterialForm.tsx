@@ -1174,28 +1174,32 @@ export function MaterialForm({ open, onClose, material, categories, onSave, savi
 
               <div className="border-t border-slate-100 pt-3 mt-1" />
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <FieldLabel className="flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5 text-slate-400" /> عملة الشراء الافتراضية</FieldLabel>
-                  <Select value={formData.default_purchase_currency} onValueChange={v => setFormData({ ...formData, default_purchase_currency: v })}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="تلقائي" /></SelectTrigger>
-                    <SelectContent>
-                      {activeCurrencies?.map(c => (
-                        <SelectItem key={c.code} value={c.code}>{c.symbol || c.code}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <FieldLabel className="flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5 text-slate-400" /> عملة البيع الافتراضية</FieldLabel>
-                  <Select value={formData.default_sale_currency} onValueChange={v => setFormData({ ...formData, default_sale_currency: v })}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="تلقائي" /></SelectTrigger>
-                    <SelectContent>
-                      {activeCurrencies?.map(c => (
-                        <SelectItem key={c.code} value={c.code}>{c.symbol || c.code}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              {activeCurrencies && activeCurrencies.length > 1 && (
+              <div className="space-y-1.5">
+                <FieldLabel className="flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5 text-slate-400" /> عملة الشراء الافتراضية</FieldLabel>
+                <Select value={formData.default_purchase_currency} onValueChange={v => setFormData({ ...formData, default_purchase_currency: v })}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="تلقائي" /></SelectTrigger>
+                  <SelectContent>
+                    {activeCurrencies?.map(c => (
+                      <SelectItem key={c.code} value={c.code}>{c.symbol || c.code}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              )}
+              {activeCurrencies && activeCurrencies.length > 1 && (
+              <div className="space-y-1.5">
+                <FieldLabel className="flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5 text-slate-400" /> عملة البيع الافتراضية</FieldLabel>
+                <Select value={formData.default_sale_currency} onValueChange={v => setFormData({ ...formData, default_sale_currency: v })}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="تلقائي" /></SelectTrigger>
+                  <SelectContent>
+                    {activeCurrencies?.map(c => (
+                      <SelectItem key={c.code} value={c.code}>{c.symbol || c.code}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              )}
               </div>
             </div>
           </SidebarSection>

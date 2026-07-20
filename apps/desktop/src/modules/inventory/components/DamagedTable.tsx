@@ -30,7 +30,7 @@ export function DamagedTable({
   onDelete,
 }: DamagedTableProps) {
   const { formatAmount, currencies } = useCurrencyContext();
-  const { isBaseCurrency } = useBaseCurrencyColumns();
+  const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
 
   const allColumns = useMemo<UnifiedColumn<DamagedItem>[]>(() => {
     const cols: UnifiedColumn<DamagedItem>[] = [
@@ -61,8 +61,8 @@ export function DamagedTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `cost_${curr.code}`,
-        header: `الخسارة (${curr.symbol || curr.code})`,
-        label: `مبلغ الخسارة (${curr.symbol || curr.code})`,
+        header: `الخسارة ${cs(curr.symbol || curr.code)}`,
+        label: `مبلغ الخسارة ${cs(curr.symbol || curr.code)}`,
         accessor: (i) => {
           const val = parseFloat(i.cost_impact || "0");
           return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "";
@@ -104,7 +104,7 @@ export function DamagedTable({
     }
 
     return cols;
-  }, [formatAmount, currencies, isBaseCurrency, onView, onEdit, onDelete]);
+  }, [formatAmount, currencies, isBaseCurrency, onView, onEdit, onDelete, cs]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["id", "material_name", "quantity"];
@@ -133,14 +133,14 @@ export function DamagedTable({
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: `إجمالي الخسارة (${sym})`,
+          label: `إجمالي الخسارة ${cs(sym)}`,
           value: totalCost > 0 ? formatAmount(totalCost, { currencyCode: currCode }) : "—",
           className: isBase ? 'text-rose-600 font-black' as const : 'text-rose-300 font-bold' as const,
         };
       }
       return { id: `${id}_spacer`, columnId: id, label: '', value: '' };
     });
-  }, [items, allColumns, currencies, formatAmount, isBaseCurrency]);
+  }, [items, allColumns, currencies, formatAmount, isBaseCurrency, cs]);
 
   const sortFn = (a: DamagedItem, b: DamagedItem, field: string, direction: 'asc' | 'desc') => {
     let comparison = 0;

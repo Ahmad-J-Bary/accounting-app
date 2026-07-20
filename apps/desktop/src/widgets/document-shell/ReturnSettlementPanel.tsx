@@ -1,4 +1,7 @@
 import { useMemo } from "react";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { type Currency } from "@modules/core/api/currencyService";
+import { resolveCurrencySymbol } from "@modules/invoicing/lib/constants";
 
 interface ReturnSettlementPanelProps {
   totalAmount: number;
@@ -10,6 +13,9 @@ interface ReturnSettlementPanelProps {
   onSettlementCashChange: (cash: string) => void;
   isPaid: boolean;
   onIsPaidChange: (paid: boolean) => void;
+  currencies?: Currency[];
+  selectedCurrency?: string;
+  onCurrencyChange?: (code: string) => void;
 }
 
 export function ReturnSettlementPanel({
@@ -22,7 +28,13 @@ export function ReturnSettlementPanel({
   onSettlementCashChange,
   isPaid,
   onIsPaidChange,
+  currencies: currenciesProp,
+  selectedCurrency,
+  onCurrencyChange,
 }: ReturnSettlementPanelProps) {
+  const { currencies: contextCurrencies, baseCurrency, hasMultipleCurrencies } = useCurrencyContext();
+  const availableCurrencies = currenciesProp ?? contextCurrencies;
+  const safeCurrency = selectedCurrency || baseCurrency?.code || (availableCurrencies[0]?.code ?? "");
   const minCash = useMemo(() => {
     if (totalAmount > partnerBalance) return totalAmount - partnerBalance;
     return 0;
@@ -52,10 +64,28 @@ export function ReturnSettlementPanel({
     <div className="bg-card border border-border rounded-lg shadow-sm p-4 select-none" dir="rtl">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-2 overflow-x-auto no-scrollbar py-1">
-          <div className="flex items-center gap-1.5 shrink-0 px-2.5 py-1 bg-muted rounded-md border border-border">
-            <span className="text-[10px] font-bold text-muted-foreground">العملة:</span>
-            <span className="text-xs font-black text-blue-600">ر.س</span>
-          </div>
+          {hasMultipleCurrencies ? (
+            <div className="flex items-center gap-1.5 shrink-0 px-2.5 py-1 bg-muted rounded-md border border-border">
+              <span className="text-[10px] font-bold text-muted-foreground">العملة:</span>
+              {onCurrencyChange && availableCurrencies.length > 0 ? (
+                <select
+                  value={safeCurrency}
+                  onChange={(e) => onCurrencyChange(e.target.value)}
+                  className="h-7 px-1 rounded border-none bg-transparent font-black text-blue-600 text-[11px] outline-none focus:ring-0 cursor-pointer"
+                >
+                  {availableCurrencies.map((c) => (
+                    <option key={c.code} value={c.code} className="text-slate-800 font-bold">
+                      {c.name_ar} ({c.symbol || resolveCurrencySymbol(c.code)})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-xs font-black text-blue-600">
+                  {availableCurrencies.find((c) => c.code === safeCurrency)?.symbol || baseCurrency?.symbol || safeCurrency}
+                </span>
+              )}
+            </div>
+          ) : null}
 
           <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 bg-muted px-2.5 py-1 rounded-md border border-border h-7 shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />

@@ -44,7 +44,7 @@ export function MaterialTable({
   onVisibleColumnsChange,
 }: MaterialTableProps) {
   const { formatAmount, currencies } = useCurrencyContext();
-  const { isBaseCurrency } = useBaseCurrencyColumns();
+  const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
 
   const { sortedData: sortedMaterials, sortField, sortDirection, handleSort } = useSortable({
     data: materials,
@@ -172,8 +172,8 @@ export function MaterialTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `unit_price_${curr.code}`,
-        header: `السعر الإفرادي (${sym})`,
-        label: `السعر الإفرادي (${sym})`,
+        header: `السعر الإفرادي${cs(sym)}`,
+        label: `السعر الإفرادي${cs(sym)}`,
         accessor: (m) => {
           const raw = rawPriceBase(m);
           return raw > 0 ? formatAmount(raw, { currencyCode: curr.code }) : "";
@@ -189,8 +189,8 @@ export function MaterialTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `extra_costs_${curr.code}`,
-        header: `تكاليف إضافية (${sym})`,
-        label: `تكاليف إضافية (${sym})`,
+        header: `تكاليف إضافية${cs(sym)}`,
+        label: `تكاليف إضافية${cs(sym)}`,
         accessor: (m) => {
           const extra = extraCostBase(m);
           return extra > 0 ? formatAmount(extra, { currencyCode: curr.code }) : "";
@@ -206,8 +206,8 @@ export function MaterialTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `average_cost_${curr.code}`,
-        header: `تكلفة الوحدة (${sym})`,
-        label: `تكلفة الوحدة (${sym})`,
+        header: `تكلفة الوحدة${cs(sym)}`,
+        label: `تكلفة الوحدة${cs(sym)}`,
         accessor: (m) => {
           const val = unitCostBase(m);
           if (val <= 0) return "";
@@ -233,8 +233,8 @@ export function MaterialTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `total_value_${curr.code}`,
-        header: `المجموع (${sym})`,
-        label: `المجموع (${sym})`,
+        header: `المجموع${cs(sym)}`,
+        label: `المجموع${cs(sym)}`,
         accessor: (m) => {
           const val = totalReceived(m) * unitCostBase(m);
           return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "";
@@ -282,8 +282,8 @@ export function MaterialTable({
       const isBase = isBaseCurrency(curr.code);
       cols.push({
         id: `available_value_${curr.code}`,
-        header: `المجموع للمتوفر (${sym})`,
-        label: `المجموع للمتوفر (${sym})`,
+        header: `المجموع للمتوفر${cs(sym)}`,
+        label: `المجموع للمتوفر${cs(sym)}`,
         accessor: (m) => {
           const val = totalAvailable(m) * unitCostBase(m);
           return val > 0 ? formatAmount(val, { currencyCode: curr.code }) : "";
@@ -305,8 +305,8 @@ export function MaterialTable({
       TIERS.forEach(tier => {
         cols.push({
           id: `sale_price_${tier.id}_${curr.code}`,
-          header: `${tier.label} (${sym})`,
-          label: `${tier.label} (${sym})`,
+          header: `${tier.label}${cs(sym)}`,
+          label: `${tier.label}${cs(sym)}`,
           accessor: (m) => {
             const defaultSaleUnitId = m.default_sale_unit_id;
             const salePrice = m.sale_prices?.find(
@@ -475,7 +475,7 @@ export function MaterialTable({
     });
 
     return cols;
-  }, [categories, onManageUnits, formatAmount, currencies, onEdit, onDelete, onRowClick, rawPriceBase, unitCostBase, extraCostBase, totalReceived, totalAvailable, isBaseCurrency]);
+  }, [categories, onManageUnits, formatAmount, currencies, onEdit, onDelete, onRowClick, rawPriceBase, unitCostBase, extraCostBase, totalReceived, totalAvailable, isBaseCurrency, cs]);
 
   // Default visible: only base currency's money columns are shown.
   const defaultVisible = useMemo(() => {

@@ -12,8 +12,8 @@ import { useReportFilters } from "@shared/hooks/useReportFilters";
 
 export default function PartnerProfitShareReport() {
   const navigate = useNavigate();
-  const { baseCurrency, currencies, formatAmount } = useCurrencyContext();
-  const { filters, setFilters, selectedCurrency } = useReportFilters(
+  const { baseCurrency, currencies, formatAmount, hasMultipleCurrencies } = useCurrencyContext();
+  const { filters, setFilters, selectedCurrency, setSelectedCurrency } = useReportFilters(
     new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
     new Date().toISOString().split("T")[0]
   );
@@ -53,7 +53,11 @@ return activeCurrency
           loading={loading}
           refreshing={refreshing}
           onRefresh={loadReportData}
-          selectedCurrencyLabel={selectedCurrencyLabel}
+          selectedCurrencyLabel={hasMultipleCurrencies ? selectedCurrencyLabel : undefined}
+          showCurrencySelect={hasMultipleCurrencies}
+          onCurrencyChange={setSelectedCurrency}
+          currencies={currencies}
+          baseCurrencyCode={baseCurrency?.code}
           lastLoadedAt={lastLoadedAt}
           extraFilters={
             <div className="flex items-end gap-2">
