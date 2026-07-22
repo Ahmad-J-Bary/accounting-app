@@ -222,8 +222,26 @@
 /* Print styles */
 @media print {
   .no-print { display: none !important; }
-  body { background: white; }
+  body { background: white !important; }
   .print-area { padding: 2rem; }
+
+  /* Clean table container for print */
+  .print-clean {
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    transition: none !important;
+  }
+  .print-clean:hover { box-shadow: none !important; }
+
+  /* Remove layout padding/gaps for print */
+  .print-clean-parent {
+    padding: 0 !important;
+    gap: 0 !important;
+    overflow: visible !important;
+  }
+
   .print-collapsed {
     max-width: 50px !important;
     min-width: 50px !important;

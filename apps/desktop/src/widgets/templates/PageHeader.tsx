@@ -22,7 +22,7 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "flex items-center justify-between gap-3 px-4 md:px-6 py-2.5 bg-background/95 backdrop-blur-sm border-b border-border shrink-0",
+        "no-print flex items-center justify-between gap-3 px-4 md:px-6 py-2.5 bg-background/95 backdrop-blur-sm border-b border-border shrink-0",
         sticky && "sticky top-0 z-20",
         className,
       )}

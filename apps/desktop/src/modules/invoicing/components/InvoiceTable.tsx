@@ -439,7 +439,7 @@ export function InvoiceTable({
     const exportColumns: ExcelExportColumn[] = enrichedColumns
       .filter((col) => col.id !== "actions")
       .map((col) => {
-        const isSubtotal = col.id.startsWith("subtotal_amount_");
+        const isSubtotal = col.id.startsWith("subtotal_");
         const isDiscountGranted = col.id.startsWith("discount_granted_");
         const isDiscount = !isDiscountGranted && col.id.startsWith("discount_");
         const isExtra = col.id.startsWith("extra_costs_");
@@ -448,7 +448,7 @@ export function InvoiceTable({
         const isRemaining = col.id.startsWith("remaining_");
         const isNumeric = isSubtotal || isDiscountGranted || isDiscount || isExtra || isTotal || isPaid || isRemaining;
 
-        if (isTotal && col.visible !== false) {
+        if (isSubtotal || isDiscountGranted || isDiscount || isExtra || isTotal || isPaid || isRemaining) {
           summary[col.id] = "subtotal";
         }
 
@@ -467,7 +467,7 @@ export function InvoiceTable({
             if (col.id === "status") return inv.status === "Posted" ? "مرحّل" : "مسودة";
             if (col.id === "notes") return inv.notes || "";
 
-            const subMatch = col.id.match(/^subtotal_amount_(.+)$/);
+            const subMatch = col.id.match(/^subtotal_(.+)$/);
             if (subMatch) {
               const code = subMatch[1];
               return getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, code);
@@ -526,11 +526,6 @@ export function InvoiceTable({
 
     const exportOptions: ExcelExportOptions = {
       sheetName: exportTitle,
-      title: exportTitle,
-      metadata: [
-        { label: "إجمالي عدد الفواتير", value: sortedData.length },
-        { label: "تاريخ التصدير", value: new Date().toLocaleDateString("ar-SY") },
-      ],
       autoFilter: true,
       summary: Object.keys(summary).length > 0 ? summary : undefined,
       summaryLabel: "المجموع",

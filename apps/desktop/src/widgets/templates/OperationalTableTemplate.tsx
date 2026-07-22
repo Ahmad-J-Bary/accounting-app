@@ -48,7 +48,7 @@ export function OperationalTableTemplate({
       <PageHeader title={title} actions={toolbar} pinAction pinLabel={title} />
 
       {/* 2. Main Layout Area */}
-      <div className="flex-1 flex overflow-hidden p-4 gap-4">
+      <div className="print-clean-parent flex-1 flex overflow-hidden p-4 gap-4">
         
         {/* Main Column */}
         <div className="flex-1 flex flex-col min-w-0 gap-3 overflow-hidden">
@@ -68,7 +68,7 @@ export function OperationalTableTemplate({
           )}
 
           {/* Table Container */}
-          <div className="flex-1 flex flex-col bg-card rounded-xl border border-border shadow-sm overflow-hidden transition-all hover:shadow-md">
+          <div className="print-clean flex-1 flex flex-col bg-card rounded-xl border border-border shadow-sm overflow-hidden transition-all hover:shadow-md">
             <div className="flex-1 overflow-x-hidden overflow-y-auto relative">
               {tableContent}
             </div>

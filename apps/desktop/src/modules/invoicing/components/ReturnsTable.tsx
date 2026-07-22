@@ -190,7 +190,7 @@ export function ReturnsTable({
       .map((col) => {
         const isTotal = col.id.startsWith("total_amount_");
 
-        if (isTotal && col.visible !== false) {
+        if (isTotal) {
           summary[col.id] = "subtotal";
         }
 
@@ -226,11 +226,6 @@ export function ReturnsTable({
 
     const exportOptions: ExcelExportOptions = {
       sheetName: exportTitle,
-      title: exportTitle,
-      metadata: [
-        { label: "إجمالي عدد المرتجعات", value: sortedData.length },
-        { label: "تاريخ التصدير", value: new Date().toLocaleDateString('ar-SY') }
-      ],
       autoFilter: true,
       summary: Object.keys(summary).length > 0 ? summary : undefined,
       summaryLabel: "المجموع",

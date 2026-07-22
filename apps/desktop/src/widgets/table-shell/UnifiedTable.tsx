@@ -1,4 +1,5 @@
-import React, { ReactNode, useCallback, useMemo, useRef } from "react";
+import React, { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { cn } from '@shared/lib/utils';
 import { Skeleton } from "@shared/ui/skeleton";
 import { useTableSettings, useGridResize } from "@shared/hooks";
@@ -136,7 +137,24 @@ export function UnifiedTable<T>({
     [columns],
   );
 
-  const renderColumns = visibleColumns;
+  const visibleColumnIds = useMemo(
+    () => new Set(visibleColumns.map(c => c.id)),
+    [visibleColumns],
+  );
+
+  const [isPrinting, setIsPrinting] = useState(false);
+
+  useEffect(() => {
+    const handlePreparePrint = () => flushSync(() => setIsPrinting(true));
+    const handleEndPrint = () => setIsPrinting(false);
+
+    window.addEventListener("app:prepare-print", handlePreparePrint);
+    window.addEventListener("app:end-print", handleEndPrint);
+    return () => {
+      window.removeEventListener("app:prepare-print", handlePreparePrint);
+      window.removeEventListener("app:end-print", handleEndPrint);
+    };
+  }, []);
 
   const preferenceKey = enableResize && tableId
     ? `unified_${tableId}`
@@ -185,7 +203,27 @@ export function UnifiedTable<T>({
     settings.fontSize,
   );
 
-  const printGridTemplateColumns = gridTemplateColumns;
+  const hiddenColumns = useMemo(
+    () => columns.filter(c => c.visible === false),
+    [columns],
+  );
+
+  const printGridTemplateColumns = useMemo(() => {
+    const visibleTracks = gridTemplateColumns.split(' ').filter(t => t !== '0fr');
+    const hiddenTracks = Array.from({ length: hiddenColumns.length }, () => '50px');
+    return [...visibleTracks, ...hiddenTracks].join(' ');
+  }, [gridTemplateColumns, hiddenColumns.length]);
+
+  const displayGridTemplate = isPrinting ? printGridTemplateColumns : gridTemplateColumns;
+
+  const printColumns = useMemo(() => {
+    return columns.map(col => ({
+      ...col,
+      className: cn(col.className, !visibleColumnIds.has(col.id) && "print-collapsed"),
+    }));
+  }, [columns, visibleColumnIds]);
+
+  const renderColumns = isPrinting ? printColumns : visibleColumns;
 
   const cellBorderClass = getLeftBorderClass(settings.borderStyle);
 
@@ -245,7 +283,7 @@ export function UnifiedTable<T>({
         <div
           key={`skeleton-${idx}`}
           className={cn("animate-pulse", getRowBorderClass(settings.borderStyle))}
-          style={{ display: "grid", gridTemplateColumns: printGridTemplateColumns }}
+          style={{ display: "grid", gridTemplateColumns: displayGridTemplate }}
           dir="rtl"
         >
           {renderColumns.map(col => (
@@ -294,7 +332,7 @@ export function UnifiedTable<T>({
             onRowClick && "cursor-pointer",
             getRowBackgroundClass(isSelected, rowIdx, settings.zebraRows, settings.rowHoverEffect),
           )}
-          style={{ display: "grid", gridTemplateColumns: printGridTemplateColumns }}
+          style={{ display: "grid", gridTemplateColumns: displayGridTemplate }}
           onClick={() => onRowClick?.(row)}
           onDoubleClick={() => onRowDoubleClick?.(row)}
         >
@@ -320,18 +358,14 @@ export function UnifiedTable<T>({
     });
   };
 
-  const visibleColumnIds = useMemo(
-    () => new Set(visibleColumns.map(c => c.id)),
-    [visibleColumns],
-  );
-
   const filteredSummary = useMemo(() => {
     if (!summary?.length) return undefined;
+    if (isPrinting) return summary;
     return summary.filter(s => {
       if (!s.columnId) return true;
       return visibleColumnIds.has(s.columnId);
     });
-  }, [summary, visibleColumnIds]);
+  }, [summary, visibleColumnIds, isPrinting]);
 
   const showSummary = !!(
     filteredSummary?.length && settings.showSummary && data.length > 0
@@ -371,7 +405,7 @@ export function UnifiedTable<T>({
           onHeaderCellClick={handleHeaderCellClick}
           onResizeStart={enableResize ? handleResizeStart : undefined}
           onAutoFit={enableResize ? handleAutoFit : undefined}
-          gridTemplate={printGridTemplateColumns}
+          gridTemplate={displayGridTemplate}
           sortField={sortField}
           sortDirection={sortDirection}
         />
@@ -391,7 +425,7 @@ export function UnifiedTable<T>({
         <div style={{ paddingInlineEnd: 8 }}>
           <TableSummary
             columns={filteredSummary!}
-          gridTemplate={printGridTemplateColumns}
+            gridTemplate={displayGridTemplate}
             asPageFooter
           />
         </div>
