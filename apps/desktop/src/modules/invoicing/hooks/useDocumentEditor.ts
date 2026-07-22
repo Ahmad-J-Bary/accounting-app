@@ -266,7 +266,7 @@ export function useDocumentEditor({
       material_id: material.id,
       material_name: material.name,
       material_code: material.code,
-      material_image: material.image_path || undefined,
+      material_image: material.image_path,
       name_en: material.name_en,
       barcode: material.barcode,
       warehouse_qty: material.total_available,

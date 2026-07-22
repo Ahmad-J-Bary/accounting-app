@@ -25,6 +25,7 @@ interface UseDocumentFinancialsProps<T extends BaseFinancialState> {
   extraColumns?: DocumentColumn[];
   /** Columns injected before the unit_price columns */
   prePriceExtraColumns?: DocumentColumn[];
+  materials?: { id: string; image_path?: string | null }[];
 }
 
 export function useDocumentFinancials<T extends BaseFinancialState>({
@@ -36,6 +37,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
   priceLabel = "السعر",
   extraColumns = [],
   prePriceExtraColumns = [],
+  materials = [],
 }: UseDocumentFinancialsProps<T>) {
   const { convertBetween, rateMap, baseCurrency } = useCurrencyContext();
 
@@ -63,6 +65,11 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
 
     const enriched = lines.map((line) => {
       const el = { ...line } as GridLine & Record<string, string | number>;
+      // Enrich material_image from materials list if not already set
+      if (!el.material_image && el.material_id && materials.length) {
+        const mat = materials.find(m => m.id === el.material_id);
+        if (mat?.image_path) el.material_image = mat.image_path;
+      }
       const qty = parseFloat(line.quantity || "0");
       const unitPrice = parseFloat(line.unit_price || "0"); // always in base currency
       const lineTotal = line.line_total || 0; // always in base currency
@@ -146,6 +153,7 @@ export function useDocumentFinancials<T extends BaseFinancialState>({
     baseCurrency?.code,
     rateMap,
     convertBetween,
+    materials,
   ]);
 
   // 2. Stable currency change handler — only affects header-level amounts,

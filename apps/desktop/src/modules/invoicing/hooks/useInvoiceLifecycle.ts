@@ -411,6 +411,7 @@ export function useInvoiceLifecycle({
     priceLabel: invoiceType === "Sales" ? "السعر" : "التكلفة",
     extraColumns: extraCols,
     prePriceExtraColumns: prePriceExtraCols,
+    materials,
   });
 
   // Auto-set default currency to base currency for new documents
@@ -424,12 +425,18 @@ export function useInvoiceLifecycle({
   // Compute columns to auto-show based on line data
   const dynamicVisibleColumns = useMemo<string[]>(() => {
     const cols: string[] = [];
-    const hasExpiryLine = lines.some(ln => {
-      if (!ln.material_id) return false;
+    let hasExpiry = false;
+    let hasImage = false;
+    for (const ln of lines) {
+      if (!ln.material_id) continue;
       const mat = materials.find(m => m.id === ln.material_id);
-      return mat?.has_expiry;
-    });
-    if (hasExpiryLine) cols.push("expiry_date");
+      if (!mat) continue;
+      if (mat.has_expiry) hasExpiry = true;
+      if (mat.image_path) hasImage = true;
+      if (hasExpiry && hasImage) break;
+    }
+    if (hasExpiry) cols.push("expiry_date");
+    if (hasImage) cols.push("material_image");
     return cols;
   }, [lines, materials]);
 

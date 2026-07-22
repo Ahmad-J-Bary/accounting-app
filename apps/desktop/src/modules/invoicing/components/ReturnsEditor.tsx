@@ -89,6 +89,18 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
     { key: "notes", header: "ملاحظات", width: "flex-[1]", type: "text", defaultVisible: true },
   ], []);
 
+    const dynamicVisibleColumns = useMemo<string[]>(() => {
+    const cols: string[] = [];
+    let hasImage = false;
+    for (const ln of lines) {
+      if (!ln.material_id) continue;
+      const mat = materials.find(m => m.id === ln.material_id);
+      if (mat?.image_path !== undefined && mat.image_path !== null) { hasImage = true; break; }
+    }
+    if (hasImage) cols.push("material_image");
+    return cols;
+  }, [lines, materials]);
+
   const handleExport = useCallback(async () => {
     if (lines.length === 0) {
       toast.error("لا توجد بنود للتصدير");
@@ -324,6 +336,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
             original_conversion_factor: convFactor,
             original_price: line.unit_price,
             original_price_base: Number.isFinite(basePrice) ? basePrice.toFixed(6) : line.unit_price,
+            material_image: mat?.image_path || undefined,
           } as GridLine;
         });
 
@@ -584,6 +597,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
           materials={materials}
           warehouses={warehouses}
           preferenceKey={`${returnType === "SalesReturn" ? "sales" : "purchase"}-returns-editor`}
+          dynamicVisibleColumns={dynamicVisibleColumns}
           searchPanelRenderer={searchPanelRenderer}
           readOnly={readOnly}
         />

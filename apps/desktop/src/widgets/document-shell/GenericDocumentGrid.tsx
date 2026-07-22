@@ -180,7 +180,12 @@ export function GenericDocumentGrid({
     if (key === "line_total")
       return formatRawAmount(line.line_total ?? 0, docCurrency || baseCurrency?.code);
     const raw = (line as unknown as Record<string, string | number>)[key];
-    if (raw === undefined) return "";
+    // For image columns, return empty string if no valid src to avoid rendering "null"
+    if (key === "material_image") {
+      if (raw === undefined || raw === null || raw === "null" || raw === "") return "";
+      return String(raw);
+    }
+    if (raw === undefined || raw === null) return "";
     let s = String(raw);
     if (s.includes(".")) s = s.replace(/\.?0+$/, "");
     if (key === "profit_percent" && s && s !== "0") return `${s}%`;
@@ -190,6 +195,12 @@ export function GenericDocumentGrid({
   const contentByColumn = useMemo(() => {
     const out: Record<string, { headerText: string; sampleValues: string[] }> = {};
     for (const col of filteredColumns) {
+      // Skip sample values for image columns — base64 strings are huge and
+      // passing them to canvas.measureText() would freeze the browser.
+      if (col.type === "image") {
+        out[col.key] = { headerText: col.header, sampleValues: [] };
+        continue;
+      }
       out[col.key] = {
         headerText: col.header,
         sampleValues: lines.slice(0, 30).map(line => getCellValue(line, col.key)).filter(Boolean),
@@ -242,9 +253,14 @@ export function GenericDocumentGrid({
 
   const handleAutoFit = useCallback(
     (colKey: string) => {
+      const col = columns.find(c => c.key === colKey);
+      // Skip sample values for image columns — base64 strings would freeze canvas measureText
+      const sampleValues = col?.type === "image"
+        ? []
+        : lines.slice(0, 30).map(line => getCellValue(line, colKey)).filter(Boolean);
       autoFitColumn(colKey, {
-        headerText: columns.find(c => c.key === colKey)?.header ?? colKey,
-        sampleValues: lines.slice(0, 30).map(line => getCellValue(line, colKey)).filter(Boolean),
+        headerText: col?.header ?? colKey,
+        sampleValues,
       });
     },
     [autoFitColumn, columns, lines, getCellValue],
