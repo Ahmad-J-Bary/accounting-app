@@ -6,13 +6,24 @@ import { TableShell } from "@widgets/table-shell/TableShell";
 import { Skeleton } from "@shared/ui/skeleton";
 import { EmptyState } from "@widgets/table-shell/EmptyState";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns, useSortable, useBaseCurrencyColumns, useTableSettings, useGridResize } from "@shared/hooks";
+import { useExcelExport, useUnifiedColumns, useSortable, useBaseCurrencyColumns, useTableSettings, useGridResize } from "@shared/hooks";
+import type { ExcelExportColumn, ExcelExportOptions } from "@shared/lib/excel";
 import { cn } from "@shared/lib/utils";
 import { getLeftBorderClass, getRowBorderClass, getRowBackgroundClass } from "@shared/lib/table-utils";
 import type { GridResizeContent } from "@shared/hooks/useGridResize";
 import type { AccountLedgerLineDto } from "@erp/shared-types";
 import { formatDateTime, formatNumber } from "@shared/lib/format";
 import { getHeaderText, getPrimitiveCellValue } from "@modules/accounting/journal/components/groupedTableUtils";
+import { Download } from "lucide-react";
+import { Button } from "@shared/ui/button";
+
+function estimateExcelWidth(headerText: string, sampleValues: string[]): number {
+  const longestText = [headerText, ...sampleValues].reduce((max, value) => {
+    return Math.max(max, String(value ?? "").trim().length);
+  }, 0);
+
+  return Math.max(12, Math.min(36, longestText + 4));
+}
 
 type SortField = "entry_number" | "date" | "journal_type";
 
@@ -46,6 +57,7 @@ export function AccountMovementTable({
 }: AccountMovementTableProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix } = useBaseCurrencyColumns();
+  const { exportData } = useExcelExport();
   const { settings, getDensityPadding } = useTableSettings();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -297,6 +309,68 @@ export function AccountMovementTable({
         .filter(Boolean),
     [tableData],
   );
+
+  const handleExport = useCallback(async () => {
+    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
+
+    const exportColumns: ExcelExportColumn[] = enrichedColumns.map((col) => {
+      const label = col.label || getHeaderText(col);
+
+      const isDebitCredit = /^debit_|^credit_/.test(col.id);
+
+      if (isDebitCredit && col.visible !== false) {
+        summary[col.id] = 'subtotal';
+      }
+
+      return {
+        id: col.id,
+        label,
+        hidden: col.visible === false,
+        width: estimateExcelWidth(label, getColumnSampleValues(col)),
+        accessor: (row) => {
+          const r = row as unknown as MovementRow;
+          if (col.id === "entry_number") return parseInt(r.entry_number, 10) || 0;
+          if (col.id === "journal_type") return r.typeLabel;
+          if (col.id === "description") return r.description;
+          if (col.id === "date") return formatDateTime(r.date);
+          if (col.id === "balance") return r.running_balance;
+
+          const debitMatch = col.id.match(/^debit_(.+)$/);
+          if (debitMatch) {
+            return r.side === "debit" && r.amount_base > 0 ? r.amount_base : 0;
+          }
+
+          const creditMatch = col.id.match(/^credit_(.+)$/);
+          if (creditMatch) {
+            return r.side === "credit" && r.amount_base > 0 ? -r.amount_base : 0;
+          }
+
+          return "";
+        },
+        ...(isDebitCredit || col.id === "balance" ? { numeric: true, decimalPlaces: 2 } : {}),
+      };
+    });
+
+    const exportOptions: ExcelExportOptions = {
+      sheetName: "كشف حركة الحساب",
+      title: `كشف حركة الحساب: ${accountName}`,
+      metadata: [
+        { label: "اسم الحساب", value: accountName },
+        { label: "الرصيد الافتتاحي", value: formatAmount(openingBalance, { currencyCode: baseCurrency?.code || "" }) },
+        { label: "تاريخ التصدير", value: new Date().toLocaleDateString('ar-SY') }
+      ],
+      autoFilter: true,
+      summary: Object.keys(summary).length > 0 ? summary : undefined,
+      summaryLabel: "المجموع",
+    };
+
+    await exportData(
+      tableData as unknown as Record<string, unknown>[],
+      exportColumns,
+      `حركة_حساب_${accountName}`,
+      exportOptions,
+    );
+  }, [enrichedColumns, tableData, accountName, openingBalance, exportData, getColumnSampleValues, baseCurrency?.code, formatAmount]);
 
   const contentByColumn = useMemo(() => {
     const out: Record<string, GridResizeContent> = {};
@@ -555,6 +629,17 @@ export function AccountMovementTable({
       onColumnsReset={resetToDefault}
       columnsModified={isModified}
       showToolbar={true}
+      actions={(
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+          onClick={handleExport}
+        >
+          <Download className="w-3.5 h-3.5 ml-1.5 text-slate-500" />
+          تصدير إكسل
+        </Button>
+      )}
     >
       <div
         ref={containerRef}

@@ -47,7 +47,7 @@ export const TableShell: React.FC<TableShellProps> = ({
   return (
     <div className={cn("flex flex-col h-full bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden", className)}>
       {showToolbar && settings.showToolbar && (
-        <div className="px-4 py-2 border-b border-slate-100 bg-slate-50/30">
+        <div className="no-print px-4 py-2 border-b border-slate-100 bg-slate-50/30">
           <TableToolbar
             title={title}
             search={search}

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { DocumentToolbar } from "@widgets/document-shell/DocumentToolbar";
-import type { CustomerDto } from "@erp/shared-types";
+import type { CustomerDto, InvoiceDto } from "@erp/shared-types";
+import { toast } from "sonner";
 
 import { HeaderField } from '@shared/ui/header-field';
 import { FinancialDocumentTemplate } from '@widgets/templates/FinancialDocumentTemplate';
@@ -14,6 +15,10 @@ import { useInvoiceLifecycle } from '../hooks/useInvoiceLifecycle';
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { customerService } from "@modules/partners/api/customerService";
 import { invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
+import { useExcelExport } from "@shared/hooks";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { formatDateTime } from "@shared/lib/format";
+import { buildInvoiceLineExportColumns } from "../lib/invoice-export-columns";
 
 export default function SalesInvoices() {
   const location = useLocation();
@@ -23,7 +28,7 @@ export default function SalesInvoices() {
     view,
     invoices,
     parties,
-    currencies,
+    currencies: invoiceCurrencies,
     materials,
     loading,
     refreshing,
@@ -61,6 +66,150 @@ export default function SalesInvoices() {
 
   const customers = parties as CustomerDto[];
   const [isSearchingParty, setIsSearchingParty] = useState(false);
+  const [gridVisibleColumnIds, setGridVisibleColumnIds] = useState<string[]>([]);
+
+  const { exportData } = useExcelExport();
+  const { currencies: availableCurrencies, hasMultipleCurrencies, convertBetween } = useCurrencyContext();
+
+  const handleExport = useCallback(async () => {
+    if (enrichedLines.length === 0) {
+      toast.error("لا توجد بنود للتصدير");
+      return;
+    }
+
+    const materialList = Object.values(materials);
+    const materialMap = new Map(materialList.map(m => [m.id, m]));
+    const enrichedForExport = enrichedLines.map(line => {
+      const r = { ...line } as Record<string, unknown>;
+      const mat = materialMap.get(String(line.material_id));
+      if (mat) {
+        r.material_image = mat.image_path || null;
+        r.material_code = mat.code || '';
+        r.name_en = mat.name_en || '';
+        r.unit_barcode = mat.barcode || '';
+      }
+      return r;
+    });
+
+    const hiddenColumnIds = gridVisibleColumnIds.length > 0
+      ? gridColumns.map(c => c.key).filter(k => !gridVisibleColumnIds.includes(k))
+      : gridColumns.filter(c => c.defaultVisible === false).map(c => c.key);
+
+    const columns = buildInvoiceLineExportColumns({
+      gridColumns,
+      hiddenColumnIds,
+      currencies: availableCurrencies,
+      hasMultipleCurrencies,
+      materials: materialList,
+      warehouses,
+    });
+
+    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
+    availableCurrencies.forEach(curr => {
+      summary[`line_total_${curr.code}`] = 'subtotal';
+    });
+
+    const paidVal = parseFloat(headerState.paid_amount || "0");
+    const remainingVal = net - paidVal;
+
+    await exportData(enrichedForExport, columns, `فاتورة_مبيعات_${headerState.invoice_number}`, {
+      sheetName: "فاتورة مبيعات",
+      title: "فاتورة مبيعات",
+      metadata: [
+        { label: "رقم الفاتورة", value: headerState.invoice_number },
+        { label: "تاريخ الإصدار", value: headerState.issued_at },
+        { label: "العميل", value: headerState.customer_name || "زبون نقدي" },
+        { label: "ملاحظات المستند", value: headerState.notes || "—" }
+      ],
+      autoFilter: true,
+      summary,
+      summaryLabel: "المجموع",
+      additionalSummary: [
+        { label: "طريقة الدفع / التسوية", value: headerState.payment_method === "Deferred" ? "آجل" : "نقدي" },
+        { label: "الضريبة", value: parseFloat(headerState.tax_amount) || 0 },
+        { label: "التكاليف الإضافية", value: parseFloat(headerState.extra_costs || "0") || 0 },
+        { label: "المجموع الكلي (الصافي)", value: net },
+        { label: "المبلغ المدفوع", value: paidVal },
+        { label: "المبلغ المتبقي", value: remainingVal }
+      ]
+    });
+  }, [exportData, availableCurrencies, hasMultipleCurrencies, enrichedLines, headerState, net, gridColumns, gridVisibleColumnIds, materials, warehouses]);
+
+  const handleExportRow = useCallback(async (inv: InvoiceDto) => {
+    const fullInv = await invoiceService.getInvoiceById(inv.id);
+    const materialList = Object.values(materials);
+    const materialMap = new Map(materialList.map(m => [m.id, m]));
+    const warehouseMap = new Map(warehouses.map(w => [w.id, w]));
+
+    const enrichedLines = fullInv.lines.map(line => {
+      const enriched = { ...line } as Record<string, unknown>;
+      const mat = materialMap.get(line.material_id);
+      if (mat) {
+        enriched.material_image = mat.image_path || null;
+        enriched.material_code = mat.code || '';
+        enriched.name_en = mat.name_en || '';
+        enriched.unit_barcode = mat.barcode || '';
+      }
+      const whId = line.warehouse_id;
+      if (whId) enriched.warehouse_name = warehouseMap.get(whId)?.name || whId;
+
+      const qty = parseFloat(line.quantity || "0");
+      const price = parseFloat(line.unit_price || "0");
+      availableCurrencies.forEach(curr => {
+        const convertedPrice = fullInv.currency_code === curr.code
+          ? price
+          : convertBetween(price, fullInv.currency_code, curr.code);
+        enriched[`unit_price_${curr.code}`] = convertedPrice.toFixed(curr.decimals);
+        enriched[`line_total_${curr.code}`] = (convertedPrice * qty).toFixed(curr.decimals);
+        const discPct = parseFloat(String(line.discount_percent || '0'));
+        enriched[`discount_value_${curr.code}`] = (qty * convertedPrice * discPct / 100).toFixed(curr.decimals);
+      });
+      return enriched;
+    });
+
+    const hiddenColumnIds = gridColumns.filter(c => c.defaultVisible === false).map(c => c.key);
+
+    const columns = buildInvoiceLineExportColumns({
+      gridColumns,
+      hiddenColumnIds,
+      currencies: availableCurrencies,
+      hasMultipleCurrencies,
+      materials: materialList,
+      warehouses,
+    });
+
+    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
+    availableCurrencies.forEach(curr => {
+      summary[`line_total_${curr.code}`] = 'subtotal';
+    });
+
+    const subtotalVal = parseFloat(fullInv.subtotal_amount || "0");
+    const discountVal = parseFloat(fullInv.discount_amount || "0");
+    const extraCostsVal = parseFloat(fullInv.extra_costs || "0");
+    const netVal = subtotalVal - discountVal + extraCostsVal;
+    const paidVal = parseFloat(fullInv.amount_paid || "0");
+    const remainingVal = netVal - paidVal;
+
+    await exportData(enrichedLines, columns, `فاتورة_مبيعات_${fullInv.invoice_number}`, {
+      sheetName: "فاتورة مبيعات",
+      title: "فاتورة مبيعات",
+      metadata: [
+        { label: "رقم الفاتورة", value: fullInv.invoice_number },
+        { label: "تاريخ الإصدار", value: formatDateTime(fullInv.issued_at) },
+        { label: "العميل", value: fullInv.customer_name || "زبون نقدي" },
+        { label: "ملاحظات المستند", value: fullInv.notes || "—" }
+      ],
+      autoFilter: true,
+      summary,
+      summaryLabel: "المجموع",
+      additionalSummary: [
+        { label: "طريقة الدفع / التسوية", value: fullInv.payment_method === "Deferred" ? "آجل" : "نقدي" },
+        { label: "المجموع الكلي (الصافي)", value: netVal },
+        { label: "المبلغ المدفوع", value: paidVal },
+        { label: "المبلغ المتبقي", value: remainingVal }
+      ]
+    });
+  }, [exportData, availableCurrencies, hasMultipleCurrencies, convertBetween, materials, warehouses, gridColumns]);
 
   if (view === "editor") {
     return (
@@ -84,6 +233,7 @@ export default function SalesInvoices() {
             onSaveDraft={() => handleSave(false)}
             onSaveAndPost={() => handleSave(true)}
             onReopen={handleReopen}
+            onExport={handleExport}
           />
         }
         headerFields={
@@ -130,6 +280,7 @@ export default function SalesInvoices() {
             docCurrency={headerState.currency_code}
             exchangeRate={headerState.exchange_rate}
             dynamicVisibleColumns={dynamicVisibleColumns}
+            onVisibleColumnsChange={setGridVisibleColumnIds}
           />
         }
         summaryPanel={
@@ -141,7 +292,7 @@ export default function SalesInvoices() {
             paid={parseFloat(headerState.paid_amount)}
             currency={displayCurrency}
             invoiceType="Sales"
-            currencies={currencies}
+            currencies={invoiceCurrencies}
             onCurrencyChange={setDisplayCurrency}
             exchangeRate={parseFloat(headerState.exchange_rate)}
             isReadOnly={isReadOnly}
@@ -200,6 +351,7 @@ export default function SalesInvoices() {
         await loadData(false);
       }}
       formatMonetaryAmount={formatMonetaryAmount}
+      onExportRow={handleExportRow}
       partyType="customer"
       showSubtotal={true}
       showDiscountGranted={true}

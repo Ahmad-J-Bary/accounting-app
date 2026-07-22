@@ -62,7 +62,7 @@ export function OperationalTableTemplate({
 
           {/* Filter Bar */}
           {filterBar && (
-            <div className="shrink-0">
+            <div className="no-print shrink-0">
               {filterBar}
             </div>
           )}

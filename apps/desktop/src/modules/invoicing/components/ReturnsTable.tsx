@@ -1,13 +1,16 @@
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
+import { useUnifiedColumns, useSortable, useBaseCurrencyColumns, useExcelExport } from "@shared/hooks";
+import type { ExcelExportColumn, ExcelExportOptions } from "@shared/lib/excel";
+import { Button } from "@shared/ui/button";
 import { formatDateTime, formatNumber } from "@shared/lib/format";
 
 import type { SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
 import { TableActions } from "@widgets/table-shell/TableActions";
+import { Download } from "lucide-react";
 
 interface ReturnsTableProps {
   items: (SalesReturnDto | PurchaseReturnDto)[];
@@ -21,6 +24,7 @@ interface ReturnsTableProps {
   onView?: (ret: SalesReturnDto | PurchaseReturnDto) => void;
   onEdit?: (ret: SalesReturnDto | PurchaseReturnDto) => void;
   onDelete?: (id: string) => Promise<void>;
+  onExportRow?: (ret: SalesReturnDto | PurchaseReturnDto) => void;
   toolbarTitle?: string;
 }
 
@@ -36,6 +40,7 @@ export function ReturnsTable({
   onView,
   onEdit,
   onDelete,
+  onExportRow,
 }: ReturnsTableProps) {
   const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
@@ -112,6 +117,7 @@ export function ReturnsTable({
                   onDelete(ret.id);
                 }
               } : undefined}
+              onExportRow={onExportRow ? () => onExportRow(ret) : undefined}
               align="start"
             />
           );
@@ -119,7 +125,7 @@ export function ReturnsTable({
       }] : []),
     ];
     return cols;
-  }, [currencies, formatAmount, partnerLabel, onView, onEdit, onDelete, isBaseCurrency, cs]);
+  }, [currencies, formatAmount, partnerLabel, onView, onEdit, onDelete, onExportRow, isBaseCurrency, cs]);
 
   // Default visible: only base currency's total column shown
   const defaultVisible = useMemo(() => {
@@ -174,6 +180,70 @@ export function ReturnsTable({
     defaultVisible,
   });
 
+  const { exportData } = useExcelExport();
+
+  const handleExport = useCallback(async () => {
+    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
+
+    const exportColumns: ExcelExportColumn[] = enrichedColumns
+      .filter((col) => col.id !== "actions")
+      .map((col) => {
+        const isTotal = col.id.startsWith("total_amount_");
+
+        if (isTotal && col.visible !== false) {
+          summary[col.id] = "subtotal";
+        }
+
+        const headerText = typeof col.header === "string" && col.header ? col.header : String(col.label || col.id);
+
+        return {
+          id: col.id,
+          label: headerText,
+          hidden: col.visible === false,
+          width: 15,
+          accessor: (row) => {
+            const ret = row as unknown as (SalesReturnDto | PurchaseReturnDto);
+            if (col.id === "return_number") return parseInt(ret.return_number ?? "0", 10) || 0;
+            if (col.id === "partner_name") {
+              if (isSalesReturn(ret)) return ret.customer_name || "";
+              if (isPurchaseReturn(ret)) return ret.supplier_name || "";
+              return "";
+            }
+            if (col.id === "notes") return ret.notes || "";
+            if (col.id === "return_date") return formatDateTime(ret.return_date);
+
+            const match = col.id.match(/^total_amount_(.+)$/);
+            if (match) {
+              return parseFloat(ret.total_amount || "0") || 0;
+            }
+            return "";
+          },
+          ...(isTotal ? { numeric: true, decimalPlaces: 2 } : {}),
+        };
+      });
+
+    const exportTitle = partnerLabel.includes("مورد") ? "قائمة مرتجعات المشتريات" : "قائمة مرتجعات المبيعات";
+
+    const exportOptions: ExcelExportOptions = {
+      sheetName: exportTitle,
+      title: exportTitle,
+      metadata: [
+        { label: "إجمالي عدد المرتجعات", value: sortedData.length },
+        { label: "تاريخ التصدير", value: new Date().toLocaleDateString('ar-SY') }
+      ],
+      autoFilter: true,
+      summary: Object.keys(summary).length > 0 ? summary : undefined,
+      summaryLabel: "المجموع",
+    };
+
+    await exportData(
+      sortedData as unknown as Record<string, unknown>[],
+      exportColumns,
+      exportTitle,
+      exportOptions
+    );
+  }, [enrichedColumns, partnerLabel, sortedData, exportData]);
+
   const baseTotal = useMemo(() =>
     items.reduce((s, ret) => s + (parseFloat(ret.total_amount || "0") || 0), 0),
     [items]);
@@ -212,6 +282,17 @@ export function ReturnsTable({
       onColumnsReset={resetToDefault}
       columnsModified={isModified}
       showToolbar={true}
+      actions={(
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+          onClick={handleExport}
+        >
+          <Download className="w-3.5 h-3.5 ml-1.5 text-emerald-600" />
+          تصدير إكسل
+        </Button>
+      )}
     >
       <UnifiedTable
         data={sortedData}

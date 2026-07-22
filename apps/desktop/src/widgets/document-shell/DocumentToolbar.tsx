@@ -1,5 +1,6 @@
+import { useCallback } from "react";
 import { Button } from "@shared/ui/button";
-import { Plus, Settings2, Save, Send, History, Printer } from "lucide-react";
+import { Plus, Settings2, Save, Send, History, Printer, Download } from "lucide-react";
 
 export interface DocumentToolbarProps {
   status?: string;
@@ -11,6 +12,7 @@ export interface DocumentToolbarProps {
   onSaveAndPost?: () => void;
   onReopen?: () => void;
   onPrint?: () => void;
+  onExport?: () => void;
   saveAndPostLabel?: string;
 }
 
@@ -23,9 +25,19 @@ export function DocumentToolbar({
   onSaveDraft,
   onSaveAndPost,
   onReopen,
-  onPrint = () => window.print(),
+  onPrint,
+  onExport,
   saveAndPostLabel = "ترحيل الفاتورة",
 }: DocumentToolbarProps) {
+  const defaultPrint = useCallback(() => {
+    window.dispatchEvent(new Event("app:prepare-print"));
+    requestAnimationFrame(() => {
+      window.print();
+      const endPrint = () => window.dispatchEvent(new Event("app:end-print"));
+      window.addEventListener("afterprint", endPrint, { once: true });
+      setTimeout(endPrint, 3000);
+    });
+  }, []);
   return (
     <div className="flex flex-wrap items-center gap-2">
       {onNewMaterial && (
@@ -90,11 +102,15 @@ export function DocumentToolbar({
         </>
       ) : null}
 
-      {onPrint && (
-        <Button variant="outline" size="sm" onClick={onPrint} className="bg-white">
-          <Printer className="w-4 h-4 ml-2" /> طباعة
+      {onExport && (
+        <Button variant="outline" size="sm" onClick={onExport} className="bg-white">
+          <Download className="w-4 h-4 ml-2" /> تصدير إكسل
         </Button>
       )}
+
+      <Button variant="outline" size="sm" onClick={onPrint ?? defaultPrint} className="bg-white">
+        <Printer className="w-4 h-4 ml-2" /> طباعة
+      </Button>
     </div>
   );
 }

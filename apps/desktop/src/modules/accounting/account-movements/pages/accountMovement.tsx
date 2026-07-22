@@ -1,8 +1,8 @@
-﻿import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useTabs } from "@app/providers/TabContext";
 import { Button } from "@shared/ui/button";
-import { Download, Printer, PlusCircle, ShoppingCart, ArrowUpRight, ArrowDownLeft, BookOpen, FileText, Landmark } from "lucide-react";
+import { Printer, PlusCircle, ShoppingCart, ArrowUpRight, ArrowDownLeft, BookOpen, FileText, Landmark } from "lucide-react";
 import { cn } from "@shared/lib/utils";
 import { formatCurrency } from "@shared/lib/format";
 import { DatePicker } from "@shared/ui/date-picker";
@@ -185,13 +185,6 @@ export default function AccountMovement() {
   );
 
   const toolbarButtons = useMemo(() => {
-    const commonExcel = (
-      <Button key="excel" variant="outline" size="sm" className={OUTLINE_BUTTON_CLASS}>
-        <Download className="w-4 h-4 ml-2 text-emerald-500" />
-        تصدير Excel
-      </Button>
-    );
-
     const commonPrint = (
       <Button key="print" variant="outline" size="sm" className={OUTLINE_BUTTON_CLASS}>
         <Printer className="w-4 h-4 ml-2 text-blue-500" />
@@ -208,8 +201,7 @@ export default function AccountMovement() {
           <Button key="drawings" size="sm" onClick={() => setIsVoucherOpen(true)} className={TOOLBAR_CLASS_BY_TYPE.partner}>
             <PlusCircle className="w-4 h-4 ml-2" />
             إنشاء سند مسحوبات جديد
-          </Button>,
-          commonExcel
+          </Button>
         ];
       case 'customer':
         return [
@@ -236,8 +228,7 @@ export default function AccountMovement() {
               <ShoppingCart className="w-4 h-4 ml-2 text-blue-500" />
               المبيعات للعميل {linkedEntityName}
             </Button>
-          ) : null,
-          commonExcel
+          ) : null
         ].filter(Boolean);
       case 'supplier':
         return [
@@ -264,19 +255,17 @@ export default function AccountMovement() {
               <ShoppingCart className="w-4 h-4 ml-2 text-emerald-500" />
               المشتريات للمورد {linkedEntityName}
             </Button>
-          ) : null,
-          commonExcel
+          ) : null
         ].filter(Boolean);
       case 'expense':
         return [
           <Button key="expense" size="sm" onClick={() => setIsVoucherOpen(true)} className={TOOLBAR_CLASS_BY_TYPE.expense}>
             <PlusCircle className="w-4 h-4 ml-2" />
             إنشاء سند صرف جديد
-          </Button>,
-          commonExcel
+          </Button>
         ];
       default:
-        return [commonExcel];
+        return [];
     }
   }, [accountType, linkedEntity, openTab]);
 

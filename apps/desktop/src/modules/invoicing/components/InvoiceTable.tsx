@@ -1,15 +1,17 @@
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
+import { useUnifiedColumns, useSortable, useBaseCurrencyColumns, useExcelExport } from "@shared/hooks";
+import type { ExcelExportColumn, ExcelExportOptions } from "@shared/lib/excel";
+import { Button } from "@shared/ui/button";
 import { formatDateTime, formatNumber } from "@shared/lib/format";
 import { getInvoiceBaseAmount } from "../lib/invoiceHelpers";
 import type { InvoiceDto } from "@erp/shared-types";
 import { DocumentStatusBadge } from "./DocumentStatusBadge";
 import { TableActions } from "@widgets/table-shell/TableActions";
-import { CheckCircle2, History, Filter } from "lucide-react";
+import { CheckCircle2, History, Filter, Download } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@shared/ui/select";
 
 interface ExtraColumn {
@@ -35,6 +37,7 @@ interface InvoiceTableProps {
   onPost: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onReopen: (id: string) => Promise<void>;
+  onExportRow?: (inv: InvoiceDto) => void;
   partyLabel: string;
   partyType: "supplier" | "customer";
   defaultName: string;
@@ -65,6 +68,7 @@ export function InvoiceTable({
   onPost,
   onDelete,
   onReopen,
+  onExportRow,
   partyLabel,
   partyType,
   defaultName,
@@ -304,6 +308,7 @@ export function InvoiceTable({
                   onDelete(inv.id);
                 }
               }}
+              onExportRow={onExportRow ? () => onExportRow(inv) : undefined}
               extraActions={extraActions}
               align="start"
             />
@@ -312,7 +317,7 @@ export function InvoiceTable({
       },
     ];
     return cols;
-  }, [formatAmount, currencies, baseCurrency, partyField, partyLabel, partyType, defaultName, showSubtotal, showDiscountGranted, showDiscount, showExtraCosts, extraColumns, onView, onEdit, onViewOpeningBalance, onEditOpeningBalance, onPost, onReopen, onDelete, isBaseCurrency, cs]);
+  }, [formatAmount, currencies, baseCurrency, partyField, partyLabel, partyType, defaultName, showSubtotal, showDiscountGranted, showDiscount, showExtraCosts, extraColumns, onView, onEdit, onViewOpeningBalance, onEditOpeningBalance, onPost, onReopen, onDelete, onExportRow, isBaseCurrency, cs]);
 
   // Default visible: hide secondary currency columns by default.
   // User can toggle them on.
@@ -425,6 +430,119 @@ export function InvoiceTable({
     columns: allColumns,
     defaultVisible,
   });
+
+  const { exportData } = useExcelExport();
+
+  const handleExport = useCallback(async () => {
+    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
+
+    const exportColumns: ExcelExportColumn[] = enrichedColumns
+      .filter((col) => col.id !== "actions")
+      .map((col) => {
+        const isSubtotal = col.id.startsWith("subtotal_amount_");
+        const isDiscountGranted = col.id.startsWith("discount_granted_");
+        const isDiscount = !isDiscountGranted && col.id.startsWith("discount_");
+        const isExtra = col.id.startsWith("extra_costs_");
+        const isTotal = col.id.startsWith("total_");
+        const isPaid = col.id.startsWith("paid_");
+        const isRemaining = col.id.startsWith("remaining_");
+        const isNumeric = isSubtotal || isDiscountGranted || isDiscount || isExtra || isTotal || isPaid || isRemaining;
+
+        if (isTotal && col.visible !== false) {
+          summary[col.id] = "subtotal";
+        }
+
+        const headerText = typeof col.header === "string" && col.header ? col.header : String(col.label || col.id);
+
+        return {
+          id: col.id,
+          label: headerText,
+          hidden: col.visible === false,
+          width: 15,
+          accessor: (row) => {
+            const inv = row as unknown as InvoiceDto;
+            if (col.id === "invoice_number") return parseInt(inv.invoice_number ?? "0", 10) || 0;
+            if (col.id === partyField) return (partyType === "supplier" ? inv.supplier_name : inv.customer_name) || defaultName;
+            if (col.id === "issued_at") return formatDateTime(inv.issued_at);
+            if (col.id === "status") return inv.status === "Posted" ? "مرحّل" : "مسودة";
+            if (col.id === "notes") return inv.notes || "";
+
+            const subMatch = col.id.match(/^subtotal_amount_(.+)$/);
+            if (subMatch) {
+              const code = subMatch[1];
+              return getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, code);
+            }
+            const discGrantedMatch = col.id.match(/^discount_granted_(.+)$/);
+            if (discGrantedMatch) {
+              const code = discGrantedMatch[1];
+              return getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, code);
+            }
+            const discMatch = col.id.match(/^discount_(.+)$/);
+            if (discMatch) {
+              const code = discMatch[1];
+              return getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, code);
+            }
+            const extraMatch = col.id.match(/^extra_costs_(.+)$/);
+            if (extraMatch) {
+              const code = extraMatch[1];
+              return getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, code);
+            }
+            const totalMatch = col.id.match(/^total_(.+)$/);
+            if (totalMatch) {
+              const code = totalMatch[1];
+              const sub = getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, code);
+              const disc = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, code);
+              const ext = getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, code);
+              return sub - disc + ext;
+            }
+            const paidMatch = col.id.match(/^paid_(.+)$/);
+            if (paidMatch) {
+              const code = paidMatch[1];
+              return getInvoiceBaseAmount(inv.amount_paid, inv.amount_paid_v2, inv.currency_code, inv.exchange_rate, code);
+            }
+            const remMatch = col.id.match(/^remaining_(.+)$/);
+            if (remMatch) {
+              const code = remMatch[1];
+              const sub = getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, code);
+              const disc = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, code);
+              const ext = getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, code);
+              const paid = getInvoiceBaseAmount(inv.amount_paid, inv.amount_paid_v2, inv.currency_code, inv.exchange_rate, code);
+              return sub - disc + ext - paid;
+            }
+
+            const extra = extraColumns.find((c) => c.key === col.id);
+            if (extra) {
+              const res = extra.accessor(inv);
+              return typeof res === "string" || typeof res === "number" ? res : "";
+            }
+
+            return "";
+          },
+          ...(isNumeric ? { numeric: true, decimalPlaces: 2 } : {}),
+        };
+      });
+
+    const exportTitle = partyType === "supplier" ? "قائمة فواتير المشتريات" : "قائمة فواتير المبيعات";
+
+    const exportOptions: ExcelExportOptions = {
+      sheetName: exportTitle,
+      title: exportTitle,
+      metadata: [
+        { label: "إجمالي عدد الفواتير", value: sortedData.length },
+        { label: "تاريخ التصدير", value: new Date().toLocaleDateString("ar-SY") },
+      ],
+      autoFilter: true,
+      summary: Object.keys(summary).length > 0 ? summary : undefined,
+      summaryLabel: "المجموع",
+    };
+
+    await exportData(
+      sortedData as unknown as Record<string, unknown>[],
+      exportColumns,
+      exportTitle,
+      exportOptions
+    );
+  }, [enrichedColumns, partyField, partyType, defaultName, extraColumns, sortedData, exportData]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     let baseSubtotalTotal = 0;
@@ -573,6 +691,17 @@ export function InvoiceTable({
       onColumnsReset={resetToDefault}
       columnsModified={isModified}
       showToolbar={true}
+      actions={(
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+          onClick={handleExport}
+        >
+          <Download className="w-3.5 h-3.5 ml-1.5 text-emerald-600" />
+          تصدير إكسل
+        </Button>
+      )}
       filterBar={
         <Select value={statusFilter} onValueChange={onStatusFilterChange}>
           <SelectTrigger className="w-[130px] h-8 bg-white font-bold shadow-sm border-slate-200 text-xs">

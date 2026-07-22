@@ -7,7 +7,7 @@ import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
 import { formatDateTime, formatNumber, toLocalString } from '@shared/lib/format';
 import { useExcelExport } from "@shared/hooks";
-import type { ExcelExportColumn } from "@shared/lib/excel";
+import type { ExcelExportColumn, ExcelExportOptions } from "@shared/lib/excel";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { getMovementType } from '../constants/movementTypes';
 import { Download } from "lucide-react";
@@ -197,59 +197,7 @@ export function InventoryMovementsTable({
     }
   });
 
-  const { exportData } = useExcelExport();
 
-  const handleExport = useCallback(async () => {
-    const summary: Record<string, string | null> = { quantity: 'subtotal' };
-    const exportColumns: ExcelExportColumn[] = [
-      { id: "reference", label: "رقم", accessor: (row) => parseInt((row as unknown as StockMovement).reference ?? "0", 10) || 0 },
-      { id: "product_name", label: "المادة", accessor: (row) => String((row as unknown as StockMovement).material_name ?? "") },
-      { id: "type", label: "النوع", accessor: (row) => {
-        const m = row as unknown as StockMovement;
-        const isTransfer = m.reference ? transferRefs.has(m.reference) : false;
-        const clean = m.movement_type.replace('MovementType::', '');
-        if (isTransfer && clean === 'Out') return "تحويل من";
-        if (isTransfer && clean === 'In') return "تحويل إلى";
-        return getMovementType(m.movement_type).label;
-      }},
-      { id: "warehouse", label: "المستودع", accessor: (row) => {
-        const m = row as unknown as StockMovement;
-        const isTransfer = m.reference ? transferRefs.has(m.reference) : false;
-        const clean = m.movement_type.replace('MovementType::', '');
-        const prefix = isTransfer && clean === 'In' ? 'إلى ' : isTransfer && clean === 'Out' ? 'من ' : '';
-        return prefix + warehouseName(m);
-      }},
-      { id: "quantity", label: "الكمية", accessor: (row) => {
-        const m = row as unknown as StockMovement;
-        if (m.signed_quantity != null) return parseFloat(m.signed_quantity) || 0;
-        const qty = parseFloat(m.quantity) || 0;
-        const cfg = getMovementType(m.movement_type);
-        return cfg.inflow ? qty : -qty;
-      }, numeric: true, decimalPlaces: 2 },
-      ...currencies.map(curr => {
-        summary[`total_cost_${curr.code}`] = `SUMPRODUCT(SIGN({col('quantity')}{firstRow}:{col('quantity')}{lastRow}), {col('total_cost_${curr.code}')}{firstRow}:{col('total_cost_${curr.code}')}{lastRow})`;
-        return {
-          id: `total_cost_${curr.code}`,
-          label: `التكلفة${cs(curr.symbol || curr.code)}`,
-          accessor: (row: Record<string, unknown>) => {
-            const m = row as unknown as StockMovement;
-            return baseCost(m);
-          },
-          numeric: true,
-          decimalPlaces: 2,
-        };
-      }),
-      { id: "notes", label: "ملاحظة / التوصيف / السبب", accessor: (row) => getCleanNotes(row as unknown as StockMovement) },
-      { id: "date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as StockMovement).movement_date) },
-    ];
-
-    await exportData(
-      sortedData as unknown as Record<string, unknown>[],
-      exportColumns,
-      "حركات المخزون",
-      { sheetName: "حركات المخزون", autoFilter: true, summary, summaryLabel: "المجموع" },
-    );
-  }, [sortedData, currencies, warehouseName, baseCost, transferRefs, exportData, cs]);
 
   const allColumns = useMemo<UnifiedColumn<StockMovement>[]>(() => {
     const cols: UnifiedColumn<StockMovement>[] = [
@@ -408,6 +356,78 @@ export function InventoryMovementsTable({
     columns: allColumns,
     defaultVisible,
   });
+
+  const { exportData } = useExcelExport();
+
+  const handleExport = useCallback(async () => {
+    const summary: Record<string, string | null> = { quantity: 'subtotal' };
+
+    const exportColumns: ExcelExportColumn[] = enrichedColumns.map((col) => {
+      const isDebitCredit = /^total_cost_/.test(col.id);
+
+      if (isDebitCredit && col.visible !== false) {
+        const currCode = col.id.replace('total_cost_', '');
+        summary[col.id] = `SUMPRODUCT(SIGN({col('quantity')}{firstRow}:{col('quantity')}{lastRow}), {col('total_cost_${currCode}')}{firstRow}:{col('total_cost_${currCode}')}{lastRow})`;
+      }
+
+      return {
+        id: col.id,
+        label: col.label || String(col.header || ""),
+        hidden: col.visible === false,
+        width: 15, // standard default fallback
+        accessor: (row) => {
+          const m = row as unknown as StockMovement;
+          if (col.id === "reference") return parseInt(m.reference ?? "0", 10) || 0;
+          if (col.id === "product_name") return String(m.material_name ?? "");
+          if (col.id === "type") {
+            const isTransfer = m.reference ? transferRefs.has(m.reference) : false;
+            const clean = m.movement_type.replace('MovementType::', '');
+            if (isTransfer && clean === 'Out') return "تحويل من";
+            if (isTransfer && clean === 'In') return "تحويل إلى";
+            return getMovementType(m.movement_type).label;
+          }
+          if (col.id === "warehouse") {
+            const isTransfer = m.reference ? transferRefs.has(m.reference) : false;
+            const clean = m.movement_type.replace('MovementType::', '');
+            const prefix = isTransfer && clean === 'In' ? 'إلى ' : isTransfer && clean === 'Out' ? 'من ' : '';
+            return prefix + warehouseName(m);
+          }
+          if (col.id === "quantity") {
+            if (m.signed_quantity != null) return parseFloat(m.signed_quantity) || 0;
+            const qty = parseFloat(m.quantity) || 0;
+            const cfg = getMovementType(m.movement_type);
+            return cfg.inflow ? qty : -qty;
+          }
+          if (col.id.startsWith("total_cost_")) {
+            return baseCost(m);
+          }
+          if (col.id === "notes") return getCleanNotes(m);
+          if (col.id === "date") return formatDateTime(m.movement_date);
+          return "";
+        },
+        ...(isDebitCredit || col.id === "quantity" ? { numeric: true, decimalPlaces: 2 } : {}),
+      };
+    });
+
+    const exportOptions: ExcelExportOptions = {
+      sheetName: "حركات المخزون",
+      title: "حركات المخزون",
+      metadata: [
+        { label: "إجمالي الحركات", value: sortedData.length },
+        { label: "تاريخ التصدير", value: new Date().toLocaleDateString('ar-SY') }
+      ],
+      autoFilter: true,
+      summary,
+      summaryLabel: "المجموع",
+    };
+
+    await exportData(
+      sortedData as unknown as Record<string, unknown>[],
+      exportColumns,
+      "حركات المخزون",
+      exportOptions,
+    );
+  }, [enrichedColumns, sortedData, warehouseName, baseCost, transferRefs, exportData]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     return enrichedColumns.map(col => {

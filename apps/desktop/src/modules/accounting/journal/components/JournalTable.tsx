@@ -680,22 +680,23 @@ export function JournalTable({
   const handleExport = useCallback(async () => {
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
 
-    const exportColumns: ExcelExportColumn[] = visibleColumns.map((col) => {
+    const exportColumns: ExcelExportColumn[] = enrichedColumns.map((col) => {
       const twoLineCol = col as UnifiedColumn<JournalTableRow>;
       const singleLineCol = col as UnifiedColumn<JournalSingleLineTableRow>;
-      const label = getHeaderText(twoLineCol);
+      const label = col.label || getHeaderText(twoLineCol);
 
       const isDebitCredit = isTwoLine
         ? /^debit_|^credit_/.test(col.id)
         : col.id === 'debit_base' || col.id === 'credit_base';
 
-      if (isDebitCredit) {
+      if (isDebitCredit && col.visible !== false) {
         summary[col.id] = 'subtotal';
       }
 
       return {
         id: col.id,
         label,
+        hidden: col.visible === false,
         width: estimateExcelWidth(label, getColumnSampleValues(col as UnifiedColumn<JournalTableRow> | UnifiedColumn<JournalSingleLineTableRow>)),
         accessor: isTwoLine
           ? (record) => getTwoLineExportValue(record as unknown as JournalTableRow, twoLineCol)
@@ -706,10 +707,16 @@ export function JournalTable({
 
     const exportOptions: ExcelExportOptions = {
       sheetName: "القيود اليومية",
+      title: isTwoLine ? "دفتر اليومية العامة - تفصيلي" : "دفتر اليومية العامة - مجمع",
+      metadata: [
+        { label: "نوع العرض", value: isTwoLine ? "تفصيلي (سطرين)" : "مجمع (سطر واحد)" },
+        { label: "إجمالي عدد القيود", value: entries.length },
+        { label: "تاريخ التصدير", value: new Date().toLocaleDateString('ar-SY') }
+      ],
       autoFilter: true,
       mergeCells: isTwoLine ? buildJournalMergeRanges(
         sortedData as JournalTableRow[],
-        visibleColumns.map((col) => col.id),
+        exportColumns.filter(c => !c.hidden).map((col) => col.id),
       ) : [],
       summary: Object.keys(summary).length > 0 ? summary : undefined,
       summaryLabel: "المجموع",
@@ -721,7 +728,7 @@ export function JournalTable({
       "القيود اليومية",
       exportOptions,
     );
-  }, [getColumnSampleValues, getTwoLineExportValue, getSingleLineExportValue, sortedData, visibleColumns, isTwoLine, exportData]);
+  }, [getColumnSampleValues, getTwoLineExportValue, getSingleLineExportValue, sortedData, enrichedColumns, isTwoLine, exportData, entries.length]);
 
   // ============ RENDER BODY ============
   const renderBody = () => {

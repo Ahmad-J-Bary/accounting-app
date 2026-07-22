@@ -136,6 +136,8 @@ export function UnifiedTable<T>({
     [columns],
   );
 
+  const renderColumns = visibleColumns;
+
   const preferenceKey = enableResize && tableId
     ? `unified_${tableId}`
     : enableResize
@@ -183,6 +185,8 @@ export function UnifiedTable<T>({
     settings.fontSize,
   );
 
+  const printGridTemplateColumns = gridTemplateColumns;
+
   const cellBorderClass = getLeftBorderClass(settings.borderStyle);
 
   // ── Single click on header → SORT ONLY (never auto-fit) ──────────────────
@@ -212,13 +216,13 @@ export function UnifiedTable<T>({
   // ── GridHeader columns ────────────────────────────────────────────────────
   const gridHeaderColumns = useMemo(
     () =>
-      visibleColumns.map(col => ({
+      renderColumns.map(col => ({
         id: col.id,
         header: col.header,
         label: col.label || getHeaderText(col),
         align: col.align,
       })),
-    [visibleColumns],
+    [renderColumns],
   );
 
   // ── Row cell style — centered, no ellipsis. The grid column widens to
@@ -241,10 +245,10 @@ export function UnifiedTable<T>({
         <div
           key={`skeleton-${idx}`}
           className={cn("animate-pulse", getRowBorderClass(settings.borderStyle))}
-          style={{ display: "grid", gridTemplateColumns }}
+          style={{ display: "grid", gridTemplateColumns: printGridTemplateColumns }}
           dir="rtl"
         >
-          {visibleColumns.map(col => (
+          {renderColumns.map(col => (
             <div
               key={col.id}
               className={cn(getDensityPadding(), cellBorderClass)}
@@ -290,27 +294,27 @@ export function UnifiedTable<T>({
             onRowClick && "cursor-pointer",
             getRowBackgroundClass(isSelected, rowIdx, settings.zebraRows, settings.rowHoverEffect),
           )}
-          style={{ display: "grid", gridTemplateColumns }}
+          style={{ display: "grid", gridTemplateColumns: printGridTemplateColumns }}
           onClick={() => onRowClick?.(row)}
           onDoubleClick={() => onRowDoubleClick?.(row)}
         >
-          {visibleColumns.map(col => (
-            <div
-              key={col.id}
-              data-col-id={col.id}
-              className={cn(
-                getDensityPadding(),
-                cellBorderClass,
-                "text-slate-600 transition-colors group-hover:text-slate-900",
-                col.className,
-              )}
-              style={getCellStyle()}
-            >
-              {typeof col.accessor === "function"
-                ? col.accessor(row, rowIdx)
-                : (row[col.accessor] as ReactNode) || "—"}
-            </div>
-          ))}
+          {renderColumns.map(col => (
+              <div
+                key={col.id}
+                data-col-id={col.id}
+                className={cn(
+                  getDensityPadding(),
+                  cellBorderClass,
+                  "text-slate-600 transition-colors group-hover:text-slate-900",
+                  col.className,
+                )}
+                style={getCellStyle()}
+              >
+                {typeof col.accessor === "function"
+                  ? col.accessor(row, rowIdx)
+                  : (row[col.accessor] as ReactNode) || "—"}
+              </div>
+            ))}
         </div>
       );
     });
@@ -367,7 +371,7 @@ export function UnifiedTable<T>({
           onHeaderCellClick={handleHeaderCellClick}
           onResizeStart={enableResize ? handleResizeStart : undefined}
           onAutoFit={enableResize ? handleAutoFit : undefined}
-          gridTemplate={gridTemplateColumns}
+          gridTemplate={printGridTemplateColumns}
           sortField={sortField}
           sortDirection={sortDirection}
         />
@@ -387,7 +391,7 @@ export function UnifiedTable<T>({
         <div style={{ paddingInlineEnd: 8 }}>
           <TableSummary
             columns={filteredSummary!}
-            gridTemplate={gridTemplateColumns}
+          gridTemplate={printGridTemplateColumns}
             asPageFooter
           />
         </div>

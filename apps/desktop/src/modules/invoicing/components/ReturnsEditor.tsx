@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from "@shared/ui/button";
 
-import { Save, X, Loader2 } from "lucide-react";
+import { Save, X, Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
 import { HeaderField } from '@shared/ui/header-field';
 import { FinancialDocumentTemplate } from "@widgets/templates/FinancialDocumentTemplate";
@@ -15,6 +15,8 @@ import { returnService } from "@modules/invoicing/api/returnService";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { toReturnBackendLines, newGridLine } from "@modules/invoicing/lib/invoiceUtils";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useExcelExport } from "@shared/hooks";
+import { buildInvoiceLineExportColumns } from "../lib/invoice-export-columns";
 import type { GridLine } from "@modules/invoicing/lib/invoiceUtils";
 import type { CustomerDto, SupplierDto, MaterialDto, SalesReturnLineDto, PurchaseReturnLineDto, WarehouseDto, SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
 import type { DocumentColumn } from "@widgets/document-shell/GenericDocumentGrid";
@@ -34,7 +36,7 @@ interface ReturnsEditorProps {
 export function ReturnsEditor({ returnType, partyType, parties, materials, warehouses, onSaved, onClose, returnId, readOnly = false }: ReturnsEditorProps) {
   const queryClient = useQueryClient();
   const isSales = returnType === "SalesReturn";
-  const { currencies, baseCurrency } = useCurrencyContext();
+  const { currencies, baseCurrency, convertBetween } = useCurrencyContext();
   const [saving, setSaving] = useState(false);
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState("");
@@ -53,6 +55,8 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
     }
   }, [baseCurrency?.code, selectedCurrency]);
 
+  const { exportData } = useExcelExport();
+
   const {
     lines,
     updateLine,
@@ -64,6 +68,107 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
     priceField: isSales ? "last_sale_price" : "last_purchase_price",
     materials,
   });
+
+  const totalAmount = useMemo(() =>
+    lines.reduce((sum, l) => sum + (parseFloat(l.quantity || "0") * parseFloat(l.unit_price || "0")), 0), [lines]);
+
+  const returnGridColumns = useMemo<DocumentColumn[]>(() => [
+    { key: "material_image", header: "صورة", width: "w-[40px]", type: "image", defaultVisible: false },
+    { key: "material_code", header: "الكود", width: "w-[100px]", type: "material_code", defaultVisible: true },
+    { key: "unit_barcode", header: "الباركود", width: "w-[120px]", type: "material_barcode", defaultVisible: false },
+    { key: "material_name", header: "الصنف (عربي)", width: "flex-[2]", type: "material", defaultVisible: true },
+    { key: "name_en", header: "الصنف (EN)", width: "flex-[1.5]", type: "readonly", defaultVisible: false },
+    { key: "warehouse_qty", header: "المتوفر", width: "w-[70px]", type: "readonly", defaultVisible: true },
+    { key: "original_quantity", header: "الكمية الأصلية", width: "w-[120px]", type: "readonly", defaultVisible: true },
+    { key: "original_price", header: "السعر الأصلي", width: "w-[90px]", type: "readonly", defaultVisible: true },
+    { key: "quantity", header: "كمية المرتجع", width: "w-[90px]", type: "number", defaultVisible: true },
+    { key: "unit_name", header: "الوحدة", width: "w-[100px]", type: "unit_select", defaultVisible: true },
+    { key: "warehouse_id", header: "المستودع", width: "w-[140px]", type: "warehouse_select", defaultVisible: true },
+    { key: "unit_price", header: "سعر المرتجع", width: "w-[100px]", type: "number", defaultVisible: true },
+    { key: "line_total", header: "الإجمالي", width: "w-[110px]", type: "readonly", defaultVisible: true },
+    { key: "notes", header: "ملاحظات", width: "flex-[1]", type: "text", defaultVisible: true },
+  ], []);
+
+  const handleExport = useCallback(async () => {
+    if (lines.length === 0) {
+      toast.error("لا توجد بنود للتصدير");
+      return;
+    }
+
+    const baseCode = baseCurrency?.code || "";
+    const materialMap = new Map(materials.map(m => [m.id, m]));
+    const warehouseMap = new Map(warehouses.map(w => [w.id, w]));
+
+    const enrichedLines = lines.map(line => {
+      const enriched = { ...line } as Record<string, unknown>;
+      const mat = materialMap.get(String(line.material_id));
+      if (mat) {
+        enriched.material_image = mat.image_path || null;
+        enriched.material_code = mat.code || '';
+        enriched.name_en = mat.name_en || '';
+        enriched.unit_barcode = mat.barcode || '';
+      }
+      const whId = line.warehouse_id as string;
+      if (whId) enriched.warehouse_name = warehouseMap.get(whId)?.name || whId;
+
+      const qty = parseFloat(line.quantity || "0");
+      const price = parseFloat(line.unit_price || "0");
+      currencies.forEach(curr => {
+        const convertedPrice = baseCode === curr.code
+          ? price
+          : convertBetween(price, baseCode, curr.code);
+        const priceKey = baseCode === curr.code ? 'unit_price' : `unit_price_${curr.code}`;
+        if (baseCode !== curr.code) {
+          enriched[priceKey] = convertedPrice.toFixed(curr.decimals);
+        }
+        enriched[`line_total_${curr.code}`] = (convertedPrice * qty).toFixed(curr.decimals);
+      });
+      return enriched;
+    });
+
+    const hiddenColumnIds = returnGridColumns.filter(c => c.defaultVisible === false).map(c => c.key);
+    const exportCols = buildInvoiceLineExportColumns({
+      gridColumns: returnGridColumns,
+      hiddenColumnIds,
+      currencies,
+      hasMultipleCurrencies: currencies.length > 1,
+      materials,
+      warehouses,
+    });
+
+    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
+    currencies.forEach(curr => {
+      summary[`line_total_${curr.code}`] = 'subtotal';
+    });
+
+    const docTitle = returnType === "SalesReturn" ? "مرتجع مبيعات" : "مرتجع مشتريات";
+    const partnerLabel = partyType === "supplier" ? "المورد" : "العميل";
+    const settlementModeLabel = settlementMode === "deduct_from_debt" ? "خصم من الدين" : settlementMode === "full_cash_return" ? "مرتجع نقدي كامل" : "تسوية جزئية";
+
+    await exportData(
+      enrichedLines,
+      exportCols,
+      `${returnType === "SalesReturn" ? "مرتجع_مبيعات" : "مرتجع_مشتريات"}_${returnNumber || "جديد"}`,
+      {
+        sheetName: "مرتجع",
+        title: docTitle,
+        metadata: [
+          { label: "رقم المرتجع", value: returnNumber || "جديد" },
+          { label: "تاريخ المرتجع", value: returnDate },
+          { label: partnerLabel, value: partyName },
+          { label: "ملاحظات", value: notes || "—" }
+        ],
+        autoFilter: true,
+        summary,
+        summaryLabel: "المجموع",
+        additionalSummary: [
+          { label: "طريقة التسوية", value: settlementModeLabel },
+          { label: "قيمة المرتجع (الصافي)", value: totalAmount },
+          { label: "المبلغ المسترد نقداً", value: settlementMode === "partial_settlement" ? parseFloat(settlementCash) || 0 : (settlementMode === "full_cash_return" ? totalAmount : 0) }
+        ]
+      }
+    );
+  }, [exportData, lines, currencies, baseCurrency, convertBetween, materials, warehouses, returnGridColumns, returnType, returnNumber, returnDate, partyType, partyName, notes, settlementMode, settlementCash, totalAmount]);
 
   // Wrapped removeLine that also removes occurrence key
   const removeLine = useCallback((index: number) => {
@@ -233,23 +338,6 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
       .finally(() => setLoadingExisting(false));
   }, [returnId, materials, isSales, readOnly, setLines]);
 
-  const columns = useMemo<DocumentColumn[]>(() => [
-    { key: "material_image", header: "صورة", width: "w-[40px]", type: "image", defaultVisible: false },
-    { key: "material_code", header: "الكود", width: "w-[100px]", type: "material_code", defaultVisible: true },
-    { key: "unit_barcode", header: "الباركود", width: "w-[120px]", type: "material_barcode", defaultVisible: false },
-    { key: "material_name", header: "الصنف (عربي)", width: "flex-[2]", type: "material", defaultVisible: true },
-    { key: "name_en", header: "الصنف (EN)", width: "flex-[1.5]", type: "readonly", defaultVisible: false },
-    { key: "warehouse_qty", header: "المتوفر", width: "w-[70px]", type: "readonly", defaultVisible: true },
-    { key: "original_quantity", header: "الكمية الأصلية", width: "w-[120px]", type: "readonly", defaultVisible: true },
-    { key: "original_price", header: "السعر الأصلي", width: "w-[90px]", type: "readonly", defaultVisible: true },
-    { key: "quantity", header: "كمية المرتجع", width: "w-[90px]", type: "number", defaultVisible: true },
-    { key: "unit_name", header: "الوحدة", width: "w-[100px]", type: "unit_select", defaultVisible: true },
-    { key: "warehouse_id", header: "المستودع", width: "w-[140px]", type: "warehouse_select", defaultVisible: true },
-    { key: "unit_price", header: "سعر المرتجع", width: "w-[100px]", type: "number", defaultVisible: true },
-    { key: "line_total", header: "الإجمالي", width: "w-[110px]", type: "readonly", defaultVisible: true },
-    { key: "notes", header: "ملاحظات", width: "flex-[1]", type: "text", defaultVisible: true },
-  ], []);
-
   const linesRef = useRef(lines);
   linesRef.current = lines;
 
@@ -363,8 +451,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
     );
   }, [occurrences, partyId, selectedOccurrenceKeys, existingInvoiceLineIds]);
 
-  const totalAmount = useMemo(() =>
-    lines.reduce((sum, l) => sum + (parseFloat(l.quantity || "0") * parseFloat(l.unit_price || "0")), 0), [lines]);
+
 
   const partnerBalance = useMemo(() => {
     if (!partyId) return 0;
@@ -460,6 +547,9 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
               <Save className="w-4 h-4 ml-2" /> {saving ? "جاري الحفظ..." : "حفظ المرتجع"}
             </Button>
           )}
+          <Button variant="outline" size="sm" onClick={handleExport} className="h-9 border-slate-200 hover:bg-slate-50">
+            <Download className="w-4 h-4 ml-2" /> تصدير إكسل
+          </Button>
         </div>
       }
       headerFields={
@@ -485,7 +575,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
       }
       lineItemsGrid={
         <GenericDocumentGrid
-          columns={columns}
+          columns={returnGridColumns}
           lines={lines}
           onUpdateLine={wrappedUpdateLine}
           onRemoveLine={readOnly ? () => {} : removeLine}

@@ -12,7 +12,9 @@ import { warehouseService } from "@modules/inventory/api/warehouseService";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { queryClient, invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
+import { useExcelExport } from "@shared/hooks";
 import { formatNumber } from "@shared/lib/format";
+import { buildInvoiceLineExportColumns } from "@modules/invoicing/lib/invoice-export-columns";
 
 import { HeaderField } from '@shared/ui/header-field';
 import { FinancialDocumentTemplate } from "@widgets/templates/FinancialDocumentTemplate";
@@ -26,6 +28,7 @@ import { useDocumentEditor } from "@modules/invoicing/hooks/useDocumentEditor";
 import { toBackendLines, calcLineTotal } from "@modules/invoicing/lib/invoiceUtils";
 import { useDocumentFinancials } from "@modules/invoicing/lib/useDocumentFinancials";
 import { MaterialForm } from "@modules/inventory/components/MaterialForm";
+
 
 interface HeaderState {
   id?: string;
@@ -71,8 +74,9 @@ export default function OpeningBalance() {
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [materialFormOpen, setMaterialFormOpen] = useState(false);
   const [savingMaterial, setSavingMaterial] = useState(false);
+  const [gridVisibleColumnIds, setGridVisibleColumnIds] = useState<string[]>([]);
 
-  const { currencies, rateMap, baseCurrency } = useCurrencyContext();
+  const { currencies, rateMap, baseCurrency, hasMultipleCurrencies } = useCurrencyContext();
   const [header, setHeader] = useState<HeaderState>(defaultHeader());
 
   const defaultWarehouseId = appSettings?.purchase_warehouse_id || warehouses.find(w => w.is_default)?.id;
@@ -316,6 +320,71 @@ export default function OpeningBalance() {
     extraColumns: extraCols,
   });
 
+  const { exportData } = useExcelExport();
+
+  const handleExport = useCallback(async () => {
+    if (enrichedLines.length === 0) {
+      toast.error("لا توجد بنود للتصدير");
+      return;
+    }
+
+    const enrichedForExport = enrichedLines.map(line => {
+      const r = { ...line } as Record<string, unknown>;
+      const mid = r.material_id as string;
+      if (mid) {
+        const mat = materials.find(m => m.id === mid);
+        if (mat) {
+          r.material_image = mat.image_path || null;
+          r.material_code = mat.code || '';
+          r.name_en = mat.name_en || '';
+          r.unit_barcode = mat.barcode || '';
+        }
+      }
+      const whId = r.warehouse_id as string;
+      if (whId) r.warehouse_name = warehouses.find(w => w.id === whId)?.name || whId;
+      return r;
+    });
+
+    const hiddenColumnIds = gridVisibleColumnIds.length > 0
+      ? gridColumns.map(c => c.key).filter(k => !gridVisibleColumnIds.includes(k))
+      : gridColumns.filter(c => c.defaultVisible === false).map(c => c.key);
+
+    const columns = buildInvoiceLineExportColumns({
+      gridColumns,
+      hiddenColumnIds,
+      currencies,
+      hasMultipleCurrencies,
+      materials,
+      warehouses,
+    });
+
+    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
+    currencies.forEach(curr => {
+      summary[`line_total_${curr.code}`] = 'subtotal';
+    });
+
+    await exportData(
+      enrichedForExport,
+      columns,
+      `بضاعة_أول_المدة_${header.docNumber || "جديد"}`,
+      {
+        sheetName: "بضاعة أول المدة",
+        title: "بضاعة أول المدة (رصيد افتتاحي للمواد)",
+        metadata: [
+          { label: "رقم القيد", value: header.docNumber },
+          { label: "تاريخ القيد", value: header.issued_at },
+          { label: "ملاحظات المستند", value: header.notes || "—" }
+        ],
+        autoFilter: true,
+        summary,
+        summaryLabel: "المجموع",
+        additionalSummary: [
+          { label: "المجموع الكلي (الصافي)", value: net }
+        ]
+      }
+    );
+  }, [enrichedLines, exportData, header, net, currencies, hasMultipleCurrencies, gridColumns, gridVisibleColumnIds, materials, warehouses]);
+
   return (
     <FinancialDocumentTemplate
       title="بضاعة أول المدة"
@@ -338,6 +407,7 @@ export default function OpeningBalance() {
           onSaveDraft={() => handleSave(false)}
           onSaveAndPost={() => handleSave(true)}
           onReopen={handleReopen}
+          onExport={handleExport}
           saveAndPostLabel="حفظ وترحيل الرصيد"
         />
       }
@@ -365,6 +435,7 @@ export default function OpeningBalance() {
           docCurrency={header.currency_code}
           exchangeRate={header.exchange_rate}
           dynamicVisibleColumns={dynamicVisibleColumns}
+          onVisibleColumnsChange={setGridVisibleColumnIds}
         />
       }
       summaryPanel={

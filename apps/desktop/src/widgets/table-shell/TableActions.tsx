@@ -1,6 +1,6 @@
 import { Button } from "@shared/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@shared/ui/dropdown-menu";
-import { LucideIcon, MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react";
+import { LucideIcon, MoreHorizontal, Eye, Edit, Trash2, Download } from "lucide-react";
 import { cn } from '@shared/lib/utils';
 
 interface ActionItem {
@@ -14,11 +14,12 @@ interface TableActionsProps {
   onView?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  onExportRow?: () => void;
   extraActions?: ActionItem[];
   align?: "start" | "end";
 }
 
-export function TableActions({ onView, onEdit, onDelete, extraActions, align = "end" }: TableActionsProps) {
+export function TableActions({ onView, onEdit, onDelete, onExportRow, extraActions, align = "end" }: TableActionsProps) {
   return (
     <div onClick={e => e.stopPropagation()}>
       <DropdownMenu>
@@ -58,6 +59,13 @@ export function TableActions({ onView, onEdit, onDelete, extraActions, align = "
               <span>{action.label}</span>
             </DropdownMenuItem>
           ))}
+
+          {onExportRow && (
+            <DropdownMenuItem onClick={onExportRow} className="gap-2 cursor-pointer py-2.5">
+              <Download className="w-4 h-4 text-slate-400" />
+              <span>تصدير إكسل</span>
+            </DropdownMenuItem>
+          )}
 
           {onDelete && (
             <>

@@ -138,7 +138,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
             <ArrowRightLeft className="w-6 h-6 text-primary" />
             {titlePrefix}: {partnerName}
           </CardTitle>
-          <Button variant="outline" size="sm" onClick={() => window.print()} className="font-bold">
+          <Button variant="outline" size="sm" onClick={() => { window.dispatchEvent(new Event("app:prepare-print")); requestAnimationFrame(() => window.print()); }} className="font-bold">
             طباعة الكشف
           </Button>
         </div>

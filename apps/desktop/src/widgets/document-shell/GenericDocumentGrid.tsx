@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
+import { flushSync } from "react-dom";
 import { Trash2, Columns, RotateCcw } from "lucide-react";
 import type { MaterialDto, WarehouseDto } from "@erp/shared-types";
 import { cn } from "@shared/lib/utils";
@@ -8,7 +9,7 @@ import { GridLine } from "@modules/invoicing/lib/invoiceUtils";
 import { useColumnPreferences } from "@shared/hooks/useColumnPreferences";
 import { MaterialSearchPanel } from "./MaterialSearchPanel";
 import { DocumentGridCell, type DocumentGridConfig, type DocumentGridCallbacks } from "./DocumentGridCell";
-import { GridHeader } from "@widgets/table-shell/GridHeader";
+import { GridHeader, type GridHeaderColumn } from "@widgets/table-shell/GridHeader";
 import { GridSummaryRow } from "./GridSummaryRow";
 import { useColumnResize } from "./useColumnResize";
 import { useTableSettings } from "@shared/hooks";
@@ -75,6 +76,7 @@ export interface GenericDocumentGridProps {
     onClose: () => void;
   }) => React.ReactNode;
   priceHistoryMap?: Record<string, import("@erp/shared-types").MaterialPriceHistoryDto>;
+  onVisibleColumnsChange?: (columns: string[]) => void;
 }
 
 export function GenericDocumentGrid({
@@ -92,6 +94,7 @@ export function GenericDocumentGrid({
   dynamicVisibleColumns,
   searchPanelRenderer,
   priceHistoryMap,
+  onVisibleColumnsChange,
 }: GenericDocumentGridProps) {
   const { baseCurrency, convertBetween, currencies } = useCurrencyContext();
   const { settings, getDensityPadding } = useTableSettings();
@@ -105,6 +108,19 @@ export function GenericDocumentGrid({
   const [searchRow, setSearchRow] = useState<number | null>(null);
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const [isPrinting, setIsPrinting] = useState(false);
+
+  useEffect(() => {
+    const preparePrint = () => { flushSync(() => setIsPrinting(true)); };
+    const endPrint = () => { flushSync(() => setIsPrinting(false)); };
+    window.addEventListener("app:prepare-print", preparePrint);
+    window.addEventListener("app:end-print", endPrint);
+    return () => {
+      window.removeEventListener("app:prepare-print", preparePrint);
+      window.removeEventListener("app:end-print", endPrint);
+    };
+  }, []);
 
   const defaultVisible = useMemo(() => columns.filter((c) => c.defaultVisible !== false).map((c) => c.key), [columns]);
   const allColumnIds = useMemo(() => columns.map((c) => c.key), [columns]);
@@ -130,9 +146,24 @@ export function GenericDocumentGrid({
     });
   }, [dynamicVisibleColumns, setVisibleColumns]);
 
+  // Notify parent of visible column changes
+  useEffect(() => {
+    onVisibleColumnsChange?.(visibleColumns);
+  }, [visibleColumns, onVisibleColumnsChange]);
+
   const filteredColumns = useMemo(
     () => columns.filter((c) => visibleColumns.includes(c.key)),
     [columns, visibleColumns],
+  );
+
+  const printColumns = useMemo(
+    () => isPrinting ? columns : filteredColumns,
+    [isPrinting, columns, filteredColumns],
+  );
+
+  const hiddenPrintColumns = useMemo(
+    () => isPrinting ? columns.filter((c) => !visibleColumns.includes(c.key)) : [],
+    [isPrinting, columns, visibleColumns],
   );
 
   const formatRawAmount = useCallback(
@@ -174,10 +205,40 @@ export function GenericDocumentGrid({
     contentByColumn,
   );
 
-  const fullGridTemplate = useMemo(
-    () => `48px ${gridTemplateColumns} 48px`,
-    [gridTemplateColumns],
-  );
+  const fullGridTemplate = useMemo(() => {
+    if (!isPrinting || hiddenPrintColumns.length === 0) {
+      return `48px ${gridTemplateColumns} 48px`;
+    }
+    const visibleTracks = gridTemplateColumns.split(/\s+/).filter(Boolean);
+    const parts: string[] = ["48px"];
+    let vi = 0;
+    for (const col of columns) {
+      if (!visibleColumns.includes(col.key)) {
+        parts.push("50px");
+      } else {
+        parts.push(visibleTracks[vi] || "1fr");
+        vi++;
+      }
+    }
+    parts.push("48px");
+    return parts.join(" ");
+  }, [isPrinting, hiddenPrintColumns, columns, visibleColumns, gridTemplateColumns]);
+
+  const printGridHeaderColumns = useMemo(() => {
+    if (!isPrinting || hiddenPrintColumns.length === 0) return gridHeaderColumns;
+    const viCols = gridHeaderColumns;
+    const parts: GridHeaderColumn[] = [];
+    let vi = 0;
+    for (const col of columns) {
+      if (!visibleColumns.includes(col.key)) {
+        parts.push({ id: col.key, header: col.header, label: col.header, align: col.align, width: col.width });
+      } else {
+        parts.push(viCols[vi]);
+        vi++;
+      }
+    }
+    return parts;
+  }, [isPrinting, hiddenPrintColumns, columns, visibleColumns, gridHeaderColumns]);
 
   const handleAutoFit = useCallback(
     (colKey: string) => {
@@ -434,7 +495,7 @@ export function GenericDocumentGrid({
   return (
     <div className="flex flex-col h-full bg-white">
       <GridHeader
-        columns={gridHeaderColumns}
+        columns={printGridHeaderColumns}
         getDensityPadding={getDensityPadding}
         fontSize={settings.fontSize}
         fontFamily={settings.fontFamily}
@@ -468,21 +529,24 @@ export function GenericDocumentGrid({
                 {rowIdx + 1}
               </div>
 
-              {filteredColumns.map((col) => {
-                const isEditable = editableCols.includes(col);
+              {printColumns.map((col) => {
+                const isHiddenCol = isPrinting && !visibleColumns.includes(col.key);
+                const isEditable = isHiddenCol ? false : editableCols.includes(col);
                 const editColIdx = isEditable ? editColCursor++ : -1;
                 return (
-                  <DocumentGridCell
-                    key={col.key}
-                    column={col}
-                    line={line}
-                    rowIndex={rowIdx}
-                    editColIndex={editColIdx}
-                    isCellActive={activeCell?.row === rowIdx && activeCell?.col === editColIdx}
-                    refKey={`${rowIdx}-${editColIdx}`}
-                    config={cellConfig}
-                    callbacks={cellCallbacks}
-                  />
+                  <div key={col.key}>
+                    <DocumentGridCell
+                      key={col.key}
+                      column={col}
+                      line={line}
+                      rowIndex={rowIdx}
+                      editColIndex={editColIdx}
+                      isCellActive={activeCell?.row === rowIdx && activeCell?.col === editColIdx}
+                      refKey={`${rowIdx}-${editColIdx}`}
+                      config={cellConfig}
+                      callbacks={cellCallbacks}
+                    />
+                  </div>
                 );
               })}
 
@@ -504,7 +568,7 @@ export function GenericDocumentGrid({
 
       {settings.showSummary && lines.length > 0 && (
         <GridSummaryRow
-          filteredColumns={filteredColumns}
+          filteredColumns={printColumns}
           lines={lines}
           cellBorderClass={cellBorderClass}
           formatRawAmount={formatRawAmount}

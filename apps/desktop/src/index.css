@@ -224,6 +224,16 @@
   .no-print { display: none !important; }
   body { background: white; }
   .print-area { padding: 2rem; }
+  .print-collapsed {
+    max-width: 50px !important;
+    min-width: 50px !important;
+    width: 50px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-size: 0.55rem !important;
+    padding: 2px !important;
+  }
 }
 
 /* Scrollbar */

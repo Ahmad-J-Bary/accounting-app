@@ -23,6 +23,20 @@ function extractBase64(dataUrl: string): { base64: string; extension: string } |
   return { base64: match[2], extension: match[1] };
 }
 
+function getRowOffset(options?: ExcelExportOptions): number {
+  let offset = 0;
+  if (options?.title) {
+    offset += 1;
+  }
+  if (options?.metadata && options.metadata.length > 0) {
+    offset += Math.ceil(options.metadata.length / 2);
+  }
+  if (offset > 0) {
+    offset += 1; // plus blank row for spacing
+  }
+  return offset;
+}
+
 async function buildExcelJsWorkbook(
   data: Record<string, unknown>[],
   columns: ExcelExportColumn[],
@@ -31,13 +45,14 @@ async function buildExcelJsWorkbook(
 ): Promise<ExcelJS.Buffer> {
   const sortedData = sortExportRows(data, columns, options?.sortBy);
   const hasImages = columns.some(c => c.imageDataUrl);
+  const rowOffset = getRowOffset(options);
 
   const workbook = new ExcelJS.Workbook();
   workbook.created = new Date();
   workbook.creator = 'ERP System';
 
   const ws = workbook.addWorksheet(sheetName, {
-    views: [{ state: 'frozen', ySplit: 1, xSplit: 0 } as unknown as ExcelJS.WorksheetView],
+    views: [{ state: 'frozen', ySplit: 1 + rowOffset, xSplit: 0 } as unknown as ExcelJS.WorksheetView],
   });
   ws.views[0].rightToLeft = true;
 
@@ -46,7 +61,49 @@ async function buildExcelJsWorkbook(
     hidden: col.hidden || false,
   }));
 
-  const headerRow = ws.getRow(1);
+  let currentRowNum = 1;
+  if (options?.title) {
+    const titleRow = ws.getRow(currentRowNum);
+    titleRow.getCell(1).value = options.title;
+    titleRow.getCell(1).font = { bold: true, size: 14, color: { argb: 'FF1E293B' } };
+    titleRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.mergeCells(currentRowNum, 1, currentRowNum, columns.length);
+    titleRow.height = 30;
+    currentRowNum++;
+  }
+
+  if (options?.metadata && options.metadata.length > 0) {
+    const metadata = options.metadata;
+    for (let i = 0; i < metadata.length; i += 2) {
+      const metaRow = ws.getRow(currentRowNum);
+      metaRow.height = 20;
+
+      // Item 1
+      metaRow.getCell(1).value = metadata[i].label + ":";
+      metaRow.getCell(1).font = { bold: true, size: 10, color: { argb: 'FF475569' } };
+      metaRow.getCell(1).alignment = { horizontal: 'right', vertical: 'middle' };
+      metaRow.getCell(2).value = metadata[i].value;
+      metaRow.getCell(2).font = { size: 10, color: { argb: 'FF0F172A' } };
+      metaRow.getCell(2).alignment = { horizontal: 'left', vertical: 'middle' };
+
+      // Item 2
+      if (i + 1 < metadata.length) {
+        metaRow.getCell(4).value = metadata[i + 1].label + ":";
+        metaRow.getCell(4).font = { bold: true, size: 10, color: { argb: 'FF475569' } };
+        metaRow.getCell(4).alignment = { horizontal: 'right', vertical: 'middle' };
+        metaRow.getCell(5).value = metadata[i + 1].value;
+        metaRow.getCell(5).font = { size: 10, color: { argb: 'FF0F172A' } };
+        metaRow.getCell(5).alignment = { horizontal: 'left', vertical: 'middle' };
+      }
+      currentRowNum++;
+    }
+  }
+
+  if (rowOffset > 0) {
+    currentRowNum++; // Blank spacing row
+  }
+
+  const headerRow = ws.getRow(rowOffset + 1);
   columns.forEach((col, i) => {
     const cell = headerRow.getCell(i + 1);
     cell.value = col.label;
@@ -71,14 +128,14 @@ async function buildExcelJsWorkbook(
 
   if (sortedData.length > 0) {
     sortedData.forEach((row, rowIdx) => {
-      const excelRow = ws.getRow(rowIdx + 2);
+      const excelRowNum = rowIdx + 2 + rowOffset;
+      const excelRow = ws.getRow(excelRowNum);
       if (imageRowHeight) excelRow.height = imageRowHeight;
 
       columns.forEach((col, colIdx) => {
         const cell = excelRow.getCell(colIdx + 1);
 
         if (col.formula) {
-          const excelRowNum = rowIdx + 2;
           const formula = resolveFormula(col.formula, columns, excelRowNum);
           cell.value = { formula };
           const decimals = col.decimalPlaces ?? 0;
@@ -111,10 +168,11 @@ async function buildExcelJsWorkbook(
     });
 
     if (options?.summary) {
-      const summaryRow = ws.getRow(sortedData.length + 2);
+      const summaryRowNum = sortedData.length + 2 + rowOffset;
+      const summaryRow = ws.getRow(summaryRowNum);
       columns.forEach((col, colIdx) => {
         const cell = summaryRow.getCell(colIdx + 1);
-        const cellValue = buildSummaryCellValue(col, colIdx, sortedData.length, columns, options);
+        const cellValue = buildSummaryCellValue(col, colIdx, sortedData.length, columns, options, rowOffset);
         if (cellValue.f) {
           cell.value = { formula: cellValue.f.substring(1) };
           cell.font = { bold: true, size: 10 };
@@ -155,9 +213,9 @@ async function buildExcelJsWorkbook(
 
         ws.addImage(imageId, {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ExcelJS Anchor class not exported; plain {col,row} works at runtime
-          tl: { col: colIdx, row: rowIdx + 1 } as any,
+          tl: { col: colIdx, row: rowIdx + 1 + rowOffset } as any,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any -- same reason
-          br: { col: colIdx + 1, row: rowIdx + 2 } as any,
+          br: { col: colIdx + 1, row: rowIdx + 2 + rowOffset } as any,
           editAs: 'twoCell',
         });
       });
@@ -168,13 +226,46 @@ async function buildExcelJsWorkbook(
     const firstNonImageCol = columns.findIndex(c => !c.imageDataUrl) + 1;
     if (firstNonImageCol > 0 && firstNonImageCol <= columns.length) {
       ws.autoFilter = {
-        from: { row: 1, column: firstNonImageCol },
-        to: { row: sortedData.length + 1, column: columns.length },
+        from: { row: 1 + rowOffset, column: firstNonImageCol },
+        to: { row: sortedData.length + 1 + rowOffset, column: columns.length },
       };
     }
   }
 
-  applyExcelJsMerges(ws, columns, options?.mergeCells);
+  if (options?.mergeCells && options.mergeCells.length > 0) {
+    const shiftedMerges = options.mergeCells.map(m => ({
+      ...m,
+      startRow: m.startRow + rowOffset,
+      endRow: m.endRow + rowOffset,
+    }));
+    applyExcelJsMerges(ws, columns, shiftedMerges);
+  }
+
+  if (options?.additionalSummary && options.additionalSummary.length > 0) {
+    let currentSummaryRowNum = sortedData.length + (options.summary ? 3 : 2) + rowOffset;
+    ws.getRow(currentSummaryRowNum).height = 15; // Blank row spacing
+    currentSummaryRowNum++;
+
+    options.additionalSummary.forEach((item) => {
+      const itemRow = ws.getRow(currentSummaryRowNum);
+      itemRow.height = 20;
+      itemRow.getCell(1).value = item.label + ":";
+      itemRow.getCell(1).font = { bold: true, size: 10, color: { argb: 'FF475569' } };
+      itemRow.getCell(1).alignment = { horizontal: 'right', vertical: 'middle' };
+
+      const numVal = typeof item.value === 'number' ? item.value : parseFloat(String(item.value));
+      const isNum = !isNaN(numVal) && typeof item.value !== 'string';
+      if (isNum) {
+        itemRow.getCell(2).value = numVal;
+        itemRow.getCell(2).numFmt = '#,##0.00';
+      } else {
+        itemRow.getCell(2).value = item.value;
+      }
+      itemRow.getCell(2).font = { bold: true, size: 10, color: { argb: 'FF0F172A' } };
+      itemRow.getCell(2).alignment = { horizontal: 'left', vertical: 'middle' };
+      currentSummaryRowNum++;
+    });
+  }
 
   return workbook.xlsx.writeBuffer() as Promise<ExcelJS.Buffer>;
 }
@@ -199,6 +290,9 @@ export interface ExcelExportOptions {
   numeralSystem?: 'arab' | 'latn';
   summary?: Record<string, string | null>;
   summaryLabel?: string;
+  title?: string;
+  metadata?: Array<{ label: string; value: string | number }>;
+  additionalSummary?: Array<{ label: string; value: string | number }>;
 }
 
 function getVisibleColumnIndex(columns: ExcelExportColumn[], columnId: string): number {
@@ -342,6 +436,7 @@ function buildSummaryCellValue(
   dataLength: number,
   columns: ExcelExportColumn[],
   options: ExcelExportOptions,
+  rowOffset = 0,
 ): { v: string | number; f?: string } {
   if (colIdx === 0 && options.summaryLabel) {
     return { v: options.summaryLabel };
@@ -353,8 +448,8 @@ function buildSummaryCellValue(
   }
 
   const colLetter = getExcelColumnLetter(colIdx);
-  const firstDataRow = 2;
-  const lastDataRow = dataLength + 1;
+  const firstDataRow = 2 + rowOffset;
+  const lastDataRow = dataLength + 1 + rowOffset;
 
   // Predefined aggregates
   if (aggType === 'sum' || aggType === 'average' || aggType === 'subtotal') {
@@ -393,17 +488,61 @@ function buildWorkbook(
   options?: ExcelExportOptions,
 ): XLSX.WorkBook {
   const sortedData = sortExportRows(data, columns, options?.sortBy);
+  const rowOffset = getRowOffset(options);
+  
+  const wsData: unknown[][] = [];
+
+  // Title Row
+  if (options?.title) {
+    const titleRow = Array(columns.length).fill({ v: "", t: 's' as const, s: {} });
+    titleRow[0] = { 
+      v: options.title, 
+      t: 's' as const, 
+      s: { 
+        font: { bold: true, sz: 14, color: { rgb: '1E293B' } }, 
+        alignment: { horizontal: 'center', vertical: 'center' } 
+      } 
+    };
+    wsData.push(titleRow);
+  }
+
+  // Metadata Row(s) - 2 items per row
+  if (options?.metadata && options.metadata.length > 0) {
+    const metadata = options.metadata;
+    for (let i = 0; i < metadata.length; i += 2) {
+      const metaRow = Array(columns.length).fill({ v: "", t: 's' as const, s: {} });
+      
+      metaRow[0] = { v: metadata[i].label + ":", t: 's' as const, s: { font: { bold: true, sz: 10, color: { rgb: '475569' } }, alignment: { horizontal: 'right' } } };
+      metaRow[1] = { v: metadata[i].value, t: typeof metadata[i].value === 'number' ? 'n' : 's', s: { font: { sz: 10, color: { rgb: '0F172A' } }, alignment: { horizontal: 'left' } } };
+
+      if (i + 1 < metadata.length) {
+        metaRow[3] = { v: metadata[i + 1].label + ":", t: 's' as const, s: { font: { bold: true, sz: 10, color: { rgb: '475569' } }, alignment: { horizontal: 'right' } } };
+        metaRow[4] = { v: metadata[i + 1].value, t: typeof metadata[i + 1].value === 'number' ? 'n' : 's', s: { font: { sz: 10, color: { rgb: '0F172A' } }, alignment: { horizontal: 'left' } } };
+      }
+      wsData.push(metaRow);
+    }
+  }
+
+  // Blank spacing row
+  if (rowOffset > 0) {
+    wsData.push(Array(columns.length).fill({ v: "", t: 's' as const, s: {} }));
+  }
+
+  // Main table header row
   const headerRow = columns.map(col => ({ v: col.label, t: 's' as const, s: HEADER_STYLE }));
+  wsData.push(headerRow);
+
+  // Main table data rows
   const dataRows = sortedData.map((row, rowIdx) =>
     columns.map(col => {
       if (col.formula) {
-        const excelRowNum = rowIdx + 2;
+        const excelRowNum = rowIdx + 2 + rowOffset;
         const formula = resolveFormula(col.formula, columns, excelRowNum);
         return { f: '=' + formula, t: 'n' as const, s: DATA_STYLE };
       }
 
       const val = getCellValue(row, col);
-      const cellStyle = { ...DATA_STYLE };
+      const cellStyle: Record<string, unknown> = { ...DATA_STYLE };
       if (col.numeric && typeof val === 'number') {
         const fmt = options?.numeralSystem === "arab" ? "[$-ar-SA]" : "[$-en-US]";
         const decimals = col.decimalPlaces ?? 0;
@@ -412,14 +551,14 @@ function buildWorkbook(
       return { v: val ?? '', t: typeof val === 'number' ? ('n' as const) : ('s' as const), s: cellStyle };
     })
   );
+  wsData.push(...dataRows);
 
-  const wsData: (typeof headerRow) = [headerRow, ...dataRows];
-
+  // Summary Row
   if (options?.summary && sortedData.length > 0) {
     const summaryRow = columns.map((col, colIdx) => {
-      const cellValue = buildSummaryCellValue(col, colIdx, sortedData.length, columns, options);
+      const cellValue = buildSummaryCellValue(col, colIdx, sortedData.length, columns, options, rowOffset);
       if (cellValue.f) {
-        const cellStyle = { ...SUMMARY_STYLE };
+        const cellStyle: Record<string, unknown> = { ...SUMMARY_STYLE };
         if (col.numeric) {
           const fmt = options?.numeralSystem === "arab" ? "[$-ar-SA]" : "[$-en-US]";
           const decimals = col.decimalPlaces ?? 0;
@@ -432,6 +571,24 @@ function buildWorkbook(
     wsData.push(summaryRow);
   }
 
+  // Additional Summary Key-value pairs
+  if (options?.additionalSummary && options.additionalSummary.length > 0) {
+    wsData.push(Array(columns.length).fill({ v: "", t: 's' as const, s: {} })); // Blank row
+    options.additionalSummary.forEach((item) => {
+      const itemRow = Array(columns.length).fill({ v: "", t: 's' as const, s: {} });
+      itemRow[0] = { v: item.label + ":", t: 's' as const, s: { font: { bold: true, sz: 10, color: { rgb: '475569' } }, alignment: { horizontal: 'right' } } };
+      
+      const numVal = typeof item.value === 'number' ? item.value : parseFloat(String(item.value));
+      const isNum = !isNaN(numVal) && typeof item.value !== 'string';
+      const cellStyle: Record<string, unknown> = { font: { bold: true, sz: 10, color: { rgb: '0F172A' } }, alignment: { horizontal: 'left' } };
+      if (isNum) {
+        cellStyle.numFmt = '#,##0.00';
+      }
+      itemRow[1] = { v: isNum ? numVal : item.value, t: isNum ? 'n' as const : 's' as const, s: cellStyle };
+      wsData.push(itemRow);
+    });
+  }
+
   const ws = XLSX.utils.aoa_to_sheet(wsData);
 
   ws['!cols'] = columns.map(col => ({
@@ -440,17 +597,34 @@ function buildWorkbook(
   }));
 
   if (options?.autoFilter !== false && sortedData.length > 0) {
-    const lastDataRow = sortedData.length + 1;
+    const firstDataRow = 1 + rowOffset;
+    const lastDataRow = sortedData.length + 1 + rowOffset;
     const lastColLetter = getExcelColumnLetter(columns.length - 1);
-    ws['!autofilter'] = { ref: `A1:${lastColLetter}${lastDataRow}` };
+    ws['!autofilter'] = { ref: `A${firstDataRow}:${lastColLetter}${lastDataRow}` };
   }
 
-  applySheetMerges(ws, columns, options?.mergeCells);
+  if (options?.mergeCells && options.mergeCells.length > 0) {
+    const shiftedMerges = options.mergeCells.map(m => ({
+      ...m,
+      startRow: m.startRow + rowOffset,
+      endRow: m.endRow + rowOffset,
+    }));
+    applySheetMerges(ws, columns, shiftedMerges);
+  }
+
+  // Handle Sheet Title Merge specifically
+  if (options?.title) {
+    const titleMerge = {
+      s: { r: 0, c: 0 },
+      e: { r: 0, c: columns.length - 1 }
+    };
+    ws['!merges'] = [...(ws['!merges'] || []), titleMerge];
+  }
 
   const wb = XLSX.utils.book_new();
   wb.Workbook = { Views: [{ RTL: true }] };
   wb.Workbook.Sheets = [{ Hidden: 0 }];
-  ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+  ws['!freeze'] = { xSplit: 0, ySplit: 1 + rowOffset };
   XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
   return wb;
