@@ -707,12 +707,6 @@ export function JournalTable({
 
     const exportOptions: ExcelExportOptions = {
       sheetName: "القيود اليومية",
-      title: isTwoLine ? "دفتر اليومية العامة - تفصيلي" : "دفتر اليومية العامة - مجمع",
-      metadata: [
-        { label: "نوع العرض", value: isTwoLine ? "تفصيلي (سطرين)" : "مجمع (سطر واحد)" },
-        { label: "إجمالي عدد القيود", value: entries.length },
-        { label: "تاريخ التصدير", value: new Date().toLocaleDateString('ar-SY') }
-      ],
       autoFilter: true,
       mergeCells: isTwoLine ? buildJournalMergeRanges(
         sortedData as JournalTableRow[],
@@ -728,7 +722,7 @@ export function JournalTable({
       "القيود اليومية",
       exportOptions,
     );
-  }, [getColumnSampleValues, getTwoLineExportValue, getSingleLineExportValue, sortedData, enrichedColumns, isTwoLine, exportData, entries.length]);
+  }, [getColumnSampleValues, getTwoLineExportValue, getSingleLineExportValue, sortedData, enrichedColumns, isTwoLine, exportData]);
 
   // ============ RENDER BODY ============
   const renderBody = () => {

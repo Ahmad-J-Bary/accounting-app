@@ -21,7 +21,6 @@ import { useInvoiceLifecycle } from "../hooks/useInvoiceLifecycle";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { supplierService } from "@modules/partners/api/supplierService";
 import { invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
-import { formatDateTime } from "@shared/lib/format";
 import { buildInvoiceLineExportColumns } from "../lib/invoice-export-columns";
 
 export default function PurchaseInvoices() {
@@ -147,13 +146,6 @@ export default function PurchaseInvoices() {
       `فاتورة_مشتريات_${headerState.invoice_number}`,
       {
         sheetName: "فاتورة مشتريات",
-        title: "فاتورة مشتريات",
-        metadata: [
-          { label: "رقم الفاتورة", value: headerState.invoice_number },
-          { label: "تاريخ الإصدار", value: headerState.issued_at },
-          { label: "المورد", value: headerState.supplier_name || "مورد نقدي" },
-          { label: "ملاحظات المستند", value: headerState.notes || "—" }
-        ],
         autoFilter: true,
         summary,
         summaryLabel: "المجموع",
@@ -226,13 +218,6 @@ export default function PurchaseInvoices() {
 
     await exportData(enrichedLines, columns, `فاتورة_مشتريات_${fullInv.invoice_number}`, {
       sheetName: "فاتورة مشتريات",
-      title: "فاتورة مشتريات",
-      metadata: [
-        { label: "رقم الفاتورة", value: fullInv.invoice_number },
-        { label: "تاريخ الإصدار", value: formatDateTime(fullInv.issued_at) },
-        { label: "المورد", value: fullInv.supplier_name || "مورد نقدي" },
-        { label: "ملاحظات المستند", value: fullInv.notes || "—" }
-      ],
       autoFilter: true,
       summary,
       summaryLabel: "المجموع",

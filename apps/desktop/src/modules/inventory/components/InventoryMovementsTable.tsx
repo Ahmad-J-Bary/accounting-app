@@ -411,11 +411,6 @@ export function InventoryMovementsTable({
 
     const exportOptions: ExcelExportOptions = {
       sheetName: "حركات المخزون",
-      title: "حركات المخزون",
-      metadata: [
-        { label: "إجمالي الحركات", value: sortedData.length },
-        { label: "تاريخ التصدير", value: new Date().toLocaleDateString('ar-SY') }
-      ],
       autoFilter: true,
       summary,
       summaryLabel: "المجموع",

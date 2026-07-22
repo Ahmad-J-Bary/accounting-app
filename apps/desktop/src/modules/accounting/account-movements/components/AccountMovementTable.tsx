@@ -353,12 +353,6 @@ export function AccountMovementTable({
 
     const exportOptions: ExcelExportOptions = {
       sheetName: "كشف حركة الحساب",
-      title: `كشف حركة الحساب: ${accountName}`,
-      metadata: [
-        { label: "اسم الحساب", value: accountName },
-        { label: "الرصيد الافتتاحي", value: formatAmount(openingBalance, { currencyCode: baseCurrency?.code || "" }) },
-        { label: "تاريخ التصدير", value: new Date().toLocaleDateString('ar-SY') }
-      ],
       autoFilter: true,
       summary: Object.keys(summary).length > 0 ? summary : undefined,
       summaryLabel: "المجموع",
@@ -370,7 +364,7 @@ export function AccountMovementTable({
       `حركة_حساب_${accountName}`,
       exportOptions,
     );
-  }, [enrichedColumns, tableData, accountName, openingBalance, exportData, getColumnSampleValues, baseCurrency?.code, formatAmount]);
+  }, [enrichedColumns, tableData, accountName, exportData, getColumnSampleValues]);
 
   const contentByColumn = useMemo(() => {
     const out: Record<string, GridResizeContent> = {};

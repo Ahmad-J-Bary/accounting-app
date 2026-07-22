@@ -153,8 +153,6 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
       summary[`line_total_${curr.code}`] = 'subtotal';
     });
 
-    const docTitle = returnType === "SalesReturn" ? "مرتجع مبيعات" : "مرتجع مشتريات";
-    const partnerLabel = partyType === "supplier" ? "المورد" : "العميل";
     const settlementModeLabel = settlementMode === "deduct_from_debt" ? "خصم من الدين" : settlementMode === "full_cash_return" ? "مرتجع نقدي كامل" : "تسوية جزئية";
 
     await exportData(
@@ -163,13 +161,6 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
       `${returnType === "SalesReturn" ? "مرتجع_مبيعات" : "مرتجع_مشتريات"}_${returnNumber || "جديد"}`,
       {
         sheetName: "مرتجع",
-        title: docTitle,
-        metadata: [
-          { label: "رقم المرتجع", value: returnNumber || "جديد" },
-          { label: "تاريخ المرتجع", value: returnDate },
-          { label: partnerLabel, value: partyName },
-          { label: "ملاحظات", value: notes || "—" }
-        ],
         autoFilter: true,
         summary,
         summaryLabel: "المجموع",
@@ -180,7 +171,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
         ]
       }
     );
-  }, [exportData, lines, currencies, baseCurrency, convertBetween, materials, warehouses, returnGridColumns, returnType, returnNumber, returnDate, partyType, partyName, notes, settlementMode, settlementCash, totalAmount]);
+  }, [exportData, lines, currencies, baseCurrency, convertBetween, materials, warehouses, returnGridColumns, returnType, returnNumber, settlementMode, settlementCash, totalAmount]);
 
   // Wrapped removeLine that also removes occurrence key
   const removeLine = useCallback((index: number) => {

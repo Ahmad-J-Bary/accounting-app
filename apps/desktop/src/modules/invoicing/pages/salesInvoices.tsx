@@ -17,7 +17,6 @@ import { customerService } from "@modules/partners/api/customerService";
 import { invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
 import { useExcelExport } from "@shared/hooks";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { formatDateTime } from "@shared/lib/format";
 import { buildInvoiceLineExportColumns } from "../lib/invoice-export-columns";
 
 export default function SalesInvoices() {
@@ -114,13 +113,6 @@ export default function SalesInvoices() {
 
     await exportData(enrichedForExport, columns, `فاتورة_مبيعات_${headerState.invoice_number}`, {
       sheetName: "فاتورة مبيعات",
-      title: "فاتورة مبيعات",
-      metadata: [
-        { label: "رقم الفاتورة", value: headerState.invoice_number },
-        { label: "تاريخ الإصدار", value: headerState.issued_at },
-        { label: "العميل", value: headerState.customer_name || "زبون نقدي" },
-        { label: "ملاحظات المستند", value: headerState.notes || "—" }
-      ],
       autoFilter: true,
       summary,
       summaryLabel: "المجموع",
@@ -192,13 +184,6 @@ export default function SalesInvoices() {
 
     await exportData(enrichedLines, columns, `فاتورة_مبيعات_${fullInv.invoice_number}`, {
       sheetName: "فاتورة مبيعات",
-      title: "فاتورة مبيعات",
-      metadata: [
-        { label: "رقم الفاتورة", value: fullInv.invoice_number },
-        { label: "تاريخ الإصدار", value: formatDateTime(fullInv.issued_at) },
-        { label: "العميل", value: fullInv.customer_name || "زبون نقدي" },
-        { label: "ملاحظات المستند", value: fullInv.notes || "—" }
-      ],
       autoFilter: true,
       summary,
       summaryLabel: "المجموع",

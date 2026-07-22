@@ -376,12 +376,6 @@ export default function OpeningBalance() {
       `بضاعة_أول_المدة_${header.docNumber || "جديد"}`,
       {
         sheetName: "بضاعة أول المدة",
-        title: "بضاعة أول المدة (رصيد افتتاحي للمواد)",
-        metadata: [
-          { label: "رقم القيد", value: header.docNumber },
-          { label: "تاريخ القيد", value: header.issued_at },
-          { label: "ملاحظات المستند", value: header.notes || "—" }
-        ],
         autoFilter: true,
         summary,
         summaryLabel: "المجموع",

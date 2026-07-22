@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { useExcelExport } from "@shared/hooks";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import type { SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
-import { formatDateTime } from "@shared/lib/format";
 import { buildInvoiceLineExportColumns } from "../lib/invoice-export-columns";
 import type { DocumentColumn } from "@widgets/document-shell/GenericDocumentGrid";
 
@@ -121,7 +120,6 @@ export default function PurchaseReturns() {
       summary[`line_total_${curr.code}`] = 'subtotal';
     });
 
-    const partnerLabel = "المورد";
     const totalVal = parseFloat(fullReturn.total_amount || "0");
 
     await exportData(
@@ -130,13 +128,6 @@ export default function PurchaseReturns() {
       `مرتجع_مشتريات_${fullReturn.return_number}`,
       {
         sheetName: "مرتجع مشتريات",
-        title: "مرتجع مشتريات",
-        metadata: [
-          { label: "رقم المرتجع", value: fullReturn.return_number },
-          { label: "تاريخ المرتجع", value: formatDateTime(fullReturn.return_date) },
-          { label: partnerLabel, value: fullReturn.supplier_name || "مورد نقدي" },
-          { label: "ملاحظات", value: fullReturn.notes || "—" }
-        ],
         autoFilter: true,
         summary,
         summaryLabel: "المجموع",
