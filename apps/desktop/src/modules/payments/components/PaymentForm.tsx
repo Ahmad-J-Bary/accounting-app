@@ -253,7 +253,12 @@ export function PaymentForm({ customers, suppliers, accounts, onSave, onClose, s
               <Input 
                 type="date"
                 value={form.payment_date?.slice(0, 10) ?? ""}
-                onChange={e => setForm(p => ({ ...p, payment_date: new Date(e.target.value).toISOString() }))} 
+                onChange={e => {
+                  const [y, m, d] = e.target.value.split('-').map(Number);
+                  const old = form.payment_date ? new Date(form.payment_date) : new Date();
+                  old.setFullYear(y, m - 1, d);
+                  setForm(p => ({ ...p, payment_date: old.toISOString() }));
+                }}
                 className="h-9 bg-white tabular-nums text-left"
               />
             </div>

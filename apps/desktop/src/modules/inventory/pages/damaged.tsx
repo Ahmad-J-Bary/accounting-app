@@ -136,7 +136,7 @@ export default function DamagedPage() {
   const { exportData } = useExcelExport();
 
   const handleExport = useCallback(async () => {
-    const currCols = currencyAmountCols("cost", "الخسارة", (row) => parseFloat((row as unknown as DamagedItem).cost_impact || "0"), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code);
+    const currCols = currencyAmountCols("cost", "الخسارة", (row) => parseFloat((row as unknown as DamagedItem).cost_impact || "0"), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap);
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = { quantity: 'subtotal' };
     currencies.forEach(curr => { summary[`cost_${curr.code}`] = 'subtotal'; });
 

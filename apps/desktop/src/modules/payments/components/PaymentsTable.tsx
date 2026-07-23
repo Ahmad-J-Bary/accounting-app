@@ -4,7 +4,7 @@ import { TableShell } from '@widgets/table-shell/TableShell';
 import { TableActions } from '@widgets/table-shell/TableActions';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
-import { formatDate, formatNumber } from "@shared/lib/format";
+import { formatDateTime, formatNumber } from "@shared/lib/format";
 import { useExcelExport } from "@shared/hooks";
 import { useExportSettings } from "@shared/hooks/useExportSettings";
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
@@ -216,7 +216,7 @@ export function PaymentsTable({
         id: "payment_date",
         header: "التاريخ",
         label: "التاريخ",
-        accessor: (p) => formatDate(p.payment_date),
+        accessor: (p) => formatDateTime(p.payment_date),
         className: "tabular-nums text-slate-500",
       },
       {
@@ -272,7 +272,7 @@ export function PaymentsTable({
       const amount = parseFloat(p.amount) || 0;
       const baseAmount = toBase(amount, p.currency_code);
       return INCOMING_TYPES.includes(p.payment_type) ? baseAmount : -baseAmount;
-    }, sortedCurrencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code);
+    }, sortedCurrencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap);
 
     const visibleIds = new Set(enrichedColumns.filter(c => c.visible !== false).map(c => c.id));
     currCols.forEach(col => {
@@ -300,7 +300,7 @@ export function PaymentsTable({
         const p = row as unknown as Payment;
         return p.debit_account_id ? accounts.find((a) => a.id === p.debit_account_id)?.name_ar ?? "" : "";
       }},
-      { id: "payment_date", label: "التاريخ", accessor: (row) => formatDate((row as unknown as Payment).payment_date) },
+      { id: "payment_date", label: "التاريخ", isDate: true, accessor: (row) => (row as unknown as Payment).payment_date },
     ];
 
     await exportData(

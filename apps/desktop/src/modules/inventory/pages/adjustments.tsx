@@ -147,7 +147,7 @@ export default function AdjustmentsPage() {
   const { exportData } = useExcelExport();
 
   const handleExport = useCallback(async () => {
-    const currCols = currencyAmountCols("total_cost", "التكلفة", (row) => Math.abs(parseFloat((row as unknown as StockAdjustment).total_cost_base || "0")), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code);
+    const currCols = currencyAmountCols("total_cost", "التكلفة", (row) => Math.abs(parseFloat((row as unknown as StockAdjustment).total_cost_base || "0")), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap);
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {
       system_quantity: 'subtotal',
       actual_quantity: 'subtotal',

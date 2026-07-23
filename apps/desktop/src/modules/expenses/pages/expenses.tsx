@@ -142,7 +142,7 @@ export default function Expenses() {
       const absBal = Math.abs(Number(c.balance || 0));
       if (absBal === 0) return 0;
       return toBase(absBal, c.currency || "");
-    }, currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code);
+    }, currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap);
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
     currencies.forEach(curr => { summary[`balance_${curr.code}`] = 'subtotal'; });
 

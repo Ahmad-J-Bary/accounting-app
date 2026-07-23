@@ -265,9 +265,9 @@ export default function Materials() {
           return ids.map(id => categories.find(c => c.id === id)?.name).filter(Boolean).join(', ');
         },
       },
-      ...currencyAmountCols("unit_price", "السعر الإفرادي", (row) => rawPriceBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code).map(c => { summary[c.id] = 'subtotal'; return c; }),
-      ...currencyAmountCols("extra_costs", "تكاليف إضافية", (row) => extraCostBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code).map(c => { summary[c.id] = 'subtotal'; return c; }),
-      ...currencyAmountCols("average_cost", "تكلفة الوحدة", (row) => unitCostBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code).map(c => { summary[c.id] = 'subtotal'; return c; }),
+      ...currencyAmountCols("unit_price", "السعر الإفرادي", (row) => rawPriceBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap).map(c => { summary[c.id] = 'subtotal'; return c; }),
+      ...currencyAmountCols("extra_costs", "تكاليف إضافية", (row) => extraCostBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap).map(c => { summary[c.id] = 'subtotal'; return c; }),
+      ...currencyAmountCols("average_cost", "تكلفة الوحدة", (row) => unitCostBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap).map(c => { summary[c.id] = 'subtotal'; return c; }),
       ...currencies.map(curr => {
         const totalValId = `total_value_${curr.code}`;
         summary[totalValId] = 'subtotal';

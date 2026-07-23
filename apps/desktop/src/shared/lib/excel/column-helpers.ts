@@ -11,6 +11,7 @@ export function currencyAmountCols(
   hasSecondaryCurrencies = true,
   currencyMode: "fixed" | "variable" = "fixed",
   baseCurrencyCode?: string,
+  rateMap?: Map<string, number>,
 ): ExcelExportColumn[] {
   const cs = (sym: string) => hasSecondaryCurrencies ? ` (${sym})` : '';
   const baseCode = baseCurrencyCode || currencies[0]?.code || '';
@@ -39,7 +40,14 @@ export function currencyAmountCols(
       accessor: (row: Record<string, unknown>) => {
         const val = valueAccessor(row);
         if (val === 0) return numeric ? 0 : emptyValue;
-        return numeric ? val : formatAmount(val, { currencyCode: curr.code });
+        if (numeric) {
+          if (!isBase && rateMap) {
+            const rate = rateMap.get(curr.code);
+            if (rate && rate > 0) return val * rate;
+          }
+          return val;
+        }
+        return formatAmount(val, { currencyCode: curr.code });
       },
       numeric: numeric ? true : undefined,
       decimalPlaces: numeric ? 2 : undefined,

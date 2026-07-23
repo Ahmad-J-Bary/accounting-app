@@ -17,6 +17,7 @@ export interface ExcelExportColumn {
   formula?: string;
   currencyCode?: string;
   currencySymbol?: string;
+  isDate?: boolean;
 }
 
 function extractBase64(dataUrl: string): { base64: string; extension: string } | null {
@@ -185,15 +186,19 @@ async function buildExcelJsWorkbook(
         } else {
           const val = getCellValue(row, col);
 
-          if (val !== null && val !== undefined && val !== "") {
-            const numVal = typeof val === "number" ? val : parseFloat(val as string) || 0;
-            if (!isNaN(numVal) && col.numeric) {
-              const decimals = col.decimalPlaces ?? 0;
-              cell.numFmt = getNumFmt(decimals, numeralSystem, col.currencyCode, col.currencySymbol);
+          if (col.isDate && val) {
+            cell.value = new Date(val as string);
+            cell.numFmt = 'yyyy/mm/dd, hh:mm AM/PM';
+          } else {
+            if (val !== null && val !== undefined && val !== "") {
+              const numVal = typeof val === "number" ? val : parseFloat(val as string) || 0;
+              if (!isNaN(numVal) && col.numeric) {
+                const decimals = col.decimalPlaces ?? 0;
+                cell.numFmt = getNumFmt(decimals, numeralSystem, col.currencyCode, col.currencySymbol);
+              }
             }
+            cell.value = val ?? '';
           }
-
-          cell.value = val ?? '';
         }
 
         cell.font = { size: 10 };
@@ -699,6 +704,9 @@ function buildWorkbook(
 
       const val = getCellValue(row, col);
       const cellStyle: Record<string, unknown> = { ...DATA_STYLE };
+      if (col.isDate && val) {
+        return { v: new Date(val as string), t: 'd' as const, s: { ...cellStyle, numFmt: 'yyyy/mm/dd hh:mm AM/PM' } };
+      }
       if (col.numeric && typeof val === 'number') {
         const decimals = col.decimalPlaces ?? 0;
         cellStyle.numFmt = getNumFmt(decimals, options?.numeralSystem, col.currencyCode, col.currencySymbol);

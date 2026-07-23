@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useLayoutEffect } from "react";
 import Draggable from "react-draggable";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
@@ -51,6 +51,16 @@ export function FloatingExchangeRateWidget({ isVisible, onClose }: FloatingExcha
     () => currencies.filter((c) => !c.is_base && c.is_active),
     [currencies]
   );
+
+  // Initialize selected currency and rate on first mount
+  useLayoutEffect(() => {
+    if (!selectedCode && nonBase.length > 0 && todayStatus.length > 0) {
+      const first = nonBase[0];
+      setSelectedCode(first.code);
+      const status = todayStatus.find(s => s.currency_code === first.code);
+      setRate(status?.rate ?? status?.last_rate ?? "1");
+    }
+  }, [nonBase, todayStatus, selectedCode]);
 
   const currentCode = selectedCode || nonBase[0]?.code || "";
   const currentCurrency = currencies.find((c) => c.code === currentCode);
