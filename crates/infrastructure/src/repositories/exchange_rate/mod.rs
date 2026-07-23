@@ -1,10 +1,11 @@
 use sqlx::{SqlitePool, Row};
+use sqlx::sqlite::SqliteRow;
 use std::sync::Arc;
 use async_trait::async_trait;
 use domain::shared::exchange_rate::{ExchangeRate, RateType};
 use application::ports::exchange_rate_repository::ExchangeRateRepository;
 use application::errors::AppError;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use rust_decimal::Decimal;
 use std::str::FromStr;
 
@@ -34,6 +35,30 @@ fn rate_type_to_str(rt: &RateType) -> &'static str {
         RateType::Closing => "Closing",
         RateType::Middle => "Middle",
     }
+}
+
+fn parse_decimal_rate(raw: &str) -> Result<Decimal, AppError> {
+    Decimal::from_str(raw)
+        .map_err(|e| AppError::Infrastructure(format!("Invalid rate value '{}': {}", raw, e)))
+}
+
+fn row_to_exchange_rate(r: &SqliteRow) -> Result<ExchangeRate, AppError> {
+    let rate_raw: String = r.get("rate");
+    Ok(ExchangeRate {
+        id: r.get("id"),
+        from_currency: r.get("from_currency"),
+        to_currency: r.get("to_currency"),
+        rate: parse_decimal_rate(&rate_raw)?,
+        rate_type: parse_rate_type(&r.get::<String, _>("rate_type")),
+        rate_date: DateTime::parse_from_rfc3339(&r.get::<String, _>("rate_date"))
+            .map(|d| d.with_timezone(&Utc))
+            .unwrap_or_else(|_| Utc::now()),
+        source: r.get("source"),
+        user_id: None,
+        created_at: DateTime::parse_from_rfc3339(&r.get::<String, _>("created_at"))
+            .map(|d| d.with_timezone(&Utc))
+            .unwrap_or_else(|_| Utc::now()),
+    })
 }
 
 #[async_trait]
@@ -77,17 +102,7 @@ impl ExchangeRateRepository for SqliteExchangeRateRepository {
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-        Ok(row.map(|r| ExchangeRate {
-            id: r.get("id"),
-            from_currency: r.get("from_currency"),
-            to_currency: r.get("to_currency"),
-            rate: Decimal::from_str(&r.get::<String, _>("rate")).unwrap_or(Decimal::ONE),
-            rate_type: parse_rate_type(&r.get::<String, _>("rate_type")),
-            rate_date: DateTime::parse_from_rfc3339(&r.get::<String, _>("rate_date")).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
-            source: r.get("source"),
-            user_id: None,
-            created_at: DateTime::parse_from_rfc3339(&r.get::<String, _>("created_at")).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
-        }))
+        row.as_ref().map(row_to_exchange_rate).transpose()
     }
 
     async fn find_at_date(
@@ -97,35 +112,30 @@ impl ExchangeRateRepository for SqliteExchangeRateRepository {
         date: DateTime<Utc>,
         rate_type: RateType,
     ) -> Result<Option<ExchangeRate>, AppError> {
-        let date_str = date.format("%Y-%m-%d").to_string();
+        let start_of_day = date.date_naive().and_hms_opt(0, 0, 0)
+            .ok_or_else(|| AppError::Infrastructure("Invalid date".to_string()))?
+            .and_utc();
+        let end_of_day = start_of_day + Duration::days(1);
+
         let rt = rate_type_to_str(&rate_type);
         let row = sqlx::query(
             "SELECT id, from_currency, to_currency, rate, rate_type, rate_date, source, created_at
              FROM exchange_rates
              WHERE from_currency = ? AND to_currency = ?
              AND rate_type = ?
-             AND date(rate_date) = date(?)
+             AND rate_date >= ? AND rate_date < ?
              ORDER BY created_at DESC LIMIT 1"
         )
         .bind(from)
         .bind(to)
         .bind(rt)
-        .bind(date_str)
+        .bind(start_of_day.to_rfc3339())
+        .bind(end_of_day.to_rfc3339())
         .fetch_optional(self.pool.as_ref())
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-        Ok(row.map(|r| ExchangeRate {
-            id: r.get("id"),
-            from_currency: r.get("from_currency"),
-            to_currency: r.get("to_currency"),
-            rate: Decimal::from_str(&r.get::<String, _>("rate")).unwrap_or(Decimal::ONE),
-            rate_type: parse_rate_type(&r.get::<String, _>("rate_type")),
-            rate_date: DateTime::parse_from_rfc3339(&r.get::<String, _>("rate_date")).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
-            source: r.get("source"),
-            user_id: None,
-            created_at: DateTime::parse_from_rfc3339(&r.get::<String, _>("created_at")).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
-        }))
+        row.as_ref().map(row_to_exchange_rate).transpose()
     }
 
     async fn list_history(
@@ -148,16 +158,6 @@ impl ExchangeRateRepository for SqliteExchangeRateRepository {
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-        Ok(rows.into_iter().map(|r| ExchangeRate {
-            id: r.get("id"),
-            from_currency: r.get("from_currency"),
-            to_currency: r.get("to_currency"),
-            rate: Decimal::from_str(&r.get::<String, _>("rate")).unwrap_or(Decimal::ONE),
-            rate_type: parse_rate_type(&r.get::<String, _>("rate_type")),
-            rate_date: DateTime::parse_from_rfc3339(&r.get::<String, _>("rate_date")).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
-            source: r.get("source"),
-            user_id: None,
-            created_at: DateTime::parse_from_rfc3339(&r.get::<String, _>("created_at")).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
-        }).collect())
+        rows.iter().map(row_to_exchange_rate).collect()
     }
 }

@@ -8,7 +8,9 @@ import { Skeleton } from "@shared/ui/skeleton";
 import { Button } from "@shared/ui/button";
 import { EmptyState } from "@widgets/table-shell/EmptyState";
 import { useExcelExport, useUnifiedColumns, useSortable, useBaseCurrencyColumns, useTableSettings, useGridResize } from "@shared/hooks";
+import { useExportSettings } from "@shared/hooks/useExportSettings";
 import type { ExcelExportColumn, ExcelExportOptions } from "@shared/lib/excel";
+import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
 import { formatDateTime, formatNumber } from "@shared/lib/format";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { cn } from "@shared/lib/utils";
@@ -89,8 +91,9 @@ export function JournalTable({
   filterBar, 
   displayMode = "two-line" 
 }: JournalTableProps) {
-  const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
+  const { currencies, baseCurrency, rateMap, formatAmount } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
+  const { currencyMode } = useExportSettings();
   const { settings, getDensityPadding } = useTableSettings();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -276,26 +279,37 @@ export function JournalTable({
       },
     ];
 
-    const baseSymbol = baseCurrency?.symbol || baseCurrency?.code || "";
-    
-    cols.push(
-      {
-        id: "debit_base",
-        header: `عليه / مدين${cs(baseSymbol)}`,
-        label: `عليه / مدين${cs(baseSymbol)}`,
-        accessor: (e: JournalSingleLineTableRow) => 
-          e.debit_amount_base > 0 ? formatAmount(e.debit_amount_base, { currencyCode: baseCurrency?.code }) : "",
-        className: "tabular-nums font-black text-blue-700"
-      },
-      {
-        id: "credit_base",
-        header: `له / دائن${cs(baseSymbol)}`,
-        label: `له / دائن${cs(baseSymbol)}`,
-        accessor: (e: JournalSingleLineTableRow) => 
-          e.credit_amount_base > 0 ? formatAmount(e.credit_amount_base, { currencyCode: baseCurrency?.code }) : "",
-        className: "tabular-nums font-black text-emerald-700"
-      },
-      {
+    sortedCurrencies.forEach(curr => {
+      const symbol = curr.symbol || curr.code;
+      const isBase = isBaseCurrency(curr.code);
+      cols.push({
+        id: `debit_${curr.code}`,
+        header: `عليه / مدين${cs(symbol)}`,
+        label: `عليه / مدين${cs(symbol)}`,
+        accessor: (e: JournalSingleLineTableRow) =>
+          e.debit_amount_base > 0 ? formatAmount(e.debit_amount_base, { currencyCode: curr.code }) : "",
+        className: isBase
+          ? "tabular-nums font-black text-blue-700"
+          : "tabular-nums font-medium text-blue-300"
+      });
+    });
+
+    sortedCurrencies.forEach(curr => {
+      const symbol = curr.symbol || curr.code;
+      const isBase = isBaseCurrency(curr.code);
+      cols.push({
+        id: `credit_${curr.code}`,
+        header: `له / دائن${cs(symbol)}`,
+        label: `له / دائن${cs(symbol)}`,
+        accessor: (e: JournalSingleLineTableRow) =>
+          e.credit_amount_base > 0 ? formatAmount(e.credit_amount_base, { currencyCode: curr.code }) : "",
+        className: isBase
+          ? "tabular-nums font-black text-emerald-700"
+          : "tabular-nums font-medium text-emerald-300"
+      });
+    });
+
+    cols.push({
         id: "description",
         header: "البيان",
         label: "البيان",
@@ -327,7 +341,7 @@ export function JournalTable({
       },
     );
     return cols;
-  }, [formatAmount, baseCurrency, cs]);
+  }, [formatAmount, cs, sortedCurrencies, isBaseCurrency]);
 
   // ============ SELECT ACTIVE DATA/COLUMNS/SORT ============
   const sortedData = isTwoLine ? twoLineSort.sortedData : singleLineSort.sortedData;
@@ -359,7 +373,13 @@ export function JournalTable({
       });
       def.push("description", "account", "entry_date");
     } else {
-      def.push("debit_base", "credit_base", "description", "debit_accounts", "credit_accounts", "entry_date");
+      sortedCurrencies.forEach(curr => {
+        if (isBaseCurrency(curr.code)) def.push(`debit_${curr.code}`);
+      });
+      sortedCurrencies.forEach(curr => {
+        if (isBaseCurrency(curr.code)) def.push(`credit_${curr.code}`);
+      });
+      def.push("description", "debit_accounts", "credit_accounts", "entry_date");
     }
     return def;
   }, [sortedCurrencies, isBaseCurrency, isTwoLine]);
@@ -531,25 +551,6 @@ export function JournalTable({
             : "text-slate-500 font-bold";
           return { id: `${id}_balance`, columnId: id, label, value, className: valueClass };
         }
-      } else {
-        if (id === "debit_base") {
-          return {
-            id: `${id}_total`,
-            columnId: id,
-            label: col.label,
-            value: baseDebitTotal > 0 ? formatAmount(baseDebitTotal, { currencyCode: baseCurrency?.code }) : "—",
-            className: "text-blue-700 font-black"
-          };
-        }
-        if (id === "credit_base") {
-          return {
-            id: `${id}_total`,
-            columnId: id,
-            label: col.label,
-            value: baseCreditTotal > 0 ? formatAmount(-baseCreditTotal, { currencyCode: baseCurrency?.code }) : "—",
-            className: "text-emerald-700 font-black"
-          };
-        }
       }
 
       const debitMatch = id.match(/^debit_(.+)$/);
@@ -662,10 +663,18 @@ export function JournalTable({
       if (col.id === "journal_type") return row.journal_type_display;
       if (col.id === "description") return row.description;
       if (col.id === "entry_date") return formatDateTime(row.created_at);
-      if (col.id === "debit_base") return row.debit_amount_base > 0 ? row.debit_amount_base : 0;
-      if (col.id === "credit_base") return row.credit_amount_base > 0 ? -row.credit_amount_base : 0;
       if (col.id === "debit_accounts") return row.debit_account_names;
       if (col.id === "credit_accounts") return row.credit_account_names;
+
+      const debitMatch = col.id.match(/^debit_(.+)$/);
+      if (debitMatch) {
+        return row.debit_amount_base > 0 ? row.debit_amount_base : 0;
+      }
+
+      const creditMatch = col.id.match(/^credit_(.+)$/);
+      if (creditMatch) {
+        return row.credit_amount_base > 0 ? -row.credit_amount_base : 0;
+      }
 
       const fallbackValue = typeof col.accessor === "function"
         ? col.accessor(row, 0)
@@ -680,14 +689,14 @@ export function JournalTable({
   const handleExport = useCallback(async () => {
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
 
+    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, sortedCurrencies, rateMap, currencyMode).currencyRatesSheet;
+
     const exportColumns: ExcelExportColumn[] = enrichedColumns.map((col) => {
       const twoLineCol = col as UnifiedColumn<JournalTableRow>;
       const singleLineCol = col as UnifiedColumn<JournalSingleLineTableRow>;
       const label = col.label || getHeaderText(twoLineCol);
 
-      const isDebitCredit = isTwoLine
-        ? /^debit_|^credit_/.test(col.id)
-        : col.id === 'debit_base' || col.id === 'credit_base';
+      const isDebitCredit = /^debit_|^credit_/.test(col.id);
 
       if (isDebitCredit && col.visible !== false) {
         summary[col.id] = 'subtotal';
@@ -714,6 +723,7 @@ export function JournalTable({
       ) : [],
       summary: Object.keys(summary).length > 0 ? summary : undefined,
       summaryLabel: "المجموع",
+      ...(currencyRatesSheet ? { currencyRatesSheet } : {}),
     };
 
     await exportData(
@@ -722,7 +732,7 @@ export function JournalTable({
       "القيود اليومية",
       exportOptions,
     );
-  }, [getColumnSampleValues, getTwoLineExportValue, getSingleLineExportValue, sortedData, enrichedColumns, isTwoLine, exportData]);
+  }, [getColumnSampleValues, getTwoLineExportValue, getSingleLineExportValue, sortedData, enrichedColumns, isTwoLine, exportData, currencyMode, baseCurrency, sortedCurrencies, rateMap]);
 
   // ============ RENDER BODY ============
   const renderBody = () => {

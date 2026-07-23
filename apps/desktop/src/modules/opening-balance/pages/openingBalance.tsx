@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { queryClient, invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
 import { useExcelExport } from "@shared/hooks";
+import { useExportSettings } from "@shared/hooks/useExportSettings";
 import { formatNumber } from "@shared/lib/format";
 import { buildInvoiceLineExportColumns } from "@modules/invoicing/lib/invoice-export-columns";
 
@@ -28,6 +29,7 @@ import { useDocumentEditor } from "@modules/invoicing/hooks/useDocumentEditor";
 import { toBackendLines, calcLineTotal } from "@modules/invoicing/lib/invoiceUtils";
 import { useDocumentFinancials } from "@modules/invoicing/lib/useDocumentFinancials";
 import { MaterialForm } from "@modules/inventory/components/MaterialForm";
+import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
 
 
 interface HeaderState {
@@ -328,6 +330,7 @@ export default function OpeningBalance() {
   });
 
   const { exportData } = useExcelExport();
+  const { currencyMode } = useExportSettings();
 
   const handleExport = useCallback(async () => {
     if (enrichedLines.length === 0) {
@@ -363,12 +366,15 @@ export default function OpeningBalance() {
       hasMultipleCurrencies,
       materials,
       warehouses,
+      currencyMode,
     });
 
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
     currencies.forEach(curr => {
       summary[`line_total_${curr.code}`] = 'subtotal';
     });
+
+    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, currencies, rateMap, currencyMode).currencyRatesSheet;
 
     await exportData(
       enrichedForExport,
@@ -381,10 +387,11 @@ export default function OpeningBalance() {
         summaryLabel: "المجموع",
         additionalSummary: [
           { label: "المجموع الكلي (الصافي)", value: net }
-        ]
+        ],
+        currencyRatesSheet,
       }
     );
-  }, [enrichedLines, exportData, header, net, currencies, hasMultipleCurrencies, gridColumns, gridVisibleColumnIds, materials, warehouses]);
+  }, [enrichedLines, exportData, header, net, currencies, hasMultipleCurrencies, gridColumns, gridVisibleColumnIds, materials, warehouses, currencyMode, rateMap, baseCurrency]);
 
   return (
     <FinancialDocumentTemplate

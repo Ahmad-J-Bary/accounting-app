@@ -4,6 +4,8 @@ import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns, useExcelExport } from "@shared/hooks";
+import { useExportSettings } from "@shared/hooks/useExportSettings";
+import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
 import type { ExcelExportColumn, ExcelExportOptions } from "@shared/lib/excel";
 import { Button } from "@shared/ui/button";
 import { formatDateTime, formatNumber } from "@shared/lib/format";
@@ -81,7 +83,7 @@ export function InvoiceTable({
   onStatusFilterChange,
   tableId = "invoices-unified",
 }: InvoiceTableProps) {
-  const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
+  const { currencies, baseCurrency, rateMap, formatAmount } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
 
   const partyField = partyType === "supplier" ? "supplier_name" : "customer_name";
@@ -432,9 +434,12 @@ export function InvoiceTable({
   });
 
   const { exportData } = useExcelExport();
+  const { currencyMode } = useExportSettings();
 
   const handleExport = useCallback(async () => {
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
+
+    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, currencies, rateMap, currencyMode).currencyRatesSheet;
 
     const exportColumns: ExcelExportColumn[] = enrichedColumns
       .filter((col) => col.id !== "actions")
@@ -529,6 +534,7 @@ export function InvoiceTable({
       autoFilter: true,
       summary: Object.keys(summary).length > 0 ? summary : undefined,
       summaryLabel: "المجموع",
+      ...(currencyRatesSheet ? { currencyRatesSheet } : {}),
     };
 
     await exportData(
@@ -537,7 +543,7 @@ export function InvoiceTable({
       exportTitle,
       exportOptions
     );
-  }, [enrichedColumns, partyField, partyType, defaultName, extraColumns, sortedData, exportData]);
+  }, [enrichedColumns, partyField, partyType, defaultName, extraColumns, sortedData, exportData, currencyMode, baseCurrency, currencies, rateMap]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     let baseSubtotalTotal = 0;

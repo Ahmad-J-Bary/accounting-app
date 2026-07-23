@@ -30,6 +30,7 @@ export default function PaymentsPage() {
     formatAmount,
     currencies,
     baseCurrency,
+    rateMap,
     toBase,
   } = useCurrencyContext();
 
@@ -165,6 +166,7 @@ export default function PaymentsPage() {
           baseCurrency={baseCurrency ?? undefined}
           formatAmount={formatAmount}
           toBase={toBase}
+          rateMap={rateMap}
           loading={paymentsLoading}
           search={search}
           onSearchChange={setSearch}

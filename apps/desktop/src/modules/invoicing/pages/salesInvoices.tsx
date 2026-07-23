@@ -16,8 +16,10 @@ import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { customerService } from "@modules/partners/api/customerService";
 import { invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
 import { useExcelExport } from "@shared/hooks";
+import { useExportSettings } from "@shared/hooks/useExportSettings";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { buildInvoiceLineExportColumns } from "../lib/invoice-export-columns";
+import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
 
 export default function SalesInvoices() {
   const location = useLocation();
@@ -68,7 +70,8 @@ export default function SalesInvoices() {
   const [gridVisibleColumnIds, setGridVisibleColumnIds] = useState<string[]>([]);
 
   const { exportData } = useExcelExport();
-  const { currencies: availableCurrencies, hasMultipleCurrencies, convertBetween } = useCurrencyContext();
+  const { currencies: availableCurrencies, hasMultipleCurrencies, convertBetween, rateMap, baseCurrency } = useCurrencyContext();
+  const { currencyMode } = useExportSettings();
 
   const handleExport = useCallback(async () => {
     if (enrichedLines.length === 0) {
@@ -101,6 +104,7 @@ export default function SalesInvoices() {
       hasMultipleCurrencies,
       materials: materialList,
       warehouses,
+      currencyMode,
     });
 
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
@@ -110,6 +114,8 @@ export default function SalesInvoices() {
 
     const paidVal = parseFloat(headerState.paid_amount || "0");
     const remainingVal = net - paidVal;
+
+    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, availableCurrencies, rateMap, currencyMode).currencyRatesSheet;
 
     await exportData(enrichedForExport, columns, `فاتورة_مبيعات_${headerState.invoice_number}`, {
       sheetName: "فاتورة مبيعات",
@@ -123,9 +129,10 @@ export default function SalesInvoices() {
         { label: "المجموع الكلي (الصافي)", value: net },
         { label: "المبلغ المدفوع", value: paidVal },
         { label: "المبلغ المتبقي", value: remainingVal }
-      ]
+      ],
+      currencyRatesSheet,
     });
-  }, [exportData, availableCurrencies, hasMultipleCurrencies, enrichedLines, headerState, net, gridColumns, gridVisibleColumnIds, materials, warehouses]);
+  }, [exportData, availableCurrencies, hasMultipleCurrencies, enrichedLines, headerState, net, gridColumns, gridVisibleColumnIds, materials, warehouses, currencyMode, rateMap, baseCurrency]);
 
   const handleExportRow = useCallback(async (inv: InvoiceDto) => {
     const fullInv = await invoiceService.getInvoiceById(inv.id);
@@ -168,6 +175,7 @@ export default function SalesInvoices() {
       hasMultipleCurrencies,
       materials: materialList,
       warehouses,
+      currencyMode,
     });
 
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
@@ -182,6 +190,8 @@ export default function SalesInvoices() {
     const paidVal = parseFloat(fullInv.amount_paid || "0");
     const remainingVal = netVal - paidVal;
 
+    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, availableCurrencies, rateMap, currencyMode).currencyRatesSheet;
+
     await exportData(enrichedLines, columns, `فاتورة_مبيعات_${fullInv.invoice_number}`, {
       sheetName: "فاتورة مبيعات",
       autoFilter: true,
@@ -192,9 +202,10 @@ export default function SalesInvoices() {
         { label: "المجموع الكلي (الصافي)", value: netVal },
         { label: "المبلغ المدفوع", value: paidVal },
         { label: "المبلغ المتبقي", value: remainingVal }
-      ]
+      ],
+      currencyRatesSheet,
     });
-  }, [exportData, availableCurrencies, hasMultipleCurrencies, convertBetween, materials, warehouses, gridColumns]);
+  }, [exportData, availableCurrencies, hasMultipleCurrencies, convertBetween, materials, warehouses, gridColumns, currencyMode, rateMap, baseCurrency]);
 
   if (view === "editor") {
     return (

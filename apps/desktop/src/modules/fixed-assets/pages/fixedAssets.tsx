@@ -11,6 +11,8 @@ import type {
 } from "@erp/shared-types";
 import { toast } from "sonner";
 import { useExcelExport } from "@shared/hooks";
+import { useExportSettings } from "@shared/hooks/useExportSettings";
+import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { SharedTable } from "@widgets/table-shell/SharedTable";
@@ -37,8 +39,9 @@ const TYPE_CATEGORY_NAMES: Record<string, string[]> = {
 };
 
 export default function FixedAssetsPage() {
-  const { currencies, formatAmount } = useCurrencyContext();
+  const { baseCurrency, rateMap, currencies, formatAmount } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
+  const { currencyMode } = useExportSettings();
 
   const {
     filtered: allAssets,
@@ -308,6 +311,9 @@ export default function FixedAssetsPage() {
 
   const handleExport = useCallback(async () => {
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
+
+    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, currencies, rateMap, currencyMode).currencyRatesSheet;
+
     const exportColumns: ExcelExportColumn[] = [
       { id: "code", label: "الكود", accessor: (row) => String((row as Record<string, unknown>).code ?? "") },
       { id: "name", label: "الاسم", accessor: (row) => String((row as Record<string, unknown>).name ?? "") },
@@ -370,8 +376,8 @@ export default function FixedAssetsPage() {
       { id: "created_at", label: "التاريخ", accessor: (row) => new Date((row as Record<string, unknown>).created_at as string).toLocaleString("ar-SA") },
     ];
 
-    await exportData(assets as unknown as Record<string, unknown>[], exportColumns, "الأصول الثابتة", { sheetName: "الأصول الثابتة", autoFilter: true, summary, summaryLabel: "المجموع" });
-  }, [assets, currencies, categoryMap, warehouseMap, exportData, cs]);
+    await exportData(assets as unknown as Record<string, unknown>[], exportColumns, "الأصول الثابتة", { sheetName: "الأصول الثابتة", autoFilter: true, summary, summaryLabel: "المجموع", ...(currencyRatesSheet ? { currencyRatesSheet } : {}) });
+  }, [assets, currencies, currencyMode, baseCurrency, rateMap, categoryMap, warehouseMap, exportData, cs]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["code", "name", "category"];

@@ -14,6 +14,8 @@ import { AdjustmentForm } from '@modules/inventory/components/AdjustmentForm';
 import { AdjustmentDetailPanel } from '@modules/inventory/components/AdjustmentDetailPanel';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useExcelExport, useBaseCurrencyColumns } from "@shared/hooks";
+import { useExportSettings } from "@shared/hooks/useExportSettings";
+import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { formatDateTime, formatNumber, getNumberingSystem } from "@shared/lib/format";
@@ -139,18 +141,22 @@ export default function AdjustmentsPage() {
 
   const isLoading = adjLoading || refreshing || loadingProducts;
 
-  const { currencies, formatAmount } = useCurrencyContext();
+  const { baseCurrency, rateMap, currencies, formatAmount } = useCurrencyContext();
   const { hasSecondaryCurrencies } = useBaseCurrencyColumns();
+  const { currencyMode } = useExportSettings();
   const { exportData } = useExcelExport();
 
   const handleExport = useCallback(async () => {
-    const currCols = currencyAmountCols("total_cost", "التكلفة", (row) => Math.abs(parseFloat((row as unknown as StockAdjustment).total_cost_base || "0")), currencies, formatAmount, "", hasSecondaryCurrencies);
+    const currCols = currencyAmountCols("total_cost", "التكلفة", (row) => Math.abs(parseFloat((row as unknown as StockAdjustment).total_cost_base || "0")), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code);
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {
       system_quantity: 'subtotal',
       actual_quantity: 'subtotal',
       difference: 'subtotal',
     };
     currencies.forEach(curr => { summary[`total_cost_${curr.code}`] = 'subtotal'; });
+
+    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, currencies, rateMap, currencyMode).currencyRatesSheet;
+
     const columns: ExcelExportColumn[] = [
       { id: "id", label: "الرقم", accessor: (row) => formatNumber(parseInt((row as unknown as StockAdjustment).reference ?? "0", 10) || 0), numeric: true },
       { id: "material_name", label: "المادة", accessor: (row) => String((row as unknown as StockAdjustment).material_name ?? "") },
@@ -161,8 +167,8 @@ export default function AdjustmentsPage() {
       { id: "notes", label: "ملاحظة", accessor: (row) => String((row as unknown as StockAdjustment).notes ?? (row as unknown as StockAdjustment).reason ?? "") },
       { id: "adjustment_date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as StockAdjustment).adjustment_date) },
     ];
-    await exportData(adjustments as unknown as Record<string, unknown>[], columns, "تسويات الجرد", { sheetName: "تسويات الجرد", autoFilter: true, numeralSystem: getNumberingSystem(), summary, summaryLabel: "المجموع" });
-  }, [adjustments, currencies, formatAmount, exportData, hasSecondaryCurrencies]);
+    await exportData(adjustments as unknown as Record<string, unknown>[], columns, "تسويات الجرد", { sheetName: "تسويات الجرد", autoFilter: true, numeralSystem: getNumberingSystem(), summary, summaryLabel: "المجموع", ...(currencyRatesSheet ? { currencyRatesSheet } : {}) });
+  }, [adjustments, currencies, formatAmount, currencyMode, baseCurrency, rateMap, exportData, hasSecondaryCurrencies]);
 
   const handleCloseForm = useCallback(() => {
     setShowDialog(false);

@@ -15,6 +15,8 @@ import { toast } from 'sonner';
 import { useEntityList } from '@shared/hooks/useEntityList';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useExcelExport, useBaseCurrencyColumns } from "@shared/hooks";
+import { useExportSettings } from "@shared/hooks/useExportSettings";
+import { buildCurrencyRatesSheetOptions } from '@shared/lib/excel';
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import type { ExcelExportColumn, ExcelExportOptions } from '@shared/lib/excel';
 import { MaterialForm } from '@modules/inventory/components/MaterialForm';
@@ -32,8 +34,9 @@ import { QUERY_KEYS, queryClient, invalidateAccountingMutationQueries } from "@s
 
 export default function Materials() {
   const { openTab } = useTabs();
-  const { currencies, formatAmount } = useCurrencyContext();
+  const { baseCurrency, rateMap, currencies, formatAmount } = useCurrencyContext();
   const { hasSecondaryCurrencies, currencySuffix: cs } = useBaseCurrencyColumns();
+  const { currencyMode } = useExportSettings();
   const {
     filtered: materials,
     loading,
@@ -262,9 +265,9 @@ export default function Materials() {
           return ids.map(id => categories.find(c => c.id === id)?.name).filter(Boolean).join(', ');
         },
       },
-      ...currencyAmountCols("unit_price", "السعر الإفرادي", (row) => rawPriceBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies).map(c => { summary[c.id] = 'subtotal'; return c; }),
-      ...currencyAmountCols("extra_costs", "تكاليف إضافية", (row) => extraCostBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies).map(c => { summary[c.id] = 'subtotal'; return c; }),
-      ...currencyAmountCols("average_cost", "تكلفة الوحدة", (row) => unitCostBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies).map(c => { summary[c.id] = 'subtotal'; return c; }),
+      ...currencyAmountCols("unit_price", "السعر الإفرادي", (row) => rawPriceBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code).map(c => { summary[c.id] = 'subtotal'; return c; }),
+      ...currencyAmountCols("extra_costs", "تكاليف إضافية", (row) => extraCostBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code).map(c => { summary[c.id] = 'subtotal'; return c; }),
+      ...currencyAmountCols("average_cost", "تكلفة الوحدة", (row) => unitCostBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code).map(c => { summary[c.id] = 'subtotal'; return c; }),
       ...currencies.map(curr => {
         const totalValId = `total_value_${curr.code}`;
         summary[totalValId] = 'subtotal';
@@ -364,6 +367,8 @@ export default function Materials() {
       },
     );
 
+    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, currencies, rateMap, currencyMode).currencyRatesSheet;
+
     const exportOptions: ExcelExportOptions = {
       sheetName: 'بطاقات المواد',
       autoFilter: true,
@@ -374,6 +379,7 @@ export default function Materials() {
       },
       summary,
       summaryLabel: "المجموع",
+      ...(currencyRatesSheet ? { currencyRatesSheet } : {}),
     };
 
     await exportData(
@@ -382,7 +388,7 @@ export default function Materials() {
       'بطاقات المواد',
       exportOptions,
     );
-  }, [materials, currencies, categories, formatAmount, visibleColumnIds, unitCostBase, rawPriceBase, extraCostBase, totalReceived, exportData, hasSecondaryCurrencies, cs]);
+  }, [materials, currencies, currencyMode, baseCurrency, rateMap, categories, formatAmount, visibleColumnIds, unitCostBase, rawPriceBase, extraCostBase, totalReceived, exportData, hasSecondaryCurrencies, cs]);
 
   const handleOpenReturn = () => {
     if (!selectedMaterial) return;

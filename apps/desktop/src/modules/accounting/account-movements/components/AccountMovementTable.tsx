@@ -7,7 +7,9 @@ import { Skeleton } from "@shared/ui/skeleton";
 import { EmptyState } from "@widgets/table-shell/EmptyState";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useExcelExport, useUnifiedColumns, useSortable, useBaseCurrencyColumns, useTableSettings, useGridResize } from "@shared/hooks";
+import { useExportSettings } from "@shared/hooks/useExportSettings";
 import type { ExcelExportColumn, ExcelExportOptions } from "@shared/lib/excel";
+import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
 import { cn } from "@shared/lib/utils";
 import { getLeftBorderClass, getRowBorderClass, getRowBackgroundClass } from "@shared/lib/table-utils";
 import type { GridResizeContent } from "@shared/hooks/useGridResize";
@@ -55,8 +57,9 @@ export function AccountMovementTable({
   accountName,
   openingBalance = 0,
 }: AccountMovementTableProps) {
-  const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
+  const { currencies, baseCurrency, rateMap, formatAmount } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix } = useBaseCurrencyColumns();
+  const { currencyMode } = useExportSettings();
   const { exportData } = useExcelExport();
   const { settings, getDensityPadding } = useTableSettings();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -313,6 +316,8 @@ export function AccountMovementTable({
   const handleExport = useCallback(async () => {
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
 
+    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, sortedCurrencies, rateMap, currencyMode).currencyRatesSheet;
+
     const exportColumns: ExcelExportColumn[] = enrichedColumns.map((col) => {
       const label = col.label || getHeaderText(col);
 
@@ -356,6 +361,7 @@ export function AccountMovementTable({
       autoFilter: true,
       summary: Object.keys(summary).length > 0 ? summary : undefined,
       summaryLabel: "المجموع",
+      ...(currencyRatesSheet ? { currencyRatesSheet } : {}),
     };
 
     await exportData(
@@ -364,7 +370,7 @@ export function AccountMovementTable({
       `حركة_حساب_${accountName}`,
       exportOptions,
     );
-  }, [enrichedColumns, tableData, accountName, exportData, getColumnSampleValues]);
+  }, [enrichedColumns, tableData, accountName, exportData, getColumnSampleValues, currencyMode, baseCurrency, sortedCurrencies, rateMap]);
 
   const contentByColumn = useMemo(() => {
     const out: Record<string, GridResizeContent> = {};

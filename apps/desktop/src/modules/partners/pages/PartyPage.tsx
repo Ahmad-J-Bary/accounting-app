@@ -13,7 +13,9 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useTabs } from "@app/providers/TabContext";
 import { useEntityList } from '@shared/hooks/useEntityList';
 import { useExcelExport, useBaseCurrencyColumns } from "@shared/hooks";
+import { useExportSettings } from "@shared/hooks/useExportSettings";
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
+import { buildCurrencyRatesSheetOptions } from '@shared/lib/excel';
 import type { ExcelExportColumn, ExcelExportOptions } from '@shared/lib/excel';
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import { PartyTable } from '@modules/partners/components/PartyTable';
@@ -94,8 +96,9 @@ interface PartyPageProps {
 export default function PartyPage({ entityName }: PartyPageProps) {
   const cfg = PARTY_CONFIGS[entityName];
   const { openTab } = useTabs();
-  const { currencies, baseCurrency, toBase, formatAmount } = useCurrencyContext();
+  const { currencies, baseCurrency, rateMap, toBase, formatAmount } = useCurrencyContext();
   const { hasSecondaryCurrencies } = useBaseCurrencyColumns();
+  const { currencyMode } = useExportSettings();
 
   // ── CRUD via useEntityList ──
 
@@ -243,7 +246,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
       const absBal = Math.abs(Number(row.balance || 0));
       if (absBal === 0) return 0;
       return toBase(absBal, String(row.currency ?? baseCurrency?.code ?? ''));
-    }, currencies, formatAmount, "", hasSecondaryCurrencies);
+    }, currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code);
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
     currencies.forEach(curr => { summary[`balance_${curr.code}`] = 'subtotal'; });
 
@@ -265,6 +268,8 @@ export default function PartyPage({ entityName }: PartyPageProps) {
       { id: 'notes', label: 'ملاحظات', width: 20, accessor: (row) => String(row.notes ?? '') },
     ];
 
+    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, currencies, rateMap, currencyMode).currencyRatesSheet;
+
     const exportOptions: ExcelExportOptions = {
       sheetName: entityName === 'supplier' ? 'الموردين' : 'العملاء',
       autoFilter: true,
@@ -275,6 +280,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
       },
       summary,
       summaryLabel: "المجموع",
+      ...(currencyRatesSheet ? { currencyRatesSheet } : {}),
     };
 
     await exportData(
@@ -283,7 +289,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
       entityName === 'supplier' ? 'الموردين' : 'العملاء',
       exportOptions,
     );
-  }, [items, currencies, entityName, toBase, formatAmount, baseCurrency?.code, visibleColumnIds, exportData, hasSecondaryCurrencies]);
+  }, [items, currencies, entityName, toBase, formatAmount, currencyMode, baseCurrency, rateMap, visibleColumnIds, exportData, hasSecondaryCurrencies]);
 
   // ── Toolbar ──
 

@@ -7,6 +7,8 @@ import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
 import { formatDateTime, formatNumber, toLocalString } from '@shared/lib/format';
 import { useExcelExport } from "@shared/hooks";
+import { useExportSettings } from "@shared/hooks/useExportSettings";
+import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
 import type { ExcelExportColumn, ExcelExportOptions } from "@shared/lib/excel";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { getMovementType } from '../constants/movementTypes';
@@ -75,8 +77,9 @@ export function InventoryMovementsTable({
   filterBar,
   selectedId, onRowClick, onRowDoubleClick, transferRefs, className,
 }: InventoryMovementsTableProps) {
-  const { formatAmount, currencies } = useCurrencyContext();
+  const { baseCurrency, rateMap, currencies, formatAmount } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
+  const { currencyMode } = useExportSettings();
   const defaultWh = useMemo(() => warehouses.find(wh => wh.is_default), [warehouses]);
 
   const warehouseName = useMemo(() => (m: StockMovement) => {
@@ -362,6 +365,8 @@ export function InventoryMovementsTable({
   const handleExport = useCallback(async () => {
     const summary: Record<string, string | null> = { quantity: 'subtotal' };
 
+    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, currencies, rateMap, currencyMode).currencyRatesSheet;
+
     const exportColumns: ExcelExportColumn[] = enrichedColumns.map((col) => {
       const isDebitCredit = /^total_cost_/.test(col.id);
 
@@ -414,6 +419,7 @@ export function InventoryMovementsTable({
       autoFilter: true,
       summary,
       summaryLabel: "المجموع",
+      ...(currencyRatesSheet ? { currencyRatesSheet } : {}),
     };
 
     await exportData(
@@ -422,7 +428,7 @@ export function InventoryMovementsTable({
       "حركات المخزون",
       exportOptions,
     );
-  }, [enrichedColumns, sortedData, warehouseName, baseCost, transferRefs, exportData]);
+  }, [enrichedColumns, sortedData, warehouseName, baseCost, transferRefs, exportData, currencyMode, baseCurrency, currencies, rateMap]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     return enrichedColumns.map(col => {

@@ -25,6 +25,8 @@ interface BuildColumnsOptions {
   hasMultipleCurrencies: boolean;
   materials?: MaterialDto[];
   warehouses?: WarehouseDto[];
+  /** When "variable", non-base currency columns are hidden in the export. */
+  currencyMode?: "fixed" | "variable";
 }
 
 /**
@@ -40,16 +42,26 @@ export function buildInvoiceLineExportColumns({
   hasMultipleCurrencies,
   materials: _materials = [],
   warehouses = [],
+  currencyMode = "fixed",
 }: BuildColumnsOptions): ExcelExportColumn[] {
   const warehouseMap = new Map(warehouses.map(w => [w.id, w]));
   const cs = (sym: string) => hasMultipleCurrencies ? ` (${sym})` : '';
+  const baseCode = currencies[0]?.code || '';
 
   const result: ExcelExportColumn[] = [];
+  const nonBaseCurrencies = currencies.filter(c => c.code !== baseCode);
 
   const resolveHidden = (key: string): boolean => {
     if (hiddenColumnIds) return hiddenColumnIds.includes(key);
     if (visibleColumnIds) return !visibleColumnIds.includes(key);
     return false;
+  };
+
+  const formulaForNonBase = (field: string, code: string): string | undefined => {
+    if (currencyMode !== "variable") return undefined;
+    const rateIdx = nonBaseCurrencies.findIndex(c => c.code === code);
+    if (rateIdx < 0) return undefined;
+    return `{col('${field}')}{row}*'أسعار الصرف'!B${rateIdx + 2}`;
   };
 
   for (const col of gridColumns) {
@@ -224,6 +236,7 @@ export function buildInvoiceLineExportColumns({
             profit_amount: "الربح",
           };
           const headerText = typeof col.header === "string" && col.header ? col.header : `${labelMap[field]}${cs(sym)}`;
+          const formula = formulaForNonBase(field, code);
           result.push({
             id: col.key,
             label: headerText,
@@ -231,7 +244,7 @@ export function buildInvoiceLineExportColumns({
             width: 15,
             numeric: true,
             decimalPlaces: 2,
-            accessor: (row) => parseFloat(String((row as Record<string, unknown>)[col.key] ?? '0')) || 0,
+            ...(formula ? { formula } : { accessor: (row) => parseFloat(String((row as Record<string, unknown>)[col.key] ?? '0')) || 0 }),
           });
         } else if (col.key === "discount") {
           result.push({
@@ -260,7 +273,11 @@ export function buildInvoiceLineExportColumns({
             accessor: (row) => String((row as EnrichedExportLine).notes ?? ''),
           });
         } else if (col.key.startsWith("retail_price") || col.key.startsWith("semi_wholesale_price") || col.key.startsWith("wholesale_price")) {
-          // Sale tier price per-currency columns
+          // Sale tier price per-currency columns (e.g. "retail_price_USD")
+          const saleMatch = col.key.match(/^(retail_price|semi_wholesale_price|wholesale_price)_([A-Za-z0-9]+)$/);
+          const field = saleMatch ? saleMatch[1] : col.key;
+          const code = saleMatch ? saleMatch[2] : baseCode;
+          const formula = code !== baseCode ? formulaForNonBase(field, code) : undefined;
           result.push({
             id: col.key,
             label: col.header,
@@ -268,7 +285,7 @@ export function buildInvoiceLineExportColumns({
             width: 15,
             numeric: true,
             decimalPlaces: 2,
-            accessor: (row) => parseFloat(String((row as Record<string, unknown>)[col.key] ?? '0')) || 0,
+            ...(formula ? { formula } : { accessor: (row) => parseFloat(String((row as Record<string, unknown>)[col.key] ?? '0')) || 0 }),
           });
         } else if (col.key === "original_quantity") {
           result.push({

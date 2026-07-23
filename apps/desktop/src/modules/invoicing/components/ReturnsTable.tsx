@@ -4,6 +4,8 @@ import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns, useExcelExport } from "@shared/hooks";
+import { useExportSettings } from "@shared/hooks/useExportSettings";
+import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
 import type { ExcelExportColumn, ExcelExportOptions } from "@shared/lib/excel";
 import { Button } from "@shared/ui/button";
 import { formatDateTime, formatNumber } from "@shared/lib/format";
@@ -42,7 +44,7 @@ export function ReturnsTable({
   onDelete,
   onExportRow,
 }: ReturnsTableProps) {
-  const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
+  const { currencies, baseCurrency, rateMap, formatAmount } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
 
   // Type guards
@@ -181,9 +183,12 @@ export function ReturnsTable({
   });
 
   const { exportData } = useExcelExport();
+  const { currencyMode } = useExportSettings();
 
   const handleExport = useCallback(async () => {
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
+
+    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, currencies, rateMap, currencyMode).currencyRatesSheet;
 
     const exportColumns: ExcelExportColumn[] = enrichedColumns
       .filter((col) => col.id !== "actions")
@@ -229,6 +234,7 @@ export function ReturnsTable({
       autoFilter: true,
       summary: Object.keys(summary).length > 0 ? summary : undefined,
       summaryLabel: "المجموع",
+      ...(currencyRatesSheet ? { currencyRatesSheet } : {}),
     };
 
     await exportData(
@@ -237,7 +243,7 @@ export function ReturnsTable({
       exportTitle,
       exportOptions
     );
-  }, [enrichedColumns, partnerLabel, sortedData, exportData]);
+  }, [enrichedColumns, partnerLabel, sortedData, exportData, currencyMode, baseCurrency, currencies, rateMap]);
 
   const baseTotal = useMemo(() =>
     items.reduce((s, ret) => s + (parseFloat(ret.total_amount || "0") || 0), 0),

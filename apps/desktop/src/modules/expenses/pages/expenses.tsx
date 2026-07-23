@@ -20,6 +20,8 @@ import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTem
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
 import { useExcelExport, useBaseCurrencyColumns } from "@shared/hooks";
+import { useExportSettings } from "@shared/hooks/useExportSettings";
+import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { toast } from "sonner";
@@ -33,6 +35,7 @@ type ExpenseSavePayload = SaveAccountCommand & { _id?: string };
 export default function Expenses() {
   const { baseCurrency, rateMap, currencies, formatAmount, toBase } = useCurrencyContext();
   const { hasSecondaryCurrencies } = useBaseCurrencyColumns();
+  const { currencyMode } = useExportSettings();
   const { openTab } = useTabs();
   const [rateMapKey, setRateMapKey] = useState(0);
   const [expensesParent, setExpensesParent] = useState<AccountDto | null>(null);
@@ -139,9 +142,12 @@ export default function Expenses() {
       const absBal = Math.abs(Number(c.balance || 0));
       if (absBal === 0) return 0;
       return toBase(absBal, c.currency || "");
-    }, currencies, formatAmount, "", hasSecondaryCurrencies);
+    }, currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code);
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
     currencies.forEach(curr => { summary[`balance_${curr.code}`] = 'subtotal'; });
+
+    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, currencies, rateMap, currencyMode).currencyRatesSheet;
+
     const exportColumns: ExcelExportColumn[] = [
       { id: "code", label: "#", accessor: (row) => {
         const c = row as unknown as AccountDto;
@@ -160,8 +166,8 @@ export default function Expenses() {
       } },
       ...currCols,
     ];
-    await exportData(expenses as unknown as Record<string, unknown>[], exportColumns, "بنود المصاريف", { sheetName: "بنود المصاريف", autoFilter: true, summary, summaryLabel: "المجموع" });
-  }, [expenses, currencies, formatAmount, toBase, expensesParent, exportData, hasSecondaryCurrencies]);
+    await exportData(expenses as unknown as Record<string, unknown>[], exportColumns, "بنود المصاريف", { sheetName: "بنود المصاريف", autoFilter: true, summary, summaryLabel: "المجموع", ...(currencyRatesSheet ? { currencyRatesSheet } : {}) });
+  }, [expenses, currencies, formatAmount, toBase, currencyMode, baseCurrency, rateMap, expensesParent, exportData, hasSecondaryCurrencies]);
 
   const isLoading = loading || refreshing;
 

@@ -29,6 +29,9 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       setCurrencies(context.active_currencies);
       setTodayStatus(context.today_status);
 
+      console.log("[CurrencyProvider] load() today_status:", JSON.stringify(context.today_status, null, 2));
+      console.log("[CurrencyProvider] load() base_currency_code:", context.base_currency_code);
+
       if (!context.base_currency_code || context.active_currencies.length === 0) {
         setDisplayCurrencyCodeState(null);
         return;
@@ -44,6 +47,8 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       if (storedMode === "base" || storedMode === "selected") {
         setDisplayModeState(storedMode);
       }
+    } catch (err) {
+      console.error("[CurrencyProvider] Failed to load currency context:", err);
     } finally {
       setLoading(false);
     }
@@ -138,6 +143,13 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
         map.set(status.currency_code, value);
       }
     }
+    console.log("[CurrencyProvider] rateMap built:", Object.fromEntries(map));
+    console.log("[CurrencyProvider] rateMap raw todayStatus:", todayStatus.map(s => ({
+      code: s.currency_code,
+      rate: s.rate,
+      last_rate: s.last_rate,
+      has_rate_today: s.has_rate_today,
+    })));
     return map;
   }, [todayStatus]);
 

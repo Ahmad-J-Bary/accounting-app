@@ -15,6 +15,8 @@ export interface ExcelExportColumn {
   numeric?: boolean;
   decimalPlaces?: number;
   formula?: string;
+  currencyCode?: string;
+  currencySymbol?: string;
 }
 
 function extractBase64(dataUrl: string): { base64: string; extension: string } | null {
@@ -35,6 +37,46 @@ function getRowOffset(options?: ExcelExportOptions): number {
     offset += 1; // plus blank row for spacing
   }
   return offset;
+}
+
+const CURRENCY_LOCALE_MAP: Record<string, { symbol: string; locale: string }> = {
+  USD: { symbol: '$', locale: 'en-US' },
+  EUR: { symbol: '€', locale: 'en-US' },
+  GBP: { symbol: '£', locale: 'en-GB' },
+  TRY: { symbol: '₺', locale: 'tr-TR' },
+  SAR: { symbol: 'ر.س', locale: 'ar-SA' },
+  SYP: { symbol: 'ل.س', locale: 'ar-SA' },
+  EGP: { symbol: 'ج.م', locale: 'ar-EG' },
+  AED: { symbol: 'د.إ', locale: 'ar-AE' },
+  IQD: { symbol: 'د.ع', locale: 'ar-IQ' },
+  JOD: { symbol: 'د.ا', locale: 'ar-JO' },
+  KWD: { symbol: 'د.ك', locale: 'ar-KW' },
+  QAR: { symbol: 'ر.ق', locale: 'ar-QA' },
+  OMR: { symbol: 'ر.ع', locale: 'ar-OM' },
+  BHD: { symbol: 'د.ب', locale: 'ar-BH' },
+  LBP: { symbol: 'ل.ل', locale: 'ar-LB' },
+  YER: { symbol: 'ر.ي', locale: 'ar-YE' },
+  TND: { symbol: 'د.ت', locale: 'ar-TN' },
+  DZD: { symbol: 'د.ج', locale: 'ar-DZ' },
+  MAD: { symbol: 'د.م', locale: 'ar-MA' },
+  LYD: { symbol: 'د.ل', locale: 'ar-LY' },
+  SDG: { symbol: 'ج.س', locale: 'ar-SD' },
+};
+
+function getNumFmt(
+  decimals: number,
+  numeralSystem?: string,
+  currencyCode?: string,
+  currencySymbol?: string,
+): string {
+  const pattern = decimals > 0 ? `#,##0.${'0'.repeat(decimals)}` : '#,##0';
+  if (currencyCode) {
+    const entry = CURRENCY_LOCALE_MAP[currencyCode];
+    if (entry) return `[$${entry.symbol}-${entry.locale}] ${pattern}`;
+  }
+  if (currencySymbol) return `[$${currencySymbol}] ${pattern}`;
+  const locale = numeralSystem === "arab" ? "[$-ar-SA]" : "[$-en-US]";
+  return locale + pattern;
 }
 
 async function buildExcelJsWorkbook(
@@ -139,8 +181,7 @@ async function buildExcelJsWorkbook(
           const formula = resolveFormula(col.formula, columns, excelRowNum);
           cell.value = { formula };
           const decimals = col.decimalPlaces ?? 0;
-          const fmt = numeralSystem === "arab" ? "[$-ar-SA]" : "[$-en-US]";
-          cell.numFmt = decimals > 0 ? fmt + `#,##0.${'0'.repeat(decimals)}` : fmt + '#,##0';
+          cell.numFmt = getNumFmt(decimals, numeralSystem, col.currencyCode, col.currencySymbol);
         } else {
           const val = getCellValue(row, col);
 
@@ -148,8 +189,7 @@ async function buildExcelJsWorkbook(
             const numVal = typeof val === "number" ? val : parseFloat(val as string) || 0;
             if (!isNaN(numVal) && col.numeric) {
               const decimals = col.decimalPlaces ?? 0;
-              const fmt = numeralSystem === "arab" ? "[$-ar-SA]" : "[$-en-US]";
-              cell.numFmt = decimals > 0 ? fmt + `#,##0.${'0'.repeat(decimals)}` : fmt + '#,##0';
+              cell.numFmt = getNumFmt(decimals, numeralSystem, col.currencyCode, col.currencySymbol);
             }
           }
 
@@ -177,8 +217,7 @@ async function buildExcelJsWorkbook(
           cell.value = { formula: cellValue.f.substring(1) };
           cell.font = { bold: true, size: 10 };
           const decimals = col.decimalPlaces ?? 0;
-          const fmt = numeralSystem === "arab" ? "[$-ar-SA]" : "[$-en-US]";
-          cell.numFmt = decimals > 0 ? fmt + `#,##0.${'0'.repeat(decimals)}` : fmt + '#,##0';
+          cell.numFmt = getNumFmt(decimals, numeralSystem, col.currencyCode, col.currencySymbol);
         } else {
           cell.value = cellValue.v ?? '';
           cell.font = { bold: true, size: 10 };
@@ -241,6 +280,88 @@ async function buildExcelJsWorkbook(
     applyExcelJsMerges(ws, columns, shiftedMerges);
   }
 
+  if (options?.currencyRatesSheet && options.currencyRatesSheet.rates.length > 0) {
+    const ratesSheet = workbook.addWorksheet(options.currencyRatesSheet.sheetName || 'أسعار الصرف');
+    ratesSheet.views = [{ state: 'frozen', ySplit: 1, xSplit: 0 } as unknown as ExcelJS.WorksheetView];
+    ratesSheet.views[0].rightToLeft = true;
+
+    ratesSheet.columns = [
+      { width: 22 },
+      { width: 30 },
+      { width: 16 },
+      { width: 10 },
+    ];
+
+    const bc = options.currencyRatesSheet.baseCurrency;
+
+    const hdrStyle: Partial<ExcelJS.Style> = {
+      font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 },
+      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } },
+      alignment: { horizontal: 'center', vertical: 'middle' },
+    };
+    const dataStyle: Partial<ExcelJS.Style> = {
+      font: { size: 10 },
+      alignment: { horizontal: 'center', vertical: 'middle' },
+      border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } },
+    };
+
+    // Header row
+    const hdrRow = ratesSheet.getRow(1);
+    hdrRow.getCell(1).value = 'النوع';
+    hdrRow.getCell(2).value = 'العملة';
+    hdrRow.getCell(3).value = 'السعر';
+    hdrRow.getCell(4).value = 'الرمز';
+    [1, 2, 3, 4].forEach(i => {
+      const cell = hdrRow.getCell(i);
+      cell.font = hdrStyle.font;
+      cell.fill = hdrStyle.fill;
+      cell.alignment = hdrStyle.alignment;
+    });
+    hdrRow.height = 22;
+
+    // Base currency row
+    const baseRow = ratesSheet.getRow(2);
+    baseRow.getCell(1).value = 'العملة الأساسية';
+    baseRow.getCell(2).value = `${bc.name_ar} ${bc.code}`;
+    baseRow.getCell(3).value = 1;
+    baseRow.getCell(4).value = bc.symbol;
+    [1, 2, 3, 4].forEach(i => {
+      const cell = baseRow.getCell(i);
+      cell.font = { bold: true, size: 10 };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border = dataStyle.border;
+    });
+    baseRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+    baseRow.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+    baseRow.getCell(3).numFmt = '#,##0';
+    baseRow.height = 20;
+
+    // Secondary currency rows
+    const rates = options.currencyRatesSheet.rates;
+    const secondaryLabel = 'العملات الثانوية المقابلة';
+    rates.forEach((r, idx) => {
+      const rowNum = idx + 3;
+      const row = ratesSheet.getRow(rowNum);
+      row.getCell(1).value = secondaryLabel;
+      row.getCell(2).value = `${r.name_ar} ${r.currency_code}`;
+      row.getCell(3).value = r.rate;
+      row.getCell(4).value = r.symbol;
+      [1, 2, 3, 4].forEach(i => {
+        const cell = row.getCell(i);
+        cell.font = { size: 10 };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = dataStyle.border;
+      });
+      row.getCell(3).numFmt = '#,##0.##';
+      row.height = 20;
+    });
+
+    // Merge column A for "العملات الثانوية المقابلة" across all secondary currency rows
+    if (rates.length > 1) {
+      ratesSheet.mergeCells(3, 1, 2 + rates.length, 1);
+    }
+  }
+
   if (options?.additionalSummary && options.additionalSummary.length > 0) {
     let currentSummaryRowNum = sortedData.length + (options.summary ? 3 : 2) + rowOffset;
     ws.getRow(currentSummaryRowNum).height = 15; // Blank row spacing
@@ -293,6 +414,39 @@ export interface ExcelExportOptions {
   title?: string;
   metadata?: Array<{ label: string; value: string | number }>;
   additionalSummary?: Array<{ label: string; value: string | number }>;
+  /** When provided, a second worksheet with exchange rates is appended to the workbook. */
+  currencyRatesSheet?: {
+    sheetName?: string;
+    baseCurrency: { code: string; name_ar: string; symbol: string };
+    rates: Array<{ currency_code: string; rate: number; name_ar: string; symbol: string }>;
+  };
+}
+
+export function buildCurrencyRatesSheetOptions(
+  baseCurrency: { code: string; name_ar: string; symbol: string } | null,
+  currencies: { code: string; name_ar: string; symbol: string }[],
+  rateMap: Map<string, number>,
+  currencyMode: "fixed" | "variable",
+): { currencyRatesSheet?: {
+  sheetName?: string;
+  baseCurrency: { code: string; name_ar: string; symbol: string };
+  rates: Array<{ currency_code: string; rate: number; name_ar: string; symbol: string }>;
+} } {
+  if (currencyMode !== "variable" || !baseCurrency) return {};
+  const nonBase = currencies.filter(c => c.code !== baseCurrency.code);
+  if (nonBase.length === 0) return {};
+  return {
+    currencyRatesSheet: {
+      sheetName: "أسعار الصرف",
+      baseCurrency: { code: baseCurrency.code, name_ar: baseCurrency.name_ar, symbol: baseCurrency.symbol },
+      rates: nonBase.map(c => ({
+        currency_code: c.code,
+        rate: rateMap.get(c.code) || 1,
+        name_ar: c.name_ar,
+        symbol: c.symbol,
+      })),
+    },
+  };
 }
 
 function getVisibleColumnIndex(columns: ExcelExportColumn[], columnId: string): number {
@@ -538,15 +692,16 @@ function buildWorkbook(
       if (col.formula) {
         const excelRowNum = rowIdx + 2 + rowOffset;
         const formula = resolveFormula(col.formula, columns, excelRowNum);
-        return { f: '=' + formula, t: 'n' as const, s: DATA_STYLE };
+        const decimals = col.decimalPlaces ?? 0;
+        const fmt = getNumFmt(decimals, options?.numeralSystem, col.currencyCode, col.currencySymbol);
+        return { f: '=' + formula, t: 'n' as const, s: { ...DATA_STYLE, numFmt: fmt } };
       }
 
       const val = getCellValue(row, col);
       const cellStyle: Record<string, unknown> = { ...DATA_STYLE };
       if (col.numeric && typeof val === 'number') {
-        const fmt = options?.numeralSystem === "arab" ? "[$-ar-SA]" : "[$-en-US]";
         const decimals = col.decimalPlaces ?? 0;
-        cellStyle.numFmt = decimals > 0 ? fmt + `#,##0.${'0'.repeat(decimals)}` : fmt + '#,##0';
+        cellStyle.numFmt = getNumFmt(decimals, options?.numeralSystem, col.currencyCode, col.currencySymbol);
       }
       return { v: val ?? '', t: typeof val === 'number' ? ('n' as const) : ('s' as const), s: cellStyle };
     })
@@ -560,9 +715,8 @@ function buildWorkbook(
       if (cellValue.f) {
         const cellStyle: Record<string, unknown> = { ...SUMMARY_STYLE };
         if (col.numeric) {
-          const fmt = options?.numeralSystem === "arab" ? "[$-ar-SA]" : "[$-en-US]";
           const decimals = col.decimalPlaces ?? 0;
-          cellStyle.numFmt = decimals > 0 ? fmt + `#,##0.${'0'.repeat(decimals)}` : fmt + '#,##0';
+          cellStyle.numFmt = getNumFmt(decimals, options?.numeralSystem, col.currencyCode, col.currencySymbol);
         }
         return { f: cellValue.f, t: 'n' as const, s: cellStyle };
       }
@@ -626,6 +780,55 @@ function buildWorkbook(
   wb.Workbook.Sheets = [{ Hidden: 0 }];
   ws['!freeze'] = { xSplit: 0, ySplit: 1 + rowOffset };
   XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+  if (options?.currencyRatesSheet && options.currencyRatesSheet.rates.length > 0) {
+    const ratesSheetName = options.currencyRatesSheet.sheetName || 'أسعار الصرف';
+    const bc = options.currencyRatesSheet.baseCurrency;
+    const secondaryLabel = 'العملات الثانوية المقابلة';
+
+    const baseRowStyle = { ...DATA_STYLE, font: { ...DATA_STYLE.font, bold: true }, fill: { fgColor: { rgb: 'F8FAFC' } } } as typeof DATA_STYLE;
+
+    const ratesData: unknown[][] = [
+      // Header row
+      [
+        { v: 'النوع', t: 's' as const, s: HEADER_STYLE },
+        { v: 'العملة', t: 's' as const, s: HEADER_STYLE },
+        { v: 'السعر', t: 's' as const, s: HEADER_STYLE },
+        { v: 'الرمز', t: 's' as const, s: HEADER_STYLE },
+      ],
+      // Base currency row
+      [
+        { v: 'العملة الأساسية', t: 's' as const, s: baseRowStyle },
+        { v: `${bc.name_ar} ${bc.code}`, t: 's' as const, s: baseRowStyle },
+        { v: 1, t: 'n' as const, s: { ...baseRowStyle, numFmt: '#,##0' } as XLSX.CellStyle },
+        { v: bc.symbol, t: 's' as const, s: baseRowStyle },
+      ],
+      // Secondary currency rows
+      ...options.currencyRatesSheet.rates.map(r => [
+        { v: secondaryLabel, t: 's' as const, s: DATA_STYLE },
+        { v: `${r.name_ar} ${r.currency_code}`, t: 's' as const, s: DATA_STYLE },
+        { v: r.rate, t: 'n' as const, s: { ...DATA_STYLE, numFmt: '#,##0.##' } as XLSX.CellStyle },
+        { v: r.symbol, t: 's' as const, s: DATA_STYLE },
+      ]),
+    ];
+
+    const ratesWs = XLSX.utils.aoa_to_sheet(ratesData);
+    ratesWs['!cols'] = [{ wch: 22 }, { wch: 30 }, { wch: 16 }, { wch: 10 }];
+
+    // Merge "العملات الثانوية المقابلة" cells in column A across secondary rows
+    const secondaryCount = options.currencyRatesSheet.rates.length;
+    if (secondaryCount > 1) {
+      const merges: XLSX.Range[] = [{
+        s: { r: 2, c: 0 },
+        e: { r: 1 + secondaryCount, c: 0 },
+      }];
+      ratesWs['!merges'] = [...(ratesWs['!merges'] || []), ...merges];
+    }
+
+    ratesWs['!freeze'] = { xSplit: 0, ySplit: 1 };
+    XLSX.utils.book_append_sheet(wb, ratesWs, ratesSheetName);
+    wb.Workbook!.Sheets!.push({ Hidden: 0 });
+  }
 
   return wb;
 }

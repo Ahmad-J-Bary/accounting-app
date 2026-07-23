@@ -6,10 +6,12 @@ import { useReturnLifecycle } from "../hooks/useReturnLifecycle";
 import { returnService } from "@modules/invoicing/api/returnService";
 import { toast } from "sonner";
 import { useExcelExport } from "@shared/hooks";
+import { useExportSettings } from "@shared/hooks/useExportSettings";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import type { SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
 import { buildInvoiceLineExportColumns } from "../lib/invoice-export-columns";
 import type { DocumentColumn } from "@widgets/document-shell/GenericDocumentGrid";
+import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
 
 export default function SalesReturns() {
   const location = useLocation();
@@ -40,7 +42,8 @@ export default function SalesReturns() {
   const customerIdFilter = searchParams.get("customerId") || undefined;
 
   const { exportData } = useExcelExport();
-  const { currencies: availableCurrencies, hasMultipleCurrencies, convertBetween, baseCurrency } = useCurrencyContext();
+  const { currencies: availableCurrencies, hasMultipleCurrencies, convertBetween, baseCurrency, rateMap } = useCurrencyContext();
+  const { currencyMode } = useExportSettings();
 
   const handleDelete = useCallback(async (id: string) => {
     try {
@@ -112,6 +115,7 @@ export default function SalesReturns() {
       hasMultipleCurrencies,
       materials,
       warehouses,
+      currencyMode,
     });
 
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
@@ -120,6 +124,8 @@ export default function SalesReturns() {
     });
 
     const totalVal = parseFloat(fullReturn.total_amount || "0");
+
+    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, availableCurrencies, rateMap, currencyMode).currencyRatesSheet;
 
     await exportData(
       enrichedLines,
@@ -132,10 +138,11 @@ export default function SalesReturns() {
         summaryLabel: "المجموع",
         additionalSummary: [
           { label: "الإجمالي", value: totalVal }
-        ]
+        ],
+        currencyRatesSheet,
       }
     );
-  }, [exportData, availableCurrencies, hasMultipleCurrencies, convertBetween, baseCurrency, materials, warehouses]);
+  }, [exportData, availableCurrencies, hasMultipleCurrencies, convertBetween, baseCurrency, materials, warehouses, currencyMode, rateMap]);
 
   if (view === "editor") {
     return (
