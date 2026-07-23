@@ -12,13 +12,11 @@ import { useDataTable } from '@shared/hooks';
 import { AdjustmentsTable } from '@modules/inventory/components/AdjustmentsTable';
 import { AdjustmentForm } from '@modules/inventory/components/AdjustmentForm';
 import { AdjustmentDetailPanel } from '@modules/inventory/components/AdjustmentDetailPanel';
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useExcelExport, useBaseCurrencyColumns } from "@shared/hooks";
-import { useExportSettings } from "@shared/hooks/useExportSettings";
-import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
+import { useExportSetup, useBaseCurrencyColumns } from "@shared/hooks";
+import { dateCol, executeExport, addCurrencySummary, applyVisibilityToCurrencyCols } from "@shared/lib/excel";
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import type { ExcelExportColumn } from "@shared/lib/excel";
-import { formatDateTime, formatNumber, getNumberingSystem } from "@shared/lib/format";
+import { formatNumber, getNumberingSystem } from "@shared/lib/format";
 
 export default function AdjustmentsPage() {
   const queryClient = useQueryClient();
@@ -41,6 +39,7 @@ export default function AdjustmentsPage() {
   const [showDialog, setShowDialog] = useState(false);
   const [selectedItem, setSelectedItem] = useState<StockAdjustment | null>(null);
   const [saving, setSaving] = useState(false);
+  const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>([]);
 
   const loadProducts = useCallback(async () => {
     try {
@@ -141,21 +140,18 @@ export default function AdjustmentsPage() {
 
   const isLoading = adjLoading || refreshing || loadingProducts;
 
-  const { baseCurrency, rateMap, currencies, formatAmount } = useCurrencyContext();
   const { hasSecondaryCurrencies } = useBaseCurrencyColumns();
-  const { currencyMode } = useExportSettings();
-  const { exportData } = useExcelExport();
+  const { exportData, rateMap, currencies, formatAmount, currencyMode, ratesSheet, baseCode } = useExportSetup();
 
   const handleExport = useCallback(async () => {
-    const currCols = currencyAmountCols("total_cost", "التكلفة", (row) => Math.abs(parseFloat((row as unknown as StockAdjustment).total_cost_base || "0")), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap);
+    const currCols = currencyAmountCols("total_cost", "التكلفة", (row) => Math.abs(parseFloat((row as unknown as StockAdjustment).total_cost_base || "0")), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
+    applyVisibilityToCurrencyCols(currCols, new Set(visibleColumnIds));
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {
       system_quantity: 'subtotal',
       actual_quantity: 'subtotal',
       difference: 'subtotal',
     };
-    currencies.forEach(curr => { summary[`total_cost_${curr.code}`] = 'subtotal'; });
-
-    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, currencies, rateMap, currencyMode).currencyRatesSheet;
+    addCurrencySummary(summary, "total_cost", currencies);
 
     const columns: ExcelExportColumn[] = [
       { id: "id", label: "الرقم", accessor: (row) => formatNumber(parseInt((row as unknown as StockAdjustment).reference ?? "0", 10) || 0), numeric: true },
@@ -165,10 +161,19 @@ export default function AdjustmentsPage() {
       { id: "difference", label: "الفارق", accessor: (row) => parseFloat((row as unknown as StockAdjustment).difference || "0"), numeric: true, decimalPlaces: 2 },
       ...currCols,
       { id: "notes", label: "ملاحظة", accessor: (row) => String((row as unknown as StockAdjustment).notes ?? (row as unknown as StockAdjustment).reason ?? "") },
-      { id: "adjustment_date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as StockAdjustment).adjustment_date) },
+      dateCol("adjustment_date", "التاريخ", (row) => (row as unknown as StockAdjustment).adjustment_date),
     ];
-    await exportData(adjustments as unknown as Record<string, unknown>[], columns, "تسويات الجرد", { sheetName: "تسويات الجرد", autoFilter: true, numeralSystem: getNumberingSystem(), summary, summaryLabel: "المجموع", ...(currencyRatesSheet ? { currencyRatesSheet } : {}) });
-  }, [adjustments, currencies, formatAmount, currencyMode, baseCurrency, rateMap, exportData, hasSecondaryCurrencies]);
+    await executeExport(exportData, {
+      sheetName: "تسويات الجرد",
+      filename: "تسويات الجرد",
+      data: adjustments as unknown as Record<string, unknown>[],
+      columns,
+      summary,
+      summaryLabel: "المجموع",
+      currencyRatesSheet: ratesSheet,
+      numeralSystem: getNumberingSystem(),
+    });
+  }, [adjustments, currencies, formatAmount, currencyMode, baseCode, rateMap, exportData, hasSecondaryCurrencies, ratesSheet, visibleColumnIds]);
 
   const handleCloseForm = useCallback(() => {
     setShowDialog(false);
@@ -206,17 +211,18 @@ export default function AdjustmentsPage() {
         </div>
       }
       tableContent={
-        <AdjustmentsTable
-          data={adjustments}
-          loading={isLoading}
-          search={search}
-          onSearchChange={setSearch}
-          selectedId={selectedItem?.id}
-          onView={handleView}
-          onEdit={handleEditClick}
-          onDelete={handleDelete}
-          onRowClick={handleRowClick}
-        />
+          <AdjustmentsTable
+            data={adjustments}
+            loading={isLoading}
+            search={search}
+            onSearchChange={setSearch}
+            selectedId={selectedItem?.id}
+            onView={handleView}
+            onEdit={handleEditClick}
+            onDelete={handleDelete}
+            onRowClick={handleRowClick}
+            onVisibleColumnsChange={setVisibleColumnIds}
+          />
       }
       sidePanel={
         selectedItem && !showDialog ? (

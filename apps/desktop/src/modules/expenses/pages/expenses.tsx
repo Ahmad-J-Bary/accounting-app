@@ -19,9 +19,8 @@ import { type CreatePaymentRequest } from "@erp/shared-types";
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
-import { useExcelExport, useBaseCurrencyColumns } from "@shared/hooks";
-import { useExportSettings } from "@shared/hooks/useExportSettings";
-import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
+import { useExportSetup, useBaseCurrencyColumns } from "@shared/hooks";
+import { executeExport, buildCurrencySummary, applyVisibilityToCurrencyCols } from "@shared/lib/excel";
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { toast } from "sonner";
@@ -33,12 +32,13 @@ const OTHER_EXPENSES_PARENT_ID = SYSTEM_ACCOUNT_IDS.OTHER_EXPENSES;
 type ExpenseSavePayload = SaveAccountCommand & { _id?: string };
 
 export default function Expenses() {
-  const { baseCurrency, rateMap, currencies, formatAmount, toBase } = useCurrencyContext();
   const { hasSecondaryCurrencies } = useBaseCurrencyColumns();
-  const { currencyMode } = useExportSettings();
+  const { exportData, baseCurrency, rateMap, currencies, formatAmount, currencyMode, ratesSheet, baseCode } = useExportSetup();
+  const { toBase } = useCurrencyContext();
   const { openTab } = useTabs();
   const [rateMapKey, setRateMapKey] = useState(0);
   const [expensesParent, setExpensesParent] = useState<AccountDto | null>(null);
+  const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>([]);
 
   useEffect(() => {
     setRateMapKey(k => k + 1);
@@ -134,19 +134,15 @@ export default function Expenses() {
     await handleSave(cmd);
   }, [expensesParent, handleSave, baseCurrency, rateMap]);
 
-  const { exportData } = useExcelExport();
-
   const handleExport = useCallback(async () => {
     const currCols = currencyAmountCols("balance", "الرصيد", (row) => {
       const c = row as unknown as AccountDto;
       const absBal = Math.abs(Number(c.balance || 0));
       if (absBal === 0) return 0;
       return toBase(absBal, c.currency || "");
-    }, currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap);
-    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
-    currencies.forEach(curr => { summary[`balance_${curr.code}`] = 'subtotal'; });
-
-    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, currencies, rateMap, currencyMode).currencyRatesSheet;
+    }, currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
+    applyVisibilityToCurrencyCols(currCols, new Set(visibleColumnIds));
+    const summary = buildCurrencySummary("balance", currencies);
 
     const exportColumns: ExcelExportColumn[] = [
       { id: "code", label: "#", accessor: (row) => {
@@ -166,8 +162,16 @@ export default function Expenses() {
       } },
       ...currCols,
     ];
-    await exportData(expenses as unknown as Record<string, unknown>[], exportColumns, "بنود المصاريف", { sheetName: "بنود المصاريف", autoFilter: true, summary, summaryLabel: "المجموع", ...(currencyRatesSheet ? { currencyRatesSheet } : {}) });
-  }, [expenses, currencies, formatAmount, toBase, currencyMode, baseCurrency, rateMap, expensesParent, exportData, hasSecondaryCurrencies]);
+    await executeExport(exportData, {
+      sheetName: "بنود المصاريف",
+      filename: "بنود المصاريف",
+      data: expenses as unknown as Record<string, unknown>[],
+      columns: exportColumns,
+      summary,
+      summaryLabel: "المجموع",
+      currencyRatesSheet: ratesSheet,
+    });
+  }, [expenses, currencies, formatAmount, toBase, currencyMode, baseCode, rateMap, expensesParent, exportData, hasSecondaryCurrencies, ratesSheet, visibleColumnIds]);
 
   const isLoading = loading || refreshing;
 
@@ -221,24 +225,25 @@ export default function Expenses() {
         </div>
       }
       tableContent={
-        <ExpenseTable
-          expenses={expenses}
-          loading={isLoading}
-          search={search}
-          onSearchChange={setSearch}
-          onView={(acc) => setSelectedId(acc.id)}
-          onEdit={(acc) => handleOpenEdit(acc)}
-          onDelete={(id) => { setSelectedId(null); handleDelete(id); }}
-          onJournal={(acc) => acc.id && openTab({
-            id: `ledger-${acc.id}`,
-            title: `حركة: ${acc.name_ar}`,
-            path: `/accounting/account-ledger/${acc.id}`,
-            closable: true
-          })}
-          onDocument={(acc) => { setSelectedId(acc.id); setIsVoucherOpen(true); setIsFormOpen(false); }}
-          selectedId={selectedId}
-          parentCode={expensesParent?.code}
-        />
+          <ExpenseTable
+            expenses={expenses}
+            loading={isLoading}
+            search={search}
+            onSearchChange={setSearch}
+            onView={(acc) => setSelectedId(acc.id)}
+            onEdit={(acc) => handleOpenEdit(acc)}
+            onDelete={(id) => { setSelectedId(null); handleDelete(id); }}
+            onJournal={(acc) => acc.id && openTab({
+              id: `ledger-${acc.id}`,
+              title: `حركة: ${acc.name_ar}`,
+              path: `/accounting/account-ledger/${acc.id}`,
+              closable: true
+            })}
+            onDocument={(acc) => { setSelectedId(acc.id); setIsVoucherOpen(true); setIsFormOpen(false); }}
+            selectedId={selectedId}
+            parentCode={expensesParent?.code}
+            onVisibleColumnsChange={setVisibleColumnIds}
+          />
       }
       sidePanel={
         isFormOpen ? (

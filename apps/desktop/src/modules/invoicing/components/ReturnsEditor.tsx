@@ -15,13 +15,12 @@ import { returnService } from "@modules/invoicing/api/returnService";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { toReturnBackendLines, newGridLine } from "@modules/invoicing/lib/invoiceUtils";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useExcelExport } from "@shared/hooks";
-import { useExportSettings } from "@shared/hooks/useExportSettings";
+import { useExportSetup } from "@shared/hooks";
+import { executeExport, addCurrencySummary } from "@shared/lib/excel";
 import { buildInvoiceLineExportColumns } from "../lib/invoice-export-columns";
 import type { GridLine } from "@modules/invoicing/lib/invoiceUtils";
 import type { CustomerDto, SupplierDto, MaterialDto, SalesReturnLineDto, PurchaseReturnLineDto, WarehouseDto, SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
 import type { DocumentColumn } from "@widgets/document-shell/GenericDocumentGrid";
-import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
 
 interface ReturnsEditorProps {
   returnType: "PurchaseReturn" | "SalesReturn";
@@ -38,7 +37,7 @@ interface ReturnsEditorProps {
 export function ReturnsEditor({ returnType, partyType, parties, materials, warehouses, onSaved, onClose, returnId, readOnly = false }: ReturnsEditorProps) {
   const queryClient = useQueryClient();
   const isSales = returnType === "SalesReturn";
-  const { currencies, baseCurrency, convertBetween, rateMap } = useCurrencyContext();
+  const { currencies, convertBetween } = useCurrencyContext();
   const [saving, setSaving] = useState(false);
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState("");
@@ -51,14 +50,13 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
   const [settlementCash, setSettlementCash] = useState("0");
   const [isPaid, setIsPaid] = useState(true);
 
+  const { exportData, baseCurrency, currencyMode, ratesSheet, baseCode } = useExportSetup();
+
   useEffect(() => {
     if (baseCurrency?.code && !selectedCurrency) {
       setSelectedCurrency(baseCurrency.code);
     }
   }, [baseCurrency?.code, selectedCurrency]);
-
-  const { exportData } = useExcelExport();
-  const { currencyMode } = useExportSettings();
 
   const {
     lines,
@@ -110,7 +108,6 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
       return;
     }
 
-    const baseCode = baseCurrency?.code || "";
     const materialMap = new Map(materials.map(m => [m.id, m]));
     const warehouseMap = new Map(warehouses.map(w => [w.id, w]));
 
@@ -153,32 +150,25 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
     });
 
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
-    currencies.forEach(curr => {
-      summary[`line_total_${curr.code}`] = 'subtotal';
-    });
+    addCurrencySummary(summary, "line_total", currencies);
 
     const settlementModeLabel = settlementMode === "deduct_from_debt" ? "خصم من الدين" : settlementMode === "full_cash_return" ? "مرتجع نقدي كامل" : "تسوية جزئية";
 
-    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, currencies, rateMap, currencyMode).currencyRatesSheet;
-
-    await exportData(
-      enrichedLines,
-      exportCols,
-      `${returnType === "SalesReturn" ? "مرتجع_مبيعات" : "مرتجع_مشتريات"}_${returnNumber || "جديد"}`,
-      {
-        sheetName: "مرتجع",
-        autoFilter: true,
-        summary,
-        summaryLabel: "المجموع",
-        additionalSummary: [
-          { label: "طريقة التسوية", value: settlementModeLabel },
-          { label: "قيمة المرتجع (الصافي)", value: totalAmount },
-          { label: "المبلغ المسترد نقداً", value: settlementMode === "partial_settlement" ? parseFloat(settlementCash) || 0 : (settlementMode === "full_cash_return" ? totalAmount : 0) }
-        ],
-        currencyRatesSheet,
-      }
-    );
-  }, [exportData, lines, currencies, baseCurrency, convertBetween, materials, warehouses, returnGridColumns, returnType, returnNumber, settlementMode, settlementCash, totalAmount, currencyMode, rateMap]);
+    await executeExport(exportData, {
+      sheetName: "مرتجع",
+      filename: `${returnType === "SalesReturn" ? "مرتجع_مبيعات" : "مرتجع_مشتريات"}_${returnNumber || "جديد"}`,
+      data: enrichedLines,
+      columns: exportCols,
+      summary,
+      summaryLabel: "المجموع",
+      additionalSummary: [
+        { label: "طريقة التسوية", value: settlementModeLabel },
+        { label: "قيمة المرتجع (الصافي)", value: totalAmount },
+        { label: "المبلغ المسترد نقداً", value: settlementMode === "partial_settlement" ? parseFloat(settlementCash) || 0 : (settlementMode === "full_cash_return" ? totalAmount : 0) }
+      ],
+      currencyRatesSheet: ratesSheet,
+    });
+  }, [exportData, lines, currencies, baseCode, convertBetween, materials, warehouses, returnGridColumns, returnType, returnNumber, settlementMode, settlementCash, totalAmount, currencyMode, ratesSheet]);
 
   // Wrapped removeLine that also removes occurrence key
   const removeLine = useCallback((index: number) => {

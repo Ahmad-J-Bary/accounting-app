@@ -1,5 +1,25 @@
 import type { ExcelExportColumn } from "./excel-export";
 
+export function debitCreditAmountCols(
+  getBaseAmount: (row: Record<string, unknown>) => { debit: number; credit: number },
+  currencies: { code: string; symbol?: string }[],
+  hasSecondaryCurrencies: boolean,
+  currencyMode: "fixed" | "variable",
+  baseCode: string,
+  rateMap?: Map<string, number>,
+): ExcelExportColumn[] {
+  const dummyFormat = () => "";
+  const debitCols = currencyAmountCols(
+    "debit", "مدين", (row) => getBaseAmount(row).debit,
+    currencies, dummyFormat, "", true, hasSecondaryCurrencies, currencyMode, baseCode, rateMap,
+  );
+  const creditCols = currencyAmountCols(
+    "credit", "دائن", (row) => -getBaseAmount(row).credit,
+    currencies, dummyFormat, "", true, hasSecondaryCurrencies, currencyMode, baseCode, rateMap,
+  );
+  return [...debitCols, ...creditCols];
+}
+
 export function currencyAmountCols(
   prefix: string,
   label: string,

@@ -12,11 +12,10 @@ import type { AccountDto, CreatePaymentRequest, CustomerDto, SupplierDto, Create
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useTabs } from "@app/providers/TabContext";
 import { useEntityList } from '@shared/hooks/useEntityList';
-import { useExcelExport, useBaseCurrencyColumns } from "@shared/hooks";
-import { useExportSettings } from "@shared/hooks/useExportSettings";
+import { useExportSetup, useBaseCurrencyColumns } from "@shared/hooks";
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
-import { buildCurrencyRatesSheetOptions } from '@shared/lib/excel';
-import type { ExcelExportColumn, ExcelExportOptions } from '@shared/lib/excel';
+import { executeExport, buildCurrencySummary, applyVisibilityToCurrencyCols } from '@shared/lib/excel';
+import type { ExcelExportColumn } from '@shared/lib/excel';
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import { PartyTable } from '@modules/partners/components/PartyTable';
 import { PaymentForm, PAYMENT_CONFIGS } from '@modules/partners/components/PaymentForm';
@@ -96,9 +95,9 @@ interface PartyPageProps {
 export default function PartyPage({ entityName }: PartyPageProps) {
   const cfg = PARTY_CONFIGS[entityName];
   const { openTab } = useTabs();
-  const { currencies, baseCurrency, rateMap, toBase, formatAmount } = useCurrencyContext();
   const { hasSecondaryCurrencies } = useBaseCurrencyColumns();
-  const { currencyMode } = useExportSettings();
+  const { exportData, currencies, rateMap, formatAmount, currencyMode, ratesSheet, baseCode } = useExportSetup();
+  const { toBase } = useCurrencyContext();
 
   // ── CRUD via useEntityList ──
 
@@ -238,17 +237,15 @@ export default function PartyPage({ entityName }: PartyPageProps) {
 
   // ── Handle Excel Export ──
 
-  const { exportData } = useExcelExport();
-
   const handleExport = useCallback(async () => {
     const isCreditFirst = entityName === 'supplier';
     const currCols = currencyAmountCols("balance", "الرصيد", (row) => {
       const absBal = Math.abs(Number(row.balance || 0));
       if (absBal === 0) return 0;
-      return toBase(absBal, String(row.currency ?? baseCurrency?.code ?? ''));
-    }, currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap);
-    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
-    currencies.forEach(curr => { summary[`balance_${curr.code}`] = 'subtotal'; });
+      return toBase(absBal, String(row.currency ?? baseCode ?? ''));
+    }, currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
+    applyVisibilityToCurrencyCols(currCols, new Set(visibleColumnIds));
+    const summary = buildCurrencySummary("balance", currencies);
 
     const colDefs: ExcelExportColumn[] = [
       { id: 'code', label: '#', width: 8, hidden: !visibleColumnIds.includes('code'), accessor: (row) => parseInt(String(row.code ?? "0"), 10) || 0 },
@@ -268,28 +265,21 @@ export default function PartyPage({ entityName }: PartyPageProps) {
       { id: 'notes', label: 'ملاحظات', width: 20, accessor: (row) => String(row.notes ?? '') },
     ];
 
-    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, currencies, rateMap, currencyMode).currencyRatesSheet;
-
-    const exportOptions: ExcelExportOptions = {
+    await executeExport(exportData, {
       sheetName: entityName === 'supplier' ? 'الموردين' : 'العملاء',
-      autoFilter: true,
+      filename: entityName === 'supplier' ? 'الموردين' : 'العملاء',
+      data: items as unknown as Record<string, unknown>[],
+      columns: colDefs,
+      summary,
+      summaryLabel: "المجموع",
       sortBy: {
         columnId: 'code',
         direction: 'asc',
         compare: (a, b) => (parseInt(String(a.code ?? '0'), 10) || 0) - (parseInt(String(b.code ?? '0'), 10) || 0),
       },
-      summary,
-      summaryLabel: "المجموع",
-      ...(currencyRatesSheet ? { currencyRatesSheet } : {}),
-    };
-
-    await exportData(
-      items as unknown as Record<string, unknown>[],
-      colDefs,
-      entityName === 'supplier' ? 'الموردين' : 'العملاء',
-      exportOptions,
-    );
-  }, [items, currencies, entityName, toBase, formatAmount, currencyMode, baseCurrency, rateMap, visibleColumnIds, exportData, hasSecondaryCurrencies]);
+      currencyRatesSheet: ratesSheet,
+    });
+  }, [items, currencies, entityName, toBase, formatAmount, currencyMode, baseCode, rateMap, visibleColumnIds, exportData, hasSecondaryCurrencies, ratesSheet]);
 
   // ── Toolbar ──
 

@@ -11,13 +11,11 @@ import { useDataTable } from '@shared/hooks';
 import { DamagedTable } from '@modules/inventory/components/DamagedTable';
 import { DamagedForm } from '@modules/inventory/components/DamagedForm';
 import { DamagedDetailPanel } from '@modules/inventory/components/DamagedDetailPanel';
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useExcelExport, useBaseCurrencyColumns } from "@shared/hooks";
-import { useExportSettings } from "@shared/hooks/useExportSettings";
-import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
+import { useExportSetup, useBaseCurrencyColumns } from "@shared/hooks";
+import { dateCol, executeExport, addCurrencySummary, applyVisibilityToCurrencyCols } from "@shared/lib/excel";
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import type { ExcelExportColumn } from "@shared/lib/excel";
-import { formatDateTime, getNumberingSystem } from "@shared/lib/format";
+import { getNumberingSystem } from "@shared/lib/format";
 
 export default function DamagedPage() {
   const queryClient = useQueryClient();
@@ -40,6 +38,7 @@ export default function DamagedPage() {
   const [showDialog, setShowDialog] = useState(false);
   const [selectedItem, setSelectedItem] = useState<DamagedItem | null>(null);
   const [saving, setSaving] = useState(false);
+  const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>([]);
 
   const loadProducts = useCallback(async () => {
     try {
@@ -130,17 +129,14 @@ export default function DamagedPage() {
 
   const isLoading = itemsLoading || refreshing || loadingProducts;
 
-  const { baseCurrency, rateMap, currencies, formatAmount } = useCurrencyContext();
   const { hasSecondaryCurrencies } = useBaseCurrencyColumns();
-  const { currencyMode } = useExportSettings();
-  const { exportData } = useExcelExport();
+  const { exportData, rateMap, currencies, formatAmount, currencyMode, ratesSheet, baseCode } = useExportSetup();
 
   const handleExport = useCallback(async () => {
-    const currCols = currencyAmountCols("cost", "الخسارة", (row) => parseFloat((row as unknown as DamagedItem).cost_impact || "0"), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap);
+    const currCols = currencyAmountCols("cost", "الخسارة", (row) => parseFloat((row as unknown as DamagedItem).cost_impact || "0"), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
+    applyVisibilityToCurrencyCols(currCols, new Set(visibleColumnIds));
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = { quantity: 'subtotal' };
-    currencies.forEach(curr => { summary[`cost_${curr.code}`] = 'subtotal'; });
-
-    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, currencies, rateMap, currencyMode).currencyRatesSheet;
+    addCurrencySummary(summary, "cost", currencies);
 
     const columns: ExcelExportColumn[] = [
       { id: "id", label: "الرقم", accessor: (row) => {
@@ -153,10 +149,19 @@ export default function DamagedPage() {
       { id: "quantity", label: "الكمية", accessor: (row) => Math.round(parseFloat((row as unknown as DamagedItem).quantity || "0")), numeric: true },
       ...currCols,
       { id: "reason", label: "السبب", accessor: (row) => String((row as unknown as DamagedItem).reason ?? "") },
-      { id: "damage_date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as DamagedItem).damage_date) },
+      dateCol("damage_date", "التاريخ", (row) => (row as unknown as DamagedItem).damage_date),
     ];
-    await exportData(items as unknown as Record<string, unknown>[], columns, "إدارة المواد التالفة", { sheetName: "إدارة المواد التالفة", autoFilter: true, numeralSystem: getNumberingSystem(), summary, summaryLabel: "المجموع", ...(currencyRatesSheet ? { currencyRatesSheet } : {}) });
-  }, [items, currencies, formatAmount, currencyMode, baseCurrency, rateMap, exportData, hasSecondaryCurrencies]);
+    await executeExport(exportData, {
+      sheetName: "إدارة المواد التالفة",
+      filename: "إدارة المواد التالفة",
+      data: items as unknown as Record<string, unknown>[],
+      columns,
+      summary,
+      summaryLabel: "المجموع",
+      currencyRatesSheet: ratesSheet,
+      numeralSystem: getNumberingSystem(),
+    });
+  }, [items, currencies, formatAmount, currencyMode, baseCode, rateMap, exportData, hasSecondaryCurrencies, ratesSheet, visibleColumnIds]);
 
   // Build initial values for form when editing
   const formInitialValues = selectedItem
@@ -188,16 +193,17 @@ export default function DamagedPage() {
         </div>
       }
       tableContent={
-        <DamagedTable
-          items={items}
-          loading={isLoading}
-          search={search}
-          onSearchChange={setSearch}
-          selectedId={selectedItem?.id}
-          onView={handleView}
-          onEdit={handleEditClick}
-          onDelete={handleDelete}
-        />
+          <DamagedTable
+            items={items}
+            loading={isLoading}
+            search={search}
+            onSearchChange={setSearch}
+            selectedId={selectedItem?.id}
+            onView={handleView}
+            onEdit={handleEditClick}
+            onDelete={handleDelete}
+            onVisibleColumnsChange={setVisibleColumnIds}
+          />
       }
       sidePanel={
         selectedItem && !showDialog ? (

@@ -14,10 +14,10 @@ import { TransferTable } from '@modules/inventory/components/TransferTable';
 import { TransferForm } from '@modules/inventory/components/TransferForm';
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { buildStockByWarehouse } from '@modules/inventory/lib/stockUtils';
-import { useExcelExport } from "@shared/hooks";
+import { useExportSetup } from "@shared/hooks";
 import type { ExcelExportColumn } from "@shared/lib/excel";
-import { formatDateTime, formatNumber, toLocalString } from "@shared/lib/format";
-import { getNumberingSystem } from "@shared/lib/format";
+import { dateCol, executeExport } from "@shared/lib/excel";
+import { toLocalString, getNumberingSystem } from "@shared/lib/format";
 
 export default function Transfers() {
   const { data: movements = [] } = useQuery<StockMovement[]>({
@@ -157,7 +157,7 @@ export default function Transfers() {
     return result;
   }, [movements, warehouses]);
 
-  const { exportData } = useExcelExport();
+  const { exportData } = useExportSetup();
 
   const handleExport = useCallback(async () => {
     const columns: ExcelExportColumn[] = [
@@ -167,9 +167,17 @@ export default function Transfers() {
       { id: "quantity", label: "الكمية", accessor: (row) => parseFloat((row as unknown as TransferRow).quantity || "0"), numeric: true, decimalPlaces: 2 },
       { id: "reference", label: "المرجع", accessor: (row) => parseInt((row as unknown as TransferRow).reference ?? "0", 10) || 0 },
       { id: "notes", label: "ملاحظة", accessor: (row) => String((row as unknown as TransferRow).notes ?? "") },
-      { id: "date", label: "التاريخ", accessor: (row) => formatDateTime((row as unknown as TransferRow).transfer_date) },
+      dateCol("date", "التاريخ", (row) => (row as unknown as TransferRow).transfer_date),
     ];
-    await exportData(exportRows as unknown as Record<string, unknown>[], columns, "التحويلات", { sheetName: "التحويلات", autoFilter: true, numeralSystem: getNumberingSystem(), summary: { quantity: 'subtotal' }, summaryLabel: "المجموع" });
+    await executeExport(exportData, {
+      sheetName: "التحويلات",
+      filename: "التحويلات",
+      data: exportRows as unknown as Record<string, unknown>[],
+      columns,
+      summary: { quantity: 'subtotal' },
+      summaryLabel: "المجموع",
+      numeralSystem: getNumberingSystem(),
+    });
   }, [exportRows, exportData]);
 
   return (

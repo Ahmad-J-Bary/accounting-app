@@ -10,16 +10,14 @@ import type {
   AssetCategoryDto,
 } from "@erp/shared-types";
 import { toast } from "sonner";
-import { useExcelExport } from "@shared/hooks";
-import { useExportSettings } from "@shared/hooks/useExportSettings";
-import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
+import { dateCol, executeExport, buildCurrencySummary, mergeCurrencySummaries } from "@shared/lib/excel";
 import type { ExcelExportColumn } from "@shared/lib/excel";
+import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { SharedTable } from "@widgets/table-shell/SharedTable";
-import { useDataTable } from "@shared/hooks";
+import { useDataTable, useExportSetup } from "@shared/hooks";
 import { FixedAssetForm } from "@modules/fixed-assets/components/FixedAssetForm";
 import { FixedAssetDetailPanel } from "@modules/fixed-assets/components/FixedAssetDetailPanel";
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useBaseCurrencyColumns } from "@shared/hooks";
 import type { UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import { TableActions } from "@widgets/table-shell/TableActions";
@@ -39,9 +37,8 @@ const TYPE_CATEGORY_NAMES: Record<string, string[]> = {
 };
 
 export default function FixedAssetsPage() {
-  const { baseCurrency, rateMap, currencies, formatAmount } = useCurrencyContext();
-  const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
-  const { currencyMode } = useExportSettings();
+  const { isBaseCurrency, currencySuffix: cs, hasSecondaryCurrencies } = useBaseCurrencyColumns();
+  const { exportData, formatAmount, currencies, rateMap, currencyMode, baseCode, ratesSheet } = useExportSetup();
 
   const {
     filtered: allAssets,
@@ -307,12 +304,40 @@ export default function FixedAssetsPage() {
     }
   }, [refresh]);
 
-  const { exportData } = useExcelExport();
-
   const handleExport = useCallback(async () => {
-    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
+    const summary = mergeCurrencySummaries(
+      buildCurrencySummary("purchase_cost", currencies),
+      buildCurrencySummary("accumulated_depreciation", currencies),
+      buildCurrencySummary("net_book_value", currencies),
+    );
 
-    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, currencies, rateMap, currencyMode).currencyRatesSheet;
+    const purchaseCols = currencyAmountCols("purchase_cost", "التكلفة", (row) => {
+      const r = row as unknown as FixedAssetDto;
+      const val = parseFloat(r.purchase_cost.amount);
+      if (baseCode === r.purchase_cost.currency.code) return val;
+      const rate = parseFloat(r.fx_rate) || 1;
+      return val / rate;
+    }, currencies, formatAmount, "", true, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
+
+    const depCols = currencyAmountCols("accumulated_depreciation", "مجمع الإهلاك", (row) => {
+      const r = row as unknown as FixedAssetDto;
+      if (r.useful_life_months === 0) return 0;
+      const val = parseFloat(r.accumulated_depreciation.amount);
+      if (baseCode === r.accumulated_depreciation.currency.code) return val;
+      const rate = parseFloat(r.fx_rate) || 1;
+      return val / rate;
+    }, currencies, formatAmount, "", true, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
+
+    const nbvCols = currencies.map(curr => {
+      const nbvId = `net_book_value_${curr.code}`;
+      return {
+        id: nbvId,
+        label: `صافي القيمة${cs(curr.symbol || curr.code)}`,
+        formula: `{col('purchase_cost_${curr.code}')}{row}-{col('accumulated_depreciation_${curr.code}')}{row}`,
+        numeric: true,
+        decimalPlaces: 2,
+      };
+    });
 
     const exportColumns: ExcelExportColumn[] = [
       { id: "code", label: "الكود", accessor: (row) => String((row as Record<string, unknown>).code ?? "") },
@@ -322,62 +347,23 @@ export default function FixedAssetsPage() {
         const r = row as Record<string, unknown>;
         return r.warehouse_id ? warehouseMap.get(r.warehouse_id as string) ?? "" : "";
       }},
-      ...currencies.map(curr => {
-        const purchaseId = `purchase_cost_${curr.code}`;
-        summary[purchaseId] = 'subtotal';
-        return {
-          id: purchaseId,
-          label: `التكلفة${cs(curr.symbol || curr.code)}`,
-          accessor: (row: Record<string, unknown>) => {
-            const r = row as unknown as FixedAssetDto;
-            const val = parseFloat(r.purchase_cost.amount);
-            if (curr.code === r.purchase_cost.currency.code) {
-              return val;
-            }
-            const rate = parseFloat(r.fx_rate) || 1;
-            return val / rate;
-          },
-          numeric: true,
-          decimalPlaces: 2,
-        };
-      }),
-      ...currencies.map(curr => {
-        const depId = `accumulated_depreciation_${curr.code}`;
-        summary[depId] = 'subtotal';
-        return {
-          id: depId,
-          label: `مجمع الإهلاك${cs(curr.symbol || curr.code)}`,
-          accessor: (row: Record<string, unknown>) => {
-            const r = row as unknown as FixedAssetDto;
-            const val = parseFloat(r.accumulated_depreciation.amount);
-            if (r.useful_life_months === 0) return 0;
-            if (curr.code === r.accumulated_depreciation.currency.code) {
-              return val;
-            }
-            const rate = parseFloat(r.fx_rate) || 1;
-            return val / rate;
-          },
-          numeric: true,
-          decimalPlaces: 2,
-        };
-      }),
-      ...currencies.map(curr => {
-        const nbvId = `net_book_value_${curr.code}`;
-        summary[nbvId] = 'subtotal';
-        return {
-          id: nbvId,
-          label: `صافي القيمة${cs(curr.symbol || curr.code)}`,
-          formula: `{col('purchase_cost_${curr.code}')}{row}-{col('accumulated_depreciation_${curr.code}')}{row}`,
-          numeric: true,
-          decimalPlaces: 2,
-        };
-      }),
+      ...purchaseCols,
+      ...depCols,
+      ...nbvCols,
       { id: "notes", label: "التوصيف", accessor: (row) => String((row as Record<string, unknown>).notes ?? "") },
-      { id: "created_at", label: "التاريخ", accessor: (row) => new Date((row as Record<string, unknown>).created_at as string).toLocaleString("ar-SA") },
+      dateCol("created_at", "التاريخ", (row) => (row as Record<string, unknown>).created_at as string),
     ];
 
-    await exportData(assets as unknown as Record<string, unknown>[], exportColumns, "الأصول الثابتة", { sheetName: "الأصول الثابتة", autoFilter: true, summary, summaryLabel: "المجموع", ...(currencyRatesSheet ? { currencyRatesSheet } : {}) });
-  }, [assets, currencies, currencyMode, baseCurrency, rateMap, categoryMap, warehouseMap, exportData, cs]);
+    await executeExport(exportData, {
+      sheetName: "الأصول الثابتة",
+      filename: "الأصول الثابتة",
+      data: assets as unknown as Record<string, unknown>[],
+      columns: exportColumns,
+      summary,
+      summaryLabel: "المجموع",
+      currencyRatesSheet: ratesSheet,
+    });
+  }, [assets, currencies, categoryMap, warehouseMap, exportData, cs, ratesSheet, formatAmount, rateMap, currencyMode, baseCode, hasSecondaryCurrencies]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["code", "name", "category"];

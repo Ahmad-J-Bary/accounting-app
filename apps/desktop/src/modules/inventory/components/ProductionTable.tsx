@@ -17,9 +17,10 @@ interface ProductionTableProps {
   loading: boolean;
   search: string;
   onSearchChange: (val: string) => void;
+  onVisibleColumnsChange?: (ids: string[]) => void;
 }
 
-export function ProductionTable({ data, loading, search, onSearchChange }: ProductionTableProps) {
+export function ProductionTable({ data, loading, search, onSearchChange, onVisibleColumnsChange }: ProductionTableProps) {
   const allColumns = useMemo<UnifiedColumn<ProductionOrder>[]>(() => [
     {
       id: "order_number",
@@ -113,6 +114,7 @@ export function ProductionTable({ data, loading, search, onSearchChange }: Produ
       sortConfig={{ field: "production_date", direction: "desc", sortFn }}
       sortableFields={["order_number", "production_date", "materials_count", "outputs_count", "total_cost", "status"]}
       emptyMessage={search ? "لا توجد نتائج للبحث" : "لا توجد أوامر إنتاج مسجّلة"}
+      onVisibleColumnsChange={onVisibleColumnsChange}
     />
   );
 }

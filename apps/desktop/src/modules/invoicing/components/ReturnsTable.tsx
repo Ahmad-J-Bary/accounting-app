@@ -2,11 +2,10 @@ import { useMemo, useCallback } from "react";
 import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns, useSortable, useBaseCurrencyColumns, useExcelExport } from "@shared/hooks";
-import { useExportSettings } from "@shared/hooks/useExportSettings";
-import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
-import type { ExcelExportColumn, ExcelExportOptions } from "@shared/lib/excel";
+import { useExportSetup, useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
+import { executeExport, dateCol } from "@shared/lib/excel";
+import type { ExcelExportColumn } from "@shared/lib/excel";
+import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import { Button } from "@shared/ui/button";
 import { formatDateTime, formatNumber } from "@shared/lib/format";
 
@@ -44,8 +43,8 @@ export function ReturnsTable({
   onDelete,
   onExportRow,
 }: ReturnsTableProps) {
-  const { currencies, baseCurrency, rateMap, formatAmount } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
+  const { exportData, baseCurrency, currencies, formatAmount, rateMap, baseCode, currencyMode, ratesSheet } = useExportSetup();
 
   // Type guards
   const isSalesReturn = (ret: SalesReturnDto | PurchaseReturnDto): ret is SalesReturnDto => {
@@ -182,13 +181,11 @@ export function ReturnsTable({
     defaultVisible,
   });
 
-  const { exportData } = useExcelExport();
-  const { currencyMode } = useExportSettings();
-
   const handleExport = useCallback(async () => {
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
 
-    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, currencies, rateMap, currencyMode).currencyRatesSheet;
+    const currCols = currencyAmountCols("total_amount", "الإجمالي", (row) => parseFloat((row as unknown as (SalesReturnDto | PurchaseReturnDto)).total_amount || "0") || 0, currencies, formatAmount, "", true, currencies.length > 1, currencyMode, baseCode, rateMap);
+    const currColMap = new Map(currCols.map(c => [c.id, c]));
 
     const exportColumns: ExcelExportColumn[] = enrichedColumns
       .filter((col) => col.id !== "actions")
@@ -200,6 +197,25 @@ export function ReturnsTable({
         }
 
         const headerText = typeof col.header === "string" && col.header ? col.header : String(col.label || col.id);
+
+        if (col.id === "return_date") {
+          return {
+            ...dateCol("return_date", headerText, (row) => {
+              const ret = row as unknown as (SalesReturnDto | PurchaseReturnDto);
+              return ret.return_date;
+            }),
+            hidden: col.visible === false,
+          };
+        }
+
+        if (isTotal) {
+          const exportCol = currColMap.get(col.id);
+          return {
+            ...exportCol,
+            label: headerText,
+            hidden: col.visible === false,
+          };
+        }
 
         return {
           id: col.id,
@@ -215,35 +231,23 @@ export function ReturnsTable({
               return "";
             }
             if (col.id === "notes") return ret.notes || "";
-            if (col.id === "return_date") return formatDateTime(ret.return_date);
-
-            const match = col.id.match(/^total_amount_(.+)$/);
-            if (match) {
-              return parseFloat(ret.total_amount || "0") || 0;
-            }
             return "";
           },
-          ...(isTotal ? { numeric: true, decimalPlaces: 2 } : {}),
         };
       });
 
     const exportTitle = partnerLabel.includes("مورد") ? "قائمة مرتجعات المشتريات" : "قائمة مرتجعات المبيعات";
 
-    const exportOptions: ExcelExportOptions = {
+    await executeExport(exportData, {
       sheetName: exportTitle,
-      autoFilter: true,
+      filename: exportTitle,
+      data: sortedData as unknown as Record<string, unknown>[],
+      columns: exportColumns,
       summary: Object.keys(summary).length > 0 ? summary : undefined,
       summaryLabel: "المجموع",
-      ...(currencyRatesSheet ? { currencyRatesSheet } : {}),
-    };
-
-    await exportData(
-      sortedData as unknown as Record<string, unknown>[],
-      exportColumns,
-      exportTitle,
-      exportOptions
-    );
-  }, [enrichedColumns, partnerLabel, sortedData, exportData, currencyMode, baseCurrency, currencies, rateMap]);
+      currencyRatesSheet: ratesSheet,
+    });
+  }, [enrichedColumns, partnerLabel, sortedData, exportData, ratesSheet, currencies, formatAmount, currencyMode, baseCode, rateMap]);
 
   const baseTotal = useMemo(() =>
     items.reduce((s, ret) => s + (parseFloat(ret.total_amount || "0") || 0), 0),

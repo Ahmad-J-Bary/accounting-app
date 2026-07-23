@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
@@ -22,6 +22,7 @@ interface ExpenseTableProps {
   onDocument?: (e: AccountDto) => void;
   selectedId?: string | null;
   parentCode?: string;
+  onVisibleColumnsChange?: (ids: string[]) => void;
 }
 
 type SortField = "code" | "name" | "balance";
@@ -31,7 +32,7 @@ const codeSuffix = (code: string, prefix?: string) => {
   return code;
 };
 
-export function ExpenseTable({ expenses, loading, search, onSearchChange, onView, onEdit, onDelete, onJournal, onDocument, selectedId, parentCode }: ExpenseTableProps) {
+export function ExpenseTable({ expenses, loading, search, onSearchChange, onView, onEdit, onDelete, onJournal, onDocument, selectedId, parentCode, onVisibleColumnsChange }: ExpenseTableProps) {
   const { currencies, formatAmount, toBase } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
   const { getAccountStatusColumn } = useTableColumns();
@@ -128,11 +129,15 @@ export function ExpenseTable({ expenses, loading, search, onSearchChange, onView
     return def;
   }, [currencies, isBaseCurrency]);
 
-  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
+  const { enrichedColumns, visibleColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "expenses-table",
     columns: allColumns,
     defaultVisible,
   });
+
+  useEffect(() => {
+    onVisibleColumnsChange?.(visibleColumns);
+  }, [visibleColumns, onVisibleColumnsChange]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     const totalBal = sortedExpenses.reduce((sum, e) => sum + Number(e.balance || 0), 0);

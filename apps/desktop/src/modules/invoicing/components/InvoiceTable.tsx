@@ -3,10 +3,10 @@ import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTa
 import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useUnifiedColumns, useSortable, useBaseCurrencyColumns, useExcelExport } from "@shared/hooks";
-import { useExportSettings } from "@shared/hooks/useExportSettings";
-import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
-import type { ExcelExportColumn, ExcelExportOptions } from "@shared/lib/excel";
+import { useUnifiedColumns, useSortable, useBaseCurrencyColumns, useExportSetup } from "@shared/hooks";
+import { executeExport, dateCol } from "@shared/lib/excel";
+import type { ExcelExportColumn } from "@shared/lib/excel";
+import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import { Button } from "@shared/ui/button";
 import { formatDateTime, formatNumber } from "@shared/lib/format";
 import { getInvoiceBaseAmount } from "../lib/invoiceHelpers";
@@ -83,7 +83,7 @@ export function InvoiceTable({
   onStatusFilterChange,
   tableId = "invoices-unified",
 }: InvoiceTableProps) {
-  const { currencies, baseCurrency, rateMap, formatAmount } = useCurrencyContext();
+  const { currencies, baseCurrency, formatAmount } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
 
   const partyField = partyType === "supplier" ? "supplier_name" : "customer_name";
@@ -433,31 +433,74 @@ export function InvoiceTable({
     defaultVisible,
   });
 
-  const { exportData } = useExcelExport();
-  const { currencyMode } = useExportSettings();
+  const { exportData, ratesSheet, rateMap, currencyMode } = useExportSetup();
 
   const handleExport = useCallback(async () => {
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
+    const hasSecondary = currencies.length > 1;
 
-    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, currencies, rateMap, currencyMode).currencyRatesSheet;
+    const baseAccessors: Record<string, (inv: InvoiceDto) => number> = {
+      subtotal: (inv) => getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code),
+      discount_granted: (inv) => getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code),
+      discount: (inv) => getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code),
+      extra_costs: (inv) => getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code),
+      paid: (inv) => getInvoiceBaseAmount(inv.amount_paid, inv.amount_paid_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code),
+      total: (inv) => {
+        const sub = getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+        const disc = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+        const ext = getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+        return sub - disc + ext;
+      },
+      remaining: (inv) => {
+        const sub = getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+        const disc = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+        const ext = getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+        const paid = getInvoiceBaseAmount(inv.amount_paid, inv.amount_paid_v2, inv.currency_code, inv.exchange_rate, baseCurrency?.code);
+        return sub - disc + ext - paid;
+      },
+    };
+
+    const labels: Record<string, string> = {
+      subtotal: "مجموع الأسعار",
+      discount_granted: "خصوم ممنوحة",
+      discount: "خصوم مكتسبة",
+      extra_costs: "تكاليف إضافية",
+      total: "المجموع الكلي",
+      paid: "المبلغ المدفوع",
+      remaining: "المبلغ المتبقي",
+    };
+
+    const allMetricCols = Object.entries(baseAccessors).flatMap(([prefix, accessor]) =>
+      currencyAmountCols(prefix, labels[prefix], (row) => accessor(row as unknown as InvoiceDto), currencies, formatAmount, "", true, hasSecondary, currencyMode, baseCurrency?.code, rateMap)
+    );
+    const metricColMap = new Map(allMetricCols.map(c => [c.id, c]));
 
     const exportColumns: ExcelExportColumn[] = enrichedColumns
       .filter((col) => col.id !== "actions")
       .map((col) => {
-        const isSubtotal = col.id.startsWith("subtotal_");
-        const isDiscountGranted = col.id.startsWith("discount_granted_");
-        const isDiscount = !isDiscountGranted && col.id.startsWith("discount_");
-        const isExtra = col.id.startsWith("extra_costs_");
-        const isTotal = col.id.startsWith("total_");
-        const isPaid = col.id.startsWith("paid_");
-        const isRemaining = col.id.startsWith("remaining_");
-        const isNumeric = isSubtotal || isDiscountGranted || isDiscount || isExtra || isTotal || isPaid || isRemaining;
+        const metricMatch = col.id.match(/^(subtotal|discount_granted|discount|extra_costs|total|paid|remaining)_(.+)$/);
 
-        if (isSubtotal || isDiscountGranted || isDiscount || isExtra || isTotal || isPaid || isRemaining) {
+        if (metricMatch) {
           summary[col.id] = "subtotal";
         }
 
         const headerText = typeof col.header === "string" && col.header ? col.header : String(col.label || col.id);
+
+        if (col.id === "issued_at") {
+          return {
+            ...dateCol("issued_at", headerText, (row) => (row as unknown as InvoiceDto).issued_at),
+            hidden: col.visible === false,
+          };
+        }
+
+        if (metricMatch) {
+          const exportCol = metricColMap.get(col.id);
+          return {
+            ...exportCol,
+            label: headerText,
+            hidden: col.visible === false,
+          };
+        }
 
         return {
           id: col.id,
@@ -468,82 +511,30 @@ export function InvoiceTable({
             const inv = row as unknown as InvoiceDto;
             if (col.id === "invoice_number") return parseInt(inv.invoice_number ?? "0", 10) || 0;
             if (col.id === partyField) return (partyType === "supplier" ? inv.supplier_name : inv.customer_name) || defaultName;
-            if (col.id === "issued_at") return formatDateTime(inv.issued_at);
             if (col.id === "status") return inv.status === "Posted" ? "مرحّل" : "مسودة";
             if (col.id === "notes") return inv.notes || "";
-
-            const subMatch = col.id.match(/^subtotal_(.+)$/);
-            if (subMatch) {
-              const code = subMatch[1];
-              return getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, code);
-            }
-            const discGrantedMatch = col.id.match(/^discount_granted_(.+)$/);
-            if (discGrantedMatch) {
-              const code = discGrantedMatch[1];
-              return getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, code);
-            }
-            const discMatch = col.id.match(/^discount_(.+)$/);
-            if (discMatch) {
-              const code = discMatch[1];
-              return getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, code);
-            }
-            const extraMatch = col.id.match(/^extra_costs_(.+)$/);
-            if (extraMatch) {
-              const code = extraMatch[1];
-              return getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, code);
-            }
-            const totalMatch = col.id.match(/^total_(.+)$/);
-            if (totalMatch) {
-              const code = totalMatch[1];
-              const sub = getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, code);
-              const disc = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, code);
-              const ext = getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, code);
-              return sub - disc + ext;
-            }
-            const paidMatch = col.id.match(/^paid_(.+)$/);
-            if (paidMatch) {
-              const code = paidMatch[1];
-              return getInvoiceBaseAmount(inv.amount_paid, inv.amount_paid_v2, inv.currency_code, inv.exchange_rate, code);
-            }
-            const remMatch = col.id.match(/^remaining_(.+)$/);
-            if (remMatch) {
-              const code = remMatch[1];
-              const sub = getInvoiceBaseAmount(inv.subtotal_amount, inv.subtotal_amount_v2, inv.currency_code, inv.exchange_rate, code);
-              const disc = getInvoiceBaseAmount(inv.discount_amount, inv.discount_amount_v2, inv.currency_code, inv.exchange_rate, code);
-              const ext = getInvoiceBaseAmount(inv.extra_costs, inv.extra_costs_v2, inv.currency_code, inv.exchange_rate, code);
-              const paid = getInvoiceBaseAmount(inv.amount_paid, inv.amount_paid_v2, inv.currency_code, inv.exchange_rate, code);
-              return sub - disc + ext - paid;
-            }
-
             const extra = extraColumns.find((c) => c.key === col.id);
             if (extra) {
               const res = extra.accessor(inv);
               return typeof res === "string" || typeof res === "number" ? res : "";
             }
-
             return "";
           },
-          ...(isNumeric ? { numeric: true, decimalPlaces: 2 } : {}),
         };
       });
 
     const exportTitle = partyType === "supplier" ? "قائمة فواتير المشتريات" : "قائمة فواتير المبيعات";
 
-    const exportOptions: ExcelExportOptions = {
+    await executeExport(exportData, {
       sheetName: exportTitle,
-      autoFilter: true,
+      filename: exportTitle,
+      data: sortedData as unknown as Record<string, unknown>[],
+      columns: exportColumns,
       summary: Object.keys(summary).length > 0 ? summary : undefined,
       summaryLabel: "المجموع",
-      ...(currencyRatesSheet ? { currencyRatesSheet } : {}),
-    };
-
-    await exportData(
-      sortedData as unknown as Record<string, unknown>[],
-      exportColumns,
-      exportTitle,
-      exportOptions
-    );
-  }, [enrichedColumns, partyField, partyType, defaultName, extraColumns, sortedData, exportData, currencyMode, baseCurrency, currencies, rateMap]);
+      currencyRatesSheet: ratesSheet,
+    });
+  }, [enrichedColumns, partyField, partyType, defaultName, extraColumns, sortedData, exportData, ratesSheet, currencies, formatAmount, baseCurrency, currencyMode, rateMap]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     let baseSubtotalTotal = 0;

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import type { StockMovement, WarehouseDto } from "@erp/shared-types";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
@@ -27,6 +27,7 @@ interface TransferTableProps {
   onView?: (row: TransferRow) => void;
   onEdit?: (row: TransferRow) => void;
   onDelete?: (reference: string) => void;
+  onVisibleColumnsChange?: (ids: string[]) => void;
 }
 
 type TransferSortField = "date" | "material_name" | "reference" | "quantity" | "notes";
@@ -38,7 +39,7 @@ const sortFn = (a: TransferRow, b: TransferRow, field: TransferSortField, direct
   return direction === "asc" ? cmp : -cmp;
 };
 
-export function TransferTable({ movements, warehouses, className, onView, onEdit, onDelete }: TransferTableProps) {
+export function TransferTable({ movements, warehouses, className, onView, onEdit, onDelete, onVisibleColumnsChange }: TransferTableProps) {
   const [search, setSearch] = useState("");
   const [selectedRef, setSelectedRef] = useState<string | null>(null);
 
@@ -173,11 +174,15 @@ export function TransferTable({ movements, warehouses, className, onView, onEdit
     return ids;
   }, [onView, onEdit, onDelete]);
 
-  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
+  const { enrichedColumns, visibleColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "transfers-unified",
     columns,
     defaultVisible,
   });
+
+  useEffect(() => {
+    onVisibleColumnsChange?.(visibleColumns);
+  }, [visibleColumns, onVisibleColumnsChange]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     return enrichedColumns.map(col => {

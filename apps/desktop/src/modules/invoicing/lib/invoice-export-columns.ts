@@ -1,3 +1,4 @@
+import { dateCol } from "@shared/lib/excel/export-helpers";
 import type { DocumentColumn } from "@widgets/document-shell/GenericDocumentGrid";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import type { Currency } from "@modules/core/api/currencyService";
@@ -61,7 +62,7 @@ export function buildInvoiceLineExportColumns({
     if (currencyMode !== "variable") return undefined;
     const rateIdx = nonBaseCurrencies.findIndex(c => c.code === code);
     if (rateIdx < 0) return undefined;
-    return `{col('${field}')}{row}*'أسعار الصرف'!B${rateIdx + 2}`;
+    return `{col('${field}')}{row}*'أسعار الصرف'!C${rateIdx + 3}`;
   };
 
   for (const col of gridColumns) {
@@ -86,7 +87,7 @@ export function buildInvoiceLineExportColumns({
           id: "material_code",
           label: "الكود",
           hidden,
-          width: 12,
+          width: 14,
           accessor: (row) => String((row as EnrichedExportLine).material_code ?? ''),
         });
         break;
@@ -126,7 +127,7 @@ export function buildInvoiceLineExportColumns({
           id: "warehouse_qty",
           label: "المتوفر",
           hidden,
-          width: 12,
+          width: 14,
           numeric: true,
           decimalPlaces: 2,
           accessor: (row) => {
@@ -140,7 +141,7 @@ export function buildInvoiceLineExportColumns({
           id: "quantity",
           label: "الكمية",
           hidden,
-          width: 10,
+          width: 12,
           numeric: true,
           decimalPlaces: 3,
           accessor: (row) => parseFloat(String((row as EnrichedExportLine).quantity ?? '0')) || 0,
@@ -152,7 +153,7 @@ export function buildInvoiceLineExportColumns({
           id: "unit_name",
           label: "الوحدة",
           hidden,
-          width: 10,
+          width: 12,
           accessor: (row) => String((row as EnrichedExportLine).unit_name ?? ''),
         });
         break;
@@ -251,18 +252,15 @@ export function buildInvoiceLineExportColumns({
             id: "discount",
             label: "خصم %",
             hidden,
-            width: 10,
+            width: 12,
             numeric: true,
             decimalPlaces: 2,
             accessor: (row) => parseFloat(String((row as EnrichedExportLine).discount ?? '0')) || 0,
           });
         } else if (col.key === "expiry_date") {
           result.push({
-            id: "expiry_date",
-            label: "تاريخ الانتهاء",
+            ...dateCol("expiry_date", "تاريخ الانتهاء", (row) => (row as EnrichedExportLine).expiry_date ?? ''),
             hidden,
-            width: 14,
-            accessor: (row) => String((row as EnrichedExportLine).expiry_date ?? ''),
           });
         } else if (col.key === "notes") {
           result.push({
@@ -300,7 +298,7 @@ export function buildInvoiceLineExportColumns({
             id: "original_price",
             label: "السعر الأصلي",
             hidden,
-            width: 12,
+            width: 14,
             numeric: true,
             decimalPlaces: 2,
             accessor: (row) => parseFloat(String((row as EnrichedExportLine).original_price ?? '0')) || 0,

@@ -10,10 +10,10 @@ import type { MaterialDto, CategoryDto, CreateMaterialRequest, UpdateMaterialReq
 import { settingsService } from "@modules/core/api/settingsService";
 import { warehouseService } from "@modules/inventory/api/warehouseService";
 import { toast } from "sonner";
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { queryClient, invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
-import { useExcelExport } from "@shared/hooks";
-import { useExportSettings } from "@shared/hooks/useExportSettings";
+import { useExportSetup } from "@shared/hooks";
+import { executeExport, addCurrencySummary } from "@shared/lib/excel";
+import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { formatNumber } from "@shared/lib/format";
 import { buildInvoiceLineExportColumns } from "@modules/invoicing/lib/invoice-export-columns";
 
@@ -29,9 +29,6 @@ import { useDocumentEditor } from "@modules/invoicing/hooks/useDocumentEditor";
 import { toBackendLines, calcLineTotal } from "@modules/invoicing/lib/invoiceUtils";
 import { useDocumentFinancials } from "@modules/invoicing/lib/useDocumentFinancials";
 import { MaterialForm } from "@modules/inventory/components/MaterialForm";
-import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
-
-
 interface HeaderState {
   id?: string;
   docNumber: string;
@@ -78,7 +75,8 @@ export default function OpeningBalance() {
   const [savingMaterial, setSavingMaterial] = useState(false);
   const [gridVisibleColumnIds, setGridVisibleColumnIds] = useState<string[]>([]);
 
-  const { currencies, rateMap, baseCurrency, hasMultipleCurrencies } = useCurrencyContext();
+  const { exportData, baseCurrency, rateMap, currencies, currencyMode, ratesSheet } = useExportSetup();
+  const { hasMultipleCurrencies } = useCurrencyContext();
   const [header, setHeader] = useState<HeaderState>(defaultHeader());
 
   const defaultWarehouseId = appSettings?.purchase_warehouse_id || warehouses.find(w => w.is_default)?.id;
@@ -329,9 +327,6 @@ export default function OpeningBalance() {
     materials,
   });
 
-  const { exportData } = useExcelExport();
-  const { currencyMode } = useExportSettings();
-
   const handleExport = useCallback(async () => {
     if (enrichedLines.length === 0) {
       toast.error("لا توجد بنود للتصدير");
@@ -370,28 +365,21 @@ export default function OpeningBalance() {
     });
 
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
-    currencies.forEach(curr => {
-      summary[`line_total_${curr.code}`] = 'subtotal';
-    });
+    addCurrencySummary(summary, "line_total", currencies);
 
-    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, currencies, rateMap, currencyMode).currencyRatesSheet;
-
-    await exportData(
-      enrichedForExport,
+    await executeExport(exportData, {
+      sheetName: "بضاعة أول المدة",
+      filename: `بضاعة_أول_المدة_${header.docNumber || "جديد"}`,
+      data: enrichedForExport,
       columns,
-      `بضاعة_أول_المدة_${header.docNumber || "جديد"}`,
-      {
-        sheetName: "بضاعة أول المدة",
-        autoFilter: true,
-        summary,
-        summaryLabel: "المجموع",
-        additionalSummary: [
-          { label: "المجموع الكلي (الصافي)", value: net }
-        ],
-        currencyRatesSheet,
-      }
-    );
-  }, [enrichedLines, exportData, header, net, currencies, hasMultipleCurrencies, gridColumns, gridVisibleColumnIds, materials, warehouses, currencyMode, rateMap, baseCurrency]);
+      summary,
+      summaryLabel: "المجموع",
+      additionalSummary: [
+        { label: "المجموع الكلي (الصافي)", value: net }
+      ],
+      currencyRatesSheet: ratesSheet,
+    });
+  }, [enrichedLines, exportData, header, net, currencies, hasMultipleCurrencies, gridColumns, gridVisibleColumnIds, materials, warehouses, currencyMode, ratesSheet]);
 
   return (
     <FinancialDocumentTemplate

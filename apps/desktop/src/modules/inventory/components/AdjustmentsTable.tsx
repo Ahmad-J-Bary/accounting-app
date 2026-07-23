@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { ArrowUpCircle, ArrowDownCircle, Minus } from "lucide-react";
 import { cn } from '@shared/lib/utils';
 import type { StockAdjustment } from "@erp/shared-types";
@@ -21,9 +21,10 @@ interface AdjustmentsTableProps {
   onEdit?: (item: StockAdjustment) => void;
   onDelete?: (id: string) => void;
   onRowClick?: (item: StockAdjustment) => void;
+  onVisibleColumnsChange?: (ids: string[]) => void;
 }
 
-export function AdjustmentsTable({ data, loading, search, onSearchChange, selectedId, onView, onEdit, onDelete, onRowClick }: AdjustmentsTableProps) {
+export function AdjustmentsTable({ data, loading, search, onSearchChange, selectedId, onView, onEdit, onDelete, onRowClick, onVisibleColumnsChange }: AdjustmentsTableProps) {
   const { currencies, formatAmount } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
   type SortField = "material_name" | "system_quantity" | "actual_quantity" | "difference" | "total_cost" | "adjustment_date" | "notes";
@@ -157,11 +158,15 @@ export function AdjustmentsTable({ data, loading, search, onSearchChange, select
     return ids;
   }, [onView, onEdit, onDelete, currencies, isBaseCurrency]);
 
-  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
+  const { enrichedColumns, visibleColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "adjustments",
     columns: allColumns,
     defaultVisible,
   });
+
+  useEffect(() => {
+    onVisibleColumnsChange?.(visibleColumns);
+  }, [visibleColumns, onVisibleColumnsChange]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     return enrichedColumns.map(col => {

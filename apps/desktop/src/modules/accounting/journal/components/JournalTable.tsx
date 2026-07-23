@@ -7,12 +7,11 @@ import { TableShell } from "@widgets/table-shell/TableShell";
 import { Skeleton } from "@shared/ui/skeleton";
 import { Button } from "@shared/ui/button";
 import { EmptyState } from "@widgets/table-shell/EmptyState";
-import { useExcelExport, useUnifiedColumns, useSortable, useBaseCurrencyColumns, useTableSettings, useGridResize } from "@shared/hooks";
-import { useExportSettings } from "@shared/hooks/useExportSettings";
+import { useExportSetup, useUnifiedColumns, useSortable, useBaseCurrencyColumns, useTableSettings, useGridResize } from "@shared/hooks";
 import type { ExcelExportColumn, ExcelExportOptions } from "@shared/lib/excel";
-import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
+import { dateCol, executeExport, estimateExcelWidth } from "@shared/lib/excel";
+import { debitCreditAmountCols } from "@shared/lib/excel/column-helpers";
 import { formatDateTime, formatNumber } from "@shared/lib/format";
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { cn } from "@shared/lib/utils";
 import { getLeftBorderClass, getRowBorderClass, getRowBackgroundClass } from "@shared/lib/table-utils";
 import type { GridResizeContent } from "@shared/hooks/useGridResize";
@@ -39,14 +38,6 @@ type SortFieldTwoLine = "entry_number" | "created_at" | "journal_type" | "accoun
 type SortFieldOneLine = "entry_number" | "created_at" | "journal_type" | "debit_accounts" | "credit_accounts";
 type JournalTableRow = JournalRowLine & { isFirstInGroup: boolean };
 type JournalSingleLineTableRow = JournalSingleLineRow & { isFirstInGroup: boolean };
-
-function estimateExcelWidth(headerText: string, sampleValues: string[]): number {
-  const longestText = [headerText, ...sampleValues].reduce((max, value) => {
-    return Math.max(max, String(value ?? "").trim().length);
-  }, 0);
-
-  return Math.max(12, Math.min(36, longestText + 4));
-}
 
 function buildJournalMergeRanges(rows: JournalTableRow[], visibleColumnIds: string[]): NonNullable<ExcelExportOptions["mergeCells"]> {
   const mergeableColumns = ["entry_number", "journal_type", "description", "entry_date"]
@@ -91,16 +82,11 @@ export function JournalTable({
   filterBar, 
   displayMode = "two-line" 
 }: JournalTableProps) {
-  const { currencies, baseCurrency, rateMap, formatAmount } = useCurrencyContext();
-  const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
-  const { currencyMode } = useExportSettings();
+  const { isBaseCurrency, currencySuffix: cs, hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { settings, getDensityPadding } = useTableSettings();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const sortedCurrencies = useMemo(() => {
-    if (!baseCurrency) return currencies;
-    return [baseCurrency, ...currencies.filter(c => c.code !== baseCurrency.code)];
-  }, [currencies, baseCurrency]);
+  const { exportData, baseCurrency, rateMap, sortedCurrencies, formatAmount, baseCode, ratesSheet, currencyMode } = useExportSetup();
 
   const isTwoLine = displayMode === "two-line";
 
@@ -684,55 +670,78 @@ export function JournalTable({
     []
   );
 
-  const { exportData } = useExcelExport();
-
   const handleExport = useCallback(async () => {
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
 
-    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, sortedCurrencies, rateMap, currencyMode).currencyRatesSheet;
+    const dcCols = debitCreditAmountCols(
+      (row) => {
+        if (isTwoLine) {
+          const r = row as unknown as JournalTableRow;
+          return {
+            debit: r.side === "debit" ? r.amount_base : 0,
+            credit: r.side === "credit" ? r.amount_base : 0,
+          };
+        }
+        const r = row as unknown as JournalSingleLineTableRow;
+        return { debit: r.debit_amount_base, credit: r.credit_amount_base };
+      },
+      sortedCurrencies, hasSecondaryCurrencies, currencyMode, baseCode, rateMap,
+    );
+    const dcColMap = new Map(dcCols.map(c => [c.id, c]));
 
     const exportColumns: ExcelExportColumn[] = enrichedColumns.map((col) => {
       const twoLineCol = col as UnifiedColumn<JournalTableRow>;
       const singleLineCol = col as UnifiedColumn<JournalSingleLineTableRow>;
       const label = col.label || getHeaderText(twoLineCol);
 
-      const isDebitCredit = /^debit_|^credit_/.test(col.id);
+      const isDebitCredit = /^(debit|credit)_(?!accounts)/.test(col.id);
 
-      if (isDebitCredit && col.visible !== false) {
+      if (isDebitCredit) {
         summary[col.id] = 'subtotal';
+      }
+
+      if (col.id === "entry_date") {
+        return dateCol("entry_date", label, (row) => {
+          const r = row as unknown as JournalTableRow | JournalSingleLineTableRow;
+          return r.created_at;
+        });
+      }
+
+      if (isDebitCredit) {
+        const dcCol = dcColMap.get(col.id);
+        return {
+          ...dcCol,
+          label,
+          hidden: col.visible === false,
+          width: estimateExcelWidth(label, getColumnSampleValues(col)),
+        };
       }
 
       return {
         id: col.id,
         label,
         hidden: col.visible === false,
-        width: estimateExcelWidth(label, getColumnSampleValues(col as UnifiedColumn<JournalTableRow> | UnifiedColumn<JournalSingleLineTableRow>)),
+        width: estimateExcelWidth(label, getColumnSampleValues(col)),
         accessor: isTwoLine
           ? (record) => getTwoLineExportValue(record as unknown as JournalTableRow, twoLineCol)
           : (record) => getSingleLineExportValue(record as unknown as JournalSingleLineTableRow, singleLineCol),
-        ...(isDebitCredit ? { numeric: true, decimalPlaces: 2 } : {}),
       };
     });
 
-    const exportOptions: ExcelExportOptions = {
+    await executeExport(exportData, {
       sheetName: "القيود اليومية",
-      autoFilter: true,
+      filename: "القيود اليومية",
+      data: sortedData as unknown as Record<string, unknown>[],
+      columns: exportColumns,
+      summary: Object.keys(summary).length > 0 ? summary : undefined,
+      summaryLabel: "المجموع",
+      currencyRatesSheet: ratesSheet,
       mergeCells: isTwoLine ? buildJournalMergeRanges(
         sortedData as JournalTableRow[],
         exportColumns.filter(c => !c.hidden).map((col) => col.id),
       ) : [],
-      summary: Object.keys(summary).length > 0 ? summary : undefined,
-      summaryLabel: "المجموع",
-      ...(currencyRatesSheet ? { currencyRatesSheet } : {}),
-    };
-
-    await exportData(
-      sortedData as unknown as Record<string, unknown>[],
-      exportColumns,
-      "القيود اليومية",
-      exportOptions,
-    );
-  }, [getColumnSampleValues, getTwoLineExportValue, getSingleLineExportValue, sortedData, enrichedColumns, isTwoLine, exportData, currencyMode, baseCurrency, sortedCurrencies, rateMap]);
+    });
+  }, [getColumnSampleValues, getTwoLineExportValue, getSingleLineExportValue, sortedData, enrichedColumns, isTwoLine, exportData, baseCode, rateMap, ratesSheet, sortedCurrencies, hasSecondaryCurrencies, currencyMode]);
 
   // ============ RENDER BODY ============
   const renderBody = () => {

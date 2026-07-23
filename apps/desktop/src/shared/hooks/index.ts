@@ -15,4 +15,5 @@ export * from './useBaseCurrencyColumns';
 export * from './useSidebarLayoutContext';
 export * from './useSidebarQuickAdd';
 export * from './useExcelExport';
+export * from './useExportSetup';
 

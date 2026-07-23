@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type { UnifiedColumn } from './UnifiedTable';
 import { UnifiedTable } from './UnifiedTable';
 import { TableShell } from './TableShell';
@@ -31,6 +32,7 @@ interface SharedTableProps<T> {
   title?: string;
   className?: string;
   filterBar?: React.ReactNode;
+  onVisibleColumnsChange?: (ids: string[]) => void;
 }
 
 export function SharedTable<T>({
@@ -52,12 +54,17 @@ export function SharedTable<T>({
   title,
   className,
   filterBar,
+  onVisibleColumnsChange,
 }: SharedTableProps<T>) {
-  const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
+  const { enrichedColumns, visibleColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: `${tableId}-unified`,
     columns,
     defaultVisible: defaultVisible || columns.map(c => c.id),
   });
+
+  useEffect(() => {
+    onVisibleColumnsChange?.(visibleColumns);
+  }, [visibleColumns, onVisibleColumnsChange]);
 
   const { sortedData, sortField, sortDirection, handleSort } = useSortable<T, string>({
     data,

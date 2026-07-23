@@ -4,13 +4,11 @@ import type { StockMovement, WarehouseDto } from "@erp/shared-types";
 import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
 import { TableShell } from '@widgets/table-shell/TableShell';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
-import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
+import { useExportSetup, useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
 import { formatDateTime, formatNumber, toLocalString } from '@shared/lib/format';
-import { useExcelExport } from "@shared/hooks";
-import { useExportSettings } from "@shared/hooks/useExportSettings";
-import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
-import type { ExcelExportColumn, ExcelExportOptions } from "@shared/lib/excel";
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { dateCol, executeExport } from "@shared/lib/excel";
+import type { ExcelExportColumn } from "@shared/lib/excel";
+import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import { getMovementType } from '../constants/movementTypes';
 import { Download } from "lucide-react";
 import { Button } from "@shared/ui/button";
@@ -77,9 +75,8 @@ export function InventoryMovementsTable({
   filterBar,
   selectedId, onRowClick, onRowDoubleClick, transferRefs, className,
 }: InventoryMovementsTableProps) {
-  const { baseCurrency, rateMap, currencies, formatAmount } = useCurrencyContext();
-  const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
-  const { currencyMode } = useExportSettings();
+  const { isBaseCurrency, currencySuffix: cs, hasSecondaryCurrencies } = useBaseCurrencyColumns();
+  const { exportData, rateMap, formatAmount, baseCode, currencies, ratesSheet, currencyMode } = useExportSetup();
   const defaultWh = useMemo(() => warehouses.find(wh => wh.is_default), [warehouses]);
 
   const warehouseName = useMemo(() => (m: StockMovement) => {
@@ -360,26 +357,41 @@ export function InventoryMovementsTable({
     defaultVisible,
   });
 
-  const { exportData } = useExcelExport();
-
   const handleExport = useCallback(async () => {
     const summary: Record<string, string | null> = { quantity: 'subtotal' };
 
-    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, currencies, rateMap, currencyMode).currencyRatesSheet;
+    const costColumns = currencyAmountCols("total_cost", "التكلفة", (row) => baseCost(row as unknown as StockMovement), currencies, formatAmount, "", true, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
+    const costColMap = new Map(costColumns.map(c => [c.id, c]));
 
     const exportColumns: ExcelExportColumn[] = enrichedColumns.map((col) => {
-      const isDebitCredit = /^total_cost_/.test(col.id);
+      const isCostCol = /^total_cost_/.test(col.id);
 
-      if (isDebitCredit && col.visible !== false) {
+      if (isCostCol) {
         const currCode = col.id.replace('total_cost_', '');
         summary[col.id] = `SUMPRODUCT(SIGN({col('quantity')}{firstRow}:{col('quantity')}{lastRow}), {col('total_cost_${currCode}')}{firstRow}:{col('total_cost_${currCode}')}{lastRow})`;
+      }
+
+      if (col.id === "date") {
+        return dateCol("date", col.label || String(col.header || ""), (row) => {
+          const m = row as unknown as StockMovement;
+          return m.movement_date;
+        });
+      }
+
+      if (col.id.startsWith("total_cost_")) {
+        const costCol = costColMap.get(col.id);
+        return {
+          ...costCol,
+          label: col.label || String(col.header || ""),
+          hidden: col.visible === false,
+        };
       }
 
       return {
         id: col.id,
         label: col.label || String(col.header || ""),
         hidden: col.visible === false,
-        width: 15, // standard default fallback
+        width: 15,
         accessor: (row) => {
           const m = row as unknown as StockMovement;
           if (col.id === "reference") return parseInt(m.reference ?? "0", 10) || 0;
@@ -403,32 +415,23 @@ export function InventoryMovementsTable({
             const cfg = getMovementType(m.movement_type);
             return cfg.inflow ? qty : -qty;
           }
-          if (col.id.startsWith("total_cost_")) {
-            return baseCost(m);
-          }
           if (col.id === "notes") return getCleanNotes(m);
-          if (col.id === "date") return formatDateTime(m.movement_date);
           return "";
         },
-        ...(isDebitCredit || col.id === "quantity" ? { numeric: true, decimalPlaces: 2 } : {}),
+        ...(col.id === "quantity" ? { numeric: true, decimalPlaces: 2 } : {}),
       };
     });
 
-    const exportOptions: ExcelExportOptions = {
+    await executeExport(exportData, {
       sheetName: "حركات المخزون",
-      autoFilter: true,
+      filename: "حركات المخزون",
+      data: sortedData as unknown as Record<string, unknown>[],
+      columns: exportColumns,
       summary,
       summaryLabel: "المجموع",
-      ...(currencyRatesSheet ? { currencyRatesSheet } : {}),
-    };
-
-    await exportData(
-      sortedData as unknown as Record<string, unknown>[],
-      exportColumns,
-      "حركات المخزون",
-      exportOptions,
-    );
-  }, [enrichedColumns, sortedData, warehouseName, baseCost, transferRefs, exportData, currencyMode, baseCurrency, currencies, rateMap]);
+      currencyRatesSheet: ratesSheet,
+    });
+  }, [enrichedColumns, sortedData, warehouseName, baseCost, transferRefs, exportData, baseCode, rateMap, ratesSheet, currencies, formatAmount, hasSecondaryCurrencies, currencyMode]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     return enrichedColumns.map(col => {

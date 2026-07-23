@@ -13,7 +13,8 @@ import { WarehouseForm } from '@modules/inventory/components/WarehouseForm';
 import { WarehouseMaterialList } from '@modules/inventory/components/WarehouseMaterialList';
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { buildStockByWarehouse } from '@modules/inventory/lib/stockUtils';
-import { useExcelExport } from "@shared/hooks";
+import { useExportSetup } from "@shared/hooks";
+import { executeExport } from "@shared/lib/excel";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 
 export default function Warehouses() {
@@ -77,7 +78,7 @@ export default function Warehouses() {
 
   const warehousesLoading_ = warehousesLoading || warehousesRefetching;
 
-  const { exportData } = useExcelExport();
+  const { exportData } = useExportSetup();
 
   const handleExport = useCallback(async () => {
     const columns: ExcelExportColumn[] = [
@@ -86,7 +87,12 @@ export default function Warehouses() {
       { id: "is_active", label: "الحالة", accessor: (row) => (row as unknown as WarehouseDto).is_active ? "نشط" : "غير نشط" },
       { id: "is_default", label: "افتراضي", accessor: (row) => (row as unknown as WarehouseDto).is_default ? "نعم" : "لا" },
     ];
-    await exportData(filteredWarehouses as unknown as Record<string, unknown>[], columns, "المستودعات", { sheetName: "المستودعات", autoFilter: true });
+    await executeExport(exportData, {
+      sheetName: "المستودعات",
+      filename: "المستودعات",
+      data: filteredWarehouses as unknown as Record<string, unknown>[],
+      columns,
+    });
   }, [filteredWarehouses, exportData]);
 
   return (

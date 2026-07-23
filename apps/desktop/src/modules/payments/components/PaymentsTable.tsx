@@ -3,13 +3,11 @@ import { UnifiedTable, type UnifiedColumn } from '@widgets/table-shell/UnifiedTa
 import { TableShell } from '@widgets/table-shell/TableShell';
 import { TableActions } from '@widgets/table-shell/TableActions';
 import type { SummaryColumn } from '@widgets/table-shell/TableSummary';
-import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
+import { useUnifiedColumns, useSortable, useBaseCurrencyColumns, useExportSetup } from "@shared/hooks";
 import { formatDateTime, formatNumber } from "@shared/lib/format";
-import { useExcelExport } from "@shared/hooks";
-import { useExportSettings } from "@shared/hooks/useExportSettings";
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import type { ExcelExportColumn } from "@shared/lib/excel";
-import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
+import { executeExport, dateCol, buildCurrencySummary } from "@shared/lib/excel";
 import { PAYMENT_TYPE_LABELS } from "@modules/payments/lib/constants";
 import { ArrowDownCircle, ArrowUpCircle, Download, Filter } from "lucide-react";
 import { Button } from "@shared/ui/button";
@@ -57,7 +55,7 @@ export function PaymentsTable({
 }: PaymentsTableProps) {
 
   const { isBaseCurrency, currencySuffix: cs, hasSecondaryCurrencies } = useBaseCurrencyColumns();
-  const { currencyMode } = useExportSettings();
+  const { exportData, currencyMode, ratesSheet, baseCode } = useExportSetup();
   const sortedCurrencies = useMemo(() => {
     if (!baseCurrency) return currencies;
     return [baseCurrency, ...currencies.filter(c => c.code !== baseCurrency.code)];
@@ -126,8 +124,6 @@ export function PaymentsTable({
       return direction === "asc" ? comparison : -comparison;
     },
   });
-
-  const { exportData } = useExcelExport();
 
   const allColumns = useMemo<UnifiedColumn<Payment>[]>(
     () => {
@@ -272,17 +268,14 @@ export function PaymentsTable({
       const amount = parseFloat(p.amount) || 0;
       const baseAmount = toBase(amount, p.currency_code);
       return INCOMING_TYPES.includes(p.payment_type) ? baseAmount : -baseAmount;
-    }, sortedCurrencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap);
+    }, sortedCurrencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
 
     const visibleIds = new Set(enrichedColumns.filter(c => c.visible !== false).map(c => c.id));
     currCols.forEach(col => {
       if (!visibleIds.has(col.id)) col.hidden = true;
     });
 
-    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
-    sortedCurrencies.forEach(curr => { summary[`amount_${curr.code}`] = 'subtotal'; });
-
-    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, sortedCurrencies, rateMap, currencyMode).currencyRatesSheet;
+    const summary = buildCurrencySummary("amount", sortedCurrencies);
 
     const exportColumns: ExcelExportColumn[] = [
       { id: "journal_entry_number", label: "رقم القيد", accessor: (row) => parseInt(String((row as Record<string, unknown>).journal_entry_number ?? "0"), 10) || 0 },
@@ -300,16 +293,19 @@ export function PaymentsTable({
         const p = row as unknown as Payment;
         return p.debit_account_id ? accounts.find((a) => a.id === p.debit_account_id)?.name_ar ?? "" : "";
       }},
-      { id: "payment_date", label: "التاريخ", isDate: true, accessor: (row) => (row as unknown as Payment).payment_date },
+      dateCol("payment_date", "التاريخ", (row) => (row as unknown as Payment).payment_date),
     ];
 
-    await exportData(
-      sortedData as unknown as Record<string, unknown>[],
-      exportColumns,
-      "السندات المالية",
-      { sheetName: "السندات المالية", autoFilter: true, summary, summaryLabel: "المجموع", ...(currencyRatesSheet ? { currencyRatesSheet } : {}) },
-    );
-  }, [sortedData, sortedCurrencies, accounts, formatAmount, toBase, currencyMode, baseCurrency, rateMap, exportData, hasSecondaryCurrencies, enrichedColumns]);
+    await executeExport(exportData, {
+      sheetName: "السندات المالية",
+      filename: "السندات المالية",
+      data: sortedData as unknown as Record<string, unknown>[],
+      columns: exportColumns,
+      summary,
+      summaryLabel: "المجموع",
+      currencyRatesSheet: ratesSheet,
+    });
+  }, [sortedData, sortedCurrencies, accounts, formatAmount, toBase, currencyMode, baseCode, rateMap, exportData, hasSecondaryCurrencies, enrichedColumns, ratesSheet]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     const INCOMING_TYPES = ["Receipt", "CashIn", "SupplierReceipt"];

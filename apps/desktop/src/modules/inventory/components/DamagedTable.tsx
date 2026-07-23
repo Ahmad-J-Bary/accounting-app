@@ -17,6 +17,7 @@ interface DamagedTableProps {
   onView?: (item: DamagedItem) => void;
   onEdit?: (item: DamagedItem) => void;
   onDelete?: (id: string) => void;
+  onVisibleColumnsChange?: (ids: string[]) => void;
 }
 
 export function DamagedTable({
@@ -28,6 +29,7 @@ export function DamagedTable({
   onView,
   onEdit,
   onDelete,
+  onVisibleColumnsChange,
 }: DamagedTableProps) {
   const { formatAmount, currencies } = useCurrencyContext();
   const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
@@ -169,6 +171,7 @@ export function DamagedTable({
       onRowClick={onView}
       emptyMessage={search ? "لا توجد نتائج للبحث" : "لا توجد سجلات تالف"}
       summary={summaryColumns}
+      onVisibleColumnsChange={onVisibleColumnsChange}
     />
   );
 }

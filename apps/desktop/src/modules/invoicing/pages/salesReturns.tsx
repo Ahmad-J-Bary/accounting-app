@@ -5,13 +5,12 @@ import { ReturnsEditor } from "../components/ReturnsEditor";
 import { useReturnLifecycle } from "../hooks/useReturnLifecycle";
 import { returnService } from "@modules/invoicing/api/returnService";
 import { toast } from "sonner";
-import { useExcelExport } from "@shared/hooks";
-import { useExportSettings } from "@shared/hooks/useExportSettings";
+import { useExportSetup } from "@shared/hooks";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { executeExport, addCurrencySummary } from "@shared/lib/excel";
 import type { SalesReturnDto, PurchaseReturnDto } from "@erp/shared-types";
 import { buildInvoiceLineExportColumns } from "../lib/invoice-export-columns";
 import type { DocumentColumn } from "@widgets/document-shell/GenericDocumentGrid";
-import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
 
 export default function SalesReturns() {
   const location = useLocation();
@@ -41,9 +40,8 @@ export default function SalesReturns() {
   const searchParams = new URLSearchParams(location.search);
   const customerIdFilter = searchParams.get("customerId") || undefined;
 
-  const { exportData } = useExcelExport();
-  const { currencies: availableCurrencies, hasMultipleCurrencies, convertBetween, baseCurrency, rateMap } = useCurrencyContext();
-  const { currencyMode } = useExportSettings();
+  const { exportData, currencyMode, baseCode, ratesSheet } = useExportSetup();
+  const { currencies: availableCurrencies, hasMultipleCurrencies, convertBetween } = useCurrencyContext();
 
   const handleDelete = useCallback(async (id: string) => {
     try {
@@ -59,7 +57,6 @@ export default function SalesReturns() {
     const fullReturn = await returnService.getSalesReturn(ret.id);
     const rawLines = fullReturn.lines || [];
 
-    const baseCode = baseCurrency?.code || "";
     const materialMap = new Map(materials.map(m => [m.id, m]));
 
     const enrichedLines = rawLines.map(line => {
@@ -119,30 +116,23 @@ export default function SalesReturns() {
     });
 
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
-    availableCurrencies.forEach(curr => {
-      summary[`line_total_${curr.code}`] = 'subtotal';
-    });
+    addCurrencySummary(summary, "line_total", availableCurrencies);
 
     const totalVal = parseFloat(fullReturn.total_amount || "0");
 
-    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, availableCurrencies, rateMap, currencyMode).currencyRatesSheet;
-
-    await exportData(
-      enrichedLines,
+    await executeExport(exportData, {
+      sheetName: "مرتجع مبيعات",
+      filename: `مرتجع_مبيعات_${fullReturn.return_number}`,
+      data: enrichedLines,
       columns,
-      `مرتجع_مبيعات_${fullReturn.return_number}`,
-      {
-        sheetName: "مرتجع مبيعات",
-        autoFilter: true,
-        summary,
-        summaryLabel: "المجموع",
-        additionalSummary: [
-          { label: "الإجمالي", value: totalVal }
-        ],
-        currencyRatesSheet,
-      }
-    );
-  }, [exportData, availableCurrencies, hasMultipleCurrencies, convertBetween, baseCurrency, materials, warehouses, currencyMode, rateMap]);
+      summary,
+      summaryLabel: "المجموع",
+      additionalSummary: [
+        { label: "الإجمالي", value: totalVal }
+      ],
+      currencyRatesSheet: ratesSheet,
+    });
+  }, [exportData, availableCurrencies, hasMultipleCurrencies, convertBetween, baseCode, materials, warehouses, currencyMode, ratesSheet]);
 
   if (view === "editor") {
     return (

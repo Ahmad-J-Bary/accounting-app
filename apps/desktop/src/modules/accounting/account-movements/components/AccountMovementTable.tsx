@@ -5,11 +5,10 @@ import { TableSummary, type SummaryColumn } from "@widgets/table-shell/TableSumm
 import { TableShell } from "@widgets/table-shell/TableShell";
 import { Skeleton } from "@shared/ui/skeleton";
 import { EmptyState } from "@widgets/table-shell/EmptyState";
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useExcelExport, useUnifiedColumns, useSortable, useBaseCurrencyColumns, useTableSettings, useGridResize } from "@shared/hooks";
-import { useExportSettings } from "@shared/hooks/useExportSettings";
-import type { ExcelExportColumn, ExcelExportOptions } from "@shared/lib/excel";
-import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
+import { useExportSetup, useUnifiedColumns, useSortable, useBaseCurrencyColumns, useTableSettings, useGridResize } from "@shared/hooks";
+import type { ExcelExportColumn } from "@shared/lib/excel";
+import { dateCol, executeExport, estimateExcelWidth } from "@shared/lib/excel";
+import { debitCreditAmountCols } from "@shared/lib/excel/column-helpers";
 import { cn } from "@shared/lib/utils";
 import { getLeftBorderClass, getRowBorderClass, getRowBackgroundClass } from "@shared/lib/table-utils";
 import type { GridResizeContent } from "@shared/hooks/useGridResize";
@@ -18,14 +17,6 @@ import { formatDateTime, formatNumber } from "@shared/lib/format";
 import { getHeaderText, getPrimitiveCellValue } from "@modules/accounting/journal/components/groupedTableUtils";
 import { Download } from "lucide-react";
 import { Button } from "@shared/ui/button";
-
-function estimateExcelWidth(headerText: string, sampleValues: string[]): number {
-  const longestText = [headerText, ...sampleValues].reduce((max, value) => {
-    return Math.max(max, String(value ?? "").trim().length);
-  }, 0);
-
-  return Math.max(12, Math.min(36, longestText + 4));
-}
 
 type SortField = "entry_number" | "date" | "journal_type";
 
@@ -57,17 +48,11 @@ export function AccountMovementTable({
   accountName,
   openingBalance = 0,
 }: AccountMovementTableProps) {
-  const { currencies, baseCurrency, rateMap, formatAmount } = useCurrencyContext();
-  const { isBaseCurrency, currencySuffix } = useBaseCurrencyColumns();
-  const { currencyMode } = useExportSettings();
-  const { exportData } = useExcelExport();
+  const { isBaseCurrency, currencySuffix, hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { settings, getDensityPadding } = useTableSettings();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const sortedCurrencies = useMemo(() => {
-    if (!baseCurrency) return currencies;
-    return [baseCurrency, ...currencies.filter(c => c.code !== baseCurrency.code)];
-  }, [currencies, baseCurrency]);
+  const { exportData, baseCurrency, rateMap, sortedCurrencies, formatAmount, baseCode, ratesSheet, currencyMode } = useExportSetup();
 
   const enrichedLines = useMemo(() => {
     return lines.map((line) => {
@@ -316,15 +301,42 @@ export function AccountMovementTable({
   const handleExport = useCallback(async () => {
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
 
-    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, sortedCurrencies, rateMap, currencyMode).currencyRatesSheet;
+    const dcCols = debitCreditAmountCols(
+      (row) => {
+        const r = row as unknown as MovementRow;
+        return {
+          debit: r.side === "debit" ? r.amount_base : 0,
+          credit: r.side === "credit" ? r.amount_base : 0,
+        };
+      },
+      sortedCurrencies, hasSecondaryCurrencies, currencyMode, baseCode, rateMap,
+    );
+    const dcColMap = new Map(dcCols.map(c => [c.id, c]));
 
     const exportColumns: ExcelExportColumn[] = enrichedColumns.map((col) => {
       const label = col.label || getHeaderText(col);
 
       const isDebitCredit = /^debit_|^credit_/.test(col.id);
 
-      if (isDebitCredit && col.visible !== false) {
+      if (isDebitCredit) {
         summary[col.id] = 'subtotal';
+      }
+
+      if (col.id === "date") {
+        return dateCol("date", label, (row) => {
+          const r = row as unknown as MovementRow;
+          return r.date;
+        });
+      }
+
+      if (isDebitCredit) {
+        const dcCol = dcColMap.get(col.id);
+        return {
+          ...dcCol,
+          label,
+          hidden: col.visible === false,
+          width: estimateExcelWidth(label, getColumnSampleValues(col)),
+        };
       }
 
       return {
@@ -337,40 +349,23 @@ export function AccountMovementTable({
           if (col.id === "entry_number") return parseInt(r.entry_number, 10) || 0;
           if (col.id === "journal_type") return r.typeLabel;
           if (col.id === "description") return r.description;
-          if (col.id === "date") return formatDateTime(r.date);
           if (col.id === "balance") return r.running_balance;
-
-          const debitMatch = col.id.match(/^debit_(.+)$/);
-          if (debitMatch) {
-            return r.side === "debit" && r.amount_base > 0 ? r.amount_base : 0;
-          }
-
-          const creditMatch = col.id.match(/^credit_(.+)$/);
-          if (creditMatch) {
-            return r.side === "credit" && r.amount_base > 0 ? -r.amount_base : 0;
-          }
-
           return "";
         },
-        ...(isDebitCredit || col.id === "balance" ? { numeric: true, decimalPlaces: 2 } : {}),
+        ...(col.id === "balance" ? { numeric: true, decimalPlaces: 2 } : {}),
       };
     });
 
-    const exportOptions: ExcelExportOptions = {
+    await executeExport(exportData, {
       sheetName: "كشف حركة الحساب",
-      autoFilter: true,
+      filename: `حركة_حساب_${accountName}`,
+      data: tableData as unknown as Record<string, unknown>[],
+      columns: exportColumns,
       summary: Object.keys(summary).length > 0 ? summary : undefined,
       summaryLabel: "المجموع",
-      ...(currencyRatesSheet ? { currencyRatesSheet } : {}),
-    };
-
-    await exportData(
-      tableData as unknown as Record<string, unknown>[],
-      exportColumns,
-      `حركة_حساب_${accountName}`,
-      exportOptions,
-    );
-  }, [enrichedColumns, tableData, accountName, exportData, getColumnSampleValues, currencyMode, baseCurrency, sortedCurrencies, rateMap]);
+      currencyRatesSheet: ratesSheet,
+    });
+  }, [enrichedColumns, tableData, accountName, exportData, getColumnSampleValues, baseCode, rateMap, ratesSheet, sortedCurrencies, hasSecondaryCurrencies, currencyMode]);
 
   const contentByColumn = useMemo(() => {
     const out: Record<string, GridResizeContent> = {};

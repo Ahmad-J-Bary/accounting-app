@@ -13,12 +13,10 @@ import { toast } from 'sonner';
 
 // Refactored Components & Hooks
 import { useEntityList } from '@shared/hooks/useEntityList';
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { useExcelExport, useBaseCurrencyColumns } from "@shared/hooks";
-import { useExportSettings } from "@shared/hooks/useExportSettings";
-import { buildCurrencyRatesSheetOptions } from '@shared/lib/excel';
+import { useExportSetup, useBaseCurrencyColumns } from "@shared/hooks";
+import { executeExport, addCurrencySummary, applyVisibilityToCurrencyCols } from '@shared/lib/excel';
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
-import type { ExcelExportColumn, ExcelExportOptions } from '@shared/lib/excel';
+import type { ExcelExportColumn } from '@shared/lib/excel';
 import { MaterialForm } from '@modules/inventory/components/MaterialForm';
 import { MaterialTable } from '@modules/inventory/components/MaterialTable';
 import { MaterialUnitsManager } from '@modules/inventory/components/MaterialUnitsManager';
@@ -34,9 +32,8 @@ import { QUERY_KEYS, queryClient, invalidateAccountingMutationQueries } from "@s
 
 export default function Materials() {
   const { openTab } = useTabs();
-  const { baseCurrency, rateMap, currencies, formatAmount } = useCurrencyContext();
   const { hasSecondaryCurrencies, currencySuffix: cs } = useBaseCurrencyColumns();
-  const { currencyMode } = useExportSettings();
+  const { exportData, baseCurrency, rateMap, currencies, formatAmount, currencyMode, ratesSheet } = useExportSetup();
   const {
     filtered: materials,
     loading,
@@ -235,8 +232,6 @@ export default function Materials() {
 
   // ── Handle Excel Export ──
 
-  const { exportData } = useExcelExport();
-
   const handleExport = useCallback(async () => {
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {
       total_received: 'subtotal',
@@ -245,6 +240,38 @@ export default function Materials() {
       total_available: 'subtotal',
       minimum_stock: 'subtotal',
     };
+    addCurrencySummary(summary, "unit_price", currencies);
+    addCurrencySummary(summary, "extra_costs", currencies);
+    addCurrencySummary(summary, "average_cost", currencies);
+    addCurrencySummary(summary, "total_value", currencies);
+    addCurrencySummary(summary, "available_value", currencies);
+
+    const unitPriceCols = currencyAmountCols("unit_price", "السعر الإفرادي", (row) => rawPriceBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap);
+    const extraCostCols = currencyAmountCols("extra_costs", "تكاليف إضافية", (row) => extraCostBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap);
+    const avgCostCols = currencyAmountCols("average_cost", "تكلفة الوحدة", (row) => unitCostBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap);
+    const visibleSet = new Set(visibleColumnIds);
+    applyVisibilityToCurrencyCols(unitPriceCols, visibleSet);
+    applyVisibilityToCurrencyCols(extraCostCols, visibleSet);
+    applyVisibilityToCurrencyCols(avgCostCols, visibleSet);
+
+    const totalValueCols = currencies.map(curr => ({
+      id: `total_value_${curr.code}`,
+      label: `المجموع${cs(curr.symbol || curr.code)}`,
+      formula: `{col('total_received')}{row}*{col('average_cost_${curr.code}')}{row}`,
+      numeric: true,
+      decimalPlaces: 2,
+    }));
+    applyVisibilityToCurrencyCols(totalValueCols, visibleSet);
+
+    const availValueCols = currencies.map(curr => ({
+      id: `available_value_${curr.code}`,
+      label: `المجموع للمتوفر${cs(curr.symbol || curr.code)}`,
+      formula: `{col('total_available')}{row}*{col('average_cost_${curr.code}')}{row}`,
+      numeric: true,
+      decimalPlaces: 2,
+    }));
+    applyVisibilityToCurrencyCols(availValueCols, visibleSet);
+
     const colDefs: ExcelExportColumn[] = [
       {
         id: 'image', label: 'صورة', width: 8,
@@ -265,35 +292,15 @@ export default function Materials() {
           return ids.map(id => categories.find(c => c.id === id)?.name).filter(Boolean).join(', ');
         },
       },
-      ...currencyAmountCols("unit_price", "السعر الإفرادي", (row) => rawPriceBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap).map(c => { summary[c.id] = 'subtotal'; return c; }),
-      ...currencyAmountCols("extra_costs", "تكاليف إضافية", (row) => extraCostBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap).map(c => { summary[c.id] = 'subtotal'; return c; }),
-      ...currencyAmountCols("average_cost", "تكلفة الوحدة", (row) => unitCostBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap).map(c => { summary[c.id] = 'subtotal'; return c; }),
-      ...currencies.map(curr => {
-        const totalValId = `total_value_${curr.code}`;
-        summary[totalValId] = 'subtotal';
-        return {
-          id: totalValId,
-          label: `المجموع${cs(curr.symbol || curr.code)}`,
-          formula: `{col('total_received')}{row}*{col('average_cost_${curr.code}')}{row}`,
-          numeric: true,
-          decimalPlaces: 2,
-        };
-      }),
+      ...unitPriceCols,
+      ...extraCostCols,
+      ...avgCostCols,
+      ...totalValueCols,
       { id: 'total_received', label: 'الكمية الكلية', width: 12, hidden: !visibleColumnIds.includes('total_received'), accessor: (row) => totalReceived(row as unknown as MaterialDto), numeric: true, decimalPlaces: 2 },
       { id: 'total_sold', label: 'الكمية المباعة', width: 12, hidden: !visibleColumnIds.includes('total_sold'), accessor: (row) => parseFloat(String((row as unknown as MaterialDto).total_sold || '0')), numeric: true, decimalPlaces: 2 },
       { id: 'total_damaged', label: 'الكمية التالفة', width: 12, hidden: !visibleColumnIds.includes('total_damaged'), accessor: (row) => parseFloat(String((row as unknown as MaterialDto).total_damaged || '0')), numeric: true, decimalPlaces: 2 },
       { id: 'total_available', label: 'الكمية المتوفرة', width: 12, hidden: !visibleColumnIds.includes('total_available'), accessor: (row) => parseFloat(String((row as unknown as MaterialDto).total_available || '0')), numeric: true, decimalPlaces: 2 },
-      ...currencies.map(curr => {
-        const availValId = `available_value_${curr.code}`;
-        summary[availValId] = 'subtotal';
-        return {
-          id: availValId,
-          label: `المجموع للمتوفر${cs(curr.symbol || curr.code)}`,
-          formula: `{col('total_available')}{row}*{col('average_cost_${curr.code}')}{row}`,
-          numeric: true,
-          decimalPlaces: 2,
-        };
-      }),
+      ...availValueCols,
     ];
 
     const TIERS = [
@@ -367,28 +374,21 @@ export default function Materials() {
       },
     );
 
-    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, currencies, rateMap, currencyMode).currencyRatesSheet;
-
-    const exportOptions: ExcelExportOptions = {
+    await executeExport(exportData, {
       sheetName: 'بطاقات المواد',
-      autoFilter: true,
+      filename: 'بطاقات المواد',
+      data: materials as unknown as Record<string, unknown>[],
+      columns: colDefs,
+      summary,
+      summaryLabel: "المجموع",
       sortBy: {
         columnId: 'code',
         direction: 'asc',
         compare: (a, b) => String(a.code ?? '').localeCompare(String(b.code ?? ''), 'ar'),
       },
-      summary,
-      summaryLabel: "المجموع",
-      ...(currencyRatesSheet ? { currencyRatesSheet } : {}),
-    };
-
-    await exportData(
-      materials as unknown as Record<string, unknown>[],
-      colDefs,
-      'بطاقات المواد',
-      exportOptions,
-    );
-  }, [materials, currencies, currencyMode, baseCurrency, rateMap, categories, formatAmount, visibleColumnIds, unitCostBase, rawPriceBase, extraCostBase, totalReceived, exportData, hasSecondaryCurrencies, cs]);
+      currencyRatesSheet: ratesSheet,
+    });
+  }, [materials, currencies, currencyMode, baseCurrency, rateMap, categories, formatAmount, visibleColumnIds, unitCostBase, rawPriceBase, extraCostBase, totalReceived, exportData, hasSecondaryCurrencies, cs, ratesSheet]);
 
   const handleOpenReturn = () => {
     if (!selectedMaterial) return;

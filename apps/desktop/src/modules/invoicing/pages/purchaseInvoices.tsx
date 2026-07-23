@@ -7,9 +7,9 @@ import { materialService } from "@modules/inventory/api/materialService";
 import { categoryService } from "@modules/inventory/api/categoryService";
 import { MaterialForm } from "@modules/inventory/components/MaterialForm";
 import { toast } from "sonner";
-import { useExcelExport } from "@shared/hooks";
-import { useExportSettings } from "@shared/hooks/useExportSettings";
+import { useExportSetup } from "@shared/hooks";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { executeExport, addCurrencySummary } from "@shared/lib/excel";
 
 import { HeaderField } from '@shared/ui/header-field';
 import { FinancialDocumentTemplate } from "@widgets/templates/FinancialDocumentTemplate";
@@ -23,8 +23,6 @@ import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { supplierService } from "@modules/partners/api/supplierService";
 import { invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
 import { buildInvoiceLineExportColumns } from "../lib/invoice-export-columns";
-import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
-
 export default function PurchaseInvoices() {
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -97,9 +95,8 @@ export default function PurchaseInvoices() {
     }
   };
 
-  const { exportData } = useExcelExport();
-  const { hasMultipleCurrencies, currencies: availableCurrencies, convertBetween, rateMap, baseCurrency } = useCurrencyContext();
-  const { currencyMode } = useExportSettings();
+  const { exportData, currencyMode, ratesSheet } = useExportSetup();
+  const { hasMultipleCurrencies, currencies: availableCurrencies, convertBetween } = useCurrencyContext();
 
   const handleExport = useCallback(async () => {
     if (enrichedLines.length === 0) {
@@ -137,36 +134,29 @@ export default function PurchaseInvoices() {
     });
 
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
-    currencies.forEach(curr => {
-      summary[`line_total_${curr.code}`] = 'subtotal';
-    });
+    addCurrencySummary(summary, "line_total", currencies);
 
     const paidVal = parseFloat(headerState.paid_amount) + parseFloat(headerState.extra_paid_amount || "0");
     const remainingVal = net - paidVal;
 
-    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, availableCurrencies, rateMap, currencyMode).currencyRatesSheet;
-
-    await exportData(
-      enrichedForExport,
+    await executeExport(exportData, {
+      sheetName: "فاتورة مشتريات",
+      filename: `فاتورة_مشتريات_${headerState.invoice_number}`,
+      data: enrichedForExport,
       columns,
-      `فاتورة_مشتريات_${headerState.invoice_number}`,
-      {
-        sheetName: "فاتورة مشتريات",
-        autoFilter: true,
-        summary,
-        summaryLabel: "المجموع",
-        additionalSummary: [
-          { label: "طريقة الدفع / التسوية", value: headerState.payment_method === "Deferred" ? "آجل" : "نقدي" },
-          { label: "الضريبة", value: parseFloat(headerState.tax_amount) || 0 },
-          { label: "التكاليف الإضافية", value: parseFloat(headerState.extra_costs) || 0 },
-          { label: "المجموع الكلي (الصافي)", value: net },
-          { label: "المبلغ المدفوع", value: paidVal },
-          { label: "المبلغ المتبقي", value: remainingVal }
-        ],
-        currencyRatesSheet,
-      }
-    );
-  }, [exportData, currencies, availableCurrencies, hasMultipleCurrencies, enrichedLines, headerState, net, gridColumns, gridVisibleColumnIds, materials, warehouses, currencyMode, rateMap, baseCurrency]);
+      summary,
+      summaryLabel: "المجموع",
+      additionalSummary: [
+        { label: "طريقة الدفع / التسوية", value: headerState.payment_method === "Deferred" ? "آجل" : "نقدي" },
+        { label: "الضريبة", value: parseFloat(headerState.tax_amount) || 0 },
+        { label: "التكاليف الإضافية", value: parseFloat(headerState.extra_costs) || 0 },
+        { label: "المجموع الكلي (الصافي)", value: net },
+        { label: "المبلغ المدفوع", value: paidVal },
+        { label: "المبلغ المتبقي", value: remainingVal }
+      ],
+      currencyRatesSheet: ratesSheet,
+    });
+  }, [exportData, currencies, hasMultipleCurrencies, enrichedLines, headerState, net, gridColumns, gridVisibleColumnIds, materials, warehouses, currencyMode, ratesSheet]);
 
   const handleExportRow = useCallback(async (inv: InvoiceDto) => {
     const fullInv = await invoiceService.getInvoiceById(inv.id);
@@ -213,9 +203,7 @@ export default function PurchaseInvoices() {
     });
 
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
-    availableCurrencies.forEach(curr => {
-      summary[`line_total_${curr.code}`] = 'subtotal';
-    });
+    addCurrencySummary(summary, "line_total", availableCurrencies);
 
     const subtotalVal = parseFloat(fullInv.subtotal_amount || "0");
     const discountVal = parseFloat(fullInv.discount_amount || "0");
@@ -224,11 +212,11 @@ export default function PurchaseInvoices() {
     const paidVal = parseFloat(fullInv.amount_paid || "0");
     const remainingVal = netVal - paidVal;
 
-    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, availableCurrencies, rateMap, currencyMode).currencyRatesSheet;
-
-    await exportData(enrichedLines, columns, `فاتورة_مشتريات_${fullInv.invoice_number}`, {
+    await executeExport(exportData, {
       sheetName: "فاتورة مشتريات",
-      autoFilter: true,
+      filename: `فاتورة_مشتريات_${fullInv.invoice_number}`,
+      data: enrichedLines,
+      columns,
       summary,
       summaryLabel: "المجموع",
       additionalSummary: [
@@ -237,9 +225,9 @@ export default function PurchaseInvoices() {
         { label: "المبلغ المدفوع", value: paidVal },
         { label: "المبلغ المتبقي", value: remainingVal }
       ],
-      currencyRatesSheet,
+      currencyRatesSheet: ratesSheet,
     });
-  }, [exportData, availableCurrencies, hasMultipleCurrencies, convertBetween, materials, warehouses, gridColumns, currencyMode, rateMap, baseCurrency]);
+  }, [exportData, availableCurrencies, hasMultipleCurrencies, convertBetween, materials, warehouses, gridColumns, currencyMode, ratesSheet]);
 
   if (view === "editor") {
     return (

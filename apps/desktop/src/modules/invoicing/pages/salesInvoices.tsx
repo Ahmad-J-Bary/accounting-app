@@ -15,11 +15,10 @@ import { useInvoiceLifecycle } from '../hooks/useInvoiceLifecycle';
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { customerService } from "@modules/partners/api/customerService";
 import { invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
-import { useExcelExport } from "@shared/hooks";
-import { useExportSettings } from "@shared/hooks/useExportSettings";
+import { useExportSetup } from "@shared/hooks";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { executeExport, addCurrencySummary } from "@shared/lib/excel";
 import { buildInvoiceLineExportColumns } from "../lib/invoice-export-columns";
-import { buildCurrencyRatesSheetOptions } from "@shared/lib/excel";
 
 export default function SalesInvoices() {
   const location = useLocation();
@@ -69,9 +68,8 @@ export default function SalesInvoices() {
   const [isSearchingParty, setIsSearchingParty] = useState(false);
   const [gridVisibleColumnIds, setGridVisibleColumnIds] = useState<string[]>([]);
 
-  const { exportData } = useExcelExport();
-  const { currencies: availableCurrencies, hasMultipleCurrencies, convertBetween, rateMap, baseCurrency } = useCurrencyContext();
-  const { currencyMode } = useExportSettings();
+  const { exportData, currencyMode, ratesSheet } = useExportSetup();
+  const { currencies: availableCurrencies, hasMultipleCurrencies, convertBetween } = useCurrencyContext();
 
   const handleExport = useCallback(async () => {
     if (enrichedLines.length === 0) {
@@ -108,18 +106,16 @@ export default function SalesInvoices() {
     });
 
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
-    availableCurrencies.forEach(curr => {
-      summary[`line_total_${curr.code}`] = 'subtotal';
-    });
+    addCurrencySummary(summary, "line_total", availableCurrencies);
 
     const paidVal = parseFloat(headerState.paid_amount || "0");
     const remainingVal = net - paidVal;
 
-    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, availableCurrencies, rateMap, currencyMode).currencyRatesSheet;
-
-    await exportData(enrichedForExport, columns, `فاتورة_مبيعات_${headerState.invoice_number}`, {
+    await executeExport(exportData, {
       sheetName: "فاتورة مبيعات",
-      autoFilter: true,
+      filename: `فاتورة_مبيعات_${headerState.invoice_number}`,
+      data: enrichedForExport,
+      columns,
       summary,
       summaryLabel: "المجموع",
       additionalSummary: [
@@ -130,9 +126,9 @@ export default function SalesInvoices() {
         { label: "المبلغ المدفوع", value: paidVal },
         { label: "المبلغ المتبقي", value: remainingVal }
       ],
-      currencyRatesSheet,
+      currencyRatesSheet: ratesSheet,
     });
-  }, [exportData, availableCurrencies, hasMultipleCurrencies, enrichedLines, headerState, net, gridColumns, gridVisibleColumnIds, materials, warehouses, currencyMode, rateMap, baseCurrency]);
+  }, [exportData, availableCurrencies, hasMultipleCurrencies, enrichedLines, headerState, net, gridColumns, gridVisibleColumnIds, materials, warehouses, currencyMode, ratesSheet]);
 
   const handleExportRow = useCallback(async (inv: InvoiceDto) => {
     const fullInv = await invoiceService.getInvoiceById(inv.id);
@@ -179,9 +175,7 @@ export default function SalesInvoices() {
     });
 
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
-    availableCurrencies.forEach(curr => {
-      summary[`line_total_${curr.code}`] = 'subtotal';
-    });
+    addCurrencySummary(summary, "line_total", availableCurrencies);
 
     const subtotalVal = parseFloat(fullInv.subtotal_amount || "0");
     const discountVal = parseFloat(fullInv.discount_amount || "0");
@@ -190,11 +184,11 @@ export default function SalesInvoices() {
     const paidVal = parseFloat(fullInv.amount_paid || "0");
     const remainingVal = netVal - paidVal;
 
-    const currencyRatesSheet = buildCurrencyRatesSheetOptions(baseCurrency, availableCurrencies, rateMap, currencyMode).currencyRatesSheet;
-
-    await exportData(enrichedLines, columns, `فاتورة_مبيعات_${fullInv.invoice_number}`, {
+    await executeExport(exportData, {
       sheetName: "فاتورة مبيعات",
-      autoFilter: true,
+      filename: `فاتورة_مبيعات_${fullInv.invoice_number}`,
+      data: enrichedLines,
+      columns,
       summary,
       summaryLabel: "المجموع",
       additionalSummary: [
@@ -203,9 +197,9 @@ export default function SalesInvoices() {
         { label: "المبلغ المدفوع", value: paidVal },
         { label: "المبلغ المتبقي", value: remainingVal }
       ],
-      currencyRatesSheet,
+      currencyRatesSheet: ratesSheet,
     });
-  }, [exportData, availableCurrencies, hasMultipleCurrencies, convertBetween, materials, warehouses, gridColumns, currencyMode, rateMap, baseCurrency]);
+  }, [exportData, availableCurrencies, hasMultipleCurrencies, convertBetween, materials, warehouses, gridColumns, currencyMode, ratesSheet]);
 
   if (view === "editor") {
     return (

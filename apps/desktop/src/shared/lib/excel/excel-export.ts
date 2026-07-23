@@ -100,7 +100,7 @@ async function buildExcelJsWorkbook(
   ws.views[0].rightToLeft = true;
 
   ws.columns = columns.map(col => ({
-    width: col.imageDataUrl ? Math.ceil((col.imageWidth ?? 80) / 7) : (col.width ?? 12),
+    width: col.imageDataUrl ? Math.ceil((col.imageWidth ?? 80) / 7) : (col.width ?? 18),
     hidden: col.hidden || false,
   }));
 
@@ -705,7 +705,7 @@ function buildWorkbook(
       const val = getCellValue(row, col);
       const cellStyle: Record<string, unknown> = { ...DATA_STYLE };
       if (col.isDate && val) {
-        return { v: new Date(val as string), t: 'd' as const, s: { ...cellStyle, numFmt: 'yyyy/mm/dd hh:mm AM/PM' } };
+        return { v: new Date(val as string), t: 'd' as const, s: { ...cellStyle, numFmt: 'yyyy/mm/dd, hh:mm AM/PM' } };
       }
       if (col.numeric && typeof val === 'number') {
         const decimals = col.decimalPlaces ?? 0;
@@ -755,7 +755,7 @@ function buildWorkbook(
 
   ws['!cols'] = columns.map(col => ({
     hidden: col.hidden || false,
-    wch: col.width ?? (col.hidden ? 0 : 12),
+    wch: col.width ?? 18,
   }));
 
   if (options?.autoFilter !== false && sortedData.length > 0) {
