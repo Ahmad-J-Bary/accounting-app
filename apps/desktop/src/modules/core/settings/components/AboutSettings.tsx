@@ -1,7 +1,7 @@
 ﻿import { Info, RefreshCw, Download, ExternalLink, RotateCcw } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { SettingsSection } from "@widgets/templates/SettingsLayout";
-import { useUpdateChecker } from "@modules/core/update/hooks/useUpdateChecker";
+import { useUpdate } from "@modules/core/update/context/UpdateContext";
 import { UpdateProgress } from "../../update/components/UpdateProgress";
 import pkg from "../../../../../package.json";
 
@@ -17,7 +17,7 @@ export function AboutSettings() {
     restartToUpdate,
     retry,
     phase,
-  } = useUpdateChecker();
+  } = useUpdate();
 
   return (
     <SettingsSection title="حول التطبيق" description="معلومات الإصدار والتحقق من التحديثات.">

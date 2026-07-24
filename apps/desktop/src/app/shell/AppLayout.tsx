@@ -13,6 +13,7 @@ import { VerticalLayout } from './layouts/VerticalLayout';
 import { TopNavLayout } from './layouts/TopNavLayout';
 import { HorizontalLayout } from './layouts/HorizontalLayout';
 import { ComboLayout } from './layouts/ComboLayout';
+import { UpdateProvider } from '@modules/core/update/context/UpdateContext';
 
 interface AppLayoutProps {
   title?: string;
@@ -117,39 +118,43 @@ export function AppLayout({ title, subtitle }: AppLayoutProps) {
     </>
   ), [tabs, isExchangeVisible, title, subtitle, hasMultipleCurrencies]);
 
-  switch (activeLayout.shellVariant) {
-    case 'topnav':
-      return (
-        <div className="min-h-screen bg-gray-50 overflow-hidden" dir="rtl">
-          <TopNavLayout isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
-            {content}
-          </TopNavLayout>
-        </div>
-      );
-    case 'horizontal':
-      return (
-        <div className="min-h-screen bg-gray-50 overflow-hidden" dir="rtl">
-          <HorizontalLayout isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
-            {content}
-          </HorizontalLayout>
-        </div>
-      );
-    case 'combo':
-      return (
-        <div className="min-h-screen bg-gray-50 overflow-hidden" dir="rtl">
-          <ComboLayout sidebarOpen={sidebarOpen} onToggleSidebar={handleToggleSidebar} isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
-            {content}
-          </ComboLayout>
-        </div>
-      );
-    case 'vertical':
-    default:
-      return (
-        <div className="min-h-screen bg-gray-50 overflow-hidden" dir="rtl">
-          <VerticalLayout sidebarOpen={sidebarOpen} onToggleSidebar={handleToggleSidebar} isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
-            {content}
-          </VerticalLayout>
-        </div>
-      );
+  return <UpdateProvider>{renderLayout()}</UpdateProvider>;
+
+  function renderLayout() {
+    switch (activeLayout.shellVariant) {
+      case 'topnav':
+        return (
+          <div className="min-h-screen bg-gray-50 overflow-hidden" dir="rtl">
+            <TopNavLayout isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
+              {content}
+            </TopNavLayout>
+          </div>
+        );
+      case 'horizontal':
+        return (
+          <div className="min-h-screen bg-gray-50 overflow-hidden" dir="rtl">
+            <HorizontalLayout isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
+              {content}
+            </HorizontalLayout>
+          </div>
+        );
+      case 'combo':
+        return (
+          <div className="min-h-screen bg-gray-50 overflow-hidden" dir="rtl">
+            <ComboLayout sidebarOpen={sidebarOpen} onToggleSidebar={handleToggleSidebar} isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
+              {content}
+            </ComboLayout>
+          </div>
+        );
+      case 'vertical':
+      default:
+        return (
+          <div className="min-h-screen bg-gray-50 overflow-hidden" dir="rtl">
+            <VerticalLayout sidebarOpen={sidebarOpen} onToggleSidebar={handleToggleSidebar} isExchangeVisible={isExchangeVisible} onToggleExchange={toggleExchange}>
+              {content}
+            </VerticalLayout>
+          </div>
+        );
+    }
   }
 }

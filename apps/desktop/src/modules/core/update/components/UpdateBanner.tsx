@@ -10,7 +10,7 @@ import {
   CheckCircle2,
   ChevronDown,
 } from "lucide-react";
-import { useUpdateChecker } from "../hooks/useUpdateChecker";
+import { useUpdate } from "../context/UpdateContext";
 import { cn } from "@shared/lib/utils";
 import { UpdateProgress } from "./UpdateProgress";
 
@@ -82,7 +82,7 @@ interface UpdateBannerProps {
 }
 
 export function UpdateBanner({ variant = 'stacked', dark = false }: UpdateBannerProps) {
-  const checker = useUpdateChecker();
+  const checker = useUpdate();
 
   const { error, updateProgress, startUpdate, restartToUpdate, retry } = checker;
 
