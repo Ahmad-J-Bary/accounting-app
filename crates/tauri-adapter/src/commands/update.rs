@@ -127,42 +127,47 @@ pub async fn apply_update_and_restart(
 
     #[cfg(target_os = "windows")]
     {
-        let filename = file_path.file_name().and_then(|f| f.to_str()).unwrap_or("");
+        let _ = &app;
+        let current_exe = std::env::current_exe()
+            .map_err(|e| format!("Failed to get current exe path: {}", e))?;
+        let install_dir = current_exe.parent()
+            .ok_or_else(|| "Failed to get install directory".to_string())?;
 
-        if filename.ends_with(".msi") {
-            let status = std::process::Command::new("msiexec")
-                .arg("/i")
-                .arg(&file_path)
-                .arg("/quiet")
-                .arg("/norestart")
-                .status()
-                .map_err(|e| format!("Failed to run MSI installer: {}", e))?;
+        let temp_dir = std::env::temp_dir();
+        let batch_path = temp_dir.join("almowakeb_update.bat");
 
-            if !status.success() {
-                let err = format!("MSI installer returned non-zero exit code: {}", status);
-                let _ = app.emit("update-failed", err.clone());
-                return Err(err);
-            }
+        let is_msi = file_path.file_name()
+            .and_then(|f| f.to_str())
+            .map(|f| f.ends_with(".msi"))
+            .unwrap_or(false);
+
+        let mut batch = std::fs::File::create(&batch_path)
+            .map_err(|e| format!("Failed to create update script: {}", e))?;
+
+        if is_msi {
+            write!(batch,
+                "@echo off\r\nstart /wait msiexec /i \"{}\" /quiet /norestart\r\nstart \"\" /d \"{}\" \"{}\"\r\ndel \"%~f0\"\r\n",
+                file_path.display(),
+                install_dir.display(),
+                current_exe.display()
+            ).map_err(|e| format!("Failed to write update script: {}", e))?;
         } else {
-            let mut cmd = std::process::Command::new(&file_path);
-            cmd.arg("/S");
-
-            let status = cmd.status().map_err(|e| format!("Failed to run EXE installer: {}", e))?;
-
-            if !status.success() {
-                let mut cmd2 = std::process::Command::new(&file_path);
-                cmd2.arg("/silent");
-                let status2 = cmd2.status();
-
-                if let Err(e) = status2 {
-                    let err = format!("Failed to run EXE installer (both /S and /silent failed): {}", e);
-                    let _ = app.emit("update-failed", err.clone());
-                    return Err(err);
-                }
-            }
+            write!(batch,
+                "@echo off\r\nstart /wait \"\" \"{}\" /S\r\nstart \"\" /d \"{}\" \"{}\"\r\ndel \"%~f0\"\r\n",
+                file_path.display(),
+                install_dir.display(),
+                current_exe.display()
+            ).map_err(|e| format!("Failed to write update script: {}", e))?;
         }
 
-        tauri::process::restart(&app.env());
+        drop(batch);
+
+        std::process::Command::new("cmd")
+            .args(["/c", "start", "/b", "", batch_path.to_string_lossy().as_ref()])
+            .spawn()
+            .map_err(|e| format!("Failed to launch update script: {}", e))?;
+
+        std::process::exit(0);
     }
 
     #[cfg(not(target_os = "windows"))]
