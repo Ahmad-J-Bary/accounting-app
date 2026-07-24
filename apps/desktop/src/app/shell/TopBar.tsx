@@ -165,10 +165,13 @@ export function TopBar({
     const displayTitle = group.customTitle ?? group.defaultTitle;
     const visibleItems = group.items.filter((i: SidebarItemConfig) => i.visible).sort((a: SidebarItemConfig, b: SidebarItemConfig) => a.order - b.order);
     if (visibleItems.length === 0) return null;
+
+    const nonSeparatorItems = visibleItems.filter(i => !i.isSeparator);
+    if (nonSeparatorItems.length === 0) return null;
     const GroupIcon = group.icon ? ICON_MAP[group.icon] ?? null : null;
 
-    if (visibleItems.length === 1) {
-      return renderNavItem(visibleItems[0], mergedSlim);
+    if (nonSeparatorItems.length === 1) {
+      return renderNavItem(nonSeparatorItems[0], mergedSlim);
     }
 
     const isGroupActive = visibleItems.some(
@@ -198,7 +201,11 @@ export function TopBar({
           )}
         >
           <div className="space-y-0.5">
-            {visibleItems.map((item: SidebarItemConfig) => {
+            {visibleItems.map((item: SidebarItemConfig, idx: number) => {
+              if (item.isSeparator) {
+                return <div key={item.id || idx} className="h-px mx-2 my-1.5 bg-slate-200/50" />;
+              }
+
               const isActive = activeTabId === item.to || location.pathname === item.to;
               const ItemIcon = ICON_MAP[item.icon] ?? null;
               const label = item.customLabel ?? item.defaultLabel;

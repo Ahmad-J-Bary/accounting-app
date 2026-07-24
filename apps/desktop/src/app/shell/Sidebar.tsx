@@ -237,7 +237,7 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
           return (
             <SidebarGroup
               key={group.id}
-              group={group}
+              group={{ ...group, items: group.items.filter(i => !i.isSeparator) }}
               collapsed={isCollapsed}
               iconOnly={isIconOnly}
               activeBg={effectiveActiveBg}

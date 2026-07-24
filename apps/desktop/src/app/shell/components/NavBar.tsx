@@ -75,11 +75,13 @@ export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hove
         const visibleItems = group.items.filter(i => i.visible).sort((a, b) => a.order - b.order);
         if (visibleItems.length === 0) return null;
 
+        const nonSeparatorItems = visibleItems.filter(i => !i.isSeparator);
+        if (nonSeparatorItems.length === 0) return null;
         const GroupIcon = group.icon ? ICON_MAP[group.icon] ?? null : null;
 
-        // If the group contains exactly 1 item, render it directly without a dropdown
-        if (visibleItems.length === 1) {
-          const item = visibleItems[0];
+        // If the group contains exactly 1 non-separator item, render it directly without a dropdown
+        if (nonSeparatorItems.length === 1) {
+          const item = nonSeparatorItems[0];
           const isActive = activeTabId === item.to || location.pathname === item.to;
           const ItemIcon = ICON_MAP[item.icon] ?? null;
           const displayLabel = item.customLabel ?? item.defaultLabel;
@@ -149,7 +151,13 @@ export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hove
               style={!isHorizLight ? { background: 'hsl(var(--sidebar-background))' } : undefined}
             >
               <div className="space-y-0.5">
-                {visibleItems.map(item => {
+                {visibleItems.map((item, idx) => {
+                  if (item.isSeparator) {
+                    return (
+                      <div key={item.id || idx} className="h-px mx-2 my-1.5 bg-slate-200/50" />
+                    );
+                  }
+
                   const isActive = activeTabId === item.to || location.pathname === item.to;
                   const ItemIcon = ICON_MAP[item.icon] ?? null;
                   const displayLabel = item.customLabel ?? item.defaultLabel;
