@@ -50,7 +50,7 @@ export const updateService = {
       }
 
       const release = await res.json();
-      const latestVersion = release.tag_name;
+      const latestVersion = release.tag_name.replace(/^v/, "");
       const hasUpdate = compareVersions(currentVersion, latestVersion);
 
       const ua = navigator.userAgent.toLowerCase();
@@ -87,7 +87,7 @@ export const updateService = {
       }
 
       const pkgJson = await fallbackRes.json();
-      const latestVersion = `v${pkgJson.version}`;
+      const latestVersion = pkgJson.version;
       const hasUpdate = compareVersions(currentVersion, latestVersion);
 
       const ua = navigator.userAgent.toLowerCase();
