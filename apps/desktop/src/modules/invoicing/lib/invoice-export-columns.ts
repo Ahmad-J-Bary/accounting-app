@@ -220,7 +220,7 @@ export function buildInvoiceLineExportColumns({
             decimalPlaces: 2,
             accessor: (row) => {
               const r = row as Record<string, unknown>;
-              return parseFloat(String(r[field] ?? r.unit_price ?? '0')) || 0;
+              return parseFloat(String(r[field] ?? r[`${field}_${baseCode}`] ?? '0')) || 0;
             },
           });
         } else if (currMatchCode) {
@@ -272,8 +272,8 @@ export function buildInvoiceLineExportColumns({
             hidden,
             width: 12,
             numeric: true,
-            decimalPlaces: 2,
-            accessor: (row) => parseFloat(String((row as EnrichedExportLine).discount ?? '0')) || 0,
+            decimalPlaces: 3,
+            formula: "IFERROR({col('discount_value')}{row}/({col('quantity')}{row}*{col('unit_price')}{row})*100,0)",
           });
         } else if (col.key === "expiry_date") {
           result.push({
@@ -388,7 +388,9 @@ export function enrichLinesForExport(
       // Per-currency discount value
       const discPct = parseFloat(String(line.discount || '0'));
       const gross = qty * price;
-      enriched[`discount_value_${curr.code}`] = (gross * discPct / 100).toFixed(curr.decimals);
+      const discVal = (gross * discPct / 100).toFixed(curr.decimals);
+      enriched[`discount_value_${curr.code}`] = discVal;
+      if (isBase) enriched.discount_value = discVal;
     });
 
     return enriched;

@@ -88,6 +88,8 @@ export default function SalesInvoices() {
         r.name_en = mat.name_en || '';
         r.unit_barcode = mat.barcode || '';
       }
+      const baseCode = availableCurrencies[0]?.code || '';
+      r.discount_value = String(parseFloat(String(r[`discount_value_${baseCode}`] ?? '0')) || 0);
       return r;
     });
 
@@ -105,7 +107,7 @@ export default function SalesInvoices() {
       currencyMode,
     });
 
-    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
+    const summary: Record<string, string> = {};
     const baseCode = availableCurrencies[0]?.code || '';
     availableCurrencies.forEach(c => {
       const suffix = c.code === baseCode ? '' : `_${c.code}`;
@@ -114,6 +116,7 @@ export default function SalesInvoices() {
       summary[`cost_price_${c.code}`] = 'subtotal';
       summary[`profit_amount_${c.code}`] = 'subtotal';
     });
+    summary.discount = `IFERROR({col('discount_value')}{summaryRow}/({col('discount_value')}{summaryRow}+{col('line_total_${baseCode}')}{summaryRow})*100,0)`;
 
     const paidVal = parseFloat(headerState.paid_amount || "0");
     const remainingVal = net - paidVal;
@@ -166,6 +169,8 @@ export default function SalesInvoices() {
         const discPct = parseFloat(String(line.discount_percent || '0'));
         enriched[`discount_value_${curr.code}`] = (qty * convertedPrice * discPct / 100).toFixed(curr.decimals);
       });
+      const baseCode = availableCurrencies[0]?.code || '';
+      enriched.discount_value = String(parseFloat(String(enriched[`discount_value_${baseCode}`] ?? '0')) || 0);
       return enriched;
     });
 
@@ -181,7 +186,7 @@ export default function SalesInvoices() {
       currencyMode,
     });
 
-    const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
+    const summary: Record<string, string> = {};
     const baseCode = availableCurrencies[0]?.code || '';
     availableCurrencies.forEach(c => {
       const suffix = c.code === baseCode ? '' : `_${c.code}`;
@@ -190,6 +195,7 @@ export default function SalesInvoices() {
       summary[`cost_price_${c.code}`] = 'subtotal';
       summary[`profit_amount_${c.code}`] = 'subtotal';
     });
+    summary.discount = `IFERROR({col('discount_value')}{summaryRow}/({col('discount_value')}{summaryRow}+{col('line_total_${baseCode}')}{summaryRow})*100,0)`;
 
     const subtotalVal = parseFloat(fullInv.subtotal_amount || "0");
     const discountVal = parseFloat(fullInv.discount_amount || "0");

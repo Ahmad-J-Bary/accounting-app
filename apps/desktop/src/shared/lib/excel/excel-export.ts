@@ -635,7 +635,8 @@ function buildSummaryCellValue(
       return idx >= 0 ? getExcelColumnLetter(idx) : '?';
     })
     .replace(/\{firstRow\}/g, String(firstDataRow))
-    .replace(/\{lastRow\}/g, String(lastDataRow));
+    .replace(/\{lastRow\}/g, String(lastDataRow))
+    .replace(/\{summaryRow\}/g, String(lastDataRow + 1));
 
   return { v: 0, f: '=' + resolved };
 }
