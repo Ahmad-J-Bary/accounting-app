@@ -10,7 +10,7 @@ import type {
   AssetCategoryDto,
 } from "@erp/shared-types";
 import { toast } from "sonner";
-import { dateCol, executeExport, buildCurrencySummary, mergeCurrencySummaries } from "@shared/lib/excel";
+import { dateCol, executeExport, buildCurrencySummary, mergeCurrencySummaries, applyVisibilityToCurrencyCols } from "@shared/lib/excel";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
@@ -60,6 +60,7 @@ export default function FixedAssetsPage() {
   const [editingAsset, setEditingAsset] = useState<FixedAssetDto | null>(null);
   const [selectedAsset, setSelectedAsset] = useState<FixedAssetDto | null>(null);
   const [movements, setMovements] = useState<AssetMovement[]>([]);
+  const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -318,6 +319,7 @@ export default function FixedAssetsPage() {
       const rate = parseFloat(r.fx_rate) || 1;
       return val / rate;
     }, currencies, formatAmount, "", true, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
+    applyVisibilityToCurrencyCols(purchaseCols, new Set(visibleColumnIds));
 
     const depCols = currencyAmountCols("accumulated_depreciation", "مجمع الإهلاك", (row) => {
       const r = row as unknown as FixedAssetDto;
@@ -327,6 +329,7 @@ export default function FixedAssetsPage() {
       const rate = parseFloat(r.fx_rate) || 1;
       return val / rate;
     }, currencies, formatAmount, "", true, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
+    applyVisibilityToCurrencyCols(depCols, new Set(visibleColumnIds));
 
     const nbvCols = currencies.map(curr => {
       const nbvId = `net_book_value_${curr.code}`;
@@ -338,20 +341,21 @@ export default function FixedAssetsPage() {
         decimalPlaces: 2,
       };
     });
+    applyVisibilityToCurrencyCols(nbvCols, new Set(visibleColumnIds));
 
     const exportColumns: ExcelExportColumn[] = [
-      { id: "code", label: "الكود", accessor: (row) => String((row as Record<string, unknown>).code ?? "") },
-      { id: "name", label: "الاسم", accessor: (row) => String((row as Record<string, unknown>).name ?? "") },
-      { id: "category", label: "التصنيف", accessor: (row) => categoryMap.get((row as Record<string, unknown>).category_id as string) ?? "" },
-      { id: "warehouse", label: "المستودع", accessor: (row) => {
+      { id: "code", label: "الكود", hidden: !visibleColumnIds.includes("code"), accessor: (row) => String((row as Record<string, unknown>).code ?? "") },
+      { id: "name", label: "الاسم", hidden: !visibleColumnIds.includes("name"), accessor: (row) => String((row as Record<string, unknown>).name ?? "") },
+      { id: "category", label: "التصنيف", hidden: !visibleColumnIds.includes("category"), accessor: (row) => categoryMap.get((row as Record<string, unknown>).category_id as string) ?? "" },
+      { id: "warehouse", label: "المستودع", hidden: !visibleColumnIds.includes("warehouse"), accessor: (row) => {
         const r = row as Record<string, unknown>;
         return r.warehouse_id ? warehouseMap.get(r.warehouse_id as string) ?? "" : "";
       }},
       ...purchaseCols,
       ...depCols,
       ...nbvCols,
-      { id: "notes", label: "التوصيف", accessor: (row) => String((row as Record<string, unknown>).notes ?? "") },
-      dateCol("created_at", "التاريخ", (row) => (row as Record<string, unknown>).created_at as string),
+      { id: "notes", label: "التوصيف", hidden: !visibleColumnIds.includes("notes"), accessor: (row) => String((row as Record<string, unknown>).notes ?? "") },
+      { ...dateCol("created_at", "التاريخ", (row) => (row as Record<string, unknown>).created_at as string), hidden: !visibleColumnIds.includes("created_at") },
     ];
 
     await executeExport(exportData, {
@@ -363,7 +367,7 @@ export default function FixedAssetsPage() {
       summaryLabel: "المجموع",
       currencyRatesSheet: ratesSheet,
     });
-  }, [assets, currencies, categoryMap, warehouseMap, exportData, cs, ratesSheet, formatAmount, rateMap, currencyMode, baseCode, hasSecondaryCurrencies]);
+  }, [assets, currencies, categoryMap, warehouseMap, exportData, cs, ratesSheet, formatAmount, rateMap, currencyMode, baseCode, hasSecondaryCurrencies, visibleColumnIds]);
 
   const defaultVisible = useMemo(() => {
     const ids: string[] = ["code", "name", "category"];
@@ -436,6 +440,7 @@ export default function FixedAssetsPage() {
           defaultVisible={defaultVisible}
           selectedId={selectedAsset?.id}
           onRowClick={handleRowClick}
+          onVisibleColumnsChange={setVisibleColumnIds}
           filterBar={
             <div className="flex items-center gap-2">
               <Select

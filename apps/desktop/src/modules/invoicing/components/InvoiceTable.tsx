@@ -475,6 +475,26 @@ export function InvoiceTable({
     );
     const metricColMap = new Map(allMetricCols.map(c => [c.id, c]));
 
+    // Replace static accessors with formulas for computed columns
+    const discPrefix = showDiscountGranted ? 'discount_granted' : showDiscount ? 'discount' : null;
+    for (const col of allMetricCols) {
+      const totalMatch = col.id.match(/^total_(.+)$/);
+      if (totalMatch) {
+        const code = totalMatch[1];
+        const discExpr = discPrefix ? `-{col('${discPrefix}_${code}')}{row}` : '';
+        const extraExpr = showExtraCosts ? `+{col('extra_costs_${code}')}{row}` : '';
+        col.formula = `{col('subtotal_${code}')}{row}${discExpr}${extraExpr}`;
+        delete col.accessor;
+        continue;
+      }
+      const remainingMatch = col.id.match(/^remaining_(.+)$/);
+      if (remainingMatch) {
+        const code = remainingMatch[1];
+        col.formula = `{col('total_${code}')}{row}-{col('paid_${code}')}{row}`;
+        delete col.accessor;
+      }
+    }
+
     const exportColumns: ExcelExportColumn[] = enrichedColumns
       .filter((col) => col.id !== "actions")
       .map((col) => {
@@ -534,7 +554,7 @@ export function InvoiceTable({
       summaryLabel: "المجموع",
       currencyRatesSheet: ratesSheet,
     });
-  }, [enrichedColumns, partyField, partyType, defaultName, extraColumns, sortedData, exportData, ratesSheet, currencies, formatAmount, baseCurrency, currencyMode, rateMap]);
+  }, [enrichedColumns, partyField, partyType, defaultName, extraColumns, sortedData, exportData, ratesSheet, currencies, formatAmount, baseCurrency, currencyMode, rateMap, showDiscount, showDiscountGranted, showExtraCosts]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     let baseSubtotalTotal = 0;

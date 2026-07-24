@@ -17,7 +17,7 @@ import { customerService } from "@modules/partners/api/customerService";
 import { invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
 import { useExportSetup } from "@shared/hooks";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { executeExport, addCurrencySummary } from "@shared/lib/excel";
+import { executeExport } from "@shared/lib/excel";
 import { buildInvoiceLineExportColumns } from "../lib/invoice-export-columns";
 
 export default function SalesInvoices() {
@@ -106,7 +106,14 @@ export default function SalesInvoices() {
     });
 
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
-    addCurrencySummary(summary, "line_total", availableCurrencies);
+    const baseCode = availableCurrencies[0]?.code || '';
+    availableCurrencies.forEach(c => {
+      const suffix = c.code === baseCode ? '' : `_${c.code}`;
+      summary[`line_total_${c.code}`] = 'subtotal';
+      summary[`discount_value${suffix}`] = 'subtotal';
+      summary[`cost_price_${c.code}`] = 'subtotal';
+      summary[`profit_amount_${c.code}`] = 'subtotal';
+    });
 
     const paidVal = parseFloat(headerState.paid_amount || "0");
     const remainingVal = net - paidVal;
@@ -175,7 +182,14 @@ export default function SalesInvoices() {
     });
 
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
-    addCurrencySummary(summary, "line_total", availableCurrencies);
+    const baseCode = availableCurrencies[0]?.code || '';
+    availableCurrencies.forEach(c => {
+      const suffix = c.code === baseCode ? '' : `_${c.code}`;
+      summary[`line_total_${c.code}`] = 'subtotal';
+      summary[`discount_value${suffix}`] = 'subtotal';
+      summary[`cost_price_${c.code}`] = 'subtotal';
+      summary[`profit_amount_${c.code}`] = 'subtotal';
+    });
 
     const subtotalVal = parseFloat(fullInv.subtotal_amount || "0");
     const discountVal = parseFloat(fullInv.discount_amount || "0");

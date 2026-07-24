@@ -224,7 +224,7 @@ export function buildInvoiceLineExportColumns({
             },
           });
         } else if (currMatchCode) {
-          // Non-base currency column (e.g. "unit_price_USD")
+          // Per-currency column with code suffix (e.g. "unit_price_USD")
           const field = currMatchCode[1];
           const code = currMatchCode[2];
           const curr = currencies.find(c => c.code === code);
@@ -237,16 +237,34 @@ export function buildInvoiceLineExportColumns({
             profit_amount: "الربح",
           };
           const headerText = typeof col.header === "string" && col.header ? col.header : `${labelMap[field]}${cs(sym)}`;
-          const formula = formulaForNonBase(field, code);
-          result.push({
-            id: col.key,
-            label: headerText,
-            hidden,
-            width: 15,
-            numeric: true,
-            decimalPlaces: 2,
-            ...(formula ? { formula } : { accessor: (row) => parseFloat(String((row as Record<string, unknown>)[col.key] ?? '0')) || 0 }),
-          });
+
+          if (field === 'line_total') {
+            const isBase = code === baseCode;
+            const priceColId = isBase ? 'unit_price' : `unit_price_${code}`;
+            const discColId = isBase ? 'discount_value' : `discount_value_${code}`;
+            const hasDisc = gridColumns.some(c => c.key === discColId);
+            const discPart = hasDisc ? `-{col('${discColId}')}{row}` : '';
+            result.push({
+              id: col.key,
+              label: headerText,
+              hidden,
+              width: 15,
+              numeric: true,
+              decimalPlaces: 2,
+              formula: `{col('quantity')}{row}*{col('${priceColId}')}{row}${discPart}`,
+            });
+          } else {
+            const formula = formulaForNonBase(field, code);
+            result.push({
+              id: col.key,
+              label: headerText,
+              hidden,
+              width: 15,
+              numeric: true,
+              decimalPlaces: 2,
+              ...(formula ? { formula } : { accessor: (row) => parseFloat(String((row as Record<string, unknown>)[col.key] ?? '0')) || 0 }),
+            });
+          }
         } else if (col.key === "discount") {
           result.push({
             id: "discount",

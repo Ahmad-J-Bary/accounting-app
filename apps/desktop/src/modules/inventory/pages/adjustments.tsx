@@ -158,7 +158,7 @@ export default function AdjustmentsPage() {
       { id: "material_name", label: "المادة", accessor: (row) => String((row as unknown as StockAdjustment).material_name ?? "") },
       { id: "system_quantity", label: "كمية النظام", accessor: (row) => parseFloat((row as unknown as StockAdjustment).system_quantity || "0"), numeric: true, decimalPlaces: 2 },
       { id: "actual_quantity", label: "الكمية المجرودة", accessor: (row) => parseFloat((row as unknown as StockAdjustment).actual_quantity || "0"), numeric: true, decimalPlaces: 2 },
-      { id: "difference", label: "الفارق", accessor: (row) => parseFloat((row as unknown as StockAdjustment).difference || "0"), numeric: true, decimalPlaces: 2 },
+      { id: "difference", label: "الفارق", formula: "{col('actual_quantity')}{row}-{col('system_quantity')}{row}", numeric: true, decimalPlaces: 2 },
       ...currCols,
       { id: "notes", label: "ملاحظة", accessor: (row) => String((row as unknown as StockAdjustment).notes ?? (row as unknown as StockAdjustment).reason ?? "") },
       dateCol("adjustment_date", "التاريخ", (row) => (row as unknown as StockAdjustment).adjustment_date),

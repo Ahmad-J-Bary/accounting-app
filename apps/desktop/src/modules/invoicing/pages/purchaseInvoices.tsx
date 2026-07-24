@@ -9,7 +9,7 @@ import { MaterialForm } from "@modules/inventory/components/MaterialForm";
 import { toast } from "sonner";
 import { useExportSetup } from "@shared/hooks";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { executeExport, addCurrencySummary } from "@shared/lib/excel";
+import { executeExport } from "@shared/lib/excel";
 
 import { HeaderField } from '@shared/ui/header-field';
 import { FinancialDocumentTemplate } from "@widgets/templates/FinancialDocumentTemplate";
@@ -134,7 +134,12 @@ export default function PurchaseInvoices() {
     });
 
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
-    addCurrencySummary(summary, "line_total", currencies);
+    const baseCode = currencies[0]?.code || '';
+    currencies.forEach(c => {
+      const suffix = c.code === baseCode ? '' : `_${c.code}`;
+      summary[`line_total_${c.code}`] = 'subtotal';
+      summary[`discount_value${suffix}`] = 'subtotal';
+    });
 
     const paidVal = parseFloat(headerState.paid_amount) + parseFloat(headerState.extra_paid_amount || "0");
     const remainingVal = net - paidVal;
@@ -203,7 +208,12 @@ export default function PurchaseInvoices() {
     });
 
     const summary: Record<string, 'sum' | 'subtotal' | 'average' | null> = {};
-    addCurrencySummary(summary, "line_total", availableCurrencies);
+    const baseCode = availableCurrencies[0]?.code || '';
+    availableCurrencies.forEach(c => {
+      const suffix = c.code === baseCode ? '' : `_${c.code}`;
+      summary[`line_total_${c.code}`] = 'subtotal';
+      summary[`discount_value${suffix}`] = 'subtotal';
+    });
 
     const subtotalVal = parseFloat(fullInv.subtotal_amount || "0");
     const discountVal = parseFloat(fullInv.discount_amount || "0");
