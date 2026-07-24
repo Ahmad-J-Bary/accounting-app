@@ -502,6 +502,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
 
       toast.success(returnId ? "تم تحديث المرتجع بنجاح" : "تم تسجيل المرتجع بنجاح");
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['materials'] });
       onSaved();
     } catch (e) {
       toast.error("فشل " + (returnId ? "تحديث" : "تسجيل") + " المرتجع: " + e);

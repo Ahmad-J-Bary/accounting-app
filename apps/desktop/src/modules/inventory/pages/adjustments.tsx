@@ -62,6 +62,7 @@ export default function AdjustmentsPage() {
       setShowDialog(false);
       refresh(true);
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['materials'] });
       toast.success("تم تسجيل تسوية الجرد بنجاح");
     } catch (e: unknown) {
       toast.error("فشل الحفظ: " + e);
@@ -88,6 +89,7 @@ export default function AdjustmentsPage() {
       setSelectedItem(null);
       refresh(true);
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['materials'] });
       toast.success("تم تعديل التسوية بنجاح");
     } catch (e: unknown) {
       toast.error("فشل التعديل: " + e);
@@ -113,6 +115,7 @@ export default function AdjustmentsPage() {
       setShowDialog(false);
       refresh(true);
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['materials'] });
     } catch (e) {
       toast.error("فشل الحذف: " + e);
     }

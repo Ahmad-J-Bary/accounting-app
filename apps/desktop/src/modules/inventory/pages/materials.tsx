@@ -228,7 +228,7 @@ export default function Materials() {
     return 0;
   }, [rawPriceBase, unitCostBase]);
 
-  const totalReceived = useCallback((m: MaterialDto) => materialStockTotal.get(m.id) ?? parseFloat(m.total_received || "0"), [materialStockTotal]);
+  const totalReceived = useCallback((m: MaterialDto) => parseFloat(m.total_received || "0"), []);
 
   // ── Handle Excel Export ──
 
@@ -248,7 +248,13 @@ export default function Materials() {
 
     const unitPriceCols = currencyAmountCols("unit_price", "السعر الإفرادي", (row) => rawPriceBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap);
     const extraCostCols = currencyAmountCols("extra_costs", "تكاليف إضافية", (row) => extraCostBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap);
-    const avgCostCols = currencyAmountCols("average_cost", "تكلفة الوحدة", (row) => unitCostBase(row as unknown as MaterialDto), currencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCurrency?.code, rateMap);
+    const avgCostCols = currencies.map(curr => ({
+      id: `average_cost_${curr.code}`,
+      label: `تكلفة الوحدة${cs(curr.symbol || curr.code)}`,
+      formula: `{col('unit_price_${curr.code}')}{row}+{col('extra_costs_${curr.code}')}{row}`,
+      numeric: true,
+      decimalPlaces: 2,
+    }));
     const visibleSet = new Set(visibleColumnIds);
     applyVisibilityToCurrencyCols(unitPriceCols, visibleSet);
     applyVisibilityToCurrencyCols(extraCostCols, visibleSet);
@@ -298,8 +304,8 @@ export default function Materials() {
       ...totalValueCols,
       { id: 'total_received', label: 'الكمية الكلية', width: 12, hidden: !visibleColumnIds.includes('total_received'), accessor: (row) => totalReceived(row as unknown as MaterialDto), numeric: true, decimalPlaces: 2 },
       { id: 'total_sold', label: 'الكمية المباعة', width: 12, hidden: !visibleColumnIds.includes('total_sold'), accessor: (row) => parseFloat(String((row as unknown as MaterialDto).total_sold || '0')), numeric: true, decimalPlaces: 2 },
-      { id: 'total_damaged', label: 'الكمية التالفة', width: 12, hidden: !visibleColumnIds.includes('total_damaged'), accessor: (row) => parseFloat(String((row as unknown as MaterialDto).total_damaged || '0')), numeric: true, decimalPlaces: 2 },
-      { id: 'total_available', label: 'الكمية المتوفرة', width: 12, hidden: !visibleColumnIds.includes('total_available'), accessor: (row) => parseFloat(String((row as unknown as MaterialDto).total_available || '0')), numeric: true, decimalPlaces: 2 },
+      { id: 'total_damaged', label: 'الكمية المهدورة', width: 12, hidden: !visibleColumnIds.includes('total_damaged'), accessor: (row) => parseFloat(String((row as unknown as MaterialDto).total_damaged || '0')), numeric: true, decimalPlaces: 2 },
+      { id: 'total_available', label: 'الكمية المتوفرة', width: 12, hidden: !visibleColumnIds.includes('total_available'), formula: "{col('total_received')}{row}-{col('total_sold')}{row}-{col('total_damaged')}{row}", numeric: true, decimalPlaces: 2 },
       ...availValueCols,
     ];
 
@@ -388,7 +394,7 @@ export default function Materials() {
       },
       currencyRatesSheet: ratesSheet,
     });
-  }, [materials, currencies, currencyMode, baseCurrency, rateMap, categories, formatAmount, visibleColumnIds, unitCostBase, rawPriceBase, extraCostBase, totalReceived, exportData, hasSecondaryCurrencies, cs, ratesSheet]);
+  }, [materials, currencies, currencyMode, baseCurrency, rateMap, categories, formatAmount, visibleColumnIds, rawPriceBase, extraCostBase, totalReceived, exportData, hasSecondaryCurrencies, cs, ratesSheet]);
 
   const handleOpenReturn = () => {
     if (!selectedMaterial) return;

@@ -94,6 +94,11 @@ pub async fn get_material_summary(pool: &SqlitePool, material_id: &MaterialId) -
 
     for m in &movements {
         if let Some(sq) = m.signed_quantity {
+            if sq.is_sign_positive() {
+                total_received += sq;
+            } else {
+                total_damaged -= sq;
+            }
             total_available += sq;
         } else if m.is_inflow() {
             if matches!(m.movement_type, domain::inventory::stock_movement::MovementType::SalesReturn) {

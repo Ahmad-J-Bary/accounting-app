@@ -91,7 +91,7 @@ export function MaterialTable({
     if (total > 0 && raw > 0 && total > raw) return total - raw;
     return 0;
   }, [rawPriceBase, unitCostBase]);
-  const totalReceived = useCallback((m: MaterialDto) => stockTotal?.get(m.id) ?? parseFloat(m.total_received || "0"), [stockTotal]);
+  const totalReceived = useCallback((m: MaterialDto) => parseFloat(m.total_received || "0"), []);
   const totalAvailable = useCallback((m: MaterialDto) => parseFloat(m.total_available || "0"), []);
 
   const allColumns = useMemo<UnifiedColumn<MaterialDto>[]>(() => {
@@ -263,8 +263,8 @@ export function MaterialTable({
 
     cols.push({
       id: "total_damaged",
-      header: "الكمية التالفة",
-      label: "الكمية التالفة",
+      header: "الكمية المهدورة",
+      label: "الكمية المهدورة",
       accessor: (m) => toLocalString(parseFloat(m.total_damaged || "0")),
       className: "tabular-nums text-rose-600 font-bold"
     });

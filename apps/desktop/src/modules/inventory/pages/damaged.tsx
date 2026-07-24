@@ -61,6 +61,7 @@ export default function DamagedPage() {
       setShowDialog(false);
       refresh(true);
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['materials'] });
       toast.success("تم تسجيل التالف بنجاح");
     } catch (e: unknown) {
       toast.error("فشل الحفظ: " + e);
@@ -82,6 +83,7 @@ export default function DamagedPage() {
       setSelectedItem(null);
       refresh(true);
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['materials'] });
       toast.success("تم التعديل بنجاح");
     } catch (e: unknown) {
       toast.error("فشل التعديل: " + e);
@@ -107,6 +109,7 @@ export default function DamagedPage() {
       setShowDialog(false);
       refresh(true);
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['materials'] });
     } catch (e) {
       toast.error("فشل الحذف: " + e);
     }
