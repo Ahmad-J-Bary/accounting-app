@@ -32,9 +32,9 @@ function SummaryCards({
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
       {cards.map((card) => (
-        <div key={card.label} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div key={card.label} className="rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
           <div className="text-xs font-black text-slate-400">{card.label}</div>
           <div className="mt-1 text-xl font-black tabular-nums text-slate-900">{formatValue(card.value)}</div>
         </div>
@@ -82,9 +82,9 @@ function InlineSection({
   const rowSign = section.id === "trading" || section.id === "profit-loss" ? "-" : "+";
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
       <SectionHeader title={section.title} />
-      <div className="mt-3 flex flex-wrap items-center justify-center gap-x-2 gap-y-2 text-sm">
+      <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-2 text-sm">
         {section.rows.map((row, idx) => {
           const isLast = idx === section.rows.length - 1;
           return (
@@ -106,7 +106,7 @@ export function IncomeStatementView(props: IncomeStatementViewProps) {
     <div className="flex flex-col h-full">
       <ReportMeta title="قائمة الدخل" description="قائمة تبين إجمالي الأرباح وصافي الربح والنشاط التشغيلي، وتظهر فيها تكلفة المبيعات والمصروفات التشغيلية" />
       <SummaryCards computed={computed} formatValue={formatValue} />
-      <div className="space-y-4">
+      <div className="space-y-3">
         {computed.sections.map((section) => (
           <InlineSection key={section.id} section={section} formatValue={formatValue} />
         ))}

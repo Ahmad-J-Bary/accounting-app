@@ -26,9 +26,9 @@ function SummaryCards({ computed, formatValue }: { computed: BalanceSheetCompute
   const diff = Math.abs(computed.totalAssets - computed.totalLiabilitiesEquity);
 
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-5">
       {cards.map((card) => (
-        <div key={card.label} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div key={card.label} className="rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
           <div className="text-xs font-black text-slate-400">{card.label}</div>
           <div className={cn("mt-1 text-xl font-black tabular-nums", card.label === "إجمالي الأصول" ? "text-blue-700" : "text-slate-900")}>
             {formatValue(card.value)}
@@ -37,8 +37,8 @@ function SummaryCards({ computed, formatValue }: { computed: BalanceSheetCompute
       ))}
 
       <div
-        className={cn(
-          "rounded-xl p-3 shadow-sm flex items-center gap-2 border-2 transition-all duration-300",
+          className={cn(
+            "rounded-xl p-2 shadow-sm flex items-center gap-2 border-2 transition-all duration-300",
           isBalanced
             ? "bg-gradient-to-br from-emerald-50 to-white border-emerald-300 hover:shadow-md hover:border-emerald-400"
             : "bg-gradient-to-br from-rose-50 to-white border-rose-300 hover:shadow-md hover:border-rose-400",
@@ -120,9 +120,9 @@ function SectionCard({ section, formatValue }: {
   formatValue: (value: number) => string;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
       <SectionHeader title={section.title} />
-      <div className="mt-3 space-y-0.5">
+      <div className="mt-2 space-y-0.5">
         {section.rows.map((row, i) => (
           <TreeRow key={`${row.label}-${i}`} row={row} formatValue={formatValue} />
         ))}
@@ -146,7 +146,7 @@ function TotalRow({ label, value, formatValue, highlight, className }: {
 }) {
   return (
     <div className={cn(
-      "flex items-center justify-between rounded-xl px-4 py-3",
+      "flex items-center justify-between rounded-xl px-3 py-2.5",
       highlight ? "bg-blue-50 border border-blue-200" : "bg-slate-50 border border-slate-200",
       className,
     )}>
@@ -168,9 +168,9 @@ export function BalanceSheetView(props: BalanceSheetViewProps) {
       <ReportMeta title="الميزانية العمومية" description="قائمة تبين الموقف المالي للشركة على مبدأ (الأصول = الخصوم + حقوق الملكية)" />
       <SummaryCards computed={computed} formatValue={formatValue} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="flex flex-col gap-3 h-full">
-          <div className="flex-1 space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div className="flex flex-col gap-2 h-full">
+          <div className="flex-1 space-y-2">
             {computed.sections.slice(0, 1).map(s => (
               <SectionCard key={s.id} section={s} formatValue={formatValue} />
             ))}
@@ -181,8 +181,8 @@ export function BalanceSheetView(props: BalanceSheetViewProps) {
           <TotalRow label="إجمالي الأصول" value={computed.totalAssets} formatValue={formatValue} highlight />
         </div>
 
-        <div className="flex flex-col gap-3 h-full">
-          <div className="flex-1 space-y-3">
+        <div className="flex flex-col gap-2 h-full">
+          <div className="flex-1 space-y-2">
             {computed.sections.slice(2, 3).map(s => (
               <SectionCard key={s.id} section={s} formatValue={formatValue} />
             ))}

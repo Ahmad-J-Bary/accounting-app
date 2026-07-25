@@ -59,15 +59,13 @@ return activeCurrency
         loading ? (
           <ReportLoadingSkeleton />
         ) : (
-          <div className="flex flex-1 flex-col p-4 sm:p-6 lg:p-8">
-            <IncomeStatementView
+          <IncomeStatementView
               computed={computed}
               filters={filters}
               selectedCurrencyLabel={selectedCurrencyLabel}
               lastLoadedAt={lastLoadedAt}
               formatValue={formatValue}
             />
-          </div>
         )
       }
     />

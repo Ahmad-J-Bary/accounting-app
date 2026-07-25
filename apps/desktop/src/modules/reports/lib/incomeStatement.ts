@@ -1,4 +1,5 @@
 import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
+import { startOfDay, endOfDay, isWithinRange } from "@modules/reports/lib/date-utils";
 import type { ReportFilters } from "@shared/types/filters";
 import type {
   AccountDto,
@@ -78,19 +79,6 @@ export const emptyIncomeStatementData: LoadedIncomeStatementData = {
 
 export function parseNumber(value?: string | number | null) {
   return parseSafeNumber(value);
-}
-
-function startOfDay(dateValue: string) {
-  return new Date(`${dateValue}T00:00:00`).getTime();
-}
-
-function endOfDay(dateValue: string) {
-  return new Date(`${dateValue}T23:59:59.999`).getTime();
-}
-
-function isWithinRange(isoDate: string, fromTs: number, toTs: number) {
-  const timestamp = new Date(isoDate).getTime();
-  return Number.isFinite(timestamp) && timestamp >= fromTs && timestamp <= toTs;
 }
 
 function getInvoiceBaseTotal(invoice: InvoiceDto) {

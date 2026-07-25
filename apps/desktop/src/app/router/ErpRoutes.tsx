@@ -28,7 +28,7 @@ import FixedAssets from '@modules/fixed-assets/pages/fixedAssets';
 
 import Expenses from '@modules/expenses/pages/expenses';
 
-import AccountMovementsReport from '@modules/accounting/account-movements/pages/AccountMovementsReport';
+import AccountMovementsReport from '@modules/reports/pages/AccountMovementsReport';
 import AccountMovement from '@modules/accounting/account-movements/pages/accountMovement';
 import IncomeStatementReport from '@modules/reports/pages/IncomeStatementReport';
 import TrialBalanceReport from '@modules/reports/pages/TrialBalanceReport';

@@ -6,6 +6,7 @@ import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useUnifiedColumns } from "@shared/hooks";
 import { ReportMeta } from "@widgets/reports";
+import { createSummarySpacer } from "../lib/table-meta";
 
 type PartnerStatementViewProps = {
   computed: PartnerStatementComputed;
@@ -195,7 +196,7 @@ export function PartnerStatementView({ computed, formatValue }: PartnerStatement
       if (col.id === "finalAmount") {
         return { id: "finalAmount_summary", columnId: "finalAmount", label: "المبلغ النهائي", value: formatValue(totals.finalAmount), className: "text-indigo-700 font-black" };
       }
-      return { id: `${col.id}_spacer`, columnId: col.id, label: "", value: "" };
+      return createSummarySpacer(col.id);
     });
   }, [enrichedColumns, totals, formatValue]);
 

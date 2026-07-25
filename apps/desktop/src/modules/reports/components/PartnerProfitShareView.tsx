@@ -8,6 +8,7 @@ import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useUnifiedColumns } from "@shared/hooks";
 import { toFixed } from "@shared/lib/format";
 import { ReportMeta } from "@widgets/reports";
+import { createSummarySpacer } from "../lib/table-meta";
 
 type PartnerProfitShareViewProps = {
   computed: PartnerProfitShareComputed;
@@ -196,7 +197,7 @@ export function PartnerProfitShareView(props: PartnerProfitShareViewProps) {
       if (col.id === "operationalAssetShare") {
         return { id: "operationalAssetShare_summary", columnId: "operationalAssetShare", label: "حصص الأصول التشغيلية", value: formatValue(totals.operationalAssetShare), className: "text-slate-700 font-bold" };
       }
-      return { id: `${col.id}_spacer`, columnId: col.id, label: "", value: "" };
+      return createSummarySpacer(col.id);
     });
   }, [enrichedColumns, totals, formatValue]);
 
