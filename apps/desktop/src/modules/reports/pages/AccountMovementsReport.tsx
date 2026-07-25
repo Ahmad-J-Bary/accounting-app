@@ -2,9 +2,9 @@ import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useChartOfAccounts } from "@shared/hooks/queries/useAccountQueries";
 import { DateRangePicker } from "@widgets/reports";
+import { useReportFilters } from "@shared/hooks/useReportFilters";
 import { useAccountMovementsReport } from "../hooks/useAccountMovementsReport";
 import { AccountMovementView } from "../components/AccountMovementView";
 import type { AccountDto } from "@erp/shared-types";
@@ -15,15 +15,11 @@ function getDescendantIds(accountId: string, accounts: AccountDto[]): string[] {
 }
 
 export default function AccountMovementsReport() {
-  const { baseCurrency } = useCurrencyContext();
+  const { filters, setFilters, baseCurrency } = useReportFilters();
   const [searchParams] = useSearchParams();
   const { data: accounts = [] } = useChartOfAccounts();
   const [selectedAccountId, setSelectedAccountId] = useState<string>(searchParams.get('accountId') || '');
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({
-    from_date: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    to_date: new Date().toISOString().split('T')[0],
-  });
 
   const accountIds = useMemo(() => {
     if (!selectedAccountId) return undefined;
@@ -56,7 +52,8 @@ export default function AccountMovementsReport() {
           <DateRangePicker
             from={filters.from_date}
             to={filters.to_date}
-            onChange={({ from_date, to_date }) => setFilters(f => ({ ...f, from_date, to_date }))}
+            onFromChange={(v) => setFilters({ from_date: v })}
+            onToChange={(v) => setFilters({ to_date: v })}
           />
         </div>
       }

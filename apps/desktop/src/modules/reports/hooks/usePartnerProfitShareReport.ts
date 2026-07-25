@@ -34,7 +34,7 @@ const emptyData: LoadedPartnerProfitShareData = {
 
 export function usePartnerProfitShareReport(filters: IncomeStatementFilters): ReportState<LoadedPartnerProfitShareData> {
   const { data: baseData, isLoading: baseLoading, isError: baseError, isRefetching: baseRefetching, refetch: baseRefetch } = useReportBaseData(filters);
-  
+
   const partnersQuery = usePartners();
   const receivablesQuery = useReceivablesPayables();
   const fixedAssetsQuery = useQuery({
@@ -95,17 +95,22 @@ export function usePartnerProfitShareReport(filters: IncomeStatementFilters): Re
 
         for (const entry of entries) {
           for (const line of entry.lines) {
-            const amt = parseFloat(line.debit_base || line.debit || "0") - parseFloat(line.credit_base || line.credit || "0");
             const pId = drawingsAccountMap[line.account_id];
             if (pId) {
-              partnerDrawings[pId] = (partnerDrawings[pId] || 0) + Math.abs(amt);
+              const debit = parseFloat(line.debit_base || line.debit || "0");
+              const credit = parseFloat(line.credit_base || line.credit || "0");
+              const net = debit - credit;
+              if (net > 0) {
+                partnerDrawings[pId] = (partnerDrawings[pId] || 0) + net;
+              }
             }
           }
         }
 
         const customerDebts = parseFloat(receivables?.customers_debit || "0");
+        const toDateStr = filters.to_date.split("T")[0];
         const fixedAssetsValue = fixedAssets
-          .filter((asset) => asset.status === "Active")
+          .filter((asset) => asset.status === "Active" && asset.purchase_date.split("T")[0] <= toDateStr)
           .reduce((sum, asset) => {
             const purchaseCost = parseFloat(asset.purchase_cost.amount || "0");
             const accumulated = parseFloat(asset.accumulated_depreciation.amount || "0");

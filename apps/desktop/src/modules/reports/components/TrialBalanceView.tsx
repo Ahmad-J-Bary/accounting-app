@@ -46,8 +46,12 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
     return baseRows.map((r) => ({
       ...r,
       balanceSec: convertFromBase(r.balance, secondaryCurrency.code),
-      debitSec: convertFromBase(r.debit, secondaryCurrency.code),
-      creditSec: convertFromBase(r.credit, secondaryCurrency.code),
+      debitSec: convertFromBase(r.periodDebit, secondaryCurrency.code),
+      creditSec: convertFromBase(r.periodCredit, secondaryCurrency.code),
+      openingDebitSec: convertFromBase(r.openingDebit, secondaryCurrency.code),
+      openingCreditSec: convertFromBase(r.openingCredit, secondaryCurrency.code),
+      periodDebitSec: convertFromBase(r.periodDebit, secondaryCurrency.code),
+      periodCreditSec: convertFromBase(r.periodCredit, secondaryCurrency.code),
     }));
   }, [treeTotals, maxDepth, secondaryCurrency, convertFromBase]);
 
@@ -83,9 +87,67 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
         className: "justify-start",
       },
       {
+        id: "opening_base",
+        header: `الرصيد الافتتاحي (${baseSym})`,
+        label: `الرصيد الافتتاحي (${baseSym})`,
+        accessor: (row) => {
+          const netOpening = row.openingDebit - row.openingCredit;
+          if (netOpening === 0) return <span className="text-slate-300">—</span>;
+          const status = netOpening > 0 ? "مدين" : "دائن";
+          return (
+            <span className={cn(
+              "tabular-nums font-bold text-xs",
+              status === "مدين" ? "text-amber-700" : "text-purple-700"
+            )}>
+              {formatCell(Math.abs(netOpening))} ({status})
+            </span>
+          );
+        },
+        className: "justify-end tabular-nums font-bold",
+      },
+      {
+        id: "debit_base",
+        header: `حركة مدين (${baseSym})`,
+        label: `حركة مدين (${baseSym})`,
+        accessor: (row) => (
+          <span className="tabular-nums font-black text-blue-700">
+            {row.periodDebit > 0 ? formatCell(row.periodDebit) : "—"}
+          </span>
+        ),
+        className: "justify-end tabular-nums font-black text-blue-700",
+      },
+      {
+        id: "credit_base",
+        header: `حركة دائن (${baseSym})`,
+        label: `حركة دائن (${baseSym})`,
+        accessor: (row) => (
+          <span className="tabular-nums font-black text-emerald-700">
+            {row.periodCredit > 0 ? formatCell(row.periodCredit) : "—"}
+          </span>
+        ),
+        className: "justify-end tabular-nums font-black text-emerald-700",
+      },
+      {
+        id: "balance_base",
+        header: `الرصيد النهائي (${baseSym})`,
+        label: `الرصيد النهائي (${baseSym})`,
+        accessor: (row) => {
+          const val = row.balance;
+          return (
+            <span className={cn(
+              "tabular-nums font-black text-xs",
+              val > 0 ? "text-red-700" : val < 0 ? "text-emerald-700" : "text-slate-400",
+            )}>
+              {formatCell(Math.abs(val))}
+            </span>
+          );
+        },
+        className: "justify-end tabular-nums font-black",
+      },
+      {
         id: "status",
-        header: "حالة الحساب",
-        label: "حالة الحساب",
+        header: "حالة الرصيد",
+        label: "حالة الرصيد",
         accessor: (row) => {
           const status = isBalanceDebit(row.balance);
           if (!status) return <span className="text-slate-300">—</span>;
@@ -100,36 +162,19 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
         },
         className: "justify-center",
       },
-      {
-        id: "balance_base",
-        header: `الرصيد (${baseSym})`,
-        label: `الرصيد (${baseSym})`,
-        accessor: (row) => {
-          const val = row.balance;
-          return (
-            <span className={cn(
-              "tabular-nums font-black",
-              val > 0 ? "text-red-700" : val < 0 ? "text-emerald-700" : "text-slate-400",
-            )}>
-              {formatCell(val)}
-            </span>
-          );
-        },
-        className: "justify-end tabular-nums font-black",
-      },
     ];
 
     if (secondaryCurrency) {
       cols.push({
         id: "balance_sec",
-        header: `الرصيد (${secSym})`,
-        label: `الرصيد (${secSym})`,
+        header: `الرصيد النهائي (${secSym})`,
+        label: `الرصيد النهائي (${secSym})`,
         accessor: (row) => {
           const val = row.balance;
           if (val === 0) return <span className="text-slate-300">—</span>;
           return (
-            <span className="tabular-nums font-extrabold text-slate-500">
-              {formatCell(row.balanceSec, secondaryCurrency.code)}
+            <span className="tabular-nums font-extrabold text-slate-500 text-xs">
+              {formatCell(Math.abs(row.balanceSec), secondaryCurrency.code)}
             </span>
           );
         },
@@ -137,92 +182,38 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
       });
     }
 
-    cols.push({
-      id: "debit_base",
-      header: `مدين (${baseSym})`,
-      label: `مدين (${baseSym})`,
-      accessor: (row) => (
-        <span className="tabular-nums font-black text-blue-700">
-          {row.debit > 0 ? formatCell(row.debit) : "—"}
-        </span>
-      ),
-      className: "justify-end tabular-nums font-black text-blue-700",
-    });
-
-    if (secondaryCurrency) {
-      cols.push({
-        id: "debit_sec",
-        header: `مدين (${secSym})`,
-        label: `مدين (${secSym})`,
-        accessor: (row) => (
-          <span className="tabular-nums font-medium text-blue-300">
-            {row.debit > 0 ? formatCell(row.debitSec, secondaryCurrency.code) : "—"}
-          </span>
-        ),
-        className: "justify-end tabular-nums font-medium text-blue-300",
-      });
-    }
-
-    cols.push({
-      id: "credit_base",
-      header: `دائن (${baseSym})`,
-      label: `دائن (${baseSym})`,
-      accessor: (row) => (
-        <span className="tabular-nums font-black text-emerald-700">
-          {row.credit > 0 ? formatCell(row.credit) : "—"}
-        </span>
-      ),
-      className: "justify-end tabular-nums font-black text-emerald-700",
-    });
-
-    if (secondaryCurrency) {
-      cols.push({
-        id: "credit_sec",
-        header: `دائن (${secSym})`,
-        label: `دائن (${secSym})`,
-        accessor: (row) => (
-          <span className="tabular-nums font-medium text-emerald-300">
-            {row.credit > 0 ? formatCell(row.creditSec, secondaryCurrency.code) : "—"}
-          </span>
-        ),
-        className: "justify-end tabular-nums font-medium text-emerald-300",
-      });
-    }
-
     return cols;
   }, [baseSym, secSym, secondaryCurrency, formatCell]);
 
   const baseIds = useMemo(() => {
-    const ids = ["name", "status", "balance_base", "debit_base", "credit_base"];
-    return ids;
+    return ["name", "opening_base", "debit_base", "credit_base", "balance_base", "status"];
   }, []);
-
-  const allColIds = useMemo(() => allColumns.map(c => c.id), [allColumns]);
 
   const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "trial-balance",
     columns: allColumns,
-    defaultVisible: secondaryCurrency ? baseIds : allColIds,
+    defaultVisible: baseIds,
   });
 
   const totals = useMemo(() => {
-    let totalBalance = 0, totalDebit = 0, totalCredit = 0;
-    let totalBalanceSec = 0, totalDebitSec = 0, totalCreditSec = 0;
+    let totalOpeningNet = 0, totalPeriodDebit = 0, totalPeriodCredit = 0;
+    let totalBalance = 0;
 
     for (const row of rows) {
+      totalOpeningNet += (row.openingDebit - row.openingCredit);
+      totalPeriodDebit += row.periodDebit;
+      totalPeriodCredit += row.periodCredit;
       totalBalance += row.balance;
-      totalDebit += row.debit;
-      totalCredit += row.credit;
-      totalBalanceSec += row.balanceSec;
-      totalDebitSec += row.debitSec;
-      totalCreditSec += row.creditSec;
     }
 
     const balanceStatus = isBalanceDebit(totalBalance);
     return {
-      balance: totalBalance, debit: totalDebit, credit: totalCredit,
-      balanceSec: totalBalanceSec, debitSec: totalDebitSec, creditSec: totalCreditSec,
-      balanceStatus, count: rows.length,
+      openingNet: totalOpeningNet,
+      periodDebit: totalPeriodDebit,
+      periodCredit: totalPeriodCredit,
+      balance: totalBalance,
+      balanceStatus,
+      count: rows.length,
     };
   }, [rows]);
 
@@ -234,11 +225,30 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
           className: "text-slate-500 font-medium",
         };
       }
-      if (col.id === "status") {
-        return { id: "status_spacer", columnId: "status", label: "", value: "" };
+      if (col.id === "opening_base") {
+        const sign = totals.openingNet > 0 ? "مدين" : totals.openingNet < 0 ? "دائن" : "متزن";
+        return {
+          id: "opening_summary", columnId: "opening_base",
+          label: "إجمالي الأرصدة الافتتاحية",
+          value: totals.openingNet !== 0 ? `${formatCell(Math.abs(totals.openingNet))} (${sign})` : "—",
+          className: "text-amber-700 font-bold",
+        };
+      }
+      if (col.id === "debit_base") {
+        return {
+          id: "debit_summary", columnId: "debit_base", label: `إجمالي حركات مدين (${baseSym})`,
+          value: totals.periodDebit > 0 ? formatCell(totals.periodDebit) : "—",
+          className: "text-blue-700 font-black",
+        };
+      }
+      if (col.id === "credit_base") {
+        return {
+          id: "credit_summary", columnId: "credit_base", label: `إجمالي حركات دائن (${baseSym})`,
+          value: totals.periodCredit > 0 ? formatCell(totals.periodCredit) : "—",
+          className: "text-emerald-700 font-black",
+        };
       }
       if (col.id === "balance_base") {
-        const sign = totals.balanceStatus || "متزن";
         const valClass = totals.balance > 0
           ? "text-red-700 font-black"
           : totals.balance < 0
@@ -246,46 +256,18 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
           : "text-slate-500 font-bold";
         return {
           id: "bal_summary", columnId: "balance_base",
-          label: `الرصيد / ${sign}`,
+          label: `إجمالي الرصيد النهائي`,
           value: totals.balance !== 0 ? formatCell(Math.abs(totals.balance)) : "—",
           className: valClass,
         };
       }
-      if (col.id === "balance_sec") {
-        return {
-          id: "bal_sec_summary", columnId: "balance_sec", label: "", className: "text-slate-500 font-extrabold",
-          value: totals.balanceSec !== 0 ? formatCell(Math.abs(totals.balanceSec), secondaryCurrency?.code) : "—",
-        };
-      }
-      if (col.id === "debit_base") {
-        return {
-          id: "debit_summary", columnId: "debit_base", label: `إجمالي مدين (${baseSym})`,
-          value: totals.debit > 0 ? formatCell(totals.debit) : "—",
-          className: "text-blue-700 font-black",
-        };
-      }
-      if (col.id === "debit_sec") {
-        return {
-          id: "debit_sec_summary", columnId: "debit_sec", label: "", className: "text-blue-300 font-extrabold",
-          value: totals.debitSec > 0 ? formatCell(totals.debitSec, secondaryCurrency?.code) : "—",
-        };
-      }
-      if (col.id === "credit_base") {
-        return {
-          id: "credit_summary", columnId: "credit_base", label: `إجمالي دائن (${baseSym})`,
-          value: totals.credit > 0 ? formatCell(totals.credit) : "—",
-          className: "text-emerald-700 font-black",
-        };
-      }
-      if (col.id === "credit_sec") {
-        return {
-          id: "credit_sec_summary", columnId: "credit_sec", label: "", className: "text-emerald-300 font-extrabold",
-          value: totals.creditSec > 0 ? formatCell(totals.creditSec, secondaryCurrency?.code) : "—",
-        };
+      if (col.id === "status") {
+        return { id: "status_spacer", columnId: "status", label: "", value: totals.balanceStatus || "—" };
       }
       return createSummarySpacer(col.id);
     });
-  }, [enrichedColumns, totals, baseSym, secondaryCurrency, formatCell]);
+  }, [enrichedColumns, totals, baseSym, formatCell]);
+
 
   return (
     <div className="flex flex-col h-full">

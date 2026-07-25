@@ -122,77 +122,87 @@ export function computeBalanceSheet(
 ): BalanceSheetComputed {
   const tree = buildAccountTree(accounts, ledgerTotals);
 
-  const assetAccounts = tree.filter(a => a.accountType === "Assets");
-  const liabilityAccounts = tree.filter(a => a.accountType === "Liabilities");
-  const equityAccounts = tree.filter(a => a.accountType === "Equity");
 
-  function classifyAndCollect(rootAccounts: AccountBalance[]): { fixed: AccountBalance[]; current: AccountBalance[] } {
-    const fixed: AccountBalance[] = [];
-    const current: AccountBalance[] = [];
-    function walk(list: AccountBalance[], skip: boolean) {
-      for (const a of list) {
-        if (!skip) {
-          // استثناء حسابات بضاعة أول/آخر المدة — تُعالج في قائمة الدخل فقط
-          if (isInventoryTradingAccount(a.name)) { continue; }
-          if (isFixedAsset(a.code, a.name)) { fixed.push(a); continue; }
-          if (isCurrentAsset(a.code, a.name)) { current.push(a); continue; }
-        }
-        walk(a.children, false);
+  // --- التصنيف الصحيح: يعتمد على accountType أولاً ثم الكود/الاسم ---
+  // المشكلة السابقة: "الخصوم الثابتة" كانت تُصنَّف كأصول ثابتة (يحتوي "ثابت")
+  //                  "الخصوم المتداولة" كانت تُصنَّف كأصول متداولة (يحتوي "متداول")
+
+  const fixedAssets: AccountBalance[] = [];
+  const currentAssets: AccountBalance[] = [];
+  const fixedLiabilities: AccountBalance[] = [];
+  const currentLiabilities: AccountBalance[] = [];
+  const equityList: AccountBalance[] = [];
+
+  // دالة مشتركة للتصنيف داخل نوع معين (أصول أو خصوم)
+  function classifyWithinType(
+    nodes: AccountBalance[],
+    isFixed: (code: string, name: string) => boolean,
+    isCurrent: (code: string, name: string) => boolean,
+    fixed: AccountBalance[],
+    current: AccountBalance[],
+    type: string,
+  ) {
+    for (const node of nodes) {
+      if (isInventoryTradingAccount(node.name)) continue;
+      // تخطي حسابات حقوق الملكية المضمّنة داخل شجرة الخصوم
+      if (node.accountType === "Equity") { equityList.push(node); continue; }
+      if (isFixed(node.code, node.name)) { fixed.push(node); }
+      else if (isCurrent(node.code, node.name)) { current.push(node); }
+      else if (node.children.length > 0) {
+        classifyWithinType(node.children, isFixed, isCurrent, fixed, current, type);
+      } else {
+        // حساب ورقي لا ينطبق عليه أي مصنف محدد → ضعه في المتداول افتراضياً
+        current.push(node);
       }
     }
-    walk(rootAccounts, false);
-    return { fixed, current };
   }
 
-  function classifyLiabilities(rootAccounts: AccountBalance[]): { fixed: AccountBalance[]; current: AccountBalance[] } {
-    const fixed: AccountBalance[] = [];
-    const current: AccountBalance[] = [];
-    function walk(list: AccountBalance[], skip: boolean) {
-      for (const a of list) {
-        if (!skip) {
-          if (isFixedLiability(a.code, a.name)) { fixed.push(a); continue; }
-          if (isCurrentLiability(a.code, a.name)) { current.push(a); continue; }
-        }
-        walk(a.children, false);
+  // تجميع حسابات حقوق الملكية من أي مكان في الشجرة (بما فيها المضمّنة في الخصوم)
+  function collectEquityDeep(nodes: AccountBalance[]) {
+    for (const node of nodes) {
+      if (node.accountType === "Equity") {
+        equityList.push(node);
+      } else {
+        collectEquityDeep(node.children);
       }
     }
-    walk(rootAccounts, false);
-    return { fixed, current };
   }
+  collectEquityDeep(tree);
 
-  const assets = classifyAndCollect(assetAccounts);
-  const liabilities = classifyLiabilities(liabilityAccounts);
+  // تصنيف الأصول (فلترة بـ accountType أولاً)
+  const assetRoots = tree.filter(a => a.accountType === "Assets");
+  classifyWithinType(assetRoots, isFixedAsset, isCurrentAsset, fixedAssets, currentAssets, "Assets");
+
+  // تصنيف الخصوم (فلترة بـ accountType أولاً)
+  const liabilityRoots = tree.filter(a => a.accountType === "Liabilities");
+  classifyWithinType(liabilityRoots, isFixedLiability, isCurrentLiability, fixedLiabilities, currentLiabilities, "Liabilities");
+
+  const assets = { fixed: fixedAssets, current: currentAssets };
+  const liabilities = { fixed: fixedLiabilities, current: currentLiabilities };
+
 
   // --- تنظيف عميق لشجرة الأصول المتداولة ---
-  //
-  // المشكلة الجذرية: حسابات "بضاعة أول/آخر المدة" و"مخزون" المكرر قد تكون
-  // أبناءً داخل حساب أب (مثل "الأصول المتداولة" برمز "12"). الفلترة السطحية
-  // على assets.current لا تطالها — يجب المعالجة بشكل تكراري في كل المستويات.
-
   const inventoryBalance = inventory?.closingInventory;
   let inventoryHandled = false;
 
   function deepClean(list: AccountBalance[]): AccountBalance[] {
     const cleaned: AccountBalance[] = [];
     for (const a of list) {
-      // حذف حسابات البضاعة التجارية في أي مستوى من الشجرة
       if (isInventoryTradingAccount(a.name)) continue;
 
-      // توحيد حسابات المخزون: الأول يُحتفظ به ويُطبَّع، البقية تُحذف
       if (a.name.includes("مخزون")) {
         if (!inventoryHandled) {
           cleaned.push({
             ...a,
             name: "المخزون",
             balance: inventoryBalance !== undefined ? inventoryBalance : a.balance,
-            children: [], // إزالة الأبناء لمنع ظهور بضاعة آخر المدة
+            children: [],
           });
           inventoryHandled = true;
         }
-        continue; // تجاهل حسابات المخزون المكررة
+        continue;
       }
 
-      // حسابات أخرى: تنظيف أبنائها بشكل تكراري مع إعادة حساب الرصيد
       if (a.children.length > 0) {
         const cleanedChildren = deepClean(a.children);
         const newBalance = cleanedChildren.reduce((s, c) => s + c.balance, 0);
@@ -206,7 +216,6 @@ export function computeBalanceSheet(
 
   assets.current = deepClean(assets.current);
 
-  // إذا لم يُعثر على أي حساب مخزون في الشجرة، نضيف صفاً اصطناعياً
   if (!inventoryHandled && inventoryBalance !== undefined && inventoryBalance !== 0) {
     assets.current.push({
       id: "__inventory__",
@@ -219,14 +228,10 @@ export function computeBalanceSheet(
     });
   }
 
-
-  function collectEquity(list: AccountBalance[]): AccountBalance[] {
-    return list;
-  }
-  const allEquity = collectEquity(equityAccounts);
+  const allEquity = equityList;
 
   function isTreeAccount(name: string): boolean {
-    return name.includes("مدين") || name.includes("مخزون") || name.includes("دائن") || name.includes("شركاء") || name.includes("شريك") || name.includes("رأس المال") || name.includes("راس المال") || name.includes("جاري");
+    return name.includes("حقوق") || name.includes("ملكية") || name.includes("مدين") || name.includes("مخزون") || name.includes("دائن") || name.includes("شركاء") || name.includes("شريك") || name.includes("رأس المال") || name.includes("راس المال") || name.includes("جاري");
   }
 
   function accountToRow(acc: AccountBalance, depth: number = 0): BalanceSheetRow {
@@ -271,7 +276,7 @@ export function computeBalanceSheet(
   const totalCurrentLiabilities = liabilities.current.reduce((s, a) => s + a.balance, 0);
   const totalLiabilities = totalFixedLiabilities + totalCurrentLiabilities;
 
-  const totalEquity = allEquity.reduce((s, a) => s + a.balance, 0) + profitLoss.netProfit - profitLoss.totalDrawings;
+  const totalEquity = allEquity.reduce((s, a) => s + a.balance, 0) + profitLoss.netProfit;
 
   const totalLiabilitiesEquity = totalLiabilities + totalEquity;
   const isBalanced = Math.abs(totalAssets - totalLiabilitiesEquity) < 0.01;
@@ -313,7 +318,6 @@ export function computeBalanceSheet(
       rows: [
         ...buildSectionRows(allEquity),
         { label: "صافي الأرباح", value: profitLoss.netProfit, depth: 0 },
-        { label: "إجمالي المسحوبات", value: -profitLoss.totalDrawings, depth: 0 },
       ],
     },
   ];

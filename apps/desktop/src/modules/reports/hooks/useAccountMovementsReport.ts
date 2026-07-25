@@ -30,7 +30,21 @@ export function useAccountMovementsReport(
 
   const reportData = useMemo<LoadedAccountMovementsData>(() => {
     const lines = ledger?.lines ?? [];
-    const openingBalance = parseFloat(ledger?.opening_balance_base || "0");
+    const openingBalance = (() => {
+      const absOpening = parseFloat(ledger?.opening_balance_base || "0");
+      if (!filters.from_date || !lines.length) return absOpening;
+
+      let debitBefore = 0;
+      let creditBefore = 0;
+      for (const line of lines) {
+        const d = new Date(line.date).toISOString().split("T")[0];
+        if (d < filters.from_date) {
+          debitBefore += parseFloat(line.debit_base || "0");
+          creditBefore += parseFloat(line.credit_base || "0");
+        }
+      }
+      return absOpening + debitBefore - creditBefore;
+    })();
 
     const filteredLines = lines.filter((l) => {
       const d = new Date(l.date).toISOString().split("T")[0];

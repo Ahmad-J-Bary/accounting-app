@@ -1,4 +1,5 @@
-import type { PartnerDto } from "@erp/shared-types";
+import { endOfDay } from "./date-utils";
+import type { PartnerDto, AccountLedgerDto } from "@erp/shared-types";
 
 export type PartnerProfitShareFilters = {
   from_date: string;
@@ -36,11 +37,27 @@ export function computePartnerProfitShare(
   fixedAssetsValue: number,
   partnerDrawings: Record<string, number>,
   customerDebts: number,
+  partnerLedgers?: Record<string, AccountLedgerDto>,
+  toDate?: string,
 ): PartnerProfitShareComputed {
-  const totalCapital = partners.reduce((s, p) => s + parseFloat(p.amount_local || "0"), 0);
+  const toTs = toDate ? endOfDay(toDate) : Infinity;
+
+  const existedPartners = partnerLedgers
+    ? partners.filter((p) => {
+        if (!p.linked_account_id) return true;
+        const ledger = partnerLedgers[p.linked_account_id];
+        if (!ledger || !ledger.lines) return false;
+        return ledger.lines.some((line) => {
+          const lineTs = new Date(line.date).getTime();
+          return Number.isFinite(lineTs) && lineTs <= toTs;
+        });
+      })
+    : partners;
+
+  const totalCapital = existedPartners.reduce((s, p) => s + parseFloat(p.amount_local || "0"), 0);
   const totalOperationalAssets = inventoryValue + fixedAssetsValue + customerDebts;
 
-  const rows: PartnerProfitShareRow[] = partners.map(p => {
+  const rows: PartnerProfitShareRow[] = existedPartners.map(p => {
     const capitalAmount = parseFloat(p.amount_local || "0");
     const capitalRatio = totalCapital > 0 ? (capitalAmount / totalCapital) * 100 : 0;
 

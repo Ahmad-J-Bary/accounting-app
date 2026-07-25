@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { DatePicker } from "@shared/ui/date-picker";
+import { DateRangePicker } from "@widgets/reports";
 import type { ReportFilters } from "@shared/types/report";
 
 type Currency = { code: string; symbol?: string; name_ar?: string; name?: string };
@@ -77,6 +77,8 @@ export function ReportFilterBar({
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
+      {extraFilters}
+      
       {showSelect && (
         <Select value={effectiveValue} onValueChange={onCurrencyChange}>
           <SelectTrigger className="h-9 w-auto min-w-[130px] rounded-lg border-slate-200 bg-white text-xs">
@@ -92,21 +94,13 @@ export function ReportFilterBar({
         </Select>
       )}
 
-      {extraFilters}
-
-      <div className="flex items-center gap-2 mr-auto">
-        <DatePicker
-          value={filters.from_date}
-          onChange={(v) => onFiltersChange({ from_date: v })}
-          className="h-9 w-36 text-xs rounded-lg bg-white"
-        />
-        <span className="text-xs text-slate-400 font-bold">إلى</span>
-        <DatePicker
-          value={filters.to_date}
-          onChange={(v) => onFiltersChange({ to_date: v })}
-          className="h-9 w-36 text-xs rounded-lg bg-white"
-        />
-      </div>
+      <DateRangePicker
+        from={filters.from_date}
+        to={filters.to_date}
+        onFromChange={(v) => onFiltersChange({ from_date: v })}
+        onToChange={(v) => onFiltersChange({ to_date: v })}
+        showSeparator={showSelect || !!extraFilters}
+      />
     </div>
   );
 }

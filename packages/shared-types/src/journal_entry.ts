@@ -39,6 +39,7 @@ export interface JournalEntryDto {
   journal_type: JournalType;
   journal_type_display: string;
   source_id?: string;
+  source_type?: string;
   lines: JournalLineDto[];
   entry_date: string;
   description: string;

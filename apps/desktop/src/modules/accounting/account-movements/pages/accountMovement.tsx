@@ -5,7 +5,7 @@ import { Button } from "@shared/ui/button";
 import { Printer, PlusCircle, ShoppingCart, ArrowUpRight, ArrowDownLeft, BookOpen, FileText, Landmark } from "lucide-react";
 import { cn } from "@shared/lib/utils";
 import { formatCurrency } from "@shared/lib/format";
-import { DatePicker } from "@shared/ui/date-picker";
+import { DateRangePicker } from "@widgets/reports";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import { customerService } from "@modules/partners/api/customerService";
 import { supplierService } from "@modules/partners/api/supplierService";
@@ -125,10 +125,21 @@ export default function AccountMovement() {
     detectType();
   }, [accountId]);
 
-  const openingBalance = useMemo(
-    () => parseFloat(ledger?.opening_balance_base || "0"),
-    [ledger],
-  );
+  const openingBalance = useMemo(() => {
+    const absOpening = parseFloat(ledger?.opening_balance_base || "0");
+    if (!dateFilters.from_date || !ledger?.lines) return absOpening;
+
+    let debitBefore = 0;
+    let creditBefore = 0;
+    for (const line of ledger.lines) {
+      const d = line.date.split("T")[0];
+      if (d < dateFilters.from_date) {
+        debitBefore += parseFloat(line.debit_base || "0");
+        creditBefore += parseFloat(line.credit_base || "0");
+      }
+    }
+    return absOpening + debitBefore - creditBefore;
+  }, [ledger, dateFilters.from_date]);
 
   // Filter lines by account type AND date range
   const { filteredLines, totals, periodClosingBalance } = useMemo(() => {
@@ -276,22 +287,13 @@ export default function AccountMovement() {
         <div className="flex items-center gap-2 flex-wrap">
           {toolbarButtons}
 
-          {/* Date Filters */}
-          <div className="flex items-center gap-2 mr-auto">
-            <DatePicker
-              value={dateFilters.from_date}
-              onChange={v => setDateFilters(f => ({ ...f, from_date: v }))}
-              className="h-9 w-36 text-xs rounded-lg bg-white"
-              placeholder=""
-            />
-            <span className="text-xs text-slate-400 font-bold">إلى</span>
-            <DatePicker
-              value={dateFilters.to_date}
-              onChange={v => setDateFilters(f => ({ ...f, to_date: v }))}
-              className="h-9 w-36 text-xs rounded-lg bg-white"
-              placeholder=""
-            />
-          </div>
+          <DateRangePicker
+            from={dateFilters.from_date}
+            to={dateFilters.to_date}
+            onFromChange={(v) => setDateFilters(f => ({ ...f, from_date: v }))}
+            onToChange={(v) => setDateFilters(f => ({ ...f, to_date: v }))}
+            showSeparator={toolbarButtons.length > 0}
+          />
         </div>
       }
       tableContent={

@@ -2,8 +2,18 @@ import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
 import { SYSTEM_ACCOUNT_IDS } from "@erp/shared-types";
 import type { AccountDto, JournalEntryDto, InvoiceDto } from "@erp/shared-types";
 
+export interface AccountLedgerTotal {
+  openingDebit: number;
+  openingCredit: number;
+  periodDebit: number;
+  periodCredit: number;
+  debit: number;
+  credit: number;
+  endingBalance: number;
+}
+
 export interface LedgerTotalsResult {
-  ledgerTotals: Map<string, { debit: number; credit: number }>;
+  ledgerTotals: Map<string, AccountLedgerTotal>;
   totalDrawings: number;
 }
 
@@ -12,130 +22,174 @@ function isCreditNatureAccount(account: AccountDto): boolean {
 }
 
 /**
- * Computes general ledger totals for all accounts, taking into account:
- * 1. Opening balances (debit/credit based on account nature).
- * 2. Partner capital ratio adjustments for in-kind opening balances.
- * 3. Journal entries (excluding in-kind capital overrides and consolidated capital details except cash).
- * 4. Purchase invoice extra cost overrides for the "تكاليف إضافية على المشتريات" account.
+ * Computes general ledger totals for all accounts with strict date range partitioning:
+ * 1. Opening entries (source_type = OPENING_BALANCE or opening journal types) and entries before fromDate -> Pre-Period Opening Balance.
+ * 2. Operational entries between fromDate and toDate -> Period Movements (Period Debit & Credit).
+ * 3. Entries strictly after toDate -> Excluded completely.
+ * 4. Correctly handles Credit nature accounts (Equity, Liabilities) vs Debit nature accounts (Assets, Expenses).
  */
 export function computeLedgerTotals(
   accounts: AccountDto[],
   entries: JournalEntryDto[],
-  purchaseInvoices: InvoiceDto[] = []
+  purchaseInvoices: InvoiceDto[] = [],
+  fromDate?: string,
+  toDate?: string,
 ): LedgerTotalsResult {
   let totalDrawings = 0;
-  const accountMap = new Map(accounts.map((a) => [a.id, a]));
-  const ledgerTotals = new Map<string, { debit: number; credit: number }>();
+  const ledgerTotals = new Map<string, AccountLedgerTotal>();
 
-  // 1. Initialize with opening balances
+  const fromDateStr = fromDate ? fromDate.split("T")[0] : undefined;
+  const toDateStr = toDate ? toDate.split("T")[0] : undefined;
+
+  // 1. Identify accounts that have explicit INDIVIDUAL opening balance journal entries in DB
+  //    (i.e., NOT via consolidated_capital — those are handled separately below)
+  const accountsWithOpeningEntries = new Set<string>();
+
+  for (const entry of entries) {
+    const isConsolidatedCapital = entry.source_id === "consolidated_capital";
+    const desc = entry.description || "";
+    const isOpeningEntry =
+      isConsolidatedCapital ||
+      entry.source_type === "OPENING_BALANCE" ||
+      entry.journal_type === "CashOpeningBalance" ||
+      entry.journal_type === "AccountOpeningBalance" ||
+      entry.journal_type === "MaterialOpeningBalance" ||
+      desc.includes("رصيد افتتاحي") ||
+      desc.includes("أول المدة");
+
+    if (isOpeningEntry) {
+      for (const line of entry.lines) {
+        // Mark ALL accounts in any opening entry (including consolidated_capital)
+        // so their static opening_balance is not double-applied on top of the journal
+        accountsWithOpeningEntries.add(line.account_id);
+      }
+    }
+  }
+
+  // 2. Compute initial static opening net balance map per account (from account.opening_balance)
+  // For accounts without explicit opening journal entries to avoid double counting.
+  const initialOpeningNetMap = new Map<string, number>();
+
   for (const account of accounts) {
-    const openingBalance = parseSafeNumber(account.opening_balance);
-    if (openingBalance !== 0) {
-      const existing = ledgerTotals.get(account.id) || { debit: 0, credit: 0 };
-      if (isCreditNatureAccount(account)) {
-        existing.credit += Math.abs(openingBalance);
-      } else {
-        existing.debit += Math.abs(openingBalance);
-      }
-      ledgerTotals.set(account.id, existing);
+    const staticOpening = parseSafeNumber(account.opening_balance);
+    if (staticOpening !== 0 && !accountsWithOpeningEntries.has(account.id)) {
+      // For credit nature accounts (Equity, Liabilities), positive static opening means Credit (- net)
+      // For debit nature accounts (Assets), positive static opening means Debit (+ net)
+      const net = isCreditNatureAccount(account) ? -staticOpening : staticOpening;
+      initialOpeningNetMap.set(account.id, net);
     }
   }
 
-  // 2. Compute partner capital ratios for distributing in-kind opening balances
-  const partnerAccounts = accounts.filter(
-    (a) => a.code !== "51" && a.code.startsWith("51") && isCreditNatureAccount(a)
-  );
-  const totalPartnerCapital = partnerAccounts.reduce(
-    (sum, a) => sum + Math.abs(parseSafeNumber(a.opening_balance)),
-    0
-  );
+  // 3. Partition journal entries into pre-period (opening) and period entries
+  const prePeriodNetMap = new Map<string, { debit: number; credit: number }>();
+  const periodNetMap = new Map<string, { debit: number; credit: number }>();
 
-  // 3. Accumulate in-kind capital credits from opening entries
-  let capitalCreditsFromInKind = 0;
   for (const entry of entries) {
-    const desc = entry.description || "";
-    const isMaterialOpening = entry.journal_type === "MaterialOpeningBalance" || desc.includes("بضاعة أول المدة");
-    const isFixedAssetOpening = desc.includes("إضافة أصل سابق") || desc.includes("رصيد افتتاحي للأصول الثابتة");
+    const entryDate = entry.entry_date.split("T")[0];
 
-    if (!isMaterialOpening && !isFixedAssetOpening) continue;
+    // Exclude entries strictly after toDate
+    if (toDateStr && entryDate > toDateStr) {
+      continue;
+    }
+
+    const desc = entry.description || "";
+    const isOpeningEntry =
+      entry.source_type === "OPENING_BALANCE" ||
+      entry.source_id === "consolidated_capital" ||
+      entry.journal_type === "CashOpeningBalance" ||
+      entry.journal_type === "AccountOpeningBalance" ||
+      entry.journal_type === "MaterialOpeningBalance" ||
+      desc.includes("رصيد افتتاحي") ||
+      desc.includes("أول المدة");
+
+    const isPrePeriod = isOpeningEntry || (fromDateStr != null && entryDate < fromDateStr);
+
+    const targetMap = isPrePeriod ? prePeriodNetMap : periodNetMap;
 
     for (const line of entry.lines) {
-      const account = accountMap.get(line.account_id);
-      if (account?.code === "51" || account?.code?.startsWith("51")) {
-        capitalCreditsFromInKind += parseFloat(line.credit_base || line.credit || "0");
-      }
-    }
-  }
+      const debitVal = parseFloat(line.debit_base || line.debit || "0");
+      const creditVal = parseFloat(line.credit_base || line.credit || "0");
 
-  // 4. Distribute in-kind capital
-  if (capitalCreditsFromInKind > 0) {
-    if (partnerAccounts.length > 0 && totalPartnerCapital > 0) {
-      for (const partnerAcc of partnerAccounts) {
-        const ratio = Math.abs(parseSafeNumber(partnerAcc.opening_balance)) / totalPartnerCapital;
-        const share = capitalCreditsFromInKind * ratio;
-        const cur = ledgerTotals.get(partnerAcc.id) || { debit: 0, credit: 0 };
-        cur.credit += share;
-        ledgerTotals.set(partnerAcc.id, cur);
-      }
-    } else {
-      const capitalParent = accounts.find((a) => a.code === "51");
-      if (capitalParent) {
-        const cur = ledgerTotals.get(capitalParent.id) || { debit: 0, credit: 0 };
-        cur.credit += capitalCreditsFromInKind;
-        ledgerTotals.set(capitalParent.id, cur);
-      }
-    }
-  }
-
-  // 5. Process standard journal lines
-  for (const entry of entries) {
-    const desc = entry.description || "";
-    const isMaterialOpening = entry.journal_type === "MaterialOpeningBalance" || desc.includes("بضاعة أول المدة");
-    const isFixedAssetOpening = desc.includes("إضافة أصل سابق") || desc.includes("رصيد افتتاحي للأصول الثابتة");
-
-    for (const line of entry.lines) {
-      const amt = parseFloat(line.debit_base || line.debit || "0") - parseFloat(line.credit_base || line.credit || "0");
       if (line.account_id === SYSTEM_ACCOUNT_IDS.DRAWINGS) {
-        totalDrawings += Math.abs(amt);
+        totalDrawings += Math.abs(debitVal - creditVal);
       }
 
-      const account = accountMap.get(line.account_id);
-
-      // Skip in-kind capital credits (already handled)
-      if (
-        (isMaterialOpening || isFixedAssetOpening) &&
-        (account?.code === "51" || account?.code?.startsWith("51"))
-      ) {
-        continue;
-      }
-
-      // Skip consolidated capital non-cash lines
-      const isConsolidatedCapitalEntry = entry.source_id === "consolidated_capital";
-      if (isConsolidatedCapitalEntry && account?.code !== "122") {
-        continue;
-      }
-
-      const cur = ledgerTotals.get(line.account_id) || { debit: 0, credit: 0 };
-      cur.debit += parseFloat(line.debit_base || line.debit || "0");
-      cur.credit += parseFloat(line.credit_base || line.credit || "0");
-      ledgerTotals.set(line.account_id, cur);
+      const cur = targetMap.get(line.account_id) || { debit: 0, credit: 0 };
+      cur.debit += debitVal;
+      cur.credit += creditVal;
+      targetMap.set(line.account_id, cur);
     }
   }
 
-  // 6. Apply purchase invoice extra costs override
-  let netPurchaseCost = 0;
+  // 4. Build AccountLedgerTotal for each account
+  for (const account of accounts) {
+    const initialStaticNet = initialOpeningNetMap.get(account.id) ?? 0;
+    const prePeriod = prePeriodNetMap.get(account.id) || { debit: 0, credit: 0 };
+    const period = periodNetMap.get(account.id) || { debit: 0, credit: 0 };
+
+    const preNet = prePeriod.debit - prePeriod.credit;
+    const totalOpeningNet = initialStaticNet + preNet;
+
+    let openingDebit = 0;
+    let openingCredit = 0;
+
+    if (totalOpeningNet > 0) {
+      openingDebit = totalOpeningNet;
+    } else if (totalOpeningNet < 0) {
+      openingCredit = Math.abs(totalOpeningNet);
+    }
+
+    const periodDebit = period.debit;
+    const periodCredit = period.credit;
+
+    const endingNet = (openingDebit - openingCredit) + periodDebit - periodCredit;
+
+    ledgerTotals.set(account.id, {
+      openingDebit,
+      openingCredit,
+      periodDebit,
+      periodCredit,
+      debit: openingDebit + periodDebit,
+      credit: openingCredit + periodCredit,
+      endingBalance: endingNet,
+    });
+  }
+
+  // 5. Apply purchase invoice extra costs
+  const prePeriodInvoices: InvoiceDto[] = [];
+  const periodInvoices: InvoiceDto[] = [];
+
   for (const inv of purchaseInvoices) {
     if (inv.status !== "Posted" && inv.status !== "Paid") continue;
-    netPurchaseCost += parseFloat(inv.extra_costs || "0");
+    const invDate = inv.issued_at.split("T")[0];
+
+    if (toDateStr && invDate > toDateStr) continue;
+
+    if (fromDateStr && invDate < fromDateStr) {
+      prePeriodInvoices.push(inv);
+    } else {
+      periodInvoices.push(inv);
+    }
   }
+
+  const preExtraCost = prePeriodInvoices.reduce((sum, inv) => sum + parseFloat(inv.extra_costs || "0"), 0);
+  const periodExtraCost = periodInvoices.reduce((sum, inv) => sum + parseFloat(inv.extra_costs || "0"), 0);
 
   for (const account of accounts) {
     if (account.name_ar === "تكاليف إضافية على المشتريات") {
-      const debit = Math.abs(netPurchaseCost);
-      const credit = Math.abs(netPurchaseCost);
-      ledgerTotals.set(account.id, { debit, credit });
+      const cur = ledgerTotals.get(account.id)!;
+      if (preExtraCost > 0) {
+        cur.openingDebit += preExtraCost;
+        cur.endingBalance += preExtraCost;
+      }
+      if (periodExtraCost > 0) {
+        cur.periodDebit += periodExtraCost;
+        cur.debit += periodExtraCost;
+        cur.endingBalance += periodExtraCost;
+      }
     }
   }
 
   return { ledgerTotals, totalDrawings };
 }
+

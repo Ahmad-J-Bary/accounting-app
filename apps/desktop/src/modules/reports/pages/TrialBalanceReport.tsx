@@ -1,15 +1,11 @@
-import { useState } from "react";
+import { useReportFilters } from "@shared/hooks/useReportFilters";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { DateRangePicker } from "@widgets/reports";
 import { useTrialBalanceReport } from "../hooks/useTrialBalanceReport";
 import { TrialBalanceView } from "../components/TrialBalanceView";
 
 export default function TrialBalanceReport() {
-  const [filters, setFilters] = useState({
-    from_date: new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
-    to_date: new Date().toISOString().split("T")[0],
-  });
-
+  const { filters, setFilters } = useReportFilters();
   const { loading, reportData } = useTrialBalanceReport(filters);
 
   return (
@@ -20,7 +16,8 @@ export default function TrialBalanceReport() {
           <DateRangePicker
             from={filters.from_date}
             to={filters.to_date}
-            onChange={({ from_date, to_date }) => setFilters(f => ({ ...f, from_date, to_date }))}
+            onFromChange={(v) => setFilters({ from_date: v })}
+            onToChange={(v) => setFilters({ to_date: v })}
           />
         </div>
       }

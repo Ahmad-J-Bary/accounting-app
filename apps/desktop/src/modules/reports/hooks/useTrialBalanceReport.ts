@@ -4,9 +4,11 @@ import type { AccountDto } from "@erp/shared-types";
 import type { ReportFilters } from "@shared/types/filters";
 import type { ReportState } from "@shared/types/report";
 
+import type { AccountLedgerTotal } from "../lib/ledgerTotals";
+
 export type LoadedTrialBalanceData = {
   accounts: AccountDto[];
-  ledgerTotals: Map<string, { debit: number; credit: number }>;
+  ledgerTotals: Map<string, AccountLedgerTotal>;
 };
 
 const emptyData: LoadedTrialBalanceData = {

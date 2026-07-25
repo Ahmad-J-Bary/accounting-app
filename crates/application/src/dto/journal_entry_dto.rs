@@ -23,6 +23,7 @@ pub struct JournalEntryDto {
     pub journal_type: JournalType,
     pub journal_type_display: String,
     pub source_id: Option<String>,
+    pub source_type: Option<String>,
     pub lines: Vec<JournalLineDto>,
     pub entry_date: String,
     pub description: String,
@@ -49,12 +50,14 @@ impl From<JournalEntry> for JournalEntryDto {
         let total_base_credit = entry.total_base_credit().to_string();
         let status = format!("{:?}", entry.status);
         let journal_type_display = entry.journal_type.to_string();
+        let source_type = entry.source_type.as_ref().map(|st| st.to_string());
         Self {
             id: entry.id.0.to_string(),
             entry_number: entry.entry_number,
             journal_type: entry.journal_type,
             journal_type_display,
             source_id: entry.source_id,
+            source_type,
             lines: entry.lines.into_iter().map(JournalLineDto::from).collect(),
             entry_date: entry.entry_date.to_rfc3339(),
             description: entry.description,

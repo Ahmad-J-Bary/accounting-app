@@ -1,3 +1,4 @@
+import { endOfDay } from "./date-utils";
 import type { PartnerDto } from "@erp/shared-types";
 import type { AccountLedgerDto } from "@erp/shared-types";
 
@@ -23,8 +24,24 @@ export function computePartnerStatement(
   partnerLedgers: Record<string, AccountLedgerDto>,
   thisYearProfitShare: Record<string, number>,
   thisYearDrawings: Record<string, number>,
+  toDate?: string,
 ): PartnerStatementComputed {
-  const rows: PartnerStatementRow[] = partners.map((p) => {
+  partnerLedgers = partnerLedgers || {};
+  const toTs = toDate ? endOfDay(toDate) : Infinity;
+
+  const existedPartners = toDate
+    ? partners.filter((p) => {
+        if (!p.linked_account_id) return true;
+        const ledger = partnerLedgers[p.linked_account_id];
+        if (!ledger || !ledger.lines) return false;
+        return ledger.lines.some((line) => {
+          const lineTs = new Date(line.date).getTime();
+          return Number.isFinite(lineTs) && lineTs <= toTs;
+        });
+      })
+    : partners;
+
+  const rows: PartnerStatementRow[] = existedPartners.map((p) => {
     const capitalAmount = parseFloat(p.amount_local || "0");
 
     const capitalLedger = p.linked_account_id ? partnerLedgers[p.linked_account_id] : null;

@@ -115,6 +115,7 @@ pub struct JournalEntry {
     pub entry_number: String,
     pub journal_type: JournalType,
     pub source_id: Option<String>, // ID of the source document (Invoice, Receipt, etc.)
+    pub source_type: Option<String>, // Originating business domain
     pub lines: Vec<JournalLine>,
     pub entry_date: DateTime<Utc>,
     pub description: String,
@@ -168,6 +169,7 @@ impl JournalEntry {
             entry_number,
             journal_type,
             source_id,
+            source_type: None,
             lines,
             entry_date,
             description,

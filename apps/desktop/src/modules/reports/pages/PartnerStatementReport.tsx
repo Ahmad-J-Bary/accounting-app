@@ -33,8 +33,10 @@ export default function PartnerStatementReport() {
       reportData.fixedAssetsValue,
       reportData.partnerDrawings,
       reportData.customerDebts,
+      reportData.partnerLedgers,
+      filters.to_date,
     );
-  }, [reportData]);
+  }, [reportData, filters.to_date]);
 
   const thisYearProfitShare: Record<string, number> = useMemo(() => {
     const map: Record<string, number> = {};
@@ -51,8 +53,9 @@ export default function PartnerStatementReport() {
       reportData.partnerLedgers,
       thisYearProfitShare,
       reportData.partnerDrawings,
+      filters.to_date,
     );
-  }, [reportData, fromTs, thisYearProfitShare]);
+  }, [reportData, fromTs, thisYearProfitShare, filters.to_date]);
 
   const formatValue = useCallback(
     (value: number) =>

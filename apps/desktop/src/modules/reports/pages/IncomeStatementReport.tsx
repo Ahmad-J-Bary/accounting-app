@@ -16,7 +16,7 @@ export default function IncomeStatementReport() {
     selectedCurrency,
     setSelectedCurrency,
   } = useReportFilters(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0],
+    new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
     new Date().toISOString().split("T")[0]
   );
   const { loading, lastLoadedAt, reportData } = useIncomeStatementReport();

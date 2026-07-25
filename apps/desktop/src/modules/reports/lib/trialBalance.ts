@@ -1,4 +1,5 @@
 import type { AccountDto } from "@erp/shared-types";
+import type { AccountLedgerTotal } from "./ledgerTotals";
 
 export interface TrialBalanceRow {
   account: AccountDto;
@@ -9,20 +10,33 @@ export interface TrialBalanceTreeRow {
   id: string;
   name: string;
   depth: number;
+  openingDebit: number;
+  openingCredit: number;
+  periodDebit: number;
+  periodCredit: number;
   balance: number;
   debit: number;
   credit: number;
   balanceSec: number;
   debitSec: number;
   creditSec: number;
+  openingDebitSec: number;
+  openingCreditSec: number;
+  periodDebitSec: number;
+  periodCreditSec: number;
 }
 
 export interface AccountTreeTotals {
   id: string;
   name: string;
   depth: number;
+  openingDebit: number;
+  openingCredit: number;
+  periodDebit: number;
+  periodCredit: number;
   totDebit: number;
   totCredit: number;
+  endingBalance: number;
   children: AccountTreeTotals[];
 }
 
@@ -65,7 +79,7 @@ export function isBalanceDebit(balance: number): "مدين" | "دائن" | null 
 
 export function computeTreeTotals(
   accounts: AccountDto[],
-  ltMap: Map<string, { debit: number; credit: number }>,
+  ltMap: Map<string, AccountLedgerTotal>,
   parentId: string | null = null,
   depth = 0,
 ): AccountTreeTotals[] {
@@ -80,20 +94,38 @@ export function computeTreeTotals(
   return children.map((acc) => {
     const subTree = computeTreeTotals(accounts, ltMap, acc.id, depth + 1);
     const lt = ltMap.get(acc.id);
-    const ownDebit = lt?.debit ?? 0;
-    const ownCredit = lt?.credit ?? 0;
 
-    let totDebit = ownDebit;
-    let totCredit = ownCredit;
+    let openingDebit = lt?.openingDebit ?? 0;
+    let openingCredit = lt?.openingCredit ?? 0;
+    let periodDebit = lt?.periodDebit ?? 0;
+    let periodCredit = lt?.periodCredit ?? 0;
+    let totDebit = lt?.debit ?? 0;
+    let totCredit = lt?.credit ?? 0;
 
     if (subTree.length > 0) {
-      const sumDebit = subTree.reduce((s, c) => s + c.totDebit, 0);
-      const sumCredit = subTree.reduce((s, c) => s + c.totCredit, 0);
-      totDebit = ownDebit + sumDebit;
-      totCredit = ownCredit + sumCredit;
+      openingDebit += subTree.reduce((s, c) => s + c.openingDebit, 0);
+      openingCredit += subTree.reduce((s, c) => s + c.openingCredit, 0);
+      periodDebit += subTree.reduce((s, c) => s + c.periodDebit, 0);
+      periodCredit += subTree.reduce((s, c) => s + c.periodCredit, 0);
+      totDebit += subTree.reduce((s, c) => s + c.totDebit, 0);
+      totCredit += subTree.reduce((s, c) => s + c.totCredit, 0);
     }
 
-    return { id: acc.id, name: acc.name_ar, depth, totDebit, totCredit, children: subTree };
+    const endingBalance = (openingDebit - openingCredit) + periodDebit - periodCredit;
+
+    return {
+      id: acc.id,
+      name: acc.name_ar,
+      depth,
+      openingDebit,
+      openingCredit,
+      periodDebit,
+      periodCredit,
+      totDebit,
+      totCredit,
+      endingBalance,
+      children: subTree,
+    };
   });
 }
 
@@ -104,22 +136,27 @@ export function flattenTreeRows(nodes: AccountTreeTotals[], maxDepth: number): T
     for (const node of list) {
       if (node.depth > maxDepth) continue;
 
-      // Hide parent if its direct children are also visible at this depth
-      // (prevents duplication — e.g. hide "الأصول" when "الأصول الثابتة" replaces it)
       const childrenVisible = node.children.length > 0 && (node.children[0]?.depth ?? Infinity) <= maxDepth;
 
       if (!childrenVisible) {
-        const balance = node.totDebit - node.totCredit;
         result.push({
           id: node.id,
           name: node.name,
           depth: node.depth,
-          balance,
+          openingDebit: node.openingDebit,
+          openingCredit: node.openingCredit,
+          periodDebit: node.periodDebit,
+          periodCredit: node.periodCredit,
+          balance: node.endingBalance,
           debit: node.totDebit,
           credit: node.totCredit,
           balanceSec: 0,
           debitSec: 0,
           creditSec: 0,
+          openingDebitSec: 0,
+          openingCreditSec: 0,
+          periodDebitSec: 0,
+          periodCreditSec: 0,
         });
       }
 
@@ -132,3 +169,4 @@ export function flattenTreeRows(nodes: AccountTreeTotals[], maxDepth: number): T
   traverse(nodes);
   return result;
 }
+

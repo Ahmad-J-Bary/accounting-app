@@ -28,8 +28,10 @@ export default function PartnerProfitShareReport() {
       reportData.fixedAssetsValue,
       reportData.partnerDrawings,
       reportData.customerDebts,
+      reportData.partnerLedgers,
+      filters.to_date,
     );
-  }, [reportData]);
+  }, [reportData, filters.to_date]);
 
   const formatValue = (value: number) =>
     formatAmount(value, {
