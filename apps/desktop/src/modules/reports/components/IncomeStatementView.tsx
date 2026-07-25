@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import type { IncomeStatementComputed, IncomeStatementSection } from "@modules/reports/lib/incomeStatement";
+import { ReportMeta } from "@widgets/reports";
 
 type IncomeStatementViewProps = {
   computed: IncomeStatementComputed;
@@ -14,16 +15,6 @@ type IncomeStatementViewProps = {
 
 function SectionHeader({ title }: { title: string }) {
   return <h3 className="text-base font-black text-slate-900">{title}</h3>;
-}
-
-function ReportMeta() {
-  return (
-    <div className="rounded-3xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-center text-sm text-slate-600">
-      <span className="text-lg font-black text-slate-900">قائمة الدخل</span>
-      <span className="mx-2 text-slate-300">|</span>
-      <span>قائمة تبين إجمالي الأرباح وصافي الربح والنشاط التشغيلي، وتظهر فيها تكلفة المبيعات والمصروفات التشغيلية</span>
-    </div>
-  );
 }
 
 function SummaryCards({
@@ -112,8 +103,8 @@ function InlineSection({
 export function IncomeStatementView(props: IncomeStatementViewProps) {
   const { computed, formatValue } = props;
   return (
-    <div className="space-y-4">
-      <ReportMeta />
+    <div className="flex flex-col h-full">
+      <ReportMeta title="قائمة الدخل" description="قائمة تبين إجمالي الأرباح وصافي الربح والنشاط التشغيلي، وتظهر فيها تكلفة المبيعات والمصروفات التشغيلية" />
       <SummaryCards computed={computed} formatValue={formatValue} />
       <div className="space-y-4">
         {computed.sections.map((section) => (

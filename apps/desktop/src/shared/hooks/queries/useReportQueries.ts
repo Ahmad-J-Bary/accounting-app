@@ -24,16 +24,16 @@ export function useReceivablesPayables() {
   });
 }
 
-export function useTrialBalance() {
+export function useTrialBalance(filters?: { from_date?: string; to_date?: string }) {
   return useQuery<{
     accounts: AccountDto[];
     ledgerTotals: Map<string, { debit: number; credit: number }>;
   }>({
-    queryKey: QUERY_KEYS.trialBalance,
+    queryKey: QUERY_KEYS.trialBalance(filters),
     queryFn: async () => {
       const [accounts, entries] = await Promise.all([
         accountingService.getChartOfAccounts(),
-        journalEntryService.listJournalEntries({}),
+        journalEntryService.listJournalEntries(filters ?? {}),
       ]);
 
       let purchaseInvoices: InvoiceDto[] = [];

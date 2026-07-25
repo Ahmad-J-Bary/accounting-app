@@ -1,5 +1,5 @@
 #[cfg_attr(not(target_os = "windows"), allow(unused_imports))]
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter};
 use std::fs::File;
 use std::io::Write;
 use std::sync::Mutex;

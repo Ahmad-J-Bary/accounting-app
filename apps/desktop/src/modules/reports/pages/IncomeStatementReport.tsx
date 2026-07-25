@@ -1,11 +1,12 @@
 import { useCallback, useMemo } from "react";
-import { ReportLayout } from "@widgets/templates/ReportLayout";
+import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useReportFilters } from "@shared/hooks/useReportFilters";
 import { computeIncomeStatement } from "@modules/reports/lib/incomeStatement";
 import { useIncomeStatementReport } from "@modules/reports/hooks/useIncomeStatementReport";
 import { IncomeStatementView } from "@modules/reports/components/IncomeStatementView";
 import { ReportFilterBar } from "@widgets/reports/ReportFilterBar";
+import { ReportLoadingSkeleton } from "@widgets/reports";
 
 export default function IncomeStatementReport() {
   const { baseCurrency, currencies, formatAmount, hasMultipleCurrencies } = useCurrencyContext();
@@ -18,7 +19,7 @@ export default function IncomeStatementReport() {
     new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0],
     new Date().toISOString().split("T")[0]
   );
-  const { loading, refreshing, lastLoadedAt, reportData, loadReportData } = useIncomeStatementReport();
+  const { loading, lastLoadedAt, reportData } = useIncomeStatementReport();
 
   const computed = useMemo(() => {
     return computeIncomeStatement(filters, reportData);
@@ -41,41 +42,34 @@ return activeCurrency
   }, [currencies, selectedCurrency, baseCurrency]);
 
   return (
-    <ReportLayout
+    <OperationalTableTemplate
       title="قائمة الدخل"
-      filters={
+      toolbar={
         <ReportFilterBar
           filters={filters}
           onFiltersChange={setFilters}
-          loading={loading}
-          refreshing={refreshing}
-          onRefresh={loadReportData}
-          selectedCurrencyLabel={hasMultipleCurrencies ? selectedCurrencyLabel : undefined}
           showCurrencySelect={hasMultipleCurrencies}
+          selectedCurrency={selectedCurrency}
           onCurrencyChange={setSelectedCurrency}
           currencies={currencies}
           baseCurrencyCode={baseCurrency?.code}
-          lastLoadedAt={lastLoadedAt}
         />
       }
-    >
-      <div className="flex flex-1 flex-col p-4 sm:p-6 lg:p-8">
-        {loading ? (
-          <div className="space-y-3 text-sm text-slate-500">
-            {Array.from({ length: 12 }).map((_, index) => (
-              <div key={index} className="h-6 animate-pulse rounded-xl bg-slate-100" />
-            ))}
-          </div>
+      tableContent={
+        loading ? (
+          <ReportLoadingSkeleton />
         ) : (
-          <IncomeStatementView
-            computed={computed}
-            filters={filters}
-            selectedCurrencyLabel={selectedCurrencyLabel}
-            lastLoadedAt={lastLoadedAt}
-            formatValue={formatValue}
-          />
-        )}
-      </div>
-    </ReportLayout>
+          <div className="flex flex-1 flex-col p-4 sm:p-6 lg:p-8">
+            <IncomeStatementView
+              computed={computed}
+              filters={filters}
+              selectedCurrencyLabel={selectedCurrencyLabel}
+              lastLoadedAt={lastLoadedAt}
+              formatValue={formatValue}
+            />
+          </div>
+        )
+      }
+    />
   );
 }

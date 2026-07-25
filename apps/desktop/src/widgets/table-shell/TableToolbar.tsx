@@ -73,7 +73,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
         </div>
       )}
       {filterBar && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           {filterBar}
         </div>
       )}

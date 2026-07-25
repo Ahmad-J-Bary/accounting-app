@@ -1,17 +1,15 @@
 import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ReportLayout } from "@widgets/templates/ReportLayout";
-import { Button } from "@shared/ui/button";
+import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
-import { Label } from "@shared/ui/label";
-import { formatCurrency, formatDate } from "@shared/lib/format";
+import { formatCurrency } from "@shared/lib/format";
 import { cn } from "@shared/lib/utils";
-import { Filter, ArrowUpRight, ArrowDownLeft, Printer, Download, BookOpen, Landmark, FileText } from "lucide-react";
-import { toast } from "sonner";
+import { ArrowUpRight, ArrowDownLeft, BookOpen, Landmark, FileText } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useChartOfAccounts, useAccountLedger } from "@shared/hooks/queries/useAccountQueries";
 import { AccountMovementTable } from "../components/AccountMovementTable";
 import { DatePicker } from "@shared/ui/date-picker";
+import { ReportMeta, DateRangePicker } from "@widgets/reports";
 import type { AccountDto } from "@erp/shared-types";
 
 function getDescendantIds(accountId: string, accounts: AccountDto[]): string[] {
@@ -35,7 +33,7 @@ export default function AccountMovementsReport() {
     return getDescendantIds(selectedAccountId, accounts);
   }, [selectedAccountId, accounts]);
 
-  const { data: ledger, isLoading: loading, refetch } = useAccountLedger(accountIds);
+  const { data: ledger, isLoading: loading } = useAccountLedger(accountIds);
 
   const filteredLines = useMemo(() => {
     if (!ledger) return [];
@@ -52,14 +50,6 @@ export default function AccountMovementsReport() {
             || (l.opposite_account_name || "").toLowerCase().includes(q);
       });
   }, [ledger, filters, search]);
-
-  const handleUpdate = () => {
-    if (!selectedAccountId) {
-      toast.error("الرجاء اختيار الحساب أولاً");
-      return;
-    }
-    refetch();
-  };
 
   const openingBalance = useMemo(
     () => parseFloat(ledger?.opening_balance_base || "0"),
@@ -85,129 +75,102 @@ export default function AccountMovementsReport() {
   const symbol = baseCurrency?.symbol || baseCurrency?.code || "";
 
   return (
-    <ReportLayout
-      title="دفتر الأستاذ / كشف حركات الحساب"
-      subtitle="عرض تفصيلي لجميع الحركات المالية والقيود المؤثرة على حساب معين خلال فترة."
-      filters={
-        <>
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase tracking-widest text-slate-400">الحساب</Label>
-            <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
-              <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-slate-50/50 font-bold">
-                <SelectValue placeholder="اختر الحساب..." />
-              </SelectTrigger>
-              <SelectContent>
-                {accounts.map(a => (
-                  <SelectItem key={a.id} value={a.id} className="font-bold">
-                    {a.code} - {a.name_ar}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase tracking-widest text-slate-400">من تاريخ</Label>
-            <DatePicker
-              value={filters.from_date}
-              onChange={v => setFilters(f => ({ ...f, from_date: v }))}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase tracking-widest text-slate-400">إلى تاريخ</Label>
-            <DatePicker
-              value={filters.to_date}
-              onChange={v => setFilters(f => ({ ...f, to_date: v }))}
-            />
-          </div>
-
-          <div className="flex items-end">
-            <Button
-              className="h-11 w-full bg-slate-900 text-white rounded-xl font-black gap-2"
-              onClick={handleUpdate}
-            >
-              <Filter className="w-4 h-4" />تحديث البيانات
-            </Button>
-          </div>
-        </>
+    <OperationalTableTemplate
+      title="حركة الحساب"
+      badge={
+        <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+          <SelectTrigger className="h-9 w-auto min-w-[160px] rounded-lg border-slate-200 bg-white text-xs font-bold">
+            <SelectValue placeholder="اختر الحساب..." />
+          </SelectTrigger>
+          <SelectContent>
+            {accounts.map(a => (
+              <SelectItem key={a.id} value={a.id} className="font-bold">
+                {a.code} - {a.name_ar}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       }
-    >
-      <div className="p-8 space-y-8 flex-1 flex flex-col">
-        {/* Date Range Banner */}
-        {filters.from_date && filters.to_date && (
-          <div className="flex items-center gap-2 text-sm">
-            <span className="rounded-full bg-blue-50 text-blue-700 px-4 py-1.5 border border-blue-100 font-bold">
-              الفترة من {formatDate(filters.from_date)} إلى {formatDate(filters.to_date)}
-            </span>
-          </div>
-        )}
+      toolbar={
+        <div className="flex items-center gap-2 flex-wrap">
+          <DateRangePicker
+            from={filters.from_date}
+            to={filters.to_date}
+            onChange={({ from_date, to_date }) => setFilters(f => ({ ...f, from_date, to_date }))}
+          />
+        </div>
+      }
+      tableContent={
+        <div className="flex flex-col h-full">
+          <ReportMeta title="دفتر الأستاذ / كشف حركات الحساب" description="عرض تفصيلي لجميع الحركات المالية والقيود المؤثرة على حساب معين خلال فترة" />
 
-        {/* Statistics Bar */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-5">
-           <div className="bg-indigo-50 p-5 rounded-3xl border border-indigo-100 flex items-center gap-4">
-              <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-100">
-                <Landmark className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-1">الرصيد الافتتاحي</span>
-                <div className="text-lg font-black text-indigo-900 tabular-nums">{formatCurrency(openingBalance, symbol)}</div>
-              </div>
-           </div>
-
-           <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100 flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-100">
-                <ArrowUpRight className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">إجمالي المدين</span>
-                <div className="text-lg font-black text-slate-900 tabular-nums">{formatCurrency(totals.debit, symbol)}</div>
-              </div>
-           </div>
-
-           <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100 flex items-center gap-4">
-              <div className="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-100">
-                <ArrowDownLeft className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">إجمالي الدائن</span>
-                <div className="text-lg font-black text-slate-900 tabular-nums">{formatCurrency(totals.credit, symbol)}</div>
-              </div>
-           </div>
-
-           <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100 flex items-center gap-4">
-              <div className={cn(
-                "w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg",
-                (totals.debit - totals.credit) >= 0
-                  ? "bg-amber-600 shadow-amber-100"
-                  : "bg-red-600 shadow-red-100"
-              )}>
-                <BookOpen className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">صافي الحركة</span>
-                <div className={cn(
-                  "text-lg font-black tabular-nums",
-                  (totals.debit - totals.credit) >= 0 ? "text-amber-700" : "text-red-700"
-                )}>
-                  {formatCurrency(totals.debit - totals.credit, symbol)}
+          {ledger && (
+            <div className="grid grid-cols-5 gap-3 px-4 pt-4 pb-2">
+              <div className="bg-indigo-50 p-3 rounded-xl border border-indigo-100 flex items-center gap-3">
+                <div className="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+                  <Landmark className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest block">الافتتاحي</span>
+                  <div className="text-sm font-black text-indigo-900 tabular-nums">{formatCurrency(openingBalance, symbol)}</div>
                 </div>
               </div>
-           </div>
 
-           <div className="bg-slate-900 p-5 rounded-3xl border border-slate-800 flex items-center gap-4">
-              <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-white backdrop-blur-md">
-                <FileText className="w-6 h-6" />
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-3">
+                <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+                  <ArrowUpRight className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">المدين</span>
+                  <div className="text-sm font-black text-slate-900 tabular-nums">{formatCurrency(totals.debit, symbol)}</div>
+                </div>
               </div>
-              <div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">الرصيد الختامي</span>
-                <div className="text-lg font-black text-white tabular-nums">{formatCurrency(periodClosingBalance, symbol)}</div>
-              </div>
-           </div>
-        </div>
 
-        {/* Main Table */}
-        <div className="flex-1 border border-slate-100 rounded-3xl overflow-hidden shadow-sm flex flex-col bg-white">
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-3">
+                <div className="w-9 h-9 bg-emerald-600 rounded-lg flex items-center justify-center text-white">
+                  <ArrowDownLeft className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">الدائن</span>
+                  <div className="text-sm font-black text-slate-900 tabular-nums">{formatCurrency(totals.credit, symbol)}</div>
+                </div>
+              </div>
+
+              <div className={cn(
+                "p-3 rounded-xl border flex items-center gap-3",
+                (totals.debit - totals.credit) >= 0
+                  ? "bg-amber-50 border-amber-100"
+                  : "bg-red-50 border-red-100"
+              )}>
+                <div className={cn(
+                  "w-9 h-9 rounded-lg flex items-center justify-center text-white",
+                  (totals.debit - totals.credit) >= 0 ? "bg-amber-600" : "bg-red-600"
+                )}>
+                  <BookOpen className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">صافي</span>
+                  <div className={cn(
+                    "text-sm font-black tabular-nums",
+                    (totals.debit - totals.credit) >= 0 ? "text-amber-700" : "text-red-700"
+                  )}>
+                    {formatCurrency(totals.debit - totals.credit, symbol)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 flex items-center gap-3">
+                <div className="w-9 h-9 bg-white/10 rounded-lg flex items-center justify-center text-white backdrop-blur-md">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">الختامي</span>
+                  <div className="text-sm font-black text-white tabular-nums">{formatCurrency(periodClosingBalance, symbol)}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <AccountMovementTable
             lines={filteredLines}
             loading={loading}
@@ -216,31 +179,8 @@ export default function AccountMovementsReport() {
             accountName={ledger?.account_name || ""}
             openingBalance={openingBalance}
           />
-
-          <div className="bg-slate-50 p-6 border-t border-slate-100 flex justify-between items-center">
-             <div className="flex gap-4">
-                <Button variant="outline" size="sm" className="h-10 rounded-xl gap-2 font-bold bg-white border-slate-200">
-                  <Printer className="w-4 h-4" />طباعة الكشف
-                </Button>
-                <Button variant="outline" size="sm" className="h-10 rounded-xl gap-2 font-bold bg-white border-slate-200">
-                  <Download className="w-4 h-4" />تصدير Excel
-                </Button>
-             </div>
-
-             <div className="flex items-center gap-8">
-                <div className="text-right">
-                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">الرصيد الختامي للفترة</span>
-                   <span className={cn(
-                     "text-xl font-black tabular-nums",
-                     periodClosingBalance >= 0 ? "text-slate-900" : "text-red-700"
-                   )}>
-                     {formatCurrency(periodClosingBalance, symbol)}
-                   </span>
-                </div>
-             </div>
-          </div>
         </div>
-      </div>
-    </ReportLayout>
+      }
+    />
   );
 }

@@ -1,11 +1,12 @@
 import { useCallback, useMemo } from "react";
-import { ReportLayout } from "@widgets/templates/ReportLayout";
+import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useReportFilters } from "@shared/hooks/useReportFilters";
 import { computeBalanceSheet } from "@modules/reports/lib/balanceSheet";
 import { useBalanceSheetReport } from "@modules/reports/hooks/useBalanceSheetReport";
 import { BalanceSheetView } from "@modules/reports/components/BalanceSheetView";
 import { ReportFilterBar } from "@widgets/reports/ReportFilterBar";
+import { ReportLoadingSkeleton } from "@widgets/reports";
 
 export default function BalanceSheetReport() {
   const { baseCurrency, currencies, formatAmount, hasMultipleCurrencies } = useCurrencyContext();
@@ -18,7 +19,7 @@ export default function BalanceSheetReport() {
     new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
     new Date().toISOString().split("T")[0]
   );
-  const { loading, refreshing, lastLoadedAt, reportData, loadReportData } = useBalanceSheetReport(filters);
+  const { loading, reportData } = useBalanceSheetReport(filters);
 
   const computed = useMemo(() => {
     return computeBalanceSheet(
@@ -42,39 +43,32 @@ export default function BalanceSheetReport() {
   );
 
   return (
-    <ReportLayout
+    <OperationalTableTemplate
       title="الميزانية العمومية"
-      filters={
+      toolbar={
         <ReportFilterBar
           filters={filters}
           onFiltersChange={setFilters}
-          loading={loading}
-          refreshing={refreshing}
-          onRefresh={loadReportData}
-          selectedCurrencyLabel={hasMultipleCurrencies ? selectedCurrency : undefined}
           showCurrencySelect={hasMultipleCurrencies}
+          selectedCurrency={selectedCurrency}
           onCurrencyChange={setSelectedCurrency}
           currencies={currencies}
           baseCurrencyCode={baseCurrency?.code}
-          lastLoadedAt={lastLoadedAt}
         />
       }
-    >
-      <div className="flex flex-1 flex-col p-4 sm:p-6 lg:p-8">
-        {loading ? (
-          <div className="space-y-3 text-sm text-slate-500">
-            {Array.from({ length: 12 }).map((_, index) => (
-              <div key={index} className="h-6 animate-pulse rounded-xl bg-slate-100" />
-            ))}
-          </div>
+      tableContent={
+        loading ? (
+          <ReportLoadingSkeleton />
         ) : (
-          <BalanceSheetView
-            computed={computed}
-            filters={filters}
-            formatValue={formatValue}
-          />
-        )}
-      </div>
-    </ReportLayout>
+          <div className="flex flex-1 flex-col p-4 sm:p-6 lg:p-8">
+            <BalanceSheetView
+              computed={computed}
+              filters={filters}
+              formatValue={formatValue}
+            />
+          </div>
+        )
+      }
+    />
   );
 }

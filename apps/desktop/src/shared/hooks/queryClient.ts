@@ -64,7 +64,8 @@ export const QUERY_KEYS = {
   incomeStatement: ["reports", "income-statement"] as const,
   balanceSheet: ["reports", "balance-sheet"] as const,
   partnerProfitShare: ["reports", "partner-profit-share"] as const,
-  trialBalance: ["reports", "trial-balance"] as const,
+  trialBalance: (filters?: { from_date?: string; to_date?: string }) =>
+    ["reports", "trial-balance", filters] as const,
 
   fixedAssets: ["fixed-assets"] as const,
   productionOrders: ["production-orders"] as const,
@@ -75,7 +76,7 @@ export const QUERY_KEYS = {
 
 /** All report query keys that should be invalidated after any accounting mutation. */
 export const ALL_REPORT_KEYS: readonly (readonly unknown[])[] = [
-  QUERY_KEYS.trialBalance,
+  QUERY_KEYS.trialBalance(),
   QUERY_KEYS.incomeStatement,
   QUERY_KEYS.balanceSheet,
   QUERY_KEYS.partnerProfitShare,

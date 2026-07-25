@@ -2,6 +2,7 @@ import type { BalanceSheetComputed, BalanceSheetRow, BalanceSheetSection } from 
 import { cn } from "@shared/lib/utils";
 import { CheckCircle2, AlertCircle, ChevronDown, ChevronLeft } from "lucide-react";
 import { useState } from "react";
+import { ReportMeta } from "@widgets/reports";
 
 type BalanceSheetViewProps = {
   computed: BalanceSheetComputed;
@@ -11,16 +12,6 @@ type BalanceSheetViewProps = {
 
 function SectionHeader({ title }: { title: string }) {
   return <h3 className="text-base font-black text-slate-900">{title}</h3>;
-}
-
-function ReportMeta() {
-  return (
-    <div className="rounded-3xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-center text-sm text-slate-600">
-      <span className="text-lg font-black text-slate-900">الميزانية العمومية</span>
-      <span className="mx-2 text-slate-300">|</span>
-      <span>قائمة تبين الموقف المالي للشركة على مبدأ (الأصول = الخصوم + حقوق الملكية)</span>
-    </div>
-  );
 }
 
 function SummaryCards({ computed, formatValue }: { computed: BalanceSheetComputed; formatValue: (value: number) => string }) {
@@ -173,8 +164,8 @@ export function BalanceSheetView(props: BalanceSheetViewProps) {
   const { computed, formatValue } = props;
 
   return (
-    <div className="space-y-4">
-      <ReportMeta />
+    <div className="flex flex-col h-full">
+      <ReportMeta title="الميزانية العمومية" description="قائمة تبين الموقف المالي للشركة على مبدأ (الأصول = الخصوم + حقوق الملكية)" />
       <SummaryCards computed={computed} formatValue={formatValue} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

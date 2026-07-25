@@ -6,6 +6,8 @@ import { PageHeader } from "./PageHeader";
 interface OperationalTableTemplateProps {
   /** Page Title */
   title: string;
+  /** Badge rendered after the title in the header */
+  badge?: ReactNode;
   /** Main list actions (New, Import, etc) */
   toolbar?: ReactNode;
   /** Filter bar rendered between title/actions and the table */
@@ -30,6 +32,7 @@ interface OperationalTableTemplateProps {
 
 export function OperationalTableTemplate({
   title,
+  badge,
   toolbar,
   filterBar,
   headerWidgets,
@@ -45,7 +48,7 @@ export function OperationalTableTemplate({
 
   return (
     <div className={cn("flex flex-col h-full w-full bg-muted/30", className)} dir="rtl">
-      <PageHeader title={title} actions={toolbar} pinAction pinLabel={title} />
+      <PageHeader title={title} badge={badge} actions={toolbar} pinAction pinLabel={title} />
 
       {/* 2. Main Layout Area */}
       <div className="print-clean-parent flex-1 flex overflow-hidden p-4 gap-4">

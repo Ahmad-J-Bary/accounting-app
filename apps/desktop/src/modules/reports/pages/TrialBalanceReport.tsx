@@ -1,17 +1,17 @@
 import { useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { ReportLayout } from "@widgets/templates/ReportLayout";
+import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useUnifiedColumns } from "@shared/hooks";
 import { cn } from "@shared/lib/utils";
-import { Minus, Plus, RefreshCw } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
+import { DatePicker } from "@shared/ui/date-picker";
+import { ReportMeta, DateRangePicker } from "@widgets/reports";
 import { computeTreeTotals, flattenTreeRows, isBalanceDebit } from "../lib/trialBalance";
 import type { TrialBalanceTreeRow } from "../lib/trialBalance";
 import { useTrialBalance } from "@shared/hooks/queries/useReportQueries";
-import { QUERY_KEYS } from "@shared/hooks/queryClient";
 
 const DETAIL_LEVELS = [
   { level: 1, maxDepth: 0, label: "مستوى 1", desc: "التصنيفات الرئيسية" },
@@ -22,10 +22,13 @@ const DETAIL_LEVELS = [
 
 export default function TrialBalanceReport() {
   const { baseCurrency, currencies, formatAmount, convertFromBase } = useCurrencyContext();
-  const queryClient = useQueryClient();
   const [detailLevel, setDetailLevel] = useState(3);
+  const [filters, setFilters] = useState({
+    from_date: new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
+    to_date: new Date().toISOString().split("T")[0],
+  });
 
-  const { data, isLoading } = useTrialBalance();
+  const { data, isLoading } = useTrialBalance(filters);
 
   const accounts = useMemo(() => data?.accounts ?? [], [data?.accounts]);
   const ledgerTotals = useMemo(() => data?.ledgerTotals ?? new Map(), [data?.ledgerTotals]);
@@ -287,86 +290,84 @@ export default function TrialBalanceReport() {
   }, [enrichedColumns, totals, baseSym, secondaryCurrency, formatCell]);
 
   return (
-    <ReportLayout title="ميزان المراجعة">
-      <div className="flex flex-col flex-1 p-8 gap-8">
-        {/* Description Banner */}
-        <div className="shrink-0 rounded-3xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-center text-sm text-slate-600">
-          <span className="text-lg font-black text-slate-900">ميزان المراجعة</span>
-          <span className="mx-2 text-slate-300">|</span>
-          <span>بيان يوضح إجمالي الحركة المدينة والحركة الدائنة لكل الحسابات المتضمنة في دليل الحسابات (الشجرة)</span>
+    <OperationalTableTemplate
+      title="ميزان المراجعة"
+      toolbar={
+        <div className="flex items-center gap-2 flex-wrap">
+          <DateRangePicker
+            from={filters.from_date}
+            to={filters.to_date}
+            onChange={({ from_date, to_date }) => setFilters(f => ({ ...f, from_date, to_date }))}
+          />
         </div>
+      }
+      tableContent={
+        <div className="flex flex-col h-full">
+          <ReportMeta title="ميزان المراجعة" description="بيان يوضح إجمالي الحركة المدينة والحركة الدائنة لكل الحسابات المتضمنة في دليل الحسابات (الشجرة)" />
 
-        {/* Detail Level Control */}
-        <div className="shrink-0 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              disabled={detailLevel === 1}
-              onClick={() => setDetailLevel((p) => Math.max(1, p - 1))}
+          <div className="flex-1 min-h-0 overflow-hidden pb-4">
+            <TableShell
+              searchPlaceholder="بحث في الحسابات..."
+              columns={toolbarColumns}
+              onColumnToggle={toggleColumn}
+              onColumnsReset={resetToDefault}
+              columnsModified={isModified}
+              filterBar={
+                <div className="flex items-center gap-2 w-full">
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      disabled={detailLevel === 1}
+                      onClick={() => setDetailLevel((p) => Math.max(1, p - 1))}
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+
+                    <div className="flex items-center gap-1" dir="ltr">
+                      {[1, 2, 3, 4].map((level) => (
+                        <button
+                          key={level}
+                          className={cn(
+                            "h-1.5 rounded-full transition-all duration-200 cursor-pointer",
+                            level <= detailLevel
+                              ? "bg-slate-900"
+                              : "bg-slate-200 hover:bg-slate-300",
+                            level === detailLevel ? "w-6" : "w-1.5",
+                          )}
+                          onClick={() => setDetailLevel(level)}
+                          title={DETAIL_LEVELS.find((d) => d.level === level)?.desc}
+                        />
+                      ))}
+                    </div>
+
+                    <button
+                      className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      disabled={detailLevel === 4}
+                      onClick={() => setDetailLevel((p) => Math.min(4, p + 1))}
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <span className="flex-1 text-center text-[11px] font-bold text-slate-400 tracking-wider">
+                    {detailLevel === 1 ? "مختصر" : detailLevel === 4 ? "مفصل" : "مستوى " + detailLevel}
+                  </span>
+                </div>
+              }
             >
-              <Minus className="w-4 h-4" />
-            </button>
-
-            <div className="flex items-center gap-1.5" dir="ltr">
-              {[1, 2, 3, 4].map((level) => (
-                <button
-                  key={level}
-                  className={cn(
-                    "h-2 rounded-full transition-all duration-200 cursor-pointer",
-                    level <= detailLevel
-                      ? "bg-slate-900"
-                      : "bg-slate-200 hover:bg-slate-300",
-                    level === detailLevel ? "w-8" : "w-2",
-                  )}
-                  onClick={() => setDetailLevel(level)}
-                  title={DETAIL_LEVELS.find((d) => d.level === level)?.desc}
-                />
-              ))}
-            </div>
-
-            <button
-              className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              disabled={detailLevel === 4}
-              onClick={() => setDetailLevel((p) => Math.min(4, p + 1))}
-            >
-              <Plus className="w-4 h-4" />
-            </button>
+              <UnifiedTable
+                data={rows}
+                columns={enrichedColumns}
+                loading={isLoading}
+                tableId="trial-balance"
+                emptyMessage="لا توجد حسابات مسجلة"
+                summary={summaryColumns}
+                enableResize
+              />
+            </TableShell>
           </div>
-
-          <span className="text-[11px] font-bold text-slate-400 tracking-wider">
-            {detailLevel === 1 ? "مختصر" : detailLevel === 4 ? "مفصل" : "مستوى " + detailLevel}
-          </span>
-
-          <button
-            onClick={() => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.trialBalance })}
-            className="ml-2 p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-            title="تحديث البيانات"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
         </div>
-
-        {/* Table */}
-        <div className="flex-1 min-h-0 rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <TableShell
-            searchPlaceholder="بحث في الحسابات..."
-            columns={toolbarColumns}
-            onColumnToggle={toggleColumn}
-            onColumnsReset={resetToDefault}
-            columnsModified={isModified}
-          >
-            <UnifiedTable
-              data={rows}
-              columns={enrichedColumns}
-              loading={isLoading}
-              tableId="trial-balance"
-              emptyMessage="لا توجد حسابات مسجلة"
-              summary={summaryColumns}
-              enableResize
-            />
-          </TableShell>
-        </div>
-      </div>
-    </ReportLayout>
+      }
+    />
   );
 }
