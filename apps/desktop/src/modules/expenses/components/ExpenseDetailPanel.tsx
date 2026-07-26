@@ -84,9 +84,8 @@ export function ExpenseDetailPanel({
             columns={2}
             fields={[
               { label: "الرصيد الافتتاحي", value: expense.opening_balance || "0" },
+              { label: "اتجاه الرصيد", value: parseFloat(expense.debit || "0") > 0 ? "مدين" : "دائن" },
               { label: "العملة", value: baseCurrency?.code || "" },
-              { label: "مدين (حالي)", value: expense.debit || "0" },
-              { label: "دائن (حالي)", value: expense.credit || "0" },
               { label: "الرصيد الحالي", value: expense.balance || "0" },
             ]}
           />

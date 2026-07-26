@@ -5,6 +5,7 @@ import type { AccountDto } from "@erp/shared-types";
 import { FormPanel } from '@widgets/form-shell/FormPanel';
 import { FieldLabel } from '@widgets/sidebar-shell/FieldLabel';
 import { SidebarSection } from '@widgets/sidebar-shell/SidebarSection';
+import { cn } from "@shared/lib/utils";
 import { Receipt } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
@@ -22,14 +23,13 @@ export interface ExpenseFormPayload {
 
 interface ExpenseFormPanelProps {
   expense: AccountDto | null;
-  expenseItems: AccountDto[];       // All current expense items — used to auto-suggest next code
-  parentCode?: string;              // e.g. "5" — parent account code prefix
+  expenseItems: AccountDto[];
+  parentCode?: string;
   onSave: (payload: ExpenseFormPayload) => Promise<void>;
   onClose: () => void;
   saving?: boolean;
 }
 
-/** Get the next numeric code for expense items (just 1, 2, 3...) */
 function suggestNextSuffix(items: AccountDto[], parentCode: string): string {
   const numeric = items
     .map(a => {
@@ -56,8 +56,7 @@ export function ExpenseFormPanel({
 
   const [name, setName] = useState("");
   const [openingBalance, setOpeningBalance] = useState("0");
-  const [debit, setDebit] = useState("0");
-  const [credit, setCredit] = useState("0");
+  const [balanceDirection, setBalanceDirection] = useState<"debit" | "credit">("debit");
   const [currency, setCurrency] = useState(baseCurrency?.code || "");
   const [notes, setNotes] = useState("");
 
@@ -66,19 +65,21 @@ export function ExpenseFormPanel({
     [expenseItems, parentCode]
   );
 
+  const computedDebit = balanceDirection === "debit" ? openingBalance : "0";
+  const computedCredit = balanceDirection === "credit" ? openingBalance : "0";
+
   useEffect(() => {
     if (expense) {
       setName(expense.name_ar || "");
       setOpeningBalance(expense.opening_balance || "0");
-      setDebit(expense.debit || "0");
-      setCredit(expense.credit || "0");
+      const pDebit = parseFloat(expense.debit || "0");
+      setBalanceDirection(pDebit > 0 ? "debit" : "credit");
       setCurrency(baseCurrency?.code || "");
       setNotes(expense.notes || "");
     } else {
       setName("");
       setOpeningBalance("0");
-      setDebit("0");
-      setCredit("0");
+      setBalanceDirection("debit");
       setCurrency(baseCurrency?.code || "");
       setNotes("");
     }
@@ -88,7 +89,7 @@ export function ExpenseFormPanel({
     if (!name.trim()) return;
 
     const suffix = expense?.code && parentCode && expense.code.startsWith(parentCode)
-      ? expense.code.substring(parentCode.length) 
+      ? expense.code.substring(parentCode.length)
       : expense?.code || suggestedSuffix;
     const fullCode = parentCode ? `${parentCode}${suffix}` : suffix;
 
@@ -97,8 +98,8 @@ export function ExpenseFormPanel({
       name_ar: name.trim(),
       name_en: name.trim(),
       opening_balance: openingBalance,
-      debit,
-      credit,
+      debit: computedDebit,
+      credit: computedCredit,
       currency,
       notes: notes.trim() || null,
     };
@@ -150,7 +151,7 @@ export function ExpenseFormPanel({
 
         <SidebarSection title="البيانات المالية">
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5 col-span-2">
+            <div className="space-y-1.5 col-span-2 sm:col-span-1">
               <FieldLabel>الرصيد الافتتاحي</FieldLabel>
               <Input
                 type="number"
@@ -160,25 +161,34 @@ export function ExpenseFormPanel({
                 className="h-9 tabular-nums"
               />
             </div>
-            <div className="space-y-1.5">
-              <FieldLabel>مدين (حالي)</FieldLabel>
-              <Input
-                type="number"
-                step="any"
-                value={debit}
-                onChange={e => setDebit(e.target.value)}
-                className="h-9 tabular-nums"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <FieldLabel>دائن (حالي)</FieldLabel>
-              <Input
-                type="number"
-                step="any"
-                value={credit}
-                onChange={e => setCredit(e.target.value)}
-                className="h-9 tabular-nums"
-              />
+            <div className="space-y-1.5 col-span-2 sm:col-span-1">
+              <FieldLabel>اتجاه الرصيد</FieldLabel>
+              <div className="flex gap-2 h-9">
+                <button
+                  type="button"
+                  className={cn(
+                    "flex-1 rounded-md text-sm font-bold transition-colors border",
+                    balanceDirection === "debit"
+                      ? "bg-blue-100 text-blue-700 border-blue-300"
+                      : "bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100"
+                  )}
+                  onClick={() => setBalanceDirection("debit")}
+                >
+                  مدين
+                </button>
+                <button
+                  type="button"
+                  className={cn(
+                    "flex-1 rounded-md text-sm font-bold transition-colors border",
+                    balanceDirection === "credit"
+                      ? "bg-emerald-100 text-emerald-700 border-emerald-300"
+                      : "bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100"
+                  )}
+                  onClick={() => setBalanceDirection("credit")}
+                >
+                  دائن
+                </button>
+              </div>
             </div>
           </div>
         </SidebarSection>

@@ -127,11 +127,12 @@ export default function AccountMovement() {
 
   const openingBalance = useMemo(() => {
     const absOpening = parseFloat(ledger?.opening_balance_base || "0");
-    if (!dateFilters.from_date || !ledger?.lines) return absOpening;
+    if (!dateFilters.from_date) return absOpening;
 
+    const allLines = ledger?.lines || [];
     let debitBefore = 0;
     let creditBefore = 0;
-    for (const line of ledger.lines) {
+    for (const line of allLines) {
       const d = line.date.split("T")[0];
       if (d < dateFilters.from_date) {
         debitBefore += parseFloat(line.debit_base || "0");
@@ -373,6 +374,7 @@ export default function AccountMovement() {
             onSearchChange={setSearch}
             accountName={ledger?.account_name || ""}
             openingBalance={openingBalance}
+            openingEntry={ledger?.opening_entry || null}
           />
         </div>
       }

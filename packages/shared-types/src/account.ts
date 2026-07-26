@@ -59,11 +59,20 @@ export interface AccountLedgerLineDto {
   balance_original: string;
 }
 
+export interface OpeningEntryDto {
+  entry_number: string;
+  description: string;
+  date: string;
+  debit_base: string;
+  credit_base: string;
+}
+
 export interface AccountLedgerDto {
   account_id: string;
   account_name: string;
   opening_balance_base: string;
   opening_balance_original: string;
+  opening_entry?: OpeningEntryDto | null;
   lines: AccountLedgerLineDto[];
   total_debit_base: string;
   total_credit_base: string;

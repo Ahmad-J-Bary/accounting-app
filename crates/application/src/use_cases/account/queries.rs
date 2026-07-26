@@ -1,5 +1,5 @@
 use super::error::AccountUseCaseError;
-use super::types::{AccountLedger, LedgerLine};
+use super::types::{AccountLedger, LedgerLine, LedgerOpeningInfo};
 use crate::dto::account_dto::AccountDto;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
@@ -130,19 +130,48 @@ impl AccountQueries {
 
         let id_set: std::collections::HashSet<AccountId> = account_ids.iter().copied().collect();
 
-        let opening_balance: Decimal = account_ids
-            .iter()
-            .map(|id| opening_balance_map.get(id).copied().unwrap_or(Decimal::ZERO))
-            .sum();
-
         let journal_entries = self
             .journal_repo
             .list_by_accounts(account_ids)
             .await
             .map_err(|e| AccountUseCaseError::JournalRepositoryError(e.to_string()))?;
 
+        let mut accounts_with_opening_entries: std::collections::HashSet<AccountId> = std::collections::HashSet::new();
+        let mut opening_entries_net = Decimal::ZERO;
+
+        for entry in &journal_entries {
+            let is_opening = entry.journal_type == domain::accounting::JournalType::AccountOpeningBalance
+                || entry.journal_type == domain::accounting::JournalType::CashOpeningBalance
+                || entry.source_type.as_deref() == Some("OPENING_BALANCE")
+                || entry.source_id.as_deref() == Some("consolidated_capital")
+                || entry.description.contains("رصيد افتتاحي")
+                || entry.description.contains("أول المدة");
+            if is_opening {
+                for line in &entry.lines {
+                    if id_set.contains(&line.account_id) {
+                        accounts_with_opening_entries.insert(line.account_id);
+                        let d = line.base_debit();
+                        let c = line.base_credit();
+                        opening_entries_net += d - c;
+                    }
+                }
+            }
+        }
+
+        let static_opening: Decimal = account_ids
+            .iter()
+            .map(|id| opening_balance_map.get(id).copied().unwrap_or(Decimal::ZERO))
+            .sum();
+
+        let opening_balance = if static_opening != Decimal::ZERO {
+            static_opening
+        } else {
+            opening_entries_net
+        };
+
         let mut lines = Vec::new();
-        let mut running_balance_base = opening_balance;
+        let mut opening_entry: Option<LedgerOpeningInfo> = None;
+        let mut running_balance_base = Decimal::ZERO;
         let mut running_balance_original = Decimal::ZERO;
 
         let mut sorted_entries = journal_entries;
@@ -155,6 +184,26 @@ impl AccountQueries {
                 .filter(|l| id_set.contains(&l.account_id))
                 .collect();
             if account_lines.is_empty() {
+                continue;
+            }
+
+            // Skip AccountOpeningBalance entries for accounts that have a
+            // static opening_balance in the DB — the synthetic opening row
+            // already represents this balance in the frontend.
+            if entry.journal_type == domain::accounting::JournalType::AccountOpeningBalance
+                && account_lines.iter().any(|l| {
+                    opening_balance_map.get(&l.account_id).copied().unwrap_or(Decimal::ZERO) > Decimal::ZERO
+                })
+            {
+                if let Some(first_line) = account_lines.first() {
+                    opening_entry = Some(LedgerOpeningInfo {
+                        entry_number: entry.entry_number.clone(),
+                        description: first_line.description.clone(),
+                        date: entry.entry_date,
+                        debit_base: first_line.base_debit(),
+                        credit_base: first_line.base_credit(),
+                    });
+                }
                 continue;
             }
 
@@ -261,6 +310,7 @@ impl AccountQueries {
             account_name,
             opening_balance_base: opening_balance,
             opening_balance_original: Decimal::ZERO,
+            opening_entry,
             lines,
             total_debit_base,
             total_credit_base,

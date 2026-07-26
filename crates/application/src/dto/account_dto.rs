@@ -1,4 +1,4 @@
-use crate::use_cases::account::types::{AccountLedger, LedgerLine};
+use crate::use_cases::account::types::{AccountLedger, LedgerLine, LedgerOpeningInfo};
 use domain::accounting::account::Account;
 use serde::{Deserialize, Serialize};
 
@@ -59,6 +59,7 @@ pub struct AccountLedgerDto {
     pub account_name: String,
     pub opening_balance_base: String,
     pub opening_balance_original: String,
+    pub opening_entry: Option<OpeningEntryDto>,
     pub lines: Vec<AccountLedgerLineDto>,
     pub total_debit_base: String,
     pub total_credit_base: String,
@@ -68,6 +69,27 @@ pub struct AccountLedgerDto {
     pub closing_balance_original: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OpeningEntryDto {
+    pub entry_number: String,
+    pub description: String,
+    pub date: String,
+    pub debit_base: String,
+    pub credit_base: String,
+}
+
+impl From<LedgerOpeningInfo> for OpeningEntryDto {
+    fn from(info: LedgerOpeningInfo) -> Self {
+        Self {
+            entry_number: info.entry_number,
+            description: info.description,
+            date: info.date.to_rfc3339(),
+            debit_base: info.debit_base.to_string(),
+            credit_base: info.credit_base.to_string(),
+        }
+    }
+}
+
 impl From<AccountLedger> for AccountLedgerDto {
     fn from(ledger: AccountLedger) -> Self {
         Self {
@@ -75,6 +97,7 @@ impl From<AccountLedger> for AccountLedgerDto {
             account_name: ledger.account_name,
             opening_balance_base: ledger.opening_balance_base.to_string(),
             opening_balance_original: ledger.opening_balance_original.to_string(),
+            opening_entry: ledger.opening_entry.map(OpeningEntryDto::from),
             lines: ledger
                 .lines
                 .into_iter()

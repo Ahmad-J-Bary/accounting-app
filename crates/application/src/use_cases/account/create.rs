@@ -96,7 +96,7 @@ impl CreateAccountUseCase {
 
         let _is_final = cmd.category == domain::accounting::account::AccountCategory::Detail;
 
-        let account = Account::new(
+        let mut account = Account::new(
             cmd.code.trim().to_string(),
             final_name_ar,
             cmd.name_en.trim().to_string(),
@@ -111,6 +111,17 @@ impl CreateAccountUseCase {
             exchange_rate,
             cmd.notes.as_ref().map(|n| n.trim().to_string()),
         ).map_err(AccountUseCaseError::from)?;
+
+        // Account::new() computes balance = opening_balance + debit - credit.
+        // After the direction-toggle refactoring, debit/credit may represent
+        // the same amount as opening_balance (direction-toggle pattern),
+        // causing double-counting. Detect and fix: if one of debit/credit
+        // equals opening_balance and the other is zero, subtract the duplicate.
+        if (debit > Decimal::ZERO && debit == opening_balance && credit == Decimal::ZERO)
+            || (credit > Decimal::ZERO && credit == opening_balance && debit == Decimal::ZERO)
+        {
+            account.balance -= opening_balance;
+        }
 
         self.account_repo
             .save(&account)

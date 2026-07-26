@@ -269,7 +269,6 @@ export function computeIncomeStatement(
       totalValue: netProfit,
       rows: [
         { label: "إجمالي الأرباح", value: grossProfit },
-         ...expenseRows,
         { label: `إجمالي المصاريف`, value: totalExpenses },
       ],
     },

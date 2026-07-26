@@ -31,6 +31,8 @@ pub struct AccountLedger {
     pub opening_balance_base: rust_decimal::Decimal,
     pub opening_balance_original: rust_decimal::Decimal,
 
+    pub opening_entry: Option<LedgerOpeningInfo>,
+
     pub lines: Vec<LedgerLine>,
 
     pub total_debit_base: rust_decimal::Decimal,
@@ -40,6 +42,15 @@ pub struct AccountLedger {
     pub total_debit_original: rust_decimal::Decimal,
     pub total_credit_original: rust_decimal::Decimal,
     pub closing_balance_original: rust_decimal::Decimal,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LedgerOpeningInfo {
+    pub entry_number: String,
+    pub description: String,
+    pub date: chrono::DateTime<chrono::Utc>,
+    pub debit_base: rust_decimal::Decimal,
+    pub credit_base: rust_decimal::Decimal,
 }
 
 #[derive(Debug, Clone, Serialize)]

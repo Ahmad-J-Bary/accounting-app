@@ -20,6 +20,14 @@ import { Button } from "@shared/ui/button";
 
 type SortField = "entry_number" | "date" | "journal_type";
 
+interface OpeningEntryInfo {
+  entry_number: string;
+  description: string;
+  date: string;
+  debit_base: string;
+  credit_base: string;
+}
+
 interface AccountMovementTableProps {
   lines: AccountLedgerLineDto[];
   loading: boolean;
@@ -27,6 +35,7 @@ interface AccountMovementTableProps {
   onSearchChange: (val: string) => void;
   accountName: string;
   openingBalance?: number;
+  openingEntry?: OpeningEntryInfo | null;
 }
 
 type MovementRow = AccountLedgerLineDto & {
@@ -47,6 +56,7 @@ export function AccountMovementTable({
   onSearchChange,
   accountName,
   openingBalance = 0,
+  openingEntry = null,
 }: AccountMovementTableProps) {
   const { isBaseCurrency, currencySuffix, hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { settings, getDensityPadding } = useTableSettings();
@@ -143,9 +153,24 @@ export function AccountMovementTable({
     }
   });
 
+  const hasOpeningEntryInLines = useMemo(() => {
+    return sortedOriginalLines.some((l) => {
+      const desc = l.description || "";
+      return (
+        l.journal_type === "AccountOpeningBalance" ||
+        l.journal_type === "CashOpeningBalance" ||
+        l.journal_type === "رصيد افتتاحي" ||
+        desc.includes("رصيد افتتاحي") ||
+        desc.includes("أول المدة")
+      );
+    });
+  }, [sortedOriginalLines]);
+
+  const showSyntheticOpeningRow = openingBalance !== 0 && !hasOpeningEntryInLines;
+
   const tableData = useMemo(() => {
     const rows: MovementRow[] = [];
-    let running = openingBalance;
+    let running = showSyntheticOpeningRow ? openingBalance : 0;
 
     for (const line of sortedOriginalLines) {
       const debitBase = parseFloat(line.debit_base || "0");
@@ -163,7 +188,7 @@ export function AccountMovementTable({
     }
 
     return rows;
-  }, [sortedOriginalLines, openingBalance]);
+  }, [sortedOriginalLines, openingBalance, showSyntheticOpeningRow]);
 
   const allColumns = useMemo<UnifiedColumn<MovementRow>[]>(() => {
     const cols: UnifiedColumn<MovementRow>[] = [
@@ -511,56 +536,72 @@ export function AccountMovementTable({
       ));
     }
 
-    if (tableData.length === 0) {
+    if (tableData.length === 0 && !showSyntheticOpeningRow) {
       return <EmptyState message={search ? "لا توجد حركات تطابق معايير البحث" : "لا توجد حركات مسجلة لهذا الحساب"} />;
     }
 
     return (
       <>
         {/* Opening Balance Row */}
-        <div
-          key="opening-balance"
-          dir="rtl"
-          className={cn(
-            "transition-all duration-75 bg-indigo-50/40 border-b border-indigo-100",
-            getRowBorderClass(settings.borderStyle),
-          )}
-          style={{
-            display: "grid",
-            gridTemplateColumns,
-          }}
-        >
-          {visibleColumns.map((col, colIdx) => {
-            const columnPosition = colIdx + 1;
-            let content: ReactNode = "";
-            if (col.id === "entry_number") content = "—";
-            else if (col.id === "journal_type") content = <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-indigo-100 text-indigo-700 uppercase tracking-tighter">رصيد افتتاحي</span>;
-            else if (col.id === "balance") content = formatAmount(openingBalance, { currencyCode: baseCurrency?.code || "" });
+        {showSyntheticOpeningRow && (
+          <div
+            key="opening-balance"
+            dir="rtl"
+            className={cn(
+              "transition-all duration-75 bg-indigo-50/40 border-b border-indigo-100",
+              getRowBorderClass(settings.borderStyle),
+            )}
+            style={{
+              display: "grid",
+              gridTemplateColumns,
+            }}
+          >
+            {visibleColumns.map((col, colIdx) => {
+              const columnPosition = colIdx + 1;
+              let content: ReactNode = "";
+              if (col.id === "entry_number") {
+                content = openingEntry?.entry_number ? formatNumber(parseInt(openingEntry.entry_number) || 0) : "—";
+              } else if (col.id === "journal_type") {
+                content = <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-indigo-100 text-indigo-700 uppercase tracking-tighter">رصيد افتتاحي</span>;
+              } else if (col.id === "description") {
+                content = openingEntry?.description || "";
+              } else if (col.id === "date") {
+                content = openingEntry?.date ? formatDateTime(openingEntry.date) : "";
+              } else if (col.id.startsWith("debit_")) {
+                const val = openingEntry ? parseFloat(openingEntry.debit_base) : 0;
+                content = val > 0 ? formatAmount(val, { currencyCode: baseCurrency?.code || "" }) : "";
+              } else if (col.id.startsWith("credit_")) {
+                const val = openingEntry ? parseFloat(openingEntry.credit_base) : 0;
+                content = val > 0 ? formatAmount(val, { currencyCode: baseCurrency?.code || "" }) : "";
+              } else if (col.id === "balance") {
+                content = formatAmount(openingBalance, { currencyCode: baseCurrency?.code || "" });
+              }
 
-            return (
-              <div
-                key={`opening-${col.id}`}
-                style={{
-                  gridColumn: String(columnPosition),
-                  minWidth: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: col.align === "left" ? "flex-start" : col.align === "center" ? "center" : "flex-end",
-                  textAlign: col.align || "right",
-                  fontSize: `${settings.fontSize}px`,
-                  fontFamily: settings.fontFamily,
-                }}
-                className={cn(
-                  getDensityPadding(),
-                  cellBorderClass,
-                  col.id === "balance" ? "text-indigo-700 font-black" : "text-indigo-600 font-bold",
-                )}
-              >
-                {content}
-              </div>
-            );
-          })}
-        </div>
+              return (
+                <div
+                  key={`opening-${col.id}`}
+                  style={{
+                    gridColumn: String(columnPosition),
+                    minWidth: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: col.align === "left" ? "flex-start" : col.align === "center" ? "center" : "flex-end",
+                    textAlign: col.align || "right",
+                    fontSize: `${settings.fontSize}px`,
+                    fontFamily: settings.fontFamily,
+                  }}
+                  className={cn(
+                    getDensityPadding(),
+                    cellBorderClass,
+                    col.id === "balance" ? "text-indigo-700 font-black" : "text-indigo-600 font-bold",
+                  )}
+                >
+                  {content}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Movement Rows — one row per movement */}
         {tableData.map((row, rowIdx) => (
