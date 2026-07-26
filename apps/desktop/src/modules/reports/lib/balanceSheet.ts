@@ -276,7 +276,7 @@ export function computeBalanceSheet(
   const totalCurrentLiabilities = liabilities.current.reduce((s, a) => s + a.balance, 0);
   const totalLiabilities = totalFixedLiabilities + totalCurrentLiabilities;
 
-  const totalEquity = allEquity.reduce((s, a) => s + a.balance, 0) + profitLoss.netProfit;
+  const totalEquity = allEquity.reduce((s, a) => s + a.balance, 0) + profitLoss.netProfit - profitLoss.totalDrawings;
 
   const totalLiabilitiesEquity = totalLiabilities + totalEquity;
   const isBalanced = Math.abs(totalAssets - totalLiabilitiesEquity) < 0.01;
@@ -318,6 +318,7 @@ export function computeBalanceSheet(
       rows: [
         ...buildSectionRows(allEquity),
         { label: "صافي الأرباح", value: profitLoss.netProfit, depth: 0 },
+        { label: "إجمالي المسحوبات", value: -profitLoss.totalDrawings, depth: 0 },
       ],
     },
   ];

@@ -3,13 +3,12 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
-import { useUnifiedColumns } from "@shared/hooks";
+import { useUnifiedColumns, useBaseCurrencyColumns } from "@shared/hooks";
 import { cn } from "@shared/lib/utils";
 import { Minus, Plus } from "lucide-react";
 import { ReportMeta } from "@widgets/reports";
 import { computeTreeTotals, flattenTreeRows, isBalanceDebit } from "../lib/trialBalance";
 import type { TrialBalanceTreeRow } from "../lib/trialBalance";
-import { createSummarySpacer } from "../lib/table-meta";
 import type { LoadedTrialBalanceData } from "../hooks/useTrialBalanceReport";
 
 type TrialBalanceViewProps = {
@@ -24,44 +23,26 @@ const DETAIL_LEVELS = [
   { level: 4, maxDepth: Infinity, label: "مستوى 4", desc: "+ كافة التفاصيل" },
 ];
 
+const cellWrap = "w-full leading-snug";
+
 export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
-  const { baseCurrency, currencies, formatAmount, convertFromBase } = useCurrencyContext();
+  const { currencies, formatAmount } = useCurrencyContext();
+  const { isBaseCurrency, currencySuffix: cs } = useBaseCurrencyColumns();
   const [detailLevel, setDetailLevel] = useState(3);
 
   const accounts = data.accounts;
   const ledgerTotals = data.ledgerTotals;
-
-  const secondaryCurrency = useMemo(() => {
-    if (!baseCurrency) return null;
-    return currencies.find(c => c.code !== baseCurrency.code) ?? null;
-  }, [currencies, baseCurrency]);
 
   const treeTotals = useMemo(() => computeTreeTotals(accounts, ledgerTotals), [accounts, ledgerTotals]);
 
   const maxDepth = DETAIL_LEVELS[detailLevel - 1].maxDepth;
 
   const rows = useMemo<TrialBalanceTreeRow[]>(() => {
-    const baseRows = flattenTreeRows(treeTotals, maxDepth);
-    if (!secondaryCurrency) return baseRows;
-    return baseRows.map((r) => ({
-      ...r,
-      balanceSec: convertFromBase(r.balance, secondaryCurrency.code),
-      debitSec: convertFromBase(r.periodDebit, secondaryCurrency.code),
-      creditSec: convertFromBase(r.periodCredit, secondaryCurrency.code),
-      openingDebitSec: convertFromBase(r.openingDebit, secondaryCurrency.code),
-      openingCreditSec: convertFromBase(r.openingCredit, secondaryCurrency.code),
-      periodDebitSec: convertFromBase(r.periodDebit, secondaryCurrency.code),
-      periodCreditSec: convertFromBase(r.periodCredit, secondaryCurrency.code),
-    }));
-  }, [treeTotals, maxDepth, secondaryCurrency, convertFromBase]);
+    return flattenTreeRows(treeTotals, maxDepth);
+  }, [treeTotals, maxDepth]);
 
-  const baseSym = baseCurrency?.symbol || baseCurrency?.code || "";
-  const secSym = secondaryCurrency?.symbol || secondaryCurrency?.code || "";
-
-  const formatCell = useMemo(() => (value: number, code?: string) => {
-    if (value === 0) return "—";
-    return formatAmount(value, { currencyCode: code });
-  }, [formatAmount]);
+  const rootClass = (c: string) => `tabular-nums font-black ${c}`;
+  const secClass = "tabular-nums font-medium text-slate-400";
 
   const allColumns = useMemo<UnifiedColumn<TrialBalanceTreeRow>[]>(() => {
     const cols: UnifiedColumn<TrialBalanceTreeRow>[] = [
@@ -79,120 +60,146 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
             ? "font-semibold text-xs text-slate-700"
             : "font-normal text-xs text-slate-600";
           return (
-            <span className={cn("truncate block", padClass, fontClass)}>
+            <div className={cn("w-full leading-snug break-words", padClass, fontClass)}>
               {row.name}
-            </span>
+            </div>
           );
         },
         className: "justify-start",
       },
-      {
-        id: "opening_base",
-        header: `الرصيد الافتتاحي (${baseSym})`,
-        label: `الرصيد الافتتاحي (${baseSym})`,
+    ];
+
+    currencies.forEach(curr => {
+      const symbol = curr.symbol || curr.code;
+      const isBase = isBaseCurrency(curr.code);
+      cols.push({
+        id: `opening_${curr.code}`,
+        header: `الرصيد الافتتاحي ${cs(symbol)}`,
+        label: `الرصيد الافتتاحي ${cs(symbol)}`,
         accessor: (row) => {
           const netOpening = row.openingDebit - row.openingCredit;
-          if (netOpening === 0) return <span className="text-slate-300">—</span>;
+          if (netOpening === 0) return <div className={cellWrap}><span className="text-slate-300">—</span></div>;
           const status = netOpening > 0 ? "مدين" : "دائن";
           return (
-            <span className={cn(
-              "tabular-nums font-bold text-xs",
-              status === "مدين" ? "text-amber-700" : "text-purple-700"
-            )}>
-              {formatCell(Math.abs(netOpening))} ({status})
-            </span>
+            <div className={cellWrap}>
+              <span className={cn(
+                isBase ? rootClass("text-amber-700") : secClass,
+                "text-xs",
+                status === "مدين" ? "" : ""
+              )}>
+                {formatAmount(Math.abs(netOpening), { currencyCode: curr.code })} ({status})
+              </span>
+            </div>
           );
         },
-        className: "justify-end tabular-nums font-bold",
-      },
-      {
-        id: "debit_base",
-        header: `حركة مدين (${baseSym})`,
-        label: `حركة مدين (${baseSym})`,
+        className: "justify-end",
+      });
+    });
+
+    currencies.forEach(curr => {
+      const symbol = curr.symbol || curr.code;
+      const isBase = isBaseCurrency(curr.code);
+      cols.push({
+        id: `debit_${curr.code}`,
+        header: `مدين ${cs(symbol)}`,
+        label: `مدين ${cs(symbol)}`,
         accessor: (row) => (
-          <span className="tabular-nums font-black text-blue-700">
-            {row.periodDebit > 0 ? formatCell(row.periodDebit) : "—"}
-          </span>
+          <div className={cellWrap}>
+            {row.periodDebit > 0 ? (
+              <span className={cn(isBase ? rootClass("text-blue-700") : secClass, "text-xs")}>
+                {formatAmount(row.periodDebit, { currencyCode: curr.code })}
+              </span>
+            ) : (
+              <span className="text-slate-300 text-xs">—</span>
+            )}
+          </div>
         ),
-        className: "justify-end tabular-nums font-black text-blue-700",
-      },
-      {
-        id: "credit_base",
-        header: `حركة دائن (${baseSym})`,
-        label: `حركة دائن (${baseSym})`,
+        className: isBase ? rootClass("text-blue-700") : secClass,
+      });
+    });
+
+    currencies.forEach(curr => {
+      const symbol = curr.symbol || curr.code;
+      const isBase = isBaseCurrency(curr.code);
+      cols.push({
+        id: `credit_${curr.code}`,
+        header: `دائن ${cs(symbol)}`,
+        label: `دائن ${cs(symbol)}`,
         accessor: (row) => (
-          <span className="tabular-nums font-black text-emerald-700">
-            {row.periodCredit > 0 ? formatCell(row.periodCredit) : "—"}
-          </span>
+          <div className={cellWrap}>
+            {row.periodCredit > 0 ? (
+              <span className={cn(isBase ? rootClass("text-emerald-700") : secClass, "text-xs")}>
+                {formatAmount(row.periodCredit, { currencyCode: curr.code })}
+              </span>
+            ) : (
+              <span className="text-slate-300 text-xs">—</span>
+            )}
+          </div>
         ),
-        className: "justify-end tabular-nums font-black text-emerald-700",
-      },
-      {
-        id: "balance_base",
-        header: `الرصيد النهائي (${baseSym})`,
-        label: `الرصيد النهائي (${baseSym})`,
+        className: isBase ? rootClass("text-emerald-700") : secClass,
+      });
+    });
+
+    currencies.forEach(curr => {
+      const symbol = curr.symbol || curr.code;
+      const isBase = isBaseCurrency(curr.code);
+      cols.push({
+        id: `balance_${curr.code}`,
+        header: `الرصيد النهائي ${cs(symbol)}`,
+        label: `الرصيد النهائي ${cs(symbol)}`,
         accessor: (row) => {
           const val = row.balance;
           return (
-            <span className={cn(
-              "tabular-nums font-black text-xs",
-              val > 0 ? "text-red-700" : val < 0 ? "text-emerald-700" : "text-slate-400",
-            )}>
-              {formatCell(Math.abs(val))}
-            </span>
+            <div className={cellWrap}>
+              <span className={cn(
+                isBase
+                  ? rootClass(val > 0 ? "text-red-700" : val < 0 ? "text-emerald-700" : "text-slate-400")
+                  : secClass,
+                "text-xs"
+              )}>
+                {formatAmount(Math.abs(val), { currencyCode: curr.code })}
+              </span>
+            </div>
           );
         },
-        className: "justify-end tabular-nums font-black",
-      },
-      {
-        id: "status",
-        header: "حالة الرصيد",
-        label: "حالة الرصيد",
-        accessor: (row) => {
-          const status = isBalanceDebit(row.balance);
-          if (!status) return <span className="text-slate-300">—</span>;
-          return (
+        className: isBase ? "justify-end tabular-nums font-black" : secClass,
+      });
+    });
+
+    cols.push({
+      id: "status",
+      header: "حالة الحساب",
+      label: "حالة الحساب",
+      accessor: (row) => {
+        const status = isBalanceDebit(row.balance);
+        if (!status) return <div className={cellWrap}><span className="text-slate-300">—</span></div>;
+        return (
+          <div className={cellWrap}>
             <span className={cn(
               "font-bold text-xs",
               status === "مدين" ? "text-red-600" : "text-emerald-600",
             )}>
               {status}
             </span>
-          );
-        },
-        className: "justify-center",
+          </div>
+        );
       },
-    ];
-
-    if (secondaryCurrency) {
-      cols.push({
-        id: "balance_sec",
-        header: `الرصيد النهائي (${secSym})`,
-        label: `الرصيد النهائي (${secSym})`,
-        accessor: (row) => {
-          const val = row.balance;
-          if (val === 0) return <span className="text-slate-300">—</span>;
-          return (
-            <span className="tabular-nums font-extrabold text-slate-500 text-xs">
-              {formatCell(Math.abs(row.balanceSec), secondaryCurrency.code)}
-            </span>
-          );
-        },
-        className: "justify-end tabular-nums font-extrabold text-slate-500",
-      });
-    }
+      className: "justify-center",
+    });
 
     return cols;
-  }, [baseSym, secSym, secondaryCurrency, formatCell]);
+  }, [currencies, formatAmount, isBaseCurrency, cs]);
 
-  const baseIds = useMemo(() => {
-    return ["name", "opening_base", "debit_base", "credit_base", "balance_base", "status"];
-  }, []);
+  const defaultVisible = useMemo(() => {
+    const baseCode = currencies.find(c => isBaseCurrency(c.code))?.code;
+    if (!baseCode) return ["name", "status"];
+    return ["name", `opening_${baseCode}`, `debit_${baseCode}`, `credit_${baseCode}`, `balance_${baseCode}`, "status"];
+  }, [currencies, isBaseCurrency]);
 
   const { enrichedColumns, toolbarColumns, toggleColumn, resetToDefault, isModified } = useUnifiedColumns({
     tableId: "trial-balance",
     columns: allColumns,
-    defaultVisible: baseIds,
+    defaultVisible,
   });
 
   const totals = useMemo(() => {
@@ -219,54 +226,75 @@ export function TrialBalanceView({ data, loading }: TrialBalanceViewProps) {
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     return enrichedColumns.map((col) => {
-      if (col.id === "name") {
+      const id = col.id;
+
+      if (id === "name") {
         return {
           id: "count", columnId: "name", label: "", value: `${totals.count} حساب`,
           className: "text-slate-500 font-medium",
         };
       }
-      if (col.id === "opening_base") {
+
+      if (id === "status") {
+        return { id: "status_spacer", columnId: "status", label: "", value: totals.balanceStatus || "—" };
+      }
+
+      const openingMatch = id.match(/^opening_(.+)$/);
+      if (openingMatch) {
+        const currCode = openingMatch[1];
         const sign = totals.openingNet > 0 ? "مدين" : totals.openingNet < 0 ? "دائن" : "متزن";
         return {
-          id: "opening_summary", columnId: "opening_base",
+          id: `${id}_summary`, columnId: id,
           label: "إجمالي الأرصدة الافتتاحية",
-          value: totals.openingNet !== 0 ? `${formatCell(Math.abs(totals.openingNet))} (${sign})` : "—",
+          value: totals.openingNet !== 0
+            ? `${formatAmount(Math.abs(totals.openingNet), { currencyCode: currCode })} (${sign})`
+            : "—",
           className: "text-amber-700 font-bold",
         };
       }
-      if (col.id === "debit_base") {
+
+      const debitMatch = id.match(/^debit_(.+)$/);
+      if (debitMatch) {
+        const currCode = debitMatch[1];
         return {
-          id: "debit_summary", columnId: "debit_base", label: `إجمالي حركات مدين (${baseSym})`,
-          value: totals.periodDebit > 0 ? formatCell(totals.periodDebit) : "—",
+          id: `${id}_summary`, columnId: id,
+          label: `إجمالي حركات مدين`,
+          value: totals.periodDebit > 0 ? formatAmount(totals.periodDebit, { currencyCode: currCode }) : "—",
           className: "text-blue-700 font-black",
         };
       }
-      if (col.id === "credit_base") {
+
+      const creditMatch = id.match(/^credit_(.+)$/);
+      if (creditMatch) {
+        const currCode = creditMatch[1];
         return {
-          id: "credit_summary", columnId: "credit_base", label: `إجمالي حركات دائن (${baseSym})`,
-          value: totals.periodCredit > 0 ? formatCell(totals.periodCredit) : "—",
+          id: `${id}_summary`, columnId: id,
+          label: `إجمالي حركات دائن`,
+          value: totals.periodCredit > 0 ? formatAmount(totals.periodCredit, { currencyCode: currCode }) : "—",
           className: "text-emerald-700 font-black",
         };
       }
-      if (col.id === "balance_base") {
+
+      const balanceMatch = id.match(/^balance_(.+)$/);
+      if (balanceMatch) {
+        const currCode = balanceMatch[1];
+        const isBase = isBaseCurrency(currCode);
         const valClass = totals.balance > 0
           ? "text-red-700 font-black"
           : totals.balance < 0
           ? "text-emerald-700 font-black"
           : "text-slate-500 font-bold";
         return {
-          id: "bal_summary", columnId: "balance_base",
+          id: `${id}_summary`, columnId: id,
           label: `إجمالي الرصيد النهائي`,
-          value: totals.balance !== 0 ? formatCell(Math.abs(totals.balance)) : "—",
-          className: valClass,
+          value: totals.balance !== 0 ? formatAmount(Math.abs(totals.balance), { currencyCode: currCode }) : "—",
+          className: isBase ? valClass : "text-slate-500 font-extrabold",
         };
       }
-      if (col.id === "status") {
-        return { id: "status_spacer", columnId: "status", label: "", value: totals.balanceStatus || "—" };
-      }
-      return createSummarySpacer(col.id);
+
+      return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [enrichedColumns, totals, baseSym, formatCell]);
+  }, [enrichedColumns, totals, formatAmount, isBaseCurrency]);
 
 
   return (

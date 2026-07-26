@@ -1,5 +1,5 @@
 import { customerService } from "@modules/partners/api/customerService";
-import { QUERY_KEYS } from "@shared/hooks/queryClient";
+import { QUERY_KEYS, ALL_REPORT_KEYS } from "@shared/hooks/queryClient";
 import { createEntityMutations } from "./createEntityMutations";
 import type { CreateCustomerRequest, UpdateCustomerRequest } from "@erp/shared-types";
 
@@ -9,9 +9,9 @@ const { useCreate, useUpdate, useDelete } = createEntityMutations<
 >({
   queryKey: QUERY_KEYS.customers,
   mutations: {
-    create: { fn: (req) => customerService.create(req), successMsg: "تم إضافة العميل بنجاح",   errorMsg: "فشل إضافة العميل" },
-    update: { fn: (req) => customerService.update(req), successMsg: "تم تحديث العميل بنجاح",  errorMsg: "فشل تحديث العميل" },
-    delete: { fn: (id)  => customerService.delete(id),  successMsg: "تم حذف العميل بنجاح",    errorMsg: "فشل حذف العميل" },
+    create: { fn: (req) => customerService.create(req), successMsg: "تم إضافة العميل بنجاح",   errorMsg: "فشل إضافة العميل", extraInvalidations: ALL_REPORT_KEYS },
+    update: { fn: (req) => customerService.update(req), successMsg: "تم تحديث العميل بنجاح",  errorMsg: "فشل تحديث العميل", extraInvalidations: ALL_REPORT_KEYS },
+    delete: { fn: (id)  => customerService.delete(id),  successMsg: "تم حذف العميل بنجاح",    errorMsg: "فشل حذف العميل", extraInvalidations: ALL_REPORT_KEYS },
   },
 });
 

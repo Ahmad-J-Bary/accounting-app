@@ -3,10 +3,10 @@ import { QueryClient } from "@tanstack/react-query";
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000,
+      staleTime: 0,
       gcTime: 10 * 60 * 1000,
       retry: 1,
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true,
     },
   },
 });
@@ -76,12 +76,15 @@ export const QUERY_KEYS = {
 
 /** All report query keys that should be invalidated after any accounting mutation. */
 export const ALL_REPORT_KEYS: readonly (readonly unknown[])[] = [
-  QUERY_KEYS.trialBalance(),
+  ["reports", "trial-balance"] as const,
   QUERY_KEYS.incomeStatement,
   QUERY_KEYS.balanceSheet,
   QUERY_KEYS.partnerProfitShare,
-  QUERY_KEYS.journalEntries({}),
+  ["journal-entries"] as const,
   QUERY_KEYS.chartOfAccounts,
+  QUERY_KEYS.chartOfAccountsTree,
+  QUERY_KEYS.salesReturns,
+  QUERY_KEYS.purchaseReturns,
   QUERY_KEYS.receivablesPayables,
 ];
 
