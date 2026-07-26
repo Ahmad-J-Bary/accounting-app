@@ -96,7 +96,10 @@ pub async fn create_partner_account(
         category: AccountCategory::Detail,
         level: parent.level + 1,
         opening_balance: params.opening_balance,
-        balance: params.debit - params.credit,
+        balance: match params.kind {
+            PartnerKind::Customer => params.debit - params.credit,
+            PartnerKind::Supplier => params.credit - params.debit,
+        },
         debit: params.debit,
         credit: params.credit,
         currency: params.currency,
@@ -154,9 +157,8 @@ pub async fn create_opening_balance_entry(
     let zero_ma = MonetaryAmount::zero(currency);
 
     let label = kind.label();
-    let lines = if net_balance > Decimal::ZERO {
-        // Partner is a debtor (customer) or we owe less (supplier reversal)
-        vec![
+    let lines = match (kind, net_balance > Decimal::ZERO) {
+        (PartnerKind::Customer, true) | (PartnerKind::Supplier, false) => vec![
             JournalLine::new(
                 account_id,
                 amount_ma.clone(),
@@ -169,10 +171,8 @@ pub async fn create_opening_balance_entry(
                 amount_ma,
                 format!("رصيد افتتاحي لـ{label}: {partner_name}"),
             ),
-        ]
-    } else {
-        // Partner is a creditor (supplier) or customer overpaid
-        vec![
+        ],
+        _ => vec![
             JournalLine::new(
                 equity_account.id,
                 amount_ma.clone(),
@@ -185,7 +185,7 @@ pub async fn create_opening_balance_entry(
                 amount_ma,
                 format!("رصيد افتتاحي لـ{label}: {partner_name}"),
             ),
-        ]
+        ],
     };
 
     let mut entry = JournalEntry::new(

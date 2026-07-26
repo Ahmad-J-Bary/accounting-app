@@ -202,9 +202,8 @@ export function PartnerDetailPanel({
               columns={2}
               fields={[
                 { label: "الرصيد الافتتاحي", value: partner.opening_balance || "0" },
+                { label: "اتجاه الرصيد", value: settled ? "—" : (parseFloat(partner.debit || "0") > 0 ? "مدين" : "دائن") },
                 { label: "العملة", value: currencyName ? `${currencyName.code} - ${currencyName.name_ar}` : baseCurrency?.code || "" },
-                { label: "مدين (حالي)", value: settled ? "0" : (partner.debit || "0") },
-                { label: "دائن (حالي)", value: settled ? "0" : (partner.credit || "0") },
                 { label: "الرصيد الحالي", value: settled ? "0" : String(effectiveBalance) },
               ]}
             />

@@ -8,6 +8,7 @@ import { SidebarSection } from '@widgets/sidebar-shell/SidebarSection';
 import { User, Building2 } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { toFixed } from "@shared/lib/format";
+import { cn } from "@shared/lib/utils";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
 import {
   AlertDialog,
@@ -65,8 +66,7 @@ export function PartnerFormPanel({
 
   const [form, setForm] = useState({ name: "", phone: "", address: "", notes: "" });
   const [openingBalance, setOpeningBalance] = useState("0");
-  const [debit, setDebit] = useState("0");
-  const [credit, setCredit] = useState("0");
+  const [balanceDirection, setBalanceDirection] = useState<"debit" | "credit">("debit");
   const [currency, setCurrency] = useState(baseCurrency?.code || "");
 
   const oldDebitRef = useRef("0");
@@ -79,6 +79,9 @@ export function PartnerFormPanel({
     return accounts.find(acc => acc.id === parentId);
   }, [accounts, isCustomer]);
 
+  const computedDebit = balanceDirection === "debit" ? openingBalance : "0";
+  const computedCredit = balanceDirection === "credit" ? openingBalance : "0";
+
   useEffect(() => {
     if (partner) {
       setForm({
@@ -88,16 +91,15 @@ export function PartnerFormPanel({
         notes: partner.notes || ""
       });
       setOpeningBalance(partner.opening_balance || "0");
-      setDebit(partner.debit || "0");
-      setCredit(partner.credit || "0");
+      const pDebit = parseFloat(partner.debit || "0");
+      setBalanceDirection(pDebit > 0 ? "debit" : "credit");
       setCurrency(partner.currency || baseCurrency?.code || "");
       oldDebitRef.current = partner.debit || "0";
       oldCreditRef.current = partner.credit || "0";
     } else {
       setForm({ name: "", phone: "", address: "", notes: "" });
       setOpeningBalance("0");
-      setDebit("0");
-      setCredit("0");
+      setBalanceDirection("debit");
       setCurrency(baseCurrency?.code || "");
       oldDebitRef.current = "0";
       oldCreditRef.current = "0";
@@ -105,7 +107,7 @@ export function PartnerFormPanel({
   }, [partner, baseCurrency]);
 
   const balanceChanged = partner != null && (
-    debit !== oldDebitRef.current || credit !== oldCreditRef.current
+    computedDebit !== oldDebitRef.current || computedCredit !== oldCreditRef.current
   );
 
   const handleSubmit = () => {
@@ -119,8 +121,8 @@ export function PartnerFormPanel({
       address: form.address || null,
       notes: form.notes || null,
       opening_balance: openingBalance,
-      debit,
-      credit,
+      debit: computedDebit,
+      credit: computedCredit,
       currency,
       exchange_rate: exchangeRate.toString(),
     };
@@ -146,7 +148,7 @@ export function PartnerFormPanel({
   };
 
   const oldBal = parseFloat(oldDebitRef.current) - parseFloat(oldCreditRef.current);
-  const newBal = parseFloat(debit) - parseFloat(credit);
+  const newBal = parseFloat(computedDebit) - parseFloat(computedCredit);
 
   return (
     <>
@@ -162,7 +164,7 @@ export function PartnerFormPanel({
                 <p><span className="font-bold">الفرق:</span> {toFixed(newBal - oldBal, 2)}</p>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                سيتم إنشاء قيد محاسبي من نوع "رصيد افتتاحي لحساب" بين حساب {isCustomer ? "العميل" : "المورد"} وحساب الرصيد الافتتاحي (224).
+                سيتم إنشاء قيد محاسبي من نوع "رصيد افتتاحي لحساب" بين حساب {isCustomer ? "العميل" : "المورد"} وحساب الرصيد الافتتاحي (53).
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -204,6 +206,35 @@ export function PartnerFormPanel({
                 <FieldLabel>الرصيد الافتتاحي</FieldLabel>
                 <Input type="number" step="any" value={openingBalance} onChange={e => setOpeningBalance(e.target.value)} className="h-9 tabular-nums" />
               </div>
+              <div className="space-y-1.5 col-span-2 sm:col-span-1">
+                <FieldLabel>اتجاه الرصيد</FieldLabel>
+                <div className="flex gap-2 h-9">
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex-1 rounded-md text-sm font-bold transition-colors border",
+                      balanceDirection === "debit"
+                        ? "bg-blue-100 text-blue-700 border-blue-300"
+                        : "bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100"
+                    )}
+                    onClick={() => setBalanceDirection("debit")}
+                  >
+                    مدين
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex-1 rounded-md text-sm font-bold transition-colors border",
+                      balanceDirection === "credit"
+                        ? "bg-emerald-100 text-emerald-700 border-emerald-300"
+                        : "bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100"
+                    )}
+                    onClick={() => setBalanceDirection("credit")}
+                  >
+                    دائن
+                  </button>
+                </div>
+              </div>
               {currencies.length > 1 && (
               <div className="space-y-1.5 col-span-2 sm:col-span-1">
                 <FieldLabel>العملة الافتراضية</FieldLabel>
@@ -217,14 +248,6 @@ export function PartnerFormPanel({
                 </Select>
               </div>
               )}
-              <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                <FieldLabel>مدين (حالي)</FieldLabel>
-                <Input type="number" step="any" value={debit} onChange={e => setDebit(e.target.value)} className="h-9 tabular-nums" />
-              </div>
-              <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                <FieldLabel>دائن (حالي)</FieldLabel>
-                <Input type="number" step="any" value={credit} onChange={e => setCredit(e.target.value)} className="h-9 tabular-nums" />
-              </div>
             </div>
           </SidebarSection>
 
