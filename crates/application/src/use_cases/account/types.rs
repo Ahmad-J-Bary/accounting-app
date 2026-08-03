@@ -32,6 +32,7 @@ pub struct AccountLedger {
     pub opening_balance_original: rust_decimal::Decimal,
 
     pub opening_entry: Option<LedgerOpeningInfo>,
+    pub opening_entries: Vec<LedgerOpeningInfo>,
 
     pub lines: Vec<LedgerLine>,
 

@@ -23,7 +23,7 @@ import type {
 } from "@erp/shared-types";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { AccountMovementTable } from "../components/AccountMovementTable";
-import { getOpeningCreationDate, isOpeningLine } from "../lib/openingLines";
+import { getOpeningCreationDate, getOpeningTotals, isOpeningLine } from "../lib/openingLines";
 import { useDataTable } from "@shared/hooks";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
@@ -162,6 +162,11 @@ export default function AccountMovement() {
     if (dateFilters.from_date) return dateFilters.from_date;
     return openingEntry?.date || "";
   }, [dateFilters.from_date, openingEntry?.date]);
+
+  const { debit: openingDebitTotal, credit: openingCreditTotal } = useMemo(
+    () => getOpeningTotals(ledger?.lines || [], ledger?.opening_entries ?? [], dateFilters.from_date, dateFilters.to_date),
+    [ledger, dateFilters],
+  );
 
   // Filter lines by account type AND date range
   const { filteredLines, totals, periodClosingBalance } = useMemo(() => {
@@ -398,6 +403,8 @@ export default function AccountMovement() {
             openingBalance={openingBalance}
             openingBalanceDate={openingBalanceDate}
             openingEntry={openingEntry}
+            openingDebitTotal={openingDebitTotal}
+            openingCreditTotal={openingCreditTotal}
           />
         </div>
       }

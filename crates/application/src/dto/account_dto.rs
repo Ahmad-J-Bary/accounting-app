@@ -60,6 +60,7 @@ pub struct AccountLedgerDto {
     pub opening_balance_base: String,
     pub opening_balance_original: String,
     pub opening_entry: Option<OpeningEntryDto>,
+    pub opening_entries: Vec<OpeningEntryDto>,
     pub lines: Vec<AccountLedgerLineDto>,
     pub total_debit_base: String,
     pub total_credit_base: String,
@@ -98,6 +99,11 @@ impl From<AccountLedger> for AccountLedgerDto {
             opening_balance_base: ledger.opening_balance_base.to_string(),
             opening_balance_original: ledger.opening_balance_original.to_string(),
             opening_entry: ledger.opening_entry.map(OpeningEntryDto::from),
+            opening_entries: ledger
+                .opening_entries
+                .into_iter()
+                .map(OpeningEntryDto::from)
+                .collect(),
             lines: ledger
                 .lines
                 .into_iter()

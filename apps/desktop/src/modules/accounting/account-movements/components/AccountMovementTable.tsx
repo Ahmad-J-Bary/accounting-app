@@ -38,6 +38,8 @@ interface AccountMovementTableProps {
   openingBalance?: number;
   openingBalanceDate?: string;
   openingEntry?: OpeningEntryInfo | null;
+  openingDebitTotal?: number;
+  openingCreditTotal?: number;
 }
 
 type MovementRow = AccountLedgerLineDto & {
@@ -60,6 +62,8 @@ export function AccountMovementTable({
   openingBalance = 0,
   openingBalanceDate = "",
   openingEntry = null,
+  openingDebitTotal = 0,
+  openingCreditTotal = 0,
 }: AccountMovementTableProps) {
   const { isBaseCurrency, currencySuffix, hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { settings, getDensityPadding } = useTableSettings();
@@ -588,10 +592,10 @@ export function AccountMovementTable({
                     ? (openingBalanceDate.includes("T") ? formatDateTime(openingBalanceDate) : formatDate(openingBalanceDate))
                     : "");
               } else if (col.id.startsWith("debit_")) {
-                const val = effectiveOpeningEntry ? parseFloat(effectiveOpeningEntry.debit_base) : 0;
+                const val = openingDebitTotal;
                 content = val > 0 ? formatAmount(val, { currencyCode: baseCurrency?.code || "" }) : "";
               } else if (col.id.startsWith("credit_")) {
-                const val = effectiveOpeningEntry ? parseFloat(effectiveOpeningEntry.credit_base) : 0;
+                const val = openingCreditTotal;
                 content = val > 0 ? formatAmount(val, { currencyCode: baseCurrency?.code || "" }) : "";
               } else if (col.id === "balance") {
                 content = formatAmount(openingBalance, { currencyCode: baseCurrency?.code || "" });

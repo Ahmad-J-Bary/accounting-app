@@ -3,7 +3,7 @@ import { useChartOfAccounts, useAccountLedger } from "@shared/hooks/queries/useA
 import type { AccountDto, AccountLedgerLineDto, OpeningEntryDto } from "@erp/shared-types";
 import type { ReportFilters } from "@shared/types/filters";
 import type { ReportState } from "@shared/types/report";
-import { getOpeningCreationDate, isOpeningLine } from "@modules/accounting/account-movements/lib/openingLines";
+import { getOpeningCreationDate, getOpeningTotals, isOpeningLine } from "@modules/accounting/account-movements/lib/openingLines";
 
 export type LoadedAccountMovementsData = {
   accounts: AccountDto[];
@@ -14,6 +14,8 @@ export type LoadedAccountMovementsData = {
   filteredLines: AccountLedgerLineDto[];
   totals: { debit: number; credit: number };
   periodClosingBalance: number;
+  openingDebitTotal: number;
+  openingCreditTotal: number;
 };
 
 export function useAccountMovementsReport(
@@ -98,6 +100,8 @@ export function useAccountMovementsReport(
 
     const periodClosingBalance = openingBalance + totals.debit - totals.credit;
 
+    const openingTotals = getOpeningTotals(lines, ledger?.opening_entries ?? [], filters.from_date, filters.to_date);
+
     return {
       accounts,
       accountName: ledger?.account_name || "",
@@ -107,6 +111,8 @@ export function useAccountMovementsReport(
       filteredLines,
       totals,
       periodClosingBalance,
+      openingDebitTotal: openingTotals.debit,
+      openingCreditTotal: openingTotals.credit,
     };
   }, [ledger, accounts, filters, openingEntry]);
 

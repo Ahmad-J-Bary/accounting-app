@@ -171,6 +171,7 @@ impl AccountQueries {
 
         let mut lines = Vec::new();
         let mut opening_entry: Option<LedgerOpeningInfo> = None;
+        let mut opening_entries: Vec<LedgerOpeningInfo> = Vec::new();
         let mut running_balance_base = Decimal::ZERO;
         let mut running_balance_original = Decimal::ZERO;
 
@@ -189,20 +190,26 @@ impl AccountQueries {
 
             // Skip AccountOpeningBalance entries for accounts that have a
             // static opening_balance in the DB — the synthetic opening row
-            // already represents this balance in the frontend.
+            // already represents this balance in the frontend. Every such
+            // opening entry is kept in `opening_entries` so the frontend can
+            // aggregate ALL opening balances (not just the latest one).
             if entry.journal_type == domain::accounting::JournalType::AccountOpeningBalance
                 && account_lines.iter().any(|l| {
                     opening_balance_map.get(&l.account_id).copied().unwrap_or(Decimal::ZERO) > Decimal::ZERO
                 })
             {
-                if let Some(first_line) = account_lines.first() {
-                    opening_entry = Some(LedgerOpeningInfo {
+                for line in &account_lines {
+                    let info = LedgerOpeningInfo {
                         entry_number: entry.entry_number.clone(),
-                        description: first_line.description.clone(),
+                        description: line.description.clone(),
                         date: entry.entry_date,
-                        debit_base: first_line.base_debit(),
-                        credit_base: first_line.base_credit(),
-                    });
+                        debit_base: line.base_debit(),
+                        credit_base: line.base_credit(),
+                    };
+                    if opening_entry.is_none() {
+                        opening_entry = Some(info.clone());
+                    }
+                    opening_entries.push(info);
                 }
                 continue;
             }
@@ -311,6 +318,7 @@ impl AccountQueries {
             opening_balance_base: opening_balance,
             opening_balance_original: Decimal::ZERO,
             opening_entry,
+            opening_entries,
             lines,
             total_debit_base,
             total_credit_base,

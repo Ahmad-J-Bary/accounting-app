@@ -32,3 +32,47 @@ export function getOpeningCreationDate(
   }
   return created;
 }
+
+type OpeningEntryAmountLike = {
+  date?: string;
+  debit_base?: string;
+  credit_base?: string;
+};
+type LedgerLineAmountLike = Pick<AccountLedgerLineDto, "journal_type" | "description" | "date" | "debit_base" | "credit_base">;
+
+// Aggregated opening debit/credit within the optional date range (from, to),
+// across all opening lines plus all opening entries. The backend guarantees no
+// overlap: accounts with a static opening balance get their opening entries in
+// `opening_entries` (lines are skipped), accounts without get them in `lines`.
+export function getOpeningTotals(
+  lines: LedgerLineAmountLike[],
+  openingEntries: OpeningEntryAmountLike[] = [],
+  fromDate?: string,
+  toDate?: string,
+): { debit: number; credit: number } {
+  const inRange = (date: string): boolean => {
+    const d = date.split("T")[0];
+    if (fromDate && d < fromDate) return false;
+    if (toDate && d > toDate) return false;
+    return true;
+  };
+
+  let debit = 0;
+  let credit = 0;
+
+  for (const line of lines) {
+    if (isOpeningLine(line) && inRange(line.date)) {
+      debit += parseFloat(line.debit_base || "0");
+      credit += parseFloat(line.credit_base || "0");
+    }
+  }
+
+  for (const openingEntry of openingEntries) {
+    if (inRange(openingEntry.date || "")) {
+      debit += parseFloat(openingEntry.debit_base || "0");
+      credit += parseFloat(openingEntry.credit_base || "0");
+    }
+  }
+
+  return { debit, credit };
+}
