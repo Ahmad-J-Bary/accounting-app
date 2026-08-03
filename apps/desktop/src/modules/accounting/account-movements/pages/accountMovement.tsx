@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useTabs } from "@app/providers/TabContext";
 import { Button } from "@shared/ui/button";
@@ -6,6 +6,7 @@ import { Printer, PlusCircle, ShoppingCart, ArrowUpRight, ArrowDownLeft, BookOpe
 import { cn } from "@shared/lib/utils";
 import { formatCurrency } from "@shared/lib/format";
 import { DateRangePicker } from "@widgets/reports";
+import { useReportFilters } from "@shared/hooks/useReportFilters";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import { customerService } from "@modules/partners/api/customerService";
 import { supplierService } from "@modules/partners/api/supplierService";
@@ -22,7 +23,7 @@ import type {
 } from "@erp/shared-types";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { AccountMovementTable } from "../components/AccountMovementTable";
-import { isOpeningLine } from "../lib/openingLines";
+import { getOpeningCreationDate, isOpeningLine } from "../lib/openingLines";
 import { useDataTable } from "@shared/hooks";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
@@ -49,12 +50,8 @@ export default function AccountMovement() {
   const { baseCurrency } = useCurrencyContext();
   const [ledger, setLedger] = useState<AccountLedgerDto | null>(null);
 
-  // Date Filters
-  const [dateFilters, setDateFilters] = useState({
-    from_date: "",
-    to_date: "",
-  });
-  const initialDateSet = useRef(false);
+  // Date Filters (same defaults + URL sync as the Account Movements report page)
+  const { filters: dateFilters, setFilters: setDateFilters } = useReportFilters();
 
   // Entity Detection
   const [accountType, setAccountType] = useState<'partner' | 'customer' | 'supplier' | 'expense' | 'other'>('other');
@@ -75,15 +72,6 @@ export default function AccountMovement() {
       const descendantIds = getDescendantIds(accountId, allAccounts);
       const data = await accountingService.getAccountLedger(descendantIds);
       setLedger(data);
-      // Set default date range only on initial load
-      if (data.lines.length > 0 && !initialDateSet.current) {
-        initialDateSet.current = true;
-        const dates = data.lines.map(l => l.date.split("T")[0]).sort();
-        setDateFilters({
-          from_date: dates[0],
-          to_date: dates[dates.length - 1],
-        });
-      }
       return data.lines;
     },
     searchFields: ["description", "entry_number", "opposite_account_name"]
@@ -129,7 +117,18 @@ export default function AccountMovement() {
   }, [accountId]);
 
   const openingBalance = useMemo(() => {
-    const absOpening = parseFloat(ledger?.opening_balance_base || "0");
+    let absOpening = parseFloat(ledger?.opening_balance_base || "0");
+
+    // The opening balance only exists once its opening entry was created.
+    // If the period ends before that creation date, the balance did not
+    // exist yet — hide it instead of "going back in time".
+    if (dateFilters.to_date) {
+      const created = getOpeningCreationDate(ledger?.opening_entry, ledger?.lines || []);
+      if (created && created > dateFilters.to_date) {
+        absOpening = 0;
+      }
+    }
+
     if (!dateFilters.from_date) return absOpening;
 
     const allLines = ledger?.lines || [];
@@ -144,12 +143,25 @@ export default function AccountMovement() {
       }
     }
     return absOpening + debitBefore - creditBefore;
-  }, [ledger, dateFilters.from_date]);
+  }, [ledger, dateFilters]);
+
+  const openingEntry = useMemo(() => {
+    const oe = ledger?.opening_entry || null;
+    if (!oe) return null;
+
+    const { from_date, to_date } = dateFilters;
+    if (from_date || to_date) {
+      const d = (oe.date || "").split("T")[0];
+      if (from_date && d < from_date) return null;
+      if (to_date && d > to_date) return null;
+    }
+    return oe;
+  }, [ledger, dateFilters]);
 
   const openingBalanceDate = useMemo(() => {
     if (dateFilters.from_date) return dateFilters.from_date;
-    return ledger?.opening_entry?.date || "";
-  }, [dateFilters.from_date, ledger?.opening_entry?.date]);
+    return openingEntry?.date || "";
+  }, [dateFilters.from_date, openingEntry?.date]);
 
   // Filter lines by account type AND date range
   const { filteredLines, totals, periodClosingBalance } = useMemo(() => {
@@ -301,8 +313,8 @@ export default function AccountMovement() {
           <DateRangePicker
             from={dateFilters.from_date}
             to={dateFilters.to_date}
-            onFromChange={(v) => setDateFilters(f => ({ ...f, from_date: v }))}
-            onToChange={(v) => setDateFilters(f => ({ ...f, to_date: v }))}
+            onFromChange={(v) => setDateFilters({ from_date: v })}
+            onToChange={(v) => setDateFilters({ to_date: v })}
             showSeparator={toolbarButtons.length > 0}
           />
         </div>
@@ -385,7 +397,7 @@ export default function AccountMovement() {
             accountName={ledger?.account_name || ""}
             openingBalance={openingBalance}
             openingBalanceDate={openingBalanceDate}
-            openingEntry={ledger?.opening_entry || null}
+            openingEntry={openingEntry}
           />
         </div>
       }

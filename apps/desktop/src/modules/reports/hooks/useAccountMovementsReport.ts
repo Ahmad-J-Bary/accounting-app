@@ -3,7 +3,7 @@ import { useChartOfAccounts, useAccountLedger } from "@shared/hooks/queries/useA
 import type { AccountDto, AccountLedgerLineDto, OpeningEntryDto } from "@erp/shared-types";
 import type { ReportFilters } from "@shared/types/filters";
 import type { ReportState } from "@shared/types/report";
-import { isOpeningLine } from "@modules/accounting/account-movements/lib/openingLines";
+import { getOpeningCreationDate, isOpeningLine } from "@modules/accounting/account-movements/lib/openingLines";
 
 export type LoadedAccountMovementsData = {
   accounts: AccountDto[];
@@ -55,13 +55,7 @@ export function useAccountMovementsReport(
       // If the period ends before that creation date, the balance did not
       // exist yet — hide it instead of "going back in time".
       if (filters.to_date) {
-        let created = ledger?.opening_entry?.date?.split("T")[0] || null;
-        for (const line of lines) {
-          if (isOpeningLine(line)) {
-            const d = line.date.split("T")[0];
-            if (!created || d < created) created = d;
-          }
-        }
+        const created = getOpeningCreationDate(ledger?.opening_entry, lines);
         if (created && created > filters.to_date) {
           absOpening = 0;
         }
