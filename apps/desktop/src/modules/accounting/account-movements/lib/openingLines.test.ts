@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isOpeningLine, getOpeningCreationDate, getOpeningTotals } from "./openingLines";
+import { isOpeningLine, getOpeningCreationDate, getOpeningTotals, computeClosingBalance } from "./openingLines";
 
 const openingLine = (journal_type: string, date: string, debit_base = "0", credit_base = "0", description = "") => ({
   journal_type,
@@ -107,5 +107,23 @@ describe("getOpeningTotals", () => {
 
   it("returns zeroes when nothing is in range", () => {
     expect(getOpeningTotals([], [], "2026-01-01", "2026-08-03")).toEqual({ debit: 0, credit: 0 });
+  });
+});
+
+describe("computeClosingBalance", () => {
+  it("returns a debit balance when the debit total is larger (account 223)", () => {
+    expect(computeClosingBalance(900, 0)).toEqual({ net: 900, sign: "مدين" });
+  });
+
+  it("returns a credit balance when the credit total is larger (account 53)", () => {
+    expect(computeClosingBalance(0, 900)).toEqual({ net: -900, sign: "دائن" });
+  });
+
+  it("returns balanced when both totals are equal", () => {
+    expect(computeClosingBalance(500, 500)).toEqual({ net: 0, sign: "متزن" });
+  });
+
+  it("uses the absolute value for the magnitude", () => {
+    expect(computeClosingBalance(150, 200)).toEqual({ net: -50, sign: "دائن" });
   });
 });

@@ -23,7 +23,7 @@ import type {
 } from "@erp/shared-types";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { AccountMovementTable } from "../components/AccountMovementTable";
-import { getOpeningCreationDate, getOpeningTotals, isOpeningLine } from "../lib/openingLines";
+import { computeClosingBalance, getOpeningCreationDate, getOpeningTotals, isOpeningLine } from "../lib/openingLines";
 import { useDataTable } from "@shared/hooks";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
@@ -65,7 +65,7 @@ export default function AccountMovement() {
     search,
     setSearch,
   } = useDataTable<AccountLedgerLineDto>({
-    queryKey: ["account-ledger", accountId ?? ""],
+    queryKey: ["account-ledger-lines", accountId ?? ""],
     fetchData: async () => {
       if (!accountId) return [];
       const allAccounts = await accountingService.getChartOfAccounts();
@@ -169,7 +169,7 @@ export default function AccountMovement() {
   );
 
   // Filter lines by account type AND date range
-  const { filteredLines, totals, periodClosingBalance } = useMemo(() => {
+  const { filteredLines, totals } = useMemo(() => {
     const allLines = ledger?.lines || [];
 
     let lines = allLines;
@@ -198,9 +198,13 @@ export default function AccountMovement() {
     return {
       filteredLines: lines,
       totals: tots,
-      periodClosingBalance: openingBalance + tots.debit - tots.credit,
     };
-  }, [ledger, accountType, dateFilters, openingBalance]);
+  }, [ledger, accountType, dateFilters]);
+
+  const closing = useMemo(
+    () => computeClosingBalance(totals.debit + openingDebitTotal, totals.credit + openingCreditTotal),
+    [totals, openingDebitTotal, openingCreditTotal],
+  );
 
   const symbol = baseCurrency?.symbol || baseCurrency?.code || "";
 
@@ -345,7 +349,7 @@ export default function AccountMovement() {
                 </div>
                 <div>
                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">المدين</span>
-                  <div className="text-sm font-black text-slate-900 tabular-nums">{formatCurrency(totals.debit, symbol)}</div>
+                  <div className="text-sm font-black text-slate-900 tabular-nums">{formatCurrency(totals.debit + openingDebitTotal, symbol)}</div>
                 </div>
               </div>
 
@@ -355,7 +359,7 @@ export default function AccountMovement() {
                 </div>
                 <div>
                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">الدائن</span>
-                  <div className="text-sm font-black text-slate-900 tabular-nums">{formatCurrency(totals.credit, symbol)}</div>
+                  <div className="text-sm font-black text-slate-900 tabular-nums">{formatCurrency(totals.credit + openingCreditTotal, symbol)}</div>
                 </div>
               </div>
 
@@ -387,8 +391,13 @@ export default function AccountMovement() {
                   <FileText className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">الختامي</span>
-                  <div className="text-sm font-black text-white tabular-nums">{formatCurrency(periodClosingBalance, symbol)}</div>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">الختامي / {closing.sign}</span>
+                  <div className={cn(
+                    "text-sm font-black tabular-nums",
+                    closing.sign === "مدين" ? "text-blue-300" : closing.sign === "دائن" ? "text-emerald-300" : "text-white"
+                  )}>
+                    {formatCurrency(Math.abs(closing.net), symbol)}
+                  </div>
                 </div>
               </div>
             </div>

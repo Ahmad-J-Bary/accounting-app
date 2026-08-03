@@ -3,6 +3,7 @@ import { formatCurrency } from "@shared/lib/format";
 import { ArrowUpRight, ArrowDownLeft, BookOpen, Landmark, FileText } from "lucide-react";
 import { ReportMeta } from "@widgets/reports";
 import { AccountMovementTable } from "@modules/accounting/account-movements/components/AccountMovementTable";
+import { computeClosingBalance } from "@modules/accounting/account-movements/lib/openingLines";
 import type { LoadedAccountMovementsData } from "../hooks/useAccountMovementsReport";
 
 type AccountMovementViewProps = {
@@ -14,7 +15,8 @@ type AccountMovementViewProps = {
 };
 
 export function AccountMovementView({ data, loading, search, onSearchChange, symbol }: AccountMovementViewProps) {
-  const { accountName, openingBalance, openingEntry, openingBalanceDate, filteredLines, totals, periodClosingBalance, openingDebitTotal, openingCreditTotal } = data;
+  const { accountName, openingBalance, openingEntry, openingBalanceDate, filteredLines, totals, openingDebitTotal, openingCreditTotal } = data;
+  const closing = computeClosingBalance(totals.debit + openingDebitTotal, totals.credit + openingCreditTotal);
 
   return (
     <div className="flex flex-col h-full">
@@ -37,7 +39,7 @@ export function AccountMovementView({ data, loading, search, onSearchChange, sym
           </div>
           <div>
             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">المدين</span>
-            <div className="text-sm font-black text-slate-900 tabular-nums">{formatCurrency(totals.debit, symbol)}</div>
+            <div className="text-sm font-black text-slate-900 tabular-nums">{formatCurrency(totals.debit + openingDebitTotal, symbol)}</div>
           </div>
         </div>
 
@@ -47,7 +49,7 @@ export function AccountMovementView({ data, loading, search, onSearchChange, sym
           </div>
           <div>
             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">الدائن</span>
-            <div className="text-sm font-black text-slate-900 tabular-nums">{formatCurrency(totals.credit, symbol)}</div>
+            <div className="text-sm font-black text-slate-900 tabular-nums">{formatCurrency(totals.credit + openingCreditTotal, symbol)}</div>
           </div>
         </div>
 
@@ -79,8 +81,13 @@ export function AccountMovementView({ data, loading, search, onSearchChange, sym
             <FileText className="w-4 h-4" />
           </div>
           <div>
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">الختامي</span>
-            <div className="text-sm font-black text-white tabular-nums">{formatCurrency(periodClosingBalance, symbol)}</div>
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">الختامي / {closing.sign}</span>
+            <div className={cn(
+              "text-sm font-black tabular-nums",
+              closing.sign === "مدين" ? "text-blue-300" : closing.sign === "دائن" ? "text-emerald-300" : "text-white"
+            )}>
+              {formatCurrency(Math.abs(closing.net), symbol)}
+            </div>
           </div>
         </div>
       </div>

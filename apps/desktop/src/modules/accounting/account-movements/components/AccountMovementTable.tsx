@@ -15,7 +15,7 @@ import type { GridResizeContent } from "@shared/hooks/useGridResize";
 import type { AccountLedgerLineDto } from "@erp/shared-types";
 import { formatDateTime, formatDate, formatNumber } from "@shared/lib/format";
 import { getHeaderText, getPrimitiveCellValue } from "@modules/accounting/journal/components/groupedTableUtils";
-import { isOpeningLine } from "@modules/accounting/account-movements/lib/openingLines";
+import { computeClosingBalance, isOpeningLine } from "@modules/accounting/account-movements/lib/openingLines";
 import { Download } from "lucide-react";
 import { Button } from "@shared/ui/button";
 
@@ -46,7 +46,6 @@ type MovementRow = AccountLedgerLineDto & {
   typeLabel: string;
   side: "debit" | "credit";
   amount_base: number;
-  running_balance: number;
 };
 
 type EnrichedOriginalLine = AccountLedgerLineDto & {
@@ -190,25 +189,21 @@ export function AccountMovementTable({
 
   const tableData = useMemo(() => {
     const rows: MovementRow[] = [];
-    let running = showSyntheticOpeningRow ? openingBalance : 0;
 
     for (const line of cleanLines) {
       const debitBase = parseFloat(line.debit_base || "0");
       const creditBase = parseFloat(line.credit_base || "0");
-
-      running += debitBase - creditBase;
 
       rows.push({
         ...line,
         typeLabel: line.typeLabel,
         side: debitBase > 0 ? "debit" : "credit",
         amount_base: debitBase > 0 ? debitBase : creditBase,
-        running_balance: running,
       });
     }
 
     return rows;
-  }, [cleanLines, openingBalance, showSyntheticOpeningRow]);
+  }, [cleanLines]);
 
   const allColumns = useMemo<UnifiedColumn<MovementRow>[]>(() => {
     const cols: UnifiedColumn<MovementRow>[] = [
@@ -282,16 +277,9 @@ export function AccountMovementTable({
         accessor: (r) => formatDateTime(r.date),
         className: "text-slate-500 tabular-nums"
       },
-      {
-        id: "balance",
-        header: "الرصيد",
-        label: "الرصيد",
-        accessor: (r) => formatAmount(r.running_balance, { currencyCode: baseCurrency?.code || "" }),
-        className: "tabular-nums font-black bg-slate-50/30"
-      },
     );
     return cols;
-  }, [sortedCurrencies, formatAmount, isBaseCurrency, baseCurrency, currencySuffix]);
+  }, [sortedCurrencies, formatAmount, isBaseCurrency, currencySuffix]);
 
   const defaultVisible = useMemo(() => {
     const def: string[] = ["entry_number", "journal_type"];
@@ -305,7 +293,7 @@ export function AccountMovementTable({
         def.push(`credit_${curr.code}`);
       }
     });
-    def.push("description", "date", "balance");
+    def.push("description", "date");
     return def;
   }, [sortedCurrencies, isBaseCurrency]);
 
@@ -394,10 +382,8 @@ export function AccountMovementTable({
           if (col.id === "entry_number") return parseInt(r.entry_number, 10) || 0;
           if (col.id === "journal_type") return r.typeLabel;
           if (col.id === "description") return r.description;
-          if (col.id === "balance") return r.running_balance;
           return "";
         },
-        ...(col.id === "balance" ? { numeric: true, decimalPlaces: 2 } : {}),
       };
     });
 
@@ -432,36 +418,39 @@ export function AccountMovementTable({
   );
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
-    const baseDebitTotal = cleanLines.reduce(
+    const periodDebit = cleanLines.reduce(
       (s, l) => s + parseFloat(l.debit_base || "0"),
       0,
     );
-    const baseCreditTotal = cleanLines.reduce(
+    const periodCredit = cleanLines.reduce(
       (s, l) => s + parseFloat(l.credit_base || "0"),
       0,
     );
-    const closingBalance = openingBalance + baseDebitTotal - baseCreditTotal;
+    const hasOpening = showSyntheticOpeningRow;
+    const totalDebit = periodDebit + (hasOpening ? openingDebitTotal : 0);
+    const totalCredit = periodCredit + (hasOpening ? openingCreditTotal : 0);
+    const { net: closingNet, sign: closingSign } = computeClosingBalance(totalDebit, totalCredit);
+    const rowCount = cleanLines.length + (hasOpening ? 1 : 0);
     const baseSymbol = baseCurrency?.symbol || baseCurrency?.code || "";
 
     return enrichedColumns.map((col) => {
       const id = col.id;
       if (id === "entry_number") {
-        return { id: "count", columnId: "entry_number", label: "", value: `${cleanLines.length} حركة`, className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: "entry_number", label: "", value: `${rowCount} حركة`, className: "text-slate-500 font-medium" };
       }
-      if (id === "journal_type" || id === "description" || id === "date") {
+      if (id === "journal_type" || id === "description") {
         return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
       }
 
-      if (id === "balance") {
-        const sign = closingBalance > 0 ? "مدين" : closingBalance < 0 ? "دائن" : "متزن";
-        const label = `الرصيد الختامي / ${sign}${currencySuffix(baseSymbol)}`;
-        const value = formatAmount(Math.abs(closingBalance), { currencyCode: baseCurrency?.code || "" });
-        const valueClass = closingBalance > 0
+      if (id === "date") {
+        const label = `الرصيد الختامي / ${closingSign}${currencySuffix(baseSymbol)}`;
+        const value = formatAmount(Math.abs(closingNet), { currencyCode: baseCurrency?.code || "" });
+        const valueClass = closingSign === "مدين"
           ? "text-blue-700 font-black"
-          : closingBalance < 0
+          : closingSign === "دائن"
           ? "text-emerald-700 font-black"
           : "text-slate-500 font-bold";
-        return { id: `${id}_closing`, columnId: id, label, value, className: valueClass };
+        return { id: "closing", columnId: "date", label, value, className: valueClass };
       }
 
       const debitMatch = id.match(/^debit_(.+)$/);
@@ -473,7 +462,7 @@ export function AccountMovementTable({
           id: `${id}_total`,
           columnId: id,
           label,
-          value: baseDebitTotal > 0 ? formatAmount(baseDebitTotal, { currencyCode: currCode }) : "—",
+          value: totalDebit > 0 ? formatAmount(totalDebit, { currencyCode: currCode }) : "—",
           className: isB
             ? "text-blue-700 font-black"
             : "text-blue-300 font-extrabold"
@@ -489,7 +478,7 @@ export function AccountMovementTable({
           id: `${id}_total`,
           columnId: id,
           label,
-          value: baseCreditTotal > 0 ? formatAmount(baseCreditTotal, { currencyCode: currCode }) : "—",
+          value: totalCredit > 0 ? formatAmount(totalCredit, { currencyCode: currCode }) : "—",
           className: isB
             ? "text-emerald-700 font-black"
             : "text-emerald-300 font-extrabold"
@@ -498,7 +487,7 @@ export function AccountMovementTable({
 
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [cleanLines, formatAmount, enrichedColumns, isBaseCurrency, baseCurrency, openingBalance, currencySuffix]);
+  }, [cleanLines, formatAmount, enrichedColumns, isBaseCurrency, baseCurrency, currencySuffix, openingDebitTotal, openingCreditTotal, showSyntheticOpeningRow]);
 
   const visibleColumnIds = useMemo(
     () => new Set(visibleColumns.map(c => c.id)),
@@ -514,7 +503,7 @@ export function AccountMovementTable({
   }, [summaryColumns, visibleColumnIds]);
 
   const showSummary = !!(
-    filteredSummary?.length && settings.showSummary && tableData.length > 0
+    filteredSummary?.length && settings.showSummary && (tableData.length > 0 || showSyntheticOpeningRow)
   );
 
   const cellBorderClass = getLeftBorderClass(settings.borderStyle);
@@ -597,8 +586,6 @@ export function AccountMovementTable({
               } else if (col.id.startsWith("credit_")) {
                 const val = openingCreditTotal;
                 content = val > 0 ? formatAmount(val, { currencyCode: baseCurrency?.code || "" }) : "";
-              } else if (col.id === "balance") {
-                content = formatAmount(openingBalance, { currencyCode: baseCurrency?.code || "" });
               }
 
               return (

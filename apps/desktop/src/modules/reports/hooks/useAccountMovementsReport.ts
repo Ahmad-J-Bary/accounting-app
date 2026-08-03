@@ -13,7 +13,6 @@ export type LoadedAccountMovementsData = {
   openingBalanceDate: string;
   filteredLines: AccountLedgerLineDto[];
   totals: { debit: number; credit: number };
-  periodClosingBalance: number;
   openingDebitTotal: number;
   openingCreditTotal: number;
 };
@@ -98,8 +97,6 @@ export function useAccountMovementsReport(
       { debit: 0, credit: 0 },
     );
 
-    const periodClosingBalance = openingBalance + totals.debit - totals.credit;
-
     const openingTotals = getOpeningTotals(lines, ledger?.opening_entries ?? [], filters.from_date, filters.to_date);
 
     return {
@@ -110,7 +107,6 @@ export function useAccountMovementsReport(
       openingBalanceDate,
       filteredLines,
       totals,
-      periodClosingBalance,
       openingDebitTotal: openingTotals.debit,
       openingCreditTotal: openingTotals.credit,
     };

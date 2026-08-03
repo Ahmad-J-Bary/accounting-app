@@ -76,3 +76,17 @@ export function getOpeningTotals(
 
   return { debit, credit };
 }
+
+export type ClosingSign = "مدين" | "دائن" | "متزن";
+
+// Closing balance = |totalDebit - totalCredit|. Its state (debit/credit) is
+// decided by whichever side is larger: debit when the debit total wins,
+// credit when the credit total wins, balanced when they are equal.
+export function computeClosingBalance(
+  totalDebit: number,
+  totalCredit: number,
+): { net: number; sign: ClosingSign } {
+  const net = totalDebit - totalCredit;
+  const sign: ClosingSign = net > 0 ? "مدين" : net < 0 ? "دائن" : "متزن";
+  return { net, sign };
+}
