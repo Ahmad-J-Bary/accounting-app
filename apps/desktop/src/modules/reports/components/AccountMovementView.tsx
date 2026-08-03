@@ -14,7 +14,7 @@ type AccountMovementViewProps = {
 };
 
 export function AccountMovementView({ data, loading, search, onSearchChange, symbol }: AccountMovementViewProps) {
-  const { accountName, openingBalance, filteredLines, totals, periodClosingBalance } = data;
+  const { accountName, openingBalance, openingEntry, openingBalanceDate, filteredLines, totals, periodClosingBalance } = data;
 
   return (
     <div className="flex flex-col h-full">
@@ -92,6 +92,8 @@ export function AccountMovementView({ data, loading, search, onSearchChange, sym
         onSearchChange={onSearchChange}
         accountName={accountName}
         openingBalance={openingBalance}
+        openingBalanceDate={openingBalanceDate}
+        openingEntry={openingEntry}
       />
     </div>
   );

@@ -164,7 +164,7 @@ export function PartnerFormPanel({
                 <p><span className="font-bold">الفرق:</span> {toFixed(newBal - oldBal, 2)}</p>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                سيتم إنشاء قيد محاسبي من نوع "رصيد افتتاحي لحساب" بين حساب {isCustomer ? "العميل" : "المورد"} وحساب الرصيد الافتتاحي (53).
+                سيتم إنشاء قيد محاسبي من نوع "رصيد افتتاحي" بين حساب {isCustomer ? "العميل" : "المورد"} وحساب الرصيد الافتتاحي (53).
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>

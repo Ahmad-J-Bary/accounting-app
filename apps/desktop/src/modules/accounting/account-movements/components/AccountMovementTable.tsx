@@ -13,8 +13,9 @@ import { cn } from "@shared/lib/utils";
 import { getLeftBorderClass, getRowBorderClass, getRowBackgroundClass } from "@shared/lib/table-utils";
 import type { GridResizeContent } from "@shared/hooks/useGridResize";
 import type { AccountLedgerLineDto } from "@erp/shared-types";
-import { formatDateTime, formatNumber } from "@shared/lib/format";
+import { formatDateTime, formatDate, formatNumber } from "@shared/lib/format";
 import { getHeaderText, getPrimitiveCellValue } from "@modules/accounting/journal/components/groupedTableUtils";
+import { isOpeningLine } from "@modules/accounting/account-movements/lib/openingLines";
 import { Download } from "lucide-react";
 import { Button } from "@shared/ui/button";
 
@@ -35,6 +36,7 @@ interface AccountMovementTableProps {
   onSearchChange: (val: string) => void;
   accountName: string;
   openingBalance?: number;
+  openingBalanceDate?: string;
   openingEntry?: OpeningEntryInfo | null;
 }
 
@@ -56,6 +58,7 @@ export function AccountMovementTable({
   onSearchChange,
   accountName,
   openingBalance = 0,
+  openingBalanceDate = "",
   openingEntry = null,
 }: AccountMovementTableProps) {
   const { isBaseCurrency, currencySuffix, hasSecondaryCurrencies } = useBaseCurrencyColumns();
@@ -123,6 +126,14 @@ export function AccountMovementTable({
         }
       } else {
         if (typeLabel === "GeneralJournal") typeLabel = "اليومية العامة";
+        if (
+          typeLabel === "AccountOpeningBalance" ||
+          typeLabel === "CashOpeningBalance" ||
+          typeLabel === "رصيد افتتاحي لحساب" ||
+          typeLabel === "رصيد افتتاحي للخزينة"
+        ) {
+          typeLabel = "رصيد افتتاحي";
+        }
       }
 
       return {
@@ -153,26 +164,31 @@ export function AccountMovementTable({
     }
   });
 
-  const hasOpeningEntryInLines = useMemo(() => {
-    return sortedOriginalLines.some((l) => {
-      const desc = l.description || "";
-      return (
-        l.journal_type === "AccountOpeningBalance" ||
-        l.journal_type === "CashOpeningBalance" ||
-        l.journal_type === "رصيد افتتاحي" ||
-        desc.includes("رصيد افتتاحي") ||
-        desc.includes("أول المدة")
-      );
+  const { cleanLines, extractedOpeningEntry } = useMemo(() => {
+    const opening: OpeningEntryInfo[] = [];
+    const regular = sortedOriginalLines.filter(l => {
+      const isOpening = isOpeningLine(l);
+      if (isOpening) opening.push({
+        entry_number: l.entry_number,
+        description: l.description || "",
+        date: l.date,
+        debit_base: l.debit_base || "0",
+        credit_base: l.credit_base || "0",
+      });
+      return !isOpening;
     });
+    return { cleanLines: regular, extractedOpeningEntry: opening.length > 0 ? opening[0] : null };
   }, [sortedOriginalLines]);
 
-  const showSyntheticOpeningRow = openingBalance !== 0 && !hasOpeningEntryInLines;
+  const effectiveOpeningEntry = extractedOpeningEntry || openingEntry;
+
+  const showSyntheticOpeningRow = openingBalance !== 0;
 
   const tableData = useMemo(() => {
     const rows: MovementRow[] = [];
     let running = showSyntheticOpeningRow ? openingBalance : 0;
 
-    for (const line of sortedOriginalLines) {
+    for (const line of cleanLines) {
       const debitBase = parseFloat(line.debit_base || "0");
       const creditBase = parseFloat(line.credit_base || "0");
 
@@ -188,7 +204,7 @@ export function AccountMovementTable({
     }
 
     return rows;
-  }, [sortedOriginalLines, openingBalance, showSyntheticOpeningRow]);
+  }, [cleanLines, openingBalance, showSyntheticOpeningRow]);
 
   const allColumns = useMemo<UnifiedColumn<MovementRow>[]>(() => {
     const cols: UnifiedColumn<MovementRow>[] = [
@@ -412,11 +428,11 @@ export function AccountMovementTable({
   );
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
-    const baseDebitTotal = lines.reduce(
+    const baseDebitTotal = cleanLines.reduce(
       (s, l) => s + parseFloat(l.debit_base || "0"),
       0,
     );
-    const baseCreditTotal = lines.reduce(
+    const baseCreditTotal = cleanLines.reduce(
       (s, l) => s + parseFloat(l.credit_base || "0"),
       0,
     );
@@ -426,7 +442,7 @@ export function AccountMovementTable({
     return enrichedColumns.map((col) => {
       const id = col.id;
       if (id === "entry_number") {
-        return { id: "count", columnId: "entry_number", label: "", value: `${lines.length} حركة`, className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: "entry_number", label: "", value: `${cleanLines.length} حركة`, className: "text-slate-500 font-medium" };
       }
       if (id === "journal_type" || id === "description" || id === "date") {
         return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
@@ -478,7 +494,7 @@ export function AccountMovementTable({
 
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [lines, formatAmount, enrichedColumns, isBaseCurrency, baseCurrency, openingBalance, currencySuffix]);
+  }, [cleanLines, formatAmount, enrichedColumns, isBaseCurrency, baseCurrency, openingBalance, currencySuffix]);
 
   const visibleColumnIds = useMemo(
     () => new Set(visibleColumns.map(c => c.id)),
@@ -560,18 +576,22 @@ export function AccountMovementTable({
               const columnPosition = colIdx + 1;
               let content: ReactNode = "";
               if (col.id === "entry_number") {
-                content = openingEntry?.entry_number ? formatNumber(parseInt(openingEntry.entry_number) || 0) : "—";
+                content = effectiveOpeningEntry?.entry_number ? formatNumber(parseInt(effectiveOpeningEntry.entry_number) || 0) : "—";
               } else if (col.id === "journal_type") {
-                content = <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-indigo-100 text-indigo-700 uppercase tracking-tighter">رصيد افتتاحي</span>;
+                content = <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-indigo-100/60 text-indigo-700 uppercase tracking-tighter">رصيد افتتاحي</span>;
               } else if (col.id === "description") {
-                content = openingEntry?.description || "";
+                content = effectiveOpeningEntry?.description || "";
               } else if (col.id === "date") {
-                content = openingEntry?.date ? formatDateTime(openingEntry.date) : "";
+                content = effectiveOpeningEntry?.date
+                  ? formatDateTime(effectiveOpeningEntry.date)
+                  : (openingBalanceDate
+                    ? (openingBalanceDate.includes("T") ? formatDateTime(openingBalanceDate) : formatDate(openingBalanceDate))
+                    : "");
               } else if (col.id.startsWith("debit_")) {
-                const val = openingEntry ? parseFloat(openingEntry.debit_base) : 0;
+                const val = effectiveOpeningEntry ? parseFloat(effectiveOpeningEntry.debit_base) : 0;
                 content = val > 0 ? formatAmount(val, { currencyCode: baseCurrency?.code || "" }) : "";
               } else if (col.id.startsWith("credit_")) {
-                const val = openingEntry ? parseFloat(openingEntry.credit_base) : 0;
+                const val = effectiveOpeningEntry ? parseFloat(effectiveOpeningEntry.credit_base) : 0;
                 content = val > 0 ? formatAmount(val, { currencyCode: baseCurrency?.code || "" }) : "";
               } else if (col.id === "balance") {
                 content = formatAmount(openingBalance, { currencyCode: baseCurrency?.code || "" });
@@ -585,15 +605,16 @@ export function AccountMovementTable({
                     minWidth: 0,
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: col.align === "left" ? "flex-start" : col.align === "center" ? "center" : "flex-end",
-                    textAlign: col.align || "right",
+                    justifyContent: "center",
+                    textAlign: "center",
                     fontSize: `${settings.fontSize}px`,
                     fontFamily: settings.fontFamily,
                   }}
                   className={cn(
                     getDensityPadding(),
                     cellBorderClass,
-                    col.id === "balance" ? "text-indigo-700 font-black" : "text-indigo-600 font-bold",
+                    "text-slate-600",
+                    col.className,
                   )}
                 >
                   {content}
@@ -632,8 +653,8 @@ export function AccountMovementTable({
                     minWidth: 0,
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: col.align === "left" ? "flex-start" : col.align === "center" ? "center" : "flex-end",
-                    textAlign: col.align || "right",
+                    justifyContent: "center",
+                    textAlign: "center",
                     fontSize: `${settings.fontSize}px`,
                     fontFamily: settings.fontFamily,
                   }}

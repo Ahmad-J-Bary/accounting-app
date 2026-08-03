@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useChartOfAccounts, useAccountLedger } from "@shared/hooks/queries/useAccountQueries";
-import type { AccountDto, AccountLedgerLineDto } from "@erp/shared-types";
+import type { AccountDto, AccountLedgerLineDto, OpeningEntryDto } from "@erp/shared-types";
 import type { ReportFilters } from "@shared/types/filters";
 import type { ReportState } from "@shared/types/report";
+import { isOpeningLine } from "@modules/accounting/account-movements/lib/openingLines";
 
 export type LoadedAccountMovementsData = {
   accounts: AccountDto[];
   accountName: string;
   openingBalance: number;
+  openingEntry: OpeningEntryDto | null;
+  openingBalanceDate: string;
   filteredLines: AccountLedgerLineDto[];
   totals: { debit: number; credit: number };
   periodClosingBalance: number;
@@ -30,14 +33,16 @@ export function useAccountMovementsReport(
 
   const reportData = useMemo<LoadedAccountMovementsData>(() => {
     const lines = ledger?.lines ?? [];
+
     const openingBalance = (() => {
       const absOpening = parseFloat(ledger?.opening_balance_base || "0");
-      if (!filters.from_date || !lines.length) return absOpening;
+      if (!filters.from_date) return absOpening;
 
       let debitBefore = 0;
       let creditBefore = 0;
       for (const line of lines) {
-        const d = new Date(line.date).toISOString().split("T")[0];
+        if (isOpeningLine(line)) continue;
+        const d = line.date.split("T")[0];
         if (d < filters.from_date) {
           debitBefore += parseFloat(line.debit_base || "0");
           creditBefore += parseFloat(line.credit_base || "0");
@@ -46,13 +51,19 @@ export function useAccountMovementsReport(
       return absOpening + debitBefore - creditBefore;
     })();
 
-    const filteredLines = lines.filter((l) => {
-      const d = new Date(l.date).toISOString().split("T")[0];
-      return d >= filters.from_date && d <= filters.to_date;
-    });
+    const openingBalanceDate = filters.from_date
+      || (ledger?.opening_entry?.date || "");
+
+    const filteredLines = filters.from_date && filters.to_date
+      ? lines.filter((l) => {
+          const d = l.date.split("T")[0];
+          return d >= filters.from_date && d <= filters.to_date;
+        })
+      : lines;
 
     const totals = filteredLines.reduce(
       (acc, l) => {
+        if (isOpeningLine(l)) return acc;
         acc.debit += parseFloat(l.debit_base || "0");
         acc.credit += parseFloat(l.credit_base || "0");
         return acc;
@@ -66,6 +77,8 @@ export function useAccountMovementsReport(
       accounts,
       accountName: ledger?.account_name || "",
       openingBalance,
+      openingEntry: ledger?.opening_entry || null,
+      openingBalanceDate,
       filteredLines,
       totals,
       periodClosingBalance,

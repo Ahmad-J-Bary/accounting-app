@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useTabs } from "@app/providers/TabContext";
 import { Button } from "@shared/ui/button";
@@ -22,6 +22,7 @@ import type {
 } from "@erp/shared-types";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { AccountMovementTable } from "../components/AccountMovementTable";
+import { isOpeningLine } from "../lib/openingLines";
 import { useDataTable } from "@shared/hooks";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
@@ -53,6 +54,7 @@ export default function AccountMovement() {
     from_date: "",
     to_date: "",
   });
+  const initialDateSet = useRef(false);
 
   // Entity Detection
   const [accountType, setAccountType] = useState<'partner' | 'customer' | 'supplier' | 'expense' | 'other'>('other');
@@ -73,8 +75,9 @@ export default function AccountMovement() {
       const descendantIds = getDescendantIds(accountId, allAccounts);
       const data = await accountingService.getAccountLedger(descendantIds);
       setLedger(data);
-      // Set default date range to cover all data
-      if (data.lines.length > 0) {
+      // Set default date range only on initial load
+      if (data.lines.length > 0 && !initialDateSet.current) {
+        initialDateSet.current = true;
         const dates = data.lines.map(l => l.date.split("T")[0]).sort();
         setDateFilters({
           from_date: dates[0],
@@ -133,6 +136,7 @@ export default function AccountMovement() {
     let debitBefore = 0;
     let creditBefore = 0;
     for (const line of allLines) {
+      if (isOpeningLine(line)) continue;
       const d = line.date.split("T")[0];
       if (d < dateFilters.from_date) {
         debitBefore += parseFloat(line.debit_base || "0");
@@ -141,6 +145,11 @@ export default function AccountMovement() {
     }
     return absOpening + debitBefore - creditBefore;
   }, [ledger, dateFilters.from_date]);
+
+  const openingBalanceDate = useMemo(() => {
+    if (dateFilters.from_date) return dateFilters.from_date;
+    return ledger?.opening_entry?.date || "";
+  }, [dateFilters.from_date, ledger?.opening_entry?.date]);
 
   // Filter lines by account type AND date range
   const { filteredLines, totals, periodClosingBalance } = useMemo(() => {
@@ -161,6 +170,7 @@ export default function AccountMovement() {
 
     const tots = lines.reduce(
       (acc, l) => {
+        if (isOpeningLine(l)) return acc;
         acc.debit += parseFloat(l.debit_base || "0");
         acc.credit += parseFloat(l.credit_base || "0");
         return acc;
@@ -374,6 +384,7 @@ export default function AccountMovement() {
             onSearchChange={setSearch}
             accountName={ledger?.account_name || ""}
             openingBalance={openingBalance}
+            openingBalanceDate={openingBalanceDate}
             openingEntry={ledger?.opening_entry || null}
           />
         </div>
