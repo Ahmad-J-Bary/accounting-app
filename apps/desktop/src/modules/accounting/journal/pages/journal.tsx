@@ -5,6 +5,7 @@ import { journalEntryService, type JournalFilters } from '@modules/accounting/ap
 import type { JournalEntryDto, JournalType } from "@erp/shared-types";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
+import { DateRangePicker } from "@widgets/reports";
 
 // Refactored Components & Hooks
 import { useDataTable } from '@shared/hooks';
@@ -134,6 +135,14 @@ export default function Journal() {
                   <LayoutGrid className="w-4 h-4" />
                 </button>
               </div>
+
+              <DateRangePicker
+                from={filters.from_date ?? ""}
+                to={filters.to_date ?? ""}
+                onFromChange={(v) => setFilters(f => ({ ...f, from_date: v }))}
+                onToChange={(v) => setFilters(f => ({ ...f, to_date: v }))}
+                showSeparator
+              />
             </div>
           }
         />

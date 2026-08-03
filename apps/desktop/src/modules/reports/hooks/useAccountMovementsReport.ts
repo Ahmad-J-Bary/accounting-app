@@ -31,11 +31,42 @@ export function useAccountMovementsReport(
     }
   }, [isFetched, ledger]);
 
+  const openingEntry = useMemo<OpeningEntryDto | null>(() => {
+    const oe = ledger?.opening_entry ?? null;
+    if (!oe) return null;
+
+    const from = filters.from_date;
+    const to = filters.to_date;
+    if (from || to) {
+      const d = (oe.date || "").split("T")[0];
+      if (from && d < from) return null;
+      if (to && d > to) return null;
+    }
+    return oe;
+  }, [ledger, filters]);
+
   const reportData = useMemo<LoadedAccountMovementsData>(() => {
     const lines = ledger?.lines ?? [];
 
     const openingBalance = (() => {
-      const absOpening = parseFloat(ledger?.opening_balance_base || "0");
+      let absOpening = parseFloat(ledger?.opening_balance_base || "0");
+
+      // The opening balance only exists once its opening entry was created.
+      // If the period ends before that creation date, the balance did not
+      // exist yet — hide it instead of "going back in time".
+      if (filters.to_date) {
+        let created = ledger?.opening_entry?.date?.split("T")[0] || null;
+        for (const line of lines) {
+          if (isOpeningLine(line)) {
+            const d = line.date.split("T")[0];
+            if (!created || d < created) created = d;
+          }
+        }
+        if (created && created > filters.to_date) {
+          absOpening = 0;
+        }
+      }
+
       if (!filters.from_date) return absOpening;
 
       let debitBefore = 0;
@@ -52,7 +83,7 @@ export function useAccountMovementsReport(
     })();
 
     const openingBalanceDate = filters.from_date
-      || (ledger?.opening_entry?.date || "");
+      || (openingEntry?.date || "");
 
     const filteredLines = filters.from_date && filters.to_date
       ? lines.filter((l) => {
@@ -77,13 +108,13 @@ export function useAccountMovementsReport(
       accounts,
       accountName: ledger?.account_name || "",
       openingBalance,
-      openingEntry: ledger?.opening_entry || null,
+      openingEntry,
       openingBalanceDate,
       filteredLines,
       totals,
       periodClosingBalance,
     };
-  }, [ledger, accounts, filters]);
+  }, [ledger, accounts, filters, openingEntry]);
 
   return {
     loading: isLoading,

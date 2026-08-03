@@ -2,7 +2,7 @@ use crate::dto::journal_entry_dto::JournalEntryDto;
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use domain::accounting::{JournalEntryStatus, JournalType};
 use domain::shared::ids::AccountId;
 use std::sync::Arc;
@@ -33,16 +33,8 @@ impl ListJournalEntriesUseCase {
         partner_id: Option<String>,
         status: Option<String>,
     ) -> Result<Vec<JournalEntryDto>, AppError> {
-        let from = from_date.and_then(|d| {
-            DateTime::parse_from_rfc3339(&d)
-                .ok()
-                .map(|dt| dt.with_timezone(&Utc))
-        });
-        let to = to_date.and_then(|d| {
-            DateTime::parse_from_rfc3339(&d)
-                .ok()
-                .map(|dt| dt.with_timezone(&Utc))
-        });
+        let from = from_date.and_then(|d| parse_date_bound(&d, false));
+        let to = to_date.and_then(|d| parse_date_bound(&d, true));
         let acc_id = account_id.and_then(|id| id.parse::<AccountId>().ok());
         let part_id = partner_id.and_then(|id| Uuid::parse_str(&id).ok());
         let status_enum = status.and_then(|s| match s.as_str() {
@@ -133,4 +125,21 @@ impl ListJournalEntriesUseCase {
         Ok(dto)
     }
 
+}
+
+fn parse_date_bound(value: &str, end_of_day: bool) -> Option<DateTime<Utc>> {
+    if let Ok(dt) = DateTime::parse_from_rfc3339(value) {
+        return Some(dt.with_timezone(&Utc));
+    }
+
+    if let Ok(date) = NaiveDate::parse_from_str(value, "%Y-%m-%d") {
+        if end_of_day {
+            let last_moment = date.and_hms_opt(23, 59, 59)?;
+            return Some(Utc.from_utc_datetime(&last_moment));
+        }
+        let start_of_day = date.and_hms_opt(0, 0, 0)?;
+        return Some(Utc.from_utc_datetime(&start_of_day));
+    }
+
+    None
 }
