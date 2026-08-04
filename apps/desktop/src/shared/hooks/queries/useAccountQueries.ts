@@ -1,7 +1,6 @@
 ﻿import { useQuery } from "@tanstack/react-query";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import { journalEntryService } from "@modules/accounting/api/journalEntryService";
-import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { computeLedgerTotals } from "@modules/reports/lib/ledgerTotals";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import type { AccountDto, AccountLedgerDto } from "@erp/shared-types";
@@ -42,14 +41,7 @@ export function useChartOfAccountsTree() {
         journalEntryService.listJournalEntries({}),
       ]);
 
-      let purchaseInvoices: Awaited<ReturnType<typeof invoiceService.listInvoicesByType>> = [];
-      try {
-        purchaseInvoices = await invoiceService.listInvoicesByType("Purchase");
-      } catch (e) {
-        console.warn("Purchase invoices fetch failed inside tree data loader:", e);
-      }
-
-      const { ledgerTotals } = computeLedgerTotals(accounts, entries, purchaseInvoices);
+      const { ledgerTotals } = computeLedgerTotals(accounts, entries);
       return { accounts, ledgerTotals };
     },
   });

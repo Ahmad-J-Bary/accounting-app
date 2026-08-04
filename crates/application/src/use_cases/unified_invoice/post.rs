@@ -689,8 +689,13 @@ impl PostInvoiceUseCase {
                     }
                 }
             } else if invoice.invoice_type == InvoiceType::PurchaseCosts {
+                let extra_costs_account = match self.account_repo.find_by_code("221").await? {
+                    Some(a) => a,
+                    None => self.account_repo.find_by_code("2201").await?
+                        .ok_or_else(|| AppError::NotFound("حساب تكاليف إضافية على المشتريات غير موجود (221)".into()))?,
+                };
                 journal_lines.push(JournalLine::new(
-                    main_account.id,
+                    extra_costs_account.id,
                     MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate),
                     MonetaryAmount::zero(doc_currency.clone()),
                     format!("تكاليف إضافية مرتبطة بفاتورة المشتريات رقم {}", invoice.invoice_number)
@@ -755,8 +760,13 @@ impl PostInvoiceUseCase {
         let extra_costs_val = invoice.extra_costs.amount();
         if invoice.invoice_type == InvoiceType::Purchase && extra_costs_val > Decimal::ZERO {
             let desc = format!("تكاليف إضافية مرتبطة بفاتورة المشتريات رقم {}", invoice.invoice_number);
+            let extra_costs_account = match self.account_repo.find_by_code("221").await? {
+                Some(a) => a,
+                None => self.account_repo.find_by_code("2201").await?
+                    .ok_or_else(|| AppError::NotFound("حساب تكاليف إضافية على المشتريات غير موجود (221)".into()))?,
+            };
 
-            // Entry 3: PurchaseCostsJournal — Dr 41 (extra costs), Cr 41 (allocation)
+            // Entry 3: PurchaseCostsJournal — Dr 41 (extra costs), Cr 221 (allocation)
             let extra_lines = vec![
                 JournalLine::new(
                     main_account.id,
@@ -765,7 +775,7 @@ impl PostInvoiceUseCase {
                     desc.clone()
                 ),
                 JournalLine::new(
-                    main_account.id,
+                    extra_costs_account.id,
                     MonetaryAmount::zero(doc_currency.clone()),
                     MonetaryAmount::new(Money::new(extra_costs_val, doc_currency.clone()), fx_rate),
                     format!("تكاليف إضافية - فاتورة رقم {}", invoice.invoice_number)
@@ -783,11 +793,11 @@ impl PostInvoiceUseCase {
             extra_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
             self.journal_repo.save(&extra_entry).await?;
 
-            // Entry 4: CashPayment for extra costs — Dr 41 (تكاليف إضافية للمشترات), Cr Cash
+            // Entry 4: CashPayment for extra costs — Dr 221 (تكاليف إضافية على المشتريات), Cr Cash
             let extra_pay_number = self.journal_repo.get_next_entry_number().await?;
             let extra_pay_lines = vec![
                 JournalLine::new(
-                    main_account.id,
+                    extra_costs_account.id,
                     MonetaryAmount::new(Money::new(extra_costs_val, doc_currency.clone()), fx_rate),
                     MonetaryAmount::zero(doc_currency.clone()),
                     format!("سند دفع تكاليف إضافية بموجب فاتورة المشتريات رقم {}", invoice.invoice_number)
@@ -820,7 +830,7 @@ impl PostInvoiceUseCase {
                     doc_currency.code.clone(),
                     fx_rate,
                     Utc::now(),
-                    Some(main_account.id),
+                    Some(extra_costs_account.id),
                     Some(cash_account.id),
                     None,
                     invoice.supplier_id,

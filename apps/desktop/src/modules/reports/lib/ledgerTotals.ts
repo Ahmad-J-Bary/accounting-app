@@ -1,6 +1,6 @@
 import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
 import { SYSTEM_ACCOUNT_IDS } from "@erp/shared-types";
-import type { AccountDto, JournalEntryDto, InvoiceDto } from "@erp/shared-types";
+import type { AccountDto, JournalEntryDto } from "@erp/shared-types";
 
 export interface AccountLedgerTotal {
   openingDebit: number;
@@ -31,7 +31,6 @@ function isCreditNatureAccount(account: AccountDto): boolean {
 export function computeLedgerTotals(
   accounts: AccountDto[],
   entries: JournalEntryDto[],
-  purchaseInvoices: InvoiceDto[] = [],
   fromDate?: string,
   toDate?: string,
 ): LedgerTotalsResult {
@@ -155,41 +154,7 @@ export function computeLedgerTotals(
     });
   }
 
-  // 5. Apply purchase invoice extra costs
-  const prePeriodInvoices: InvoiceDto[] = [];
-  const periodInvoices: InvoiceDto[] = [];
-
-  for (const inv of purchaseInvoices) {
-    if (inv.status !== "Posted" && inv.status !== "Paid") continue;
-    const invDate = inv.issued_at.split("T")[0];
-
-    if (toDateStr && invDate > toDateStr) continue;
-
-    if (fromDateStr && invDate < fromDateStr) {
-      prePeriodInvoices.push(inv);
-    } else {
-      periodInvoices.push(inv);
-    }
-  }
-
-  const preExtraCost = prePeriodInvoices.reduce((sum, inv) => sum + parseFloat(inv.extra_costs || "0"), 0);
-  const periodExtraCost = periodInvoices.reduce((sum, inv) => sum + parseFloat(inv.extra_costs || "0"), 0);
-
-  for (const account of accounts) {
-    if (account.name_ar === "تكاليف إضافية على المشتريات") {
-      const cur = ledgerTotals.get(account.id)!;
-      if (preExtraCost > 0) {
-        cur.openingDebit += preExtraCost;
-        cur.endingBalance += preExtraCost;
-      }
-      if (periodExtraCost > 0) {
-        cur.periodDebit += periodExtraCost;
-        cur.debit += periodExtraCost;
-        cur.endingBalance += periodExtraCost;
-      }
-    }
-  }
-
+  // 5. Build the final result
   return { ledgerTotals, totalDrawings };
 }
 

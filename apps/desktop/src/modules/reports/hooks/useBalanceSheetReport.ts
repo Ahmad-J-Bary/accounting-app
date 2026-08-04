@@ -70,7 +70,6 @@ export function useBalanceSheetReport(filters: IncomeStatementFilters): ReportSt
         const { ledgerTotals, totalDrawings } = computeLedgerTotals(
           baseData.accounts,
           allEntriesQuery.data ?? [],
-          baseData.purchaseInvoices,
           filters.from_date,
           filters.to_date,
         );
