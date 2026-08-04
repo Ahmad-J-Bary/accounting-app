@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 import { useTabs } from "@app/providers/TabContext";
 import { Button } from "@shared/ui/button";
 import { Printer, PlusCircle, ShoppingCart, ArrowUpRight, ArrowDownLeft, BookOpen, FileText, Landmark } from "lucide-react";
-import { cn } from "@shared/lib/utils";
 import { formatCurrency } from "@shared/lib/format";
 import { DateRangePicker } from "@widgets/reports";
 import { useReportFilters } from "@shared/hooks/useReportFilters";
@@ -362,6 +361,7 @@ export default function AccountMovement() {
             openingBalance={openingBalance}
             openingBalanceDate={openingBalanceDate}
             openingEntry={openingEntry}
+            openingEntries={ledger?.opening_entries ?? []}
             openingDebitTotal={openingDebitTotal}
             openingCreditTotal={openingCreditTotal}
           />

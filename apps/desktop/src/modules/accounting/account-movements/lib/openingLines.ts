@@ -1,4 +1,4 @@
-import type { AccountLedgerLineDto } from "@erp/shared-types";
+import type { AccountLedgerLineDto, OpeningEntryDto } from "@erp/shared-types";
 import { toLocalDateStr } from "@shared/lib/format";
 
 export function isOpeningLine(l: Pick<AccountLedgerLineDto, "journal_type" | "description">): boolean {
@@ -13,6 +13,31 @@ export function isOpeningLine(l: Pick<AccountLedgerLineDto, "journal_type" | "de
     desc.includes("رصيد افتتاحي") ||
     desc.includes("أول المدة")
   );
+}
+
+// Convert backend `opening_entries` (accounts with a static opening balance)
+// into line-shaped objects so they can be rendered as individual rows and
+// recognized by `isOpeningLine` (journal_type "رصيد افتتاحي").
+export function openingEntriesToLines(
+  entries: OpeningEntryDto[],
+): AccountLedgerLineDto[] {
+  return entries.map((oe) => ({
+    date: oe.date,
+    journal_id: "",
+    entry_number: oe.entry_number,
+    journal_type: "رصيد افتتاحي",
+    source_id: null,
+    description: oe.description,
+    opposite_account_name: "",
+    currency: "",
+    fx_rate: "0",
+    debit_base: oe.debit_base,
+    credit_base: oe.credit_base,
+    balance_base: "0",
+    debit_original: "0",
+    credit_original: "0",
+    balance_original: "0",
+  }));
 }
 
 type OpeningEntryLike = { date?: string } | null | undefined;

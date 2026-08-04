@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isOpeningLine, getOpeningCreationDate, getOpeningTotals, computeClosingBalance } from "./openingLines";
+import { isOpeningLine, getOpeningCreationDate, getOpeningTotals, computeClosingBalance, openingEntriesToLines } from "./openingLines";
 
 const openingLine = (journal_type: string, date: string, debit_base = "0", credit_base = "0", description = "") => ({
   journal_type,
@@ -107,6 +107,30 @@ describe("getOpeningTotals", () => {
 
   it("returns zeroes when nothing is in range", () => {
     expect(getOpeningTotals([], [], "2026-01-01", "2026-08-03")).toEqual({ debit: 0, credit: 0 });
+  });
+});
+
+describe("openingEntriesToLines", () => {
+  it("converts each opening entry into a line detected as opening", () => {
+    const entries = [
+      { entry_number: "1", description: "رصيد افتتاحي عميل", date: "2026-08-03T18:12:52Z", debit_base: "111", credit_base: "0" },
+      { entry_number: "2", description: "رصيد افتتاحي مورد", date: "2026-08-03T19:00:00Z", debit_base: "0", credit_base: "555" },
+    ];
+    const lines = openingEntriesToLines(entries);
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toMatchObject({
+      entry_number: "1",
+      description: "رصيد افتتاحي عميل",
+      date: "2026-08-03T18:12:52Z",
+      debit_base: "111",
+      credit_base: "0",
+      journal_type: "رصيد افتتاحي",
+    });
+    expect(lines.every((l) => isOpeningLine(l))).toBe(true);
+  });
+
+  it("returns an empty array when there are no opening entries", () => {
+    expect(openingEntriesToLines([])).toEqual([]);
   });
 });
 

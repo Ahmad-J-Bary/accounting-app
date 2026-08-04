@@ -11,6 +11,7 @@ export type LoadedAccountMovementsData = {
   accountName: string;
   openingBalance: number;
   openingEntry: OpeningEntryDto | null;
+  openingEntries: OpeningEntryDto[];
   openingBalanceDate: string;
   filteredLines: AccountLedgerLineDto[];
   totals: { debit: number; credit: number };
@@ -105,6 +106,7 @@ export function useAccountMovementsReport(
       accountName: ledger?.account_name || "",
       openingBalance,
       openingEntry,
+      openingEntries: ledger?.opening_entries ?? [],
       openingBalanceDate,
       filteredLines,
       totals,

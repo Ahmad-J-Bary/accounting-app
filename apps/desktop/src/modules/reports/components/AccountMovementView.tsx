@@ -1,4 +1,3 @@
-import { cn } from "@shared/lib/utils";
 import { formatCurrency } from "@shared/lib/format";
 import { ArrowUpRight, ArrowDownLeft, BookOpen, Landmark, FileText } from "lucide-react";
 import { ReportMeta } from "@widgets/reports";
@@ -16,7 +15,7 @@ type AccountMovementViewProps = {
 };
 
 export function AccountMovementView({ data, loading, search, onSearchChange, symbol }: AccountMovementViewProps) {
-  const { accountName, openingBalance, openingEntry, openingBalanceDate, filteredLines, totals, openingDebitTotal, openingCreditTotal } = data;
+  const { accountName, openingBalance, openingEntry, openingEntries, openingBalanceDate, filteredLines, totals, openingDebitTotal, openingCreditTotal } = data;
   const closing = computeClosingBalance(totals.debit + openingDebitTotal, totals.credit + openingCreditTotal);
 
   return (
@@ -50,6 +49,7 @@ export function AccountMovementView({ data, loading, search, onSearchChange, sym
         openingBalance={openingBalance}
         openingBalanceDate={openingBalanceDate}
         openingEntry={openingEntry}
+        openingEntries={openingEntries}
         openingDebitTotal={openingDebitTotal}
         openingCreditTotal={openingCreditTotal}
       />
