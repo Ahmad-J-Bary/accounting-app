@@ -1,5 +1,6 @@
 import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
 import { startOfDay, endOfDay, isWithinRange } from "@modules/reports/lib/date-utils";
+import { getOpeningTotals, isOpeningLine } from "@modules/accounting/account-movements/lib/openingLines";
 import type { ReportFilters } from "@shared/types/filters";
 import type {
   AccountDto,
@@ -207,11 +208,20 @@ export function computeIncomeStatement(
     .map((account) => {
       const ledger = data.expenseLedgers.get(account.id);
       if (!ledger) return { label: account.name_ar, value: 0 };
+      // حركة الفترة (يُستثنى منها الرصيد الافتتاحي لعدم تكرار الاحتساب)
       const periodNet = ledger.lines.reduce((ledgerSum, line) => {
+        if (isOpeningLine(line)) return ledgerSum;
         if (!isWithinRange(line.date, fromTs, toTs)) return ledgerSum;
         return ledgerSum + parseNumber(line.debit_base) - parseNumber(line.credit_base);
       }, 0);
-      return { label: account.name_ar, value: periodNet };
+      // الرصيد الافتتاحي لبند المصروف يُضاف إلى إجمالي المصاريف
+      const opening = getOpeningTotals(ledger.lines, ledger.opening_entries, undefined, filters.to_date);
+      const openingNet = opening.debit - opening.credit;
+      const staticOpening = parseNumber(ledger.opening_balance_base);
+      return {
+        label: account.name_ar,
+        value: periodNet + (openingNet !== 0 ? openingNet : staticOpening),
+      };
     })
     .filter((r) => r.value !== 0);
 

@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useTabs } from "@app/providers/TabContext";
 import { Button } from "@shared/ui/button";
-import { Printer, PlusCircle, ShoppingCart, ArrowUpRight, ArrowDownLeft, BookOpen, FileText, Landmark } from "lucide-react";
+import { Printer, PlusCircle, ShoppingCart, ArrowUpRight, ArrowDownLeft, FileText, Landmark } from "lucide-react";
 import { formatCurrency } from "@shared/lib/format";
 import { DateRangePicker } from "@widgets/reports";
 import { useReportFilters } from "@shared/hooks/useReportFilters";
@@ -207,6 +207,11 @@ export default function AccountMovement() {
     [totals, openingDebitTotal, openingCreditTotal],
   );
 
+  const openingClosing = useMemo(
+    () => computeClosingBalance(openingDebitTotal, openingCreditTotal),
+    [openingDebitTotal, openingCreditTotal],
+  );
+
   const symbol = baseCurrency?.symbol || baseCurrency?.code || "";
 
   const handleSaveVoucher = async (payload: CreatePaymentRequest) => {
@@ -333,15 +338,14 @@ export default function AccountMovement() {
         <div className="flex flex-col h-full">
           {/* Statistics Bar */}
           {ledger && (
-            <div className="grid grid-cols-5 gap-2 px-4 pt-4 pb-2">
-              <StatCard label="الافتتاحي" value={formatCurrency(openingBalance, symbol)} icon={Landmark} />
-              <StatCard label="المدين" value={formatCurrency(totals.debit + openingDebitTotal, symbol)} icon={ArrowUpRight} />
-              <StatCard label="الدائن" value={formatCurrency(totals.credit + openingCreditTotal, symbol)} icon={ArrowDownLeft} />
+            <div className="grid grid-cols-4 gap-2 px-4 pt-4 pb-2">
+              <StatCard label="افتتاحي / مدين" value={formatCurrency(openingDebitTotal, symbol)} icon={ArrowUpRight} />
+              <StatCard label="افتتاحي / دائن" value={formatCurrency(openingCreditTotal, symbol)} icon={ArrowDownLeft} />
               <StatCard
-                label="صافي"
-                value={formatCurrency(totals.debit - totals.credit, symbol)}
-                icon={BookOpen}
-                variant={(totals.debit - totals.credit) >= 0 ? "positive" : "negative"}
+                label={`صافي الافتتاحي / ${openingClosing.sign}`}
+                value={formatCurrency(Math.abs(openingClosing.net), symbol)}
+                icon={Landmark}
+                variant={openingClosing.net >= 0 ? "positive" : "negative"}
               />
               <StatCard
                 label={`الختامي / ${closing.sign}`}
