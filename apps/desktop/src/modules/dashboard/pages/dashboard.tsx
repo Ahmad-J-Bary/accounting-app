@@ -10,9 +10,8 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   PieChart, Pie, Cell
 } from "recharts";
-import { cn } from "@shared/lib/utils";
-
 import { DashboardLayout, DashboardCard } from "@widgets/templates/DashboardLayout";
+import { StatCard } from "@widgets/stats/StatCard";
 import { StatusBadge } from '@widgets/stats/StatusBadge';
 import { QuickActions } from '@app/shell/QuickActions';
 
@@ -125,12 +124,12 @@ export default function Dashboard() {
   ), [productItems]);
 
   const kpis = useMemo(() => [
-    { title: "المبيعات", value: postedSalesTotal, icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-50" },
-    { title: "المشتريات", value: approvedPurchasesTotal, icon: ShoppingCart, color: "text-indigo-600", bg: "bg-indigo-50" },
-    { title: "الرصيد النقدي", value: cashBalance, icon: Wallet, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { title: "ذمم العملاء", value: rpSummary ? parseFloat(rpSummary.total_receivables) : 0, icon: Users, color: "text-amber-600", bg: "bg-amber-50" },
-    { title: "ذمم الموردين", value: rpSummary ? parseFloat(rpSummary.total_payables) : 0, icon: Truck, color: "text-rose-600", bg: "bg-rose-50" },
-    { title: "المخزون", value: inventoryValue, icon: Package, color: "text-slate-600", bg: "bg-slate-50" },
+    { title: "المبيعات", value: postedSalesTotal, icon: TrendingUp },
+    { title: "المشتريات", value: approvedPurchasesTotal, icon: ShoppingCart },
+    { title: "الرصيد النقدي", value: cashBalance, icon: Wallet },
+    { title: "ذمم العملاء", value: rpSummary ? parseFloat(rpSummary.total_receivables) : 0, icon: Users },
+    { title: "ذمم الموردين", value: rpSummary ? parseFloat(rpSummary.total_payables) : 0, icon: Truck },
+    { title: "المخزون", value: inventoryValue, icon: Package },
   ], [postedSalesTotal, approvedPurchasesTotal, cashBalance, rpSummary, inventoryValue]);
 
   // === Revenue chart from real invoices (group by month) ===
@@ -265,15 +264,7 @@ export default function Dashboard() {
       }
       widgets={
         kpis.map((k, i) => (
-          <div key={i} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between transition-all hover:shadow-xl hover:-translate-y-1 group">
-            <div className="space-y-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{k.title}</span>
-              <div className={cn("text-xl font-black tabular-nums", k.color)}>{formatAmount(k.value, { mode: localDisplayMode })}</div>
-            </div>
-            <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-colors group-hover:scale-110 duration-300", k.bg, k.color)}>
-              <k.icon className="w-6 h-6" />
-            </div>
-          </div>
+          <StatCard key={i} label={k.title} value={formatAmount(k.value, { mode: localDisplayMode })} icon={k.icon} />
         ))
       }
     >

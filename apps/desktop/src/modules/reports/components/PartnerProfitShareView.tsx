@@ -9,6 +9,7 @@ import { useUnifiedColumns } from "@shared/hooks";
 import { toFixed } from "@shared/lib/format";
 import { ReportMeta } from "@widgets/reports";
 import { createSummarySpacer } from "../lib/table-meta";
+import { StatCard } from "@widgets/stats/StatCard";
 
 type PartnerProfitShareViewProps = {
   computed: PartnerProfitShareComputed;
@@ -16,33 +17,20 @@ type PartnerProfitShareViewProps = {
 };
 
 const summaryCards = [
-  { label: "رأس المال", key: "totalCapital" as const, icon: Users, cardBg: "bg-indigo-50 border-indigo-100", iconBg: "bg-indigo-600", labelColor: "text-indigo-400", valueColor: "text-indigo-900" },
-  { label: "صافي الأرباح", key: "netProfit" as const, icon: TrendingUp, cardBg: "bg-emerald-50 border-emerald-100", iconBg: "bg-emerald-600", labelColor: "text-emerald-400", valueColor: "text-emerald-900" },
-  { label: "قيمة البضاعة", key: "inventoryValue" as const, icon: Package, cardBg: "bg-amber-50 border-amber-100", iconBg: "bg-amber-600", labelColor: "text-amber-400", valueColor: "text-amber-900" },
-  { label: "ديون العملاء", key: "totalCustomerDebts" as const, icon: CreditCard, cardBg: "bg-rose-50 border-rose-100", iconBg: "bg-rose-600", labelColor: "text-rose-400", valueColor: "text-rose-900" },
-  { label: "الأصول الثابتة", key: "fixedAssetsValue" as const, icon: Building2, cardBg: "bg-violet-50 border-violet-100", iconBg: "bg-violet-600", labelColor: "text-violet-400", valueColor: "text-violet-900" },
-  { label: "الأصول التشغيلية", key: "totalOperationalAssets" as const, icon: BarChart3, cardBg: "bg-slate-100 border-slate-200", iconBg: "bg-slate-600", labelColor: "text-slate-400", valueColor: "text-slate-900" },
+  { label: "رأس المال", key: "totalCapital" as const, icon: Users },
+  { label: "صافي الأرباح", key: "netProfit" as const, icon: TrendingUp },
+  { label: "قيمة البضاعة", key: "inventoryValue" as const, icon: Package },
+  { label: "ديون العملاء", key: "totalCustomerDebts" as const, icon: CreditCard },
+  { label: "الأصول الثابتة", key: "fixedAssetsValue" as const, icon: Building2 },
+  { label: "الأصول التشغيلية", key: "totalOperationalAssets" as const, icon: BarChart3 },
 ];
 
 function SummaryCards({ computed, formatValue }: { computed: PartnerProfitShareComputed; formatValue: (value: number) => string }) {
   return (
     <div className="grid grid-cols-6 gap-2 px-4 pt-4 pb-2">
-      {summaryCards.map((card) => {
-        const Icon = card.icon;
-        return (
-          <div key={card.label} className={cn("rounded-xl border p-3 flex items-center gap-3", card.cardBg)}>
-            <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center text-white shrink-0", card.iconBg)}>
-              <Icon className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <span className={cn("text-[9px] font-black uppercase tracking-widest block", card.labelColor)}>{card.label}</span>
-              <div className={cn("text-sm font-black tabular-nums leading-tight", card.valueColor)}>
-                {formatValue(computed[card.key])}
-              </div>
-            </div>
-          </div>
-        );
-      })}
+      {summaryCards.map((card) => (
+        <StatCard key={card.label} label={card.label} value={formatValue(computed[card.key])} icon={card.icon} />
+      ))}
     </div>
   );
 }

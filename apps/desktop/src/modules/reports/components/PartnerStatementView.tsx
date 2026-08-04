@@ -7,6 +7,7 @@ import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useUnifiedColumns } from "@shared/hooks";
 import { ReportMeta } from "@widgets/reports";
 import { createSummarySpacer } from "../lib/table-meta";
+import { StatCard } from "@widgets/stats/StatCard";
 
 type PartnerStatementViewProps = {
   computed: PartnerStatementComputed;
@@ -27,45 +28,10 @@ function SummaryCards({ computed, formatValue }: { computed: PartnerStatementCom
 
   return (
     <div className="grid grid-cols-4 gap-2 px-4 pt-4 pb-2">
-      <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-3 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center text-white shrink-0">
-          <Users className="w-4 h-4" />
-        </div>
-        <div className="min-w-0">
-          <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest block">إجمالي رأس المال</span>
-          <div className="text-sm font-black text-indigo-900 tabular-nums leading-tight">{formatValue(totals.capital)}</div>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-lg bg-emerald-600 flex items-center justify-center text-white shrink-0">
-          <TrendingUp className="w-4 h-4" />
-        </div>
-        <div className="min-w-0">
-          <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest block">إجمالي الأرباح</span>
-          <div className="text-sm font-black text-emerald-900 tabular-nums leading-tight">{formatValue(totals.profits)}</div>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-rose-100 bg-rose-50 p-3 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-lg bg-rose-600 flex items-center justify-center text-white shrink-0">
-          <Wallet className="w-4 h-4" />
-        </div>
-        <div className="min-w-0">
-          <span className="text-[9px] font-black text-rose-400 uppercase tracking-widest block">إجمالي المسحوبات</span>
-          <div className="text-sm font-black text-rose-900 tabular-nums leading-tight">{formatValue(totals.drawings)}</div>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-slate-200 bg-slate-100 p-3 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-lg bg-slate-600 flex items-center justify-center text-white shrink-0">
-          <Percent className="w-4 h-4" />
-        </div>
-        <div className="min-w-0">
-          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">المبلغ النهائي</span>
-          <div className="text-sm font-black text-slate-900 tabular-nums leading-tight">{formatValue(totals.finalAmount)}</div>
-        </div>
-      </div>
+      <StatCard label="إجمالي رأس المال" value={formatValue(totals.capital)} icon={Users} />
+      <StatCard label="إجمالي الأرباح" value={formatValue(totals.profits)} icon={TrendingUp} />
+      <StatCard label="إجمالي المسحوبات" value={formatValue(totals.drawings)} icon={Wallet} />
+      <StatCard label="المبلغ النهائي" value={formatValue(totals.finalAmount)} icon={Percent} />
     </div>
   );
 }

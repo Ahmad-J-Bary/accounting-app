@@ -12,6 +12,7 @@ import { customerService } from "@modules/partners/api/customerService";
 import { supplierService } from "@modules/partners/api/supplierService";
 import { partnerService } from "@modules/partners/api/partnerService";
 import { paymentService } from "@modules/payments/api/paymentService";
+import { StatCard } from "@widgets/stats/StatCard";
 import type {
   AccountLedgerDto,
   AccountLedgerLineDto,
@@ -333,74 +334,22 @@ export default function AccountMovement() {
         <div className="flex flex-col h-full">
           {/* Statistics Bar */}
           {ledger && (
-            <div className="grid grid-cols-5 gap-3 px-4 pt-4 pb-2">
-              <div className="bg-indigo-50 p-3 rounded-xl border border-indigo-100 flex items-center gap-3">
-                <div className="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
-                  <Landmark className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest block">الافتتاحي</span>
-                  <div className="text-sm font-black text-indigo-900 tabular-nums">{formatCurrency(openingBalance, symbol)}</div>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-3">
-                <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center text-white">
-                  <ArrowUpRight className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">المدين</span>
-                  <div className="text-sm font-black text-slate-900 tabular-nums">{formatCurrency(totals.debit + openingDebitTotal, symbol)}</div>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-3">
-                <div className="w-9 h-9 bg-emerald-600 rounded-lg flex items-center justify-center text-white">
-                  <ArrowDownLeft className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">الدائن</span>
-                  <div className="text-sm font-black text-slate-900 tabular-nums">{formatCurrency(totals.credit + openingCreditTotal, symbol)}</div>
-                </div>
-              </div>
-
-              <div className={cn(
-                "p-3 rounded-xl border flex items-center gap-3",
-                (totals.debit - totals.credit) >= 0
-                  ? "bg-amber-50 border-amber-100"
-                  : "bg-red-50 border-red-100"
-              )}>
-                <div className={cn(
-                  "w-9 h-9 rounded-lg flex items-center justify-center text-white",
-                  (totals.debit - totals.credit) >= 0 ? "bg-amber-600" : "bg-red-600"
-                )}>
-                  <BookOpen className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">صافي</span>
-                  <div className={cn(
-                    "text-sm font-black tabular-nums",
-                    (totals.debit - totals.credit) >= 0 ? "text-amber-700" : "text-red-700"
-                  )}>
-                    {formatCurrency(totals.debit - totals.credit, symbol)}
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 flex items-center gap-3">
-                <div className="w-9 h-9 bg-white/10 rounded-lg flex items-center justify-center text-white backdrop-blur-md">
-                  <FileText className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">الختامي / {closing.sign}</span>
-                  <div className={cn(
-                    "text-sm font-black tabular-nums",
-                    closing.sign === "مدين" ? "text-blue-300" : closing.sign === "دائن" ? "text-emerald-300" : "text-white"
-                  )}>
-                    {formatCurrency(Math.abs(closing.net), symbol)}
-                  </div>
-                </div>
-              </div>
+            <div className="grid grid-cols-5 gap-2 px-4 pt-4 pb-2">
+              <StatCard label="الافتتاحي" value={formatCurrency(openingBalance, symbol)} icon={Landmark} />
+              <StatCard label="المدين" value={formatCurrency(totals.debit + openingDebitTotal, symbol)} icon={ArrowUpRight} />
+              <StatCard label="الدائن" value={formatCurrency(totals.credit + openingCreditTotal, symbol)} icon={ArrowDownLeft} />
+              <StatCard
+                label="صافي"
+                value={formatCurrency(totals.debit - totals.credit, symbol)}
+                icon={BookOpen}
+                variant={(totals.debit - totals.credit) >= 0 ? "positive" : "negative"}
+              />
+              <StatCard
+                label={`الختامي / ${closing.sign}`}
+                value={formatCurrency(Math.abs(closing.net), symbol)}
+                icon={FileText}
+                variant="accent"
+              />
             </div>
           )}
 

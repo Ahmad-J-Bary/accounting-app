@@ -1,8 +1,9 @@
 import type { BalanceSheetComputed, BalanceSheetRow, BalanceSheetSection } from "@modules/reports/lib/balanceSheet";
 import { cn } from "@shared/lib/utils";
-import { CheckCircle2, AlertCircle, ChevronDown, ChevronLeft } from "lucide-react";
+import { CheckCircle2, AlertCircle, ChevronDown, ChevronLeft, Building2, Wallet, Users, Scale } from "lucide-react";
 import { useState } from "react";
 import { ReportMeta } from "@widgets/reports";
+import { StatCard } from "@widgets/stats/StatCard";
 
 type BalanceSheetViewProps = {
   computed: BalanceSheetComputed;
@@ -15,56 +16,20 @@ function SectionHeader({ title }: { title: string }) {
 }
 
 function SummaryCards({ computed, formatValue }: { computed: BalanceSheetComputed; formatValue: (value: number) => string }) {
-  const cards = [
-    { label: "إجمالي الأصول", value: computed.totalAssets },
-    { label: "إجمالي الخصوم", value: computed.totalLiabilities },
-    { label: "حقوق الملكية", value: computed.totalEquity },
-    { label: "الخصوم + حقوق الملكية", value: computed.totalLiabilitiesEquity },
-  ];
-
   const isBalanced = computed.isBalanced;
   const diff = Math.abs(computed.totalAssets - computed.totalLiabilitiesEquity);
 
   return (
-    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-5">
-      {cards.map((card) => (
-        <div key={card.label} className="rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
-          <div className="text-xs font-black text-slate-400">{card.label}</div>
-          <div className={cn("mt-1 text-xl font-black tabular-nums", card.label === "إجمالي الأصول" ? "text-blue-700" : "text-slate-900")}>
-            {formatValue(card.value)}
-          </div>
-        </div>
-      ))}
-
-      <div
-          className={cn(
-            "rounded-xl p-2 shadow-sm flex items-center gap-2 border-2 transition-all duration-300",
-          isBalanced
-            ? "bg-gradient-to-br from-emerald-50 to-white border-emerald-300 hover:shadow-md hover:border-emerald-400"
-            : "bg-gradient-to-br from-rose-50 to-white border-rose-300 hover:shadow-md hover:border-rose-400",
-        )}
-      >
-        <div className={cn(
-          "w-7 h-7 rounded-full flex items-center justify-center shrink-0",
-          isBalanced ? "bg-emerald-100" : "bg-rose-100",
-        )}>
-          {isBalanced
-            ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-            : <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
-          }
-        </div>
-        <span className={cn(
-          "text-[11px] font-black leading-tight",
-          isBalanced ? "text-emerald-800" : "text-rose-800",
-        )}>
-          {isBalanced ? "متوازنة" : "غير متوازنة"}
-        </span>
-        {!isBalanced && (
-          <span className="text-[9px] text-rose-500 font-bold">
-            فرق {formatValue(diff)}
-          </span>
-        )}
-      </div>
+    <div className="grid grid-cols-1 gap-2 px-4 pt-4 pb-2 md:grid-cols-2 xl:grid-cols-5">
+      <StatCard label="إجمالي الأصول" value={formatValue(computed.totalAssets)} icon={Building2} />
+      <StatCard label="إجمالي الخصوم" value={formatValue(computed.totalLiabilities)} icon={Wallet} />
+      <StatCard label="حقوق الملكية" value={formatValue(computed.totalEquity)} icon={Users} />
+      <StatCard label="الخصوم + حقوق الملكية" value={formatValue(computed.totalLiabilitiesEquity)} icon={Scale} />
+      {isBalanced ? (
+        <StatCard label="الميزانية متوازنة" value="" icon={CheckCircle2} variant="positive" />
+      ) : (
+        <StatCard label="الميزانية غير متوازنة" value={`فرق ${formatValue(diff)}`} icon={AlertCircle} variant="negative" />
+      )}
     </div>
   );
 }

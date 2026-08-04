@@ -1,6 +1,8 @@
 import { Fragment } from "react";
 import type { IncomeStatementComputed, IncomeStatementSection } from "@modules/reports/lib/incomeStatement";
 import { ReportMeta } from "@widgets/reports";
+import { TrendingUp, TrendingDown, Coins, BarChart3 } from "lucide-react";
+import { StatCard } from "@widgets/stats/StatCard";
 
 type IncomeStatementViewProps = {
   computed: IncomeStatementComputed;
@@ -24,21 +26,12 @@ function SummaryCards({
   computed: IncomeStatementComputed;
   formatValue: (value: number) => string;
 }) {
-  const cards = [
-    { label: "إجمالي الإيرادات", value: computed.totalRevenue },
-    { label: "إجمالي التكاليف", value: computed.totalLiabilities },
-    { label: "إجمالي الأرباح", value: computed.grossProfit },
-    { label: "صافي الأرباح", value: computed.netProfit },
-  ];
-
   return (
-    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
-      {cards.map((card) => (
-        <div key={card.label} className="rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
-          <div className="text-xs font-black text-slate-400">{card.label}</div>
-          <div className="mt-1 text-xl font-black tabular-nums text-slate-900">{formatValue(card.value)}</div>
-        </div>
-      ))}
+    <div className="grid grid-cols-1 gap-2 px-4 pt-4 pb-2 md:grid-cols-2 xl:grid-cols-4">
+      <StatCard label="إجمالي الإيرادات" value={formatValue(computed.totalRevenue)} icon={TrendingUp} />
+      <StatCard label="إجمالي التكاليف" value={formatValue(computed.totalLiabilities)} icon={TrendingDown} />
+      <StatCard label="إجمالي الأرباح" value={formatValue(computed.grossProfit)} icon={Coins} />
+      <StatCard label="صافي الأرباح" value={formatValue(computed.netProfit)} icon={BarChart3} variant={computed.netProfit >= 0 ? "positive" : "negative"} />
     </div>
   );
 }
