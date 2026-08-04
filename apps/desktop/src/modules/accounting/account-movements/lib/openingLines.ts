@@ -1,4 +1,5 @@
 import type { AccountLedgerLineDto } from "@erp/shared-types";
+import { toLocalDateStr } from "@shared/lib/format";
 
 export function isOpeningLine(l: Pick<AccountLedgerLineDto, "journal_type" | "description">): boolean {
   const desc = l.description || "";
@@ -23,10 +24,10 @@ export function getOpeningCreationDate(
   openingEntry: OpeningEntryLike,
   lines: LedgerLineLike[],
 ): string | null {
-  let created = openingEntry?.date?.split("T")[0] || null;
+  let created = openingEntry?.date ? toLocalDateStr(openingEntry.date) : null;
   for (const line of lines) {
     if (isOpeningLine(line)) {
-      const d = line.date.split("T")[0];
+      const d = toLocalDateStr(line.date);
       if (!created || d < created) created = d;
     }
   }
@@ -51,7 +52,7 @@ export function getOpeningTotals(
   toDate?: string,
 ): { debit: number; credit: number } {
   const inRange = (date: string): boolean => {
-    const d = date.split("T")[0];
+    const d = toLocalDateStr(date);
     if (fromDate && d < fromDate) return false;
     if (toDate && d > toDate) return false;
     return true;

@@ -4,6 +4,7 @@ import type { AccountDto, AccountLedgerLineDto, OpeningEntryDto } from "@erp/sha
 import type { ReportFilters } from "@shared/types/filters";
 import type { ReportState } from "@shared/types/report";
 import { getOpeningCreationDate, getOpeningTotals, isOpeningLine } from "@modules/accounting/account-movements/lib/openingLines";
+import { toLocalDateStr } from "@shared/lib/format";
 
 export type LoadedAccountMovementsData = {
   accounts: AccountDto[];
@@ -39,7 +40,7 @@ export function useAccountMovementsReport(
     const from = filters.from_date;
     const to = filters.to_date;
     if (from || to) {
-      const d = (oe.date || "").split("T")[0];
+      const d = (oe.date || "") ? toLocalDateStr(oe.date || "") : "";
       if (from && d < from) return null;
       if (to && d > to) return null;
     }
@@ -68,7 +69,7 @@ export function useAccountMovementsReport(
       let creditBefore = 0;
       for (const line of lines) {
         if (isOpeningLine(line)) continue;
-        const d = line.date.split("T")[0];
+        const d = toLocalDateStr(line.date);
         if (d < filters.from_date) {
           debitBefore += parseFloat(line.debit_base || "0");
           creditBefore += parseFloat(line.credit_base || "0");
@@ -82,7 +83,7 @@ export function useAccountMovementsReport(
 
     const filteredLines = filters.from_date && filters.to_date
       ? lines.filter((l) => {
-          const d = l.date.split("T")[0];
+          const d = toLocalDateStr(l.date);
           return d >= filters.from_date && d <= filters.to_date;
         })
       : lines;

@@ -119,7 +119,7 @@ export function JournalTable({
           comparison = (parseInt(a.entry_number || "0", 10) || 0) - (parseInt(b.entry_number || "0", 10) || 0);
           break;
         case "created_at":
-          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          comparison = new Date(a.entry_date).getTime() - new Date(b.entry_date).getTime();
           break;
         case "journal_type":
           comparison = (a.journal_type_display || "").localeCompare(b.journal_type_display || "", "ar");
@@ -143,7 +143,7 @@ export function JournalTable({
           comparison = (parseInt(a.entry_number || "0", 10) || 0) - (parseInt(b.entry_number || "0", 10) || 0);
           break;
         case "created_at":
-          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          comparison = new Date(a.entry_date).getTime() - new Date(b.entry_date).getTime();
           break;
         case "journal_type":
           comparison = (a.journal_type_display || "").localeCompare(b.journal_type_display || "", "ar");
@@ -237,7 +237,7 @@ export function JournalTable({
         id: "entry_date",
         header: "التاريخ",
         label: "التاريخ",
-        accessor: (e) => e.isFirstInGroup ? formatDateTime(e.created_at) : "",
+        accessor: (e) => e.isFirstInGroup ? formatDateTime(e.entry_date) : "",
         className: "text-slate-500 tabular-nums"
       },
     );
@@ -322,7 +322,7 @@ export function JournalTable({
         id: "entry_date",
         header: "التاريخ",
         label: "التاريخ",
-        accessor: (e) => formatDateTime(e.created_at),
+        accessor: (e) => formatDateTime(e.entry_date),
         className: "text-slate-500 tabular-nums"
       },
     );
@@ -619,7 +619,7 @@ export function JournalTable({
       if (col.id === "journal_type") return row.journal_type_display;
       if (col.id === "description") return row.description;
       if (col.id === "account") return row.account_name;
-      if (col.id === "entry_date") return formatDateTime(row.created_at);
+      if (col.id === "entry_date") return formatDateTime(row.entry_date);
 
       const debitMatch = col.id.match(/^debit_(.+)$/);
       if (debitMatch) {
@@ -648,7 +648,7 @@ export function JournalTable({
       if (col.id === "entry_number") return parseInt(row.entry_number, 10) || 0;
       if (col.id === "journal_type") return row.journal_type_display;
       if (col.id === "description") return row.description;
-      if (col.id === "entry_date") return formatDateTime(row.created_at);
+      if (col.id === "entry_date") return formatDateTime(row.entry_date);
       if (col.id === "debit_accounts") return row.debit_account_names;
       if (col.id === "credit_accounts") return row.credit_account_names;
 
@@ -703,7 +703,7 @@ export function JournalTable({
       if (col.id === "entry_date") {
         return dateCol("entry_date", label, (row) => {
           const r = row as unknown as JournalTableRow | JournalSingleLineTableRow;
-          return r.created_at;
+          return r.entry_date;
         });
       }
 

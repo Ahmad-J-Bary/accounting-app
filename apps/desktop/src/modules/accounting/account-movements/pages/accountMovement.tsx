@@ -24,6 +24,7 @@ import type {
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { AccountMovementTable } from "../components/AccountMovementTable";
 import { computeClosingBalance, getOpeningCreationDate, getOpeningTotals, isOpeningLine } from "../lib/openingLines";
+import { toLocalDateStr } from "@shared/lib/format";
 import { useDataTable } from "@shared/hooks";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
@@ -136,7 +137,7 @@ export default function AccountMovement() {
     let creditBefore = 0;
     for (const line of allLines) {
       if (isOpeningLine(line)) continue;
-      const d = line.date.split("T")[0];
+      const d = toLocalDateStr(line.date);
       if (d < dateFilters.from_date) {
         debitBefore += parseFloat(line.debit_base || "0");
         creditBefore += parseFloat(line.credit_base || "0");
@@ -180,7 +181,7 @@ export default function AccountMovement() {
     // Apply date filter if dates are set
     if (dateFilters.from_date && dateFilters.to_date) {
       lines = lines.filter(l => {
-        const d = l.date.split("T")[0];
+        const d = toLocalDateStr(l.date);
         return d >= dateFilters.from_date && d <= dateFilters.to_date;
       });
     }

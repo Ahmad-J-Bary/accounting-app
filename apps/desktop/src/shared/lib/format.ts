@@ -60,6 +60,32 @@ export function toLocalString(n: number): string {
   }).format(n);
 }
 
+/** Local calendar date (YYYY-MM-DD) for a Date, independent of the UTC timezone. */
+export function toLocalDatePart(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Local calendar date (YYYY-MM-DD) of an ISO/timestamp string. Falls back to the input on invalid dates. */
+export function toLocalDateStr(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return toLocalDatePart(d);
+}
+
+/**
+ * Converts a picked local date (YYYY-MM-DD) into the matching UTC instant,
+ * so server-side filters match what the user sees in local time.
+ *   from_date (start of day)  -> new Date("YYYY-MM-DDT00:00:00").toISOString()
+ *   to_date   (end of day)    -> new Date("YYYY-MM-DDT23:59:59.999").toISOString()
+ */
+export function toUtcBound(date: string, endOfDay: boolean): string {
+  const suffix = endOfDay ? "T23:59:59.999" : "T00:00:00";
+  return new Date(`${date}${suffix}`).toISOString();
+}
+
 export function toFixed(n: number, digits: number): string {
   return new Intl.NumberFormat("ar-SY", {
     numberingSystem: _numberingSystem,

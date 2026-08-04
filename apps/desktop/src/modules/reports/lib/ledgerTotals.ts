@@ -1,5 +1,6 @@
 import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
 import { SYSTEM_ACCOUNT_IDS } from "@erp/shared-types";
+import { toLocalDateStr } from "@shared/lib/format";
 import type { AccountDto, JournalEntryDto } from "@erp/shared-types";
 
 export interface AccountLedgerTotal {
@@ -84,7 +85,7 @@ export function computeLedgerTotals(
   const periodNetMap = new Map<string, { debit: number; credit: number }>();
 
   for (const entry of entries) {
-    const entryDate = entry.entry_date.split("T")[0];
+    const entryDate = toLocalDateStr(entry.entry_date);
 
     // Exclude entries strictly after toDate
     if (toDateStr && entryDate > toDateStr) {

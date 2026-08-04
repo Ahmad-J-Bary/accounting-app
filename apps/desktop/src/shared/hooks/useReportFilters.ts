@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { toLocalDatePart } from "@shared/lib/format";
 
 import type { ReportFilters } from "@shared/types/report";
 
@@ -9,8 +10,8 @@ export function useReportFilters(defaultFromDate?: string, defaultToDate?: strin
   const { baseCurrency, currencies } = useCurrencyContext();
 
   const [filters, setFilters] = useState<ReportFilters>({
-    from_date: defaultFromDate ?? new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
-    to_date: defaultToDate ?? new Date().toISOString().split("T")[0],
+    from_date: defaultFromDate ?? toLocalDatePart(new Date(new Date().getFullYear(), 0, 1)),
+    to_date: defaultToDate ?? toLocalDatePart(new Date()),
   });
 
   const [selectedCurrency, setSelectedCurrency] = useState<string>(baseCurrency?.code ?? "");

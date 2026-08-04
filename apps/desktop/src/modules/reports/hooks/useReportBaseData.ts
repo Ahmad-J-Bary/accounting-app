@@ -6,6 +6,7 @@ import { journalEntryService } from "@modules/accounting/api/journalEntryService
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { returnService } from "@modules/invoicing/api/returnService";
 import { materialService } from "@modules/inventory/api/materialService";
+import { toUtcBound } from "@shared/lib/format";
 import type { ReportFilters } from "@shared/types/filters";
 
 export function useReportBaseData(filters?: ReportFilters) {
@@ -16,7 +17,10 @@ export function useReportBaseData(filters?: ReportFilters) {
 
   const journalEntriesQuery = useQuery({
     queryKey: QUERY_KEYS.journalEntries(filters ? { from_date: filters.from_date, to_date: filters.to_date } : {}),
-    queryFn: () => journalEntryService.listJournalEntries(filters ? { from_date: filters.from_date, to_date: filters.to_date } : {}),
+    queryFn: () => journalEntryService.listJournalEntries(filters ? {
+      from_date: toUtcBound(filters.from_date, false),
+      to_date: toUtcBound(filters.to_date, true),
+    } : {}),
   });
 
   const salesInvoicesQuery = useQuery({

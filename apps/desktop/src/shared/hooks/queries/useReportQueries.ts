@@ -3,6 +3,7 @@ import { journalEntryService } from "@modules/accounting/api/journalEntryService
 import { accountingService } from "@modules/accounting/api/accountingService";
 import { computeLedgerTotals, type AccountLedgerTotal } from "@modules/reports/lib/ledgerTotals";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
+import { toUtcBound } from "@shared/lib/format";
 import type { JournalEntryDto, ReceivablesPayablesSummary, AccountDto } from "@erp/shared-types";
 
 export function useJournalEntries(filters: { from_date: string; to_date: string }) {
@@ -10,8 +11,8 @@ export function useJournalEntries(filters: { from_date: string; to_date: string 
     queryKey: QUERY_KEYS.journalEntries(filters),
     queryFn: () =>
       journalEntryService.listJournalEntries({
-        from_date: filters.from_date,
-        to_date: filters.to_date,
+        from_date: toUtcBound(filters.from_date, false),
+        to_date: toUtcBound(filters.to_date, true),
       }),
   });
 }

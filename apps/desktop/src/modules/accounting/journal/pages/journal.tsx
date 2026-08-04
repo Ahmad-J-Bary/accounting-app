@@ -6,6 +6,8 @@ import type { JournalEntryDto, JournalType } from "@erp/shared-types";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { DateRangePicker } from "@widgets/reports";
+import { useReportFilters } from "@shared/hooks/useReportFilters";
+import { toLocalDateStr } from "@shared/lib/format";
 
 // Refactored Components & Hooks
 import { useDataTable } from '@shared/hooks';
@@ -17,12 +19,11 @@ type DisplayMode = "two-line" | "one-line";
 export default function Journal() {
   const [searchParams] = useSearchParams();
   const typeParam = searchParams.get('type') as JournalType | null;
-  
-  const [filters, setFilters] = useState<JournalFilters>({
-    journal_type: typeParam || 'GeneralJournal',
-    from_date: undefined,
-    to_date: undefined,
-  });
+
+  // Date range: same defaults + URL sync as the Account Movements page
+  const { filters: dateFilters, setFilters: setDateFilters } = useReportFilters();
+
+  const [journalType, setJournalType] = useState<JournalType>(typeParam || 'GeneralJournal');
 
   const [displayMode, setDisplayMode] = useState<DisplayMode>(
     () => (localStorage.getItem("journal-display-mode") as DisplayMode) || "two-line"
@@ -35,14 +36,18 @@ export default function Journal() {
   useEffect(() => {
     // Sync from URL only when the query param exists.
     // Do not force-reset user selection back to GeneralJournal.
-    if (typeParam && typeParam !== (filters.journal_type || 'GeneralJournal')) {
-      setFilters(f => ({ ...f, journal_type: typeParam }));
+    if (typeParam && typeParam !== (journalType || 'GeneralJournal')) {
+      setJournalType(typeParam);
     }
-  }, [typeParam, filters.journal_type]);
+  }, [typeParam, journalType]);
+
+  // Fetch all entries; the date range is applied client-side (local dates),
+  // mirroring the Account Movements page for consistent behavior.
+  const queryFilters = useMemo<JournalFilters>(() => ({}), []);
 
   const fetchData = useCallback(() => {
-    return journalEntryService.listJournalEntries(filters);
-  }, [filters]);
+    return journalEntryService.listJournalEntries(queryFilters);
+  }, [queryFilters]);
 
   const {
     filtered: entries,
@@ -50,14 +55,24 @@ export default function Journal() {
     search,
     setSearch,
   } = useDataTable<JournalEntryDto>({
-    queryKey: ["journal-entries", JSON.stringify(filters)],
+    queryKey: ["journal-entries", JSON.stringify(queryFilters)],
     fetchData,
     searchFields: ["entry_number", "description"],
   });
 
   const displayEntries = useMemo(() => {
-    const jt = filters.journal_type;
-    if (!jt || jt === 'GeneralJournal') return entries;
+    let list = entries;
+
+    // Apply date range filter (local date strings, same as Account Movements)
+    if (dateFilters.from_date && dateFilters.to_date) {
+      list = list.filter((e) => {
+        const d = toLocalDateStr(e.entry_date);
+        return d >= dateFilters.from_date && d <= dateFilters.to_date;
+      });
+    }
+
+    const jt = journalType;
+    if (!jt || jt === 'GeneralJournal') return list;
 
     const ALLOWED: Record<string, Set<string>> = {
       CashJournal:          new Set(['CashJournal', 'DrawingsVoucher', 'CashReceipt', 'CashPayment', 'ExpenseVoucher', 'CashOpeningBalance', 'AccountOpeningBalance', 'SupplierReceiptJournal', 'CustomerPaymentJournal']),
@@ -72,31 +87,40 @@ export default function Journal() {
     };
 
     const allowed = ALLOWED[jt];
-    if (allowed) return entries.filter(e => allowed.has(e.journal_type));
+    if (allowed) return list.filter(e => allowed.has(e.journal_type));
 
-    return entries;
-  }, [entries, filters.journal_type]);
+    return list;
+  }, [entries, journalType, dateFilters.from_date, dateFilters.to_date]);
 
-  const journalTitle = JOURNAL_TYPES.find(t => t.value === (filters.journal_type || 'GeneralJournal'))?.label || 'القيود اليومية';
+  const journalTitle = JOURNAL_TYPES.find(t => t.value === (journalType || 'GeneralJournal'))?.label || 'القيود اليومية';
 
   return (
     <OperationalTableTemplate
       title={journalTitle}
-      toolbar={<></>}
+      toolbar={
+        <div className="flex items-center gap-2 flex-wrap">
+          <DateRangePicker
+            from={dateFilters.from_date}
+            to={dateFilters.to_date}
+            onFromChange={(v) => setDateFilters({ from_date: v })}
+            onToChange={(v) => setDateFilters({ to_date: v })}
+          />
+        </div>
+      }
       tableContent={
         <JournalTable
-          key={`journal-table-${filters.journal_type || 'GeneralJournal'}-${displayMode}`}
+          key={`journal-table-${journalType || 'GeneralJournal'}-${displayMode}`}
           entries={displayEntries}
           loading={loading}
           search={search}
           onSearchChange={setSearch}
-          filters={filters as JournalFilters}
+          filters={queryFilters}
           displayMode={displayMode}
           filterBar={
             <div className="flex flex-wrap items-center gap-2">
               <Select 
-                value={filters.journal_type} 
-                onValueChange={(val) => setFilters(f => ({ ...f, journal_type: val as JournalType }))}
+                value={journalType} 
+                onValueChange={(val) => setJournalType(val as JournalType)}
               >
                 <SelectTrigger className="w-[180px] h-10 bg-white font-bold shadow-sm border-slate-200">
                   <Filter className="w-4 h-4 ml-2 text-slate-400" />
@@ -135,14 +159,6 @@ export default function Journal() {
                   <LayoutGrid className="w-4 h-4" />
                 </button>
               </div>
-
-              <DateRangePicker
-                from={filters.from_date ?? ""}
-                to={filters.to_date ?? ""}
-                onFromChange={(v) => setFilters(f => ({ ...f, from_date: v }))}
-                onToChange={(v) => setFilters(f => ({ ...f, to_date: v }))}
-                showSeparator
-              />
             </div>
           }
         />
