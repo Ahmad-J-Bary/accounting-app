@@ -99,7 +99,7 @@ export function IncomeStatementView(props: IncomeStatementViewProps) {
     <div className="flex flex-col h-full">
       <ReportMeta title="قائمة الدخل" description="قائمة تبين إجمالي الأرباح وصافي الربح والنشاط التشغيلي، وتظهر فيها تكلفة المبيعات والمصروفات التشغيلية" />
       <SummaryCards computed={computed} formatValue={formatValue} />
-      <div className="space-y-3">
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-3 px-4 pb-4 custom-scrollbar">
         {computed.sections.map((section) => (
           <InlineSection key={section.id} section={section} formatValue={formatValue} />
         ))}

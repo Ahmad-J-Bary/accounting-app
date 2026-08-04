@@ -133,7 +133,7 @@ export function BalanceSheetView(props: BalanceSheetViewProps) {
       <ReportMeta title="الميزانية العمومية" description="قائمة تبين الموقف المالي للشركة على مبدأ (الأصول = الخصوم + حقوق الملكية)" />
       <SummaryCards computed={computed} formatValue={formatValue} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 lg:grid-cols-2 gap-3 px-4 pb-4 custom-scrollbar">
         <div className="flex flex-col gap-2 h-full">
           <div className="flex-1 space-y-2">
             {computed.sections.slice(0, 1).map(s => (
