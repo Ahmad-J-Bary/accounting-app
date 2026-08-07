@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, RefreshCw, CheckCircle2, Coins, XCircle } from "lucide-react";
+import { Plus, RefreshCw, CheckCircle2, Coins, XCircle, Lock } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
@@ -33,7 +33,10 @@ const TYPE_LABEL: Record<string, string> = {
 
 const STATUS_LABEL: Record<string, string> = {
   Draft: "مسودة",
+  Validated: "تم التحقق",
+  Approved: "معتمد",
   Posted: "مرحّل",
+  Locked: "مقفول",
   Cancelled: "ملغى",
 };
 
@@ -48,6 +51,7 @@ export default function OpeningBalanceMigration() {
   const [saving, setSaving] = useState(false);
   const [postingId, setPostingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [transitioningTo, setTransitioningTo] = useState<string | null>(null);
   const [allocMigrationId, setAllocMigrationId] = useState<string>("");
   const [netProfit, setNetProfit] = useState("");
   const [allocResult, setAllocResult] = useState<NetProfitAllocationDto | null>(null);
@@ -140,6 +144,45 @@ export default function OpeningBalanceMigration() {
       toast.error("فشل الترحيل: " + e);
     } finally {
       setPostingId(null);
+    }
+  };
+
+  const handleValidate = async (id: string) => {
+    setTransitioningTo(id);
+    try {
+      await openingBalanceService.validateMigration(id, "system");
+      toast.success("تم التحقق من الترحيل");
+      refetchMigrations();
+    } catch (e) {
+      toast.error("فشل التحقق: " + e);
+    } finally {
+      setTransitioningTo(null);
+    }
+  };
+
+  const handleApprove = async (id: string) => {
+    setTransitioningTo(id);
+    try {
+      await openingBalanceService.approveMigration(id, "system");
+      toast.success("تم اعتماد الترحيل");
+      refetchMigrations();
+    } catch (e) {
+      toast.error("فشل الاعتماد: " + e);
+    } finally {
+      setTransitioningTo(null);
+    }
+  };
+
+  const handleLock = async (id: string) => {
+    setTransitioningTo(id);
+    try {
+      await openingBalanceService.lockMigration(id);
+      toast.success("تم قفل الترحيل");
+      refetchMigrations();
+    } catch (e) {
+      toast.error("فشل القفل: " + e);
+    } finally {
+      setTransitioningTo(null);
     }
   };
 
@@ -298,9 +341,13 @@ export default function OpeningBalanceMigration() {
                         <span
                           className={
                             "mr-2 text-xs px-2 py-0.5 rounded-full " +
-                            (m.status === "Posted" ? "bg-green-100 text-green-700"
-                              : m.status === "Cancelled" ? "bg-red-100 text-red-600"
-                                : "bg-amber-100 text-amber-700")
+                            (m.status === "Posted"
+                              ? "bg-green-100 text-green-700"
+                              : m.status === "Cancelled"
+                                ? "bg-red-100 text-red-600"
+                                : m.status === "Locked"
+                                  ? "bg-slate-200 text-slate-700"
+                                  : "bg-amber-100 text-amber-700")
                           }
                         >
                           {STATUS_LABEL[m.status]}
@@ -309,25 +356,88 @@ export default function OpeningBalanceMigration() {
                       <div className="text-xs text-slate-400 truncate">{m.notes || "بدون ملاحظات"}</div>
                     </div>
                     {m.status === "Draft" && (
-                      <Button
-                        size="sm"
-                        disabled={postingId === m.id}
-                        onClick={() => handlePost(m.id)}
-                        className="bg-green-600 hover:bg-green-700 text-white font-bold"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5 ml-1.5" /> {postingId === m.id ? "جارٍ..." : "ترحيل"}
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          disabled={transitioningTo === m.id}
+                          onClick={() => handleValidate(m.id)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5 ml-1.5" /> {transitioningTo === m.id ? "جارٍ..." : "تحقق"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={cancellingId === m.id}
+                          onClick={() => handleCancel(m.id)}
+                          className="border-red-200 text-red-600 hover:bg-red-50 font-bold"
+                        >
+                          <XCircle className="w-3.5 h-3.5 ml-1.5" /> إلغاء
+                        </Button>
+                      </>
+                    )}
+                    {m.status === "Validated" && (
+                      <>
+                        <Button
+                          size="sm"
+                          disabled={transitioningTo === m.id}
+                          onClick={() => handleApprove(m.id)}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5 ml-1.5" /> {transitioningTo === m.id ? "جارٍ..." : "اعتماد"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={cancellingId === m.id}
+                          onClick={() => handleCancel(m.id)}
+                          className="border-red-200 text-red-600 hover:bg-red-50 font-bold"
+                        >
+                          <XCircle className="w-3.5 h-3.5 ml-1.5" /> إلغاء
+                        </Button>
+                      </>
+                    )}
+                    {m.status === "Approved" && (
+                      <>
+                        <Button
+                          size="sm"
+                          disabled={postingId === m.id}
+                          onClick={() => handlePost(m.id)}
+                          className="bg-green-600 hover:bg-green-700 text-white font-bold"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5 ml-1.5" /> {postingId === m.id ? "جارٍ..." : "ترحيل"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={cancellingId === m.id}
+                          onClick={() => handleCancel(m.id)}
+                          className="border-red-200 text-red-600 hover:bg-red-50 font-bold"
+                        >
+                          <XCircle className="w-3.5 h-3.5 ml-1.5" /> إلغاء
+                        </Button>
+                      </>
                     )}
                     {m.status === "Posted" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={cancellingId === m.id}
-                        onClick={() => handleCancel(m.id)}
-                        className="border-red-200 text-red-600 hover:bg-red-50 font-bold"
-                      >
-                        <XCircle className="w-3.5 h-3.5 ml-1.5" /> {cancellingId === m.id ? "جارٍ..." : "إلغاء الترحيل"}
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          disabled={transitioningTo === m.id}
+                          onClick={() => handleLock(m.id)}
+                          className="bg-slate-600 hover:bg-slate-700 text-white font-bold"
+                        >
+                          <Lock className="w-3.5 h-3.5 ml-1.5" /> {transitioningTo === m.id ? "جارٍ..." : "قفل"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={cancellingId === m.id}
+                          onClick={() => handleCancel(m.id)}
+                          className="border-red-200 text-red-600 hover:bg-red-50 font-bold"
+                        >
+                          <XCircle className="w-3.5 h-3.5 ml-1.5" /> {cancellingId === m.id ? "جارٍ..." : "إلغاء الترحيل"}
+                        </Button>
+                      </>
                     )}
                   </div>
                 ))}

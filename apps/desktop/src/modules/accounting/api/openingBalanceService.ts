@@ -1,6 +1,12 @@
 import { invoke } from '@shared/lib/invoke';
 
-export type OpeningMigrationStatus = 'Draft' | 'Posted' | 'Cancelled';
+export type OpeningMigrationStatus =
+  | 'Draft'
+  | 'Validated'
+  | 'Approved'
+  | 'Posted'
+  | 'Locked'
+  | 'Cancelled';
 
 export interface OpeningBalanceLineDto {
   account_id: string;
@@ -10,11 +16,19 @@ export interface OpeningBalanceLineDto {
 
 export interface OpeningBalanceMigrationDto {
   id: string;
+  company_id: string | null;
   cutover_date: string;
+  source_system: string | null;
+  source_reference: string | null;
   status: OpeningMigrationStatus;
   notes: string | null;
   lines: OpeningBalanceLineDto[];
+  validated_by: string | null;
+  validated_at: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
   posted_at: string | null;
+  locked_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -70,6 +84,15 @@ export const openingBalanceService = {
   },
   async cancelMigration(id: string): Promise<OpeningBalanceMigrationDto> {
     return await invoke<OpeningBalanceMigrationDto>('cancel_opening_balance_migration', { id });
+  },
+  async validateMigration(id: string, by: string): Promise<OpeningBalanceMigrationDto> {
+    return await invoke<OpeningBalanceMigrationDto>('validate_opening_balance_migration', { id, by });
+  },
+  async approveMigration(id: string, by: string): Promise<OpeningBalanceMigrationDto> {
+    return await invoke<OpeningBalanceMigrationDto>('approve_opening_balance_migration', { id, by });
+  },
+  async lockMigration(id: string): Promise<OpeningBalanceMigrationDto> {
+    return await invoke<OpeningBalanceMigrationDto>('lock_opening_balance_migration', { id });
   },
   async allocateNetProfit(request: AllocateNetProfitRequest): Promise<NetProfitAllocationDto> {
     return await invoke<NetProfitAllocationDto>('allocate_net_profit', { request });

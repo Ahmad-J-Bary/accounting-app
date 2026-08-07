@@ -1,10 +1,18 @@
 #[derive(sqlx::FromRow)]
 pub struct MigrationRow {
     pub id: String,
+    pub company_id: Option<String>,
     pub cutover_date: String,
+    pub source_system: Option<String>,
+    pub source_reference: Option<String>,
     pub status: String,
     pub notes: Option<String>,
+    pub validated_by: Option<String>,
+    pub validated_at: Option<String>,
+    pub approved_by: Option<String>,
+    pub approved_at: Option<String>,
     pub posted_at: Option<String>,
+    pub locked_at: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }

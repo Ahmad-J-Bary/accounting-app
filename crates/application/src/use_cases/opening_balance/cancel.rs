@@ -31,14 +31,19 @@ impl CancelOpeningBalanceUseCase {
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
 
         match migration.status {
-            MigrationStatus::Draft => {
-                return Err(AppError::Forbidden(
-                    "الترحيل لم يُرحَّل بعد؛ احذفه من صفحة المسودة".into(),
-                ));
+            MigrationStatus::Draft | MigrationStatus::Validated | MigrationStatus::Approved => {
+                migration.cancel().map_err(AppError::Domain)?;
+                self.migration_repo.update(&migration).await?;
+                return Ok(OpeningMigrationDto(migration));
             }
             MigrationStatus::Cancelled => {
                 // Idempotent: already cancelled, nothing to do.
                 return Ok(OpeningMigrationDto(migration));
+            }
+            MigrationStatus::Locked => {
+                return Err(AppError::Forbidden(
+                    "الترحيل مقفول؛ يجب إلغاء القفل أولاً قبل الإلغاء".into(),
+                ));
             }
             MigrationStatus::Posted => {}
         }

@@ -4,17 +4,27 @@ use domain::accounting::OpeningBalanceMigration;
 use super::models::{MigrationRow, MigrationLineRow};
 use super::mappers::{row_to_migration, row_to_line};
 
+const MIGRATION_COLUMNS: &str = "id, company_id, cutover_date, source_system, source_reference, status, notes, validated_by, validated_at, approved_by, approved_at, posted_at, locked_at, created_at, updated_at";
+
 pub async fn create(pool: &SqlitePool, m: &OpeningBalanceMigration) -> Result<(), AppError> {
     let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     sqlx::query(
-        "INSERT INTO opening_balance_migrations (id, cutover_date, status, notes, posted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO opening_balance_migrations (id, company_id, cutover_date, source_system, source_reference, status, notes, validated_by, validated_at, approved_by, approved_at, posted_at, locked_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(&m.id)
+    .bind(&m.company_id)
     .bind(m.cutover_date.to_rfc3339())
+    .bind(&m.source_system)
+    .bind(&m.source_reference)
     .bind(m.status.as_str())
     .bind(&m.notes)
+    .bind(&m.validated_by)
+    .bind(m.validated_at.map(|d| d.to_rfc3339()))
+    .bind(&m.approved_by)
+    .bind(m.approved_at.map(|d| d.to_rfc3339()))
     .bind(m.posted_at.map(|d| d.to_rfc3339()))
+    .bind(m.locked_at.map(|d| d.to_rfc3339()))
     .bind(m.created_at.to_rfc3339())
     .bind(m.updated_at.to_rfc3339())
     .execute(&mut *tx).await
@@ -29,12 +39,19 @@ pub async fn update(pool: &SqlitePool, m: &OpeningBalanceMigration) -> Result<()
     let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     sqlx::query(
-        "UPDATE opening_balance_migrations SET cutover_date = ?, status = ?, notes = ?, posted_at = ?, updated_at = ? WHERE id = ?"
+        "UPDATE opening_balance_migrations SET cutover_date = ?, source_system = ?, source_reference = ?, status = ?, notes = ?, validated_by = ?, validated_at = ?, approved_by = ?, approved_at = ?, posted_at = ?, locked_at = ?, updated_at = ? WHERE id = ?"
     )
     .bind(m.cutover_date.to_rfc3339())
+    .bind(&m.source_system)
+    .bind(&m.source_reference)
     .bind(m.status.as_str())
     .bind(&m.notes)
+    .bind(&m.validated_by)
+    .bind(m.validated_at.map(|d| d.to_rfc3339()))
+    .bind(&m.approved_by)
+    .bind(m.approved_at.map(|d| d.to_rfc3339()))
     .bind(m.posted_at.as_ref().map(|d| d.to_rfc3339()))
+    .bind(m.locked_at.map(|d| d.to_rfc3339()))
     .bind(m.updated_at.to_rfc3339())
     .bind(&m.id)
     .execute(&mut *tx).await
@@ -71,40 +88,50 @@ async fn insert_lines<'a>(
 }
 
 pub async fn find_by_id(pool: &SqlitePool, id: &str) -> Result<Option<OpeningBalanceMigration>, AppError> {
-    let row = sqlx::query_as::<_, MigrationRow>(
-        "SELECT id, cutover_date, status, notes, posted_at, created_at, updated_at FROM opening_balance_migrations WHERE id = ?"
-    )
-    .bind(id).fetch_optional(pool).await
-    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    let sql = format!("SELECT {MIGRATION_COLUMNS} FROM opening_balance_migrations WHERE id = ?");
+    let row = sqlx::query_as::<_, MigrationRow>(&sql)
+        .bind(id).fetch_optional(pool).await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     let Some(row) = row else { return Ok(None) };
 
-    let lines = sqlx::query_as::<_, MigrationLineRow>(
-        "SELECT id, migration_id, account_id, amount, description FROM opening_balance_lines WHERE migration_id = ? ORDER BY created_at"
-    )
-    .bind(&row.id).fetch_all(pool).await
-    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
-
-    let parsed = lines.into_iter().map(row_to_line).collect::<Result<Vec<_>, _>>()?;
-    Ok(Some(row_to_migration(row, parsed)?))
+    let lines = load_lines(pool, &row.id).await?;
+    Ok(Some(row_to_migration(row, lines)?))
 }
 
-pub async fn list(pool: &SqlitePool) -> Result<Vec<OpeningBalanceMigration>, AppError> {
-    let rows = sqlx::query_as::<_, MigrationRow>(
-        "SELECT id, cutover_date, status, notes, posted_at, created_at, updated_at FROM opening_balance_migrations ORDER BY created_at DESC"
-    )
-    .fetch_all(pool).await
-    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+pub async fn find_by_cutover_date(pool: &SqlitePool, cutover_date: &str) -> Result<Vec<OpeningBalanceMigration>, AppError> {
+    let sql = format!("SELECT {MIGRATION_COLUMNS} FROM opening_balance_migrations WHERE date(cutover_date) = date(?) ORDER BY created_at DESC");
+    let rows = sqlx::query_as::<_, MigrationRow>(&sql)
+        .bind(cutover_date).fetch_all(pool).await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     let mut out = Vec::with_capacity(rows.len());
     for row in rows {
-        let lines = sqlx::query_as::<_, MigrationLineRow>(
-            "SELECT id, migration_id, account_id, amount, description FROM opening_balance_lines WHERE migration_id = ? ORDER BY created_at"
-        )
-        .bind(&row.id).fetch_all(pool).await
+        let lines = load_lines(pool, &row.id).await?;
+        out.push(row_to_migration(row, lines)?);
+    }
+    Ok(out)
+}
+
+async fn load_lines(pool: &SqlitePool, migration_id: &str) -> Result<Vec<domain::accounting::OpeningBalanceLine>, AppError> {
+    let line_rows = sqlx::query_as::<_, MigrationLineRow>(
+        "SELECT id, migration_id, account_id, amount, description FROM opening_balance_lines WHERE migration_id = ? ORDER BY created_at"
+    )
+    .bind(migration_id).fetch_all(pool).await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    line_rows.into_iter().map(row_to_line).collect()
+}
+
+pub async fn list(pool: &SqlitePool) -> Result<Vec<OpeningBalanceMigration>, AppError> {
+    let sql = format!("SELECT {MIGRATION_COLUMNS} FROM opening_balance_migrations ORDER BY created_at DESC");
+    let rows = sqlx::query_as::<_, MigrationRow>(&sql)
+        .fetch_all(pool).await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
-        let parsed = lines.into_iter().map(row_to_line).collect::<Result<Vec<_>, _>>()?;
-        out.push(row_to_migration(row, parsed)?);
+
+    let mut out = Vec::with_capacity(rows.len());
+    for row in rows {
+        let lines = load_lines(pool, &row.id).await?;
+        out.push(row_to_migration(row, lines)?);
     }
     Ok(out)
 }

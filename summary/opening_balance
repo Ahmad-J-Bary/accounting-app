@@ -4,7 +4,7 @@
 إنهاء **Phase C–H** من "محرك ترحيل الأرصدة الافتتاحية" لشركة قائمة (ExistingCompanyMigration) والفصل بين الشريك ومساهمة رأس المال، مع بناء المسار الكامل domain → port → infra → use case → Tauri → frontend، وترجيح كل مرحلة عبر الشيكات والاختبارات.
 
 ## Status
-- **كل المراحل C → H اكتملت** — cargo check/clippy, tsc, eslint, vitest 100/100, cargo test (application) 7/7 نظيفة.
+- **كل المراحل C → I اكتملت** — cargo check/clippy, tsc, eslint, vitest 100/100, cargo test (application 7 + domain 5) نظيفة.
 - **Phase A (مكتمل)**: فصل الشريك عن القيود المالية؛ `JournalType::CapitalContribution` + `CreateCapitalContributionUseCase` (Dr مصدر تمويل / Cr رأس مال شريك)؛ حذف side-effect `consolidated_capital` من CRUD الشريك.
 - **Phase B (مكتمل)**: `accounting_start_mode` (NewCompany|ExistingCompanyMigration) في settings + منصبي الوضع في واجهة الشركاء.
 - **Phase C (مكتمل)**: محرك ترحيل الأرصدة الأساسي.
@@ -13,8 +13,22 @@
 - **Phase F (مكتمل)**: atomicity معزول للميزة الجديدة (معاملة SQLite واحدة لترحيل الرصيد)، بلا لمس `UnitOfWork` العالمي (ظل stub) و`foreign_keys=false` كما هو (قرار مُعزول).
 - **Phase G (مكتمل)**: شيكات البوابات + اختبارات وحدات لتوزيع الأرباح + توثيق.
 - **Phase H (مكتمل)**: دورة حياة الترحيل — إلغاء/عكس رصيد مفتوح مُرحَّل بقيد ترحيل عكسي حقيقي.
+- **Phase I (مكتمل)**: نموذج حالات كامل Draft/Validated/Approved/Posted/Locked/Cancelled + حقول تتبع الأصل/المُفحص/المُعتمد + جداول تفاصيل الواجهات الفرعية.
 
 ## تفاصيل المراحل المكتملة
+
+### Phase I — نموذج حالة الترحيل + تفاصيل الواجهات الفرعية
+- **Domain** `opening_balance.rs`: `MigrationStatus` → 6 حالات (`Draft→Validated→Approved→Posted→Locked` + `Cancelled`)، حقول جديدة `company_id/source_system/source_reference/validated_at&by/approved_at&by/locked_at`، انتقالات `validate/approve/mark_posted(يتطلب Approved)/lock/unlock/un_post/cancel`، +5 unit tests.
+- **Migration 140** `140_opening_migration_state.sql`: ALTER للعمود الجديدة + جداول `opening_balance_customer_items/supplier_items/inventory_items/fixed_assets` (FK→migration, CASCADE) + indexes.
+- **Port/Infra**: `OpeningMigrationRepository::find_by_cutover_date` + تحديث `models/mappers/queries` للأعمدة الجديدة.
+- **Use cases** `state.rs`: `Validate/Approve/LockOpeningBalanceUseCase`؛ `create.rs` يحظر ترحيلًا مكررًا في نفس تاريخ القطع (إلا إن الكل Cancelled)؛ `cancel.rs` يسمح بالإلغاء للحالات القبل-ترحيل عبر `migration_repo.update`.
+- **Tauri**: أوامر `validate/approve/lock_opening_balance_migration` مسجّلة.
+- **Frontend**: توسعة `OpeningMigrationStatus` الستّ + DTO بالحقول الجديدة؛ أزرار "تحقق/اعتماد/ترحيل/قفل/إلغاء" حسب الحالة + تسميات/شارات.
+
+## Verification (آخر تشغيل)
+- `cargo check --workspace` ✓ (بما فيها desktop)
+- `cargo clippy -p domain -p application -p infrastructure -p tauri-adapter` ✓
+- `cargo test -p domain` → 5 opening_balance + كل السلسلة ✓ · `cargo test -p application` → 7 ✓
 
 ### Phase H — إلغاء / عكس ترحيل مفتوح
 - **Domain**: `OpeningBalanceMigration::un_post()` (يسمح فقط Posted→Cancelled، عكس `mark_posted`)؛ `JournalType::OpeningBalanceReversal` + Display "عكس ترحيل رصيد الافتتاح".

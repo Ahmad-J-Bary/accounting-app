@@ -36,6 +36,10 @@ impl OpeningMigrationRepository for SqliteOpeningMigrationRepository {
         queries::find_by_id(&self.pool, id).await
     }
 
+    async fn find_by_cutover_date(&self, cutover_date: &str) -> Result<Vec<OpeningBalanceMigration>, AppError> {
+        queries::find_by_cutover_date(&self.pool, cutover_date).await
+    }
+
     async fn list(&self) -> Result<Vec<OpeningBalanceMigration>, AppError> {
         queries::list(&self.pool).await
     }

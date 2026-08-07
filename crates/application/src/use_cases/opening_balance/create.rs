@@ -2,7 +2,7 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use std::str::FromStr;
-use domain::accounting::{OpeningBalanceMigration, OpeningBalanceLine};
+use domain::accounting::{MigrationStatus, OpeningBalanceMigration, OpeningBalanceLine};
 use domain::shared::ids::AccountId;
 
 use crate::errors::AppError;
@@ -22,6 +22,16 @@ impl CreateOpeningBalanceUseCase {
         let cutover = DateTime::parse_from_rfc3339(&cmd.cutover_date)
             .map(|d| d.with_timezone(&Utc))
             .map_err(|_| AppError::Invalid("تاريخ الترحيل غير صالح".into()))?;
+
+        // Prevent accidental duplicate migrations for the same cutover date
+        // unless every existing one on that date is already cancelled.
+        let existing = self.repo.find_by_cutover_date(&cutover.to_rfc3339()).await?;
+        let has_active = existing.iter().any(|m| m.status != MigrationStatus::Cancelled);
+        if has_active {
+            return Err(AppError::Invalid(
+                "يوجد ترحيل رصيد افتتاحي نشط بالفعل في هذا التاريخ؛ لا يمكن إنشاء ترحيل مكرر".into(),
+            ));
+        }
 
         let mut lines = Vec::with_capacity(cmd.lines.len());
         for l in cmd.lines {

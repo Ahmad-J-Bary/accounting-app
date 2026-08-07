@@ -7,16 +7,27 @@ use rust_decimal::Decimal;
 use std::str::FromStr;
 
 pub fn row_to_migration(row: MigrationRow, lines: Vec<OpeningBalanceLine>) -> Result<OpeningBalanceMigration, AppError> {
+    let ts = |s: Option<String>| {
+        s.and_then(|d| DateTime::parse_from_rfc3339(&d).ok())
+            .map(|d| d.with_timezone(&Utc))
+    };
     Ok(OpeningBalanceMigration {
         id: row.id,
+        company_id: row.company_id,
         cutover_date: DateTime::parse_from_rfc3339(&row.cutover_date)
             .map(|d| d.with_timezone(&Utc))
             .unwrap_or_else(|_| Utc::now()),
+        source_system: row.source_system,
+        source_reference: row.source_reference,
         status: MigrationStatus::from_str(&row.status),
         notes: row.notes,
         lines,
-        posted_at: row.posted_at.and_then(|d| DateTime::parse_from_rfc3339(&d).ok())
-            .map(|d| d.with_timezone(&Utc)),
+        validated_by: row.validated_by,
+        validated_at: ts(row.validated_at),
+        approved_by: row.approved_by,
+        approved_at: ts(row.approved_at),
+        posted_at: ts(row.posted_at),
+        locked_at: ts(row.locked_at),
         created_at: DateTime::parse_from_rfc3339(&row.created_at)
             .map(|d| d.with_timezone(&Utc))
             .unwrap_or_else(|_| Utc::now()),
