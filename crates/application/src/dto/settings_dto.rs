@@ -21,6 +21,7 @@ pub struct CompanySettingsDto {
     pub purchase_warehouse_id: Option<String>,
     pub sales_warehouse_id: Option<String>,
     pub numeral_system: String,
+    pub accounting_start_mode: String,
     pub updated_at: String,
 }
 
@@ -43,4 +44,5 @@ pub struct UpdateSettingsRequest {
     pub purchase_warehouse_id: Option<String>,
     pub sales_warehouse_id: Option<String>,
     pub numeral_system: String,
+    pub accounting_start_mode: Option<String>,
 }

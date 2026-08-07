@@ -3,20 +3,16 @@ use rust_decimal::Decimal;
 use chrono::Utc;
 use domain::accounting::partner::{Partner, ProfitSharingType};
 use domain::accounting::account::{Account, AccountType, AccountCategory};
-use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
-use domain::shared::{Money, MonetaryAmount};
 
 use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::partner_repository::PartnerRepository;
 use crate::ports::account_repository::AccountRepository;
-use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::unit_of_work::UnitOfWork;
 use crate::errors::AppError;
 
 pub struct CreatePartnerUseCase {
     repo: Arc<dyn PartnerRepository>,
     account_repo: Arc<dyn AccountRepository>,
-    journal_repo: Arc<dyn JournalEntryRepository>,
     uow: Arc<dyn UnitOfWork>,
     currency_repo: Arc<dyn CurrencyRepository>,
 }
@@ -25,11 +21,10 @@ impl CreatePartnerUseCase {
     pub fn new(
         repo: Arc<dyn PartnerRepository>,
         account_repo: Arc<dyn AccountRepository>,
-        journal_repo: Arc<dyn JournalEntryRepository>,
         uow: Arc<dyn UnitOfWork>,
         currency_repo: Arc<dyn CurrencyRepository>,
     ) -> Self {
-        Self { repo, account_repo, journal_repo, uow, currency_repo }
+        Self { repo, account_repo, uow, currency_repo }
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -42,6 +37,7 @@ impl CreatePartnerUseCase {
         is_amount_in_original: bool,
         sharing_type: String,
         manual_ratio: Option<Decimal>,
+        accounting_start_mode: String,
     ) -> Result<String, AppError> {
         let sharing_enum = match sharing_type.as_str() {
             "BasedOnCapitalLocal" => ProfitSharingType::BasedOnCapitalLocal,
@@ -88,6 +84,16 @@ impl CreatePartnerUseCase {
         let cap_code = format!("51{}", &code[1..]); 
         let cap_account_id = domain::shared::ids::AccountId::new();
 
+        // For an existing-company migration the partner capital is recorded as
+        // the account's opening balance (no journal). For a new company it is
+        // recorded through an explicit capital-contribution journal instead, so
+        // the static balance must stay zero to avoid double counting.
+        let capital_amount = if accounting_start_mode == "ExistingCompanyMigration" {
+            partner.amount_local
+        } else {
+            Decimal::ZERO
+        };
+
         let cap_account = Account {
             id: cap_account_id,
             code: cap_code,
@@ -97,8 +103,8 @@ impl CreatePartnerUseCase {
             parent_id: Some(capital_parent.id),
             category: AccountCategory::Detail,
             level: 4,
-            opening_balance: partner.amount_local,
-            balance: partner.amount_local,
+            opening_balance: capital_amount,
+            balance: capital_amount,
             debit: Decimal::ZERO,
             credit: Decimal::ZERO,
             currency: partner.currency.clone(),
@@ -152,75 +158,6 @@ impl CreatePartnerUseCase {
         partner.link_drawings_account(draw_account.id);
         
         self.repo.save(&partner).await?;
-
-        // --- Consolidated Capital Journal Entry ---
-        // Delete any existing consolidated capital entry
-        if let Ok(Some(old_entry)) = self.journal_repo.find_by_source_id("consolidated_capital").await {
-            self.journal_repo.delete(&old_entry.id).await?;
-        }
-
-        // Compute total capital from ALL partners
-        let all_partners = self.repo.list_all(true).await?;
-        let mut total_local = Decimal::ZERO;
-        let mut total_original = Decimal::ZERO;
-        for p in &all_partners {
-            total_local += p.amount_local;
-            total_original += p.amount_original;
-        }
-
-        if total_local > Decimal::ZERO || total_original > Decimal::ZERO {
-            let cash_account = self.account_repo.find_by_code("122").await?
-                .ok_or_else(|| AppError::NotFound("حساب الصندوق (الخزينة) (122) غير موجود".into()))?;
-
-            let _capital_parent = self.account_repo.find_by_code("51").await?
-                .ok_or_else(|| AppError::Invalid("حساب رأس المال العام (51) غير موجود".into()))?;
-
-            let base_currency = self.currency_repo.get_base_currency().await?
-                .ok_or_else(|| AppError::Invalid("لم يتم تعيين العملة الأساسية".into()))?;
-            let fx_rate = if exchange_rate > Decimal::ZERO { exchange_rate } else { Decimal::ONE };
-            let total_ma = if is_amount_in_original || total_original > Decimal::ZERO {
-                MonetaryAmount::new(Money::new(total_original.abs(), base_currency.clone()), fx_rate)
-            } else {
-                MonetaryAmount::new(Money::new(total_local.abs(), base_currency), fx_rate)
-            };
-            let zero_ma = MonetaryAmount::zero(total_ma.currency().clone());
-            let mut lines = Vec::new();
-            lines.push(JournalLine::new(cash_account.id, total_ma.clone(), zero_ma.clone(),
-                "إيداع رأس المال بالصندوق".to_string()));
-
-            for p in &all_partners {
-                if p.amount_local > Decimal::ZERO || p.amount_original > Decimal::ZERO {
-                    let p_fx_rate = if p.exchange_rate > Decimal::ZERO { p.exchange_rate } else { Decimal::ONE };
-                    let p_ma = if is_amount_in_original || p.amount_original > Decimal::ZERO {
-                        MonetaryAmount::new(Money::new(p.amount_original.abs(), p.currency.clone()), p_fx_rate)
-                    } else {
-                        MonetaryAmount::new(Money::new(p.amount_local.abs(), p.currency.clone()), p_fx_rate)
-                    };
-                    let p_zero_ma = MonetaryAmount::zero(p_ma.currency().clone());
-
-                    if let Some(cap_acc_id) = p.linked_account_id {
-                        lines.push(JournalLine::new(
-                            cap_acc_id,
-                            p_zero_ma,
-                            p_ma,
-                            format!("حصة الشريك {} في رأس المال", p.name),
-                        ));
-                    }
-                }
-            }
-
-            let mut entry = JournalEntry::new(
-                self.journal_repo.get_next_entry_number().await?,
-                JournalType::CashOpeningBalance,
-                lines,
-                Utc::now(),
-                "إيداع رأس المال بالصندوق — رأس مال الشركاء التفصيلي".to_string(),
-                Some("consolidated_capital".to_string()),
-            ).map_err(|e| AppError::Invalid(e.to_string()))?;
-
-            entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-            self.journal_repo.save(&entry).await?;
-        }
 
         self.uow.commit().await?;
 

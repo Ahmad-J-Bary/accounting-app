@@ -25,6 +25,7 @@ pub fn row_to_settings(row: SettingsRow) -> CompanySettings {
         purchase_warehouse_id: row.purchase_warehouse_id,
         sales_warehouse_id: row.sales_warehouse_id,
         numeral_system: row.numeral_system,
+        accounting_start_mode: row.accounting_start_mode,
         updated_at: DateTime::parse_from_rfc3339(&row.updated_at)
             .map(|d| d.with_timezone(&Utc))
             .unwrap_or_else(|_| Utc::now()),

@@ -24,6 +24,7 @@ pub struct CompanySettings {
     pub purchase_warehouse_id: Option<String>,
     pub sales_warehouse_id: Option<String>,
     pub numeral_system: String,
+    pub accounting_start_mode: String,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -49,6 +50,7 @@ impl Default for CompanySettings {
             purchase_warehouse_id: None,
             sales_warehouse_id: None,
             numeral_system: "western".into(),
+            accounting_start_mode: "NewCompany".into(),
             updated_at: Utc::now(),
         }
     }

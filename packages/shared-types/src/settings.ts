@@ -18,6 +18,7 @@ export interface CompanySettings {
   purchase_warehouse_id?: string;
   sales_warehouse_id?: string;
   numeral_system: string;
+  accounting_start_mode: string;
   updated_at: string;
 }
 
@@ -39,4 +40,5 @@ export interface UpdateSettingsRequest {
   purchase_warehouse_id?: string;
   sales_warehouse_id?: string;
   numeral_system: string;
+  accounting_start_mode?: string;
 }

@@ -39,6 +39,7 @@ pub fn to_dto(s: domain::settings::CompanySettings) -> CompanySettingsDto {
         purchase_warehouse_id: s.purchase_warehouse_id,
         sales_warehouse_id: s.sales_warehouse_id,
         numeral_system: s.numeral_system,
+        accounting_start_mode: s.accounting_start_mode,
         updated_at: s.updated_at.to_rfc3339(),
     }
 }

@@ -127,6 +127,7 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::dashboard::get_receivables_payables_summary,
             // Partners
             commands::partner::add_partner,
+            commands::partner::create_capital_contribution,
             commands::partner::list_partners,
             commands::partner::delete_partner,
             commands::partner::update_partner,

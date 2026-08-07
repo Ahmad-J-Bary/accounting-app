@@ -1,9 +1,12 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   TrendingUp,
   PieChart as PieChartIcon,
 } from "lucide-react";
 import { partnerService, type PartnerDto, type PartnerRequest } from '@modules/partners/api/partnerService';
+import { accountingService } from '@modules/accounting/api/accountingService';
+import { settingsService } from '@modules/core/api/settingsService';
+import type { UpdateSettingsRequest } from '@erp/shared-types';
 
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { PartnerTable } from '../components/PartnerTable';
@@ -44,6 +47,47 @@ export default function Partners() {
   const [saving, setSaving] = useState(false);
   const [drawingsSaving, setDrawingsSaving] = useState(false);
 
+  const [startMode, setStartMode] = useState<string>("NewCompany");
+
+  useEffect(() => {
+    settingsService.getSettings()
+      .then((s) => setStartMode(s.accounting_start_mode || "NewCompany"))
+      .catch(() => {});
+  }, []);
+
+  const handleModeChange = async (mode: string) => {
+    setStartMode(mode);
+    try {
+      const current = await settingsService.getSettings();
+      await settingsService.updateSettings({
+        company_name: current.company_name,
+        company_name_en: current.company_name_en,
+        tax_number: current.tax_number,
+        commercial_register: current.commercial_register,
+        address: current.address,
+        phone: current.phone,
+        email: current.email,
+        currency: current.currency,
+        currency_symbol: current.currency_symbol,
+        tax_rate: Number(current.tax_rate),
+        invoice_prefix: current.invoice_prefix,
+        purchase_prefix: current.purchase_prefix,
+        journal_prefix: current.journal_prefix,
+        fiscal_year_start_month: current.fiscal_year_start_month,
+        purchase_warehouse_id: current.purchase_warehouse_id,
+        sales_warehouse_id: current.sales_warehouse_id,
+        numeral_system: current.numeral_system,
+        accounting_start_mode: mode,
+      } as UpdateSettingsRequest);
+      setStartMode(mode);
+      toast.success(mode === "ExistingCompanyMigration"
+        ? "وضع: شركة قائمة (رأس مال افتتاحي بدون خزينة)"
+        : "وضع: شركة جديدة (رأس المال يضاف للصندوق)");
+    } catch (error) {
+      toast.error("فشل تغيير الوضع: " + error);
+    }
+  };
+
   const {
     partnersWithRatios,
   } = usePartnerRatios({ 
@@ -63,8 +107,31 @@ export default function Partners() {
         await partnerService.updatePartner(payload);
         toast.success("تم التحديث بنجاح");
       } else {
-        await partnerService.addPartner(payload);
-        toast.success("تم الإضافة بنجاح");
+        const partnerId = await partnerService.addPartner({
+          ...payload,
+          accountingStartMode: startMode,
+        } as PartnerRequest);
+        // Two accounting-start modes (company-level setting):
+        // - NewCompany: partner capital becomes an explicit cash contribution.
+        // - ExistingCompanyMigration: opening capital only — no cash journal.
+        if (startMode !== "ExistingCompanyMigration" && Number(payload.amount) > 0) {
+          const accounts = await accountingService.getChartOfAccounts();
+          const cash = accounts.find((a) => a.code === "122");
+          const fundingAccountId = cash?.id ?? accounts.find((a) => a.account_type === "Assets")?.id;
+          if (fundingAccountId) {
+            await partnerService.createCapitalContribution({
+              partnerId,
+              fundingAccountId,
+              amount: payload.amount,
+              isAmountInOriginal: payload.isAmountInOriginal,
+            });
+          }
+        }
+        toast.success(
+          startMode === "ExistingCompanyMigration"
+            ? "تمت إضافة الشريك (رأس مال افتتاحي، بدون حركة صندوق)"
+            : "تمت الإضافة بنجاح",
+        );
       }
       setActivePanel(null);
       refresh(true);
@@ -136,7 +203,7 @@ export default function Partners() {
           search={search}
           onSearchChange={setSearch}
           filterBar={
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap">التوزيع:</span>
               <Select value={globalStrategy} onValueChange={persistStrategy}>
                 <SelectTrigger className="w-[120px] h-8 bg-white font-bold shadow-sm border-slate-200 text-xs">
@@ -145,6 +212,17 @@ export default function Partners() {
                 <SelectContent>
                   <SelectItem value="BasedOnCapital" className="text-xs font-bold">تلقائي</SelectItem>
                   <SelectItem value="Manual" className="text-xs font-bold">يدوي</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="w-px h-6 bg-slate-200 mx-1" />
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap">بدء الحسابات:</span>
+              <Select value={startMode} onValueChange={handleModeChange}>
+                <SelectTrigger className="w-[230px] h-8 bg-white font-bold shadow-sm border-slate-200 text-xs">
+                  <SelectValue placeholder="اختر" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="NewCompany" className="text-xs font-bold">شركة جديدة (رأس المال → الصندوق)</SelectItem>
+                  <SelectItem value="ExistingCompanyMigration" className="text-xs font-bold">شركة قائمة (افتتاحي بدون خزينة)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

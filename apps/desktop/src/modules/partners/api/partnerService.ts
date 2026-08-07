@@ -5,9 +5,15 @@ export type { PartnerDto, PartnerRequest };
 
 export const partnerService = {
   listPartners: () => invoke<PartnerDto[]>("list_partners"),
-  addPartner: (data: PartnerRequest) => invoke("add_partner", data),
+  addPartner: (data: PartnerRequest) => invoke<string>("add_partner", data),
   updatePartner: (data: PartnerRequest) => invoke("update_partner", data),
   deletePartner: (id: string) => invoke("delete_partner", { id }),
   settlePartnerBalance: (partnerType: string, partnerId: string) =>
     invoke<string>("settle_partner_balance", { partnerType, partnerId }),
+  createCapitalContribution: (args: {
+    partnerId: string;
+    fundingAccountId: string;
+    amount: string;
+    isAmountInOriginal: boolean;
+  }) => invoke<string>("create_capital_contribution", args),
 };
