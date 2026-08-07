@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, RefreshCw, CheckCircle2, Coins, XCircle, Lock } from "lucide-react";
+import { Plus, RefreshCw, CheckCircle2, Coins, XCircle, Lock, Scale } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
@@ -14,6 +14,7 @@ import {
   type OpeningBalanceMigrationDto,
   type OpeningLineInput,
   type NetProfitAllocationDto,
+  type OpeningReconciliationDto,
 } from "@modules/accounting/api/openingBalanceService";
 
 interface AccountLine {
@@ -56,6 +57,9 @@ export default function OpeningBalanceMigration() {
   const [netProfit, setNetProfit] = useState("");
   const [allocResult, setAllocResult] = useState<NetProfitAllocationDto | null>(null);
   const [allocating, setAllocating] = useState(false);
+  const [reconId, setReconId] = useState<string>("");
+  const [reconciliation, setReconciliation] = useState<OpeningReconciliationDto | null>(null);
+  const [reconLoading, setReconLoading] = useState(false);
 
   const { data: accounts = [] } = useQuery<AccountDto[]>({
     queryKey: ["chart-of-accounts"],
@@ -225,6 +229,32 @@ export default function OpeningBalanceMigration() {
     } finally {
       setAllocating(false);
     }
+  };
+
+  const reconcileCandidates = useMemo(
+    () => migrations.filter((m) => m.status !== "Cancelled"),
+    [migrations],
+  );
+
+  const handleReconcile = async () => {
+    if (!reconId) return toast.error("اختر ترحيلاً للتحقق");
+    setReconLoading(true);
+    setReconciliation(null);
+    try {
+      const res = await openingBalanceService.getReconciliation(reconId);
+      setReconciliation(res);
+    } catch (e) {
+      toast.error("فشل تحميل التسوية: " + e);
+    } finally {
+      setReconLoading(false);
+    }
+  };
+
+  const reconRowLabel: Record<string, string> = {
+    AR: "الذمم المدينة (العملاء)",
+    AP: "الذمم الدائنة (الموردون)",
+    Inventory: "المخزون",
+    FixedAssets: "الأصول الثابتة",
   };
 
   return (
@@ -442,6 +472,70 @@ export default function OpeningBalanceMigration() {
                   </div>
                 ))}
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader className="py-3">
+              <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
+                <Scale className="w-4 h-4 text-blue-600" /> التحقق من تسوية الرصيد الافتتاحي
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-slate-500">
+                يقارن أرصدة السجل المساعد (AR/AP/Inventory/FA) بأرصدة دفتر الأستاذ العام، ويعرض رصيد حساب رصيد الافتتاح
+                (53) ومدين/دائن القيد لفحص معادلة الميزانية: A = L + E.
+              </p>
+              <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-600">الترحيل</label>
+                  <Select value={reconId} onValueChange={setReconId}>
+                    <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
+                      <SelectValue placeholder={reconcileCandidates.length ? "اختر ترحيلاً..." : "لا توجد ترحيلات"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {reconcileCandidates.map((m) => (
+                        <SelectItem key={m.id} value={m.id} className="text-xs">
+                          {m.cutover_date.split("T")[0]} — {STATUS_LABEL[m.status]} — {m.lines.length} بنود
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button size="sm" onClick={handleReconcile} disabled={reconLoading} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                  {reconLoading ? "جارٍ الفحص..." : "تحقق من التسوية"}
+                </Button>
+              </div>
+
+              {reconciliation && (
+                <div className="border border-slate-200 rounded-lg divide-y divide-slate-100">
+                  {reconciliation.rows.map((r) => (
+                    <div key={r.key} className="flex items-center justify-between px-3 py-2 text-xs">
+                      <div className="font-semibold text-slate-700">
+                        {reconRowLabel[r.key] || r.key}
+                        <span className={"mr-2 text-[11px] px-1.5 py-0.5 rounded-full " + (r.reconciled ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600")}>
+                          {r.reconciled ? "مطابق" : "فرق"}
+                        </span>
+                      </div>
+                      <div className="tabular-nums text-slate-600">
+                        السجل المساعد: {parseFloat(r.subledger).toFixed(2)} ← دفتر الأستاذ: {parseFloat(r.general_ledger).toFixed(2)}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs bg-slate-50">
+                    <span className={"font-bold " + (reconciliation.all_reconciled ? "text-green-700" : "text-red-600")}>
+                      {reconciliation.all_reconciled ? "جميع الأرصدة متطابقة ✓" : "يوجد فرق في الأرصدة"}
+                    </span>
+                    <span className="tabular-nums text-slate-600">
+                      مدين: {parseFloat(reconciliation.debit_total).toFixed(2)} · دائن: {parseFloat(reconciliation.credit_total).toFixed(2)}
+                    </span>
+                    <span className="tabular-nums text-slate-700 font-semibold">
+                      رصيد الافتتاح (53): {parseFloat(reconciliation.opening_control_balance).toFixed(2)}
+                      {reconciliation.opening_control_balance === "0" && " — متوازن ✓"}
+                    </span>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

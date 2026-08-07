@@ -72,6 +72,69 @@ export interface AllocateNetProfitRequest {
   net_profit: string;
 }
 
+export interface OpeningCustomerItem {
+  customer_id: string;
+  reference?: string | null;
+  original_amount: string;
+  outstanding_amount: string;
+  due_date?: string | null;
+  currency_code?: string | null;
+  exchange_rate?: string | null;
+}
+
+export interface OpeningSupplierItem {
+  supplier_id: string;
+  reference?: string | null;
+  original_amount: string;
+  outstanding_amount: string;
+  due_date?: string | null;
+  currency_code?: string | null;
+  exchange_rate?: string | null;
+}
+
+export interface OpeningInventoryItem {
+  material_id: string;
+  warehouse_id?: string | null;
+  quantity: string;
+  unit_cost: string;
+  total_cost: string;
+  batch?: string | null;
+  currency_code?: string | null;
+}
+
+export interface OpeningFixedAssetItem {
+  asset_id: string;
+  acquisition_cost: string;
+  accumulated_depreciation: string;
+  net_book_value: string;
+  acquisition_date?: string | null;
+  depreciation_method?: string | null;
+  useful_life?: string | null;
+}
+
+export interface OpeningDetailsDto {
+  customer_items: OpeningCustomerItem[];
+  supplier_items: OpeningSupplierItem[];
+  inventory_items: OpeningInventoryItem[];
+  fixed_assets: OpeningFixedAssetItem[];
+}
+
+export interface ReconciliationRow {
+  key: string;
+  subledger: string;
+  general_ledger: string;
+  reconciled: boolean;
+}
+
+export interface OpeningReconciliationDto {
+  rows: ReconciliationRow[];
+  all_reconciled: boolean;
+  opening_control_balance: string;
+  debit_total: string;
+  credit_total: string;
+  debit_equals_credit: boolean;
+}
+
 export const openingBalanceService = {
   async createMigration(request: CreateOpeningBalanceMigrationRequest): Promise<OpeningBalanceMigrationDto> {
     return await invoke<OpeningBalanceMigrationDto>('create_opening_balance_migration', { request });
@@ -96,5 +159,13 @@ export const openingBalanceService = {
   },
   async allocateNetProfit(request: AllocateNetProfitRequest): Promise<NetProfitAllocationDto> {
     return await invoke<NetProfitAllocationDto>('allocate_net_profit', { request });
+  },
+  async saveDetails(
+    request: OpeningDetailsDto & { migration_id: string },
+  ): Promise<OpeningDetailsDto> {
+    return await invoke<OpeningDetailsDto>('save_opening_balance_details', { command: request });
+  },
+  async getReconciliation(id: string): Promise<OpeningReconciliationDto> {
+    return await invoke<OpeningReconciliationDto>('get_opening_balance_reconciliation', { id });
   },
 };

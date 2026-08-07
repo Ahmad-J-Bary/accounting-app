@@ -29,3 +29,4 @@ pub mod inventory_lot_repository;
 pub mod warehouse_repository;
 pub mod opening_migration_repository;
 pub mod opening_posting_repository;
+pub mod opening_detail_repository;

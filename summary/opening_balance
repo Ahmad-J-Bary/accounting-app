@@ -92,3 +92,17 @@
 - توزيع صافي الربح تلقائيًا من قائمة الدخل (بدل المدخل اليدوي) إذا رغب المستخدم.
 - تنفيذ `SqliteUnitOfWork` حقيقي على مستوى التطبيق ومراجعة `foreign_keys(true)`.
 - كتابة `source_type` لكل أنواع القيود وتحسين إعادة الفتح (reversal) للأرصدة المفتوحة.
+
+### Phase I - State Machine (Draft/Validated/Approved/Posted/Locked/Cancelled)
+- Domain `opening_balance.rs`: 6-state `MigrationStatus` + fields company_id/source_system/source_reference/validated_by/at/approved_by/at/locked_at; transitions validate/approve/lock/unlock/mark_posted/un_post/cancel; mark_posted requires Approved; +5 unit tests.
+- Migration `140_opening_migration_state.sql`: ALTER columns + new tables opening_balance_customer_items/supplier_items/inventory_items/fixed_assets (FK -> migration, ON DELETE CASCADE).
+- Port `find_by_cutover_date`; infra models/mappers/queries expanded; create guards duplicate active cutover; cancel handles all states (Locked forbidden, Posted -> reversal path).
+- Tauri: validate/approve/lock commands; frontend status badges + per-status actions.
+
+### Phase J - Sub-ledger Details + Reconciliation
+- types.rs: OpeningCustomerItem/SupplierItem/InventoryItem/FixedAssetItem, SaveOpeningDetailsCommand, OpeningDetailsDto, OpeningReconciliationDto, ReconciliationRow.
+- Port `opening_detail_repository.rs` (replace_details/load_details); infra `repositories/opening_balance/details.rs` (atomic replace inside one tx, string-encoded decimals).
+- SaveOpeningDetailsUseCase (blocks Posted/Locked/Cancelled); GetOpeningReconciliationUseCase (AR/AP via effective_balance, Inventory via material summary total_available*average_cost_base, FA via net_book_value; debit/credit + opening control from posted journal, else drift classification of lines; obe account code 53).
+- Tauri save_opening_balance_details + get_opening_balance_reconciliation; container wired (opening_detail_repo field).
+- Frontend: service saveDetails/getReconciliation + reconciliation card (rows AR/AP/Inventory/FA matched vs GL, debit=credit, control 53 = 0).
+- Gates: cargo check --workspace, clippy 4 crates, domain 49 tests, application 8 tests, tsc, eslint, vitest 100 tests all pass.

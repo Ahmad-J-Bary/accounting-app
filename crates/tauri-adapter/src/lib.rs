@@ -188,6 +188,8 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::opening_balance::validate_opening_balance_migration,
             commands::opening_balance::approve_opening_balance_migration,
             commands::opening_balance::lock_opening_balance_migration,
+            commands::opening_balance::save_opening_balance_details,
+            commands::opening_balance::get_opening_balance_reconciliation,
         ])
         .setup(|app| {
             let app_data_dir = app

@@ -9,7 +9,9 @@ mod models;
 mod mappers;
 mod queries;
 mod posting;
+mod details;
 
+pub use details::SqliteOpeningDetailRepository;
 pub use posting::SqliteOpeningPostingRepository;
 
 pub struct SqliteOpeningMigrationRepository {

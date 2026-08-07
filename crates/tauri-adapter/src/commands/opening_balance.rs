@@ -2,9 +2,10 @@ use crate::bootstrap::container::AppState;
 use application::use_cases::opening_balance::{
     AllocateNetProfitCommand, AllocateNetProfitUseCase,
     ApproveOpeningBalanceUseCase, CancelOpeningBalanceUseCase, CreateOpeningBalanceMigrationCommand,
-    CreateOpeningBalanceUseCase, ListOpeningMigrationsUseCase, LockOpeningBalanceUseCase,
-    NetProfitAllocationDto, OpeningMigrationDto, PostOpeningBalanceResult, PostOpeningBalanceUseCase,
-    ValidateOpeningBalanceUseCase,
+    CreateOpeningBalanceUseCase, GetOpeningReconciliationUseCase, ListOpeningMigrationsUseCase,
+    LockOpeningBalanceUseCase, NetProfitAllocationDto, OpeningDetailsDto, OpeningMigrationDto,
+    OpeningReconciliationDto, PostOpeningBalanceResult, PostOpeningBalanceUseCase,
+    SaveOpeningDetailsCommand, SaveOpeningDetailsUseCase, ValidateOpeningBalanceUseCase,
 };
 use tauri::State;
 
@@ -109,4 +110,39 @@ pub async fn lock_opening_balance_migration(
         .execute(id)
         .await
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn save_opening_balance_details(
+    state: State<'_, AppState>,
+    command: SaveOpeningDetailsCommand,
+) -> Result<OpeningDetailsDto, String> {
+    SaveOpeningDetailsUseCase::new(
+        state.opening_migration_repo.clone(),
+        state.opening_detail_repo.clone(),
+    )
+    .execute(command)
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_opening_balance_reconciliation(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<OpeningReconciliationDto, String> {
+    GetOpeningReconciliationUseCase::new(
+        state.opening_migration_repo.clone(),
+        state.opening_detail_repo.clone(),
+        state.customer_repo.clone(),
+        state.supplier_repo.clone(),
+        state.material_repo.clone(),
+        state.stock_movement_repo.clone(),
+        state.asset_repo.clone(),
+        state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
+    )
+    .execute(id)
+    .await
+    .map_err(|e| e.to_string())
 }

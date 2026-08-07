@@ -49,3 +49,84 @@ pub struct NetProfitAllocationDto {
     pub allocated_total: Decimal,
     pub shares: Vec<PartnerAllocationShare>,
 }
+
+// ---------- Opening detail items (AR / AP / Inventory / Fixed Assets) ----------
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct OpeningCustomerItem {
+    pub customer_id: String,
+    pub reference: Option<String>,
+    pub original_amount: String,
+    pub outstanding_amount: String,
+    pub due_date: Option<String>,
+    pub currency_code: Option<String>,
+    pub exchange_rate: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct OpeningSupplierItem {
+    pub supplier_id: String,
+    pub reference: Option<String>,
+    pub original_amount: String,
+    pub outstanding_amount: String,
+    pub due_date: Option<String>,
+    pub currency_code: Option<String>,
+    pub exchange_rate: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct OpeningInventoryItem {
+    pub material_id: String,
+    pub warehouse_id: Option<String>,
+    pub quantity: String,
+    pub unit_cost: String,
+    pub total_cost: String,
+    pub batch: Option<String>,
+    pub currency_code: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct OpeningFixedAssetItem {
+    pub asset_id: String,
+    pub acquisition_cost: String,
+    pub accumulated_depreciation: String,
+    pub net_book_value: String,
+    pub acquisition_date: Option<String>,
+    pub depreciation_method: Option<String>,
+    pub useful_life: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct SaveOpeningDetailsCommand {
+    pub migration_id: String,
+    pub customer_items: Vec<OpeningCustomerItem>,
+    pub supplier_items: Vec<OpeningSupplierItem>,
+    pub inventory_items: Vec<OpeningInventoryItem>,
+    pub fixed_assets: Vec<OpeningFixedAssetItem>,
+}
+
+#[derive(Debug, Clone, Serialize, Default)]
+pub struct OpeningDetailsDto {
+    pub customer_items: Vec<OpeningCustomerItem>,
+    pub supplier_items: Vec<OpeningSupplierItem>,
+    pub inventory_items: Vec<OpeningInventoryItem>,
+    pub fixed_assets: Vec<OpeningFixedAssetItem>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct OpeningReconciliationDto {
+    pub rows: Vec<ReconciliationRow>,
+    pub all_reconciled: bool,
+    pub opening_control_balance: Decimal,
+    pub debit_total: Decimal,
+    pub credit_total: Decimal,
+    pub debit_equals_credit: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ReconciliationRow {
+    pub key: String,
+    pub subledger: Decimal,
+    pub general_ledger: Decimal,
+    pub reconciled: bool,
+}
