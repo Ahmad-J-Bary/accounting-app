@@ -8,6 +8,9 @@ use std::sync::Arc;
 mod models;
 mod mappers;
 mod queries;
+mod posting;
+
+pub use posting::SqliteOpeningPostingRepository;
 
 pub struct SqliteOpeningMigrationRepository {
     pool: Arc<SqlitePool>,

@@ -55,3 +55,4 @@ pub mod warehouse;
 pub use warehouse::SqliteWarehouseRepository;
 pub mod opening_balance;
 pub use opening_balance::SqliteOpeningMigrationRepository;
+pub use opening_balance::SqliteOpeningPostingRepository;

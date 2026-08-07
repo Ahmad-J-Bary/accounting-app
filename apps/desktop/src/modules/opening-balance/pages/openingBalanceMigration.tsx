@@ -1,8 +1,9 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, RefreshCw, CheckCircle2 } from "lucide-react";
+import { Plus, RefreshCw, CheckCircle2, Coins } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { toast } from "sonner";
@@ -12,6 +13,7 @@ import {
   openingBalanceService,
   type OpeningBalanceMigrationDto,
   type OpeningLineInput,
+  type NetProfitAllocationDto,
 } from "@modules/accounting/api/openingBalanceService";
 
 interface AccountLine {
@@ -45,6 +47,10 @@ export default function OpeningBalanceMigration() {
   const [lines, setLines] = useState<AccountLine[]>([]);
   const [saving, setSaving] = useState(false);
   const [postingId, setPostingId] = useState<string | null>(null);
+  const [allocMigrationId, setAllocMigrationId] = useState<string>("");
+  const [netProfit, setNetProfit] = useState("");
+  const [allocResult, setAllocResult] = useState<NetProfitAllocationDto | null>(null);
+  const [allocating, setAllocating] = useState(false);
 
   const { data: accounts = [] } = useQuery<AccountDto[]>({
     queryKey: ["chart-of-accounts"],
@@ -123,13 +129,41 @@ export default function OpeningBalanceMigration() {
   const handlePost = async (id: string) => {
     setPostingId(id);
     try {
-      await openingBalanceService.postMigration(id);
-      toast.success("تم ترحيل الرصيد الافتتاحي بنجاح");
+      const res = await openingBalanceService.postMigration(id);
+      toast.success(
+        (res.equity_balanced ? "تم ترحيل الرصيد الافتتاحي (متوازن)" : "تم الترحيل مع تسوية على رصيد الافتتاح")
+          + ` — مدين ${res.debit_total} / دائن ${res.credit_total}`
+      );
       refetchMigrations();
     } catch (e) {
       toast.error("فشل الترحيل: " + e);
     } finally {
       setPostingId(null);
+    }
+  };
+
+  const postedMigrations = useMemo(
+    () => migrations.filter((m) => m.status === "Posted"),
+    [migrations],
+  );
+
+  const handleAllocate = async () => {
+    if (!allocMigrationId) return toast.error("اختر ترحيلاً مرحّلاً");
+    if (!netProfit || isNaN(parseFloat(netProfit))) return toast.error("أدخل صافي الربح");
+    setAllocating(true);
+    setAllocResult(null);
+    try {
+      const res = await openingBalanceService.allocateNetProfit({
+        migration_id: allocMigrationId,
+        net_profit: netProfit,
+      });
+      setAllocResult(res);
+      toast.success("تم توزيع أرباح الترحيل على الشركاء");
+      refetchMigrations();
+    } catch (e) {
+      toast.error("فشل توزيع الأرباح: " + e);
+    } finally {
+      setAllocating(false);
     }
   };
 
@@ -270,6 +304,66 @@ export default function OpeningBalanceMigration() {
                   </div>
                 ))}
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader className="py-3">
+              <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
+                <Coins className="w-4 h-4 text-blue-600" /> توزيع صافي الربح على الشركاء
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-slate-500">
+                أدخل صافي الربح (نتيجة قائمة الدخل) حتى تاريخ القطع لتوزيعه على حسابات رأس مال الشركاء (51X).
+              </p>
+              <div className="grid grid-cols-[1fr_180px_auto] gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-600">الترحيل المرحّل</label>
+                  <Select value={allocMigrationId} onValueChange={setAllocMigrationId}>
+                    <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
+                      <SelectValue placeholder={postedMigrations.length ? "اختر ترحيلاً..." : "لا توجد ترحيلات مرحّلة"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {postedMigrations.map((m) => (
+                        <SelectItem key={m.id} value={m.id} className="text-xs">
+                          {m.cutover_date.split("T")[0]} — {m.notes || "بدون ملاحظات"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-600">صافي الربح</label>
+                  <Input value={netProfit} onChange={(e) => setNetProfit(e.target.value)} placeholder="0.00" type="number" className="h-9 text-left tabular-nums" />
+                </div>
+                <div className="flex items-end">
+                  <Button size="sm" onClick={handleAllocate} disabled={allocating} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                    {allocating ? "جارٍ التوزيع..." : "توزيع"}
+                  </Button>
+                </div>
+              </div>
+
+              {allocResult && (
+                <div className="border border-green-200 bg-green-50 rounded-lg p-3 space-y-2">
+                  <div className="text-xs font-semibold text-green-700">
+                    رقم القيد: {allocResult.entry_number} — الموزع:
+                    {parseFloat(allocResult.allocated_total || "0").toFixed(2)} من {parseFloat(allocResult.net_profit || "0").toFixed(2)}
+                  </div>
+                  {allocResult.shares.length === 0 && (
+                    <p className="text-xs text-slate-500">لا توجد حصص (صافي الربح صفر).</p>
+                  )}
+                  <div className="divide-y divide-green-100">
+                    {allocResult.shares.map((s) => (
+                      <div key={s.partner_id} className="flex items-center justify-between py-1 text-xs text-slate-700">
+                        <span className="font-semibold">{s.partner_name}</span>
+                        <span className="text-slate-400">رأس المال {parseFloat(s.capital || "0").toFixed(2)} · نسبة {parseFloat(s.ratio_percent || "0").toFixed(2)}%</span>
+                        <span className="font-bold tabular-nums">{parseFloat(s.share || "0").toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

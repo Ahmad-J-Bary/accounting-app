@@ -22,6 +22,7 @@ use application::ports::stock_movement_repository::StockMovementRepository;
 use application::ports::supplier_repository::SupplierRepository;
 use application::ports::warehouse_repository::WarehouseRepository;
 use application::ports::opening_migration_repository::OpeningMigrationRepository;
+use application::ports::opening_posting_repository::OpeningPostingRepository;
 use application::ports::unified_invoice_repository::UnifiedInvoiceRepository;
 use application::ports::unit_of_work::UnitOfWork;
 use application::ports::user_repository::UserRepository;
@@ -46,6 +47,7 @@ use infrastructure::repositories::SqliteInvoiceRepository;
 use infrastructure::repositories::SqlitePurchaseInvoiceRepository;
 use infrastructure::SqliteWarehouseRepository;
 use infrastructure::repositories::SqliteOpeningMigrationRepository;
+use infrastructure::repositories::SqliteOpeningPostingRepository;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -78,6 +80,7 @@ pub struct AppState {
     pub inventory_lot_repo: Arc<dyn InventoryLotRepository>,
     pub warehouse_repo: Arc<dyn WarehouseRepository>,
     pub opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
+    pub opening_posting_repo: Arc<dyn OpeningPostingRepository>,
     pub uow: Arc<dyn UnitOfWork>,
     pub material_code_use_cases: Arc<MaterialCodeUseCases>,
     pub currency_commands: Arc<CurrencyCommands>,
@@ -152,6 +155,8 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
         warehouse_repo: warehouse_repo.clone() as Arc<dyn WarehouseRepository>,
         opening_migration_repo: Arc::new(SqliteOpeningMigrationRepository::new(pool.clone()))
             as Arc<dyn OpeningMigrationRepository>,
+        opening_posting_repo: Arc::new(SqliteOpeningPostingRepository::new(pool.clone()))
+            as Arc<dyn OpeningPostingRepository>,
         uow: Arc::new(SqliteUnitOfWork::new(pool.clone())) as Arc<dyn UnitOfWork>,
         material_code_use_cases: Arc::new(MaterialCodeUseCases::new(
             prefix_repo.clone(),

@@ -1,48 +1,65 @@
-# Work Summary — Accounting App (فس إصلاح رصيد الافتتاح / ترحيل الشركة)
+# Work Summary — Accounting App (إصلاح رصيد الافتتاح / ترحيل الشركة)
 
 ## Goal (الجلسة الحالية)
-إنهاء **Phase C–D** من "محرك ترحيل الأرصدة الافتتاحية" لشركة قائمة (ExistingCompanyMigration) والفصل بين الشريك ومساهمة رأس المال، مع بناء المسار الكامل domain → port → infra → use case → Tauri → frontend، وترجيح التغييرات مسبقًا عبر الشيكات والاختبارات.
+إنهاء **Phase C–G** من "محرك ترحيل الأرصدة الافتتاحية" لشركة قائمة (ExistingCompanyMigration) والفصل بين الشريك ومساهمة رأس المال، مع بناء المسار الكامل domain → port → infra → use case → Tauri → frontend، وترجيح كل مرحلة عبر الشيكات والاختبارات.
 
 ## Status
-- **الكل: Phase C backend complete + frontend wizard** — cargo check/clippy, tsc, eslint, vitest 100/100 جميعها نظيفة.
-- **Phase A (سابق، مكتمل)**: فصل الشريك عن القيود المالية؛ `JournalType::CapitalContribution` + `CreateCapitalContributionUseCase` (Dr مصدر تمويل / Cr حق ملكية شريك)؛ حذف side-effect `consolidated_capital` من CRUD الشريك.
-- **Phase B (سابق، مكتمل)**: إضافة `accounting_start_mode` (NewCompany|ExistingCompanyMigration) إلى settings + منصبي الوضع في واجهة الشركاء.
-- **Phase C (حاليًا مكتمل)**: محرك ترحيل الأرصدة.
+- **كل المراحل C → G مكتملة** — cargo check/clippy, tsc, eslint, vitest 100/100, cargo test (application) 6/6 نظيفة.
+- **Phase A (مكتمل)**: فصل الشريك عن القيود المالية؛ `JournalType::CapitalContribution` + `CreateCapitalContributionUseCase` (Dr مصدر تمويل / Cr رأس مال شريك)؛ حذف side-effect `consolidated_capital` من CRUD الشريك.
+- **Phase B (مكتمل)**: `accounting_start_mode` (NewCompany|ExistingCompanyMigration) في settings + منصبي الوضع في واجهة الشركاء.
+- **Phase C (مكتمل)**: محرك ترحيل الأرصدة الأساسي.
+- **Phase D (مكتمل)**: التحقق من معادلة Assets=Liabilities+Equity + توزيع صافي الربح على الشركاء (مدخل يدوي كما اختار المستخدم).
+- **Phase E (مكتمل)**: تسميات/رسم القيود + `ProfitDistribution` واصلاح `CapitalContribution` في طبقات الخرائط.
+- **Phase F (مكتمل)**: atomicity معزول للميزة الجديدة (معاملة SQLite واحدة لترحيل الرصيد)، بلا لمس `UnitOfWork` العالمي (ظل stub) و`foreign_keys=false` كما هو (قرار مُعزول).
+- **Phase G (مكتمل)**: شيكات البوابات + اختبارات وحدات لتوزيع الأرباح + توثيق.
 
-### Phase C — المحرك (الوصل والتشغيل)
-1. **Domain** — `crates/domain/src/accounting/opening_balance.rs`: `MigrationStatus`(Draft/Posted/Cancelled)+`OpeningBalanceLine{account_id,amount>0,description}`+`OpeningBalanceMigration` مع `new/set_notes/mark_posted/cancel/total_lines_amount`؛ أُصدّرت من `accounting/mod.rs`.
-2. **Migration DB** — `crates/infrastructure/src/db/migrations/139_opening_balance_migrations.sql`: `opening_balance_migrations`(id, cutover_date, status, notes, posted_at, created_at, updated_at)+`opening_balance_lines`(id, migration_id FK, account_id, amount, description)+ index.
-3. **Port** — `crates/application/src/ports/opening_migration_repository.rs` (create/update/find_by_id/list/delete).
-4. **Infra Repo** — `crates/infrastructure/src/repositories/opening_balance/{mod,models,mappers,queries}.rs` `SqliteOpeningMigrationRepository` مسجل في `repositories/mod.rs` + `lib.rs`.
-5. **Use cases** — `crates/application/src/use_cases/opening_balance/`: `CreateOpeningBalanceUseCase`, `ListOpeningMigrationsUseCase`, `PostOpeningBalanceUseCase` (يبني قيد `AccountOpeningBalance` Dr/Cr حسب طبيعة الحساب، يوزن بكافرات "فتح رأس مال" ضد حساب 46 إن لزم، يرحّل ويعيّن `mark_posted`). سّجل في `use_cases/mod.rs`.
-6. **Tauri** — `commands/opening_balance.rs` (create/list/post via `request`/`id`) + تسجيل في `commands/mod.rs` و `lib.rs`.
-7. **Container** — `AppState.opening_migration_repo` + بناؤه في `bootstrap/container.rs`.
-8. **Frontend** —
-   - `modules/accounting/api/openingBalanceService.ts`: أنواع + `create/list/postMigration`.
-   - `modules/opening-balance/pages/openingBalanceMigration.tsx`: صفحة Wizard (تاريخ cutover, بنود بحساب/مبلغ/دائن-مدين, حفظ مسودة, عرض التوازن، ترحيل قائمة) — خلف تطبيق `openingBalance.tsx` (بضاعة أول المدة المخزني).
-   - Router: مسار `/opening-balance-migration` + إدخال nav في `routeRegistry.ts` (ضمن "المحاسبة العامة").
+## تفاصيل المراحل المكتملة
 
-## Verification
-- `cargo check --workspace` ✓
+### Phase C — المحرك (سابقاً)
+- Domain: `crates/domain/src/accounting/opening_balance.rs` (MigrationStatus/OpeningBalanceLine/OpeningBalanceMigration).
+- DB: `139_opening_balance_migrations.sql`.
+- Port: `opening_migration_repository.rs`؛ Infra: `repositories/opening_balance/{mod,models,mappers,queries}.rs`.
+- Use cases: `Create/List/PostOpeningBalanceUseCase`؛ Tauri: `commands/opening_balance.rs`؛ Container: `opening_migration_repo`.
+- Wizard `openingBalanceMigration.tsx` + مسار `/opening-balance-migration` + nav.
+
+### Phase D — توزيع الأرباح والتحقق
+- **D1**: `PostOpeningBalanceUseCase` — يحسب `debit_sum`/`credit_sum`، يعبّر عن الهوية Assets=Liab+Equity عبر توازنها، يزن بكافرة OBE (53) عند الخلل، ويرجع `PostOpeningBalanceResult{migration, debit_total, credit_total, equity_balanced}`.
+- **D2**: `AllocateNetProfitUseCase` (جديد) — مدخل `AllocateNetProfitCommand{migration_id, net_profit}`؛ يشترط حالة Posted؛ يحسب نسبة كل شريك (Manual أو نسبة رأس المال كما في `partnerProfitShare.ts`)؛ يقرّب الأسهم ويضبط الفرق على الأكبر؛ يبني قيد `ProfitDistribution` (Dr 52 / Cr 51X لكل شريك؛ ينعكس للخسارة)؛ `adjust_shares_to_sum` + `ratio_for` كدوال نقية قابلة للاختبار. أمر Tauri جديد `allocate_net_profit`.
+- **D3**: المعالج يضيف بطاقة "توزيع صافي الربح" (اختيار ترحيل مرحّل + مدخل صافي الربح + معاينة الحصص + رقم القيد).
+
+### Phase E — التسميات والخرائط
+- `JournalType::ProfitDistribution` أُضيف مع تسمية "توزيع أرباح" في Display.
+- Infra `journal_entry/mappers.rs`: فرع `"ProfitDistribution"`.
+- TS `JournalType` union في `shared-types/journal_entry.ts`: أضيف `'CapitalContribution' | 'ProfitDistribution'`.
+- `journal-config.ts`: `CapitalContribution: "مساهمة رأس مال"`, `ProfitDistribution: "توزيع أرباح"`.
+
+### Phase F — Atomicity معزول
+- Port جديد `opening_posting_repository.rs` + `SqliteOpeningPostingRepository` (`repositories/opening_balance/posting.rs`) يكتب قيد اليومية + علامة Posted في معاملة SQLite واحدة.
+- `PostOpeningBalanceUseCase` يستخدمه بدل `journal_repo.save` + `repo.update`؛ الحقل الجديد `opening_posting_repo` في الـ Container.
+
+## Verification (آخر تشغيل)
+- `cargo check --workspace` ✓ (بدون أخطاء/تحذيرات)
 - `cargo clippy -p domain -p application -p infrastructure -p tauri-adapter` ✓
+- `cargo test -p application` → 6 tests pass (4 توزيع + 2 أخرى)
 - `pnpm --filter desktop exec tsc --noEmit` ✓
-- `pnpm --filter desktop exec eslint <aَنا files>` ✓
+- `pnpm --filter desktop exec eslint <new files>` ✓
 - `pnpm --filter desktop exec vitest run` → 6 files / 100 tests pass ✓
 
-## Next Steps
-- **Phase D**: تحقق معادلة المستخدم (Assets=Liab+Equity عند الترحيل من عرض Validation في Wizard) + توزيع صافي الربح إلى الشريك.
-- **Phase E**: رسم/تسميات القيود الدقيقة لكل نشأة، مصادر `source_id` متسقة.
-- **Phase F**: معالجة `UnitOfWork` الواجهي (absence of real transactions) و إعادة التحق من `foreign_keys=false` في pool.rs وضمان atomicity عند ترحيل الأرصدة.
-- **Phase G**: توثيق + تشييد/تحزيم + فحص E2E.
-
-## Known Caveats
-- `UnitOfWork` في هذا المشروع stub (لا تحقييات فعلية في jedheolixture) — سيتم إنشاؤها في Phase F.
-- قعدة المعادلات الحالية لا يتضمن jurisdiction نقل رصيد الشركة إلى حساب يمكن إظهاره في الميزانية بعد الترحيل (حساب 46 كمضاد)؛ يُراجع في Phase D.
+## Notes / Caveats
+- `UnitOfWork` العالمي لا يزال stub — لم تُلمس كما قرر المستخدم؛ atomicity للميزة فقط.
+- `foreign_keys(false)` في `pool.rs` بقي كما هو (قرار معزول).
+- `AllocateNetProfitUseCase` يتطلب وجود حساب 52 (Retained Earnings) ومرجع `linked_account_id` لكل شريك.
+- تمثيل `source_id` موحّد: `opening_balance:<id>` و`profit_distribution:<id>`.
 
 ## Key File Paths
-- Domain: `crates/domain/src/accounting/opening_balance.rs`, `accounting/mod.rs`
-- Ports: `crates/application/src/ports/opening_migration_repository.rs`
-- Infra: `crates/infrastructure/src/repositories/opening_balance/*`, `db/migrations/139_*.sql`
-- Use cases: `crates/application/src/use_cases/opening_balance/*`
+- Domain: `crates/domain/src/accounting/opening_balance.rs`, `journal_entry.rs`
+- Ports: `crates/application/src/ports/opening_migration_repository.rs`, `opening_posting_repository.rs`
+- Infra: `crates/infrastructure/src/repositories/opening_balance/*`, `repositories/journal_entry/mappers.rs`, `db/migrations/139_*.sql`
+- Use cases: `crates/application/src/use_cases/opening_balance/{create,list,post,allocate}.rs`
 - Tauri: `crates/tauri-adapter/src/commands/opening_balance.rs`, `bootstrap/container.rs`, `lib.rs`
-- Frontend: `apps/desktop/src/modules/accounting/api/openingBalanceService.ts`, `apps/desktop/src/modules/opening-balance/pages/openingBalanceMigration.tsx`, `app/router/ErpRoutes.tsx`, `app/shell/routeRegistry.ts`
+- Frontend: `apps/desktop/src/modules/accounting/api/openingBalanceService.ts`, `modules/opening-balance/pages/openingBalanceMigration.tsx`, `modules/accounting/journal/lib/journal-config.ts`, `app/router/ErpRoutes.tsx`, `app/shell/routeRegistry.ts`, `packages/shared-types/src/journal_entry.ts`
+
+## Future Work (خارج النطاق الحالي)
+- توزيع صافي الربح تلقائيًا من قائمة الدخل (بدل المدخل اليدوي) إذا رغب المستخدم.
+- تنفيذ `SqliteUnitOfWork` حقيقي على مستوى التطبيق ومراجعة `foreign_keys(true)`.
+- كتابة `source_type` لكل أنواع القيود وتحسين إعادة الفتح (reversal) للأرصدة المفتوحة.

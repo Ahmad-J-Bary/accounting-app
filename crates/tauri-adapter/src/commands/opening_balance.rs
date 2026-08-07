@@ -1,7 +1,9 @@
 use crate::bootstrap::container::AppState;
 use application::use_cases::opening_balance::{
+    AllocateNetProfitCommand, AllocateNetProfitUseCase,
     CreateOpeningBalanceMigrationCommand, CreateOpeningBalanceUseCase,
-    ListOpeningMigrationsUseCase, OpeningMigrationDto, PostOpeningBalanceUseCase,
+    ListOpeningMigrationsUseCase, NetProfitAllocationDto, OpeningMigrationDto,
+    PostOpeningBalanceResult, PostOpeningBalanceUseCase,
 };
 use tauri::State;
 
@@ -30,13 +32,30 @@ pub async fn list_opening_balance_migrations(
 pub async fn post_opening_balance_migration(
     state: State<'_, AppState>,
     id: String,
-) -> Result<OpeningMigrationDto, String> {
+) -> Result<PostOpeningBalanceResult, String> {
     PostOpeningBalanceUseCase::new(
         state.opening_migration_repo.clone(),
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
+        state.opening_posting_repo.clone(),
     )
     .execute(id)
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn allocate_net_profit(
+    state: State<'_, AppState>,
+    request: AllocateNetProfitCommand,
+) -> Result<NetProfitAllocationDto, String> {
+    AllocateNetProfitUseCase::new(
+        state.opening_migration_repo.clone(),
+        state.partner_repo.clone(),
+        state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
+    )
+    .execute(request)
     .await
     .map_err(|e| e.to_string())
 }

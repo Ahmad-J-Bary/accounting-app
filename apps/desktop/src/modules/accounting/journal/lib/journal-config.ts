@@ -39,6 +39,8 @@ export const JOURNAL_TYPE_LABELS: Record<string, string> = {
   AdjustmentJournal: "تسوية جرد",
   DiscountEarnedJournal: "حسم مكتسب",
   DiscountGrantedJournal: "حسم ممنوح",
+  CapitalContribution: "مساهمة رأس مال",
+  ProfitDistribution: "توزيع أرباح",
 };
 
 // Unified column order for ALL journal types:

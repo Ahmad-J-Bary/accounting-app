@@ -8,7 +8,8 @@ use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
-use crate::use_cases::opening_balance::types::OpeningMigrationDto;
+use crate::ports::opening_posting_repository::OpeningPostingRepository;
+use crate::use_cases::opening_balance::types::{OpeningMigrationDto, PostOpeningBalanceResult};
 
 /// Code of the opening-equity contra account used to balance the posting when
 /// the user-supplied balances are not already in equilibrium (Debit = Credit).
@@ -18,6 +19,7 @@ pub struct PostOpeningBalanceUseCase {
     repo: Arc<dyn OpeningMigrationRepository>,
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
+    posting_repo: Arc<dyn OpeningPostingRepository>,
 }
 
 impl PostOpeningBalanceUseCase {
@@ -25,11 +27,12 @@ impl PostOpeningBalanceUseCase {
         repo: Arc<dyn OpeningMigrationRepository>,
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
+        posting_repo: Arc<dyn OpeningPostingRepository>,
     ) -> Self {
-        Self { repo, account_repo, journal_repo }
+        Self { repo, account_repo, journal_repo, posting_repo }
     }
 
-    pub async fn execute(&self, id: String) -> Result<OpeningMigrationDto, AppError> {
+    pub async fn execute(&self, id: String) -> Result<PostOpeningBalanceResult, AppError> {
         let mut migration = self.repo.find_by_id(&id).await?
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
 
@@ -65,9 +68,12 @@ impl PostOpeningBalanceUseCase {
             });
         }
 
-        // Balance the posting against the opening-equity account so the migration
-        // represents a true journal (Debit = Credit).
-        if debit_sum != credit_sum {
+        // The accounting identity Assets = Liabilities + Equity is satisfied exactly
+        // when debit-nature balances equal credit-nature balances. If the user-supplied
+        // lines are not in equilibrium, absorb the difference into the opening-balance
+        // equity account (53) so the resulting journal remains balanced.
+        let was_balanced = debit_sum == credit_sum;
+        if !was_balanced {
             let equity = self.account_repo.find_by_code(OPENING_EQUITY_ACCOUNT_CODE).await?
                 .ok_or_else(|| AppError::NotFound(
                     format!("حساب الرصيد الافتتاحي غير موجود: {OPENING_EQUITY_ACCOUNT_CODE}")
@@ -94,11 +100,16 @@ impl PostOpeningBalanceUseCase {
 
         entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
 
-        self.journal_repo.save(&entry).await?;
-
+        // Mark the domain aggregate as posted (state guard) then persist the
+        // journal + status change in a single transaction (atomicity).
         migration.mark_posted().map_err(AppError::Domain)?;
-        self.repo.update(&migration).await?;
+        self.posting_repo.post(&migration, &entry).await?;
 
-        Ok(OpeningMigrationDto(migration))
+        Ok(PostOpeningBalanceResult {
+            migration: OpeningMigrationDto(migration),
+            debit_total: debit_sum,
+            credit_total: credit_sum,
+            equity_balanced: was_balanced,
+        })
     }
 }
