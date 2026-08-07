@@ -3,6 +3,22 @@ import type { PartnerDto, PartnerRequest } from "@erp/shared-types";
 
 export type { PartnerDto, PartnerRequest };
 
+export interface PartnerEquityRow {
+  partner_id: string;
+  partner_name: string;
+  capital_registered: string;
+  ledger_balance: string;
+  profit_allocated: string;
+  total_equity: string;
+}
+
+export interface PartnerEquityStatementDto {
+  rows: PartnerEquityRow[];
+  total_capital: string;
+  total_profit_allocated: string;
+  total_equity: string;
+}
+
 export const partnerService = {
   listPartners: () => invoke<PartnerDto[]>("list_partners"),
   addPartner: (data: PartnerRequest) => invoke<string>("add_partner", data),
@@ -16,4 +32,5 @@ export const partnerService = {
     amount: string;
     isAmountInOriginal: boolean;
   }) => invoke<string>("create_capital_contribution", args),
+  getPartnerEquityStatement: () => invoke<PartnerEquityStatementDto>("get_partner_equity_statement"),
 };

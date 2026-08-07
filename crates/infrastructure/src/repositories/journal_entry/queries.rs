@@ -8,7 +8,7 @@ use chrono::{DateTime, Utc};
 
 pub async fn find_by_id(pool: &SqlitePool, id: &JournalEntryId) -> Result<Option<JournalEntry>, AppError> {
     let row = sqlx::query_as::<_, JournalEntryRow>(
-        "SELECT id, entry_number, journal_type, source_id, entry_date, description, status, created_at, posted_at, updated_at FROM journal_entries WHERE id = ?"
+        "SELECT id, entry_number, journal_type, source_id, source_type, reversal_of_entry_id, entry_date, description, status, created_at, posted_at, reversed_at, updated_at FROM journal_entries WHERE id = ?"
     )
     .bind(id.0.to_string())
     .fetch_optional(pool)
@@ -25,7 +25,7 @@ pub async fn find_by_id(pool: &SqlitePool, id: &JournalEntryId) -> Result<Option
 
 pub async fn find_by_number(pool: &SqlitePool, number: &str) -> Result<Option<JournalEntry>, AppError> {
     let row = sqlx::query_as::<_, JournalEntryRow>(
-        "SELECT id, entry_number, journal_type, source_id, entry_date, description, status, created_at, posted_at, updated_at FROM journal_entries WHERE entry_number = ?"
+        "SELECT id, entry_number, journal_type, source_id, source_type, reversal_of_entry_id, entry_date, description, status, created_at, posted_at, reversed_at, updated_at FROM journal_entries WHERE entry_number = ?"
     )
     .bind(number)
     .fetch_optional(pool)
@@ -42,7 +42,7 @@ pub async fn find_by_number(pool: &SqlitePool, number: &str) -> Result<Option<Jo
 
 pub async fn find_by_source_id(pool: &SqlitePool, source_id: &str) -> Result<Option<JournalEntry>, AppError> {
     let row = sqlx::query_as::<_, JournalEntryRow>(
-        "SELECT id, entry_number, journal_type, source_id, entry_date, description, status, created_at, posted_at, updated_at FROM journal_entries WHERE source_id = ?"
+        "SELECT id, entry_number, journal_type, source_id, source_type, reversal_of_entry_id, entry_date, description, status, created_at, posted_at, reversed_at, updated_at FROM journal_entries WHERE source_id = ?"
     )
     .bind(source_id)
     .fetch_optional(pool)
@@ -59,7 +59,7 @@ pub async fn find_by_source_id(pool: &SqlitePool, source_id: &str) -> Result<Opt
 
 pub async fn find_all_by_source_id(pool: &SqlitePool, source_id: &str) -> Result<Vec<JournalEntry>, AppError> {
     let rows = sqlx::query_as::<_, JournalEntryRow>(
-        "SELECT id, entry_number, journal_type, source_id, entry_date, description, status, created_at, posted_at, updated_at FROM journal_entries WHERE source_id = ? ORDER BY created_at ASC"
+        "SELECT id, entry_number, journal_type, source_id, source_type, reversal_of_entry_id, entry_date, description, status, created_at, posted_at, reversed_at, updated_at FROM journal_entries WHERE source_id = ? ORDER BY created_at ASC"
     )
     .bind(source_id)
     .fetch_all(pool)
@@ -76,7 +76,7 @@ pub async fn find_all_by_source_id(pool: &SqlitePool, source_id: &str) -> Result
 
 pub async fn list_all(pool: &SqlitePool) -> Result<Vec<JournalEntry>, AppError> {
     let rows = sqlx::query_as::<_, JournalEntryRow>(
-        "SELECT id, entry_number, journal_type, source_id, entry_date, description, status, created_at, posted_at, updated_at FROM journal_entries ORDER BY entry_date DESC"
+        "SELECT id, entry_number, journal_type, source_id, source_type, reversal_of_entry_id, entry_date, description, status, created_at, posted_at, reversed_at, updated_at FROM journal_entries ORDER BY entry_date DESC"
     )
     .fetch_all(pool)
     .await
@@ -92,7 +92,7 @@ pub async fn list_all(pool: &SqlitePool) -> Result<Vec<JournalEntry>, AppError> 
 
 pub async fn list_by_account(pool: &SqlitePool, account_id: &AccountId) -> Result<Vec<JournalEntry>, AppError> {
     let rows = sqlx::query_as::<_, JournalEntryRow>(
-        "SELECT DISTINCT je.id, je.entry_number, je.journal_type, je.source_id, je.entry_date, je.description, je.status, je.created_at, je.posted_at, je.updated_at 
+        "SELECT DISTINCT je.id, je.entry_number, je.journal_type, je.source_id, je.source_type, je.reversal_of_entry_id, je.entry_date, je.description, je.status, je.created_at, je.posted_at, je.reversed_at, je.updated_at 
          FROM journal_entries je
          JOIN journal_lines jl ON je.id = jl.journal_entry_id
          WHERE jl.account_id = ?
@@ -118,7 +118,7 @@ pub async fn list_by_accounts(pool: &SqlitePool, account_ids: &[AccountId]) -> R
 
     let placeholders: Vec<String> = account_ids.iter().map(|_| "?".to_string()).collect();
     let sql = format!(
-        "SELECT DISTINCT je.id, je.entry_number, je.journal_type, je.source_id, je.entry_date, je.description, je.status, je.created_at, je.posted_at, je.updated_at 
+        "SELECT DISTINCT je.id, je.entry_number, je.journal_type, je.source_id, je.source_type, je.reversal_of_entry_id, je.entry_date, je.description, je.status, je.created_at, je.posted_at, je.reversed_at, je.updated_at 
          FROM journal_entries je
          JOIN journal_lines jl ON je.id = jl.journal_entry_id
          WHERE jl.account_id IN ({})
@@ -153,7 +153,7 @@ pub async fn list_with_filters(
     partner_id: Option<uuid::Uuid>,
     status: Option<JournalEntryStatus>,
 ) -> Result<Vec<JournalEntry>, AppError> {
-    let mut query_str = "SELECT DISTINCT je.id, je.entry_number, je.journal_type, je.source_id, je.entry_date, je.description, je.status, je.created_at, je.posted_at, je.updated_at FROM journal_entries je JOIN journal_lines jl ON je.id = jl.journal_entry_id WHERE 1=1".to_string();
+    let mut query_str = "SELECT DISTINCT je.id, je.entry_number, je.journal_type, je.source_id, je.source_type, je.reversal_of_entry_id, je.entry_date, je.description, je.status, je.created_at, je.posted_at, je.reversed_at, je.updated_at FROM journal_entries je JOIN journal_lines jl ON je.id = jl.journal_entry_id WHERE 1=1".to_string();
     
     if from_date.is_some() { query_str.push_str(" AND je.entry_date >= ?"); }
     if to_date.is_some() { query_str.push_str(" AND je.entry_date <= ?"); }

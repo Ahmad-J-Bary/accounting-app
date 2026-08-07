@@ -1,4 +1,5 @@
 use crate::bootstrap::container::AppState;
+use application::use_cases::equity::GetPartnerEquityStatementUseCase;
 use application::use_cases::partner::{
     CreatePartnerUseCase, CreateCapitalContributionUseCase, PartnerQueries, UpdatePartnerUseCase, UpdatePartnerRequest, DeletePartnerUseCase, PartnerDto
 };
@@ -67,6 +68,19 @@ pub async fn list_partners(
         .list_partners()
         .await
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_partner_equity_statement(
+    state: State<'_, AppState>,
+) -> Result<application::use_cases::equity::PartnerEquityStatementDto, String> {
+    GetPartnerEquityStatementUseCase::new(
+        state.partner_repo.clone(),
+        state.journal_entry_repo.clone(),
+    )
+    .execute()
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

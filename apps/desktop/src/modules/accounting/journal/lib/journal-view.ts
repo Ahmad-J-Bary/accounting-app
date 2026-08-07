@@ -7,8 +7,10 @@ const isOriginalAmount = (currencyCode?: string, fxRate?: string) => {
 
 export interface JournalRowLine {
   group_key: string;
+  id: string;
   entry_number: string;
   journal_type_display: string;
+  status?: string;
   description: string;
   entry_date: string;
   created_at: string;
@@ -148,8 +150,10 @@ export function toJournalLines(entry: JournalEntryDto): JournalRowLine[] {
     if (d > 0) {
       lines.push({
         group_key: entry.id,
+        id: entry.id,
         entry_number: entry.entry_number,
         journal_type_display: journalTypeDisplay,
+        status: entry.status,
         description: entry.description,
         entry_date: entry.entry_date,
         created_at: entry.created_at,
@@ -165,8 +169,10 @@ export function toJournalLines(entry: JournalEntryDto): JournalRowLine[] {
     if (c > 0) {
       lines.push({
         group_key: entry.id,
+        id: entry.id,
         entry_number: entry.entry_number,
         journal_type_display: journalTypeDisplay,
+        status: entry.status,
         description: entry.description,
         entry_date: entry.entry_date,
         created_at: entry.created_at,
@@ -244,8 +250,10 @@ export function aggregateTotals(rows: JournalRowLine[]) {
 
 export interface JournalSingleLineRow {
   group_key: string;
+  id: string;
   entry_number: string;
   journal_type_display: string;
+  status?: string;
   description: string;
   entry_date: string;
   created_at: string;
@@ -413,8 +421,10 @@ export function toJournalLinesSingleLine(entry: JournalEntryDto): JournalSingleL
 
   return [{
     group_key: entry.id,
+    id: entry.id,
     entry_number: entry.entry_number,
     journal_type_display: journalTypeDisplay,
+    status: entry.status,
     description: entry.description,
     entry_date: entry.entry_date,
     created_at: entry.created_at,

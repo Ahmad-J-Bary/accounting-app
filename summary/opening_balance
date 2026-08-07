@@ -106,3 +106,22 @@
 - Tauri save_opening_balance_details + get_opening_balance_reconciliation; container wired (opening_detail_repo field).
 - Frontend: service saveDetails/getReconciliation + reconciliation card (rows AR/AP/Inventory/FA matched vs GL, debit=credit, control 53 = 0).
 - Gates: cargo check --workspace, clippy 4 crates, domain 49 tests, application 8 tests, tsc, eslint, vitest 100 tests all pass.
+
+### Phase K - Reversal + Wizard
+- K1: JournalType::Reversal + reversal_of_entry_id + source_type persisted (migration 141); fixed dropped reversed_at in repo save; ReverseJournalEntryUseCase now posts a true contra entry (create_reversal swaps debit/credit, links original, source_type=original type) then marks original Reversed. Frontend: JournalType/JournalEntryStatus unions synced, journal page shows عكس action for Posted + معكوس badge.
+- K2: WizardShell component + 15-step wizard (/opening-balance-wizard) collecting company info, assets/liabilities/equity lines, AR/AP/Inventory/FA details, equation A=L+E, commit+reconcile, then validate/approve/post/lock via existing commands.
+
+### Phase L1 - Capitalization / Partner Equity Statement
+- CreateCapitalContributionUseCase already existed and is wired (partners page).
+- New GetPartnerEquityStatementUseCase (equity module): per partner registered capital (amount_local) + cumulative ledger balance of linked capital account (sum credit_base - debit_base, status != Draft) => profit_allocated + total_equity; Tauri get_partner_equity_statement + PartnerEquityCard on partners page (بيان شركاء).
+
+### Phase L2 - Multi-scenario integration tests + migration bug fix
+- New integration suite crates/infrastructure/tests/reversal_lifecycle.rs (5 tests) on a temp-file SQLite DB exercising the real repo: full reversal lifecycle persists metadata (JournalType::Reversal + reversal_of_entry_id + source_type + swapped lines), drafts carry no reversal metadata, use case rejects reversing an already-reversed entry, schema forward-complete, and orphan cleanup.
+- FOUND + FIXED latent bug: migration 130 added depreciation_method to fixed_assets, but migration 004 already ships that column -> "duplicate column name" on FRESH installs. The pool's healing loop then marked 130..141 as applied WITHOUT running them, silently dropping the opening-balance tables (139/140) and journal reversal columns (141) on new DBs. Migration 130 is now a no-op (column already exists via 004); fresh installs now apply every migration.
+
+### Phase L3 — Real UnitOfWork + atomic reversal + orphan cleanup
+- sqlite_unit_of_work.rs: real begin()/commit()/rollback() driving a dedicated PoolConnection with explicit BEGIN IMMEDIATE / COMMIT / ROLLBACK (no 'static Transaction leak). +3 unit tests (rollback discards writes, commit persists, nested begin rejected, commit-without-begin no-op).
+- JournalEntryRepository::save_reversal_pair persists the reversal + its Reversed original in ONE transaction; ReverseJournalEntryUseCase now uses it (true cross-row atomicity).
+- Migration 142_reversal_integrity_cleanup.sql (idempotent): deletes Reversal entries with id a dangling reversing_of_entry_id (or NULL link) and resets stranded 'Reversed' originals back to Posted.
+- FK enforcement kept OFF (user decision; legacy migrations/live DBs).
+- Gates: workspace check, clippy, domain 52, application 8, infrastructure 8 (3 lib + 5 integration), tsc/eslint/vitest 100 - all green.

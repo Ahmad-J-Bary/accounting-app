@@ -34,6 +34,7 @@ pub enum JournalType {
     CapitalContribution,// مساهمة رأس مال
     ProfitDistribution,// توزيع أرباح على الشركاء
     OpeningBalanceReversal,// عكس ترحيل رصيد الافتتاح
+    Reversal,           // قيد عكسي عام (قيد معاكس لأي قيد مرحّل)
 }
 
 impl std::fmt::Display for JournalType {
@@ -63,6 +64,7 @@ impl std::fmt::Display for JournalType {
             Self::CapitalContribution => "مساهمة رأس مال",
             Self::ProfitDistribution => "توزيع أرباح",
             Self::OpeningBalanceReversal => "عكس ترحيل رصيد الافتتاح",
+            Self::Reversal => "قيد عكسي",
         };
         write!(f, "{}", s)
     }
@@ -122,6 +124,7 @@ pub struct JournalEntry {
     pub journal_type: JournalType,
     pub source_id: Option<String>, // ID of the source document (Invoice, Receipt, etc.)
     pub source_type: Option<String>, // Originating business domain
+    pub reversal_of_entry_id: Option<JournalEntryId>, // Set on contra entries pointing back to the reversed original
     pub lines: Vec<JournalLine>,
     pub entry_date: DateTime<Utc>,
     pub description: String,
@@ -176,6 +179,7 @@ impl JournalEntry {
             journal_type,
             source_id,
             source_type: None,
+            reversal_of_entry_id: None,
             lines,
             entry_date,
             description,
@@ -190,6 +194,53 @@ impl JournalEntry {
     pub fn with_source(mut self, source_id: String) -> Self {
         self.source_id = Some(source_id);
         self
+    }
+
+    pub fn with_source_type(mut self, source_type: String) -> Self {
+        self.source_type = Some(source_type);
+        self
+    }
+
+    /// Builds a true contra (reversing) entry for `original`: every line has its
+    /// debit and credit swapped, the entry is typed `Reversal`, and it is linked
+    /// back to the original through `reversal_of_entry_id`. Only posted entries
+    /// can be reversed.
+    pub fn create_reversal(
+        original: &Self,
+        entry_number: String,
+        entry_date: DateTime<Utc>,
+        description: String,
+    ) -> Result<Self, DomainError> {
+        if original.status != JournalEntryStatus::Posted {
+            return Err(DomainError::Forbidden(
+                "يمكن عكس القيود المرحلة فقط".into(),
+            ));
+        }
+
+        let lines: Vec<JournalLine> = original
+            .lines
+            .iter()
+            .map(|l| JournalLine {
+                account_id: l.account_id,
+                partner_id: l.partner_id,
+                debit: l.credit.clone(),
+                credit: l.debit.clone(),
+                description: format!("عكس قيد {} — {}", original.entry_number, l.description),
+            })
+            .collect();
+
+        let mut reversal = Self::new(
+            entry_number,
+            JournalType::Reversal,
+            lines,
+            entry_date,
+            description,
+            None,
+        )?;
+
+        reversal.source_type = Some(format!("{:?}", original.journal_type));
+        reversal.reversal_of_entry_id = Some(original.id);
+        Ok(reversal)
     }
 
     pub fn total_base_debit(&self) -> Decimal {
@@ -453,5 +504,126 @@ mod tests {
         .unwrap();
 
         assert_eq!(entry.total_base_debit().normalize(), dec!(110).normalize());
+    }
+
+    #[test]
+    fn create_reversal_swaps_debit_credit_and_links_original() {
+        let base_currency = test_base_currency();
+        let lines = vec![
+            JournalLine::new(
+                AccountId(Uuid::new_v4()),
+                MonetaryAmount::new(Money::new(dec!(100), base_currency.clone()), Decimal::ONE),
+                MonetaryAmount::zero(base_currency.clone()),
+                "مدين".to_string(),
+            ),
+            JournalLine::new(
+                AccountId(Uuid::new_v4()),
+                MonetaryAmount::zero(base_currency.clone()),
+                MonetaryAmount::new(Money::new(dec!(100), base_currency.clone()), Decimal::ONE),
+                "دائن".to_string(),
+            ),
+        ];
+        let mut original = JournalEntry::new(
+            "JE-REV-001".to_string(),
+            JournalType::CashReceipt,
+            lines,
+            Utc::now(),
+            "قيد أصلي".to_string(),
+            None,
+        )
+        .unwrap();
+        original.post().unwrap();
+
+        let reversal = JournalEntry::create_reversal(
+            &original,
+            "JE-REV-002".to_string(),
+            Utc::now(),
+            "عكس قيد JE-REV-001".to_string(),
+        )
+        .unwrap();
+
+        assert_eq!(reversal.journal_type, JournalType::Reversal);
+        assert_eq!(reversal.reversal_of_entry_id, Some(original.id));
+        assert_eq!(reversal.source_type.as_deref(), Some("CashReceipt"));
+        assert!(reversal.is_balanced());
+        // Line 0 was a debit of 100 → reversal line 0 is a credit of 100.
+        assert_eq!(reversal.lines[0].base_debit(), Decimal::ZERO);
+        assert_eq!(reversal.lines[0].base_credit(), dec!(100));
+    }
+
+    #[test]
+    fn create_reversal_rejects_non_posted_entries() {
+        let base_currency = test_base_currency();
+        let lines = vec![
+            JournalLine::new(
+                AccountId(Uuid::new_v4()),
+                MonetaryAmount::new(Money::new(dec!(100), base_currency.clone()), Decimal::ONE),
+                MonetaryAmount::zero(base_currency.clone()),
+                "مدين".to_string(),
+            ),
+            JournalLine::new(
+                AccountId(Uuid::new_v4()),
+                MonetaryAmount::zero(base_currency.clone()),
+                MonetaryAmount::new(Money::new(dec!(100), base_currency.clone()), Decimal::ONE),
+                "دائن".to_string(),
+            ),
+        ];
+        let original = JournalEntry::new(
+            "JE-REV-003".to_string(),
+            JournalType::GeneralJournal,
+            lines,
+            Utc::now(),
+            "قيد غير مرحّل".to_string(),
+            None,
+        )
+        .unwrap();
+
+        let res = JournalEntry::create_reversal(
+            &original,
+            "JE-REV-004".to_string(),
+            Utc::now(),
+            "عكس".to_string(),
+        );
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn reversal_post_is_balanced_and_ready() {
+        let base_currency = test_base_currency();
+        let lines = vec![
+            JournalLine::new(
+                AccountId(Uuid::new_v4()),
+                MonetaryAmount::new(Money::new(dec!(50), base_currency.clone()), Decimal::ONE),
+                MonetaryAmount::zero(base_currency.clone()),
+                "مدين".to_string(),
+            ),
+            JournalLine::new(
+                AccountId(Uuid::new_v4()),
+                MonetaryAmount::zero(base_currency.clone()),
+                MonetaryAmount::new(Money::new(dec!(50), base_currency.clone()), Decimal::ONE),
+                "دائن".to_string(),
+            ),
+        ];
+        let mut original = JournalEntry::new(
+            "JE-REV-005".to_string(),
+            JournalType::CashPayment,
+            lines,
+            Utc::now(),
+            "قيد أصلي".to_string(),
+            None,
+        )
+        .unwrap();
+        original.post().unwrap();
+
+        let mut reversal = JournalEntry::create_reversal(
+            &original,
+            "JE-REV-006".to_string(),
+            Utc::now(),
+            "عكس".to_string(),
+        )
+        .unwrap();
+
+        assert!(reversal.post().is_ok());
+        assert_eq!(reversal.status, JournalEntryStatus::Posted);
     }
 }

@@ -1,6 +1,8 @@
 ﻿import { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Filter, LayoutList, LayoutGrid } from "lucide-react";
+import { toast } from "sonner";
 import { journalEntryService, type JournalFilters } from '@modules/accounting/api/journalEntryService';
 import type { JournalEntryDto, JournalType } from "@erp/shared-types";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
@@ -28,6 +30,9 @@ export default function Journal() {
   const [displayMode, setDisplayMode] = useState<DisplayMode>(
     () => (localStorage.getItem("journal-display-mode") as DisplayMode) || "two-line"
   );
+
+  const [reversingId, setReversingId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     localStorage.setItem("journal-display-mode", displayMode);
@@ -94,6 +99,22 @@ export default function Journal() {
 
   const journalTitle = JOURNAL_TYPES.find(t => t.value === (journalType || 'GeneralJournal'))?.label || 'القيود اليومية';
 
+  const handleReverse = useCallback(async (id: string) => {
+    if (!window.confirm("سيتم ترحيل قيد عكسي (معاكس) يُلغي أثر القيد ويحدد القيد الأصلي كمعكوس. هل تريد المتابعة؟")) {
+      return;
+    }
+    setReversingId(id);
+    try {
+      const reversal = await journalEntryService.reverseJournalEntry(id);
+      toast.success(`تم ترحيل القيد العكسي ${reversal.entry_number}`);
+      await queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+    } catch (e) {
+      toast.error("فشل عكس القيد: " + e);
+    } finally {
+      setReversingId(null);
+    }
+  }, [queryClient]);
+
   return (
     <OperationalTableTemplate
       title={journalTitle}
@@ -116,6 +137,8 @@ export default function Journal() {
           onSearchChange={setSearch}
           filters={queryFilters}
           displayMode={displayMode}
+          onReverse={handleReverse}
+          reversingId={reversingId}
           filterBar={
             <div className="flex flex-wrap items-center gap-2">
               <Select 

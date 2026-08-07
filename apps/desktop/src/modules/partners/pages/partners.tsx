@@ -13,6 +13,7 @@ import { PartnerTable } from '../components/PartnerTable';
 import { PartnersToolbar } from '../components/PartnersToolbar';
 import { PartnersSidePanel } from '../components/PartnersSidePanel';
 import { ChartCard } from '@modules/partners/components/ChartCard';
+import { PartnerEquityCard } from '@modules/partners/components/PartnerEquityCard';
 import { useDataTable } from '@shared/hooks';
 import { useTabs } from "@app/providers/TabContext";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
@@ -253,6 +254,7 @@ export default function Partners() {
                   <ChartCard title="حصص رأس المال" icon={PieChartIcon} data={partnersWithRatios.map(p => ({ name: p.name, value: p.calculatedCapitalRatio }))} formatter={(v: number) => `${v.toFixed(2)}%`} />
                   <ChartCard title="توزيع الأرباح" icon={TrendingUp} data={partnersWithRatios.map(p => ({ name: p.name, value: p.calculatedRatio }))} formatter={(v: number) => `${v.toFixed(2)}%`} />
               </div>
+              <PartnerEquityCard />
         </div>
       }
       sidePanel={

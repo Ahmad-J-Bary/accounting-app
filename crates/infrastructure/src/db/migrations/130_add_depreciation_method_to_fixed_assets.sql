@@ -1,3 +1,7 @@
--- Migration 130: Add depreciation_method column to existing fixed_assets table
-
-ALTER TABLE fixed_assets ADD COLUMN depreciation_method TEXT NOT NULL DEFAULT 'StraightLine';
+-- Migration 130: Add depreciation_method column to existing fixed_assets table.
+--
+-- The column is already part of the fixed_assets schema created by migration 004,
+-- so this migration is intentionally a no-op. Re-running the old ALTER here would
+-- raise "duplicate column name: depreciation_method" on fresh databases, which
+-- previously caused the migration healing loop to silently skip every migration
+-- after this one (131..141). Keeping it empty keeps the migration run clean.

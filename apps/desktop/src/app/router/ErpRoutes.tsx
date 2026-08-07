@@ -18,6 +18,7 @@ import Damaged from '@modules/inventory/pages/damaged';
 import Production from '@modules/inventory/pages/production';
 import OpeningBalance from '@modules/opening-balance/pages/openingBalance';
 import OpeningBalanceMigration from '@modules/opening-balance/pages/openingBalanceMigration';
+import OpeningBalanceWizard from '@modules/opening-balance/pages/openingBalanceWizard';
 import Adjustments from '@modules/inventory/pages/adjustments';
 import MaterialMovementsPage from '@modules/inventory/pages/MaterialMovementsPage';
 import Users from '@modules/users/pages/users';
@@ -83,6 +84,7 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/opening-balance/new/*" element={<OpeningBalance />} />
       <Route path="/opening-balance/:id" element={<OpeningBalance />} />
       <Route path="/opening-balance-migration" element={<OpeningBalanceMigration />} />
+      <Route path="/opening-balance-wizard" element={<OpeningBalanceWizard />} />
       <Route path="/adjustments" element={<Adjustments />} />
       <Route path="/users" element={<Users />} />
       <Route path="/settings" element={<Settings />} />

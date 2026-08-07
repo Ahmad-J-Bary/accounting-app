@@ -5,11 +5,14 @@ pub struct JournalEntryRow {
     pub entry_number: String,
     pub journal_type: String,
     pub source_id: Option<String>,
+    pub source_type: Option<String>,
+    pub reversal_of_entry_id: Option<String>,
     pub entry_date: String,
     pub description: String,
     pub status: String,
     pub created_at: String,
     pub posted_at: Option<String>,
+    pub reversed_at: Option<String>,
     pub updated_at: String,
 }
 

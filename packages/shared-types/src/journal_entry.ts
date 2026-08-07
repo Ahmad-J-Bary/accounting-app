@@ -16,11 +16,16 @@ export type JournalType =
   | 'PurchaseReturnJournal'
   | 'SupplierReceiptJournal'
   | 'CustomerPaymentJournal'
+  | 'DamagedJournal'
+  | 'AdjustmentJournal'
   | 'DiscountEarnedJournal'
   | 'DiscountGrantedJournal'
   | 'CapitalContribution'
   | 'ProfitDistribution'
-  | 'OpeningBalanceReversal';
+  | 'OpeningBalanceReversal'
+  | 'Reversal';
+
+export type JournalEntryStatus = 'Draft' | 'Posted' | 'Reversed' | 'Cancelled';
 
 export interface JournalLineDto {
   account_id: string;
@@ -43,10 +48,11 @@ export interface JournalEntryDto {
   journal_type_display: string;
   source_id?: string;
   source_type?: string;
+  reversal_of_entry_id?: string;
   lines: JournalLineDto[];
   entry_date: string;
   description: string;
-  status: string;
+  status: JournalEntryStatus;
   total_base_debit: string;
   total_base_credit: string;
   created_at: string;

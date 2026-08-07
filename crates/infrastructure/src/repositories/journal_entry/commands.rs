@@ -7,26 +7,53 @@ use uuid::Uuid;
 pub async fn save(pool: &SqlitePool, entry: &JournalEntry) -> Result<(), AppError> {
     let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
+    insert_entry(&mut tx, entry).await?;
+    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    Ok(())
+}
+
+/// Atomically persist `reversal` and its `original` (which was marked Reversed)
+/// in one transaction: either both rows are written or neither is.
+pub async fn save_reversal_pair(
+    pool: &SqlitePool,
+    reversal: &JournalEntry,
+    original: &JournalEntry,
+) -> Result<(), AppError> {
+    let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    insert_entry(&mut tx, reversal).await?;
+    insert_entry(&mut tx, original).await?;
+    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    Ok(())
+}
+
+async fn insert_entry(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    entry: &JournalEntry,
+) -> Result<(), AppError> {
     sqlx::query(
-        "INSERT OR REPLACE INTO journal_entries (id, entry_number, journal_type, source_id, entry_date, description, status, created_at, posted_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT OR REPLACE INTO journal_entries (id, entry_number, journal_type, source_id, source_type, entry_date, description, status, created_at, posted_at, reversed_at, updated_at, reversal_of_entry_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(entry.id.0.to_string())
     .bind(&entry.entry_number)
     .bind(format!("{:?}", entry.journal_type))
     .bind(&entry.source_id)
+    .bind(&entry.source_type)
     .bind(entry.entry_date.to_rfc3339())
     .bind(&entry.description)
     .bind(format!("{:?}", entry.status))
     .bind(entry.created_at.to_rfc3339())
     .bind(entry.posted_at.map(|d| d.to_rfc3339()))
+    .bind(entry.reversed_at.map(|d| d.to_rfc3339()))
     .bind(chrono::Utc::now().to_rfc3339())
-    .execute(&mut *tx)
+    .bind(entry.reversal_of_entry_id.map(|id| id.0.to_string()))
+    .execute(&mut **tx)
     .await
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     sqlx::query("DELETE FROM journal_lines WHERE journal_entry_id = ?")
         .bind(entry.id.0.to_string())
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
@@ -46,12 +73,10 @@ pub async fn save(pool: &SqlitePool, entry: &JournalEntry) -> Result<(), AppErro
         .bind(line.credit.base_amount.to_string())
         .bind(&line.description)
         .bind(chrono::Utc::now().to_rfc3339())
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     }
-
-    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
 }
 

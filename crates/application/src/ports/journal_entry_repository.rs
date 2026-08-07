@@ -7,6 +7,13 @@ use async_trait::async_trait;
 #[async_trait]
 pub trait JournalEntryRepository: Send + Sync {
     async fn save(&self, entry: &JournalEntry) -> Result<(), AppError>;
+    /// Persist a reversal and its reversed original in a single transaction so
+    /// the pair can never be partially written.
+    async fn save_reversal_pair(
+        &self,
+        reversal: &JournalEntry,
+        original: &JournalEntry,
+    ) -> Result<(), AppError>;
     async fn find_by_id(&self, id: &JournalEntryId) -> Result<Option<JournalEntry>, AppError>;
     async fn find_by_number(&self, number: &str) -> Result<Option<JournalEntry>, AppError>;
     async fn list_all(&self) -> Result<Vec<JournalEntry>, AppError>;

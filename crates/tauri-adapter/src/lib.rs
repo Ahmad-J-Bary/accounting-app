@@ -129,6 +129,7 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::partner::add_partner,
             commands::partner::create_capital_contribution,
             commands::partner::list_partners,
+            commands::partner::get_partner_equity_statement,
             commands::partner::delete_partner,
             commands::partner::update_partner,
             // Currency

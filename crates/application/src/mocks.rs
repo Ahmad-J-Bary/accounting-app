@@ -103,6 +103,16 @@ impl JournalEntryRepository for MockJournalRepository {
         self.entries.lock().unwrap().push(entry.clone());
         Ok(())
     }
+    async fn save_reversal_pair(
+        &self,
+        reversal: &JournalEntry,
+        original: &JournalEntry,
+    ) -> Result<(), AppError> {
+        let mut store = self.entries.lock().unwrap();
+        store.push(reversal.clone());
+        store.push(original.clone());
+        Ok(())
+    }
     async fn find_by_id(&self, _id: &JournalEntryId) -> Result<Option<JournalEntry>, AppError> { Ok(None) }
     async fn find_by_number(&self, _number: &str) -> Result<Option<JournalEntry>, AppError> { Ok(None) }
     async fn list_all(&self) -> Result<Vec<JournalEntry>, AppError> { Ok(self.entries.lock().unwrap().clone()) }

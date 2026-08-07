@@ -42,6 +42,7 @@ export const JOURNAL_TYPE_LABELS: Record<string, string> = {
   CapitalContribution: "مساهمة رأس مال",
   ProfitDistribution: "توزيع أرباح",
   OpeningBalanceReversal: "عكس ترحيل رصيد الافتتاح",
+  Reversal: "قيد عكسي",
 };
 
 // Unified column order for ALL journal types:

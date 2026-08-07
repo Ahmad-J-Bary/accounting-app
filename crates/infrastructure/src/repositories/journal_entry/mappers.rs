@@ -35,6 +35,7 @@ pub fn row_to_entry(row: JournalEntryRow, lines: Vec<JournalLine>) -> Result<Jou
         "CapitalContribution" => JournalType::CapitalContribution,
         "ProfitDistribution" => JournalType::ProfitDistribution,
         "OpeningBalanceReversal" => JournalType::OpeningBalanceReversal,
+        "Reversal" => JournalType::Reversal,
         _ => JournalType::GeneralJournal,
     };
 
@@ -59,6 +60,14 @@ pub fn row_to_entry(row: JournalEntryRow, lines: Vec<JournalLine>) -> Result<Jou
         
     entry.posted_at = row.posted_at.and_then(|d| DateTime::parse_from_rfc3339(&d).ok())
         .map(|d| d.with_timezone(&Utc));
+
+    entry.reversed_at = row.reversed_at.and_then(|d| DateTime::parse_from_rfc3339(&d).ok())
+        .map(|d| d.with_timezone(&Utc));
+
+    entry.source_type = row.source_type;
+    entry.reversal_of_entry_id = row.reversal_of_entry_id
+        .and_then(|id| Uuid::parse_str(&id).ok())
+        .map(JournalEntryId);
         
     entry.status = match row.status.as_str() {
         "Posted" => JournalEntryStatus::Posted,

@@ -27,6 +27,14 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
         commands::save(&self.pool, entry).await
     }
 
+    async fn save_reversal_pair(
+        &self,
+        reversal: &JournalEntry,
+        original: &JournalEntry,
+    ) -> Result<(), AppError> {
+        commands::save_reversal_pair(&self.pool, reversal, original).await
+    }
+
     async fn find_by_id(&self, id: &JournalEntryId) -> Result<Option<JournalEntry>, AppError> {
         queries::find_by_id(&self.pool, id).await
     }

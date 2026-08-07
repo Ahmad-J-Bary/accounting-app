@@ -1,5 +1,5 @@
 import { useMemo, useRef, useCallback, useEffect, type ReactNode } from "react";
-import { Download } from "lucide-react";
+import { Download, Undo2 } from "lucide-react";
 import { GridHeader, type GridHeaderColumn } from "@widgets/table-shell/GridHeader";
 import type { UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import { TableSummary, type SummaryColumn } from "@widgets/table-shell/TableSummary";
@@ -32,6 +32,8 @@ interface JournalTableProps {
   filters?: JournalFilters;
   filterBar?: React.ReactNode;
   displayMode?: DisplayMode;
+  onReverse?: (id: string) => void;
+  reversingId?: string | null;
 }
 
 type SortFieldTwoLine = "entry_number" | "created_at" | "journal_type" | "account";
@@ -80,7 +82,9 @@ export function JournalTable({
   search, 
   onSearchChange, 
   filterBar, 
-  displayMode = "two-line" 
+  displayMode = "two-line",
+  onReverse,
+  reversingId,
 }: JournalTableProps) {
   const { isBaseCurrency, currencySuffix: cs, hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { settings, getDensityPadding } = useTableSettings();
@@ -174,8 +178,27 @@ export function JournalTable({
         header: "نوع الحركة",
         label: "نوع الحركة",
         accessor: (e) => e.isFirstInGroup ? (
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">
-            {e.journal_type_display}
+          <span className="inline-flex items-center gap-1">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">
+              {e.journal_type_display}
+            </span>
+            {e.status === "Reversed" && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-red-100 text-red-600">
+                معكوس
+              </span>
+            )}
+            {e.status === "Posted" && onReverse && (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={reversingId === e.id}
+                onClick={() => onReverse(e.id)}
+                className="h-6 px-2 text-[10px] font-bold text-red-600 hover:bg-red-50"
+              >
+                <Undo2 className="w-3 h-3 ml-1" />
+                {reversingId === e.id ? "جارٍ..." : "عكس"}
+              </Button>
+            )}
           </span>
         ) : "",
       },
@@ -242,7 +265,7 @@ export function JournalTable({
       },
     );
     return cols;
-  }, [sortedCurrencies, formatAmount, isBaseCurrency, cs]);
+  }, [sortedCurrencies, formatAmount, isBaseCurrency, cs, onReverse, reversingId]);
 
   const singleLineColumns = useMemo<UnifiedColumn<JournalSingleLineTableRow>[]>(() => {
     const cols: UnifiedColumn<JournalSingleLineTableRow>[] = [
@@ -258,8 +281,27 @@ export function JournalTable({
         header: "نوع الحركة",
         label: "نوع الحركة",
         accessor: (e) => (
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">
-            {e.journal_type_display}
+          <span className="inline-flex items-center gap-1">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">
+              {e.journal_type_display}
+            </span>
+            {e.status === "Reversed" && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-red-100 text-red-600">
+                معكوس
+              </span>
+            )}
+            {e.status === "Posted" && onReverse && (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={reversingId === e.id}
+                onClick={() => onReverse(e.id)}
+                className="h-6 px-2 text-[10px] font-bold text-red-600 hover:bg-red-50"
+              >
+                <Undo2 className="w-3 h-3 ml-1" />
+                {reversingId === e.id ? "جارٍ..." : "عكس"}
+              </Button>
+            )}
           </span>
         ),
       },
@@ -327,7 +369,7 @@ export function JournalTable({
       },
     );
     return cols;
-  }, [formatAmount, cs, sortedCurrencies, isBaseCurrency]);
+  }, [formatAmount, cs, sortedCurrencies, isBaseCurrency, onReverse, reversingId]);
 
   // ============ SELECT ACTIVE DATA/COLUMNS/SORT ============
   const sortedData = isTwoLine ? twoLineSort.sortedData : singleLineSort.sortedData;
