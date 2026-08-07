@@ -101,6 +101,20 @@ impl OpeningBalanceMigration {
         Ok(())
     }
 
+    /// Voids a previously-posted migration by moving it to `Cancelled`. The
+    /// caller is responsible for posting the corresponding reversing journal
+    /// entry atomically with this status change.
+    pub fn un_post(&mut self) -> Result<(), DomainError> {
+        if self.status != MigrationStatus::Posted {
+            return Err(DomainError::Forbidden(
+                "لا يمكن إلغاء إلا الترحيل المرحل".into(),
+            ));
+        }
+        self.status = MigrationStatus::Cancelled;
+        self.updated_at = Utc::now();
+        Ok(())
+    }
+
     pub fn cancel(&mut self) -> Result<(), DomainError> {
         if self.status != MigrationStatus::Draft {
             return Err(DomainError::Forbidden(

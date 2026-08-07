@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, RefreshCw, CheckCircle2, Coins } from "lucide-react";
+import { Plus, RefreshCw, CheckCircle2, Coins, XCircle } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
@@ -47,6 +47,7 @@ export default function OpeningBalanceMigration() {
   const [lines, setLines] = useState<AccountLine[]>([]);
   const [saving, setSaving] = useState(false);
   const [postingId, setPostingId] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [allocMigrationId, setAllocMigrationId] = useState<string>("");
   const [netProfit, setNetProfit] = useState("");
   const [allocResult, setAllocResult] = useState<NetProfitAllocationDto | null>(null);
@@ -139,6 +140,22 @@ export default function OpeningBalanceMigration() {
       toast.error("فشل الترحيل: " + e);
     } finally {
       setPostingId(null);
+    }
+  };
+
+  const handleCancel = async (id: string) => {
+    if (!window.confirm("سيتم ترحيل قيد عكسي يُلغي الرصيد الافتتاحي ويميّز الترحيل كملغى. هل تريد المتابعة؟")) {
+      return;
+    }
+    setCancellingId(id);
+    try {
+      await openingBalanceService.cancelMigration(id);
+      toast.success("تم إلغاء ترحيل الرصيد الافتتاحي وتسجيل القيد العكسي");
+      refetchMigrations();
+    } catch (e) {
+      toast.error("فشل الإلغاء: " + e);
+    } finally {
+      setCancellingId(null);
     }
   };
 
@@ -299,6 +316,17 @@ export default function OpeningBalanceMigration() {
                         className="bg-green-600 hover:bg-green-700 text-white font-bold"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5 ml-1.5" /> {postingId === m.id ? "جارٍ..." : "ترحيل"}
+                      </Button>
+                    )}
+                    {m.status === "Posted" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={cancellingId === m.id}
+                        onClick={() => handleCancel(m.id)}
+                        className="border-red-200 text-red-600 hover:bg-red-50 font-bold"
+                      >
+                        <XCircle className="w-3.5 h-3.5 ml-1.5" /> {cancellingId === m.id ? "جارٍ..." : "إلغاء الترحيل"}
                       </Button>
                     )}
                   </div>

@@ -33,6 +33,7 @@ pub enum JournalType {
     DiscountGrantedJournal,// حسم ممنوح
     CapitalContribution,// مساهمة رأس مال
     ProfitDistribution,// توزيع أرباح على الشركاء
+    OpeningBalanceReversal,// عكس ترحيل رصيد الافتتاح
 }
 
 impl std::fmt::Display for JournalType {
@@ -61,6 +62,7 @@ impl std::fmt::Display for JournalType {
             Self::DiscountGrantedJournal => "حسم ممنوح",
             Self::CapitalContribution => "مساهمة رأس مال",
             Self::ProfitDistribution => "توزيع أرباح",
+            Self::OpeningBalanceReversal => "عكس ترحيل رصيد الافتتاح",
         };
         write!(f, "{}", s)
     }

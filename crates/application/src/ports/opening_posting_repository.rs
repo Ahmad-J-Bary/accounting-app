@@ -9,4 +9,9 @@ use crate::errors::AppError;
 #[async_trait]
 pub trait OpeningPostingRepository: Send + Sync {
     async fn post(&self, migration: &OpeningBalanceMigration, entry: &JournalEntry) -> Result<(), AppError>;
+
+    /// Persists an opening-balance cancellation atomically: the generated
+    /// reversing journal entry and the migration status change (Posted ->
+    /// Cancelled) are committed in a single SQLite transaction.
+    async fn cancel(&self, migration: &OpeningBalanceMigration, reversal: &JournalEntry) -> Result<(), AppError>;
 }

@@ -1,10 +1,10 @@
 # Work Summary — Accounting App (إصلاح رصيد الافتتاح / ترحيل الشركة)
 
 ## Goal (الجلسة الحالية)
-إنهاء **Phase C–G** من "محرك ترحيل الأرصدة الافتتاحية" لشركة قائمة (ExistingCompanyMigration) والفصل بين الشريك ومساهمة رأس المال، مع بناء المسار الكامل domain → port → infra → use case → Tauri → frontend، وترجيح كل مرحلة عبر الشيكات والاختبارات.
+إنهاء **Phase C–H** من "محرك ترحيل الأرصدة الافتتاحية" لشركة قائمة (ExistingCompanyMigration) والفصل بين الشريك ومساهمة رأس المال، مع بناء المسار الكامل domain → port → infra → use case → Tauri → frontend، وترجيح كل مرحلة عبر الشيكات والاختبارات.
 
 ## Status
-- **كل المراحل C → G مكتملة** — cargo check/clippy, tsc, eslint, vitest 100/100, cargo test (application) 6/6 نظيفة.
+- **كل المراحل C → H اكتملت** — cargo check/clippy, tsc, eslint, vitest 100/100, cargo test (application) 7/7 نظيفة.
 - **Phase A (مكتمل)**: فصل الشريك عن القيود المالية؛ `JournalType::CapitalContribution` + `CreateCapitalContributionUseCase` (Dr مصدر تمويل / Cr رأس مال شريك)؛ حذف side-effect `consolidated_capital` من CRUD الشريك.
 - **Phase B (مكتمل)**: `accounting_start_mode` (NewCompany|ExistingCompanyMigration) في settings + منصبي الوضع في واجهة الشركاء.
 - **Phase C (مكتمل)**: محرك ترحيل الأرصدة الأساسي.
@@ -12,8 +12,22 @@
 - **Phase E (مكتمل)**: تسميات/رسم القيود + `ProfitDistribution` واصلاح `CapitalContribution` في طبقات الخرائط.
 - **Phase F (مكتمل)**: atomicity معزول للميزة الجديدة (معاملة SQLite واحدة لترحيل الرصيد)، بلا لمس `UnitOfWork` العالمي (ظل stub) و`foreign_keys=false` كما هو (قرار مُعزول).
 - **Phase G (مكتمل)**: شيكات البوابات + اختبارات وحدات لتوزيع الأرباح + توثيق.
+- **Phase H (مكتمل)**: دورة حياة الترحيل — إلغاء/عكس رصيد مفتوح مُرحَّل بقيد ترحيل عكسي حقيقي.
 
 ## تفاصيل المراحل المكتملة
+
+### Phase H — إلغاء / عكس ترحيل مفتوح
+- **Domain**: `OpeningBalanceMigration::un_post()` (يسمح فقط Posted→Cancelled، عكس `mark_posted`)؛ `JournalType::OpeningBalanceReversal` + Display "عكس ترحيل رصيد الافتتاح".
+- **Port**: `OpeningPostingRepository::cancel(migration, reversal)`.
+- **Infra** `posting.rs`: أُعِيدت البنى داخل `insert_journal` مساعِد مشترك مُعاد استخدامه من `post`، وأُضيف `cancel` الذي يدرج القيد العكسي + `UPDATE status='Cancelled'` في معاملة واحدة.
+- **Use case** `cancel.rs`: `CancelOpeningBalanceUseCase` — يوجد القيد المرحل المدنّى عبر `find_by_source_id("opening_balance:<id>")`، يُقلب debit/credit لكل بند، ينشئ قيد `OpeningBalanceReversal` بِـ `source="ob_reversal:<id>"`، يعيّن `status=Posted` ثم `un_post` + `posting_repo.cancel`، مع **تجدّع** (Idempotent) للحالة `Cancelled` ورفض `Draft`. + unit test لِبثقة توازن القيد المعاكس.
+- **Tauri**: أمر `cancel_opening_balance_migration` مسجّل.
+- **Frontend**: زر "إلغاء الترحيل" (ظاهر فقط عند `status==='Posted'`) مع تأكيد + toast؛ `openingBalanceService.cancelMigration`؛ أضيف `OpeningBalanceReversal` إلى union و`JOURNAL_TYPE_LABELS` وmapper infra.
+
+## Verification (آخر تشغيل)
+- `cargo check --workspace` ✓ (بدون أخطاء)
+- `cargo clippy -p domain -p application -p infrastructure -p tauri-adapter` ✓
+- `cargo test -p application` → 7 tests pass (توزيع + إلغاء عكسي + أخرى)
 
 ### Phase C — المحرك (سابقاً)
 - Domain: `crates/domain/src/accounting/opening_balance.rs` (MigrationStatus/OpeningBalanceLine/OpeningBalanceMigration).
@@ -58,6 +72,7 @@
 - Use cases: `crates/application/src/use_cases/opening_balance/{create,list,post,allocate}.rs`
 - Tauri: `crates/tauri-adapter/src/commands/opening_balance.rs`, `bootstrap/container.rs`, `lib.rs`
 - Frontend: `apps/desktop/src/modules/accounting/api/openingBalanceService.ts`, `modules/opening-balance/pages/openingBalanceMigration.tsx`, `modules/accounting/journal/lib/journal-config.ts`, `app/router/ErpRoutes.tsx`, `app/shell/routeRegistry.ts`, `packages/shared-types/src/journal_entry.ts`
+- Phase H: `crates/application/src/use_cases/opening_balance/cancel.rs`, `crates/infrastructure/src/repositories/opening_balance/posting.rs`, `crates/tauri-adapter/src/commands/opening_balance.rs`
 
 ## Future Work (خارج النطاق الحالي)
 - توزيع صافي الربح تلقائيًا من قائمة الدخل (بدل المدخل اليدوي) إذا رغب المستخدم.

@@ -19,7 +19,8 @@ export type JournalType =
   | 'DiscountEarnedJournal'
   | 'DiscountGrantedJournal'
   | 'CapitalContribution'
-  | 'ProfitDistribution';
+  | 'ProfitDistribution'
+  | 'OpeningBalanceReversal';
 
 export interface JournalLineDto {
   account_id: string;

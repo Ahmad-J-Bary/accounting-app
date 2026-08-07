@@ -68,6 +68,9 @@ export const openingBalanceService = {
   async postMigration(id: string): Promise<PostOpeningBalanceResult> {
     return await invoke<PostOpeningBalanceResult>('post_opening_balance_migration', { id });
   },
+  async cancelMigration(id: string): Promise<OpeningBalanceMigrationDto> {
+    return await invoke<OpeningBalanceMigrationDto>('cancel_opening_balance_migration', { id });
+  },
   async allocateNetProfit(request: AllocateNetProfitRequest): Promise<NetProfitAllocationDto> {
     return await invoke<NetProfitAllocationDto>('allocate_net_profit', { request });
   },

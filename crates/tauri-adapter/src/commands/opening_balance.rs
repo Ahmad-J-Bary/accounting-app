@@ -1,7 +1,7 @@
 use crate::bootstrap::container::AppState;
 use application::use_cases::opening_balance::{
     AllocateNetProfitCommand, AllocateNetProfitUseCase,
-    CreateOpeningBalanceMigrationCommand, CreateOpeningBalanceUseCase,
+    CancelOpeningBalanceUseCase, CreateOpeningBalanceMigrationCommand, CreateOpeningBalanceUseCase,
     ListOpeningMigrationsUseCase, NetProfitAllocationDto, OpeningMigrationDto,
     PostOpeningBalanceResult, PostOpeningBalanceUseCase,
 };
@@ -56,6 +56,21 @@ pub async fn allocate_net_profit(
         state.journal_entry_repo.clone(),
     )
     .execute(request)
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn cancel_opening_balance_migration(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<OpeningMigrationDto, String> {
+    CancelOpeningBalanceUseCase::new(
+        state.opening_migration_repo.clone(),
+        state.journal_entry_repo.clone(),
+        state.opening_posting_repo.clone(),
+    )
+    .execute(id)
     .await
     .map_err(|e| e.to_string())
 }
