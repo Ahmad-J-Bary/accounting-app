@@ -195,6 +195,27 @@ impl OpeningBalanceMigration {
         Ok(())
     }
 
+    /// Re-opens a previously-cancelled (pre-posting) migration back to `Draft`
+    /// so its lines can be edited and the lifecycle re-run. Works only for
+    /// migrations that were cancelled before posting; posted/cancelled-after-
+    /// posting migrations cannot be re-opened and must be re-pathed via a fresh
+    /// migration.
+    pub fn reopen(&mut self) -> Result<(), DomainError> {
+        self.require_status(
+            &[MigrationStatus::Cancelled],
+            "لا يمكن إعادة فتح إلا الترحيل الملغى قبل الترحيل",
+        )?;
+        self.status = MigrationStatus::Draft;
+        self.validated_by = None;
+        self.validated_at = None;
+        self.approved_by = None;
+        self.approved_at = None;
+        self.posted_at = None;
+        self.locked_at = None;
+        self.updated_at = Utc::now();
+        Ok(())
+    }
+
     pub fn total_lines_amount(&self) -> Decimal {
         self.lines.iter().map(|l| l.amount).sum()
     }
@@ -285,6 +306,33 @@ mod tests {
         assert!(m2.cancel().is_err());
         m2.un_post().unwrap();
         assert_eq!(m2.status, MigrationStatus::Cancelled);
+    }
+
+    #[test]
+    fn reopen_returns_cancelled_to_draft_and_clears_audit() {
+        let mut m = sample(Decimal::new(1000, 2));
+        m.validate("u1").unwrap();
+        m.approve("u2").unwrap();
+        m.cancel().unwrap();
+        assert_eq!(m.status, MigrationStatus::Cancelled);
+
+        m.reopen().unwrap();
+        assert_eq!(m.status, MigrationStatus::Draft);
+        assert!(m.validated_at.is_none());
+        assert!(m.approved_by.is_none());
+        assert!(m.posted_at.is_none());
+    }
+
+    #[test]
+    fn reopen_rejects_non_cancelled_and_posted() {
+        let mut posted = sample(Decimal::new(500, 0));
+        posted.validate("u1").unwrap();
+        posted.approve("u2").unwrap();
+        posted.mark_posted().unwrap();
+        assert!(posted.reopen().is_err(), "فتح ترحيل مرحَّل مرفوض");
+
+        let mut draft = sample(Decimal::new(500, 0));
+        assert!(draft.reopen().is_err(), "فتح مسودة مرفوض");
     }
 
     #[test]

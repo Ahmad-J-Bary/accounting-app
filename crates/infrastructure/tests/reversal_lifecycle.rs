@@ -113,7 +113,7 @@ let pool = build_pool().await;
         .expect("reversal must exist");
     assert_eq!(stored_reversal.journal_type, JournalType::Reversal);
     assert_eq!(stored_reversal.reversal_of_entry_id, Some(original.id));
-    assert_eq!(stored_reversal.source_type.as_deref(), Some("CashReceipt"));
+    assert_eq!(stored_reversal.source_type.as_deref(), Some("cash_receipt"));
     assert_eq!(stored_reversal.status, JournalEntryStatus::Posted);
     assert!(stored_reversal.is_balanced());
     assert_eq!(
@@ -150,9 +150,9 @@ let pool = build_pool().await;
         .await
         .unwrap()
         .expect("entry must exist");
-    assert_eq!(stored.status, JournalEntryStatus::Draft);
+assert_eq!(stored.status, JournalEntryStatus::Draft);
     assert!(stored.reversal_of_entry_id.is_none());
-    assert!(stored.source_type.is_none());
+    assert_eq!(stored.source_type.as_deref(), Some("general_journal"));
     assert!(stored.reversed_at.is_none());
     assert!(stored.posted_at.is_none());
 }

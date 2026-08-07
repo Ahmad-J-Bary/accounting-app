@@ -33,6 +33,22 @@ pub struct AllocateNetProfitCommand {
     pub net_profit: String,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+pub struct ComputeNetProfitCommand {
+    /// The migration whose cutover date bounds the ledger window for the
+    /// computation (only posted entries at or before it are included).
+    pub migration_id: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ComputedNetProfitDto {
+    pub net_profit: Decimal,
+    pub total_revenue: Decimal,
+    pub total_expenses: Decimal,
+    pub gross_profit: Decimal,
+    pub entry_count: i64,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct PartnerAllocationShare {
     pub partner_id: String,

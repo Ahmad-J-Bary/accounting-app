@@ -88,10 +88,15 @@
 - Frontend: `apps/desktop/src/modules/accounting/api/openingBalanceService.ts`, `modules/opening-balance/pages/openingBalanceMigration.tsx`, `modules/accounting/journal/lib/journal-config.ts`, `app/router/ErpRoutes.tsx`, `app/shell/routeRegistry.ts`, `packages/shared-types/src/journal_entry.ts`
 - Phase H: `crates/application/src/use_cases/opening_balance/cancel.rs`, `crates/infrastructure/src/repositories/opening_balance/posting.rs`, `crates/tauri-adapter/src/commands/opening_balance.rs`
 
-## Future Work (خارج النطاق الحالي)
-- توزيع صافي الربح تلقائيًا من قائمة الدخل (بدل المدخل اليدوي) إذا رغب المستخدم.
-- تنفيذ `SqliteUnitOfWork` حقيقي على مستوى التطبيق ومراجعة `foreign_keys(true)`.
-- كتابة `source_type` لكل أنواع القيود وتحسين إعادة الفتح (reversal) للأرصدة المفتوحة.
+### Phase M — Auto Net-Profit from ledger (توزيع تلقائي)
+- New `ComputeNetProfitUseCase` (`net_profit.rs`): reads posted entries (status=Posted) up to the migration's cutover day end-of-day via `list_with_filters`, then classifies each line by `AccountType` (Revenue: credit−debit; Expenses: debit−credit); returns `ComputedNetProfitDto{net_profit, total_revenue, total_expenses, gross_profit, entry_count}`. Pure `compute_ledger_totals` free function + 4 unit tests (revenue/exp separation, drafts excluded, reversal nets to zero, unknown-account skipped).
+- Tauri `compute_opening_balance_net_profit` registered; frontend `openingBalanceService.computeNetProfit` + "احسب من اليومية" button on the allocate card (pre-fills net_profit + shows revenue/expense/net summary with entry count). Manual override still supported.
+
+### Phase N — `source_type` standardization + reopen cancelled migration
+- **N1**: Added canonical `JournalType::source_type() -> &'static str` (snake_case tags for all 25 variants). Infra `insert_entry` now persists the canonical tag whenever a caller leaves `source_type` None — one central, future-proof default covering all ~30 creation sites (no per-site duplication). `create_reversal` also uses the canonical tag of the original type (previously Debug-formatted `CashReceipt`).
+- **N2**: `OpeningBalanceMigration::reopen()` (Cancelled→Draft, clears validate/approve/post/lock audit) + `ReopenOpeningBalanceUseCase` + Tauri `reopen_opening_balance_migration` + a "إعادة فتح" button on cancelled migrations. +2 domain tests (reopen resets audit; rejects posted/draft).
+- Tests updated for canonical labels: domain `cash_receipt`, infra `draft_entry_has_no_reversal_metadata` expects `general_journal`.
+- Gates: workspace check, clippy 4 crates (clean), domain 54, application 12, infrastructure 8 (3 lib + 5 integration), tsc/eslint (0 errors, 46 pre-existing warnings), vitest 100 — all green.
 
 ### Phase I - State Machine (Draft/Validated/Approved/Posted/Locked/Cancelled)
 - Domain `opening_balance.rs`: 6-state `MigrationStatus` + fields company_id/source_system/source_reference/validated_by/at/approved_by/at/locked_at; transitions validate/approve/lock/unlock/mark_posted/un_post/cancel; mark_posted requires Approved; +5 unit tests.
@@ -125,3 +130,5 @@
 - Migration 142_reversal_integrity_cleanup.sql (idempotent): deletes Reversal entries with id a dangling reversing_of_entry_id (or NULL link) and resets stranded 'Reversed' originals back to Posted.
 - FK enforcement kept OFF (user decision; legacy migrations/live DBs).
 - Gates: workspace check, clippy, domain 52, application 8, infrastructure 8 (3 lib + 5 integration), tsc/eslint/vitest 100 - all green.
+
+> After M+N: gates — workspace check ✓, clippy 4 crates ✓ (0 warnings), domain 54 ✓, application 12 ✓ (10 opening_balance + 2), infrastructure 8 ✓ (3 lib + 5 integration), tsc ✓, eslint 0 errors / 46 pre-existing warnings, vitest 100 ✓. `JournalType::source_type()` central default at persist — source_type never NULL going forward; explicit overrides still honored. Reopen guarded to Cancelled cancellation (post-posting reversals not re-openable; create a new migration instead).

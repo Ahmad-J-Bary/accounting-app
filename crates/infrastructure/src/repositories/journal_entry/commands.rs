@@ -31,6 +31,11 @@ async fn insert_entry(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
     entry: &JournalEntry,
 ) -> Result<(), AppError> {
+    // Always persist a source_type. Explicit callers may set it; otherwise the
+    // canonical tag for the journal type is used so templates can label entries.
+    let source_type = entry.source_type.clone()
+        .or_else(|| Some(entry.journal_type.source_type().to_string()));
+
     sqlx::query(
         "INSERT OR REPLACE INTO journal_entries (id, entry_number, journal_type, source_id, source_type, entry_date, description, status, created_at, posted_at, reversed_at, updated_at, reversal_of_entry_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
@@ -38,7 +43,7 @@ async fn insert_entry(
     .bind(&entry.entry_number)
     .bind(format!("{:?}", entry.journal_type))
     .bind(&entry.source_id)
-    .bind(&entry.source_type)
+    .bind(&source_type)
     .bind(entry.entry_date.to_rfc3339())
     .bind(&entry.description)
     .bind(format!("{:?}", entry.status))

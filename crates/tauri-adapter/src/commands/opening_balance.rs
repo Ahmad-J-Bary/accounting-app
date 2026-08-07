@@ -1,11 +1,14 @@
 use crate::bootstrap::container::AppState;
 use application::use_cases::opening_balance::{
     AllocateNetProfitCommand, AllocateNetProfitUseCase,
-    ApproveOpeningBalanceUseCase, CancelOpeningBalanceUseCase, CreateOpeningBalanceMigrationCommand,
+    ApproveOpeningBalanceUseCase, CancelOpeningBalanceUseCase,
+    ComputeNetProfitCommand, ComputeNetProfitUseCase, ComputedNetProfitDto,
+    CreateOpeningBalanceMigrationCommand,
     CreateOpeningBalanceUseCase, GetOpeningReconciliationUseCase, ListOpeningMigrationsUseCase,
     LockOpeningBalanceUseCase, NetProfitAllocationDto, OpeningDetailsDto, OpeningMigrationDto,
     OpeningReconciliationDto, PostOpeningBalanceResult, PostOpeningBalanceUseCase,
-    SaveOpeningDetailsCommand, SaveOpeningDetailsUseCase, ValidateOpeningBalanceUseCase,
+    ReopenOpeningBalanceUseCase, SaveOpeningDetailsCommand, SaveOpeningDetailsUseCase,
+    ValidateOpeningBalanceUseCase,
 };
 use tauri::State;
 
@@ -63,6 +66,21 @@ pub async fn allocate_net_profit(
 }
 
 #[tauri::command]
+pub async fn compute_opening_balance_net_profit(
+    state: State<'_, AppState>,
+    request: ComputeNetProfitCommand,
+) -> Result<ComputedNetProfitDto, String> {
+    ComputeNetProfitUseCase::new(
+        state.opening_migration_repo.clone(),
+        state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
+    )
+    .execute(request)
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn cancel_opening_balance_migration(
     state: State<'_, AppState>,
     id: String,
@@ -75,6 +93,17 @@ pub async fn cancel_opening_balance_migration(
     .execute(id)
     .await
     .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn reopen_opening_balance_migration(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<OpeningMigrationDto, String> {
+    ReopenOpeningBalanceUseCase::new(state.opening_migration_repo.clone())
+        .execute(id)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

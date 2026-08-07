@@ -72,6 +72,18 @@ export interface AllocateNetProfitRequest {
   net_profit: string;
 }
 
+export interface ComputedNetProfitDto {
+  net_profit: string;
+  total_revenue: string;
+  total_expenses: string;
+  gross_profit: string;
+  entry_count: number;
+}
+
+export interface ComputeNetProfitRequest {
+  migration_id: string;
+}
+
 export interface OpeningCustomerItem {
   customer_id: string;
   reference?: string | null;
@@ -148,6 +160,9 @@ export const openingBalanceService = {
   async cancelMigration(id: string): Promise<OpeningBalanceMigrationDto> {
     return await invoke<OpeningBalanceMigrationDto>('cancel_opening_balance_migration', { id });
   },
+  async reopenMigration(id: string): Promise<OpeningBalanceMigrationDto> {
+    return await invoke<OpeningBalanceMigrationDto>('reopen_opening_balance_migration', { id });
+  },
   async validateMigration(id: string, by: string): Promise<OpeningBalanceMigrationDto> {
     return await invoke<OpeningBalanceMigrationDto>('validate_opening_balance_migration', { id, by });
   },
@@ -159,6 +174,9 @@ export const openingBalanceService = {
   },
   async allocateNetProfit(request: AllocateNetProfitRequest): Promise<NetProfitAllocationDto> {
     return await invoke<NetProfitAllocationDto>('allocate_net_profit', { request });
+  },
+  async computeNetProfit(request: ComputeNetProfitRequest): Promise<ComputedNetProfitDto> {
+    return await invoke<ComputedNetProfitDto>('compute_opening_balance_net_profit', { request });
   },
   async saveDetails(
     request: OpeningDetailsDto & { migration_id: string },

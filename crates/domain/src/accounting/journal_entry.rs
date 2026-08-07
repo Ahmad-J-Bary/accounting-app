@@ -70,6 +70,41 @@ impl std::fmt::Display for JournalType {
     }
 }
 
+impl JournalType {
+    /// Canonical machine-readable tag identifying the originating business
+    /// domain. Used to populate `JournalEntry::source_type` so templates and
+    /// reports can label entries without parsing descriptions.
+    pub fn source_type(self) -> &'static str {
+        match self {
+            Self::CashReceipt => "cash_receipt",
+            Self::CashPayment => "cash_payment",
+            Self::SupplierReceiptJournal => "supplier_receipt",
+            Self::CustomerPaymentJournal => "customer_payment",
+            Self::ExpenseVoucher => "expense_voucher",
+            Self::DrawingsVoucher => "drawings_voucher",
+            Self::CashOpeningBalance => "cash_opening_balance",
+            Self::AccountOpeningBalance => "account_opening_balance",
+            Self::MaterialOpeningBalance => "material_opening_balance",
+            Self::CashJournal => "cash_journal",
+            Self::CashSalesJournal => "cash_sales",
+            Self::CreditSalesJournal => "credit_sales",
+            Self::PurchaseJournal => "purchase",
+            Self::PurchaseCostsJournal => "purchase_costs",
+            Self::GeneralJournal => "general_journal",
+            Self::SalesReturnJournal => "sales_return",
+            Self::PurchaseReturnJournal => "purchase_return",
+            Self::DamagedJournal => "damaged",
+            Self::AdjustmentJournal => "adjustment",
+            Self::DiscountEarnedJournal => "discount_earned",
+            Self::DiscountGrantedJournal => "discount_granted",
+            Self::CapitalContribution => "capital_contribution",
+            Self::ProfitDistribution => "profit_distribution",
+            Self::OpeningBalanceReversal => "opening_balance_reversal",
+            Self::Reversal => "reversal",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JournalLine {
     pub account_id: AccountId,
@@ -238,7 +273,7 @@ impl JournalEntry {
             None,
         )?;
 
-        reversal.source_type = Some(format!("{:?}", original.journal_type));
+        reversal.source_type = Some(original.journal_type.source_type().to_string());
         reversal.reversal_of_entry_id = Some(original.id);
         Ok(reversal)
     }
@@ -544,7 +579,7 @@ mod tests {
 
         assert_eq!(reversal.journal_type, JournalType::Reversal);
         assert_eq!(reversal.reversal_of_entry_id, Some(original.id));
-        assert_eq!(reversal.source_type.as_deref(), Some("CashReceipt"));
+        assert_eq!(reversal.source_type.as_deref(), Some("cash_receipt"));
         assert!(reversal.is_balanced());
         // Line 0 was a debit of 100 → reversal line 0 is a credit of 100.
         assert_eq!(reversal.lines[0].base_debit(), Decimal::ZERO);
