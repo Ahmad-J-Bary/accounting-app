@@ -1,0 +1,48 @@
+# Work Summary — Accounting App (فس إصلاح رصيد الافتتاح / ترحيل الشركة)
+
+## Goal (الجلسة الحالية)
+إنهاء **Phase C–D** من "محرك ترحيل الأرصدة الافتتاحية" لشركة قائمة (ExistingCompanyMigration) والفصل بين الشريك ومساهمة رأس المال، مع بناء المسار الكامل domain → port → infra → use case → Tauri → frontend، وترجيح التغييرات مسبقًا عبر الشيكات والاختبارات.
+
+## Status
+- **الكل: Phase C backend complete + frontend wizard** — cargo check/clippy, tsc, eslint, vitest 100/100 جميعها نظيفة.
+- **Phase A (سابق، مكتمل)**: فصل الشريك عن القيود المالية؛ `JournalType::CapitalContribution` + `CreateCapitalContributionUseCase` (Dr مصدر تمويل / Cr حق ملكية شريك)؛ حذف side-effect `consolidated_capital` من CRUD الشريك.
+- **Phase B (سابق، مكتمل)**: إضافة `accounting_start_mode` (NewCompany|ExistingCompanyMigration) إلى settings + منصبي الوضع في واجهة الشركاء.
+- **Phase C (حاليًا مكتمل)**: محرك ترحيل الأرصدة.
+
+### Phase C — المحرك (الوصل والتشغيل)
+1. **Domain** — `crates/domain/src/accounting/opening_balance.rs`: `MigrationStatus`(Draft/Posted/Cancelled)+`OpeningBalanceLine{account_id,amount>0,description}`+`OpeningBalanceMigration` مع `new/set_notes/mark_posted/cancel/total_lines_amount`؛ أُصدّرت من `accounting/mod.rs`.
+2. **Migration DB** — `crates/infrastructure/src/db/migrations/139_opening_balance_migrations.sql`: `opening_balance_migrations`(id, cutover_date, status, notes, posted_at, created_at, updated_at)+`opening_balance_lines`(id, migration_id FK, account_id, amount, description)+ index.
+3. **Port** — `crates/application/src/ports/opening_migration_repository.rs` (create/update/find_by_id/list/delete).
+4. **Infra Repo** — `crates/infrastructure/src/repositories/opening_balance/{mod,models,mappers,queries}.rs` `SqliteOpeningMigrationRepository` مسجل في `repositories/mod.rs` + `lib.rs`.
+5. **Use cases** — `crates/application/src/use_cases/opening_balance/`: `CreateOpeningBalanceUseCase`, `ListOpeningMigrationsUseCase`, `PostOpeningBalanceUseCase` (يبني قيد `AccountOpeningBalance` Dr/Cr حسب طبيعة الحساب، يوزن بكافرات "فتح رأس مال" ضد حساب 46 إن لزم، يرحّل ويعيّن `mark_posted`). سّجل في `use_cases/mod.rs`.
+6. **Tauri** — `commands/opening_balance.rs` (create/list/post via `request`/`id`) + تسجيل في `commands/mod.rs` و `lib.rs`.
+7. **Container** — `AppState.opening_migration_repo` + بناؤه في `bootstrap/container.rs`.
+8. **Frontend** —
+   - `modules/accounting/api/openingBalanceService.ts`: أنواع + `create/list/postMigration`.
+   - `modules/opening-balance/pages/openingBalanceMigration.tsx`: صفحة Wizard (تاريخ cutover, بنود بحساب/مبلغ/دائن-مدين, حفظ مسودة, عرض التوازن، ترحيل قائمة) — خلف تطبيق `openingBalance.tsx` (بضاعة أول المدة المخزني).
+   - Router: مسار `/opening-balance-migration` + إدخال nav في `routeRegistry.ts` (ضمن "المحاسبة العامة").
+
+## Verification
+- `cargo check --workspace` ✓
+- `cargo clippy -p domain -p application -p infrastructure -p tauri-adapter` ✓
+- `pnpm --filter desktop exec tsc --noEmit` ✓
+- `pnpm --filter desktop exec eslint <aَنا files>` ✓
+- `pnpm --filter desktop exec vitest run` → 6 files / 100 tests pass ✓
+
+## Next Steps
+- **Phase D**: تحقق معادلة المستخدم (Assets=Liab+Equity عند الترحيل من عرض Validation في Wizard) + توزيع صافي الربح إلى الشريك.
+- **Phase E**: رسم/تسميات القيود الدقيقة لكل نشأة، مصادر `source_id` متسقة.
+- **Phase F**: معالجة `UnitOfWork` الواجهي (absence of real transactions) و إعادة التحق من `foreign_keys=false` في pool.rs وضمان atomicity عند ترحيل الأرصدة.
+- **Phase G**: توثيق + تشييد/تحزيم + فحص E2E.
+
+## Known Caveats
+- `UnitOfWork` في هذا المشروع stub (لا تحقييات فعلية في jedheolixture) — سيتم إنشاؤها في Phase F.
+- قعدة المعادلات الحالية لا يتضمن jurisdiction نقل رصيد الشركة إلى حساب يمكن إظهاره في الميزانية بعد الترحيل (حساب 46 كمضاد)؛ يُراجع في Phase D.
+
+## Key File Paths
+- Domain: `crates/domain/src/accounting/opening_balance.rs`, `accounting/mod.rs`
+- Ports: `crates/application/src/ports/opening_migration_repository.rs`
+- Infra: `crates/infrastructure/src/repositories/opening_balance/*`, `db/migrations/139_*.sql`
+- Use cases: `crates/application/src/use_cases/opening_balance/*`
+- Tauri: `crates/tauri-adapter/src/commands/opening_balance.rs`, `bootstrap/container.rs`, `lib.rs`
+- Frontend: `apps/desktop/src/modules/accounting/api/openingBalanceService.ts`, `apps/desktop/src/modules/opening-balance/pages/openingBalanceMigration.tsx`, `app/router/ErpRoutes.tsx`, `app/shell/routeRegistry.ts`

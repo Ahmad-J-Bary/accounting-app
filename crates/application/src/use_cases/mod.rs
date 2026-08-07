@@ -24,3 +24,4 @@ pub mod currency;
 pub mod sales_return;
 pub mod purchase_return;
 pub mod settle_partner_balance;
+pub mod opening_balance;

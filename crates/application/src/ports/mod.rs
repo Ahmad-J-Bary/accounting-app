@@ -27,3 +27,4 @@ pub mod sales_return_repository;
 pub mod purchase_return_repository;
 pub mod inventory_lot_repository;
 pub mod warehouse_repository;
+pub mod opening_migration_repository;

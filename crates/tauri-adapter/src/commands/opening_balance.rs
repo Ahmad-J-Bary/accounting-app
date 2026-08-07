@@ -1,0 +1,42 @@
+use crate::bootstrap::container::AppState;
+use application::use_cases::opening_balance::{
+    CreateOpeningBalanceMigrationCommand, CreateOpeningBalanceUseCase,
+    ListOpeningMigrationsUseCase, OpeningMigrationDto, PostOpeningBalanceUseCase,
+};
+use tauri::State;
+
+#[tauri::command]
+pub async fn create_opening_balance_migration(
+    state: State<'_, AppState>,
+    request: CreateOpeningBalanceMigrationCommand,
+) -> Result<OpeningMigrationDto, String> {
+    CreateOpeningBalanceUseCase::new(state.opening_migration_repo.clone())
+        .execute(request)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn list_opening_balance_migrations(
+    state: State<'_, AppState>,
+) -> Result<Vec<OpeningMigrationDto>, String> {
+    ListOpeningMigrationsUseCase::new(state.opening_migration_repo.clone())
+        .execute()
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn post_opening_balance_migration(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<OpeningMigrationDto, String> {
+    PostOpeningBalanceUseCase::new(
+        state.opening_migration_repo.clone(),
+        state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
+    )
+    .execute(id)
+    .await
+    .map_err(|e| e.to_string())
+}

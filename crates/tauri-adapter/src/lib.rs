@@ -179,6 +179,10 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::settle::settle_partner_balance,
             // Export commands
             commands::export::save_file,
+            // Opening balance migration
+            commands::opening_balance::create_opening_balance_migration,
+            commands::opening_balance::list_opening_balance_migrations,
+            commands::opening_balance::post_opening_balance_migration,
         ])
         .setup(|app| {
             let app_data_dir = app

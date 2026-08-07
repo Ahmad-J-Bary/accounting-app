@@ -21,6 +21,7 @@ use application::ports::stock_adjustment_repository::StockAdjustmentRepository;
 use application::ports::stock_movement_repository::StockMovementRepository;
 use application::ports::supplier_repository::SupplierRepository;
 use application::ports::warehouse_repository::WarehouseRepository;
+use application::ports::opening_migration_repository::OpeningMigrationRepository;
 use application::ports::unified_invoice_repository::UnifiedInvoiceRepository;
 use application::ports::unit_of_work::UnitOfWork;
 use application::ports::user_repository::UserRepository;
@@ -44,6 +45,7 @@ use infrastructure::{
 use infrastructure::repositories::SqliteInvoiceRepository;
 use infrastructure::repositories::SqlitePurchaseInvoiceRepository;
 use infrastructure::SqliteWarehouseRepository;
+use infrastructure::repositories::SqliteOpeningMigrationRepository;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -75,6 +77,7 @@ pub struct AppState {
     pub purchase_return_repo: Arc<dyn PurchaseReturnRepository>,
     pub inventory_lot_repo: Arc<dyn InventoryLotRepository>,
     pub warehouse_repo: Arc<dyn WarehouseRepository>,
+    pub opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
     pub uow: Arc<dyn UnitOfWork>,
     pub material_code_use_cases: Arc<MaterialCodeUseCases>,
     pub currency_commands: Arc<CurrencyCommands>,
@@ -147,6 +150,8 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
         purchase_return_repo: purchase_return_repo.clone() as Arc<dyn PurchaseReturnRepository>,
         inventory_lot_repo: inventory_lot_repo.clone() as Arc<dyn InventoryLotRepository>,
         warehouse_repo: warehouse_repo.clone() as Arc<dyn WarehouseRepository>,
+        opening_migration_repo: Arc::new(SqliteOpeningMigrationRepository::new(pool.clone()))
+            as Arc<dyn OpeningMigrationRepository>,
         uow: Arc::new(SqliteUnitOfWork::new(pool.clone())) as Arc<dyn UnitOfWork>,
         material_code_use_cases: Arc::new(MaterialCodeUseCases::new(
             prefix_repo.clone(),

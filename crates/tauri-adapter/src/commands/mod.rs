@@ -27,3 +27,4 @@ pub mod warehouse;
 pub mod transfer;
 pub mod settle;
 pub mod export;
+pub mod opening_balance;

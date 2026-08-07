@@ -16,6 +16,7 @@ export const ALL_SYSTEM_ROUTES: SystemRouteEntry[] = [
   { id: "accounting-chart", to: "/accounting", label: "دليل الحسابات", icon: "BookOpen", groupId: "accounting", groupLabel: "المحاسبة العامة" },
   { id: "journal", to: "/journal", label: "القيود اليومية", icon: "FileText", groupId: "accounting", groupLabel: "المحاسبة العامة" },
   { id: "accounting-ledger", to: "/accounting/reports/ledger", label: "دفتر الأستاذ", icon: "BarChart3", groupId: "", groupLabel: "" },
+  { id: "opening-balance-migration", to: "/opening-balance-migration", label: "رصيد افتتاح الشركة", icon: "Layers", groupId: "accounting", groupLabel: "المحاسبة العامة" },
   { id: "income-statement", to: "/accounting/reports/income", label: "قائمة الدخل", icon: "DollarSign", groupId: "", groupLabel: "" },
   { id: "trial-balance", to: "/accounting/reports/trial-balance", label: "ميزان المراجعة", icon: "Scale", groupId: "", groupLabel: "" },
   { id: "balance-sheet", to: "/accounting/reports/balance-sheet", label: "الميزانية العمومية", icon: "BarChart3", groupId: "", groupLabel: "" },
