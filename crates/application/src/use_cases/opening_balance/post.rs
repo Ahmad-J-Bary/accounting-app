@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use rust_decimal::Decimal;
 use domain::accounting::account::AccountType;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::shared::{Currency, MonetaryAmount};
@@ -7,16 +6,15 @@ use domain::shared::{Currency, MonetaryAmount};
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
+use crate::ports::opening_detail_repository::OpeningDetailRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::opening_posting_repository::OpeningPostingRepository;
+use crate::use_cases::opening_balance::reconcile::{readiness_blockers, GetOpeningReconciliationUseCase};
 use crate::use_cases::opening_balance::types::{OpeningMigrationDto, PostOpeningBalanceResult};
-
-/// Code of the opening-equity contra account used to balance the posting when
-/// the user-supplied balances are not already in equilibrium (Debit = Credit).
-const OPENING_EQUITY_ACCOUNT_CODE: &str = "53";
 
 pub struct PostOpeningBalanceUseCase {
     repo: Arc<dyn OpeningMigrationRepository>,
+    detail_repo: Arc<dyn OpeningDetailRepository>,
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
     posting_repo: Arc<dyn OpeningPostingRepository>,
@@ -25,11 +23,18 @@ pub struct PostOpeningBalanceUseCase {
 impl PostOpeningBalanceUseCase {
     pub fn new(
         repo: Arc<dyn OpeningMigrationRepository>,
+        detail_repo: Arc<dyn OpeningDetailRepository>,
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
         posting_repo: Arc<dyn OpeningPostingRepository>,
     ) -> Self {
-        Self { repo, account_repo, journal_repo, posting_repo }
+        Self {
+            repo,
+            detail_repo,
+            account_repo,
+            journal_repo,
+            posting_repo,
+        }
     }
 
     pub async fn execute(&self, id: String) -> Result<PostOpeningBalanceResult, AppError> {
@@ -40,9 +45,24 @@ impl PostOpeningBalanceUseCase {
             return Err(AppError::Invalid("ترحيل الرصيد الافتتاحي بلا بنود".into()));
         }
 
+        // Enforcement gate: a migration may only be posted when its opening lines
+        // are in equilibrium (Debit = Credit) AND the entered sub-ledger details
+        // reconcile to the general-ledger opening lines. No silent plug account.
+        let recon = GetOpeningReconciliationUseCase::new(
+            self.repo.clone(),
+            self.detail_repo.clone(),
+            self.account_repo.clone(),
+            self.journal_repo.clone(),
+        )
+        .execute(id.clone())
+        .await?;
+
+        let blockers = readiness_blockers(&recon, false);
+        if !blockers.is_empty() {
+            return Err(AppError::Invalid(blockers.join("؛ ")));
+        }
+
         let base_currency = Currency::new("SAR", "SAR", "ريال", "ر.س", 2, false);
-        let mut debit_sum = Decimal::ZERO;
-        let mut credit_sum = Decimal::ZERO;
 
         let mut lines: Vec<JournalLine> = Vec::with_capacity(migration.lines.len());
         for line in &migration.lines {
@@ -52,12 +72,6 @@ impl PostOpeningBalanceUseCase {
             let amount = MonetaryAmount::from_base(line.amount, base_currency.clone());
             let debit_nature = matches!(account.account_type, AccountType::Assets | AccountType::Expenses);
 
-            if debit_nature {
-                debit_sum += line.amount;
-            } else {
-                credit_sum += line.amount;
-            }
-
             let description = line.description.clone()
                 .unwrap_or_else(|| format!("رصيد افتتاحي — {}", account.name_ar));
 
@@ -66,27 +80,6 @@ impl PostOpeningBalanceUseCase {
             } else {
                 JournalLine::new(line.account_id, MonetaryAmount::zero(base_currency.clone()), amount.clone(), description)
             });
-        }
-
-        // The accounting identity Assets = Liabilities + Equity is satisfied exactly
-        // when debit-nature balances equal credit-nature balances. If the user-supplied
-        // lines are not in equilibrium, absorb the difference into the opening-balance
-        // equity account (53) so the resulting journal remains balanced.
-        let was_balanced = debit_sum == credit_sum;
-        if !was_balanced {
-            let equity = self.account_repo.find_by_code(OPENING_EQUITY_ACCOUNT_CODE).await?
-                .ok_or_else(|| AppError::NotFound(
-                    format!("حساب الرصيد الافتتاحي غير موجود: {OPENING_EQUITY_ACCOUNT_CODE}")
-                ))?;
-            let diff = (debit_sum - credit_sum).abs();
-            let amount = MonetaryAmount::from_base(diff, base_currency.clone());
-            let zero = MonetaryAmount::zero(base_currency.clone());
-            let description = "تسوية رصيد افتتاحي".to_string();
-            if debit_sum > credit_sum {
-                lines.push(JournalLine::new(equity.id, zero, amount, description));
-            } else {
-                lines.push(JournalLine::new(equity.id, amount, zero, description));
-            }
         }
 
         let mut entry = JournalEntry::new(
@@ -107,9 +100,9 @@ impl PostOpeningBalanceUseCase {
 
         Ok(PostOpeningBalanceResult {
             migration: OpeningMigrationDto(migration),
-            debit_total: debit_sum,
-            credit_total: credit_sum,
-            equity_balanced: was_balanced,
+            debit_total: recon.debit_total,
+            credit_total: recon.credit_total,
+            equity_balanced: recon.debit_equals_credit,
         })
     }
 }

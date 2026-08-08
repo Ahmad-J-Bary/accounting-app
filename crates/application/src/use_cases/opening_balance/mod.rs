@@ -17,7 +17,10 @@ pub use create::CreateOpeningBalanceUseCase;
 pub use details::SaveOpeningDetailsUseCase;
 pub use list::ListOpeningMigrationsUseCase;
 pub use post::PostOpeningBalanceUseCase;
-pub use reconcile::GetOpeningReconciliationUseCase;
+pub use reconcile::{
+    account_subledger_kind, detail_subledger_totals, gl_bucket_totals, readiness_blockers,
+    GetOpeningReconciliationUseCase, SubledgerKind,
+};
 pub use reopen::ReopenOpeningBalanceUseCase;
 pub use state::{ApproveOpeningBalanceUseCase, LockOpeningBalanceUseCase, ValidateOpeningBalanceUseCase};
 pub use types::{

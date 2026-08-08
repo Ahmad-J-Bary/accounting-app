@@ -1,7 +1,11 @@
 use std::sync::Arc;
 
 use crate::errors::AppError;
+use crate::ports::account_repository::AccountRepository;
+use crate::ports::journal_entry_repository::JournalEntryRepository;
+use crate::ports::opening_detail_repository::OpeningDetailRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
+use crate::use_cases::opening_balance::reconcile::{readiness_blockers, GetOpeningReconciliationUseCase};
 use crate::use_cases::opening_balance::types::OpeningMigrationDto;
 
 /// Moves an opening-balance migration to `Validated`.
@@ -45,22 +49,50 @@ impl ApproveOpeningBalanceUseCase {
     }
 }
 
-/// Locks a posted migration. The controller must ensure the Opening Balance
-/// Control account is zero before calling; the domain enforces the Posted-state
-/// precondition.
+/// Locks a posted migration. The Opening Balance Control account (53) must be
+/// zero and the sub-ledgers must reconcile before locking; the domain enforces
+/// the Posted-state precondition.
 pub struct LockOpeningBalanceUseCase {
     repo: Arc<dyn OpeningMigrationRepository>,
+    detail_repo: Arc<dyn OpeningDetailRepository>,
+    account_repo: Arc<dyn AccountRepository>,
+    journal_repo: Arc<dyn JournalEntryRepository>,
 }
 
 impl LockOpeningBalanceUseCase {
-    pub fn new(repo: Arc<dyn OpeningMigrationRepository>) -> Self {
-        Self { repo }
+    pub fn new(
+        repo: Arc<dyn OpeningMigrationRepository>,
+        detail_repo: Arc<dyn OpeningDetailRepository>,
+        account_repo: Arc<dyn AccountRepository>,
+        journal_repo: Arc<dyn JournalEntryRepository>,
+    ) -> Self {
+        Self {
+            repo,
+            detail_repo,
+            account_repo,
+            journal_repo,
+        }
     }
 
     pub async fn execute(&self, id: String) -> Result<OpeningMigrationDto, AppError> {
         let mut migration = self.repo.find_by_id(&id).await?
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
         migration.lock().map_err(AppError::Domain)?;
+
+        let recon = GetOpeningReconciliationUseCase::new(
+            self.repo.clone(),
+            self.detail_repo.clone(),
+            self.account_repo.clone(),
+            self.journal_repo.clone(),
+        )
+        .execute(id)
+        .await?;
+
+        let blockers = readiness_blockers(&recon, true);
+        if !blockers.is_empty() {
+            return Err(AppError::Invalid(blockers.join("؛ ")));
+        }
+
         self.repo.update(&migration).await?;
         Ok(OpeningMigrationDto(migration))
     }

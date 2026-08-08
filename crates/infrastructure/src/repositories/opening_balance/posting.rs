@@ -25,13 +25,22 @@ async fn insert_journal<'a>(
     tx: &mut Transaction<'a, Sqlite>,
     entry: &JournalEntry,
 ) -> Result<(), AppError> {
+    // Canonical tag default (same rule as the general journal repository): a
+    // caller-provided source_type wins; otherwise persist the type's canonical
+    // snake_case tag so `source_type` is never NULL going forward.
+    let source_type = entry
+        .source_type
+        .clone()
+        .or_else(|| Some(entry.journal_type.source_type().to_string()));
+
     sqlx::query(
-        "INSERT OR REPLACE INTO journal_entries (id, entry_number, journal_type, source_id, entry_date, description, status, created_at, posted_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT OR REPLACE INTO journal_entries (id, entry_number, journal_type, source_id, source_type, entry_date, description, status, created_at, posted_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(entry.id.0.to_string())
     .bind(&entry.entry_number)
     .bind(format!("{:?}", entry.journal_type))
     .bind(&entry.source_id)
+    .bind(&source_type)
     .bind(entry.entry_date.to_rfc3339())
     .bind(&entry.description)
     .bind(format!("{:?}", entry.status))

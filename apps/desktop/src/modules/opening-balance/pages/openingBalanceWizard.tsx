@@ -241,7 +241,7 @@ export default function OpeningBalanceWizard() {
         setBusy(true);
         const res = await openingBalanceService.postMigration(migration.id);
         setMigration(res.migration);
-        toast.success(res.equity_balanced ? "تم الترحيل (متوازن)" : "تم الترحيل مع تسوية على رصيد الافتتاح");
+        toast.success("تم الترحيل (متوازن)");
         setBusy(false);
         return true;
       }
@@ -497,6 +497,25 @@ export default function OpeningBalanceWizard() {
                     رصيد الافتتاح (53): {parseFloat(reconciliation.opening_control_balance).toFixed(2)} · مدين {parseFloat(reconciliation.debit_total).toFixed(2)} / دائن {parseFloat(reconciliation.credit_total).toFixed(2)}
                   </span>
                 </div>
+                {(() => {
+                  const controlZero = parseFloat(reconciliation.opening_control_balance) === 0;
+                  const readyToPost = reconciliation.debit_equals_credit && reconciliation.all_reconciled;
+                  const readyToLock = readyToPost && controlZero;
+                  const blockers = [
+                    !reconciliation.debit_equals_credit && "القيد غير متوازن",
+                    !reconciliation.all_reconciled && "الواجهات الفرعية غير مطابقة",
+                    !controlZero && "رصيد 53 لم يُصفَّر بعد",
+                  ].filter(Boolean) as string[];
+                  return (
+                    <div className={"px-3 py-2 text-xs font-bold rounded-b-lg " + (readyToPost ? (readyToLock ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700") : "bg-red-50 text-red-600")}>
+                      {readyToLock
+                        ? "جاهز للترحيل والقفل ✓"
+                        : readyToPost
+                          ? "جاهز للترحيل (صفّر رصيد 53 قبل القفل)"
+                          : "غير جاهز: " + blockers.join(" · ")}
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>

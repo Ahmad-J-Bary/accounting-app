@@ -40,6 +40,7 @@ pub async fn post_opening_balance_migration(
 ) -> Result<PostOpeningBalanceResult, String> {
     PostOpeningBalanceUseCase::new(
         state.opening_migration_repo.clone(),
+        state.opening_detail_repo.clone(),
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
         state.opening_posting_repo.clone(),
@@ -135,10 +136,15 @@ pub async fn lock_opening_balance_migration(
     state: State<'_, AppState>,
     id: String,
 ) -> Result<OpeningMigrationDto, String> {
-    LockOpeningBalanceUseCase::new(state.opening_migration_repo.clone())
-        .execute(id)
-        .await
-        .map_err(|e| e.to_string())
+    LockOpeningBalanceUseCase::new(
+        state.opening_migration_repo.clone(),
+        state.opening_detail_repo.clone(),
+        state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
+    )
+    .execute(id)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -163,11 +169,6 @@ pub async fn get_opening_balance_reconciliation(
     GetOpeningReconciliationUseCase::new(
         state.opening_migration_repo.clone(),
         state.opening_detail_repo.clone(),
-        state.customer_repo.clone(),
-        state.supplier_repo.clone(),
-        state.material_repo.clone(),
-        state.stock_movement_repo.clone(),
-        state.asset_repo.clone(),
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
     )
