@@ -19,7 +19,10 @@ pub async fn create_opening_balance_migration(
     state: State<'_, AppState>,
     request: CreateOpeningBalanceMigrationCommand,
 ) -> Result<OpeningMigrationDto, String> {
-    CreateOpeningBalanceUseCase::new(state.opening_migration_repo.clone())
+    CreateOpeningBalanceUseCase::new(
+        state.opening_migration_repo.clone(),
+        state.account_repo.clone(),
+    )
         .execute(request)
         .await
         .map_err(|e| e.to_string())

@@ -92,7 +92,14 @@ export default function OpeningBalanceWizard() {
   });
 
   const detailAccounts = useMemo(
-    () => accounts.filter((a) => a.category === "Detail" && a.is_active),
+    () =>
+      accounts.filter(
+        (a) =>
+          a.category === "Detail" &&
+          a.is_active &&
+          a.account_type !== "Revenue" &&
+          a.account_type !== "Expenses",
+      ),
     [accounts],
   );
 
@@ -252,6 +259,11 @@ export default function OpeningBalanceWizard() {
         setBusy(true);
         const res = await openingBalanceService.postMigration(migration.id);
         setMigration(res.migration);
+        // Auto-apply the residual reclassification (Dr 53 / Cr residual account)
+        // so the OBE control (53) zeroes and the lock gate can be satisfied.
+        if (residualClassification && residualAccountId) {
+          await openingBalanceService.applyResidual(migration.id);
+        }
         toast.success("تم الترحيل (متوازن)");
         setBusy(false);
         return true;

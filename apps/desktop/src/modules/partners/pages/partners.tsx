@@ -4,7 +4,6 @@ import {
   PieChart as PieChartIcon,
 } from "lucide-react";
 import { partnerService, type PartnerDto, type PartnerRequest } from '@modules/partners/api/partnerService';
-import { accountingService } from '@modules/accounting/api/accountingService';
 import { settingsService } from '@modules/core/api/settingsService';
 import type { UpdateSettingsRequest } from '@erp/shared-types';
 
@@ -14,6 +13,7 @@ import { PartnersToolbar } from '../components/PartnersToolbar';
 import { PartnersSidePanel } from '../components/PartnersSidePanel';
 import { ChartCard } from '@modules/partners/components/ChartCard';
 import { PartnerEquityCard } from '@modules/partners/components/PartnerEquityCard';
+import { CapitalSourceDialog, type CapitalSource } from '../components/CapitalSourceDialog';
 import { useDataTable } from '@shared/hooks';
 import { useTabs } from "@app/providers/TabContext";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
@@ -47,6 +47,12 @@ export default function Partners() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [drawingsSaving, setDrawingsSaving] = useState(false);
+  const [pendingCapital, setPendingCapital] = useState<{
+    partnerId: string;
+    amount: string;
+    isAmountInOriginal: boolean;
+  } | null>(null);
+  const [capitalSubmitting, setCapitalSubmitting] = useState(false);
 
   const [startMode, setStartMode] = useState<string>("NewCompany");
 
@@ -113,20 +119,16 @@ export default function Partners() {
           accountingStartMode: startMode,
         } as PartnerRequest);
         // Two accounting-start modes (company-level setting):
-        // - NewCompany: partner capital becomes an explicit cash contribution.
+        // - NewCompany: partner capital requires an explicit contribution event —
+        //   ask "how was the capital provided?" (cash / bank / in-kind / owed).
         // - ExistingCompanyMigration: opening capital only — no cash journal.
         if (startMode !== "ExistingCompanyMigration" && Number(payload.amount) > 0) {
-          const accounts = await accountingService.getChartOfAccounts();
-          const cash = accounts.find((a) => a.code === "122");
-          const fundingAccountId = cash?.id ?? accounts.find((a) => a.account_type === "Assets")?.id;
-          if (fundingAccountId) {
-            await partnerService.createCapitalContribution({
-              partnerId,
-              fundingAccountId,
-              amount: payload.amount,
-              isAmountInOriginal: payload.isAmountInOriginal,
-            });
-          }
+          setPendingCapital({
+            partnerId,
+            amount: payload.amount,
+            isAmountInOriginal: payload.isAmountInOriginal,
+          });
+          return; // keep the side panel open; dialog drives the contribution
         }
         toast.success(
           startMode === "ExistingCompanyMigration"
@@ -168,10 +170,34 @@ export default function Partners() {
     }
   };
 
+  const handleCapitalConfirm = async (_source: CapitalSource, fundingAccountId: string) => {
+    if (!pendingCapital) return;
+    try {
+      setCapitalSubmitting(true);
+      await partnerService.createCapitalContribution({
+        partnerId: pendingCapital.partnerId,
+        fundingAccountId,
+        amount: pendingCapital.amount,
+        isAmountInOriginal: pendingCapital.isAmountInOriginal,
+      });
+      setPendingCapital(null);
+      setActivePanel(null);
+      setSelectedId(null);
+      setEditPartner(null);
+      refresh(true);
+      toast.success("تم تسجيل مساهمة رأس المال بنجاح");
+    } catch (error) {
+      toast.error("فشل تسجيل المساهمة: " + error);
+    } finally {
+      setCapitalSubmitting(false);
+    }
+  };
+
   const isLoading = loading;
 
   return (
-    <OperationalTableTemplate
+    <>
+      <OperationalTableTemplate
       title="الشركاء ورأس المال"
       toolbar={
         <PartnersToolbar
@@ -275,6 +301,16 @@ export default function Partners() {
         />
       }
       isPanelOpen={activePanel != null}
-    />
+      />
+      <CapitalSourceDialog
+        open={!!pendingCapital}
+        partnerId={pendingCapital?.partnerId ?? null}
+        amount={pendingCapital?.amount ?? ""}
+        isAmountInOriginal={pendingCapital?.isAmountInOriginal ?? false}
+        submitting={capitalSubmitting}
+        onClose={() => setPendingCapital(null)}
+        onConfirm={handleCapitalConfirm}
+      />
+    </>
   );
 }

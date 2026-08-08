@@ -6,16 +6,22 @@ use domain::accounting::{MigrationStatus, OpeningBalanceMigration, OpeningBalanc
 use domain::shared::ids::AccountId;
 
 use crate::errors::AppError;
+use crate::ports::account_repository::AccountRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::use_cases::opening_balance::types::{CreateOpeningBalanceMigrationCommand, OpeningMigrationDto};
+use domain::accounting::account::AccountType;
 
 pub struct CreateOpeningBalanceUseCase {
     repo: Arc<dyn OpeningMigrationRepository>,
+    account_repo: Arc<dyn AccountRepository>,
 }
 
 impl CreateOpeningBalanceUseCase {
-    pub fn new(repo: Arc<dyn OpeningMigrationRepository>) -> Self {
-        Self { repo }
+    pub fn new(
+        repo: Arc<dyn OpeningMigrationRepository>,
+        account_repo: Arc<dyn AccountRepository>,
+    ) -> Self {
+        Self { repo, account_repo }
     }
 
     pub async fn execute(&self, cmd: CreateOpeningBalanceMigrationCommand) -> Result<OpeningMigrationDto, AppError> {
@@ -39,6 +45,20 @@ impl CreateOpeningBalanceUseCase {
                 .map_err(|_| AppError::Invalid("قيمة البند غير صالحة".into()))?;
             let account_id = AccountId::from_str(&l.account_id)
                 .map_err(|_| AppError::Invalid("معرف الحساب غير صالح".into()))?;
+
+            // Balance-sheet only: opening entries never carry P&L accounts.
+            let account = self.account_repo.find_by_id(&account_id).await?
+                .ok_or_else(|| AppError::NotFound(format!("الحساب غير موجود: {}", account_id)))?;
+            if matches!(
+                account.account_type,
+                AccountType::Revenue | AccountType::Expenses
+            ) {
+                return Err(AppError::Invalid(
+                    "حسابات قائمة الدخل (إيرادات/مصاريف) غير مسموحة في الرصيد الافتتاحي — تُرحَّل النتيجة عبر الأرباح المبقاة"
+                        .into(),
+                ));
+            }
+
             lines.push(OpeningBalanceLine {
                 account_id,
                 amount,

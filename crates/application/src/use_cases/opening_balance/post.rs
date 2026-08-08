@@ -68,6 +68,20 @@ impl PostOpeningBalanceUseCase {
             let account = self.account_repo.find_by_id(&line.account_id).await?
                 .ok_or_else(|| AppError::NotFound(format!("الحساب غير موجود: {}", line.account_id)))?;
 
+            // Opening balances carry balance-sheet items only. P&L accounts
+            // (Revenue/Expenses) are never posted to the Opening Balance; the
+            // historical result flows through Retained Earnings / the residual.
+            if matches!(
+                account.account_type,
+                domain::accounting::account::AccountType::Revenue
+                    | domain::accounting::account::AccountType::Expenses
+            ) {
+                return Err(AppError::Invalid(
+                    "حسابات قائمة الدخل (إيرادات/مصاريف) غير مسموحة في الرصيد الافتتاحي — تُرحَّل النتيجة عبر الأرباح المبقاة"
+                        .into(),
+                ));
+            }
+
             let amount = MonetaryAmount::from_base(line.amount, base_currency.clone());
             // Debit-normal accounts (assets, expenses, *drawings*) carry the
             // opening amount on the debit side; credit-normal accounts land on

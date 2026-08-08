@@ -199,4 +199,7 @@ export const openingBalanceService = {
   ): Promise<void> {
     return await invoke<void>('set_opening_balance_residual_classification', { request });
   },
+  async applyResidual(migrationId: string): Promise<void> {
+    return await invoke<void>('apply_opening_balance_residual_classification', { id: migrationId });
+  },
 };
