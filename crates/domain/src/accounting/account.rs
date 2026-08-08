@@ -31,6 +31,26 @@ pub enum NormalBalance {
     Credit,
 }
 
+/// The *purpose* of an account — a semantic classification that replaces
+/// brittle code-prefix string matching (Sec 46). Chart conventions that were
+/// previously inferred from a code prefix (44/1203/2203/1204/11/51/52/53/54)
+/// are now explicit and survive a chart re-code.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum AccountPurpose {
+    #[default]
+    General,            // غير محدد الغرض
+    PartnerCapital,     // رأس مال الشريك (51X)
+    PartnerDrawings,    // مسحوبات الشريك (44X) — contra-equity
+    PartnerCurrent,     // الحساب الجاري/الربح للشريك (54X)
+    Receivable,         // ذمم عملاء (1203)
+    Payable,            // ذمم موردين (2203)
+    Inventory,          // مخزون (1204)
+    FixedAsset,         // أصول ثابتة (11)
+    RetainedEarnings,   // أرباح مبقاة (52)
+    OpeningBalanceEquity, // رصيد افتتاحي (53)
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Account {
     pub id: AccountId,
@@ -53,6 +73,7 @@ pub struct Account {
     pub credit: Decimal,
     pub currency: Currency,
     pub exchange_rate: Decimal,
+    pub purpose: AccountPurpose,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -119,11 +140,20 @@ impl Account {
             is_active: true,
             is_default: false,
             is_final: false,
-            linked_customer_id: None,
+linked_customer_id: None,
             linked_supplier_id: None,
+            purpose: AccountPurpose::General,
             created_at: now,
             updated_at: now,
         })
+    }
+
+    /// Sets a semantic purpose used by the accounting engine to classify the
+    /// account (Sec 46) — replacing reliance on the account code prefix.
+    pub fn with_purpose(mut self, purpose: AccountPurpose) -> Self {
+        self.purpose = purpose;
+        self.updated_at = Utc::now();
+        self
     }
 
     pub fn set_final(&mut self, is_final: bool) {
@@ -194,10 +224,10 @@ impl Account {
         self.balance.abs()
     }
 
-    /// Partner-drawings accounts (contra equity) live under chart prefix `44`
-    /// and are NOT operating expenses. They must never appear in the P&L.
+/// Partner-drawings accounts (contra equity) are NOT operating expenses.
+    /// They must never appear in the P&L (Sec 11 / Sec 31).
     pub fn is_drawings_account(&self) -> bool {
-        self.code.starts_with("44")
+        self.purpose == AccountPurpose::PartnerDrawings
     }
 
     pub fn deactivate(&mut self) {
@@ -240,14 +270,14 @@ impl Account {
         self.linked_supplier_id.is_some()
     }
 
-    /// هل هذا الحساب ضمن ذمم العملاء؟ (كود يبدأ بـ 1203)
+/// هل هذا الحساب ضمن ذمم العملاء؟ (غرض الحساب = ذمم عملاء)
     pub fn is_receivable_account(&self) -> bool {
-        self.code.starts_with("1203") && self.account_type == AccountType::Assets
+        self.purpose == AccountPurpose::Receivable
     }
 
-    /// هل هذا الحساب ضمن ذمم الموردين؟ (كود يبدأ بـ 2203)
+    /// هل هذا الحساب ضمن ذمم الموردين؟ (غرض الحساب = ذمم موردين)
     pub fn is_payable_account(&self) -> bool {
-        self.code.starts_with("2203") && self.account_type == AccountType::Liabilities
+        self.purpose == AccountPurpose::Payable
     }
 }
 
@@ -450,9 +480,11 @@ mod tests {
         assert_eq!(a.signed_balance(), dec!(-10));
     }
 
-    #[test]
-    fn drawings_accounts_are_detected_by_prefix_44() {
-        let drawings = create_test_account("4401", "مسحوبات", "Drawings", AccountType::Expenses).unwrap();
+#[test]
+    fn drawings_accounts_are_detected_by_purpose() {
+        let drawings = create_test_account("4401", "مسحوبات", "Drawings", AccountType::Equity)
+            .unwrap()
+            .with_purpose(AccountPurpose::PartnerDrawings);
         assert!(drawings.is_drawings_account());
         let capital = create_test_account("5101", "رأس المال", "Capital", AccountType::Equity).unwrap();
         assert!(!capital.is_drawings_account());

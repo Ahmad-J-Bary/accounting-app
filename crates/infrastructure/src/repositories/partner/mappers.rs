@@ -30,6 +30,7 @@ pub fn row_to_partner(row: PartnerRow) -> Result<Partner, AppError> {
         profit_sharing_type: sharing_type,
         linked_account_id: row.linked_account_id.and_then(|id| AccountId::from_str(&id).ok()),
         drawings_account_id: row.drawings_account_id.and_then(|id| AccountId::from_str(&id).ok()),
+        current_account_id: row.current_account_id.and_then(|id| AccountId::from_str(&id).ok()),
         created_at: DateTime::parse_from_rfc3339(&row.created_at).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
         updated_at: DateTime::parse_from_rfc3339(&row.updated_at).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
     })

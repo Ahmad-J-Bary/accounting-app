@@ -86,6 +86,11 @@ pub async fn create_partner_account(
         ),
     };
 
+    let purpose = match params.kind {
+        PartnerKind::Customer => domain::accounting::account::AccountPurpose::Receivable,
+        PartnerKind::Supplier => domain::accounting::account::AccountPurpose::Payable,
+    };
+
     let new_account = Account {
         id: new_account_id,
         code: account_code,
@@ -110,6 +115,7 @@ pub async fn create_partner_account(
         is_final: true,
         linked_customer_id,
         linked_supplier_id,
+        purpose,
         created_at: Utc::now(),
         updated_at: Utc::now(),
     };

@@ -12,6 +12,7 @@ pub struct PartnerRow {
     pub profit_sharing_type: String,
     pub linked_account_id: Option<String>,
     pub drawings_account_id: Option<String>,
+    pub current_account_id: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }

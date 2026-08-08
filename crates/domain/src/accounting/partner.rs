@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ProfitSharingType {
     BasedOnCapitalLocal, // نسبة المشاركة بالأرباح = نسبة المشاركة برأس المال
     BasedOnCapitalOriginal,   // نسبة المشاركة بالأرباح = نسبة المشاركة برأس المال الأصلي
@@ -27,6 +27,9 @@ pub struct Partner {
     pub profit_sharing_type: ProfitSharingType,
     pub linked_account_id: Option<AccountId>,
     pub drawings_account_id: Option<AccountId>,
+    /// Per-partner current/profit account (accumulated profit allocations),
+    /// separate from the capital account (Sec 4 / Sec 13).
+    pub current_account_id: Option<AccountId>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -75,6 +78,7 @@ impl Partner {
             profit_sharing_type,
             linked_account_id: None,
             drawings_account_id: None,
+            current_account_id: None,
             created_at: now,
             updated_at: now,
         })
@@ -123,6 +127,11 @@ impl Partner {
 
     pub fn link_drawings_account(&mut self, account_id: AccountId) {
         self.drawings_account_id = Some(account_id);
+        self.updated_at = Utc::now();
+    }
+
+    pub fn link_current_account(&mut self, account_id: AccountId) {
+        self.current_account_id = Some(account_id);
         self.updated_at = Utc::now();
     }
 }

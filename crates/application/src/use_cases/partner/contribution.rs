@@ -9,6 +9,7 @@ use crate::ports::partner_repository::PartnerRepository;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::errors::AppError;
+use uuid::Uuid;
 
 /// Explicit capital contribution: a partner contributes funds/assets to the
 /// company. This is a real financial event and is intentionally kept separate
@@ -37,6 +38,7 @@ impl CreateCapitalContributionUseCase {
         funding_account_id: String,
         amount: Decimal,
         is_amount_in_original: bool,
+        event_id: Option<String>,
     ) -> Result<String, AppError> {
         let partner_id_parsed = partner_id.parse::<PartnerId>()
             .map_err(|_| AppError::NotFound("معرف الشريك غير صالح".into()))?;
@@ -88,13 +90,24 @@ impl CreateCapitalContributionUseCase {
             ),
         ];
 
+        // A capital contribution is a single auditable event. The event id keys
+        // the journal's source ({type}:{event}); a caller-provided id means a
+        // re-submission of the same event resolves to the already-created
+        // journal instead of double-posting (Sec 10 / Sec 45).
+        let event_key = event_id.unwrap_or_else(|| Uuid::new_v4().to_string());
+        let source_id = format!("capital_contribution:{}", event_key);
+
+        if let Some(existing) = self.journal_repo.find_by_source_id(&source_id).await? {
+            return Ok(existing.id.to_string());
+        }
+
         let mut entry = JournalEntry::new(
             self.journal_repo.get_next_entry_number().await?,
             JournalType::CapitalContribution,
             lines,
             Utc::now(),
             format!("مساهمة رأس مال — الشريك {}", partner.name),
-            Some(format!("capital_contribution:{}", partner.id)),
+            Some(source_id),
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
         entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;

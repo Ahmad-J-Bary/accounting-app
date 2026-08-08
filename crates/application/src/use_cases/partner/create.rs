@@ -110,6 +110,7 @@ impl CreatePartnerUseCase {
             is_final: true,
             linked_customer_id: None,
             linked_supplier_id: None,
+            purpose: domain::accounting::account::AccountPurpose::PartnerCapital,
             created_at: Utc::now(),
             updated_at: Utc::now(),
         };
@@ -144,15 +145,52 @@ impl CreatePartnerUseCase {
             is_final: true,
             linked_customer_id: None,
             linked_supplier_id: None,
+            purpose: domain::accounting::account::AccountPurpose::PartnerDrawings,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+
+        // Per-partner current/profit account (Sec 4 / Sec 13 / Sec 37):
+        // accumulated profit allocations live here, separate from registered
+        // capital, so the equity statement can show (capital + current −
+        // drawings) without deriving profit as ledger − registered capital.
+        let current_parent = self.account_repo.find_by_code("54").await?
+            .ok_or_else(|| AppError::Invalid("حساب الجارية للشركاء (54) غير موجود".into()))?;
+
+        let current_code = format!("54{}", &code[1..]);
+        let current_name = format!("حساب جاري {}", name);
+        let current_account = Account {
+            id: domain::shared::ids::AccountId::new(),
+            code: current_code,
+            name_ar: current_name.clone(),
+            name_en: current_name.clone(),
+            account_type: AccountType::Equity,
+            parent_id: Some(current_parent.id),
+            category: AccountCategory::Detail,
+            level: 3,
+            opening_balance: Decimal::ZERO,
+            balance: Decimal::ZERO,
+            debit: Decimal::ZERO,
+            credit: Decimal::ZERO,
+            currency: partner.currency.clone(),
+            exchange_rate: partner.exchange_rate,
+            notes: Some(format!("الحساب الجاري للشريك {}", name)),
+            is_active: true,
+            is_default: false,
+            is_final: true,
+            linked_customer_id: None,
+            linked_supplier_id: None,
+            purpose: domain::accounting::account::AccountPurpose::PartnerCurrent,
             created_at: Utc::now(),
             updated_at: Utc::now(),
         };
 
         partner.link_account(cap_account.id);
         partner.link_drawings_account(draw_account.id);
+        partner.link_current_account(current_account.id);
 
-        // Partner + its two accounts persist in ONE transaction (Sec 14 / Sec 29).
-        self.repo.save_with_accounts(&partner, &cap_account, &draw_account).await?;
+        // Partner + its three accounts persist in ONE transaction (Sec 14 / Sec 29).
+        self.repo.save_with_accounts(&partner, &cap_account, &draw_account, Some(&current_account)).await?;
 
         Ok(partner.id.to_string())
     }

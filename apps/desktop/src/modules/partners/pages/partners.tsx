@@ -26,7 +26,7 @@ import { usePartnerRatios } from '@modules/partners/hooks/usePartnerRatios';
 export default function Partners() {
   const { openTab } = useTabs();
   const { formatAmount, baseCurrency, currencies } = useCurrencyContext();
-  const [globalStrategy, setGlobalStrategy] = useState(() => localStorage.getItem("partnerProfitStrategy") || "BasedOnCapital");
+  const [globalStrategy, setGlobalStrategy] = useState(() => localStorage.getItem("partnerProfitStrategy") || "auto");
   const persistStrategy = (v: string) => { setGlobalStrategy(v); localStorage.setItem("partnerProfitStrategy", v); };
 
   const {
@@ -51,6 +51,7 @@ export default function Partners() {
     partnerId: string;
     amount: string;
     isAmountInOriginal: boolean;
+    eventId: string;
   } | null>(null);
   const [capitalSubmitting, setCapitalSubmitting] = useState(false);
 
@@ -127,6 +128,7 @@ export default function Partners() {
             partnerId,
             amount: payload.amount,
             isAmountInOriginal: payload.isAmountInOriginal,
+            eventId: crypto.randomUUID(),
           });
           return; // keep the side panel open; dialog drives the contribution
         }
@@ -179,6 +181,7 @@ export default function Partners() {
         fundingAccountId,
         amount: pendingCapital.amount,
         isAmountInOriginal: pendingCapital.isAmountInOriginal,
+        eventId: pendingCapital.eventId,
       });
       setPendingCapital(null);
       setActivePanel(null);
@@ -237,7 +240,9 @@ export default function Partners() {
                   <SelectValue placeholder="اختر" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="BasedOnCapital" className="text-xs font-bold">تلقائي</SelectItem>
+                  <SelectItem value="auto" className="text-xs font-bold">تلقائي حسب الشريك</SelectItem>
+                  <SelectItem value="BasedOnCapitalLocal" className="text-xs font-bold">رأس المال المحلي</SelectItem>
+                  <SelectItem value="BasedOnCapitalOriginal" className="text-xs font-bold">رأس المال الأصلي</SelectItem>
                   <SelectItem value="Manual" className="text-xs font-bold">يدوي</SelectItem>
                 </SelectContent>
               </Select>

@@ -1,7 +1,23 @@
 use sqlx::SqlitePool;
 use application::errors::AppError;
 use domain::accounting::account::{Account, AccountCategory};
-use domain::shared::ids::{AccountId};
+use domain::shared::ids::AccountId;
+
+pub fn purpose_to_str(purpose: domain::accounting::account::AccountPurpose) -> &'static str {
+    use domain::accounting::account::AccountPurpose;
+    match purpose {
+        AccountPurpose::General => "general",
+        AccountPurpose::PartnerCapital => "partner_capital",
+        AccountPurpose::PartnerDrawings => "partner_drawings",
+        AccountPurpose::PartnerCurrent => "partner_current",
+        AccountPurpose::Receivable => "receivable",
+        AccountPurpose::Payable => "payable",
+        AccountPurpose::Inventory => "inventory",
+        AccountPurpose::FixedAsset => "fixed_asset",
+        AccountPurpose::RetainedEarnings => "retained_earnings",
+        AccountPurpose::OpeningBalanceEquity => "opening_balance_equity",
+    }
+}
 
 pub async fn save(pool: &SqlitePool, account: &Account) -> Result<(), AppError> {
     let category_str = match account.category {
@@ -10,8 +26,8 @@ pub async fn save(pool: &SqlitePool, account: &Account) -> Result<(), AppError> 
     };
 
     sqlx::query(
-        "INSERT INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, debit, credit, notes, is_active, is_default, is_final, linked_customer_id, linked_supplier_id, currency_code, exchange_rate, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        "INSERT INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, debit, credit, notes, is_active, is_default, is_final, linked_customer_id, linked_supplier_id, currency_code, exchange_rate, purpose, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
             code = excluded.code,
             name_ar = excluded.name_ar,
@@ -32,6 +48,7 @@ pub async fn save(pool: &SqlitePool, account: &Account) -> Result<(), AppError> 
             linked_supplier_id = excluded.linked_supplier_id,
             currency_code = excluded.currency_code,
             exchange_rate = excluded.exchange_rate,
+            purpose = excluded.purpose,
             updated_at = excluded.updated_at"
     )
     .bind(account.id.0.to_string())
@@ -54,6 +71,7 @@ pub async fn save(pool: &SqlitePool, account: &Account) -> Result<(), AppError> 
     .bind(account.linked_supplier_id.as_ref().map(|id| id.0.to_string()))
     .bind(&account.currency.code)
     .bind(account.exchange_rate.to_string())
+    .bind(purpose_to_str(account.purpose))
     .bind(account.created_at)
     .bind(account.updated_at)
     .execute(pool)

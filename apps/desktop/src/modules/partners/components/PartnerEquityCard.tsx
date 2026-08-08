@@ -37,6 +37,7 @@ export function PartnerEquityCard() {
                   <th className="text-right px-4 py-2 font-semibold">الشريك</th>
                   <th className="text-right px-4 py-2 font-semibold">رأس المال المسجل</th>
                   <th className="text-right px-4 py-2 font-semibold">رصيد دفتر الأستاذ</th>
+                  <th className="text-right px-4 py-2 font-semibold">الحساب الجاري</th>
                   <th className="text-right px-4 py-2 font-semibold">المسحوبات</th>
                   <th className="text-right px-4 py-2 font-semibold">الأرباح المتراكمة</th>
                   <th className="text-right px-4 py-2 font-semibold">إجمالي حقوق الملكية</th>
@@ -45,7 +46,7 @@ export function PartnerEquityCard() {
               <tbody>
                 {data.rows.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="text-center py-4 text-slate-400">لا يوجد شركاء</td>
+                    <td colSpan={7} className="text-center py-4 text-slate-400">لا يوجد شركاء</td>
                   </tr>
                 )}
                 {data.rows.map((r) => (
@@ -53,6 +54,7 @@ export function PartnerEquityCard() {
                     <td className="px-4 py-2 font-bold text-slate-700">{r.partner_name}</td>
                     <td className="px-4 py-2 tabular-nums text-slate-600">{show(r.capital_registered)}</td>
                     <td className="px-4 py-2 tabular-nums text-slate-600">{show(r.ledger_balance)}</td>
+                    <td className="px-4 py-2 tabular-nums text-slate-600">{show(r.current_balance)}</td>
                     <td className="px-4 py-2 tabular-nums text-red-600">{show(r.drawings)}</td>
                     <td className={"px-4 py-2 tabular-nums " + (parseFloat(r.profit_allocated) < 0 ? "text-red-600" : "text-emerald-700")}>
                       {show(r.profit_allocated)}
@@ -64,6 +66,7 @@ export function PartnerEquityCard() {
                   <tr className="bg-slate-50 font-black text-slate-800">
                     <td className="px-4 py-2">الإجمالي</td>
                     <td className="px-4 py-2 tabular-nums">{show(data.total_capital)}</td>
+                    <td className="px-4 py-2 tabular-nums">—</td>
                     <td className="px-4 py-2 tabular-nums">—</td>
                     <td className="px-4 py-2 tabular-nums">{show(data.total_drawings)}</td>
                     <td className="px-4 py-2 tabular-nums">{show(data.total_profit_allocated)}</td>

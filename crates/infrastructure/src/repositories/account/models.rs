@@ -20,6 +20,7 @@ pub struct AccountRow {
     pub credit: String,
     pub currency_code: Option<String>,
     pub exchange_rate: Option<String>,
+    pub purpose: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }

@@ -198,7 +198,7 @@ let mut migration = OpeningBalanceMigration::new(
          JOIN journal_entries je ON je.id = jl.journal_entry_id
          WHERE je.source_id = ?",
     )
-    .bind(&format!("residual_classification:{migration_id}"))
+    .bind(format!("residual_classification:{migration_id}"))
     .fetch_all(pool.as_ref())
     .await
     .unwrap();

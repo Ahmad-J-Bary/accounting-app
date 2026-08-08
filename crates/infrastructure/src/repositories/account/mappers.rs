@@ -1,5 +1,5 @@
 use application::errors::AppError;
-use domain::accounting::account::{Account, AccountType, AccountCategory};
+use domain::accounting::account::{Account, AccountType, AccountCategory, AccountPurpose};
 use domain::shared::currency::Currency;
 use domain::shared::ids::{AccountId, CustomerId, SupplierId};
 use rust_decimal::Decimal;
@@ -7,6 +7,21 @@ use std::str::FromStr;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use super::models::AccountRow;
+
+pub fn purpose_from_str(value: &str) -> AccountPurpose {
+    match value {
+        "partner_capital" => AccountPurpose::PartnerCapital,
+        "partner_drawings" => AccountPurpose::PartnerDrawings,
+        "partner_current" => AccountPurpose::PartnerCurrent,
+        "receivable" => AccountPurpose::Receivable,
+        "payable" => AccountPurpose::Payable,
+        "inventory" => AccountPurpose::Inventory,
+        "fixed_asset" => AccountPurpose::FixedAsset,
+        "retained_earnings" => AccountPurpose::RetainedEarnings,
+        "opening_balance_equity" => AccountPurpose::OpeningBalanceEquity,
+        _ => AccountPurpose::General,
+    }
+}
 
 pub fn row_to_account(row: AccountRow) -> Result<Account, AppError> {
     let account_type = match row.account_type.as_str() {
@@ -49,6 +64,7 @@ pub fn row_to_account(row: AccountRow) -> Result<Account, AppError> {
         credit: Decimal::from_str(&row.credit).unwrap_or(Decimal::ZERO),
         currency,
         exchange_rate,
+        purpose: purpose_from_str(&row.purpose.clone().unwrap_or_else(|| "general".to_string())),
         created_at: DateTime::parse_from_rfc3339(&row.created_at).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
         updated_at: DateTime::parse_from_rfc3339(&row.updated_at).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now()),
     })

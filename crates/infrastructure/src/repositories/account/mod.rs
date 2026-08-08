@@ -11,6 +11,12 @@ mod mappers;
 mod queries;
 mod commands;
 
+/// Serializes an account purpose for database storage (shared by the partner
+/// repository's atomic account inserts).
+pub fn purpose_to_str(purpose: domain::accounting::account::AccountPurpose) -> &'static str {
+    commands::purpose_to_str(purpose)
+}
+
 pub struct SqliteAccountRepository {
     pool: Arc<SqlitePool>,
 }

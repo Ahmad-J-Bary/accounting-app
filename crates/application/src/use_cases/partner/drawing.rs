@@ -9,6 +9,7 @@ use crate::ports::partner_repository::PartnerRepository;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::errors::AppError;
+use uuid::Uuid;
 
 /// Explicit partner-drawing event: a partner withdraws cash/bank funds from the
 /// company.
@@ -41,6 +42,7 @@ impl CreatePartnerDrawingUseCase {
         amount: Decimal,
         effective_date: Option<String>,
         description: Option<String>,
+        event_id: Option<String>,
     ) -> Result<String, AppError> {
         let partner_id_parsed = partner_id.parse::<PartnerId>()
             .map_err(|_| AppError::NotFound("معرف الشريك غير صالح".into()))?;
@@ -88,6 +90,16 @@ impl CreatePartnerDrawingUseCase {
             ),
         ];
 
+        // A drawing is a single auditable event; the event id keys the journal's
+        // source. A re-submitted drawing with the same event id resolves to the
+        // already-created journal (Sec 11 / Sec 34 / Sec 45).
+        let event_key = event_id.unwrap_or_else(|| Uuid::new_v4().to_string());
+        let source_id = format!("partner_drawing:{}", event_key);
+
+        if let Some(existing) = self.journal_repo.find_by_source_id(&source_id).await? {
+            return Ok(existing.id.to_string());
+        }
+
         let mut entry = JournalEntry::new(
             self.journal_repo.get_next_entry_number().await?,
             JournalType::PartnerDrawing,
@@ -97,7 +109,7 @@ impl CreatePartnerDrawingUseCase {
                 .map(|d| d.with_timezone(&Utc))
                 .unwrap_or_else(Utc::now),
             description.unwrap_or_else(|| format!("سحب الشريك {}", partner.name)),
-            Some(format!("partner_drawing:{}", partner.id)),
+            Some(source_id),
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
         entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
@@ -126,13 +138,13 @@ mod tests {
             JournalType::PartnerDrawing,
             vec![
                 JournalLine::new(
-                    drawings_id.clone(),
+                    drawings_id,
                     MonetaryAmount::from_base(Decimal::from(5000), cur.clone()),
                     MonetaryAmount::zero(cur.clone()),
                     "سحب".to_string(),
                 ),
                 JournalLine::new(
-                    funding_id.clone(),
+                    funding_id,
                     MonetaryAmount::zero(cur.clone()),
                     MonetaryAmount::from_base(Decimal::from(5000), cur.clone()),
                     "سحب".to_string(),

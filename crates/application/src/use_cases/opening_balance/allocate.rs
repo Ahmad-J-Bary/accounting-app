@@ -1,10 +1,11 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use rust_decimal::Decimal;
 use std::str::FromStr;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::accounting::partner::ProfitSharingType;
 use domain::accounting::MigrationStatus;
-use domain::shared::{Currency, MonetaryAmount};
+use domain::shared::{Currency, MonetaryAmount, AccountId};
 
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
@@ -41,15 +42,40 @@ fn adjust_shares_to_sum(raw: Vec<Decimal>, target: Decimal) -> Vec<Decimal> {
     shares
 }
 
-/// Allocation ratio (%) for a partner: Manual ratio wins, otherwise the
-/// capital-weighted ratio.
-fn ratio_for(capital: Decimal, total_capital: Decimal, is_manual: bool, manual_ratio: Option<Decimal>) -> Decimal {
-    if is_manual {
-        manual_ratio.unwrap_or(Decimal::ZERO)
-    } else if total_capital.is_zero() {
-        Decimal::ZERO
-    } else {
-        (capital / total_capital) * Decimal::new(100, 0)
+/// Profit-sharing ratio (%) for a partner.
+///
+/// - `Manual`: an explicit per-partner ratio wins (Sec 45).
+/// - `BasedOnCapitalLocal`: the ratio of the partner's LOCAL (base-currency)
+///   capital to the total local capital (Sec 23).
+/// - `BasedOnCapitalOriginal`: the ratio of the partner's ORIGINAL (foreign /
+///   own-currency) capital to the total original capital (Sec 23).
+///
+/// `OriginalCapital` is a percentage of *own-currency* amounts, which is
+/// currency-independent even when partners hold different currencies.
+fn ratio_for(
+    sharing: ProfitSharingType,
+    manual_ratio: Option<Decimal>,
+    capital_local: Decimal,
+    capital_original: Decimal,
+    total_local: Decimal,
+    total_original: Decimal,
+) -> Decimal {
+    match sharing {
+        ProfitSharingType::Manual => manual_ratio.unwrap_or(Decimal::ZERO),
+        ProfitSharingType::BasedOnCapitalLocal => {
+            if total_local.is_zero() {
+                Decimal::ZERO
+            } else {
+                (capital_local / total_local) * Decimal::new(100, 0)
+            }
+        }
+        ProfitSharingType::BasedOnCapitalOriginal => {
+            if total_original.is_zero() {
+                Decimal::ZERO
+            } else {
+                (capital_original / total_original) * Decimal::new(100, 0)
+            }
+        }
     }
 }
 
@@ -80,6 +106,15 @@ impl AllocateNetProfitUseCase {
             return Err(AppError::Forbidden("يجب ترحيل الرصيد الافتتاحي قبل توزيع الأرباح".into()));
         }
 
+        // Profit distribution keys on the migration: re-running the command for
+        // the same migration must resolve to the already-posted distribution
+        // instead of creating a second journal (Sec 8 / Sec 10 / Sec 45). The
+        // DB-level UNIQUE(source_type, source_id) backs this up.
+        let source_id = format!("profit_distribution:{}", migration.id);
+        if let Some(existing) = self.journal_repo.find_by_source_id(&source_id).await? {
+            return self.dto_from_existing(&existing, net_profit).await;
+        }
+
         if net_profit == Decimal::ZERO {
             return Ok(NetProfitAllocationDto {
                 entry_number: String::new(),
@@ -94,7 +129,8 @@ impl AllocateNetProfitUseCase {
             return Err(AppError::Invalid("لا يوجد شركاء لاستلام توزيع الأرباح".into()));
         }
 
-        let total_capital: Decimal = partners.iter().map(|p| p.amount_local).sum();
+        let total_local: Decimal = partners.iter().map(|p| p.amount_local).sum();
+        let total_original: Decimal = partners.iter().map(|p| p.amount_original).sum();
 
         // Pass 1: compute ratio + raw share for each partner.
         struct Pending {
@@ -107,10 +143,12 @@ impl AllocateNetProfitUseCase {
         let mut pendings: Vec<Pending> = Vec::with_capacity(partners.len());
         for (idx, p) in partners.iter().enumerate() {
             let ratio = ratio_for(
-                p.amount_local,
-                total_capital,
-                p.profit_sharing_type == ProfitSharingType::Manual,
+                p.profit_sharing_type,
                 p.profit_sharing_ratio,
+                p.amount_local,
+                p.amount_original,
+                total_local,
+                total_original,
             );
             let raw_share = net_profit * (ratio / Decimal::new(100, 0));
             pendings.push(Pending {
@@ -138,21 +176,23 @@ impl AllocateNetProfitUseCase {
         let mut dto_shares: Vec<PartnerAllocationShare> = Vec::with_capacity(shares.len());
 
         for (p, share_dec) in pendings.iter().zip(shares.iter()) {
-            let capital_account = partners[p.partner].linked_account_id
-                .ok_or(AppError::Invalid(format!("الشريك {} لا يملك حساب رأس مال مرتبط", p.name)))?;
+            // Profit allocations accrue to the partner's CURRENT (profit)
+            // account, keeping registered capital un-polluted (Sec 4 / Sec 13).
+            let current_account = partners[p.partner].current_account_id
+                .ok_or(AppError::Invalid(format!("الشريك {} لا يملك حساباً جارياً مرتبطاً", p.name)))?;
 
             let amount = MonetaryAmount::from_base(share_dec.abs(), base_currency.clone());
             let zero = MonetaryAmount::zero(base_currency.clone());
             if *share_dec < Decimal::ZERO {
                 lines.push(JournalLine::new(
-                    capital_account,
+                    current_account,
                     amount.clone(),
                     zero.clone(),
                     format!("نصيب الشريك من الخسارة: {}", p.name),
                 ));
             } else {
                 lines.push(JournalLine::new(
-                    capital_account,
+                    current_account,
                     zero.clone(),
                     amount.clone(),
                     format!("نصيب الشريك من الأرباح: {}", p.name),
@@ -168,13 +208,14 @@ impl AllocateNetProfitUseCase {
             });
         }
 
-        // Retained-earnings leg balances the pot (reverses for a loss).
+        // Retained-earnings leg balances the pot: distributing profit debits
+        // retained earnings (52) and credits each partner's current account.
         let net_amount = MonetaryAmount::from_base(net_profit.abs(), base_currency.clone());
         let zero_net = MonetaryAmount::zero(base_currency.clone());
         if net_profit < Decimal::ZERO {
-            lines.insert(0, JournalLine::new(equity.id, net_amount, zero_net, "توزيع خسارة على الشركاء".to_string()));
+            lines.insert(0, JournalLine::new(equity.id, zero_net, net_amount, "توزيع خسارة على الشركاء".to_string()));
         } else {
-            lines.insert(0, JournalLine::new(equity.id, zero_net, net_amount, "توزيع أرباح على الشركاء".to_string()));
+            lines.insert(0, JournalLine::new(equity.id, net_amount, zero_net, "توزيع أرباح على الشركاء".to_string()));
         }
 
         let entry_number = self.journal_repo.get_next_entry_number().await?;
@@ -184,7 +225,7 @@ impl AllocateNetProfitUseCase {
             lines,
             migration.cutover_date,
             "توزيع صافي أرباح الترحيل على الشركاء".to_string(),
-            Some(format!("profit_distribution:{}", migration.id)),
+            Some(source_id),
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
         entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
@@ -196,6 +237,58 @@ impl AllocateNetProfitUseCase {
             net_profit,
             allocated_total: final_total,
             shares: dto_shares,
+        })
+    }
+
+    /// Rebuilds the allocation DTO from an already-posted profit-distribution
+    /// journal of the same migration, so a re-run returns a stable result
+    /// instead of double-posting. The share of each partner is the amount on the
+    /// line hitting that partner's current (profit) account.
+    async fn dto_from_existing(
+        &self,
+        entry: &JournalEntry,
+        requested_net_profit: Decimal,
+    ) -> Result<NetProfitAllocationDto, AppError> {
+        let partners = self.partner_repo.list_all(false).await?;
+        let mut by_account: HashMap<AccountId, &domain::accounting::partner::Partner> = HashMap::new();
+        for p in &partners {
+            if let Some(aid) = p.current_account_id {
+                by_account.insert(aid, p);
+            }
+        }
+
+        let mut shares: Vec<PartnerAllocationShare> = Vec::new();
+        let mut allocated_total = Decimal::ZERO;
+        for line in &entry.lines {
+            if line.base_debit().is_zero() && line.base_credit().is_zero() {
+                continue;
+            }
+            let Some(p) = by_account.get(&line.account_id) else { continue };
+            let share = if line.base_credit().is_zero() {
+                -line.base_debit()
+            } else {
+                line.base_credit()
+            };
+            allocated_total += share;
+            let ratio = if requested_net_profit.is_zero() {
+                Decimal::ZERO
+            } else {
+                (share / requested_net_profit) * Decimal::new(100, 0)
+            };
+            shares.push(PartnerAllocationShare {
+                partner_id: p.id.0.to_string(),
+                partner_name: p.name.clone(),
+                capital: p.amount_local,
+                ratio_percent: ratio.round_dp(2),
+                share,
+            });
+        }
+
+        Ok(NetProfitAllocationDto {
+            entry_number: entry.entry_number.clone(),
+            net_profit: requested_net_profit,
+            allocated_total,
+            shares,
         })
     }
 }
@@ -226,14 +319,53 @@ mod tests {
 
     #[test]
     fn manual_ratio_is_respected() {
-        let r = ratio_for(Decimal::new(100, 0), Decimal::new(200, 0), true, Some(Decimal::new(60, 0)));
+        let r = ratio_for(
+            ProfitSharingType::Manual,
+            Some(Decimal::new(60, 0)),
+            Decimal::new(100, 0),
+            Decimal::new(100, 0),
+            Decimal::new(200, 0),
+            Decimal::new(200, 0),
+        );
         assert_eq!(r, Decimal::new(60, 0));
     }
 
     #[test]
-    fn capital_ratio_is_weighted_and_zero_safe() {
-        let r = ratio_for(Decimal::new(40, 0), Decimal::new(200, 0), false, None);
+    fn local_capital_ratio_is_weighted_and_zero_safe() {
+        // Local = 40 of 200 → 20%.
+        let r = ratio_for(
+            ProfitSharingType::BasedOnCapitalLocal,
+            None,
+            Decimal::new(40, 0),
+            Decimal::new(999, 0),
+            Decimal::new(200, 0),
+            Decimal::new(999, 0),
+        );
         assert_eq!(r, Decimal::new(20, 0));
-        assert_eq!(ratio_for(Decimal::new(40, 0), Decimal::ZERO, false, None), Decimal::ZERO);
+        let zero = ratio_for(
+            ProfitSharingType::BasedOnCapitalLocal,
+            None,
+            Decimal::new(40, 0),
+            Decimal::new(999, 0),
+            Decimal::ZERO,
+            Decimal::new(999, 0),
+        );
+        assert_eq!(zero, Decimal::ZERO);
+    }
+
+    #[test]
+    fn original_capital_ratio_uses_own_currency_amounts() {
+        // Two partners in different currencies, both holding 100 in their own
+        // currency: each gets 50% even though the local (converted) totals
+        // differ. Original ratio must be currency-independent.
+        let partner_a = ratio_for(
+            ProfitSharingType::BasedOnCapitalOriginal,
+            None,
+            Decimal::new(3_750, 0), // SAR 3750 local for USD 1000 @3.75
+            Decimal::new(1_000, 0), // USD 1000 original
+            Decimal::new(7_750, 0),
+            Decimal::new(2_000, 0),
+        );
+        assert_eq!(partner_a, Decimal::new(50, 0));
     }
 }

@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use rust_decimal::Decimal;
 
-use domain::accounting::account::{Account, AccountType};
+use domain::accounting::account::Account;
 use domain::shared::ids::AccountId;
 
 use crate::errors::AppError;
@@ -43,18 +43,15 @@ impl SubledgerKind {
 }
 
 /// Classifies an account into its opening sub-ledger category using the chart
-/// conventions: AR = 1203*, AP = 2203*, Inventory = 1204*, Fixed Assets = 11*.
+/// account *purpose* semantics (Sec 46), not code-string matching.
 pub fn account_subledger_kind(account: &Account) -> Option<SubledgerKind> {
-    if account.is_receivable_account() {
-        Some(SubledgerKind::Ar)
-    } else if account.is_payable_account() {
-        Some(SubledgerKind::Ap)
-    } else if account.account_type == AccountType::Assets && account.code.starts_with("1204") {
-        Some(SubledgerKind::Inventory)
-    } else if account.account_type == AccountType::Assets && account.code.starts_with("11") {
-        Some(SubledgerKind::FixedAssets)
-    } else {
-        None
+    use domain::accounting::account::AccountPurpose;
+    match account.purpose {
+        AccountPurpose::Receivable => Some(SubledgerKind::Ar),
+        AccountPurpose::Payable => Some(SubledgerKind::Ap),
+        AccountPurpose::Inventory => Some(SubledgerKind::Inventory),
+        AccountPurpose::FixedAsset => Some(SubledgerKind::FixedAssets),
+        _ => None,
     }
 }
 
@@ -260,11 +257,23 @@ async fn drift_totals(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use domain::accounting::account::{Account, AccountCategory};
+    use domain::accounting::account::{Account, AccountCategory, AccountType};
     use domain::shared::currency::Currency;
     use rust_decimal_macros::dec;
 
     fn account(code: &str, account_type: AccountType) -> Account {
+        use domain::accounting::account::AccountPurpose;
+        let purpose = if code.starts_with("1203") && account_type == AccountType::Assets {
+            AccountPurpose::Receivable
+        } else if code.starts_with("2203") && account_type == AccountType::Liabilities {
+            AccountPurpose::Payable
+        } else if code.starts_with("1204") && account_type == AccountType::Assets {
+            AccountPurpose::Inventory
+        } else if code.starts_with("11") && account_type == AccountType::Assets {
+            AccountPurpose::FixedAsset
+        } else {
+            AccountPurpose::General
+        };
         Account::new(
             code.to_string(),
             format!("حساب {}", code),
@@ -281,6 +290,7 @@ mod tests {
             None,
         )
         .unwrap()
+        .with_purpose(purpose)
     }
 
     #[test]
@@ -334,7 +344,7 @@ mod tests {
 
     #[test]
     fn reconciliation_row_math() {
-        let rows = vec![
+        let rows = [
             ReconciliationRow { key: "AR".into(), subledger: Decimal::new(10000, 2), general_ledger: Decimal::new(10000, 2), reconciled: true },
             ReconciliationRow { key: "AP".into(), subledger: Decimal::new(5000, 2), general_ledger: Decimal::new(3000, 2), reconciled: false },
         ];

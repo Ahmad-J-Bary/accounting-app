@@ -17,15 +17,10 @@ pub async fn save(pool: &SqlitePool, entry: &JournalEntry) -> Result<(), AppErro
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-    if let Some(status) = existing.as_deref() {
-        match status {
-            "Posted" | "Reversed" | "Cancelled" => {
-                return Err(AppError::Forbidden(
-                    "لا يمكن تعديل قيد مرحَّل أو ملغى مباشرة؛ استخدم قيد التراجع (Reversal)".into(),
-                ));
-            }
-            _ => {}
-        }
+    if let Some("Posted" | "Reversed" | "Cancelled") = existing.as_deref() {
+        return Err(AppError::Forbidden(
+            "لا يمكن تعديل قيد مرحَّل أو ملغى مباشرة؛ استخدم قيد التراجع (Reversal)".into(),
+        ));
     }
 
     insert_entry(&mut tx, entry).await?;

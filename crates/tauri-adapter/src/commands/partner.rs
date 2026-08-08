@@ -48,13 +48,14 @@ pub async fn create_capital_contribution(
     funding_account_id: String,
     amount: String,
     is_amount_in_original: bool,
+    event_id: Option<String>,
 ) -> Result<String, String> {
     let amt = Decimal::from_str(&amount).map_err(|e| e.to_string())?;
     CreateCapitalContributionUseCase::new(
         state.partner_repo.clone(),
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
-    ).execute(partner_id, funding_account_id, amt, is_amount_in_original)
+    ).execute(partner_id, funding_account_id, amt, is_amount_in_original, event_id)
         .await
         .map_err(|e| e.to_string())
 }
@@ -69,6 +70,7 @@ pub async fn create_partner_drawing(
     amount: String,
     effective_date: Option<String>,
     description: Option<String>,
+    event_id: Option<String>,
 ) -> Result<String, String> {
     let amt = Decimal::from_str(&amount).map_err(|e| e.to_string())?;
     CreatePartnerDrawingUseCase::new(
@@ -76,7 +78,7 @@ pub async fn create_partner_drawing(
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
     )
-    .execute(partner_id, funding_account_id, amt, effective_date, description)
+    .execute(partner_id, funding_account_id, amt, effective_date, description, event_id)
     .await
     .map_err(|e| e.to_string())
 }
@@ -89,6 +91,7 @@ pub async fn capitalize_retained_earnings(
     partner_id: String,
     amount: String,
     effective_date: Option<String>,
+    event_id: Option<String>,
 ) -> Result<String, String> {
     let amt = Decimal::from_str(&amount).map_err(|e| e.to_string())?;
     CapitalizeRetainedEarningsUseCase::new(
@@ -96,7 +99,7 @@ pub async fn capitalize_retained_earnings(
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
     )
-    .execute(partner_id, amt, effective_date)
+    .execute(partner_id, amt, effective_date, event_id)
     .await
     .map_err(|e| e.to_string())
 }

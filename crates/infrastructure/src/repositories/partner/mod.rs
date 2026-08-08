@@ -41,8 +41,9 @@ impl PartnerRepository for SqlitePartnerRepository {
         partner: &Partner,
         capital_account: &Account,
         drawings_account: &Account,
+        current_account: Option<&Account>,
     ) -> Result<(), AppError> {
-        commands::save_with_accounts(&self.pool, partner, capital_account, drawings_account).await
+        commands::save_with_accounts(&self.pool, partner, capital_account, drawings_account, current_account).await
     }
 
     async fn update(&self, partner: &Partner) -> Result<(), AppError> {

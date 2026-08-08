@@ -143,7 +143,7 @@ async fn ensure_opening_balance_equity_account(pool: &SqlitePool) {
         .unwrap_or(false);
     if !root_equity {
         let _ = sqlx::query(
-            "INSERT OR IGNORE INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at) SELECT '00000000-0000-0000-0000-000000000005', '5', 'حقوق الملكية', 'Equity', 'Equity', (SELECT id FROM accounts WHERE code = '0'), 'Summary', 1, '0', '0', 1, datetime('now'), datetime('now') WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '5')"
+            "INSERT OR IGNORE INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, purpose, is_active, created_at, updated_at) SELECT '00000000-0000-0000-0000-000000000005', '5', 'حقوق الملكية', 'Equity', 'Equity', (SELECT id FROM accounts WHERE code = '0'), 'Summary', 1, '0', '0', 'general', 1, datetime('now'), datetime('now') WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '5')"
         ).execute(pool).await;
     }
 
@@ -159,11 +159,11 @@ async fn ensure_opening_balance_equity_account(pool: &SqlitePool) {
     if !cap_51 {
         // First try to rename existing 222 → 51
         let _ = sqlx::query(
-            "UPDATE accounts SET code = '51', name_ar = 'رأس المال', name_en = 'Capital', parent_id = (SELECT id FROM accounts WHERE code = '5'), category = 'Summary', level = 2, updated_at = datetime('now') WHERE code = '222'"
+            "UPDATE accounts SET code = '51', name_ar = 'رأس المال', name_en = 'Capital', parent_id = (SELECT id FROM accounts WHERE code = '5'), category = 'Summary', level = 2, purpose = 'partner_capital', updated_at = datetime('now') WHERE code = '222'"
         ).execute(pool).await;
         // If 222 didn't exist either, create 51 fresh
         let _ = sqlx::query(
-            "INSERT OR IGNORE INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at) SELECT '00000000-0000-0000-0000-000000000051', '51', 'رأس المال', 'Capital', 'Equity', (SELECT id FROM accounts WHERE code = '5'), 'Summary', 2, '0', '0', 1, datetime('now'), datetime('now') WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '51')"
+            "INSERT OR IGNORE INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, purpose, is_active, created_at, updated_at) SELECT '00000000-0000-0000-0000-000000000051', '51', 'رأس المال', 'Capital', 'Equity', (SELECT id FROM accounts WHERE code = '5'), 'Summary', 2, '0', '0', 'partner_capital', 1, datetime('now'), datetime('now') WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '51')"
         ).execute(pool).await;
     }
 
@@ -174,7 +174,7 @@ async fn ensure_opening_balance_equity_account(pool: &SqlitePool) {
         .unwrap_or(false);
     if !ret_earn {
         let _ = sqlx::query(
-            "INSERT OR IGNORE INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at) SELECT '00000000-0000-0000-0000-000000000052', '52', 'الأرباح المبقاة', 'Retained Earnings', 'Equity', (SELECT id FROM accounts WHERE code = '5'), 'Detail', 2, '0', '0', 1, datetime('now'), datetime('now') WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '52')"
+            "INSERT OR IGNORE INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, purpose, is_active, created_at, updated_at) SELECT '00000000-0000-0000-0000-000000000052', '52', 'الأرباح المبقاة', 'Retained Earnings', 'Equity', (SELECT id FROM accounts WHERE code = '5'), 'Detail', 2, '0', '0', 'retained_earnings', 1, datetime('now'), datetime('now') WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '52')"
         ).execute(pool).await;
     }
 
@@ -187,11 +187,11 @@ async fn ensure_opening_balance_equity_account(pool: &SqlitePool) {
     if !obe_53 {
         // First try to rename existing 224 → 53
         let _ = sqlx::query(
-            "UPDATE accounts SET code = '53', name_ar = 'رصيد افتتاحي', name_en = 'Opening Balance Equity', parent_id = (SELECT id FROM accounts WHERE code = '5'), account_type = 'Equity', category = 'Detail', level = 2, updated_at = datetime('now') WHERE code = '224'"
+            "UPDATE accounts SET code = '53', name_ar = 'رصيد افتتاحي', name_en = 'Opening Balance Equity', parent_id = (SELECT id FROM accounts WHERE code = '5'), account_type = 'Equity', category = 'Detail', level = 2, purpose = 'opening_balance_equity', updated_at = datetime('now') WHERE code = '224'"
         ).execute(pool).await;
         // If 224 didn't exist either (e.g. deleted by migration 128), create 53 fresh
         let _ = sqlx::query(
-            "INSERT OR IGNORE INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at) SELECT '00000000-0000-0000-0000-000000000053', '53', 'رصيد افتتاحي', 'Opening Balance Equity', 'Equity', (SELECT id FROM accounts WHERE code = '5'), 'Detail', 2, '0', '0', 1, datetime('now'), datetime('now') WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '53')"
+            "INSERT OR IGNORE INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, purpose, is_active, created_at, updated_at) SELECT '00000000-0000-0000-0000-000000000053', '53', 'رصيد افتتاحي', 'Opening Balance Equity', 'Equity', (SELECT id FROM accounts WHERE code = '5'), 'Detail', 2, '0', '0', 'opening_balance_equity', 1, datetime('now'), datetime('now') WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '53')"
         ).execute(pool).await;
     }
 }

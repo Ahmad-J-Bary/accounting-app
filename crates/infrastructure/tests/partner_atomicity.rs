@@ -98,7 +98,7 @@ async fn save_with_accounts_persists_partner_and_accounts_atomically() {
     partner.link_account(capital.id);
     partner.link_drawings_account(drawings.id);
 
-    repo.save_with_accounts(&partner, &capital, &drawings)
+    repo.save_with_accounts(&partner, &capital, &drawings, None)
         .await
         .unwrap();
 
@@ -150,7 +150,7 @@ async fn save_with_accounts_rolls_back_everything_when_account_code_duplicates()
     partner.link_account(capital.id);
     partner.link_drawings_account(drawings.id);
 
-    let err = repo.save_with_accounts(&partner, &capital, &drawings).await;
+    let err = repo.save_with_accounts(&partner, &capital, &drawings, None).await;
     assert!(err.is_err(), "المعاملة يجب أن تفشل عند تضارب كود الحساب");
 
     let partner_rows: i64 = sqlx::query_scalar("SELECT count(*) FROM partners WHERE id = ?")

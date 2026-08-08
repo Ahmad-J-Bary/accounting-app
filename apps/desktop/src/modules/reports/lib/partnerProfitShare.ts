@@ -55,15 +55,23 @@ export function computePartnerProfitShare(
     : partners;
 
   const totalCapital = existedPartners.reduce((s, p) => s + parseFloat(p.amount_local || "0"), 0);
+  const totalOriginalCapital = existedPartners.reduce((s, p) => s + parseFloat(p.amount_original || "0"), 0);
   const totalOperationalAssets = inventoryValue + fixedAssetsValue + customerDebts;
 
   const rows: PartnerProfitShareRow[] = existedPartners.map(p => {
     const capitalAmount = parseFloat(p.amount_local || "0");
     const capitalRatio = totalCapital > 0 ? (capitalAmount / totalCapital) * 100 : 0;
+    const originalAmount = parseFloat(p.amount_original || "0");
+    const originalRatio = totalOriginalCapital > 0 ? (originalAmount / totalOriginalCapital) * 100 : 0;
 
+    // Per-partner profit-sharing type (spec Sec 23): Manual wins; otherwise the
+    // ratio is capital-based — either on LOCAL (base) capital or on the
+    // partner's ORIGINAL (own-currency) capital, which stays currency-independent.
     let profitShareRatio: number;
     if (p.profit_sharing_type === "Manual") {
       profitShareRatio = p.profit_sharing_ratio ? parseFloat(p.profit_sharing_ratio) : 0;
+    } else if (p.profit_sharing_type === "BasedOnCapitalOriginal") {
+      profitShareRatio = originalRatio;
     } else {
       profitShareRatio = capitalRatio;
     }

@@ -84,12 +84,13 @@ export interface ComputedNetProfitDto {
   net_profit: string;
   total_revenue: string;
   total_expenses: string;
-  gross_profit: string;
   entry_count: number;
 }
 
 export interface ComputeNetProfitRequest {
   migration_id: string;
+  period_start?: string | null;
+  period_end?: string | null;
 }
 
 export interface OpeningCustomerItem {

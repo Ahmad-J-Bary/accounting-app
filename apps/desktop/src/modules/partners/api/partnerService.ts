@@ -8,6 +8,7 @@ export interface PartnerEquityRow {
   partner_name: string;
   capital_registered: string;
   ledger_balance: string;
+  current_balance: string;
   drawings: string;
   profit_allocated: string;
   total_equity: string;
@@ -33,6 +34,7 @@ export const partnerService = {
     fundingAccountId: string;
     amount: string;
     isAmountInOriginal: boolean;
+    eventId?: string;
   }) => invoke<string>("create_capital_contribution", args),
   createPartnerDrawing: (args: {
     partnerId: string;

@@ -49,6 +49,11 @@ pub struct ComputeNetProfitCommand {
     /// The migration whose cutover date bounds the ledger window for the
     /// computation (only posted entries at or before it are included).
     pub migration_id: String,
+    /// Optional explicit period window. When provided, `period_start` and
+    /// `period_end` take precedence over the migration's cutover date so the
+    /// net profit can be computed for an arbitrary fiscal period (Sec 45).
+    pub period_start: Option<String>,
+    pub period_end: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -56,7 +61,6 @@ pub struct ComputedNetProfitDto {
     pub net_profit: Decimal,
     pub total_revenue: Decimal,
     pub total_expenses: Decimal,
-    pub gross_profit: Decimal,
     pub entry_count: i64,
 }
 

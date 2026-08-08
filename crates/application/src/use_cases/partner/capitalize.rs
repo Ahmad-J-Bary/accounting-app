@@ -9,6 +9,7 @@ use crate::ports::partner_repository::PartnerRepository;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::errors::AppError;
+use uuid::Uuid;
 
 /// Capitalizes a portion of the company's retained earnings (52) into a
 /// partner's capital account through an explicit, auditable journal (Sec 10).
@@ -36,6 +37,7 @@ impl CapitalizeRetainedEarningsUseCase {
         partner_id: String,
         amount: Decimal,
         effective_date: Option<String>,
+        event_id: Option<String>,
     ) -> Result<String, AppError> {
         let partner_id_parsed = partner_id.parse::<PartnerId>()
             .map_err(|_| AppError::NotFound("معرف الشريك غير صالح".into()))?;
@@ -79,6 +81,16 @@ impl CapitalizeRetainedEarningsUseCase {
             ),
         ];
 
+        // A capitalization is a single auditable event; the event id keys the
+        // journal's source so a re-submission resolves to the existing journal
+        // (Sec 10 / Sec 45).
+        let event_key = event_id.unwrap_or_else(|| Uuid::new_v4().to_string());
+        let source_id = format!("capitalization:{}", event_key);
+
+        if let Some(existing) = self.journal_repo.find_by_source_id(&source_id).await? {
+            return Ok(existing.id.to_string());
+        }
+
         let mut entry = JournalEntry::new(
             self.journal_repo.get_next_entry_number().await?,
             JournalType::Capitalization,
@@ -88,7 +100,7 @@ impl CapitalizeRetainedEarningsUseCase {
                 .map(|d| d.with_timezone(&Utc))
                 .unwrap_or_else(Utc::now),
             format!("رسملة الأرباح المبقاة — الشريك {}", partner.name),
-            Some(format!("capitalization:{}", partner.id)),
+            Some(source_id),
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
         entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;

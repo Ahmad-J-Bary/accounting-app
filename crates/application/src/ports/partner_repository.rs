@@ -10,13 +10,14 @@ pub trait PartnerRepository: Send + Sync {
     async fn list_all(&self, include_inactive: bool) -> Result<Vec<Partner>, AppError>;
     async fn save(&self, partner: &Partner) -> Result<(), AppError>;
     /// Atomically persists a partner together with its created capital and
-    /// drawings accounts in ONE transaction: either every row is written or
-    /// none is (Sec 14 / Sec 29).
+    /// drawings accounts (and optional current/profit account) in ONE
+    /// transaction: either every row is written or none is (Sec 14 / Sec 29).
     async fn save_with_accounts(
         &self,
         partner: &Partner,
         capital_account: &Account,
         drawings_account: &Account,
+        current_account: Option<&Account>,
     ) -> Result<(), AppError>;
     async fn update(&self, partner: &Partner) -> Result<(), AppError>;
     async fn delete(&self, id: &PartnerId) -> Result<(), AppError>;

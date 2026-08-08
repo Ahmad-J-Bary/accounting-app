@@ -93,7 +93,6 @@ let mut reversal = JournalEntry::create_reversal(
     .unwrap();
     reversal.post().unwrap();
 
-    let mut original = original;
     original.reverse().unwrap();
     // The immutability guard rejects rewriting a Posted entry through `save`;
     // the reversal flow persists both rows atomically via save_reversal_pair.
