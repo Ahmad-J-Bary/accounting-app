@@ -19,6 +19,7 @@ export interface PartnerDto {
   profit_sharing_type: string;
   linked_account_id: string | null;
   drawings_account_id: string | null;
+  current_account_id: string | null;
 }
 
 export interface PartnerRequest {

@@ -64,15 +64,7 @@ impl CreateCapitalContributionUseCase {
         } else {
             Decimal::ONE
         };
-        let amount_original = if is_amount_in_original {
-            amount
-        } else {
-            amount / fx_rate
-        };
-        let amount_ma = MonetaryAmount::new(
-            Money::new(amount_original, partner.currency.clone()),
-            fx_rate,
-        );
+        let amount_ma = contribution_currency_amount(amount, fx_rate, &partner.currency, is_amount_in_original);
         let zero_ma = MonetaryAmount::zero(amount_ma.currency().clone());
 
         let lines = vec![
@@ -116,5 +108,70 @@ impl CreateCapitalContributionUseCase {
         self.journal_repo.save(&entry).await?;
 
         Ok(entry.id.to_string())
+    }
+}
+
+/// Builds the partner-currency monetary leg for a capital contribution.
+///
+/// * `is_amount_in_original == true`: the caller entered the amount in the
+///   partner's own currency → original = amount, base = amount / fx.
+/// * `false`: the amount is entered in the local (base) currency → original =
+///   amount * fx so `Money::to_base` yields exactly `amount` (no fx^2 drift;
+///   Sec 38).
+fn contribution_currency_amount(
+    amount: Decimal,
+    fx_rate: Decimal,
+    currency: &domain::shared::currency::Currency,
+    is_amount_in_original: bool,
+) -> MonetaryAmount {
+    let amount_original = if is_amount_in_original {
+        amount
+    } else {
+        amount * fx_rate
+    };
+    MonetaryAmount::new(Money::new(amount_original, currency.clone()), fx_rate)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use domain::shared::currency::Currency;
+
+    #[test]
+    fn foreign_currency_contribution_from_base_equals_entered_amount() {
+        let usd = Currency::new("USD", "دولار", "US Dollar", "$", 2, false);
+        let fx = Decimal::new(375, 2); // 3.75 — base SAR
+        let base_amount = Decimal::new(20000, 0); // 20000 entered in base currency
+
+        let ma = contribution_currency_amount(base_amount, fx, &usd, false);
+
+        assert_eq!(ma.base_amount, base_amount, "base leg must equal the entered base amount");
+        assert_eq!(ma.amount(), Decimal::new(7500000, 2)); // 20000 * 3.75 USD
+    }
+
+    #[test]
+    fn foreign_currency_contribution_in_original_converts_to_base() {
+        let usd = Currency::new("USD", "دولار", "US Dollar", "$", 2, false);
+        let fx = Decimal::new(375, 2); // 3.75 — base SAR
+        let original_amount = Decimal::new(1000, 0); // 1000 USD
+
+        let ma = contribution_currency_amount(original_amount, fx, &usd, true);
+
+        assert_eq!(ma.amount(), original_amount);
+        assert_eq!(
+            ma.base_amount.round_dp(2),
+            Decimal::new(26667, 2), // 1000 / 3.75 ≈ 266.67
+        );
+    }
+
+    #[test]
+    fn base_currency_contribution_is_unchanged_at_rate_one() {
+        let sar = Currency::new("SAR", "ريال", "Saudi Riyal", "ر.س", 2, true);
+        let amount = Decimal::new(5000, 0);
+
+        let ma = contribution_currency_amount(amount, Decimal::ONE, &sar, false);
+
+        assert_eq!(ma.amount(), amount);
+        assert_eq!(ma.base_amount, amount);
     }
 }

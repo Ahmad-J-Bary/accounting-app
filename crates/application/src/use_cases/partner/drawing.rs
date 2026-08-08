@@ -66,13 +66,7 @@ impl CreatePartnerDrawingUseCase {
         } else {
             Decimal::ONE
         };
-        // The entered amount is expressed in the base (local) currency, so the
-        // original-currency leg round-trips back to the same base figure.
-        let amount_original = amount / fx_rate;
-        let amount_ma = MonetaryAmount::new(
-            Money::new(amount_original, partner.currency.clone()),
-            fx_rate,
-        );
+        let amount_ma = drawing_currency_amount(amount, fx_rate, &partner.currency);
         let zero_ma = MonetaryAmount::zero(amount_ma.currency().clone());
 
         let lines = vec![
@@ -118,6 +112,15 @@ impl CreatePartnerDrawingUseCase {
 
         Ok(entry.id.to_string())
     }
+}
+
+/// Builds the partner-currency monetary leg for a drawing whose entered amount
+/// is in the local (base) currency. `original = base * fx` so `Money::to_base`
+/// divides back to exactly `base` — the journal balances in the base currency
+/// without an fx^2 drift for non-base (foreign-currency) partners (Sec 38).
+fn drawing_currency_amount(base_amount: Decimal, fx_rate: Decimal, currency: &domain::shared::currency::Currency) -> MonetaryAmount {
+    let amount_original = base_amount * fx_rate;
+    MonetaryAmount::new(Money::new(amount_original, currency.clone()), fx_rate)
 }
 
 #[cfg(test)]
@@ -199,5 +202,19 @@ mod tests {
     #[test]
     fn partner_id_parses() {
         let _id: PartnerId = "8fb1e5ce-0000-0000-0000-000000000001".parse().unwrap();
+    }
+
+    #[test]
+    fn foreign_currency_drawing_base_equals_entered_amount() {
+        let usd = Currency::new("USD", "دولار", "US Dollar", "$", 2, false);
+        let fx = Decimal::new(375, 2); // 3.75 — base SAR
+        let base_amount = Decimal::new(3750, 0); // 3750 entered in base currency
+
+        let ma = drawing_currency_amount(base_amount, fx, &usd);
+
+        // The original leg carries the partner's USD figure and the base leg
+        // equals the entered base amount exactly (round-trip, no fx^2 drift).
+        assert_eq!(ma.amount(), Decimal::new(1406250, 2)); // 3750 * 3.75 USD
+        assert_eq!(ma.base_amount, base_amount);
     }
 }

@@ -120,7 +120,11 @@ export function usePartnerProfitShareReport(filters: IncomeStatementFilters): Re
         const partnerLedgers: Record<string, AccountLedgerDto> = {};
         await Promise.allSettled(
           partners.map(async (p) => {
-            const accountIds = [p.linked_account_id, p.drawings_account_id].filter(Boolean) as string[];
+            // Capital, drawings, and the current (profit) account: the current
+            // account carries accumulated profit allocations and is the only
+            // ledger-backed source for "accumulated profits" (Sec 4 / Sec 13) —
+            // never derived as credits−registered capital.
+            const accountIds = [p.linked_account_id, p.drawings_account_id, p.current_account_id].filter(Boolean) as string[];
             const ledgers = await Promise.allSettled(
               accountIds.map((id) => accountingService.getAccountLedger([id]))
             );

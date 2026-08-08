@@ -20,7 +20,8 @@ pub struct PartnerEquityRow {
     /// Cumulative balance of the partner's current/profit account: accumulated
     /// profit allocations, kept separate from registered capital (Sec 4 / Sec 13).
     pub current_balance: String,
-    /// Cumulative balance of the partner's drawings (contra-equity) account.
+    /// Cumulative magnitude of the partner's drawings (contra-equity) account,
+    /// presented positive and subtracted from capital + current to get equity.
     pub drawings: String,
     /// Accumulated profit allocations: the balance of the partner's current
     /// (profit) account — a real ledger figure, never derived as
@@ -70,10 +71,12 @@ impl GetPartnerEquityStatementUseCase {
                 Some(account_id) => self.ledger_balance(&account_id).await?,
                 None => Decimal::ZERO,
             };
-            // Drawings are a debit-normal contra-equity balance; their ledger
-            // balance is positive in the direction of drawings.
+            // Drawings are a debit-normal contra-equity account, so their signed
+            // ledger balance is negative. The statement presents the magnitude
+            // and SUBTRACTS it: `total_equity = ledger + current - drawings`
+            // then reduces equity — a drawing must never inflate it.
             let drawings = match p.drawings_account_id {
-                Some(account_id) => self.ledger_balance(&account_id).await?,
+                Some(account_id) => self.ledger_balance(&account_id).await?.abs(),
                 None => Decimal::ZERO,
             };
             // Accumulated profit allocations live in the partner's CURRENT

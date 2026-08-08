@@ -33,8 +33,13 @@ async fn insert_journal<'a>(
         .clone()
         .or_else(|| Some(entry.journal_type.source_type().to_string()));
 
+    // Plain INSERT (never INSERT OR REPLACE): the schema-level
+    // UNIQUE(source_type, source_id) index is the backstop against a
+    // double-click / retry re-posting the same opening-balance event. REPLACE
+    // would silently delete the previously posted journal and deny its
+    // reversibility — always forbidden for the authoritative ledger.
     sqlx::query(
-        "INSERT OR REPLACE INTO journal_entries (id, entry_number, journal_type, source_id, source_type, entry_date, description, status, created_at, posted_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO journal_entries (id, entry_number, journal_type, source_id, source_type, entry_date, description, status, created_at, posted_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(entry.id.0.to_string())
     .bind(&entry.entry_number)
@@ -49,7 +54,7 @@ async fn insert_journal<'a>(
     .bind(chrono::Utc::now().to_rfc3339())
     .execute(&mut **tx)
     .await
-    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    .map_err(duplicate_journal)?;
 
     sqlx::query("DELETE FROM journal_lines WHERE journal_entry_id = ?")
         .bind(entry.id.0.to_string())
@@ -79,6 +84,19 @@ async fn insert_journal<'a>(
     }
 
     Ok(())
+}
+
+/// A re-submitted opening-balance journal (duplicate on the
+/// UNIQUE(source_type, source_id) index) must surface as a conflict, never as
+/// a silent REPLACE of the authoritative opening journal (Sec 10 / Sec 45).
+fn duplicate_journal(e: sqlx::Error) -> AppError {
+    if e.to_string().contains("UNIQUE constraint failed") {
+        AppError::Conflict(
+            "حدث افتتاحي مكرر: يوجد قيد مرحَّل لهذا الحدث — لم يتم إنشاء قيد جديد".into(),
+        )
+    } else {
+        AppError::Infrastructure(e.to_string())
+    }
 }
 
 #[async_trait]

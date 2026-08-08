@@ -54,16 +54,12 @@ impl CapitalizeRetainedEarningsUseCase {
         let retained = self.account_repo.find_by_code("52").await?
             .ok_or_else(|| AppError::NotFound("حساب الأرباح المبقاة (52) غير موجود".into()))?;
 
-        let fx_rate = if partner.exchange_rate > Decimal::ZERO {
+let fx_rate = if partner.exchange_rate > Decimal::ZERO {
             partner.exchange_rate
         } else {
             Decimal::ONE
         };
-        let amount_original = amount / fx_rate;
-        let amount_ma = MonetaryAmount::new(
-            Money::new(amount_original, partner.currency.clone()),
-            fx_rate,
-        );
+        let amount_ma = capitalization_currency_amount(amount, fx_rate, &partner.currency);
         let zero_ma = MonetaryAmount::zero(amount_ma.currency().clone());
 
         let lines = vec![
@@ -109,6 +105,15 @@ impl CapitalizeRetainedEarningsUseCase {
 
         Ok(entry.id.to_string())
     }
+}
+
+/// Builds the partner-currency monetary leg for a capitalization whose entered
+/// amount is in the local (base) currency. `original = base * fx` so
+/// `Money::to_base` divides back to exactly `base` — no fx^2 drift for
+/// non-base partners (Sec 38).
+fn capitalization_currency_amount(base_amount: Decimal, fx_rate: Decimal, currency: &domain::shared::currency::Currency) -> MonetaryAmount {
+    let amount_original = base_amount * fx_rate;
+    MonetaryAmount::new(Money::new(amount_original, currency.clone()), fx_rate)
 }
 
 #[cfg(test)]
@@ -157,5 +162,17 @@ mod tests {
     #[test]
     fn partner_id_round_trip() {
         let _id: PartnerId = "8fb1e5ce-0000-0000-0000-000000000002".parse().unwrap();
+    }
+
+    #[test]
+    fn foreign_currency_capitalization_base_equals_entered_amount() {
+        let usd = Currency::new("USD", "دولار", "US Dollar", "$", 2, false);
+        let fx = Decimal::new(375, 2); // 3.75 — base SAR
+        let base_amount = Decimal::new(12000, 0); // 12000 entered in base currency
+
+        let ma = capitalization_currency_amount(base_amount, fx, &usd);
+
+        assert_eq!(ma.amount(), Decimal::new(4500000, 2)); // 12000 * 3.75 USD
+        assert_eq!(ma.base_amount, base_amount);
     }
 }

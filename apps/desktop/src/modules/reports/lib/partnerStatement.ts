@@ -46,17 +46,21 @@ export function computePartnerStatement(
 
     const capitalLedger = p.linked_account_id ? partnerLedgers[p.linked_account_id] : null;
     const drawingsLedger = p.drawings_account_id ? partnerLedgers[p.drawings_account_id] : null;
+    // Accumulated profit allocations live on the partner's CURRENT account in
+    // the ledger (Sec 4 / Sec 13). They are a real ledger figure, never derived
+    // as "capital credits − registered capital" (the current account is where
+    // profit/loss allocations are posted).
+    const currentLedger = p.current_account_id ? partnerLedgers[p.current_account_id] : null;
 
-    let accumulatedCredits = 0;
-    if (capitalLedger) {
-      for (const line of capitalLedger.lines) {
+    let accumulatedProfits = 0;
+    if (currentLedger) {
+      for (const line of currentLedger.lines) {
         const lineTs = new Date(line.date).getTime();
         if (Number.isFinite(lineTs) && lineTs < fromTs) {
-          accumulatedCredits += parseFloat(line.credit_base || "0");
+          accumulatedProfits += parseFloat(line.credit_base || "0") - parseFloat(line.debit_base || "0");
         }
       }
     }
-    const accumulatedProfits = Math.max(0, accumulatedCredits - capitalAmount);
 
     let accumulatedDrawings = 0;
     if (drawingsLedger) {

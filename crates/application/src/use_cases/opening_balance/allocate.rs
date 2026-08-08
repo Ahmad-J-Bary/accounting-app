@@ -46,9 +46,9 @@ fn adjust_shares_to_sum(raw: Vec<Decimal>, target: Decimal) -> Vec<Decimal> {
 ///
 /// - `Manual`: an explicit per-partner ratio wins (Sec 45).
 /// - `BasedOnCapitalLocal`: the ratio of the partner's LOCAL (base-currency)
-///   capital to the total local capital (Sec 23).
+///   capital to the total local capital.
 /// - `BasedOnCapitalOriginal`: the ratio of the partner's ORIGINAL (foreign /
-///   own-currency) capital to the total original capital (Sec 23).
+///   own-currency) capital to the total original capital.
 ///
 /// `OriginalCapital` is a percentage of *own-currency* amounts, which is
 /// currency-independent even when partners hold different currencies.
@@ -77,6 +77,47 @@ fn ratio_for(
             }
         }
     }
+}
+
+/// Tolerance (in percentage points) below which a ratio sum is accepted as
+/// exactly 100%. Legal decimal accumulation (e.g. 33.33+33.33+33.34) is fine;
+/// a real deviation (99.5% or 101%) is rejected.
+fn ratio_sum_tolerance() -> Decimal {
+    Decimal::new(1, 2) // 0.01
+}
+
+/// Per-§15: a partner configured with Manual profit sharing must carry an
+/// explicit ratio — a missing ratio is rejected up front.
+fn ensure_manual_ratios(
+    partners: &[(String, ProfitSharingType, Option<Decimal>)],
+) -> Result<(), AppError> {
+    for (name, sharing, ratio) in partners {
+        if *sharing == ProfitSharingType::Manual && ratio.is_none() {
+            return Err(AppError::Invalid(format!(
+                "الشريك {name} مكوّن على التوزيع اليدوي دون نسبة محددة — حدّد نسبة التوزيع أولاً"
+            )));
+        }
+    }
+    Ok(())
+}
+
+/// Per-§15: the effective ratios (derived from the Manual value or the chosen
+/// capital basis) must be non-negative and sum to 100% (± tolerance). Returns
+/// the total when valid.
+fn validate_ratio_list(ratios: &[(String, Decimal)]) -> Result<Decimal, AppError> {
+    let mut total = Decimal::ZERO;
+    for (name, ratio) in ratios {
+        if ratio.is_sign_negative() {
+            return Err(AppError::Invalid(format!("نسبة توزيع أرباح الشريك {name} سالبة")));
+        }
+        total += ratio;
+    }
+    if (total - Decimal::new(100, 0)).abs() > ratio_sum_tolerance() {
+        return Err(AppError::Invalid(format!(
+            "مجموع نسب توزيع الأرباح يجب أن يساوي 100% (المجموع الحالي: {total})"
+        )));
+    }
+    Ok(total)
 }
 
 pub struct AllocateNetProfitUseCase {
@@ -132,6 +173,14 @@ impl AllocateNetProfitUseCase {
         let total_local: Decimal = partners.iter().map(|p| p.amount_local).sum();
         let total_original: Decimal = partners.iter().map(|p| p.amount_original).sum();
 
+        // Per-§15: every participating partner must carry a valid sharing
+        // configuration before an allocation journal is created.
+        let sharing_config: Vec<(String, ProfitSharingType, Option<Decimal>)> = partners
+            .iter()
+            .map(|p| (p.name.clone(), p.profit_sharing_type, p.profit_sharing_ratio))
+            .collect();
+        ensure_manual_ratios(&sharing_config)?;
+
         // Pass 1: compute ratio + raw share for each partner.
         struct Pending {
             partner: usize,
@@ -141,6 +190,7 @@ impl AllocateNetProfitUseCase {
             raw_share: Decimal,
         }
         let mut pendings: Vec<Pending> = Vec::with_capacity(partners.len());
+        let mut effective_ratios: Vec<(String, Decimal)> = Vec::with_capacity(partners.len());
         for (idx, p) in partners.iter().enumerate() {
             let ratio = ratio_for(
                 p.profit_sharing_type,
@@ -150,6 +200,7 @@ impl AllocateNetProfitUseCase {
                 total_local,
                 total_original,
             );
+            effective_ratios.push((p.name.clone(), ratio));
             let raw_share = net_profit * (ratio / Decimal::new(100, 0));
             pendings.push(Pending {
                 partner: idx,
@@ -159,6 +210,10 @@ impl AllocateNetProfitUseCase {
                 raw_share,
             });
         }
+
+        // Strict-§15: negative or non-100% ratio totals are rejected
+        // (99.5% / 101% fail; accumulation artifacts up to 0.01pp pass).
+        validate_ratio_list(&effective_ratios)?;
 
         let shares = adjust_shares_to_sum(pendings.iter().map(|p| p.raw_share).collect(), net_profit);
         if shares.iter().all(|s| s.is_zero()) {
@@ -367,5 +422,62 @@ mod tests {
             Decimal::new(2_000, 0),
         );
         assert_eq!(partner_a, Decimal::new(50, 0));
+    }
+
+    #[test]
+    fn manual_partner_requires_explicit_ratio() {
+        let ok = ensure_manual_ratios(&[
+            ("A".into(), ProfitSharingType::Manual, Some(Decimal::new(60, 0))),
+            ("B".into(), ProfitSharingType::Manual, Some(Decimal::new(40, 0))),
+        ]);
+        assert!(ok.is_ok());
+
+        let missing = ensure_manual_ratios(&[
+            ("A".into(), ProfitSharingType::Manual, None),
+        ]);
+        assert!(missing.is_err(), "manual partner without ratio must be rejected");
+    }
+
+    #[test]
+    fn ratio_sum_100_is_accepted() {
+        let r = validate_ratio_list(&[
+            ("A".into(), Decimal::new(60, 0)),
+            ("B".into(), Decimal::new(40, 0)),
+        ]);
+        assert!(r.is_ok());
+        assert_eq!(r.unwrap(), Decimal::new(100, 0));
+    }
+
+    #[test]
+    fn ratio_sum_below_and_above_100_rejected() {
+        // 99.5% — rejected.
+        assert!(validate_ratio_list(&[
+            ("A".into(), Decimal::new(60, 0)),
+            ("B".into(), Decimal::new(3950, 2)),
+        ]).is_err());
+        // 101% — rejected.
+        assert!(validate_ratio_list(&[
+            ("A".into(), Decimal::new(60, 0)),
+            ("B".into(), Decimal::new(41, 0)),
+        ]).is_err());
+    }
+
+    #[test]
+    fn negative_ratio_is_rejected() {
+        assert!(validate_ratio_list(&[
+            ("A".into(), Decimal::new(-5, 0)),
+            ("B".into(), Decimal::new(105, 0)),
+        ]).is_err());
+    }
+
+    #[test]
+    fn rounding_accumulation_tolerance_accepts_100() {
+        // 33.33 + 33.33 + 33.34 = 100.00 — accumulation artifact, accepted.
+        let r = validate_ratio_list(&[
+            ("A".into(), Decimal::new(3333, 2)),
+            ("B".into(), Decimal::new(3333, 2)),
+            ("C".into(), Decimal::new(3334, 2)),
+        ]);
+        assert!(r.is_ok());
     }
 }

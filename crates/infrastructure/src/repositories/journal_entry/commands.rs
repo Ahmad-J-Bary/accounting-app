@@ -52,25 +52,58 @@ async fn insert_entry(
     let source_type = entry.source_type.clone()
         .or_else(|| Some(entry.journal_type.source_type().to_string()));
 
-    sqlx::query(
-        "INSERT OR REPLACE INTO journal_entries (id, entry_number, journal_type, source_id, source_type, entry_date, description, status, created_at, posted_at, reversed_at, updated_at, reversal_of_entry_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    )
-    .bind(entry.id.0.to_string())
-    .bind(&entry.entry_number)
-    .bind(format!("{:?}", entry.journal_type))
-    .bind(&entry.source_id)
-    .bind(&source_type)
-    .bind(entry.entry_date.to_rfc3339())
-    .bind(&entry.description)
-    .bind(format!("{:?}", entry.status))
-    .bind(entry.created_at.to_rfc3339())
-    .bind(entry.posted_at.map(|d| d.to_rfc3339()))
-    .bind(entry.reversed_at.map(|d| d.to_rfc3339()))
-    .bind(chrono::Utc::now().to_rfc3339())
-    .bind(entry.reversal_of_entry_id.map(|id| id.0.to_string()))
-    .execute(&mut **tx)
-    .await
-    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    // A pre-existing row with the same id is refreshed only when the caller is
+    // explicitly persisting that draft again (e.g. journal editing); `save`
+    // already rejects overwriting Posted/Reversed/Cancelled. A brand-new row
+    // goes through a plain INSERT (never INSERT OR REPLACE) so the database
+    // UNIQUE(source_type, source_id) index is a genuine concurrency backstop:
+    // a duplicate business event surfaces as AppError::Conflict instead of
+    // silently replacing the already-posted journal (Sec 10 / Sec 45).
+    let existing_id: Option<String> = sqlx::query_scalar("SELECT id FROM journal_entries WHERE id = ?")
+        .bind(entry.id.0.to_string())
+        .fetch_optional(&mut **tx)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    if existing_id.is_some() {
+        sqlx::query(
+            "UPDATE journal_entries SET journal_type = ?, source_id = ?, source_type = ?, entry_date = ?, description = ?, status = ?, posted_at = ?, reversed_at = ?, updated_at = ?, reversal_of_entry_id = ? WHERE id = ?"
+        )
+        .bind(format!("{:?}", entry.journal_type))
+        .bind(&entry.source_id)
+        .bind(&source_type)
+        .bind(entry.entry_date.to_rfc3339())
+        .bind(&entry.description)
+        .bind(format!("{:?}", entry.status))
+        .bind(entry.posted_at.map(|d| d.to_rfc3339()))
+        .bind(entry.reversed_at.map(|d| d.to_rfc3339()))
+        .bind(chrono::Utc::now().to_rfc3339())
+        .bind(entry.reversal_of_entry_id.map(|id| id.0.to_string()))
+        .bind(entry.id.0.to_string())
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    } else {
+        sqlx::query(
+            "INSERT INTO journal_entries (id, entry_number, journal_type, source_id, source_type, entry_date, description, status, created_at, posted_at, reversed_at, updated_at, reversal_of_entry_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        )
+        .bind(entry.id.0.to_string())
+        .bind(&entry.entry_number)
+        .bind(format!("{:?}", entry.journal_type))
+        .bind(&entry.source_id)
+        .bind(&source_type)
+        .bind(entry.entry_date.to_rfc3339())
+        .bind(&entry.description)
+        .bind(format!("{:?}", entry.status))
+        .bind(entry.created_at.to_rfc3339())
+        .bind(entry.posted_at.map(|d| d.to_rfc3339()))
+        .bind(entry.reversed_at.map(|d| d.to_rfc3339()))
+        .bind(chrono::Utc::now().to_rfc3339())
+        .bind(entry.reversal_of_entry_id.map(|id| id.0.to_string()))
+        .execute(&mut **tx)
+        .await
+        .map_err(duplicate_source)?;
+    }
 
     sqlx::query("DELETE FROM journal_lines WHERE journal_entry_id = ?")
         .bind(entry.id.0.to_string())
@@ -99,6 +132,17 @@ async fn insert_entry(
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     }
     Ok(())
+}
+
+/// Maps a duplicate (source_type, source_id) insert to an actionable conflict.
+fn duplicate_source(e: sqlx::Error) -> AppError {
+    if e.to_string().contains("UNIQUE constraint failed") {
+        AppError::Conflict(
+            "حدث مالي مكرر: يوجد قيد مرحَّل لهذا الحدث (source_type/source_id) — لم يتم إنشاء قيد جديد".into(),
+        )
+    } else {
+        AppError::Infrastructure(e.to_string())
+    }
 }
 
 pub async fn delete(pool: &SqlitePool, id: &JournalEntryId) -> Result<(), AppError> {
