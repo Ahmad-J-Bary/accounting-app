@@ -190,25 +190,43 @@ impl GetOpeningReconciliationUseCase {
         let obe_account_id = self.account_repo.find_by_code(OPENING_EQUITY_ACCOUNT_CODE).await?
             .map(|a| a.id);
 
-        let (debit_total, credit_total, opening_control) =
-            if let Some(entry) = self.journal_repo
-                .find_by_source_id(&format!("opening_balance:{migration_id}")).await?
-            {
-                let d: Decimal = entry.lines.iter().map(|l| l.debit.base_amount).sum();
-                let c: Decimal = entry.lines.iter().map(|l| l.credit.base_amount).sum();
-                let obe_net: Decimal = entry.lines.iter()
-                    .filter(|l| Some(l.account_id) == obe_account_id)
-                    .map(|l| l.debit.base_amount - l.credit.base_amount).sum();
-                (d, c, obe_net)
-            } else {
-                let (d, c) = drift_totals(&migration, &self.account_repo).await?;
-                (d, c, d - c)
-            };
+        // The Opening Balance Control is the net of account 53 across the
+        // posting journal *and* any residual reclassification journal. The
+        // residual journal's OBE leg cancels the posting OBE leg, so a
+        // reclassified migration nets to zero here.
+        let mut obe_net = Decimal::ZERO;
+        let (mut debit_total, mut credit_total) = (Decimal::ZERO, Decimal::ZERO);
+        let mut found_posting = false;
+        for source_id in [
+            format!("opening_balance:{migration_id}"),
+            format!("residual_classification:{migration_id}"),
+        ] {
+            if let Some(entry) = self.journal_repo.find_by_source_id(&source_id).await? {
+                if !found_posting {
+                    debit_total = entry.lines.iter().map(|l| l.debit.base_amount).sum();
+                    credit_total = entry.lines.iter().map(|l| l.credit.base_amount).sum();
+                    found_posting = true;
+                }
+                if let Some(obe_account_id) = obe_account_id {
+                    for line in &entry.lines {
+                        if line.account_id == obe_account_id {
+                            obe_net += line.debit.base_amount - line.credit.base_amount;
+                        }
+                    }
+                }
+            }
+        }
+        let (debit_total, credit_total, opening_control_balance) = if found_posting {
+            (debit_total, credit_total, obe_net)
+        } else {
+            let (d, c) = drift_totals(&migration, &self.account_repo).await?;
+            (d, c, d - c)
+        };
 
         Ok(OpeningReconciliationDto {
             rows,
             all_reconciled,
-            opening_control_balance: opening_control,
+            opening_control_balance,
             debit_total,
             credit_total,
             debit_equals_credit: debit_total == credit_total,

@@ -196,6 +196,7 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::opening_balance::save_opening_balance_details,
             commands::opening_balance::get_opening_balance_reconciliation,
             commands::opening_balance::set_opening_balance_residual_classification,
+            commands::opening_balance::apply_opening_balance_residual_classification,
         ])
         .setup(|app| {
             let app_data_dir = app

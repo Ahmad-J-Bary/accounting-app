@@ -7,6 +7,7 @@ pub struct MigrationRow {
     pub source_reference: Option<String>,
     pub residual_classification: Option<String>,
     pub residual_account_id: Option<String>,
+    pub residual_applied_at: Option<String>,
     pub status: String,
     pub notes: Option<String>,
     pub validated_by: Option<String>,

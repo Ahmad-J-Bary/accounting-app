@@ -134,4 +134,30 @@ impl OpeningPostingRepository for SqliteOpeningPostingRepository {
 
         Ok(())
     }
+
+    async fn apply_residual(&self, migration: &OpeningBalanceMigration, entry: &JournalEntry) -> Result<(), AppError> {
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+        insert_journal(&mut tx, entry).await?;
+
+        sqlx::query(
+            "UPDATE opening_balance_migrations SET residual_applied_at = ?, updated_at = ? WHERE id = ?"
+        )
+        .bind(chrono::Utc::now().to_rfc3339())
+        .bind(chrono::Utc::now().to_rfc3339())
+        .bind(&migration.id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+        tx.commit()
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+        Ok(())
+    }
 }

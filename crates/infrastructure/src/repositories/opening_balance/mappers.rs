@@ -26,6 +26,7 @@ pub fn row_to_migration(row: MigrationRow, lines: Vec<OpeningBalanceLine>) -> Re
         residual_account_id: row
             .residual_account_id
             .and_then(|id| AccountId::from_str(&id).ok()),
+        residual_applied_at: ts(row.residual_applied_at),
         status: MigrationStatus::from_str(&row.status),
         notes: row.notes,
         lines,

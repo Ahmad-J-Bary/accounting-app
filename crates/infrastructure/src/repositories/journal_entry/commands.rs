@@ -7,6 +7,27 @@ use uuid::Uuid;
 pub async fn save(pool: &SqlitePool, entry: &JournalEntry) -> Result<(), AppError> {
     let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
+    // Immutability guard: a persisted Posted / Reversed entry may only be
+    // rewritten through `save_reversal_pair` (the reversal flow). Any other
+    // attempt to overwrite posted financial history is rejected here so no
+    // use case or UI can silently mutate the ledger.
+    let existing: Option<String> = sqlx::query_scalar("SELECT status FROM journal_entries WHERE id = ?")
+        .bind(entry.id.0.to_string())
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    if let Some(status) = existing.as_deref() {
+        match status {
+            "Posted" | "Reversed" | "Cancelled" => {
+                return Err(AppError::Forbidden(
+                    "لا يمكن تعديل قيد مرحَّل أو ملغى مباشرة؛ استخدم قيد التراجع (Reversal)".into(),
+                ));
+            }
+            _ => {}
+        }
+    }
+
     insert_entry(&mut tx, entry).await?;
     tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
@@ -87,6 +108,23 @@ async fn insert_entry(
 
 pub async fn delete(pool: &SqlitePool, id: &JournalEntryId) -> Result<(), AppError> {
     let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    // Posted entries are part of the auditable financial history: they must
+    // not be deleted, only reversed. Reversals may carry their own lifecycle
+    // (a reversal entry itself is posted audit trail and is also protected).
+    let status: Option<String> = sqlx::query_scalar("SELECT status FROM journal_entries WHERE id = ?")
+        .bind(id.0.to_string())
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    if let Some(status) = status.as_deref() {
+        if status == "Posted" || status == "Reversed" || status == "Cancelled" {
+            return Err(AppError::Forbidden(
+                "لا يمكن حذف قيد مرحَّل أو ملغى؛ استخدم قيد التراجع (Reversal)".into(),
+            ));
+        }
+    }
 
     sqlx::query("DELETE FROM journal_lines WHERE journal_entry_id = ?")
         .bind(id.0.to_string())

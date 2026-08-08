@@ -94,6 +94,9 @@ pub struct OpeningBalanceMigration {
     pub source_reference: Option<String>,
     pub residual_classification: Option<ResidualClassification>,
     pub residual_account_id: Option<AccountId>,
+    /// Set when the residual (OBE balance) has been moved into the chosen
+    /// classification account by `ApplyResidualToLedgerUseCase`.
+    pub residual_applied_at: Option<DateTime<Utc>>,
     pub status: MigrationStatus,
     pub notes: Option<String>,
     pub lines: Vec<OpeningBalanceLine>,
@@ -135,6 +138,7 @@ impl OpeningBalanceMigration {
             source_reference: None,
             residual_classification: None,
             residual_account_id: None,
+            residual_applied_at: None,
             status: MigrationStatus::Draft,
             notes,
             lines,
@@ -174,6 +178,27 @@ impl OpeningBalanceMigration {
         self.residual_classification = classification;
         self.residual_account_id = residual_account_id;
         self.updated_at = Utc::now();
+    }
+
+    /// Marks the residual as applied to the ledger. Only a posted migration
+    /// that already carries an accountant-chosen classification plus a target
+    /// account may be applied (guarded at the cluster / use-case level); the
+    /// domain simply records the timestamp so the lock gate can prove the
+    /// Opening Balance Control (53) was re-classified and not silently
+    /// left as an unexplained difference.
+    pub fn mark_residual_applied(&mut self) -> Result<(), DomainError> {
+        self.require_status(
+            &[MigrationStatus::Posted, MigrationStatus::Locked],
+            "لا يمكن ترحيل التصنيف إلا بعد ترحيل الترحيل",
+        )?;
+        if self.residual_classification.is_none() || self.residual_account_id.is_none() {
+            return Err(DomainError::Invalid(
+                "يجب تحديد تصنيف حساب الرصيد المتبقي قبل ترحيله".into(),
+            ));
+        }
+        self.residual_applied_at = Some(Utc::now());
+        self.updated_at = Utc::now();
+        Ok(())
     }
 
     pub fn validate(&mut self, by: &str) -> Result<(), DomainError> {
@@ -426,5 +451,46 @@ mod tests {
         );
         assert_eq!(m.residual_classification, Some(ResidualClassification::RetainedEarnings));
         assert_eq!(m.residual_account_id, Some(account_id));
+    }
+
+    #[test]
+    fn mark_residual_applied_requires_posted_and_classified() {
+        // Draft without classification → rejected
+        let mut m = sample(Decimal::new(1000, 2));
+        assert!(m.mark_residual_applied().is_err());
+
+        // Posted but never classified → rejected (no residual_account_id)
+        let mut m = sample(Decimal::new(1000, 2));
+        m.validate("u1").unwrap();
+        m.approve("u2").unwrap();
+        m.mark_posted().unwrap();
+        assert!(m.mark_residual_applied().is_err());
+
+        // Posted + classified → accepted and timestamped
+        let account_id = AccountId(uuid::Uuid::new_v4());
+        let mut m = sample(Decimal::new(1000, 2));
+        m.validate("u1").unwrap();
+        m.approve("u2").unwrap();
+        m.mark_posted().unwrap();
+        m.set_residual_classification(
+            Some(ResidualClassification::RetainedEarnings),
+            Some(account_id),
+        );
+        assert!(m.mark_residual_applied().is_ok());
+        assert!(m.residual_applied_at.is_some());
+
+        // Locked + classified → still recorded (the timestamp is idempotent
+        // ledger proof that 53 was re-classified before/after locking).
+        let account_id = AccountId(uuid::Uuid::new_v4());
+        let mut m2 = sample(Decimal::new(1000, 2));
+        m2.validate("u1").unwrap();
+        m2.approve("u2").unwrap();
+        m2.mark_posted().unwrap();
+        m2.lock().unwrap();
+        m2.set_residual_classification(
+            Some(ResidualClassification::OpeningEquityAdjustment),
+            Some(account_id),
+        );
+        assert!(m2.mark_residual_applied().is_ok());
     }
 }

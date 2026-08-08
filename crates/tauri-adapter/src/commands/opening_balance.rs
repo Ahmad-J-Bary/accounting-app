@@ -1,6 +1,7 @@
 use crate::bootstrap::container::AppState;
 use application::use_cases::opening_balance::{
     AllocateNetProfitCommand, AllocateNetProfitUseCase,
+    ApplyResidualToLedgerUseCase,
     ApproveOpeningBalanceUseCase, CancelOpeningBalanceUseCase,
     ComputeNetProfitCommand, ComputeNetProfitUseCase, ComputedNetProfitDto,
     CreateOpeningBalanceMigrationCommand,
@@ -117,6 +118,22 @@ pub async fn set_opening_balance_residual_classification(
         .execute(request)
         .await
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn apply_opening_balance_residual_classification(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<(), String> {
+    ApplyResidualToLedgerUseCase::new(
+        state.opening_migration_repo.clone(),
+        state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
+        state.opening_posting_repo.clone(),
+    )
+    .execute(id)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

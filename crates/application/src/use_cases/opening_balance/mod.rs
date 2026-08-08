@@ -10,6 +10,7 @@ pub mod reconcile;
 pub mod net_profit;
 pub mod reopen;
 pub mod classify;
+pub mod residual_apply;
 
 pub use allocate::AllocateNetProfitUseCase;
 pub use net_profit::ComputeNetProfitUseCase;
@@ -24,6 +25,7 @@ pub use reconcile::{
     GetOpeningReconciliationUseCase, SubledgerKind,
 };
 pub use reopen::ReopenOpeningBalanceUseCase;
+pub use residual_apply::ApplyResidualToLedgerUseCase;
 pub use state::{ApproveOpeningBalanceUseCase, LockOpeningBalanceUseCase, ValidateOpeningBalanceUseCase};
 pub use types::{
     AllocateNetProfitCommand, ComputedNetProfitDto, ComputeNetProfitCommand,
