@@ -118,6 +118,7 @@ impl ListJournalEntriesUseCase {
                 if let Ok(Some(acc)) = self.account_repo.find_by_id(&acc_id).await {
                     line.account_name = Some(acc.name_ar);
                     line.account_code = Some(acc.code);
+                    line.account_purpose = Some(acc.purpose.to_str().to_string());
                 }
             }
         }

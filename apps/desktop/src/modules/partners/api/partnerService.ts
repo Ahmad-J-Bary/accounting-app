@@ -11,6 +11,7 @@ export interface PartnerEquityRow {
   current_balance: string;
   drawings: string;
   profit_allocated: string;
+  loss_allocated: string;
   total_equity: string;
 }
 

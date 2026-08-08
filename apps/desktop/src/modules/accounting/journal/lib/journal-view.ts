@@ -1,9 +1,48 @@
-import type { JournalEntryDto } from "@erp/shared-types";
+import type { JournalEntryDto, JournalLineDto } from "@erp/shared-types";
 
 const isOriginalAmount = (currencyCode?: string, fxRate?: string) => {
   const rate = parseFloat(fxRate || "1");
   return Boolean(currencyCode) && Math.abs(rate - 1) > Number.EPSILON;
 };
+
+/** نوع فرعي لعنوان تلخيص القيد (عرض فقط). يرتكز على الغرض أولاً ثم الكود/الاسم. */
+function classifyAssetSubType(line: JournalLineDto): "أبنية وأراضي" | "معدات وتجهيزات" | "أثاث ومفروشات" | null {
+  const accName = line.account_name || "";
+  const accCode = line.account_code || "";
+  if (
+    accName.includes("أبنية") ||
+    accName.includes("أراضي") ||
+    accName.includes("المباني") ||
+    accName.includes("الأراضي")
+  ) {
+    return "أبنية وأراضي";
+  }
+  if (
+    accName.includes("معدات") ||
+    accName.includes("تجهيزات") ||
+    accName.includes("الآلات") ||
+    accName.includes("المعدات")
+  ) {
+    return "معدات وتجهيزات";
+  }
+  if (
+    accName.includes("أثاث") ||
+    accName.includes("مفروشات") ||
+    accName.includes("المفروشات")
+  ) {
+    return "أثاث ومفروشات";
+  }
+  if (accCode.startsWith("1101") || accCode.startsWith("111")) {
+    return "أبنية وأراضي";
+  }
+  if (accCode.startsWith("1102") || accCode.startsWith("112")) {
+    return "معدات وتجهيزات";
+  }
+  if (accCode.startsWith("1103") || accCode.startsWith("113")) {
+    return "أثاث ومفروشات";
+  }
+  return null;
+}
 
 export interface JournalRowLine {
   group_key: string;
@@ -51,46 +90,12 @@ export function toJournalLines(entry: JournalEntryDto): JournalRowLine[] {
     const isPurchase = desc.includes("شراء أصل ثابت") || desc.includes("اثبات شراء");
 
     if (isDepreciation || isOpening || isPurchase) {
-      let assetType = "أصول ثابتة";
+      let assetType: string = "أصول ثابتة";
       for (const line of entry.lines) {
-        const accName = line.account_name || "";
-        const accCode = line.account_code || "";
-        if (
-          accName.includes("أبنية") || 
-          accName.includes("أراضي") || 
-          accName.includes("المباني") || 
-          accName.includes("الأراضي")
-        ) {
-          assetType = "أبنية وأراضي";
-          break;
-        }
-        if (
-          accName.includes("معدات") || 
-          accName.includes("تجهيزات") || 
-          accName.includes("الآلات") || 
-          accName.includes("المعدات")
-        ) {
-          assetType = "معدات وتجهيزات";
-          break;
-        }
-        if (
-          accName.includes("أثاث") || 
-          accName.includes("مفروشات") || 
-          accName.includes("المفروشات")
-        ) {
-          assetType = "أثاث ومفروشات";
-          break;
-        }
-        if (accCode.startsWith("1101") || accCode.startsWith("111")) {
-          assetType = "أبنية وأراضي";
-          break;
-        }
-        if (accCode.startsWith("1102") || accCode.startsWith("112")) {
-          assetType = "معدات وتجهيزات";
-          break;
-        }
-        if (accCode.startsWith("1103") || accCode.startsWith("113")) {
-          assetType = "أثاث ومفروشات";
+        if (line.account_purpose === "fixed_asset") continue;
+        const subtype = classifyAssetSubType(line);
+        if (subtype) {
+          assetType = subtype;
           break;
         }
       }
@@ -298,46 +303,12 @@ export function toJournalLinesSingleLine(entry: JournalEntryDto): JournalSingleL
     const isPurchase = desc.includes("شراء أصل ثابت") || desc.includes("اثبات شراء");
 
     if (isDepreciation || isOpening || isPurchase) {
-      let assetType = "أصول ثابتة";
+      let assetType: string = "أصول ثابتة";
       for (const line of entry.lines) {
-        const accName = line.account_name || "";
-        const accCode = line.account_code || "";
-        if (
-          accName.includes("أبنية") || 
-          accName.includes("أراضي") || 
-          accName.includes("المباني") || 
-          accName.includes("الأراضي")
-        ) {
-          assetType = "أبنية وأراضي";
-          break;
-        }
-        if (
-          accName.includes("معدات") || 
-          accName.includes("تجهيزات") || 
-          accName.includes("الآلات") || 
-          accName.includes("المعدات")
-        ) {
-          assetType = "معدات وتجهيزات";
-          break;
-        }
-        if (
-          accName.includes("أثاث") || 
-          accName.includes("مفروشات") || 
-          accName.includes("المفروشات")
-        ) {
-          assetType = "أثاث ومفروشات";
-          break;
-        }
-        if (accCode.startsWith("1101") || accCode.startsWith("111")) {
-          assetType = "أبنية وأراضي";
-          break;
-        }
-        if (accCode.startsWith("1102") || accCode.startsWith("112")) {
-          assetType = "معدات وتجهيزات";
-          break;
-        }
-        if (accCode.startsWith("1103") || accCode.startsWith("113")) {
-          assetType = "أثاث ومفروشات";
+        if (line.account_purpose === "fixed_asset") continue;
+        const subtype = classifyAssetSubType(line);
+        if (subtype) {
+          assetType = subtype;
           break;
         }
       }

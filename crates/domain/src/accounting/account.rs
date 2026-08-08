@@ -42,13 +42,31 @@ pub enum AccountPurpose {
     General,            // غير محدد الغرض
     PartnerCapital,     // رأس مال الشريك (51X)
     PartnerDrawings,    // مسحوبات الشريك (44X) — contra-equity
-    PartnerCurrent,     // الحساب الجاري/الربح للشريك (54X)
+    PartnerCurrent,     // الحساب الجاري/الربح للشريك (متداول)
     Receivable,         // ذمم عملاء (1203)
     Payable,            // ذمم موردين (2203)
     Inventory,          // مخزون (1204)
     FixedAsset,         // أصول ثابتة (11)
     RetainedEarnings,   // أرباح مبقاة (52)
     OpeningBalanceEquity, // رصيد افتتاحي (53)
+}
+
+impl AccountPurpose {
+    /// Canonical snake_case tag persisted to the `purpose` column (Sec 46).
+    pub fn to_str(self) -> &'static str {
+        match self {
+            AccountPurpose::General => "general",
+            AccountPurpose::PartnerCapital => "partner_capital",
+            AccountPurpose::PartnerDrawings => "partner_drawings",
+            AccountPurpose::PartnerCurrent => "partner_current",
+            AccountPurpose::Receivable => "receivable",
+            AccountPurpose::Payable => "payable",
+            AccountPurpose::Inventory => "inventory",
+            AccountPurpose::FixedAsset => "fixed_asset",
+            AccountPurpose::RetainedEarnings => "retained_earnings",
+            AccountPurpose::OpeningBalanceEquity => "opening_balance_equity",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -225,4 +225,14 @@ async fn equity_statement_reconciles_with_partner_ledgers() {
     // profit_allocated == current account balance on the ledger (Sec 13).
     assert_eq!(Decimal::from_str(&row_a.profit_allocated).unwrap(), cur_a);
     assert_eq!(Decimal::from_str(&row_b.profit_allocated).unwrap(), cur_b);
+
+    // loss_allocated exposes the debit leg separately: no losses were
+    // allocated in this run, so it must be zero (and distinct from profit).
+    let loss_a: Decimal = Decimal::from_str(&row_a.loss_allocated).unwrap();
+    let loss_b: Decimal = Decimal::from_str(&row_b.loss_allocated).unwrap();
+    assert_eq!(loss_a, Decimal::ZERO);
+    assert_eq!(loss_b, Decimal::ZERO);
+    // profit − loss restores the net current balance used by total_equity.
+    assert_eq!(Decimal::from_str(&row_a.profit_allocated).unwrap() - loss_a, cur_a);
+    assert_eq!(Decimal::from_str(&row_b.profit_allocated).unwrap() - loss_b, cur_b);
 }

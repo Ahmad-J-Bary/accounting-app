@@ -24,6 +24,9 @@ pub struct AccountDto {
     pub credit: String,
     pub currency: String,
     pub exchange_rate: String,
+    /// Semantic account purpose (Sec 46) so the UI can classify without brittle
+    /// code-prefix string matching. See `AccountPurpose` in the domain.
+    pub purpose: String,
 }
 
 impl From<Account> for AccountDto {
@@ -49,6 +52,7 @@ impl From<Account> for AccountDto {
             credit: account.credit.to_string(),
             currency: account.currency.code,
             exchange_rate: account.exchange_rate.to_string(),
+            purpose: account.purpose.to_str().to_string(),
         }
     }
 }

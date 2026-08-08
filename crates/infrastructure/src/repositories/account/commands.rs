@@ -4,19 +4,7 @@ use domain::accounting::account::{Account, AccountCategory};
 use domain::shared::ids::AccountId;
 
 pub fn purpose_to_str(purpose: domain::accounting::account::AccountPurpose) -> &'static str {
-    use domain::accounting::account::AccountPurpose;
-    match purpose {
-        AccountPurpose::General => "general",
-        AccountPurpose::PartnerCapital => "partner_capital",
-        AccountPurpose::PartnerDrawings => "partner_drawings",
-        AccountPurpose::PartnerCurrent => "partner_current",
-        AccountPurpose::Receivable => "receivable",
-        AccountPurpose::Payable => "payable",
-        AccountPurpose::Inventory => "inventory",
-        AccountPurpose::FixedAsset => "fixed_asset",
-        AccountPurpose::RetainedEarnings => "retained_earnings",
-        AccountPurpose::OpeningBalanceEquity => "opening_balance_equity",
-    }
+    purpose.to_str()
 }
 
 pub async fn save(pool: &SqlitePool, account: &Account) -> Result<(), AppError> {

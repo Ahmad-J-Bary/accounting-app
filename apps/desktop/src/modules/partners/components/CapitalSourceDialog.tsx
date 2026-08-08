@@ -29,17 +29,19 @@ const SOURCE_OPTIONS: { id: CapitalSource; icon: ComponentType<{ className?: str
 function accountCandidates(accounts: AccountDto[], source: CapitalSource): AccountDto[] {
   const detail = accounts.filter((a) => a.account_type === 'Assets' && a.category === 'Detail' && a.is_active);
   const match = (a: AccountDto) => `${a.name_ar} ${a.name_en} ${a.code}`.toLowerCase();
+  const byPurpose = (a: AccountDto, ...purposes: string[]) => !!a.purpose && purposes.includes(a.purpose);
   switch (source) {
     case 'Cash': {
-      const cash = detail.find((a) => match(a).includes('نقد') || match(a).includes('صندوق') || a.code === '122');
+      const cashByPurpose = detail.find((a) => byPurpose(a, 'general') && (match(a).includes('نقد') || match(a).includes('صندوق') || a.code === '122'));
+      const cash = cashByPurpose || detail.find((a) => match(a).includes('نقد') || match(a).includes('صندوق') || a.code === '122');
       return cash ? [cash] : detail;
     }
     case 'Bank':
       return detail.filter((a) => match(a).includes('بنك') || match(a).includes('مصرف'));
     case 'InKind':
-      return detail.filter((a) => match(a).includes('أصل') || match(a).includes('عيني') || match(a).includes('معدات') || match(a).includes('مخزون'));
+      return detail.filter((a) => byPurpose(a, 'fixed_asset', 'inventory') || match(a).includes('أصل') || match(a).includes('عيني') || match(a).includes('معدات') || match(a).includes('مخزون'));
     case 'Owed':
-      return detail.filter((a) => match(a).includes('ذمة') || match(a).includes('مستحق') || match(a).includes('عميل') || match(a).includes('قبض') || match(a).includes('مدين'));
+      return detail.filter((a) => byPurpose(a, 'receivable') || match(a).includes('ذمة') || match(a).includes('مستحق') || match(a).includes('عميل') || match(a).includes('قبض') || match(a).includes('مدين'));
     default:
       return detail;
   }

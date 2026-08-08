@@ -61,6 +61,24 @@ The `44*` subtree is reclassified from Expenses to Equity by migration
 `143_partner_drawings_and_residual.sql` so owner drawings never appear as an
 operating expense in the P&L.
 
+### 2.1 Semantic account purpose (Sec 46)
+
+`AccountPurpose` replaces brittle code-prefix/name string matching as the source
+of truth for account semantics (`general`, `partner_capital`,
+`partner_drawings`, `partner_current`, `receivable`, `payable`, `inventory`,
+`fixed_asset`, `retained_earnings`, `opening_balance_equity`):
+
+- Stored on every account by migrations 148/149 and surfaced as `purpose` in
+  the backend `AccountDto` and `JournalLineDto` (shared-types), so the UI never
+  re-derives semantics from volatile code prefixes or names.
+- Frontend classifiers are **purpose-first with fallback**: the balance sheet,
+  journal line and capital-source dialog match `purpose` first (`fixed_asset`
+  → fixed assets, `receivable`/`inventory` → current assets & owed funds,
+  `payable` → current liabilities), and only for legacy `general` rows
+  fall back to the old code/name heuristics.
+- `AccountPurpose::to_str()` in the domain is the single canonical tag mapping,
+  reused by persistence and DTOs so the strings never drift apart.
+
 ## 3. Partner master data (atomic creation)
 
 `CreatePartnerUseCase` creates a partner plus its two linked accounts
@@ -113,6 +131,24 @@ Dr <retained earnings (52)>
 ```
 
 Journal type `Capitalization`. Pure equity-to-equity: no P&L impact.
+
+### 6.1 Partner equity statement (profit vs loss allocations)
+
+`GetPartnerEquityStatementUseCase` serves each partner's owner position from the
+ledgers only (never `ledger_balance − registered_capital`):
+
+- `current_balance` = net credit−debit of the partner's current account (the
+  accumulated profit allocations, Sec 13), read straight from POSTed/reversed
+  `journal_lines`.
+- `profit_allocated` = the same current-account net figure (a loss period makes
+  it negative).
+- `loss_allocated` = the **debit leg magnitude** of the current account,
+  exposed separately so a loss period shows explicitly (red in the UI) and can
+  never be silently folded into the profit figure. Invariant:
+  `profit_allocated − loss_allocated == current_balance` when the drift is only
+  the debit leg with a zero net — verified by `equity_gl_reconcile` test that
+  reconciles the statement row against raw SQL `journal_lines`.
+- `total_equity = ledger_balance + current_balance − drawings`.
 
 ## 7. Opening-balance cutover & residual equity
 

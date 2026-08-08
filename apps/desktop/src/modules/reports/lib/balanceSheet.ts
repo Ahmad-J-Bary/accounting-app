@@ -43,6 +43,7 @@ type AccountBalance = {
   balance: number;
   accountType: string;
   depth: number;
+  purpose?: string;
   children: AccountBalance[];
 };
 
@@ -50,13 +51,19 @@ function parseNum(value?: string | number | null): number {
   return parseSafeNumber(value);
 }
 
-function isFixedAsset(code: string, name: string): boolean {
+function isPurposeOf(purpose: string | undefined, ...tags: string[]): boolean {
+  return !!purpose && tags.includes(purpose);
+}
+
+function isFixedAsset(code: string, name: string, purpose?: string): boolean {
+  if (isPurposeOf(purpose, "fixed_asset")) return true;
   const fixedIndicators = ["11", "ثابت", "عقار", "أرض", "مبنى", "بناء", "أبنية", "أراضي", "معدات", "تجهيز", "أثاث", "مفروش", "مجمع إهلاك"];
   if (fixedIndicators.some(i => code.startsWith(i) || name.includes(i))) return true;
   return false;
 }
 
-function isCurrentAsset(code: string, name: string): boolean {
+function isCurrentAsset(code: string, name: string, purpose?: string): boolean {
+  if (isPurposeOf(purpose, "receivable", "inventory")) return true;
   const currentIndicators = ["12", "متداول", "نقد", "خزين", "صندوق", "عميل", "مدين", "زبون", "مخزون"];
   if (currentIndicators.some(i => code.startsWith(i) || name.includes(i))) return true;
   return false;
@@ -73,7 +80,8 @@ function isFixedLiability(code: string, name: string): boolean {
   return false;
 }
 
-function isCurrentLiability(code: string, name: string): boolean {
+function isCurrentLiability(code: string, name: string, purpose?: string): boolean {
+  if (isPurposeOf(purpose, "payable")) return true;
   const currentIndicators = ["22", "23", "24", "25", "26", "27", "28", "29", "متداول", "قصير", "مورد", "دائن", "مستحق", "تكاليف"];
   if (currentIndicators.some(i => code.startsWith(i) || name.includes(i))) return true;
   return false;
@@ -109,6 +117,7 @@ function buildAccountTree(
         balance: children.length > 0 ? childrenBalance : ownBalance,
         accountType: acc.account_type,
         depth: 0,
+        purpose: acc.purpose ?? undefined,
         children,
       };
     });
@@ -133,11 +142,11 @@ export function computeBalanceSheet(
   const currentLiabilities: AccountBalance[] = [];
   const equityList: AccountBalance[] = [];
 
-  // دالة مشتركة للتصنيف داخل نوع معين (أصول أو خصوم)
+// دالة مشتركة للتصنيف داخل نوع معين (أصول أو خصوم)
   function classifyWithinType(
     nodes: AccountBalance[],
-    isFixed: (code: string, name: string) => boolean,
-    isCurrent: (code: string, name: string) => boolean,
+    isFixed: (code: string, name: string, purpose?: string) => boolean,
+    isCurrent: (code: string, name: string, purpose?: string) => boolean,
     fixed: AccountBalance[],
     current: AccountBalance[],
     type: string,
@@ -146,8 +155,8 @@ export function computeBalanceSheet(
       if (isInventoryTradingAccount(node.name)) continue;
       // تخطي حسابات حقوق الملكية المضمّنة داخل شجرة الخصوم
       if (node.accountType === "Equity") { equityList.push(node); continue; }
-      if (isFixed(node.code, node.name)) { fixed.push(node); }
-      else if (isCurrent(node.code, node.name)) { current.push(node); }
+      if (isFixed(node.code, node.name, node.purpose)) { fixed.push(node); }
+      else if (isCurrent(node.code, node.name, node.purpose)) { current.push(node); }
       else if (node.children.length > 0) {
         classifyWithinType(node.children, isFixed, isCurrent, fixed, current, type);
       } else {
@@ -224,6 +233,7 @@ export function computeBalanceSheet(
       balance: inventoryBalance,
       accountType: "Assets",
       depth: 0,
+      purpose: "inventory",
       children: [],
     });
   }

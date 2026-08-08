@@ -40,13 +40,14 @@ export function PartnerEquityCard() {
                   <th className="text-right px-4 py-2 font-semibold">الحساب الجاري</th>
                   <th className="text-right px-4 py-2 font-semibold">المسحوبات</th>
                   <th className="text-right px-4 py-2 font-semibold">الأرباح المتراكمة</th>
+                  <th className="text-right px-4 py-2 font-semibold">الخسائر المتراكمة</th>
                   <th className="text-right px-4 py-2 font-semibold">إجمالي حقوق الملكية</th>
                 </tr>
               </thead>
               <tbody>
                 {data.rows.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="text-center py-4 text-slate-400">لا يوجد شركاء</td>
+                    <td colSpan={8} className="text-center py-4 text-slate-400">لا يوجد شركاء</td>
                   </tr>
                 )}
                 {data.rows.map((r) => (
@@ -59,6 +60,9 @@ export function PartnerEquityCard() {
                     <td className={"px-4 py-2 tabular-nums " + (parseFloat(r.profit_allocated) < 0 ? "text-red-600" : "text-emerald-700")}>
                       {show(r.profit_allocated)}
                     </td>
+                    <td className={"px-4 py-2 tabular-nums " + (parseFloat(r.loss_allocated) > 0 ? "text-red-600" : "text-slate-500")}>
+                      {show(r.loss_allocated)}
+                    </td>
                     <td className="px-4 py-2 tabular-nums font-black text-indigo-700">{show(r.total_equity)}</td>
                   </tr>
                 ))}
@@ -70,6 +74,7 @@ export function PartnerEquityCard() {
                     <td className="px-4 py-2 tabular-nums">—</td>
                     <td className="px-4 py-2 tabular-nums">{show(data.total_drawings)}</td>
                     <td className="px-4 py-2 tabular-nums">{show(data.total_profit_allocated)}</td>
+                    <td className="px-4 py-2 tabular-nums">—</td>
                     <td className="px-4 py-2 tabular-nums">{show(data.total_equity)}</td>
                   </tr>
                 )}

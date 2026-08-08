@@ -19,6 +19,7 @@ export interface AccountDto {
   credit: string;
   currency?: string;
   exchange_rate?: string;
+  purpose?: string;
 }
 
 export interface SaveAccountCommand {

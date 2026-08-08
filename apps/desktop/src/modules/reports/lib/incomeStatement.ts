@@ -177,28 +177,35 @@ export function computeIncomeStatement(
   const accountMap = new Map((data.accounts || []).map((acc) => [acc.id, acc]));
   const entries = data.entries || [];
 
-  const getAccountPeriodNet = (code: string) => {
+const getAccountPeriodNet = (predicate: (acc?: AccountDto) => boolean, revenueSide: boolean) => {
     let debit = 0;
     let credit = 0;
     for (const entry of entries) {
       if (!isWithinRange(entry.entry_date, fromTs, toTs)) continue;
       for (const line of entry.lines) {
         const acc = accountMap.get(line.account_id);
-        if (acc?.code === code) {
+        if (acc && predicate(acc)) {
           debit += parseFloat(line.debit_base || line.debit || "0");
           credit += parseFloat(line.credit_base || line.credit || "0");
         }
       }
     }
-    if (code.startsWith("3")) {
+    // حسابات الإيرادات/المقابلات (أرقام تبدأ بـ 3) تُعامل عكسياً: رصيدها دائن
+    if (revenueSide) {
       return credit - debit;
     }
     return debit - credit;
   };
 
-  const adjustmentGains = getAccountPeriodNet("331");
-  const adjustmentLosses = getAccountPeriodNet("45");
-  const depreciationExpense = getAccountPeriodNet("46");
+  const SYSTEM_DEPRECIATION_ID = "00000000-0000-0000-0000-000000000046";
+  const matchCode = (codes: string[]) => (acc: AccountDto) => codes.includes(acc.code);
+
+  const adjustmentGains = getAccountPeriodNet(matchCode(["331"]), true);
+  const adjustmentLosses = getAccountPeriodNet(matchCode(["45"]), false);
+  const depreciationExpense = getAccountPeriodNet(
+    (acc) => acc.id === SYSTEM_DEPRECIATION_ID || acc.code === "46",
+    false,
+  );
 
   // 3. احتساب بضاعة آخر المدة النهائية بعد التسويات والتالف
   const closingInventory = closingInventoryBefore + adjustmentGains - adjustmentLosses;

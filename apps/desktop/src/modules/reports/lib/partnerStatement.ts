@@ -44,7 +44,6 @@ export function computePartnerStatement(
   const rows: PartnerStatementRow[] = existedPartners.map((p) => {
     const capitalAmount = parseFloat(p.amount_local || "0");
 
-    const capitalLedger = p.linked_account_id ? partnerLedgers[p.linked_account_id] : null;
     const drawingsLedger = p.drawings_account_id ? partnerLedgers[p.drawings_account_id] : null;
     // Accumulated profit allocations live on the partner's CURRENT account in
     // the ledger (Sec 4 / Sec 13). They are a real ledger figure, never derived

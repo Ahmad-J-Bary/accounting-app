@@ -27,6 +27,10 @@ pub struct PartnerEquityRow {
     /// (profit) account — a real ledger figure, never derived as
     /// "ledger_balance − registered capital" (Sec 13).
     pub profit_allocated: String,
+    /// Accumulated loss allocations on the partner's current account (the debit
+    /// leg, magnitude). Distinct from `profit_allocated` so a loss period is
+    /// shown explicitly and never mixed silently into the profit figure.
+    pub loss_allocated: String,
     /// ledger_balance + current_balance − drawings (the partner's net equity).
     pub total_equity: String,
 }
@@ -81,9 +85,9 @@ impl GetPartnerEquityStatementUseCase {
             };
             // Accumulated profit allocations live in the partner's CURRENT
             // account, never inside the capital account (Sec 4 / Sec 13).
-            let current_balance = match p.current_account_id {
-                Some(account_id) => self.ledger_balance(&account_id).await?,
-                None => Decimal::ZERO,
+            let (current_balance, loss_allocated) = match p.current_account_id {
+                Some(account_id) => self.ledger_breakdown(&account_id).await?,
+                None => (Decimal::ZERO, Decimal::ZERO),
             };
             let capital_registered = p.amount_local;
             let profit_allocated = current_balance;
@@ -102,6 +106,7 @@ impl GetPartnerEquityStatementUseCase {
                 current_balance: current_balance.to_string(),
                 drawings: drawings.to_string(),
                 profit_allocated: profit_allocated.to_string(),
+                loss_allocated: loss_allocated.to_string(),
                 total_equity: total_equity_row.to_string(),
             });
         }
@@ -116,8 +121,15 @@ impl GetPartnerEquityStatementUseCase {
     }
 
     async fn ledger_balance(&self, account_id: &AccountId) -> Result<Decimal, AppError> {
+        Ok(self.ledger_breakdown(account_id).await?.0)
+    }
+
+    /// (net credit−debit balance, debit magnitude) for an account across all
+    /// Posted/Reversed journal lines, from the ledgers themselves.
+    async fn ledger_breakdown(&self, account_id: &AccountId) -> Result<(Decimal, Decimal), AppError> {
         let entries = self.journal_repo.list_by_account(account_id).await?;
         let mut balance = Decimal::ZERO;
+        let mut debits = Decimal::ZERO;
         for entry in &entries {
             if entry.status == JournalEntryStatus::Draft {
                 continue;
@@ -125,9 +137,10 @@ impl GetPartnerEquityStatementUseCase {
             for line in &entry.lines {
                 if line.account_id == *account_id {
                     balance += line.credit.base_amount - line.debit.base_amount;
+                    debits += line.debit.base_amount;
                 }
             }
         }
-        Ok(balance)
+        Ok((balance, debits))
     }
 }
