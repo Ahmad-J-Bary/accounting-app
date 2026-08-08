@@ -86,15 +86,20 @@ impl UpdatePaymentUseCase {
             ).await?;
         }
 
-        // 2. Delete old journal entry
-        if existing.reference.as_deref().is_some_and(|r| r.starts_with("return:")) {
-            if let Some(ref entry_number) = existing.journal_entry_number {
-                if let Ok(Some(entry)) = self.journal_repo.find_by_number(entry_number).await {
-                    let _ = self.journal_repo.delete(&entry.id).await;
-                }
-            }
-        } else if let Ok(Some(entry)) = self.journal_repo.find_by_source_id(&pid.to_string()).await {
-            let _ = self.journal_repo.delete(&entry.id).await;
+        // 2. Delete old journal entry — only drafts may be rewritten directly.
+        // Posted entries must be reversed instead of being overwritten.
+        let old_entries = match existing.reference.as_deref().is_some_and(|r| r.starts_with("return:")) {
+            true => match &existing.journal_entry_number {
+                Some(number) => self.journal_repo.find_by_number(number).await?
+                    .into_iter().collect::<Vec<_>>(),
+                None => Vec::new(),
+            },
+            false => self.journal_repo.find_by_source_id(&pid.to_string()).await?
+                .into_iter().collect::<Vec<_>>(),
+        };
+        crate::use_cases::journal::guards::ensure_deletable(&old_entries)?;
+        for entry in old_entries {
+            self.journal_repo.delete(&entry.id).await?;
         }
 
         // 3. Build updated payment

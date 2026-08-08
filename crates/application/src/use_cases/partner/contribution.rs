@@ -8,7 +8,6 @@ use domain::shared::ids::PartnerId;
 use crate::ports::partner_repository::PartnerRepository;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
-use crate::ports::unit_of_work::UnitOfWork;
 use crate::errors::AppError;
 
 /// Explicit capital contribution: a partner contributes funds/assets to the
@@ -21,7 +20,6 @@ pub struct CreateCapitalContributionUseCase {
     repo: Arc<dyn PartnerRepository>,
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
-    uow: Arc<dyn UnitOfWork>,
 }
 
 impl CreateCapitalContributionUseCase {
@@ -29,9 +27,8 @@ impl CreateCapitalContributionUseCase {
         repo: Arc<dyn PartnerRepository>,
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
-        uow: Arc<dyn UnitOfWork>,
     ) -> Self {
-        Self { repo, account_repo, journal_repo, uow }
+        Self { repo, account_repo, journal_repo }
     }
 
     pub async fn execute(
@@ -91,8 +88,6 @@ impl CreateCapitalContributionUseCase {
             ),
         ];
 
-        self.uow.begin().await?;
-
         let mut entry = JournalEntry::new(
             self.journal_repo.get_next_entry_number().await?,
             JournalType::CapitalContribution,
@@ -103,9 +98,9 @@ impl CreateCapitalContributionUseCase {
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
         entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
+        // The journal repository persists the entry atomically (single write);
+        // journal_lines are written in the same transaction.
         self.journal_repo.save(&entry).await?;
-
-        self.uow.commit().await?;
 
         Ok(entry.id.to_string())
     }

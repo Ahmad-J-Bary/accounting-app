@@ -21,14 +21,20 @@ async fn delete_payment_by_reference(state: &AppState, reference: &str) -> Resul
         if payment.reference.as_deref() == Some(reference) {
             // Delete cash journal entry referenced by the payment
             if let Some(ref entry_number) = payment.journal_entry_number {
-                if let Ok(Some(entry)) = state.journal_entry_repo.find_by_number(entry_number).await {
-                    let _ = state.journal_entry_repo.delete(&entry.id).await;
+                if let Some(entry) = state.journal_entry_repo.find_by_number(entry_number)
+                    .await.map_err(|e| format!("فشل البحث عن قيد اليومية: {}", e))?
+                {
+                    state.journal_entry_repo.delete(&entry.id).await
+                        .map_err(|e| format!("فشل حذف قيد اليومية: {}", e))?;
                 }
             }
             // Also delete any entry by source_id (legacy)
             let pid_str = payment.id.to_string();
-            if let Ok(Some(entry)) = state.journal_entry_repo.find_by_source_id(&pid_str).await {
-                let _ = state.journal_entry_repo.delete(&entry.id).await;
+            if let Some(entry) = state.journal_entry_repo.find_by_source_id(&pid_str)
+                .await.map_err(|e| format!("فشل البحث عن قيد اليومية: {}", e))?
+            {
+                state.journal_entry_repo.delete(&entry.id).await
+                    .map_err(|e| format!("فشل حذف قيد اليومية: {}", e))?;
             }
             state.payment_repo.delete(&payment.id).await.map_err(|e| e.to_string())?;
         }

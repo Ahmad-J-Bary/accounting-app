@@ -72,15 +72,20 @@ impl DeletePaymentUseCase {
             ).await?;
         }
 
-        // Delete associated journal entry
-        if payment.reference.as_deref().is_some_and(|r| r.starts_with("return:")) {
-            if let Some(ref entry_number) = payment.journal_entry_number {
-                if let Ok(Some(entry)) = self.journal_repo.find_by_number(entry_number).await {
-                    let _ = self.journal_repo.delete(&entry.id).await;
-                }
-            }
-        } else if let Ok(Some(entry)) = self.journal_repo.find_by_source_id(&pid.to_string()).await {
-            let _ = self.journal_repo.delete(&entry.id).await;
+        // Delete associated journal entry — only drafts may be removed directly.
+        // Posted entries must go through a reversal; treat them as a hard stop.
+        let entries = match payment.reference.as_deref().is_some_and(|r| r.starts_with("return:")) {
+            true => match &payment.journal_entry_number {
+                Some(number) => self.journal_repo.find_by_number(number).await?
+                    .into_iter().collect::<Vec<_>>(),
+                None => Vec::new(),
+            },
+            false => self.journal_repo.find_by_source_id(&pid.to_string()).await?
+                .into_iter().collect::<Vec<_>>(),
+        };
+        crate::use_cases::journal::guards::ensure_deletable(&entries)?;
+        for entry in entries {
+            self.journal_repo.delete(&entry.id).await?;
         }
 
         self.repo.delete(&pid).await

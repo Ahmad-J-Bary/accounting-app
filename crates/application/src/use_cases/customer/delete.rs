@@ -27,8 +27,10 @@ impl DeleteCustomerUseCase {
 
         if let Some(ref customer) = customer {
             if let Some(ref account_id) = &customer.account_id {
-                // Cascade: delete all journal entries referencing this account
+                // Cascade: delete all journal entries referencing this account.
+                // Only drafts may be removed; posted history is immutable.
                 let entries = self.journal_repo.list_by_account(account_id).await?;
+                crate::use_cases::journal::guards::ensure_deletable(&entries)?;
                 for entry in &entries {
                     self.journal_repo.delete(&entry.id).await?;
                 }

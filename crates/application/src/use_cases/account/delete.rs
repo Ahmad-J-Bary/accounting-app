@@ -61,12 +61,24 @@ impl DeleteAccountUseCase {
             return Err(AccountUseCaseError::Forbidden("لا يمكن حذف حساب لديه حسابات فرعية".into()));
         }
 
-        // Cascade: delete all journal entries referencing this account
+        // Cascade: delete all journal entries referencing this account.
+        // Only drafts may be removed directly; posted history is immutable.
         let entries = self
             .journal_repo
             .list_by_account(&id)
             .await
             .map_err(|e| AccountUseCaseError::JournalRepositoryError(e.to_string()))?;
+
+        for entry in &entries {
+            match entry.status {
+                JournalEntryStatus::Draft => {}
+                _ => {
+                    return Err(AccountUseCaseError::Forbidden(
+                        "لا يمكن حذف الحساب: يحتوي على قيود مرحّلة/ملغاة في السجل المحاسبي".into(),
+                    ));
+                }
+            }
+        }
 
         for entry in &entries {
             self.journal_repo

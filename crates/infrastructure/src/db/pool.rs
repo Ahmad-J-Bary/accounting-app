@@ -10,7 +10,11 @@ pub async fn create_pool(database_url: &str) -> Result<DbPool, sqlx::Error> {
     let options = SqliteConnectOptions::from_str(database_url)?
         .busy_timeout(Duration::from_secs(10))
         .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
-        .foreign_keys(false);
+        // Referential integrity is enforced so the ledger's FK constraints
+        // (journal_lines→journal_entries/accounts, document lines→parents, …)
+        // actually protect data. Migration 145 purges pre-existing orphans so
+        // this flip is safe on databases created before enforcement.
+        .foreign_keys(true);
 
     let pool = SqlitePoolOptions::new()
         .max_connections(5)

@@ -84,7 +84,7 @@ let pool = build_pool().await;
     original.post().unwrap();
     repo.save(&original).await.unwrap();
 
-    let mut reversal = JournalEntry::create_reversal(
+let mut reversal = JournalEntry::create_reversal(
         &original,
         "CR-1001".to_string(),
         Utc::now(),
@@ -92,11 +92,12 @@ let pool = build_pool().await;
     )
     .unwrap();
     reversal.post().unwrap();
-    repo.save(&reversal).await.unwrap();
 
     let mut original = original;
     original.reverse().unwrap();
-    repo.save(&original).await.unwrap();
+    // The immutability guard rejects rewriting a Posted entry through `save`;
+    // the reversal flow persists both rows atomically via save_reversal_pair.
+    repo.save_reversal_pair(&reversal, &original).await.unwrap();
 
     let stored_original = repo
         .find_by_id(&original.id)

@@ -54,7 +54,6 @@ pub async fn create_capital_contribution(
         state.partner_repo.clone(),
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
-        state.uow.clone(),
     ).execute(partner_id, funding_account_id, amt, is_amount_in_original)
         .await
         .map_err(|e| e.to_string())
@@ -76,7 +75,6 @@ pub async fn create_partner_drawing(
         state.partner_repo.clone(),
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
-        state.uow.clone(),
     )
     .execute(partner_id, funding_account_id, amt, effective_date, description)
     .await
@@ -97,7 +95,6 @@ pub async fn capitalize_retained_earnings(
         state.partner_repo.clone(),
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
-        state.uow.clone(),
     )
     .execute(partner_id, amt, effective_date)
     .await

@@ -33,8 +33,10 @@ impl DeleteDamagedItemUseCase {
 
         let reference = item.reference.clone().unwrap_or_else(|| format!("DAM-{}", id));
 
-        // Delete journal entry
-        if let Ok(Some(entry)) = self.journal_repo.find_by_source_id(&reference).await {
+        // Delete journal entry — drafts only; posted entries are immutable.
+        let entry = self.journal_repo.find_by_source_id(&reference).await?;
+        if let Some(entry) = entry {
+            crate::use_cases::journal::guards::ensure_deletable(std::slice::from_ref(&entry))?;
             self.journal_repo.delete(&entry.id).await?;
         }
 

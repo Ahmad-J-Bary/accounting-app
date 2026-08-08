@@ -296,8 +296,10 @@ impl FixedAssetUseCases {
             self.repo.save_movement(&acq_mov).await?;
         }
 
-        // Also update the acquisition journal entry if it exists
+        // Also update the acquisition journal entry if it exists.
+        // Only draft entries are editable; posted ones are immutable.
         let entries = self.journal_repo.find_all_by_source_id(&id.0.to_string()).await?;
+        crate::use_cases::journal::guards::ensure_deletable(&entries)?;
         if let Some(mut entry) = entries.into_iter().find(|e| e.journal_type != domain::accounting::JournalType::GeneralJournal || !e.description.contains("إهلاك")) {
             entry.description = match req.addition_type.as_str() {
                 "existing" => format!("إضافة أصل سابق (أول المدة): {}", req.name),
@@ -335,8 +337,10 @@ impl FixedAssetUseCases {
     }
 
     pub async fn delete_asset(&self, id: FixedAssetId) -> Result<(), AppError> {
-        // Find all journal entries for this source and delete them
+        // Find all journal entries for this source. Only drafts may be deleted;
+        // posted entries are immutable and must go through a reversal.
         let entries = self.journal_repo.find_all_by_source_id(&id.0.to_string()).await?;
+        crate::use_cases::journal::guards::ensure_deletable(&entries)?;
         for entry in entries {
             self.journal_repo.delete(&entry.id).await?;
         }
