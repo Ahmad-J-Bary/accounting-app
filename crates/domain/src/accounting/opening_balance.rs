@@ -49,6 +49,42 @@ pub struct OpeningBalanceLine {
     pub description: Option<String>,
 }
 
+/// Explicit accounting classification for the residual equity of an opening
+/// migration. The system computes the residual but never decides its nature:
+/// the accountant must pick one explicitly (Sec 6 / Sec 8).
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ResidualClassification {
+    RetainedEarnings,
+    OpeningEquityAdjustment,
+    PriorPeriodAdjustment,
+    OtherEquity,
+    UnresolvedDifference,
+}
+
+impl ResidualClassification {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::RetainedEarnings => "RetainedEarnings",
+            Self::OpeningEquityAdjustment => "OpeningEquityAdjustment",
+            Self::PriorPeriodAdjustment => "PriorPeriodAdjustment",
+            Self::OtherEquity => "OtherEquity",
+            Self::UnresolvedDifference => "UnresolvedDifference",
+        }
+    }
+
+    #[allow(clippy::should_implement_trait)]
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "RetainedEarnings" => Some(Self::RetainedEarnings),
+            "OpeningEquityAdjustment" => Some(Self::OpeningEquityAdjustment),
+            "PriorPeriodAdjustment" => Some(Self::PriorPeriodAdjustment),
+            "OtherEquity" => Some(Self::OtherEquity),
+            "UnresolvedDifference" => Some(Self::UnresolvedDifference),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OpeningBalanceMigration {
     pub id: String,
@@ -56,6 +92,8 @@ pub struct OpeningBalanceMigration {
     pub cutover_date: DateTime<Utc>,
     pub source_system: Option<String>,
     pub source_reference: Option<String>,
+    pub residual_classification: Option<ResidualClassification>,
+    pub residual_account_id: Option<AccountId>,
     pub status: MigrationStatus,
     pub notes: Option<String>,
     pub lines: Vec<OpeningBalanceLine>,
@@ -95,6 +133,8 @@ impl OpeningBalanceMigration {
             cutover_date,
             source_system: None,
             source_reference: None,
+            residual_classification: None,
+            residual_account_id: None,
             status: MigrationStatus::Draft,
             notes,
             lines,
@@ -120,6 +160,19 @@ impl OpeningBalanceMigration {
         self.company_id = company_id;
         self.source_system = source_system;
         self.source_reference = source_reference;
+        self.updated_at = Utc::now();
+    }
+
+    /// Records the accountant-approved classification of the residual equity.
+    /// `residual_account_id` is the ledger account (e.g. 52 retained earnings)
+    /// that carries the residual line.
+    pub fn set_residual_classification(
+        &mut self,
+        classification: Option<ResidualClassification>,
+        residual_account_id: Option<AccountId>,
+    ) {
+        self.residual_classification = classification;
+        self.residual_account_id = residual_account_id;
         self.updated_at = Utc::now();
     }
 
@@ -347,5 +400,31 @@ mod tests {
         ] {
             assert_eq!(MigrationStatus::from_str(s.as_str()), s);
         }
+    }
+
+    #[test]
+    fn residual_classification_round_trip() {
+        for c in [
+            ResidualClassification::RetainedEarnings,
+            ResidualClassification::OpeningEquityAdjustment,
+            ResidualClassification::PriorPeriodAdjustment,
+            ResidualClassification::OtherEquity,
+            ResidualClassification::UnresolvedDifference,
+        ] {
+            assert_eq!(ResidualClassification::from_str(c.as_str()), Some(c));
+        }
+        assert_eq!(ResidualClassification::from_str("Unknown"), None);
+    }
+
+    #[test]
+    fn set_residual_classification_persists_fields() {
+        let mut m = sample(Decimal::new(1000, 2));
+        let account_id = AccountId(uuid::Uuid::new_v4());
+        m.set_residual_classification(
+            Some(ResidualClassification::RetainedEarnings),
+            Some(account_id),
+        );
+        assert_eq!(m.residual_classification, Some(ResidualClassification::RetainedEarnings));
+        assert_eq!(m.residual_account_id, Some(account_id));
     }
 }

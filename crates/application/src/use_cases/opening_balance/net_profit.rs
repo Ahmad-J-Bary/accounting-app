@@ -106,6 +106,13 @@ pub fn compute_ledger_totals(accounts: &[Account], entries: &[JournalEntry]) -> 
                 Some(a) => *a,
                 None => continue,
             };
+            // Partner drawings (owner current) are contra-equity, NEVER a P&L
+            // expense (Sec 11 / Sec 31). Reclassifying them as Equity + explicit
+            // guard keeps them out of net profit both in the legacy migration
+            // ledger and after partner-drawings journals are posted.
+            if account.is_drawings_account() {
+                continue;
+            }
             match account.account_type {
                 AccountType::Revenue => revenue += line.base_credit() - line.base_debit(),
                 AccountType::Expenses => expenses += line.base_debit() - line.base_credit(),
@@ -216,5 +223,46 @@ mod tests {
         let entry = posted_entry(ghost, 0, 999);
         let totals = compute_ledger_totals(&[rev], &[entry]);
         assert_eq!(totals.net, Decimal::ZERO);
+    }
+
+    #[test]
+    fn partner_drawings_do_not_reduce_net_profit() {
+        let rev = account("4001", AccountType::Revenue);
+        // After migration 143 the partner drawings account (44X) is Equity.
+        let drawings = account("4401", AccountType::Equity);
+        let totals = compute_ledger_totals(&[rev.clone(), drawings.clone()], &[
+            posted_entry(rev.id, 0, 1000),
+            posted_entry(drawings.id, 250, 0),
+        ]);
+        assert_eq!(totals.expenses, Decimal::ZERO);
+        assert_eq!(totals.net, dec!(1000));
+    }
+
+    #[test]
+    fn drawings_guard_skips_pnl_even_if_mistyped_expenses() {
+        // Defense-in-depth: even if a drawings account lingered typed Expenses,
+        // the code-44 guard removes it from the P&L.
+        let rev = account("4001", AccountType::Revenue);
+        let drawings = Account::new(
+            "4401".to_string(),
+            "مسحوبات شركاء".to_string(),
+            "Partner Drawings".to_string(),
+            AccountType::Expenses,
+            None,
+            AccountCategory::Detail,
+            1,
+            Decimal::ZERO,
+            Decimal::ZERO,
+            Decimal::ZERO,
+            Currency::new("SAR", "SAR", "ريال", "ر.س", 2, false),
+            Decimal::ONE,
+            None,
+        )
+        .unwrap();
+        let totals = compute_ledger_totals(&[rev.clone(), drawings.clone()], &[
+            posted_entry(rev.id, 0, 1000),
+            posted_entry(drawings.id, 250, 0),
+        ]);
+        assert_eq!(totals.net, dec!(1000));
     }
 }

@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::partner_repository::PartnerRepository;
+use domain::accounting::account::Account;
 use domain::accounting::partner::{Partner};
 use domain::shared::ids::{PartnerId};
 use std::sync::Arc;
@@ -33,6 +34,15 @@ impl PartnerRepository for SqlitePartnerRepository {
 
     async fn save(&self, partner: &Partner) -> Result<(), AppError> {
         commands::save(&self.pool, partner).await
+    }
+
+    async fn save_with_accounts(
+        &self,
+        partner: &Partner,
+        capital_account: &Account,
+        drawings_account: &Account,
+    ) -> Result<(), AppError> {
+        commands::save_with_accounts(&self.pool, partner, capital_account, drawings_account).await
     }
 
     async fn update(&self, partner: &Partner) -> Result<(), AppError> {

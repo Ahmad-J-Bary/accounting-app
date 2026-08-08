@@ -50,6 +50,14 @@ export interface CreateOpeningBalanceMigrationRequest {
   cutover_date: string;
   notes?: string | null;
   lines: OpeningLineInput[];
+  source_system?: string | null;
+  source_reference?: string | null;
+}
+
+export interface SetResidualClassificationRequest {
+  migration_id: string;
+  classification: string;
+  residual_account_id?: string | null;
 }
 
 export interface PartnerAllocationShare {
@@ -185,5 +193,10 @@ export const openingBalanceService = {
   },
   async getReconciliation(id: string): Promise<OpeningReconciliationDto> {
     return await invoke<OpeningReconciliationDto>('get_opening_balance_reconciliation', { id });
+  },
+  async setResidualClassification(
+    request: SetResidualClassificationRequest,
+  ): Promise<void> {
+    return await invoke<void>('set_opening_balance_residual_classification', { request });
   },
 };

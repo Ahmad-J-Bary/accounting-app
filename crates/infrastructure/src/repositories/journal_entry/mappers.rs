@@ -34,6 +34,8 @@ pub fn row_to_entry(row: JournalEntryRow, lines: Vec<JournalLine>) -> Result<Jou
         "AdjustmentJournal" => JournalType::AdjustmentJournal,
         "CapitalContribution" => JournalType::CapitalContribution,
         "ProfitDistribution" => JournalType::ProfitDistribution,
+        "PartnerDrawing" => JournalType::PartnerDrawing,
+        "Capitalization" => JournalType::Capitalization,
         "OpeningBalanceReversal" => JournalType::OpeningBalanceReversal,
         "Reversal" => JournalType::Reversal,
         _ => JournalType::GeneralJournal,

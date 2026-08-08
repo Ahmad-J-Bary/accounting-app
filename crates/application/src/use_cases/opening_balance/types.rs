@@ -14,6 +14,17 @@ pub struct CreateOpeningBalanceMigrationCommand {
     pub cutover_date: String,
     pub notes: Option<String>,
     pub lines: Vec<OpeningLineInput>,
+    /// Prior accounting system this migration replaces (Sec 31 traceability).
+    pub source_system: Option<String>,
+    pub source_reference: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct SetResidualClassificationCommand {
+    pub migration_id: String,
+    pub classification: String,
+    /// Ledger account carrying the residual (e.g. 52 retained earnings).
+    pub residual_account_id: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

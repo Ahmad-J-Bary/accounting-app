@@ -73,6 +73,8 @@ export default function OpeningBalanceWizard() {
   const [sourceSystem, setSourceSystem] = useState("");
   const [sourceReference, setSourceReference] = useState("");
   const [notes, setNotes] = useState("");
+  const [residualClassification, setResidualClassification] = useState("");
+  const [residualAccountId, setResidualAccountId] = useState("");
   const [assets, setAssets] = useState<WizLine[]>([]);
   const [liabilities, setLiabilities] = useState<WizLine[]>([]);
   const [equity, setEquity] = useState<WizLine[]>([]);
@@ -173,7 +175,16 @@ export default function OpeningBalanceWizard() {
           cutover_date: new Date(cutoverDate).toISOString(),
           notes: notes || null,
           lines: collectLines(),
+          source_system: sourceSystem || null,
+          source_reference: sourceReference || null,
         });
+        if (residualClassification && residualAccountId) {
+          await openingBalanceService.setResidualClassification({
+            migration_id: created.id,
+            classification: residualClassification,
+            residual_account_id: residualAccountId,
+          });
+        }
         const details = {
           customer_items: arRows.map((r) => ({
             customer_id: r.reference,
@@ -416,6 +427,42 @@ export default function OpeningBalanceWizard() {
           <div className="space-y-3">
             <p className="text-xs text-slate-500">حقوق الملكية — رؤوس أموال الشركاء والأرباح المبقاة (طبيعة دائن).</p>
             {renderLineEditor(equity, setEquity, "ابحث واختر حساب حقوق ملكية...")}
+            <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 space-y-2">
+              <p className="text-xs font-semibold text-amber-700">
+                تصنيف الفرق المتبقي (رصيد غير مسجل من النظام السابق):
+              </p>
+              <p className="text-[11px] text-amber-600">
+                يُحسب الرصيد المتبقي تلقائياً بعد إدخال الخطوط، وطبيعته قرار محاسب صريح — لا تُسوّى قسراً.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={residualClassification}
+                  onChange={(e) => setResidualClassification(e.target.value)}
+                  className="h-9 rounded-md border border-slate-200 bg-white px-2 text-sm"
+                >
+                  <option value="">التصنيف (اختياري)</option>
+                  <option value="RetainedEarnings">أرباح مبقاة</option>
+                  <option value="OpeningEquityAdjustment">تعديل حقوق ملكية افتتاحي</option>
+                  <option value="PriorPeriodAdjustment">تعديل فترة سابقة</option>
+                  <option value="OtherEquity">حقوق ملكية أخرى</option>
+                  <option value="UnresolvedDifference">فرق غير محلول</option>
+                </select>
+                <Input
+                  list="wiz-equity-accounts"
+                  value={residualAccountId}
+                  onChange={(e) => setResidualAccountId(e.target.value)}
+                  placeholder="حساب حامل الفرق (مثال: 52)"
+                  className="h-9"
+                />
+                <datalist id="wiz-equity-accounts">
+                  {detailAccounts.filter((a) => a.account_type === "Equity").map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.code} — {a.name_ar}
+                    </option>
+                  ))}
+                </datalist>
+              </div>
+            </div>
           </div>
         );
       case 4:

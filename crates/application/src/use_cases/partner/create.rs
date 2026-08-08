@@ -7,13 +7,11 @@ use domain::accounting::account::{Account, AccountType, AccountCategory};
 use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::partner_repository::PartnerRepository;
 use crate::ports::account_repository::AccountRepository;
-use crate::ports::unit_of_work::UnitOfWork;
 use crate::errors::AppError;
 
 pub struct CreatePartnerUseCase {
     repo: Arc<dyn PartnerRepository>,
     account_repo: Arc<dyn AccountRepository>,
-    uow: Arc<dyn UnitOfWork>,
     currency_repo: Arc<dyn CurrencyRepository>,
 }
 
@@ -21,10 +19,9 @@ impl CreatePartnerUseCase {
     pub fn new(
         repo: Arc<dyn PartnerRepository>,
         account_repo: Arc<dyn AccountRepository>,
-        uow: Arc<dyn UnitOfWork>,
         currency_repo: Arc<dyn CurrencyRepository>,
     ) -> Self {
-        Self { repo, account_repo, uow, currency_repo }
+        Self { repo, account_repo, currency_repo }
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -76,8 +73,6 @@ impl CreatePartnerUseCase {
             manual_ratio,
         ).map_err(AppError::Domain)?;
 
-        self.uow.begin().await?;
-
         let capital_parent = self.account_repo.find_by_code("51").await?
             .ok_or_else(|| AppError::Invalid("حساب رأس المال العام (51) غير موجود".into()))?;
         
@@ -118,21 +113,22 @@ impl CreatePartnerUseCase {
             created_at: Utc::now(),
             updated_at: Utc::now(),
         };
-
-        self.account_repo.save(&cap_account).await?;
         
         let drawings_parent = self.account_repo.find_by_code("44").await?
             .ok_or_else(|| AppError::Invalid("حساب المسحوبات العام (44) غير موجود".into()))?;
 
         let draw_code = format!("44{}", &code[1..]);
         let draw_account_name = format!("مسحوبات {}", name);
-        
+
+        // Partner drawings are a contra-equity (owner-current) balance that must
+        // NEVER be treated as an operating expense in the P&L (Sec 11 / Sec 31).
+        // Reclassified to a Debit-normal Equity-side accounts under chart "44".
         let draw_account = Account {
             id: domain::shared::ids::AccountId::new(),
             code: draw_code,
             name_ar: draw_account_name.clone(),
             name_en: draw_account_name.clone(),
-            account_type: AccountType::Expenses,
+            account_type: AccountType::Equity,
             parent_id: Some(drawings_parent.id),
             category: AccountCategory::Detail,
             level: 3,
@@ -152,14 +148,11 @@ impl CreatePartnerUseCase {
             updated_at: Utc::now(),
         };
 
-        self.account_repo.save(&draw_account).await?;
-
         partner.link_account(cap_account.id);
         partner.link_drawings_account(draw_account.id);
-        
-        self.repo.save(&partner).await?;
 
-        self.uow.commit().await?;
+        // Partner + its two accounts persist in ONE transaction (Sec 14 / Sec 29).
+        self.repo.save_with_accounts(&partner, &cap_account, &draw_account).await?;
 
         Ok(partner.id.to_string())
     }

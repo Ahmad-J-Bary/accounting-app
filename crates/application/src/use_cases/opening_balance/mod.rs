@@ -9,10 +9,12 @@ pub mod details;
 pub mod reconcile;
 pub mod net_profit;
 pub mod reopen;
+pub mod classify;
 
 pub use allocate::AllocateNetProfitUseCase;
 pub use net_profit::ComputeNetProfitUseCase;
 pub use cancel::CancelOpeningBalanceUseCase;
+pub use classify::SetResidualClassificationUseCase;
 pub use create::CreateOpeningBalanceUseCase;
 pub use details::SaveOpeningDetailsUseCase;
 pub use list::ListOpeningMigrationsUseCase;
@@ -29,4 +31,5 @@ pub use types::{
     OpeningCustomerItem, OpeningDetailsDto, OpeningFixedAssetItem, OpeningInventoryItem,
     OpeningLineInput, OpeningMigrationDto, OpeningReconciliationDto, OpeningSupplierItem,
     PartnerAllocationShare, PostOpeningBalanceResult, ReconciliationRow, SaveOpeningDetailsCommand,
+    SetResidualClassificationCommand,
 };

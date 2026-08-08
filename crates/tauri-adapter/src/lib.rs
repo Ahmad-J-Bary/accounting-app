@@ -128,6 +128,8 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             // Partners
             commands::partner::add_partner,
             commands::partner::create_capital_contribution,
+            commands::partner::create_partner_drawing,
+            commands::partner::capitalize_retained_earnings,
             commands::partner::list_partners,
             commands::partner::get_partner_equity_statement,
             commands::partner::delete_partner,
@@ -193,6 +195,7 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::opening_balance::lock_opening_balance_migration,
             commands::opening_balance::save_opening_balance_details,
             commands::opening_balance::get_opening_balance_reconciliation,
+            commands::opening_balance::set_opening_balance_residual_classification,
         ])
         .setup(|app| {
             let app_data_dir = app

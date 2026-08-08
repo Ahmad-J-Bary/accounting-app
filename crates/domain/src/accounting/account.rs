@@ -16,10 +16,19 @@ pub enum AccountType {
     Expenses,    // المصاريف
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum AccountCategory {
     Summary, // حساب تجميعي
     Detail,  // حساب فرعي/نهائي
+}
+
+/// The side on which an account normally carries its balance and increases.
+/// Assets & Expenses are debit-normal; Liabilities, Equity and Revenue are
+/// credit-normal. Used to interpret a stored balance as a signed value.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum NormalBalance {
+    Debit,
+    Credit,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -154,6 +163,41 @@ impl Account {
             self.account_type,
             AccountType::Liabilities | AccountType::Equity | AccountType::Revenue
         )
+    }
+
+    /// The natural balance side for this account type (Section 12 of the
+    /// accounting spec): a NEGATIVE signed value on a Debit-normal account or a
+    /// POSITIVE value on a Credit-normal account is a contra/abnormal balance.
+    pub fn normal_balance(&self) -> NormalBalance {
+        if self.is_debit_account() {
+            NormalBalance::Debit
+        } else {
+            NormalBalance::Credit
+        }
+    }
+
+    /// Signed ledger balance expressed so that a positive value sits on the
+    /// account's natural (normal) side:
+    ///   Debit-normal accounts:  +balance = debit,  −balance = credit
+    ///   Credit-normal accounts: +balance = credit, −balance = debit
+    pub fn signed_balance(&self) -> Decimal {
+        match self.normal_balance() {
+            NormalBalance::Debit => self.balance,
+            NormalBalance::Credit => -self.balance,
+        }
+    }
+
+    /// Display balance always positive; the side is reported separately (via
+    /// `signed_balance` or `is_debit_account()`) so UIs never print negative
+    /// totals for a normal credit balance.
+    pub fn display_balance(&self) -> Decimal {
+        self.balance.abs()
+    }
+
+    /// Partner-drawings accounts (contra equity) live under chart prefix `44`
+    /// and are NOT operating expenses. They must never appear in the P&L.
+    pub fn is_drawings_account(&self) -> bool {
+        self.code.starts_with("44")
     }
 
     pub fn deactivate(&mut self) {
@@ -322,4 +366,96 @@ mod tests {
             create_test_account("4001", "المبيعات", "Sales", AccountType::Revenue).unwrap();
         assert!(account.is_credit_account());
     }
+
+    // --- Normal balance semantics (Sec 12) ---
+
+    fn with_balance(acc_type: AccountType, opening: Decimal) -> Account {
+        create_test_account("1", "acc", "acc", acc_type)
+            .map(|mut a| {
+                a.opening_balance = opening;
+                a.balance = opening;
+                a
+            })
+            .unwrap()
+    }
+
+    #[test]
+    fn asset_is_debit_normal() {
+        let a = with_balance(AccountType::Assets, dec!(500));
+        assert_eq!(a.normal_balance(), NormalBalance::Debit);
+        assert_eq!(a.signed_balance(), dec!(500));
+        assert_eq!(a.display_balance(), dec!(500));
+    }
+
+    #[test]
+    fn expense_is_debit_normal() {
+        let a = with_balance(AccountType::Expenses, dec!(300));
+        assert_eq!(a.normal_balance(), NormalBalance::Debit);
+        assert_eq!(a.signed_balance(), dec!(300));
+    }
+
+    #[test]
+    fn asset_credit_contra_is_negative_signed() {
+        let mut a = with_balance(AccountType::Assets, Decimal::ZERO);
+        a.credit(dec!(40)).unwrap(); // abnormal (credit) side of an asset
+        assert_eq!(a.signed_balance(), dec!(-40));
+        assert_eq!(a.display_balance(), dec!(40));
+    }
+
+    #[test]
+    fn expense_credit_contra_is_negative_signed() {
+        let mut a = with_balance(AccountType::Expenses, Decimal::ZERO);
+        a.credit(dec!(25)).unwrap();
+        assert_eq!(a.signed_balance(), dec!(-25));
+    }
+
+    #[test]
+    fn liability_is_credit_normal() {
+        let mut a = with_balance(AccountType::Liabilities, Decimal::ZERO);
+        a.credit(dec!(1000)).unwrap();
+        assert_eq!(a.normal_balance(), NormalBalance::Credit);
+        assert_eq!(a.signed_balance(), dec!(1000)); // positive = credit
+    }
+
+    #[test]
+    fn equity_is_credit_normal() {
+        let mut a = with_balance(AccountType::Equity, Decimal::ZERO);
+        a.credit(dec!(4000)).unwrap();
+        assert_eq!(a.normal_balance(), NormalBalance::Credit);
+        assert_eq!(a.signed_balance(), dec!(4000));
+    }
+
+    #[test]
+    fn equity_debit_contra_is_negative_signed() {
+        let mut a = with_balance(AccountType::Equity, Decimal::ZERO);
+        a.credit(dec!(100)).unwrap();  // natural credit 100
+        a.debit(dec!(130)).unwrap();   // drawings push it to a net debit of 30
+        assert_eq!(a.signed_balance(), dec!(-30));
+        assert_eq!(a.display_balance(), dec!(30));
+    }
+
+    #[test]
+    fn revenue_is_credit_normal() {
+        let mut a = with_balance(AccountType::Revenue, Decimal::ZERO);
+        a.credit(dec!(800)).unwrap();
+        assert_eq!(a.normal_balance(), NormalBalance::Credit);
+        assert_eq!(a.signed_balance(), dec!(800));
+    }
+
+    #[test]
+    fn revenue_debit_contra_is_negative_signed() {
+        let mut a = with_balance(AccountType::Revenue, Decimal::ZERO);
+        a.credit(dec!(100)).unwrap();
+        a.debit(dec!(110)).unwrap(); // net debit 10 → contra
+        assert_eq!(a.signed_balance(), dec!(-10));
+    }
+
+    #[test]
+    fn drawings_accounts_are_detected_by_prefix_44() {
+        let drawings = create_test_account("4401", "مسحوبات", "Drawings", AccountType::Expenses).unwrap();
+        assert!(drawings.is_drawings_account());
+        let capital = create_test_account("5101", "رأس المال", "Capital", AccountType::Equity).unwrap();
+        assert!(!capital.is_drawings_account());
+    }
 }
+

@@ -47,8 +47,9 @@ impl CreateOpeningBalanceUseCase {
         }
 
         let id = uuid::Uuid::new_v4().to_string();
-        let migration = OpeningBalanceMigration::new(id, cutover, cmd.notes, lines)
+        let mut migration = OpeningBalanceMigration::new(id, cutover, cmd.notes, lines)
             .map_err(AppError::Domain)?;
+        migration.set_source(None, cmd.source_system, cmd.source_reference);
         self.repo.create(&migration).await?;
 
         Ok(OpeningMigrationDto(migration))

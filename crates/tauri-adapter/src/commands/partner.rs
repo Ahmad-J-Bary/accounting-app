@@ -1,7 +1,8 @@
 use crate::bootstrap::container::AppState;
 use application::use_cases::equity::GetPartnerEquityStatementUseCase;
 use application::use_cases::partner::{
-    CreatePartnerUseCase, CreateCapitalContributionUseCase, PartnerQueries, UpdatePartnerUseCase, UpdatePartnerRequest, DeletePartnerUseCase, PartnerDto
+    CreatePartnerUseCase, CreateCapitalContributionUseCase, CreatePartnerDrawingUseCase,
+    CapitalizeRetainedEarningsUseCase, PartnerQueries, UpdatePartnerUseCase, UpdatePartnerRequest, DeletePartnerUseCase, PartnerDto
 };
 use rust_decimal::Decimal;
 use tauri::State;
@@ -27,7 +28,6 @@ pub async fn add_partner(
     CreatePartnerUseCase::new(
         state.partner_repo.clone(),
         state.account_repo.clone(),
-        state.uow.clone(),
         state.currency_repo.clone(),
     ).execute(
         name,
@@ -58,6 +58,50 @@ pub async fn create_capital_contribution(
     ).execute(partner_id, funding_account_id, amt, is_amount_in_original)
         .await
         .map_err(|e| e.to_string())
+}
+
+/// Explicit partner-drawing event: Dr partner drawings account / Cr cash-bank
+/// (Sec 11 / Sec 34). Drawings are contra-equity and never reduce net profit.
+#[tauri::command]
+pub async fn create_partner_drawing(
+    state: State<'_, AppState>,
+    partner_id: String,
+    funding_account_id: String,
+    amount: String,
+    effective_date: Option<String>,
+    description: Option<String>,
+) -> Result<String, String> {
+    let amt = Decimal::from_str(&amount).map_err(|e| e.to_string())?;
+    CreatePartnerDrawingUseCase::new(
+        state.partner_repo.clone(),
+        state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
+        state.uow.clone(),
+    )
+    .execute(partner_id, funding_account_id, amt, effective_date, description)
+    .await
+    .map_err(|e| e.to_string())
+}
+
+/// Moves retained earnings (52) into a partner's capital account through an
+/// explicit, auditable capitalization journal (Sec 10).
+#[tauri::command]
+pub async fn capitalize_retained_earnings(
+    state: State<'_, AppState>,
+    partner_id: String,
+    amount: String,
+    effective_date: Option<String>,
+) -> Result<String, String> {
+    let amt = Decimal::from_str(&amount).map_err(|e| e.to_string())?;
+    CapitalizeRetainedEarningsUseCase::new(
+        state.partner_repo.clone(),
+        state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
+        state.uow.clone(),
+    )
+    .execute(partner_id, amt, effective_date)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

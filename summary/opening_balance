@@ -139,3 +139,35 @@
 - **O3 — تسوية GL مصحّحة + إجبار كامل**: `reconcile.rs` أُعيد بناؤه — `SubledgerKind{Ar,Ap,Inventory,FixedAssets}` + دوال نقية `account_subledger_kind` (سوابق 1203*/2203*/1204*/11*) و`gl_bucket_totals` (من بنود الترحيل، لا الأرصدة المخزنة) و`detail_subledger_totals` و`readiness_blockers(recon, require_control_zero)`؛ `GetOpeningReconciliationUseCase` خُفّض إلى 4 حقن. `LockOpeningBalanceUseCase` يشغّل `readiness_blockers(true)` — يرفض القفل إذا رصيد 53 ≠ 0 (يطبّق "Control == 0 قبل القفل" فعلياً لا تعليقاً).
 - **O4 — الاختبارات**: +2 integration `crates/infrastructure/tests/opening_posting.rs` (post يخزّن `account_opening_balance` + حالة Posted؛ cancel مع `OpeningBalanceReversal` يخزّن `opening_balance_reversal` + حالة Cancelled) على sqlite حقيقي؛ +2 unit في `reconcile.rs` (تصنيف الأكواد ورفض النقد، مدخلات post vs lock). واجهة: سطر حالة "جاهز للترحيل/القفل" في بطاقة التسوية (الصفحتان) يعرض blockers.
 - **Gates**: workspace check ✓, clippy 4 crates ✓ (0 warnings), domain ✓, application 14 ✓, infrastructure 10 ✓ (3 lib + 5 reversal + 2 opening_posting), tsc ✓, eslint 0 errors / 46 pre-existing warnings, vitest 100 ✓.
+
+### Phase P � Partner drawings (contra-equity), residual classification & atomic partner creation
+- **P1 � save_with_accounts (atomic partner creation)**: New port method
+  \PartnerRepository::save_with_accounts\ + Sqlite impl persisting partner + capital (51X) +
+  drawings (44X) in ONE SQLite transaction (helpers \insert_account_tx\/\insert_partner_tx\).
+  \CreatePartnerUseCase\ switched from \uow + repo.save�3\ to the single-call atomic path (drops the
+  \UnitOfWork\ injection; integration test \partner_atomicity.rs\ proves rollback of all rows on
+  mid-tx failure). Drawings account now created as **AccountType::Equity** (contra) not Expenses.
+- **P2**: Migration \143_partner_drawings_and_residual.sql\ � reclassifies all \44%\ accounts from
+  Expenses to Equity (renames 44"); ALTER \opening_balance_migrations\ + \esidual_classification\ +
+  \esidual_account_id\ columns. Infra models/mappers/queries updated.
+- **P3 � Normal Balance**: \NormalBalance::{Debit,Credit}\ + \Account::normal_balance()\,
+  \signed_balance()\, \display_balance()\, \is_drawings_account()\ (prefix 44). post.rs and
+  econcile.rs now classify Dr/Cr by \
+ormal_balance()\ instead of hardcoded type matches (enables
+  equity-typed drawings to post on the debit side). 11 domain unit tests.
+- **P4 � Explicit drawing journal**: \CreatePartnerDrawingUseCase\ (Dr 44X / Cr bank) with
+  \JournalType::PartnerDrawing\; Tauri \create_partner_drawing\; frontend service.
+- **P5 � Capitalization**: \CapitalizeRetainedEarningsUseCase\ (Dr 52 / Cr 51X) with
+  \JournalType::Capitalization\; Tauri \capitalize_retained_earnings\.
+- **P6 � Residual classification**: \SetResidualClassificationUseCase\ + \SetResidualClassificationCommand\;
+  wizard equity step gains classification picker + residual account; create persistence also saves
+  \source_system\/\source_reference\ (wizard now sends them).
+- **P7 � Partner equity statement now valid net-of-drawings**: \GetPartnerEquityStatementUseCase\
+  adds \drawings\ per row and reports \	otal_equity = ledger_balance - drawings\; frontend
+  PartnerEquityCard shows a ??????? column and totals.
+- **P8 � Drawings excluded from P&L**: \ComputeNetProfitUseCase\ (net_profit.rs) skips lines whose
+  account \is_drawings_account()\ so drawings never depress net profit (both Equity-typed and legacy
+  Expenses-typed DBs); +2 unit tests.
+- **Gates**: cargo check --workspace ? � clippy 4 crates ? (0 warnings) � cargo test
+  (domain 66 + application 21 + infra lib 3 + integration opening 2 + reversal 5 + partner_atomicity 2) ? �
+  tsc ? � eslint 0 errors (46 pre-existing warnings) ? � vitest 100 ? � \docs/accounting-model.md\ added.

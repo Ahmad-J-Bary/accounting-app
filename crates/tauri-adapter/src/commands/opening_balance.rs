@@ -8,6 +8,7 @@ use application::use_cases::opening_balance::{
     LockOpeningBalanceUseCase, NetProfitAllocationDto, OpeningDetailsDto, OpeningMigrationDto,
     OpeningReconciliationDto, PostOpeningBalanceResult, PostOpeningBalanceUseCase,
     ReopenOpeningBalanceUseCase, SaveOpeningDetailsCommand, SaveOpeningDetailsUseCase,
+    SetResidualClassificationCommand, SetResidualClassificationUseCase,
     ValidateOpeningBalanceUseCase,
 };
 use tauri::State;
@@ -102,7 +103,18 @@ pub async fn reopen_opening_balance_migration(
     id: String,
 ) -> Result<OpeningMigrationDto, String> {
     ReopenOpeningBalanceUseCase::new(state.opening_migration_repo.clone())
-        .execute(id)
+.execute(id)
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn set_opening_balance_residual_classification(
+    state: State<'_, AppState>,
+    request: SetResidualClassificationCommand,
+) -> Result<(), String> {
+    SetResidualClassificationUseCase::new(state.opening_migration_repo.clone())
+        .execute(request)
         .await
         .map_err(|e| e.to_string())
 }

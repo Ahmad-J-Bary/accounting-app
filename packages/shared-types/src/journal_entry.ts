@@ -22,6 +22,8 @@ export type JournalType =
   | 'DiscountGrantedJournal'
   | 'CapitalContribution'
   | 'ProfitDistribution'
+  | 'PartnerDrawing'
+  | 'Capitalization'
   | 'OpeningBalanceReversal'
   | 'Reversal';
 

@@ -33,6 +33,8 @@ pub enum JournalType {
     DiscountGrantedJournal,// حسم ممنوح
     CapitalContribution,// مساهمة رأس مال
     ProfitDistribution,// توزيع أرباح على الشركاء
+    PartnerDrawing,   // سحب شريك (مسحوبات)
+    Capitalization,   // رسملة الأرباح المبقاة إلى رأس المال
     OpeningBalanceReversal,// عكس ترحيل رصيد الافتتاح
     Reversal,           // قيد عكسي عام (قيد معاكس لأي قيد مرحّل)
 }
@@ -63,6 +65,8 @@ impl std::fmt::Display for JournalType {
             Self::DiscountGrantedJournal => "حسم ممنوح",
             Self::CapitalContribution => "مساهمة رأس مال",
             Self::ProfitDistribution => "توزيع أرباح",
+            Self::PartnerDrawing => "سحب شريك",
+            Self::Capitalization => "رسملة الأرباح المبقاة",
             Self::OpeningBalanceReversal => "عكس ترحيل رصيد الافتتاح",
             Self::Reversal => "قيد عكسي",
         };
@@ -99,6 +103,8 @@ impl JournalType {
             Self::DiscountGrantedJournal => "discount_granted",
             Self::CapitalContribution => "capital_contribution",
             Self::ProfitDistribution => "profit_distribution",
+            Self::PartnerDrawing => "partner_drawing",
+            Self::Capitalization => "capitalization",
             Self::OpeningBalanceReversal => "opening_balance_reversal",
             Self::Reversal => "reversal",
         }

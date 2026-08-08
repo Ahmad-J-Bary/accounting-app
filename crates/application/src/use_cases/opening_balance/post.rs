@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use domain::accounting::account::AccountType;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::shared::{Currency, MonetaryAmount};
 
@@ -70,7 +69,13 @@ impl PostOpeningBalanceUseCase {
                 .ok_or_else(|| AppError::NotFound(format!("الحساب غير موجود: {}", line.account_id)))?;
 
             let amount = MonetaryAmount::from_base(line.amount, base_currency.clone());
-            let debit_nature = matches!(account.account_type, AccountType::Assets | AccountType::Expenses);
+            // Debit-normal accounts (assets, expenses, *drawings*) carry the
+            // opening amount on the debit side; credit-normal accounts land on
+            // credit (Sec 12 normal-balance convention).
+            let debit_nature = matches!(
+                account.normal_balance(),
+                domain::accounting::account::NormalBalance::Debit
+            );
 
             let description = line.description.clone()
                 .unwrap_or_else(|| format!("رصيد افتتاحي — {}", account.name_ar));

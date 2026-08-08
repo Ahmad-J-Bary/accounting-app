@@ -1,6 +1,6 @@
 use super::models::{MigrationRow, MigrationLineRow};
 use application::errors::AppError;
-use domain::accounting::{OpeningBalanceMigration, OpeningBalanceLine, MigrationStatus};
+use domain::accounting::{OpeningBalanceMigration, OpeningBalanceLine, MigrationStatus, ResidualClassification};
 use domain::shared::AccountId;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
@@ -19,6 +19,13 @@ pub fn row_to_migration(row: MigrationRow, lines: Vec<OpeningBalanceLine>) -> Re
             .unwrap_or_else(|_| Utc::now()),
         source_system: row.source_system,
         source_reference: row.source_reference,
+        residual_classification: row
+            .residual_classification
+            .as_deref()
+            .and_then(ResidualClassification::from_str),
+        residual_account_id: row
+            .residual_account_id
+            .and_then(|id| AccountId::from_str(&id).ok()),
         status: MigrationStatus::from_str(&row.status),
         notes: row.notes,
         lines,

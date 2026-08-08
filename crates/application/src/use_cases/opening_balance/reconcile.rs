@@ -227,7 +227,10 @@ async fn drift_totals(
     for line in &migration.lines {
         let account = account_repo.find_by_id(&line.account_id).await?
             .ok_or_else(|| AppError::NotFound(format!("الحساب غير موجود: {}", line.account_id)))?;
-        if matches!(account.account_type, AccountType::Assets | AccountType::Expenses) {
+        if matches!(
+            account.normal_balance(),
+            domain::accounting::account::NormalBalance::Debit
+        ) {
             d += line.amount;
         } else {
             c_ += line.amount;

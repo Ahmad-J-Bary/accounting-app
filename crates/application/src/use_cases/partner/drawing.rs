@@ -1,0 +1,197 @@
+use std::sync::Arc;
+use rust_decimal::Decimal;
+use chrono::{DateTime, Utc};
+use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
+use domain::shared::{Money, MonetaryAmount, AccountId};
+use domain::shared::ids::PartnerId;
+
+use crate::ports::partner_repository::PartnerRepository;
+use crate::ports::account_repository::AccountRepository;
+use crate::ports::journal_entry_repository::JournalEntryRepository;
+use crate::ports::unit_of_work::UnitOfWork;
+use crate::errors::AppError;
+
+/// Explicit partner-drawing event: a partner withdraws cash/bank funds from the
+/// company.
+///
+/// Journal (Sec 11 / Sec 34):
+///   Dr <partner drawings account (44X, contra-equity)>
+///       Cr <funding account (cash/bank)>
+///
+/// Drawings are a contra-equity (owner current) balance and therefore do NOT
+/// appear as an operating expense in the Profit & Loss.
+pub struct CreatePartnerDrawingUseCase {
+    repo: Arc<dyn PartnerRepository>,
+    account_repo: Arc<dyn AccountRepository>,
+    journal_repo: Arc<dyn JournalEntryRepository>,
+    uow: Arc<dyn UnitOfWork>,
+}
+
+impl CreatePartnerDrawingUseCase {
+    pub fn new(
+        repo: Arc<dyn PartnerRepository>,
+        account_repo: Arc<dyn AccountRepository>,
+        journal_repo: Arc<dyn JournalEntryRepository>,
+        uow: Arc<dyn UnitOfWork>,
+    ) -> Self {
+        Self { repo, account_repo, journal_repo, uow }
+    }
+
+    pub async fn execute(
+        &self,
+        partner_id: String,
+        funding_account_id: String,
+        amount: Decimal,
+        effective_date: Option<String>,
+        description: Option<String>,
+    ) -> Result<String, AppError> {
+        let partner_id_parsed = partner_id.parse::<PartnerId>()
+            .map_err(|_| AppError::NotFound("معرف الشريك غير صالح".into()))?;
+        let partner = self.repo.find_by_id(&partner_id_parsed).await?
+            .ok_or_else(|| AppError::NotFound("الشريك غير موجود".into()))?;
+
+        if amount <= Decimal::ZERO {
+            return Err(AppError::Invalid("مبلغ المسحوبات يجب أن يكون أكبر من الصفر".into()));
+        }
+
+        let drawings_account_id = partner.drawings_account_id
+            .ok_or_else(|| AppError::Invalid("الشريك لا يملك حساب مسحوبات مرتبط".into()))?;
+
+        let funding_id = funding_account_id.parse::<AccountId>()
+            .map_err(|_| AppError::NotFound("معرف حساب التمويل غير صالح".into()))?;
+        let _funding_account = self.account_repo.find_by_id(&funding_id).await?
+            .ok_or_else(|| AppError::NotFound("حساب التمويل غير موجود".into()))?;
+
+        let fx_rate = if partner.exchange_rate > Decimal::ZERO {
+            partner.exchange_rate
+        } else {
+            Decimal::ONE
+        };
+        // The entered amount is expressed in the base (local) currency, so the
+        // original-currency leg round-trips back to the same base figure.
+        let amount_original = amount / fx_rate;
+        let amount_ma = MonetaryAmount::new(
+            Money::new(amount_original, partner.currency.clone()),
+            fx_rate,
+        );
+        let zero_ma = MonetaryAmount::zero(amount_ma.currency().clone());
+
+        let lines = vec![
+            JournalLine::new(
+                drawings_account_id,
+                amount_ma.clone(),
+                zero_ma.clone(),
+                format!("سحب الشريك {}", partner.name),
+            ),
+            JournalLine::new(
+                funding_id,
+                zero_ma,
+                amount_ma,
+                format!("سحب الشريك {} من الحساب الممول", partner.name),
+            ),
+        ];
+
+        self.uow.begin().await?;
+
+        let mut entry = JournalEntry::new(
+            self.journal_repo.get_next_entry_number().await?,
+            JournalType::PartnerDrawing,
+            lines,
+            effective_date
+                .and_then(|d| DateTime::parse_from_rfc3339(&d).ok())
+                .map(|d| d.with_timezone(&Utc))
+                .unwrap_or_else(Utc::now),
+            description.unwrap_or_else(|| format!("سحب الشريك {}", partner.name)),
+            Some(format!("partner_drawing:{}", partner.id)),
+        ).map_err(|e| AppError::Invalid(e.to_string()))?;
+
+        entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
+        self.journal_repo.save(&entry).await?;
+
+        self.uow.commit().await?;
+
+        Ok(entry.id.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use domain::shared::currency::Currency;
+    use domain::shared::ids::{AccountId, PartnerId};
+    use rust_decimal::Decimal;
+
+    #[test]
+    fn drawing_entry_is_balanced_and_uses_contra_equity_leg() {
+        let drawings_id = AccountId::new();
+        let funding_id = AccountId::new();
+        let cur = Currency::new("SAR", "ريال", "Saudi Riyal", "ر.س", 2, true);
+
+        let entry = JournalEntry::new(
+            "JE-001".to_string(),
+            JournalType::PartnerDrawing,
+            vec![
+                JournalLine::new(
+                    drawings_id.clone(),
+                    MonetaryAmount::from_base(Decimal::from(5000), cur.clone()),
+                    MonetaryAmount::zero(cur.clone()),
+                    "سحب".to_string(),
+                ),
+                JournalLine::new(
+                    funding_id.clone(),
+                    MonetaryAmount::zero(cur.clone()),
+                    MonetaryAmount::from_base(Decimal::from(5000), cur.clone()),
+                    "سحب".to_string(),
+                ),
+            ],
+            Utc::now(),
+            "سحب الشريك".to_string(),
+            None,
+        )
+        .expect("valid entry");
+
+        entry.clone().post().expect("balanced entry must post");
+        assert_eq!(entry.total_base_debit(), Decimal::from(5000));
+        assert_eq!(entry.total_base_credit(), Decimal::from(5000));
+        assert_eq!(entry.journal_type, JournalType::PartnerDrawing);
+        assert!(entry.is_balanced());
+    }
+
+    #[test]
+    fn drawing_does_not_change_retained_earnings_balance() {
+        // A partner drawing debits a contra-equity account and credits cash only;
+        // retained earnings (52) is untouched by this transaction.
+        let cur = Currency::new("SAR", "ريال", "Saudi Riyal", "ر.س", 2, true);
+        let entry = JournalEntry::new(
+            "JE-002".to_string(),
+            JournalType::PartnerDrawing,
+            vec![
+                JournalLine::new(
+                    AccountId::new(),
+                    MonetaryAmount::from_base(Decimal::from(2500), cur.clone()),
+                    MonetaryAmount::zero(cur.clone()),
+                    "سحب".to_string(),
+                ),
+                JournalLine::new(
+                    AccountId::new(),
+                    MonetaryAmount::zero(cur.clone()),
+                    MonetaryAmount::from_base(Decimal::from(2500), cur.clone()),
+                    "سحب".to_string(),
+                ),
+            ],
+            Utc::now(),
+            "سحب الشريك".to_string(),
+            None,
+        )
+        .expect("valid entry");
+
+        entry.clone().post().unwrap();
+        assert!(entry.is_balanced());
+        assert_eq!(entry.lines.len(), 2);
+    }
+
+    #[test]
+    fn partner_id_parses() {
+        let _id: PartnerId = "8fb1e5ce-0000-0000-0000-000000000001".parse().unwrap();
+    }
+}

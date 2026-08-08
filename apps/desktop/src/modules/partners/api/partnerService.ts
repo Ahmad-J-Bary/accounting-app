@@ -8,6 +8,7 @@ export interface PartnerEquityRow {
   partner_name: string;
   capital_registered: string;
   ledger_balance: string;
+  drawings: string;
   profit_allocated: string;
   total_equity: string;
 }
@@ -16,6 +17,7 @@ export interface PartnerEquityStatementDto {
   rows: PartnerEquityRow[];
   total_capital: string;
   total_profit_allocated: string;
+  total_drawings: string;
   total_equity: string;
 }
 
@@ -32,5 +34,17 @@ export const partnerService = {
     amount: string;
     isAmountInOriginal: boolean;
   }) => invoke<string>("create_capital_contribution", args),
+  createPartnerDrawing: (args: {
+    partnerId: string;
+    fundingAccountId: string;
+    amount: string;
+    effectiveDate?: string;
+    description?: string;
+  }) => invoke<string>("create_partner_drawing", args),
+  capitalizeRetainedEarnings: (args: {
+    partnerId: string;
+    amount: string;
+    effectiveDate?: string;
+  }) => invoke<string>("capitalize_retained_earnings", args),
   getPartnerEquityStatement: () => invoke<PartnerEquityStatementDto>("get_partner_equity_statement"),
 };

@@ -5,6 +5,8 @@ pub struct MigrationRow {
     pub cutover_date: String,
     pub source_system: Option<String>,
     pub source_reference: Option<String>,
+    pub residual_classification: Option<String>,
+    pub residual_account_id: Option<String>,
     pub status: String,
     pub notes: Option<String>,
     pub validated_by: Option<String>,

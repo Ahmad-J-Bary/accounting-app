@@ -4,19 +4,21 @@ use domain::accounting::OpeningBalanceMigration;
 use super::models::{MigrationRow, MigrationLineRow};
 use super::mappers::{row_to_migration, row_to_line};
 
-const MIGRATION_COLUMNS: &str = "id, company_id, cutover_date, source_system, source_reference, status, notes, validated_by, validated_at, approved_by, approved_at, posted_at, locked_at, created_at, updated_at";
+const MIGRATION_COLUMNS: &str = "id, company_id, cutover_date, source_system, source_reference, residual_classification, residual_account_id, status, notes, validated_by, validated_at, approved_by, approved_at, posted_at, locked_at, created_at, updated_at";
 
 pub async fn create(pool: &SqlitePool, m: &OpeningBalanceMigration) -> Result<(), AppError> {
     let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     sqlx::query(
-        "INSERT INTO opening_balance_migrations (id, company_id, cutover_date, source_system, source_reference, status, notes, validated_by, validated_at, approved_by, approved_at, posted_at, locked_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO opening_balance_migrations (id, company_id, cutover_date, source_system, source_reference, residual_classification, residual_account_id, status, notes, validated_by, validated_at, approved_by, approved_at, posted_at, locked_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(&m.id)
     .bind(&m.company_id)
     .bind(m.cutover_date.to_rfc3339())
     .bind(&m.source_system)
     .bind(&m.source_reference)
+    .bind(m.residual_classification.map(|c| c.as_str()))
+    .bind(m.residual_account_id.map(|id| id.to_string()))
     .bind(m.status.as_str())
     .bind(&m.notes)
     .bind(&m.validated_by)
@@ -39,11 +41,13 @@ pub async fn update(pool: &SqlitePool, m: &OpeningBalanceMigration) -> Result<()
     let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     sqlx::query(
-        "UPDATE opening_balance_migrations SET cutover_date = ?, source_system = ?, source_reference = ?, status = ?, notes = ?, validated_by = ?, validated_at = ?, approved_by = ?, approved_at = ?, posted_at = ?, locked_at = ?, updated_at = ? WHERE id = ?"
+        "UPDATE opening_balance_migrations SET cutover_date = ?, source_system = ?, source_reference = ?, residual_classification = ?, residual_account_id = ?, status = ?, notes = ?, validated_by = ?, validated_at = ?, approved_by = ?, approved_at = ?, posted_at = ?, locked_at = ?, updated_at = ? WHERE id = ?"
     )
     .bind(m.cutover_date.to_rfc3339())
     .bind(&m.source_system)
     .bind(&m.source_reference)
+    .bind(m.residual_classification.map(|c| c.as_str()))
+    .bind(m.residual_account_id.map(|id| id.to_string()))
     .bind(m.status.as_str())
     .bind(&m.notes)
     .bind(&m.validated_by)
