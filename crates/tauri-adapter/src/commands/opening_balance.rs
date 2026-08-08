@@ -5,9 +5,10 @@ use application::use_cases::opening_balance::{
     ApproveOpeningBalanceUseCase, CancelOpeningBalanceUseCase,
     ComputeNetProfitCommand, ComputeNetProfitUseCase, ComputedNetProfitDto,
     CreateOpeningBalanceMigrationCommand,
-    CreateOpeningBalanceUseCase, GetOpeningReconciliationUseCase, ListOpeningMigrationsUseCase,
+    CreateOpeningBalanceUseCase, GetOpeningPositionControlUseCase, GetOpeningReconciliationUseCase,
+    ListOpeningMigrationsUseCase,
     LockOpeningBalanceUseCase, NetProfitAllocationDto, OpeningDetailsDto, OpeningMigrationDto,
-    OpeningReconciliationDto, PostOpeningBalanceResult, PostOpeningBalanceUseCase,
+    OpeningPositionControlDto, OpeningReconciliationDto, PostOpeningBalanceResult, PostOpeningBalanceUseCase,
     ReopenOpeningBalanceUseCase, SaveOpeningDetailsCommand, SaveOpeningDetailsUseCase,
     SetResidualClassificationCommand, SetResidualClassificationUseCase,
     ValidateOpeningBalanceUseCase,
@@ -82,6 +83,21 @@ pub async fn compute_opening_balance_net_profit(
         state.journal_entry_repo.clone(),
     )
     .execute(request)
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_opening_position_control(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<OpeningPositionControlDto, String> {
+    GetOpeningPositionControlUseCase::new(
+        state.opening_migration_repo.clone(),
+        state.account_repo.clone(),
+        state.partner_repo.clone(),
+    )
+    .execute(id)
     .await
     .map_err(|e| e.to_string())
 }

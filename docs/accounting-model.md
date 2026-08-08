@@ -126,6 +126,37 @@ Journal type `Capitalization`. Pure equity-to-equity: no P&L impact.
   OtherEquity | UnresolvedDifference`, along with a
   `residual_account_id` (e.g. 52).
 
+### 7.1 Opening Position Control (read-only, v0.9.9)
+
+`GetOpeningPositionControlUseCase` derives the opening financial position of a
+migration from **its own opening lines + chart semantics** — it is a pure
+projection and never creates or touches a `JournalEntry` (verified by an
+integration test that asserts the journal count is unchanged).
+
+- `net_assets = total_assets − total_liabilities`
+- `total_equity = partner_capital + partner_current + retained_earnings +
+  opening_equity_adjustment + other_equity − drawings`
+- `equity_difference = net_assets − total_equity`; `is_balanced` when
+  `|difference| ≤ 0.01` (Decimal — f64 is never introduced, and `Math.abs` is
+  never used to hide an error).
+- Account grouping is semantic via `AccountPurpose` (`Receivable`, `Inventory`,
+  `FixedAsset`, `Payable`, `PartnerCapital/…`, plus `Other`) — never code
+  prefixes or names.
+- P&L lines are skipped defensively: **expenses never enter the balance
+  equation** (they are not cash, and the migration lifecycle already rejects
+  Revenue/Expenses lines).
+- `opening_historical_result = net_assets − partner_capital − explicit_other_equity`
+  — informational only. It is derived, never reloaded, so `PartnerCurrent`,
+  `PartnerDrawings` and `RetainedEarnings` are counted exactly once.
+  This is **not** the current-period profit; `ComputeNetProfitUseCase` remains
+  the ledger result to date.
+- An unbalanced position shows "Unclassified Difference" plus the exact amount
+  and points back to the residual workflow (`SetResidualClassificationUseCase` /
+  `ApplyResidualToLedgerUseCase`); the system never silently plugs the gap and
+  never decides the residual's nature.
+- UI: the report is displayed as a read-only card (`مركز الافتتاحي`) with a
+  text status badge (✓ متوازن / يوجد فرق — never color-only).
+
 ## 8. Lifecycle & immutability
 
 Migration status: `Draft → Validated → Approved → Posted → Locked` (+
