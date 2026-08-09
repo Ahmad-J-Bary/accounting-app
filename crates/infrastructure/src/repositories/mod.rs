@@ -57,3 +57,5 @@ pub mod opening_balance;
 pub use opening_balance::SqliteOpeningMigrationRepository;
 pub use opening_balance::SqliteOpeningPostingRepository;
 pub use opening_balance::SqliteOpeningDetailRepository;
+pub mod fiscal_period;
+pub use fiscal_period::SqliteFiscalPeriodRepository;

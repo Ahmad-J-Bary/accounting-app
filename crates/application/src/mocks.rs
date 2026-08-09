@@ -2,10 +2,13 @@ use std::sync::Mutex;
 use async_trait::async_trait;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::asset_repository::AssetRepository;
+use crate::ports::fiscal_period_repository::FiscalPeriodRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use domain::accounting::account::Account;
+use domain::accounting::fiscal_period::FiscalPeriod;
 use domain::assets::{FixedAsset, FixedAssetId, AssetCategory, AssetMovement, DepreciationSchedule, AssetType};
 use domain::accounting::{JournalEntry, JournalEntryId};
+use domain::shared::ids::FiscalPeriodId;
 use domain::shared::AccountId;
 use crate::errors::AppError;
 use uuid::Uuid;
@@ -191,5 +194,55 @@ impl AccountRepository for MockAccountRepository {
 
     async fn get_next_child_code(&self, _parent_code: &str) -> Result<String, AppError> {
         Ok("001".to_string())
+    }
+}
+
+pub struct MockFiscalPeriodRepository {
+    pub periods: Mutex<Vec<FiscalPeriod>>,
+}
+
+impl MockFiscalPeriodRepository {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl Default for MockFiscalPeriodRepository {
+    fn default() -> Self {
+        Self { periods: Mutex::new(Vec::new()) }
+    }
+}
+
+#[async_trait]
+impl FiscalPeriodRepository for MockFiscalPeriodRepository {
+    async fn create(&self, period: &FiscalPeriod) -> Result<(), AppError> {
+        self.periods.lock().unwrap().push(period.clone());
+        Ok(())
+    }
+
+    async fn find_by_id(&self, id: &FiscalPeriodId) -> Result<Option<FiscalPeriod>, AppError> {
+        Ok(self.periods.lock().unwrap().iter().find(|p| p.id == *id).cloned())
+    }
+
+    async fn list(&self) -> Result<Vec<FiscalPeriod>, AppError> {
+        Ok(self.periods.lock().unwrap().clone())
+    }
+
+    async fn find_by_date(&self, date: chrono::DateTime<chrono::Utc>) -> Result<Vec<FiscalPeriod>, AppError> {
+        Ok(self
+            .periods
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|p| p.contains(date))
+            .cloned()
+            .collect())
+    }
+
+    async fn update(&self, period: &FiscalPeriod) -> Result<(), AppError> {
+        let mut periods = self.periods.lock().unwrap();
+        periods.retain(|p| p.id != period.id);
+        periods.push(period.clone());
+        Ok(())
     }
 }

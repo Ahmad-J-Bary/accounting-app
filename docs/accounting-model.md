@@ -199,3 +199,78 @@ Migration status: `Draft → Validated → Approved → Posted → Locked` (+
 `Cancelled`). Posted entries are reversible only via `create_reversal`
 (swaps legs, links the original, forces `source_type` to the canonical tag).
 Posted / hit-locked migrations cannot be edited.
+
+## 9. Fiscal periods & distributable profit (Sec 18–22)
+
+### 9.1 Fiscal period (Sec 20)
+
+`FiscalPeriod` is a formal reporting window, **independent of the opening
+migration cutover**:
+
+- the cutover is the company's position at a moment in time (a snapshot);
+- the period is the accounting window whose current-period net profit is
+  computed and distributable — it must never be derived from the cutover.
+
+Status lifecycle: `Open → Closing → Closed`, plus `Reopened` (explicit
+accountant action, only from `Closed`) and `Cancelled`. `close(by, status)`
+records who closed and when; a non-final `Closing` step can be finalized.
+
+- Migration `150_fiscal_periods.sql`; port
+  `FiscalPeriodRepository` (`create / find_by_id / list / find_by_date /
+  update`).
+- Creating a period whose window overlaps an existing same-company period is
+  rejected (`AppError::Conflict`) so reporting windows never double-count a
+  date. `company_id` is an optional column until a companies table exists.
+- `CloseFiscalPeriodUseCase` is **idempotent**: re-running it for an already
+  closed/cancelled period returns the existing state instead of failing.
+
+### 9.2 Explicit-window net profit (Sec 19)
+
+`ComputePeriodNetProfitUseCase` computes net profit for an **explicit
+`period_start` / `period_end` pair** from the posted journal ledger only:
+
+```
+revenue  = Σ over Revenue-typed lines of (credit − debit)
+expenses = Σ over Expenses-typed lines of (debit − credit)
+net      = revenue − expenses
+```
+
+- Ledger-only, keyed on explicit accounting dates — never on a migration cutover
+  (the fix point of this phase). The legacy migration-keyed
+  `ComputeNetProfitUseCase` is kept as a thin backward-compat wrapper.
+- Only `JournalEntryStatus::Posted` entries count; draft entries and partner
+  drawings (contra-equity, `is_drawings_account()`) are excluded automatically.
+  Reversals net because a contra carries swapped legs.
+- `from > to` is rejected; both bounds must parse as RFC-3339 (`UTC`).
+- Aggregation reuses the shared pure `compute_ledger_totals` from the
+  opening-balance engine, so the summation semantics are identical everywhere.
+
+### 9.3 Distributable profit projection (Sec 18, Sec 22)
+
+`GetDistributableProfitUseCase` is a **READ-ONLY projection** — it never posts,
+allocates or mutates anything:
+
+```
+retained_earnings_balance = Σ credit − debit over the purpose-`RetainedEarnings`
+                            account (credit-normal account), posted lines only
+allocated_to_date         = Σ total_base_debit of posted journals whose
+                            source_id starts with `profit_distribution:`
+distributable = current_period_profit + retained_earnings_balance − allocated_to_date
+```
+
+- `current_period_profit` is the §9.2 ledger result for the same window;
+  `retained_earnings` is the historical/accumulated result booked in the chart;
+  the three figures are kept distinct (never conflated).
+- Counting only the posted `profit_distribution:*` source journals keeps the
+  projection idempotency-safe: an already-allocated amount is never counted
+  twice.
+- The opening migration never auto-allocates profit — allocation remains a
+  separate explicit command (migration-keyed `AllocateNetProfitUseCase`).
+
+### 9.4 Tauri & UI
+
+Commands: `create_fiscal_period`, `list_fiscal_periods`,
+`close_fiscal_period`, `compute_period_net_profit`,
+`get_distributable_profit`. Route `/accounting/reports/fiscal-periods`
+(`FiscalPeriodReport` page) with period list/create/close plus a read-only
+distributable-profit panel for the active period.

@@ -30,3 +30,4 @@ pub mod warehouse_repository;
 pub mod opening_migration_repository;
 pub mod opening_posting_repository;
 pub mod opening_detail_repository;
+pub mod fiscal_period_repository;

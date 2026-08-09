@@ -198,6 +198,11 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::opening_balance::set_opening_balance_residual_classification,
             commands::opening_balance::apply_opening_balance_residual_classification,
             commands::opening_balance::get_opening_position_control,
+            commands::fiscal_period::create_fiscal_period,
+            commands::fiscal_period::list_fiscal_periods,
+            commands::fiscal_period::close_fiscal_period,
+            commands::fiscal_period::compute_period_net_profit,
+            commands::fiscal_period::get_distributable_profit,
         ])
         .setup(|app| {
             let app_data_dir = app
