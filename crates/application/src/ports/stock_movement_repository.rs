@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use domain::accounting::journal_entry::JournalEntry;
 use domain::inventory::stock_movement::StockMovement;
 use domain::shared::ids::{StockMovementId, MaterialId};
 use rust_decimal::Decimal;
@@ -22,6 +23,11 @@ pub struct MaterialInventorySummary {
 #[async_trait]
 pub trait StockMovementRepository: Send + Sync {
     async fn save(&self, movement: &StockMovement) -> Result<(), AppError>;
+    async fn post_with_accounting(
+        &self,
+        movements: &[StockMovement],
+        entries: &[JournalEntry],
+    ) -> Result<(), AppError>;
     async fn find_by_id(&self, id: &StockMovementId) -> Result<Option<StockMovement>, AppError>;
     async fn list_all(&self) -> Result<Vec<StockMovement>, AppError>;
     async fn list_by_material(&self, material_id: &MaterialId) -> Result<Vec<StockMovement>, AppError>;

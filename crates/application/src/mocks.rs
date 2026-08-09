@@ -17,6 +17,7 @@ pub struct MockAssetRepository {
     pub assets: Mutex<Vec<FixedAsset>>,
     pub movements: Mutex<Vec<AssetMovement>>,
     pub categories: Mutex<Vec<AssetCategory>>,
+    pub entries: Mutex<Vec<JournalEntry>>,
 }
 
 impl MockAssetRepository {
@@ -31,6 +32,7 @@ impl Default for MockAssetRepository {
             assets: Mutex::new(Vec::new()),
             movements: Mutex::new(Vec::new()),
             categories: Mutex::new(Vec::new()),
+            entries: Mutex::new(Vec::new()),
         }
     }
 }
@@ -81,6 +83,34 @@ impl AssetRepository for MockAssetRepository {
         let mut movements = self.movements.lock().unwrap();
         movements.retain(|m| m.asset_id != *asset_id);
         Ok(())
+    }
+
+    async fn save_asset_with_accounting(
+        &self,
+        asset: &FixedAsset,
+        movements: &[AssetMovement],
+        entries: &[JournalEntry],
+        _accounts: &[Account],
+    ) -> Result<(), AppError> {
+        self.save_asset(asset).await?;
+        let mut store = self.movements.lock().unwrap();
+        for m in movements {
+            store.push(m.clone());
+        }
+        let mut entry_store = self.entries.lock().unwrap();
+        for e in entries {
+            entry_store.push(e.clone());
+        }
+        Ok(())
+    }
+
+    async fn delete_asset_with_accounting(
+        &self,
+        id: &FixedAssetId,
+        _entries: &[JournalEntryId],
+    ) -> Result<(), AppError> {
+        self.delete_asset(id).await?;
+        self.delete_movements_by_asset(&id.0).await
     }
 }
 

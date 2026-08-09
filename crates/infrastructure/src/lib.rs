@@ -21,7 +21,6 @@ pub use repositories::SqliteAssetRepository;
 pub use repositories::SqliteConsumableRepository;
 pub use repositories::SqlitePartnerRepository;
 pub use repositories::SqliteUnifiedInvoiceRepository;
-pub use repositories::sqlite_unit_of_work::SqliteUnitOfWork;
 pub use repositories::SqliteCodePrefixRepository;
 pub use repositories::SqliteCurrencyRepository;
 pub use repositories::SqliteExchangeRateRepository;

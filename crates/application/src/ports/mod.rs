@@ -6,7 +6,6 @@ pub mod category_repository;
 pub mod code_prefix_repository;
 pub mod account_repository;
 pub mod journal_entry_repository;
-pub mod unit_of_work;
 pub mod supplier_repository;
 // Removed obsolete invoice ports
 pub mod payment_repository;

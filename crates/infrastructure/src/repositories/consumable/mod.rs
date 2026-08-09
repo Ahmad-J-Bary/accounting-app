@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::consumable_repository::ConsumableRepository;
-use domain::assets::{Consumable, ConsumableId};
+use domain::assets::{Consumable, ConsumableId, AssetMovement};
 use std::sync::Arc;
 
 mod models;
@@ -36,5 +36,14 @@ impl ConsumableRepository for SqliteConsumableRepository {
 
     async fn delete(&self, id: &ConsumableId) -> Result<(), AppError> {
         commands::delete(&self.pool, id).await
+    }
+
+    async fn save_with_accounting(
+        &self,
+        consumable: &Consumable,
+        movements: &[AssetMovement],
+        entries: &[domain::accounting::journal_entry::JournalEntry],
+    ) -> Result<(), AppError> {
+        commands::save_with_accounting(&self.pool, consumable, movements, entries).await
     }
 }

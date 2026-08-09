@@ -27,6 +27,17 @@ impl StockAdjustmentRepository for SqliteStockAdjustmentRepository {
         commands::save(&self.pool, adj).await
     }
 
+    async fn save_with_accounting(
+        &self,
+        adj: &StockAdjustment,
+        movements: &[domain::inventory::stock_movement::StockMovement],
+        entries: &[domain::accounting::journal_entry::JournalEntry],
+        delete_movement_reference: Option<&str>,
+        delete_entries: &[domain::shared::ids::JournalEntryId],
+    ) -> Result<(), AppError> {
+        commands::save_with_accounting(&self.pool, adj, movements, entries, delete_movement_reference, delete_entries).await
+    }
+
     async fn find_by_id(&self, id: &StockAdjustmentId) -> Result<Option<StockAdjustment>, AppError> {
         queries::find_by_id(&self.pool, id).await
     }

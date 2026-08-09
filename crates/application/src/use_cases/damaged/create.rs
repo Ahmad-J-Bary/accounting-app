@@ -73,7 +73,6 @@ impl CreateDamagedItemUseCase {
 
         let display_ref = self.repo.get_next_reference().await?;
         item.reference = Some(display_ref.clone());
-        self.repo.save(&item).await?;
 
         let inventory_ref = self.movement_repo.get_next_inventory_reference().await?;
 
@@ -95,35 +94,37 @@ impl CreateDamagedItemUseCase {
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
         movement.document_number = Some(display_ref.clone());
-        self.movement_repo.save(&movement).await?;
 
-        // Create journal entry: Dr 45 (خسائر المواد التالفة والتسويات), Cr 1241 (بضاعة آخر المدة)
-        create_damaged_journal_entry(
+        // Build journal entry: Dr 45 (خسائر المواد التالفة والتسويات), Cr 1241 (بضاعة آخر المدة)
+        let entry_number = self.journal_repo.get_next_entry_number().await?;
+        let entry = build_damaged_journal_entry(
             &self.account_repo,
-            &self.journal_repo,
+            entry_number,
             cost_impact,
             &display_ref,
             damage_date,
         ).await?;
 
+        // Commit doc + movement + journal in ONE transaction (Sec 9 atomicity).
+        self.repo.save_with_accounting(&item, &[movement], &[entry], None, &[]).await?;
+
         Ok(to_dto(item, Some(display_ref)))
     }
 }
 
-pub async fn create_damaged_journal_entry(
+pub async fn build_damaged_journal_entry(
     account_repo: &Arc<dyn AccountRepository>,
-    journal_repo: &Arc<dyn JournalEntryRepository>,
+    entry_number: String,
     cost_impact: Decimal,
     reference: &str,
     entry_date: DateTime<Utc>,
-) -> Result<(), AppError> {
+) -> Result<JournalEntry, AppError> {
     let loss_account = account_repo.find_by_code("45").await?
         .ok_or_else(|| AppError::NotFound("حساب خسائر المواد التالفة والتسويات غير موجود: 45".into()))?;
     let inventory_account = account_repo.find_by_code("1241").await?
         .ok_or_else(|| AppError::NotFound("حساب بضاعة آخر المدة غير موجود: 1241".into()))?;
 
     let base_currency = Currency::new(BASE_CURRENCY, BASE_CURRENCY, "ريال", "ر.س", 2, false);
-    let entry_number = journal_repo.get_next_entry_number().await?;
     let lines = vec![
         JournalLine::new(
             loss_account.id,
@@ -138,7 +139,7 @@ pub async fn create_damaged_journal_entry(
             format!("خسائر مواد تالفة - مرجع {}", reference),
         ),
     ];
-    let entry = JournalEntry::new(
+    JournalEntry::new(
         entry_number,
         JournalType::DamagedJournal,
         lines,
@@ -146,9 +147,7 @@ pub async fn create_damaged_journal_entry(
         format!("خسائر مواد تالفة - مرجع {}", reference),
         Some(reference.to_string()),
     )
-    .map_err(|e| AppError::Invalid(e.to_string()))?;
-    journal_repo.save(&entry).await?;
-    Ok(())
+    .map_err(|e| AppError::Invalid(e.to_string()))
 }
 
 pub fn to_dto(d: DamagedItem, reference: Option<String>) -> DamagedItemDto {

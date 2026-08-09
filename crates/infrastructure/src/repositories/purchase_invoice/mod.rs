@@ -46,4 +46,13 @@ impl PurchaseInvoiceRepository for SqlitePurchaseInvoiceRepository {
     async fn delete(&self, id: &PurchaseInvoiceId) -> Result<(), AppError> {
         commands::delete(&self.pool, id).await
     }
+
+    async fn post_with_accounting(
+        &self,
+        invoice: &PurchaseInvoice,
+        movements: &[domain::inventory::stock_movement::StockMovement],
+        entries: &[domain::accounting::journal_entry::JournalEntry],
+    ) -> Result<(), AppError> {
+        commands::post_with_accounting(&self.pool, invoice, movements, entries).await
+    }
 }

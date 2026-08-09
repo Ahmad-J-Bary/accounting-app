@@ -10,7 +10,7 @@ use domain::inventory::stock_movement::{MovementType, StockMovement};
 use domain::shared::ids::{DamagedItemId, MaterialId};
 use rust_decimal::Decimal;
 use std::sync::Arc;
-use crate::use_cases::damaged::create::{to_dto, create_damaged_journal_entry};
+use crate::use_cases::damaged::create::{to_dto, build_damaged_journal_entry};
 
 pub struct UpdateDamagedItemUseCase {
     repo: Arc<dyn DamagedItemRepository>,
@@ -83,14 +83,11 @@ impl UpdateDamagedItemUseCase {
 
         // Delete old journal entry — drafts only; posted entries are immutable.
         let old_entry = self.journal_repo.find_by_source_id(&reference).await?;
+        let mut delete_entries = Vec::new();
         if let Some(old_entry) = old_entry {
             crate::use_cases::journal::guards::ensure_deletable(std::slice::from_ref(&old_entry))?;
-            self.journal_repo.delete(&old_entry.id).await?;
+            delete_entries.push(old_entry.id);
         }
-
-        self.movement_repo.delete_by_reference(&reference, "Damaged").await?;
-
-        self.repo.save(&item).await?;
 
         let unit_cost = if quantity > Decimal::ZERO {
             cost_impact / quantity
@@ -110,15 +107,25 @@ impl UpdateDamagedItemUseCase {
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
         movement.document_number = Some(reference.clone());
-        self.movement_repo.save(&movement).await?;
 
-        // Create new journal entry
-        create_damaged_journal_entry(
+        // Build new journal entry (persisted atomically below)
+        let entry_number = self.journal_repo.get_next_entry_number().await?;
+        let entry = build_damaged_journal_entry(
             &self.account_repo,
-            &self.journal_repo,
+            entry_number,
             cost_impact,
             &reference,
             damage_date,
+        ).await?;
+
+        // Commit old-entry deletions + doc + movement + journal in ONE
+        // transaction (Sec 9 atomicity).
+        self.repo.save_with_accounting(
+            &item,
+            &[movement],
+            &[entry],
+            Some(&reference),
+            &delete_entries,
         ).await?;
 
         Ok(to_dto(item, Some(reference)))

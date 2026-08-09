@@ -93,8 +93,6 @@ impl FixedAssetUseCases {
             }
         }
 
-        self.repo.save_asset(&asset).await?;
-
         let (movement_desc, entry_desc, line1_desc, line2_desc) = match req.addition_type.as_str() {
             "existing" => (
                 format!("إضافة أصل سابق (أول المدة): {}", asset.name),
@@ -117,7 +115,6 @@ impl FixedAssetUseCases {
             req.purchase_cost.clone(),
             movement_desc,
         );
-        self.repo.save_movement(&movement).await?;
 
         let lines = vec![
             JournalLine::new(
@@ -144,22 +141,23 @@ impl FixedAssetUseCases {
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
 
-        self.journal_repo.save(&entry).await?;
-
-        // --- Update account balances ---
+        // --- Update account balances (computed in memory, persisted below) ---
         let base_amount = req.purchase_cost.to_base(req.fx_rate);
-
+        let mut accounts = Vec::new();
         if let Some(mut asset_account) = self.account_repo.find_by_id(&AccountId(req.asset_account_id)).await? {
             asset_account.debit(base_amount).map_err(|e| AppError::Invalid(e.to_string()))?;
             asset_account.debit += base_amount;
-            self.account_repo.save(&asset_account).await?;
+            accounts.push(asset_account);
         }
-
         if let Some(mut payment_account) = self.account_repo.find_by_id(&AccountId(req.payment_account_id)).await? {
             payment_account.credit(base_amount).map_err(|e| AppError::Invalid(e.to_string()))?;
             payment_account.credit += base_amount;
-            self.account_repo.save(&payment_account).await?;
+            accounts.push(payment_account);
         }
+
+        // Commit asset + movement + journal + account balances in ONE
+        // transaction (Sec 9 atomicity).
+        self.repo.save_asset_with_accounting(&asset, &[movement], &[entry], &accounts).await?;
 
         Ok(asset.id)
     }
@@ -197,7 +195,6 @@ impl FixedAssetUseCases {
             .ok_or_else(|| AppError::NotFound("Asset not found".to_string()))?;
 
         let depreciation_money = asset.depreciate();
-        self.repo.save_asset(&asset).await?;
 
         let movement = AssetMovement::new(
             asset.id.0,
@@ -210,7 +207,6 @@ impl FixedAssetUseCases {
                 date.format("%Y-%m")
             ),
         );
-        self.repo.save_movement(&movement).await?;
 
         let mut lines = Vec::new();
         lines.push(JournalLine::new(
@@ -240,7 +236,9 @@ impl FixedAssetUseCases {
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
 
-        self.journal_repo.save(&entry).await?;
+        // Commit updated asset + movement + journal in ONE transaction
+        // (Sec 9 atomicity).
+        self.repo.save_asset_with_accounting(&asset, &[movement], &[entry], &[]).await?;
 
         Ok(())
     }
@@ -282,25 +280,28 @@ impl FixedAssetUseCases {
         }
         asset.updated_at = Utc::now();
 
-        self.repo.save_asset(&asset).await?;
+        // Collect the acquisition movement and journal updates; all persisted
+        // atomically below (Sec 9 atomicity).
+        let mut movements = Vec::new();
+        let mut entries = Vec::new();
 
         // Also update the acquisition movement
-        let movements = self.repo.list_movements_by_asset(&id.0).await?;
-        if let Some(mut acq_mov) = movements.into_iter().find(|m| m.movement_type == domain::assets::AssetMovementType::Acquisition) {
+        let asset_movements = self.repo.list_movements_by_asset(&id.0).await?;
+        if let Some(mut acq_mov) = asset_movements.into_iter().find(|m| m.movement_type == domain::assets::AssetMovementType::Acquisition) {
             acq_mov.date = req.purchase_date;
             acq_mov.amount = req.purchase_cost.clone();
             acq_mov.description = match req.addition_type.as_str() {
                 "existing" => format!("إضافة أصل سابق (أول المدة): {}", req.name),
                 _ => format!("شراء أصل ثابت: {}", req.name),
             };
-            self.repo.save_movement(&acq_mov).await?;
+            movements.push(acq_mov);
         }
 
         // Also update the acquisition journal entry if it exists.
         // Only draft entries are editable; posted ones are immutable.
-        let entries = self.journal_repo.find_all_by_source_id(&id.0.to_string()).await?;
-        crate::use_cases::journal::guards::ensure_deletable(&entries)?;
-        if let Some(mut entry) = entries.into_iter().find(|e| e.journal_type != domain::accounting::JournalType::GeneralJournal || !e.description.contains("إهلاك")) {
+        let all_entries = self.journal_repo.find_all_by_source_id(&id.0.to_string()).await?;
+        crate::use_cases::journal::guards::ensure_deletable(&all_entries)?;
+        if let Some(mut entry) = all_entries.into_iter().find(|e| e.journal_type != domain::accounting::JournalType::GeneralJournal || !e.description.contains("إهلاك")) {
             entry.description = match req.addition_type.as_str() {
                 "existing" => format!("إضافة أصل سابق (أول المدة): {}", req.name),
                 _ => format!("شراء أصل ثابت: {}", req.name),
@@ -330,8 +331,11 @@ impl FixedAssetUseCases {
                     line2_desc,
                 ),
             ];
-            self.journal_repo.save(&entry).await?;
+            entries.push(entry);
         }
+
+        // Commit asset + movement + journal in ONE transaction.
+        self.repo.save_asset_with_accounting(&asset, &movements, &entries, &[]).await?;
 
         Ok(())
     }
@@ -341,11 +345,10 @@ impl FixedAssetUseCases {
         // posted entries are immutable and must go through a reversal.
         let entries = self.journal_repo.find_all_by_source_id(&id.0.to_string()).await?;
         crate::use_cases::journal::guards::ensure_deletable(&entries)?;
-        for entry in entries {
-            self.journal_repo.delete(&entry.id).await?;
-        }
-        self.repo.delete_movements_by_asset(&id.0).await?;
-        self.repo.delete_asset(&id).await?;
+        let entry_ids: Vec<_> = entries.into_iter().map(|e| e.id).collect();
+        // Delete journal entries + movements + asset in ONE transaction
+        // (Sec 9 atomicity).
+        self.repo.delete_asset_with_accounting(&id, &entry_ids).await?;
         Ok(())
     }
 
@@ -368,8 +371,6 @@ impl FixedAssetUseCases {
                 continue;
             }
 
-            self.repo.save_asset(&asset).await?;
-
             let movement = AssetMovement::new(
                 asset.id.0,
                 AssetMovementType::Depreciation,
@@ -381,7 +382,6 @@ impl FixedAssetUseCases {
                     date.format("%Y")
                 ),
             );
-            self.repo.save_movement(&movement).await?;
 
             let lines = vec![
                 JournalLine::new(
@@ -412,7 +412,9 @@ impl FixedAssetUseCases {
             )
             .map_err(|e| AppError::Invalid(e.to_string()))?;
 
-            self.journal_repo.save(&entry).await?;
+            // Commit updated asset + movement + journal in ONE transaction
+            // (Sec 9 atomicity).
+            self.repo.save_asset_with_accounting(&asset, &[movement], &[entry], &[]).await?;
 
             results.push(RotationResult {
                 asset_id: asset.id.0.to_string(),
@@ -481,7 +483,7 @@ mod tests {
 
         // Check Journal Entry
         {
-            let entries = journal_repo.entries.lock().unwrap();
+            let entries = asset_repo.entries.lock().unwrap();
             assert_eq!(entries.len(), 1);
             assert!(entries[0].description.contains("Laptop"));
         }

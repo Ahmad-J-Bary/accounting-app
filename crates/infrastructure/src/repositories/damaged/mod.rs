@@ -27,6 +27,17 @@ impl DamagedItemRepository for SqliteDamagedItemRepository {
         commands::save(&self.pool, item).await
     }
 
+    async fn save_with_accounting(
+        &self,
+        item: &DamagedItem,
+        movements: &[domain::inventory::stock_movement::StockMovement],
+        entries: &[domain::accounting::journal_entry::JournalEntry],
+        delete_movement_reference: Option<&str>,
+        delete_entries: &[domain::shared::ids::JournalEntryId],
+    ) -> Result<(), AppError> {
+        commands::save_with_accounting(&self.pool, item, movements, entries, delete_movement_reference, delete_entries).await
+    }
+
     async fn find_by_id(&self, id: &DamagedItemId) -> Result<Option<DamagedItem>, AppError> {
         queries::find_by_id(&self.pool, id).await
     }

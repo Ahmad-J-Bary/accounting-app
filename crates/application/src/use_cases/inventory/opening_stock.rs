@@ -46,6 +46,7 @@ impl RecordOpeningStockUseCase {
         let fx_rate = Decimal::from_str(&req.exchange_rate).unwrap_or(Decimal::ONE);
 
         // 1. Process items
+        let mut movements = Vec::new();
         for item in &req.items {
             let pid = item
                 .material_id
@@ -78,14 +79,14 @@ impl RecordOpeningStockUseCase {
             .map_err(|e| AppError::Invalid(e.to_string()))?;
             movement.document_number = Some("OP-STOCK".to_string());
 
-            // Record movement (dynamic balance)
-            self.movement_repo.save(&movement).await?;
+            movements.push(movement);
 
             total_value += quantity * unit_cost;
             total_value_base += quantity * unit_cost_base;
         }
 
         // 2. Create Journal Entry if value > 0
+        let mut entries = Vec::new();
         if total_value > Decimal::ZERO {
             let inventory_account =
                 match self.account_repo.find_by_code("1201").await? {
@@ -125,8 +126,11 @@ impl RecordOpeningStockUseCase {
             .map_err(|e| AppError::Invalid(e.to_string()))?;
 
             entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-            self.journal_repo.save(&entry).await?;
+            entries.push(entry);
         }
+
+        // Commit movements + journal in ONE transaction (Sec 9 atomicity).
+        self.movement_repo.post_with_accounting(&movements, &entries).await?;
 
         Ok(())
     }

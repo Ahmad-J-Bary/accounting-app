@@ -259,7 +259,8 @@ impl PostPurchaseInvoiceUseCase {
             .ok_or_else(|| AppError::NotFound("فاتورة الشراء غير موجودة".into()))?;
         invoice.post().map_err(|e| AppError::Invalid(e.to_string()))?;
 
-        // 1. Update stock and record movements
+        // 1. Update stock and record movements (collected, not yet persisted)
+        let mut movements = Vec::new();
         for item in &invoice.items {
             if let Ok(Some(material)) = self.material_repo.find_by_id(&item.material_id).await {
                 // Calculate effective quantity in base units
@@ -284,7 +285,7 @@ impl PostPurchaseInvoiceUseCase {
                     chrono::Utc::now(),
                 ).map_err(|e| AppError::Invalid(e.to_string()))?;
                 movement.document_number = Some(invoice.invoice_number.clone());
-                self.movement_repo.save(&movement).await?;
+                movements.push(movement);
             }
         }
 
@@ -307,6 +308,8 @@ impl PostPurchaseInvoiceUseCase {
             invoice.exchange_rate
         );
 
+        let mut entries = Vec::new();
+
         let entry_num = self.journal_repo.get_next_entry_number().await?;
         let mut purchase_entry = JournalEntry::create_purchase_entry(
             entry_num,
@@ -320,7 +323,7 @@ impl PostPurchaseInvoiceUseCase {
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
         purchase_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-        self.journal_repo.save(&purchase_entry).await?;
+        entries.push(purchase_entry);
 
         // 3. Accounting Integration: Create Journal Entries for Additional Costs
         for cost in invoice.additional_costs.iter() {
@@ -342,11 +345,11 @@ impl PostPurchaseInvoiceUseCase {
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
             cost_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-            self.journal_repo.save(&cost_entry).await?;
+            entries.push(cost_entry);
         }
 
-        // 4. Save invoice
-        self.repo.update(&invoice).await?;
+        // 4. Commit movements + journals + invoice status in ONE transaction
+        self.repo.post_with_accounting(&invoice, &movements, &entries).await?;
         Ok(enrich_invoice(invoice, &self.supplier_repo, &self.material_repo, &self.account_repo).await)
     }
 }

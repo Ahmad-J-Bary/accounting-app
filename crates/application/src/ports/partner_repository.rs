@@ -1,6 +1,6 @@
 use domain::accounting::partner::Partner;
 use domain::accounting::account::Account;
-use domain::shared::ids::PartnerId;
+use domain::shared::ids::{AccountId, PartnerId};
 use crate::errors::AppError;
 use async_trait::async_trait;
 
@@ -20,5 +20,20 @@ pub trait PartnerRepository: Send + Sync {
         current_account: Option<&Account>,
     ) -> Result<(), AppError>;
     async fn update(&self, partner: &Partner) -> Result<(), AppError>;
+    /// Atomically persists a partner update plus any linked-account renames
+    /// (capital + drawings accounts carry the partner name) in ONE transaction.
+    async fn update_with_accounts(
+        &self,
+        partner: &Partner,
+        capital_replacement: Option<&Account>,
+        drawings_replacement: Option<&Account>,
+    ) -> Result<(), AppError>;
     async fn delete(&self, id: &PartnerId) -> Result<(), AppError>;
+    /// Atomically deletes a partner together with its linked capital, drawings
+    /// and current accounts in ONE transaction.
+    async fn delete_with_accounts(
+        &self,
+        id: &PartnerId,
+        linked_account_ids: &[AccountId],
+    ) -> Result<(), AppError>;
 }

@@ -58,3 +58,53 @@ pub async fn delete_by_reference(pool: &SqlitePool, reference: &str, movement_ty
 
     Ok(())
 }
+
+/// Inserts a stock movement within an open transaction so a stock movement and
+/// its journal entry (and any parent document state) commit together (Sec 9).
+pub(crate) async fn insert_movement_tx<'a>(
+    tx: &mut sqlx::Transaction<'a, sqlx::Sqlite>,
+    movement: &StockMovement,
+) -> Result<(), AppError> {
+    let warehouse_id = resolve_warehouse_id_tx(tx, movement).await?;
+
+    sqlx::query(
+        "INSERT INTO stock_movements (id, material_id, quantity, unit_cost, unit_cost_base, total_cost, total_cost_base, raw_total_cost_base, original_currency, fx_rate, movement_type, reason, reference, document_number, warehouse_id, movement_date, created_at, signed_quantity)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    )
+    .bind(movement.id.to_string())
+    .bind(movement.material_id.to_string())
+    .bind(movement.quantity.to_string())
+    .bind(movement.unit_cost.to_string())
+    .bind(movement.unit_cost_base.to_string())
+    .bind(movement.total_cost.to_string())
+    .bind(movement.total_cost_base.to_string())
+    .bind(movement.raw_total_cost_base.to_string())
+    .bind(&movement.original_currency)
+    .bind(movement.fx_rate.to_string())
+    .bind(format!("{:?}", movement.movement_type))
+    .bind(&movement.notes)
+    .bind(&movement.reference)
+    .bind(&movement.document_number)
+    .bind(warehouse_id)
+    .bind(movement.movement_date.to_rfc3339())
+    .bind(movement.created_at.to_rfc3339())
+    .bind(movement.signed_quantity.map(|v| v.to_string()))
+    .execute(&mut **tx)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    Ok(())
+}
+
+async fn resolve_warehouse_id_tx<'a>(
+    tx: &mut sqlx::Transaction<'a, sqlx::Sqlite>,
+    movement: &StockMovement,
+) -> Result<Option<String>, AppError> {
+    if let Some(id) = &movement.warehouse_id {
+        return Ok(Some(id.to_string()));
+    }
+    sqlx::query_scalar::<_, String>("SELECT id FROM warehouses WHERE is_default = 1 LIMIT 1")
+        .fetch_optional(&mut **tx)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))
+}

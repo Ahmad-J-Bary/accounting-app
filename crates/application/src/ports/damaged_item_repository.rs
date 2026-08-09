@@ -1,4 +1,6 @@
 use async_trait::async_trait;
+use domain::accounting::journal_entry::JournalEntry;
+use domain::inventory::stock_movement::StockMovement;
 use domain::inventory::DamagedItem;
 use domain::shared::ids::DamagedItemId;
 use crate::errors::AppError;
@@ -11,4 +13,12 @@ pub trait DamagedItemRepository: Send + Sync {
     async fn delete(&self, id: &DamagedItemId) -> Result<(), AppError>;
     async fn count(&self) -> Result<i64, AppError>;
     async fn get_next_reference(&self) -> Result<String, AppError>;
+    async fn save_with_accounting(
+        &self,
+        item: &DamagedItem,
+        movements: &[StockMovement],
+        entries: &[JournalEntry],
+        delete_movement_reference: Option<&str>,
+        delete_entries: &[domain::shared::ids::JournalEntryId],
+    ) -> Result<(), AppError>;
 }

@@ -1,13 +1,38 @@
 use std::sync::Arc;
 use rust_decimal::Decimal;
+use domain::accounting::account::Account;
+use domain::customers::Customer;
 use domain::payments::{Payment, PaymentType};
 use domain::shared::ids::{CustomerId, SupplierId, AccountId};
 use domain::shared::{Currency, Money, MonetaryAmount};
+use domain::suppliers::Supplier;
 use crate::dto::payment_dto::PaymentDto;
 use crate::errors::AppError;
 use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::supplier_repository::SupplierRepository;
 use crate::ports::account_repository::AccountRepository;
+
+/// Accumulated customer / supplier / account balance mutations for a payment
+/// accounting event. The mutations are applied by the repository composite in
+/// ONE transaction together with the journal + payment writes (Sec 9).
+#[derive(Debug, Default)]
+pub struct BalanceChanges {
+    pub customers: Vec<Customer>,
+    pub suppliers: Vec<Supplier>,
+    pub accounts: Vec<Account>,
+}
+
+impl BalanceChanges {
+    fn push_customer(&mut self, c: Customer) {
+        self.customers.push(c);
+    }
+    fn push_supplier(&mut self, s: Supplier) {
+        self.suppliers.push(s);
+    }
+    fn push_account(&mut self, a: Account) {
+        self.accounts.push(a);
+    }
+}
 
 /// Enriches a Payment domain object into a PaymentDto by resolving
 /// customer/supplier names from the respective repositories.
@@ -60,10 +85,11 @@ pub fn build_monetary_amount(amount: Decimal, currency_code: &str, exchange_rate
     (ma, currency)
 }
 
-/// Applies entity balance changes (increase) after a payment is created.
-/// For return-linked payments, use the `return_apply_entity_balances` variant.
+/// Computes entity balance changes (increase) for a payment event **without
+/// persisting** them. The returned mutations are written by the repository
+/// composite together with the journal + payment in one transaction.
 #[allow(clippy::too_many_arguments)]
-pub async fn apply_entity_balances(
+pub async fn compute_apply_balances(
     payment_type: &PaymentType,
     base_amount: Decimal,
     customer_id: &Option<CustomerId>,
@@ -72,7 +98,8 @@ pub async fn apply_entity_balances(
     customer_repo: &Arc<dyn CustomerRepository>,
     supplier_repo: &Arc<dyn SupplierRepository>,
     account_repo: &Arc<dyn AccountRepository>,
-) -> Result<(), AppError> {
+) -> Result<BalanceChanges, AppError> {
+    let mut changes = BalanceChanges::default();
     match payment_type {
         PaymentType::Receipt => {
             if let Some(cid) = customer_id {
@@ -80,7 +107,7 @@ pub async fn apply_entity_balances(
                     .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
                 customer.increase_credit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
-                customer_repo.update(&customer).await?;
+                changes.push_customer(customer);
             }
         }
         PaymentType::SupplierPayment => {
@@ -89,7 +116,7 @@ pub async fn apply_entity_balances(
                     .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
                 supplier.increase_debit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
-                supplier_repo.update(&supplier).await?;
+                changes.push_supplier(supplier);
             }
         }
         PaymentType::ExpenseVoucher => {
@@ -99,7 +126,7 @@ pub async fn apply_entity_balances(
                 account.debit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 account.debit += base_amount;
-                account_repo.save(&account).await?;
+                changes.push_account(account);
             }
         }
         PaymentType::DrawingsVoucher => {
@@ -109,7 +136,7 @@ pub async fn apply_entity_balances(
                 account.debit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 account.debit += base_amount;
-                account_repo.save(&account).await?;
+                changes.push_account(account);
             }
         }
         PaymentType::CustomerPayment => {
@@ -118,7 +145,7 @@ pub async fn apply_entity_balances(
                     .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
                 customer.decrease_debit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
-                customer_repo.update(&customer).await?;
+                changes.push_customer(customer);
             }
         }
         PaymentType::SupplierReceipt => {
@@ -127,18 +154,19 @@ pub async fn apply_entity_balances(
                     .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
                 supplier.decrease_credit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
-                supplier_repo.update(&supplier).await?;
+                changes.push_supplier(supplier);
             }
         }
         _ => {}
     }
-    Ok(())
+    Ok(changes)
 }
 
-/// Reverses entity balance changes (from a previous payment operation).
-/// `is_settlement` controls special settlement logic for CustomerPayment / SupplierReceipt.
+/// Computes reversed entity balance changes (from a previous payment event)
+/// **without persisting** them. `is_settlement` controls special settlement
+/// logic for CustomerPayment / SupplierReceipt.
 #[allow(clippy::too_many_arguments)]
-pub async fn reverse_entity_balances(
+pub async fn compute_reverse_balances(
     payment_type: &PaymentType,
     base_amount: Decimal,
     customer_id: &Option<CustomerId>,
@@ -148,7 +176,8 @@ pub async fn reverse_entity_balances(
     supplier_repo: &Arc<dyn SupplierRepository>,
     account_repo: &Arc<dyn AccountRepository>,
     is_settlement: bool,
-) -> Result<(), AppError> {
+) -> Result<BalanceChanges, AppError> {
+    let mut changes = BalanceChanges::default();
     match payment_type {
         PaymentType::Receipt => {
             if let Some(cid) = customer_id {
@@ -156,7 +185,7 @@ pub async fn reverse_entity_balances(
                     .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
                 customer.decrease_credit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
-                customer_repo.update(&customer).await?;
+                changes.push_customer(customer);
             }
         }
         PaymentType::SupplierPayment => {
@@ -165,7 +194,7 @@ pub async fn reverse_entity_balances(
                     .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
                 supplier.decrease_debit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
-                supplier_repo.update(&supplier).await?;
+                changes.push_supplier(supplier);
             }
         }
         PaymentType::ExpenseVoucher => {
@@ -175,7 +204,7 @@ pub async fn reverse_entity_balances(
                 account.credit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 account.debit -= base_amount;
-                account_repo.save(&account).await?;
+                changes.push_account(account);
             }
         }
         PaymentType::DrawingsVoucher => {
@@ -185,7 +214,7 @@ pub async fn reverse_entity_balances(
                 account.credit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
                 account.debit -= base_amount;
-                account_repo.save(&account).await?;
+                changes.push_account(account);
             }
         }
         PaymentType::CustomerPayment => {
@@ -206,7 +235,7 @@ pub async fn reverse_entity_balances(
                     customer.increase_debit(base_amount)
                         .map_err(|e| AppError::Invalid(e.to_string()))?;
                 }
-                customer_repo.update(&customer).await?;
+                changes.push_customer(customer);
             }
         }
         PaymentType::SupplierReceipt => {
@@ -227,7 +256,115 @@ pub async fn reverse_entity_balances(
                     supplier.increase_credit(base_amount)
                         .map_err(|e| AppError::Invalid(e.to_string()))?;
                 }
-                supplier_repo.update(&supplier).await?;
+                changes.push_supplier(supplier);
+            }
+        }
+        _ => {}
+    }
+    Ok(changes)
+}
+
+/// Applies a balance mutation onto an already-computed `BalanceChanges` set:
+/// if an entity of the same id is already present (e.g. after a reverse step)
+/// it is mutated in place, preserving sequential semantics; otherwise it is
+/// loaded from the repository and added. Nothing is persisted here.
+#[allow(clippy::too_many_arguments)]
+pub async fn apply_balance_onto(
+    changes: &mut BalanceChanges,
+    payment_type: &PaymentType,
+    base_amount: Decimal,
+    customer_id: &Option<CustomerId>,
+    supplier_id: &Option<SupplierId>,
+    debit_account_id: &Option<AccountId>,
+    customer_repo: &Arc<dyn CustomerRepository>,
+    supplier_repo: &Arc<dyn SupplierRepository>,
+    account_repo: &Arc<dyn AccountRepository>,
+) -> Result<(), AppError> {
+    match payment_type {
+        PaymentType::Receipt => {
+            if let Some(cid) = customer_id {
+                let mut customer = if let Some(c) = changes.customers.iter().find(|c| c.id == *cid).cloned() {
+                    c
+                } else {
+                    customer_repo.find_by_id(cid).await?
+                        .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?
+                };
+                customer.increase_credit(base_amount)
+                    .map_err(|e| AppError::Invalid(e.to_string()))?;
+                if let Some(c) = changes.customers.iter_mut().find(|c| c.id == *cid) {
+                    *c = customer;
+                } else {
+                    changes.customers.push(customer);
+                }
+            }
+        }
+        PaymentType::SupplierPayment => {
+            if let Some(sid) = supplier_id {
+                let mut supplier = if let Some(s) = changes.suppliers.iter().find(|s| s.id == *sid).cloned() {
+                    s
+                } else {
+                    supplier_repo.find_by_id(sid).await?
+                        .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?
+                };
+                supplier.increase_debit(base_amount)
+                    .map_err(|e| AppError::Invalid(e.to_string()))?;
+                if let Some(s) = changes.suppliers.iter_mut().find(|s| s.id == *sid) {
+                    *s = supplier;
+                } else {
+                    changes.suppliers.push(supplier);
+                }
+            }
+        }
+        PaymentType::ExpenseVoucher | PaymentType::DrawingsVoucher => {
+            if let Some(acc_id) = debit_account_id {
+                let mut account = if let Some(a) = changes.accounts.iter().find(|a| a.id == *acc_id).cloned() {
+                    a
+                } else {
+                    account_repo.find_by_id(acc_id).await?
+                        .ok_or_else(|| AppError::NotFound("حساب المصروف غير موجود".into()))?
+                };
+                account.debit(base_amount)
+                    .map_err(|e| AppError::Invalid(e.to_string()))?;
+                account.debit += base_amount;
+                if let Some(a) = changes.accounts.iter_mut().find(|a| a.id == *acc_id) {
+                    *a = account;
+                } else {
+                    changes.accounts.push(account);
+                }
+            }
+        }
+        PaymentType::CustomerPayment => {
+            if let Some(cid) = customer_id {
+                let mut customer = if let Some(c) = changes.customers.iter().find(|c| c.id == *cid).cloned() {
+                    c
+                } else {
+                    customer_repo.find_by_id(cid).await?
+                        .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?
+                };
+                customer.decrease_debit(base_amount)
+                    .map_err(|e| AppError::Invalid(e.to_string()))?;
+                if let Some(c) = changes.customers.iter_mut().find(|c| c.id == *cid) {
+                    *c = customer;
+                } else {
+                    changes.customers.push(customer);
+                }
+            }
+        }
+        PaymentType::SupplierReceipt => {
+            if let Some(sid) = supplier_id {
+                let mut supplier = if let Some(s) = changes.suppliers.iter().find(|s| s.id == *sid).cloned() {
+                    s
+                } else {
+                    supplier_repo.find_by_id(sid).await?
+                        .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?
+                };
+                supplier.decrease_credit(base_amount)
+                    .map_err(|e| AppError::Invalid(e.to_string()))?;
+                if let Some(s) = changes.suppliers.iter_mut().find(|s| s.id == *sid) {
+                    *s = supplier;
+                } else {
+                    changes.suppliers.push(supplier);
+                }
             }
         }
         _ => {}
@@ -235,15 +372,17 @@ pub async fn reverse_entity_balances(
     Ok(())
 }
 
-/// Reverses the balance for a return-linked CustomerPayment or SupplierReceipt.
-pub async fn reverse_return_entity_balances(
+/// Computes the reversed balance for a return-linked CustomerPayment or
+/// SupplierReceipt **without persisting**.
+pub async fn compute_reverse_return_balances(
     payment_type: &PaymentType,
     base_amount: Decimal,
     customer_id: &Option<CustomerId>,
     supplier_id: &Option<SupplierId>,
     customer_repo: &Arc<dyn CustomerRepository>,
     supplier_repo: &Arc<dyn SupplierRepository>,
-) -> Result<(), AppError> {
+) -> Result<BalanceChanges, AppError> {
+    let mut changes = BalanceChanges::default();
     match payment_type {
         PaymentType::CustomerPayment => {
             if let Some(cid) = customer_id {
@@ -251,7 +390,7 @@ pub async fn reverse_return_entity_balances(
                     .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
                 customer.decrease_debit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
-                customer_repo.update(&customer).await?;
+                changes.push_customer(customer);
             }
         }
         PaymentType::SupplierReceipt => {
@@ -260,23 +399,25 @@ pub async fn reverse_return_entity_balances(
                     .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
                 supplier.decrease_credit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
-                supplier_repo.update(&supplier).await?;
+                changes.push_supplier(supplier);
             }
         }
         _ => {}
     }
-    Ok(())
+    Ok(changes)
 }
 
-/// Applies the balance for a return-linked CustomerPayment or SupplierReceipt.
-pub async fn apply_return_entity_balances(
+/// Computes the applied balance for a return-linked CustomerPayment or
+/// SupplierReceipt **without persisting**.
+pub async fn compute_apply_return_balances(
     payment_type: &PaymentType,
     base_amount: Decimal,
     customer_id: &Option<CustomerId>,
     supplier_id: &Option<SupplierId>,
     customer_repo: &Arc<dyn CustomerRepository>,
     supplier_repo: &Arc<dyn SupplierRepository>,
-) -> Result<(), AppError> {
+) -> Result<BalanceChanges, AppError> {
+    let mut changes = BalanceChanges::default();
     match payment_type {
         PaymentType::CustomerPayment => {
             if let Some(cid) = customer_id {
@@ -284,7 +425,7 @@ pub async fn apply_return_entity_balances(
                     .ok_or_else(|| AppError::NotFound("العميل غير موجود".into()))?;
                 customer.increase_debit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
-                customer_repo.update(&customer).await?;
+                changes.push_customer(customer);
             }
         }
         PaymentType::SupplierReceipt => {
@@ -293,10 +434,10 @@ pub async fn apply_return_entity_balances(
                     .ok_or_else(|| AppError::NotFound("المورد غير موجود".into()))?;
                 supplier.increase_credit(base_amount)
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
-                supplier_repo.update(&supplier).await?;
+                changes.push_supplier(supplier);
             }
         }
         _ => {}
     }
-    Ok(())
+    Ok(changes)
 }

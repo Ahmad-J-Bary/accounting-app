@@ -150,10 +150,8 @@ impl SettlePartnerBalanceUseCase {
                 ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
                 entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-                self.journal_repo.save(&entry).await?;
                 payment.journal_entry_number = Some(entry_number.clone());
                 payment.reference = Some("settlement".to_string());
-                self.payment_repo.save(&payment).await?;
 
                 if effective > Decimal::ZERO {
                     customer.increase_credit(effective)
@@ -162,7 +160,11 @@ impl SettlePartnerBalanceUseCase {
                     customer.decrease_credit(-effective)
                         .map_err(|e| AppError::Invalid(e.to_string()))?;
                 }
-                self.customer_repo.update(&customer).await?;
+
+                // Journal + payment + counter-party balance change committed in
+                // ONE transaction (Sec 9 atomicity). No partial settlement can
+                // survive a failure.
+                self.payment_repo.save_settlement(&payment, &entry, Some(&customer), None).await?;
 
                 Ok(entry_number)
             }
@@ -267,10 +269,8 @@ impl SettlePartnerBalanceUseCase {
                 ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
                 entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-                self.journal_repo.save(&entry).await?;
                 payment.journal_entry_number = Some(entry_number.clone());
                 payment.reference = Some("settlement".to_string());
-                self.payment_repo.save(&payment).await?;
 
                 if effective > Decimal::ZERO {
                     supplier.increase_debit(effective)
@@ -279,7 +279,10 @@ impl SettlePartnerBalanceUseCase {
                     supplier.decrease_debit(-effective)
                         .map_err(|e| AppError::Invalid(e.to_string()))?;
                 }
-                self.supplier_repo.update(&supplier).await?;
+
+                // Journal + payment + counter-party balance change committed in
+                // ONE transaction (Sec 9 atomicity).
+                self.payment_repo.save_settlement(&payment, &entry, None, Some(&supplier)).await?;
 
                 Ok(entry_number)
             }

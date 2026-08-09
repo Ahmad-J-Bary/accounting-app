@@ -70,4 +70,22 @@ impl AssetRepository for SqliteAssetRepository {
     async fn delete_movements_by_asset(&self, asset_id: &Uuid) -> Result<(), AppError> {
         queries::delete_movements_by_asset(&self.pool, asset_id).await
     }
+
+    async fn save_asset_with_accounting(
+        &self,
+        asset: &FixedAsset,
+        movements: &[AssetMovement],
+        entries: &[domain::accounting::journal_entry::JournalEntry],
+        accounts: &[domain::accounting::account::Account],
+    ) -> Result<(), AppError> {
+        commands::save_asset_with_accounting(&self.pool, asset, movements, entries, accounts).await
+    }
+
+    async fn delete_asset_with_accounting(
+        &self,
+        id: &FixedAssetId,
+        entries: &[domain::shared::ids::JournalEntryId],
+    ) -> Result<(), AppError> {
+        commands::delete_asset_with_accounting(&self.pool, id, entries).await
+    }
 }

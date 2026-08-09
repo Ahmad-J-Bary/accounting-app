@@ -55,4 +55,24 @@ impl PurchaseReturnRepository for SqlitePurchaseReturnRepository {
             None => Ok("1".to_string()),
         }
     }
+
+    async fn post_with_accounting(
+        &self,
+        movements: &[domain::inventory::stock_movement::StockMovement],
+        entries: &[domain::accounting::journal_entry::JournalEntry],
+        payment: Option<&domain::payments::Payment>,
+        customers: &[domain::customers::Customer],
+        suppliers: &[domain::suppliers::Supplier],
+    ) -> Result<(), AppError> {
+        crate::repositories::atomic::write_event(
+            &self.pool,
+            movements,
+            entries,
+            payment,
+            customers,
+            suppliers,
+            &[],
+        )
+        .await
+    }
 }

@@ -9,8 +9,8 @@ use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use super::helpers::{
     build_monetary_amount,
-    reverse_entity_balances,
-    reverse_return_entity_balances,
+    compute_reverse_balances,
+    compute_reverse_return_balances,
 };
 
 pub struct DeletePaymentUseCase {
@@ -48,9 +48,10 @@ impl DeletePaymentUseCase {
 
         let is_return = payment.reference.as_deref().is_some_and(|r| r.starts_with("return:"));
 
-        if !is_return {
+        // Compute reversed entity balance changes (not persisted yet)
+        let changes = if !is_return {
             let is_settlement = payment.reference.as_deref() == Some("settlement");
-            reverse_entity_balances(
+            compute_reverse_balances(
                 &payment.payment_type,
                 base_amount,
                 &payment.customer_id,
@@ -60,17 +61,17 @@ impl DeletePaymentUseCase {
                 &self.supplier_repo,
                 &self.account_repo,
                 is_settlement,
-            ).await?;
+            ).await?
         } else {
-            reverse_return_entity_balances(
+            compute_reverse_return_balances(
                 &payment.payment_type,
                 base_amount,
                 &payment.customer_id,
                 &payment.supplier_id,
                 &self.customer_repo,
                 &self.supplier_repo,
-            ).await?;
-        }
+            ).await?
+        };
 
         // Delete associated journal entry — only drafts may be removed directly.
         // Posted entries must go through a reversal; treat them as a hard stop.
@@ -84,10 +85,14 @@ impl DeletePaymentUseCase {
                 .into_iter().collect::<Vec<_>>(),
         };
         crate::use_cases::journal::guards::ensure_deletable(&entries)?;
-        for entry in entries {
-            self.journal_repo.delete(&entry.id).await?;
-        }
+        let entry_ids = entries.into_iter().map(|e| e.id).collect::<Vec<_>>();
 
-        self.repo.delete(&pid).await
+        self.repo.delete_with_accounting(
+            &pid,
+            &entry_ids,
+            &changes.customers,
+            &changes.suppliers,
+            &changes.accounts,
+        ).await
     }
 }

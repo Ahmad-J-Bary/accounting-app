@@ -15,7 +15,6 @@ use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::material_repository::MaterialRepository;
 use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::exchange_rate_repository::ExchangeRateRepository;
-use crate::ports::payment_repository::PaymentRepository;
 use crate::dto::returns_dto::SalesReturnDto;
 use crate::errors::AppError;
 
@@ -30,7 +29,6 @@ pub struct PostSalesReturnUseCase {
     material_repo: Arc<dyn MaterialRepository>,
     currency_repo: Arc<dyn CurrencyRepository>,
     exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
-    payment_repo: Arc<dyn PaymentRepository>,
 }
 
 impl PostSalesReturnUseCase {
@@ -44,9 +42,8 @@ impl PostSalesReturnUseCase {
         material_repo: Arc<dyn MaterialRepository>,
         currency_repo: Arc<dyn CurrencyRepository>,
         exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
-        payment_repo: Arc<dyn PaymentRepository>,
     ) -> Self {
-        Self { repo, movement_repo, journal_repo, account_repo, customer_repo, material_repo, currency_repo, exchange_rate_repo, payment_repo }
+        Self { repo, movement_repo, journal_repo, account_repo, customer_repo, material_repo, currency_repo, exchange_rate_repo }
     }
 
     pub async fn execute(&self, id: String, settlement_mode: Option<String>, settlement_amount: Option<String>, is_paid: Option<bool>) -> Result<SalesReturnDto, AppError> {
@@ -61,6 +58,7 @@ impl PostSalesReturnUseCase {
         let fx_rate = Decimal::ONE;
 
         // 1. Create stock movements (INFLOW - goods return to inventory)
+        let mut movements = Vec::new();
         for line in &ret.lines {
             let material = self.material_repo.find_by_id(&line.material_id).await?
                 .ok_or_else(|| AppError::NotFound(format!("المادة مع المعرف {} غير موجودة", line.material_id)))?;
@@ -122,7 +120,7 @@ impl PostSalesReturnUseCase {
             movement.document_number = Some(ret.return_number.clone());
             movement.unit_cost_base = unit_cost_base;
             movement.total_cost_base = total_cost_base;
-            self.movement_repo.save(&movement).await?;
+            movements.push(movement);
         }
 
         // 2. Determine settlement amounts
@@ -135,6 +133,8 @@ impl PostSalesReturnUseCase {
         ).await?;
 
         // 3. Create RETURN journal entry (always credits customer by full total)
+        let mut entries = Vec::new();
+        let mut payments = Vec::new();
         let mut return_journal_lines = Vec::new();
 
         let sales_return_account = self.account_repo.find_by_code("42").await?
@@ -171,7 +171,7 @@ impl PostSalesReturnUseCase {
                 Some(ret.id.0.to_string()),
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
             entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-            self.journal_repo.save(&entry).await?;
+            entries.push(entry);
         }
 
         // 4. Create CASH journal entry (separate — only if cash_amount > 0 and paid now)
@@ -211,7 +211,7 @@ impl PostSalesReturnUseCase {
                 None,
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
             cash_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-            self.journal_repo.save(&cash_entry).await?;
+            entries.push(cash_entry);
 
             // 5. Create payment record for audit trail
             if let Some(customer) = self.customer_repo.find_by_id(&ret.customer_id).await? {
@@ -231,13 +231,14 @@ impl PostSalesReturnUseCase {
                         Some(format!("دفعة نقدية مرتبطة بمرتجع مبيعات {}", ret.return_number)),
                     ).map_err(|e| AppError::Invalid(e.to_string()))?;
                     payment.journal_entry_number = Some(cash_entry_number);
-                    self.payment_repo.save(&payment).await?;
+                    payments.push(payment);
                 }
             }
         }
 
         // 6. Adjust partner balance: return entry decreases debit by total,
         //    cash entry (if paid now) increases debit by cash_amount → net: decrease by (total - cash)
+        let mut customer_mutations = Vec::new();
         if let Some(customer) = self.customer_repo.find_by_id(&ret.customer_id).await? {
             let converted_total = crate::use_cases::unified_invoice::post::convert_to_partner_currency(
                 total,
@@ -264,8 +265,18 @@ impl PostSalesReturnUseCase {
                     .map_err(|e| AppError::Invalid(e.to_string()))?;
             }
 
-            self.customer_repo.update(&updated_customer).await?;
+            customer_mutations.push(updated_customer);
         }
+
+        // Commit stock movements + journals + payments + partner balance in
+        // ONE transaction (Sec 9 atomicity).
+        self.repo.post_with_accounting(
+            &movements,
+            &entries,
+            payments.first(),
+            &customer_mutations,
+            &[],
+        ).await?;
 
         let dto = SalesReturnDto::from(ret);
         let queries = SalesReturnQueries::new(

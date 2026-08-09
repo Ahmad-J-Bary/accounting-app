@@ -66,13 +66,14 @@ impl CreateStockAdjustmentUseCase {
 
         let display_ref = self.adjustment_repo.get_next_reference().await?;
         adjustment.reference = Some(display_ref.clone());
-        self.adjustment_repo.save(&adjustment).await?;
 
         let inventory_ref = self.movement_repo.get_next_inventory_reference().await?;
 
         // Create a stock movement for inventory tracking
         let difference = adjustment.difference;
         let abs_diff = difference.abs();
+        let mut movements = Vec::new();
+        let mut entries = Vec::new();
         if abs_diff > Decimal::ZERO {
             let notes = if difference > Decimal::ZERO {
                 "تسوية: فائض".to_string()
@@ -99,34 +100,37 @@ impl CreateStockAdjustmentUseCase {
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
             movement.signed_quantity = Some(difference);
             movement.document_number = Some(display_ref.clone());
-            self.movement_repo.save(&movement).await?;
+            movements.push(movement);
 
-            // Create journal entry for adjustment
-            create_adjustment_journal_entry(
+            // Build journal entry for adjustment (persisted atomically below)
+            let entry_number = self.journal_repo.get_next_entry_number().await?;
+            let entry = build_adjustment_journal_entry(
                 &self.account_repo,
-                &self.journal_repo,
+                entry_number,
                 unit_cost,
                 difference,
                 &display_ref,
                 adjustment.adjustment_date,
             ).await?;
+            entries.push(entry);
         }
+
+        // Commit doc + movement + journal in ONE transaction (Sec 9 atomicity).
+        self.adjustment_repo.save_with_accounting(&adjustment, &movements, &entries, None, &[]).await?;
 
         Ok(to_dto(adjustment, material.name))
     }
 }
 
-pub async fn create_adjustment_journal_entry(
+pub async fn build_adjustment_journal_entry(
     account_repo: &Arc<dyn AccountRepository>,
-    journal_repo: &Arc<dyn JournalEntryRepository>,
+    entry_number: String,
     total_value: Decimal,
     difference: Decimal,
     reference: &str,
     entry_date: DateTime<Utc>,
-) -> Result<(), AppError> {
+) -> Result<JournalEntry, AppError> {
     let base_currency = Currency::new(BASE_CURRENCY, BASE_CURRENCY, "ريال", "ر.س", 2, false);
-    let entry_number = journal_repo.get_next_entry_number().await?;
-
     if difference > Decimal::ZERO {
         // Surplus: Dr 1241 (بضاعة آخر المدة), Cr 331 (أرباح تسوية المخزون)
         let inventory_account = account_repo.find_by_code("1241").await?
@@ -156,7 +160,7 @@ pub async fn create_adjustment_journal_entry(
             format!("تسوية جرد (فائض) - مرجع {}", reference),
             Some(reference.to_string()),
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
-        journal_repo.save(&entry).await?;
+        Ok(entry)
     } else {
         // Shortage: Dr 45 (خسائر المواد التالفة والتسويات), Cr 1241 (بضاعة آخر المدة)
         let loss_account = account_repo.find_by_code("45").await?
@@ -186,9 +190,8 @@ pub async fn create_adjustment_journal_entry(
             format!("تسوية جرد (عجز) - مرجع {}", reference),
             Some(reference.to_string()),
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
-        journal_repo.save(&entry).await?;
+        Ok(entry)
     }
-    Ok(())
 }
 
 pub fn to_dto(a: StockAdjustment, material_name: String) -> StockAdjustmentDto {

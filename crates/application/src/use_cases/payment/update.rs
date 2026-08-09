@@ -15,10 +15,9 @@ use crate::ports::account_repository::AccountRepository;
 use super::helpers::{
     enrich_payment,
     build_monetary_amount,
-    apply_entity_balances,
-    reverse_entity_balances,
-    apply_return_entity_balances,
-    reverse_return_entity_balances,
+    compute_reverse_balances,
+    compute_reverse_return_balances,
+    apply_balance_onto,
 };
 use super::journal_builder::{
     parse_payment_type,
@@ -61,10 +60,10 @@ impl UpdatePaymentUseCase {
         let old_debit_account_id = existing.debit_account_id;
         let is_return = existing.reference.as_deref().is_some_and(|r| r.starts_with("return:"));
 
-        // 1. Reverse old entity balances
-        if !is_return {
+        // 1. Compute reversed old entity balances (not persisted yet)
+        let mut changes = if !is_return {
             let is_settlement = existing.reference.as_deref() == Some("settlement");
-            reverse_entity_balances(
+            compute_reverse_balances(
                 &old_type,
                 old_base_amount,
                 &old_customer_id,
@@ -74,17 +73,17 @@ impl UpdatePaymentUseCase {
                 &self.supplier_repo,
                 &self.account_repo,
                 is_settlement,
-            ).await?;
+            ).await?
         } else {
-            reverse_return_entity_balances(
+            compute_reverse_return_balances(
                 &old_type,
                 old_base_amount,
                 &old_customer_id,
                 &old_supplier_id,
                 &self.customer_repo,
                 &self.supplier_repo,
-            ).await?;
-        }
+            ).await?
+        };
 
         // 2. Delete old journal entry — only drafts may be rewritten directly.
         // Posted entries must be reversed instead of being overwritten.
@@ -98,9 +97,7 @@ impl UpdatePaymentUseCase {
                 .into_iter().collect::<Vec<_>>(),
         };
         crate::use_cases::journal::guards::ensure_deletable(&old_entries)?;
-        for entry in old_entries {
-            self.journal_repo.delete(&entry.id).await?;
-        }
+        let old_entry_ids = old_entries.into_iter().map(|e| e.id).collect::<Vec<_>>();
 
         // 3. Build updated payment
         let payment_type = parse_payment_type(&req.payment_type);
@@ -169,9 +166,10 @@ impl UpdatePaymentUseCase {
             &self.account_repo,
         ).await?;
 
+        let mut entry = None;
         if !journal_lines.is_empty() {
             let entry_number = self.journal_repo.get_next_entry_number().await?;
-            let mut entry = JournalEntry::new(
+            let mut built = JournalEntry::new(
                 entry_number.clone(),
                 journal_type,
                 journal_lines,
@@ -180,21 +178,20 @@ impl UpdatePaymentUseCase {
                 Some(updated_payment.id.to_string()),
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
-            entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-            self.journal_repo.save(&entry).await?;
+            built.post().map_err(|e| AppError::Invalid(e.to_string()))?;
             updated_payment.journal_entry_number = Some(entry_number);
+            entry = Some(built);
         } else {
             updated_payment.journal_entry_number = None;
         }
 
-        self.repo.save(&updated_payment).await?;
-
-        // 5. Apply new entity balances
+        // 5. Compute new entity balance mutations (chained on top of the reversed
+        // set) without persisting.
         let (new_amount_ma, _) = build_monetary_amount(updated_payment.amount, &updated_payment.currency_code, updated_payment.exchange_rate);
         let new_base_amount = new_amount_ma.base_amount;
-
         if !is_return {
-            apply_entity_balances(
+            apply_balance_onto(
+                &mut changes,
                 &updated_payment.payment_type,
                 new_base_amount,
                 &updated_payment.customer_id,
@@ -205,7 +202,7 @@ impl UpdatePaymentUseCase {
                 &self.account_repo,
             ).await?;
         } else {
-            apply_return_entity_balances(
+            let return_changes = super::helpers::compute_apply_return_balances(
                 &updated_payment.payment_type,
                 new_base_amount,
                 &updated_payment.customer_id,
@@ -213,7 +210,20 @@ impl UpdatePaymentUseCase {
                 &self.customer_repo,
                 &self.supplier_repo,
             ).await?;
+            changes.customers.extend(return_changes.customers);
+            changes.suppliers.extend(return_changes.suppliers);
         }
+
+        // Commit old-entry deletions + new journal + payment + all balance
+        // changes in ONE transaction (Sec 9 atomicity).
+        self.repo.save_with_accounting(
+            &updated_payment,
+            entry.as_ref(),
+            &old_entry_ids,
+            &changes.customers,
+            &changes.suppliers,
+            &changes.accounts,
+        ).await?;
 
         Ok(enrich_payment(updated_payment, &self.customer_repo, &self.supplier_repo).await)
     }

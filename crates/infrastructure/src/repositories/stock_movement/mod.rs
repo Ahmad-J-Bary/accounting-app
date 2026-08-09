@@ -12,6 +12,8 @@ mod mappers;
 mod queries;
 mod commands;
 
+pub(crate) use commands::insert_movement_tx;
+
 pub struct StockMovementRow {
     pub id: String,
     pub material_id: String,
@@ -44,6 +46,23 @@ impl SqliteStockMovementRepository {
 impl StockMovementRepository for SqliteStockMovementRepository {
     async fn save(&self, movement: &StockMovement) -> Result<(), AppError> {
         commands::save(&self.pool, movement).await
+    }
+
+    async fn post_with_accounting(
+        &self,
+        movements: &[StockMovement],
+        entries: &[domain::accounting::journal_entry::JournalEntry],
+    ) -> Result<(), AppError> {
+        crate::repositories::atomic::write_event(
+            &self.pool,
+            movements,
+            entries,
+            None,
+            &[],
+            &[],
+            &[],
+        )
+        .await
     }
 
     async fn find_by_id(&self, id: &StockMovementId) -> Result<Option<StockMovement>, AppError> {

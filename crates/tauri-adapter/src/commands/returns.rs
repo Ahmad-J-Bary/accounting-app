@@ -274,7 +274,6 @@ pub async fn create_sales_return(
         state.material_repo.clone(),
         state.currency_repo.clone(),
         state.exchange_rate_repo.clone(),
-        state.payment_repo.clone(),
     );
     post_use_case.execute(dto.id.clone(), settlement_mode, settlement_amount, is_paid).await.map_err(|e| e.to_string())
 }
@@ -318,7 +317,6 @@ pub async fn post_sales_return(
         state.material_repo.clone(),
         state.currency_repo.clone(),
         state.exchange_rate_repo.clone(),
-        state.payment_repo.clone(),
     )
     .execute(id, None, None, None).await.map_err(|e| e.to_string())
 }
@@ -355,7 +353,6 @@ pub async fn create_purchase_return(
         state.material_repo.clone(),
         state.currency_repo.clone(),
         state.exchange_rate_repo.clone(),
-        state.payment_repo.clone(),
     );
     post_use_case.execute(dto.id.clone(), settlement_mode, settlement_amount, is_paid).await.map_err(|e| e.to_string())
 }
@@ -399,7 +396,6 @@ pub async fn post_purchase_return(
         state.material_repo.clone(),
         state.currency_repo.clone(),
         state.exchange_rate_repo.clone(),
-        state.payment_repo.clone(),
     )
     .execute(id, None, None, None).await.map_err(|e| e.to_string())
 }

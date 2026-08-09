@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use crate::ports::consumable_repository::ConsumableRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
-use crate::ports::asset_repository::AssetRepository;
 use domain::assets::{Consumable, ConsumableId, AssetMovement, AssetMovementType};
 use domain::accounting::{JournalEntry, JournalLine};
 use domain::shared::{Money, AccountId, MonetaryAmount};
@@ -12,7 +11,6 @@ use chrono::Utc;
 
 pub struct ConsumableUseCases {
     repo: Arc<dyn ConsumableRepository>,
-    asset_repo: Arc<dyn AssetRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
 }
 
@@ -29,10 +27,9 @@ pub struct CreateConsumableRequest {
 impl ConsumableUseCases {
     pub fn new(
         repo: Arc<dyn ConsumableRepository>,
-        asset_repo: Arc<dyn AssetRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
     ) -> Self {
-        Self { repo, asset_repo, journal_repo }
+        Self { repo, journal_repo }
     }
 
     pub async fn create_item(
@@ -57,7 +54,6 @@ impl ConsumableUseCases {
             .ok_or_else(|| AppError::NotFound("Item not found".to_string()))?;
         
         item.add_stock(quantity);
-        self.repo.save(&item).await?;
 
         // Log movement
         let movement = AssetMovement::new(
@@ -67,7 +63,9 @@ impl ConsumableUseCases {
             item.unit_cost.clone() * quantity,
             format!("زيادة الكمية: {}", quantity),
         );
-        self.asset_repo.save_movement(&movement).await?;
+
+        // Commit item + movement in ONE transaction (Sec 9 atomicity).
+        self.repo.save_with_accounting(&item, &[movement], &[]).await?;
 
         Ok(())
     }
@@ -77,7 +75,6 @@ impl ConsumableUseCases {
             .ok_or_else(|| AppError::NotFound("Item not found".to_string()))?;
 
         let total_value = item.issue(quantity).map_err(AppError::Invalid)?;
-        self.repo.save(&item).await?;
 
         // Log movement
         let movement = AssetMovement::new(
@@ -87,7 +84,6 @@ impl ConsumableUseCases {
             total_value.clone(),
             description.clone(),
         );
-        self.asset_repo.save_movement(&movement).await?;
 
         // Journal Entry
         let mut lines = Vec::new();
@@ -118,7 +114,8 @@ impl ConsumableUseCases {
             Some(item.id.0.to_string()),
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
-        self.journal_repo.save(&entry).await?;
+        // Commit item + movement + journal in ONE transaction (Sec 9 atomicity).
+        self.repo.save_with_accounting(&item, &[movement], &[entry]).await?;
 
         Ok(())
     }
@@ -131,7 +128,7 @@ impl ConsumableUseCases {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mocks::{MockAssetRepository, MockJournalRepository};
+    use crate::mocks::MockJournalRepository;
     use domain::shared::Currency;
     use rust_decimal_macros::dec;
 
@@ -141,6 +138,7 @@ mod tests {
 
     pub struct MockConsumableRepo {
         pub items: std::sync::Mutex<Vec<Consumable>>,
+        pub entries: std::sync::Mutex<Vec<domain::accounting::JournalEntry>>,
     }
     
     #[async_trait::async_trait]
@@ -159,14 +157,26 @@ mod tests {
             Ok(self.items.lock().unwrap().clone())
         }
         async fn delete(&self, _id: &ConsumableId) -> Result<(), AppError> { Ok(()) }
+        async fn save_with_accounting(
+            &self,
+            item: &Consumable,
+            _movements: &[domain::assets::AssetMovement],
+            entries: &[domain::accounting::JournalEntry],
+        ) -> Result<(), AppError> {
+            self.save(item).await?;
+            let mut store = self.entries.lock().unwrap();
+            for e in entries {
+                store.push(e.clone());
+            }
+            Ok(())
+        }
     }
 
     #[tokio::test]
     async fn test_consumable_lifecycle() {
-        let repo = Arc::new(MockConsumableRepo { items: std::sync::Mutex::new(Vec::new()) });
-        let asset_repo = Arc::new(MockAssetRepository::default());
+        let repo = Arc::new(MockConsumableRepo { items: std::sync::Mutex::new(Vec::new()), entries: std::sync::Mutex::new(Vec::new()) });
         let journal_repo = Arc::new(MockJournalRepository::default());
-        let use_cases = ConsumableUseCases::new(repo, asset_repo.clone(), journal_repo.clone());
+        let use_cases = ConsumableUseCases::new(repo.clone(), journal_repo.clone());
 
         // 1. Create
         let id = use_cases.create_item(CreateConsumableRequest {
@@ -192,7 +202,7 @@ mod tests {
         assert_eq!(updated[0].quantity_on_hand, dec!(8));
 
         // Check Accounting
-        let entries = journal_repo.entries.lock().unwrap();
+        let entries = repo.entries.lock().unwrap();
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].lines[0].debit.amount(), dec!(100)); // 2 * 50
     }

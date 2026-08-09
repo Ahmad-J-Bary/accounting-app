@@ -12,7 +12,7 @@ use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::supplier_repository::SupplierRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::account_repository::AccountRepository;
-use super::helpers::{enrich_payment, apply_entity_balances, build_monetary_amount};
+use super::helpers::{enrich_payment, compute_apply_balances, build_monetary_amount};
 use super::journal_builder::{parse_payment_type, voucher_prefix, payment_type_to_journal_type, build_journal_lines};
 
 pub struct CreatePaymentUseCase {
@@ -107,9 +107,10 @@ impl CreatePaymentUseCase {
             &self.account_repo,
         ).await?;
 
+        let mut entry = None;
         if !journal_lines.is_empty() {
             let entry_number = self.journal_repo.get_next_entry_number().await?;
-            let mut entry = JournalEntry::new(
+            let mut built = JournalEntry::new(
                 entry_number.clone(),
                 journal_type,
                 journal_lines,
@@ -118,15 +119,13 @@ impl CreatePaymentUseCase {
                 Some(payment.id.to_string()),
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
-            entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-            self.journal_repo.save(&entry).await?;
+            built.post().map_err(|e| AppError::Invalid(e.to_string()))?;
             payment.journal_entry_number = Some(entry_number);
+            entry = Some(built);
         }
 
-        self.repo.save(&payment).await?;
-
-        // --- Update entity balances ---
-        apply_entity_balances(
+        // --- Compute entity balance changes (not persisted yet) ---
+        let balances = compute_apply_balances(
             &payment.payment_type,
             base_amount,
             &payment.customer_id,
@@ -135,6 +134,16 @@ impl CreatePaymentUseCase {
             &self.customer_repo,
             &self.supplier_repo,
             &self.account_repo,
+        ).await?;
+
+        // --- Commit journal + payment + balance changes in ONE transaction ---
+        self.repo.save_with_accounting(
+            &payment,
+            entry.as_ref(),
+            &[],
+            &balances.customers,
+            &balances.suppliers,
+            &balances.accounts,
         ).await?;
 
         Ok(enrich_payment(payment, &self.customer_repo, &self.supplier_repo).await)

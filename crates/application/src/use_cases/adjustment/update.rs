@@ -10,7 +10,7 @@ use crate::ports::material_repository::MaterialRepository;
 use crate::ports::stock_movement_repository::StockMovementRepository;
 use crate::dto::adjustment_dto::{UpdateStockAdjustmentRequest, StockAdjustmentDto};
 use crate::errors::AppError;
-use super::create::{to_dto, create_adjustment_journal_entry};
+use super::create::{to_dto, build_adjustment_journal_entry};
 
 pub struct UpdateStockAdjustmentUseCase {
     adjustment_repo: Arc<dyn StockAdjustmentRepository>,
@@ -77,20 +77,19 @@ impl UpdateStockAdjustmentUseCase {
 
         // Delete old journal entry — drafts only; posted entries are immutable.
         let old_entry = self.journal_repo.find_by_source_id(&display_ref).await?;
+        let mut delete_entries = Vec::new();
         if let Some(old_entry) = old_entry {
             crate::use_cases::journal::guards::ensure_deletable(std::slice::from_ref(&old_entry))?;
-            self.journal_repo.delete(&old_entry.id).await?;
+            delete_entries.push(old_entry.id);
         }
-
-        self.movement_repo.delete_by_reference(&display_ref, "Adjustment").await?;
-
-        self.adjustment_repo.save(&adjustment).await?;
 
         let inventory_ref = self.movement_repo.get_next_inventory_reference().await?;
 
         // Create new stock movement
         let difference = adjustment.difference;
         let abs_diff = difference.abs();
+        let mut movements = Vec::new();
+        let mut entries = Vec::new();
         if abs_diff > Decimal::ZERO {
             let notes = if difference > Decimal::ZERO {
                 "تسوية: فائض".to_string()
@@ -120,18 +119,30 @@ impl UpdateStockAdjustmentUseCase {
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
             movement.signed_quantity = Some(difference);
             movement.document_number = Some(display_ref.clone());
-            self.movement_repo.save(&movement).await?;
+            movements.push(movement);
 
-            // Create journal entry for adjustment
-            create_adjustment_journal_entry(
+            // Build journal entry for adjustment (persisted atomically below)
+            let entry_number = self.journal_repo.get_next_entry_number().await?;
+            let entry = build_adjustment_journal_entry(
                 &self.account_repo,
-                &self.journal_repo,
+                entry_number,
                 unit_cost,
                 difference,
                 &display_ref,
                 adjustment.adjustment_date,
             ).await?;
+            entries.push(entry);
         }
+
+        // Commit old-entry deletions + doc + movement + journal in ONE
+        // transaction (Sec 9 atomicity).
+        self.adjustment_repo.save_with_accounting(
+            &adjustment,
+            &movements,
+            &entries,
+            Some(&display_ref),
+            &delete_entries,
+        ).await?;
 
         Ok(to_dto(adjustment, material.name))
     }

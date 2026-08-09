@@ -200,7 +200,7 @@ pub async fn create_consumable(
     let asset_acc = Uuid::parse_str(&asset_account_id).map_err(|e| e.to_string())?;
     let exp_acc = Uuid::parse_str(&expense_account_id).map_err(|e| e.to_string())?;
 
-    let use_case = ConsumableUseCases::new(state.consumable_repo.clone(), state.asset_repo.clone(), state.journal_entry_repo.clone());
+    let use_case = ConsumableUseCases::new(state.consumable_repo.clone(), state.journal_entry_repo.clone());
     let id = use_case.create_item(CreateConsumableRequest {
         code,
         name,
@@ -219,7 +219,7 @@ pub async fn create_consumable(
 pub async fn list_consumables(
     state: State<'_, AppState>,
 ) -> Result<Vec<Consumable>, String> {
-    let use_case = ConsumableUseCases::new(state.consumable_repo.clone(), state.asset_repo.clone(), state.journal_entry_repo.clone());
+    let use_case = ConsumableUseCases::new(state.consumable_repo.clone(), state.journal_entry_repo.clone());
     use_case.list_items().await.map_err(|e| e.to_string())
 }
 
@@ -231,7 +231,7 @@ pub async fn add_consumable_stock(
 ) -> Result<(), String> {
     let uuid = Uuid::parse_str(&id).map_err(|e| e.to_string())?;
     let qty = Decimal::from_str(&quantity).map_err(|e| e.to_string())?;
-    let use_case = ConsumableUseCases::new(state.consumable_repo.clone(), state.asset_repo.clone(), state.journal_entry_repo.clone());
+    let use_case = ConsumableUseCases::new(state.consumable_repo.clone(), state.journal_entry_repo.clone());
     use_case.add_stock(uuid, qty).await.map_err(|e| e.to_string())
 }
 
@@ -244,7 +244,7 @@ pub async fn issue_consumable(
 ) -> Result<(), String> {
     let uuid = Uuid::parse_str(&id).map_err(|e| e.to_string())?;
     let qty = Decimal::from_str(&quantity).map_err(|e| e.to_string())?;
-    let use_case = ConsumableUseCases::new(state.consumable_repo.clone(), state.asset_repo.clone(), state.journal_entry_repo.clone());
+    let use_case = ConsumableUseCases::new(state.consumable_repo.clone(), state.journal_entry_repo.clone());
     use_case.issue_item(uuid, qty, description).await.map_err(|e| e.to_string())
 }
 

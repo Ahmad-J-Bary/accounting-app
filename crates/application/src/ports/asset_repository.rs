@@ -1,5 +1,7 @@
 use async_trait::async_trait;
 use domain::assets::{FixedAsset, FixedAssetId, AssetCategory, AssetMovement, DepreciationSchedule};
+use domain::accounting::journal_entry::JournalEntry;
+use domain::accounting::account::Account;
 use crate::errors::AppError;
 use uuid::Uuid;
 
@@ -21,4 +23,23 @@ pub trait AssetRepository: Send + Sync {
 
     async fn delete_asset(&self, id: &FixedAssetId) -> Result<(), AppError>;
     async fn delete_movements_by_asset(&self, asset_id: &Uuid) -> Result<(), AppError>;
+
+    /// Atomically saves the asset + its movements + its journal entries +
+    /// the affected account balance changes in ONE transaction (Sec 9).
+    #[allow(clippy::too_many_arguments)]
+    async fn save_asset_with_accounting(
+        &self,
+        asset: &FixedAsset,
+        movements: &[AssetMovement],
+        entries: &[JournalEntry],
+        accounts: &[Account],
+    ) -> Result<(), AppError>;
+
+    /// Atomically deletes the asset + its movements + the given journal
+    /// entries in ONE transaction. Only drafts may be deleted (Sec 9).
+    async fn delete_asset_with_accounting(
+        &self,
+        id: &FixedAssetId,
+        entries: &[domain::shared::ids::JournalEntryId],
+    ) -> Result<(), AppError>;
 }

@@ -43,7 +43,12 @@ pub async fn save_reversal_pair(
     Ok(())
 }
 
-async fn insert_entry(
+/// Inserts (or refreshes) a journal entry + its lines within an open
+/// transaction. `pub(crate)` so composite repository methods across the crate
+/// (payment settlements, invoice posting, stock/adjustment/asset events) can
+/// write a journal and their business records in ONE shared transaction
+/// instead of splitting the accounting event across autocommit connections.
+pub(crate) async fn insert_entry(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
     entry: &JournalEntry,
 ) -> Result<(), AppError> {

@@ -135,7 +135,6 @@ pub async fn delete_partner(
     DeletePartnerUseCase::new(
         state.partner_repo.clone(),
         state.account_repo.clone(),
-        state.uow.clone(),
     ).execute(id).await.map_err(|e| e.to_string())
 }
 
@@ -159,7 +158,6 @@ pub async fn update_partner(
     UpdatePartnerUseCase::new(
         state.partner_repo.clone(),
         state.account_repo.clone(),
-        state.uow.clone(),
         state.currency_repo.clone(),
     ).execute(UpdatePartnerRequest {
         id,

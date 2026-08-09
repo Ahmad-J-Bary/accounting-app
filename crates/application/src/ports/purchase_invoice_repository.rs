@@ -1,4 +1,6 @@
 use async_trait::async_trait;
+use domain::accounting::journal_entry::JournalEntry;
+use domain::inventory::stock_movement::StockMovement;
 use domain::purchases::PurchaseInvoice;
 use domain::shared::ids::{PurchaseInvoiceId, SupplierId};
 use crate::errors::AppError;
@@ -11,4 +13,10 @@ pub trait PurchaseInvoiceRepository: Send + Sync {
     async fn list_by_supplier(&self, supplier_id: &SupplierId) -> Result<Vec<PurchaseInvoice>, AppError>;
     async fn update(&self, invoice: &PurchaseInvoice) -> Result<(), AppError>;
     async fn delete(&self, id: &PurchaseInvoiceId) -> Result<(), AppError>;
+    async fn post_with_accounting(
+        &self,
+        invoice: &PurchaseInvoice,
+        movements: &[StockMovement],
+        entries: &[JournalEntry],
+    ) -> Result<(), AppError>;
 }

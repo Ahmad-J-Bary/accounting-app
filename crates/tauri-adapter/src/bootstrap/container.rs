@@ -26,7 +26,6 @@ use application::ports::opening_posting_repository::OpeningPostingRepository;
 use application::ports::opening_detail_repository::OpeningDetailRepository;
 use application::ports::fiscal_period_repository::FiscalPeriodRepository;
 use application::ports::unified_invoice_repository::UnifiedInvoiceRepository;
-use application::ports::unit_of_work::UnitOfWork;
 use application::ports::user_repository::UserRepository;
 use application::ports::sales_return_repository::SalesReturnRepository;
 use application::ports::purchase_return_repository::PurchaseReturnRepository;
@@ -42,7 +41,7 @@ use infrastructure::{
     SqliteJournalEntryRepository, SqliteMaterialRepository, SqlitePartnerRepository,
     SqlitePaymentRepository, SqliteProductionRepository,
     SqliteSettingsRepository, SqliteStockAdjustmentRepository, SqliteStockMovementRepository,
-    SqliteSupplierRepository, SqliteUnifiedInvoiceRepository, SqliteUnitOfWork,
+    SqliteSupplierRepository, SqliteUnifiedInvoiceRepository,
     SqliteUserRepository, SqliteSalesReturnRepository, SqlitePurchaseReturnRepository,
 };
 use infrastructure::repositories::SqliteInvoiceRepository;
@@ -87,7 +86,6 @@ pub struct AppState {
     pub opening_posting_repo: Arc<dyn OpeningPostingRepository>,
     pub opening_detail_repo: Arc<dyn OpeningDetailRepository>,
     pub fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
-    pub uow: Arc<dyn UnitOfWork>,
     pub material_code_use_cases: Arc<MaterialCodeUseCases>,
     pub currency_commands: Arc<CurrencyCommands>,
     pub currency_queries: Arc<CurrencyQueries>,
@@ -167,7 +165,6 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
             as Arc<dyn OpeningDetailRepository>,
         fiscal_period_repo: Arc::new(SqliteFiscalPeriodRepository::new(pool.clone()))
             as Arc<dyn FiscalPeriodRepository>,
-        uow: Arc::new(SqliteUnitOfWork::new(pool.clone())) as Arc<dyn UnitOfWork>,
         material_code_use_cases: Arc::new(MaterialCodeUseCases::new(
             prefix_repo.clone(),
             category_repo.clone(),

@@ -7,13 +7,11 @@ use domain::shared::ids::PartnerId;
 use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::partner_repository::PartnerRepository;
 use crate::ports::account_repository::AccountRepository;
-use crate::ports::unit_of_work::UnitOfWork;
 use crate::errors::AppError;
 
 pub struct UpdatePartnerUseCase {
     repo: Arc<dyn PartnerRepository>,
     account_repo: Arc<dyn AccountRepository>,
-    uow: Arc<dyn UnitOfWork>,
     currency_repo: Arc<dyn CurrencyRepository>,
 }
 
@@ -32,10 +30,9 @@ impl UpdatePartnerUseCase {
     pub fn new(
         repo: Arc<dyn PartnerRepository>,
         account_repo: Arc<dyn AccountRepository>,
-        uow: Arc<dyn UnitOfWork>,
         currency_repo: Arc<dyn CurrencyRepository>,
     ) -> Self {
-        Self { repo, account_repo, uow, currency_repo }
+        Self { repo, account_repo, currency_repo }
     }
 
     pub async fn execute(
@@ -78,16 +75,17 @@ impl UpdatePartnerUseCase {
             req.manual_ratio,
         ).map_err(AppError::Domain)?;
 
-        self.uow.begin().await?;
-        self.repo.update(&partner).await?;
-
+        // Resolve renamed linked accounts BEFORE the transaction so reads are
+        // part of the decision; the write is then atomic in one tx.
+        let mut capital_replacement = None;
+        let mut drawings_replacement = None;
         if old_name != req.name {
             if let Some(cap_id) = partner.linked_account_id {
                 if let Some(mut acc) = self.account_repo.find_by_id(&cap_id).await? {
                     acc.name_ar = req.name.clone();
                     acc.name_en = req.name.clone();
                     acc.updated_at = Utc::now();
-                    self.account_repo.save(&acc).await?;
+                    capital_replacement = Some(acc);
                 }
             }
             if let Some(draw_id) = partner.drawings_account_id {
@@ -96,12 +94,14 @@ impl UpdatePartnerUseCase {
                     acc.name_ar = draw_account_name.clone();
                     acc.name_en = draw_account_name;
                     acc.updated_at = Utc::now();
-                    self.account_repo.save(&acc).await?;
+                    drawings_replacement = Some(acc);
                 }
             }
         }
 
-        self.uow.commit().await?;
+        self.repo
+            .update_with_accounts(&partner, capital_replacement.as_ref(), drawings_replacement.as_ref())
+            .await?;
 
         Ok(())
     }
