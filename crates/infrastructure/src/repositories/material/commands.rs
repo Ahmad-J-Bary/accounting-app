@@ -46,7 +46,15 @@ pub async fn save(pool: &SqlitePool, material: &Material) -> Result<(), AppError
 
 pub async fn update(pool: &SqlitePool, material: &Material) -> Result<(), AppError> {
     let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    update_tx(&mut tx, material).await?;
+    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    Ok(())
+}
 
+pub(crate) async fn update_tx<'a>(
+    tx: &mut sqlx::Transaction<'a, sqlx::Sqlite>,
+    material: &Material,
+) -> Result<(), AppError> {
     sqlx::query(
         "UPDATE materials SET name=?, name_en=?, barcode=?, code=?, minimum_stock=?, notes=?, image_path=?, default_purchase_unit_id=?, default_sale_unit_id=?, default_purchase_currency=?, default_sale_currency=?, default_warehouse_id=?, has_expiry=?, expiry_alert_before_days=?, updated_at=? 
          WHERE id=?"
@@ -67,16 +75,15 @@ pub async fn update(pool: &SqlitePool, material: &Material) -> Result<(), AppErr
     .bind(material.expiry_alert_before_days)
     .bind(material.updated_at.to_rfc3339())
     .bind(material.id.to_string())
-    .execute(&mut *tx)
+    .execute(&mut **tx)
     .await
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-    save_category_links(&mut tx, &material.id.to_string(), &material.category_ids).await?;
-    save_units(&mut tx, &material.units).await?;
-    save_purchase_prices(&mut tx, &material.id.to_string(), &material.purchase_prices).await?;
-    save_sale_prices(&mut tx, &material.id.to_string(), &material.sale_prices).await?;
+    save_category_links(&mut *tx, &material.id.to_string(), &material.category_ids).await?;
+    save_units(&mut *tx, &material.units).await?;
+    save_purchase_prices(&mut *tx, &material.id.to_string(), &material.purchase_prices).await?;
+    save_sale_prices(&mut *tx, &material.id.to_string(), &material.sale_prices).await?;
 
-    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
 }
 

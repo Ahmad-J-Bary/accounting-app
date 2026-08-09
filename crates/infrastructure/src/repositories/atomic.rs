@@ -49,7 +49,7 @@ pub async fn write_event(
         .map_err(|e| AppError::Infrastructure(e.to_string()))
 }
 
-async fn insert_payment_tx<'a>(
+pub(crate) async fn insert_payment_tx<'a>(
     tx: &mut sqlx::Transaction<'a, sqlx::Sqlite>,
     payment: &Payment,
 ) -> Result<(), AppError> {
@@ -80,7 +80,7 @@ async fn insert_payment_tx<'a>(
     Ok(())
 }
 
-async fn update_customer_tx<'a>(
+pub(crate) async fn update_customer_tx<'a>(
     tx: &mut sqlx::Transaction<'a, sqlx::Sqlite>,
     customer: &Customer,
 ) -> Result<(), AppError> {
@@ -99,7 +99,7 @@ async fn update_customer_tx<'a>(
     Ok(())
 }
 
-async fn update_supplier_tx<'a>(
+pub(crate) async fn update_supplier_tx<'a>(
     tx: &mut sqlx::Transaction<'a, sqlx::Sqlite>,
     supplier: &Supplier,
 ) -> Result<(), AppError> {
