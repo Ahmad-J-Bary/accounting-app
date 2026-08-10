@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import type { AccountDto } from "@erp/shared-types";
 import { accountingService } from "@modules/accounting/api/accountingService";
@@ -454,22 +455,20 @@ export function AccountDetailsSidebar({
             </div>
             <div className="space-y-1">
               <FieldLabel>العملة</FieldLabel>
-              <select
-                className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-              >
-                <option value="" disabled>
-                  اختر العملة
-                </option>
-                {activeCurrencies
-                  .filter((c) => c.is_active)
-                  .map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.code} - {c.name_ar}
-                    </option>
-                  ))}
-              </select>
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger className="h-9 bg-white border-slate-200 text-sm">
+                  <SelectValue placeholder="اختر العملة" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeCurrencies
+                    .filter((c) => c.is_active)
+                    .map((c) => (
+                      <SelectItem key={c.code} value={c.code}>
+                        {c.code} - {c.name_ar}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>

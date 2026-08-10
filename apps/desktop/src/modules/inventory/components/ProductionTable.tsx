@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { formatDateTime, formatCurrency } from '@shared/lib/format';
-import { cn } from "@shared/lib/utils";
+import { StatusBadge } from "@shared/ui/status-badge";
 import type { ProductionOrder } from "@erp/shared-types";
 import { SharedTable } from '@widgets/table-shell/SharedTable';
 import type { UnifiedColumn } from '@widgets/table-shell/UnifiedTable';
@@ -67,17 +67,7 @@ export function ProductionTable({ data, loading, search, onSearchChange, onVisib
       id: "status",
       header: "الحالة",
       label: "حالة الأمر",
-      accessor: (o) => {
-        const st = STATUS_MAP[o.status] ?? { label: o.status, cls: "bg-slate-100 text-slate-700 ring-slate-200" };
-        return (
-          <span className={cn(
-            "inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ring-1 ring-inset",
-            st.cls
-          )}>
-            {st.label}
-          </span>
-        );
-      },
+      accessor: (o) => <StatusBadge status={o.status} />,
     }
   ], []);
 

@@ -1,8 +1,10 @@
 import { Button } from "@shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
 import { CheckCircle2, Lock, RefreshCw, XCircle } from "lucide-react";
+import { StatusBadge } from "@shared/ui/status-badge";
+import { Skeleton } from "@shared/ui/skeleton";
+import { EmptyState } from "@widgets/table-shell/EmptyState";
 import type { OpeningBalanceMigrationDto } from "../../accounting/api/openingBalanceService";
-import { STATUS_LABEL } from "../lib/migration-labels";
 
 export type MigrationActionHandler = (id: string) => void;
 
@@ -18,18 +20,6 @@ interface MigrationListCardProps {
   onLock: MigrationActionHandler;
   onCancel: MigrationActionHandler;
   onReopen: MigrationActionHandler;
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const cls =
-    status === "Posted"
-      ? "bg-green-100 text-green-700"
-      : status === "Cancelled"
-        ? "bg-red-100 text-red-600"
-        : status === "Locked"
-          ? "bg-slate-200 text-slate-700"
-          : "bg-amber-100 text-amber-700";
-  return <span className={`mr-2 text-xs px-2 py-0.5 rounded-full ${cls}`}>{STATUS_LABEL[status]}</span>;
 }
 
 export function MigrationListCard({
@@ -51,9 +41,15 @@ export function MigrationListCard({
         <CardTitle className="text-base font-bold text-slate-800">ترحيلات الرصيد الافتتاحي</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        {isLoading && <p className="text-xs text-slate-400 p-4">جارٍ التحميل...</p>}
+        {isLoading && (
+          <div className="p-4 space-y-3">
+            <Skeleton className="h-5 w-full" />
+            <Skeleton className="h-5 w-full" />
+            <Skeleton className="h-5 w-2/3" />
+          </div>
+        )}
         {migrations.length === 0 && !isLoading && (
-          <p className="text-xs text-slate-400 p-4 text-center">لا توجد ترحيلات بعد</p>
+          <EmptyState compact message="لا توجد ترحيلات بعد" suggestion="ابدأ بإنشاء ترحيل رصيد افتتاحي جديد" />
         )}
         <div className="divide-y divide-slate-100">
           {migrations.map((m) => (
@@ -61,7 +57,7 @@ export function MigrationListCard({
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold text-slate-700">
                   {m.cutover_date.split("T")[0]} — {m.lines.length} بنود
-                  <StatusBadge status={m.status} />
+                  <StatusBadge status={m.status} className="mr-2" />
                 </div>
                 <div className="text-xs text-slate-400 truncate">{m.notes || "بدون ملاحظات"}</div>
               </div>

@@ -1,5 +1,7 @@
 import { Input } from "@shared/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
+import { StatusBadge } from "@shared/ui/status-badge";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { WizardShell } from "@modules/opening-balance/components/WizardShell";
 import { WizardLineEditor, WizardDetailEditor } from "@modules/opening-balance/components/WizardLineEditor";
@@ -106,18 +108,18 @@ export default function OpeningBalanceWizard() {
                 يُحسب الرصيد المتبقي تلقائياً بعد إدخال الخطوط، وطبيعته قرار محاسب صريح — لا تُسوّى قسراً.
               </p>
               <div className="grid grid-cols-2 gap-2">
-                <select
-                  value={residualClassification}
-                  onChange={(e) => setResidualClassification(e.target.value)}
-                  className="h-9 rounded-md border border-slate-200 bg-white px-2 text-sm"
-                >
-                  <option value="">التصنيف (اختياري)</option>
-                  <option value="RetainedEarnings">أرباح مبقاة</option>
-                  <option value="OpeningEquityAdjustment">تعديل حقوق ملكية افتتاحي</option>
-                  <option value="PriorPeriodAdjustment">تعديل فترة سابقة</option>
-                  <option value="OtherEquity">حقوق ملكية أخرى</option>
-                  <option value="UnresolvedDifference">فرق غير محلول</option>
-                </select>
+                <Select value={residualClassification} onValueChange={setResidualClassification}>
+                  <SelectTrigger className="h-9 bg-white border-slate-200 text-sm">
+                    <SelectValue placeholder="التصنيف (اختياري)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="RetainedEarnings">أرباح مبقاة</SelectItem>
+                    <SelectItem value="OpeningEquityAdjustment">تعديل حقوق ملكية افتتاحي</SelectItem>
+                    <SelectItem value="PriorPeriodAdjustment">تعديل فترة سابقة</SelectItem>
+                    <SelectItem value="OtherEquity">حقوق ملكية أخرى</SelectItem>
+                    <SelectItem value="UnresolvedDifference">فرق غير محلول</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Input
                   list="wiz-equity-accounts"
                   value={residualAccountId}
@@ -198,9 +200,12 @@ export default function OpeningBalanceWizard() {
                   <div key={r.key} className="flex items-center justify-between px-3 py-2 text-xs">
                     <div className="font-semibold text-slate-700">
                       {RECON_ROW_LABEL[r.key] || r.key}
-                      <span className={"mr-2 text-[11px] px-1.5 py-0.5 rounded-full " + (r.reconciled ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600")}>
-                        {r.reconciled ? "مطابق" : "فرق"}
-                      </span>
+                      <StatusBadge
+                        status={r.reconciled ? "متطابق" : "فرق"}
+                        label={r.reconciled ? "مطابق" : "فرق"}
+                        tone={r.reconciled ? "green" : "red"}
+                        className="mr-2"
+                      />
                     </div>
                     <div className="tabular-nums text-slate-600">
                       السجل المساعد: {parseFloat(r.subledger).toFixed(2)} ← الأستاذ: {parseFloat(r.general_ledger).toFixed(2)}

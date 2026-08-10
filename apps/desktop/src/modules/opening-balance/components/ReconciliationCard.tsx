@@ -1,6 +1,7 @@
 import { Button } from "@shared/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
+import { StatusBadge } from "@shared/ui/status-badge";
 import { Scale } from "lucide-react";
 import type { OpeningBalanceMigrationDto, OpeningReconciliationDto } from "../../accounting/api/openingBalanceService";
 import { RECON_ROW_LABEL, STATUS_LABEL } from "../lib/migration-labels";
@@ -61,9 +62,12 @@ export function ReconciliationCard({
               <div key={r.key} className="flex items-center justify-between px-3 py-2 text-xs">
                 <div className="font-semibold text-slate-700">
                   {RECON_ROW_LABEL[r.key] || r.key}
-                  <span className={"mr-2 text-[11px] px-1.5 py-0.5 rounded-full " + (r.reconciled ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600")}>
-                    {r.reconciled ? "مطابق" : "فرق"}
-                  </span>
+                  <StatusBadge
+                    status={r.reconciled ? "متطابق" : "فرق"}
+                    label={r.reconciled ? "مطابق" : "فرق"}
+                    tone={r.reconciled ? "green" : "red"}
+                    className="mr-2"
+                  />
                 </div>
                 <div className="tabular-nums text-slate-600">
                   السجل المساعد: {parseFloat(r.subledger).toFixed(2)} ← دفتر الأستاذ: {parseFloat(r.general_ledger).toFixed(2)}
