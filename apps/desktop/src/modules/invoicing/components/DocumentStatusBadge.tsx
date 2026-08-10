@@ -1,5 +1,6 @@
 import { CheckCircle2, Clock, Send, DollarSign, AlertCircle } from "lucide-react";
-import { StatusBadge, type StatusTone } from "@shared/ui/status-badge";
+import { StatusBadge } from "@shared/ui/status-badge";
+import type { StatusTone } from "@shared/ui/status";
 
 export type DocumentStatus = "Draft" | "Saved" | "Posted" | "PartiallyPaid" | "FullyPaid" | "Cancelled";
 

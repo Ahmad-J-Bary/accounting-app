@@ -1,7 +1,8 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@shared/ui/button";
+import { ConfirmDialog } from "@shared/ui/confirm-dialog";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { toast } from "sonner";
 import type { AccountDto, OpeningPositionControlDto } from "@erp/shared-types";
@@ -39,6 +40,7 @@ export default function OpeningBalanceMigration() {
   const [transitioningTo, setTransitioningTo] = useState<string | null>(null);
   const [allocMigrationId, setAllocMigrationId] = useState<string>("");
   const [netProfit, setNetProfit] = useState("");
+  const [confirmAction, setConfirmAction] = useState<{ type: "cancel" | "reopen"; id: string } | null>(null);
   const [allocResult, setAllocResult] = useState<NetProfitAllocationDto | null>(null);
   const [allocating, setAllocating] = useState(false);
   const [computingProfit, setComputingProfit] = useState(false);
@@ -181,9 +183,6 @@ export default function OpeningBalanceMigration() {
   };
 
   const handleCancel = async (id: string) => {
-    if (!window.confirm("سيتم ترحيل قيد عكسي يُلغي الرصيد الافتتاحي ويميّز الترحيل كملغى. هل تريد المتابعة؟")) {
-      return;
-    }
     setCancellingId(id);
     try {
       await openingBalanceService.cancelMigration(id);
@@ -198,9 +197,6 @@ export default function OpeningBalanceMigration() {
   };
 
   const handleReopen = async (id: string) => {
-    if (!window.confirm("ستُعاد فتح الترحيل الملغى كمسودة لتعديل بنوده وإعادة سير التحقق. هل تريد المتابعة؟")) {
-      return;
-    }
     setTransitioningTo(id);
     try {
       await openingBalanceService.reopenMigration(id);
@@ -211,6 +207,14 @@ export default function OpeningBalanceMigration() {
     } finally {
       setTransitioningTo(null);
     }
+  };
+
+  const handleConfirmed = async () => {
+    if (!confirmAction) return;
+    const { id } = confirmAction;
+    setConfirmAction(null);
+    if (confirmAction.type === "cancel") await handleCancel(id);
+    else await handleReopen(id);
   };
 
   const postedMigrations = useMemo(
@@ -290,6 +294,31 @@ export default function OpeningBalanceMigration() {
     }
   };
 
+  const autoLoadedId = useRef<string | null>(null);
+
+  // Hero summary: preselect the most recent migration (by cutover date) when none
+  // is selected or the selected one no longer exists.
+  useEffect(() => {
+    if (reconcileCandidates.length === 0) return;
+    const latest = [...reconcileCandidates].sort((a, b) => b.cutover_date.localeCompare(a.cutover_date))[0];
+    if (!positionId || !reconcileCandidates.some((m) => m.id === positionId)) {
+      setPositionId(latest.id);
+    }
+  }, [reconcileCandidates, positionId]);
+
+  // Auto-load the opening position summary so the page reads as a state snapshot
+  // ("ما هي حالة الشركة الافتتاحية الآن؟") without a manual select+click.
+  useEffect(() => {
+    if (!positionId || autoLoadedId.current === positionId) return;
+    autoLoadedId.current = positionId;
+    setPositionLoading(true);
+    openingBalanceService
+      .getOpeningPositionControl(positionId)
+      .then((res) => setPosition(res))
+      .catch((e) => toast.error("فشل تحميل المركز الافتتاحي: " + e))
+      .finally(() => setPositionLoading(false));
+  }, [positionId]);
+
   return (
     <OperationalTableTemplate
       title="رصيد افتتاح الشركة (شركة قائمة)"
@@ -302,6 +331,15 @@ export default function OpeningBalanceMigration() {
       }
       tableContent={
         <div className="flex flex-col h-full overflow-auto p-4 gap-4">
+          <PositionControlCard
+            candidates={reconcileCandidates}
+            positionId={positionId}
+            onPositionIdChange={setPositionId}
+            loading={positionLoading}
+            position={position}
+            onShow={handleShowPosition}
+          />
+
           <OpeningDraftCard
             cutoverDate={cutoverDate}
             onCutoverDateChange={setCutoverDate}
@@ -330,8 +368,8 @@ export default function OpeningBalanceMigration() {
             onApprove={handleApprove}
             onPost={handlePost}
             onLock={handleLock}
-            onCancel={handleCancel}
-            onReopen={handleReopen}
+            onCancel={(id) => setConfirmAction({ type: "cancel", id })}
+            onReopen={(id) => setConfirmAction({ type: "reopen", id })}
           />
 
           <ReconciliationCard
@@ -341,15 +379,6 @@ export default function OpeningBalanceMigration() {
             loading={reconLoading}
             reconciliation={reconciliation}
             onCheck={handleReconcile}
-          />
-
-          <PositionControlCard
-            candidates={reconcileCandidates}
-            positionId={positionId}
-            onPositionIdChange={setPositionId}
-            loading={positionLoading}
-            position={position}
-            onShow={handleShowPosition}
           />
 
           <ProfitAllocationCard
@@ -367,6 +396,20 @@ export default function OpeningBalanceMigration() {
           />
         </div>
       }
-    />
+    >
+      <ConfirmDialog
+        open={!!confirmAction}
+        onOpenChange={(open) => !open && setConfirmAction(null)}
+        title={confirmAction?.type === "cancel" ? "إلغاء ترحيل الرصيد الافتتاحي" : "إعادة فتح الترحيل"}
+        description={
+          confirmAction?.type === "cancel"
+            ? "سيتم ترحيل قيد عكسي يُلغي الرصيد الافتتاحي ويميّز الترحيل كملغى. هل تريد المتابعة؟"
+            : "ستُعاد فتح الترحيل الملغى كمسودة لتعديل بنوده وإعادة سير التحقق. هل تريد المتابعة؟"
+        }
+        confirmLabel={confirmAction?.type === "cancel" ? "إلغاء الترحيل" : "إعادة الفتح"}
+        destructive={confirmAction?.type === "cancel"}
+        onConfirm={handleConfirmed}
+      />
+    </OperationalTableTemplate>
   );
 }

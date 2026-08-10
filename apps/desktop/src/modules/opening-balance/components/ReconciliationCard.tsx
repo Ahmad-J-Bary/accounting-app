@@ -1,10 +1,13 @@
 import { Button } from "@shared/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
+import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
+import { STATUS_LABEL } from "@shared/ui/status";
+import { toFixed } from "@shared/lib/format";
 import { StatusBadge } from "@shared/ui/status-badge";
 import { Scale } from "lucide-react";
 import type { OpeningBalanceMigrationDto, OpeningReconciliationDto } from "../../accounting/api/openingBalanceService";
-import { RECON_ROW_LABEL, STATUS_LABEL } from "../lib/migration-labels";
+import { RECON_ROW_LABEL } from "../lib/migration-labels";
 
 interface ReconciliationCardProps {
   candidates: OpeningBalanceMigrationDto[];
@@ -37,7 +40,7 @@ export function ReconciliationCard({
         </p>
         <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-600">الترحيل</label>
+            <FieldLabel>الترحيل</FieldLabel>
             <Select value={reconId} onValueChange={onReconIdChange}>
               <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
                 <SelectValue placeholder={candidates.length ? "اختر ترحيلاً..." : "لا توجد ترحيلات"} />
@@ -70,7 +73,7 @@ export function ReconciliationCard({
                   />
                 </div>
                 <div className="tabular-nums text-slate-600">
-                  السجل المساعد: {parseFloat(r.subledger).toFixed(2)} ← دفتر الأستاذ: {parseFloat(r.general_ledger).toFixed(2)}
+                  السجل المساعد: {toFixed(parseFloat(r.subledger), 2)} ← دفتر الأستاذ: {toFixed(parseFloat(r.general_ledger), 2)}
                 </div>
               </div>
             ))}
@@ -79,10 +82,10 @@ export function ReconciliationCard({
                 {reconciliation.all_reconciled ? "جميع الأرصدة متطابقة ✓" : "يوجد فرق في الأرصدة"}
               </span>
               <span className="tabular-nums text-slate-600">
-                مدين: {parseFloat(reconciliation.debit_total).toFixed(2)} · دائن: {parseFloat(reconciliation.credit_total).toFixed(2)}
+                مدين: {toFixed(parseFloat(reconciliation.debit_total), 2)} · دائن: {toFixed(parseFloat(reconciliation.credit_total), 2)}
               </span>
               <span className="tabular-nums text-slate-700 font-semibold">
-                رصيد الافتتاح (53): {parseFloat(reconciliation.opening_control_balance).toFixed(2)}
+                رصيد الافتتاح (53): {toFixed(parseFloat(reconciliation.opening_control_balance), 2)}
                 {reconciliation.opening_control_balance === "0" && " — متوازن ✓"}
               </span>
             </div>

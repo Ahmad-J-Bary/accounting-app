@@ -1,43 +1,10 @@
 import { cn } from "@shared/lib/utils";
 import type { ReactNode } from "react";
-
-export type StatusTone =
-  | "slate"
-  | "amber"
-  | "blue"
-  | "green"
-  | "orange"
-  | "emerald"
-  | "red"
-  | "rose";
-
-export const STATUS_LABEL: Record<string, string> = {
-  Draft: "مسودة",
-  Saved: "محفوظ",
-  Validated: "تم التحقق",
-  Approved: "معتمد",
-  Posted: "مرحّل",
-  Locked: "مقفول",
-  Cancelled: "ملغي",
-  PartiallyPaid: "مدفوع جزئياً",
-  FullyPaid: "مدفوع بالكامل",
-  InProgress: "جاري التنفيذ",
-  Completed: "مكتمل",
-};
-
-export const STATUS_TONE: Record<string, StatusTone> = {
-  Draft: "amber",
-  Saved: "blue",
-  Validated: "blue",
-  Approved: "emerald",
-  Posted: "green",
-  Locked: "slate",
-  Cancelled: "red",
-  PartiallyPaid: "orange",
-  FullyPaid: "emerald",
-  InProgress: "blue",
-  Completed: "green",
-};
+import {
+  STATUS_LABEL,
+  STATUS_TONE,
+  type StatusTone,
+} from "@shared/ui/status";
 
 const TONE_CLASS: Record<StatusTone, string> = {
   slate: "bg-slate-50 text-slate-700 ring-slate-200 border-slate-200",

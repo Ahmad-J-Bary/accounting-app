@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { EmptyState } from "@widgets/table-shell/EmptyState";
+import { toFixed } from "@shared/lib/format";
 import type { AccountDto } from "@erp/shared-types";
 import { TYPE_LABEL, findAccount, isDebitNature } from "../lib/migration-labels";
 import { newLine, newDetail, type WizLine, type DetailRow } from "../hooks/useOpeningBalanceWizard";
@@ -55,6 +56,14 @@ export function WizardLineEditor({ rows, setter, updateLine, placeholder, accoun
       <Button size="sm" variant="outline" onClick={() => setter((prev) => [...prev, newLine()])} className="border-blue-200 text-blue-700 hover:bg-blue-50 font-bold">
         <Plus className="w-3.5 h-3.5 ml-1.5" /> إضافة بند
       </Button>
+      {rows.some((l) => parseFloat(l.amount) > 0) && (
+        <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-xs font-semibold text-slate-600">
+          <span>الإجمالي</span>
+          <span className="tabular-nums font-bold">
+            {toFixed(rows.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0), 2)}
+          </span>
+        </div>
+      )}
       <datalist id="wiz-accounts">
         {detailAccounts.map((a) => (
           <option key={a.id} value={a.id}>
@@ -112,6 +121,14 @@ export function WizardDetailEditor({ rows, setter, updateDetail, referenceLabel,
       <Button size="sm" variant="outline" onClick={() => setter((prev) => [...prev, newDetail("", "", "")])} className="border-blue-200 text-blue-700 hover:bg-blue-50 font-bold">
         <Plus className="w-3.5 h-3.5 ml-1.5" /> إضافة بند
       </Button>
+      {rows.some((r) => parseFloat(r.amount) > 0) && (
+        <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-xs font-semibold text-slate-600">
+          <span>الإجمالي</span>
+          <span className="tabular-nums font-bold">
+            {toFixed(rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0), 2)}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

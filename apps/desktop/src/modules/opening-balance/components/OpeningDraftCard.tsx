@@ -1,6 +1,8 @@
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
+import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
+import { toFixed } from "@shared/lib/format";
 import { Plus } from "lucide-react";
 import type { AccountDto } from "@erp/shared-types";
 import type { AccountLine } from "../lib/migration-labels";
@@ -49,11 +51,11 @@ export function OpeningDraftCard({
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-600">تاريخ الترحيل (Cutover)</label>
+            <FieldLabel>تاريخ الترحيل (Cutover)</FieldLabel>
             <Input type="date" value={cutoverDate} onChange={(e) => onCutoverDateChange(e.target.value)} className="h-9" />
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-600">ملاحظات</label>
+            <FieldLabel>ملاحظات</FieldLabel>
             <Input value={notes} onChange={(e) => onNotesChange(e.target.value)} placeholder="ملاحظات اختيارية..." className="h-9" />
           </div>
         </div>
@@ -110,10 +112,10 @@ export function OpeningDraftCard({
         <div className="flex items-center justify-between border-t border-slate-100 pt-3">
           <div className="text-xs font-semibold flex gap-4 text-slate-600">
             <span className={isValid ? "text-green-600" : "text-red-500"}>
-              مدين: {debitTotal.toFixed(2)}
+              مدين: {toFixed(debitTotal, 2)}
             </span>
             <span className={isValid ? "text-green-600" : "text-red-500"}>
-              دائن: {creditTotal.toFixed(2)}
+              دائن: {toFixed(creditTotal, 2)}
             </span>
             <span className={isValid ? "text-green-600" : "text-red-500"}>
               {isValid ? "متوازن ✓" : "غير متوازن"}

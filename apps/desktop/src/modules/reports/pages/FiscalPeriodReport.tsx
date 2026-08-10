@@ -11,8 +11,12 @@ import {
   CardTitle,
 } from "@shared/ui/card";
 import { Button } from "@shared/ui/button";
-import { Label } from "@shared/ui/label";
+import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { Input } from "@shared/ui/input";
+import { StatusBadge } from "@shared/ui/status-badge";
+import { Skeleton } from "@shared/ui/skeleton";
+import { EmptyState } from "@widgets/table-shell/EmptyState";
+import { cn } from "@shared/lib/utils";
 
 function toDateInput(iso: string | null): string {
   if (!iso) return "";
@@ -92,18 +96,18 @@ export default function FiscalPeriodReport() {
             <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-600">بداية الفترة</Label>
-                  <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
+                  <FieldLabel>بداية الفترة</FieldLabel>
+                  <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} className="h-9" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-600">نهاية الفترة</Label>
-                  <Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
+                  <FieldLabel>نهاية الفترة</FieldLabel>
+                  <Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className="h-9" />
                 </div>
               </div>
               <Button
                 onClick={() => create.mutate()}
                 disabled={!canCreate || create.isPending}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
               >
                 {create.isPending ? "جارٍ الإنشاء..." : "إنشاء الفترة"}
               </Button>
@@ -134,53 +138,61 @@ export default function FiscalPeriodReport() {
               <CardTitle className="text-base font-bold text-slate-800">القائمة</CardTitle>
             </CardHeader>
             <CardContent className="p-0 overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-slate-200 text-slate-500">
-                    <th className="text-right px-4 py-2 font-semibold">البداية</th>
-                    <th className="text-right px-4 py-2 font-semibold">النهاية</th>
-                    <th className="text-right px-4 py-2 font-semibold">الحالة</th>
-                    <th className="text-right px-4 py-2 font-semibold">أُغلقت بواسطة</th>
-                    <th className="text-right px-4 py-2 font-semibold"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {isLoading && (
-                    <tr><td colSpan={5} className="text-center py-4 text-slate-400">جارٍ التحميل...</td></tr>
-                  )}
-                  {!isLoading && periods.length === 0 && (
-                    <tr><td colSpan={5} className="text-center py-4 text-slate-400">لا توجد فترات بعد</td></tr>
-                  )}
-                  {periods.map((p) => (
-                    <tr key={p.id} className="border-b border-slate-100">
-                      <td className="px-4 py-2 tabular-nums">{toDateInput(p.start_date)}</td>
-                      <td className="px-4 py-2 tabular-nums">{toDateInput(p.end_date)}</td>
-                      <td className="px-4 py-2">
-                        <span className={
-                          p.status === "Open" ? "text-emerald-700" :
-                          p.status === "Closed" ? "text-red-600" :
-                          p.status === "Closing" ? "text-amber-600" : "text-slate-500"
-                        }>
-                          {p.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 text-slate-600">{p.closed_by || "—"}</td>
-                      <td className="px-4 py-2">
-                        {(p.status === "Open" || p.status === "Closing") && (
-                          <Button
-                            variant="outline"
-                            className="h-8 text-xs"
-                            disabled={closePeriod.isPending}
-                            onClick={() => closePeriod.mutate({ periodId: p.id, finalize: true })}
-                          >
-                            إغلاق
-                          </Button>
-                        )}
-                      </td>
+              {isLoading && (
+                <div className="p-4 space-y-3">
+                  <Skeleton className="h-5 w-full" />
+                  <Skeleton className="h-5 w-full" />
+                  <Skeleton className="h-5 w-2/3" />
+                </div>
+              )}
+              {!isLoading && periods.length === 0 && (
+                <div className="py-10">
+                  <EmptyState compact message="لا توجد فترات بعد" suggestion="أنشئ فترة مالية لبدء حساب الأرباح وتوزيعها" />
+                </div>
+              )}
+              {!isLoading && periods.length > 0 && (
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-500">
+                      <th className="text-right px-4 py-2 font-semibold">البداية</th>
+                      <th className="text-right px-4 py-2 font-semibold">النهاية</th>
+                      <th className="text-right px-4 py-2 font-semibold">الحالة</th>
+                      <th className="text-right px-4 py-2 font-semibold">أُغلقت بواسطة</th>
+                      <th className="text-right px-4 py-2 font-semibold"></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {periods.map((p) => {
+                      const isCurrent = p.status === "Open" || p.status === "Closing" || p.status === "Reopened";
+                      return (
+                        <tr key={p.id} className={cn("border-b border-slate-100", isCurrent && "bg-emerald-50/40")}>
+                          <td className="px-4 py-2 tabular-nums">{toDateInput(p.start_date)}</td>
+                          <td className="px-4 py-2 tabular-nums">{toDateInput(p.end_date)}</td>
+                          <td className="px-4 py-2">
+                            <span className="flex items-center gap-1.5">
+                              <StatusBadge status={p.status} />
+                              {isCurrent && <span className="text-[10px] font-bold text-emerald-600">المركز الحالية</span>}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2 text-slate-600">{p.closed_by || "—"}</td>
+                          <td className="px-4 py-2">
+                            {(p.status === "Open" || p.status === "Closing") && (
+                              <Button
+                                variant="outline"
+                                className="h-8 text-xs border-slate-200 text-slate-700 font-bold"
+                                disabled={closePeriod.isPending}
+                                onClick={() => closePeriod.mutate({ periodId: p.id, finalize: true })}
+                              >
+                                إغلاق
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
             </CardContent>
           </Card>
         </div>

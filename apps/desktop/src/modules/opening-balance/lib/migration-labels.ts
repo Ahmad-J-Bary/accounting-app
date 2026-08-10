@@ -15,15 +15,6 @@ export const TYPE_LABEL: Record<string, string> = {
   Expenses: "مصروف",
 };
 
-export const STATUS_LABEL: Record<string, string> = {
-  Draft: "مسودة",
-  Validated: "تم التحقق",
-  Approved: "معتمد",
-  Posted: "مرحّل",
-  Locked: "مقفول",
-  Cancelled: "ملغى",
-};
-
 export const RECON_ROW_LABEL: Record<string, string> = {
   AR: "الذمم المدينة (العملاء)",
   AP: "الذمم الدائنة (الموردون)",

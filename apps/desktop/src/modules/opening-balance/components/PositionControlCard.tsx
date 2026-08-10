@@ -1,10 +1,12 @@
 import { Button } from "@shared/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
+import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
+import { STATUS_LABEL } from "@shared/ui/status";
+import { toFixed } from "@shared/lib/format";
 import { Eye } from "lucide-react";
 import type { PositionAccountLine, OpeningPositionControlDto } from "@erp/shared-types";
 import type { OpeningBalanceMigrationDto } from "../../accounting/api/openingBalanceService";
-import { STATUS_LABEL } from "../lib/migration-labels";
 
 interface PositionControlCardProps {
   candidates: OpeningBalanceMigrationDto[];
@@ -37,7 +39,7 @@ export function PositionControlCard({
         </p>
         <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-600">الترحيل</label>
+            <FieldLabel>الترحيل</FieldLabel>
             <Select value={positionId} onValueChange={onPositionIdChange}>
               <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
                 <SelectValue placeholder={candidates.length ? "اختر ترحيلاً..." : "لا توجد ترحيلات"} />
@@ -61,7 +63,7 @@ export function PositionControlCard({
             <div className={"flex items-center justify-between px-3 py-2 rounded-lg text-sm font-bold " + (position.is_balanced ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600")}>
               <span>{position.is_balanced ? "المركز متوازن ✓" : "يوجد فرق في المركز"}</span>
               <span className="tabular-nums">
-                الفرق: {parseFloat(position.equity_difference || "0").toFixed(2)}
+                الفرق: {toFixed(parseFloat(position.equity_difference || "0"), 2)}
               </span>
             </div>
 
@@ -80,7 +82,7 @@ export function PositionControlCard({
               ].map((row) => (
                 <div key={row.label} className="border border-slate-100 rounded-lg p-2 space-y-0.5 bg-white">
                   <div className="text-slate-500 font-semibold">{row.label}</div>
-                  <div className={"font-bold tabular-nums " + row.color}>{parseFloat(row.value || "0").toFixed(2)}</div>
+                  <div className={"font-bold tabular-nums " + row.color}>{toFixed(parseFloat(row.value || "0"), 2)}</div>
                 </div>
               ))}
             </div>
@@ -88,27 +90,27 @@ export function PositionControlCard({
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
               <div className="border border-slate-100 rounded-lg p-2 space-y-1">
                 <div className="text-slate-500 font-semibold">رأس مال الشركاء</div>
-                <div className="font-bold tabular-nums">{parseFloat(position.partner_capital || "0").toFixed(2)}</div>
+                <div className="font-bold tabular-nums">{toFixed(parseFloat(position.partner_capital || "0"), 2)}</div>
               </div>
               <div className="border border-slate-100 rounded-lg p-2 space-y-1">
                 <div className="text-slate-500 font-semibold">الحسابات الجارية</div>
-                <div className="font-bold tabular-nums">{parseFloat(position.partner_current_accounts || "0").toFixed(2)}</div>
+                <div className="font-bold tabular-nums">{toFixed(parseFloat(position.partner_current_accounts || "0"), 2)}</div>
               </div>
               <div className="border border-slate-100 rounded-lg p-2 space-y-1">
                 <div className="text-slate-500 font-semibold">الأرباح المبقاة</div>
-                <div className="font-bold tabular-nums">{parseFloat(position.retained_earnings || "0").toFixed(2)}</div>
+                <div className="font-bold tabular-nums">{toFixed(parseFloat(position.retained_earnings || "0"), 2)}</div>
               </div>
               <div className="border border-slate-100 rounded-lg p-2 space-y-1">
                 <div className="text-slate-500 font-semibold">تسوية رصيد الافتتاح (53)</div>
-                <div className="font-bold tabular-nums">{parseFloat(position.opening_equity_adjustment || "0").toFixed(2)}</div>
+                <div className="font-bold tabular-nums">{toFixed(parseFloat(position.opening_equity_adjustment || "0"), 2)}</div>
               </div>
               <div className="border border-slate-100 rounded-lg p-2 space-y-1">
                 <div className="text-slate-500 font-semibold">حقوق ملكية أخرى</div>
-                <div className="font-bold tabular-nums">{parseFloat(position.other_equity || "0").toFixed(2)}</div>
+                <div className="font-bold tabular-nums">{toFixed(parseFloat(position.other_equity || "0"), 2)}</div>
               </div>
               <div className="border border-slate-100 rounded-lg p-2 space-y-1">
                 <div className="text-slate-500 font-semibold">مسحوبات (−)</div>
-                <div className="font-bold tabular-nums text-red-600">{parseFloat(position.drawings || "0").toFixed(2)}</div>
+                <div className="font-bold tabular-nums text-red-600">{toFixed(parseFloat(position.drawings || "0"), 2)}</div>
               </div>
             </div>
 
@@ -117,7 +119,7 @@ export function PositionControlCard({
                 النتيجة التاريخية الافتتاحية (صافي الأصول − رأس المال − حقوق صريحة أخرى):
               </span>
               <span className="font-black tabular-nums text-indigo-700">
-                {parseFloat(position.opening_historical_result || "0").toFixed(2)}
+                {toFixed(parseFloat(position.opening_historical_result || "0"), 2)}
               </span>
             </div>
 
@@ -138,10 +140,10 @@ export function PositionControlCard({
                   {position.partner_rows.map((p) => (
                     <div key={p.partner_id} className="grid grid-cols-2 md:grid-cols-5 gap-2 px-3 py-2 text-xs items-center">
                       <span className="font-semibold text-slate-700">{p.partner_name}</span>
-                      <span className="tabular-nums text-slate-600">رأس المال: {parseFloat(p.capital || "0").toFixed(2)}</span>
-                      <span className="tabular-nums text-slate-600">النسبة: {parseFloat(p.ownership_percent || "0").toFixed(2)}%</span>
-                      <span className="tabular-nums text-slate-600">جاري: {parseFloat(p.current || "0").toFixed(2)}</span>
-                      <span className="tabular-nums text-slate-600">مسحوبات: {parseFloat(p.drawings || "0").toFixed(2)}</span>
+                      <span className="tabular-nums text-slate-600">رأس المال: {toFixed(parseFloat(p.capital || "0"), 2)}</span>
+                      <span className="tabular-nums text-slate-600">النسبة: {toFixed(parseFloat(p.ownership_percent || "0"), 2)}%</span>
+                      <span className="tabular-nums text-slate-600">جاري: {toFixed(parseFloat(p.current || "0"), 2)}</span>
+                      <span className="tabular-nums text-slate-600">مسحوبات: {toFixed(parseFloat(p.drawings || "0"), 2)}</span>
                     </div>
                   ))}
                 </div>
@@ -162,11 +164,11 @@ function PositionDetailTable({ title, lines }: { title: string; lines: PositionA
         {lines.map((l) => (
           <div key={l.account_id} className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-[10px] font-bold text-slate-400 tabular-nums">{l.code}</span>
+              <span className="text-2xs font-bold text-slate-400 tabular-nums">{l.code}</span>
               <span className="truncate text-slate-700">{l.name_ar}</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500">{l.group_key}</span>
+              <span className="text-2xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500">{l.group_key}</span>
             </div>
-            <span className="tabular-nums font-semibold text-slate-700">{parseFloat(l.amount || "0").toFixed(2)}</span>
+            <span className="tabular-nums font-semibold text-slate-700">{toFixed(parseFloat(l.amount || "0"), 2)}</span>
           </div>
         ))}
       </div>

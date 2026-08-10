@@ -1,6 +1,8 @@
 import { Input } from "@shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { StatusBadge } from "@shared/ui/status-badge";
+import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
+import { toFixed } from "@shared/lib/format";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { WizardShell } from "@modules/opening-balance/components/WizardShell";
 import { WizardLineEditor, WizardDetailEditor } from "@modules/opening-balance/components/WizardLineEditor";
@@ -57,24 +59,30 @@ export default function OpeningBalanceWizard() {
       case 0:
         return (
           <div className="space-y-4">
-            <p className="text-xs text-slate-500">
-              أدخل بيانات الترحيل: النظام السابق الذي صدرت منه الأرصدة وتاريخ القطع.
-            </p>
+            <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 space-y-1.5">
+              <p className="text-xs font-semibold text-slate-700">
+                شركة قائمة تبدأ استخدام التطبيق الآن:
+              </p>
+              <p className="text-xs text-slate-600">
+                سيجري إدخال الحالة المالية الفعلية للشركة في تاريخ بدء الاستخدام (تاريخ القطع). لن يُنشأ أي
+                حركة نقدية تلقائية — رأس مال الشركاء هنا هو رصيد سابق، وليس مساهمة نقدية جديدة.
+              </p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600">تاريخ القطع (Cutover)</label>
+                <FieldLabel>تاريخ القطع (Cutover)</FieldLabel>
                 <Input type="date" value={cutoverDate} onChange={(e) => setCutoverDate(e.target.value)} className="h-9" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600">النظام السابق (Source System)</label>
+                <FieldLabel>النظام السابق (Source System)</FieldLabel>
                 <Input value={sourceSystem} onChange={(e) => setSourceSystem(e.target.value)} placeholder="مثال: نظام محاسبة قديم" className="h-9" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600">المرجع (Source Reference)</label>
+                <FieldLabel>المرجع (Source Reference)</FieldLabel>
                 <Input value={sourceReference} onChange={(e) => setSourceReference(e.target.value)} placeholder="رقم الميزانية / المرجع" className="h-9" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600">ملاحظات</label>
+                <FieldLabel>ملاحظات</FieldLabel>
                 <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="اختياري" className="h-9" />
               </div>
             </div>
@@ -155,26 +163,26 @@ export default function OpeningBalanceWizard() {
               <div className="border border-slate-100 rounded-lg p-3 space-y-1 bg-white">
                 <div className="text-xs font-semibold text-blue-700">الأصول (مدين)</div>
                 <div className="text-xl font-black tabular-nums text-blue-700">
-                  {totals.debit.toFixed(2)}
+                  {toFixed(totals.debit, 2)}
                 </div>
               </div>
               <div className="border border-slate-100 rounded-lg p-3 space-y-1 bg-white">
                 <div className="text-xs font-semibold text-emerald-700">الخصوم (دائن)</div>
                 <div className="text-xl font-black tabular-nums text-emerald-700">
-                  {liabilities.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0).toFixed(2)}
+                  {toFixed(liabilities.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0), 2)}
                 </div>
               </div>
               <div className="border border-slate-100 rounded-lg p-3 space-y-1 bg-white">
                 <div className="text-xs font-semibold text-indigo-700">حقوق الملكية (دائن)</div>
                 <div className="text-xl font-black tabular-nums text-indigo-700">
-                  {equity.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0).toFixed(2)}
+                  {toFixed(equity.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0), 2)}
                 </div>
               </div>
             </div>
             <div className={"rounded-lg p-3 text-sm font-bold " + (totals.balanced ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600")}>
               {totals.balanced
-                ? `متوازن ✓ — مدين ${totals.debit.toFixed(2)} = دائن ${totals.credit.toFixed(2)}`
-                : `غير متوازن — فرق ${(totals.debit - totals.credit).toFixed(2)}`}
+                ? `متوازن ✓ — مدين ${toFixed(totals.debit, 2)} = دائن ${toFixed(totals.credit, 2)}`
+                : `غير متوازن — فرق ${toFixed(totals.debit - totals.credit, 2)}`}
             </div>
           </div>
         );
@@ -201,7 +209,7 @@ export default function OpeningBalanceWizard() {
                       />
                     </div>
                     <div className="tabular-nums text-slate-600">
-                      السجل المساعد: {parseFloat(r.subledger).toFixed(2)} ← الأستاذ: {parseFloat(r.general_ledger).toFixed(2)}
+                      السجل المساعد: {toFixed(parseFloat(r.subledger), 2)} ← الأستاذ: {toFixed(parseFloat(r.general_ledger), 2)}
                     </div>
                   </div>
                 ))}
@@ -210,7 +218,7 @@ export default function OpeningBalanceWizard() {
                     {reconciliation.all_reconciled ? "جميع الأرصدة متطابقة ✓" : "يوجد فرق في الأرصدة"}
                   </span>
                   <span className="tabular-nums text-slate-700 font-semibold">
-                    رصيد الافتتاح (53): {parseFloat(reconciliation.opening_control_balance).toFixed(2)} · مدين {parseFloat(reconciliation.debit_total).toFixed(2)} / دائن {parseFloat(reconciliation.credit_total).toFixed(2)}
+                    رصيد الافتتاح (53): {toFixed(parseFloat(reconciliation.opening_control_balance), 2)} · مدين {toFixed(parseFloat(reconciliation.debit_total), 2)} / دائن {toFixed(parseFloat(reconciliation.credit_total), 2)}
                   </span>
                 </div>
                 {(() => {
@@ -251,9 +259,13 @@ export default function OpeningBalanceWizard() {
           <div className="space-y-3">
             <p className="text-sm font-bold text-slate-700">{title}</p>
             <p className="text-xs text-slate-500">{desc}</p>
-            <div className="text-xs font-semibold text-slate-600">
-              الحالة الحالية:{" "}
-              <span className="text-blue-700">{migration ? migration.status : "—"}</span>
+            <div className="text-xs font-semibold text-slate-600 flex items-center">
+              الحالة الحالية:
+              {migration ? (
+                <StatusBadge status={migration.status} className="mr-1.5" />
+              ) : (
+                <span className="text-slate-400 mr-1.5">—</span>
+              )}
               {migration && migration.notes && <span> · {migration.notes}</span>}
             </div>
             {busy && <p className="text-xs text-blue-600 font-semibold">جارٍ التنفيذ...</p>}
@@ -267,7 +279,7 @@ export default function OpeningBalanceWizard() {
               <p className="text-base font-black">
                 {migration?.status === "Locked" ? "اكتمل المعالج بنجاح ✓" : "اكتمل المعالج"}
               </p>
-              <p className="text-xs mt-1">حالة الترحيل النهائية: {migration?.status} — تاريخ القطع: {migration?.cutover_date.split("T")[0]}</p>
+              <p className="text-xs mt-1">حالة الترحيل النهائية: <StatusBadge status={migration?.status || ""} /> — تاريخ القطع: {migration?.cutover_date.split("T")[0]}</p>
             </div>
           </div>
         );
