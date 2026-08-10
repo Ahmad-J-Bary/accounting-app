@@ -17,6 +17,8 @@ pub fn purpose_to_str(purpose: domain::accounting::account::AccountPurpose) -> &
     commands::purpose_to_str(purpose)
 }
 
+pub(crate) use commands::{insert_tx, upsert_tx, delete_tx};
+
 pub struct SqliteAccountRepository {
     pool: Arc<SqlitePool>,
 }

@@ -153,12 +153,26 @@ fn duplicate_source(e: sqlx::Error) -> AppError {
 pub async fn delete(pool: &SqlitePool, id: &JournalEntryId) -> Result<(), AppError> {
     let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
+    delete_tx(&mut tx, id).await?;
+
+    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    Ok(())
+}
+
+/// Deletes a journal entry + its lines inside an open transaction, with the
+/// same immutability guard as `delete`. `pub(crate)` so composite repository
+/// methods (customer/supplier deletion, payment removal) can cascade-cleanse
+/// draft journals and their linked partner rows in ONE shared transaction.
+pub(crate) async fn delete_tx<'a>(
+    tx: &mut sqlx::Transaction<'a, sqlx::Sqlite>,
+    id: &JournalEntryId,
+) -> Result<(), AppError> {
     // Posted entries are part of the auditable financial history: they must
     // not be deleted, only reversed. Reversals may carry their own lifecycle
     // (a reversal entry itself is posted audit trail and is also protected).
     let status: Option<String> = sqlx::query_scalar("SELECT status FROM journal_entries WHERE id = ?")
         .bind(id.0.to_string())
-        .fetch_optional(&mut *tx)
+        .fetch_optional(&mut **tx)
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
@@ -172,16 +186,15 @@ pub async fn delete(pool: &SqlitePool, id: &JournalEntryId) -> Result<(), AppErr
 
     sqlx::query("DELETE FROM journal_lines WHERE journal_entry_id = ?")
         .bind(id.0.to_string())
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
     sqlx::query("DELETE FROM journal_entries WHERE id = ?")
         .bind(id.0.to_string())
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(())
 }

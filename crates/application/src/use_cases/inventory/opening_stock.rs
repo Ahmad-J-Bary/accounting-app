@@ -121,9 +121,12 @@ impl RecordOpeningStockUseCase {
                 lines,
                 entry_date,
                 format!("إنشاء فاتورة أول المدة رقم {}", entry_number),
-                None,
+                movements
+                    .first()
+                    .map(|m| format!("opening-stock:{}", m.reference)),
             )
-            .map_err(|e| AppError::Invalid(e.to_string()))?;
+            .map_err(|e| AppError::Invalid(e.to_string()))?
+            .with_source_type("opening_stock".into());
 
             entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
             entries.push(entry);

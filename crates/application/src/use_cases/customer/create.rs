@@ -13,7 +13,7 @@ use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::constants::RECEIVABLES_PARENT_ID;
 use crate::use_cases::shared::partner_account::{
     PartnerAccountParams, PartnerKind,
-    create_partner_account, create_opening_balance_entry,
+    build_partner_account, build_opening_balance_entry,
 };
 
 pub struct CreateCustomerUseCase {
@@ -69,10 +69,8 @@ impl CreateCustomerUseCase {
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
 
-        self.customer_repo.save(&customer).await?;
-
-        // Create linked ledger account
-        let new_account_id = create_partner_account(
+        // Build the linked ledger account in memory (no write yet)
+        let (new_account, new_account_id) = build_partner_account(
             PartnerAccountParams {
                 partner_id_str: customer_id.to_string(),
                 code: &code,
@@ -90,11 +88,10 @@ impl CreateCustomerUseCase {
         ).await?;
 
         customer.link_account(new_account_id);
-        self.customer_repo.save(&customer).await?;
 
-        // Create opening balance journal entry
+        // Build the opening balance journal entry in memory (no write yet)
         let net_balance = debit - credit;
-        create_opening_balance_entry(
+        let opening_entry = build_opening_balance_entry(
             new_account_id,
             &customer.name,
             &customer.id.to_string(),
@@ -106,6 +103,16 @@ impl CreateCustomerUseCase {
             &self.account_repo,
             &self.journal_repo,
         ).await?;
+
+        let mut entries = Vec::new();
+        if let Some(entry) = opening_entry {
+            entries.push(entry);
+        }
+
+        // Persist customer + account + opening-balance journal in ONE txn
+        self.customer_repo
+            .save_with_accounting(&customer, &new_account, &entries)
+            .await?;
 
         Ok(CustomerDto::from(customer))
     }

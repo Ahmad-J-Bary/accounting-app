@@ -1,23 +1,20 @@
 use std::sync::Arc;
 use domain::shared::ids::SupplierId;
 use crate::ports::supplier_repository::SupplierRepository;
-use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::errors::AppError;
 
 pub struct DeleteSupplierUseCase {
     supplier_repo: Arc<dyn SupplierRepository>,
-    account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
 }
 
 impl DeleteSupplierUseCase {
     pub fn new(
         supplier_repo: Arc<dyn SupplierRepository>,
-        account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
     ) -> Self {
-        Self { supplier_repo, account_repo, journal_repo }
+        Self { supplier_repo, journal_repo }
     }
 
     pub async fn execute(&self, id: String) -> Result<(), AppError> {
@@ -25,19 +22,25 @@ impl DeleteSupplierUseCase {
 
         let supplier = self.supplier_repo.find_by_id(&sid).await?;
 
-        if let Some(ref supplier) = supplier {
+        let (account_id, entry_ids) = if let Some(ref supplier) = supplier {
             if let Some(ref account_id) = &supplier.account_id {
-                // Cascade: delete all journal entries referencing this account.
-                // Only drafts may be removed; posted history is immutable.
+                // Gather the deletable journal entries referencing this account.
+                // Only drafts may be removed; posted history is immutable, and
+                // `ensure_deletable` rejects the whole delete if any survive.
                 let entries = self.journal_repo.list_by_account(account_id).await?;
                 crate::use_cases::journal::guards::ensure_deletable(&entries)?;
-                for entry in &entries {
-                    self.journal_repo.delete(&entry.id).await?;
-                }
-                self.account_repo.delete(account_id).await?;
+                let entry_ids = entries.iter().map(|e| e.id).collect::<Vec<_>>();
+                (Some(*account_id), entry_ids)
+            } else {
+                (None, Vec::new())
             }
-        }
+        } else {
+            return Err(AppError::NotFound("المورد غير موجود".into()));
+        };
 
-        self.supplier_repo.delete(&sid).await
+        // Cascade supplier + account + draft journals in ONE transaction
+        self.supplier_repo
+            .delete_with_accounting(&sid, account_id.as_ref(), &entry_ids)
+            .await
     }
 }

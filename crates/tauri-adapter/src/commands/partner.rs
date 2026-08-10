@@ -134,7 +134,6 @@ pub async fn delete_partner(
 ) -> Result<(), String> {
     DeletePartnerUseCase::new(
         state.partner_repo.clone(),
-        state.account_repo.clone(),
     ).execute(id).await.map_err(|e| e.to_string())
 }
 

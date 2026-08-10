@@ -49,7 +49,6 @@ pub async fn update_supplier(
 pub async fn delete_supplier(id: String, state: State<'_, AppState>) -> Result<(), String> {
     DeleteSupplierUseCase::new(
         state.supplier_repo.clone(),
-        state.account_repo.clone(),
         state.journal_entry_repo.clone(),
     )
     .execute(id)

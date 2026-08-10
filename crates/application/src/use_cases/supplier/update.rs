@@ -7,7 +7,7 @@ use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::dto::supplier_dto::{UpdateSupplierRequest, SupplierDto};
 use crate::errors::AppError;
-use crate::use_cases::shared::partner_account::{PartnerKind, create_balance_adjustment_entry};
+use crate::use_cases::shared::partner_account::{PartnerKind, build_balance_adjustment_entry};
 
 pub struct UpdateSupplierUseCase {
     supplier_repo: Arc<dyn SupplierRepository>,
@@ -66,33 +66,44 @@ impl UpdateSupplierUseCase {
         let old_balance = old_credit - old_debit;
         let balance_change = new_balance - old_balance;
 
-        // Create adjustment journal entry if balance changed
+        // Sync the linked account name/balance in memory (persisted atomically below)
+        let mut synced_account = None;
         if let Some(ref account_id) = &supplier.account_id {
-            create_balance_adjustment_entry(
-                *account_id,
+            let mut account = self.account_repo.find_by_id(account_id).await
+                .map_err(|e| AppError::Infrastructure(e.to_string()))?
+                .ok_or_else(|| AppError::NotFound("معرف الحساب غير صالح".into()))?;
+            account.name_ar = supplier.name.clone();
+            account.name_en = supplier.name.clone();
+            account.balance = supplier.balance;
+            account.updated_at = Utc::now();
+            synced_account = Some(account);
+        }
+
+        // Build the balance-adjustment journal entry in memory (no write yet).
+        // Only partners that actually have a linked ledger account produce one.
+        let adjustment_entry = if let Some(account) = synced_account.as_ref() {
+            build_balance_adjustment_entry(
+                account.id,
                 &supplier.name,
                 &supplier.id.to_string(),
                 balance_change,
                 PartnerKind::Supplier,
                 &self.account_repo,
                 &self.journal_repo,
-            ).await?;
+            ).await?
+        } else {
+            None
+        };
+
+        let mut entries = Vec::new();
+        if let Some(entry) = adjustment_entry {
+            entries.push(entry);
         }
 
-        self.supplier_repo.update(&supplier).await?;
-
-        // Keep linked account name/balance in sync
-        if let Some(ref account_id) = &supplier.account_id {
-            if let Some(mut account) = self.account_repo.find_by_id(account_id).await
-                .map_err(|e| AppError::Infrastructure(e.to_string()))? {
-                account.name_ar = supplier.name.clone();
-                account.name_en = supplier.name.clone();
-                account.balance = supplier.balance;
-                account.updated_at = Utc::now();
-                self.account_repo.save(&account).await
-                    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
-            }
-        }
+        // Persist supplier + account sync + adjustment journal in ONE txn
+        self.supplier_repo
+            .update_with_accounting(&supplier, synced_account.as_ref(), &entries)
+            .await?;
 
         Ok(SupplierDto::from(supplier))
     }

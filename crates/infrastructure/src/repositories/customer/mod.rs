@@ -2,8 +2,10 @@ use async_trait::async_trait;
 use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::customer_repository::CustomerRepository;
+use domain::accounting::account::Account;
+use domain::accounting::journal_entry::JournalEntry;
 use domain::customers::Customer;
-use domain::shared::{CustomerId, AccountId};
+use domain::shared::{CustomerId, AccountId, JournalEntryId};
 use std::sync::Arc;
 
 mod models;
@@ -49,5 +51,32 @@ impl CustomerRepository for SqliteCustomerRepository {
 
     async fn get_next_customer_number(&self) -> Result<i32, AppError> {
         queries::get_next_customer_number(&self.pool).await
+    }
+
+    async fn save_with_accounting(
+        &self,
+        customer: &Customer,
+        account: &Account,
+        entries: &[JournalEntry],
+    ) -> Result<(), AppError> {
+        commands::save_with_accounting(&self.pool, customer, account, entries).await
+    }
+
+    async fn update_with_accounting(
+        &self,
+        customer: &Customer,
+        account: Option<&Account>,
+        entries: &[JournalEntry],
+    ) -> Result<(), AppError> {
+        commands::update_with_accounting(&self.pool, customer, account, entries).await
+    }
+
+    async fn delete_with_accounting(
+        &self,
+        id: &CustomerId,
+        account_id: Option<&AccountId>,
+        entry_ids: &[JournalEntryId],
+    ) -> Result<(), AppError> {
+        commands::delete_with_accounting(&self.pool, id, account_id, entry_ids).await
     }
 }

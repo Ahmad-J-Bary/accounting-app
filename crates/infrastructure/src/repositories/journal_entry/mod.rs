@@ -11,7 +11,7 @@ mod mappers;
 mod queries;
 mod commands;
 
-pub(crate) use commands::insert_entry;
+pub(crate) use commands::{insert_entry, delete_tx};
 
 pub struct SqliteJournalEntryRepository {
     pool: Arc<SqlitePool>,

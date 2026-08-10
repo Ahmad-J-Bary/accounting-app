@@ -51,12 +51,15 @@ pub struct PartnerAccountParams<'a> {
     pub kind: PartnerKind,
 }
 
-/// Creates a linked ledger `Account` for a newly-created partner (customer/supplier).
-/// Returns the new `AccountId` after saving.
-pub async fn create_partner_account(
+/// Builds a linked ledger `Account` for a newly-created partner (customer/supplier)
+/// entirely in memory. It performs NO write: the caller persists the account,
+/// the partner row and any opening-balance journals through ONE atomic
+/// repository call so a partial partner can never be committed (Sec 9).
+/// Returns the built account together with its id.
+pub async fn build_partner_account(
     params: PartnerAccountParams<'_>,
     account_repo: &Arc<dyn AccountRepository>,
-) -> Result<AccountId, AppError> {
+) -> Result<(Account, AccountId), AppError> {
     let parent_id = params.parent_account_id
         .parse::<AccountId>()
         .map_err(|_| AppError::Invalid("معرف حساب الأب غير صالح".into()))?;
@@ -120,20 +123,16 @@ pub async fn create_partner_account(
         updated_at: Utc::now(),
     };
 
-    account_repo
-        .save(&new_account)
-        .await
-        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
-
-    Ok(new_account_id)
+    Ok((new_account, new_account_id))
 }
 
-/// Creates an opening-balance journal entry for a partner account.
-/// The `balance_sign` convention:
+/// Builds an opening-balance journal entry for a partner account, in memory
+/// only (never persists). Returns `None` when the net balance is zero (no
+/// journal is required). The `balance_sign` convention:
 /// - Customer: positive means debit (receivable), negative means credit.
 /// - Supplier: positive means credit (payable), negative means debit.
 #[allow(clippy::too_many_arguments)]
-pub async fn create_opening_balance_entry(
+pub async fn build_opening_balance_entry(
     account_id: AccountId,
     partner_name: &str,
     partner_entity_id: &str,
@@ -144,9 +143,9 @@ pub async fn create_opening_balance_entry(
     kind: PartnerKind,
     account_repo: &Arc<dyn AccountRepository>,
     journal_repo: &Arc<dyn JournalEntryRepository>,
-) -> Result<(), AppError> {
+) -> Result<Option<JournalEntry>, AppError> {
     if net_balance == Decimal::ZERO {
-        return Ok(());
+        return Ok(None);
     }
 
     let equity_account = account_repo
@@ -205,16 +204,17 @@ pub async fn create_opening_balance_entry(
     .map_err(|e| AppError::Invalid(e.to_string()))?;
 
     entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-    journal_repo.save(&entry).await?;
 
-    Ok(())
+    Ok(Some(entry))
 }
 
-/// Creates a balance-adjustment journal entry when a partner's balance changes during update.
-/// `balance_change` = new_balance − old_balance.
+/// Builds a balance-adjustment journal entry when a partner's balance changes
+/// during update, in memory only (never persists). Returns `None` when nothing
+/// changed. `balance_change` = new_balance − old_balance.
 /// For customers: positive = Dr partner account, Cr equity.
 /// For suppliers: positive = Dr equity, Cr partner account.
-pub async fn create_balance_adjustment_entry(
+#[allow(clippy::too_many_arguments)]
+pub async fn build_balance_adjustment_entry(
     account_id: AccountId,
     partner_name: &str,
     partner_entity_id: &str,
@@ -222,9 +222,9 @@ pub async fn create_balance_adjustment_entry(
     kind: PartnerKind,
     account_repo: &Arc<dyn AccountRepository>,
     journal_repo: &Arc<dyn JournalEntryRepository>,
-) -> Result<(), AppError> {
+) -> Result<Option<JournalEntry>, AppError> {
     if balance_change == Decimal::ZERO {
-        return Ok(());
+        return Ok(None);
     }
 
     let adjustment_account = account_repo
@@ -283,7 +283,6 @@ pub async fn create_balance_adjustment_entry(
     .map_err(|e| AppError::Invalid(e.to_string()))?;
 
     entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-    journal_repo.save(&entry).await?;
 
-    Ok(())
+    Ok(Some(entry))
 }

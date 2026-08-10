@@ -1,20 +1,17 @@
 use std::sync::Arc;
 use domain::shared::ids::PartnerId;
 use crate::ports::partner_repository::PartnerRepository;
-use crate::ports::account_repository::AccountRepository;
 use crate::errors::AppError;
 
 pub struct DeletePartnerUseCase {
     repo: Arc<dyn PartnerRepository>,
-    account_repo: Arc<dyn AccountRepository>,
 }
 
 impl DeletePartnerUseCase {
     pub fn new(
         repo: Arc<dyn PartnerRepository>,
-        account_repo: Arc<dyn AccountRepository>,
     ) -> Self {
-        Self { repo, account_repo }
+        Self { repo }
     }
 
     pub async fn execute(&self, id: String) -> Result<(), AppError> {

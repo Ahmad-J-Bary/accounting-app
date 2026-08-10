@@ -63,7 +63,6 @@ pub async fn delete_customer(
 ) -> Result<(), String> {
     DeleteCustomerUseCase::new(
         state.customer_repo.clone(),
-        state.account_repo.clone(),
         state.journal_entry_repo.clone(),
     )
     .execute(id)

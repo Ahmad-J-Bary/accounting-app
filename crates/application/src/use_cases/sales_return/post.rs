@@ -208,8 +208,10 @@ impl PostSalesReturnUseCase {
                 cash_journal_lines,
                 Utc::now(),
                 format!("سند دفع لعميل مرتبط بمرتجع المبيعات رقم {}", ret.return_number),
-                None,
-            ).map_err(|e| AppError::Invalid(e.to_string()))?;
+                Some(ret.id.0.to_string()),
+            )
+            .map_err(|e| AppError::Invalid(e.to_string()))?
+            .with_source_type("sales_return_cash".into());
             cash_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
             entries.push(cash_entry);
 

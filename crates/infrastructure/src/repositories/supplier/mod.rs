@@ -2,9 +2,11 @@ use async_trait::async_trait;
 use sqlx::SqlitePool;
 use application::errors::AppError;
 use application::ports::supplier_repository::SupplierRepository;
+use domain::accounting::account::Account;
+use domain::accounting::journal_entry::JournalEntry;
 use domain::suppliers::Supplier;
 use domain::shared::ids::SupplierId;
-use domain::shared::AccountId;
+use domain::shared::{AccountId, JournalEntryId};
 use std::sync::Arc;
 
 mod models;
@@ -54,5 +56,32 @@ impl SupplierRepository for SqliteSupplierRepository {
 
     async fn get_next_supplier_number(&self) -> Result<i32, AppError> {
         queries::get_next_supplier_number(&self.pool).await
+    }
+
+    async fn save_with_accounting(
+        &self,
+        supplier: &Supplier,
+        account: &Account,
+        entries: &[JournalEntry],
+    ) -> Result<(), AppError> {
+        commands::save_with_accounting(&self.pool, supplier, account, entries).await
+    }
+
+    async fn update_with_accounting(
+        &self,
+        supplier: &Supplier,
+        account: Option<&Account>,
+        entries: &[JournalEntry],
+    ) -> Result<(), AppError> {
+        commands::update_with_accounting(&self.pool, supplier, account, entries).await
+    }
+
+    async fn delete_with_accounting(
+        &self,
+        id: &SupplierId,
+        account_id: Option<&AccountId>,
+        entry_ids: &[JournalEntryId],
+    ) -> Result<(), AppError> {
+        commands::delete_with_accounting(&self.pool, id, account_id, entry_ids).await
     }
 }
