@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@shared/ui/button";
 import { Plus, Download } from "lucide-react";
 import { fixedAssetService } from "@modules/fixed-assets/api/fixedAssetService";
+import { invalidateAccountingMutationQueries, queryClient } from "@shared/hooks/queryClient";
 import { warehouseService } from "@modules/inventory/api/warehouseService";
 import type {
   FixedAssetDto,
@@ -160,6 +161,7 @@ export default function FixedAssetsPage() {
       toast.success("تم حذف الأصل بنجاح");
       if (selectedAsset?.id === asset.id) setSelectedAsset(null);
       refresh(true);
+      await invalidateAccountingMutationQueries(queryClient);
     } catch (e) {
       toast.error("فشل حذف الأصل: " + e);
     }
@@ -300,6 +302,7 @@ export default function FixedAssetsPage() {
       const results = await fixedAssetService.runYearlyRotation(new Date().toISOString());
       toast.success(`تم ترحيل إهلاك ${results.length} أصل بنجاح`);
       refresh(true);
+      await invalidateAccountingMutationQueries(queryClient);
     } catch (e) {
       toast.error("فشل تدوير الحسابات: " + e);
     }

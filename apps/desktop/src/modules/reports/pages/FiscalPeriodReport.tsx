@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
@@ -41,13 +42,17 @@ export default function FiscalPeriodReport() {
       setStart("");
       setEnd("");
       qc.invalidateQueries({ queryKey: ["fiscal-periods"] });
+      invalidateAccountingMutationQueries(qc);
     },
   });
 
   const closePeriod = useMutation({
     mutationFn: ({ periodId, finalize }: { periodId: string; finalize: boolean }) =>
       fiscalPeriodService.closeFiscalPeriod({ period_id: periodId, closed_by: "user", finalize }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["fiscal-periods"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["fiscal-periods"] });
+      invalidateAccountingMutationQueries(qc);
+    },
   });
 
   const active = periods.find((p) => p.status === "Open" || p.status === "Reopened" || p.status === "Closing");

@@ -72,9 +72,14 @@ export const QUERY_KEYS = {
   auditLog: ["audit-log"] as const,
   users: ["users"] as const,
   roles: ["roles"] as const,
+
+  damagedItems: ["damaged-items"] as const,
+  stockAdjustments: ["stock-adjustments"] as const,
+  openingBalanceMigrations: ["opening-balance-migrations"] as const,
+  fiscalPeriods: ["fiscal-periods"] as const,
 } as const;
 
-/** All report query keys that should be invalidated after any accounting mutation. */
+/** All report/ledger query keys that should be invalidated after any accounting mutation. */
 export const ALL_REPORT_KEYS: readonly (readonly unknown[])[] = [
   ["reports", "trial-balance"] as const,
   QUERY_KEYS.incomeStatement,
@@ -86,6 +91,7 @@ export const ALL_REPORT_KEYS: readonly (readonly unknown[])[] = [
   QUERY_KEYS.salesReturns,
   QUERY_KEYS.purchaseReturns,
   QUERY_KEYS.receivablesPayables,
+  ["account-ledger"] as const,
 ];
 
 export const ALL_PARTY_KEYS: readonly (readonly unknown[])[] = [
@@ -97,6 +103,10 @@ export const ALL_PARTY_KEYS: readonly (readonly unknown[])[] = [
 export const ALL_INVENTORY_KEYS: readonly (readonly unknown[])[] = [
   QUERY_KEYS.materials,
   QUERY_KEYS.stockMovements,
+  QUERY_KEYS.damagedItems,
+  QUERY_KEYS.stockAdjustments,
+  QUERY_KEYS.fixedAssets,
+  QUERY_KEYS.productionOrders,
 ];
 
 export const ALL_INVOICE_KEYS: readonly (readonly unknown[])[] = [
@@ -110,6 +120,8 @@ export const ALL_ACCOUNTING_MUTATION_KEYS: readonly (readonly unknown[])[] = [
   ...ALL_PARTY_KEYS,
   ...ALL_INVENTORY_KEYS,
   ...ALL_INVOICE_KEYS,
+  QUERY_KEYS.openingBalanceMigrations,
+  QUERY_KEYS.fiscalPeriods,
 ];
 
 export async function invalidateAccountingMutationQueries(queryClient: QueryClient) {

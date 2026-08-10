@@ -23,6 +23,7 @@ import { useExportSetup, useBaseCurrencyColumns } from "@shared/hooks";
 import { executeExport, buildCurrencySummary, applyVisibilityToCurrencyCols } from "@shared/lib/excel";
 import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import type { ExcelExportColumn } from "@shared/lib/excel";
+import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import { toast } from "sonner";
 
 // The "مصاريف أخرى" parent account ID in the chart of accounts
@@ -76,7 +77,7 @@ export default function Expenses() {
     handleSave,
     handleDelete,
   } = useEntityList<AccountDto, ExpenseSavePayload>({
-    queryKey: ["accounting", "expenseItems"],
+    queryKey: [...QUERY_KEYS.expenseItems],
     fetchData: () => accountingService.getExpenseItems(),
     saveData: async (payload) => {
       const { _id, ...cmd } = payload;

@@ -17,6 +17,7 @@ import type {
 import { toast } from "sonner";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { useDataTable } from "@shared/hooks";
+import { queryClient, invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
 import {
   PaymentForm,
   type PaymentFormPayload,
@@ -93,6 +94,7 @@ export default function PaymentsPage() {
         toast.success("تم الحذف بنجاح");
         setSelectedPayment(null);
         refresh(true);
+        await invalidateAccountingMutationQueries(queryClient);
     } catch (e) {
         toast.error("فشل الحذف: " + e);
       }
@@ -106,6 +108,7 @@ export default function PaymentsPage() {
       await paymentService.createPayment(payload);
       setShowDialog(false);
       refresh(true);
+      await invalidateAccountingMutationQueries(queryClient);
       toast.success("تم تسجيل الحركة بنجاح");
     } catch (e) {
       toast.error("فشل حفظ الحركة: " + e);
@@ -127,6 +130,7 @@ export default function PaymentsPage() {
       setShowDialog(false);
       setSelectedPayment(null);
       refresh(true);
+      await invalidateAccountingMutationQueries(queryClient);
     } catch (e) {
       toast.error("فشل التعديل: " + e);
     } finally {

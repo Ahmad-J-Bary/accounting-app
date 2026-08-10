@@ -1,7 +1,19 @@
-import XLSX from 'xlsx-js-style';
-import ExcelJS from 'exceljs';
+import type * as XLSX from 'xlsx-js-style';
+import type ExcelJS from 'exceljs';
 import { save } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@shared/lib/invoke';
+
+let exceljsPromise: Promise<typeof ExcelJS> | null = null;
+function loadExcelJS(): Promise<typeof ExcelJS> {
+  exceljsPromise ??= import('exceljs');
+  return exceljsPromise;
+}
+
+let xlsxPromise: Promise<typeof XLSX> | null = null;
+function loadXLSX(): Promise<typeof XLSX> {
+  xlsxPromise ??= import('xlsx-js-style');
+  return xlsxPromise;
+}
 
 export interface ExcelExportColumn {
   id: string;
@@ -86,6 +98,7 @@ async function buildExcelJsWorkbook(
   sheetName: string,
   options?: ExcelExportOptions,
 ): Promise<ExcelJS.Buffer> {
+  const ExcelJS = await loadExcelJS();
   const sortedData = sortExportRows(data, columns, options?.sortBy);
   const hasImages = columns.some(c => c.imageDataUrl);
   const rowOffset = getRowOffset(options);
@@ -641,12 +654,13 @@ function buildSummaryCellValue(
   return { v: 0, f: '=' + resolved };
 }
 
-function buildWorkbook(
+async function buildWorkbook(
   data: Record<string, unknown>[],
   columns: ExcelExportColumn[],
   sheetName: string,
   options?: ExcelExportOptions,
-): XLSX.WorkBook {
+): Promise<XLSX.WorkBook> {
+  const XLSX = await loadXLSX();
   const sortedData = sortExportRows(data, columns, options?.sortBy);
   const rowOffset = getRowOffset(options);
   
@@ -842,15 +856,16 @@ function buildWorkbook(
   return wb;
 }
 
-export function exportToExcel(
+export async function exportToExcel(
   data: Record<string, unknown>[],
   columns: ExcelExportColumn[],
   filename: string,
   options?: ExcelExportOptions,
-): void {
+): Promise<void> {
   if (!data || data.length === 0) return;
 
-  const wb = buildWorkbook(data, columns, options?.sheetName || 'Sheet1', options);
+  const wb = await buildWorkbook(data, columns, options?.sheetName || 'Sheet1', options);
+  const XLSX = await loadXLSX();
   const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
@@ -866,12 +881,13 @@ export function exportToExcel(
   URL.revokeObjectURL(url);
 }
 
-export function exportToExcelBuffer(
+export async function exportToExcelBuffer(
   data: Record<string, unknown>[],
   columns: ExcelExportColumn[],
   options?: ExcelExportOptions,
-): Uint8Array {
-  const wb = buildWorkbook(data, columns, options?.sheetName || 'Sheet1', options);
+): Promise<Uint8Array> {
+  const wb = await buildWorkbook(data, columns, options?.sheetName || 'Sheet1', options);
+  const XLSX = await loadXLSX();
   const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
   return new Uint8Array(buf);
 }

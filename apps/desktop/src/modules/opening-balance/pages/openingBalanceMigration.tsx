@@ -1,13 +1,10 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, RefreshCw, CheckCircle2, Coins, XCircle, Lock, Scale, Calculator, Eye } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { Button } from "@shared/ui/button";
-import { Input } from "@shared/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { toast } from "sonner";
-import type { AccountDto, OpeningPositionControlDto, PositionAccountLine } from "@erp/shared-types";
+import type { AccountDto, OpeningPositionControlDto } from "@erp/shared-types";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import {
   openingBalanceService,
@@ -16,33 +13,20 @@ import {
   type NetProfitAllocationDto,
   type OpeningReconciliationDto,
 } from "@modules/accounting/api/openingBalanceService";
+import { invalidateAccountingMutationQueries, queryClient } from "@shared/hooks/queryClient";
+import { OpeningDraftCard } from "../components/OpeningDraftCard";
+import { MigrationListCard } from "../components/MigrationListCard";
+import { ReconciliationCard } from "../components/ReconciliationCard";
+import { PositionControlCard } from "../components/PositionControlCard";
+import { ProfitAllocationCard } from "../components/ProfitAllocationCard";
+import type { AccountLine } from "../lib/migration-labels";
+import { findAccount, isDebitNature, newLineKey } from "../lib/migration-labels";
 
-interface AccountLine {
-  key: string;
-  account_id: string;
-  amount: string;
-  description: string;
-}
-
-const TYPE_LABEL: Record<string, string> = {
-  Assets: "أصل",
-  Liabilities: "التزام",
-  Equity: "حقوق ملكية",
-  Revenue: "إيراد",
-  Expenses: "مصروف",
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  Draft: "مسودة",
-  Validated: "تم التحقق",
-  Approved: "معتمد",
-  Posted: "مرحّل",
-  Locked: "مقفول",
-  Cancelled: "ملغى",
-};
-
-function isDebitNature(accountType: string): boolean {
-  return accountType === "Assets" || accountType === "Expenses";
+interface ComputedProfit {
+  net_profit: string;
+  total_revenue: string;
+  total_expenses: string;
+  entry_count: number;
 }
 
 export default function OpeningBalanceMigration() {
@@ -58,12 +42,7 @@ export default function OpeningBalanceMigration() {
   const [allocResult, setAllocResult] = useState<NetProfitAllocationDto | null>(null);
   const [allocating, setAllocating] = useState(false);
   const [computingProfit, setComputingProfit] = useState(false);
-  const [computedProfit, setComputedProfit] = useState<{
-    net_profit: string;
-    total_revenue: string;
-    total_expenses: string;
-    entry_count: number;
-  } | null>(null);
+  const [computedProfit, setComputedProfit] = useState<ComputedProfit | null>(null);
   const [reconId, setReconId] = useState<string>("");
   const [reconciliation, setReconciliation] = useState<OpeningReconciliationDto | null>(null);
   const [reconLoading, setReconLoading] = useState(false);
@@ -93,7 +72,7 @@ export default function OpeningBalanceMigration() {
   const addLine = useCallback(() => {
     setLines((prev) => [
       ...prev,
-      { key: `ob_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, account_id: "", amount: "", description: "" },
+      { key: newLineKey(), account_id: "", amount: "", description: "" },
     ]);
   }, []);
 
@@ -109,7 +88,7 @@ export default function OpeningBalanceMigration() {
     let debit = 0;
     let credit = 0;
     for (const l of lines) {
-      const acc = accounts.find((a) => a.id === l.account_id);
+      const acc = findAccount(accounts, l.account_id);
       const amount = parseFloat(l.amount) || 0;
       if (!acc || !amount) continue;
       if (isDebitNature(acc.account_type)) debit += amount;
@@ -154,6 +133,7 @@ export default function OpeningBalanceMigration() {
           + ` — مدين ${res.debit_total} / دائن ${res.credit_total}`
       );
       refetchMigrations();
+      await invalidateAccountingMutationQueries(queryClient);
     } catch (e) {
       toast.error("فشل الترحيل: " + e);
     } finally {
@@ -209,6 +189,7 @@ export default function OpeningBalanceMigration() {
       await openingBalanceService.cancelMigration(id);
       toast.success("تم إلغاء ترحيل الرصيد الافتتاحي وتسجيل القيد العكسي");
       refetchMigrations();
+      await invalidateAccountingMutationQueries(queryClient);
     } catch (e) {
       toast.error("فشل الإلغاء: " + e);
     } finally {
@@ -250,6 +231,7 @@ export default function OpeningBalanceMigration() {
       setAllocResult(res);
       toast.success("تم توزيع أرباح الترحيل على الشركاء");
       refetchMigrations();
+      await invalidateAccountingMutationQueries(queryClient);
     } catch (e) {
       toast.error("فشل توزيع الأرباح: " + e);
     } finally {
@@ -294,13 +276,6 @@ export default function OpeningBalanceMigration() {
     }
   };
 
-  const reconRowLabel: Record<string, string> = {
-    AR: "الذمم المدينة (العملاء)",
-    AP: "الذمم الدائنة (الموردون)",
-    Inventory: "المخزون",
-    FixedAssets: "الأصول الثابتة",
-  };
-
   const handleShowPosition = async () => {
     if (!positionId) return toast.error("اختر ترحيلاً لعرض المركز");
     setPositionLoading(true);
@@ -327,538 +302,71 @@ export default function OpeningBalanceMigration() {
       }
       tableContent={
         <div className="flex flex-col h-full overflow-auto p-4 gap-4">
-          <Card className="border-slate-200 shadow-sm">
-            <CardHeader className="py-3">
-              <CardTitle className="text-base font-bold text-slate-800">إنشاء مسودة رصيد افتتاحي</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-600">تاريخ الترحيل (Cutover)</label>
-                  <Input type="date" value={cutoverDate} onChange={(e) => setCutoverDate(e.target.value)} className="h-9" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-600">ملاحظات</label>
-                  <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="ملاحظات اختيارية..." className="h-9" />
-                </div>
-              </div>
+          <OpeningDraftCard
+            cutoverDate={cutoverDate}
+            onCutoverDateChange={setCutoverDate}
+            notes={notes}
+            onNotesChange={setNotes}
+            lines={lines}
+            detailAccounts={detailAccounts}
+            accounts={accounts}
+            onAddLine={addLine}
+            onRemoveLine={removeLine}
+            onUpdateLine={updateLine}
+            debitTotal={debitTotal}
+            creditTotal={creditTotal}
+            isValid={isValid}
+            saving={saving}
+            onSaveDraft={handleCreate}
+          />
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-600">بنود الرصيد الافتتاحي</span>
-                  <Button size="sm" variant="outline" onClick={addLine} className="border-blue-200 text-blue-700 hover:bg-blue-50 font-bold">
-                    <Plus className="w-3.5 h-3.5 ml-1.5" /> إضافة بند
-                  </Button>
-                </div>
+          <MigrationListCard
+            migrations={migrations}
+            isLoading={isLoading}
+            postingId={postingId}
+            cancellingId={cancellingId}
+            transitioningTo={transitioningTo}
+            onValidate={handleValidate}
+            onApprove={handleApprove}
+            onPost={handlePost}
+            onLock={handleLock}
+            onCancel={handleCancel}
+            onReopen={handleReopen}
+          />
 
-                {lines.length === 0 && (
-                  <p className="text-xs text-slate-400 py-2 text-center">لا توجد بنود بعد — أضف الحسابات وأرصدتها</p>
-                )}
+          <ReconciliationCard
+            candidates={reconcileCandidates}
+            reconId={reconId}
+            onReconIdChange={setReconId}
+            loading={reconLoading}
+            reconciliation={reconciliation}
+            onCheck={handleReconcile}
+          />
 
-                {lines.map((l) => {
-                  const acc = accounts.find((a) => a.id === l.account_id);
-                  return (
-                    <div key={l.key} className="flex items-center gap-2 border border-slate-200 rounded-lg p-2">
-                      <Input
-                        list="ob-accounts"
-                        value={l.account_id}
-                        onChange={(e) => updateLine(l.key, { account_id: e.target.value })}
-                        placeholder="ابحث واختر حساباً..."
-                        className="h-9 flex-1"
-                      />
-                      <div className="w-[190px] shrink-0 text-xs text-slate-600">
-                        {acc ? `${acc.name_ar} (${TYPE_LABEL[acc.account_type]})` : "—"}
-                      </div>
-                      <div className="w-[90px] shrink-0 text-[11px] font-bold text-slate-500">
-                        {acc && isDebitNature(acc.account_type) ? "مدين" : acc ? "دائن" : ""}
-                      </div>
-                      <Input
-                        value={l.amount}
-                        onChange={(e) => updateLine(l.key, { amount: e.target.value })}
-                        placeholder="0.00"
-                        className="h-9 w-[110px] shrink-0 text-left tabular-nums"
-                      />
-                      <Button size="sm" variant="ghost" onClick={() => removeLine(l.key)} className="text-red-500 hover:bg-red-50">حذف</Button>
-                    </div>
-                  );
-                })}
+          <PositionControlCard
+            candidates={reconcileCandidates}
+            positionId={positionId}
+            onPositionIdChange={setPositionId}
+            loading={positionLoading}
+            position={position}
+            onShow={handleShowPosition}
+          />
 
-                <datalist id="ob-accounts">
-                  {detailAccounts.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.code} — {a.name_ar} ({TYPE_LABEL[a.account_type]})
-                    </option>
-                  ))}
-                </datalist>
-              </div>
-
-              <div className="flex items-center justify-between border-t border-slate-100 pt-3">
-                <div className="text-xs font-semibold flex gap-4 text-slate-600">
-                  <span className={isValid ? "text-green-600" : "text-red-500"}>
-                    مدين: {debitTotal.toFixed(2)}
-                  </span>
-                  <span className={isValid ? "text-green-600" : "text-red-500"}>
-                    دائن: {creditTotal.toFixed(2)}
-                  </span>
-                  <span className={isValid ? "text-green-600" : "text-red-500"}>
-                    {isValid ? "متوازن ✓" : "غير متوازن"}
-                  </span>
-                </div>
-                <Button onClick={handleCreate} disabled={saving || !isValid} className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-100 font-bold">
-                  {saving ? "جارٍ الحفظ..." : "حفظ المسودة"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-200 shadow-sm">
-            <CardHeader className="py-3">
-              <CardTitle className="text-base font-bold text-slate-800">ترحيلات الرصيد الافتتاحي</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {isLoading && <p className="text-xs text-slate-400 p-4">جارٍ التحميل...</p>}
-              {migrations.length === 0 && !isLoading && (
-                <p className="text-xs text-slate-400 p-4 text-center">لا توجد ترحيلات بعد</p>
-              )}
-              <div className="divide-y divide-slate-100">
-                {migrations.map((m) => (
-                  <div key={m.id} className="flex items-center gap-3 px-4 py-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-slate-700">
-                        {m.cutover_date.split("T")[0]} — {m.lines.length} بنود
-                        <span
-                          className={
-                            "mr-2 text-xs px-2 py-0.5 rounded-full " +
-                            (m.status === "Posted"
-                              ? "bg-green-100 text-green-700"
-                              : m.status === "Cancelled"
-                                ? "bg-red-100 text-red-600"
-                                : m.status === "Locked"
-                                  ? "bg-slate-200 text-slate-700"
-                                  : "bg-amber-100 text-amber-700")
-                          }
-                        >
-                          {STATUS_LABEL[m.status]}
-                        </span>
-                      </div>
-                      <div className="text-xs text-slate-400 truncate">{m.notes || "بدون ملاحظات"}</div>
-                    </div>
-                    {m.status === "Draft" && (
-                      <>
-                        <Button
-                          size="sm"
-                          disabled={transitioningTo === m.id}
-                          onClick={() => handleValidate(m.id)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5 ml-1.5" /> {transitioningTo === m.id ? "جارٍ..." : "تحقق"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={cancellingId === m.id}
-                          onClick={() => handleCancel(m.id)}
-                          className="border-red-200 text-red-600 hover:bg-red-50 font-bold"
-                        >
-                          <XCircle className="w-3.5 h-3.5 ml-1.5" /> إلغاء
-                        </Button>
-                      </>
-                    )}
-                    {m.status === "Validated" && (
-                      <>
-                        <Button
-                          size="sm"
-                          disabled={transitioningTo === m.id}
-                          onClick={() => handleApprove(m.id)}
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5 ml-1.5" /> {transitioningTo === m.id ? "جارٍ..." : "اعتماد"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={cancellingId === m.id}
-                          onClick={() => handleCancel(m.id)}
-                          className="border-red-200 text-red-600 hover:bg-red-50 font-bold"
-                        >
-                          <XCircle className="w-3.5 h-3.5 ml-1.5" /> إلغاء
-                        </Button>
-                      </>
-                    )}
-                    {m.status === "Approved" && (
-                      <>
-                        <Button
-                          size="sm"
-                          disabled={postingId === m.id}
-                          onClick={() => handlePost(m.id)}
-                          className="bg-green-600 hover:bg-green-700 text-white font-bold"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5 ml-1.5" /> {postingId === m.id ? "جارٍ..." : "ترحيل"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={cancellingId === m.id}
-                          onClick={() => handleCancel(m.id)}
-                          className="border-red-200 text-red-600 hover:bg-red-50 font-bold"
-                        >
-                          <XCircle className="w-3.5 h-3.5 ml-1.5" /> إلغاء
-                        </Button>
-                      </>
-                    )}
-                    {m.status === "Posted" && (
-                      <>
-                        <Button
-                          size="sm"
-                          disabled={transitioningTo === m.id}
-                          onClick={() => handleLock(m.id)}
-                          className="bg-slate-600 hover:bg-slate-700 text-white font-bold"
-                        >
-                          <Lock className="w-3.5 h-3.5 ml-1.5" /> {transitioningTo === m.id ? "جارٍ..." : "قفل"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={cancellingId === m.id}
-                          onClick={() => handleCancel(m.id)}
-                          className="border-red-200 text-red-600 hover:bg-red-50 font-bold"
-                        >
-                          <XCircle className="w-3.5 h-3.5 ml-1.5" /> {cancellingId === m.id ? "جارٍ..." : "إلغاء الترحيل"}
-                        </Button>
-                      </>
-                    )}
-                    {m.status === "Cancelled" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={transitioningTo === m.id}
-                        onClick={() => handleReopen(m.id)}
-                        className="border-amber-200 text-amber-700 hover:bg-amber-50 font-bold"
-                        title="إعادة فتح الترحيل الملغى كمسودة"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5 ml-1.5" /> {transitioningTo === m.id ? "جارٍ..." : "إعادة فتح"}
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-200 shadow-sm">
-            <CardHeader className="py-3">
-              <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
-                <Scale className="w-4 h-4 text-blue-600" /> التحقق من تسوية الرصيد الافتتاحي
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-xs text-slate-500">
-                يقارن أرصدة السجل المساعد (AR/AP/Inventory/FA) بأرصدة دفتر الأستاذ العام، ويعرض رصيد حساب رصيد الافتتاح
-                (53) ومدين/دائن القيد لفحص معادلة الميزانية: A = L + E.
-              </p>
-              <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-600">الترحيل</label>
-                  <Select value={reconId} onValueChange={setReconId}>
-                    <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
-                      <SelectValue placeholder={reconcileCandidates.length ? "اختر ترحيلاً..." : "لا توجد ترحيلات"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {reconcileCandidates.map((m) => (
-                        <SelectItem key={m.id} value={m.id} className="text-xs">
-                          {m.cutover_date.split("T")[0]} — {STATUS_LABEL[m.status]} — {m.lines.length} بنود
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button size="sm" onClick={handleReconcile} disabled={reconLoading} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
-                  {reconLoading ? "جارٍ الفحص..." : "تحقق من التسوية"}
-                </Button>
-              </div>
-
-              {reconciliation && (
-                <div className="border border-slate-200 rounded-lg divide-y divide-slate-100">
-                  {reconciliation.rows.map((r) => (
-                    <div key={r.key} className="flex items-center justify-between px-3 py-2 text-xs">
-                      <div className="font-semibold text-slate-700">
-                        {reconRowLabel[r.key] || r.key}
-                        <span className={"mr-2 text-[11px] px-1.5 py-0.5 rounded-full " + (r.reconciled ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600")}>
-                          {r.reconciled ? "مطابق" : "فرق"}
-                        </span>
-                      </div>
-                      <div className="tabular-nums text-slate-600">
-                        السجل المساعد: {parseFloat(r.subledger).toFixed(2)} ← دفتر الأستاذ: {parseFloat(r.general_ledger).toFixed(2)}
-                      </div>
-                    </div>
-                  ))}
-                  <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs bg-slate-50">
-                    <span className={"font-bold " + (reconciliation.all_reconciled ? "text-green-700" : "text-red-600")}>
-                      {reconciliation.all_reconciled ? "جميع الأرصدة متطابقة ✓" : "يوجد فرق في الأرصدة"}
-                    </span>
-                    <span className="tabular-nums text-slate-600">
-                      مدين: {parseFloat(reconciliation.debit_total).toFixed(2)} · دائن: {parseFloat(reconciliation.credit_total).toFixed(2)}
-                    </span>
-                    <span className="tabular-nums text-slate-700 font-semibold">
-                      رصيد الافتتاح (53): {parseFloat(reconciliation.opening_control_balance).toFixed(2)}
-                      {reconciliation.opening_control_balance === "0" && " — متوازن ✓"}
-                    </span>
-                  </div>
-                  {(() => {
-                    const controlZero = parseFloat(reconciliation.opening_control_balance) === 0;
-                    const readyToPost = reconciliation.debit_equals_credit && reconciliation.all_reconciled;
-                    const readyToLock = readyToPost && controlZero;
-                    const blockers = [
-                      !reconciliation.debit_equals_credit && "القيد غير متوازن (مدين ≠ دائن)",
-                      !reconciliation.all_reconciled && "الواجهات الفرعية غير مطابقة",
-                      !controlZero && "رصيد الافتتاح (53) لم يُصفَّر بعد",
-                    ].filter(Boolean) as string[];
-                    return (
-                      <div className={"px-3 py-2 text-xs font-bold rounded-b-lg " + (readyToPost ? (readyToLock ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700") : "bg-red-50 text-red-600")}>
-                        {readyToLock
-                          ? "جاهز للقفل ✓"
-                          : readyToPost
-                            ? "جاهز للترحيل (صفّر رصيد 53 قبل القفل)"
-                            : "غير جاهز: " + blockers.join(" · ")}
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-200 shadow-sm">
-            <CardHeader className="py-3">
-              <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
-                <Eye className="w-4 h-4 text-blue-600" /> المركز الافتتاحي (قراءة فقط)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-xs text-slate-500">
-                يعرض المركز المالي الافتتاحي المشتق من بنود الترحيل نفسها (A = L + E) دون إنشاء أي قيد اليومية،
-                ويسلط الضوء على الفرق غير المصنف إن وُجد للرجوع إلى سير عمل تصنيف الرصيد المتبقي.
-              </p>
-              <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-600">الترحيل</label>
-                  <Select value={positionId} onValueChange={setPositionId}>
-                    <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
-                      <SelectValue placeholder={reconcileCandidates.length ? "اختر ترحيلاً..." : "لا توجد ترحيلات"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {reconcileCandidates.map((m) => (
-                        <SelectItem key={m.id} value={m.id} className="text-xs">
-                          {m.cutover_date.split("T")[0]} — {STATUS_LABEL[m.status]} — {m.lines.length} بنود
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button size="sm" onClick={handleShowPosition} disabled={positionLoading} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
-                  {positionLoading ? "جارٍ العرض..." : "عرض المركز"}
-                </Button>
-              </div>
-
-              {position && (
-                <div className="border border-slate-200 rounded-lg space-y-3 p-3">
-                  <div className={"flex items-center justify-between px-3 py-2 rounded-lg text-sm font-bold " + (position.is_balanced ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600")}>
-                    <span>{position.is_balanced ? "المركز متوازن ✓" : "يوجد فرق في المركز"}</span>
-                    <span className="tabular-nums">
-                      الفرق: {parseFloat(position.equity_difference || "0").toFixed(2)}
-                    </span>
-                  </div>
-
-                  {!position.is_balanced && position.difference_message && (
-                    <div className="px-3 py-2 text-xs bg-amber-50 text-amber-800 rounded-lg">
-                      {position.difference_message}
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                    {[
-                      { label: "الأصول", value: position.total_assets, color: "text-blue-700" },
-                      { label: "الخصوم", value: position.total_liabilities, color: "text-emerald-700" },
-                      { label: "صافي الأصول", value: position.net_assets, color: "text-slate-800 font-black" },
-                      { label: "حقوق الملكية", value: position.total_equity, color: "text-indigo-700" },
-                    ].map((row) => (
-                      <div key={row.label} className="border border-slate-100 rounded-lg p-2 space-y-0.5 bg-white">
-                        <div className="text-slate-500 font-semibold">{row.label}</div>
-                        <div className={"font-bold tabular-nums " + row.color}>{parseFloat(row.value || "0").toFixed(2)}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
-                    <div className="border border-slate-100 rounded-lg p-2 space-y-1">
-                      <div className="text-slate-500 font-semibold">رأس مال الشركاء</div>
-                      <div className="font-bold tabular-nums">{parseFloat(position.partner_capital || "0").toFixed(2)}</div>
-                    </div>
-                    <div className="border border-slate-100 rounded-lg p-2 space-y-1">
-                      <div className="text-slate-500 font-semibold">الحسابات الجارية</div>
-                      <div className="font-bold tabular-nums">{parseFloat(position.partner_current_accounts || "0").toFixed(2)}</div>
-                    </div>
-                    <div className="border border-slate-100 rounded-lg p-2 space-y-1">
-                      <div className="text-slate-500 font-semibold">الأرباح المبقاة</div>
-                      <div className="font-bold tabular-nums">{parseFloat(position.retained_earnings || "0").toFixed(2)}</div>
-                    </div>
-                    <div className="border border-slate-100 rounded-lg p-2 space-y-1">
-                      <div className="text-slate-500 font-semibold">تسوية رصيد الافتتاح (53)</div>
-                      <div className="font-bold tabular-nums">{parseFloat(position.opening_equity_adjustment || "0").toFixed(2)}</div>
-                    </div>
-                    <div className="border border-slate-100 rounded-lg p-2 space-y-1">
-                      <div className="text-slate-500 font-semibold">حقوق ملكية أخرى</div>
-                      <div className="font-bold tabular-nums">{parseFloat(position.other_equity || "0").toFixed(2)}</div>
-                    </div>
-                    <div className="border border-slate-100 rounded-lg p-2 space-y-1">
-                      <div className="text-slate-500 font-semibold">مسحوبات (−)</div>
-                      <div className="font-bold tabular-nums text-red-600">{parseFloat(position.drawings || "0").toFixed(2)}</div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-slate-50 rounded-lg text-xs">
-                    <span className="font-semibold text-slate-700">
-                      النتيجة التاريخية الافتتاحية (صافي الأصول − رأس المال − حقوق صريحة أخرى):
-                    </span>
-                    <span className="font-black tabular-nums text-indigo-700">
-                      {parseFloat(position.opening_historical_result || "0").toFixed(2)}
-                    </span>
-                  </div>
-
-                  {position.asset_detail.length > 0 && (
-                    <PositionDetailTable title="تفاصيل الأصول" lines={position.asset_detail} />
-                  )}
-                  {position.liability_detail.length > 0 && (
-                    <PositionDetailTable title="تفاصيل الخصوم" lines={position.liability_detail} />
-                  )}
-                  {position.equity_detail.length > 0 && (
-                    <PositionDetailTable title="تفاصيل حقوق الملكية" lines={position.equity_detail} />
-                  )}
-
-                  {position.partner_rows.length > 0 && (
-                    <div className="space-y-1">
-                      <div className="text-xs font-bold text-slate-700">تفصيل الشركاء</div>
-                      <div className="border border-slate-100 rounded-lg divide-y divide-slate-100">
-                        {position.partner_rows.map((p) => (
-                          <div key={p.partner_id} className="grid grid-cols-2 md:grid-cols-5 gap-2 px-3 py-2 text-xs items-center">
-                            <span className="font-semibold text-slate-700">{p.partner_name}</span>
-                            <span className="tabular-nums text-slate-600">رأس المال: {parseFloat(p.capital || "0").toFixed(2)}</span>
-                            <span className="tabular-nums text-slate-600">النسبة: {parseFloat(p.ownership_percent || "0").toFixed(2)}%</span>
-                            <span className="tabular-nums text-slate-600">جاري: {parseFloat(p.current || "0").toFixed(2)}</span>
-                            <span className="tabular-nums text-slate-600">مسحوبات: {parseFloat(p.drawings || "0").toFixed(2)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-200 shadow-sm">
-            <CardHeader className="py-3">
-              <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
-                <Coins className="w-4 h-4 text-blue-600" /> توزيع صافي الربح على الشركاء
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-xs text-slate-500">
-                أدخل صافي الربح (نتيجة قائمة الدخل) حتى تاريخ القطع لتوزيعه على حسابات رأس مال الشركاء (51X)،
-                أو احسبه تلقائياً من القيود المرحلة.
-              </p>
-              <div className="grid grid-cols-[1fr_180px_auto] gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-600">الترحيل المرحّل</label>
-                  <Select value={allocMigrationId} onValueChange={setAllocMigrationId}>
-                    <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
-                      <SelectValue placeholder={postedMigrations.length ? "اختر ترحيلاً..." : "لا توجد ترحيلات مرحّلة"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {postedMigrations.map((m) => (
-                        <SelectItem key={m.id} value={m.id} className="text-xs">
-                          {m.cutover_date.split("T")[0]} — {m.notes || "بدون ملاحظات"}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-600">صافي الربح</label>
-                  <Input value={netProfit} onChange={(e) => setNetProfit(e.target.value)} placeholder="0.00" type="number" className="h-9 text-left tabular-nums" />
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Button variant="outline" size="sm" onClick={handleComputeProfit} disabled={computingProfit} className="border-blue-200 text-blue-700 hover:bg-blue-50 font-bold" title="احتساب صافي الربح من قيود اليومية المرحلة للسنة حتى تاريخ القطع">
-                    <Calculator className="w-4 h-4" />
-                    {computingProfit ? "جارٍ الاحتساب..." : "احسب من اليومية"}
-                  </Button>
-                  <Button size="sm" onClick={handleAllocate} disabled={allocating} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
-                    {allocating ? "جارٍ التوزيع..." : "توزيع"}
-                  </Button>
-                </div>
-              </div>
-
-              {computedProfit && (
-                <div className="border border-slate-200 bg-slate-50 rounded-lg p-3 grid grid-cols-3 gap-3 text-xs">
-                  <div className="space-y-0.5">
-                    <div className="text-slate-500 font-semibold">إجمالي الإيرادات</div>
-                    <div className="font-bold tabular-nums">{parseFloat(computedProfit.total_revenue || "0").toFixed(2)}</div>
-                  </div>
-                  <div className="space-y-0.5">
-                    <div className="text-slate-500 font-semibold">إجمالي المصاريف</div>
-                    <div className="font-bold tabular-nums">{parseFloat(computedProfit.total_expenses || "0").toFixed(2)}</div>
-                  </div>
-                  <div className="space-y-0.5">
-                    <div className="text-slate-500 font-semibold">صافي الأرباح (قيد: {computedProfit.entry_count})</div>
-                    <div className="font-bold tabular-nums text-green-700">{parseFloat(computedProfit.net_profit || "0").toFixed(2)}</div>
-                  </div>
-                </div>
-              )}
-
-              {allocResult && (
-                <div className="border border-green-200 bg-green-50 rounded-lg p-3 space-y-2">
-                  <div className="text-xs font-semibold text-green-700">
-                    رقم القيد: {allocResult.entry_number} — الموزع:
-                    {parseFloat(allocResult.allocated_total || "0").toFixed(2)} من {parseFloat(allocResult.net_profit || "0").toFixed(2)}
-                  </div>
-                  {allocResult.shares.length === 0 && (
-                    <p className="text-xs text-slate-500">لا توجد حصص (صافي الربح صفر).</p>
-                  )}
-                  <div className="divide-y divide-green-100">
-                    {allocResult.shares.map((s) => (
-                      <div key={s.partner_id} className="flex items-center justify-between py-1 text-xs text-slate-700">
-                        <span className="font-semibold">{s.partner_name}</span>
-                        <span className="text-slate-400">رأس المال {parseFloat(s.capital || "0").toFixed(2)} · نسبة {parseFloat(s.ratio_percent || "0").toFixed(2)}%</span>
-                        <span className="font-bold tabular-nums">{parseFloat(s.share || "0").toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <ProfitAllocationCard
+            postedMigrations={postedMigrations}
+            allocMigrationId={allocMigrationId}
+            onAllocMigrationIdChange={setAllocMigrationId}
+            netProfit={netProfit}
+            onNetProfitChange={setNetProfit}
+            allocating={allocating}
+            computingProfit={computingProfit}
+            allocResult={allocResult}
+            computedProfit={computedProfit}
+            onCompute={handleComputeProfit}
+            onAllocate={handleAllocate}
+          />
         </div>
       }
     />
-  );
-}
-
-function PositionDetailTable({ title, lines }: { title: string; lines: PositionAccountLine[] }) {
-  return (
-    <div className="space-y-1">
-      <div className="text-xs font-bold text-slate-700">{title}</div>
-      <div className="border border-slate-100 rounded-lg divide-y divide-slate-100">
-        {lines.map((l) => (
-          <div key={l.account_id} className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-[10px] font-bold text-slate-400 tabular-nums">{l.code}</span>
-              <span className="truncate text-slate-700">{l.name_ar}</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500">{l.group_key}</span>
-            </div>
-            <span className="tabular-nums font-semibold text-slate-700">{parseFloat(l.amount || "0").toFixed(2)}</span>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }

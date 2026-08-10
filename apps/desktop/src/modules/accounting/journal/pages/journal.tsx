@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DateRangePicker } from "@widgets/reports";
 import { useReportFilters } from "@shared/hooks/useReportFilters";
 import { toLocalDateStr } from "@shared/lib/format";
+import { invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
 
 // Refactored Components & Hooks
 import { useDataTable } from '@shared/hooks';
@@ -107,7 +108,7 @@ export default function Journal() {
     try {
       const reversal = await journalEntryService.reverseJournalEntry(id);
       toast.success(`تم ترحيل القيد العكسي ${reversal.entry_number}`);
-      await queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+      await invalidateAccountingMutationQueries(queryClient);
     } catch (e) {
       toast.error("فشل عكس القيد: " + e);
     } finally {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useQueryClient } from '@tanstack/react-query';
+import { invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
 import { Button } from "@shared/ui/button";
 import { Plus, Download } from "lucide-react";
 import { damagedService } from '@modules/inventory/api/damagedService';
@@ -62,6 +63,7 @@ export default function DamagedPage() {
       refresh(true);
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
       queryClient.invalidateQueries({ queryKey: ['materials'] });
+      await invalidateAccountingMutationQueries(queryClient);
       toast.success("تم تسجيل التالف بنجاح");
     } catch (e: unknown) {
       toast.error("فشل الحفظ: " + e);
@@ -84,6 +86,7 @@ export default function DamagedPage() {
       refresh(true);
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
       queryClient.invalidateQueries({ queryKey: ['materials'] });
+      await invalidateAccountingMutationQueries(queryClient);
       toast.success("تم التعديل بنجاح");
     } catch (e: unknown) {
       toast.error("فشل التعديل: " + e);
@@ -110,6 +113,7 @@ export default function DamagedPage() {
       refresh(true);
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
       queryClient.invalidateQueries({ queryKey: ['materials'] });
+      await invalidateAccountingMutationQueries(queryClient);
     } catch (e) {
       toast.error("فشل الحذف: " + e);
     }
