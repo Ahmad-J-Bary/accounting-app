@@ -33,7 +33,7 @@ export function SidebarHeader({
             {title}
           </h2>
           {subtitle && (
-            <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+            <p className="text-2xs text-slate-400 font-medium mt-0.5">
               {subtitle}
             </p>
           )}

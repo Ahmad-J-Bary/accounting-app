@@ -136,7 +136,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                   <span className="text-xs">الأعمدة</span>
                   {hasColumns && (
                     <span className={cn(
-                      "mr-1 text-[9px] font-bold px-1 py-0.5 rounded tabular-nums",
+                      "mr-1 text-3xs font-bold px-1 py-0.5 rounded tabular-nums",
                       columnsModified
                         ? "bg-amber-200 text-amber-800"
                         : "bg-slate-100 text-slate-600"
@@ -150,7 +150,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                 <DropdownMenuLabel className="flex items-center justify-between text-right gap-2">
                   <span>إظهار / إخفاء الأعمدة</span>
                   {hasColumns && (
-                    <span className="text-[10px] tabular-nums text-slate-500 font-medium">
+                    <span className="text-2xs tabular-nums text-slate-500 font-medium">
                       {visibleCount} / {totalCount}
                     </span>
                   )}

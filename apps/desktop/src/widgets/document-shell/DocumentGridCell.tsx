@@ -186,7 +186,7 @@ export function DocumentGridCell({
         <DropdownMenu>
           <DropdownMenuTrigger asChild disabled={readOnly || !line.material_id}>
             <button className={cn(
-              "text-[9px] font-black px-2 py-0.5 rounded border uppercase tracking-tighter transition-all",
+              "text-3xs font-black px-2 py-0.5 rounded border uppercase tracking-tighter transition-all",
               line.material_id
                 ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 cursor-pointer"
                 : "bg-slate-50 text-slate-400 border-slate-200 cursor-default",
@@ -198,7 +198,7 @@ export function DocumentGridCell({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="min-w-[140px] shadow-xl">
-            <DropdownMenuLabel className="text-right text-[9px] font-black text-slate-500 uppercase">نوع السعر</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-right text-3xs font-black text-slate-500 uppercase">نوع السعر</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {tiers.map((t) => {
               const salePrice = material?.sale_prices?.find(
@@ -211,12 +211,12 @@ export function DocumentGridCell({
                   key={t.id}
                   checked={currentTier === t.id}
                   onCheckedChange={() => handleTierChange(t.id)}
-                  className="text-right flex-row-reverse gap-2 text-[10px] font-bold py-1.5"
+                  className="text-right flex-row-reverse gap-2 text-2xs font-bold py-1.5"
                 >
                   <span className="flex items-center gap-2 w-full">
                     <span>{t.label}</span>
                     {priceStr && <span className="tabular-nums text-slate-400 font-medium">{priceStr}</span>}
-                    {maxQty > 0 && <span className="text-[8px] text-purple-500 font-bold mr-auto">&le;{maxQty}</span>}
+                    {maxQty > 0 && <span className="text-4xs text-purple-500 font-bold mr-auto">&le;{maxQty}</span>}
                   </span>
                 </DropdownMenuCheckboxItem>
               );
@@ -251,7 +251,7 @@ export function DocumentGridCell({
   if (col.type === "badge") {
     return (
       <CellWrapper column={col} config={config} isReadonlyCell>
-        <span className="text-[9px] font-black bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 uppercase tracking-tighter">
+        <span className="text-3xs font-black bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 uppercase tracking-tighter">
           {getCellValue(line, col.key)}
         </span>
       </CellWrapper>
@@ -274,7 +274,7 @@ export function DocumentGridCell({
         <DropdownMenu>
           <DropdownMenuTrigger asChild disabled={readOnly || !line.material_id}>
             <button className={cn(
-              "text-[9px] font-black px-2 py-0.5 rounded border uppercase tracking-tighter transition-all",
+              "text-3xs font-black px-2 py-0.5 rounded border uppercase tracking-tighter transition-all",
               line.material_id
                 ? "bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 cursor-pointer"
                 : "bg-slate-50 text-slate-400 border-slate-200 cursor-default",
@@ -283,14 +283,14 @@ export function DocumentGridCell({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="min-w-[100px] shadow-xl">
-            <DropdownMenuLabel className="text-right text-[9px] font-black text-slate-500 uppercase">الوحدات المتاحة</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-right text-3xs font-black text-slate-500 uppercase">الوحدات المتاحة</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {units.map((u) => (
               <DropdownMenuCheckboxItem
                 key={u.id}
                 checked={line.unit_id === u.id || currentUnitName === u.name}
                 onCheckedChange={() => onUpdateLine(rowIdx, { unit_id: u.id, unit_name: u.name })}
-                className="text-right flex-row-reverse gap-2 text-[10px] font-bold py-1.5"
+                className="text-right flex-row-reverse gap-2 text-2xs font-bold py-1.5"
               >
                 {u.name}
               </DropdownMenuCheckboxItem>
@@ -309,7 +309,7 @@ export function DocumentGridCell({
         <DropdownMenu>
           <DropdownMenuTrigger asChild disabled={readOnly}>
             <button className={cn(
-              "text-[9px] font-black px-2 py-0.5 rounded border tracking-tighter transition-all",
+              "text-3xs font-black px-2 py-0.5 rounded border tracking-tighter transition-all",
               currentWarehouseId
                 ? "bg-violet-50 text-violet-600 border-violet-100 hover:bg-violet-100 cursor-pointer"
                 : "bg-slate-50 text-slate-400 border-slate-200 cursor-default",
@@ -318,14 +318,14 @@ export function DocumentGridCell({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="min-w-[140px] shadow-xl">
-            <DropdownMenuLabel className="text-right text-[9px] font-black text-slate-500 uppercase">المستودعات</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-right text-3xs font-black text-slate-500 uppercase">المستودعات</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {warehouses.map((w) => (
               <DropdownMenuCheckboxItem
                 key={w.id}
                 checked={currentWarehouseId === w.id}
                 onCheckedChange={() => onUpdateLine(rowIdx, { warehouse_id: w.id })}
-                className="text-right flex-row-reverse gap-2 text-[10px] font-bold py-1.5"
+                className="text-right flex-row-reverse gap-2 text-2xs font-bold py-1.5"
               >
                 {w.name}
               </DropdownMenuCheckboxItem>
@@ -360,7 +360,7 @@ export function DocumentGridCell({
       return (
         <CellWrapper column={col} config={config} isReadonlyCell>
           <span className="flex items-center gap-1.5 text-center justify-center">
-            <span className="text-[8px] font-black px-1 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200">{tierLabel}</span>
+            <span className="text-4xs font-black px-1 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200">{tierLabel}</span>
             <ReadonlyContent value={priceValue || "-"} fontSize={fontSize} fontFamily={config.fontFamily} />
           </span>
         </CellWrapper>
@@ -373,7 +373,7 @@ export function DocumentGridCell({
           <DropdownMenu>
             <DropdownMenuTrigger asChild disabled={!line.material_id}>
               <button className={cn(
-                "text-[8px] font-black px-1 py-0.5 rounded border uppercase tracking-tighter transition-all shrink-0",
+                "text-4xs font-black px-1 py-0.5 rounded border uppercase tracking-tighter transition-all shrink-0",
                 line.material_id
                   ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 cursor-pointer"
                   : "bg-slate-50 text-slate-400 border-slate-200 cursor-default",
@@ -382,14 +382,14 @@ export function DocumentGridCell({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="center" className="min-w-[140px] shadow-xl">
-              <DropdownMenuLabel className="text-right text-[9px] font-black text-slate-500 uppercase">نوع السعر</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-right text-3xs font-black text-slate-500 uppercase">نوع السعر</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {tiers.map((t) => (
                 <DropdownMenuCheckboxItem
                   key={t.id}
                   checked={currentTier === t.id}
                   onCheckedChange={() => handleTierChange(t.id)}
-                  className="text-right flex-row-reverse gap-2 text-[10px] font-bold py-1.5"
+                  className="text-right flex-row-reverse gap-2 text-2xs font-bold py-1.5"
                 >
                   {t.label}
                 </DropdownMenuCheckboxItem>
@@ -485,7 +485,7 @@ export function DocumentGridCell({
       <button
         tabIndex={-1}
         onClick={toggleLayout}
-        className="absolute -top-0.5 -left-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] p-0.5 rounded bg-white border border-slate-200 text-slate-400 hover:text-slate-700 hover:border-slate-300 shadow-sm z-10"
+        className="absolute -top-0.5 -left-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-3xs p-0.5 rounded bg-white border border-slate-200 text-slate-400 hover:text-slate-700 hover:border-slate-300 shadow-sm z-10"
         title={isRowLayout ? "عرض أفقي" : "عرض عمودي"}
       >
         {isRowLayout ? "⊞" : "☰"}
@@ -495,11 +495,11 @@ export function DocumentGridCell({
     if (readOnly) {
       return (
         <CellWrapper column={col} config={config} isReadonlyCell>
-          <div className={cn("relative w-full text-[10px] leading-tight group", isRowLayout ? "flex flex-col gap-0.5" : "flex flex-row gap-0")} style={{ fontSize: `${fontSize}px`, fontFamily: config.fontFamily }}>
+          <div className={cn("relative w-full text-2xs leading-tight group", isRowLayout ? "flex flex-col gap-0.5" : "flex flex-row gap-0")} style={{ fontSize: `${fontSize}px`, fontFamily: config.fontFamily }}>
             {toggleBtn}
             {tiers.map((t) => (
               <span key={t.key} className={cn("flex items-center gap-1", isRowLayout ? "justify-between" : "flex-col flex-1 min-w-0 text-center")}>
-                <span className="text-[8px] font-bold text-slate-400 shrink-0">{t.label}</span>
+                <span className="text-4xs font-bold text-slate-400 shrink-0">{t.label}</span>
                 <span className="tabular-nums">{getCellValue(line, t.key) || "-"}</span>
               </span>
             ))}
@@ -514,7 +514,7 @@ export function DocumentGridCell({
           {toggleBtn}
           {tiers.map((t, i) => (
             <div key={t.key} className={cn("flex", isRowLayout ? "items-center gap-1" : "flex-col flex-1 min-w-0 items-center gap-0")}>
-              <span className="text-[8px] font-bold text-slate-400 shrink-0">{t.label}</span>
+              <span className="text-4xs font-bold text-slate-400 shrink-0">{t.label}</span>
               <input
                 ref={(el) => { const refMapKey = i === 0 ? refKey : `${refKey}_${t.key}`; if (el) callbacks.inputRefs.current.set(refMapKey, el); else callbacks.inputRefs.current.delete(refMapKey); }}
                 type="number"

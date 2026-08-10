@@ -21,6 +21,11 @@ export default {
       },
     },
     extend: {
+      fontSize: {
+        '2xs': '0.625rem',
+        '3xs': '0.5625rem',
+        '4xs': '0.5rem',
+      },
       colors: {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',

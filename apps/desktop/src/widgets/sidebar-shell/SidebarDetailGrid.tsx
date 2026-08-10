@@ -20,7 +20,7 @@ export function SidebarDetailGrid({
       {title && (
         <div className="flex items-center gap-2 border-b border-slate-50 pb-2 mb-4">
           {icon && <span className="text-slate-400">{icon}</span>}
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+          <span className="text-2xs font-black text-slate-400 uppercase tracking-wider">
             {title}
           </span>
         </div>

@@ -465,11 +465,11 @@ export function GenericDocumentGrid({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-64 max-h-[420px] overflow-y-auto shadow-xl">
           <DropdownMenuLabel className="flex items-center justify-between text-right gap-2">
-            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">
+            <span className="text-2xs font-black uppercase text-slate-500 tracking-widest">
               إظهار / إخفاء الأعمدة
             </span>
             <span className={cn(
-              "text-[10px] tabular-nums font-bold px-1.5 py-0.5 rounded",
+              "text-2xs tabular-nums font-bold px-1.5 py-0.5 rounded",
               isModified
                 ? "bg-amber-100 text-amber-700"
                 : "bg-slate-100 text-slate-500"
@@ -541,7 +541,7 @@ export function GenericDocumentGrid({
                 getRowBackgroundClass(isActiveRow, rowIdx, settings.zebraRows, settings.rowHoverEffect),
               )}
             >
-              <div className={cn("w-10 flex items-center justify-center text-[10px] text-slate-400 font-bold bg-slate-50/50", cellBorderClass)}>
+              <div className={cn("w-10 flex items-center justify-center text-2xs text-slate-400 font-bold bg-slate-50/50", cellBorderClass)}>
                 {rowIdx + 1}
               </div>
 

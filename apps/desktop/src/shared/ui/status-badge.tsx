@@ -65,7 +65,7 @@ export function StatusBadge({ status, label, size = "sm", icon, tone, className 
     <span
       className={cn(
         "inline-flex items-center gap-1.5 font-bold ring-1 ring-inset border rounded-full whitespace-nowrap",
-        size === "sm" ? "text-[10px] px-2 py-0.5" : "text-xs px-3 py-1",
+        size === "sm" ? "text-2xs px-2 py-0.5" : "text-xs px-3 py-1",
         TONE_CLASS[resolvedTone],
         className,
       )}

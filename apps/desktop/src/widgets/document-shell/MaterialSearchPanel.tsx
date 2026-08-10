@@ -77,10 +77,10 @@ export function MaterialSearchPanel({
         <span className="text-[11px] font-black text-slate-500 tracking-wider">
           نتائج البحث
         </span>
-        <span className="text-[10px] tabular-nums font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">
+        <span className="text-2xs tabular-nums font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">
           {filtered.length}
         </span>
-        <span className="text-[10px] text-slate-400 font-semibold">صنف</span>
+        <span className="text-2xs text-slate-400 font-semibold">صنف</span>
         <button
           onClick={onClose}
           className="mr-auto p-1 rounded-lg text-slate-300 hover:text-slate-500 hover:bg-slate-100 transition-all"
@@ -133,20 +133,20 @@ export function MaterialSearchPanel({
 
                 {/* ── Cost Row ── */}
                 <div className="flex items-center gap-3 mt-2 pt-1.5 border-t border-slate-50 flex-wrap" dir="ltr">
-                  <span className="flex items-center gap-1 text-[10px] tabular-nums text-amber-600 font-bold" title="تكلفة الوحدة">
+                  <span className="flex items-center gap-1 text-2xs tabular-nums text-amber-600 font-bold" title="تكلفة الوحدة">
                     <DollarSign className="w-2.5 h-2.5 opacity-60" />
                     {formatCost(m.average_cost_base)} {sym}
                   </span>
-                  <span className="flex items-center gap-1 text-[10px] tabular-nums text-emerald-600 font-bold" title="آخر سعر شراء">
+                  <span className="flex items-center gap-1 text-2xs tabular-nums text-emerald-600 font-bold" title="آخر سعر شراء">
                     <ShoppingCart className="w-2.5 h-2.5 opacity-60" />
                     {formatCost(m.last_purchase_price_base)} {sym}
                   </span>
-                  <span className="flex items-center gap-1 text-[10px] tabular-nums text-blue-600 font-bold" title="آخر سعر مبيع">
+                  <span className="flex items-center gap-1 text-2xs tabular-nums text-blue-600 font-bold" title="آخر سعر مبيع">
                     <TrendingUp className="w-2.5 h-2.5 opacity-60" />
                     {formatCost(m.last_sale_price_base)} {sym}
                   </span>
                   {m.costing_method === "FIFO" && (
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600 border border-purple-200">
+                    <span className="text-3xs font-bold px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600 border border-purple-200">
                       FIFO
                     </span>
                   )}

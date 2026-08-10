@@ -43,7 +43,7 @@ export function StatCard({ label, value, icon: Icon, variant = "default", classN
       <div className="min-w-0">
         <span
           className={cn(
-            "text-[9px] font-black uppercase tracking-widest block",
+            "text-3xs font-black uppercase tracking-widest block",
             isAccent ? "text-white/70" : "text-muted-foreground",
           )}
         >

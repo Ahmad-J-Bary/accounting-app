@@ -54,7 +54,7 @@ export function ReceivablesPayablesCard({
         </div>
       </div>
       {unlinkedCount > 0 && (
-        <div className={`mt-3 text-[10px] font-medium flex items-center gap-1 ${isAmber ? "text-amber-600" : "text-red-600"}`}>
+        <div className={`mt-3 text-2xs font-medium flex items-center gap-1 ${isAmber ? "text-amber-600" : "text-red-600"}`}>
           <span className="flex h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
           ⚠️ {unlinkedCount} {type === "receivable" ? "عملاء" : "موردين"} غير مرتبطين بحسابات محاسبية
         </div>
