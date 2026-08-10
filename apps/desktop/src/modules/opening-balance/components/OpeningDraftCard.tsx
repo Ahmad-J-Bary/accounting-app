@@ -51,12 +51,12 @@ export function OpeningDraftCard({
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <FieldLabel>تاريخ الترحيل (Cutover)</FieldLabel>
-            <Input type="date" value={cutoverDate} onChange={(e) => onCutoverDateChange(e.target.value)} className="h-9" />
+            <FieldLabel htmlFor="ob-cutover-date" required>تاريخ الترحيل (Cutover)</FieldLabel>
+            <Input id="ob-cutover-date" type="date" value={cutoverDate} onChange={(e) => onCutoverDateChange(e.target.value)} className="h-9" aria-required />
           </div>
           <div className="space-y-1.5">
-            <FieldLabel>ملاحظات</FieldLabel>
-            <Input value={notes} onChange={(e) => onNotesChange(e.target.value)} placeholder="ملاحظات اختيارية..." className="h-9" />
+            <FieldLabel htmlFor="ob-notes">ملاحظات</FieldLabel>
+            <Input id="ob-notes" value={notes} onChange={(e) => onNotesChange(e.target.value)} placeholder="ملاحظات اختيارية..." className="h-9" />
           </div>
         </div>
 

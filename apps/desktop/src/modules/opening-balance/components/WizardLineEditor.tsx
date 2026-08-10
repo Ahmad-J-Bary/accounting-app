@@ -47,7 +47,7 @@ export function WizardLineEditor({ rows, setter, updateLine, placeholder, accoun
               type="number"
               className="h-9 w-[110px] shrink-0 text-left tabular-nums"
             />
-            <Button size="sm" variant="ghost" onClick={() => setter((prev) => prev.filter((x) => x.key !== l.key))} className="text-red-500 hover:bg-red-50">
+            <Button size="sm" variant="ghost" onClick={() => setter((prev) => prev.filter((x) => x.key !== l.key))} aria-label="حذف هذا البند" className="text-red-500 hover:bg-red-50">
               <Trash2 className="w-3.5 h-3.5" />
             </Button>
           </div>
@@ -113,7 +113,7 @@ export function WizardDetailEditor({ rows, setter, updateDetail, referenceLabel,
             type="number"
             className="h-9 w-[110px] shrink-0 text-left tabular-nums"
           />
-          <Button size="sm" variant="ghost" onClick={() => setter((prev) => prev.filter((x) => x.key !== r.key))} className="text-red-500 hover:bg-red-50">
+          <Button size="sm" variant="ghost" onClick={() => setter((prev) => prev.filter((x) => x.key !== r.key))} aria-label="حذف هذا البند" className="text-red-500 hover:bg-red-50">
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
         </div>

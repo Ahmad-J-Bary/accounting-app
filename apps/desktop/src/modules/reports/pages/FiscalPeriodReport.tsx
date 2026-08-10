@@ -96,12 +96,12 @@ export default function FiscalPeriodReport() {
             <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <FieldLabel>بداية الفترة</FieldLabel>
-                  <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} className="h-9" />
+                  <FieldLabel htmlFor="fp-start" required>بداية الفترة</FieldLabel>
+                  <Input id="fp-start" type="date" value={start} onChange={(e) => setStart(e.target.value)} className="h-9" aria-required />
                 </div>
                 <div className="space-y-1.5">
-                  <FieldLabel>نهاية الفترة</FieldLabel>
-                  <Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className="h-9" />
+                  <FieldLabel htmlFor="fp-end" required>نهاية الفترة</FieldLabel>
+                  <Input id="fp-end" type="date" value={end} onChange={(e) => setEnd(e.target.value)} className="h-9" aria-required />
                 </div>
               </div>
               <Button
@@ -154,11 +154,11 @@ export default function FiscalPeriodReport() {
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-slate-200 text-slate-500">
-                      <th className="text-right px-4 py-2 font-semibold">البداية</th>
-                      <th className="text-right px-4 py-2 font-semibold">النهاية</th>
-                      <th className="text-right px-4 py-2 font-semibold">الحالة</th>
-                      <th className="text-right px-4 py-2 font-semibold">أُغلقت بواسطة</th>
-                      <th className="text-right px-4 py-2 font-semibold"></th>
+                      <th scope="col" className="text-right px-4 py-2 font-semibold">البداية</th>
+                      <th scope="col" className="text-right px-4 py-2 font-semibold">النهاية</th>
+                      <th scope="col" className="text-right px-4 py-2 font-semibold">الحالة</th>
+                      <th scope="col" className="text-right px-4 py-2 font-semibold">أُغلقت بواسطة</th>
+                      <th scope="col" className="text-right px-4 py-2 font-semibold"></th>
                     </tr>
                   </thead>
                   <tbody>

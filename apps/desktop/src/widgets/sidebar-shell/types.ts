@@ -94,5 +94,6 @@ export interface SidebarValidationSummaryProps {
 export interface FieldLabelProps {
   className?: string;
   required?: boolean;
+  htmlFor?: string;
   children: ReactNode;
 }

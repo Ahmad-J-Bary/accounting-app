@@ -53,9 +53,9 @@ export function ProfitAllocationCard({
         </p>
         <div className="grid grid-cols-[1fr_180px_auto] gap-3">
           <div className="space-y-1.5">
-            <FieldLabel>الترحيل المرحّل</FieldLabel>
+            <FieldLabel htmlFor="alloc-migration">الترحيل المرحّل</FieldLabel>
             <Select value={allocMigrationId} onValueChange={onAllocMigrationIdChange}>
-              <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
+              <SelectTrigger id="alloc-migration" className="h-9 bg-white border-slate-200 text-xs">
                 <SelectValue placeholder={postedMigrations.length ? "اختر ترحيلاً..." : "لا توجد ترحيلات مرحّلة"} />
               </SelectTrigger>
               <SelectContent>
@@ -68,8 +68,8 @@ export function ProfitAllocationCard({
             </Select>
           </div>
           <div className="space-y-1.5">
-            <FieldLabel>صافي الربح</FieldLabel>
-            <Input value={netProfit} onChange={(e) => onNetProfitChange(e.target.value)} placeholder="0.00" type="number" className="h-9 text-left tabular-nums" />
+            <FieldLabel htmlFor="alloc-net-profit">صافي الربح</FieldLabel>
+            <Input id="alloc-net-profit" value={netProfit} onChange={(e) => onNetProfitChange(e.target.value)} placeholder="0.00" type="number" className="h-9 text-left tabular-nums" />
           </div>
           <div className="flex items-center gap-1.5">
             <Button variant="outline" size="sm" onClick={onCompute} disabled={computingProfit} className="border-blue-200 text-blue-700 hover:bg-blue-50 font-bold" title="احتساب صافي الربح من قيود اليومية المرحلة للسنة حتى تاريخ القطع">

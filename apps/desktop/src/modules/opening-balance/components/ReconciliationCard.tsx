@@ -40,9 +40,9 @@ export function ReconciliationCard({
         </p>
         <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
           <div className="space-y-1.5">
-            <FieldLabel>الترحيل</FieldLabel>
+            <FieldLabel htmlFor="recon-migration">الترحيل</FieldLabel>
             <Select value={reconId} onValueChange={onReconIdChange}>
-              <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
+              <SelectTrigger id="recon-migration" className="h-9 bg-white border-slate-200 text-xs">
                 <SelectValue placeholder={candidates.length ? "اختر ترحيلاً..." : "لا توجد ترحيلات"} />
               </SelectTrigger>
               <SelectContent>

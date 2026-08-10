@@ -70,20 +70,20 @@ export default function OpeningBalanceWizard() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <FieldLabel>تاريخ القطع (Cutover)</FieldLabel>
-                <Input type="date" value={cutoverDate} onChange={(e) => setCutoverDate(e.target.value)} className="h-9" />
+                <FieldLabel htmlFor="wiz-cutover-date" required>تاريخ القطع (Cutover)</FieldLabel>
+                <Input id="wiz-cutover-date" type="date" value={cutoverDate} onChange={(e) => setCutoverDate(e.target.value)} className="h-9" />
               </div>
               <div className="space-y-1.5">
-                <FieldLabel>النظام السابق (Source System)</FieldLabel>
-                <Input value={sourceSystem} onChange={(e) => setSourceSystem(e.target.value)} placeholder="مثال: نظام محاسبة قديم" className="h-9" />
+                <FieldLabel htmlFor="wiz-source-system">النظام السابق (Source System)</FieldLabel>
+                <Input id="wiz-source-system" value={sourceSystem} onChange={(e) => setSourceSystem(e.target.value)} placeholder="مثال: نظام محاسبة قديم" className="h-9" />
               </div>
               <div className="space-y-1.5">
-                <FieldLabel>المرجع (Source Reference)</FieldLabel>
-                <Input value={sourceReference} onChange={(e) => setSourceReference(e.target.value)} placeholder="رقم الميزانية / المرجع" className="h-9" />
+                <FieldLabel htmlFor="wiz-source-reference">المرجع (Source Reference)</FieldLabel>
+                <Input id="wiz-source-reference" value={sourceReference} onChange={(e) => setSourceReference(e.target.value)} placeholder="رقم الميزانية / المرجع" className="h-9" />
               </div>
               <div className="space-y-1.5">
-                <FieldLabel>ملاحظات</FieldLabel>
-                <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="اختياري" className="h-9" />
+                <FieldLabel htmlFor="wiz-notes">ملاحظات</FieldLabel>
+                <Input id="wiz-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="اختياري" className="h-9" />
               </div>
             </div>
           </div>
@@ -116,7 +116,7 @@ export default function OpeningBalanceWizard() {
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <Select value={residualClassification} onValueChange={setResidualClassification}>
-                  <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
+                  <SelectTrigger className="h-9 bg-white border-slate-200 text-xs" aria-label="تصنيف الفرق المتبقي">
                     <SelectValue placeholder="التصنيف (اختياري)" />
                   </SelectTrigger>
                   <SelectContent>
@@ -132,6 +132,7 @@ export default function OpeningBalanceWizard() {
                   value={residualAccountId}
                   onChange={(e) => setResidualAccountId(e.target.value)}
                   placeholder="حساب حامل الفرق (مثال: 52)"
+                  aria-label="حساب حامل الفرق"
                   className="h-9"
                 />
                 <datalist id="wiz-equity-accounts">
