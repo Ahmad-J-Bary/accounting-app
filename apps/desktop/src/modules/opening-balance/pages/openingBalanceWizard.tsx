@@ -1,6 +1,5 @@
 import { Input } from "@shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
 import { StatusBadge } from "@shared/ui/status-badge";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { WizardShell } from "@modules/opening-balance/components/WizardShell";
@@ -61,7 +60,7 @@ export default function OpeningBalanceWizard() {
             <p className="text-xs text-slate-500">
               أدخل بيانات الترحيل: النظام السابق الذي صدرت منه الأرصدة وتاريخ القطع.
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-600">تاريخ القطع (Cutover)</label>
                 <Input type="date" value={cutoverDate} onChange={(e) => setCutoverDate(e.target.value)} className="h-9" />
@@ -100,16 +99,16 @@ export default function OpeningBalanceWizard() {
           <div className="space-y-3">
             <p className="text-xs text-slate-500">حقوق الملكية — رؤوس أموال الشركاء والأرباح المبقاة (طبيعة دائن).</p>
             <WizardLineEditor rows={equity} setter={setEquity} updateLine={updateLine} placeholder="ابحث واختر حساب حقوق ملكية..." accounts={accounts} detailAccounts={detailAccounts} />
-            <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 space-y-2">
+            <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 space-y-2">
               <p className="text-xs font-semibold text-amber-700">
                 تصنيف الفرق المتبقي (رصيد غير مسجل من النظام السابق):
               </p>
-              <p className="text-[11px] text-amber-600">
+              <p className="text-xs text-amber-600">
                 يُحسب الرصيد المتبقي تلقائياً بعد إدخال الخطوط، وطبيعته قرار محاسب صريح — لا تُسوّى قسراً.
               </p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <Select value={residualClassification} onValueChange={setResidualClassification}>
-                  <SelectTrigger className="h-9 bg-white border-slate-200 text-sm">
+                  <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
                     <SelectValue placeholder="التصنيف (اختياري)" />
                   </SelectTrigger>
                   <SelectContent>
@@ -152,31 +151,25 @@ export default function OpeningBalanceWizard() {
             <p className="text-xs text-slate-500">
               معادلة الميزانية: الأصول (A) = الخصوم (L) + حقوق الملكية (E). يجب أن يتوازن الجانبان قبل المتابعة.
             </p>
-            <div className="grid grid-cols-3 gap-3">
-              <Card className="border-slate-200">
-                <CardHeader className="py-2">
-                  <CardTitle className="text-xs font-bold text-blue-700">الأصول (مدين)</CardTitle>
-                </CardHeader>
-                <CardContent className="text-xl font-black tabular-nums text-blue-700">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="border border-slate-100 rounded-lg p-3 space-y-1 bg-white">
+                <div className="text-xs font-semibold text-blue-700">الأصول (مدين)</div>
+                <div className="text-xl font-black tabular-nums text-blue-700">
                   {totals.debit.toFixed(2)}
-                </CardContent>
-              </Card>
-              <Card className="border-slate-200">
-                <CardHeader className="py-2">
-                  <CardTitle className="text-xs font-bold text-emerald-700">الخصوم (دائن)</CardTitle>
-                </CardHeader>
-                <CardContent className="text-xl font-black tabular-nums text-emerald-700">
+                </div>
+              </div>
+              <div className="border border-slate-100 rounded-lg p-3 space-y-1 bg-white">
+                <div className="text-xs font-semibold text-emerald-700">الخصوم (دائن)</div>
+                <div className="text-xl font-black tabular-nums text-emerald-700">
                   {liabilities.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0).toFixed(2)}
-                </CardContent>
-              </Card>
-              <Card className="border-slate-200">
-                <CardHeader className="py-2">
-                  <CardTitle className="text-xs font-bold text-indigo-700">حقوق الملكية (دائن)</CardTitle>
-                </CardHeader>
-                <CardContent className="text-xl font-black tabular-nums text-indigo-700">
+                </div>
+              </div>
+              <div className="border border-slate-100 rounded-lg p-3 space-y-1 bg-white">
+                <div className="text-xs font-semibold text-indigo-700">حقوق الملكية (دائن)</div>
+                <div className="text-xl font-black tabular-nums text-indigo-700">
                   {equity.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0).toFixed(2)}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
             <div className={"rounded-lg p-3 text-sm font-bold " + (totals.balanced ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600")}>
               {totals.balanced
@@ -287,7 +280,7 @@ export default function OpeningBalanceWizard() {
     <OperationalTableTemplate
       title="معالج الرصيد الافتتاحي (شركة قائمة)"
       tableContent={
-        <div className="flex flex-col h-full overflow-auto p-4">
+        <div className="flex flex-col h-full overflow-auto p-4 gap-4">
           <WizardShell
             title="رصيد افتتاح شركة قائمة"
             subtitle="جمع أرصدة الميزانية والسجل المساعد ثم التحقق والاعتماد والترحيل والقفل."

@@ -2,8 +2,9 @@ import { Plus, Trash2 } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
+import { EmptyState } from "@widgets/table-shell/EmptyState";
 import type { AccountDto } from "@erp/shared-types";
-import { TYPE_LABEL } from "../lib/migration-labels";
+import { TYPE_LABEL, findAccount, isDebitNature } from "../lib/migration-labels";
 import { newLine, newDetail, type WizLine, type DetailRow } from "../hooks/useOpeningBalanceWizard";
 
 interface WizardLineEditorProps {
@@ -19,10 +20,10 @@ export function WizardLineEditor({ rows, setter, updateLine, placeholder, accoun
   return (
     <div className="space-y-2">
       {rows.length === 0 && (
-        <p className="text-xs text-slate-400 py-2 text-center">لا توجد بنود بعد</p>
+        <EmptyState message="لا توجد بنود بعد" suggestion="أضف بنداً واختر الحساب والمبلغ" compact />
       )}
       {rows.map((l) => {
-        const acc = accounts.find((a) => a.id === l.account_id);
+        const acc = findAccount(accounts, l.account_id);
         return (
           <div key={l.key} className="flex items-center gap-2 border border-slate-200 rounded-lg p-2">
             <Input
@@ -32,8 +33,11 @@ export function WizardLineEditor({ rows, setter, updateLine, placeholder, accoun
               placeholder={placeholder}
               className="h-9 flex-1"
             />
-            <div className="w-[170px] shrink-0 text-xs text-slate-600">
+            <div className="w-[190px] shrink-0 text-xs text-slate-600">
               {acc ? `${acc.name_ar} (${TYPE_LABEL[acc.account_type]})` : "—"}
+            </div>
+            <div className="w-[90px] shrink-0 text-[11px] font-bold text-slate-500">
+              {acc && isDebitNature(acc.account_type) ? "مدين" : acc ? "دائن" : ""}
             </div>
             <Input
               value={l.amount}
@@ -74,7 +78,7 @@ export function WizardDetailEditor({ rows, setter, updateDetail, referenceLabel,
   return (
     <div className="space-y-2">
       {rows.length === 0 && (
-        <p className="text-xs text-slate-400 py-2 text-center">لا توجد بنود (اختياري)</p>
+        <EmptyState message="لا توجد بنود (اختياري)" suggestion="اختياري — أضف بنود السجل المساعد" compact />
       )}
       {rows.map((r) => (
         <div key={r.key} className="flex items-center gap-2 border border-slate-200 rounded-lg p-2">
