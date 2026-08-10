@@ -1,11 +1,8 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from "sonner";
 import { Plus, Download } from "lucide-react";
 import { transferService } from '@modules/inventory/api/transferService';
-import { stockMovementService } from '@modules/inventory/api/stockMovementService';
-import { warehouseService } from '@modules/inventory/api/warehouseService';
-import { materialService } from '@modules/inventory/api/materialService';
 import { Button } from "@shared/ui/button";
 import type { StockMovement, WarehouseDto, MaterialDto, CreateTransferRequest } from '@erp/shared-types';
 import type { TransferRow } from '@modules/inventory/components/TransferTable';
@@ -14,26 +11,19 @@ import { TransferTable } from '@modules/inventory/components/TransferTable';
 import { TransferForm } from '@modules/inventory/components/TransferForm';
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { buildStockByWarehouse } from '@modules/inventory/lib/stockUtils';
+import { useStockMovements, useMaterials } from "@shared/hooks/queries/useMaterialQueries";
+import { useWarehouses } from "@shared/hooks/queries/useWarehouseQueries";
 import { useExportSetup } from "@shared/hooks";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { dateCol, executeExport } from "@shared/lib/excel";
 import { toLocalString, getNumberingSystem } from "@shared/lib/format";
 
 export default function Transfers() {
-  const { data: movements = [] } = useQuery<StockMovement[]>({
-    queryKey: ['stock-movements'],
-    queryFn: () => stockMovementService.list(),
-  });
+  const { data: movements = [] } = useStockMovements();
 
-  const { data: warehouses = [] } = useQuery<WarehouseDto[]>({
-    queryKey: ['warehouses'],
-    queryFn: () => warehouseService.list(),
-  });
+  const { data: warehouses = [] } = useWarehouses();
 
-  const { data: products = [] } = useQuery<MaterialDto[]>({
-    queryKey: ['materials'],
-    queryFn: () => materialService.list(),
-  });
+  const { data: products = [] } = useMaterials();
 
   const queryClient = useQueryClient();
   const stockByWarehouse = useMemo(() => buildStockByWarehouse(movements), [movements]);

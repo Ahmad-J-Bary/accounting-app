@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { toast } from "sonner";
 import type { AccountDto } from "@erp/shared-types";
+import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import {
   openingBalanceService,
@@ -87,7 +88,7 @@ export default function OpeningBalanceWizard() {
   const [busy, setBusy] = useState(false);
 
   const { data: accounts = [] } = useQuery<AccountDto[]>({
-    queryKey: ["chart-of-accounts"],
+    queryKey: QUERY_KEYS.chartOfAccounts,
     queryFn: () => accountingService.getChartOfAccounts(),
   });
 

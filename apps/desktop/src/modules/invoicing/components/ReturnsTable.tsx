@@ -3,9 +3,8 @@ import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTa
 import { TableShell } from "@widgets/table-shell/TableShell";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useExportSetup, useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
-import { executeExport, dateCol } from "@shared/lib/excel";
+import { executeExport, dateCol, currencyAmountCols } from "@shared/lib/excel";
 import type { ExcelExportColumn } from "@shared/lib/excel";
-import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
 import { Button } from "@shared/ui/button";
 import { formatDateTime, formatNumber } from "@shared/lib/format";
 

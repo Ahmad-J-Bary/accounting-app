@@ -3,7 +3,7 @@ import { cn } from '@shared/lib/utils';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import { getLeftBorderClass, getRowBorderClass } from '@shared/lib/table-utils';
 
-import type { GridResizeOptions } from '@shared/hooks/useGridResize';
+import type { GridResizeOptions } from "@shared/hooks";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types

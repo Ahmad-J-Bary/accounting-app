@@ -1,9 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { Plus, Search, LayoutGrid, Download } from "lucide-react";
-import { stockMovementService } from '@modules/inventory/api/stockMovementService';
-import { warehouseService } from '@modules/inventory/api/warehouseService';
-import { materialService } from '@modules/inventory/api/materialService';
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
@@ -13,6 +9,8 @@ import { WarehouseForm } from '@modules/inventory/components/WarehouseForm';
 import { WarehouseMaterialList } from '@modules/inventory/components/WarehouseMaterialList';
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { buildStockByWarehouse } from '@modules/inventory/lib/stockUtils';
+import { useStockMovements, useMaterials } from "@shared/hooks/queries/useMaterialQueries";
+import { useWarehouses } from "@shared/hooks/queries/useWarehouseQueries";
 import { useExportSetup } from "@shared/hooks";
 import { executeExport } from "@shared/lib/excel";
 import type { ExcelExportColumn } from "@shared/lib/excel";
@@ -23,20 +21,11 @@ export default function Warehouses() {
     isLoading: warehousesLoading,
     refetch: refreshWarehouses,
     isRefetching: warehousesRefetching,
-  } = useQuery<WarehouseDto[]>({
-    queryKey: ['warehouses'],
-    queryFn: () => warehouseService.list(),
-  });
+  } = useWarehouses();
 
-  const { data: products = [] } = useQuery<MaterialDto[]>({
-    queryKey: ['materials'],
-    queryFn: () => materialService.list(),
-  });
+  const { data: products = [] } = useMaterials();
 
-  const { data: movements = [] } = useQuery<StockMovement[]>({
-    queryKey: ['stock-movements'],
-    queryFn: () => stockMovementService.list(),
-  });
+  const { data: movements = [] } = useStockMovements();
 
   const stockByWarehouse = useMemo(() => buildStockByWarehouse(movements), [movements]);
 

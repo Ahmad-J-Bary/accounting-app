@@ -13,7 +13,7 @@ import {
   type NetProfitAllocationDto,
   type OpeningReconciliationDto,
 } from "@modules/accounting/api/openingBalanceService";
-import { invalidateAccountingMutationQueries, queryClient } from "@shared/hooks/queryClient";
+import { invalidateAccountingMutationQueries, queryClient, QUERY_KEYS } from "@shared/hooks/queryClient";
 import { OpeningDraftCard } from "../components/OpeningDraftCard";
 import { MigrationListCard } from "../components/MigrationListCard";
 import { ReconciliationCard } from "../components/ReconciliationCard";
@@ -51,7 +51,7 @@ export default function OpeningBalanceMigration() {
   const [positionLoading, setPositionLoading] = useState(false);
 
   const { data: accounts = [] } = useQuery<AccountDto[]>({
-    queryKey: ["chart-of-accounts"],
+    queryKey: QUERY_KEYS.chartOfAccounts,
     queryFn: () => accountingService.getChartOfAccounts(),
   });
 

@@ -9,13 +9,11 @@ import type { StockAdjustment, CreateStockAdjustmentRequest, UpdateStockAdjustme
 import { toast } from "sonner";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 
-import { useDataTable } from '@shared/hooks';
+import { useDataTable, useExportSetup, useBaseCurrencyColumns } from '@shared/hooks';
 import { AdjustmentsTable } from '@modules/inventory/components/AdjustmentsTable';
 import { AdjustmentForm } from '@modules/inventory/components/AdjustmentForm';
 import { AdjustmentDetailPanel } from '@modules/inventory/components/AdjustmentDetailPanel';
-import { useExportSetup, useBaseCurrencyColumns } from "@shared/hooks";
-import { dateCol, executeExport, addCurrencySummary, applyVisibilityToCurrencyCols } from "@shared/lib/excel";
-import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
+import { dateCol, executeExport, addCurrencySummary, applyVisibilityToCurrencyCols, currencyAmountCols } from "@shared/lib/excel";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { formatNumber, getNumberingSystem } from "@shared/lib/format";
 

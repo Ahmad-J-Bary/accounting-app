@@ -8,13 +8,11 @@ import { materialService } from '@modules/inventory/api/materialService';
 import type { DamagedItem, CreateDamagedItemRequest, UpdateDamagedItemRequest, MaterialDto } from "@erp/shared-types";
 import { toast } from "sonner";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
-import { useDataTable } from '@shared/hooks';
+import { useDataTable, useExportSetup, useBaseCurrencyColumns } from '@shared/hooks';
 import { DamagedTable } from '@modules/inventory/components/DamagedTable';
 import { DamagedForm } from '@modules/inventory/components/DamagedForm';
 import { DamagedDetailPanel } from '@modules/inventory/components/DamagedDetailPanel';
-import { useExportSetup, useBaseCurrencyColumns } from "@shared/hooks";
-import { dateCol, executeExport, addCurrencySummary, applyVisibilityToCurrencyCols } from "@shared/lib/excel";
-import { currencyAmountCols } from "@shared/lib/excel/column-helpers";
+import { dateCol, executeExport, addCurrencySummary, applyVisibilityToCurrencyCols, currencyAmountCols } from "@shared/lib/excel";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { getNumberingSystem } from "@shared/lib/format";
 

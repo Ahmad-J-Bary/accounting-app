@@ -1,7 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { materialService } from "@modules/inventory/api/materialService";
+import { stockMovementService } from "@modules/inventory/api/stockMovementService";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
-import type { MaterialDto, StockMovementDetailDto } from "@erp/shared-types";
+import type { MaterialDto, StockMovementDetailDto, StockMovement } from "@erp/shared-types";
+
+export function useStockMovements() {
+  return useQuery<StockMovement[]>({
+    queryKey: QUERY_KEYS.stockMovements,
+    queryFn: () => stockMovementService.list(),
+  });
+}
 
 export function useMaterials() {
   return useQuery<MaterialDto[]>({

@@ -1,4 +1,4 @@
-import { dateCol } from "@shared/lib/excel/export-helpers";
+import { dateCol } from "@shared/lib/excel";
 import type { DocumentColumn } from "@widgets/document-shell/GenericDocumentGrid";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import type { Currency } from "@modules/core/api/currencyService";

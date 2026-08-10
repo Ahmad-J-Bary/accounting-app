@@ -2,14 +2,13 @@ import React, { ReactNode, useCallback, useEffect, useMemo, useRef, useState } f
 import { flushSync } from "react-dom";
 import { cn } from '@shared/lib/utils';
 import { Skeleton } from "@shared/ui/skeleton";
-import { useTableSettings, useGridResize } from "@shared/hooks";
+import { useTableSettings, useGridResize, type GridResizeOptions } from "@shared/hooks";
 import { getRowBackgroundClass, getRowBorderClass, getLeftBorderClass } from "@shared/lib/table-utils";
 import type { SummaryColumn } from './TableSummary';
 import { TableSummary } from './TableSummary';
 import { TablePagination } from './TablePagination';
 import { EmptyState } from './EmptyState';
 import { GridHeader } from './GridHeader';
-import type { GridResizeOptions } from '@shared/hooks/useGridResize';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types

@@ -1,10 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { toast } from "sonner";
 import { useTabs } from "@app/providers/TabContext";
-import { stockMovementService } from '@modules/inventory/api/stockMovementService';
-import { warehouseService } from '@modules/inventory/api/warehouseService';
-import { materialService } from '@modules/inventory/api/materialService';
 import type { StockMovement, WarehouseDto, MaterialDto, DamagedItem, StockAdjustment } from '@erp/shared-types';
 import { DamagedDetailPanel } from '@modules/inventory/components/DamagedDetailPanel';
 import { AdjustmentDetailPanel } from '@modules/inventory/components/AdjustmentDetailPanel';
@@ -13,24 +9,17 @@ import { InventoryMovementsTable } from '@modules/inventory/components/Inventory
 import { WarehouseSelector } from '@modules/inventory/components/WarehouseSelector';
 import { MovementTypeFilter } from '@modules/inventory/components/MovementTypeFilter';
 import { MOVEMENT_TYPE_KEYS, getTransferRefs } from '@modules/inventory/constants/movementTypes';
+import { useStockMovements, useMaterials } from "@shared/hooks/queries/useMaterialQueries";
+import { useWarehouses } from "@shared/hooks/queries/useWarehouseQueries";
 
 export default function Inventory() {
   const { openTab } = useTabs();
 
-  const { data: movements = [], isLoading: movementsLoading, isRefetching: movementsRefetching } = useQuery<StockMovement[]>({
-    queryKey: ['stock-movements'],
-    queryFn: () => stockMovementService.list(),
-  });
+  const { data: movements = [], isLoading: movementsLoading, isRefetching: movementsRefetching } = useStockMovements();
 
-  const { data: warehouses = [] } = useQuery<WarehouseDto[]>({
-    queryKey: ['warehouses'],
-    queryFn: () => warehouseService.list(),
-  });
+  const { data: warehouses = [] } = useWarehouses();
 
-  const { data: materials = [] } = useQuery<MaterialDto[]>({
-    queryKey: ['materials'],
-    queryFn: () => materialService.list(),
-  });
+  const { data: materials = [] } = useMaterials();
 
   const [search, setSearch] = useState('');
   const [selectedTypes, setSelectedTypes] = useState<string[]>([...MOVEMENT_TYPE_KEYS]);
