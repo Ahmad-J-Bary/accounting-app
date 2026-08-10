@@ -11,6 +11,8 @@ mod mappers;
 mod queries;
 mod commands;
 
+pub(crate) use commands::update_tx;
+
 pub struct SqliteMaterialRepository {
     pool: Arc<SqlitePool>,
 }

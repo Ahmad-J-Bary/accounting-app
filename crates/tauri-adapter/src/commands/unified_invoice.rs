@@ -31,14 +31,10 @@ pub async fn update_unified_invoice(
     use domain::shared::ids::InvoiceId;
     use domain::sales::unified_invoice::InvoiceStatus;
 
-    // CRITICAL FIX: If the invoice is currently Posted, we MUST reopen it first
-    // (while the DB still holds the original amounts) before writing new data.
-    //
-    // Without this, UpdateInvoiceUseCase writes new amounts while status stays "Posted".
-    // Then when postInvoice() is called next, PostInvoiceUseCase calls ReopenInvoiceUseCase
-    // which reads the UPDATED (wrong) amounts to reverse, corrupting partner balances.
-    //
-    // Correct order: reopen (reverse original) → update data → re-post (apply new amounts)
+    // A Posted unified invoice is auditable financial history. It may not be
+    // silently reopened + re-posted; changing it requires the reversal flow.
+    // Editing a Posted invoice in place is hard-blocked so stale amounts can
+    // never overwrite already-posted partner balances / journals (Sec 10/45).
     let invoice_id = InvoiceId::from_str(&request.id)
         .map_err(|_| "معرف فاتورة غير صالح".to_string())?;
 
@@ -48,21 +44,9 @@ pub async fn update_unified_invoice(
         .map_err(|e| e.to_string())?
     {
         if existing.status == InvoiceStatus::Posted {
-            let reopen_deps = ReopenInvoiceDependencies {
-                repo: state.unified_invoice_repo.clone(),
-                movement_repo: state.stock_movement_repo.clone(),
-                lot_repo: state.inventory_lot_repo.clone(),
-                journal_repo: state.journal_entry_repo.clone(),
-                customer_repo: state.customer_repo.clone(),
-                supplier_repo: state.supplier_repo.clone(),
-                currency_repo: state.currency_repo.clone(),
-                exchange_rate_repo: state.exchange_rate_repo.clone(),
-                payment_repo: state.payment_repo.clone(),
-            };
-            ReopenInvoiceUseCase::new(reopen_deps)
-            .execute(request.id.clone())
-            .await
-            .map_err(|e| e.to_string())?;
+            return Err(
+                "لا يمكن تعديل فاتورة مرحّلة. استخدم العكس (Reversal) لإظهار تأثيرها ثم أنشئ فاتورة جديدة".to_string(),
+            );
         }
     }
 
@@ -95,7 +79,6 @@ pub async fn post_unified_invoice(
         category_repo: state.category_repo.clone(),
         currency_repo: state.currency_repo.clone(),
         exchange_rate_repo: state.exchange_rate_repo.clone(),
-        payment_repo: state.payment_repo.clone(),
     })
     .execute(id).await.map_err(|e| e.to_string())
 }

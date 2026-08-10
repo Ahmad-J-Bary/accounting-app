@@ -72,6 +72,18 @@ impl ReopenInvoiceUseCase {
         let mut invoice = self.repo.find_by_id(&invoice_id).await?
             .ok_or_else(|| AppError::NotFound("الفاتورة غير موجودة".into()))?;
 
+        // HARD BLOCK (Sec 10/45): a Posted invoice is auditable financial
+        // history. Reopening deletes posted journal entries, payments, stock
+        // movements and mutates partner balances without a trail. Any change to
+        // posted data must go through the reversal flow, so reopening a Posted
+        // invoice is rejected here before any deletion can occur. The deletion
+        // cascade below is therefore unreachable and kept only as reference.
+        if invoice.status == InvoiceStatus::Posted {
+            return Err(AppError::Forbidden(
+                "لا يمكن إعادة فتح فاتورة مرحّلة؛ البيانات المحاسبية أصبحت نهائية. استخدم العكس (Reversal) لتعديل بيانات ترحيل سابق".into(),
+            ));
+        }
+
         if invoice.status != InvoiceStatus::Posted {
             return Err(AppError::Invalid("يمكن فقط إعادة فتح الفواتير المرحلة".into()));
         }

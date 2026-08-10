@@ -1,6 +1,13 @@
 use sqlx::SqlitePool;
 use application::errors::AppError;
 use domain::sales::unified_invoice::{UnifiedInvoice, InvoiceType, InvoiceStatus, PaymentMethod};
+use domain::accounting::journal_entry::JournalEntry;
+use domain::inventory::stock_movement::StockMovement;
+use domain::inventory::inventory_lot::InventoryLot;
+use domain::inventory::material::Material;
+use domain::payments::Payment;
+use domain::customers::Customer;
+use domain::suppliers::Supplier;
 use domain::shared::ids::{InvoiceId};
 use uuid::Uuid;
 
@@ -93,9 +100,63 @@ pub async fn save(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), App
     Ok(())
 }
 
-pub async fn update(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), AppError> {
+/// Atomically posts a unified invoice: invoice header status, stock movements,
+/// new inventory lots, lot remaining updates, auto-updated materials, journal
+/// entries, payment vouchers and customer / supplier balance changes all
+/// commit in ONE transaction (Sec 9 atomicity). The entry numbers, movement
+/// references and voucher numbers are provided by the caller so they are
+/// globally unique before any row is written.
+#[allow(clippy::too_many_arguments)]
+pub async fn post_with_accounting(
+    pool: &SqlitePool,
+    invoice: &UnifiedInvoice,
+    movements: &[StockMovement],
+    new_lots: &[InventoryLot],
+    lot_updates: &[(String, String)],
+    material_updates: &[Material],
+    entries: &[JournalEntry],
+    payments: &[Payment],
+    customers: &[Customer],
+    suppliers: &[Supplier],
+) -> Result<(), AppError> {
     let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
+    update_header_tx(&mut tx, invoice).await?;
+
+    for movement in movements {
+        crate::repositories::stock_movement::insert_movement_tx(&mut tx, movement).await?;
+    }
+    for lot in new_lots {
+        crate::repositories::inventory_lot::insert_lot_tx(&mut tx, lot).await?;
+    }
+    for (lot_id, new_remaining) in lot_updates {
+        crate::repositories::inventory_lot::update_remaining_tx(&mut tx, lot_id, new_remaining).await?;
+    }
+    for material in material_updates {
+        crate::repositories::material::update_tx(&mut tx, material).await?;
+    }
+    for entry in entries {
+        crate::repositories::journal_entry::insert_entry(&mut tx, entry).await?;
+    }
+    for payment in payments {
+        crate::repositories::atomic::insert_payment_tx(&mut tx, payment).await?;
+    }
+    for customer in customers {
+        crate::repositories::atomic::update_customer_tx(&mut tx, customer).await?;
+    }
+    for supplier in suppliers {
+        crate::repositories::atomic::update_supplier_tx(&mut tx, supplier).await?;
+    }
+
+    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    Ok(())
+}
+
+/// Updates the unified invoice header columns within an open transaction.
+pub(crate) async fn update_header_tx<'a>(
+    tx: &mut sqlx::Transaction<'a, sqlx::Sqlite>,
+    invoice: &UnifiedInvoice,
+) -> Result<(), AppError> {
     let istatus = match invoice.status {
         InvoiceStatus::Draft => "Draft",
         InvoiceStatus::Posted => "Posted",
@@ -133,9 +194,17 @@ pub async fn update(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), A
     .bind(invoice.supplier_id.as_ref().map(|id| id.to_string()))
     .bind(&invoice.supplier_name)
     .bind(invoice.id.to_string())
-    .execute(&mut *tx)
+    .execute(&mut **tx)
     .await
     .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    Ok(())
+}
+
+pub async fn update(pool: &SqlitePool, invoice: &UnifiedInvoice) -> Result<(), AppError> {
+    let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    update_header_tx(&mut tx, invoice).await?;
 
     if invoice.status == InvoiceStatus::Draft {
         sqlx::query("DELETE FROM unified_invoice_lines WHERE invoice_id = ?")

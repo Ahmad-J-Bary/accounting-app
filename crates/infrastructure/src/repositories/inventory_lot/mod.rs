@@ -10,6 +10,8 @@ mod mappers;
 mod queries;
 mod commands;
 
+pub(crate) use commands::{insert_lot_tx, update_remaining_tx};
+
 pub struct SqliteInventoryLotRepository {
     pool: Arc<SqlitePool>,
 }

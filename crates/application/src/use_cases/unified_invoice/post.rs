@@ -1,11 +1,12 @@
 use std::sync::Arc;
+use std::collections::HashMap;
 use std::str::FromStr;
 use chrono::Utc;
-use domain::sales::unified_invoice::{InvoiceType};
+use domain::sales::unified_invoice::{InvoiceType, InvoiceStatus};
 use domain::inventory::stock_movement::{StockMovement, MovementType};
 use domain::shared::ids::WarehouseId;
 use domain::inventory::inventory_lot::{InventoryLot, LotConsumption};
-use domain::inventory::material::{MaterialPurchasePrice, MaterialSalePrice};
+use domain::inventory::material::{Material, MaterialPurchasePrice, MaterialSalePrice};
 use domain::shared::ids::MaterialUnitId;
 use domain::shared::ids::{InvoiceId};
 use crate::ports::unified_invoice_repository::UnifiedInvoiceRepository;
@@ -19,10 +20,11 @@ use crate::ports::material_repository::MaterialRepository;
 use crate::ports::category_repository::CategoryRepository;
 use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::exchange_rate_repository::ExchangeRateRepository;
-use crate::ports::payment_repository::PaymentRepository;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine};
 use domain::payments::{Payment, PaymentType};
 use domain::shared::{Currency, Money, MonetaryAmount};
+use domain::customers::Customer;
+use domain::suppliers::Supplier;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 use crate::dto::invoice_dto::{InvoiceDto};
@@ -40,7 +42,6 @@ pub struct PostInvoiceUseCase {
     category_repo: Arc<dyn CategoryRepository>,
     currency_repo: Arc<dyn CurrencyRepository>,
     exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
-    payment_repo: Arc<dyn PaymentRepository>,
 }
 
 pub struct PostInvoiceDependencies {
@@ -55,7 +56,31 @@ pub struct PostInvoiceDependencies {
     pub category_repo: Arc<dyn CategoryRepository>,
     pub currency_repo: Arc<dyn CurrencyRepository>,
     pub exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
-    pub payment_repo: Arc<dyn PaymentRepository>,
+}
+
+/// Locally-sequenced number allocator. Seeding once from the database (MAX+1)
+/// and incrementing in memory guarantees every allocated entry number /
+/// inventory reference / voucher is globally unique before a single row is
+/// written — required because `post_with_accounting` commits all rows at once,
+/// so repeated `get_next_entry_number` reads would otherwise collide.
+struct Seq {
+    next: i64,
+}
+
+impl Seq {
+    fn seed(raw: String) -> Result<Self, AppError> {
+        let next = raw
+            .trim()
+            .parse::<i64>()
+            .map_err(|_| AppError::Invalid("رقم غير صالح".into()))?;
+        Ok(Self { next })
+    }
+
+    fn take(&mut self) -> String {
+        let s = self.next.to_string();
+        self.next += 1;
+        s
+    }
 }
 
 fn allocate_extra_cost(
@@ -133,36 +158,25 @@ impl PostInvoiceUseCase {
             category_repo: deps.category_repo,
             currency_repo: deps.currency_repo,
             exchange_rate_repo: deps.exchange_rate_repo,
-            payment_repo: deps.payment_repo,
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     pub async fn execute(&self, id: String) -> Result<InvoiceDto, AppError> {
         let invoice_id = InvoiceId::from_str(&id).map_err(|_| AppError::Invalid("معرف فاتورة غير صالح".into()))?;
-        let mut invoice = self.repo.find_by_id(&invoice_id).await?
+        let invoice = self.repo.find_by_id(&invoice_id).await?
             .ok_or_else(|| AppError::NotFound("الفاتورة غير موجودة".into()))?;
 
-        // If already posted, we need to reverse existing impact before re-posting
-        if invoice.status == domain::sales::unified_invoice::InvoiceStatus::Posted {
-             let reopened_deps = crate::use_cases::unified_invoice::ReopenInvoiceDependencies {
-                repo: self.repo.clone(),
-                movement_repo: self.movement_repo.clone(),
-                lot_repo: self.lot_repo.clone(),
-                journal_repo: self.journal_repo.clone(),
-                customer_repo: self.customer_repo.clone(),
-                supplier_repo: self.supplier_repo.clone(),
-                currency_repo: self.currency_repo.clone(),
-                exchange_rate_repo: self.exchange_rate_repo.clone(),
-                payment_repo: self.payment_repo.clone(),
-            };
-            let reopener = crate::use_cases::unified_invoice::ReopenInvoiceUseCase::new(reopened_deps);
-            reopener.execute(id.clone()).await?;
-
-            // Re-fetch to get clean state
-            invoice = self.repo.find_by_id(&invoice_id).await?
-                .ok_or_else(|| AppError::NotFound("الفاتورة غير موجودة بعد التراجع".into()))?;
+        // Hard block: a Posted unified invoice is financial audit history and may
+        // not be silently reopened + re-posted. To change it the user must reverse
+        // it through the reversal flow (Sec 45 / Sec 10 idempotency).
+        if invoice.status == InvoiceStatus::Posted {
+            return Err(AppError::Forbidden(
+                "الفاتورة مرحّلة بالفعل. لا يمكن ترحيلها مجدداً؛ استخدم العكس (Reversal) لتعديل بيانات ترحيل سابق".into(),
+            ));
         }
 
+        let mut invoice = invoice;
         invoice.post().map_err(|e| AppError::Invalid(e.to_string()))?;
 
         let movement_type = match invoice.invoice_type {
@@ -171,6 +185,18 @@ impl PostInvoiceUseCase {
             InvoiceType::PurchaseCosts => MovementType::Purchase,
             InvoiceType::OpeningBalance => MovementType::OpeningBalance,
         };
+
+        // ---- Deferred write collection (Sec 9): single commit at the end ----
+        let mut entry_seq = Seq::seed(self.journal_repo.get_next_entry_number().await?)?;
+        let mut ref_seq = Seq::seed(self.movement_repo.get_next_inventory_reference().await?)?;
+        let mut movements: Vec<StockMovement> = Vec::new();
+        let mut new_lots: Vec<InventoryLot> = Vec::new();
+        let mut lot_updates: Vec<(String, String)> = Vec::new();
+        let mut material_cache: HashMap<String, Material> = HashMap::new();
+        let mut entries: Vec<JournalEntry> = Vec::new();
+        let mut payments: Vec<Payment> = Vec::new();
+        let mut customers: Vec<Customer> = Vec::new();
+        let mut suppliers: Vec<Supplier> = Vec::new();
 
         let purchase_subtotal = invoice.subtotal();
         let purchase_subtotal_doc = purchase_subtotal.amount();
@@ -256,10 +282,7 @@ impl PostInvoiceUseCase {
                             lot.quantity_remaining
                         };
                         let new_remaining = lot.quantity_remaining - take;
-                        self.lot_repo.update_remaining(
-                            &lot.id.to_string(),
-                            &new_remaining.to_string(),
-                        ).await?;
+                        lot_updates.push((lot.id.to_string(), new_remaining.to_string()));
                         remaining_qty -= take;
                     }
                 } else {
@@ -310,10 +333,7 @@ impl PostInvoiceUseCase {
                             lot.quantity_remaining
                         };
                         let new_remaining = lot.quantity_remaining - take;
-                        self.lot_repo.update_remaining(
-                            &lot.id.to_string(),
-                            &new_remaining.to_string(),
-                        ).await?;
+                        lot_updates.push((lot.id.to_string(), new_remaining.to_string()));
                         remaining_qty -= take;
                     }
                 }
@@ -337,7 +357,7 @@ impl PostInvoiceUseCase {
                 })
                 .unwrap_or_default();
             let movement_notes = format!("{} - رقم الفاتورة {}", base_notes, invoice.invoice_number);
-            let ref_no = self.movement_repo.get_next_inventory_reference().await?;
+            let ref_no = ref_seq.take();
             let mut movement = StockMovement::new(
                 line.material_id,
                 movement_type.clone(),
@@ -358,7 +378,9 @@ impl PostInvoiceUseCase {
             movement.fx_rate = invoice.exchange_rate;
             movement.warehouse_id = line.warehouse_id.as_ref()
                 .and_then(|id| WarehouseId::from_str(id).ok());
-            self.movement_repo.save(&movement).await?;
+            let movement_id = movement.id;
+            let movement_unit_cost_base = movement.unit_cost_base;
+            movements.push(movement);
 
             // For purchase invoices (excluding OpeningBalance), create inventory lots
             if is_purchase {
@@ -367,14 +389,17 @@ impl PostInvoiceUseCase {
                 let semi_wholesale_price_base = line.semi_wholesale_price.as_ref().map(|m| m.base_amount);
                 let wholesale_price_base = line.wholesale_price.as_ref().map(|m| m.base_amount);
 
+                // NOTE: The original comment said "excluding OpeningBalance" but the
+                // code creates lots for OpeningBalance too (is_purchase includes it),
+                // matching the original post.rs behaviour exactly.
                 let lot = InventoryLot {
                     id: Uuid::new_v4(),
                     material_id: line.material_id.0,
                     purchase_invoice_id: Some(invoice.id.0),
-                    movement_id: movement.id,
+                    movement_id,
                     quantity_original: effective_quantity,
                     quantity_remaining: effective_quantity,
-                    unit_cost_base: movement.unit_cost_base,
+                    unit_cost_base: movement_unit_cost_base,
                     raw_unit_cost_base: line_total.base_amount,
                     currency_code: Some(invoice.currency_code.clone()),
                     fx_rate: invoice.exchange_rate,
@@ -384,63 +409,72 @@ impl PostInvoiceUseCase {
                     semi_wholesale_price_base,
                     wholesale_price_base,
                 };
-                self.lot_repo.save(&lot).await?;
+                new_lots.push(lot);
             }
 
             // Auto-update material purchase and sale prices for Purchase invoices
             if invoice.invoice_type == InvoiceType::Purchase {
-                if let (Ok(Some(mut material)), Some(unit_id_str)) = (self.material_repo.find_by_id(&line.material_id).await, &line.unit_id) {
+                if let Some(unit_id_str) = &line.unit_id {
                     if let Ok(unit_id) = MaterialUnitId::from_str(unit_id_str) {
-                        let raw_unit_price_doc = line.unit_price.amount();
-                        let raw_unit_price_base = line.unit_price.base_amount;
-                        let purchase_price = MaterialPurchasePrice {
-                            id: Uuid::new_v4().to_string(),
-                            unit_id,
-                            price: raw_unit_price_doc,
-                            price_base: raw_unit_price_base,
-                            currency: invoice.currency_code.clone(),
-                        };
-                        let existing_purchase = material.purchase_prices.iter().position(|p| p.unit_id == unit_id);
-                        if let Some(idx) = existing_purchase {
-                            material.purchase_prices[idx] = purchase_price;
+                        let material_key = line.material_id.to_string();
+                        let material_opt = if let Some(m) = material_cache.get(&material_key) {
+                            Some(m.clone())
                         } else {
-                            material.purchase_prices.push(purchase_price);
-                        }
+                            self.material_repo.find_by_id(&line.material_id).await
+                                .unwrap_or(None)
+                        };
+                        if let Some(mut material) = material_opt {
+                            let raw_unit_price_doc = line.unit_price.amount();
+                            let raw_unit_price_base = line.unit_price.base_amount;
+                            let purchase_price = MaterialPurchasePrice {
+                                id: Uuid::new_v4().to_string(),
+                                unit_id,
+                                price: raw_unit_price_doc,
+                                price_base: raw_unit_price_base,
+                                currency: invoice.currency_code.clone(),
+                            };
+                            let existing_purchase = material.purchase_prices.iter().position(|p| p.unit_id == unit_id);
+                            if let Some(idx) = existing_purchase {
+                                material.purchase_prices[idx] = purchase_price;
+                            } else {
+                                material.purchase_prices.push(purchase_price);
+                            }
 
-                        for (tier_label, sale_opt) in [
-                            ("retail", &line.retail_price),
-                            ("semi_wholesale", &line.semi_wholesale_price),
-                            ("wholesale", &line.wholesale_price),
-                        ] {
-                            if let Some(price) = sale_opt {
-                                let sale_price = MaterialSalePrice {
-                                    id: Uuid::new_v4().to_string(),
-                                    unit_id,
-                                    tier: tier_label.to_string(),
-                                    price: price.amount(),
-                                    price_base: price.base_amount,
-                                    min_price: Decimal::ZERO,
-                                    min_price_base: Decimal::ZERO,
-                                    max_quantity: "0".to_string(),
-                                    max_quantity_unit_id: None,
-                                    currency: invoice.currency_code.clone(),
-                                };
-                                let existing_sale = material.sale_prices.iter().position(|p| p.unit_id == unit_id && p.tier == tier_label);
-                                if let Some(idx) = existing_sale {
-                                    material.sale_prices[idx] = sale_price;
-                                } else {
-                                    material.sale_prices.push(sale_price);
+                            for (tier_label, sale_opt) in [
+                                ("retail", &line.retail_price),
+                                ("semi_wholesale", &line.semi_wholesale_price),
+                                ("wholesale", &line.wholesale_price),
+                            ] {
+                                if let Some(price) = sale_opt {
+                                    let sale_price = MaterialSalePrice {
+                                        id: Uuid::new_v4().to_string(),
+                                        unit_id,
+                                        tier: tier_label.to_string(),
+                                        price: price.amount(),
+                                        price_base: price.base_amount,
+                                        min_price: Decimal::ZERO,
+                                        min_price_base: Decimal::ZERO,
+                                        max_quantity: "0".to_string(),
+                                        max_quantity_unit_id: None,
+                                        currency: invoice.currency_code.clone(),
+                                    };
+                                    let existing_sale = material.sale_prices.iter().position(|p| p.unit_id == unit_id && p.tier == tier_label);
+                                    if let Some(idx) = existing_sale {
+                                        material.sale_prices[idx] = sale_price;
+                                    } else {
+                                        material.sale_prices.push(sale_price);
+                                    }
                                 }
                             }
-                        }
 
-                        self.material_repo.update(&material).await?;
+                            material_cache.insert(material_key, material);
+                        }
                     }
                 }
             }
         }
 
-        self.repo.update(&invoice).await?;
+        let material_updates: Vec<Material> = material_cache.into_values().collect();
 
         // --- Accounting Logic ---
         let mut journal_lines = Vec::new();
@@ -462,6 +496,12 @@ impl PostInvoiceUseCase {
         let main_account = self.account_repo.find_by_code(main_account_code).await?.ok_or_else(|| AppError::NotFound(format!("حساب الإيرادات/المصاريف غير موجود: {}", main_account_code)))?;
         let cash_account = self.account_repo.find_by_code("122").await?.ok_or_else(|| AppError::NotFound("حساب الصندوق غير موجود: 122".into()))?;
 
+        // Single in-memory working copy of the sales customer. Every mutation
+        // (main debit, receipt decrease, discount decrease) accumulates on this
+        // copy; the final state is persisted exactly once with the posting.
+        let mut customer_work: Option<Customer> = None;
+        let mut customer_mutated = false;
+
         if total_amount > Decimal::ZERO {
             if invoice.invoice_type == InvoiceType::Sales {
                 let sales_account = if amount_deferred > Decimal::ZERO {
@@ -473,28 +513,31 @@ impl PostInvoiceUseCase {
 
                 let mut customer_handled = false;
                 if let Some(cid) = &invoice.customer_id {
-                    if let Some(customer) = self.customer_repo.find_by_id(cid).await? {
-                        if let Some(p_acc_id) = customer.account_id {
-                            journal_lines.push(JournalLine::new(
-                                p_acc_id,
-                                MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate),
-                                MonetaryAmount::zero(doc_currency.clone()),
-                                format!("فاتورة مبيعات رقم {}", invoice.invoice_number)
-                            ).with_partner(cid.0));
+                    if customer_work.is_none() {
+                        customer_work = self.customer_repo.find_by_id(cid).await?;
+                    }
+                    let cust_acc = customer_work.as_ref().and_then(|c| c.account_id);
+                    if let Some(p_acc_id) = cust_acc {
+                        journal_lines.push(JournalLine::new(
+                            p_acc_id,
+                            MonetaryAmount::new(Money::new(total_amount, doc_currency.clone()), fx_rate),
+                            MonetaryAmount::zero(doc_currency.clone()),
+                            format!("فاتورة مبيعات رقم {}", invoice.invoice_number)
+                        ).with_partner(cid.0));
 
-                            let converted_total = convert_to_partner_currency(
-                                total_amount,
-                                &invoice.currency_code,
-                                fx_rate,
-                                &customer.currency.code,
-                                &self.currency_repo,
-                                &self.exchange_rate_repo,
-                            ).await?;
-                            let mut updated_customer = customer;
-                            updated_customer.increase_debit(converted_total).map_err(|e| AppError::Invalid(e.to_string()))?;
-                            self.customer_repo.update(&updated_customer).await?;
-                            customer_handled = true;
-                        }
+                        let currency_code = customer_work.as_ref().unwrap().currency.code.clone();
+                        let converted_total = convert_to_partner_currency(
+                            total_amount,
+                            &invoice.currency_code,
+                            fx_rate,
+                            &currency_code,
+                            &self.currency_repo,
+                            &self.exchange_rate_repo,
+                        ).await?;
+                        let cust = customer_work.as_mut().unwrap();
+                        cust.increase_debit(converted_total).map_err(|e| AppError::Invalid(e.to_string()))?;
+                        customer_mutated = true;
+                        customer_handled = true;
                     }
                 }
                 if !customer_handled {
@@ -518,7 +561,7 @@ impl PostInvoiceUseCase {
                 let discount_earned_account = self.account_repo.find_by_code("332").await?
                     .ok_or_else(|| AppError::NotFound("حساب الخصوم المكتسبة غير موجود: 332".into()))?;
 
-                let mut purchase_supplier = None;
+                let mut purchase_supplier: Option<Supplier> = None;
                 if let Some(sid) = &invoice.supplier_id {
                     purchase_supplier = self.supplier_repo.find_by_id(sid).await?;
                 }
@@ -528,7 +571,7 @@ impl PostInvoiceUseCase {
                     if let Some(p_acc_id) = supplier.account_id {
                         if let Some(supplier_id) = &invoice.supplier_id {
                             // Entry 1: Purchase (PurchaseJournal) — Dr 41 (subtotal only, excl. extra costs), Cr Supplier
-                            let purchase_number = self.journal_repo.get_next_entry_number().await?;
+                            let purchase_number = entry_seq.take();
                             let purchase_lines = vec![
                                 JournalLine::new(
                                     main_account.id,
@@ -552,7 +595,7 @@ impl PostInvoiceUseCase {
                                 Some(invoice.id.to_string()),
                             ).map_err(|e| AppError::Invalid(e.to_string()))?;
                             purchase_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-                            self.journal_repo.save(&purchase_entry).await?;
+                            entries.push(purchase_entry);
 
                             // Entry 2: Payment (CashPayment) — Dr Supplier, Cr Cash (for purchase items only)
                             // Cap at subtotal since extra costs are paid separately
@@ -562,7 +605,7 @@ impl PostInvoiceUseCase {
                                 amount_paid
                             };
                             if purchase_paid > Decimal::ZERO {
-                                let payment_number = self.journal_repo.get_next_entry_number().await?;
+                                let payment_number = entry_seq.take();
                                 let payment_lines = vec![
                                     JournalLine::new(
                                         p_acc_id,
@@ -586,7 +629,8 @@ impl PostInvoiceUseCase {
                                     Some(invoice.id.to_string()),
                                 ).map_err(|e| AppError::Invalid(e.to_string()))?;
                                 payment_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-                                self.journal_repo.save(&payment_entry).await?;
+                                let entry_number = payment_entry.entry_number.to_string();
+                                entries.push(payment_entry);
 
                                 // Create Payment record for the payment journal
                                 let mut payment = Payment::with_invoice_id(
@@ -604,13 +648,13 @@ impl PostInvoiceUseCase {
                                     None,
                                     Some(invoice.id.to_string()),
                                 ).map_err(|e| AppError::Invalid(e.to_string()))?;
-                                payment.journal_entry_number = Some(payment_entry.entry_number.to_string());
-                                self.payment_repo.save(&payment).await?;
+                                payment.journal_entry_number = Some(entry_number);
+                                payments.push(payment);
                             }
 
                             // Entry 3: Discount (DiscountEarnedJournal) — Dr Supplier, Cr 332 (if discount)
                             if total_discount_earned > Decimal::ZERO {
-                                let discount_number = self.journal_repo.get_next_entry_number().await?;
+                                let discount_number = entry_seq.take();
                                 let discount_lines = vec![
                                     JournalLine::new(
                                         p_acc_id,
@@ -634,7 +678,7 @@ impl PostInvoiceUseCase {
                                     Some(invoice.id.to_string()),
                                 ).map_err(|e| AppError::Invalid(e.to_string()))?;
                                 discount_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-                                self.journal_repo.save(&discount_entry).await?;
+                                entries.push(discount_entry);
                             }
                         }
 
@@ -642,11 +686,12 @@ impl PostInvoiceUseCase {
                         // Extra costs are paid separately (not through supplier), so exclude them
                         let purchase_paid_cap = if amount_paid > purchase_subtotal_doc { purchase_subtotal_doc } else { amount_paid };
                         let net_supplier_change = purchase_subtotal_doc - purchase_paid_cap - total_discount_earned;
+                        let currency_code = supplier.currency.code.clone();
                         let converted_change = convert_to_partner_currency(
                             net_supplier_change.abs(),
                             &invoice.currency_code,
                             fx_rate,
-                            &supplier.currency.code,
+                            &currency_code,
                             &self.currency_repo,
                             &self.exchange_rate_repo,
                         ).await?;
@@ -656,7 +701,7 @@ impl PostInvoiceUseCase {
                         } else if net_supplier_change < Decimal::ZERO {
                             updated_supplier.decrease_credit(converted_change).map_err(|e| AppError::Invalid(e.to_string()))?;
                         }
-                        self.supplier_repo.update(&updated_supplier).await?;
+                        suppliers.push(updated_supplier);
                         handled = true;
                     }
                 }
@@ -740,7 +785,7 @@ impl PostInvoiceUseCase {
             };
 
             let mut journal_entry = JournalEntry::new(
-                self.journal_repo.get_next_entry_number().await?,
+                entry_seq.take(),
                 journal_type,
                 journal_lines,
                 Utc::now(),
@@ -754,7 +799,7 @@ impl PostInvoiceUseCase {
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
             journal_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-            self.journal_repo.save(&journal_entry).await?;
+            entries.push(journal_entry);
         }
 
         let extra_costs_val = invoice.extra_costs.amount();
@@ -783,7 +828,7 @@ impl PostInvoiceUseCase {
             ];
 
             let mut extra_entry = JournalEntry::new(
-                self.journal_repo.get_next_entry_number().await?,
+                entry_seq.take(),
                 domain::accounting::JournalType::PurchaseCostsJournal,
                 extra_lines,
                 Utc::now(),
@@ -791,10 +836,13 @@ impl PostInvoiceUseCase {
                 Some(invoice.id.to_string()),
             ).map_err(|e| AppError::Invalid(e.to_string()))?;
             extra_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-            self.journal_repo.save(&extra_entry).await?;
+            entries.push(extra_entry);
 
             // Entry 4: CashPayment for extra costs — Dr 221 (تكاليف إضافية على المشتريات), Cr Cash
-            let extra_pay_number = self.journal_repo.get_next_entry_number().await?;
+            // Uses a DISTINCT source_type (not "cash_payment") so the DB
+            // UNIQUE(source_type, source_id) backstop accepts this second
+            // CashPayment row alongside the purchase payment on the same invoice.
+            let extra_pay_number = entry_seq.take();
             let extra_pay_lines = vec![
                 JournalLine::new(
                     extra_costs_account.id,
@@ -816,13 +864,15 @@ impl PostInvoiceUseCase {
                 Utc::now(),
                 format!("سند دفع تكاليف إضافية بموجب فاتورة المشتريات رقم {}", invoice.invoice_number),
                 Some(invoice.id.to_string()),
-            ).map_err(|e| AppError::Invalid(e.to_string()))?;
+            ).map_err(|e| AppError::Invalid(e.to_string()))?
+                .with_source_type("extra_costs_payment".to_string());
             extra_pay_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-            self.journal_repo.save(&extra_pay_entry).await?;
+            let extra_pay_entry_number = extra_pay_entry.entry_number.clone();
+            entries.push(extra_pay_entry);
 
             // Create Payment record for extra costs
             {
-                let extra_pay_voucher = self.journal_repo.get_next_entry_number().await?.to_string();
+                let extra_pay_voucher = entry_seq.take();
                 let mut payment = Payment::with_invoice_id(
                     extra_pay_voucher,
                     PaymentType::SupplierPayment,
@@ -838,8 +888,8 @@ impl PostInvoiceUseCase {
                     None,
                     Some(invoice.id.to_string()),
                 ).map_err(|e| AppError::Invalid(e.to_string()))?;
-                payment.journal_entry_number = Some(extra_pay_entry.entry_number.to_string());
-                self.payment_repo.save(&payment).await?;
+                payment.journal_entry_number = Some(extra_pay_entry_number);
+                payments.push(payment);
             }
         }
 
@@ -847,6 +897,11 @@ impl PostInvoiceUseCase {
         // Only create when there's a customer (otherwise cash is already in the main entry)
         if invoice.invoice_type == InvoiceType::Sales && amount_paid > Decimal::ZERO {
             if let Some(customer_id) = &invoice.customer_id {
+                if customer_work.is_none() {
+                    customer_work = self.customer_repo.find_by_id(customer_id).await?;
+                }
+                let cust_acc_for_receipt = customer_work.as_ref().and_then(|c| c.account_id);
+
                 let mut receipt_lines = Vec::new();
                 receipt_lines.push(JournalLine::new(
                     cash_account.id,
@@ -854,9 +909,6 @@ impl PostInvoiceUseCase {
                     MonetaryAmount::zero(doc_currency.clone()),
                     format!("تحصيل نقدي - فاتورة مبيعات رقم {}", invoice.invoice_number)
                 ));
-
-                let cust_acc_for_receipt = self.customer_repo.find_by_id(customer_id).await?
-                    .and_then(|c| c.account_id);
 
                 if let Some(cust_acc_id) = cust_acc_for_receipt {
                     receipt_lines.push(JournalLine::new(
@@ -866,18 +918,18 @@ impl PostInvoiceUseCase {
                         format!("تحصيل نقدي - فاتورة مبيعات رقم {}", invoice.invoice_number)
                     ).with_partner(customer_id.0));
 
-                    if let Some(mut customer) = self.customer_repo.find_by_id(customer_id).await? {
-                        let converted_paid = convert_to_partner_currency(
-                            amount_paid,
-                            &invoice.currency_code,
-                            fx_rate,
-                            &customer.currency.code,
-                            &self.currency_repo,
-                            &self.exchange_rate_repo,
-                        ).await?;
-                        customer.decrease_debit(converted_paid).map_err(|e| AppError::Invalid(e.to_string()))?;
-                        self.customer_repo.update(&customer).await?;
-                    }
+                    let currency_code = customer_work.as_ref().unwrap().currency.code.clone();
+                    let converted_paid = convert_to_partner_currency(
+                        amount_paid,
+                        &invoice.currency_code,
+                        fx_rate,
+                        &currency_code,
+                        &self.currency_repo,
+                        &self.exchange_rate_repo,
+                    ).await?;
+                    let cust = customer_work.as_mut().unwrap();
+                    cust.decrease_debit(converted_paid).map_err(|e| AppError::Invalid(e.to_string()))?;
+                    customer_mutated = true;
                 } else {
                     receipt_lines.push(JournalLine::new(
                         cash_account.id,
@@ -888,7 +940,7 @@ impl PostInvoiceUseCase {
                 }
 
                 let mut receipt_entry = JournalEntry::new(
-                    self.journal_repo.get_next_entry_number().await?,
+                    entry_seq.take(),
                     domain::accounting::JournalType::CashReceipt,
                     receipt_lines,
                     Utc::now(),
@@ -897,10 +949,11 @@ impl PostInvoiceUseCase {
                 ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
                 receipt_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-                self.journal_repo.save(&receipt_entry).await?;
+                let receipt_entry_number = receipt_entry.entry_number.clone();
+                entries.push(receipt_entry);
 
                 // Create Payment record for the sales receipt
-                let receipt_voucher = self.journal_repo.get_next_entry_number().await?.to_string();
+                let receipt_voucher = entry_seq.take();
                 let mut payment = Payment::with_invoice_id(
                     receipt_voucher,
                     PaymentType::Receipt,
@@ -916,8 +969,8 @@ impl PostInvoiceUseCase {
                     None,
                     Some(invoice.id.to_string()),
                 ).map_err(|e| AppError::Invalid(e.to_string()))?;
-                payment.journal_entry_number = Some(receipt_entry.entry_number.to_string());
-                self.payment_repo.save(&payment).await?;
+                payment.journal_entry_number = Some(receipt_entry_number);
+                payments.push(payment);
             }
         }
 
@@ -927,48 +980,71 @@ impl PostInvoiceUseCase {
                 .ok_or_else(|| AppError::NotFound("حساب الخصوم الممنوحة غير موجود: 47".into()))?;
 
             if let Some(cid) = &invoice.customer_id {
-                if let Some(mut customer) = self.customer_repo.find_by_id(cid).await? {
-                    if let Some(cust_acc_id) = customer.account_id {
-                        let discount_lines = vec![
-                            JournalLine::new(
-                                discount_granted_account.id,
-                                MonetaryAmount::new(Money::new(total_discount_granted, doc_currency.clone()), fx_rate),
-                                MonetaryAmount::zero(doc_currency.clone()),
-                                format!("حسم ممنوح بموجب فاتورة المبيعات رقم {}", invoice.invoice_number)
-                            ),
-                            JournalLine::new(
-                                cust_acc_id,
-                                MonetaryAmount::zero(doc_currency.clone()),
-                                MonetaryAmount::new(Money::new(total_discount_granted, doc_currency.clone()), fx_rate),
-                                format!("حسم ممنوح بموجب فاتورة المبيعات رقم {}", invoice.invoice_number)
-                            ).with_partner(cid.0),
-                        ];
-                        let mut discount_entry = JournalEntry::new(
-                            self.journal_repo.get_next_entry_number().await?,
-                            domain::accounting::JournalType::DiscountGrantedJournal,
-                            discount_lines,
-                            Utc::now(),
-                            format!("حسم ممنوح بموجب فاتورة المبيعات رقم {}", invoice.invoice_number),
-                            Some(invoice.id.to_string()),
-                        ).map_err(|e| AppError::Invalid(e.to_string()))?;
-                        discount_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
-                        self.journal_repo.save(&discount_entry).await?;
+                if customer_work.is_none() {
+                    customer_work = self.customer_repo.find_by_id(cid).await?;
+                }
+                let cust_acc_id = customer_work.as_ref().and_then(|c| c.account_id);
+                if let Some(cust_acc_id) = cust_acc_id {
+                    let discount_lines = vec![
+                        JournalLine::new(
+                            discount_granted_account.id,
+                            MonetaryAmount::new(Money::new(total_discount_granted, doc_currency.clone()), fx_rate),
+                            MonetaryAmount::zero(doc_currency.clone()),
+                            format!("حسم ممنوح بموجب فاتورة المبيعات رقم {}", invoice.invoice_number)
+                        ),
+                        JournalLine::new(
+                            cust_acc_id,
+                            MonetaryAmount::zero(doc_currency.clone()),
+                            MonetaryAmount::new(Money::new(total_discount_granted, doc_currency.clone()), fx_rate),
+                            format!("حسم ممنوح بموجب فاتورة المبيعات رقم {}", invoice.invoice_number)
+                        ).with_partner(cid.0),
+                    ];
+                    let mut discount_entry = JournalEntry::new(
+                        entry_seq.take(),
+                        domain::accounting::JournalType::DiscountGrantedJournal,
+                        discount_lines,
+                        Utc::now(),
+                        format!("حسم ممنوح بموجب فاتورة المبيعات رقم {}", invoice.invoice_number),
+                        Some(invoice.id.to_string()),
+                    ).map_err(|e| AppError::Invalid(e.to_string()))?;
+                    discount_entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
+                    entries.push(discount_entry);
 
-                        let converted_discount = super::convert_to_partner_currency(
-                            total_discount_granted,
-                            &invoice.currency_code,
-                            fx_rate,
-                            &customer.currency.code,
-                            &self.currency_repo,
-                            &self.exchange_rate_repo,
-                        ).await?;
-                        customer.decrease_debit(converted_discount).map_err(|e| AppError::Invalid(e.to_string()))?;
-                        self.customer_repo.update(&customer).await?;
-                    }
+                    let currency_code = customer_work.as_ref().unwrap().currency.code.clone();
+                    let converted_discount = super::convert_to_partner_currency(
+                        total_discount_granted,
+                        &invoice.currency_code,
+                        fx_rate,
+                        &currency_code,
+                        &self.currency_repo,
+                        &self.exchange_rate_repo,
+                    ).await?;
+                    let cust = customer_work.as_mut().unwrap();
+                    cust.decrease_debit(converted_discount).map_err(|e| AppError::Invalid(e.to_string()))?;
+                    customer_mutated = true;
                 }
             }
         }
 
+        if customer_mutated {
+            if let Some(customer) = customer_work.take() {
+                customers.push(customer);
+            }
+        }
+
+        // ---- Single atomic commit: header, movements, lots, materials,
+        // entries, payments and partner balances all-or-nothing ----
+        self.repo.post_with_accounting(
+            &invoice,
+            &movements,
+            &new_lots,
+            &lot_updates,
+            &material_updates,
+            &entries,
+            &payments,
+            &customers,
+            &suppliers,
+        ).await?;
 
         let dto = InvoiceDto::from(invoice);
         let queries = crate::use_cases::unified_invoice::InvoiceQueries::new(

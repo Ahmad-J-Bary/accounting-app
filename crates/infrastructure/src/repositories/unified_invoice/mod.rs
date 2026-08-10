@@ -47,6 +47,33 @@ impl UnifiedInvoiceRepository for SqliteUnifiedInvoiceRepository {
         commands::delete(&self.pool, id).await
     }
 
+    async fn post_with_accounting(
+        &self,
+        invoice: &UnifiedInvoice,
+        movements: &[domain::inventory::stock_movement::StockMovement],
+        new_lots: &[domain::inventory::inventory_lot::InventoryLot],
+        lot_updates: &[(String, String)],
+        material_updates: &[domain::inventory::material::Material],
+        entries: &[domain::accounting::journal_entry::JournalEntry],
+        payments: &[domain::payments::Payment],
+        customers: &[domain::customers::Customer],
+        suppliers: &[domain::suppliers::Supplier],
+    ) -> Result<(), AppError> {
+        commands::post_with_accounting(
+            &self.pool,
+            invoice,
+            movements,
+            new_lots,
+            lot_updates,
+            material_updates,
+            entries,
+            payments,
+            customers,
+            suppliers,
+        )
+        .await
+    }
+
     async fn get_last_original_prices(&self, material_id: &str) -> Result<(String, String), AppError> {
         queries::get_last_original_prices(&self.pool, material_id).await
     }
