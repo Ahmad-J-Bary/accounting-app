@@ -5,13 +5,13 @@ import { invoke } from '@shared/lib/invoke';
 
 let exceljsPromise: Promise<typeof ExcelJS> | null = null;
 function loadExcelJS(): Promise<typeof ExcelJS> {
-  exceljsPromise ??= import('exceljs');
+  exceljsPromise ??= import('exceljs').then((m) => (m as { default?: typeof ExcelJS }).default ?? m);
   return exceljsPromise;
 }
 
 let xlsxPromise: Promise<typeof XLSX> | null = null;
 function loadXLSX(): Promise<typeof XLSX> {
-  xlsxPromise ??= import('xlsx-js-style');
+  xlsxPromise ??= import('xlsx-js-style').then((m) => (m as { default?: typeof XLSX }).default ?? m);
   return xlsxPromise;
 }
 
@@ -912,7 +912,7 @@ export async function saveExcelFile(
     const excelBuf = await buildExcelJsWorkbook(data, columns, options?.sheetName || 'Sheet1', options);
     buffer = new Uint8Array(excelBuf);
   } else {
-    buffer = exportToExcelBuffer(data, columns, options);
+    buffer = await exportToExcelBuffer(data, columns, options);
   }
 
   await invoke<string>('save_file', { path, data: Array.from(buffer) });
