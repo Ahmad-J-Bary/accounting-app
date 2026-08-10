@@ -72,6 +72,7 @@ export default function OpeningBalanceWizard() {
               <div className="space-y-1.5">
                 <FieldLabel htmlFor="wiz-cutover-date" required>تاريخ القطع (Cutover)</FieldLabel>
                 <Input id="wiz-cutover-date" type="date" value={cutoverDate} onChange={(e) => setCutoverDate(e.target.value)} className="h-9" />
+                <p className="text-2xs text-slate-500">تاريخ بدء استخدام التطبيق الذي تُرصد بناءً عليه أرصدة الميزانية القديمة.</p>
               </div>
               <div className="space-y-1.5">
                 <FieldLabel htmlFor="wiz-source-system">النظام السابق (Source System)</FieldLabel>

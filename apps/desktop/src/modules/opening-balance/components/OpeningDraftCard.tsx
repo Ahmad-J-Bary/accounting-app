@@ -3,7 +3,7 @@ import { Input } from "@shared/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { toFixed } from "@shared/lib/format";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import type { AccountDto } from "@erp/shared-types";
 import type { AccountLine } from "../lib/migration-labels";
 import { TYPE_LABEL, findAccount, isDebitNature } from "../lib/migration-labels";
@@ -74,28 +74,45 @@ export function OpeningDraftCard({
 
           {lines.map((l) => {
             const acc = findAccount(accounts, l.account_id);
+            const amountNum = parseFloat(l.amount);
+            const amountInvalid = l.amount.trim() !== "" && (Number.isNaN(amountNum) || amountNum <= 0);
+            const missingAccount = !l.account_id && l.amount.trim() !== "";
             return (
-              <div key={l.key} className="flex items-center gap-2 border border-slate-200 rounded-lg p-2">
-                <Input
-                  list="ob-accounts"
-                  value={l.account_id}
-                  onChange={(e) => onUpdateLine(l.key, { account_id: e.target.value })}
-                  placeholder="ابحث واختر حساباً..."
-                  className="h-9 flex-1"
-                />
-                <div className="w-[190px] shrink-0 text-xs text-slate-600">
-                  {acc ? `${acc.name_ar} (${TYPE_LABEL[acc.account_type]})` : "—"}
+              <div key={l.key} className="space-y-1">
+                <div className="flex items-center gap-2 border border-slate-200 rounded-lg p-2">
+                  <Input
+                    list="ob-accounts"
+                    value={l.account_id}
+                    onChange={(e) => onUpdateLine(l.key, { account_id: e.target.value })}
+                    placeholder="ابحث واختر حساباً..."
+                    className="h-9 flex-1"
+                  />
+                  <div className="w-[190px] shrink-0 text-xs text-slate-600">
+                    {acc ? `${acc.name_ar} (${TYPE_LABEL[acc.account_type]})` : "—"}
+                  </div>
+                  <div className="w-[90px] shrink-0 text-[11px] font-bold text-slate-500">
+                    {acc && isDebitNature(acc.account_type) ? "مدين" : acc ? "دائن" : ""}
+                  </div>
+                  <Input
+                    value={l.amount}
+                    onChange={(e) => onUpdateLine(l.key, { amount: e.target.value })}
+                    placeholder="0.00"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    aria-invalid={amountInvalid || missingAccount}
+                    className={"h-9 w-[110px] shrink-0 text-left tabular-nums " + ((amountInvalid || missingAccount) ? "border-red-300 focus-visible:ring-red-200" : "")}
+                  />
+                  <Button size="sm" variant="ghost" onClick={() => onRemoveLine(l.key)} aria-label="حذف هذا البند" className="text-red-500 hover:bg-red-50">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
                 </div>
-                <div className="w-[90px] shrink-0 text-[11px] font-bold text-slate-500">
-                  {acc && isDebitNature(acc.account_type) ? "مدين" : acc ? "دائن" : ""}
-                </div>
-                <Input
-                  value={l.amount}
-                  onChange={(e) => onUpdateLine(l.key, { amount: e.target.value })}
-                  placeholder="0.00"
-                  className="h-9 w-[110px] shrink-0 text-left tabular-nums"
-                />
-                <Button size="sm" variant="ghost" onClick={() => onRemoveLine(l.key)} className="text-red-500 hover:bg-red-50">حذف</Button>
+                {missingAccount && (
+                  <p className="text-2xs text-red-600 px-1">اختر حساباً لهذا البند قبل الحفظ.</p>
+                )}
+                {!missingAccount && amountInvalid && (
+                  <p className="text-2xs text-red-600 px-1">أدخل مبلغاً صحيحاً أكبر من صفر لهذا البند.</p>
+                )}
               </div>
             );
           })}
@@ -121,9 +138,17 @@ export function OpeningDraftCard({
               {isValid ? "متوازن ✓" : "غير متوازن"}
             </span>
           </div>
-          <Button onClick={onSaveDraft} disabled={saving || !isValid} className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-100 font-bold">
-            {saving ? "جارٍ الحفظ..." : "حفظ المسودة"}
-          </Button>
+          <div className="flex flex-col items-end gap-1">
+            {!isValid && lines.length > 0 && (
+              <p className="text-2xs text-red-600">أضف بنداً واحداً على الأقل مع الحساب والمبلغ وتوازن مدين = دائن قبل الحفظ.</p>
+            )}
+            {!isValid && lines.length === 0 && (
+              <p className="text-2xs text-slate-500">أضف بنود الحسابات قبل حفظ المسودة.</p>
+            )}
+            <Button onClick={onSaveDraft} disabled={saving || !isValid} className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-100 font-bold">
+              {saving ? "جارٍ الحفظ..." : "حفظ المسودة"}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

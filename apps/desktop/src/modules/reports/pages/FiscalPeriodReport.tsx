@@ -111,6 +111,9 @@ export default function FiscalPeriodReport() {
               >
                 {create.isPending ? "جارٍ الإنشاء..." : "إنشاء الفترة"}
               </Button>
+              {start && end && !canCreate && (
+                <p className="text-2xs text-red-600">نهاية الفترة يجب أن تكون بعد بدايتها.</p>
+              )}
               {create.isError && <p className="text-xs text-red-500">{String(create.error)}</p>}
             </CardContent>
           </Card>
