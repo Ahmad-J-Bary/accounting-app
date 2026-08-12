@@ -3,10 +3,10 @@ import { Input } from "@shared/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { toFixed } from "@shared/lib/format";
-import { Plus, Trash2 } from "lucide-react";
 import type { AccountDto } from "@erp/shared-types";
 import type { AccountLine } from "../lib/migration-labels";
-import { TYPE_LABEL, findAccount, isDebitNature } from "../lib/migration-labels";
+import { AccountLineRow } from "./AccountLineRow";
+import { AddLineButton } from "./AddLineButton";
 
 interface OpeningDraftCardProps {
   cutoverDate: string;
@@ -63,9 +63,7 @@ export function OpeningDraftCard({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-600">بنود الرصيد الافتتاحي</span>
-            <Button size="sm" variant="outline" onClick={onAddLine} className="border-blue-200 text-blue-700 hover:bg-blue-50 font-bold">
-              <Plus className="w-3.5 h-3.5 ml-1.5" /> إضافة بند
-            </Button>
+            <span className="text-2xs text-slate-400">{lines.length} بند</span>
           </div>
 
           {lines.length === 0 && (
@@ -73,57 +71,31 @@ export function OpeningDraftCard({
           )}
 
           {lines.map((l) => {
-            const acc = findAccount(accounts, l.account_id);
             const amountNum = parseFloat(l.amount);
             const amountInvalid = l.amount.trim() !== "" && (Number.isNaN(amountNum) || amountNum <= 0);
             const missingAccount = !l.account_id && l.amount.trim() !== "";
             return (
-              <div key={l.key} className="space-y-1">
-                <div className="flex items-center gap-2 border border-slate-200 rounded-lg p-2">
-                  <Input
-                    list="ob-accounts"
-                    value={l.account_id}
-                    onChange={(e) => onUpdateLine(l.key, { account_id: e.target.value })}
-                    placeholder="ابحث واختر حساباً..."
-                    className="h-9 flex-1"
-                  />
-                  <div className="w-[190px] shrink-0 text-xs text-slate-600">
-                    {acc ? `${acc.name_ar} (${TYPE_LABEL[acc.account_type]})` : "—"}
-                  </div>
-                  <div className="w-[90px] shrink-0 text-[11px] font-bold text-slate-500">
-                    {acc && isDebitNature(acc.account_type) ? "مدين" : acc ? "دائن" : ""}
-                  </div>
-                  <Input
-                    value={l.amount}
-                    onChange={(e) => onUpdateLine(l.key, { amount: e.target.value })}
-                    placeholder="0.00"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    aria-invalid={amountInvalid || missingAccount}
-                    className={"h-9 w-[110px] shrink-0 text-left tabular-nums " + ((amountInvalid || missingAccount) ? "border-red-300 focus-visible:ring-red-200" : "")}
-                  />
-                  <Button size="sm" variant="ghost" onClick={() => onRemoveLine(l.key)} aria-label="حذف هذا البند" className="text-red-500 hover:bg-red-50">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-                {missingAccount && (
-                  <p className="text-2xs text-red-600 px-1">اختر حساباً لهذا البند قبل الحفظ.</p>
-                )}
-                {!missingAccount && amountInvalid && (
-                  <p className="text-2xs text-red-600 px-1">أدخل مبلغاً صحيحاً أكبر من صفر لهذا البند.</p>
-                )}
-              </div>
+              <AccountLineRow
+                key={l.key}
+                accountId={l.account_id}
+                onAccountChange={(id) => onUpdateLine(l.key, { account_id: id })}
+                amount={l.amount}
+                onAmountChange={(amount) => onUpdateLine(l.key, { amount })}
+                onRemove={() => onRemoveLine(l.key)}
+                accounts={accounts}
+                options={detailAccounts}
+                placeholder="ابحث واختر حساباً..."
+                showErrorMessage={missingAccount || amountInvalid}
+                errorMessage={
+                  missingAccount
+                    ? "اختر حساباً لهذا البند قبل الحفظ."
+                    : "أدخل مبلغاً صحيحاً أكبر من صفر لهذا البند."
+                }
+              />
             );
           })}
 
-          <datalist id="ob-accounts">
-            {detailAccounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.code} — {a.name_ar} ({TYPE_LABEL[a.account_type]})
-              </option>
-            ))}
-          </datalist>
+          <AddLineButton onClick={onAddLine} />
         </div>
 
         <div className="flex items-center justify-between border-t border-slate-100 pt-3">

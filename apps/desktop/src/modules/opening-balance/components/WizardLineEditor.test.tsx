@@ -59,15 +59,16 @@ describe("WizardLineEditor", () => {
   it("adds a row via the add button", async () => {
     const user = userEvent.setup();
     render(<Harness />);
+    expect(screen.getAllByRole("combobox")).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: /إضافة بند/ }));
-    expect(screen.getAllByPlaceholderText("ابحث واختر حساب أصل...")).toHaveLength(2);
+    expect(screen.getAllByRole("combobox")).toHaveLength(2);
   });
 
   it("removes a row through the delete button", async () => {
     const user = userEvent.setup();
     render(<Harness />);
     await user.click(screen.getByRole("button", { name: "حذف هذا البند" }));
-    expect(screen.queryAllByPlaceholderText("ابحث واختر حساب أصل...")).toHaveLength(0);
+    expect(screen.queryAllByRole("combobox")).toHaveLength(0);
   });
 
   it("shows the running subtotal once rows have amounts", () => {
