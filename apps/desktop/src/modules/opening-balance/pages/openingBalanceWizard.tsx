@@ -5,7 +5,7 @@ import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { toFixed } from "@shared/lib/format";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { WizardShell } from "@modules/opening-balance/components/WizardShell";
-import { WizardLineEditor, WizardDetailEditor } from "@modules/opening-balance/components/WizardLineEditor";
+import { WizardLineEditor, WizardEntityEditor } from "@modules/opening-balance/components/WizardLineEditor";
 import { useOpeningBalanceWizard, STEPS } from "@modules/opening-balance/hooks/useOpeningBalanceWizard";
 import { RECON_ROW_LABEL } from "@modules/opening-balance/lib/migration-labels";
 
@@ -44,6 +44,10 @@ export default function OpeningBalanceWizard() {
     busy,
     accounts,
     detailAccounts,
+    customerOptions,
+    supplierOptions,
+    materialOptions,
+    fixedAssetOptions,
     updateLine,
     updateDetail,
     collectLines,
@@ -148,13 +152,13 @@ export default function OpeningBalanceWizard() {
           </div>
         );
       case 4:
-        return <WizardDetailEditor rows={arRows} setter={setArRows} updateDetail={updateDetail} referenceLabel="مرجع/اسم العميل" withQty={false} />;
+        return <WizardEntityEditor rows={arRows} setter={setArRows} updateDetail={updateDetail} entities={customerOptions} entityPlaceholder="اختر/ابحث عن العميل..." referenceLabel="مرجع/رقم فاتورة" withQty={false} />;
       case 5:
-        return <WizardDetailEditor rows={apRows} setter={setApRows} updateDetail={updateDetail} referenceLabel="مرجع/اسم المورد" withQty={false} />;
+        return <WizardEntityEditor rows={apRows} setter={setApRows} updateDetail={updateDetail} entities={supplierOptions} entityPlaceholder="اختر/ابحث عن المورد..." referenceLabel="مرجع/رقم فاتورة" withQty={false} />;
       case 6:
-        return <WizardDetailEditor rows={invRows} setter={setInvRows} updateDetail={updateDetail} referenceLabel="معرف المادة" withQty />;
+        return <WizardEntityEditor rows={invRows} setter={setInvRows} updateDetail={updateDetail} entities={materialOptions} entityPlaceholder="اختر/ابحث عن المادة..." referenceLabel="مرجع/الدفعة" withQty />;
       case 7:
-        return <WizardDetailEditor rows={faRows} setter={setFaRows} updateDetail={updateDetail} referenceLabel="معرف الأصل الثابت" withQty={false} />;
+        return <WizardEntityEditor rows={faRows} setter={setFaRows} updateDetail={updateDetail} entities={fixedAssetOptions} entityPlaceholder="اختر/ابحث عن الأصل الثابت..." referenceLabel="مرجع" withQty={false} />;
       case 8:
         return (
           <div className="space-y-3">

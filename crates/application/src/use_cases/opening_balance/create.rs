@@ -8,23 +8,41 @@ use domain::shared::ids::AccountId;
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
+use crate::ports::settings_repository::SettingsRepository;
 use crate::use_cases::opening_balance::types::{CreateOpeningBalanceMigrationCommand, OpeningMigrationDto};
 use domain::accounting::account::AccountType;
+
+/// Company-startup mode stored in `CompanySettings`. An opening-balance
+/// migration is the ExistingCompany transition; a NewCompany has no migration.
+pub const START_MODE_EXISTING: &str = "ExistingCompanyMigration";
+pub const START_MODE_NEW: &str = "NewCompany";
 
 pub struct CreateOpeningBalanceUseCase {
     repo: Arc<dyn OpeningMigrationRepository>,
     account_repo: Arc<dyn AccountRepository>,
+    settings_repo: Arc<dyn SettingsRepository>,
 }
 
 impl CreateOpeningBalanceUseCase {
     pub fn new(
         repo: Arc<dyn OpeningMigrationRepository>,
         account_repo: Arc<dyn AccountRepository>,
+        settings_repo: Arc<dyn SettingsRepository>,
     ) -> Self {
-        Self { repo, account_repo }
+        Self { repo, account_repo, settings_repo }
     }
 
     pub async fn execute(&self, cmd: CreateOpeningBalanceMigrationCommand) -> Result<OpeningMigrationDto, AppError> {
+        // Lifecycle guard: a migration only exists for an EXISTING company. A
+        // NewCompany never has one — it just starts with the normal modules.
+        let settings = self.settings_repo.get().await?;
+        if settings.accounting_start_mode != START_MODE_EXISTING {
+            return Err(AppError::Forbidden(
+                "وضع بدء المحاسبة مضبوط على «شركة جديدة» — لا يمكن إنشاء رصيد افتتاحي؛ غيّر الوضع إلى «شركة قائمة تبدأ الاستخدام» أولاً"
+                    .into(),
+            ));
+        }
+
         let cutover = DateTime::parse_from_rfc3339(&cmd.cutover_date)
             .map(|d| d.with_timezone(&Utc))
             .map_err(|_| AppError::Invalid("تاريخ الترحيل غير صالح".into()))?;

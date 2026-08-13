@@ -5,7 +5,7 @@ use domain::shared::{Currency, MonetaryAmount};
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
-use crate::ports::opening_detail_repository::OpeningDetailRepository;
+use crate::ports::opening_item_repository::OpeningItemRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::opening_posting_repository::OpeningPostingRepository;
 use crate::use_cases::opening_balance::reconcile::{readiness_blockers, GetOpeningReconciliationUseCase};
@@ -13,7 +13,7 @@ use crate::use_cases::opening_balance::types::{OpeningMigrationDto, PostOpeningB
 
 pub struct PostOpeningBalanceUseCase {
     repo: Arc<dyn OpeningMigrationRepository>,
-    detail_repo: Arc<dyn OpeningDetailRepository>,
+    detail_repo: Arc<dyn OpeningItemRepository>,
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
     posting_repo: Arc<dyn OpeningPostingRepository>,
@@ -22,7 +22,7 @@ pub struct PostOpeningBalanceUseCase {
 impl PostOpeningBalanceUseCase {
     pub fn new(
         repo: Arc<dyn OpeningMigrationRepository>,
-        detail_repo: Arc<dyn OpeningDetailRepository>,
+        detail_repo: Arc<dyn OpeningItemRepository>,
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
         posting_repo: Arc<dyn OpeningPostingRepository>,

@@ -2,10 +2,11 @@ import type { Dispatch, SetStateAction } from "react";
 import { Trash2 } from "lucide-react";
 import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
+import { Combobox } from "@shared/ui/combobox";
 import { EmptyState } from "@widgets/table-shell/EmptyState";
 import { toFixed } from "@shared/lib/format";
 import type { AccountDto } from "@erp/shared-types";
-import type { WizLine, DetailRow } from "../hooks/useOpeningBalanceWizard";
+import type { WizLine, DetailRow, EntityOption } from "../hooks/useOpeningBalanceWizard";
 import { newLine, newDetail } from "../hooks/useOpeningBalanceWizard";
 import { AccountLineRow } from "./AccountLineRow";
 import { AddLineButton } from "./AddLineButton";
@@ -56,15 +57,25 @@ export function WizardLineEditor({ rows, setter, updateLine, placeholder, accoun
   );
 }
 
-interface WizardDetailEditorProps {
+interface WizardEntityEditorProps {
   rows: DetailRow[];
   setter: Dispatch<SetStateAction<DetailRow[]>>;
   updateDetail: (setter: Dispatch<SetStateAction<DetailRow[]>>, key: string, patch: Partial<DetailRow>) => void;
+  entities: EntityOption[];
+  entityPlaceholder: string;
   referenceLabel: string;
   withQty: boolean;
 }
 
-export function WizardDetailEditor({ rows, setter, updateDetail, referenceLabel, withQty }: WizardDetailEditorProps) {
+export function WizardEntityEditor({
+  rows,
+  setter,
+  updateDetail,
+  entities,
+  entityPlaceholder,
+  referenceLabel,
+  withQty,
+}: WizardEntityEditorProps) {
   return (
     <div className="space-y-2">
       {rows.length === 0 && (
@@ -78,6 +89,15 @@ export function WizardDetailEditor({ rows, setter, updateDetail, referenceLabel,
         return (
           <div key={r.key} className="space-y-1">
             <div className="flex items-center gap-2 border border-slate-200 rounded-lg p-2">
+              <Combobox
+                options={entities}
+                value={r.entity_id}
+                onValueChange={(id) => updateDetail(setter, r.key, { entity_id: id })}
+                placeholder={entityPlaceholder}
+                searchPlaceholder="ابحث..."
+                emptyText="لا توجد نتائج"
+                className="h-9 flex-1 min-w-[140px]"
+              />
               <Input
                 value={r.reference}
                 onChange={(e) => updateDetail(setter, r.key, { reference: e.target.value })}
@@ -120,7 +140,7 @@ export function WizardDetailEditor({ rows, setter, updateDetail, referenceLabel,
           </div>
         );
       })}
-      <AddLineButton onClick={() => setter((prev) => [...prev, newDetail("", "", "")])} />
+      <AddLineButton onClick={() => setter((prev) => [...prev, newDetail()])} />
       {rows.some((r) => parseFloat(r.amount) > 0) && (
         <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-xs font-semibold text-slate-600">
           <span>الإجمالي</span>

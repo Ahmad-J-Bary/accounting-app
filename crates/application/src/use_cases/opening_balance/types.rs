@@ -81,67 +81,37 @@ pub struct NetProfitAllocationDto {
     pub shares: Vec<PartnerAllocationShare>,
 }
 
-// ---------- Opening detail items (AR / AP / Inventory / Fixed Assets) ----------
+// ---------- Opening sub-ledger items (link to REAL entities) ----------
+// A migration's sub-ledger is a list of references to real entities
+// (Customer / Supplier / Material / FixedAsset) with the opening amount each
+// carries. The parallel "Opening Customer" style stores no longer exist: the
+// entity is created through the same module, and the opening amount is an
+// Accounting Movement attached to it inside the migration context.
+
+/// Canonical kinds matching `SubledgerKind::key()`.
+pub const KIND_AR: &str = "AR";
+pub const KIND_AP: &str = "AP";
+pub const KIND_INVENTORY: &str = "Inventory";
+pub const KIND_FIXED_ASSET: &str = "FixedAsset";
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct OpeningCustomerItem {
-    pub customer_id: String,
+pub struct OpeningItemInput {
+    pub kind: String,          // KIND_AR | KIND_AP | KIND_INVENTORY | KIND_FIXED_ASSET
+    pub entity_id: String,     // real customer/supplier/material/asset id
     pub reference: Option<String>,
-    pub original_amount: String,
-    pub outstanding_amount: String,
-    pub due_date: Option<String>,
-    pub currency_code: Option<String>,
-    pub exchange_rate: Option<String>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct OpeningSupplierItem {
-    pub supplier_id: String,
-    pub reference: Option<String>,
-    pub original_amount: String,
-    pub outstanding_amount: String,
-    pub due_date: Option<String>,
-    pub currency_code: Option<String>,
-    pub exchange_rate: Option<String>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct OpeningInventoryItem {
-    pub material_id: String,
-    pub warehouse_id: Option<String>,
-    pub quantity: String,
-    pub unit_cost: String,
-    pub total_cost: String,
-    pub batch: Option<String>,
-    pub currency_code: Option<String>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct OpeningFixedAssetItem {
-    pub asset_id: String,
-    pub acquisition_cost: String,
-    pub accumulated_depreciation: String,
-    pub net_book_value: String,
-    pub acquisition_date: Option<String>,
-    pub depreciation_method: Option<String>,
-    pub useful_life: Option<String>,
+    pub amount: String,        // AR/AP net balance, inventory total cost, FA net book value
+    pub qty: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct SaveOpeningDetailsCommand {
+pub struct SaveOpeningItemsCommand {
     pub migration_id: String,
-    pub customer_items: Vec<OpeningCustomerItem>,
-    pub supplier_items: Vec<OpeningSupplierItem>,
-    pub inventory_items: Vec<OpeningInventoryItem>,
-    pub fixed_assets: Vec<OpeningFixedAssetItem>,
+    pub items: Vec<OpeningItemInput>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
-pub struct OpeningDetailsDto {
-    pub customer_items: Vec<OpeningCustomerItem>,
-    pub supplier_items: Vec<OpeningSupplierItem>,
-    pub inventory_items: Vec<OpeningInventoryItem>,
-    pub fixed_assets: Vec<OpeningFixedAssetItem>,
+pub struct OpeningItemsDto {
+    pub items: Vec<OpeningItemInput>,
 }
 
 #[derive(Debug, Clone, Serialize)]

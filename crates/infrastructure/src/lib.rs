@@ -32,7 +32,7 @@ pub use repositories::SqliteInventoryLotRepository;
 pub use repositories::SqliteWarehouseRepository;
 pub use repositories::SqliteOpeningMigrationRepository;
 pub use repositories::SqliteOpeningPostingRepository;
-pub use repositories::SqliteOpeningDetailRepository;
+pub use repositories::SqliteOpeningItemRepository;
 pub use repositories::SqliteFiscalPeriodRepository;
 
 

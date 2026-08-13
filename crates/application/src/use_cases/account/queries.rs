@@ -142,8 +142,6 @@ impl AccountQueries {
         for entry in &journal_entries {
             let is_opening = entry.journal_type == domain::accounting::JournalType::AccountOpeningBalance
                 || entry.journal_type == domain::accounting::JournalType::CashOpeningBalance
-                || entry.source_type.as_deref() == Some("OPENING_BALANCE")
-                || entry.source_id.as_deref() == Some("consolidated_capital")
                 || entry.description.contains("رصيد افتتاحي")
                 || entry.description.contains("أول المدة");
             if is_opening {

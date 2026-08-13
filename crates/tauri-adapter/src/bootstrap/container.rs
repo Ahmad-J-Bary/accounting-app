@@ -1,4 +1,4 @@
-use application::ports::account_repository::AccountRepository;
+﻿use application::ports::account_repository::AccountRepository;
 use application::ports::asset_repository::AssetRepository;
 use application::ports::audit_log_repository::AuditLogRepository;
 use application::ports::category_repository::CategoryRepository;
@@ -23,7 +23,7 @@ use application::ports::supplier_repository::SupplierRepository;
 use application::ports::warehouse_repository::WarehouseRepository;
 use application::ports::opening_migration_repository::OpeningMigrationRepository;
 use application::ports::opening_posting_repository::OpeningPostingRepository;
-use application::ports::opening_detail_repository::OpeningDetailRepository;
+use application::ports::opening_item_repository::OpeningItemRepository;
 use application::ports::fiscal_period_repository::FiscalPeriodRepository;
 use application::ports::unified_invoice_repository::UnifiedInvoiceRepository;
 use application::ports::user_repository::UserRepository;
@@ -49,7 +49,7 @@ use infrastructure::repositories::SqlitePurchaseInvoiceRepository;
 use infrastructure::SqliteWarehouseRepository;
 use infrastructure::repositories::SqliteOpeningMigrationRepository;
 use infrastructure::repositories::SqliteOpeningPostingRepository;
-use infrastructure::repositories::SqliteOpeningDetailRepository;
+use infrastructure::repositories::SqliteOpeningItemRepository;
 use infrastructure::repositories::SqliteFiscalPeriodRepository;
 use std::sync::Arc;
 
@@ -84,7 +84,7 @@ pub struct AppState {
     pub warehouse_repo: Arc<dyn WarehouseRepository>,
     pub opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
     pub opening_posting_repo: Arc<dyn OpeningPostingRepository>,
-    pub opening_detail_repo: Arc<dyn OpeningDetailRepository>,
+    pub opening_item_repo: Arc<dyn OpeningItemRepository>,
     pub fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
     pub material_code_use_cases: Arc<MaterialCodeUseCases>,
     pub currency_commands: Arc<CurrencyCommands>,
@@ -161,8 +161,8 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
             as Arc<dyn OpeningMigrationRepository>,
         opening_posting_repo: Arc::new(SqliteOpeningPostingRepository::new(pool.clone()))
             as Arc<dyn OpeningPostingRepository>,
-        opening_detail_repo: Arc::new(SqliteOpeningDetailRepository::new(pool.clone()))
-            as Arc<dyn OpeningDetailRepository>,
+        opening_item_repo: Arc::new(SqliteOpeningItemRepository::new(pool.clone()))
+            as Arc<dyn OpeningItemRepository>,
         fiscal_period_repo: Arc::new(SqliteFiscalPeriodRepository::new(pool.clone()))
             as Arc<dyn FiscalPeriodRepository>,
         material_code_use_cases: Arc::new(MaterialCodeUseCases::new(

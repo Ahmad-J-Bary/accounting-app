@@ -1,9 +1,9 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
-use crate::ports::opening_detail_repository::OpeningDetailRepository;
+use crate::ports::opening_item_repository::OpeningItemRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::use_cases::opening_balance::reconcile::{readiness_blockers, GetOpeningReconciliationUseCase};
 use crate::use_cases::opening_balance::types::OpeningMigrationDto;
@@ -23,7 +23,7 @@ impl ValidateOpeningBalanceUseCase {
 
     pub async fn execute(&self, id: String, by: String) -> Result<OpeningMigrationDto, AppError> {
         let mut migration = self.repo.find_by_id(&id).await?
-            .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
+            .ok_or_else(|| AppError::NotFound("ØªØ±Ø­ÙŠÙ„ Ø§Ù„Ø±ØµÙŠØ¯ Ø§Ù„Ø§ÙØªØªØ§Ø­ÙŠ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯".into()))?;
         migration.validate(&by).map_err(AppError::Domain)?;
         self.repo.update(&migration).await?;
         Ok(OpeningMigrationDto(migration))
@@ -42,7 +42,7 @@ impl ApproveOpeningBalanceUseCase {
 
     pub async fn execute(&self, id: String, by: String) -> Result<OpeningMigrationDto, AppError> {
         let mut migration = self.repo.find_by_id(&id).await?
-            .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
+            .ok_or_else(|| AppError::NotFound("ØªØ±Ø­ÙŠÙ„ Ø§Ù„Ø±ØµÙŠØ¯ Ø§Ù„Ø§ÙØªØªØ§Ø­ÙŠ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯".into()))?;
         migration.approve(&by).map_err(AppError::Domain)?;
         self.repo.update(&migration).await?;
         Ok(OpeningMigrationDto(migration))
@@ -54,7 +54,7 @@ impl ApproveOpeningBalanceUseCase {
 /// the Posted-state precondition.
 pub struct LockOpeningBalanceUseCase {
     repo: Arc<dyn OpeningMigrationRepository>,
-    detail_repo: Arc<dyn OpeningDetailRepository>,
+    detail_repo: Arc<dyn OpeningItemRepository>,
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
 }
@@ -62,7 +62,7 @@ pub struct LockOpeningBalanceUseCase {
 impl LockOpeningBalanceUseCase {
     pub fn new(
         repo: Arc<dyn OpeningMigrationRepository>,
-        detail_repo: Arc<dyn OpeningDetailRepository>,
+        detail_repo: Arc<dyn OpeningItemRepository>,
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
     ) -> Self {
@@ -76,7 +76,7 @@ impl LockOpeningBalanceUseCase {
 
     pub async fn execute(&self, id: String) -> Result<OpeningMigrationDto, AppError> {
         let mut migration = self.repo.find_by_id(&id).await?
-            .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
+            .ok_or_else(|| AppError::NotFound("ØªØ±Ø­ÙŠÙ„ Ø§Ù„Ø±ØµÙŠØ¯ Ø§Ù„Ø§ÙØªØªØ§Ø­ÙŠ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯".into()))?;
         migration.lock().map_err(AppError::Domain)?;
 
         let recon = GetOpeningReconciliationUseCase::new(
@@ -90,7 +90,7 @@ impl LockOpeningBalanceUseCase {
 
         let blockers = readiness_blockers(&recon, true);
         if !blockers.is_empty() {
-            return Err(AppError::Invalid(blockers.join("؛ ")));
+            return Err(AppError::Invalid(blockers.join("Ø› ")));
         }
 
         self.repo.update(&migration).await?;

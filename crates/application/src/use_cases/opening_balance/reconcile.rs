@@ -10,10 +10,11 @@ use domain::shared::ids::AccountId;
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
-use crate::ports::opening_detail_repository::OpeningDetailRepository;
+use crate::ports::opening_item_repository::OpeningItemRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::use_cases::opening_balance::types::{
-    OpeningDetailsDto, OpeningReconciliationDto, ReconciliationRow,
+    KIND_AR, KIND_AP, KIND_FIXED_ASSET, KIND_INVENTORY, OpeningItemInput, OpeningReconciliationDto,
+    ReconciliationRow,
 };
 
 const OPENING_EQUITY_ACCOUNT_CODE: &str = "53";
@@ -71,25 +72,21 @@ pub fn gl_bucket_totals(
     buckets
 }
 
-/// Sub-ledger detail-item totals per category (AR / AP / Inventory / FA).
-pub fn detail_subledger_totals(details: &OpeningDetailsDto) -> HashMap<SubledgerKind, Decimal> {
+/// Sub-ledger item totals per category (AR / AP / Inventory / FA) from the
+/// migration's real-entity link items.
+pub fn detail_subledger_totals(items: &[OpeningItemInput]) -> HashMap<SubledgerKind, Decimal> {
     let mut totals: HashMap<SubledgerKind, Decimal> = HashMap::new();
-    let mut add = |kind: SubledgerKind, raw: &str| {
-        if let Ok(value) = Decimal::from_str(raw) {
+    for it in items {
+        let kind = match it.kind.as_str() {
+            KIND_AR => SubledgerKind::Ar,
+            KIND_AP => SubledgerKind::Ap,
+            KIND_INVENTORY => SubledgerKind::Inventory,
+            KIND_FIXED_ASSET => SubledgerKind::FixedAssets,
+            _ => continue,
+        };
+        if let Ok(value) = Decimal::from_str(&it.amount) {
             *totals.entry(kind).or_default() += value;
         }
-    };
-    for item in &details.customer_items {
-        add(SubledgerKind::Ar, &item.outstanding_amount);
-    }
-    for item in &details.supplier_items {
-        add(SubledgerKind::Ap, &item.outstanding_amount);
-    }
-    for item in &details.inventory_items {
-        add(SubledgerKind::Inventory, &item.total_cost);
-    }
-    for item in &details.fixed_assets {
-        add(SubledgerKind::FixedAssets, &item.net_book_value);
     }
     totals
 }
@@ -128,7 +125,7 @@ pub fn readiness_blockers(
 /// the enforcement gate for posting and locking.
 pub struct GetOpeningReconciliationUseCase {
     migration_repo: Arc<dyn OpeningMigrationRepository>,
-    detail_repo: Arc<dyn OpeningDetailRepository>,
+    detail_repo: Arc<dyn OpeningItemRepository>,
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
 }
@@ -136,7 +133,7 @@ pub struct GetOpeningReconciliationUseCase {
 impl GetOpeningReconciliationUseCase {
     pub fn new(
         migration_repo: Arc<dyn OpeningMigrationRepository>,
-        detail_repo: Arc<dyn OpeningDetailRepository>,
+        detail_repo: Arc<dyn OpeningItemRepository>,
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
     ) -> Self {
@@ -151,7 +148,7 @@ impl GetOpeningReconciliationUseCase {
     pub async fn execute(&self, migration_id: String) -> Result<OpeningReconciliationDto, AppError> {
         let migration = self.migration_repo.find_by_id(&migration_id).await?
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
-        let details = self.detail_repo.load_details(&migration_id).await?;
+        let items = self.detail_repo.load_items(&migration_id).await?;
 
         // Resolve every account referenced by the migration lines once.
         let mut accounts: HashMap<AccountId, Account> = HashMap::new();
@@ -165,7 +162,7 @@ impl GetOpeningReconciliationUseCase {
         }
 
         let gl = gl_bucket_totals(&migration, &accounts);
-        let sub = detail_subledger_totals(&details);
+        let sub = detail_subledger_totals(&items);
 
         let rows: Vec<ReconciliationRow> = SubledgerKind::all()
             .into_iter()
@@ -343,13 +340,19 @@ mod tests {
     }
 
     #[test]
-    fn reconciliation_row_math() {
-        let rows = [
-            ReconciliationRow { key: "AR".into(), subledger: Decimal::new(10000, 2), general_ledger: Decimal::new(10000, 2), reconciled: true },
-            ReconciliationRow { key: "AP".into(), subledger: Decimal::new(5000, 2), general_ledger: Decimal::new(3000, 2), reconciled: false },
+    fn detail_totals_from_real_entity_links() {
+        let items = vec![
+            OpeningItemInput { kind: KIND_AR.into(), entity_id: "a".into(), reference: None, amount: "100.00".into(), qty: "1".into() },
+            OpeningItemInput { kind: KIND_AR.into(), entity_id: "b".into(), reference: None, amount: "50.00".into(), qty: "1".into() },
+            OpeningItemInput { kind: KIND_AP.into(), entity_id: "c".into(), reference: None, amount: "30.00".into(), qty: "1".into() },
+            OpeningItemInput { kind: KIND_INVENTORY.into(), entity_id: "m1".into(), reference: None, amount: "200.00".into(), qty: "10".into() },
+            OpeningItemInput { kind: KIND_FIXED_ASSET.into(), entity_id: "f1".into(), reference: None, amount: "900.00".into(), qty: "1".into() },
+            OpeningItemInput { kind: "Unknown".into(), entity_id: "x".into(), reference: None, amount: "999.00".into(), qty: "1".into() },
         ];
-        assert!(rows[0].reconciled);
-        assert!(!rows[1].reconciled);
-        assert!(!rows.iter().all(|r| r.reconciled));
+        let totals = detail_subledger_totals(&items);
+        assert_eq!(totals.get(&SubledgerKind::Ar).copied().unwrap_or_default(), Decimal::new(15000, 2));
+        assert_eq!(totals.get(&SubledgerKind::Ap).copied().unwrap_or_default(), Decimal::new(3000, 2));
+        assert_eq!(totals.get(&SubledgerKind::Inventory).copied().unwrap_or_default(), Decimal::new(20000, 2));
+        assert_eq!(totals.get(&SubledgerKind::FixedAssets).copied().unwrap_or_default(), Decimal::new(90000, 2));
     }
 }

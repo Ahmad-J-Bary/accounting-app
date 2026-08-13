@@ -162,11 +162,11 @@ async fn equity_statement_reconciles_with_partner_ledgers() {
     // two explicit contributions feed both capital ledgers
     let contrib_a = 200;
     let contrib_b = 400;
-    CreateCapitalContributionUseCase::new(partner_repo.clone(), account_repo.clone(), journal_repo.clone())
+    CreateCapitalContributionUseCase::new(partner_repo.clone(), account_repo.clone(), journal_repo.clone(), Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())))
         .execute(a_id.to_string(), cash.id.0.to_string(), Decimal::from(contrib_a), false, Some("rec-a".into()))
         .await
         .unwrap();
-    CreateCapitalContributionUseCase::new(partner_repo.clone(), account_repo.clone(), journal_repo.clone())
+    CreateCapitalContributionUseCase::new(partner_repo.clone(), account_repo.clone(), journal_repo.clone(), Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())))
         .execute(b_id.to_string(), cash.id.0.to_string(), Decimal::from(contrib_b), false, Some("rec-b".into()))
         .await
         .unwrap();

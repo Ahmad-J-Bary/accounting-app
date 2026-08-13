@@ -94,51 +94,21 @@ export interface ComputeNetProfitRequest {
   period_end?: string | null;
 }
 
-export interface OpeningCustomerItem {
-  customer_id: string;
+export interface OpeningItemInput {
+  kind: string; // KIND_AR | KIND_AP | KIND_INVENTORY | KIND_FIXED_ASSET
+  entity_id: string; // real customer/supplier/material/asset id
   reference?: string | null;
-  original_amount: string;
-  outstanding_amount: string;
-  due_date?: string | null;
-  currency_code?: string | null;
-  exchange_rate?: string | null;
+  amount: string; // AR/AP net balance, inventory total cost, FA net book value
+  qty: string;
 }
 
-export interface OpeningSupplierItem {
-  supplier_id: string;
-  reference?: string | null;
-  original_amount: string;
-  outstanding_amount: string;
-  due_date?: string | null;
-  currency_code?: string | null;
-  exchange_rate?: string | null;
+export interface OpeningItemsDto {
+  items: OpeningItemInput[];
 }
 
-export interface OpeningInventoryItem {
-  material_id: string;
-  warehouse_id?: string | null;
-  quantity: string;
-  unit_cost: string;
-  total_cost: string;
-  batch?: string | null;
-  currency_code?: string | null;
-}
-
-export interface OpeningFixedAssetItem {
-  asset_id: string;
-  acquisition_cost: string;
-  accumulated_depreciation: string;
-  net_book_value: string;
-  acquisition_date?: string | null;
-  depreciation_method?: string | null;
-  useful_life?: string | null;
-}
-
-export interface OpeningDetailsDto {
-  customer_items: OpeningCustomerItem[];
-  supplier_items: OpeningSupplierItem[];
-  inventory_items: OpeningInventoryItem[];
-  fixed_assets: OpeningFixedAssetItem[];
+export interface SaveOpeningItemsRequest {
+  migration_id: string;
+  items: OpeningItemInput[];
 }
 
 export interface ReconciliationRow {
@@ -188,10 +158,8 @@ export const openingBalanceService = {
   async computeNetProfit(request: ComputeNetProfitRequest): Promise<ComputedNetProfitDto> {
     return await invoke<ComputedNetProfitDto>('compute_opening_balance_net_profit', { request });
   },
-  async saveDetails(
-    request: OpeningDetailsDto & { migration_id: string },
-  ): Promise<OpeningDetailsDto> {
-    return await invoke<OpeningDetailsDto>('save_opening_balance_details', { command: request });
+  async saveMigrationItems(request: SaveOpeningItemsRequest): Promise<OpeningItemsDto> {
+    return await invoke<OpeningItemsDto>('save_opening_balance_items', { command: request });
   },
   async getReconciliation(id: string): Promise<OpeningReconciliationDto> {
     return await invoke<OpeningReconciliationDto>('get_opening_balance_reconciliation', { id });

@@ -10,7 +10,9 @@ use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::supplier_repository::SupplierRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
+use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::constants::PAYABLES_PARENT_ID;
+use crate::use_cases::opening_balance::opening_window_active;
 use crate::use_cases::shared::partner_account::{
     PartnerAccountParams, PartnerKind,
     build_partner_account, build_opening_balance_entry,
@@ -20,6 +22,7 @@ pub struct CreateSupplierUseCase {
     supplier_repo: Arc<dyn SupplierRepository>,
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
+    opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
 }
 
 impl CreateSupplierUseCase {
@@ -27,8 +30,9 @@ impl CreateSupplierUseCase {
         supplier_repo: Arc<dyn SupplierRepository>,
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
+        opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
     ) -> Self {
-        Self { supplier_repo, account_repo, journal_repo }
+        Self { supplier_repo, account_repo, journal_repo, opening_migration_repo }
     }
 
     pub async fn execute(&self, req: CreateSupplierRequest) -> Result<SupplierDto, AppError> {
@@ -69,16 +73,26 @@ impl CreateSupplierUseCase {
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
 
-        // Build the linked ledger account in memory (no write yet)
+        // Build the linked ledger account in memory (no write yet). While an
+        // opening-balance migration window is open the account is created with
+        // a static zero opening — the migration's aggregate journal owns the
+        // ledger — so the real entity is created by the SAME module in both
+        // company lifecycles.
+        let opening_window = opening_window_active(&self.opening_migration_repo).await?;
+        let (static_opening, static_debit, static_credit) = if opening_window {
+            (Decimal::ZERO, Decimal::ZERO, Decimal::ZERO)
+        } else {
+            (opening_balance, debit, credit)
+        };
         let (new_account, new_account_id) = build_partner_account(
             PartnerAccountParams {
                 partner_id_str: supplier_id.to_string(),
                 code: &code,
                 code_for_account: &code,
                 name: &req.name,
-                opening_balance,
-                debit,
-                credit,
+                opening_balance: static_opening,
+                debit: static_debit,
+                credit: static_credit,
                 currency: currency.clone(),
                 fx_rate,
                 parent_account_id: PAYABLES_PARENT_ID,
@@ -89,21 +103,27 @@ impl CreateSupplierUseCase {
 
         supplier.link_account(new_account_id);
 
-        // Build the opening balance journal entry in memory (no write yet)
-        // For suppliers: net_balance = credit − debit (positive = we owe them)
+        // Build the opening balance journal entry in memory (no write yet).
+        // For suppliers: net_balance = credit − debit (positive = we owe them).
+        // During an opening window the posting is deferred to the migration so
+        // a per-entity journal never double-counts the same balance (R1).
         let net_balance = credit - debit;
-        let opening_entry = build_opening_balance_entry(
-            new_account_id,
-            &supplier.name,
-            &supplier.id.to_string(),
-            net_balance,
-            currency,
-            fx_rate,
-            "53",
-            PartnerKind::Supplier,
-            &self.account_repo,
-            &self.journal_repo,
-        ).await?;
+        let opening_entry = if opening_window || net_balance.is_zero() {
+            None
+        } else {
+            build_opening_balance_entry(
+                new_account_id,
+                &supplier.name,
+                &supplier.id.to_string(),
+                net_balance,
+                currency,
+                fx_rate,
+                "53",
+                PartnerKind::Supplier,
+                &self.account_repo,
+                &self.journal_repo,
+            ).await?
+        };
 
         let mut entries = Vec::new();
         if let Some(entry) = opening_entry {

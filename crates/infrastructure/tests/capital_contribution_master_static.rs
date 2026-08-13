@@ -10,7 +10,8 @@ use application::use_cases::equity::GetPartnerEquityStatementUseCase;
 use application::use_cases::partner::CreateCapitalContributionUseCase;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{
-    SqliteAccountRepository, SqliteJournalEntryRepository, SqlitePartnerRepository,
+    SqliteAccountRepository, SqliteJournalEntryRepository, SqliteOpeningMigrationRepository,
+    SqlitePartnerRepository,
 };
 use rust_decimal::Decimal;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -131,6 +132,7 @@ async fn contribution_keeps_master_static_and_ledger_is_truth() {
         Arc::new(SqlitePartnerRepository::new(pool.clone())),
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
+        Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
     );
     case.execute(
         partner_id.clone(),

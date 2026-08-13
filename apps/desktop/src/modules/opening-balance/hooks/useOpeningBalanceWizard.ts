@@ -5,12 +5,22 @@ import type { AccountDto } from "@erp/shared-types";
 import type { WizardStepDef } from "@modules/opening-balance/components/WizardShell";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import { accountingService } from "@modules/accounting/api/accountingService";
+import { customerService } from "@modules/partners/api/customerService";
+import { supplierService } from "@modules/partners/api/supplierService";
+import { materialService } from "@modules/inventory/api/materialService";
+import { fixedAssetService } from "@modules/fixed-assets/api/fixedAssetService";
 import {
   openingBalanceService,
   type OpeningBalanceMigrationDto,
   type OpeningLineInput,
+  type OpeningItemInput,
   type OpeningReconciliationDto,
 } from "@modules/accounting/api/openingBalanceService";
+
+export const KIND_AR = "AR";
+export const KIND_AP = "AP";
+export const KIND_INVENTORY = "Inventory";
+export const KIND_FIXED_ASSET = "FixedAsset";
 
 export interface WizLine {
   key: string;
@@ -18,8 +28,12 @@ export interface WizLine {
   amount: string;
 }
 
+// A sub-ledger row links a REAL entity (customer/supplier/material/asset) to
+// the opening amount it carries inside the migration. `reference` is the
+// source-system reference (invoice/order number), never a free-text id.
 export interface DetailRow {
   key: string;
+  entity_id: string;
   reference: string;
   amount: string;
   qty: string;
@@ -29,8 +43,13 @@ export function newLine(): WizLine {
   return { key: `wl_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, account_id: "", amount: "" };
 }
 
-export function newDetail(reference: string, amount: string, qty: string): DetailRow {
-  return { key: `wd_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, reference, amount, qty };
+export function newDetail(): DetailRow {
+  return { key: `wd_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, entity_id: "", reference: "", amount: "", qty: "" };
+}
+
+export interface EntityOption {
+  value: string;
+  label: string;
 }
 
 export function useOpeningBalanceWizard() {
@@ -56,6 +75,40 @@ export function useOpeningBalanceWizard() {
     queryKey: QUERY_KEYS.chartOfAccounts,
     queryFn: () => accountingService.getChartOfAccounts(),
   });
+
+  const { data: customers = [] } = useQuery({
+    queryKey: QUERY_KEYS.customers,
+    queryFn: () => customerService.list(),
+  });
+  const { data: suppliers = [] } = useQuery({
+    queryKey: QUERY_KEYS.suppliers,
+    queryFn: () => supplierService.list(),
+  });
+  const { data: materials = [] } = useQuery({
+    queryKey: QUERY_KEYS.materials,
+    queryFn: () => materialService.list(),
+  });
+  const { data: fixedAssets = [] } = useQuery({
+    queryKey: QUERY_KEYS.fixedAssets,
+    queryFn: () => fixedAssetService.list(),
+  });
+
+  const customerOptions: EntityOption[] = useMemo(
+    () => customers.map((c) => ({ value: c.id, label: `${c.code || ""} — ${c.name}` })),
+    [customers],
+  );
+  const supplierOptions: EntityOption[] = useMemo(
+    () => suppliers.map((s) => ({ value: s.id, label: `${s.code || ""} — ${s.name}` })),
+    [suppliers],
+  );
+  const materialOptions: EntityOption[] = useMemo(
+    () => materials.map((m) => ({ value: m.id, label: `${m.code || m.barcode || ""} — ${m.name}` })),
+    [materials],
+  );
+  const fixedAssetOptions: EntityOption[] = useMemo(
+    () => fixedAssets.map((a) => ({ value: a.id, label: `${a.code || ""} — ${a.name}` })),
+    [fixedAssets],
+  );
 
   const detailAccounts = useMemo(
     () =>
@@ -151,45 +204,23 @@ export function useOpeningBalanceWizard() {
             residual_account_id: residualAccountId,
           });
         }
-        const details = {
-          customer_items: arRows.map((r) => ({
-            customer_id: r.reference,
-            reference: r.reference,
-            original_amount: r.amount,
-            outstanding_amount: r.amount,
-            due_date: null,
-            currency_code: null,
-            exchange_rate: null,
-          })),
-          supplier_items: apRows.map((r) => ({
-            supplier_id: r.reference,
-            reference: r.reference,
-            original_amount: r.amount,
-            outstanding_amount: r.amount,
-            due_date: null,
-            currency_code: null,
-            exchange_rate: null,
-          })),
-          inventory_items: invRows.map((r) => ({
-            material_id: r.reference,
-            warehouse_id: null,
-            quantity: r.qty || "1",
-            unit_cost: r.amount,
-            total_cost: String((parseFloat(r.qty || "1") || 1) * (parseFloat(r.amount) || 0)),
-            batch: null,
-            currency_code: null,
-          })),
-          fixed_assets: faRows.map((r) => ({
-            asset_id: r.reference,
-            acquisition_cost: r.amount,
-            accumulated_depreciation: "0",
-            net_book_value: r.amount,
-            acquisition_date: null,
-            depreciation_method: null,
-            useful_life: null,
-          })),
-        };
-        await openingBalanceService.saveDetails({ migration_id: created.id, ...details });
+        const item = (kind: string, rows: DetailRow[]): OpeningItemInput[] =>
+          rows
+            .filter((r) => r.entity_id && r.amount)
+            .map((r) => ({
+              kind,
+              entity_id: r.entity_id,
+              reference: r.reference || null,
+              amount: r.amount,
+              qty: r.qty || "0",
+            }));
+        const items = [
+          ...item(KIND_AR, arRows),
+          ...item(KIND_AP, apRows),
+          ...item(KIND_INVENTORY, invRows),
+          ...item(KIND_FIXED_ASSET, faRows),
+        ];
+        await openingBalanceService.saveMigrationItems({ migration_id: created.id, items });
         const recon = await openingBalanceService.getReconciliation(created.id);
         setMigration(created);
         setReconciliation(recon);
@@ -284,6 +315,10 @@ export function useOpeningBalanceWizard() {
     busy,
     accounts,
     detailAccounts,
+    customerOptions,
+    supplierOptions,
+    materialOptions,
+    fixedAssetOptions,
     updateLine,
     updateDetail,
     collectLines,

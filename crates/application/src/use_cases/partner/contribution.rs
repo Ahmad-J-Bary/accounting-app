@@ -8,7 +8,9 @@ use domain::shared::ids::PartnerId;
 use crate::ports::partner_repository::PartnerRepository;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
+use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::errors::AppError;
+use crate::use_cases::opening_balance::opening_window_active;
 use uuid::Uuid;
 
 /// Explicit capital contribution: a partner contributes funds/assets to the
@@ -17,10 +19,15 @@ use uuid::Uuid;
 /// posts any journal entry).
 ///
 /// Journal:  Dr <funding account> / Cr <partner capital>
+///
+/// An existing-company partner's historical capital is NOT a cash contribution:
+/// while an opening-balance migration window is open this event is rejected so
+/// cash never increases just by registering historical capital (Sec 5).
 pub struct CreateCapitalContributionUseCase {
     repo: Arc<dyn PartnerRepository>,
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
+    opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
 }
 
 impl CreateCapitalContributionUseCase {
@@ -28,8 +35,9 @@ impl CreateCapitalContributionUseCase {
         repo: Arc<dyn PartnerRepository>,
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
+        opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
     ) -> Self {
-        Self { repo, account_repo, journal_repo }
+        Self { repo, account_repo, journal_repo, opening_migration_repo }
     }
 
     pub async fn execute(
@@ -40,6 +48,13 @@ impl CreateCapitalContributionUseCase {
         is_amount_in_original: bool,
         event_id: Option<String>,
     ) -> Result<String, AppError> {
+        if opening_window_active(&self.opening_migration_repo).await? {
+            return Err(AppError::Forbidden(
+                "لا يمكن تسجيل مساهمة رأس مال نقدية أثناء فترة الرصيد الافتتاحي — رأس مال الشركة القائمة يُسجَّل كرصيد افتتاحي تاريخي دون زيادة النقدية"
+                    .into(),
+            ));
+        }
+
         let partner_id_parsed = partner_id.parse::<PartnerId>()
             .map_err(|_| AppError::NotFound("معرف الشريك غير صالح".into()))?;
         let partner = self.repo.find_by_id(&partner_id_parsed).await?

@@ -7,9 +7,9 @@ use application::use_cases::opening_balance::{
     CreateOpeningBalanceMigrationCommand,
     CreateOpeningBalanceUseCase, GetOpeningPositionControlUseCase, GetOpeningReconciliationUseCase,
     ListOpeningMigrationsUseCase,
-    LockOpeningBalanceUseCase, NetProfitAllocationDto, OpeningDetailsDto, OpeningMigrationDto,
+    LockOpeningBalanceUseCase, NetProfitAllocationDto, OpeningItemsDto, OpeningMigrationDto,
     OpeningPositionControlDto, OpeningReconciliationDto, PostOpeningBalanceResult, PostOpeningBalanceUseCase,
-    ReopenOpeningBalanceUseCase, SaveOpeningDetailsCommand, SaveOpeningDetailsUseCase,
+    ReopenOpeningBalanceUseCase, SaveOpeningItemsCommand, SaveOpeningItemsUseCase,
     SetResidualClassificationCommand, SetResidualClassificationUseCase,
     ValidateOpeningBalanceUseCase,
 };
@@ -23,6 +23,7 @@ pub async fn create_opening_balance_migration(
     CreateOpeningBalanceUseCase::new(
         state.opening_migration_repo.clone(),
         state.account_repo.clone(),
+        state.settings_repo.clone(),
     )
         .execute(request)
         .await
@@ -46,7 +47,7 @@ pub async fn post_opening_balance_migration(
 ) -> Result<PostOpeningBalanceResult, String> {
     PostOpeningBalanceUseCase::new(
         state.opening_migration_repo.clone(),
-        state.opening_detail_repo.clone(),
+        state.opening_item_repo.clone(),
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
         state.opening_posting_repo.clone(),
@@ -186,7 +187,7 @@ pub async fn lock_opening_balance_migration(
 ) -> Result<OpeningMigrationDto, String> {
     LockOpeningBalanceUseCase::new(
         state.opening_migration_repo.clone(),
-        state.opening_detail_repo.clone(),
+        state.opening_item_repo.clone(),
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
     )
@@ -196,13 +197,17 @@ pub async fn lock_opening_balance_migration(
 }
 
 #[tauri::command]
-pub async fn save_opening_balance_details(
+pub async fn save_opening_balance_items(
     state: State<'_, AppState>,
-    command: SaveOpeningDetailsCommand,
-) -> Result<OpeningDetailsDto, String> {
-    SaveOpeningDetailsUseCase::new(
+    command: SaveOpeningItemsCommand,
+) -> Result<OpeningItemsDto, String> {
+    SaveOpeningItemsUseCase::new(
         state.opening_migration_repo.clone(),
-        state.opening_detail_repo.clone(),
+        state.opening_item_repo.clone(),
+        state.customer_repo.clone(),
+        state.supplier_repo.clone(),
+        state.material_repo.clone(),
+        state.asset_repo.clone(),
     )
     .execute(command)
     .await
@@ -216,7 +221,7 @@ pub async fn get_opening_balance_reconciliation(
 ) -> Result<OpeningReconciliationDto, String> {
     GetOpeningReconciliationUseCase::new(
         state.opening_migration_repo.clone(),
-        state.opening_detail_repo.clone(),
+        state.opening_item_repo.clone(),
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
     )

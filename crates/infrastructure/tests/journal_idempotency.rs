@@ -9,7 +9,8 @@ use application::ports::partner_repository::PartnerRepository;
 use application::use_cases::partner::CreateCapitalContributionUseCase;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{
-    SqliteAccountRepository, SqliteJournalEntryRepository, SqlitePartnerRepository,
+    SqliteAccountRepository, SqliteJournalEntryRepository, SqliteOpeningMigrationRepository,
+    SqlitePartnerRepository,
 };
 use rust_decimal::Decimal;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -124,6 +125,7 @@ async fn contribution_with_same_event_id_posts_once() {
         Arc::new(SqlitePartnerRepository::new(pool.clone())),
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
+        Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
     );
 
     let event = "8f1a2b3c-0000-0000-0000-000000000001".to_string();
@@ -159,6 +161,7 @@ async fn distinct_event_ids_create_distinct_journals() {
         Arc::new(SqlitePartnerRepository::new(pool.clone())),
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
+        Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
     );
 
     let a = case

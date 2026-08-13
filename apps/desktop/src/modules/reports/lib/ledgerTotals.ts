@@ -24,7 +24,7 @@ function isCreditNatureAccount(account: AccountDto): boolean {
 
 /**
  * Computes general ledger totals for all accounts with strict date range partitioning:
- * 1. Opening entries (source_type = OPENING_BALANCE or opening journal types) and entries before fromDate -> Pre-Period Opening Balance.
+ * 1. Opening entries (opening journal types) and entries before fromDate -> Pre-Period Opening Balance.
  * 2. Operational entries between fromDate and toDate -> Period Movements (Period Debit & Credit).
  * 3. Entries strictly after toDate -> Excluded completely.
  * 4. Correctly handles Credit nature accounts (Equity, Liabilities) vs Debit nature accounts (Assets, Expenses).
@@ -42,15 +42,11 @@ export function computeLedgerTotals(
   const toDateStr = toDate ? toDate.split("T")[0] : undefined;
 
   // 1. Identify accounts that have explicit INDIVIDUAL opening balance journal entries in DB
-  //    (i.e., NOT via consolidated_capital — those are handled separately below)
   const accountsWithOpeningEntries = new Set<string>();
 
   for (const entry of entries) {
-    const isConsolidatedCapital = entry.source_id === "consolidated_capital";
     const desc = entry.description || "";
     const isOpeningEntry =
-      isConsolidatedCapital ||
-      entry.source_type === "OPENING_BALANCE" ||
       entry.journal_type === "CashOpeningBalance" ||
       entry.journal_type === "AccountOpeningBalance" ||
       entry.journal_type === "MaterialOpeningBalance" ||
@@ -59,8 +55,8 @@ export function computeLedgerTotals(
 
     if (isOpeningEntry) {
       for (const line of entry.lines) {
-        // Mark ALL accounts in any opening entry (including consolidated_capital)
-        // so their static opening_balance is not double-applied on top of the journal
+        // Mark ALL accounts in any opening entry so their static opening_balance
+        // is not double-applied on top of the journal
         accountsWithOpeningEntries.add(line.account_id);
       }
     }
@@ -94,8 +90,6 @@ export function computeLedgerTotals(
 
     const desc = entry.description || "";
     const isOpeningEntry =
-      entry.source_type === "OPENING_BALANCE" ||
-      entry.source_id === "consolidated_capital" ||
       entry.journal_type === "CashOpeningBalance" ||
       entry.journal_type === "AccountOpeningBalance" ||
       entry.journal_type === "MaterialOpeningBalance" ||
