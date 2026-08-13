@@ -1,4 +1,4 @@
-﻿use std::sync::Arc;
+use std::sync::Arc;
 
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
@@ -74,7 +74,7 @@ impl ApproveOpeningBalanceUseCase {
 
     pub async fn execute(&self, id: String, by: String) -> Result<OpeningMigrationDto, AppError> {
         let mut migration = self.repo.find_by_id(&id).await?
-            .ok_or_else(|| AppError::NotFound("ØªØ±Ø­ÙŠÙ„ Ø§Ù„Ø±ØµÙŠØ¯ Ø§Ù„Ø§ÙØªØªØ§Ø­ÙŠ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯".into()))?;
+            .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
         migration.approve(&by).map_err(AppError::Domain)?;
         self.repo.update(&migration).await?;
         Ok(OpeningMigrationDto(migration))
@@ -108,7 +108,7 @@ impl LockOpeningBalanceUseCase {
 
     pub async fn execute(&self, id: String) -> Result<OpeningMigrationDto, AppError> {
         let mut migration = self.repo.find_by_id(&id).await?
-            .ok_or_else(|| AppError::NotFound("ØªØ±Ø­ÙŠÙ„ Ø§Ù„Ø±ØµÙŠØ¯ Ø§Ù„Ø§ÙØªØªØ§Ø­ÙŠ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯".into()))?;
+            .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
         migration.lock().map_err(AppError::Domain)?;
 
         let recon = GetOpeningReconciliationUseCase::new(

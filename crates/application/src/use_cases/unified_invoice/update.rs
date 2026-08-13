@@ -36,6 +36,7 @@ pub struct UpdateInvoiceUseCase {
 }
 
 impl UpdateInvoiceUseCase {
+    #[allow(clippy::too_many_arguments)] // 8th arg (opening_migration_repo) added by the opening-balance integration
     pub fn new(
         repo: Arc<dyn UnifiedInvoiceRepository>,
         customer_repo: Arc<dyn CustomerRepository>,
