@@ -57,6 +57,7 @@ pub async fn create_account(
         Some(state.customer_repo.clone()),
         Some(state.supplier_repo.clone()),
         state.currency_repo.clone(),
+        state.opening_migration_repo.clone(),
     )
     .execute(cmd)
     .await

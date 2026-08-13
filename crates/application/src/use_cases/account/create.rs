@@ -15,10 +15,12 @@ use domain::suppliers::Supplier;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::currency_repository::CurrencyRepository;
+use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::supplier_repository::SupplierRepository;
 use crate::constants::{RECEIVABLES_PARENT_ID, PAYABLES_PARENT_ID};
+use crate::use_cases::opening_balance::opening_window_active;
 
 use super::error::AccountUseCaseError;
 use super::types::CreateAccountCommand;
@@ -30,6 +32,7 @@ pub struct CreateAccountUseCase {
     customer_repo: Option<Arc<dyn CustomerRepository>>,
     supplier_repo: Option<Arc<dyn SupplierRepository>>,
     currency_repo: Arc<dyn CurrencyRepository>,
+    opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
 }
 
 impl CreateAccountUseCase {
@@ -39,6 +42,7 @@ impl CreateAccountUseCase {
         customer_repo: Option<Arc<dyn CustomerRepository>>,
         supplier_repo: Option<Arc<dyn SupplierRepository>>,
         currency_repo: Arc<dyn CurrencyRepository>,
+        opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
     ) -> Self {
         Self {
             account_repo,
@@ -46,6 +50,7 @@ impl CreateAccountUseCase {
             customer_repo,
             supplier_repo,
             currency_repo,
+            opening_migration_repo,
         }
     }
 
@@ -94,6 +99,21 @@ impl CreateAccountUseCase {
         let debit = cmd.debit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(Decimal::ZERO);
         let credit = cmd.credit.as_deref().and_then(|s| Decimal::from_str(s).ok()).unwrap_or(Decimal::ZERO);
 
+        // While an opening-balance migration window is open (ExistingCompany),
+        // the migration's aggregate journal owns the ledger. New CoA accounts
+        // are created with a static zero opening balance and the per-account
+        // AccountOpeningBalance journal below is deferred — the same treatment
+        // Phase 2 applies to customer/supplier create, so the same balance can
+        // never be posted twice (R1).
+        let opening_window = opening_window_active(&self.opening_migration_repo)
+            .await
+            .map_err(|e| AccountUseCaseError::RepositoryError(e.to_string()))?;
+        let (opening_balance, debit, credit) = if opening_window {
+            (Decimal::ZERO, Decimal::ZERO, Decimal::ZERO)
+        } else {
+            (opening_balance, debit, credit)
+        };
+
         let _is_final = cmd.category == domain::accounting::account::AccountCategory::Detail;
 
         let mut account = Account::new(
@@ -138,7 +158,9 @@ impl CreateAccountUseCase {
         let currency = Currency::new(&currency_code, &currency_code, &currency_code, "", 2, false);
 
         // Create AccountOpeningBalance journal entry for every new account
-        // (skip for auto-created customer/supplier accounts, their entries are handled separately)
+        // (skip for auto-created customer/supplier accounts, their entries are
+        // handled separately; skip while an opening-migration window is open,
+        // the migration's aggregate journal owns the ledger).
         let is_receivable_or_payable = cmd.parent_id.as_ref().map(|p| {
             let pid = p.to_string();
             pid == RECEIVABLES_PARENT_ID || pid == PAYABLES_PARENT_ID
@@ -146,7 +168,7 @@ impl CreateAccountUseCase {
 
         let total_opening = debit - credit;
 
-        if !is_receivable_or_payable {
+        if !is_receivable_or_payable && !opening_window {
             let fx_rate = if currency.is_base {
                 Decimal::ONE
             } else {

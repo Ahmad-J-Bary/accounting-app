@@ -1,6 +1,9 @@
 -- Migration 007: Ensure Default Accounts for Opening Stock Journal Entries
 -- Adds the inventory asset account (1201) and opening balance equity account (224)
--- if they don't already exist, so that RecordOpeningStockUseCase can always find them.
+-- if they don't already exist. Inventory opening goes through the existing
+-- unified-invoice flow (invoice_type = OpeningBalance), which posts the
+-- MovementType::OpeningBalance stock movement and the MaterialOpeningBalance
+-- journal against these accounts.
 
 -- Inventory account (Asset) - مخزون البضاعة
 INSERT OR IGNORE INTO accounts (id, code, name_ar, name_en, account_type, parent_id, balance, is_active, created_at, updated_at)
