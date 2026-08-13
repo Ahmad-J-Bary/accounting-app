@@ -97,6 +97,8 @@ pub async fn get_opening_position_control(
         state.opening_migration_repo.clone(),
         state.account_repo.clone(),
         state.partner_repo.clone(),
+        state.opening_item_repo.clone(),
+        state.journal_entry_repo.clone(),
     )
     .execute(id)
     .await
@@ -162,7 +164,12 @@ pub async fn validate_opening_balance_migration(
     id: String,
     by: String,
 ) -> Result<OpeningMigrationDto, String> {
-    ValidateOpeningBalanceUseCase::new(state.opening_migration_repo.clone())
+    ValidateOpeningBalanceUseCase::new(
+        state.opening_migration_repo.clone(),
+        state.opening_item_repo.clone(),
+        state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
+    )
         .execute(id, by)
         .await
         .map_err(|e| e.to_string())

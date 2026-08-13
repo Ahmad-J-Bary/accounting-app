@@ -12,7 +12,6 @@ pub mod production;
 pub mod adjustment;
 pub mod user;
 pub mod settings;
-pub mod inventory;
 pub mod transfer;
 pub mod asset;
 pub mod audit;

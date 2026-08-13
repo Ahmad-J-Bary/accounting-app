@@ -31,7 +31,7 @@ pub use reopen::ReopenOpeningBalanceUseCase;
 pub use residual_apply::ApplyResidualToLedgerUseCase;
 pub use position::{
     GetOpeningPositionControlUseCase, OpeningPositionControlDto, PositionAccountLine,
-    PositionPartnerRow,
+    PositionPartnerRow, UnreconciledRow,
 };
 pub use state::{ApproveOpeningBalanceUseCase, LockOpeningBalanceUseCase, ValidateOpeningBalanceUseCase};
 pub use types::{

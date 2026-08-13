@@ -1,27 +1,23 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { ConfirmDialog } from "@shared/ui/confirm-dialog";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { toast } from "sonner";
-import type { AccountDto, OpeningPositionControlDto } from "@erp/shared-types";
-import { accountingService } from "@modules/accounting/api/accountingService";
+import type { OpeningPositionControlDto } from "@erp/shared-types";
 import {
   openingBalanceService,
   type OpeningBalanceMigrationDto,
-  type OpeningLineInput,
   type NetProfitAllocationDto,
   type OpeningReconciliationDto,
 } from "@modules/accounting/api/openingBalanceService";
 import { invalidateAccountingMutationQueries, queryClient, QUERY_KEYS } from "@shared/hooks/queryClient";
-import { OpeningDraftCard } from "../components/OpeningDraftCard";
 import { MigrationListCard } from "../components/MigrationListCard";
 import { ReconciliationCard } from "../components/ReconciliationCard";
 import { PositionControlCard } from "../components/PositionControlCard";
 import { ProfitAllocationCard } from "../components/ProfitAllocationCard";
-import type { AccountLine } from "../lib/migration-labels";
-import { findAccount, isDebitNature, newLineKey } from "../lib/migration-labels";
+import { GuidedTransitionWizard } from "../components/GuidedTransitionWizard";
 
 interface ComputedProfit {
   net_profit: string;
@@ -31,11 +27,6 @@ interface ComputedProfit {
 }
 
 export default function OpeningBalanceMigration() {
-  const [cutoverDate, setCutoverDate] = useState(() => new Date().toISOString().split("T")[0]);
-  const [notes, setNotes] = useState("");
-  const [lines, setLines] = useState<AccountLine[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [postingId, setPostingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [transitioningTo, setTransitioningTo] = useState<string | null>(null);
   const [allocMigrationId, setAllocMigrationId] = useState<string>("");
@@ -52,122 +43,14 @@ export default function OpeningBalanceMigration() {
   const [position, setPosition] = useState<OpeningPositionControlDto | null>(null);
   const [positionLoading, setPositionLoading] = useState(false);
 
-  const { data: accounts = [] } = useQuery<AccountDto[]>({
-    queryKey: QUERY_KEYS.chartOfAccounts,
-    queryFn: () => accountingService.getChartOfAccounts(),
-  });
-
   const {
     data: migrations = [],
     refetch: refetchMigrations,
     isLoading,
   } = useQuery<OpeningBalanceMigrationDto[]>({
-    queryKey: ["opening-balance-migrations"],
+    queryKey: QUERY_KEYS.openingBalanceMigrations,
     queryFn: () => openingBalanceService.listMigrations(),
   });
-
-  const detailAccounts = useMemo(
-    () => accounts.filter((a) => a.category === "Detail" && a.is_active),
-    [accounts],
-  );
-
-  const addLine = useCallback(() => {
-    setLines((prev) => [
-      ...prev,
-      { key: newLineKey(), account_id: "", amount: "", description: "" },
-    ]);
-  }, []);
-
-  const removeLine = useCallback((key: string) => {
-    setLines((prev) => prev.filter((l) => l.key !== key));
-  }, []);
-
-  const updateLine = useCallback((key: string, patch: Partial<AccountLine>) => {
-    setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
-  }, []);
-
-  const { debitTotal, creditTotal, isValid } = useMemo(() => {
-    let debit = 0;
-    let credit = 0;
-    for (const l of lines) {
-      const acc = findAccount(accounts, l.account_id);
-      const amount = parseFloat(l.amount) || 0;
-      if (!acc || !amount) continue;
-      if (isDebitNature(acc.account_type)) debit += amount;
-      else credit += amount;
-    }
-    return { debitTotal: debit, creditTotal: credit, isValid: debit === credit };
-  }, [lines, accounts]);
-
-  const handleCreate = async () => {
-    if (!cutoverDate) return toast.error("اختر تاريخ الترحيل");
-    const validLines = lines.filter((l) => l.account_id && l.amount);
-    if (validLines.length === 0) return toast.error("أضف بنداً واحداً على الأقل مع الحساب والمبلغ");
-    setSaving(true);
-    try {
-      const payload = {
-        cutover_date: new Date(cutoverDate).toISOString(),
-        notes: notes || null,
-        lines: validLines.map((l): OpeningLineInput => ({
-          account_id: l.account_id,
-          amount: l.amount,
-          description: l.description || undefined,
-        })),
-      };
-      await openingBalanceService.createMigration(payload);
-      toast.success("تم حفظ مسودة الترحيل");
-      setLines([]);
-      setNotes("");
-      refetchMigrations();
-    } catch (e) {
-      toast.error("فشل الحفظ: " + e);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handlePost = async (id: string) => {
-    setPostingId(id);
-    try {
-      const res = await openingBalanceService.postMigration(id);
-      toast.success(
-        "تم ترحيل الرصيد الافتتاحي (متوازن)"
-          + ` — مدين ${res.debit_total} / دائن ${res.credit_total}`
-      );
-      refetchMigrations();
-      await invalidateAccountingMutationQueries(queryClient);
-    } catch (e) {
-      toast.error("فشل الترحيل: " + e);
-    } finally {
-      setPostingId(null);
-    }
-  };
-
-  const handleValidate = async (id: string) => {
-    setTransitioningTo(id);
-    try {
-      await openingBalanceService.validateMigration(id, "system");
-      toast.success("تم التحقق من الترحيل");
-      refetchMigrations();
-    } catch (e) {
-      toast.error("فشل التحقق: " + e);
-    } finally {
-      setTransitioningTo(null);
-    }
-  };
-
-  const handleApprove = async (id: string) => {
-    setTransitioningTo(id);
-    try {
-      await openingBalanceService.approveMigration(id, "system");
-      toast.success("تم اعتماد الترحيل");
-      refetchMigrations();
-    } catch (e) {
-      toast.error("فشل الاعتماد: " + e);
-    } finally {
-      setTransitioningTo(null);
-    }
-  };
 
   const handleLock = async (id: string) => {
     setTransitioningTo(id);
@@ -321,7 +204,7 @@ export default function OpeningBalanceMigration() {
 
   return (
     <OperationalTableTemplate
-      title="رصيد افتتاح الشركة (شركة قائمة)"
+      title="رصيد افتتاح الشركة"
       toolbar={
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => refetchMigrations()} className="border-slate-200 hover:bg-slate-50 font-bold">
@@ -340,33 +223,13 @@ export default function OpeningBalanceMigration() {
             onShow={handleShowPosition}
           />
 
-          <OpeningDraftCard
-            cutoverDate={cutoverDate}
-            onCutoverDateChange={setCutoverDate}
-            notes={notes}
-            onNotesChange={setNotes}
-            lines={lines}
-            detailAccounts={detailAccounts}
-            accounts={accounts}
-            onAddLine={addLine}
-            onRemoveLine={removeLine}
-            onUpdateLine={updateLine}
-            debitTotal={debitTotal}
-            creditTotal={creditTotal}
-            isValid={isValid}
-            saving={saving}
-            onSaveDraft={handleCreate}
-          />
+          <GuidedTransitionWizard />
 
           <MigrationListCard
             migrations={migrations}
             isLoading={isLoading}
-            postingId={postingId}
             cancellingId={cancellingId}
             transitioningTo={transitioningTo}
-            onValidate={handleValidate}
-            onApprove={handleApprove}
-            onPost={handlePost}
             onLock={handleLock}
             onCancel={(id) => setConfirmAction({ type: "cancel", id })}
             onReopen={(id) => setConfirmAction({ type: "reopen", id })}

@@ -10,8 +10,11 @@ use domain::shared::ids::AccountId;
 
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
+use crate::ports::journal_entry_repository::JournalEntryRepository;
+use crate::ports::opening_item_repository::OpeningItemRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::partner_repository::PartnerRepository;
+use crate::use_cases::opening_balance::reconcile::{readiness_blockers, GetOpeningReconciliationUseCase};
 
 /// Currency-aware Decimal tolerance for the balance check. A difference at or
 /// below one penny is treated as balanced; f64 is never introduced.
@@ -42,11 +45,26 @@ pub struct PositionPartnerRow {
     pub net_equity: Decimal,
 }
 
+/// One unreconciled sub-ledger row of the opening position (AR / AP / Inventory
+/// / Fixed Assets). The system computes the comparison; the accountant decides
+/// how to close it (Sec 4).
+#[derive(Debug, Clone, Serialize)]
+pub struct UnreconciledRow {
+    pub key: String,
+    pub label: String,
+    pub subledger: Decimal,
+    pub general_ledger: Decimal,
+}
+
 /// Read-only summary of the opening financial position of an opening-balance
 /// migration (Sec 3). Everything is derived from the migration's own opening
 /// lines and the chart semantics — no journal entries are created or touched.
 #[derive(Debug, Clone, Serialize)]
 pub struct OpeningPositionControlDto {
+    /// Lifecycle status of the migration that produced this position.
+    pub opening_status: String,
+    /// The cutover date the migration was recorded against.
+    pub cutover_date: String,
     pub total_assets: Decimal,
     pub total_liabilities: Decimal,
     pub net_assets: Decimal,
@@ -70,6 +88,13 @@ pub struct OpeningPositionControlDto {
     /// Empty when balanced; otherwise a human-readable pointer to the existing
     /// residual workflow so the difference is never silently hidden.
     pub difference_message: Option<String>,
+
+    /// Sub-ledger rows whose detail totals do not equal the general ledger.
+    /// Empty when everything reconciles.
+    pub unreconciled_items: Vec<UnreconciledRow>,
+    /// Structural validation blockers (the same gates as posting/locking).
+    /// Empty when the migration is ready to post.
+    pub validation_errors: Vec<String>,
 
     pub asset_detail: Vec<PositionAccountLine>,
     pub liability_detail: Vec<PositionAccountLine>,
@@ -204,6 +229,16 @@ fn purpose_str(purpose: AccountPurpose) -> String {
     purpose_to_str(purpose).to_string()
 }
 
+fn subledger_label(key: &str) -> &'static str {
+    match key {
+        "AR" => "الذمم المدينة (العملاء)",
+        "AP" => "الذمم الدائنة (الموردون)",
+        "Inventory" => "المخزون",
+        "FixedAssets" => "الأصول الثابتة",
+        _ => "أخرى",
+    }
+}
+
 fn purpose_to_str(purpose: AccountPurpose) -> &'static str {
     match purpose {
         AccountPurpose::General => "general",
@@ -271,6 +306,8 @@ pub fn compute_dto(
     };
 
     OpeningPositionControlDto {
+        opening_status: migration.status.as_str().to_string(),
+        cutover_date: migration.cutover_date.to_rfc3339(),
         total_assets: assets,
         total_liabilities: liabilities,
         net_assets,
@@ -287,6 +324,8 @@ pub fn compute_dto(
         classification: classification_label(migration.residual_classification),
         residual_applied: migration.residual_applied_at.is_some(),
         difference_message,
+        unreconciled_items: vec![],
+        validation_errors: vec![],
         asset_detail,
         liability_detail,
         equity_detail,
@@ -300,6 +339,8 @@ pub struct GetOpeningPositionControlUseCase {
     migration_repo: Arc<dyn OpeningMigrationRepository>,
     account_repo: Arc<dyn AccountRepository>,
     partner_repo: Arc<dyn PartnerRepository>,
+    detail_repo: Arc<dyn OpeningItemRepository>,
+    journal_repo: Arc<dyn JournalEntryRepository>,
 }
 
 impl GetOpeningPositionControlUseCase {
@@ -307,11 +348,15 @@ impl GetOpeningPositionControlUseCase {
         migration_repo: Arc<dyn OpeningMigrationRepository>,
         account_repo: Arc<dyn AccountRepository>,
         partner_repo: Arc<dyn PartnerRepository>,
+        detail_repo: Arc<dyn OpeningItemRepository>,
+        journal_repo: Arc<dyn JournalEntryRepository>,
     ) -> Self {
         Self {
             migration_repo,
             account_repo,
             partner_repo,
+            detail_repo,
+            journal_repo,
         }
     }
 
@@ -334,6 +379,30 @@ impl GetOpeningPositionControlUseCase {
         let partner_rows = self.partner_rows(&buckets).await?;
         let mut dto = compute_dto(&migration, buckets);
         dto.partner_rows = partner_rows;
+
+        // Sub-ledger reconciliation + structural readiness (read-only): the same
+        // gates that enforcement uses, surfaced on the position snapshot.
+        let recon = GetOpeningReconciliationUseCase::new(
+            self.migration_repo.clone(),
+            self.detail_repo.clone(),
+            self.account_repo.clone(),
+            self.journal_repo.clone(),
+        )
+        .execute(migration_id)
+        .await?;
+
+        dto.unreconciled_items = recon
+            .rows
+            .iter()
+            .filter(|r| !r.reconciled)
+            .map(|r| UnreconciledRow {
+                key: r.key.clone(),
+                label: subledger_label(&r.key).to_string(),
+                subledger: r.subledger,
+                general_ledger: r.general_ledger,
+            })
+            .collect();
+        dto.validation_errors = readiness_blockers(&recon, false);
 
         Ok(dto)
     }

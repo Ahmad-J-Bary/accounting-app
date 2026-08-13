@@ -110,6 +110,8 @@ async fn position_is_balanced_and_read_only() {
         migration_repo.clone(),
         account_repo.clone(),
         partner_repo.clone(),
+        Arc::new(infrastructure::repositories::opening_balance::SqliteOpeningItemRepository::new(pool.clone())),
+        Arc::new(infrastructure::repositories::journal_entry::SqliteJournalEntryRepository::new(pool.clone())),
     )
     .execute(migration.id.clone())
     .await
@@ -185,6 +187,8 @@ async fn position_reports_unbalanced_difference_read_only() {
         migration_repo.clone(),
         account_repo.clone(),
         partner_repo.clone(),
+        Arc::new(infrastructure::repositories::opening_balance::SqliteOpeningItemRepository::new(pool.clone())),
+        Arc::new(infrastructure::repositories::journal_entry::SqliteJournalEntryRepository::new(pool.clone())),
     )
     .execute(migration.id)
     .await

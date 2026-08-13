@@ -17,7 +17,16 @@ export interface PositionPartnerRow {
   net_equity: string;
 }
 
+export interface UnreconciledRow {
+  key: string;
+  label: string;
+  subledger: string;
+  general_ledger: string;
+}
+
 export interface OpeningPositionControlDto {
+  opening_status: string;
+  cutover_date: string;
   total_assets: string;
   total_liabilities: string;
   net_assets: string;
@@ -37,6 +46,9 @@ export interface OpeningPositionControlDto {
   classification: string | null;
   residual_applied: boolean;
   difference_message: string | null;
+
+  unreconciled_items: UnreconciledRow[];
+  validation_errors: string[];
 
   asset_detail: PositionAccountLine[];
   liability_detail: PositionAccountLine[];

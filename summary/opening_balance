@@ -140,34 +140,40 @@
 - **O4 — الاختبارات**: +2 integration `crates/infrastructure/tests/opening_posting.rs` (post يخزّن `account_opening_balance` + حالة Posted؛ cancel مع `OpeningBalanceReversal` يخزّن `opening_balance_reversal` + حالة Cancelled) على sqlite حقيقي؛ +2 unit في `reconcile.rs` (تصنيف الأكواد ورفض النقد، مدخلات post vs lock). واجهة: سطر حالة "جاهز للترحيل/القفل" في بطاقة التسوية (الصفحتان) يعرض blockers.
 - **Gates**: workspace check ✓, clippy 4 crates ✓ (0 warnings), domain ✓, application 14 ✓, infrastructure 10 ✓ (3 lib + 5 reversal + 2 opening_posting), tsc ✓, eslint 0 errors / 46 pre-existing warnings, vitest 100 ✓.
 
-### Phase P � Partner drawings (contra-equity), residual classification & atomic partner creation
-- **P1 � save_with_accounts (atomic partner creation)**: New port method
+### Phase P � Partner drawings (contra-equity), residual classification & atomic partner creation
+- **P1 � save_with_accounts (atomic partner creation)**: New port method
   \PartnerRepository::save_with_accounts\ + Sqlite impl persisting partner + capital (51X) +
   drawings (44X) in ONE SQLite transaction (helpers \insert_account_tx\/\insert_partner_tx\).
-  \CreatePartnerUseCase\ switched from \uow + repo.save�3\ to the single-call atomic path (drops the
+  \CreatePartnerUseCase\ switched from \uow + repo.save�3\ to the single-call atomic path (drops the
   \UnitOfWork\ injection; integration test \partner_atomicity.rs\ proves rollback of all rows on
   mid-tx failure). Drawings account now created as **AccountType::Equity** (contra) not Expenses.
-- **P2**: Migration \143_partner_drawings_and_residual.sql\ � reclassifies all \44%\ accounts from
+- **P2**: Migration \143_partner_drawings_and_residual.sql\ � reclassifies all \44%\ accounts from
   Expenses to Equity (renames 44"); ALTER \opening_balance_migrations\ + \esidual_classification\ +
   \esidual_account_id\ columns. Infra models/mappers/queries updated.
-- **P3 � Normal Balance**: \NormalBalance::{Debit,Credit}\ + \Account::normal_balance()\,
+- **P3 � Normal Balance**: \NormalBalance::{Debit,Credit}\ + \Account::normal_balance()\,
   \signed_balance()\, \display_balance()\, \is_drawings_account()\ (prefix 44). post.rs and
   econcile.rs now classify Dr/Cr by \
 ormal_balance()\ instead of hardcoded type matches (enables
   equity-typed drawings to post on the debit side). 11 domain unit tests.
-- **P4 � Explicit drawing journal**: \CreatePartnerDrawingUseCase\ (Dr 44X / Cr bank) with
+- **P4 � Explicit drawing journal**: \CreatePartnerDrawingUseCase\ (Dr 44X / Cr bank) with
   \JournalType::PartnerDrawing\; Tauri \create_partner_drawing\; frontend service.
-- **P5 � Capitalization**: \CapitalizeRetainedEarningsUseCase\ (Dr 52 / Cr 51X) with
+- **P5 � Capitalization**: \CapitalizeRetainedEarningsUseCase\ (Dr 52 / Cr 51X) with
   \JournalType::Capitalization\; Tauri \capitalize_retained_earnings\.
-- **P6 � Residual classification**: \SetResidualClassificationUseCase\ + \SetResidualClassificationCommand\;
+- **P6 � Residual classification**: \SetResidualClassificationUseCase\ + \SetResidualClassificationCommand\;
   wizard equity step gains classification picker + residual account; create persistence also saves
   \source_system\/\source_reference\ (wizard now sends them).
-- **P7 � Partner equity statement now valid net-of-drawings**: \GetPartnerEquityStatementUseCase\
+- **P7 � Partner equity statement now valid net-of-drawings**: \GetPartnerEquityStatementUseCase\
   adds \drawings\ per row and reports \	otal_equity = ledger_balance - drawings\; frontend
   PartnerEquityCard shows a ??????? column and totals.
-- **P8 � Drawings excluded from P&L**: \ComputeNetProfitUseCase\ (net_profit.rs) skips lines whose
+- **P8 � Drawings excluded from P&L**: \ComputeNetProfitUseCase\ (net_profit.rs) skips lines whose
   account \is_drawings_account()\ so drawings never depress net profit (both Equity-typed and legacy
   Expenses-typed DBs); +2 unit tests.
-- **Gates**: cargo check --workspace ? � clippy 4 crates ? (0 warnings) � cargo test
-  (domain 66 + application 21 + infra lib 3 + integration opening 2 + reversal 5 + partner_atomicity 2) ? �
-  tsc ? � eslint 0 errors (46 pre-existing warnings) ? � vitest 100 ? � \docs/accounting-model.md\ added.
+- **Gates**: cargo check --workspace ? � clippy 4 crates ? (0 warnings) � cargo test
+  (domain 66 + application 21 + infra lib 3 + integration opening 2 + reversal 5 + partner_atomicity 2) ? �
+  tsc ? � eslint 0 errors (46 pre-existing warnings) ? � vitest 100 ? � \docs/accounting-model.md\ added.
+
+### Phase Q — Consolidated Opening Balance page (single entry, module-derived wizard)
+- **Q1 — One page, one entry**: `/opening-balance-migration` becomes the only entry; the 15-step standalone wizard page `/opening-balance-wizard` is deleted and its route now `<Navigate>`s to the consolidated page. `routeRegistry` carries a single menu label; `MigrationListCard` trimmed to settled history (Lock on Posted / Reopen on Cancelled; Draft/Validated/Approved action rows and onValidate/onApprove/onPost removed).
+- **Q2 — Read-only Opening Position Control Center**: `OpeningPositionControlDto` extended with `opening_status`, `cutover_date`, `unreconciled_items` (sub-ledger rows), `validation_errors` (readiness blockers) via `readiness_blockers(&recon, false)`; `GetOpeningPositionControlUseCase::new` now takes detail+journal repos. `PositionControlCard` renders status badge + cutover + assets/liabilities/equity/net/difference + unreconciled + blocker panels.
+- **Q3 — Module-derived 10-step wizard** (`GuidedTransitionWizard`, embedded): Company Start → Partners & Capital → Assets → Liabilities → Reconciliation → Review → Validate → Post → Lock → Done. Lines are DERIVED from modules (AR from customers, AP from suppliers, FA at net book value, partner equity) + manual only for cash/bank/other; AR/AP/FA items collected from real entity ids; Inventory read-only info linking to the Phase-3 opening-invoice flow; 53 plug on credit residual with explicit classification. Company Start mode selector (New/Existing) relocated from /partners into wizard Step 1, persisted via settings; validate/post/lock run the existing backend gates at steps 6/7/8.
+- **Gates**: cargo check --workspace ✓ � cargo test (domain 63 + application 74 + infrastructure 49 all green; phase4_validate_enforcement 3 new) ✓ � tsc --noEmit exit 0 ✓ � eslint --quiet clean ✓ � vitest ✓ � vite build ✓. Known pre-existing env block: `cargo test -p tauri-adapter --lib` fails 0xc0000139 (unrelated to changes).

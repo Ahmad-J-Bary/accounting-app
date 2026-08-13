@@ -9,21 +9,53 @@ use crate::use_cases::opening_balance::reconcile::{readiness_blockers, GetOpenin
 use crate::use_cases::opening_balance::types::OpeningMigrationDto;
 
 /// Moves an opening-balance migration to `Validated`.
-/// Structural validation (accounting equation / reconciliation) is enforced by
-/// the reconciliation engine feeding this transition; the domain records the
-/// validated state.
+/// Structural validation (accounting equation / reconciliation) is enforced
+/// here — the same gates as posting (Debit = Credit, sub-ledgers reconciled,
+/// no unresolved difference) must clear before the migration may be marked
+/// validated; the domain then records the state.
 pub struct ValidateOpeningBalanceUseCase {
     repo: Arc<dyn OpeningMigrationRepository>,
+    detail_repo: Arc<dyn OpeningItemRepository>,
+    account_repo: Arc<dyn AccountRepository>,
+    journal_repo: Arc<dyn JournalEntryRepository>,
 }
 
 impl ValidateOpeningBalanceUseCase {
-    pub fn new(repo: Arc<dyn OpeningMigrationRepository>) -> Self {
-        Self { repo }
+    pub fn new(
+        repo: Arc<dyn OpeningMigrationRepository>,
+        detail_repo: Arc<dyn OpeningItemRepository>,
+        account_repo: Arc<dyn AccountRepository>,
+        journal_repo: Arc<dyn JournalEntryRepository>,
+    ) -> Self {
+        Self {
+            repo,
+            detail_repo,
+            account_repo,
+            journal_repo,
+        }
     }
 
     pub async fn execute(&self, id: String, by: String) -> Result<OpeningMigrationDto, AppError> {
         let mut migration = self.repo.find_by_id(&id).await?
-            .ok_or_else(|| AppError::NotFound("ØªØ±Ø­ÙŠÙ„ Ø§Ù„Ø±ØµÙŠØ¯ Ø§Ù„Ø§ÙØªØªØ§Ø­ÙŠ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯".into()))?;
+            .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
+
+        // Enforcement gate (same as posting): the opening lines must be in
+        // equilibrium AND the entered sub-ledger details must reconcile to the
+        // general ledger. No silent plug account may pass validation.
+        let recon = GetOpeningReconciliationUseCase::new(
+            self.repo.clone(),
+            self.detail_repo.clone(),
+            self.account_repo.clone(),
+            self.journal_repo.clone(),
+        )
+        .execute(id)
+        .await?;
+
+        let blockers = readiness_blockers(&recon, false);
+        if !blockers.is_empty() {
+            return Err(AppError::Invalid(blockers.join("؛ ")));
+        }
+
         migration.validate(&by).map_err(AppError::Domain)?;
         self.repo.update(&migration).await?;
         Ok(OpeningMigrationDto(migration))

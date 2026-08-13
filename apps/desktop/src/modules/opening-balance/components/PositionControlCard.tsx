@@ -2,6 +2,7 @@ import { Button } from "@shared/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
+import { StatusBadge } from "@shared/ui/status-badge";
 import { STATUS_LABEL } from "@shared/ui/status";
 import { toFixed } from "@shared/lib/format";
 import { Eye } from "lucide-react";
@@ -58,6 +59,20 @@ export function PositionControlCard({
           </Button>
         </div>
 
+        {(() => {
+          const selected = candidates.find((m) => m.id === positionId);
+          if (!selected) return null;
+          return (
+            <div className="flex flex-wrap items-center gap-3 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs">
+              <span className="font-semibold text-slate-700">حالة الافتتاح:</span>
+              <StatusBadge status={selected.status} />
+              <span className="font-semibold text-slate-700">تاريخ القطع:</span>
+              <span className="tabular-nums font-bold text-slate-700">{selected.cutover_date.split("T")[0]}</span>
+              {selected.notes && <span className="text-slate-500 truncate">· {selected.notes}</span>}
+            </div>
+          );
+        })()}
+
         {position && (
           <div className="border border-slate-200 rounded-lg space-y-3 p-3">
             <div className={"flex items-center justify-between px-3 py-2 rounded-lg text-sm font-bold " + (position.is_balanced ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600")}>
@@ -70,6 +85,31 @@ export function PositionControlCard({
             {!position.is_balanced && position.difference_message && (
               <div className="px-3 py-2 text-xs bg-amber-50 text-amber-800 rounded-lg">
                 {position.difference_message}
+              </div>
+            )}
+
+            {position.unreconciled_items.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-xs font-bold text-amber-700">بنود غير مطابقة (السجل المساعد)</div>
+                <div className="border border-amber-200 rounded-lg divide-y divide-amber-100">
+                  {position.unreconciled_items.map((r) => (
+                    <div key={r.key} className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs">
+                      <span className="font-semibold text-slate-700">{r.label}</span>
+                      <span className="tabular-nums text-slate-600">
+                        السجل المساعد: {toFixed(parseFloat(r.subledger || "0"), 2)} ← الأستاذ: {toFixed(parseFloat(r.general_ledger || "0"), 2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {position.validation_errors.length > 0 && (
+              <div className="px-3 py-2 rounded-lg bg-red-50 text-red-700 text-xs space-y-1">
+                <div className="font-bold">أخطاء الجاهزية للترحيل</div>
+                {position.validation_errors.map((e, i) => (
+                  <div key={i} className="pr-1">• {e}</div>
+                ))}
               </div>
             )}
 
