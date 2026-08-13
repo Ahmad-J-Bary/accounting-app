@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { ConfirmDialog } from "@shared/ui/confirm-dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { toast } from "sonner";
 import type { OpeningPositionControlDto } from "@erp/shared-types";
@@ -215,48 +216,65 @@ export default function OpeningBalanceMigration() {
       }
       tableContent={
         <div className="flex flex-col h-full overflow-auto p-4 gap-4">
-          <PositionControlCard
-            candidates={reconcileCandidates}
-            positionId={positionId}
-            onPositionIdChange={setPositionId}
-            loading={positionLoading}
-            position={position}
-            onShow={handleShowPosition}
-          />
+          <Tabs defaultValue="wizard">
+            <TabsList className="bg-white border border-slate-200 p-1 h-11 rounded-xl shadow-sm mb-1">
+              <TabsTrigger value="wizard" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">المعالج</TabsTrigger>
+              <TabsTrigger value="list" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">قائمة الترحيلات</TabsTrigger>
+              <TabsTrigger value="position" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">المركز والتسوية</TabsTrigger>
+              <TabsTrigger value="allocation" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">توزيع الأرباح</TabsTrigger>
+            </TabsList>
 
-          <GuidedTransitionWizard />
+            <TabsContent value="wizard" className="mt-2 space-y-4">
+              <GuidedTransitionWizard />
+            </TabsContent>
 
-          <MigrationListCard
-            migrations={migrations}
-            isLoading={isLoading}
-            cancellingId={cancellingId}
-            transitioningTo={transitioningTo}
-            onLock={handleLock}
-            onCancel={(id) => setConfirmAction({ type: "cancel", id })}
-            onReopen={(id) => setConfirmAction({ type: "reopen", id })}
-          />
+            <TabsContent value="list" className="mt-2 space-y-4">
+              <MigrationListCard
+                migrations={migrations}
+                isLoading={isLoading}
+                cancellingId={cancellingId}
+                transitioningTo={transitioningTo}
+                onLock={handleLock}
+                onCancel={(id) => setConfirmAction({ type: "cancel", id })}
+                onReopen={(id) => setConfirmAction({ type: "reopen", id })}
+              />
+            </TabsContent>
 
-          <ReconciliationCard
-            candidates={reconcileCandidates}
-            reconId={reconId}
-            onReconIdChange={setReconId}
-            loading={reconLoading}
-            reconciliation={reconciliation}
-          />
+            <TabsContent value="position" className="mt-2 space-y-4">
+              <PositionControlCard
+                candidates={reconcileCandidates}
+                positionId={positionId}
+                onPositionIdChange={setPositionId}
+                loading={positionLoading}
+                position={position}
+                onShow={handleShowPosition}
+              />
 
-          <ProfitAllocationCard
-            postedMigrations={postedMigrations}
-            allocMigrationId={allocMigrationId}
-            onAllocMigrationIdChange={setAllocMigrationId}
-            netProfit={netProfit}
-            onNetProfitChange={setNetProfit}
-            allocating={allocating}
-            computingProfit={computingProfit}
-            allocResult={allocResult}
-            computedProfit={computedProfit}
-            onCompute={handleComputeProfit}
-            onAllocate={handleAllocate}
-          />
+              <ReconciliationCard
+                candidates={reconcileCandidates}
+                reconId={reconId}
+                onReconIdChange={setReconId}
+                loading={reconLoading}
+                reconciliation={reconciliation}
+              />
+            </TabsContent>
+
+            <TabsContent value="allocation" className="mt-2 space-y-4">
+              <ProfitAllocationCard
+                postedMigrations={postedMigrations}
+                allocMigrationId={allocMigrationId}
+                onAllocMigrationIdChange={setAllocMigrationId}
+                netProfit={netProfit}
+                onNetProfitChange={setNetProfit}
+                allocating={allocating}
+                computingProfit={computingProfit}
+                allocResult={allocResult}
+                computedProfit={computedProfit}
+                onCompute={handleComputeProfit}
+                onAllocate={handleAllocate}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
       }
     >

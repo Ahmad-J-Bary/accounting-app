@@ -297,7 +297,7 @@ export function useOpeningBalanceWizard() {
       case 6:
         return !!migration && migration.status === "Validated";
       case 7:
-        return !!migration && migration.status === "Approved";
+        return !!migration && migration.status === "Validated";
       case 8:
         return !!migration && migration.status === "Posted";
       case 9:
@@ -385,6 +385,10 @@ export function useOpeningBalanceWizard() {
       }
       if (step === 7) {
         setBusy(true);
+        // The backend only posts an Approved migration. Approval is folded into
+        // the "تأكيد الترحيل" step so the wizard never dead-ends at Post.
+        const approved = await openingBalanceService.approveMigration(migration.id, "system");
+        setMigration(approved);
         const res = await openingBalanceService.postMigration(migration.id);
         setMigration(res.migration);
         invalidateMigrations();

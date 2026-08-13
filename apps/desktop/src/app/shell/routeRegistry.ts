@@ -43,7 +43,7 @@ export const ALL_SYSTEM_ROUTES: SystemRouteEntry[] = [
   // ── المخزون ──
   { id: "categories", to: "/categories", label: "تصنيفات المواد", icon: "Folders", groupId: "inventory", groupLabel: "المخزون" },
   { id: "materials", to: "/materials", label: "بطاقات المواد", icon: "Package", groupId: "inventory", groupLabel: "المخزون" },
-  { id: "opening-balance", to: "/opening-balance", label: "فاتورة أول المدة", icon: "Layers", groupId: "inventory", groupLabel: "المحاسبة العامة" },
+  { id: "opening-balance", to: "/opening-balance", label: "فاتورة أول المدة", icon: "PackageOpen", groupId: "inventory", groupLabel: "المخزون" },
   { id: "inventory", to: "/inventory", label: "حركات المخزون", icon: "Warehouse", groupId: "inventory", groupLabel: "المخزون" },
   { id: "transfers", to: "/inventory/transfers", label: "التحويلات", icon: "ArrowLeftRight", groupId: "inventory", groupLabel: "المخزون" },
   { id: "warehouses", to: "/inventory/warehouses", label: "المستودعات", icon: "Warehouse", groupId: "inventory", groupLabel: "المخزون" },

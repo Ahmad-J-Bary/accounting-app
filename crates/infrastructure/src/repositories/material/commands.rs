@@ -10,6 +10,15 @@ use domain::inventory::material::{MaterialPurchasePrice, MaterialSalePrice};
 pub async fn save(pool: &SqlitePool, material: &Material) -> Result<(), AppError> {
     let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
+    // materials.default_purchase_unit_id / default_sale_unit_id point at
+    // material_units rows that are inserted *after* the materials row (the
+    // tables form a circular FK: material_units.material_id -> materials.id).
+    // Defer FK enforcement to commit so the child rows may be written first.
+    sqlx::query("PRAGMA defer_foreign_keys = ON")
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
     sqlx::query(
         "INSERT INTO materials (id, name, name_en, barcode, code, minimum_stock, notes, image_path, default_purchase_unit_id, default_sale_unit_id, default_purchase_currency, default_sale_currency, default_warehouse_id, has_expiry, expiry_alert_before_days, created_at, updated_at) 
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -55,6 +64,15 @@ pub(crate) async fn update_tx<'a>(
     tx: &mut sqlx::Transaction<'a, sqlx::Sqlite>,
     material: &Material,
 ) -> Result<(), AppError> {
+    // Defer FK enforcement for the same circular-FK reason as save(): units may
+    // be replaced (DELETE + INSERT) while the materials row still references
+    // them. Guarded by the enclosing transaction (update() or the caller that
+    // opened the transaction before invoking update_tx).
+    sqlx::query("PRAGMA defer_foreign_keys = ON")
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
     sqlx::query(
         "UPDATE materials SET name=?, name_en=?, barcode=?, code=?, minimum_stock=?, notes=?, image_path=?, default_purchase_unit_id=?, default_sale_unit_id=?, default_purchase_currency=?, default_sale_currency=?, default_warehouse_id=?, has_expiry=?, expiry_alert_before_days=?, updated_at=? 
          WHERE id=?"
