@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@shared/ui/button";
@@ -149,20 +149,6 @@ export default function OpeningBalanceMigration() {
     [migrations],
   );
 
-  const handleReconcile = async () => {
-    if (!reconId) return toast.error("اختر ترحيلاً للتحقق");
-    setReconLoading(true);
-    setReconciliation(null);
-    try {
-      const res = await openingBalanceService.getReconciliation(reconId);
-      setReconciliation(res);
-    } catch (e) {
-      toast.error("فشل تحميل التسوية: " + e);
-    } finally {
-      setReconLoading(false);
-    }
-  };
-
   const handleShowPosition = async () => {
     if (!positionId) return toast.error("اختر ترحيلاً لعرض المركز");
     setPositionLoading(true);
@@ -178,6 +164,7 @@ export default function OpeningBalanceMigration() {
   };
 
   const autoLoadedId = useRef<string | null>(null);
+  const autoReconId = useRef<string | null>(null);
 
   // Hero summary: preselect the most recent migration (by cutover date) when none
   // is selected or the selected one no longer exists.
@@ -201,6 +188,20 @@ export default function OpeningBalanceMigration() {
       .catch((e) => toast.error("فشل تحميل المركز الافتتاحي: " + e))
       .finally(() => setPositionLoading(false));
   }, [positionId]);
+
+  // Auto-load the reconciliation snapshot when a migration is picked, mirroring
+  // the position card behavior — one fewer click to check the balances.
+  useEffect(() => {
+    if (!reconId || autoReconId.current === reconId) return;
+    autoReconId.current = reconId;
+    setReconLoading(true);
+    setReconciliation(null);
+    openingBalanceService
+      .getReconciliation(reconId)
+      .then((res) => setReconciliation(res))
+      .catch((e) => toast.error("فشل تحميل التسوية: " + e))
+      .finally(() => setReconLoading(false));
+  }, [reconId]);
 
   return (
     <OperationalTableTemplate
@@ -241,7 +242,6 @@ export default function OpeningBalanceMigration() {
             onReconIdChange={setReconId}
             loading={reconLoading}
             reconciliation={reconciliation}
-            onCheck={handleReconcile}
           />
 
           <ProfitAllocationCard

@@ -1,13 +1,11 @@
 import { Button } from "@shared/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
-import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
+import { SectionCard } from "@shared/ui/section-card";
 import { StatusBadge } from "@shared/ui/status-badge";
-import { STATUS_LABEL } from "@shared/ui/status";
-import { toFixed } from "@shared/lib/format";
+import { fmtMoney, toLocalDateStr } from "@shared/lib/format";
 import { Eye } from "lucide-react";
 import type { PositionAccountLine, OpeningPositionControlDto } from "@erp/shared-types";
 import type { OpeningBalanceMigrationDto } from "../../accounting/api/openingBalanceService";
+import { MigrationPicker } from "./MigrationPicker";
 
 interface PositionControlCardProps {
   candidates: OpeningBalanceMigrationDto[];
@@ -26,38 +24,18 @@ export function PositionControlCard({
   position,
   onShow,
 }: PositionControlCardProps) {
-  return (
-    <Card className="border-slate-200 shadow-sm">
-      <CardHeader className="py-3">
-        <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
-          <Eye className="w-4 h-4 text-blue-600" /> المركز الافتتاحي (قراءة فقط)
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-xs text-slate-500">
-          يعرض المركز المالي الافتتاحي المشتق من بنود الترحيل نفسها (A = L + E) دون إنشاء أي قيد اليومية،
-          ويسلط الضوء على الفرق غير المصنف إن وُجد للرجوع إلى سير عمل تصنيف الرصيد المتبقي.
-        </p>
-        <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
-          <div className="space-y-1.5">
-            <FieldLabel htmlFor="pos-migration">الترحيل</FieldLabel>
-            <Select value={positionId} onValueChange={onPositionIdChange}>
-              <SelectTrigger id="pos-migration" className="h-9 bg-white border-slate-200 text-xs">
-                <SelectValue placeholder={candidates.length ? "اختر ترحيلاً..." : "لا توجد ترحيلات"} />
-              </SelectTrigger>
-              <SelectContent>
-                {candidates.map((m) => (
-                  <SelectItem key={m.id} value={m.id} className="text-xs">
-                    {m.cutover_date.split("T")[0]} — {STATUS_LABEL[m.status]} — {m.lines.length} بنود
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button size="sm" onClick={onShow} disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
-            {loading ? "جارٍ العرض..." : "عرض المركز"}
-          </Button>
-        </div>
+return (
+    <SectionCard
+      title="المركز الافتتاحي (قراءة فقط)"
+      icon={<Eye className="w-4 h-4 text-blue-600" />}
+      description="يعرض المركز المالي الافتتاحي المشتق من بنود الترحيل نفسها (A = L + E) دون إنشاء أي قيد اليومية، ويسلط الضوء على الفرق غير المصنف إن وُجد للرجوع إلى سير عمل تصنيف الرصيد المتبقي."
+    >
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
+        <MigrationPicker id="pos-migration" label="الترحيل" candidates={candidates} value={positionId} onChange={onPositionIdChange} />
+        <Button size="sm" onClick={onShow} disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+          {loading ? "جارٍ العرض..." : "عرض المركز"}
+        </Button>
+      </div>
 
         {(() => {
           const selected = candidates.find((m) => m.id === positionId);
@@ -67,7 +45,7 @@ export function PositionControlCard({
               <span className="font-semibold text-slate-700">حالة الافتتاح:</span>
               <StatusBadge status={selected.status} />
               <span className="font-semibold text-slate-700">تاريخ القطع:</span>
-              <span className="tabular-nums font-bold text-slate-700">{selected.cutover_date.split("T")[0]}</span>
+              <span className="tabular-nums font-bold text-slate-700">{toLocalDateStr(selected.cutover_date)}</span>
               {selected.notes && <span className="text-slate-500 truncate">· {selected.notes}</span>}
             </div>
           );
@@ -78,7 +56,7 @@ export function PositionControlCard({
             <div className={"flex items-center justify-between px-3 py-2 rounded-lg text-sm font-bold " + (position.is_balanced ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600")}>
               <span>{position.is_balanced ? "المركز متوازن ✓" : "يوجد فرق في المركز"}</span>
               <span className="tabular-nums">
-                الفرق: {toFixed(parseFloat(position.equity_difference || "0"), 2)}
+                الفرق: {fmtMoney(position.equity_difference)}
               </span>
             </div>
 
@@ -96,7 +74,7 @@ export function PositionControlCard({
                     <div key={r.key} className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs">
                       <span className="font-semibold text-slate-700">{r.label}</span>
                       <span className="tabular-nums text-slate-600">
-                        السجل المساعد: {toFixed(parseFloat(r.subledger || "0"), 2)} ← الأستاذ: {toFixed(parseFloat(r.general_ledger || "0"), 2)}
+                        السجل المساعد: {fmtMoney(r.subledger)} ← الأستاذ: {fmtMoney(r.general_ledger)}
                       </span>
                     </div>
                   ))}
@@ -122,7 +100,7 @@ export function PositionControlCard({
               ].map((row) => (
                 <div key={row.label} className="border border-slate-100 rounded-lg p-2 space-y-0.5 bg-white">
                   <div className="text-slate-500 font-semibold">{row.label}</div>
-                  <div className={"font-bold tabular-nums " + row.color}>{toFixed(parseFloat(row.value || "0"), 2)}</div>
+                  <div className={"font-bold tabular-nums " + row.color}>{fmtMoney(row.value)}</div>
                 </div>
               ))}
             </div>
@@ -130,27 +108,27 @@ export function PositionControlCard({
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
               <div className="border border-slate-100 rounded-lg p-2 space-y-1">
                 <div className="text-slate-500 font-semibold">رأس مال الشركاء</div>
-                <div className="font-bold tabular-nums">{toFixed(parseFloat(position.partner_capital || "0"), 2)}</div>
+                <div className="font-bold tabular-nums">{fmtMoney(position.partner_capital)}</div>
               </div>
               <div className="border border-slate-100 rounded-lg p-2 space-y-1">
                 <div className="text-slate-500 font-semibold">الحسابات الجارية</div>
-                <div className="font-bold tabular-nums">{toFixed(parseFloat(position.partner_current_accounts || "0"), 2)}</div>
+                <div className="font-bold tabular-nums">{fmtMoney(position.partner_current_accounts)}</div>
               </div>
               <div className="border border-slate-100 rounded-lg p-2 space-y-1">
                 <div className="text-slate-500 font-semibold">الأرباح المبقاة</div>
-                <div className="font-bold tabular-nums">{toFixed(parseFloat(position.retained_earnings || "0"), 2)}</div>
+                <div className="font-bold tabular-nums">{fmtMoney(position.retained_earnings)}</div>
               </div>
               <div className="border border-slate-100 rounded-lg p-2 space-y-1">
                 <div className="text-slate-500 font-semibold">تسوية رصيد الافتتاح (53)</div>
-                <div className="font-bold tabular-nums">{toFixed(parseFloat(position.opening_equity_adjustment || "0"), 2)}</div>
+                <div className="font-bold tabular-nums">{fmtMoney(position.opening_equity_adjustment)}</div>
               </div>
               <div className="border border-slate-100 rounded-lg p-2 space-y-1">
                 <div className="text-slate-500 font-semibold">حقوق ملكية أخرى</div>
-                <div className="font-bold tabular-nums">{toFixed(parseFloat(position.other_equity || "0"), 2)}</div>
+                <div className="font-bold tabular-nums">{fmtMoney(position.other_equity)}</div>
               </div>
               <div className="border border-slate-100 rounded-lg p-2 space-y-1">
                 <div className="text-slate-500 font-semibold">مسحوبات (−)</div>
-                <div className="font-bold tabular-nums text-red-600">{toFixed(parseFloat(position.drawings || "0"), 2)}</div>
+                <div className="font-bold tabular-nums text-red-600">{fmtMoney(position.drawings)}</div>
               </div>
             </div>
 
@@ -159,7 +137,7 @@ export function PositionControlCard({
                 النتيجة التاريخية الافتتاحية (صافي الأصول − رأس المال − حقوق صريحة أخرى):
               </span>
               <span className="font-black tabular-nums text-indigo-700">
-                {toFixed(parseFloat(position.opening_historical_result || "0"), 2)}
+                {fmtMoney(position.opening_historical_result)}
               </span>
             </div>
 
@@ -180,10 +158,10 @@ export function PositionControlCard({
                   {position.partner_rows.map((p) => (
                     <div key={p.partner_id} className="grid grid-cols-2 md:grid-cols-5 gap-2 px-3 py-2 text-xs items-center">
                       <span className="font-semibold text-slate-700">{p.partner_name}</span>
-                      <span className="tabular-nums text-slate-600">رأس المال: {toFixed(parseFloat(p.capital || "0"), 2)}</span>
-                      <span className="tabular-nums text-slate-600">النسبة: {toFixed(parseFloat(p.ownership_percent || "0"), 2)}%</span>
-                      <span className="tabular-nums text-slate-600">جاري: {toFixed(parseFloat(p.current || "0"), 2)}</span>
-                      <span className="tabular-nums text-slate-600">مسحوبات: {toFixed(parseFloat(p.drawings || "0"), 2)}</span>
+                      <span className="tabular-nums text-slate-600">رأس المال: {fmtMoney(p.capital)}</span>
+                      <span className="tabular-nums text-slate-600">النسبة: {fmtMoney(p.ownership_percent)}%</span>
+                      <span className="tabular-nums text-slate-600">جاري: {fmtMoney(p.current)}</span>
+                      <span className="tabular-nums text-slate-600">مسحوبات: {fmtMoney(p.drawings)}</span>
                     </div>
                   ))}
                 </div>
@@ -191,8 +169,7 @@ export function PositionControlCard({
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
+    </SectionCard>
   );
 }
 
@@ -208,7 +185,7 @@ function PositionDetailTable({ title, lines }: { title: string; lines: PositionA
               <span className="truncate text-slate-700">{l.name_ar}</span>
               <span className="text-2xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500">{l.group_key}</span>
             </div>
-            <span className="tabular-nums font-semibold text-slate-700">{toFixed(parseFloat(l.amount || "0"), 2)}</span>
+            <span className="tabular-nums font-semibold text-slate-700">{fmtMoney(l.amount)}</span>
           </div>
         ))}
       </div>

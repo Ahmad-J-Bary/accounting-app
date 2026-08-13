@@ -54,12 +54,12 @@ export function WizardShell({
         </CardHeader>
 
         <CardContent className="pt-0">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1">
             {steps.map((s, i) => {
               const active = i === stepIndex;
               const passed = i < stepIndex;
               return (
-                <div key={s.id} className="flex flex-1 flex-col items-center gap-1 min-w-0">
+                <div key={s.id} className="flex flex-1 flex-col items-center gap-1 min-w-[3.5rem]">
                   <div
                     className={cn(
                       "flex items-center justify-center w-8 h-8 rounded-full border-2 shadow-sm transition-all",
@@ -70,6 +70,7 @@ export function WizardShell({
                           : "bg-white border-slate-200 text-slate-400",
                     )}
                     title={s.label}
+                    aria-current={active ? "step" : undefined}
                   >
                     {passed ? <Check className="w-4 h-4 stroke-[3]" /> : <span className="text-xs font-bold font-mono">{i + 1}</span>}
                   </div>

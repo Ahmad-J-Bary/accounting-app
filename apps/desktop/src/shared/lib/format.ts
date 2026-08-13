@@ -1,3 +1,5 @@
+import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
+
 let _numberingSystem: "arab" | "latn" = "latn";
 
 export function getNumberingSystem(): "arab" | "latn" {
@@ -92,4 +94,18 @@ export function toFixed(n: number, digits: number): string {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   }).format(n);
+}
+
+/**
+ * Formats a money value coming from the backend (string-encoded decimal) or a
+ * local number/input. Null/undefined/NaN collapse to "0.00" so callers don't
+ * sprinkle `parseFloat(x || "0")` everywhere.
+ */
+export function fmtMoney(value: string | number | null | undefined, digits = 2): string {
+  const parsed = parseSafeNumber(value);
+  return new Intl.NumberFormat("ar-SY", {
+    numberingSystem: _numberingSystem,
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(parsed);
 }

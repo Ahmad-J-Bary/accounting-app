@@ -1,5 +1,39 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { formatCurrency, formatNumber, formatDate, formatDateTime, setNumberingSystem, getNumberingSystem } from "./format";
+import { formatCurrency, formatNumber, formatDate, formatDateTime, setNumberingSystem, getNumberingSystem, fmtMoney, toLocalDateStr } from "./format";
+
+describe("fmtMoney", () => {
+  beforeEach(() => {
+    setNumberingSystem("western");
+  });
+
+  it("formats a number with two decimals", () => {
+    expect(fmtMoney(1234.5)).toBe("1,234.50");
+  });
+
+  it("accepts string-encoded decimals from the backend", () => {
+    expect(fmtMoney("250.75")).toContain("250.75");
+  });
+
+  it("collapses null/undefined/NaN to zero", () => {
+    expect(fmtMoney(null)).toBe("0.00");
+    expect(fmtMoney(undefined)).toBe("0.00");
+    expect(fmtMoney("abc")).toBe("0.00");
+  });
+
+  it("honours a custom digit count", () => {
+    expect(fmtMoney(1.234, 3)).toContain("1.234");
+  });
+});
+
+describe("toLocalDateStr", () => {
+  it("returns the local calendar date of an ISO string", () => {
+    expect(toLocalDateStr("2026-05-15T00:00:00Z")).toBe("2026-05-15");
+  });
+
+  it("returns the input untouched on invalid dates", () => {
+    expect(toLocalDateStr("not-a-date")).toBe("not-a-date");
+  });
+});
 
 describe("formatCurrency", () => {
   it("formats without forcing a default currency", () => {

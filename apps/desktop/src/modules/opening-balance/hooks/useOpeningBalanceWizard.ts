@@ -1,16 +1,7 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type {
-  AccountDto,
-  CustomerDto,
-  SupplierDto,
-  PartnerDto,
-  FixedAssetDto,
-  MaterialDto,
-  UpdateSettingsRequest,
-  FiscalPeriodDto,
-} from "@erp/shared-types";
+import type { AccountDto, UpdateSettingsRequest, FiscalPeriodDto } from "@erp/shared-types";
 import type { WizardStepDef } from "@modules/opening-balance/components/WizardShell";
 import { queryClient, QUERY_KEYS } from "@shared/hooks/queryClient";
 import { accountingService } from "@modules/accounting/api/accountingService";
@@ -28,61 +19,24 @@ import {
   type OpeningItemInput,
   type OpeningReconciliationDto,
 } from "@modules/accounting/api/openingBalanceService";
-
-export const KIND_AR = "AR";
-export const KIND_AP = "AP";
-export const KIND_INVENTORY = "Inventory";
-export const KIND_FIXED_ASSET = "FixedAsset";
-
-export const START_MODE_NEW = "NewCompany";
-export const START_MODE_EXISTING = "ExistingCompanyMigration";
-
-// Opening Balance Equity control account (code 53) — the residual plug.
-const OPENING_EQUITY_CODE = "53";
-
-export interface WizLine {
-  key: string;
-  account_id: string;
-  amount: string;
-}
-
-// A sub-ledger row links a REAL entity (customer/supplier/material/asset) to
-// the opening amount it carries inside the migration. `reference` is the
-// source-system reference (invoice/order number), never a free-text id.
-export interface DetailRow {
-  key: string;
-  entity_id: string;
-  reference: string;
-  amount: string;
-  qty: string;
-}
-
-// A read-only line DERIVED from an owning module (customers / suppliers /
-// fixed assets / partners). Shown with a "مشتق" badge; never manually edited.
-export interface DerivedRow {
-  key: string;
-  entity_id: string;
-  label: string;
-  account_id: string;
-  account_code: string;
-  amount: string;
-  kind: "AR" | "AP" | "FixedAsset" | "Equity";
-}
-
-export function newLine(): WizLine {
-  return { key: `wl_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, account_id: "", amount: "" };
-}
-
-export function newDetail(): DetailRow {
-  return { key: `wd_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, entity_id: "", reference: "", amount: "", qty: "" };
-}
-
-export interface EntityOption {
-  value: string;
-  label: string;
-}
-
-const toNum = (v?: string): number => parseFloat(v || "0") || 0;
+import {
+  KIND_AR,
+  KIND_AP,
+  KIND_FIXED_ASSET,
+  START_MODE_NEW,
+  START_MODE_EXISTING,
+  OPENING_EQUITY_CODE,
+  type WizLine,
+  type DerivedRow,
+} from "@modules/opening-balance/lib/wizard-types";
+import {
+  deriveAr,
+  deriveAp,
+  deriveFa,
+  derivePartnerEquity,
+  inventorySummary as inventorySummaryFn,
+  sumLines,
+} from "@modules/opening-balance/lib/derive-rows";
 
 export function useOpeningBalanceWizard() {
   const [step, setStep] = useState(0);
@@ -154,123 +108,51 @@ export function useOpeningBalanceWizard() {
     }
   };
 
+  // NewCompany never touches these modules, so only fetch them when the
+  // Existing-company migration path is active (avoids 6 wasted queries on mount).
+  const existing = startMode === START_MODE_EXISTING;
+
   const { data: accounts = [] } = useQuery<AccountDto[]>({
     queryKey: QUERY_KEYS.chartOfAccounts,
     queryFn: () => accountingService.getChartOfAccounts(),
+    enabled: existing,
   });
-
-  const { data: customers = [] } = useQuery<CustomerDto[]>({
+  const { data: customers = [] } = useQuery({
     queryKey: QUERY_KEYS.customers,
     queryFn: () => customerService.list(),
+    enabled: existing,
   });
-  const { data: suppliers = [] } = useQuery<SupplierDto[]>({
+  const { data: suppliers = [] } = useQuery({
     queryKey: QUERY_KEYS.suppliers,
     queryFn: () => supplierService.list(),
+    enabled: existing,
   });
-  const { data: partners = [] } = useQuery<PartnerDto[]>({
+  const { data: partners = [] } = useQuery({
     queryKey: QUERY_KEYS.partners,
     queryFn: () => partnerService.listPartners(),
+    enabled: existing,
   });
-  const { data: materials = [] } = useQuery<MaterialDto[]>({
+  const { data: materials = [] } = useQuery({
     queryKey: QUERY_KEYS.materials,
     queryFn: () => materialService.list(),
+    enabled: existing,
   });
-  const { data: fixedAssets = [] } = useQuery<FixedAssetDto[]>({
+  const { data: fixedAssets = [] } = useQuery({
     queryKey: QUERY_KEYS.fixedAssets,
     queryFn: () => fixedAssetService.list(),
+    enabled: existing,
   });
 
-  const accountCode = useCallback(
-    (id?: string | null) => (id ? accounts.find((a) => a.id === id)?.code || "" : ""),
-    [accounts],
-  );
-
-  // ── Module-derived rows (read-only) ─────────────────────────────────────
-  const derivedAr: DerivedRow[] = useMemo(
-    () =>
-      customers
-        .filter((c) => c.account_id && toNum(c.opening_balance) !== 0)
-        .map((c) => ({
-          key: `ar_${c.id}`,
-          entity_id: c.id,
-          label: `${c.code || ""} — ${c.name}`,
-          account_id: c.account_id as string,
-          account_code: accountCode(c.account_id),
-          amount: String(toNum(c.opening_balance)),
-          kind: "AR" as const,
-        })),
-    [customers, accountCode],
-  );
-
-  const derivedAp: DerivedRow[] = useMemo(
-    () =>
-      suppliers
-        .filter((s) => s.account_id && toNum(s.opening_balance) !== 0)
-        .map((s) => ({
-          key: `ap_${s.id}`,
-          entity_id: s.id,
-          label: `${s.code || ""} — ${s.name}`,
-          account_id: s.account_id as string,
-          account_code: accountCode(s.account_id),
-          amount: String(toNum(s.opening_balance)),
-          kind: "AP" as const,
-        })),
-    [suppliers, accountCode],
-  );
-
-  const derivedFa: DerivedRow[] = useMemo(
-    () =>
-      fixedAssets
-        .filter((a) => a.status === "Active" && a.asset_account_id)
-        .map((a) => ({
-          key: `fa_${a.id}`,
-          entity_id: a.id,
-          label: `${a.code || ""} — ${a.name}`,
-          account_id: a.asset_account_id,
-          account_code: accountCode(a.asset_account_id),
-          amount: String(toNum(a.purchase_cost?.amount) - toNum(a.accumulated_depreciation?.amount)),
-          kind: "FixedAsset" as const,
-        }))
-        .filter((r) => toNum(r.amount) !== 0),
-    [fixedAssets, accountCode],
-  );
-
-  const partnerEquity: DerivedRow[] = useMemo(
-    () =>
-      partners
-        .filter((p) => p.linked_account_id && toNum(p.amount_local) !== 0)
-        .map((p) => ({
-          key: `eq_${p.id}`,
-          entity_id: p.id,
-          label: `${p.code || ""} — ${p.name}`,
-          account_id: p.linked_account_id as string,
-          account_code: accountCode(p.linked_account_id),
-          amount: String(toNum(p.amount_local)),
-          kind: "Equity" as const,
-        })),
-    [partners, accountCode],
-  );
+  // ── Module-derived rows (read-only, pure derivation) ────────────────────
+  const derivedAr: DerivedRow[] = useMemo(() => deriveAr(customers, accounts), [customers, accounts]);
+  const derivedAp: DerivedRow[] = useMemo(() => deriveAp(suppliers, accounts), [suppliers, accounts]);
+  const derivedFa: DerivedRow[] = useMemo(() => deriveFa(fixedAssets, accounts), [fixedAssets, accounts]);
+  const partnerEquity: DerivedRow[] = useMemo(() => derivePartnerEquity(partners, accounts), [partners, accounts]);
 
   // ── Inventory: handled by the Phase-3 opening-invoice flow (read-only) ──
-  const inventorySummary = useMemo(() => {
-    const rows = materials
-      .map((m) => ({
-        name: m.name,
-        available: toNum(m.total_available),
-        value: toNum(m.total_available) * toNum(m.average_cost_base),
-      }))
-      .filter((r) => r.available !== 0);
-    return {
-      rows,
-      total: rows.reduce((s, r) => s + r.value, 0),
-      count: rows.length,
-    };
-  }, [materials]);
+  const inventorySummary = useMemo(() => inventorySummaryFn(materials), [materials]);
 
   // ── Totals (never asked from the user) ──────────────────────────────────
-  const sumLines = (list: Array<{ amount?: string }>) =>
-    list.reduce((s, l) => s + toNum(l.amount), 0);
-
   const manualAssetsTotal = sumLines(assetsManual);
   const manualLiabilitiesTotal = sumLines(liabilitiesManual);
   const manualEquityTotal = sumLines(equityManual);

@@ -6,8 +6,8 @@ import { Combobox } from "@shared/ui/combobox";
 import { EmptyState } from "@widgets/table-shell/EmptyState";
 import { toFixed } from "@shared/lib/format";
 import type { AccountDto } from "@erp/shared-types";
-import type { WizLine, DetailRow, EntityOption } from "../hooks/useOpeningBalanceWizard";
-import { newLine, newDetail } from "../hooks/useOpeningBalanceWizard";
+import type { WizLine, DetailRow, EntityOption } from "@modules/opening-balance/lib/wizard-types";
+import { newLine, newDetail } from "@modules/opening-balance/lib/wizard-types";
 import { AccountLineRow } from "./AccountLineRow";
 import { AddLineButton } from "./AddLineButton";
 

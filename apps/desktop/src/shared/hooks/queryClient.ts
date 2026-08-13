@@ -77,6 +77,7 @@ export const QUERY_KEYS = {
   stockAdjustments: ["stock-adjustments"] as const,
   openingBalanceMigrations: ["opening-balance-migrations"] as const,
   fiscalPeriods: ["fiscal-periods"] as const,
+  distributableProfit: (start?: string, end?: string) => ["fiscal-periods", "distributable-profit", start, end] as const,
 } as const;
 
 /** All report/ledger query keys that should be invalidated after any accounting mutation. */

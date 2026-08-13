@@ -2,17 +2,16 @@ import { Input } from "@shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { StatusBadge } from "@shared/ui/status-badge";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
-import { toFixed } from "@shared/lib/format";
+import { toLocalDateStr, fmtMoney, toFixed } from "@shared/lib/format";
 import { Badge } from "@shared/ui/badge";
 import { WizardShell } from "@modules/opening-balance/components/WizardShell";
 import { WizardLineEditor } from "@modules/opening-balance/components/WizardLineEditor";
 import {
   useOpeningBalanceWizard,
-  START_MODE_NEW,
-  START_MODE_EXISTING,
-  type DerivedRow,
 } from "@modules/opening-balance/hooks/useOpeningBalanceWizard";
-import { RECON_ROW_LABEL } from "@modules/opening-balance/lib/migration-labels";
+import { START_MODE_NEW, START_MODE_EXISTING, type DerivedRow } from "@modules/opening-balance/lib/wizard-types";
+import { RECON_ROW_LABEL, reconciliationReadiness } from "@modules/opening-balance/lib/migration-labels";
+import { ReconciliationStatusBanner } from "@modules/opening-balance/components/ReconciliationStatusBanner";
 import { Link } from "react-router-dom";
 
 export function GuidedTransitionWizard() {
@@ -35,7 +34,7 @@ export function GuidedTransitionWizard() {
       </div>
       {w.firstPeriod && (
         <div className="rounded-lg p-3 text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-          أول فترة مالية: {w.firstPeriod.start_date.split("T")[0]} ← {w.firstPeriod.end_date.split("T")[0]}
+          أول فترة مالية: {toLocalDateStr(w.firstPeriod.start_date)} ← {toLocalDateStr(w.firstPeriod.end_date)}
         </div>
       )}
     </div>
@@ -284,7 +283,7 @@ export function GuidedTransitionWizard() {
                       />
                     </div>
                     <div className="tabular-nums text-slate-600">
-                      السجل المساعد: {toFixed(parseFloat(r.subledger), 2)} ← الأستاذ: {toFixed(parseFloat(r.general_ledger), 2)}
+                      السجل المساعد: {fmtMoney(r.subledger)} ← الأستاذ: {fmtMoney(r.general_ledger)}
                     </div>
                   </div>
                 ))}
@@ -293,28 +292,10 @@ export function GuidedTransitionWizard() {
                     {w.reconciliation.all_reconciled ? "جميع الأرصدة متطابقة ✓" : "يوجد فرق في الأرصدة"}
                   </span>
                   <span className="tabular-nums text-slate-700 font-semibold">
-                    رصيد الافتتاح (53): {toFixed(parseFloat(w.reconciliation.opening_control_balance), 2)} · مدين {toFixed(parseFloat(w.reconciliation.debit_total), 2)} / دائن {toFixed(parseFloat(w.reconciliation.credit_total), 2)}
+                    رصيد الافتتاح (53): {fmtMoney(w.reconciliation.opening_control_balance)} · مدين {fmtMoney(w.reconciliation.debit_total)} / دائن {fmtMoney(w.reconciliation.credit_total)}
                   </span>
                 </div>
-                {(() => {
-                  const controlZero = parseFloat(w.reconciliation.opening_control_balance) === 0;
-                  const readyToPost = w.reconciliation.debit_equals_credit && w.reconciliation.all_reconciled;
-                  const readyToLock = readyToPost && controlZero;
-                  const blockers = [
-                    !w.reconciliation.debit_equals_credit && "القيد غير متوازن",
-                    !w.reconciliation.all_reconciled && "الواجهات الفرعية غير مطابقة",
-                    !controlZero && "رصيد 53 لم يُصفَّر بعد",
-                  ].filter(Boolean) as string[];
-                  return (
-                    <div className={"px-3 py-2 text-xs font-bold rounded-b-lg " + (readyToPost ? (readyToLock ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700") : "bg-red-50 text-red-600")}>
-                      {readyToLock
-                        ? "جاهز للترحيل والقفل ✓"
-                        : readyToPost
-                          ? "جاهز للترحيل (صفّر رصيد 53 قبل القفل)"
-                          : "غير جاهز: " + blockers.join(" · ")}
-                    </div>
-                  );
-                })()}
+                <ReconciliationStatusBanner readiness={reconciliationReadiness(w.reconciliation)} />
               </div>
             )}
           </div>
@@ -431,7 +412,7 @@ function FirstPeriodFields({
       </div>
       {created && (
         <div className="rounded-lg p-3 text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
-          تم إنشاء الفترة: {created.start_date.split("T")[0]} ← {created.end_date.split("T")[0]}
+          تم إنشاء الفترة: {toLocalDateStr(created.start_date)} ← {toLocalDateStr(created.end_date)}
         </div>
       )}
     </div>
@@ -444,7 +425,7 @@ function DerivedRows({ title, rows }: { title: string; rows: DerivedRow[] }) {
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-slate-600">{title}</span>
         <span className="tabular-nums text-xs font-bold text-slate-700">
-          {toFixed(rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0), 2)}
+          {fmtMoney(rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0))}
         </span>
       </div>
       {rows.length === 0 ? (
@@ -458,7 +439,7 @@ function DerivedRows({ title, rows }: { title: string; rows: DerivedRow[] }) {
                 <span className="text-2xs font-bold text-slate-400 tabular-nums">{r.account_code || "—"}</span>
                 <span className="truncate text-slate-700">{r.label}</span>
               </div>
-              <span className="tabular-nums font-semibold text-slate-700">{toFixed(parseFloat(r.amount) || 0, 2)}</span>
+              <span className="tabular-nums font-semibold text-slate-700">{fmtMoney(r.amount)}</span>
             </div>
           ))}
         </div>

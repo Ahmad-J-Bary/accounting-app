@@ -3,7 +3,7 @@ import { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { WizardLineEditor } from "@modules/opening-balance/components/WizardLineEditor";
-import type { WizLine } from "@modules/opening-balance/hooks/useOpeningBalanceWizard";
+import type { WizLine } from "@modules/opening-balance/lib/wizard-types";
 import type { AccountDto } from "@erp/shared-types";
 
 const ACCOUNTS: AccountDto[] = [
