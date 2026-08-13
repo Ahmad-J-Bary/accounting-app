@@ -232,7 +232,9 @@ impl FixedAssetUseCases {
                 asset.name,
                 date.format("%Y-%m")
             ),
-            Some(asset.id.0.to_string()),
+            // Each month's depreciation is its own idempotent event; the
+            // acquisition journal already owns `asset.id` as its source.
+            Some(format!("asset:{}:depreciation:{}", asset.id.0, date.format("%Y-%m"))),
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
 
@@ -408,7 +410,9 @@ impl FixedAssetUseCases {
                     asset.name,
                     date.format("%Y")
                 ),
-                Some(asset.id.0.to_string()),
+                // Yearly depreciation is its own idempotent event per year
+                // (acquisition owns `asset.id` as its source).
+                Some(format!("asset:{}:depreciation:year:{}", asset.id.0, date.format("%Y"))),
             )
             .map_err(|e| AppError::Invalid(e.to_string()))?;
 

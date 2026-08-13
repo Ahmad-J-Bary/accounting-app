@@ -1,9 +1,26 @@
 use std::sync::Arc;
 
+use domain::accounting::account::Account;
 use domain::accounting::MigrationStatus;
 
 use crate::errors::AppError;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
+
+/// Rejects a P&L (Revenue / Expenses) account from an opening-balance item.
+/// Opening balances carry balance-sheet items only; the historical result
+/// flows through Retained Earnings / the residual reclassification.
+/// Shared by the create (line intake) and post (journal build) paths so the
+/// rule cannot drift between the two.
+pub fn reject_pl_account(account: &Account) -> Result<(), AppError> {
+    use domain::accounting::account::AccountType;
+    if matches!(account.account_type, AccountType::Revenue | AccountType::Expenses) {
+        return Err(AppError::Invalid(
+            "حسابات قائمة الدخل (إيرادات/مصاريف) غير مسموحة في الرصيد الافتتاحي — تُرحَّل النتيجة عبر الأرباح المبقاة"
+                .into(),
+        ));
+    }
+    Ok(())
+}
 
 /// True while an opening-balance migration setup is "in flight" — i.e. its
 /// window is still open (Draft → Approved). The window closes when the

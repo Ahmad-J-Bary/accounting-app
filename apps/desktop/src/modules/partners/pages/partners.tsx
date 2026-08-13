@@ -22,6 +22,7 @@ import { paymentService } from '@modules/payments/api/paymentService';
 import { type CreatePaymentRequest } from '@erp/shared-types';
 import { usePartnerRatios } from '@modules/partners/hooks/usePartnerRatios';
 import { queryClient, invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
+import { START_MODE_NEW, START_MODE_EXISTING } from "@modules/opening-balance/lib/wizard-types";
 
 export default function Partners() {
   const { openTab } = useTabs();
@@ -55,11 +56,11 @@ export default function Partners() {
   } | null>(null);
   const [capitalSubmitting, setCapitalSubmitting] = useState(false);
 
-  const [startMode, setStartMode] = useState<string>("NewCompany");
+  const [startMode, setStartMode] = useState<string>(START_MODE_NEW);
 
   useEffect(() => {
-    settingsService.getSettings()
-      .then((s) => setStartMode(s.accounting_start_mode || "NewCompany"))
+    settingsService.get()
+      .then((s) => setStartMode(s.accounting_start_mode || START_MODE_NEW))
       .catch(() => {});
   }, []);
 
@@ -90,7 +91,7 @@ export default function Partners() {
         // - NewCompany: partner capital requires an explicit contribution event —
         //   ask "how was the capital provided?" (cash / bank / in-kind / owed).
         // - ExistingCompanyMigration: opening capital only — no cash journal.
-        if (startMode !== "ExistingCompanyMigration" && Number(payload.amount) > 0) {
+        if (startMode !== START_MODE_EXISTING && Number(payload.amount) > 0) {
           setPendingCapital({
             partnerId,
             amount: payload.amount,
@@ -100,7 +101,7 @@ export default function Partners() {
           return; // keep the side panel open; dialog drives the contribution
         }
         toast.success(
-          startMode === "ExistingCompanyMigration"
+          startMode === START_MODE_EXISTING
             ? "تمت إضافة الشريك (رأس مال افتتاحي، بدون حركة صندوق)"
             : "تمت الإضافة بنجاح",
         );

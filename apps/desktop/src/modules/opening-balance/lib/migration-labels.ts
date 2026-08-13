@@ -30,10 +30,6 @@ export function findAccount(accounts: readonly AccountDto[], id: string): Accoun
   return accounts.find((a) => a.id === id);
 }
 
-export function newLineKey(): string {
-  return `ob_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-}
-
 export interface ReadinessInput {
   debit_equals_credit: boolean;
   all_reconciled: boolean;

@@ -10,7 +10,7 @@ import {
   useOpeningBalanceWizard,
 } from "@modules/opening-balance/hooks/useOpeningBalanceWizard";
 import { START_MODE_NEW, START_MODE_EXISTING, type DerivedRow } from "@modules/opening-balance/lib/wizard-types";
-import { RECON_ROW_LABEL, reconciliationReadiness } from "@modules/opening-balance/lib/migration-labels";
+import { reconciliationReadiness } from "@modules/opening-balance/lib/migration-labels";
 import { ReconciliationStatusBanner } from "@modules/opening-balance/components/ReconciliationStatusBanner";
 import { Link } from "react-router-dom";
 
@@ -28,7 +28,7 @@ export function GuidedTransitionWizard() {
           {isNew ? (
             "أول فترة مالية جاهزة — ابدأ تسجيل الحركات اليومية من الصفحات الرئيسية."
           ) : (
-            <>حالة الترحيل النهائية: <StatusBadge status={w.migration?.status || ""} /> — تاريخ القطع: {w.migration?.cutover_date.split("T")[0]}</>
+            <>حالة الترحيل النهائية: <StatusBadge status={w.migration?.status || ""} /> — تاريخ القطع: {toLocalDateStr(w.migration?.cutover_date || "")}</>
           )}
         </p>
       </div>
@@ -270,31 +270,14 @@ export function GuidedTransitionWizard() {
               عدد البنود: {w.collectLines().length} · الذمم المدينة: {w.derivedAr.length} · الذمم الدائنة: {w.derivedAp.length} · الأصول الثابتة: {w.derivedFa.length} · رأس مال الشركاء: {w.partnerEquity.length}
             </div>
             {w.reconciliation && (
-              <div className="border border-slate-200 rounded-lg divide-y divide-slate-100">
-                {w.reconciliation.rows.map((r) => (
-                  <div key={r.key} className="flex items-center justify-between px-3 py-2 text-xs">
-                    <div className="font-semibold text-slate-700">
-                      {RECON_ROW_LABEL[r.key] || r.key}
-                      <StatusBadge
-                        status={r.reconciled ? "متطابق" : "فرق"}
-                        label={r.reconciled ? "مطابق" : "فرق"}
-                        tone={r.reconciled ? "green" : "red"}
-                        className="mr-2"
-                      />
-                    </div>
-                    <div className="tabular-nums text-slate-600">
-                      السجل المساعد: {fmtMoney(r.subledger)} ← الأستاذ: {fmtMoney(r.general_ledger)}
-                    </div>
-                  </div>
-                ))}
-                <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs bg-slate-50">
-                  <span className={"font-bold " + (w.reconciliation.all_reconciled ? "text-green-700" : "text-red-600")}>
-                    {w.reconciliation.all_reconciled ? "جميع الأرصدة متطابقة ✓" : "يوجد فرق في الأرصدة"}
-                  </span>
-                  <span className="tabular-nums text-slate-700 font-semibold">
-                    رصيد الافتتاح (53): {fmtMoney(w.reconciliation.opening_control_balance)} · مدين {fmtMoney(w.reconciliation.debit_total)} / دائن {fmtMoney(w.reconciliation.credit_total)}
-                  </span>
-                </div>
+              <div className="space-y-3">
+                <ReconciliationRowsTable
+                  rows={w.reconciliation.rows}
+                  allReconciled={w.reconciliation.all_reconciled}
+                  openingControlBalance={w.reconciliation.opening_control_balance}
+                  debitTotal={w.reconciliation.debit_total}
+                  creditTotal={w.reconciliation.credit_total}
+                />
                 <ReconciliationStatusBanner readiness={reconciliationReadiness(w.reconciliation)} />
               </div>
             )}

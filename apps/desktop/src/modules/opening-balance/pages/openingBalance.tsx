@@ -14,7 +14,7 @@ import { queryClient, invalidateAccountingMutationQueries } from "@shared/hooks/
 import { useExportSetup } from "@shared/hooks";
 import { executeExport, addCurrencySummary } from "@shared/lib/excel";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { formatNumber } from "@shared/lib/format";
+import { formatNumber, toLocalDateStr } from "@shared/lib/format";
 import { buildInvoiceLineExportColumns } from "@modules/invoicing/lib/invoice-export-columns";
 
 import { HeaderField } from '@shared/ui/header-field';
@@ -47,7 +47,7 @@ interface HeaderState {
 
 const defaultHeader = (): HeaderState => ({
   docNumber: "...",
-  issued_at: new Date().toISOString().split("T")[0],
+  issued_at: toLocalDateStr(new Date().toISOString()),
   notes: "مواد أول المدة- رصيد افتتاحي للمواد",
   currency_code: "",
   exchange_rate: "1",
@@ -133,7 +133,7 @@ export default function OpeningBalance() {
       setHeader({
         id: inv.id,
         docNumber: inv.invoice_number,
-        issued_at: inv.issued_at.split("T")[0],
+        issued_at: toLocalDateStr(inv.issued_at),
         notes: inv.notes || "",
         currency_code: inv.currency_code,
         exchange_rate: inv.exchange_rate || "1",

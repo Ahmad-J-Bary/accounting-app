@@ -10,7 +10,6 @@ use crate::ports::account_repository::AccountRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::settings_repository::SettingsRepository;
 use crate::use_cases::opening_balance::types::{CreateOpeningBalanceMigrationCommand, OpeningMigrationDto};
-use domain::accounting::account::AccountType;
 
 /// Company-startup mode stored in `CompanySettings`. An opening-balance
 /// migration is the ExistingCompany transition; a NewCompany has no migration.
@@ -67,15 +66,7 @@ impl CreateOpeningBalanceUseCase {
             // Balance-sheet only: opening entries never carry P&L accounts.
             let account = self.account_repo.find_by_id(&account_id).await?
                 .ok_or_else(|| AppError::NotFound(format!("الحساب غير موجود: {}", account_id)))?;
-            if matches!(
-                account.account_type,
-                AccountType::Revenue | AccountType::Expenses
-            ) {
-                return Err(AppError::Invalid(
-                    "حسابات قائمة الدخل (إيرادات/مصاريف) غير مسموحة في الرصيد الافتتاحي — تُرحَّل النتيجة عبر الأرباح المبقاة"
-                        .into(),
-                ));
-            }
+            super::guard::reject_pl_account(&account)?;
 
             lines.push(OpeningBalanceLine {
                 account_id,

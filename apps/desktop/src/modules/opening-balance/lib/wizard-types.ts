@@ -18,17 +18,6 @@ export interface WizLine {
   amount: string;
 }
 
-// A sub-ledger row links a REAL entity (customer/supplier/material/asset) to
-// the opening amount it carries inside the migration. `reference` is the
-// source-system reference (invoice/order number), never a free-text id.
-export interface DetailRow {
-  key: string;
-  entity_id: string;
-  reference: string;
-  amount: string;
-  qty: string;
-}
-
 // A read-only line DERIVED from an owning module (customers / suppliers /
 // fixed assets / partners). Shown with a "مشتق" badge; never manually edited.
 export interface DerivedRow {
@@ -41,17 +30,8 @@ export interface DerivedRow {
   kind: "AR" | "AP" | "FixedAsset" | "Equity";
 }
 
-export interface EntityOption {
-  value: string;
-  label: string;
-}
-
 export function newLine(): WizLine {
   return { key: `wl_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, account_id: "", amount: "" };
-}
-
-export function newDetail(): DetailRow {
-  return { key: `wd_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, entity_id: "", reference: "", amount: "", qty: "" };
 }
 
 export function toNum(v?: string): number {

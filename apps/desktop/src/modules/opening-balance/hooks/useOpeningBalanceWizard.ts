@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import type { AccountDto, UpdateSettingsRequest, FiscalPeriodDto } from "@erp/shared-types";
 import type { WizardStepDef } from "@modules/opening-balance/components/WizardShell";
 import { queryClient, QUERY_KEYS } from "@shared/hooks/queryClient";
+import { toLocalDatePart } from "@shared/lib/format";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import { settingsService } from "@modules/core/api/settingsService";
 import { fiscalPeriodService, periodWindowFromDateInput } from "@modules/accounting/api/fiscalPeriodService";
@@ -41,7 +42,7 @@ import {
 export function useOpeningBalanceWizard() {
   const [step, setStep] = useState(0);
   const [startMode, setStartMode] = useState<string>(START_MODE_NEW);
-  const [cutoverDate, setCutoverDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [cutoverDate, setCutoverDate] = useState(() => toLocalDatePart(new Date()));
   const [sourceSystem, setSourceSystem] = useState("");
   const [sourceReference, setSourceReference] = useState("");
   const [notes, setNotes] = useState("");
@@ -56,7 +57,7 @@ export function useOpeningBalanceWizard() {
   // First active financial period (core accounting, independent of the opening
   // transition): defined inline for NewCompany (Step 1) and in a dedicated step
   // after opening Lock for Existing companies.
-  const [firstPeriodStart, setFirstPeriodStart] = useState(() => new Date().toISOString().split("T")[0]);
+  const [firstPeriodStart, setFirstPeriodStart] = useState(() => toLocalDatePart(new Date()));
   const [firstPeriodEnd, setFirstPeriodEnd] = useState(() => `${new Date().getFullYear()}-12-31`);
   const [firstPeriod, setFirstPeriod] = useState<FiscalPeriodDto | null>(null);
 

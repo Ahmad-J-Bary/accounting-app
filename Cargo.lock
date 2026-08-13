@@ -79,7 +79,7 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
 name = "application"
-version = "0.9.9"
+version = "0.9.10"
 dependencies = [
  "async-trait",
  "chrono",
@@ -778,7 +778,7 @@ dependencies = [
 
 [[package]]
 name = "desktop"
-version = "0.9.9"
+version = "0.9.10"
 dependencies = [
  "glib",
  "serde",
@@ -887,7 +887,7 @@ dependencies = [
 
 [[package]]
 name = "domain"
-version = "0.9.9"
+version = "0.9.10"
 dependencies = [
  "chrono",
  "rust_decimal",
@@ -1965,7 +1965,7 @@ dependencies = [
 
 [[package]]
 name = "infrastructure"
-version = "0.9.9"
+version = "0.9.10"
 dependencies = [
  "application",
  "async-trait",
@@ -4753,7 +4753,7 @@ dependencies = [
 
 [[package]]
 name = "tauri-adapter"
-version = "0.9.9"
+version = "0.9.10"
 dependencies = [
  "application",
  "chrono",
