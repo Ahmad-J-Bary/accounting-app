@@ -36,7 +36,7 @@ import TrialBalanceReport from '@modules/reports/pages/TrialBalanceReport';
 import BalanceSheetReport from '@modules/reports/pages/BalanceSheetReport';
 import PartnerProfitShareReport from '@modules/reports/pages/PartnerProfitShareReport';
 import PartnerStatementReport from '@modules/reports/pages/PartnerStatementReport';
-import FiscalPeriodReport from '@modules/reports/pages/FiscalPeriodReport';
+import FiscalPeriodsPage from '@modules/accounting/fiscal-periods/pages/FiscalPeriodsPage';
 
 export function ErpRoutes({ location }: { location?: string | Partial<Location> }) {
   return (
@@ -51,7 +51,8 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/accounting/reports/balance-sheet" element={<BalanceSheetReport />} />
       <Route path="/accounting/reports/partner-profit-share" element={<PartnerProfitShareReport />} />
       <Route path="/accounting/reports/partner-statement" element={<PartnerStatementReport />} />
-      <Route path="/accounting/reports/fiscal-periods" element={<FiscalPeriodReport />} />
+      <Route path="/accounting/fiscal-periods" element={<FiscalPeriodsPage />} />
+      <Route path="/accounting/reports/fiscal-periods" element={<Navigate to="/accounting/fiscal-periods" replace />} />
       <Route path="/accounting/account-ledger/:accountId" element={<AccountMovement />} />
       <Route path="/journal" element={<Journal />} />
       <Route path="/customers" element={<PartyPage entityName="customer" />} />

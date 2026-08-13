@@ -29,10 +29,11 @@ impl CloseFiscalPeriodUseCase {
             return Err(AppError::NotFound("الفترة المالية غير موجودة".into()));
         };
 
-        // Idempotent close: a already Closed (or Cancelled) period is returned as-is.
+        // Idempotent close: an already Closed / Locked / Cancelled period is
+        // returned as-is.
         if matches!(
             period.status,
-            FiscalPeriodStatus::Closed | FiscalPeriodStatus::Cancelled
+            FiscalPeriodStatus::Closed | FiscalPeriodStatus::Locked | FiscalPeriodStatus::Cancelled
         ) || (period.status == FiscalPeriodStatus::Closing && !cmd.finalize)
         {
             return Ok(to_dto(&period));

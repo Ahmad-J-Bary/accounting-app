@@ -56,6 +56,8 @@ pub(crate) fn to_dto(p: &FiscalPeriod) -> FiscalPeriodDto {
         status: p.status.as_str().to_string(),
         closed_at: p.closed_at.map(|d| d.to_rfc3339()),
         closed_by: p.closed_by.clone(),
+        locked_at: p.locked_at.map(|d| d.to_rfc3339()),
+        locked_by: p.locked_by.clone(),
         created_at: p.created_at.to_rfc3339(),
         updated_at: p.updated_at.to_rfc3339(),
     }

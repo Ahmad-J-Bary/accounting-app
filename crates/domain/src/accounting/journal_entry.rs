@@ -109,6 +109,22 @@ impl JournalType {
             Self::Reversal => "reversal",
         }
     }
+
+    /// Whether a journal of this type bypasses fiscal-period gating. Opening
+    /// balances are a Company Setup / Lifecycle step (they post before the
+    /// first operational period exists) and reversals are the explicit
+    /// correction mechanism for closed/locked financial history — both must be
+    /// allowed regardless of the entry date's period status.
+    pub fn is_period_exempt(self) -> bool {
+        matches!(
+            self,
+            Self::CashOpeningBalance
+                | Self::AccountOpeningBalance
+                | Self::MaterialOpeningBalance
+                | Self::OpeningBalanceReversal
+                | Self::Reversal
+        )
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -666,5 +682,22 @@ mod tests {
 
         assert!(reversal.post().is_ok());
         assert_eq!(reversal.status, JournalEntryStatus::Posted);
+    }
+
+    #[test]
+    fn opening_and_reversal_types_are_period_exempt() {
+        for t in [
+            JournalType::CashOpeningBalance,
+            JournalType::AccountOpeningBalance,
+            JournalType::MaterialOpeningBalance,
+            JournalType::OpeningBalanceReversal,
+            JournalType::Reversal,
+        ] {
+            assert!(t.is_period_exempt(), "{t:?} should be period-exempt");
+        }
+        assert!(!JournalType::GeneralJournal.is_period_exempt());
+        assert!(!JournalType::CashReceipt.is_period_exempt());
+        assert!(!JournalType::PurchaseJournal.is_period_exempt());
+        assert!(!JournalType::ProfitDistribution.is_period_exempt());
     }
 }

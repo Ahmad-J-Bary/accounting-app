@@ -7,12 +7,12 @@ use domain::shared::ids::FiscalPeriodId;
 use chrono::{DateTime, Utc};
 use std::sync::Arc;
 
-const PERIOD_COLUMNS: &str = "id, company_id, start_date, end_date, status, closed_at, closed_by, created_at, updated_at";
+const PERIOD_COLUMNS: &str = "id, company_id, start_date, end_date, status, closed_at, closed_by, locked_at, locked_by, created_at, updated_at";
 
-type PeriodRow = (String, Option<String>, String, String, String, Option<String>, Option<String>, String, String);
+type PeriodRow = (String, Option<String>, String, String, String, Option<String>, Option<String>, Option<String>, Option<String>, String, String);
 
 fn row_to_period(row: PeriodRow) -> Result<FiscalPeriod, AppError> {
-    let (id, company_id, start_date, end_date, status, closed_at, closed_by, created_at, updated_at) = row;
+    let (id, company_id, start_date, end_date, status, closed_at, closed_by, locked_at, locked_by, created_at, updated_at) = row;
     let parse = |s: &str| -> Result<DateTime<Utc>, AppError> {
         DateTime::parse_from_rfc3339(s)
             .map(|d| d.with_timezone(&Utc))
@@ -29,6 +29,8 @@ fn row_to_period(row: PeriodRow) -> Result<FiscalPeriod, AppError> {
         status: FiscalPeriodStatus::from_str(&status),
         closed_at: closed_at.as_deref().map(parse).transpose()?,
         closed_by,
+        locked_at: locked_at.as_deref().map(parse).transpose()?,
+        locked_by,
         created_at: parse(&created_at)?,
         updated_at: parse(&updated_at)?,
     })
@@ -48,8 +50,8 @@ impl SqliteFiscalPeriodRepository {
 impl FiscalPeriodRepository for SqliteFiscalPeriodRepository {
     async fn create(&self, period: &FiscalPeriod) -> Result<(), AppError> {
         sqlx::query(
-            "INSERT INTO fiscal_periods (id, company_id, start_date, end_date, status, closed_at, closed_by, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO fiscal_periods (id, company_id, start_date, end_date, status, closed_at, closed_by, locked_at, locked_by, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(period.id.to_string())
         .bind(&period.company_id)
@@ -58,6 +60,8 @@ impl FiscalPeriodRepository for SqliteFiscalPeriodRepository {
         .bind(period.status.as_str())
         .bind(period.closed_at.map(|d| d.to_rfc3339()))
         .bind(&period.closed_by)
+        .bind(period.locked_at.map(|d| d.to_rfc3339()))
+        .bind(&period.locked_by)
         .bind(period.created_at.to_rfc3339())
         .bind(period.updated_at.to_rfc3339())
         .execute(&*self.pool)
@@ -67,7 +71,7 @@ impl FiscalPeriodRepository for SqliteFiscalPeriodRepository {
     }
 
     async fn find_by_id(&self, id: &FiscalPeriodId) -> Result<Option<FiscalPeriod>, AppError> {
-        let row = sqlx::query_as::<_, (String, Option<String>, String, String, String, Option<String>, Option<String>, String, String)>(
+        let row = sqlx::query_as::<_, (String, Option<String>, String, String, String, Option<String>, Option<String>, Option<String>, Option<String>, String, String)>(
             format!("SELECT {PERIOD_COLUMNS} FROM fiscal_periods WHERE id = ?").as_str(),
         )
         .bind(id.to_string())
@@ -79,7 +83,7 @@ impl FiscalPeriodRepository for SqliteFiscalPeriodRepository {
     }
 
     async fn list(&self) -> Result<Vec<FiscalPeriod>, AppError> {
-        let rows = sqlx::query_as::<_, (String, Option<String>, String, String, String, Option<String>, Option<String>, String, String)>(
+        let rows = sqlx::query_as::<_, (String, Option<String>, String, String, String, Option<String>, Option<String>, Option<String>, Option<String>, String, String)>(
             format!("SELECT {PERIOD_COLUMNS} FROM fiscal_periods ORDER BY start_date").as_str(),
         )
         .fetch_all(&*self.pool)
@@ -94,7 +98,7 @@ impl FiscalPeriodRepository for SqliteFiscalPeriodRepository {
     }
 
     async fn find_by_date(&self, date: DateTime<Utc>) -> Result<Vec<FiscalPeriod>, AppError> {
-        let rows = sqlx::query_as::<_, (String, Option<String>, String, String, String, Option<String>, Option<String>, String, String)>(
+        let rows = sqlx::query_as::<_, (String, Option<String>, String, String, String, Option<String>, Option<String>, Option<String>, Option<String>, String, String)>(
             format!("SELECT {PERIOD_COLUMNS} FROM fiscal_periods WHERE start_date <= ? AND end_date >= ? ORDER BY start_date").as_str(),
         )
         .bind(date.to_rfc3339())
@@ -112,11 +116,13 @@ impl FiscalPeriodRepository for SqliteFiscalPeriodRepository {
 
     async fn update(&self, period: &FiscalPeriod) -> Result<(), AppError> {
         sqlx::query(
-            "UPDATE fiscal_periods SET status = ?, closed_at = ?, closed_by = ?, updated_at = ? WHERE id = ?",
+            "UPDATE fiscal_periods SET status = ?, closed_at = ?, closed_by = ?, locked_at = ?, locked_by = ?, updated_at = ? WHERE id = ?",
         )
         .bind(period.status.as_str())
         .bind(period.closed_at.map(|d| d.to_rfc3339()))
         .bind(&period.closed_by)
+        .bind(period.locked_at.map(|d| d.to_rfc3339()))
+        .bind(&period.locked_by)
         .bind(period.updated_at.to_rfc3339())
         .bind(period.id.to_string())
         .execute(&*self.pool)

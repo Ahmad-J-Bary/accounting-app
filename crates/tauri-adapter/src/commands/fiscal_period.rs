@@ -3,7 +3,8 @@ use application::use_cases::fiscal_period::{
     CloseFiscalPeriodCommand, CloseFiscalPeriodUseCase, ComputePeriodNetProfitUseCase,
     ComputePeriodProfitCommand, ComputedPeriodProfitDto, CreateFiscalPeriodCommand,
     CreateFiscalPeriodUseCase, DistributableProfitDto, FiscalPeriodDto,
-    GetDistributableProfitUseCase, ListFiscalPeriodsUseCase,
+    GetDistributableProfitUseCase, ListFiscalPeriodsUseCase, LockFiscalPeriodCommand,
+    LockFiscalPeriodUseCase, ReopenFiscalPeriodCommand, ReopenFiscalPeriodUseCase,
 };
 use tauri::State;
 
@@ -34,6 +35,28 @@ pub async fn close_fiscal_period(
     request: CloseFiscalPeriodCommand,
 ) -> Result<FiscalPeriodDto, String> {
     CloseFiscalPeriodUseCase::new(state.fiscal_period_repo.clone())
+        .execute(request)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn lock_fiscal_period(
+    state: State<'_, AppState>,
+    request: LockFiscalPeriodCommand,
+) -> Result<FiscalPeriodDto, String> {
+    LockFiscalPeriodUseCase::new(state.fiscal_period_repo.clone())
+        .execute(request)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn reopen_fiscal_period(
+    state: State<'_, AppState>,
+    request: ReopenFiscalPeriodCommand,
+) -> Result<FiscalPeriodDto, String> {
+    ReopenFiscalPeriodUseCase::new(state.fiscal_period_repo.clone())
         .execute(request)
         .await
         .map_err(|e| e.to_string())

@@ -8,7 +8,6 @@ import { WizardShell } from "@modules/opening-balance/components/WizardShell";
 import { WizardLineEditor } from "@modules/opening-balance/components/WizardLineEditor";
 import {
   useOpeningBalanceWizard,
-  STEPS,
   START_MODE_NEW,
   START_MODE_EXISTING,
   type DerivedRow,
@@ -18,6 +17,29 @@ import { Link } from "react-router-dom";
 
 export function GuidedTransitionWizard() {
   const w = useOpeningBalanceWizard();
+  const isNew = w.startMode === START_MODE_NEW;
+
+  const renderDone = () => (
+    <div className="space-y-3">
+      <div className={"rounded-lg p-4 text-center " + (isNew || w.migration?.status === "Locked" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700")}>
+        <p className="text-base font-black">
+          {isNew ? "تم بدء المحاسبة بنجاح ✓" : w.migration?.status === "Locked" ? "اكتمل المعالج بنجاح ✓" : "اكتمل المعالج"}
+        </p>
+        <p className="text-xs mt-1">
+          {isNew ? (
+            "أول فترة مالية جاهزة — ابدأ تسجيل الحركات اليومية من الصفحات الرئيسية."
+          ) : (
+            <>حالة الترحيل النهائية: <StatusBadge status={w.migration?.status || ""} /> — تاريخ القطع: {w.migration?.cutover_date.split("T")[0]}</>
+          )}
+        </p>
+      </div>
+      {w.firstPeriod && (
+        <div className="rounded-lg p-3 text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+          أول فترة مالية: {w.firstPeriod.start_date.split("T")[0]} ← {w.firstPeriod.end_date.split("T")[0]}
+        </div>
+      )}
+    </div>
+  );
 
   const renderStep = () => {
     switch (w.step) {
@@ -38,50 +60,62 @@ export function GuidedTransitionWizard() {
             </div>
 
             {w.startMode === START_MODE_NEW && (
-              <div className="rounded-lg border border-blue-200 bg-blue-50/60 p-3 space-y-1.5">
-                <p className="text-xs font-semibold text-blue-700">
-                  الشركة تعمل بوضع «شركة جديدة»
-                </p>
-                <p className="text-xs text-blue-600">
-                  لا يُنشأ رصيد افتتاحي في هذا الوضع — تبدأ السجلات من الصفر ويُسجَّل رأس المال عبر
-                  صفحة «الشركاء ورأس المال» كمساهمة نقدية. اختر «شركة قائمة تبدأ الاستخدام» لتفعيل
-                  معالج التحويل أدناه.
-                </p>
-              </div>
+              <>
+                <div className="rounded-lg border border-blue-200 bg-blue-50/60 p-3 space-y-1.5">
+                  <p className="text-xs font-semibold text-blue-700">
+                    الشركة تعمل بوضع «شركة جديدة»
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    لا يُنشأ رصيد افتتاحي في هذا الوضع — تبدأ السجلات من الصفر. حدّد نافذة أول فترة
+                    مالية (النافذة الزمنية الأولى التي تُقيد عليها الحركات) ثم اضغط «إنشاء الفترة الأولى
+                    والبدء».
+                  </p>
+                </div>
+                <FirstPeriodFields
+                  start={w.firstPeriodStart}
+                  end={w.firstPeriodEnd}
+                  onStart={w.setFirstPeriodStart}
+                  onEnd={w.setFirstPeriodEnd}
+                  created={w.firstPeriod}
+                />
+              </>
             )}
 
             {w.startMode === START_MODE_EXISTING && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 space-y-1.5">
-                <p className="text-xs font-semibold text-amber-700">شركة قائمة تبدأ استخدام التطبيق الآن:</p>
-                <p className="text-xs text-amber-600">
-                  سيُدخل الحالة المالية الفعلية للشركة في تاريخ بدء الاستخدام (تاريخ القطع). لن يُنشأ
-                  أي حركة نقدية تلقائية — رأس مال الشركاء رصيد سابق، وليس مساهمة نقدية جديدة.
-                </p>
-              </div>
-            )}
+              <>
+                <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 space-y-1.5">
+                  <p className="text-xs font-semibold text-amber-700">شركة قائمة تبدأ استخدام التطبيق الآن:</p>
+                  <p className="text-xs text-amber-600">
+                    سيُدخل الحالة المالية الفعلية للشركة في تاريخ بدء الاستخدام (تاريخ القطع). لن يُنشأ
+                    أي حركة نقدية تلقائية — رأس مال الشركاء رصيد سابق، وليس مساهمة نقدية جديدة.
+                  </p>
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <FieldLabel htmlFor="wiz-cutover-date" required>تاريخ القطع (Cutover)</FieldLabel>
-                <Input id="wiz-cutover-date" type="date" value={w.cutoverDate} onChange={(e) => w.setCutoverDate(e.target.value)} className="h-9" />
-                <p className="text-2xs text-slate-500">تاريخ بدء استخدام التطبيق الذي تُرصد بناءً عليه أرصدة الميزانية القديمة.</p>
-              </div>
-              <div className="space-y-1.5">
-                <FieldLabel htmlFor="wiz-source-system">النظام السابق (Source System)</FieldLabel>
-                <Input id="wiz-source-system" value={w.sourceSystem} onChange={(e) => w.setSourceSystem(e.target.value)} placeholder="مثال: نظام محاسبة قديم" className="h-9" />
-              </div>
-              <div className="space-y-1.5">
-                <FieldLabel htmlFor="wiz-source-reference">المرجع (Source Reference)</FieldLabel>
-                <Input id="wiz-source-reference" value={w.sourceReference} onChange={(e) => w.setSourceReference(e.target.value)} placeholder="رقم الميزانية / المرجع" className="h-9" />
-              </div>
-              <div className="space-y-1.5">
-                <FieldLabel htmlFor="wiz-notes">ملاحظات</FieldLabel>
-                <Input id="wiz-notes" value={w.notes} onChange={(e) => w.setNotes(e.target.value)} placeholder="اختياري" className="h-9" />
-              </div>
-            </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <FieldLabel htmlFor="wiz-cutover-date" required>تاريخ القطع (Cutover)</FieldLabel>
+                    <Input id="wiz-cutover-date" type="date" value={w.cutoverDate} onChange={(e) => w.setCutoverDate(e.target.value)} className="h-9" />
+                    <p className="text-2xs text-slate-500">تاريخ بدء استخدام التطبيق الذي تُرصد بناءً عليه أرصدة الميزانية القديمة.</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <FieldLabel htmlFor="wiz-source-system">النظام السابق (Source System)</FieldLabel>
+                    <Input id="wiz-source-system" value={w.sourceSystem} onChange={(e) => w.setSourceSystem(e.target.value)} placeholder="مثال: نظام محاسبة قديم" className="h-9" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <FieldLabel htmlFor="wiz-source-reference">المرجع (Source Reference)</FieldLabel>
+                    <Input id="wiz-source-reference" value={w.sourceReference} onChange={(e) => w.setSourceReference(e.target.value)} placeholder="رقم الميزانية / المرجع" className="h-9" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <FieldLabel htmlFor="wiz-notes">ملاحظات</FieldLabel>
+                    <Input id="wiz-notes" value={w.notes} onChange={(e) => w.setNotes(e.target.value)} placeholder="اختياري" className="h-9" />
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         );
       case 1:
+        if (isNew) return renderDone();
         return (
           <div className="space-y-3">
             <p className="text-xs text-slate-500">
@@ -314,14 +348,29 @@ export function GuidedTransitionWizard() {
       case 9:
         return (
           <div className="space-y-3">
-            <div className={"rounded-lg p-4 text-center " + (w.migration?.status === "Locked" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700")}>
-              <p className="text-base font-black">
-                {w.migration?.status === "Locked" ? "اكتمل المعالج بنجاح ✓" : "اكتمل المعالج"}
-              </p>
-              <p className="text-xs mt-1">حالة الترحيل النهائية: <StatusBadge status={w.migration?.status || ""} /> — تاريخ القطع: {w.migration?.cutover_date.split("T")[0]}</p>
-            </div>
+            <p className="text-xs text-slate-500">
+              أُقفل الرصيد الافتتاحي. حدّد الآن نافذة أول فترة تشغيلية ستُقيد عليها الحركات الجديدة
+              (عادةً من اليوم التالي لتاريخ القطع حتى نهاية السنة). لا يمكن ترحيل أي حركة خارج فترة
+              مفتوحة.
+            </p>
+            <FirstPeriodFields
+              start={w.firstPeriodStart}
+              end={w.firstPeriodEnd}
+              onStart={w.setFirstPeriodStart}
+              onEnd={w.setFirstPeriodEnd}
+              created={w.firstPeriod}
+            />
+            {w.firstPeriod ? (
+              <div className="rounded-lg p-3 text-xs font-bold bg-green-50 text-green-700 border border-green-200">
+                تم إنشاء أول فترة تشغيلية ✓ — يمكنك المتابعة لتسجيل الحركات اليومية.
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400">اضغط «إنشاء أول فترة تشغيلية» لإنشائها ثم تابع.</p>
+            )}
           </div>
         );
+      case 10:
+        return renderDone();
       default:
         return null;
     }
@@ -329,20 +378,63 @@ export function GuidedTransitionWizard() {
 
   return (
     <WizardShell
-      title="معالج التحويل الموجه (شركة قائمة)"
-      subtitle="جمع أرصدة الميزانية والسجل المساعد من وحدات النظام ثم التحقق والاعتماد والترحيل والقفل."
-      steps={STEPS}
+      title={isNew ? "بدء محاسبة شركة جديدة" : "معالج التحويل الموجه (شركة قائمة)"}
+      subtitle={isNew
+        ? "أنشئ أول فترة مالية وابدأ تسجيل الحركات اليومية — لا يوجد رصيد افتتاحي في هذا الوضع."
+        : "جمع أرصدة الميزانية والسجل المساعد من وحدات النظام ثم التحقق والاعتماد والترحيل والقفل ثم إنشاء أول فترة تشغيلية."}
+      steps={w.steps}
       stepIndex={w.step}
       canNext={w.canNext}
       canPrev={w.canPrev}
       isNexting={w.busy}
-      isFinal={w.step === STEPS.length - 1}
+      isFinal={w.step === w.steps.length - 1}
       nextLabel={w.nextLabel}
       onNext={w.handleNext}
       onPrev={() => w.setStep((s) => Math.max(0, s - 1))}
     >
       {renderStep()}
     </WizardShell>
+  );
+}
+
+function FirstPeriodFields({
+  start,
+  end,
+  onStart,
+  onEnd,
+  created,
+}: {
+  start: string;
+  end: string;
+  onStart: (v: string) => void;
+  onEnd: (v: string) => void;
+  created: { start_date: string; end_date: string } | null;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 space-y-1.5">
+        <p className="text-xs font-semibold text-indigo-700">أول فترة مالية (أساسية للمحاسبة)</p>
+        <p className="text-xs text-indigo-600">
+          الفترات المالية هي الأساس الذي تُقيد عليه كل الحركات — دون فترة مفتوحة تغطي تاريخ القيد لا يمكن
+          ترحيل أي حركة محاسبية.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <FieldLabel htmlFor="wiz-period-start" required>بداية الفترة</FieldLabel>
+          <Input id="wiz-period-start" type="date" value={start} onChange={(e) => onStart(e.target.value)} className="h-9" />
+        </div>
+        <div className="space-y-1.5">
+          <FieldLabel htmlFor="wiz-period-end" required>نهاية الفترة</FieldLabel>
+          <Input id="wiz-period-end" type="date" value={end} onChange={(e) => onEnd(e.target.value)} className="h-9" />
+        </div>
+      </div>
+      {created && (
+        <div className="rounded-lg p-3 text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
+          تم إنشاء الفترة: {created.start_date.split("T")[0]} ← {created.end_date.split("T")[0]}
+        </div>
+      )}
+    </div>
   );
 }
 

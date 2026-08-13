@@ -9,11 +9,13 @@ import type {
   FixedAssetDto,
   MaterialDto,
   UpdateSettingsRequest,
+  FiscalPeriodDto,
 } from "@erp/shared-types";
 import type { WizardStepDef } from "@modules/opening-balance/components/WizardShell";
 import { queryClient, QUERY_KEYS } from "@shared/hooks/queryClient";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import { settingsService } from "@modules/core/api/settingsService";
+import { fiscalPeriodService, periodWindowFromDateInput } from "@modules/accounting/api/fiscalPeriodService";
 import { partnerService } from "@modules/partners/api/partnerService";
 import { customerService } from "@modules/partners/api/customerService";
 import { supplierService } from "@modules/partners/api/supplierService";
@@ -97,6 +99,12 @@ export function useOpeningBalanceWizard() {
   const [migration, setMigration] = useState<OpeningBalanceMigrationDto | null>(null);
   const [reconciliation, setReconciliation] = useState<OpeningReconciliationDto | null>(null);
   const [busy, setBusy] = useState(false);
+  // First active financial period (core accounting, independent of the opening
+  // transition): defined inline for NewCompany (Step 1) and in a dedicated step
+  // after opening Lock for Existing companies.
+  const [firstPeriodStart, setFirstPeriodStart] = useState(() => new Date().toISOString().split("T")[0]);
+  const [firstPeriodEnd, setFirstPeriodEnd] = useState(() => `${new Date().getFullYear()}-12-31`);
+  const [firstPeriod, setFirstPeriod] = useState<FiscalPeriodDto | null>(null);
 
   const startModeLoaded = useRef(false);
   useEffect(() => {
@@ -107,6 +115,10 @@ export function useOpeningBalanceWizard() {
       .then((s) => setStartMode(s.accounting_start_mode || START_MODE_NEW))
       .catch(() => {});
   }, []);
+
+  // A NewCompany only needs its first financial period (no opening migration);
+  // an Existing company runs the full 11-step transition incl. the first period.
+  const steps = startMode === START_MODE_NEW ? STEPS_NEW : STEPS_EXISTING;
 
   const handleStartModeChange = async (mode: string) => {
     setStartMode(mode);
@@ -346,7 +358,46 @@ export function useOpeningBalanceWizard() {
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.openingBalanceMigrations });
   }, []);
 
+  // Creates (idempotently) the first active financial period from the current
+  // inputs. Re-running with an unchanged window is a no-op so navigating back
+  // and forth does not duplicate the period.
+  const createFirstPeriod = useCallback(async (): Promise<boolean> => {
+    if (!firstPeriodStart || !firstPeriodEnd || new Date(firstPeriodStart) >= new Date(firstPeriodEnd)) {
+      toast.error("تاريخ بداية الفترة المالية يجب أن يسبق تاريخ النهاية");
+      return false;
+    }
+    const window = periodWindowFromDateInput(firstPeriodStart, firstPeriodEnd);
+    if (firstPeriod && firstPeriod.start_date === window.start_date && firstPeriod.end_date === window.end_date) {
+      return true;
+    }
+    try {
+      const created = await fiscalPeriodService.createFiscalPeriod(window);
+      setFirstPeriod(created);
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.fiscalPeriods });
+      toast.success(
+        startMode === START_MODE_NEW
+          ? "تم إنشاء أول فترة مالية — يمكنك بدء العمل"
+          : "تم إنشاء أول فترة تشغيلية بعد إقفال الرصيد الافتتاحي",
+      );
+      return true;
+    } catch (e) {
+      toast.error("فشل إنشاء الفترة المالية: " + e);
+      return false;
+    }
+  }, [firstPeriodStart, firstPeriodEnd, firstPeriod, startMode]);
+
   const canNext = useMemo(() => {
+    const datesValid = !!firstPeriodStart && !!firstPeriodEnd && firstPeriodStart < firstPeriodEnd;
+    if (startMode === START_MODE_NEW) {
+      switch (step) {
+        case 0:
+          return datesValid;
+        case 1:
+          return true;
+        default:
+          return true;
+      }
+    }
     switch (step) {
       case 0:
         return startMode === START_MODE_EXISTING && !!cutoverDate;
@@ -367,27 +418,49 @@ export function useOpeningBalanceWizard() {
       case 8:
         return !!migration && migration.status === "Posted";
       case 9:
-        return !!migration && migration.status === "Locked";
+        return datesValid;
+      case 10:
+        return true;
       default:
         return true;
     }
-  }, [step, startMode, cutoverDate, debit, totals, migration, reconciliation]);
+  }, [step, startMode, cutoverDate, debit, totals, migration, reconciliation, firstPeriodStart, firstPeriodEnd]);
 
   const committed = step >= 5;
   const canPrev = step > 0 && !committed && !busy;
 
   const nextLabel = useMemo(() => {
+    if (startMode === START_MODE_NEW) {
+      return step === 0 ? "إنشاء الفترة الأولى والبدء" : undefined;
+    }
     switch (step) {
       case 5: return "حفظ وفحص التسوية";
       case 6: return "تأكيد التحقق";
       case 7: return "تأكيد الترحيل";
       case 8: return "تأكيد القفل";
+      case 9: return "إنشاء أول فترة تشغيلية";
       default: return undefined;
     }
-  }, [step]);
+  }, [step, startMode]);
 
   const runStep = async () => {
     try {
+      // NewCompany: Step 1 creates the first financial period and nothing else.
+      if (startMode === START_MODE_NEW && step === 0) {
+        setBusy(true);
+        const ok = await createFirstPeriod();
+        setBusy(false);
+        return ok;
+      }
+
+      // Existing: Step 9 creates the first operational period after opening Lock.
+      if (step === 9) {
+        setBusy(true);
+        const ok = await createFirstPeriod();
+        setBusy(false);
+        return ok;
+      }
+
       if (step === 5) {
         setBusy(true);
         const created = await openingBalanceService.createMigration({
@@ -458,11 +531,12 @@ export function useOpeningBalanceWizard() {
   };
 
   const handleNext = async () => {
-    if (step === 5 || (step >= 6 && step <= 8)) {
+    const runOnNext = startMode === START_MODE_NEW ? step === 0 : step === 5 || (step >= 6 && step <= 9);
+    if (runOnNext) {
       const ok = await runStep();
       if (!ok) return;
     }
-    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    setStep((s) => Math.min(s + 1, steps.length - 1));
   };
 
   return {
@@ -507,6 +581,13 @@ export function useOpeningBalanceWizard() {
     committed,
     nextLabel,
     handleNext,
+    steps,
+    firstPeriodStart,
+    setFirstPeriodStart,
+    firstPeriodEnd,
+    setFirstPeriodEnd,
+    firstPeriod,
+    createFirstPeriod,
     customers,
     suppliers,
     materials,
@@ -514,7 +595,8 @@ export function useOpeningBalanceWizard() {
   };
 }
 
-export const STEPS: WizardStepDef[] = [
+// ExistingCompany: full 11-step guided transition incl. first operational period.
+export const STEPS_EXISTING: WizardStepDef[] = [
   { id: "company-start", label: "بدء الحسابات" },
   { id: "partners", label: "الشركاء ورأس المال" },
   { id: "assets", label: "الأصول القائمة" },
@@ -524,5 +606,14 @@ export const STEPS: WizardStepDef[] = [
   { id: "validate", label: "التحقق" },
   { id: "post", label: "الترحيل" },
   { id: "lock", label: "القفل" },
+  { id: "first-period", label: "أول فترة تشغيلية" },
   { id: "done", label: "اكتمال" },
 ];
+
+// NewCompany: the wizard only creates the first financial period, then finishes.
+export const STEPS_NEW: WizardStepDef[] = [
+  { id: "company-start", label: "بدء الحسابات" },
+  { id: "done", label: "اكتمال" },
+];
+
+export const STEPS = STEPS_EXISTING;

@@ -201,6 +201,8 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::fiscal_period::create_fiscal_period,
             commands::fiscal_period::list_fiscal_periods,
             commands::fiscal_period::close_fiscal_period,
+            commands::fiscal_period::lock_fiscal_period,
+            commands::fiscal_period::reopen_fiscal_period,
             commands::fiscal_period::compute_period_net_profit,
             commands::fiscal_period::get_distributable_profit,
         ])

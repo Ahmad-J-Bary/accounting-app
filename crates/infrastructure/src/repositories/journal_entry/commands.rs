@@ -1,6 +1,8 @@
 use sqlx::SqlitePool;
 use application::errors::AppError;
-use domain::accounting::journal_entry::{JournalEntry};
+use chrono::{DateTime, Utc};
+use domain::accounting::fiscal_period::FiscalPeriodStatus;
+use domain::accounting::journal_entry::{JournalEntry, JournalEntryStatus, JournalType};
 use domain::shared::{JournalEntryId};
 use uuid::Uuid;
 
@@ -43,6 +45,62 @@ pub async fn save_reversal_pair(
     Ok(())
 }
 
+/// Rejects persisting a POSTED journal whose accounting date falls in a fiscal
+/// period that does not accept posting (Closing / Closed / Locked / Cancelled),
+/// or outside every existing period once periods are in use.
+///
+/// Graduated enforcement so legacy/fresh databases keep working:
+///  * Period-exempt journal types (opening balances, reversals) skip the check
+///    — they are the explicit mechanisms for pre-period setup and for
+///    correcting closed/locked financial history.
+///  * If NO fiscal period exists at all, writes are allowed (periods not yet
+///    adopted).
+///  * Otherwise the entry date must be covered by an Open/Reopened period.
+pub(crate) async fn validate_posting_period(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    entry_date: DateTime<Utc>,
+    journal_type: JournalType,
+) -> Result<(), AppError> {
+    if journal_type.is_period_exempt() {
+        return Ok(());
+    }
+
+    let covering: Vec<String> = sqlx::query_scalar(
+        "SELECT status FROM fiscal_periods WHERE start_date <= ? AND end_date >= ?",
+    )
+    .bind(entry_date.to_rfc3339())
+    .bind(entry_date.to_rfc3339())
+    .fetch_all(&mut **tx)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    if covering.is_empty() {
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM fiscal_periods")
+            .fetch_one(&mut **tx)
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+        if count == 0 {
+            return Ok(());
+        }
+        return Err(AppError::Forbidden(format!(
+            "لا توجد فترة مالية نشطة تغطي تاريخ القيد ({}) — اختر تاريخاً ضمن فترة مالية مفتوحة أو أنشئ فترة تغطيه",
+            entry_date.to_rfc3339()
+        )));
+    }
+
+    if covering
+        .iter()
+        .any(|s| FiscalPeriodStatus::from_str(s).can_post())
+    {
+        return Ok(());
+    }
+
+    Err(AppError::Forbidden(format!(
+        "التاريخ {} يقع في فترة مالية مغلقة أو مقفلة — لا يمكن ترحيل حركات في فترة مغلقة أو مقفلة",
+        entry_date.to_rfc3339()
+    )))
+}
+
 /// Inserts (or refreshes) a journal entry + its lines within an open
 /// transaction. `pub(crate)` so composite repository methods across the crate
 /// (payment settlements, invoice posting, stock/adjustment/asset events) can
@@ -52,6 +110,13 @@ pub(crate) async fn insert_entry(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
     entry: &JournalEntry,
 ) -> Result<(), AppError> {
+    // Posting a journal is gated on the fiscal-period calendar: a Posted entry
+    // must belong to an Open/Reopened period (or be a period-exempt opening /
+    // reversal). Drafts may be edited freely; they only get checked on posting.
+    if entry.status == JournalEntryStatus::Posted {
+        validate_posting_period(tx, entry.entry_date, entry.journal_type).await?;
+    }
+
     // Always persist a source_type. Explicit callers may set it; otherwise the
     // canonical tag for the journal type is used so templates can label entries.
     let source_type = entry.source_type.clone()

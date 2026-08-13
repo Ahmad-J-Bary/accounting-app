@@ -1,4 +1,10 @@
-export type FiscalPeriodStatus = 'Open' | 'Closing' | 'Closed' | 'Reopened' | 'Cancelled';
+export type FiscalPeriodStatus =
+  | 'Open'
+  | 'Closing'
+  | 'Closed'
+  | 'Reopened'
+  | 'Locked'
+  | 'Cancelled';
 
 export interface FiscalPeriodDto {
   id: string;
@@ -8,6 +14,8 @@ export interface FiscalPeriodDto {
   status: FiscalPeriodStatus;
   closed_at: string | null;
   closed_by: string | null;
+  locked_at: string | null;
+  locked_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -22,6 +30,15 @@ export interface CloseFiscalPeriodCommand {
   period_id: string;
   closed_by: string;
   finalize: boolean;
+}
+
+export interface LockFiscalPeriodCommand {
+  period_id: string;
+  locked_by: string;
+}
+
+export interface ReopenFiscalPeriodCommand {
+  period_id: string;
 }
 
 export interface ComputePeriodProfitCommand {

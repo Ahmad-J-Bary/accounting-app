@@ -38,6 +38,7 @@ export const ALL_SYSTEM_ROUTES: SystemRouteEntry[] = [
 
   // ── الأصول الثابتة (ضمن المحاسبة العامة) ──
   { id: "fixed-assets", to: "/fixed-assets", label: "الأصول الثابتة", icon: "Building2", groupId: "accounting", groupLabel: "المحاسبة العامة" },
+  { id: "fiscal-periods", to: "/accounting/fiscal-periods", label: "الفترات المالية", icon: "CalendarDays", groupId: "accounting", groupLabel: "المحاسبة العامة" },
 
   // ── المخزون ──
   { id: "categories", to: "/categories", label: "تصنيفات المواد", icon: "Folders", groupId: "inventory", groupLabel: "المخزون" },
@@ -58,7 +59,6 @@ export const ALL_SYSTEM_ROUTES: SystemRouteEntry[] = [
   { id: "report-balance-sheet", to: "/accounting/reports/balance-sheet", label: "الميزانية العمومية", icon: "BarChart3", groupId: "reports", groupLabel: "التقارير" },
   { id: "sep-reports-2", to: "", label: "", icon: "", groupId: "reports", groupLabel: "التقارير", isSeparator: true },
   { id: "report-partner-profit", to: "/accounting/reports/partner-profit-share", label: "الشركاء وتقاسم الأرباح", icon: "Users", groupId: "reports", groupLabel: "التقارير" },
-  { id: "report-fiscal-periods", to: "/accounting/reports/fiscal-periods", label: "الفترات المالية", icon: "CalendarDays", groupId: "reports", groupLabel: "التقارير" },
   { id: "sep-reports-3", to: "", label: "", icon: "", groupId: "reports", groupLabel: "التقارير", isSeparator: true },
   { id: "report-inventory-valuation", to: "/inventory/reports/valuation", label: "جرد وقيمة المخزون", icon: "Package", groupId: "reports", groupLabel: "التقارير" },
   { id: "report-low-stock", to: "/inventory/reports/low-stock", label: "نواقص المخزون", icon: "AlertTriangle", groupId: "reports", groupLabel: "التقارير" },

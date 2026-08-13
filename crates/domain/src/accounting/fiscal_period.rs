@@ -4,14 +4,17 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 /// Lifecycle of a fiscal period (Sec 20). A `Closed` period must not host new
-/// posting; `Reopened` returns it to `Open` so corrections can be recorded,
-/// but closed financial history stays immutable through reversals only.
+/// posting; `Reopened` returns it to `Open` so corrections can be recorded.
+/// `Locked` is the permanent seal: it blocks posting and cannot be reopened
+/// through the normal flow — closed financial history stays immutable through
+/// explicit correction mechanisms (reversals / opening balances) only.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum FiscalPeriodStatus {
     Open,
     Closing,
     Closed,
     Reopened,
+    Locked,
     Cancelled,
 }
 
@@ -22,8 +25,16 @@ impl FiscalPeriodStatus {
             Self::Closing => "Closing",
             Self::Closed => "Closed",
             Self::Reopened => "Reopened",
+            Self::Locked => "Locked",
             Self::Cancelled => "Cancelled",
         }
+    }
+
+    /// Whether new posting is accepted in this status. `Closing`/`Closed`/
+    /// `Locked`/`Cancelled` are all posting-blocking; a `Reopened` period
+    /// accepts corrections again.
+    pub fn can_post(self) -> bool {
+        matches!(self, Self::Open | Self::Reopened)
     }
 
     #[allow(clippy::should_implement_trait)]
@@ -32,6 +43,7 @@ impl FiscalPeriodStatus {
             "Closing" => Self::Closing,
             "Closed" => Self::Closed,
             "Reopened" => Self::Reopened,
+            "Locked" => Self::Locked,
             "Cancelled" => Self::Cancelled,
             _ => Self::Open,
         }
@@ -53,6 +65,8 @@ pub struct FiscalPeriod {
     pub status: FiscalPeriodStatus,
     pub closed_at: Option<DateTime<Utc>>,
     pub closed_by: Option<String>,
+    pub locked_at: Option<DateTime<Utc>>,
+    pub locked_by: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -77,6 +91,8 @@ impl FiscalPeriod {
             status: FiscalPeriodStatus::Open,
             closed_at: None,
             closed_by: None,
+            locked_at: None,
+            locked_by: None,
             created_at: now,
             updated_at: now,
         })
@@ -104,11 +120,12 @@ impl FiscalPeriod {
     }
 
     /// Reopens a previously closed period (explicit accountant action). The
-    /// period must be `Closed` to be reopened.
+    /// period must be `Closed` to be reopened. A `Locked` period is sealed and
+    /// cannot be reopened.
     pub fn reopen(&mut self) -> Result<(), DomainError> {
         if self.status != FiscalPeriodStatus::Closed {
             return Err(DomainError::Invalid(
-                "لا يمكن فتح فترة مالية غير مغلقة".into(),
+                "لا يمكن فتح فترة مالية غير مغلقة أو مقفلة".into(),
             ));
         }
         let now = Utc::now();
@@ -119,7 +136,29 @@ impl FiscalPeriod {
         Ok(())
     }
 
-    /// The period can accept new accounting for dates within its window only.
+    /// Permanently seals the period. Allowed from `Open`, `Closing`, `Closed`
+    /// or `Reopened`; a `Locked`/`Cancelled` period cannot be locked again.
+    pub fn lock(&mut self, by: &str) -> Result<(), DomainError> {
+        if !matches!(
+            self.status,
+            FiscalPeriodStatus::Open
+                | FiscalPeriodStatus::Closing
+                | FiscalPeriodStatus::Closed
+                | FiscalPeriodStatus::Reopened
+        ) {
+            return Err(DomainError::Invalid(
+                "لا يمكن قفل فترة مقفلة أو ملغاة".into(),
+            ));
+        }
+        let now = Utc::now();
+        self.status = FiscalPeriodStatus::Locked;
+        self.locked_at = Some(now);
+        self.locked_by = Some(by.to_string());
+        self.updated_at = now;
+        Ok(())
+    }
+
+    /// The period accepts new accounting for dates within its window only.
     pub fn contains(&self, date: DateTime<Utc>) -> bool {
         date >= self.start_date && date <= self.end_date
     }
@@ -192,5 +231,57 @@ mod tests {
         assert!(p.contains(p.start_date));
         assert!(p.contains(p.end_date));
         assert!(!p.contains(p.end_date + Duration::days(1)));
+    }
+
+    #[test]
+    fn lock_seals_the_period() {
+        let mut p = period();
+        p.lock("admin").unwrap();
+        assert_eq!(p.status, FiscalPeriodStatus::Locked);
+        assert!(p.locked_at.is_some());
+        assert_eq!(p.locked_by.as_deref(), Some("admin"));
+        assert!(!p.status.can_post());
+    }
+
+    #[test]
+    fn lock_allowed_from_open_closed_and_reopened() {
+        for pre in [
+            FiscalPeriodStatus::Open,
+            FiscalPeriodStatus::Closed,
+            FiscalPeriodStatus::Reopened,
+            FiscalPeriodStatus::Closing,
+        ] {
+            let mut p = period();
+            p.status = pre;
+            assert!(p.lock("u").is_ok(), "lock should work from {:?}", pre);
+        }
+    }
+
+    #[test]
+    fn already_locked_or_cancelled_cannot_lock() {
+        let mut locked = period();
+        locked.status = FiscalPeriodStatus::Locked;
+        let mut cancelled = period();
+        cancelled.status = FiscalPeriodStatus::Cancelled;
+        assert!(locked.lock("u").is_err());
+        assert!(cancelled.lock("u").is_err());
+    }
+
+    #[test]
+    fn locked_period_cannot_reopen() {
+        let mut p = period();
+        p.close("u", FiscalPeriodStatus::Closed).unwrap();
+        p.lock("u").unwrap();
+        assert!(p.reopen().is_err());
+    }
+
+    #[test]
+    fn can_post_only_open_and_reopened() {
+        assert!(FiscalPeriodStatus::Open.can_post());
+        assert!(FiscalPeriodStatus::Reopened.can_post());
+        assert!(!FiscalPeriodStatus::Closing.can_post());
+        assert!(!FiscalPeriodStatus::Closed.can_post());
+        assert!(!FiscalPeriodStatus::Locked.can_post());
+        assert!(!FiscalPeriodStatus::Cancelled.can_post());
     }
 }

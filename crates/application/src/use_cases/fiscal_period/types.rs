@@ -19,6 +19,17 @@ pub struct CloseFiscalPeriodCommand {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LockFiscalPeriodCommand {
+    pub period_id: String,
+    pub locked_by: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReopenFiscalPeriodCommand {
+    pub period_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComputePeriodProfitCommand {
     pub company_id: Option<String>,
     pub period_start: String,
@@ -58,6 +69,8 @@ pub struct FiscalPeriodDto {
     pub status: String,
     pub closed_at: Option<String>,
     pub closed_by: Option<String>,
+    pub locked_at: Option<String>,
+    pub locked_by: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
