@@ -5,14 +5,17 @@ use domain::shared::ids::{AccountId, SupplierId};
 use crate::ports::supplier_repository::SupplierRepository;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
+use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::dto::supplier_dto::{UpdateSupplierRequest, SupplierDto};
 use crate::errors::AppError;
+use crate::use_cases::opening_balance::opening_window_active;
 use crate::use_cases::shared::partner_account::{PartnerKind, build_balance_adjustment_entry};
 
 pub struct UpdateSupplierUseCase {
     supplier_repo: Arc<dyn SupplierRepository>,
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
+    opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
 }
 
 impl UpdateSupplierUseCase {
@@ -20,8 +23,9 @@ impl UpdateSupplierUseCase {
         supplier_repo: Arc<dyn SupplierRepository>,
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
+        opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
     ) -> Self {
-        Self { supplier_repo, account_repo, journal_repo }
+        Self { supplier_repo, account_repo, journal_repo, opening_migration_repo }
     }
 
     pub async fn execute(&self, req: UpdateSupplierRequest) -> Result<SupplierDto, AppError> {
@@ -66,7 +70,16 @@ impl UpdateSupplierUseCase {
         let old_balance = old_credit - old_debit;
         let balance_change = new_balance - old_balance;
 
-        // Sync the linked account name/balance in memory (persisted atomically below)
+        // While an opening-balance migration window is open the migration's
+        // aggregate journal owns the ledger (same rule as partner create). The
+        // linked account stays static (no balance drift) and no per-entity
+        // balance-adjustment journal is posted — a later real journal would
+        // double-count the same opening balance (R1). Entity edits such as the
+        // opening balance are still persisted; they feed the wizard derivation.
+        let opening_window = opening_window_active(&self.opening_migration_repo).await?;
+
+        // Sync the linked account name in memory (persisted atomically below).
+        // During the window the balance keeps its static value.
         let mut synced_account = None;
         if let Some(ref account_id) = &supplier.account_id {
             let mut account = self.account_repo.find_by_id(account_id).await
@@ -74,23 +87,30 @@ impl UpdateSupplierUseCase {
                 .ok_or_else(|| AppError::NotFound("معرف الحساب غير صالح".into()))?;
             account.name_ar = supplier.name.clone();
             account.name_en = supplier.name.clone();
-            account.balance = supplier.balance;
+            if !opening_window {
+                account.balance = supplier.balance;
+            }
             account.updated_at = Utc::now();
             synced_account = Some(account);
         }
 
         // Build the balance-adjustment journal entry in memory (no write yet).
-        // Only partners that actually have a linked ledger account produce one.
-        let adjustment_entry = if let Some(account) = synced_account.as_ref() {
-            build_balance_adjustment_entry(
-                account.id,
-                &supplier.name,
-                &supplier.id.to_string(),
-                balance_change,
-                PartnerKind::Supplier,
-                &self.account_repo,
-                &self.journal_repo,
-            ).await?
+        // Deferred to the migration while the opening window is open; only
+        // partners that actually have a linked ledger account produce one.
+        let adjustment_entry = if !opening_window {
+            if let Some(account) = synced_account.as_ref() {
+                build_balance_adjustment_entry(
+                    account.id,
+                    &supplier.name,
+                    &supplier.id.to_string(),
+                    balance_change,
+                    PartnerKind::Supplier,
+                    &self.account_repo,
+                    &self.journal_repo,
+                ).await?
+            } else {
+                None
+            }
         } else {
             None
         };

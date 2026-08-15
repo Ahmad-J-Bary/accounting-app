@@ -197,6 +197,7 @@ async fn stock_material(pool: &Arc<sqlx::SqlitePool>, material: &Material) {
         category_repo: Arc::new(SqliteCategoryRepository::new(pool.clone())),
         currency_repo: Arc::new(SqliteCurrencyRepository::new(pool.clone())),
         exchange_rate_repo: Arc::new(SqliteExchangeRateRepository::new(pool.clone())),
+        opening_migration_repo: Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
     })
     .execute(invoice.id)
     .await
@@ -476,6 +477,7 @@ async fn new_company_cash_sale_posts_one_balanced_journal_and_stock_movement() {
         category_repo: Arc::new(SqliteCategoryRepository::new(pool.clone())),
         currency_repo: Arc::new(SqliteCurrencyRepository::new(pool.clone())),
         exchange_rate_repo: Arc::new(SqliteExchangeRateRepository::new(pool.clone())),
+        opening_migration_repo: Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
     })
     .execute(invoice.id)
     .await

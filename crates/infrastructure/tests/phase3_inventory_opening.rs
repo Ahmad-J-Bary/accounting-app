@@ -204,6 +204,7 @@ async fn post_opening_balance_invoice(pool: &Arc<sqlx::SqlitePool>, material: &M
         category_repo: Arc::new(SqliteCategoryRepository::new(pool.clone())),
         currency_repo: Arc::new(SqliteCurrencyRepository::new(pool.clone())),
         exchange_rate_repo: Arc::new(SqliteExchangeRateRepository::new(pool.clone())),
+        opening_migration_repo: Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
     })
     .execute(invoice.id)
     .await

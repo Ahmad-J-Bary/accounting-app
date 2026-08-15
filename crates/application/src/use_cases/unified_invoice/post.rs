@@ -20,6 +20,8 @@ use crate::ports::material_repository::MaterialRepository;
 use crate::ports::category_repository::CategoryRepository;
 use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::exchange_rate_repository::ExchangeRateRepository;
+use crate::ports::opening_migration_repository::OpeningMigrationRepository;
+use crate::use_cases::opening_balance::opening_window_active;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine};
 use domain::payments::{Payment, PaymentType};
 use domain::shared::{Currency, Money, MonetaryAmount};
@@ -42,6 +44,7 @@ pub struct PostInvoiceUseCase {
     category_repo: Arc<dyn CategoryRepository>,
     currency_repo: Arc<dyn CurrencyRepository>,
     exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
+    opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
 }
 
 pub struct PostInvoiceDependencies {
@@ -56,6 +59,7 @@ pub struct PostInvoiceDependencies {
     pub category_repo: Arc<dyn CategoryRepository>,
     pub currency_repo: Arc<dyn CurrencyRepository>,
     pub exchange_rate_repo: Arc<dyn ExchangeRateRepository>,
+    pub opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
 }
 
 /// Locally-sequenced number allocator. Seeding once from the database (MAX+1)
@@ -158,6 +162,7 @@ impl PostInvoiceUseCase {
             category_repo: deps.category_repo,
             currency_repo: deps.currency_repo,
             exchange_rate_repo: deps.exchange_rate_repo,
+            opening_migration_repo: deps.opening_migration_repo,
         }
     }
 
@@ -178,6 +183,16 @@ impl PostInvoiceUseCase {
 
         let mut invoice = invoice;
         invoice.post().map_err(|e| AppError::Invalid(e.to_string()))?;
+
+        // While an opening-balance migration window is open the migration's
+        // aggregate journal owns the ledger for the OpeningBalance stock too:
+        // the invoice still creates the real OpeningBalance movement + lot, but
+        // its MaterialOpeningBalance journal is deferred so the same stock is
+        // never posted twice (R1) — the migration's own opening lines carry it
+        // and balance its account-53 leg, which the residual reclassification
+        // then closes.
+        let defer_opening_invoice_journal = invoice.invoice_type == InvoiceType::OpeningBalance
+            && opening_window_active(&self.opening_migration_repo).await?;
 
         let movement_type = match invoice.invoice_type {
             InvoiceType::Sales => MovementType::Sale,
@@ -773,7 +788,7 @@ impl PostInvoiceUseCase {
             }
         }
 
-        if !journal_lines.is_empty() {
+        if !journal_lines.is_empty() && !defer_opening_invoice_journal {
             let journal_type = match invoice.invoice_type {
                 InvoiceType::Sales => {
                     if amount_deferred > Decimal::ZERO { domain::accounting::JournalType::CreditSalesJournal }

@@ -42,6 +42,7 @@ pub async fn update_supplier(
         state.supplier_repo.clone(),
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
+        state.opening_migration_repo.clone(),
     )
         .execute(request).await.map_err(|e| e.to_string())
 }

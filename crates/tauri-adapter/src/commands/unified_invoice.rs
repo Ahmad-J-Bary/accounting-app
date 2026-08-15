@@ -81,6 +81,7 @@ pub async fn post_unified_invoice(
         category_repo: state.category_repo.clone(),
         currency_repo: state.currency_repo.clone(),
         exchange_rate_repo: state.exchange_rate_repo.clone(),
+        opening_migration_repo: state.opening_migration_repo.clone(),
     })
     .execute(id).await.map_err(|e| e.to_string())
 }
