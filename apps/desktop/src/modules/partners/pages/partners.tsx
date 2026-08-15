@@ -59,7 +59,7 @@ export default function Partners() {
   const [startMode, setStartMode] = useState<string>(START_MODE_NEW);
 
   useEffect(() => {
-    settingsService.get()
+    settingsService.getSettings()
       .then((s) => setStartMode(s.accounting_start_mode || START_MODE_NEW))
       .catch(() => {});
   }, []);

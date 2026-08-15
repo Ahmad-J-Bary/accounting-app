@@ -2,8 +2,7 @@ import { Input } from "@shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { StatusBadge } from "@shared/ui/status-badge";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
-import { toLocalDateStr, fmtMoney, toFixed } from "@shared/lib/format";
-import { Badge } from "@shared/ui/badge";
+import { toLocalDateStr, toFixed } from "@shared/lib/format";
 import { WizardShell } from "@modules/opening-balance/components/WizardShell";
 import { WizardLineEditor } from "@modules/opening-balance/components/WizardLineEditor";
 import {
@@ -12,7 +11,10 @@ import {
 import { START_MODE_NEW, START_MODE_EXISTING, type DerivedRow } from "@modules/opening-balance/lib/wizard-types";
 import { reconciliationReadiness } from "@modules/opening-balance/lib/migration-labels";
 import { ReconciliationStatusBanner } from "@modules/opening-balance/components/ReconciliationStatusBanner";
-import { Link } from "react-router-dom";
+import { AutoAmountSection } from "@modules/opening-balance/components/AutoAmountSection";
+import { InlineBalanceRow } from "@modules/opening-balance/components/InlineBalanceRow";
+import { InventorySection } from "@modules/opening-balance/components/InventorySection";
+import { ReconciliationRowsTable } from "@modules/opening-balance/components/ReconciliationRowsTable";
 
 export function GuidedTransitionWizard() {
   const w = useOpeningBalanceWizard();
@@ -40,6 +42,89 @@ export function GuidedTransitionWizard() {
     </div>
   );
 
+  const renderTotalsSummary = () => (
+    <div className="space-y-3">
+      <p className="text-xs text-slate-500">
+        معادلة الميزانية: الأصول (A) = الخصوم (L) + حقوق الملكية (E). يجب أن يتوازن الجانبان قبل الحفظ.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="border border-slate-100 rounded-lg p-3 space-y-1 bg-white">
+          <div className="text-xs font-semibold text-blue-700">الأصول (مدين)</div>
+          <div className="text-xl font-black tabular-nums text-blue-700">{toFixed(w.totals.debit, 2)}</div>
+        </div>
+        <div className="border border-slate-100 rounded-lg p-3 space-y-1 bg-white">
+          <div className="text-xs font-semibold text-emerald-700">الخصوم (دائن)</div>
+          <div className="text-xl font-black tabular-nums text-emerald-700">{toFixed(w.totals.liabilities, 2)}</div>
+        </div>
+        <div className="border border-slate-100 rounded-lg p-3 space-y-1 bg-white">
+          <div className="text-xs font-semibold text-indigo-700">حقوق الملكية (دائن)</div>
+          <div className="text-xl font-black tabular-nums text-indigo-700">
+            {toFixed(w.totals.equity + w.totals.plugAmount, 2)}
+          </div>
+        </div>
+      </div>
+
+      {w.totals.residual !== 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 space-y-2">
+          <p className="text-xs font-semibold text-amber-700">
+            الرصيد المتبقي (غير مسجل من النظام السابق): {toFixed(w.totals.residual, 2)}
+          </p>
+          {w.totals.residual > 0 ? (
+            <p className="text-xs text-amber-600">
+              يُحسب الرصيد تلقائياً وطبيعته قرار محاسب صريح — لا تُسوّى قسراً. اختر تصنيفاً وحساباً وسيضيف
+              المعالج بند موازنة على حساب الرصيد الافتتاحي (53) يعاد تصنيفه بعد الترحيل.
+            </p>
+          ) : (
+            <p className="text-xs text-amber-600">
+              الرصيد المتبقي سالب (الخصوم/الملكية تزيد عن الأصول). أضف بنداً يدوياً مديناً (مثال: مسحوبات
+              الشركاء أو حساب تسوية) في الخطوات السابقة لموازنة القيد.
+            </p>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <Select value={w.residualClassification} onValueChange={w.setResidualClassification}>
+              <SelectTrigger className="h-9 bg-white border-slate-200 text-xs" aria-label="تصنيف الفرق المتبقي">
+                <SelectValue placeholder="التصنيف (اختياري)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="RetainedEarnings">أرباح مبقاة</SelectItem>
+                <SelectItem value="OpeningEquityAdjustment">تعديل حقوق ملكية افتتاحي</SelectItem>
+                <SelectItem value="PriorPeriodAdjustment">تعديل فترة سابقة</SelectItem>
+                <SelectItem value="OtherEquity">حقوق ملكية أخرى</SelectItem>
+                <SelectItem value="UnresolvedDifference">فرق غير محلول</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              list="wiz-equity-accounts"
+              value={w.residualAccountId}
+              onChange={(e) => w.setResidualAccountId(e.target.value)}
+              placeholder="حساب حامل الفرق (مثال: 52)"
+              aria-label="حساب حامل الفرق"
+              className="h-9"
+            />
+            <datalist id="wiz-equity-accounts">
+              {w.detailAccounts.filter((a) => a.account_type === "Equity").map((a) => (
+                <option key={a.id} value={a.id}>{a.code} — {a.name_ar}</option>
+              ))}
+            </datalist>
+          </div>
+        </div>
+      )}
+
+      {w.totals.plugAmount !== 0 && (
+        <div className="rounded-lg p-3 text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+          بند موازنة تلقائي على حساب الرصيد الافتتاحي (53): {toFixed(w.totals.plugAmount, 2)} — سيعاد
+          تصنيفه بعد الترحيل إلى الحساب المحدد.
+        </div>
+      )}
+
+      <div className={"rounded-lg p-3 text-sm font-bold " + (w.totals.balanced ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600")}>
+        {w.totals.balanced
+          ? `متوازن ✓ — مدين ${toFixed(w.totals.debit, 2)} = دائن ${toFixed(w.totals.credit, 2)}`
+          : `غير متوازن — فرق ${toFixed(w.totals.debit - w.totals.credit, 2)}`}
+      </div>
+    </div>
+  );
+
   const renderStep = () => {
     switch (w.step) {
       case 0:
@@ -58,16 +143,13 @@ export function GuidedTransitionWizard() {
               </Select>
             </div>
 
-            {w.startMode === START_MODE_NEW && (
+            {isNew && (
               <>
                 <div className="rounded-lg border border-blue-200 bg-blue-50/60 p-3 space-y-1.5">
-                  <p className="text-xs font-semibold text-blue-700">
-                    الشركة تعمل بوضع «شركة جديدة»
-                  </p>
+                  <p className="text-xs font-semibold text-blue-700">الشركة تعمل بوضع «شركة جديدة»</p>
                   <p className="text-xs text-blue-600">
                     لا يُنشأ رصيد افتتاحي في هذا الوضع — تبدأ السجلات من الصفر. حدّد نافذة أول فترة
-                    مالية (النافذة الزمنية الأولى التي تُقيد عليها الحركات) ثم اضغط «إنشاء الفترة الأولى
-                    والبدء».
+                    مالية ثم اضغط «إنشاء الفترة الأولى والبدء».
                   </p>
                 </div>
                 <FirstPeriodFields
@@ -80,7 +162,7 @@ export function GuidedTransitionWizard() {
               </>
             )}
 
-            {w.startMode === START_MODE_EXISTING && (
+            {!isNew && (
               <>
                 <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 space-y-1.5">
                   <p className="text-xs font-semibold text-amber-700">شركة قائمة تبدأ استخدام التطبيق الآن:</p>
@@ -116,12 +198,149 @@ export function GuidedTransitionWizard() {
       case 1:
         if (isNew) return renderDone();
         return (
+          <div className="space-y-4">
+            <p className="text-xs text-slate-500">
+              أدخل أرصدة الصندوق والبنوك كمبالغ فقط — الحساب الافتراضي يُقترح تلقائياً ويمكن تغييره يدوياً.
+            </p>
+            <AutoAmountSection
+              title="الصندوق والنقد"
+              rows={w.cashBanks.filter((l) => l.kind === "cash")}
+              onAdd={w.addCashRow}
+              onPatch={(key, patch) => w.updateLine(w.setCashBanks, key, patch)}
+              onRemove={(key) => w.setCashBanks((prev) => prev.filter((x) => x.key !== key))}
+              accounts={w.accounts}
+              detailAccounts={w.detailAccounts}
+              defaultAccount={w.defaultCashAccount}
+              addLabel="إضافة صندوق/نقد"
+            />
+            <AutoAmountSection
+              title="البنوك"
+              hint="تُقيد أرصدة الشيكات والحسابات البنكية هنا على حساب بنكي."
+              rows={w.cashBanks.filter((l) => l.kind === "bank")}
+              onAdd={w.addBankRow}
+              onPatch={(key, patch) => w.updateLine(w.setCashBanks, key, patch)}
+              onRemove={(key) => w.setCashBanks((prev) => prev.filter((x) => x.key !== key))}
+              accounts={w.accounts}
+              detailAccounts={w.detailAccounts}
+              defaultAccount={w.defaultBankAccount}
+              addLabel="إضافة حساب بنكي"
+            />
+          </div>
+        );
+      case 2:
+        return (
           <div className="space-y-3">
             <p className="text-xs text-slate-500">
-              رؤوس أموال الشركاء (طبيعة دائن) تُشتق تلقائياً من سجل الشركاء. أضف يدوياً بنود حقوق ملكية
-              أخرى فقط (أرباح مبقاة، تعديلات...).
+              أرصدة العملاء تُشتق من سجل العملاء ويمكن تعديلها هنا مباشرة.
             </p>
-            <DerivedRows title="رؤوس أموال الشركاء (مشتقة)" rows={w.partnerEquity} />
+            <InlineRows
+              title="الذمم المدينة — العملاء (مشتقة)"
+              rows={w.derivedAr}
+              onSave={w.saveCustomerOpening}
+              label="رصيد العميل"
+              nativeHint="debit"
+            />
+            {w.derivedAr.length === 0 && (
+              <p className="text-xs text-slate-400">لا يوجد عملاء بأرصدة — أضفهم من صفحة «العملاء» أو تخطَّ.</p>
+            )}
+          </div>
+        );
+      case 3:
+        return (
+          <InventorySection
+            rows={w.effectiveInventory}
+            onRowChange={w.setInventoryRow}
+            total={w.inventoryTotal}
+            accountId={w.effectiveInventoryAccountId}
+            defaultAccount={w.defaultInventoryAccount}
+            onAccountChange={w.setInventoryAccountId}
+            posted={w.inventoryPosted}
+            posting={w.inventoryPosting}
+            onPost={() => { void w.handlePostInventoryInvoice(); }}
+            accounts={w.accounts}
+            detailAccounts={w.detailAccounts}
+          />
+        );
+      case 4:
+        return (
+          <div className="space-y-3">
+            <p className="text-xs text-slate-500">
+              صافي القيمة الدفترية (التكلفة − مجمع الإهلاك) مشتق من سجل الأصول الثابتة. التعديل هنا يؤثر على
+              قيمة الافتتاح في المعالج فقط — سجل الأصول والاستهلاك يبقى كما هو.
+            </p>
+            <InlineRows
+              title="الأصول الثابتة (مشتقة — صافي القيمة الدفترية)"
+              rows={w.faRows}
+              onSave={w.saveFixedAssetOverride}
+              label="القيمة الافتتاحية"
+              nativeHint="debit"
+            />
+            {w.faRows.length === 0 && (
+              <p className="text-xs text-slate-400">لا توجد أصول ثابتة نشطة.</p>
+            )}
+          </div>
+        );
+      case 5:
+        return (
+          <div className="space-y-3">
+            <p className="text-xs text-slate-500">
+              الأصول الأخرى الباقية (استثمارات، سلف، مصروفات مقدمة...) تُدخل كبنود يدوية.
+            </p>
+            <WizardLineEditor rows={w.assetsManual} setter={w.setAssetsManual} updateLine={w.updateLine} placeholder="ابحث واختر حساب أصل..." accounts={w.accounts} detailAccounts={w.detailAccounts} />
+          </div>
+        );
+      case 6:
+        return (
+          <div className="space-y-3">
+            <p className="text-xs text-slate-500">
+              أرصدة الموردين تُشتق من سجل الموردين ويمكن تعديلها هنا مباشرة.
+            </p>
+            <InlineRows
+              title="الذمم الدائنة — الموردون (مشتقة)"
+              rows={w.derivedAp}
+              onSave={w.saveSupplierOpening}
+              label="رصيد المورد"
+              nativeHint="credit"
+            />
+            {w.derivedAp.length === 0 && (
+              <p className="text-xs text-slate-400">لا توجد أرصدة موردين مستحقة.</p>
+            )}
+          </div>
+        );
+      case 7:
+        return (
+          <div className="space-y-4">
+            <AutoAmountSection
+              title="القروض"
+              hint="قروض وتسليفات بنكية — تُقيد كالتزام على حساب قرض."
+              rows={w.loans}
+              onAdd={w.addLoanRow}
+              onPatch={(key, patch) => w.updateLine(w.setLoans, key, patch)}
+              onRemove={(key) => w.setLoans((prev) => prev.filter((x) => x.key !== key))}
+              accounts={w.accounts}
+              detailAccounts={w.detailAccounts}
+              defaultAccount={w.defaultLoanAccount}
+              addLabel="إضافة قرض"
+            />
+            <div className="space-y-2">
+              <div className="text-xs font-semibold text-slate-600">التزامات أخرى (يدوي)</div>
+              <WizardLineEditor rows={w.liabilitiesManual} setter={w.setLiabilitiesManual} updateLine={w.updateLine} placeholder="ابحث واختر حساب التزام..." accounts={w.accounts} detailAccounts={w.detailAccounts} />
+            </div>
+          </div>
+        );
+      case 8:
+        return (
+          <div className="space-y-3">
+            <p className="text-xs text-slate-500">
+              رؤوس أموال الشركاء (طبيعة دائن) تُشتق من سجل الشركاء وقابلة للتعديل هنا.
+            </p>
+            <InlineRows
+              title="رؤوس أموال الشركاء (مشتقة)"
+              rows={w.partnerEquity}
+              onSave={w.savePartnerCapital}
+              label="رأس المال"
+              nativeHint="credit"
+            />
             {w.partnerEquity.length === 0 && (
               <p className="text-xs text-slate-400">لا يوجد شركاء برأس مال — أضفهم عبر صفحة «الشركاء ورأس المال» أو أدخل حقوق ملكية يدوياً.</p>
             )}
@@ -131,143 +350,18 @@ export function GuidedTransitionWizard() {
             </div>
           </div>
         );
-      case 2:
+      case 9:
         return (
-          <div className="space-y-3">
-            <p className="text-xs text-slate-500">
-              الذمم المدينة والأصول الثابتة تُشتق من سجل العملاء والأصول الثابتة (طبيعة مدين). أضف يدوياً
-              النقد والبنك والأصول الأخرى الباقية فقط.
-            </p>
-            <DerivedRows title="الذمم المدينة — العملاء (مشتقة)" rows={w.derivedAr} />
-            <DerivedRows title="الأصول الثابتة (مشتقة — صافي القيمة الدفترية)" rows={w.derivedFa} />
-
-            <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 space-y-1">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-slate-600">المخزون (معلومات قراءة فقط)</p>
-                <span className="tabular-nums text-xs font-bold text-indigo-700">{toFixed(w.inventorySummary.total, 2)}</span>
-              </div>
+          <div className="space-y-4">
+            {renderTotalsSummary()}
+            <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 space-y-2">
+              <p className="text-xs font-semibold text-slate-600">سيتم عند «حفظ وفحص التسوية»:</p>
               <p className="text-xs text-slate-500">
-                تقييم المخزون الحالي (متاح × متوسط التكلفة) عبر {w.inventorySummary.count} مادة. لا يُدخل
-                المخزون عبر هذا المعالج — يُرصد من خلال{" "}
-                <Link to="/opening-balance" className="text-blue-600 underline font-semibold">فاتورة أول المدة</Link>
-                .
+                حفظ المسودة (بنود الميزانية) وتفاصيل السجل المساعد ثم فحص تسوية الأرصدة مع دفتر الأستاذ.
+                عدد البنود: {w.collectLines().length} ·
+                العملاء: {w.derivedAr.length} · الموردون: {w.derivedAp.length} ·
+                الأصول الثابتة: {w.faRows.length} · رأس مال الشركاء: {w.partnerEquity.length}
               </p>
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="text-xs font-semibold text-slate-600">بنود أصول يدوية (نقد/بنك/أخرى)</div>
-              <WizardLineEditor rows={w.assetsManual} setter={w.setAssetsManual} updateLine={w.updateLine} placeholder="ابحث واختر حساب أصل..." accounts={w.accounts} detailAccounts={w.detailAccounts} />
-            </div>
-          </div>
-        );
-      case 3:
-        return (
-          <div className="space-y-3">
-            <p className="text-xs text-slate-500">
-              الذمم الدائنة تُشتق من سجل الموردين (طبيعة دائن). أضف يدوياً الخصوم الأخرى الباقية فقط.
-            </p>
-            <DerivedRows title="الذمم الدائنة — الموردون (مشتقة)" rows={w.derivedAp} />
-            {w.derivedAp.length === 0 && (
-              <p className="text-xs text-slate-400">لا توجد أرصدة موردين مستحقة.</p>
-            )}
-            <div className="space-y-1.5">
-              <div className="text-xs font-semibold text-slate-600">بنود خصوم يدوية (قروض/التزامات أخرى)</div>
-              <WizardLineEditor rows={w.liabilitiesManual} setter={w.setLiabilitiesManual} updateLine={w.updateLine} placeholder="ابحث واختر حساب التزام..." accounts={w.accounts} detailAccounts={w.detailAccounts} />
-            </div>
-          </div>
-        );
-      case 4:
-        return (
-          <div className="space-y-3">
-            <p className="text-xs text-slate-500">
-              معادلة الميزانية: الأصول (A) = الخصوم (L) + حقوق الملكية (E). يجب أن يتوازن الجانبان قبل
-              المتابعة — وتُجبر التسوية في خطوة التحقق.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="border border-slate-100 rounded-lg p-3 space-y-1 bg-white">
-                <div className="text-xs font-semibold text-blue-700">الأصول (مدين)</div>
-                <div className="text-xl font-black tabular-nums text-blue-700">{toFixed(w.totals.debit, 2)}</div>
-              </div>
-              <div className="border border-slate-100 rounded-lg p-3 space-y-1 bg-white">
-                <div className="text-xs font-semibold text-emerald-700">الخصوم (دائن)</div>
-                <div className="text-xl font-black tabular-nums text-emerald-700">{toFixed(w.totals.liabilities, 2)}</div>
-              </div>
-              <div className="border border-slate-100 rounded-lg p-3 space-y-1 bg-white">
-                <div className="text-xs font-semibold text-indigo-700">حقوق الملكية (دائن)</div>
-                <div className="text-xl font-black tabular-nums text-indigo-700">
-                  {toFixed(w.totals.equity + w.totals.plugAmount, 2)}
-                </div>
-              </div>
-            </div>
-
-            {w.totals.residual !== 0 && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 space-y-2">
-                <p className="text-xs font-semibold text-amber-700">
-                  الرصيد المتبقي (غير مسجل من النظام السابق): {toFixed(w.totals.residual, 2)}
-                </p>
-                {w.totals.residual > 0 ? (
-                  <p className="text-xs text-amber-600">
-                    يُحسب الرصيد تلقائياً وطبيعته قرار محاسب صريح — لا تُسوّى قسراً. اختر تصنيفاً وحساباً
-                    وسيضيف المعالج بند موازنة على حساب الرصيد الافتتاحي (53) يعاد تصنيفه بعد الترحيل.
-                  </p>
-                ) : (
-                  <p className="text-xs text-amber-600">
-                    الرصيد المتبقي سالب (الخصوم/الملكية تزيد عن الأصول). أضف بنداً يدوياً مديناً
-                    (مثال: مسحوبات الشركاء أو حساب تسوية) في الخطوات السابقة لموازنة القيد.
-                  </p>
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <Select value={w.residualClassification} onValueChange={w.setResidualClassification}>
-                    <SelectTrigger className="h-9 bg-white border-slate-200 text-xs" aria-label="تصنيف الفرق المتبقي">
-                      <SelectValue placeholder="التصنيف (اختياري)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="RetainedEarnings">أرباح مبقاة</SelectItem>
-                      <SelectItem value="OpeningEquityAdjustment">تعديل حقوق ملكية افتتاحي</SelectItem>
-                      <SelectItem value="PriorPeriodAdjustment">تعديل فترة سابقة</SelectItem>
-                      <SelectItem value="OtherEquity">حقوق ملكية أخرى</SelectItem>
-                      <SelectItem value="UnresolvedDifference">فرق غير محلول</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    list="wiz-equity-accounts"
-                    value={w.residualAccountId}
-                    onChange={(e) => w.setResidualAccountId(e.target.value)}
-                    placeholder="حساب حامل الفرق (مثال: 52)"
-                    aria-label="حساب حامل الفرق"
-                    className="h-9"
-                  />
-                  <datalist id="wiz-equity-accounts">
-                    {w.detailAccounts.filter((a) => a.account_type === "Equity").map((a) => (
-                      <option key={a.id} value={a.id}>{a.code} — {a.name_ar}</option>
-                    ))}
-                  </datalist>
-                </div>
-              </div>
-            )}
-
-            {w.totals.plugAmount !== 0 && (
-              <div className="rounded-lg p-3 text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                بند موازنة تلقائي على حساب الرصيد الافتتاحي (53): {toFixed(w.totals.plugAmount, 2)} —
-                سيعاد تصنيفه بعد الترحيل إلى الحساب المحدد.
-              </div>
-            )}
-
-            <div className={"rounded-lg p-3 text-sm font-bold " + (w.totals.balanced ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600")}>
-              {w.totals.balanced
-                ? `متوازن ✓ — مدين ${toFixed(w.totals.debit, 2)} = دائن ${toFixed(w.totals.credit, 2)}`
-                : `غير متوازن — فرق ${toFixed(w.totals.debit - w.totals.credit, 2)}`}
-            </div>
-          </div>
-        );
-      case 5:
-        return (
-          <div className="space-y-3">
-            <p className="text-xs text-slate-500">
-              سيتم حفظ المسودة (بنود الميزانية) وتفاصيل السجل المساعد ثم فحص تسوية الأرصدة مع دفتر الأستاذ.
-            </p>
-            <div className="text-xs font-semibold text-slate-600">
-              عدد البنود: {w.collectLines().length} · الذمم المدينة: {w.derivedAr.length} · الذمم الدائنة: {w.derivedAp.length} · الأصول الثابتة: {w.derivedFa.length} · رأس مال الشركاء: {w.partnerEquity.length}
             </div>
             {w.reconciliation && (
               <div className="space-y-3">
@@ -283,13 +377,13 @@ export function GuidedTransitionWizard() {
             )}
           </div>
         );
-      case 6:
-      case 7:
-      case 8: {
+      case 10:
+      case 11:
+      case 12: {
         const labels: Record<number, [string, string]> = {
-          6: ["التحقق", "تأكيد أن البيانات صحيحة ومكتملة قبل الانتقال للاعتماد. تُجبر هنا تسوية البنود مع دفتر الأستاذ."],
-          7: ["الترحيل", "تسجيل قيد الرصيد الافتتاحي في دفتر الأستاذ العام."],
-          8: ["القفل", "تثبيت الترحيل نهائياً وصفير رصيد حساب 53 ومنع أي تعديل مستقبلي."],
+          10: ["التحقق", "تأكيد أن البيانات صحيحة ومكتملة قبل الانتقال للاعتماد. تُجبر هنا تسوية البنود مع دفتر الأستاذ."],
+          11: ["الترحيل", "تسجيل قيد الرصيد الافتتاحي في دفتر الأستاذ العام."],
+          12: ["القفل", "تثبيت الترحيل نهائياً وصفير رصيد حساب 53 ومنع أي تعديل مستقبلي."],
         };
         const [title, desc] = labels[w.step];
         return (
@@ -309,7 +403,7 @@ export function GuidedTransitionWizard() {
           </div>
         );
       }
-      case 9:
+      case 13:
         return (
           <div className="space-y-3">
             <p className="text-xs text-slate-500">
@@ -333,7 +427,7 @@ export function GuidedTransitionWizard() {
             )}
           </div>
         );
-      case 10:
+      case 14:
         return renderDone();
       default:
         return null;
@@ -345,7 +439,7 @@ export function GuidedTransitionWizard() {
       title={isNew ? "بدء محاسبة شركة جديدة" : "معالج التحويل الموجه (شركة قائمة)"}
       subtitle={isNew
         ? "أنشئ أول فترة مالية وابدأ تسجيل الحركات اليومية — لا يوجد رصيد افتتاحي في هذا الوضع."
-        : "جمع أرصدة الميزانية والسجل المساعد من وحدات النظام ثم التحقق والاعتماد والترحيل والقفل ثم إنشاء أول فترة تشغيلية."}
+        : "جمع الأرصدة قسماً بقسم (نقد وبنوك، عملاء، مخزون، أصول ثابتة، موردون، قروض، شركاء) ثم التحقق والاعتماد والترحيل والقفل ثم إنشاء أول فترة تشغيلية."}
       steps={w.steps}
       stepIndex={w.step}
       canNext={w.canNext}
@@ -358,6 +452,40 @@ export function GuidedTransitionWizard() {
     >
       {renderStep()}
     </WizardShell>
+  );
+}
+
+function InlineRows({
+  title,
+  rows,
+  onSave,
+  label,
+  nativeHint,
+}: {
+  title: string;
+  rows: DerivedRow[];
+  onSave: (row: DerivedRow, value: string) => Promise<boolean>;
+  label: string;
+  nativeHint?: "debit" | "credit";
+}) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-slate-600">{title}</span>
+        <span className="tabular-nums text-xs font-bold text-slate-700">
+          {rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0).toFixed(2)}
+        </span>
+      </div>
+      {rows.length === 0 ? (
+        <p className="text-xs text-slate-400 py-1.5">لا توجد بنود مشتقة.</p>
+      ) : (
+        <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 bg-slate-50/40">
+          {rows.map((r) => (
+            <InlineBalanceRow key={r.key} row={r} onSave={onSave} label={label} nativeHint={nativeHint} />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -396,35 +524,6 @@ function FirstPeriodFields({
       {created && (
         <div className="rounded-lg p-3 text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
           تم إنشاء الفترة: {toLocalDateStr(created.start_date)} ← {toLocalDateStr(created.end_date)}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DerivedRows({ title, rows }: { title: string; rows: DerivedRow[] }) {
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-slate-600">{title}</span>
-        <span className="tabular-nums text-xs font-bold text-slate-700">
-          {fmtMoney(rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0))}
-        </span>
-      </div>
-      {rows.length === 0 ? (
-        <p className="text-xs text-slate-400 py-1.5">لا توجد بنود مشتقة.</p>
-      ) : (
-        <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 bg-slate-50/40">
-          {rows.map((r) => (
-            <div key={r.key} className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs">
-              <div className="flex items-center gap-2 min-w-0">
-                <Badge variant="outline" className="text-2xs bg-blue-50 text-blue-700 border-blue-200">مشتق</Badge>
-                <span className="text-2xs font-bold text-slate-400 tabular-nums">{r.account_code || "—"}</span>
-                <span className="truncate text-slate-700">{r.label}</span>
-              </div>
-              <span className="tabular-nums font-semibold text-slate-700">{fmtMoney(r.amount)}</span>
-            </div>
-          ))}
         </div>
       )}
     </div>

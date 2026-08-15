@@ -46,7 +46,7 @@ export function WizardShell({
   const progress = ((stepIndex + 1) / steps.length) * 100;
 
   return (
-    <div className="flex flex-col gap-4 w-full">
+    <div className="flex flex-col gap-4 w-full" dir="rtl">
       <Card className="border-slate-200 shadow-sm">
         <CardHeader className="py-3">
           <CardTitle className="text-base font-bold text-slate-800">{title}</CardTitle>

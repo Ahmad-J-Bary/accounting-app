@@ -45,8 +45,18 @@ vi.mock("@modules/partners/api/partnerService", () => ({
 vi.mock("@modules/inventory/api/materialService", () => ({
   materialService: { list: vi.fn().mockResolvedValue([]) },
 }));
+vi.mock("@modules/inventory/api/warehouseService", () => ({
+  warehouseService: { list: vi.fn().mockResolvedValue([]) },
+}));
 vi.mock("@modules/fixed-assets/api/fixedAssetService", () => ({
   fixedAssetService: { list: vi.fn().mockResolvedValue([]) },
+}));
+vi.mock("@modules/invoicing/api/invoiceService", () => ({
+  invoiceService: {
+    createInvoice: vi.fn(),
+    postInvoice: vi.fn(),
+    getNextInvoiceNumber: vi.fn().mockResolvedValue("1"),
+  },
 }));
 
 const PERIOD = {
@@ -107,12 +117,15 @@ describe("GuidedTransitionWizard", () => {
     expect(await screen.findByText("تم بدء المحاسبة بنجاح ✓")).toBeInTheDocument();
   });
 
-  it("ExistingCompany mode runs the 11-step transition incl. the first-period step", async () => {
+  it("ExistingCompany mode runs the 15-step transition incl. the first-period step", async () => {
     vi.mocked(settingsService.getSettings).mockResolvedValue({ accounting_start_mode: "ExistingCompanyMigration" } as never);
     renderWizard();
     expect(await screen.findByText("معالج التحويل الموجه (شركة قائمة)")).toBeInTheDocument();
     expect(screen.getByText("أول فترة تشغيلية")).toBeInTheDocument();
-    expect(screen.getByText("الشركاء ورأس المال")).toBeInTheDocument();
+    expect(screen.getByText("النقد والبنوك")).toBeInTheDocument();
+    expect(screen.getByText("المخزون")).toBeInTheDocument();
+    expect(screen.getByText("الشركاء وحقوق الملكية")).toBeInTheDocument();
+    expect(screen.queryByText("الشركاء ورأس المال")).not.toBeInTheDocument();
     expect(screen.getByText("القفل")).toBeInTheDocument();
     expect(screen.getByText("اكتمال")).toBeInTheDocument();
   });

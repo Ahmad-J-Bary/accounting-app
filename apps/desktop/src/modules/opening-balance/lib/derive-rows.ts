@@ -71,6 +71,36 @@ export interface InventoryRow {
   value: number;
 }
 
+// Editable per-material opening-stock entry used by the wizard's inventory
+// section to build the opening invoice and the migration line + items.
+export interface InventoryEntry {
+  material_id: string;
+  code: string;
+  name: string;
+  default_warehouse_id: string | null;
+  default_unit_id: string | null;
+  qty: string;
+  cost: string;
+  value: number;
+}
+
+export function deriveInventoryRows(materials: readonly MaterialDto[]): InventoryEntry[] {
+  return materials.map((m) => {
+    const qty = toNum(m.total_available);
+    const cost = toNum(m.average_cost_base) || toNum(m.last_purchase_price_base);
+    return {
+      material_id: m.id,
+      code: m.code || "",
+      name: m.name,
+      default_warehouse_id: m.default_warehouse_id ?? null,
+      default_unit_id: m.default_purchase_unit_id ?? null,
+      qty: String(qty || ""),
+      cost: String(cost || ""),
+      value: qty * cost,
+    };
+  });
+}
+
 export function inventorySummary(materials: readonly MaterialDto[]): { rows: InventoryRow[]; total: number; count: number } {
   const rows = materials
     .map((m) => ({

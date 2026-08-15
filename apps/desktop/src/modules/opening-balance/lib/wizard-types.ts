@@ -16,6 +16,7 @@ export interface WizLine {
   key: string;
   account_id: string;
   amount: string;
+  kind?: "cash" | "bank" | "loan" | "manual";
 }
 
 // A read-only line DERIVED from an owning module (customers / suppliers /

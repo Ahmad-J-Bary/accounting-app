@@ -1,7 +1,7 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { AccountDto, UpdateSettingsRequest, FiscalPeriodDto } from "@erp/shared-types";
+import type { AccountDto, UpdateSettingsRequest, FiscalPeriodDto, CustomerDto, SupplierDto, FixedAssetDto } from "@erp/shared-types";
 import type { WizardStepDef } from "@modules/opening-balance/components/WizardShell";
 import { queryClient, QUERY_KEYS } from "@shared/hooks/queryClient";
 import { toLocalDatePart } from "@shared/lib/format";
@@ -12,7 +12,9 @@ import { partnerService } from "@modules/partners/api/partnerService";
 import { customerService } from "@modules/partners/api/customerService";
 import { supplierService } from "@modules/partners/api/supplierService";
 import { materialService } from "@modules/inventory/api/materialService";
+import { warehouseService } from "@modules/inventory/api/warehouseService";
 import { fixedAssetService } from "@modules/fixed-assets/api/fixedAssetService";
+import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import {
   openingBalanceService,
   type OpeningBalanceMigrationDto,
@@ -24,9 +26,12 @@ import {
   KIND_AR,
   KIND_AP,
   KIND_FIXED_ASSET,
+  KIND_INVENTORY,
   START_MODE_NEW,
   START_MODE_EXISTING,
   OPENING_EQUITY_CODE,
+  newLine,
+  toNum,
   type WizLine,
   type DerivedRow,
 } from "@modules/opening-balance/lib/wizard-types";
@@ -35,9 +40,18 @@ import {
   deriveAp,
   deriveFa,
   derivePartnerEquity,
-  inventorySummary as inventorySummaryFn,
+  deriveInventoryRows,
   sumLines,
+  type InventoryEntry,
 } from "@modules/opening-balance/lib/derive-rows";
+import { defaultAccountFor } from "@modules/opening-balance/lib/auto-accounts";
+
+// Step indices for the ExistingCompany 15-step layout.
+const STEP_REVIEW = 9;
+const STEP_VALIDATE = 10;
+const STEP_POST = 11;
+const STEP_LOCK = 12;
+const STEP_FIRST_PERIOD = 13;
 
 export function useOpeningBalanceWizard() {
   const [step, setStep] = useState(0);
@@ -51,6 +65,18 @@ export function useOpeningBalanceWizard() {
   const [assetsManual, setAssetsManual] = useState<WizLine[]>([]);
   const [liabilitiesManual, setLiabilitiesManual] = useState<WizLine[]>([]);
   const [equityManual, setEquityManual] = useState<WizLine[]>([]);
+  // Amount-only sections (auto-default accounts, overridable manually).
+  const [cashBanks, setCashBanks] = useState<WizLine[]>([]);
+  const [loans, setLoans] = useState<WizLine[]>([]);
+  // Per-asset opening net-book-value overrides that only affect the migration
+  // (the fixed-asset module stays authoritative for cost/depreciation).
+  const [faOverrides, setFaOverrides] = useState<Record<string, string>>({});
+  // Inventory entries: editable qty + cost per material, plus the account the
+  // migration line is booked on.
+  const [inventoryInputs, setInventoryInputs] = useState<Record<string, { qty: string; cost: string }>>({});
+  const [inventoryAccountId, setInventoryAccountId] = useState("");
+  const [inventoryPosted, setInventoryPosted] = useState(false);
+  const [inventoryPosting, setInventoryPosting] = useState(false);
   const [migration, setMigration] = useState<OpeningBalanceMigrationDto | null>(null);
   const [reconciliation, setReconciliation] = useState<OpeningReconciliationDto | null>(null);
   const [busy, setBusy] = useState(false);
@@ -72,7 +98,7 @@ export function useOpeningBalanceWizard() {
   }, []);
 
   // A NewCompany only needs its first financial period (no opening migration);
-  // an Existing company runs the full 11-step transition incl. the first period.
+  // an Existing company runs the full 15-step transition incl. the first period.
   const steps = startMode === START_MODE_NEW ? STEPS_NEW : STEPS_EXISTING;
 
   const handleStartModeChange = async (mode: string) => {
@@ -110,12 +136,22 @@ export function useOpeningBalanceWizard() {
   };
 
   // NewCompany never touches these modules, so only fetch them when the
-  // Existing-company migration path is active (avoids 6 wasted queries on mount).
+  // Existing-company migration path is active (avoids wasted queries on mount).
   const existing = startMode === START_MODE_EXISTING;
 
   const { data: accounts = [] } = useQuery<AccountDto[]>({
     queryKey: QUERY_KEYS.chartOfAccounts,
     queryFn: () => accountingService.getChartOfAccounts(),
+    enabled: existing,
+  });
+  const { data: appSettings } = useQuery({
+    queryKey: QUERY_KEYS.settings,
+    queryFn: () => settingsService.getSettings(),
+    enabled: existing,
+  });
+  const { data: warehouses = [] } = useQuery({
+    queryKey: QUERY_KEYS.warehouses,
+    queryFn: () => warehouseService.list(),
     enabled: existing,
   });
   const { data: customers = [] } = useQuery({
@@ -144,26 +180,55 @@ export function useOpeningBalanceWizard() {
     enabled: existing,
   });
 
-  // ── Module-derived rows (read-only, pure derivation) ────────────────────
+  // ── Module-derived rows (read-only derivation) ───────────────────────────
   const derivedAr: DerivedRow[] = useMemo(() => deriveAr(customers, accounts), [customers, accounts]);
   const derivedAp: DerivedRow[] = useMemo(() => deriveAp(suppliers, accounts), [suppliers, accounts]);
   const derivedFa: DerivedRow[] = useMemo(() => deriveFa(fixedAssets, accounts), [fixedAssets, accounts]);
   const partnerEquity: DerivedRow[] = useMemo(() => derivePartnerEquity(partners, accounts), [partners, accounts]);
 
-  // ── Inventory: handled by the Phase-3 opening-invoice flow (read-only) ──
-  const inventorySummary = useMemo(() => inventorySummaryFn(materials), [materials]);
+  // Fixed assets may carry a wizard-side opening NBV override (migration only).
+  const faRows: DerivedRow[] = useMemo(() => {
+    return derivedFa.map((r) => {
+      const over = faOverrides[r.entity_id];
+      return over !== undefined && over !== "" ? { ...r, amount: over } : r;
+    });
+  }, [derivedFa, faOverrides]);
 
-  // ── Totals (never asked from the user) ──────────────────────────────────
+  // ── Inventory (in-wizard, editable qty/cost, single posting) ─────────────
+  const inventoryEntries: InventoryEntry[] = useMemo(() => deriveInventoryRows(materials), [materials]);
+  const effectiveInventory = useMemo(() => {
+    return inventoryEntries.map((r) => {
+      const over = inventoryInputs[r.material_id];
+      const qty = over?.qty ?? r.qty;
+      const cost = over?.cost ?? r.cost;
+      return { ...r, qty, cost, value: toNum(qty) * toNum(cost) };
+    });
+  }, [inventoryEntries, inventoryInputs]);
+  const inventoryTotal = useMemo(
+    () => effectiveInventory.reduce((s, r) => s + r.value, 0),
+    [effectiveInventory],
+  );
+
+  // ── Auto-default accounts (amount-only / inventory booking) ──────────────
+  const defaultCashAccount = useMemo(() => defaultAccountFor(accounts, "cash"), [accounts]);
+  const defaultBankAccount = useMemo(() => defaultAccountFor(accounts, "bank"), [accounts]);
+  const defaultLoanAccount = useMemo(() => defaultAccountFor(accounts, "loan"), [accounts]);
+  const defaultInventoryAccount = useMemo(() => defaultAccountFor(accounts, "inventory"), [accounts]);
+  const effectiveInventoryAccountId = inventoryAccountId || defaultInventoryAccount;
+
+  // ── Totals (never asked from the user) ───────────────────────────────────
   const manualAssetsTotal = sumLines(assetsManual);
   const manualLiabilitiesTotal = sumLines(liabilitiesManual);
   const manualEquityTotal = sumLines(equityManual);
+  const cashBanksTotal = sumLines(cashBanks);
+  const loansTotal = sumLines(loans);
   const arTotal = sumLines(derivedAr);
   const apTotal = sumLines(derivedAp);
-  const faTotal = sumLines(derivedFa);
+  const faTotal = sumLines(faRows);
   const equityTotal = sumLines(partnerEquity);
 
-  const debit = manualAssetsTotal + arTotal + faTotal;
-  const credit = manualLiabilitiesTotal + manualEquityTotal + apTotal + equityTotal;
+  const debit = manualAssetsTotal + cashBanksTotal + inventoryTotal + arTotal + faTotal;
+  const credit = manualLiabilitiesTotal + loansTotal + apTotal + equityTotal + manualEquityTotal;
   const residual = debit - credit;
 
   const obeAccountId = useMemo(
@@ -182,7 +247,7 @@ export function useOpeningBalanceWizard() {
   const totals = useMemo(() => {
     const plugAmount = hasResidualPlug ? residual : 0;
     const debitTotal = debit;
-    const liabilities = manualLiabilitiesTotal + apTotal;
+    const liabilities = manualLiabilitiesTotal + loansTotal + apTotal;
     const equity = manualEquityTotal + equityTotal;
     const creditTotal = credit + plugAmount;
     return {
@@ -195,7 +260,17 @@ export function useOpeningBalanceWizard() {
       residual,
       plugAmount: hasResidualPlug ? plugAmount : 0,
     };
-  }, [debit, credit, residual, hasResidualPlug, manualLiabilitiesTotal, apTotal, manualEquityTotal, equityTotal]);
+  }, [
+    debit,
+    credit,
+    residual,
+    hasResidualPlug,
+    manualLiabilitiesTotal,
+    loansTotal,
+    apTotal,
+    manualEquityTotal,
+    equityTotal,
+  ]);
 
   const detailAccounts = useMemo(
     () =>
@@ -213,29 +288,245 @@ export function useOpeningBalanceWizard() {
     setter((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
   };
 
+  const addCashRow = useCallback(() => {
+    setCashBanks((prev) => [
+      ...prev,
+      { key: newLine().key, account_id: defaultCashAccount || "", amount: "", kind: "cash" },
+    ]);
+  }, [defaultCashAccount]);
+  const addBankRow = useCallback(() => {
+    setCashBanks((prev) => [
+      ...prev,
+      { key: newLine().key, account_id: defaultBankAccount || "", amount: "", kind: "bank" },
+    ]);
+  }, [defaultBankAccount]);
+  const addLoanRow = useCallback(() => {
+    setLoans((prev) => [...prev, { key: newLine().key, account_id: defaultLoanAccount || "", amount: "", kind: "loan" }]);
+  }, [defaultLoanAccount]);
+
+  // ── Inline module saves (window-safe: no journals while the window is open) ─
+  const saveCustomerOpening = useCallback(
+    async (row: DerivedRow, value: string): Promise<boolean> => {
+      const c = customers.find((x) => x.id === row.entity_id);
+      if (!c) return false;
+      try {
+        const updated = await customerService.update({
+          id: c.id,
+          code: c.code,
+          name: c.name,
+          phone: c.phone,
+          address: c.address,
+          account_id: c.account_id,
+          debit: c.debit,
+          credit: c.credit,
+          opening_balance: value || "0",
+          currency: c.currency,
+          notes: c.notes,
+          is_active: c.is_active,
+        });
+        queryClient.setQueryData<CustomerDto[]>(QUERY_KEYS.customers, (old) =>
+          old?.map((x) => (x.id === c.id ? updated : x)) ?? [],
+        );
+        toast.success("تم تحديث رصيد العميل");
+        return true;
+      } catch (e) {
+        toast.error("فشل تحديث رصيد العميل: " + e);
+        return false;
+      }
+    },
+    [customers],
+  );
+
+  const saveSupplierOpening = useCallback(
+    async (row: DerivedRow, value: string): Promise<boolean> => {
+      const s = suppliers.find((x) => x.id === row.entity_id);
+      if (!s) return false;
+      try {
+        const updated = await supplierService.update({
+          id: s.id,
+          code: s.code,
+          name: s.name,
+          phone: s.phone,
+          address: s.address,
+          account_id: s.account_id,
+          debit: s.debit,
+          credit: s.credit,
+          opening_balance: value || "0",
+          currency: s.currency,
+          notes: s.notes,
+          is_active: s.is_active,
+        });
+        queryClient.setQueryData<SupplierDto[]>(QUERY_KEYS.suppliers, (old) =>
+          old?.map((x) => (x.id === s.id ? updated : x)) ?? [],
+        );
+        toast.success("تم تحديث رصيد المورد");
+        return true;
+      } catch (e) {
+        toast.error("فشل تحديث رصيد المورد: " + e);
+        return false;
+      }
+    },
+    [suppliers],
+  );
+
+  const savePartnerCapital = useCallback(
+    async (row: DerivedRow, value: string): Promise<boolean> => {
+      const p = partners.find((x) => x.id === row.entity_id);
+      if (!p) return false;
+      try {
+        await partnerService.updatePartner({
+          id: p.id,
+          code: p.code,
+          name: p.name,
+          currency: p.currency,
+          exchangeRate: p.exchange_rate,
+          amount: value || "0",
+          isAmountInOriginal: p.is_amount_in_original,
+          sharingType: p.profit_sharing_type,
+          manualRatio: p.profit_sharing_ratio,
+        });
+        await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partners });
+        toast.success("تم تحديث رأس مال الشريك");
+        return true;
+      } catch (e) {
+        toast.error("فشل تحديث رأس مال الشريك: " + e);
+        return false;
+      }
+    },
+    [partners],
+  );
+
+  // Fixed assets: the module stays authoritative (cost/depreciation), so the
+  // inline edit only adjusts the migration's opening valuation per asset.
+  const saveFixedAssetOverride = useCallback(async (row: DerivedRow, value: string): Promise<boolean> => {
+    setFaOverrides((prev) => ({ ...prev, [row.entity_id]: value || "" }));
+    toast.success("تم تحديث قيمة الأصل الافتتاحية في المعالج");
+    return true;
+  }, []);
+
+  const setInventoryRow = useCallback((materialId: string, patch: { qty?: string; cost?: string }) => {
+    setInventoryInputs((prev) => {
+      const cur = prev[materialId] || { qty: "", cost: "" };
+      return { ...prev, [materialId]: { ...cur, ...patch } };
+    });
+  }, []);
+
+  const defaultWarehouseId =
+    appSettings?.purchase_warehouse_id || warehouses.find((w) => w.is_default)?.id || "";
+
+  // Builds and posts the OpeningBalance invoice from the wizard's inventory
+  // rows so real stock lots are seeded; the MaterialOpeningBalance journal is
+  // deferred while the opening window is open (single ledger posting R1).
+  const handlePostInventoryInvoice = useCallback(async (): Promise<boolean> => {
+    const rows = effectiveInventory.filter((r) => toNum(r.qty) > 0 && toNum(r.cost) > 0);
+    if (rows.length === 0) {
+      toast.error("أدخل كميات وتكاليف للمواد قبل ترحيل رصيد البضاعة");
+      return false;
+    }
+    if (inventoryPosted) return true;
+    if (!appSettings?.currency) {
+      toast.error("حدّد العملة الأساسية من الإعدادات أولاً");
+      return false;
+    }
+    setInventoryPosting(true);
+    try {
+      const number = await invoiceService.getNextInvoiceNumber("OpeningBalance");
+      const created = await invoiceService.createInvoice({
+        invoice_number: number,
+        invoice_type: "OpeningBalance",
+        lines: rows.map((r) => ({
+          id: "",
+          material_id: r.material_id,
+          material_name: r.name,
+          quantity: r.qty,
+          unit_id: r.default_unit_id ?? undefined,
+          warehouse_id: r.default_warehouse_id || defaultWarehouseId || undefined,
+          unit_price: r.cost,
+          notes: "",
+        })),
+        tax_amount: "0",
+        discount_amount: "0",
+        extra_costs: "0",
+        payment_method: "Deferred",
+        amount_paid: "0",
+        issued_at: new Date().toISOString(),
+        currency_code: appSettings.currency,
+        exchange_rate: "1",
+        notes: "مواد أول المدة- رصيد افتتاحي للمواد",
+      });
+      await invoiceService.postInvoice(created.id);
+      setInventoryPosted(true);
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.materials });
+      toast.success("تم ترحيل رصيد البضاعة إلى المخزون");
+      return true;
+    } catch (e) {
+      toast.error("فشل ترحيل رصيد البضاعة: " + e);
+      return false;
+    } finally {
+      setInventoryPosting(false);
+    }
+  }, [effectiveInventory, inventoryPosted, appSettings, defaultWarehouseId]);
+
   const collectLines = useCallback((): OpeningLineInput[] => {
     const lines: OpeningLineInput[] = [];
-    for (const r of [...derivedAr, ...derivedAp, ...derivedFa, ...partnerEquity]) {
+    for (const r of [...derivedAr, ...derivedAp, ...faRows, ...partnerEquity]) {
       lines.push({ account_id: r.account_id, amount: r.amount, description: undefined });
+    }
+    for (const l of cashBanks) {
+      if (l.account_id && l.amount) {
+        lines.push({ account_id: l.account_id, amount: l.amount, description: "نقد وبنوك — رصيد افتتاحي" });
+      }
+    }
+    for (const l of loans) {
+      if (l.account_id && l.amount) {
+        lines.push({ account_id: l.account_id, amount: l.amount, description: "قروض — رصيد افتتاحي" });
+      }
     }
     for (const l of [...assetsManual, ...liabilitiesManual, ...equityManual]) {
       if (l.account_id && l.amount) {
         lines.push({ account_id: l.account_id, amount: l.amount, description: "بند يدوي" });
       }
     }
+    if (inventoryTotal !== 0 && effectiveInventoryAccountId) {
+      lines.push({
+        account_id: effectiveInventoryAccountId,
+        amount: String(inventoryTotal),
+        description: "مخزون أول المدة",
+      });
+    }
     if (hasResidualPlug) {
       lines.push({ account_id: obeAccountId, amount: String(totals.plugAmount), description: "بند تسوية الرصيد المتبقي" });
     }
     return lines;
-  }, [derivedAr, derivedAp, derivedFa, partnerEquity, assetsManual, liabilitiesManual, equityManual, hasResidualPlug, obeAccountId, totals]);
+  }, [
+    derivedAr,
+    derivedAp,
+    faRows,
+    partnerEquity,
+    cashBanks,
+    loans,
+    assetsManual,
+    liabilitiesManual,
+    equityManual,
+    inventoryTotal,
+    effectiveInventoryAccountId,
+    hasResidualPlug,
+    obeAccountId,
+    totals,
+  ]);
 
   const collectItems = useCallback((): OpeningItemInput[] => {
     const items: OpeningItemInput[] = [];
     for (const r of derivedAr) items.push({ kind: KIND_AR, entity_id: r.entity_id, reference: r.label, amount: r.amount, qty: "0" });
     for (const r of derivedAp) items.push({ kind: KIND_AP, entity_id: r.entity_id, reference: r.label, amount: r.amount, qty: "0" });
-    for (const r of derivedFa) items.push({ kind: KIND_FIXED_ASSET, entity_id: r.entity_id, reference: r.label, amount: r.amount, qty: "0" });
+    for (const r of faRows) items.push({ kind: KIND_FIXED_ASSET, entity_id: r.entity_id, reference: r.label, amount: r.amount, qty: "0" });
+    for (const r of effectiveInventory) {
+      if (r.value !== 0) {
+        items.push({ kind: KIND_INVENTORY, entity_id: r.material_id, reference: r.name, amount: String(r.value), qty: String(toNum(r.qty)) });
+      }
+    }
     return items;
-  }, [derivedAr, derivedAp, derivedFa]);
+  }, [derivedAr, derivedAp, faRows, effectiveInventory]);
 
   const invalidateMigrations = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.openingBalanceMigrations });
@@ -275,8 +566,6 @@ export function useOpeningBalanceWizard() {
       switch (step) {
         case 0:
           return datesValid;
-        case 1:
-          return true;
         default:
           return true;
       }
@@ -284,32 +573,22 @@ export function useOpeningBalanceWizard() {
     switch (step) {
       case 0:
         return startMode === START_MODE_EXISTING && !!cutoverDate;
-      case 1:
-        return true;
-      case 2:
-        return debit > 0;
-      case 3:
-        return true;
-      case 4:
+      case STEP_REVIEW:
         return totals.balanced && totals.total > 0;
-      case 5:
-        return !!migration && !!reconciliation;
-      case 6:
+      case STEP_VALIDATE:
         return !!migration && migration.status === "Validated";
-      case 7:
+      case STEP_POST:
         return !!migration && migration.status === "Validated";
-      case 8:
+      case STEP_LOCK:
         return !!migration && migration.status === "Posted";
-      case 9:
+      case STEP_FIRST_PERIOD:
         return datesValid;
-      case 10:
-        return true;
       default:
         return true;
     }
-  }, [step, startMode, cutoverDate, debit, totals, migration, reconciliation, firstPeriodStart, firstPeriodEnd]);
+  }, [step, startMode, cutoverDate, totals, migration, firstPeriodStart, firstPeriodEnd]);
 
-  const committed = step >= 5;
+  const committed = step >= STEP_REVIEW;
   const canPrev = step > 0 && !committed && !busy;
 
   const nextLabel = useMemo(() => {
@@ -317,11 +596,11 @@ export function useOpeningBalanceWizard() {
       return step === 0 ? "إنشاء الفترة الأولى والبدء" : undefined;
     }
     switch (step) {
-      case 5: return "حفظ وفحص التسوية";
-      case 6: return "تأكيد التحقق";
-      case 7: return "تأكيد الترحيل";
-      case 8: return "تأكيد القفل";
-      case 9: return "إنشاء أول فترة تشغيلية";
+      case STEP_REVIEW: return "حفظ وفحص التسوية";
+      case STEP_VALIDATE: return "تأكيد التحقق";
+      case STEP_POST: return "تأكيد الترحيل";
+      case STEP_LOCK: return "تأكيد القفل";
+      case STEP_FIRST_PERIOD: return "إنشاء أول فترة تشغيلية";
       default: return undefined;
     }
   }, [step, startMode]);
@@ -336,15 +615,15 @@ export function useOpeningBalanceWizard() {
         return ok;
       }
 
-      // Existing: Step 9 creates the first operational period after opening Lock.
-      if (step === 9) {
+      // Existing: Step 14 creates the first operational period after opening Lock.
+      if (step === STEP_FIRST_PERIOD) {
         setBusy(true);
         const ok = await createFirstPeriod();
         setBusy(false);
         return ok;
       }
 
-      if (step === 5) {
+      if (step === STEP_REVIEW) {
         setBusy(true);
         const created = await openingBalanceService.createMigration({
           cutover_date: new Date(cutoverDate).toISOString(),
@@ -375,7 +654,7 @@ export function useOpeningBalanceWizard() {
 
       if (!migration) return false;
 
-      if (step === 6) {
+      if (step === STEP_VALIDATE) {
         setBusy(true);
         const updated = await openingBalanceService.validateMigration(migration.id, "system");
         setMigration(updated);
@@ -383,7 +662,7 @@ export function useOpeningBalanceWizard() {
         setBusy(false);
         return true;
       }
-      if (step === 7) {
+      if (step === STEP_POST) {
         setBusy(true);
         // The backend only posts an Approved migration. Approval is folded into
         // the "تأكيد الترحيل" step so the wizard never dead-ends at Post.
@@ -401,7 +680,7 @@ export function useOpeningBalanceWizard() {
         setBusy(false);
         return true;
       }
-      if (step === 8) {
+      if (step === STEP_LOCK) {
         setBusy(true);
         const updated = await openingBalanceService.lockMigration(migration.id);
         setMigration(updated);
@@ -418,7 +697,7 @@ export function useOpeningBalanceWizard() {
   };
 
   const handleNext = async () => {
-    const runOnNext = startMode === START_MODE_NEW ? step === 0 : step === 5 || (step >= 6 && step <= 9);
+    const runOnNext = startMode === START_MODE_NEW ? step === 0 : step === STEP_REVIEW || (step >= STEP_VALIDATE && step <= STEP_FIRST_PERIOD);
     if (runOnNext) {
       const ok = await runStep();
       if (!ok) return;
@@ -449,11 +728,26 @@ export function useOpeningBalanceWizard() {
     setLiabilitiesManual,
     equityManual,
     setEquityManual,
+    cashBanks,
+    setCashBanks,
+    loans,
+    setLoans,
+    addCashRow,
+    addBankRow,
+    addLoanRow,
+    defaultCashAccount,
+    defaultBankAccount,
+    defaultLoanAccount,
     derivedAr,
     derivedAp,
-    derivedFa,
+    faRows,
+    faOverrides,
+    setFaOverrides,
+    saveFixedAssetOverride,
     partnerEquity,
-    inventorySummary,
+    saveCustomerOpening,
+    saveSupplierOpening,
+    savePartnerCapital,
     migration,
     reconciliation,
     busy,
@@ -479,16 +773,32 @@ export function useOpeningBalanceWizard() {
     suppliers,
     materials,
     fixedAssets,
+    // Inventory section
+    effectiveInventory,
+    inventoryTotal,
+    setInventoryRow,
+    inventoryAccountId,
+    setInventoryAccountId,
+    effectiveInventoryAccountId,
+    defaultInventoryAccount,
+    inventoryPosted,
+    inventoryPosting,
+    handlePostInventoryInvoice,
+    defaultWarehouseId,
   };
 }
 
-// ExistingCompany: full 11-step guided transition incl. first operational period.
+// ExistingCompany: full 15-step guided transition incl. the first period.
 export const STEPS_EXISTING: WizardStepDef[] = [
   { id: "company-start", label: "بدء الحسابات" },
-  { id: "partners", label: "الشركاء ورأس المال" },
-  { id: "assets", label: "الأصول القائمة" },
-  { id: "liabilities", label: "الخصوم" },
-  { id: "reconciliation", label: "التسوية" },
+  { id: "cash-banks", label: "النقد والبنوك" },
+  { id: "customers", label: "الذمم المدينة" },
+  { id: "inventory", label: "المخزون" },
+  { id: "fixed-assets", label: "الأصول الثابتة" },
+  { id: "other-assets", label: "أصول أخرى" },
+  { id: "suppliers", label: "الذمم الدائنة" },
+  { id: "loans", label: "القروض" },
+  { id: "partners-equity", label: "الشركاء وحقوق الملكية" },
   { id: "review", label: "المراجعة والحفظ" },
   { id: "validate", label: "التحقق" },
   { id: "post", label: "الترحيل" },
