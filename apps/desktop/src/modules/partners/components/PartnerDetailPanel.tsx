@@ -41,7 +41,7 @@ export function PartnerDetailPanel({
 }: PartnerDetailPanelProps) {
   const { currencies, baseCurrency } = useCurrencyContext();
   const { openTab } = useTabs();
-  const { canUseOpeningWorkflow } = useCompanyCapabilities();
+  const { canAccessOpeningWorkflow } = useCompanyCapabilities();
   const [settled, setSettled] = useState(false);
   const [settling, setSettling] = useState(false);
 
@@ -203,7 +203,7 @@ export function PartnerDetailPanel({
             <SidebarDetailGrid
               columns={2}
               fields={[
-                ...(canUseOpeningWorkflow
+                ...(canAccessOpeningWorkflow
                   ? [
                       { label: "الرصيد الافتتاحي", value: partner.opening_balance || "0" },
                       { label: "اتجاه الرصيد", value: settled ? "—" : (parseFloat(partner.debit || "0") > 0 ? "مدين" : "دائن") },

@@ -9,6 +9,7 @@ import { TabContext } from "@app/providers/TabContext";
 import type { TabContextType } from "@shared/types/tabs";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import type { CompanyType } from "@modules/opening-balance/lib/company-lifecycle";
+import { START_MODE_EXISTING } from "@modules/opening-balance/lib/wizard-types";
 
 export const currencyValue: CurrencyContextValue = {
   loading: false,
@@ -58,16 +59,24 @@ export const sidePanelValue = {
 /**
  * Renders a component with the persisted company type already available in the
  * query cache (so `useCompanyType`/`useCompanyCapabilities` read NEW/EXISTING
- * immediately without needing a settingsService mock).
+ * immediately without needing a settingsService mock). The opening-lifecycle
+ * queries (migrations + fiscal periods) are seeded to empty lists so the state
+ * resolves to NOT_STARTED (EXISTING) — the workflow is open and its controls
+ * visible, matching what these form/panel tests assert.
  */
 export function renderWithCompanyType(ui: ReactNode, companyType: CompanyType) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   qc.setQueryData(QUERY_KEYS.settings, { accounting_start_mode: companyType });
+  qc.setQueryData(QUERY_KEYS.openingBalanceMigrations, []);
+  qc.setQueryData(QUERY_KEYS.fiscalPeriods, []);
+  const expectedInitState: "ACTIVE" | "NOT_STARTED" =
+    companyType === START_MODE_EXISTING ? "NOT_STARTED" : "ACTIVE";
 
   return {
     qc,
+    expectedInitState,
     ...render(
       <MemoryRouter>
         <QueryClientProvider client={qc}>

@@ -90,28 +90,52 @@ export function companyTypeOf(settings?: CompanyLifecycleSettingsLike | null): C
 }
 
 export interface CompanyCapabilities {
+  isNewCompany: boolean;
   isExistingCompany: boolean;
   isOpeningRequired: boolean;
-  canUseOpeningWorkflow: boolean;
+  isOpeningLocked: boolean;
+  canAccessOpeningWorkflow: boolean;
+  canCreateOpeningBalance: boolean;
+  canPostOpening: boolean;
+  canLockOpening: boolean;
+  isNormalAccountingEnabled: boolean;
 }
 
-// Single source of truth for "does this company touch the opening-balance
-// workflow?" — every form/page that must hide opening controls reads these
-// capabilities (via `useCompanyCapabilities`) instead of repeating
-// `if (type === NEW) ... else ...`.
-export function companyCapabilities(type: CompanyType): CompanyCapabilities {
+// Single source of truth for "what is this company allowed to do right now in
+// the opening lifecycle?" — every form, page, route guard and nav filter reads
+// these capabilities (via `useCompanyCapabilities`) instead of repeating
+// `if (type === NEW) ... else ...` / `if (initState === "ACTIVE") ...` checks.
+// Lifecycle (Phase 5):
+//   EXISTING: NOT_STARTED → IN_PROGRESS → READY(Validated) → POSTED →
+//   OPENING_LOCKED → ACTIVE
+// The opening workflow is reachable ONLY before the migration is Locked; once
+// Locked it closes for good and normal accounting takes over. NEW companies
+// never open the workflow at all.
+export function companyCapabilities(
+  type: CompanyType,
+  initState: CompanyInitState = "ACTIVE",
+): CompanyCapabilities {
   const isExistingCompany = type === START_MODE_EXISTING;
+  const workflowOpen =
+    isExistingCompany &&
+    (initState === "NOT_STARTED" ||
+      initState === "OPENING_IN_PROGRESS" ||
+      initState === "OPENING_READY" ||
+      initState === "OPENING_POSTED");
+  const closed = initState === "OPENING_LOCKED" || initState === "ACTIVE";
   return {
+    isNewCompany: !isExistingCompany,
     isExistingCompany,
     isOpeningRequired: isExistingCompany,
-    canUseOpeningWorkflow: isExistingCompany,
+    isOpeningLocked: isExistingCompany && closed,
+    canAccessOpeningWorkflow: workflowOpen,
+    canCreateOpeningBalance:
+      isExistingCompany &&
+      (initState === "NOT_STARTED" || initState === "OPENING_IN_PROGRESS"),
+    canPostOpening: isExistingCompany && initState === "OPENING_READY",
+    canLockOpening: isExistingCompany && initState === "OPENING_POSTED",
+    isNormalAccountingEnabled: !isExistingCompany || closed,
   };
-}
-
-export function companyCapabilitiesOf(
-  settings?: CompanyLifecycleSettingsLike | null,
-): CompanyCapabilities {
-  return companyCapabilities(companyTypeOf(settings));
 }
 
 export function deriveCompanyInitState(input: CompanyLifecycleInput): CompanyInitState {
@@ -170,28 +194,30 @@ export function hiddenNavIdsForNew(
 }
 
 // Generalized nav hiding driven by both the persisted company type and the
-// derived initialization state (Phase 4):
-//  * NEW company                     → opening nav ids hidden for good.
-//  * EXISTING once fully ACTIVE      → opening nav ids hidden (lifecycle done).
-//  * EXISTING still opening          → transactional nav ids hidden so daily
-//    operations cannot begin before the opening migration is sealed.
+// derived initialization state (Phases 4–5):
+//  * NEW company                                  → opening nav ids hidden for good.
+//  * EXISTING once the workflow closes            → opening nav ids hidden
+//    (OPENING_LOCKED: locked but first fiscal period pending, and ACTIVE).
+//  * EXISTING still opening                       → transactional nav ids hidden
+//    so daily operations cannot begin before the opening migration is sealed.
 export function hiddenNavIds(
   type: CompanyType,
   initState: CompanyInitState,
 ): ReadonlySet<string> {
-  if (type === START_MODE_NEW || initState === "ACTIVE") {
+  const capabilities = companyCapabilities(type, initState);
+  if (capabilities.isNewCompany || capabilities.isOpeningLocked) {
     return new Set(HIDDEN_NAV_IDS_FOR_NEW);
   }
   return new Set(TRANSACTIONAL_NAV_IDS);
 }
 
 // Whether transactional (daily-log) pages may be accessed: NEW companies are
-// always active, EXISTING companies only once the lifecycle reaches ACTIVE.
+// always active; EXISTING once the workflow is closed (locked or active).
 export function isTransactionalAllowed(
   type: CompanyType,
   initState: CompanyInitState,
 ): boolean {
-  return type === START_MODE_NEW || initState === "ACTIVE";
+  return companyCapabilities(type, initState).isNormalAccountingEnabled;
 }
 
 export const INIT_STATE_LABELS: Record<CompanyInitState, string> = {

@@ -9,11 +9,15 @@ use std::sync::Arc;
 
 use application::errors::AppError;
 use application::ports::opening_draft_repository::OpeningDraftRepository;
+use application::ports::opening_migration_repository::OpeningMigrationRepository;
+use application::ports::settings_repository::SettingsRepository;
 use application::use_cases::opening_balance::{
     ClearOpeningDraftUseCase, GetOpeningDraftUseCase, SaveOpeningDraftUseCase,
 };
 use infrastructure::db::pool::run_migrations;
-use infrastructure::repositories::SqliteOpeningDraftRepository;
+use infrastructure::repositories::{
+    SqliteOpeningDraftRepository, SqliteOpeningMigrationRepository, SqliteSettingsRepository,
+};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
@@ -36,6 +40,36 @@ fn repo(pool: &Arc<sqlx::SqlitePool>) -> Arc<dyn OpeningDraftRepository> {
     Arc::new(SqliteOpeningDraftRepository::new(pool.clone()))
 }
 
+/// Save use case with the Phase 5 lifecycle guard wired in (real settings +
+/// migration repos against the test db — defaults to an EXISTING company with
+/// no Locked migration, so the workflow is open).
+fn save_uc(pool: &Arc<sqlx::SqlitePool>) -> SaveOpeningDraftUseCase {
+    SaveOpeningDraftUseCase::new(
+        repo(pool),
+        Arc::new(SqliteSettingsRepository::new(pool.clone())),
+        Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
+    )
+}
+
+async fn set_start_mode(pool: &Arc<sqlx::SqlitePool>, mode: &str) {
+    let settings_repo = Arc::new(SqliteSettingsRepository::new(pool.clone()));
+    let mut settings = settings_repo.get().await.unwrap();
+    settings.accounting_start_mode = mode.into();
+    settings_repo.save(&settings).await.unwrap();
+}
+
+async fn insert_migration(pool: &sqlx::SqlitePool, id: &str, status: &str) {
+    sqlx::query(
+        "INSERT INTO opening_balance_migrations (id, cutover_date, status, notes, posted_at, created_at, updated_at)
+         VALUES (?, datetime('now'), ?, NULL, NULL, datetime('now'), datetime('now'))",
+    )
+    .bind(id)
+    .bind(status)
+    .execute(pool)
+    .await
+    .unwrap();
+}
+
 // ---------------------------------------------------------------------------
 // Empty by default; save → get round-trips exactly; clear removes it.
 // ---------------------------------------------------------------------------
@@ -51,7 +85,7 @@ async fn draft_round_trips_save_get_clear() {
     );
 
     let snapshot = r#"{"stepIndex":3,"items":[{"kind":"AR","amount":"1200"}]}"#.to_string();
-    SaveOpeningDraftUseCase::new(repos.clone())
+    save_uc(&pool)
         .execute(&snapshot)
         .await
         .unwrap();
@@ -62,7 +96,7 @@ async fn draft_round_trips_save_get_clear() {
     );
 
     // Overwriting replaces, not appends.
-    SaveOpeningDraftUseCase::new(repos.clone())
+    save_uc(&pool)
         .execute("{\"step\":5}")
         .await
         .unwrap();
@@ -86,11 +120,11 @@ async fn draft_round_trips_save_get_clear() {
 #[tokio::test]
 async fn draft_store_uses_single_row() {
     let pool = build_pool().await;
-    SaveOpeningDraftUseCase::new(repo(&pool))
+    save_uc(&pool)
         .execute(r#"{"once":true}"#)
         .await
         .unwrap();
-    SaveOpeningDraftUseCase::new(repo(&pool))
+    save_uc(&pool)
         .execute(r#"{"twice":true}"#)
         .await
         .unwrap();
@@ -110,7 +144,7 @@ async fn draft_rejects_oversized_payload() {
     let pool = build_pool().await;
     let huge = "x".repeat(500_001);
 
-    let err = SaveOpeningDraftUseCase::new(repo(&pool))
+    let err = save_uc(&pool)
         .execute(&huge)
         .await
         .expect_err("an oversized draft must be rejected");

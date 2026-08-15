@@ -5,6 +5,9 @@ use domain::accounting::MigrationStatus;
 
 use crate::errors::AppError;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
+use crate::ports::settings_repository::SettingsRepository;
+
+use super::create::START_MODE_EXISTING;
 
 /// Rejects a P&L (Revenue / Expenses) account from an opening-balance item.
 /// Opening balances carry balance-sheet items only; the historical result
@@ -43,4 +46,44 @@ pub async fn opening_window_active(
             | MigrationStatus::Validated
             | MigrationStatus::Approved
     )))
+}
+
+/// True once an EXISTING company's opening lifecycle is sealed — any migration
+/// has reached Locked. After that the opening workflow is closed for good and
+/// becomes read-only history (Phase 5: no new writes, no new migrations).
+pub async fn opening_lifecycle_closed(
+    repo: &Arc<dyn OpeningMigrationRepository>,
+) -> Result<bool, AppError> {
+    let migrations = repo.list().await?;
+    Ok(migrations
+        .iter()
+        .any(|m| m.status == MigrationStatus::Locked))
+}
+
+/// Phase 5 backend capability guard for opening-workflow WRITES (persisting the
+/// wizard draft, creating a migration, …): only legal while the lifecycle is
+/// still open — an EXISTING company with no Locked migration yet. NEW companies
+/// never touch the workflow; once closed (a Locked migration exists) the
+/// workflow is sealed and every write is rejected so the API cannot be abused
+/// by direct calls even though the UI hides the pages.
+pub async fn assert_opening_workflow_writable(
+    settings_repo: &Arc<dyn SettingsRepository>,
+    migration_repo: &Arc<dyn OpeningMigrationRepository>,
+) -> Result<(), AppError> {
+    let settings = settings_repo.get().await?;
+    if settings.accounting_start_mode != START_MODE_EXISTING {
+        return Err(AppError::Forbidden(
+            "وضع بدء المحاسبة مضبوط على «شركة جديدة» — لا يوجد رصيد افتتاحي يمكن تعديله؛ \
+             استخدم الوضع «شركة قائمة تبدأ الاستخدام» أولاً"
+                .into(),
+        ));
+    }
+    if opening_lifecycle_closed(migration_repo).await? {
+        return Err(AppError::Forbidden(
+            "الرصيد الافتتاحي للشركة أُقفل نهائياً — انتهى وقت تجهيز الرصيد الافتتاحي \
+             ولا يُسمح بأي تعديلات أو إنشاء ترحيلات جديدة"
+                .into(),
+        ));
+    }
+    Ok(())
 }

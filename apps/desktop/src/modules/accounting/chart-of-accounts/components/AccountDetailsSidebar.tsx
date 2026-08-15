@@ -38,7 +38,7 @@ export function AccountDetailsSidebar({
   canDelete = !!selected,
 }: AccountDetailsSidebarProps) {
   const { openTab } = useTabs();
-  const { canUseOpeningWorkflow } = useCompanyCapabilities();
+  const { canAccessOpeningWorkflow } = useCompanyCapabilities();
   const [formMode, setFormMode] = useState<"create" | "edit" | null>(null);
   // ... existing state ...
   const [code, setCode] = useState("");
@@ -436,8 +436,8 @@ export function AccountDetailsSidebar({
               />
             </div>
           </div>
-          <div className={`grid ${canUseOpeningWorkflow ? "grid-cols-3" : "grid-cols-1"} gap-3`}>
-            {canUseOpeningWorkflow && (
+          <div className={`grid ${canAccessOpeningWorkflow ? "grid-cols-3" : "grid-cols-1"} gap-3`}>
+            {canAccessOpeningWorkflow && (
               <>
                 <div className="space-y-1">
                   <FieldLabel>مدين</FieldLabel>
@@ -480,7 +480,7 @@ export function AccountDetailsSidebar({
         </div>
       )}
       <div className="pt-2 space-y-3 border-t border-primary/10">
-        {canUseOpeningWorkflow && (
+        {canAccessOpeningWorkflow && (
           <div className="space-y-1">
             <FieldLabel>الرصيد الافتتاحي</FieldLabel>
             <Input

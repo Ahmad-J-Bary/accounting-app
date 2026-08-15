@@ -20,8 +20,8 @@ import {
 } from "@modules/accounting/api/openingBalanceService";
 import { invalidateAccountingMutationQueries, queryClient, QUERY_KEYS } from "@shared/hooks/queryClient";
 import {
-  COMPANY_TYPE_NEW,
   INIT_STATE_LABELS,
+  companyCapabilities,
   companyTypeOf,
   deriveCompanyInitState,
 } from "../lib/company-lifecycle";
@@ -250,11 +250,12 @@ export default function OpeningBalanceMigration() {
       .finally(() => setReconLoading(false));
   }, [reconId]);
 
-  // A NEW company never has an opening balance: redirect away as soon as the
-  // persisted company type is known (settings still loading = no redirect).
-  // Likewise, an EXISTING company whose lifecycle is fully ACTIVE (migration
-  // Locked + first fiscal period exists) no longer shows the opening pages.
-  if (settings && (companyTypeOf(settings) === COMPANY_TYPE_NEW || initState === "ACTIVE")) {
+  // The opening workflow is only reachable while it is still open (Phase 5):
+  // a NEW company never has one, and once an EXISTING company's migration is
+  // Locked (OPENING_LOCKED … ACTIVE) the workflow closes for good — the pages
+  // are hidden from navigation and direct URLs redirect away. Settings still
+  // loading = no redirect.
+  if (settings && !companyCapabilities(companyTypeOf(settings), initState).canAccessOpeningWorkflow) {
     return <Navigate to="/dashboard" replace />;
   }
 

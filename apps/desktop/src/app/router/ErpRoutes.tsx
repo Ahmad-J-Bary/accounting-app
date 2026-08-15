@@ -2,8 +2,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useCompanyTypeSettings, useCompanyInitState } from '@shared/hooks';
 import {
+  companyCapabilities,
   companyTypeOf,
-  isTransactionalAllowed,
 } from '@modules/opening-balance/lib/company-lifecycle';
 import Dashboard from '@modules/dashboard/pages/dashboard';
 import Accounting from '@modules/accounting/chart-of-accounts/pages/accounting';
@@ -44,16 +44,20 @@ import PartnerProfitShareReport from '@modules/reports/pages/PartnerProfitShareR
 import PartnerStatementReport from '@modules/reports/pages/PartnerStatementReport';
 import FiscalPeriodsPage from '@modules/accounting/fiscal-periods/pages/FiscalPeriodsPage';
 
-// Phase 4: while an EXISTING company is still in its opening workflow
-// (NOT_STARTED … OPENING_LOCKED), daily-log transactional pages are blocked and
-// redirected to the opening migration. Master-data / opening pages stay open.
+// Phase 5: while an EXISTING company is still in its opening workflow
+// (before OPENING_LOCKED), daily-log transactional pages are blocked and
+// redirected to the opening migration; master-data / opening pages stay open.
 // Until the lifecycle queries resolve we stay permissive to avoid flash-gating.
 function OpeningTransactionGate({ children }: { children: ReactElement }) {
   const settings = useCompanyTypeSettings();
   const { initState, isReady } = useCompanyInitState();
-  const blocked =
-    isReady && !isTransactionalAllowed(companyTypeOf(settings), initState);
-  if (blocked) return <Navigate to="/opening-balance-migration" replace />;
+  const capabilities = companyCapabilities(
+    companyTypeOf(settings),
+    isReady ? initState : 'ACTIVE',
+  );
+  if (!capabilities.isNormalAccountingEnabled) {
+    return <Navigate to="/opening-balance-migration" replace />;
+  }
   return children;
 }
 

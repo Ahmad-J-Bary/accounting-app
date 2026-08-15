@@ -5,7 +5,7 @@ import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import {
   companyTypeOf,
-  companyCapabilitiesOf,
+  companyCapabilities,
   deriveCompanyInitState,
   type CompanyLifecycleSettingsLike,
   type CompanyCapabilities,
@@ -27,8 +27,14 @@ export function useCompanyType(): ReturnType<typeof companyTypeOf> {
   return companyTypeOf(useCompanyTypeSettings());
 }
 
+// State-aware capabilities (Phase 5): the opening workflow is open ONLY while
+// an EXISTING company is still before OPENING_LOCKED. While the lifecycle
+// queries resolve we fall back to the permissive ACTIVE state so neither the
+// transactional pages nor the opening workflow flash as blocked during startup.
 export function useCompanyCapabilities(): CompanyCapabilities {
-  return companyCapabilitiesOf(useCompanyTypeSettings());
+  const settings = useCompanyTypeSettings();
+  const { initState, isReady } = useCompanyInitState();
+  return companyCapabilities(companyTypeOf(settings), isReady ? initState : "ACTIVE");
 }
 
 export interface CompanyInitStateResult {

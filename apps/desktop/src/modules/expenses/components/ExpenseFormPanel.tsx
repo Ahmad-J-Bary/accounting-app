@@ -52,7 +52,7 @@ export function ExpenseFormPanel({
   saving,
 }: ExpenseFormPanelProps) {
   const { currencies, baseCurrency } = useCurrencyContext();
-  const { canUseOpeningWorkflow } = useCompanyCapabilities();
+  const { canAccessOpeningWorkflow } = useCompanyCapabilities();
 
   const title = expense ? "تعديل بند المصروف" : "إضافة بند مصروف جديد";
 
@@ -151,7 +151,7 @@ export function ExpenseFormPanel({
           </div>
         </SidebarSection>
 
-        {canUseOpeningWorkflow && (
+        {canAccessOpeningWorkflow && (
           <SidebarSection title="البيانات المالية">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5 col-span-2 sm:col-span-1">

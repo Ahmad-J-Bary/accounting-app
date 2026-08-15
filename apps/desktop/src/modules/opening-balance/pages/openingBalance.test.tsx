@@ -10,6 +10,8 @@ import { SidebarLayoutProvider } from "@app/providers/SidebarLayoutProvider";
 import { TabContext } from "@app/providers/TabContext";
 import { TableSettingsContext } from "@shared/context/TableSettingsContext";
 import { settingsService } from "@modules/core/api/settingsService";
+import { openingBalanceService } from "@modules/accounting/api/openingBalanceService";
+import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
 import { START_MODE_EXISTING, START_MODE_NEW } from "@modules/opening-balance/lib/wizard-types";
 
 vi.mock("@modules/core/api/settingsService", () => ({
@@ -38,6 +40,21 @@ vi.mock("@modules/invoicing/api/invoiceService", () => ({
     updateInvoice: vi.fn(),
     postInvoice: vi.fn(),
     reopenInvoice: vi.fn(),
+  },
+}));
+
+vi.mock("@modules/accounting/api/openingBalanceService", () => ({
+  openingBalanceService: {
+    listMigrations: vi.fn().mockResolvedValue([]),
+    getOpeningDraft: vi.fn().mockResolvedValue(null),
+    clearOpeningDraft: vi.fn(),
+    saveOpeningDraft: vi.fn(),
+  },
+}));
+
+vi.mock("@modules/accounting/api/fiscalPeriodService", () => ({
+  fiscalPeriodService: {
+    listFiscalPeriods: vi.fn().mockResolvedValue([]),
   },
 }));
 
@@ -140,5 +157,45 @@ describe("openingBalance (فاتورة أول المدة) company-type gate", ()
     } as never);
     renderPage();
     expect(await screen.findByText("بضاعة أول المدة")).toBeInTheDocument();
+  });
+
+  it("redirects an EXISTING company away once the migration is Locked (OPENING_LOCKED)", async () => {
+    vi.mocked(settingsService.getSettings).mockResolvedValue({
+      accounting_start_mode: START_MODE_EXISTING,
+    } as never);
+    vi.mocked(openingBalanceService.listMigrations).mockResolvedValue([
+      {
+        id: "m1",
+        status: "Locked",
+        cutover_date: new Date().toISOString().slice(0, 10),
+        lines: [],
+        locked_at: new Date().toISOString(),
+      },
+    ] as never);
+    vi.mocked(fiscalPeriodService.listFiscalPeriods).mockResolvedValue([] as never);
+    renderPage();
+    expect(await screen.findByText("DASHBOARD_ROOT")).toBeInTheDocument();
+    expect(screen.queryByText("بضاعة أول المدة")).not.toBeInTheDocument();
+  });
+
+  it("redirects an EXISTING company away once fully ACTIVE", async () => {
+    vi.mocked(settingsService.getSettings).mockResolvedValue({
+      accounting_start_mode: START_MODE_EXISTING,
+    } as never);
+    vi.mocked(openingBalanceService.listMigrations).mockResolvedValue([
+      {
+        id: "m1",
+        status: "Locked",
+        cutover_date: new Date().toISOString().slice(0, 10),
+        lines: [],
+        locked_at: new Date().toISOString(),
+      },
+    ] as never);
+    vi.mocked(fiscalPeriodService.listFiscalPeriods).mockResolvedValue([
+      { id: "p1", status: "Open", start_date: "2026-01-01", end_date: "2026-12-31" } as never,
+    ]);
+    renderPage();
+    expect(await screen.findByText("DASHBOARD_ROOT")).toBeInTheDocument();
+    expect(screen.queryByText("بضاعة أول المدة")).not.toBeInTheDocument();
   });
 });

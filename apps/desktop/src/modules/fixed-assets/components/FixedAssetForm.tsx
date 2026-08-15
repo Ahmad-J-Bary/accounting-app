@@ -97,7 +97,7 @@ export function FixedAssetForm({
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
   const { rateMap, baseCurrency } = useCurrencyContext();
-  const { canUseOpeningWorkflow } = useCompanyCapabilities();
+  const { canAccessOpeningWorkflow } = useCompanyCapabilities();
 
   const isEditing = !!asset;
 
@@ -378,7 +378,7 @@ export function FixedAssetForm({
       <SidebarSection title="البيانات الأساسية" icon={<FileText className="w-3.5 h-3.5" />} defaultOpen>
         {/* Addition Type Toggle (hidden when editing; a NEW company only buys
             new assets — no "previous asset / أول المدة" opening entry) */}
-        {!isEditing && canUseOpeningWorkflow && (
+        {!isEditing && canAccessOpeningWorkflow && (
         <div className="flex rounded-lg border border-slate-200 overflow-hidden bg-slate-50 mb-3">
           <button
             type="button"

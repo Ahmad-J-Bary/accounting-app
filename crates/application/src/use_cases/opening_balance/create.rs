@@ -42,6 +42,16 @@ impl CreateOpeningBalanceUseCase {
             ));
         }
 
+        // Phase 5: once a migration is Locked the lifecycle is sealed — no new
+        // opening migrations can be created afterwards (only Cancelled
+        // migrations keep the restart path open).
+        if super::guard::opening_lifecycle_closed(&self.repo).await? {
+            return Err(AppError::Forbidden(
+                "الرصيد الافتتاحي للشركة أُقفل نهائياً — لا يمكن إنشاء ترحيل رصيد افتتاحي جديد بعد إقفال الرصيد"
+                    .into(),
+            ));
+        }
+
         let cutover = DateTime::parse_from_rfc3339(&cmd.cutover_date)
             .map(|d| d.with_timezone(&Utc))
             .map_err(|_| AppError::Invalid("تاريخ الترحيل غير صالح".into()))?;

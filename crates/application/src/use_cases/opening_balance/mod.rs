@@ -16,7 +16,7 @@ pub mod guard;
 pub mod draft;
 
 pub use allocate::AllocateNetProfitUseCase;
-pub use guard::opening_window_active;
+pub use guard::{assert_opening_workflow_writable, opening_lifecycle_closed, opening_window_active};
 pub use net_profit::ComputeNetProfitUseCase;
 pub use cancel::CancelOpeningBalanceUseCase;
 pub use classify::SetResidualClassificationUseCase;

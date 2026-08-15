@@ -253,10 +253,14 @@ pub async fn save_opening_wizard_draft(
     state: State<'_, AppState>,
     data: String,
 ) -> Result<(), String> {
-    SaveOpeningDraftUseCase::new(state.opening_draft_repo.clone())
-        .execute(&data)
-        .await
-        .map_err(|e| e.to_string())
+    SaveOpeningDraftUseCase::new(
+        state.opening_draft_repo.clone(),
+        state.settings_repo.clone(),
+        state.opening_migration_repo.clone(),
+    )
+    .execute(&data)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

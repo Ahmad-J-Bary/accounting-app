@@ -12,8 +12,8 @@ import { warehouseService } from "@modules/inventory/api/warehouseService";
 import { toast } from "sonner";
 import { queryClient, invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
 import { useExportSetup } from "@shared/hooks";
-import { useCompanyType } from "@shared/hooks";
-import { COMPANY_TYPE_NEW } from "../lib/company-lifecycle";
+import { useCompanyType, useCompanyInitState } from "@shared/hooks";
+import { COMPANY_TYPE_NEW, companyCapabilities } from "../lib/company-lifecycle";
 import { executeExport, addCurrencySummary } from "@shared/lib/excel";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { formatNumber, toLocalDateStr } from "@shared/lib/format";
@@ -384,9 +384,16 @@ export default function OpeningBalance() {
     });
   }, [enrichedLines, exportData, header, net, currencies, hasMultipleCurrencies, gridColumns, gridVisibleColumnIds, materials, warehouses, currencyMode, ratesSheet]);
 
-  // A NEW company never has an opening balance (invoice of first period
-  // / فاتورة أول المدة): redirect away as soon as the persisted type is known.
-  if (companyType === COMPANY_TYPE_NEW) {
+  // بضاعة أول المدة is part of the opening workflow: away as soon as the
+  // persisted type says NEW, and once an EXISTING company's lifecycle closes
+  // (OPENING_LOCKED … ACTIVE) the workflow is sealed — direct URLs redirect.
+  // While the lifecycle queries are still loading only the persisted NEW type
+  // redirects so nothing flashes for an EXISTING company.
+  const { initState, isReady } = useCompanyInitState();
+  const workflowClosed = isReady
+    ? !companyCapabilities(companyType, initState).canAccessOpeningWorkflow
+    : companyType === COMPANY_TYPE_NEW;
+  if (workflowClosed) {
     return <Navigate to="/dashboard" replace />;
   }
 

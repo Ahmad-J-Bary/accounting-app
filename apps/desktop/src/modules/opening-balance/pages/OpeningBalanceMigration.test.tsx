@@ -163,6 +163,37 @@ describe("OpeningBalanceMigration company-type gate", () => {
     expect(screen.queryByText("رصيد افتتاح الشركة")).not.toBeInTheDocument();
   });
 
+  it("redirects away once Locked but the first fiscal period is still pending (OPENING_LOCKED)", async () => {
+    vi.mocked(settingsService.getSettings).mockResolvedValue({
+      accounting_start_mode: START_MODE_EXISTING,
+    } as never);
+    vi.mocked(openingBalanceService.listMigrations).mockResolvedValue([
+      {
+        id: "m1",
+        company_id: null,
+        cutover_date: new Date().toISOString().slice(0, 10),
+        source_system: null,
+        source_reference: null,
+        status: "Locked",
+        notes: null,
+        lines: [],
+        validated_by: null,
+        validated_at: null,
+        approved_by: null,
+        approved_at: null,
+        posted_at: null,
+        locked_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ] as never);
+    vi.mocked(fiscalPeriodService.listFiscalPeriods).mockResolvedValue([] as never);
+    const { qc } = renderPage();
+    await waitFor(() => expect(qc.getQueryData(QUERY_KEYS.openingBalanceMigrations)).toBeTruthy());
+    expect(await screen.findByText("DASHBOARD_ROOT")).toBeInTheDocument();
+    expect(screen.queryByText("رصيد افتتاح الشركة")).not.toBeInTheDocument();
+  });
+
   it("shows an OPENING_IN_PROGRESS badge once a draft migration exists", async () => {
     vi.mocked(settingsService.getSettings).mockResolvedValue({
       accounting_start_mode: START_MODE_EXISTING,

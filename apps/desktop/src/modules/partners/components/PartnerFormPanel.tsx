@@ -56,7 +56,7 @@ export function PartnerFormPanel({
   saving
 }: PartnerFormPanelProps) {
   const { currencies, baseCurrency, rateMap } = useCurrencyContext();
-  const { canUseOpeningWorkflow } = useCompanyCapabilities();
+  const { canAccessOpeningWorkflow } = useCompanyCapabilities();
   const isCustomer = type === "customer";
   const title = isCustomer 
     ? (partner ? "تعديل بيانات العميل" : "إضافة عميل جديد")
@@ -199,7 +199,7 @@ export function PartnerFormPanel({
                 <FieldLabel>العنوان</FieldLabel>
                 <Input value={form.address} onChange={(e) => setForm({...form, address: e.target.value})} placeholder="المدينة، الشارع..." className="h-9" />
               </div>
-              {!canUseOpeningWorkflow && currencies.length > 1 && (
+              {!canAccessOpeningWorkflow && currencies.length > 1 && (
                 <div className="space-y-1.5">
                   <FieldLabel>العملة الافتراضية</FieldLabel>
                   <Select value={currency} onValueChange={setCurrency}>
@@ -215,7 +215,7 @@ export function PartnerFormPanel({
             </div>
           </SidebarSection>
 
-          {canUseOpeningWorkflow && (
+          {canAccessOpeningWorkflow && (
           <SidebarSection title="البيانات المالية">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5 col-span-2 sm:col-span-1">

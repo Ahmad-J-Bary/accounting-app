@@ -29,7 +29,7 @@ export function ExpenseDetailPanel({
 }: ExpenseDetailPanelProps) {
   const { baseCurrency } = useCurrencyContext();
   const { openTab } = useTabs();
-  const { canUseOpeningWorkflow } = useCompanyCapabilities();
+  const { canAccessOpeningWorkflow } = useCompanyCapabilities();
 
   if (!expense) return null;
 
@@ -85,7 +85,7 @@ export function ExpenseDetailPanel({
           <SidebarDetailGrid
             columns={2}
             fields={[
-              ...(canUseOpeningWorkflow
+              ...(canAccessOpeningWorkflow
                 ? [
                     { label: "الرصيد الافتتاحي", value: expense.opening_balance || "0" },
                     { label: "اتجاه الرصيد", value: parseFloat(expense.debit || "0") > 0 ? "مدين" : "دائن" },

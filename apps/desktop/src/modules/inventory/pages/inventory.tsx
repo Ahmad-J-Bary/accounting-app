@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { toast } from "sonner";
 import { useTabs } from "@app/providers/TabContext";
-import type { StockMovement, WarehouseDto, MaterialDto, DamagedItem, StockAdjustment } from '@erp/shared-types';
+import type { StockMovement, DamagedItem, StockAdjustment } from '@erp/shared-types';
 import { DamagedDetailPanel } from '@modules/inventory/components/DamagedDetailPanel';
 import { AdjustmentDetailPanel } from '@modules/inventory/components/AdjustmentDetailPanel';
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
@@ -15,7 +15,7 @@ import { useCompanyCapabilities } from "@shared/hooks";
 
 export default function Inventory() {
   const { openTab } = useTabs();
-  const { canUseOpeningWorkflow } = useCompanyCapabilities();
+  const { canAccessOpeningWorkflow } = useCompanyCapabilities();
 
   const { data: movements = [], isLoading: movementsLoading, isRefetching: movementsRefetching } = useStockMovements();
 
@@ -25,7 +25,7 @@ export default function Inventory() {
 
   const [search, setSearch] = useState('');
   const [selectedTypes, setSelectedTypes] = useState<string[]>(() =>
-    canUseOpeningWorkflow
+    canAccessOpeningWorkflow
       ? [...MOVEMENT_TYPE_KEYS]
       : MOVEMENT_TYPE_KEYS.filter(k => k !== 'OpeningBalance'),
   );
@@ -41,11 +41,11 @@ export default function Inventory() {
       SalesReturn: '/sales-returns',
       PurchaseReturn: '/purchase-returns',
     };
-    if (canUseOpeningWorkflow) {
+    if (canAccessOpeningWorkflow) {
       routes.OpeningBalance = '/opening-balance';
     }
     return routes;
-  }, [canUseOpeningWorkflow]);
+  }, [canAccessOpeningWorkflow]);
 
   const isSingleWarehouse = warehouses.length === 1;
 
@@ -216,7 +216,7 @@ export default function Inventory() {
                   placeholder={isSingleWarehouse ? (warehouses[0]?.name || 'مستودع الشركة') : 'جميع المستودعات'}
                 />
               </div>
-              <MovementTypeFilter value={selectedTypes} onChange={setSelectedTypes} excludeKeys={canUseOpeningWorkflow ? undefined : ['OpeningBalance']} />
+              <MovementTypeFilter value={selectedTypes} onChange={setSelectedTypes} excludeKeys={canAccessOpeningWorkflow ? undefined : ['OpeningBalance']} />
             </div>
           }
           selectedId={selectedMovementId}
