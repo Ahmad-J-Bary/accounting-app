@@ -46,6 +46,7 @@ describe("PartnerFormPanel (customers & suppliers)", () => {
   it("NEW company: customer form never shows opening receivable fields", () => {
     renderForm("customer", COMPANY_TYPE_NEW);
     expect(screen.getByText("إضافة عميل جديد")).toBeInTheDocument();
+    expect(screen.queryByText("البيانات المالية")).not.toBeInTheDocument();
     expect(screen.queryByText("الرصيد الافتتاحي")).not.toBeInTheDocument();
     expect(screen.queryByText("اتجاه الرصيد")).not.toBeInTheDocument();
   });
@@ -53,18 +54,21 @@ describe("PartnerFormPanel (customers & suppliers)", () => {
   it("NEW company: supplier form never shows opening payable fields", () => {
     renderForm("supplier", COMPANY_TYPE_NEW);
     expect(screen.getByText("إضافة مورد جديد")).toBeInTheDocument();
+    expect(screen.queryByText("البيانات المالية")).not.toBeInTheDocument();
     expect(screen.queryByText("الرصيد الافتتاحي")).not.toBeInTheDocument();
     expect(screen.queryByText("اتجاه الرصيد")).not.toBeInTheDocument();
   });
 
   it("EXISTING company: customer form still exposes the opening receivable fields", () => {
     renderForm("customer", COMPANY_TYPE_EXISTING);
+    expect(screen.getByText("البيانات المالية")).toBeInTheDocument();
     expect(screen.getByText("الرصيد الافتتاحي")).toBeInTheDocument();
     expect(screen.getByText("اتجاه الرصيد")).toBeInTheDocument();
   });
 
   it("EXISTING company: supplier form still exposes the opening payable fields", () => {
     renderForm("supplier", COMPANY_TYPE_EXISTING);
+    expect(screen.getByText("البيانات المالية")).toBeInTheDocument();
     expect(screen.getByText("الرصيد الافتتاحي")).toBeInTheDocument();
   });
 });
