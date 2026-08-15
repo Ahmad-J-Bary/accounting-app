@@ -8,7 +8,7 @@ import { WizardShell } from "@modules/opening-balance/components/WizardShell";
 import { WizardLineEditor } from "@modules/opening-balance/components/WizardLineEditor";
 import { useOpeningBalanceWizard, STEP_REVIEW } from "@modules/opening-balance/hooks/useOpeningBalanceWizard";
 import { START_MODE_NEW, START_MODE_EXISTING, toNum, type DerivedRow } from "@modules/opening-balance/lib/wizard-types";
-import { sumLines } from "@modules/opening-balance/lib/derive-rows";
+import { sumLines, inventoryMismatchHints } from "@modules/opening-balance/lib/derive-rows";
 import { reconciliationReadiness, RECON_ROW_LABEL } from "@modules/opening-balance/lib/migration-labels";
 import { ReconciliationStatusBanner } from "@modules/opening-balance/components/ReconciliationStatusBanner";
 import { AutoAmountSection } from "@modules/opening-balance/components/AutoAmountSection";
@@ -477,6 +477,7 @@ export function GuidedTransitionWizard() {
         }
       }
     }
+    hints.push(...inventoryMismatchHints(w.effectiveInventory, w.materials));
 
     return {
       cash,
@@ -493,7 +494,7 @@ export function GuidedTransitionWizard() {
       residual,
       hints,
     };
-  }, [w.cashBanks, w.derivedAr, w.derivedAp, w.faRows, w.assetsManual, w.loans, w.liabilitiesManual, w.partnerEquity, w.equityManual, w.inventoryTotal, w.reconciliation]);
+  }, [w.cashBanks, w.derivedAr, w.derivedAp, w.faRows, w.assetsManual, w.loans, w.liabilitiesManual, w.partnerEquity, w.equityManual, w.inventoryTotal, w.reconciliation, w.effectiveInventory, w.materials]);
 
   // ── Progress checklist (§15): every section's done-state, derived from data
   // and the reached step so the user never has to remember what is finished.

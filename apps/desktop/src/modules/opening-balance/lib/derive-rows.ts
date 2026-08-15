@@ -3,6 +3,7 @@
 import type { AccountDto, CustomerDto, SupplierDto, PartnerDto, FixedAssetDto, MaterialDto } from "@erp/shared-types";
 import type { DerivedRow } from "./wizard-types";
 import { toNum } from "./wizard-types";
+import { toFixed, fmtMoney } from "@shared/lib/format";
 
 function codeOf(accounts: readonly AccountDto[], id?: string | null): string {
   return id ? accounts.find((a) => a.id === id)?.code || "" : "";
@@ -118,4 +119,34 @@ export function inventorySummary(materials: readonly MaterialDto[]): { rows: Inv
 
 export function sumLines(list: readonly { amount?: string }[]): number {
   return list.reduce((s, l) => s + toNum(l.amount), 0);
+}
+
+/**
+ * Pre-save smart hints for §14: point the accountant at incomplete inventory
+ * rows or a divergence between the material-card stock value and the opening
+ * inventory value, before any reconciliation is run.
+ */
+export function inventoryMismatchHints(entries: readonly InventoryEntry[], materials: readonly MaterialDto[]): string[] {
+  const hints: string[] = [];
+  for (const r of entries) {
+    const qty = toNum(r.qty);
+    const cost = toNum(r.cost);
+    if (qty > 0 && cost <= 0) {
+      hints.push(
+        `المادة «${r.name}» لها كمية ${toFixed(qty, 2)} بدون تكلفة — لن تُضاف إلى قيمة المخزون الافتتاحية؛ أدخل التكلفة.`,
+      );
+    } else if (cost > 0 && qty <= 0) {
+      hints.push(
+        `المادة «${r.name}» لها تكلفة ${toFixed(cost, 2)} بدون كمية — لن تُضاف إلى قيمة المخزون الافتتاحية؛ أدخل الكمية.`,
+      );
+    }
+  }
+  const cardTotal = inventorySummary(materials).total;
+  const openingTotal = entries.reduce((s, r) => s + r.value, 0);
+  if (cardTotal > 0 && Math.abs(cardTotal - openingTotal) > 0.01) {
+    hints.push(
+      `رصيد المخزون في بطاقة المواد (${fmtMoney(cardTotal)}) لا يساوي قيمة المخزون الافتتاحية (${fmtMoney(openingTotal)}) — راجع قسم «المخزون»؛ سيُضاف الرصيد الافتتاحي فوق الرصيد الحالي.`,
+    );
+  }
+  return hints;
 }

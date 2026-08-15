@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { AccountDto, CustomerDto, SupplierDto, FixedAssetDto, PartnerDto, MaterialDto } from "@erp/shared-types";
-import { deriveAr, deriveAp, deriveFa, derivePartnerEquity, inventorySummary, sumLines } from "./derive-rows";
+import { toFixed, fmtMoney } from "@shared/lib/format";
+import { deriveAr, deriveAp, deriveFa, derivePartnerEquity, inventorySummary, inventoryMismatchHints, sumLines, type InventoryEntry } from "./derive-rows";
 
 const accounts: AccountDto[] = [
   { id: "a1", code: "1101", name_ar: "عملاء", name_en: "Customers", category: "Detail", account_type: "Assets" },
@@ -89,5 +90,40 @@ describe("inventorySummary", () => {
 describe("sumLines", () => {
   it("treats missing amounts as zero", () => {
     expect(sumLines([{ amount: "10" }, { amount: "2.5" }, {}])).toBe(12.5);
+  });
+});
+
+function entry(partial: Partial<InventoryEntry>): InventoryEntry {
+  return { material_id: "m1", code: "M1", name: "مادة أ", default_warehouse_id: null, default_unit_id: null, qty: "", cost: "", value: 0, ...partial };
+}
+
+describe("inventoryMismatchHints", () => {
+  it("flags a quantity without a cost so the row is dropped from opening value", () => {
+    const hints = inventoryMismatchHints([entry({ qty: "5", cost: "" })], []);
+    expect(hints).toEqual([`المادة «مادة أ» لها كمية ${toFixed(5, 2)} بدون تكلفة — لن تُضاف إلى قيمة المخزون الافتتاحية؛ أدخل التكلفة.`]);
+  });
+
+  it("flags a cost without a quantity", () => {
+    const hints = inventoryMismatchHints([entry({ qty: "", cost: "150" })], []);
+    expect(hints).toEqual([`المادة «مادة أ» لها تكلفة ${toFixed(150, 2)} بدون كمية — لن تُضاف إلى قيمة المخزون الافتتاحية؛ أدخل الكمية.`]);
+  });
+
+  it("reports the exact §14 mismatch when the card exceeds the opening value", () => {
+    const materials = [{ name: "مادة أ", total_available: "10", average_cost_base: "100" }] as MaterialDto[];
+    const hints = inventoryMismatchHints([entry({ qty: "5", cost: "100", value: 500 })], materials);
+    expect(hints).toHaveLength(1);
+    expect(hints[0]).toContain(`(${fmtMoney(1000)})`);
+    expect(hints[0]).toContain(`(${fmtMoney(500)})`);
+    expect(hints[0]).toContain("لا يساوي قيمة المخزون الافتتاحية");
+  });
+
+  it("stays silent when opening creates the card from scratch", () => {
+    const materials = [{ name: "مادة أ", total_available: "0", average_cost_base: "100" }] as MaterialDto[];
+    expect(inventoryMismatchHints([entry({ qty: "10", cost: "120", value: 1200 })], materials)).toEqual([]);
+  });
+
+  it("stays silent on the default prefill where the opening equals the card", () => {
+    const materials = [{ name: "مادة أ", total_available: "10", average_cost_base: "100" }] as MaterialDto[];
+    expect(inventoryMismatchHints([entry({ qty: "10", cost: "100", value: 1000 })], materials)).toEqual([]);
   });
 });
