@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::str::FromStr;
 use rust_decimal::Decimal;
+use domain::settings::{START_MODE_EXISTING, START_MODE_NEW};
 use crate::ports::settings_repository::SettingsRepository;
 use crate::dto::settings_dto::{CompanySettingsDto, UpdateSettingsRequest};
 use crate::errors::AppError;
@@ -36,6 +37,9 @@ impl UpdateSettingsUseCase {
         settings.sales_warehouse_id = req.sales_warehouse_id;
         settings.numeral_system = req.numeral_system;
         if let Some(mode) = req.accounting_start_mode {
+            if mode != START_MODE_NEW && mode != START_MODE_EXISTING {
+                return Err(AppError::Invalid("طريقة بدء المحاسبة غير صالحة".into()));
+            }
             settings.accounting_start_mode = mode;
         }
         settings.updated_at = chrono::Utc::now();

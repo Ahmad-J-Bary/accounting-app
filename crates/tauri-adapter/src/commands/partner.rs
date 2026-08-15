@@ -19,11 +19,15 @@ pub async fn add_partner(
     is_amount_in_original: bool,
     sharing_type: String,
     manual_ratio: Option<String>,
-    accounting_start_mode: String,
 ) -> Result<String, String> {
     let rate = Decimal::from_str(&exchange_rate).map_err(|e| e.to_string())?;
     let amt = Decimal::from_str(&amount).map_err(|e| e.to_string())?;
     let ratio = manual_ratio.and_then(|r| Decimal::from_str(&r).ok());
+
+    // Company type is read from persisted settings, never trusted from the
+    // client: it decides whether partner capital is booked as opening equity
+    // (ExistingCompanyMigration) or zeroed for an explicit contribution event.
+    let settings = state.settings_repo.get().await.map_err(|e| e.to_string())?;
 
     CreatePartnerUseCase::new(
         state.partner_repo.clone(),
@@ -37,7 +41,7 @@ pub async fn add_partner(
         is_amount_in_original,
         sharing_type,
         ratio,
-        accounting_start_mode,
+        settings.accounting_start_mode,
     ).await.map_err(|e| e.to_string())
 }
 

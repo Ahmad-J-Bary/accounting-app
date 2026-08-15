@@ -56,11 +56,11 @@ export default function Partners() {
   } | null>(null);
   const [capitalSubmitting, setCapitalSubmitting] = useState(false);
 
-  const [startMode, setStartMode] = useState<string>(START_MODE_NEW);
+  const [startMode, setStartMode] = useState<string>(START_MODE_EXISTING);
 
   useEffect(() => {
     settingsService.getSettings()
-      .then((s) => setStartMode(s.accounting_start_mode || START_MODE_NEW))
+      .then((s) => setStartMode(s.accounting_start_mode || START_MODE_EXISTING))
       .catch(() => {});
   }, []);
 
@@ -83,10 +83,7 @@ export default function Partners() {
         await partnerService.updatePartner(payload);
         toast.success("تم التحديث بنجاح");
       } else {
-        const partnerId = await partnerService.addPartner({
-          ...payload,
-          accountingStartMode: startMode,
-        } as PartnerRequest);
+        const partnerId = await partnerService.addPartner(payload);
         // Two accounting-start modes (company-level setting):
         // - NewCompany: partner capital requires an explicit contribution event —
         //   ask "how was the capital provided?" (cash / bank / in-kind / owed).

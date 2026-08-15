@@ -129,4 +129,10 @@ describe("GuidedTransitionWizard", () => {
     expect(screen.getByText("القفل")).toBeInTheDocument();
     expect(screen.getByText("اكتمال")).toBeInTheDocument();
   });
+
+  it("no longer exposes a start-mode toggle — company type is fixed from settings", async () => {
+    renderWizard();
+    expect(await screen.findByText("بدء محاسبة شركة جديدة")).toBeInTheDocument();
+    expect(screen.queryByText("طريقة بدء المحاسبة")).not.toBeInTheDocument();
+  });
 });

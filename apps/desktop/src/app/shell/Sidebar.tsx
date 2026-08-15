@@ -1,8 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTabs } from '@app/providers/TabContext';
-import { useNavSidebarSettings, useSidebarLayout } from '@shared/hooks';
+import { useNavSidebarSettings, useCompanyTypeSettings, useSidebarLayout } from '@shared/hooks';
 import { useAppearance } from '@shared/hooks/useAppearance';
+import {
+  COMPANY_TYPE_NEW,
+  OPENING_NAV_ID,
+  companyTypeOf,
+  filterNavByCompanyType,
+} from '@modules/opening-balance/lib/company-lifecycle';
 import { cn } from '@shared/lib/utils';
 import { ICON_MAP } from './sidebarConfig';
 import { SidebarCollapseBtn } from './components/SidebarCollapseBtn';
@@ -19,6 +25,7 @@ interface SidebarProps {
 export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
   const { settings, updateSetting, getNavWidth } = useNavSidebarSettings();
   const { layout, toggleGroupCollapsed } = useSidebarLayout();
+  const companySettings = useCompanyTypeSettings();
   const { openTab, updateMainTab, activeTabId } = useTabs();
   const location = useLocation();
 
@@ -99,14 +106,22 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
     }
   };
 
-  // المجموعات المرئية مرتّبة
+  // المجموعات المرئية مرتّبة (مع إخفاء عناصر نوع الشركة المنطبقة)
   const visibleGroups = [...layout.groups]
     .filter(g => g.visible)
+    .map(g => ({ ...g, items: filterNavByCompanyType(g.items, companySettings) }))
+    .filter(g => g.items.length > 0)
     .sort((a, b) => a.order - b.order);
+
+  const hiddenItemIds = useMemo(() => {
+    return companyTypeOf(companySettings) === COMPANY_TYPE_NEW
+      ? new Set([OPENING_NAV_ID])
+      : new Set<string>();
+  }, [companySettings]);
 
   // ── الوضع المكدس: شريط أيقونات ضيق + لوحة جانبية ──
   if (isStacked) {
-    const selectedGroup = layout.groups.find(g => g.id === selectedStackedGroupId) ?? visibleGroups[0] ?? null;
+    const selectedGroup = visibleGroups.find(g => g.id === selectedStackedGroupId) ?? visibleGroups[0] ?? null;
     const isRailDark = verticalNavbarAppearance === 'dark';
     const railBg = isRailDark ? 'bg-slate-950' : 'bg-white';
     const railBorder = isRailDark ? 'border-slate-800' : 'border-slate-200';
@@ -221,6 +236,7 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
           iconOnly={isIconOnly}
           activeBg={effectiveActiveBg}
           hoverBg={effectiveHoverBg}
+          hiddenItemIds={hiddenItemIds}
           onClose={onClose}
           verticalAppearance={verticalNavbarAppearance}
         />

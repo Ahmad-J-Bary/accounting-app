@@ -1,11 +1,21 @@
 import { Building, Globe, Mail, Phone, MapPin, Save } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Input } from "@shared/ui/input";
 import { Label } from "@shared/ui/label";
 import { Button } from "@shared/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { SettingsSection } from "@widgets/templates/SettingsLayout";
 import type { CompanySettings as CompanySettingsType } from "@erp/shared-types";
 import { toast } from "sonner";
 import { settingsService } from '@modules/core/api/settingsService';
+import { openingBalanceService } from "@modules/accounting/api/openingBalanceService";
+import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
+import { QUERY_KEYS } from "@shared/hooks/queryClient";
+import { COMPANY_TYPE_EXISTING, COMPANY_TYPE_NEW } from "@modules/opening-balance/lib/wizard-types";
+import {
+  deriveCompanyInitState,
+  INIT_STATE_LABELS,
+} from "@modules/opening-balance/lib/company-lifecycle";
 
 interface CompanySettingsProps {
   settings: CompanySettingsType;
@@ -13,6 +23,19 @@ interface CompanySettingsProps {
 }
 
 export function CompanySettings({ settings, onChange }: CompanySettingsProps) {
+  // Company type is only changeable before the accounting setup starts
+  // (NOT_STARTED): afterwards it is locked to protect the opening migration.
+  const { data: migrations = [] } = useQuery({
+    queryKey: QUERY_KEYS.openingBalanceMigrations,
+    queryFn: () => openingBalanceService.listMigrations(),
+  });
+  const { data: fiscalPeriods = [] } = useQuery({
+    queryKey: QUERY_KEYS.fiscalPeriods,
+    queryFn: () => fiscalPeriodService.listFiscalPeriods(),
+  });
+  const initState = deriveCompanyInitState({ settings, migrations, periods: fiscalPeriods });
+  const canChangeType = initState === "NOT_STARTED";
+
   const handleSave = async () => {
     try {
       await settingsService.updateSettings({
@@ -31,6 +54,7 @@ export function CompanySettings({ settings, onChange }: CompanySettingsProps) {
         journal_prefix: settings.journal_prefix,
         fiscal_year_start_month: settings.fiscal_year_start_month,
         numeral_system: settings.numeral_system || "western",
+        accounting_start_mode: settings.accounting_start_mode ?? COMPANY_TYPE_EXISTING,
       });
       window.dispatchEvent(new CustomEvent("erp:settings-updated"));
       toast.success("تم الحفظ", { description: "تم حفظ بيانات الشركة بنجاح" });
@@ -84,6 +108,27 @@ export function CompanySettings({ settings, onChange }: CompanySettingsProps) {
             <Mail className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
             <Input className="pr-11 h-12 rounded-lg border-slate-200 font-mono" dir="ltr" value={settings.email ?? ""} onChange={e => onChange("email", e.target.value)} />
           </div>
+        </div>
+        <div className="space-y-2 md:col-span-2">
+          <Label className="font-bold text-slate-700">نوع الشركة</Label>
+          <Select
+            value={settings.accounting_start_mode ?? COMPANY_TYPE_EXISTING}
+            onValueChange={(v) => onChange("accounting_start_mode", v)}
+            disabled={!canChangeType}
+          >
+            <SelectTrigger className="h-12 rounded-lg border-slate-200">
+              <SelectValue placeholder="اختر نوع الشركة" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={COMPANY_TYPE_EXISTING} className="text-xs">شركة قائمة (رصيد افتتاحي)</SelectItem>
+              <SelectItem value={COMPANY_TYPE_NEW} className="text-xs">شركة جديدة (بدء من الصفر)</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-slate-400" data-testid="company-type-hint">
+            {canChangeType
+              ? "يمكن تغيير نوع الشركة قبل بدء إدخال وضعها المالي. شركة جديدة = تبدأ السجلات من الصفر، شركة قائمة = يُدخل رصيدها الافتتاحي عند بدء الاستخدام."
+              : `نوع الشركة مغلق بعد بدء الإعداد — الحالة الحالية: ${INIT_STATE_LABELS[initState]}.`}
+          </p>
         </div>
       </div>
       <div className="flex justify-end mt-6 pt-6 border-t border-slate-100">

@@ -2,9 +2,11 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { currencyService, type WorldCurrency } from '@modules/core/api/currencyService';
 import { settingsService } from '@modules/core/api/settingsService';
+import { COMPANY_TYPE_EXISTING, COMPANY_TYPE_NEW } from '@modules/opening-balance/lib/wizard-types';
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@shared/ui/card";
+import { RadioGroup, RadioGroupItem } from "@shared/ui/radio-group";
 import { Badge } from "@shared/ui/badge";
 import { CheckCircle2, Search, Loader2, ArrowRight, Building2 } from "lucide-react";
 
@@ -12,6 +14,7 @@ export default function SetupWizard() {
   const navigate = useNavigate();
   const [step, setStep] = useState<"loading" | "welcome" | "pick" | "done">("loading");
   const [companyName, setCompanyName] = useState("");
+  const [companyType, setCompanyType] = useState<string>(COMPANY_TYPE_EXISTING);
   const [currenciesReady, setCurrenciesReady] = useState(false);
   const [worldCurrencies, setWorldCurrencies] = useState<WorldCurrency[]>([]);
   const [search, setSearch] = useState("");
@@ -91,6 +94,7 @@ export default function SetupWizard() {
       journal_prefix: "JRN",
       fiscal_year_start_month: 1,
       numeral_system: "western",
+      accounting_start_mode: companyType,
     });
   };
 
@@ -171,6 +175,26 @@ export default function SetupWizard() {
                   className="pr-10 h-11 text-base"
                 />
               </div>
+            </div>
+
+            <div className="text-right space-y-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">نوع الشركة</label>
+              <RadioGroup value={companyType} onValueChange={setCompanyType} className="gap-2">
+                <div className="flex items-start gap-3 border border-slate-200 rounded-lg p-3 bg-white cursor-pointer transition-colors hover:border-slate-300">
+                  <RadioGroupItem value={COMPANY_TYPE_EXISTING} id="company-type-existing" aria-label="شركة قائمة" className="mt-1" />
+                  <label htmlFor="company-type-existing" className="cursor-pointer">
+                    <p className="text-sm font-bold text-slate-800">شركة قائمة</p>
+                    <p className="text-xs text-slate-500 mt-0.5">شركة موجودة مسبقًا وسيتم إدخال وضعها المالي عند بدء استخدام النظام.</p>
+                  </label>
+                </div>
+                <div className="flex items-start gap-3 border border-slate-200 rounded-lg p-3 bg-white cursor-pointer transition-colors hover:border-slate-300">
+                  <RadioGroupItem value={COMPANY_TYPE_NEW} id="company-type-new" aria-label="شركة جديدة" className="mt-1" />
+                  <label htmlFor="company-type-new" className="cursor-pointer">
+                    <p className="text-sm font-bold text-slate-800">شركة جديدة</p>
+                    <p className="text-xs text-slate-500 mt-0.5">شركة جديدة وسيبدأ تسجيل العمليات المحاسبية من بداية استخدام النظام.</p>
+                  </label>
+                </div>
+              </RadioGroup>
             </div>
             {!currenciesReady && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-right text-sm text-amber-800">

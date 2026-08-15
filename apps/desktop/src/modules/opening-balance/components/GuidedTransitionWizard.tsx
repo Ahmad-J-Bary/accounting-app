@@ -7,7 +7,7 @@ import { toLocalDateStr, toFixed, fmtMoney } from "@shared/lib/format";
 import { WizardShell } from "@modules/opening-balance/components/WizardShell";
 import { WizardLineEditor } from "@modules/opening-balance/components/WizardLineEditor";
 import { useOpeningBalanceWizard, STEP_REVIEW } from "@modules/opening-balance/hooks/useOpeningBalanceWizard";
-import { START_MODE_NEW, START_MODE_EXISTING, toNum, type DerivedRow } from "@modules/opening-balance/lib/wizard-types";
+import { START_MODE_NEW, toNum, type DerivedRow } from "@modules/opening-balance/lib/wizard-types";
 import { sumLines, inventoryMismatchHints } from "@modules/opening-balance/lib/derive-rows";
 import { reconciliationReadiness, RECON_ROW_LABEL } from "@modules/opening-balance/lib/migration-labels";
 import { ReconciliationStatusBanner } from "@modules/opening-balance/components/ReconciliationStatusBanner";
@@ -127,19 +127,6 @@ export function GuidedTransitionWizard() {
       case 0:
         return (
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <FieldLabel htmlFor="wiz-start-mode" required>طريقة بدء المحاسبة</FieldLabel>
-              <Select value={w.startMode} onValueChange={w.handleStartModeChange}>
-                <SelectTrigger id="wiz-start-mode" className="h-9 bg-white border-slate-200 text-xs">
-                  <SelectValue placeholder="اختر وضع البدء" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={START_MODE_NEW} className="text-xs">شركة جديدة (رأس المال يضاف للصندوق)</SelectItem>
-                  <SelectItem value={START_MODE_EXISTING} className="text-xs">شركة قائمة (رصيد افتتاحي بدون خزينة)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             {isNew && (
               <>
                 <div className="rounded-lg border border-blue-200 bg-blue-50/60 p-3 space-y-1.5">

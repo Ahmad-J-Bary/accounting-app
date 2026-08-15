@@ -1,7 +1,7 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { AccountDto, UpdateSettingsRequest, FiscalPeriodDto, CustomerDto, SupplierDto } from "@erp/shared-types";
+import type { AccountDto, FiscalPeriodDto, CustomerDto, SupplierDto } from "@erp/shared-types";
 import type { WizardStepDef } from "@modules/opening-balance/components/WizardShell";
 import { queryClient, QUERY_KEYS } from "@shared/hooks/queryClient";
 import { toLocalDatePart } from "@shared/lib/format";
@@ -55,7 +55,7 @@ export const STEP_FIRST_PERIOD = 13;
 
 export function useOpeningBalanceWizard() {
   const [step, setStep] = useState(0);
-  const [startMode, setStartMode] = useState<string>(START_MODE_NEW);
+  const [startMode, setStartMode] = useState<string>(START_MODE_EXISTING);
   const [cutoverDate, setCutoverDate] = useState(() => toLocalDatePart(new Date()));
   const [sourceSystem, setSourceSystem] = useState("");
   const [sourceReference, setSourceReference] = useState("");
@@ -93,47 +93,13 @@ export function useOpeningBalanceWizard() {
     startModeLoaded.current = true;
     settingsService
       .getSettings()
-      .then((s) => setStartMode(s.accounting_start_mode || START_MODE_NEW))
+      .then((s) => setStartMode(s.accounting_start_mode || START_MODE_EXISTING))
       .catch(() => {});
   }, []);
 
   // A NewCompany only needs its first financial period (no opening migration);
   // an Existing company runs the full 15-step transition incl. the first period.
   const steps = startMode === START_MODE_NEW ? STEPS_NEW : STEPS_EXISTING;
-
-  const handleStartModeChange = async (mode: string) => {
-    setStartMode(mode);
-    try {
-      const current = await settingsService.getSettings();
-      await settingsService.updateSettings({
-        company_name: current.company_name,
-        company_name_en: current.company_name_en,
-        tax_number: current.tax_number,
-        commercial_register: current.commercial_register,
-        address: current.address,
-        phone: current.phone,
-        email: current.email,
-        currency: current.currency,
-        currency_symbol: current.currency_symbol,
-        tax_rate: Number(current.tax_rate),
-        invoice_prefix: current.invoice_prefix,
-        purchase_prefix: current.purchase_prefix,
-        journal_prefix: current.journal_prefix,
-        fiscal_year_start_month: current.fiscal_year_start_month,
-        purchase_warehouse_id: current.purchase_warehouse_id,
-        sales_warehouse_id: current.sales_warehouse_id,
-        numeral_system: current.numeral_system,
-        accounting_start_mode: mode,
-      } as UpdateSettingsRequest);
-      toast.success(
-        mode === START_MODE_EXISTING
-          ? "وضع: شركة قائمة (رصيد افتتاحي بدون خزينة)"
-          : "وضع: شركة جديدة (رأس المال يضاف للصندوق)",
-      );
-    } catch (error) {
-      toast.error("فشل تغيير الوضع: " + error);
-    }
-  };
 
   // NewCompany never touches these modules, so only fetch them when the
   // Existing-company migration path is active (avoids wasted queries on mount).
@@ -709,7 +675,6 @@ export function useOpeningBalanceWizard() {
     step,
     setStep,
     startMode,
-    handleStartModeChange,
     cutoverDate,
     setCutoverDate,
     sourceSystem,

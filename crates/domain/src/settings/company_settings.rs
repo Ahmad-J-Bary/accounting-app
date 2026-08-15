@@ -3,6 +3,13 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+// Company type persisted in `settings.accounting_start_mode`. `START_MODE_NEW`
+// = a brand-new company recording operations from scratch (no opening balance);
+// `START_MODE_EXISTING` = an existing company entering its financial position
+// at cutover via the opening-balance migration.
+pub const START_MODE_NEW: &str = "NewCompany";
+pub const START_MODE_EXISTING: &str = "ExistingCompanyMigration";
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompanySettings {
     pub id: String,
@@ -50,7 +57,7 @@ impl Default for CompanySettings {
             purchase_warehouse_id: None,
             sales_warehouse_id: None,
             numeral_system: "western".into(),
-            accounting_start_mode: "NewCompany".into(),
+            accounting_start_mode: START_MODE_EXISTING.into(),
             updated_at: Utc::now(),
         }
     }

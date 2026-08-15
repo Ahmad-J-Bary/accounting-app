@@ -9,6 +9,12 @@ export const KIND_FIXED_ASSET = "FixedAsset";
 export const START_MODE_NEW = "NewCompany";
 export const START_MODE_EXISTING = "ExistingCompanyMigration";
 
+// Company type (persisted in settings.accounting_start_mode, formerly called
+// "أسلوب بدء المحاسبة"). Semantic aliases used by the setup screen and the
+// company-lifecycle derivation; the START_MODE_* names remain as legacy alias.
+export const COMPANY_TYPE_NEW = START_MODE_NEW;
+export const COMPANY_TYPE_EXISTING = START_MODE_EXISTING;
+
 // Opening Balance Equity control account (code 53) — the residual plug.
 export const OPENING_EQUITY_CODE = "53";
 

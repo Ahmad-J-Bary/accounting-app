@@ -3,6 +3,7 @@ use rust_decimal::Decimal;
 use chrono::Utc;
 use domain::accounting::partner::{Partner, ProfitSharingType};
 use domain::accounting::account::{Account, AccountType, AccountCategory};
+use domain::settings::START_MODE_EXISTING;
 
 use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::partner_repository::PartnerRepository;
@@ -83,7 +84,7 @@ impl CreatePartnerUseCase {
         // the account's opening balance (no journal). For a new company it is
         // recorded through an explicit capital-contribution journal instead, so
         // the static balance must stay zero to avoid double counting.
-        let capital_amount = if accounting_start_mode == "ExistingCompanyMigration" {
+        let capital_amount = if accounting_start_mode == START_MODE_EXISTING {
             partner.amount_local
         } else {
             Decimal::ZERO

@@ -16,4 +16,5 @@ export * from './useSidebarLayoutContext';
 export * from './useSidebarQuickAdd';
 export * from './useExcelExport';
 export * from './useExportSetup';
+export * from './useCompanyType';
 

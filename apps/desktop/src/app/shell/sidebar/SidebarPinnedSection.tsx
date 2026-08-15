@@ -11,15 +11,16 @@ interface SidebarPinnedSectionProps {
   hoverBg: string;
   onClose?: () => void;
   verticalAppearance?: 'light' | 'dark';
+  hiddenItemIds?: ReadonlySet<string>;
 }
 
 export function SidebarPinnedSection({
-  collapsed, iconOnly, activeBg, hoverBg, onClose, verticalAppearance,
+  collapsed, iconOnly, activeBg, hoverBg, onClose, verticalAppearance, hiddenItemIds,
 }: SidebarPinnedSectionProps) {
   const { getPinnedItems } = useSidebarLayout();
   const { settings } = useNavSidebarSettings();
 
-  const pinnedItems = getPinnedItems();
+  const pinnedItems = getPinnedItems().filter(i => !hiddenItemIds?.has(i.id));
   if (pinnedItems.length === 0) return null;
 
   const isBgLight = verticalAppearance

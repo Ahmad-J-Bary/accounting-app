@@ -1,11 +1,15 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Navigate } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { ConfirmDialog } from "@shared/ui/confirm-dialog";
+import { Badge } from "@shared/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { toast } from "sonner";
+import { settingsService } from "@modules/core/api/settingsService";
+import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
 import type { OpeningPositionControlDto } from "@erp/shared-types";
 import {
   openingBalanceService,
@@ -14,6 +18,12 @@ import {
   type OpeningReconciliationDto,
 } from "@modules/accounting/api/openingBalanceService";
 import { invalidateAccountingMutationQueries, queryClient, QUERY_KEYS } from "@shared/hooks/queryClient";
+import {
+  COMPANY_TYPE_NEW,
+  INIT_STATE_LABELS,
+  companyTypeOf,
+  deriveCompanyInitState,
+} from "../lib/company-lifecycle";
 import { MigrationListCard } from "../components/MigrationListCard";
 import { ReconciliationCard } from "../components/ReconciliationCard";
 import { PositionControlCard } from "../components/PositionControlCard";
@@ -52,6 +62,20 @@ export default function OpeningBalanceMigration() {
     queryKey: QUERY_KEYS.openingBalanceMigrations,
     queryFn: () => openingBalanceService.listMigrations(),
   });
+
+  const { data: settings } = useQuery({
+    queryKey: QUERY_KEYS.settings,
+    queryFn: () => settingsService.getSettings(),
+  });
+
+  const { data: fiscalPeriods = [] } = useQuery({
+    queryKey: QUERY_KEYS.fiscalPeriods,
+    queryFn: () => fiscalPeriodService.listFiscalPeriods(),
+  });
+
+  // Derived company initialization state (from company type + migration status +
+  // existence of a first fiscal period) shown as a header badge.
+  const initState = deriveCompanyInitState({ settings, migrations, periods: fiscalPeriods });
 
   const handleLock = async (id: string) => {
     setTransitioningTo(id);
@@ -204,9 +228,16 @@ export default function OpeningBalanceMigration() {
       .finally(() => setReconLoading(false));
   }, [reconId]);
 
+  // A NEW company never has an opening balance: redirect away as soon as the
+  // persisted company type is known (settings still loading = no redirect).
+  if (settings && companyTypeOf(settings) === COMPANY_TYPE_NEW) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
     <OperationalTableTemplate
       title="رصيد افتتاح الشركة"
+      badge={<Badge className="bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-50">{INIT_STATE_LABELS[initState]}</Badge>}
       toolbar={
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => refetchMigrations()} className="border-slate-200 hover:bg-slate-50 font-bold">
