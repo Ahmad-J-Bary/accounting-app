@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Navigate } from "react-router-dom";
 import { useTabs } from "@app/providers/TabContext";
 import { useTabLocation } from "@app/providers/TabLocationContext";
 import { DocumentToolbar } from "@widgets/document-shell/DocumentToolbar";
@@ -12,6 +12,8 @@ import { warehouseService } from "@modules/inventory/api/warehouseService";
 import { toast } from "sonner";
 import { queryClient, invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
 import { useExportSetup } from "@shared/hooks";
+import { useCompanyType } from "@shared/hooks";
+import { COMPANY_TYPE_NEW } from "../lib/company-lifecycle";
 import { executeExport, addCurrencySummary } from "@shared/lib/excel";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { formatNumber, toLocalDateStr } from "@shared/lib/format";
@@ -77,6 +79,7 @@ export default function OpeningBalance() {
 
   const { exportData, baseCurrency, rateMap, currencies, currencyMode, ratesSheet } = useExportSetup();
   const { hasMultipleCurrencies } = useCurrencyContext();
+  const companyType = useCompanyType();
   const [header, setHeader] = useState<HeaderState>(defaultHeader());
 
   const defaultWarehouseId = appSettings?.purchase_warehouse_id || warehouses.find(w => w.is_default)?.id;
@@ -380,6 +383,12 @@ export default function OpeningBalance() {
       currencyRatesSheet: ratesSheet,
     });
   }, [enrichedLines, exportData, header, net, currencies, hasMultipleCurrencies, gridColumns, gridVisibleColumnIds, materials, warehouses, currencyMode, ratesSheet]);
+
+  // A NEW company never has an opening balance (invoice of first period
+  // / فاتورة أول المدة): redirect away as soon as the persisted type is known.
+  if (companyType === COMPANY_TYPE_NEW) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <FinancialDocumentTemplate

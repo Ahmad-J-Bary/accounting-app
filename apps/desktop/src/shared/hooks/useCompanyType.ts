@@ -3,7 +3,9 @@ import { settingsService } from "@modules/core/api/settingsService";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import {
   companyTypeOf,
+  companyCapabilitiesOf,
   type CompanyLifecycleSettingsLike,
+  type CompanyCapabilities,
 } from "@modules/opening-balance/lib/company-lifecycle";
 
 // Persisted company type read by the shell (sidebar/navbar) to gate the
@@ -19,4 +21,8 @@ export function useCompanyTypeSettings(): CompanyLifecycleSettingsLike | undefin
 
 export function useCompanyType(): ReturnType<typeof companyTypeOf> {
   return companyTypeOf(useCompanyTypeSettings());
+}
+
+export function useCompanyCapabilities(): CompanyCapabilities {
+  return companyCapabilitiesOf(useCompanyTypeSettings());
 }

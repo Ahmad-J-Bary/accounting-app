@@ -4,10 +4,8 @@ import { useTabs } from '@app/providers/TabContext';
 import { useNavSidebarSettings, useCompanyTypeSettings, useSidebarLayout } from '@shared/hooks';
 import { useAppearance } from '@shared/hooks/useAppearance';
 import {
-  COMPANY_TYPE_NEW,
-  OPENING_NAV_ID,
-  companyTypeOf,
   filterNavByCompanyType,
+  hiddenNavIdsForNew,
 } from '@modules/opening-balance/lib/company-lifecycle';
 import { cn } from '@shared/lib/utils';
 import { ICON_MAP } from './sidebarConfig';
@@ -113,11 +111,10 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
     .filter(g => g.items.length > 0)
     .sort((a, b) => a.order - b.order);
 
-  const hiddenItemIds = useMemo(() => {
-    return companyTypeOf(companySettings) === COMPANY_TYPE_NEW
-      ? new Set([OPENING_NAV_ID])
-      : new Set<string>();
-  }, [companySettings]);
+  const hiddenItemIds = useMemo(
+    () => hiddenNavIdsForNew(companySettings),
+    [companySettings],
+  );
 
   // ── الوضع المكدس: شريط أيقونات ضيق + لوحة جانبية ──
   if (isStacked) {

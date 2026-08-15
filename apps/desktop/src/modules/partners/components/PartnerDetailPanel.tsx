@@ -4,6 +4,7 @@ import type { CustomerDto, SupplierDto, PartnerDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { toFixed } from "@shared/lib/format";
 import { useTabs } from "@app/providers/TabContext";
+import { useCompanyCapabilities } from "@shared/hooks";
 import { toast } from "sonner";
 import { partnerService } from "@modules/partners/api/partnerService";
 import {
@@ -40,6 +41,7 @@ export function PartnerDetailPanel({
 }: PartnerDetailPanelProps) {
   const { currencies, baseCurrency } = useCurrencyContext();
   const { openTab } = useTabs();
+  const { canUseOpeningWorkflow } = useCompanyCapabilities();
   const [settled, setSettled] = useState(false);
   const [settling, setSettling] = useState(false);
 
@@ -201,8 +203,12 @@ export function PartnerDetailPanel({
             <SidebarDetailGrid
               columns={2}
               fields={[
-                { label: "الرصيد الافتتاحي", value: partner.opening_balance || "0" },
-                { label: "اتجاه الرصيد", value: settled ? "—" : (parseFloat(partner.debit || "0") > 0 ? "مدين" : "دائن") },
+                ...(canUseOpeningWorkflow
+                  ? [
+                      { label: "الرصيد الافتتاحي", value: partner.opening_balance || "0" },
+                      { label: "اتجاه الرصيد", value: settled ? "—" : (parseFloat(partner.debit || "0") > 0 ? "مدين" : "دائن") },
+                    ]
+                  : []),
                 { label: "العملة", value: currencyName ? `${currencyName.code} - ${currencyName.name_ar}` : baseCurrency?.code || "" },
                 { label: "الرصيد الحالي", value: settled ? "0" : String(effectiveBalance) },
               ]}

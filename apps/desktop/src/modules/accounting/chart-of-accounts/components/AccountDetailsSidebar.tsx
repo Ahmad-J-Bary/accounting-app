@@ -16,6 +16,7 @@ import { BookOpen } from "lucide-react";
 import { useTabs } from "@app/providers/TabContext";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
+import { useCompanyCapabilities } from "@shared/hooks";
 
 interface AccountDetailsSidebarProps {
   selected: AccountDto | null;
@@ -37,6 +38,7 @@ export function AccountDetailsSidebar({
   canDelete = !!selected,
 }: AccountDetailsSidebarProps) {
   const { openTab } = useTabs();
+  const { canUseOpeningWorkflow } = useCompanyCapabilities();
   const [formMode, setFormMode] = useState<"create" | "edit" | null>(null);
   // ... existing state ...
   const [code, setCode] = useState("");
@@ -434,25 +436,29 @@ export function AccountDetailsSidebar({
               />
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="space-y-1">
-              <FieldLabel>مدين</FieldLabel>
-              <Input
-                type="number"
-                value={debit}
-                onChange={(e) => setDebit(e.target.value)}
-                className="bg-white"
-              />
-            </div>
-            <div className="space-y-1">
-              <FieldLabel>دائن</FieldLabel>
-              <Input
-                type="number"
-                value={credit}
-                onChange={(e) => setCredit(e.target.value)}
-                className="bg-white"
-              />
-            </div>
+          <div className={`grid ${canUseOpeningWorkflow ? "grid-cols-3" : "grid-cols-1"} gap-3`}>
+            {canUseOpeningWorkflow && (
+              <>
+                <div className="space-y-1">
+                  <FieldLabel>مدين</FieldLabel>
+                  <Input
+                    type="number"
+                    value={debit}
+                    onChange={(e) => setDebit(e.target.value)}
+                    className="bg-white"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <FieldLabel>دائن</FieldLabel>
+                  <Input
+                    type="number"
+                    value={credit}
+                    onChange={(e) => setCredit(e.target.value)}
+                    className="bg-white"
+                  />
+                </div>
+              </>
+            )}
             <div className="space-y-1">
               <FieldLabel>العملة</FieldLabel>
               <Select value={currency} onValueChange={setCurrency}>
@@ -474,15 +480,17 @@ export function AccountDetailsSidebar({
         </div>
       )}
       <div className="pt-2 space-y-3 border-t border-primary/10">
-        <div className="space-y-1">
-          <FieldLabel>الرصيد الافتتاحي</FieldLabel>
-          <Input
-            type="number"
-            value={openingBalance}
-            onChange={(e) => setOpeningBalance(e.target.value)}
-            className="bg-white"
-          />
-        </div>
+        {canUseOpeningWorkflow && (
+          <div className="space-y-1">
+            <FieldLabel>الرصيد الافتتاحي</FieldLabel>
+            <Input
+              type="number"
+              value={openingBalance}
+              onChange={(e) => setOpeningBalance(e.target.value)}
+              className="bg-white"
+            />
+          </div>
+        )}
         <div className="space-y-1">
           <FieldLabel>ملاحظات</FieldLabel>
           <textarea

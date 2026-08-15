@@ -2,6 +2,7 @@ import { Pencil, Trash2, BookOpen } from "lucide-react";
 import type { AccountDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useTabs } from "@app/providers/TabContext";
+import { useCompanyCapabilities } from "@shared/hooks";
 import {
   SidebarShell,
   SidebarHeader,
@@ -28,6 +29,7 @@ export function ExpenseDetailPanel({
 }: ExpenseDetailPanelProps) {
   const { baseCurrency } = useCurrencyContext();
   const { openTab } = useTabs();
+  const { canUseOpeningWorkflow } = useCompanyCapabilities();
 
   if (!expense) return null;
 
@@ -83,8 +85,12 @@ export function ExpenseDetailPanel({
           <SidebarDetailGrid
             columns={2}
             fields={[
-              { label: "الرصيد الافتتاحي", value: expense.opening_balance || "0" },
-              { label: "اتجاه الرصيد", value: parseFloat(expense.debit || "0") > 0 ? "مدين" : "دائن" },
+              ...(canUseOpeningWorkflow
+                ? [
+                    { label: "الرصيد الافتتاحي", value: expense.opening_balance || "0" },
+                    { label: "اتجاه الرصيد", value: parseFloat(expense.debit || "0") > 0 ? "مدين" : "دائن" },
+                  ]
+                : []),
               { label: "العملة", value: baseCurrency?.code || "" },
               { label: "الرصيد الحالي", value: expense.balance || "0" },
             ]}

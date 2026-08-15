@@ -1,9 +1,14 @@
 import { describe, it, expect } from "vitest";
 import {
   companyTypeOf,
+  companyCapabilities,
+  companyCapabilitiesOf,
   deriveCompanyInitState,
   filterNavByCompanyType,
+  hiddenNavIdsForNew,
   OPENING_NAV_ID,
+  OPENING_INVOICE_NAV_ID,
+  HIDDEN_NAV_IDS_FOR_NEW,
 } from "@modules/opening-balance/lib/company-lifecycle";
 import {
   COMPANY_TYPE_EXISTING,
@@ -90,16 +95,17 @@ describe("deriveCompanyInitState", () => {
 describe("filterNavByCompanyType", () => {
   const items = [
     { id: "opening-balance-migration" },
+    { id: "opening-balance" },
     { id: "fiscal-periods" },
     { id: "dashboard" },
   ] as { id: string }[];
 
-  it("hides the opening-balance entry for a NEW company, keeps everything else", () => {
+  it("hides ALL opening entries for a NEW company, keeps everything else", () => {
     const filtered = filterNavByCompanyType(items, NEW);
     expect(filtered.map((i) => i.id)).toEqual(["fiscal-periods", "dashboard"]);
   });
 
-  it("keeps the opening-balance entry for an EXISTING company", () => {
+  it("keeps the opening entries for an EXISTING company", () => {
     expect(filterNavByCompanyType(items, EXISTING).map((i) => i.id)).toEqual(items.map((i) => i.id));
   });
 
@@ -109,7 +115,43 @@ describe("filterNavByCompanyType", () => {
 
   it("uses the single opening nav id", () => {
     expect(OPENING_NAV_ID).toBe("opening-balance-migration");
+    expect(OPENING_INVOICE_NAV_ID).toBe("opening-balance");
+    expect(HIDDEN_NAV_IDS_FOR_NEW).toContain(OPENING_NAV_ID);
+    expect(HIDDEN_NAV_IDS_FOR_NEW).toContain(OPENING_INVOICE_NAV_ID);
     expect(COMPANY_TYPE_NEW).toBe(START_MODE_NEW);
     expect(COMPANY_TYPE_EXISTING).toBe(START_MODE_EXISTING);
+  });
+});
+
+describe("hiddenNavIdsForNew", () => {
+  it("returns the opening ids as a set only for a NEW company", () => {
+    expect([...hiddenNavIdsForNew(NEW)]).toEqual([...HIDDEN_NAV_IDS_FOR_NEW]);
+  });
+
+  it("returns an empty set for an EXISTING company or while loading", () => {
+    expect(hiddenNavIdsForNew(EXISTING).size).toBe(0);
+    expect(hiddenNavIdsForNew(undefined).size).toBe(0);
+  });
+});
+
+describe("companyCapabilities", () => {
+  it("NEW company: no opening workflow at all", () => {
+    const caps = companyCapabilities(COMPANY_TYPE_NEW);
+    expect(caps.isExistingCompany).toBe(false);
+    expect(caps.isOpeningRequired).toBe(false);
+    expect(caps.canUseOpeningWorkflow).toBe(false);
+  });
+
+  it("EXISTING company: opening workflow fully available", () => {
+    const caps = companyCapabilities(COMPANY_TYPE_EXISTING);
+    expect(caps.isExistingCompany).toBe(true);
+    expect(caps.isOpeningRequired).toBe(true);
+    expect(caps.canUseOpeningWorkflow).toBe(true);
+  });
+
+  it("derives capabilities from persisted settings (default EXISTING while loading)", () => {
+    expect(companyCapabilitiesOf(NEW).canUseOpeningWorkflow).toBe(false);
+    expect(companyCapabilitiesOf(EXISTING).canUseOpeningWorkflow).toBe(true);
+    expect(companyCapabilitiesOf(undefined).canUseOpeningWorkflow).toBe(true);
   });
 });

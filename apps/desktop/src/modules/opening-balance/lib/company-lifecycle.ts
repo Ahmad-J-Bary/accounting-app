@@ -35,9 +35,16 @@ export interface CompanyLifecycleInput {
   periods?: CompanyLifecyclePeriodLike[];
 }
 
-// Node id of the opening-balance page in the sidebar page registry. For a NEW
-// company the item is filtered out and the route redirects to /dashboard.
+// Node ids of the opening pages in the sidebar page registry. For a NEW company
+// these items are filtered out and their routes redirect to /dashboard.
 export const OPENING_NAV_ID = "opening-balance-migration";
+export const OPENING_INVOICE_NAV_ID = "opening-balance";
+
+// Every nav entry that must disappear for a NEW company.
+export const HIDDEN_NAV_IDS_FOR_NEW: readonly string[] = [
+  OPENING_NAV_ID,
+  OPENING_INVOICE_NAV_ID,
+];
 
 export function companyTypeOf(settings?: CompanyLifecycleSettingsLike | null): CompanyType {
   // Defaults to EXISTING (waiting for persisted settings while loading, and the
@@ -45,6 +52,31 @@ export function companyTypeOf(settings?: CompanyLifecycleSettingsLike | null): C
   return settings?.accounting_start_mode === START_MODE_NEW
     ? START_MODE_NEW
     : START_MODE_EXISTING;
+}
+
+export interface CompanyCapabilities {
+  isExistingCompany: boolean;
+  isOpeningRequired: boolean;
+  canUseOpeningWorkflow: boolean;
+}
+
+// Single source of truth for "does this company touch the opening-balance
+// workflow?" — every form/page that must hide opening controls reads these
+// capabilities (via `useCompanyCapabilities`) instead of repeating
+// `if (type === NEW) ... else ...`.
+export function companyCapabilities(type: CompanyType): CompanyCapabilities {
+  const isExistingCompany = type === START_MODE_EXISTING;
+  return {
+    isExistingCompany,
+    isOpeningRequired: isExistingCompany,
+    canUseOpeningWorkflow: isExistingCompany,
+  };
+}
+
+export function companyCapabilitiesOf(
+  settings?: CompanyLifecycleSettingsLike | null,
+): CompanyCapabilities {
+  return companyCapabilities(companyTypeOf(settings));
 }
 
 export function deriveCompanyInitState(input: CompanyLifecycleInput): CompanyInitState {
@@ -78,16 +110,28 @@ export function deriveCompanyInitState(input: CompanyLifecycleInput): CompanyIni
 }
 
 // Nav items hidden per company type. A NEW company never touches the opening
-// migration, so its nav entry is filtered out (the route also redirects).
+// migration or the opening invoice, so those entries are filtered out (their
+// routes also redirect).
 export function filterNavByCompanyType<T extends { id: string }>(
   items: readonly T[],
   settings?: CompanyLifecycleSettingsLike | null,
 ): T[] {
   const type = companyTypeOf(settings);
   if (type === START_MODE_NEW) {
-    return items.filter((item) => item.id !== OPENING_NAV_ID);
+    const hidden = new Set(HIDDEN_NAV_IDS_FOR_NEW);
+    return items.filter((item) => !hidden.has(item.id));
   }
   return [...items];
+}
+
+// Ids hidden for a NEW company, as a set (used by the sidebar to drop pinned
+// entries too). Empty set for EXISTING.
+export function hiddenNavIdsForNew(
+  settings?: CompanyLifecycleSettingsLike | null,
+): ReadonlySet<string> {
+  return companyTypeOf(settings) === START_MODE_NEW
+    ? new Set(HIDDEN_NAV_IDS_FOR_NEW)
+    : new Set<string>();
 }
 
 export const INIT_STATE_LABELS: Record<CompanyInitState, string> = {

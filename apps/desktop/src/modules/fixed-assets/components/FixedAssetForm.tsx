@@ -36,6 +36,7 @@ import { SYSTEM_ACCOUNT_IDS } from "@erp/shared-types";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
+import { useCompanyCapabilities } from "@shared/hooks";
 
 interface FixedAssetFormProps {
   onClose: () => void;
@@ -96,6 +97,7 @@ export function FixedAssetForm({
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
   const { rateMap, baseCurrency } = useCurrencyContext();
+  const { canUseOpeningWorkflow } = useCompanyCapabilities();
 
   const isEditing = !!asset;
 
@@ -374,8 +376,9 @@ export function FixedAssetForm({
     >
       {/* ── Section 1: Basic Info ── */}
       <SidebarSection title="البيانات الأساسية" icon={<FileText className="w-3.5 h-3.5" />} defaultOpen>
-        {/* Addition Type Toggle (hidden when editing) */}
-        {!isEditing && (
+        {/* Addition Type Toggle (hidden when editing; a NEW company only buys
+            new assets — no "previous asset / أول المدة" opening entry) */}
+        {!isEditing && canUseOpeningWorkflow && (
         <div className="flex rounded-lg border border-slate-200 overflow-hidden bg-slate-50 mb-3">
           <button
             type="button"

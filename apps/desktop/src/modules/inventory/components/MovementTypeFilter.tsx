@@ -10,12 +10,16 @@ import { MOVEMENT_TYPE_CONFIG, MOVEMENT_TYPE_KEYS, PARENT_CHILD_MAP, CHILD_PAREN
 interface MovementTypeFilterProps {
   value: string[];
   onChange: (types: string[]) => void;
+  excludeKeys?: string[];
 }
 
-export function MovementTypeFilter({ value, onChange }: MovementTypeFilterProps) {
+export function MovementTypeFilter({ value, onChange, excludeKeys }: MovementTypeFilterProps) {
   const [open, setOpen] = useState(false);
+  const visibleKeys = excludeKeys && excludeKeys.length > 0
+    ? MOVEMENT_TYPE_KEYS.filter((k) => !excludeKeys.includes(k))
+    : MOVEMENT_TYPE_KEYS;
 
-  const allSelected = MOVEMENT_TYPE_KEYS.every(k => value.includes(k));
+  const allSelected = visibleKeys.every(k => value.includes(k));
   const noneSelected = value.length === 0;
 
   const toggle = (key: string) => {
@@ -52,7 +56,7 @@ export function MovementTypeFilter({ value, onChange }: MovementTypeFilterProps)
     if (allSelected) {
       onChange([]);
     } else {
-      onChange([...MOVEMENT_TYPE_KEYS]);
+      onChange([...visibleKeys]);
     }
   };
 
@@ -90,7 +94,7 @@ export function MovementTypeFilter({ value, onChange }: MovementTypeFilterProps)
             <span>{allSelected ? 'إلغاء الكل' : 'تحديد الكل'}</span>
           </button>
           <div className="h-px bg-slate-100 my-1" />
-          {MOVEMENT_TYPE_KEYS.map(key => {
+          {visibleKeys.map(key => {
             const cfg = MOVEMENT_TYPE_CONFIG[key];
             const showSep = lastGroup !== null && cfg.group !== lastGroup;
             lastGroup = cfg.group;

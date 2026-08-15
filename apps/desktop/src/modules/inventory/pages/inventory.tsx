@@ -11,9 +11,11 @@ import { MovementTypeFilter } from '@modules/inventory/components/MovementTypeFi
 import { MOVEMENT_TYPE_KEYS, getTransferRefs } from '@modules/inventory/constants/movementTypes';
 import { useStockMovements, useMaterials } from "@shared/hooks/queries/useMaterialQueries";
 import { useWarehouses } from "@shared/hooks/queries/useWarehouseQueries";
+import { useCompanyCapabilities } from "@shared/hooks";
 
 export default function Inventory() {
   const { openTab } = useTabs();
+  const { canUseOpeningWorkflow } = useCompanyCapabilities();
 
   const { data: movements = [], isLoading: movementsLoading, isRefetching: movementsRefetching } = useStockMovements();
 
@@ -22,19 +24,28 @@ export default function Inventory() {
   const { data: materials = [] } = useMaterials();
 
   const [search, setSearch] = useState('');
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([...MOVEMENT_TYPE_KEYS]);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(() =>
+    canUseOpeningWorkflow
+      ? [...MOVEMENT_TYPE_KEYS]
+      : MOVEMENT_TYPE_KEYS.filter(k => k !== 'OpeningBalance'),
+  );
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | null>(null);
   const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null);
   const [damagedDetailItem, setDamagedDetailItem] = useState<DamagedItem | null>(null);
   const [adjustmentDetailItem, setAdjustmentDetailItem] = useState<StockAdjustment | null>(null);
 
-  const INVOICE_ROUTES: Record<string, string> = useMemo(() => ({
-    Sale: '/sales-invoices',
-    Purchase: '/purchase-invoices',
-    OpeningBalance: '/opening-balance',
-    SalesReturn: '/sales-returns',
-    PurchaseReturn: '/purchase-returns',
-  }), []);
+  const INVOICE_ROUTES: Record<string, string> = useMemo(() => {
+    const routes: Record<string, string> = {
+      Sale: '/sales-invoices',
+      Purchase: '/purchase-invoices',
+      SalesReturn: '/sales-returns',
+      PurchaseReturn: '/purchase-returns',
+    };
+    if (canUseOpeningWorkflow) {
+      routes.OpeningBalance = '/opening-balance';
+    }
+    return routes;
+  }, [canUseOpeningWorkflow]);
 
   const isSingleWarehouse = warehouses.length === 1;
 
@@ -205,7 +216,7 @@ export default function Inventory() {
                   placeholder={isSingleWarehouse ? (warehouses[0]?.name || 'مستودع الشركة') : 'جميع المستودعات'}
                 />
               </div>
-              <MovementTypeFilter value={selectedTypes} onChange={setSelectedTypes} />
+              <MovementTypeFilter value={selectedTypes} onChange={setSelectedTypes} excludeKeys={canUseOpeningWorkflow ? undefined : ['OpeningBalance']} />
             </div>
           }
           selectedId={selectedMovementId}

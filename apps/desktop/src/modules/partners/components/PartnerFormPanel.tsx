@@ -7,6 +7,7 @@ import { FieldLabel } from '@widgets/sidebar-shell/FieldLabel';
 import { SidebarSection } from '@widgets/sidebar-shell/SidebarSection';
 import { User, Building2 } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { useCompanyCapabilities } from "@shared/hooks";
 import { toFixed } from "@shared/lib/format";
 import { cn } from "@shared/lib/utils";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
@@ -55,6 +56,7 @@ export function PartnerFormPanel({
   saving
 }: PartnerFormPanelProps) {
   const { currencies, baseCurrency, rateMap } = useCurrencyContext();
+  const { canUseOpeningWorkflow } = useCompanyCapabilities();
   const isCustomer = type === "customer";
   const title = isCustomer 
     ? (partner ? "تعديل بيانات العميل" : "إضافة عميل جديد")
@@ -201,40 +203,44 @@ export function PartnerFormPanel({
           </SidebarSection>
 
           <SidebarSection title="البيانات المالية">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                <FieldLabel>الرصيد الافتتاحي</FieldLabel>
-                <Input type="number" step="any" value={openingBalance} onChange={e => setOpeningBalance(e.target.value)} className="h-9 tabular-nums" />
-              </div>
-              <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                <FieldLabel>اتجاه الرصيد</FieldLabel>
-                <div className="flex gap-2 h-9">
-                  <button
-                    type="button"
-                    className={cn(
-                      "flex-1 rounded-md text-sm font-bold transition-colors border",
-                      balanceDirection === "debit"
-                        ? "bg-blue-100 text-blue-700 border-blue-300"
-                        : "bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100"
-                    )}
-                    onClick={() => setBalanceDirection("debit")}
-                  >
-                    مدين
-                  </button>
-                  <button
-                    type="button"
-                    className={cn(
-                      "flex-1 rounded-md text-sm font-bold transition-colors border",
-                      balanceDirection === "credit"
-                        ? "bg-emerald-100 text-emerald-700 border-emerald-300"
-                        : "bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100"
-                    )}
-                    onClick={() => setBalanceDirection("credit")}
-                  >
-                    دائن
-                  </button>
-                </div>
-              </div>
+            <div className={`grid ${canUseOpeningWorkflow ? "grid-cols-2" : "grid-cols-1"} gap-3`}>
+              {canUseOpeningWorkflow && (
+                <>
+                  <div className="space-y-1.5 col-span-2 sm:col-span-1">
+                    <FieldLabel>الرصيد الافتتاحي</FieldLabel>
+                    <Input type="number" step="any" value={openingBalance} onChange={e => setOpeningBalance(e.target.value)} className="h-9 tabular-nums" />
+                  </div>
+                  <div className="space-y-1.5 col-span-2 sm:col-span-1">
+                    <FieldLabel>اتجاه الرصيد</FieldLabel>
+                    <div className="flex gap-2 h-9">
+                      <button
+                        type="button"
+                        className={cn(
+                          "flex-1 rounded-md text-sm font-bold transition-colors border",
+                          balanceDirection === "debit"
+                            ? "bg-blue-100 text-blue-700 border-blue-300"
+                            : "bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100"
+                        )}
+                        onClick={() => setBalanceDirection("debit")}
+                      >
+                        مدين
+                      </button>
+                      <button
+                        type="button"
+                        className={cn(
+                          "flex-1 rounded-md text-sm font-bold transition-colors border",
+                          balanceDirection === "credit"
+                            ? "bg-emerald-100 text-emerald-700 border-emerald-300"
+                            : "bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100"
+                        )}
+                        onClick={() => setBalanceDirection("credit")}
+                      >
+                        دائن
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
               {currencies.length > 1 && (
               <div className="space-y-1.5 col-span-2 sm:col-span-1">
                 <FieldLabel>العملة الافتراضية</FieldLabel>
