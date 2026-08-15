@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTabs } from '@app/providers/TabContext';
-import { useCompanyTypeSettings, useSidebarLayout } from '@shared/hooks';
-import { filterNavByCompanyType } from '@modules/opening-balance/lib/company-lifecycle';
+import { useCompanyTypeSettings, useCompanyInitState, useSidebarLayout } from '@shared/hooks';
+import { companyTypeOf, hiddenNavIds } from '@modules/opening-balance/lib/company-lifecycle';
 import { cn } from '@shared/lib/utils';
 import { ICON_MAP } from '../sidebarConfig';
 import { ChevronDown } from 'lucide-react';
@@ -18,6 +18,8 @@ interface NavBarProps {
 export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hover:bg-white/5 hover:text-white', vertical = false, horizontalAppearance }: NavBarProps) {
   const { layout } = useSidebarLayout();
   const companySettings = useCompanyTypeSettings();
+  const { initState, isReady } = useCompanyInitState();
+  const hiddenItemIds = hiddenNavIds(companyTypeOf(companySettings), isReady ? initState : 'ACTIVE');
   const { openTab, updateMainTab, activeTabId } = useTabs();
   const location = useLocation();
   const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
@@ -74,7 +76,7 @@ export function NavBar({ slim = false, activeBg = 'bg-blue-600', hoverBg = 'hove
     >
       {visibleGroups.map(group => {
         const displayGroupTitle = group.customTitle ?? group.defaultTitle;
-        const visibleItems = filterNavByCompanyType(group.items, companySettings).filter(i => i.visible).sort((a, b) => a.order - b.order);
+        const visibleItems = group.items.filter(i => !hiddenItemIds.has(i.id)).filter(i => i.visible).sort((a, b) => a.order - b.order);
         if (visibleItems.length === 0) return null;
 
         const nonSeparatorItems = visibleItems.filter(i => !i.isSeparator);

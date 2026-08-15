@@ -22,7 +22,7 @@ import { paymentService } from '@modules/payments/api/paymentService';
 import { type CreatePaymentRequest } from '@erp/shared-types';
 import { usePartnerRatios } from '@modules/partners/hooks/usePartnerRatios';
 import { queryClient, invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
-import { START_MODE_NEW, START_MODE_EXISTING } from "@modules/opening-balance/lib/wizard-types";
+import { START_MODE_EXISTING } from "@modules/opening-balance/lib/wizard-types";
 
 export default function Partners() {
   const { openTab } = useTabs();

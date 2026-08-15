@@ -56,6 +56,8 @@ pub mod opening_balance;
 pub use opening_balance::SqliteOpeningMigrationRepository;
 pub use opening_balance::SqliteOpeningPostingRepository;
 pub use opening_balance::SqliteOpeningItemRepository;
+pub mod opening_draft;
+pub use opening_draft::SqliteOpeningDraftRepository;
 pub mod fiscal_period;
 pub(crate) mod atomic;
 pub use fiscal_period::SqliteFiscalPeriodRepository;

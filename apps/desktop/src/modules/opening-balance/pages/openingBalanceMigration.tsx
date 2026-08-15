@@ -1,13 +1,14 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, ArrowLeft, Play } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { ConfirmDialog } from "@shared/ui/confirm-dialog";
 import { Badge } from "@shared/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { toast } from "sonner";
+import { toLocalDateStr } from "@shared/lib/format";
 import { settingsService } from "@modules/core/api/settingsService";
 import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
 import type { OpeningPositionControlDto } from "@erp/shared-types";
@@ -29,6 +30,8 @@ import { ReconciliationCard } from "../components/ReconciliationCard";
 import { PositionControlCard } from "../components/PositionControlCard";
 import { ProfitAllocationCard } from "../components/ProfitAllocationCard";
 import { GuidedTransitionWizard } from "../components/GuidedTransitionWizard";
+import { OpeningDashboard } from "../components/OpeningDashboard";
+import { deriveOpeningSnapshot } from "../lib/derive-opening-snapshot";
 
 interface ComputedProfit {
   net_profit: string;
@@ -53,6 +56,7 @@ export default function OpeningBalanceMigration() {
   const [positionId, setPositionId] = useState<string>("");
   const [position, setPosition] = useState<OpeningPositionControlDto | null>(null);
   const [positionLoading, setPositionLoading] = useState(false);
+  const [tab, setTab] = useState("overview");
 
   const {
     data: migrations = [],
@@ -73,9 +77,27 @@ export default function OpeningBalanceMigration() {
     queryFn: () => fiscalPeriodService.listFiscalPeriods(),
   });
 
+  const { data: openingDraft = null } = useQuery<string | null>({
+    queryKey: QUERY_KEYS.openingDraft,
+    queryFn: () => openingBalanceService.getOpeningDraft(),
+  });
+
   // Derived company initialization state (from company type + migration status +
   // existence of a first fiscal period) shown as a header badge.
   const initState = deriveCompanyInitState({ settings, migrations, periods: fiscalPeriods });
+
+  // Overview dashboard snapshot over the most recent (non-cancelled) migration.
+  const latestMigration = useMemo(
+    () =>
+      [...migrations]
+        .filter((m) => m.status !== "Cancelled")
+        .sort((a, b) => b.cutover_date.localeCompare(a.cutover_date))[0] ?? null,
+    [migrations],
+  );
+  const snapshot = useMemo(
+    () => deriveOpeningSnapshot({ status: latestMigration?.status ?? null, position }),
+    [latestMigration, position],
+  );
 
   const handleLock = async (id: string) => {
     setTransitioningTo(id);
@@ -230,7 +252,9 @@ export default function OpeningBalanceMigration() {
 
   // A NEW company never has an opening balance: redirect away as soon as the
   // persisted company type is known (settings still loading = no redirect).
-  if (settings && companyTypeOf(settings) === COMPANY_TYPE_NEW) {
+  // Likewise, an EXISTING company whose lifecycle is fully ACTIVE (migration
+  // Locked + first fiscal period exists) no longer shows the opening pages.
+  if (settings && (companyTypeOf(settings) === COMPANY_TYPE_NEW || initState === "ACTIVE")) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -247,13 +271,37 @@ export default function OpeningBalanceMigration() {
       }
       tableContent={
         <div className="flex flex-col h-full overflow-auto p-4 gap-4">
-          <Tabs defaultValue="wizard" dir="rtl">
+          <Tabs value={tab} onValueChange={setTab} dir="rtl">
             <TabsList className="bg-white border border-slate-200 p-1 h-11 rounded-xl shadow-sm mb-1">
+              <TabsTrigger value="overview" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">نظرة عامة</TabsTrigger>
               <TabsTrigger value="wizard" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">المعالج</TabsTrigger>
               <TabsTrigger value="list" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">قائمة الترحيلات</TabsTrigger>
               <TabsTrigger value="position" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">المركز والتسوية</TabsTrigger>
               <TabsTrigger value="allocation" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">توزيع الأرباح</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="overview" className="mt-2 space-y-4">
+              {latestMigration === null ? (
+                <WelcomeCard onStart={() => setTab("wizard")} />
+              ) : (
+                <OpeningDashboard
+                  snapshot={snapshot}
+                  loading={positionLoading}
+                  onOpenSection={() => setTab("wizard")}
+                  footer={
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 flex items-center justify-between gap-3">
+                      <div className="text-xs text-slate-500">
+                        تاريخ القطع: <span className="font-bold text-slate-700">{toLocalDateStr(latestMigration.cutover_date)}</span>
+                        {latestMigration.notes ? ` — ${latestMigration.notes}` : ""}
+                      </div>
+                      <Button size="sm" variant="outline" onClick={() => setTab("wizard")} className="border-slate-200 font-bold">
+                        <ArrowLeft className="w-4 h-4 ml-1.5" /> متابعة في المعالج
+                      </Button>
+                    </div>
+                  }
+                />
+              )}
+            </TabsContent>
 
             <TabsContent value="wizard" className="mt-2 space-y-4">
               <GuidedTransitionWizard />
@@ -265,6 +313,8 @@ export default function OpeningBalanceMigration() {
                 isLoading={isLoading}
                 cancellingId={cancellingId}
                 transitioningTo={transitioningTo}
+                draft={openingDraft}
+                onResume={() => setTab("wizard")}
                 onLock={handleLock}
                 onCancel={(id) => setConfirmAction({ type: "cancel", id })}
                 onReopen={(id) => setConfirmAction({ type: "reopen", id })}
@@ -323,5 +373,31 @@ export default function OpeningBalanceMigration() {
         onConfirm={handleConfirmed}
       />
     </OperationalTableTemplate>
+  );
+}
+
+// NOT_STARTED welcome — explains what the opening setup does (cutover snapshot
+// of the legacy position, no automatic cash), and routes into the wizard.
+function WelcomeCard({ onStart }: { onStart: () => void }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-3">
+      <p className="text-sm font-black text-slate-800">إعداد رصيد افتتاح الشركة القائمة</p>
+      <p className="text-xs text-slate-500 leading-relaxed">
+        بما أنك تبدأ استخدام التطبيق الآن، سيُدخل المعالج الموجه الحالة المالية الفعلية للشركة في تاريخ
+        بدء الاستخدام («تاريخ القطع»). تُرصد الأرصدة قسماً بقسم — نقد وبنوك، عملاء، مخزون، أصول ثابتة، موردون،
+        قروض، شركاء — ثم تُسوّى مع دليل الحسابات وتُرحَّل وتُقفل، ويُفتتح بعدها أول فترة تشغيلية تُقيد عليها
+        الحركات اليومية.
+      </p>
+      <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 space-y-1">
+        <p className="text-xs font-bold text-amber-700">لن تُنشأ حركة نقدية تلقائية</p>
+        <p className="text-xs text-amber-600">
+          رأس المال والذمم والبنود القديمة أرصدة تاريخية تُرصد للشركة القائمة — ليست مساهمات نقدية جديدة،
+          ولا تُسجَّل أي حركات يومية قبل إقفال الرصيد الافتتاحي.
+        </p>
+      </div>
+      <Button size="sm" onClick={onStart} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+        <Play className="w-4 h-4 ml-1.5" /> ابدأ المعالج
+      </Button>
+    </div>
   );
 }

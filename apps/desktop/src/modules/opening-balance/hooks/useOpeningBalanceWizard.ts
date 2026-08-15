@@ -53,6 +53,28 @@ export const STEP_POST = 11;
 export const STEP_LOCK = 12;
 export const STEP_FIRST_PERIOD = 13;
 
+// JSON scratch the wizard persists so Save → Exit → Continue Later restores the
+// mid-editing inputs. Derived (module) rows are never stored: they re-derive
+// from the customer/supplier/partner/material records on mount.
+interface WizardDraft {
+  step: number;
+  cutoverDate: string;
+  sourceSystem: string;
+  sourceReference: string;
+  notes: string;
+  residualClassification: string;
+  residualAccountId: string;
+  cashBanks: WizLine[];
+  loans: WizLine[];
+  assetsManual: WizLine[];
+  liabilitiesManual: WizLine[];
+  equityManual: WizLine[];
+  faOverrides: Record<string, string>;
+  inventoryInputs: Record<string, { qty: string; cost: string }>;
+  inventoryAccountId: string;
+  inventoryPosted: boolean;
+}
+
 export function useOpeningBalanceWizard() {
   const [step, setStep] = useState(0);
   const [startMode, setStartMode] = useState<string>(START_MODE_EXISTING);
@@ -88,13 +110,100 @@ export function useOpeningBalanceWizard() {
   const [firstPeriod, setFirstPeriod] = useState<FiscalPeriodDto | null>(null);
 
   const startModeLoaded = useRef(false);
+  const [settingsReady, setSettingsReady] = useState(false);
   useEffect(() => {
     if (startModeLoaded.current) return;
     startModeLoaded.current = true;
     settingsService
       .getSettings()
-      .then((s) => setStartMode(s.accounting_start_mode || START_MODE_EXISTING))
+      .then((s) => {
+        setStartMode(s.accounting_start_mode || START_MODE_EXISTING);
+        setSettingsReady(true);
+      })
+      .catch(() => setSettingsReady(true));
+  }, []);
+
+  // ── Persisted wizard draft (Save → Exit → Continue later; Phase 4) ────────
+  const [hasDraft, setHasDraft] = useState(false);
+  const draftHydrated = useRef(false);
+
+  const restoreDraft = (d: Partial<WizardDraft>) => {
+    if (d.step !== undefined) setStep(Math.max(0, Math.min(d.step, STEPS_EXISTING.length - 1)));
+    if (d.cutoverDate) setCutoverDate(d.cutoverDate);
+    if (typeof d.sourceSystem === "string") setSourceSystem(d.sourceSystem);
+    if (typeof d.sourceReference === "string") setSourceReference(d.sourceReference);
+    if (typeof d.notes === "string") setNotes(d.notes);
+    if (typeof d.residualClassification === "string") setResidualClassification(d.residualClassification);
+    if (typeof d.residualAccountId === "string") setResidualAccountId(d.residualAccountId);
+    if (Array.isArray(d.cashBanks)) setCashBanks(d.cashBanks);
+    if (Array.isArray(d.loans)) setLoans(d.loans);
+    if (Array.isArray(d.assetsManual)) setAssetsManual(d.assetsManual);
+    if (Array.isArray(d.liabilitiesManual)) setLiabilitiesManual(d.liabilitiesManual);
+    if (Array.isArray(d.equityManual)) setEquityManual(d.equityManual);
+    if (d.faOverrides) setFaOverrides(d.faOverrides);
+    if (d.inventoryInputs) setInventoryInputs(d.inventoryInputs);
+    if (typeof d.inventoryAccountId === "string") setInventoryAccountId(d.inventoryAccountId);
+    if (typeof d.inventoryPosted === "boolean") setInventoryPosted(d.inventoryPosted);
+  };
+
+  useEffect(() => {
+    if (!settingsReady || startMode !== START_MODE_EXISTING || draftHydrated.current) return;
+    draftHydrated.current = true;
+    openingBalanceService
+      .getOpeningDraft()
+      .then((raw) => {
+        if (!raw) return;
+        try {
+          restoreDraft(JSON.parse(raw) as Partial<WizardDraft>);
+          setHasDraft(true);
+        } catch {
+          setHasDraft(false);
+        }
+      })
       .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsReady, startMode]);
+
+  const saveDraft = useCallback(async (): Promise<boolean> => {
+    const draft: WizardDraft = {
+      step,
+      cutoverDate,
+      sourceSystem,
+      sourceReference,
+      notes,
+      residualClassification,
+      residualAccountId,
+      cashBanks,
+      loans,
+      assetsManual,
+      liabilitiesManual,
+      equityManual,
+      faOverrides,
+      inventoryInputs,
+      inventoryAccountId,
+      inventoryPosted,
+    };
+    try {
+      const json = JSON.stringify(draft);
+      await openingBalanceService.saveOpeningDraft(json);
+      setHasDraft(true);
+      queryClient.setQueryData<string | null>(QUERY_KEYS.openingDraft, json);
+      toast.success("تم حفظ المسودة — يمكنك إكمال الرصيد الافتتاحي لاحقاً");
+      return true;
+    } catch (e) {
+      toast.error("فشل حفظ المسودة: " + e);
+      return false;
+    }
+  }, [step, cutoverDate, sourceSystem, sourceReference, notes, residualClassification, residualAccountId, cashBanks, loans, assetsManual, liabilitiesManual, equityManual, faOverrides, inventoryInputs, inventoryAccountId, inventoryPosted]);
+
+  const clearDraft = useCallback(async () => {
+    setHasDraft(false);
+    queryClient.setQueryData<string | null>(QUERY_KEYS.openingDraft, null);
+    try {
+      await openingBalanceService.clearOpeningDraft();
+    } catch {
+      // clear is best-effort; the migration is the source of truth once created.
+    }
   }, []);
 
   // A NewCompany only needs its first financial period (no opening migration);
@@ -613,6 +722,7 @@ export function useOpeningBalanceWizard() {
         setMigration(created);
         setReconciliation(recon);
         invalidateMigrations();
+        await clearDraft();
         toast.success("تم حفظ المسودة وفحص التسوية");
         setBusy(false);
         return true;
@@ -651,6 +761,7 @@ export function useOpeningBalanceWizard() {
         const updated = await openingBalanceService.lockMigration(migration.id);
         setMigration(updated);
         invalidateMigrations();
+        await clearDraft();
         setBusy(false);
         return true;
       }
@@ -728,6 +839,9 @@ export function useOpeningBalanceWizard() {
     nextLabel,
     handleNext,
     steps,
+    hasDraft,
+    saveDraft,
+    clearDraft,
     firstPeriodStart,
     setFirstPeriodStart,
     firstPeriodEnd,

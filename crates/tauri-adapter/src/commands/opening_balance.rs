@@ -3,13 +3,14 @@ use application::use_cases::opening_balance::{
     AllocateNetProfitCommand, AllocateNetProfitUseCase,
     ApplyResidualToLedgerUseCase,
     ApproveOpeningBalanceUseCase, CancelOpeningBalanceUseCase,
+    ClearOpeningDraftUseCase,
     ComputeNetProfitCommand, ComputeNetProfitUseCase, ComputedNetProfitDto,
     CreateOpeningBalanceMigrationCommand,
-    CreateOpeningBalanceUseCase, GetOpeningPositionControlUseCase, GetOpeningReconciliationUseCase,
+    CreateOpeningBalanceUseCase, GetOpeningDraftUseCase, GetOpeningPositionControlUseCase, GetOpeningReconciliationUseCase,
     ListOpeningMigrationsUseCase,
     LockOpeningBalanceUseCase, NetProfitAllocationDto, OpeningItemsDto, OpeningMigrationDto,
     OpeningPositionControlDto, OpeningReconciliationDto, PostOpeningBalanceResult, PostOpeningBalanceUseCase,
-    ReopenOpeningBalanceUseCase, SaveOpeningItemsCommand, SaveOpeningItemsUseCase,
+    ReopenOpeningBalanceUseCase, SaveOpeningDraftUseCase, SaveOpeningItemsCommand, SaveOpeningItemsUseCase,
     SetResidualClassificationCommand, SetResidualClassificationUseCase,
     ValidateOpeningBalanceUseCase,
 };
@@ -235,4 +236,35 @@ pub async fn get_opening_balance_reconciliation(
     .execute(id)
     .await
     .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_opening_wizard_draft(
+    state: State<'_, AppState>,
+) -> Result<Option<String>, String> {
+    GetOpeningDraftUseCase::new(state.opening_draft_repo.clone())
+        .execute()
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn save_opening_wizard_draft(
+    state: State<'_, AppState>,
+    data: String,
+) -> Result<(), String> {
+    SaveOpeningDraftUseCase::new(state.opening_draft_repo.clone())
+        .execute(&data)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn clear_opening_wizard_draft(
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    ClearOpeningDraftUseCase::new(state.opening_draft_repo.clone())
+        .execute()
+        .await
+        .map_err(|e| e.to_string())
 }

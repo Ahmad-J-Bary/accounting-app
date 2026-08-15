@@ -159,19 +159,10 @@ async fn equity_statement_reconciles_with_partner_ledgers() {
     let journal_repo: Arc<dyn JournalEntryRepository> =
         Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
 
-    // two explicit contributions feed both capital ledgers
-    let contrib_a = 200;
-    let contrib_b = 400;
-    CreateCapitalContributionUseCase::new(partner_repo.clone(), account_repo.clone(), journal_repo.clone(), Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())))
-        .execute(a_id.to_string(), cash.id.0.to_string(), Decimal::from(contrib_a), false, Some("rec-a".into()))
-        .await
-        .unwrap();
-    CreateCapitalContributionUseCase::new(partner_repo.clone(), account_repo.clone(), journal_repo.clone(), Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())))
-        .execute(b_id.to_string(), cash.id.0.to_string(), Decimal::from(contrib_b), false, Some("rec-b".into()))
-        .await
-        .unwrap();
-
-    // Profit allocation goes to the current (profit) accounts only.
+    // Opening sequence: profit allocation runs while the migration is still
+    // Posted (pre-lock), then the migration is sealed (Locked) before any
+    // operational capital/drawing event is posted — Phase 4 forbids normal
+    // journals while an unsealed migration exists.
     AllocateNetProfitUseCase::new(
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
         partner_repo.clone(),
@@ -184,6 +175,23 @@ async fn equity_statement_reconciles_with_partner_ledgers() {
     })
     .await
     .unwrap();
+    sqlx::query("UPDATE opening_balance_migrations SET status = 'Locked', locked_at = datetime('now') WHERE id = ?")
+        .bind(&migration_id)
+        .execute(pool.as_ref())
+        .await
+        .unwrap();
+
+    // two explicit contributions feed both capital ledgers
+    let contrib_a = 200;
+    let contrib_b = 400;
+    CreateCapitalContributionUseCase::new(partner_repo.clone(), account_repo.clone(), journal_repo.clone(), Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())))
+        .execute(a_id.to_string(), cash.id.0.to_string(), Decimal::from(contrib_a), false, Some("rec-a".into()))
+        .await
+        .unwrap();
+    CreateCapitalContributionUseCase::new(partner_repo.clone(), account_repo.clone(), journal_repo.clone(), Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())))
+        .execute(b_id.to_string(), cash.id.0.to_string(), Decimal::from(contrib_b), false, Some("rec-b".into()))
+        .await
+        .unwrap();
 
     // One partner draws out — this is contra-equity and must REDUCE equity.
     CreatePartnerDrawingUseCase::new(partner_repo.clone(), account_repo.clone(), journal_repo.clone())

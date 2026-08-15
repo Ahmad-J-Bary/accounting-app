@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Input } from "@shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { StatusBadge } from "@shared/ui/status-badge";
@@ -22,6 +23,25 @@ import { OpeningProgressChecklist, type ChecklistItem } from "@modules/opening-b
 export function GuidedTransitionWizard() {
   const w = useOpeningBalanceWizard();
   const isNew = w.startMode === START_MODE_NEW;
+  const navigate = useNavigate();
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [exiting, setExiting] = useState(false);
+
+  // Save → Exit → Continue later: persist the editor inputs then leave. A NEW
+  // company has nothing to save (no migration workflow), so the buttons are
+  // only provided for the Existing-company wizard.
+  const handleSaveDraft = async () => {
+    setSavingDraft(true);
+    await w.saveDraft();
+    setSavingDraft(false);
+  };
+
+  const handleExit = async () => {
+    setExiting(true);
+    const ok = await w.saveDraft();
+    setExiting(false);
+    if (ok) navigate("/dashboard");
+  };
 
   const renderDone = () => (
     <div className="space-y-3">
@@ -524,6 +544,10 @@ export function GuidedTransitionWizard() {
       nextLabel={w.nextLabel}
       onNext={w.handleNext}
       onPrev={() => w.setStep((s) => Math.max(0, s - 1))}
+      onSave={isNew ? undefined : handleSaveDraft}
+      saving={savingDraft}
+      onExit={isNew ? undefined : handleExit}
+      exiting={exiting}
     >
       {renderStep()}
     </WizardShell>

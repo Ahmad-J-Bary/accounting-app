@@ -3,6 +3,7 @@ use application::errors::AppError;
 use chrono::{DateTime, Utc};
 use domain::accounting::fiscal_period::FiscalPeriodStatus;
 use domain::accounting::journal_entry::{JournalEntry, JournalEntryStatus, JournalType};
+use domain::settings::START_MODE_EXISTING;
 use domain::shared::{JournalEntryId};
 use uuid::Uuid;
 
@@ -101,6 +102,60 @@ pub(crate) async fn validate_posting_period(
     )))
 }
 
+/// Rejects posting NORMAL operational journals while an EXISTING company's
+/// opening-balance migration has not been sealed yet (Phase 4: no daily
+/// accounting before the opening position is Locked). Opening-workflow
+/// journals are exempt two ways:
+///  * period exemption (`is_period_exempt`: Cash/Account/Material opening
+///    balances and reversals), and
+///  * opening pivot source ids (`opening_balance:`, `residual_classification:`,
+///    `ob_reversal:`, `profit_distribution:`) — the residual reclassification
+///    posts a `GeneralJournal` while the migration is still Posted, so the gate
+///    cannot rely on journal type alone.
+/// NEW companies never carry a migration, so the gate is a no-op for them.
+async fn validate_opening_gate(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    entry: &JournalEntry,
+) -> Result<(), AppError> {
+    if entry.journal_type.is_period_exempt() {
+        return Ok(());
+    }
+    if let Some(src) = entry.source_id.as_deref() {
+        const OPENING_PIVOTS: [&str; 4] = [
+            "opening_balance:",
+            "residual_classification:",
+            "ob_reversal:",
+            "profit_distribution:",
+        ];
+        if OPENING_PIVOTS.iter().any(|p| src.starts_with(p)) {
+            return Ok(());
+        }
+    }
+
+    let mode: Option<String> =
+        sqlx::query_scalar("SELECT accounting_start_mode FROM settings LIMIT 1")
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+    if mode.as_deref() != Some(START_MODE_EXISTING) {
+        return Ok(());
+    }
+
+    let pending: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM opening_balance_migrations WHERE status NOT IN ('Cancelled', 'Locked')",
+    )
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    if pending > 0 {
+        return Err(AppError::Forbidden(
+            "لا يمكن ترحيل حركات يومية قبل إقفال الرصيد الافتتاحي — أكمل تجهيز الرصيد الافتتاحي (التحقق، الترحيل، القفل) ثم أنشئ أول فترة تشغيلية".into(),
+        ));
+    }
+    Ok(())
+}
+
 /// Inserts (or refreshes) a journal entry + its lines within an open
 /// transaction. `pub(crate)` so composite repository methods across the crate
 /// (payment settlements, invoice posting, stock/adjustment/asset events) can
@@ -115,6 +170,7 @@ pub(crate) async fn insert_entry(
     // reversal). Drafts may be edited freely; they only get checked on posting.
     if entry.status == JournalEntryStatus::Posted {
         validate_posting_period(tx, entry.entry_date, entry.journal_type).await?;
+        validate_opening_gate(tx, entry).await?;
     }
 
     // Always persist a source_type. Explicit callers may set it; otherwise the

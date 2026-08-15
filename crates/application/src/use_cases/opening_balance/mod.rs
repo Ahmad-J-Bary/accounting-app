@@ -13,6 +13,7 @@ pub mod classify;
 pub mod residual_apply;
 pub mod position;
 pub mod guard;
+pub mod draft;
 
 pub use allocate::AllocateNetProfitUseCase;
 pub use guard::opening_window_active;
@@ -20,6 +21,7 @@ pub use net_profit::ComputeNetProfitUseCase;
 pub use cancel::CancelOpeningBalanceUseCase;
 pub use classify::SetResidualClassificationUseCase;
 pub use create::CreateOpeningBalanceUseCase;
+pub use draft::{ClearOpeningDraftUseCase, GetOpeningDraftUseCase, SaveOpeningDraftUseCase};
 pub use items::SaveOpeningItemsUseCase;
 pub use list::ListOpeningMigrationsUseCase;
 pub use post::PostOpeningBalanceUseCase;

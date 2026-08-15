@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { ChevronRight, ChevronLeft, Check } from "lucide-react";
+import { ChevronRight, ChevronLeft, Check, Save, LogOut } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
 import { cn } from "@shared/lib/utils";
@@ -21,6 +21,11 @@ interface WizardShellProps {
   nextLabel?: string;
   onNext: () => void;
   onPrev: () => void;
+  // Draft persistence (Save → Exit → Continue later):
+  onSave?: () => void;
+  saving?: boolean;
+  onExit?: () => void;
+  exiting?: boolean;
   children: ReactNode;
 }
 
@@ -41,6 +46,10 @@ export function WizardShell({
   nextLabel,
   onNext,
   onPrev,
+  onSave,
+  saving = false,
+  onExit,
+  exiting = false,
   children,
 }: WizardShellProps) {
   const progress = ((stepIndex + 1) / steps.length) * 100;
@@ -100,7 +109,35 @@ export function WizardShell({
         <CardContent className="pt-4">{children}</CardContent>
       </Card>
 
-      <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+      <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+        {(onSave || onExit) && (
+          <div className="flex items-center gap-2">
+            {onSave && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onSave}
+                disabled={saving || isNexting}
+                className="border-slate-200 text-slate-700 font-bold"
+              >
+                <Save className="w-4 h-4 ml-1.5" /> {saving ? "جارٍ الحفظ..." : "حفظ المسودة"}
+              </Button>
+            )}
+            {onExit && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onExit}
+                disabled={exiting || isNexting}
+                className="text-slate-500 font-bold"
+                title="حفظ المسودة والخروج للاستكمال لاحقاً"
+              >
+                <LogOut className="w-4 h-4 ml-1.5" /> {exiting ? "جارٍ الحفظ..." : "خروج للاحقًا"}
+              </Button>
+            )}
+          </div>
+        )}
+        <div className="flex-1" />
         <Button
           variant="outline"
           size="sm"

@@ -1,5 +1,5 @@
 import { Button } from "@shared/ui/button";
-import { Lock, RefreshCw, XCircle } from "lucide-react";
+import { Lock, RefreshCw, XCircle, FileClock } from "lucide-react";
 import { StatusBadge } from "@shared/ui/status-badge";
 import { LoadingState } from "@widgets/table-shell/LoadingState";
 import { EmptyState } from "@widgets/table-shell/EmptyState";
@@ -14,6 +14,8 @@ interface MigrationListCardProps {
   isLoading: boolean;
   cancellingId: string | null;
   transitioningTo: string | null;
+  draft?: string | null;
+  onResume?: () => void;
   onLock: MigrationActionHandler;
   onCancel: MigrationActionHandler;
   onReopen: MigrationActionHandler;
@@ -24,6 +26,8 @@ export function MigrationListCard({
   isLoading,
   cancellingId,
   transitioningTo,
+  draft = null,
+  onResume,
   onLock,
   onCancel,
   onReopen,
@@ -32,6 +36,21 @@ export function MigrationListCard({
 
   return (
     <SectionCard title="سجل ترحيلات الرصيد الافتتاحي" contentClassName="p-0">
+      {draft && (
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-dashed border-blue-200 bg-blue-50/50">
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-blue-700 flex items-center gap-1.5">
+              <FileClock className="w-4 h-4" /> توجد مسودة رصيد افتتاحي محفوظة
+            </div>
+            <div className="text-xs text-slate-500">أنت في منتصف إدخال الأرصدة — أكمل من حيث توقفت.</div>
+          </div>
+          {onResume && (
+            <Button size="sm" onClick={onResume} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+              استكمال المتابعة
+            </Button>
+          )}
+        </div>
+      )}
       {isLoading && <LoadingState rows={3} />}
       {settled.length === 0 && !isLoading && (
         <EmptyState compact message="لا توجد ترحيلات منجزة بعد" suggestion="الترحيلات المرحّلة أو المقفلة أو الملغاة تظهر هنا" />

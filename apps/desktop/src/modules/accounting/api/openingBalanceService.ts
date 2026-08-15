@@ -175,4 +175,13 @@ export const openingBalanceService = {
   async getOpeningPositionControl(id: string): Promise<OpeningPositionControlDto> {
     return await invoke<OpeningPositionControlDto>('get_opening_position_control', { id });
   },
+  async getOpeningDraft(): Promise<string | null> {
+    return await invoke<string | null>('get_opening_wizard_draft', {});
+  },
+  async saveOpeningDraft(data: string): Promise<void> {
+    return await invoke<void>('save_opening_wizard_draft', { data });
+  },
+  async clearOpeningDraft(): Promise<void> {
+    return await invoke<void>('clear_opening_wizard_draft', {});
+  },
 };

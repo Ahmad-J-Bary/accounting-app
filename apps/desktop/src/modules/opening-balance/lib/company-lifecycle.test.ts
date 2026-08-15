@@ -6,9 +6,12 @@ import {
   deriveCompanyInitState,
   filterNavByCompanyType,
   hiddenNavIdsForNew,
+  hiddenNavIds,
+  isTransactionalAllowed,
   OPENING_NAV_ID,
   OPENING_INVOICE_NAV_ID,
   HIDDEN_NAV_IDS_FOR_NEW,
+  TRANSACTIONAL_NAV_IDS,
 } from "@modules/opening-balance/lib/company-lifecycle";
 import {
   COMPANY_TYPE_EXISTING,
@@ -131,6 +134,47 @@ describe("hiddenNavIdsForNew", () => {
   it("returns an empty set for an EXISTING company or while loading", () => {
     expect(hiddenNavIdsForNew(EXISTING).size).toBe(0);
     expect(hiddenNavIdsForNew(undefined).size).toBe(0);
+  });
+});
+
+describe("hiddenNavIds", () => {
+  it("NEW company hides the opening nav ids regardless of state", () => {
+    expect([...hiddenNavIds(COMPANY_TYPE_NEW, "OPENING_IN_PROGRESS")]).toEqual([...HIDDEN_NAV_IDS_FOR_NEW]);
+    expect([...hiddenNavIds(COMPANY_TYPE_NEW, "ACTIVE")]).toEqual([...HIDDEN_NAV_IDS_FOR_NEW]);
+  });
+
+  it("EXISTING company hides the opening nav ids once ACTIVE", () => {
+    expect([...hiddenNavIds(COMPANY_TYPE_EXISTING, "ACTIVE")]).toEqual([...HIDDEN_NAV_IDS_FOR_NEW]);
+  });
+
+  it("EXISTING company mid-opening hides the transactional nav ids instead", () => {
+    for (const state of ["NOT_STARTED", "OPENING_IN_PROGRESS", "OPENING_READY", "OPENING_POSTED", "OPENING_LOCKED"] as const) {
+      const hidden = hiddenNavIds(COMPANY_TYPE_EXISTING, state);
+      expect([...hidden]).toEqual([...TRANSACTIONAL_NAV_IDS]);
+    }
+  });
+
+  it("transactional set contains the daily-log entry points but not master data", () => {
+    for (const id of ["journal", "payments", "sales-invoices", "inventory", "adjustments"]) {
+      expect(TRANSACTIONAL_NAV_IDS).toContain(id);
+    }
+    for (const id of ["customers", "suppliers", "materials", "opening-balance-migration", "opening-balance"]) {
+      expect(TRANSACTIONAL_NAV_IDS).not.toContain(id);
+    }
+  });
+});
+
+describe("isTransactionalAllowed", () => {
+  it("NEW companies are always allowed to transact", () => {
+    expect(isTransactionalAllowed(COMPANY_TYPE_NEW, "NOT_STARTED")).toBe(true);
+    expect(isTransactionalAllowed(COMPANY_TYPE_NEW, "ACTIVE")).toBe(true);
+  });
+
+  it("EXISTING companies transact only once ACTIVE", () => {
+    expect(isTransactionalAllowed(COMPANY_TYPE_EXISTING, "ACTIVE")).toBe(true);
+    for (const state of ["NOT_STARTED", "OPENING_IN_PROGRESS", "OPENING_READY", "OPENING_POSTED", "OPENING_LOCKED"] as const) {
+      expect(isTransactionalAllowed(COMPANY_TYPE_EXISTING, state)).toBe(false);
+    }
   });
 });
 

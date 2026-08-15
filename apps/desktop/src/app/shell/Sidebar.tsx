@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTabs } from '@app/providers/TabContext';
-import { useNavSidebarSettings, useCompanyTypeSettings, useSidebarLayout } from '@shared/hooks';
+import { useNavSidebarSettings, useCompanyTypeSettings, useCompanyInitState, useSidebarLayout } from '@shared/hooks';
 import { useAppearance } from '@shared/hooks/useAppearance';
 import {
-  filterNavByCompanyType,
-  hiddenNavIdsForNew,
+  companyTypeOf,
+  hiddenNavIds,
 } from '@modules/opening-balance/lib/company-lifecycle';
 import { cn } from '@shared/lib/utils';
 import { ICON_MAP } from './sidebarConfig';
@@ -24,6 +24,7 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
   const { settings, updateSetting, getNavWidth } = useNavSidebarSettings();
   const { layout, toggleGroupCollapsed } = useSidebarLayout();
   const companySettings = useCompanyTypeSettings();
+  const { initState, isReady } = useCompanyInitState();
   const { openTab, updateMainTab, activeTabId } = useTabs();
   const location = useLocation();
 
@@ -104,17 +105,20 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
     }
   };
 
+  // Nav entries gated by company lifecycle (Phase 4): NEW hides opening items;
+  // EXISTING hides transactional items until the migration is sealed, then hides
+  // the opening items once ACTIVE. Until the state resolves we stay permissive.
+  const hiddenItemIds = useMemo(
+    () => hiddenNavIds(companyTypeOf(companySettings), isReady ? initState : 'ACTIVE'),
+    [companySettings, initState, isReady],
+  );
+
   // المجموعات المرئية مرتّبة (مع إخفاء عناصر نوع الشركة المنطبقة)
   const visibleGroups = [...layout.groups]
     .filter(g => g.visible)
-    .map(g => ({ ...g, items: filterNavByCompanyType(g.items, companySettings) }))
+    .map(g => ({ ...g, items: g.items.filter(i => !hiddenItemIds.has(i.id)) }))
     .filter(g => g.items.length > 0)
     .sort((a, b) => a.order - b.order);
-
-  const hiddenItemIds = useMemo(
-    () => hiddenNavIdsForNew(companySettings),
-    [companySettings],
-  );
 
   // ── الوضع المكدس: شريط أيقونات ضيق + لوحة جانبية ──
   if (isStacked) {

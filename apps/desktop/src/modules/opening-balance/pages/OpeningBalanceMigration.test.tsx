@@ -39,6 +39,9 @@ vi.mock("@modules/accounting/api/openingBalanceService", () => ({
     listMigrations: vi.fn().mockResolvedValue([]),
     getOpeningPositionControl: vi.fn().mockResolvedValue(null),
     getReconciliation: vi.fn().mockResolvedValue(null),
+    getOpeningDraft: vi.fn().mockResolvedValue(null),
+    clearOpeningDraft: vi.fn(),
+    saveOpeningDraft: vi.fn(),
     lockMigration: vi.fn(),
     cancelMigration: vi.fn(),
     reopenMigration: vi.fn(),
@@ -120,7 +123,44 @@ describe("OpeningBalanceMigration company-type gate", () => {
     renderPage();
     expect(await screen.findByText("رصيد افتتاح الشركة")).toBeInTheDocument();
     expect(await screen.findByText("لم يبدأ بعد")).toBeInTheDocument();
+    // The overview tab is the default landing: welcome for NOT_STARTED companies.
+    expect(screen.getByText("نظرة عامة")).toBeInTheDocument();
     expect(screen.getByText("قائمة الترحيلات")).toBeInTheDocument();
+    expect(screen.getByText("إعداد رصيد افتتاح الشركة القائمة")).toBeInTheDocument();
+    expect(screen.getByText("ابدأ المعالج")).toBeInTheDocument();
+  });
+
+  it("redirects a fully ACTIVE EXISTING company away like a NEW one", async () => {
+    vi.mocked(settingsService.getSettings).mockResolvedValue({
+      accounting_start_mode: START_MODE_EXISTING,
+    } as never);
+    vi.mocked(openingBalanceService.listMigrations).mockResolvedValue([
+      {
+        id: "m1",
+        company_id: null,
+        cutover_date: new Date().toISOString().slice(0, 10),
+        source_system: null,
+        source_reference: null,
+        status: "Locked",
+        notes: null,
+        lines: [],
+        validated_by: null,
+        validated_at: null,
+        approved_by: null,
+        approved_at: null,
+        posted_at: null,
+        locked_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ] as never);
+    vi.mocked(fiscalPeriodService.listFiscalPeriods).mockResolvedValue([
+      { id: "p1", status: "Open", start_date: "2026-01-01", end_date: "2026-12-31" } as never,
+    ]);
+    const { qc } = renderPage();
+    await waitFor(() => expect(qc.getQueryData(QUERY_KEYS.openingBalanceMigrations)).toBeTruthy());
+    expect(await screen.findByText("DASHBOARD_ROOT")).toBeInTheDocument();
+    expect(screen.queryByText("رصيد افتتاح الشركة")).not.toBeInTheDocument();
   });
 
   it("shows an OPENING_IN_PROGRESS badge once a draft migration exists", async () => {

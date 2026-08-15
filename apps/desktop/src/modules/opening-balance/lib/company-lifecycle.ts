@@ -36,7 +36,8 @@ export interface CompanyLifecycleInput {
 }
 
 // Node ids of the opening pages in the sidebar page registry. For a NEW company
-// these items are filtered out and their routes redirect to /dashboard.
+// these items are filtered out and their routes redirect to /dashboard. They are
+// also hidden once an EXISTING company becomes fully ACTIVE.
 export const OPENING_NAV_ID = "opening-balance-migration";
 export const OPENING_INVOICE_NAV_ID = "opening-balance";
 
@@ -44,6 +45,40 @@ export const OPENING_INVOICE_NAV_ID = "opening-balance";
 export const HIDDEN_NAV_IDS_FOR_NEW: readonly string[] = [
   OPENING_NAV_ID,
   OPENING_INVOICE_NAV_ID,
+];
+
+// Nav ids whose routes must disappear while an EXISTING company is still in its
+// opening workflow (NOT_STARTED … OPENING_LOCKED): daily-log operational entry
+// points. Master-data / opening pages stay reachable during that window.
+export const TRANSACTIONAL_NAV_IDS: readonly string[] = [
+  "journal",
+  "payments",
+  "sales-invoices",
+  "purchase-invoices",
+  "sales-returns",
+  "purchase-returns",
+  "inventory",
+  "transfers",
+  "damaged",
+  "production",
+  "adjustments",
+];
+
+// Route paths covered by the transactional gate (shared with ErpRoutes).
+export const TRANSACTIONAL_PATHS: readonly string[] = [
+  "/journal",
+  "/payments",
+  "/sales-invoices",
+  "/purchase-invoices",
+  "/sales-returns",
+  "/purchase-returns",
+  "/inventory",
+  "/inventory/transfers",
+  "/damaged",
+  "/production",
+  "/adjustments",
+  "/inventory/purchases/",
+  "/inventory/sales/",
 ];
 
 export function companyTypeOf(settings?: CompanyLifecycleSettingsLike | null): CompanyType {
@@ -132,6 +167,31 @@ export function hiddenNavIdsForNew(
   return companyTypeOf(settings) === START_MODE_NEW
     ? new Set(HIDDEN_NAV_IDS_FOR_NEW)
     : new Set<string>();
+}
+
+// Generalized nav hiding driven by both the persisted company type and the
+// derived initialization state (Phase 4):
+//  * NEW company                     → opening nav ids hidden for good.
+//  * EXISTING once fully ACTIVE      → opening nav ids hidden (lifecycle done).
+//  * EXISTING still opening          → transactional nav ids hidden so daily
+//    operations cannot begin before the opening migration is sealed.
+export function hiddenNavIds(
+  type: CompanyType,
+  initState: CompanyInitState,
+): ReadonlySet<string> {
+  if (type === START_MODE_NEW || initState === "ACTIVE") {
+    return new Set(HIDDEN_NAV_IDS_FOR_NEW);
+  }
+  return new Set(TRANSACTIONAL_NAV_IDS);
+}
+
+// Whether transactional (daily-log) pages may be accessed: NEW companies are
+// always active, EXISTING companies only once the lifecycle reaches ACTIVE.
+export function isTransactionalAllowed(
+  type: CompanyType,
+  initState: CompanyInitState,
+): boolean {
+  return type === START_MODE_NEW || initState === "ACTIVE";
 }
 
 export const INIT_STATE_LABELS: Record<CompanyInitState, string> = {
