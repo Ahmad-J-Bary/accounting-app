@@ -1,7 +1,7 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { AccountDto, UpdateSettingsRequest, FiscalPeriodDto, CustomerDto, SupplierDto, FixedAssetDto } from "@erp/shared-types";
+import type { AccountDto, UpdateSettingsRequest, FiscalPeriodDto, CustomerDto, SupplierDto } from "@erp/shared-types";
 import type { WizardStepDef } from "@modules/opening-balance/components/WizardShell";
 import { queryClient, QUERY_KEYS } from "@shared/hooks/queryClient";
 import { toLocalDatePart } from "@shared/lib/format";
@@ -47,11 +47,11 @@ import {
 import { defaultAccountFor } from "@modules/opening-balance/lib/auto-accounts";
 
 // Step indices for the ExistingCompany 15-step layout.
-const STEP_REVIEW = 9;
-const STEP_VALIDATE = 10;
-const STEP_POST = 11;
-const STEP_LOCK = 12;
-const STEP_FIRST_PERIOD = 13;
+export const STEP_REVIEW = 9;
+export const STEP_VALIDATE = 10;
+export const STEP_POST = 11;
+export const STEP_LOCK = 12;
+export const STEP_FIRST_PERIOD = 13;
 
 export function useOpeningBalanceWizard() {
   const [step, setStep] = useState(0);

@@ -1,20 +1,23 @@
+import { useMemo } from "react";
 import { Input } from "@shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { StatusBadge } from "@shared/ui/status-badge";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
-import { toLocalDateStr, toFixed } from "@shared/lib/format";
+import { toLocalDateStr, toFixed, fmtMoney } from "@shared/lib/format";
 import { WizardShell } from "@modules/opening-balance/components/WizardShell";
 import { WizardLineEditor } from "@modules/opening-balance/components/WizardLineEditor";
-import {
-  useOpeningBalanceWizard,
-} from "@modules/opening-balance/hooks/useOpeningBalanceWizard";
-import { START_MODE_NEW, START_MODE_EXISTING, type DerivedRow } from "@modules/opening-balance/lib/wizard-types";
-import { reconciliationReadiness } from "@modules/opening-balance/lib/migration-labels";
+import { useOpeningBalanceWizard, STEP_REVIEW } from "@modules/opening-balance/hooks/useOpeningBalanceWizard";
+import { START_MODE_NEW, START_MODE_EXISTING, toNum, type DerivedRow } from "@modules/opening-balance/lib/wizard-types";
+import { sumLines } from "@modules/opening-balance/lib/derive-rows";
+import { reconciliationReadiness, RECON_ROW_LABEL } from "@modules/opening-balance/lib/migration-labels";
 import { ReconciliationStatusBanner } from "@modules/opening-balance/components/ReconciliationStatusBanner";
 import { AutoAmountSection } from "@modules/opening-balance/components/AutoAmountSection";
 import { InlineBalanceRow } from "@modules/opening-balance/components/InlineBalanceRow";
 import { InventorySection } from "@modules/opening-balance/components/InventorySection";
 import { ReconciliationRowsTable } from "@modules/opening-balance/components/ReconciliationRowsTable";
+import { AccountCombobox } from "@modules/opening-balance/components/AccountCombobox";
+import { OpeningPositionSummary } from "@modules/opening-balance/components/OpeningPositionSummary";
+import { OpeningProgressChecklist, type ChecklistItem } from "@modules/opening-balance/components/OpeningProgressChecklist";
 
 export function GuidedTransitionWizard() {
   const w = useOpeningBalanceWizard();
@@ -93,19 +96,13 @@ export function GuidedTransitionWizard() {
                 <SelectItem value="UnresolvedDifference">فرق غير محلول</SelectItem>
               </SelectContent>
             </Select>
-            <Input
-              list="wiz-equity-accounts"
+            <AccountCombobox
+              accounts={w.accounts}
+              options={w.detailAccounts.filter((a) => a.account_type === "Equity")}
               value={w.residualAccountId}
-              onChange={(e) => w.setResidualAccountId(e.target.value)}
+              onValueChange={w.setResidualAccountId}
               placeholder="حساب حامل الفرق (مثال: 52)"
-              aria-label="حساب حامل الفرق"
-              className="h-9"
             />
-            <datalist id="wiz-equity-accounts">
-              {w.detailAccounts.filter((a) => a.account_type === "Equity").map((a) => (
-                <option key={a.id} value={a.id}>{a.code} — {a.name_ar}</option>
-              ))}
-            </datalist>
           </div>
         </div>
       )}
@@ -434,7 +431,97 @@ export function GuidedTransitionWizard() {
     }
   };
 
-  return (
+  // ── Live opening-position summary (§13) derived from wizard state ─────────
+  const summary = useMemo(() => {
+    const cash = sumLines(w.cashBanks.filter((l) => l.kind === "cash"));
+    const bank = sumLines(w.cashBanks.filter((l) => l.kind === "bank"));
+    const receivables = sumLines(w.derivedAr);
+    const inventory = w.inventoryTotal;
+    const fixedAssets = sumLines(w.faRows);
+    const otherAssets = sumLines(w.assetsManual);
+    const suppliers = sumLines(w.derivedAp);
+    const loans = sumLines(w.loans);
+    const otherLiabilities = sumLines(w.liabilitiesManual);
+    const partnerCapital = sumLines(w.partnerEquity);
+    const otherEquity = sumLines(w.equityManual);
+
+    const totalAssets = cash + bank + receivables + inventory + fixedAssets + otherAssets;
+    const totalLiabilities = suppliers + loans + otherLiabilities;
+    const recognizedEquity = partnerCapital + otherEquity;
+    const residual = totalAssets - totalLiabilities - recognizedEquity;
+
+    // Smart, section-targeted hints (§14): tell the accountant WHICH section
+    // needs fixing and by how much, never "journal line 17 is invalid".
+    const hints: string[] = [];
+    if (residual > 0.01) {
+      hints.push(`إجمالي الأصول أكبر من الخصوم وحقوق الملكية بمبلغ ${toFixed(residual, 2)} — صُنّف الرصيد المتبقي من قسم «الشركاء وحقوق الملكية».`);
+    } else if (residual < -0.01) {
+      hints.push(`الخصوم وحقوق الملكية تزيد عن الأصول بمبلغ ${toFixed(-residual, 2)} — أضف بنداً مديناً (مثل مسحوبات الشركاء أو تسوية) في أحد أقسام الأصول.`);
+    }
+    for (const r of w.derivedAr) {
+      if (toNum(r.amount) > 0 && !r.account_id) {
+        hints.push(`يوجد رصيد عميل «${r.label}» بقيمة ${fmtMoney(r.amount)} غير مرتبط بحساب عميل — راجعه في قسم «الذمم المدينة».`);
+      }
+    }
+    for (const r of w.derivedAp) {
+      if (toNum(r.amount) > 0 && !r.account_id) {
+        hints.push(`يوجد رصيد مورد «${r.label}» بقيمة ${fmtMoney(r.amount)} غير مرتبط بحساب مورد — راجعه في قسم «الذمم الدائنة».`);
+      }
+    }
+    if (w.reconciliation && !w.reconciliation.all_reconciled) {
+      for (const row of w.reconciliation.rows) {
+        if (toNum(row.subledger) !== toNum(row.general_ledger)) {
+          hints.push(
+            `رصيد ${RECON_ROW_LABEL[row.key] || row.key}: السجل المساعد ${fmtMoney(row.subledger)} لا يطابق دفتر الأستاذ ${fmtMoney(row.general_ledger)}.`,
+          );
+        }
+      }
+    }
+
+    return {
+      cash,
+      bank,
+      receivables,
+      inventory,
+      fixedAssets,
+      otherAssets,
+      suppliers,
+      loans,
+      otherLiabilities,
+      partnerCapital,
+      otherEquity,
+      residual,
+      hints,
+    };
+  }, [w.cashBanks, w.derivedAr, w.derivedAp, w.faRows, w.assetsManual, w.loans, w.liabilitiesManual, w.partnerEquity, w.equityManual, w.inventoryTotal, w.reconciliation]);
+
+  // ── Progress checklist (§15): every section's done-state, derived from data
+  // and the reached step so the user never has to remember what is finished.
+  const checklistItems: ChecklistItem[] = useMemo(() => {
+    const ar = sumLines(w.derivedAr);
+    const ap = sumLines(w.derivedAp);
+    const loansT = sumLines(w.loans);
+    const otherLiab = sumLines(w.liabilitiesManual);
+    const cap = sumLines(w.partnerEquity);
+    const otherEq = sumLines(w.equityManual);
+    const cashBank = sumLines(w.cashBanks);
+    const fa = sumLines(w.faRows);
+    return [
+      { key: "cutover", label: "تاريخ القطع", done: !!w.cutoverDate },
+      { key: "cash", label: "أرصدة النقد والبنوك", done: cashBank > 0 || w.step > 1 },
+      { key: "customers", label: "العملاء (الذمم المدينة)", done: ar > 0 || w.step > 2 },
+      { key: "inventory", label: "المخزون (ترحيل البضاعة)", done: !!w.inventoryPosted || w.inventoryTotal === 0 || w.step > 3 },
+      { key: "fixed-assets", label: "الأصول الثابتة", done: fa > 0 || w.step > 4 },
+      { key: "suppliers", label: "الموردون (الذمم الدائنة)", done: ap > 0 || w.step > 6 },
+      { key: "loans", label: "القروض والخصوم", done: loansT > 0 || otherLiab > 0 || w.step > 7 },
+      { key: "partners", label: "رؤوس أموال الشركاء", done: cap > 0 || otherEq > 0 || w.step > 8 },
+      { key: "reconcile", label: "التسوية", done: !!w.reconciliation && w.reconciliation.all_reconciled },
+      { key: "balanced", label: "متوازن", done: w.totals.balanced },
+      { key: "ready", label: "جاهز للترحيل", done: w.step >= STEP_REVIEW && w.canNext },
+    ];
+  }, [w.derivedAr, w.derivedAp, w.loans, w.liabilitiesManual, w.partnerEquity, w.equityManual, w.cashBanks, w.faRows, w.inventoryPosted, w.inventoryTotal, w.step, w.cutoverDate, w.reconciliation, w.totals, w.canNext]);
+
+  const wizard = (
     <WizardShell
       title={isNew ? "بدء محاسبة شركة جديدة" : "معالج التحويل الموجه (شركة قائمة)"}
       subtitle={isNew
@@ -452,6 +539,18 @@ export function GuidedTransitionWizard() {
     >
       {renderStep()}
     </WizardShell>
+  );
+
+  if (isNew) return wizard;
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_330px] gap-4 items-start" dir="rtl">
+      {wizard}
+      <aside className="lg:sticky lg:top-4 space-y-3 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto custom-scrollbar">
+        <OpeningPositionSummary {...summary} plugAmount={w.totals.plugAmount} balanced={w.totals.balanced} />
+        <OpeningProgressChecklist items={checklistItems} />
+      </aside>
+    </div>
   );
 }
 
