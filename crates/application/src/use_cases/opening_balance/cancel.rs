@@ -6,6 +6,7 @@ use crate::errors::AppError;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::opening_posting_repository::OpeningPostingRepository;
+use crate::use_cases::opening_balance::guard::opening_lifecycle_closed;
 use crate::use_cases::opening_balance::types::OpeningMigrationDto;
 
 /// Executes a cancellation of a previously-posted opening-balance migration by
@@ -27,6 +28,14 @@ impl CancelOpeningBalanceUseCase {
     }
 
     pub async fn execute(&self, id: String) -> Result<OpeningMigrationDto, AppError> {
+        // Phase 5: once any migration is Locked the lifecycle is sealed; the
+        // only mutation from then on is read-only history.
+        if opening_lifecycle_closed(&self.migration_repo).await? {
+            return Err(AppError::Forbidden(
+                "الرصيد الافتتاحي للشركة أُقفل نهائياً — لا يمكن إلغاء ترحيلات الرصيد الافتتاحي بعد الإقفال".into(),
+            ));
+        }
+
         let mut migration = self.migration_repo.find_by_id(&id).await?
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
 

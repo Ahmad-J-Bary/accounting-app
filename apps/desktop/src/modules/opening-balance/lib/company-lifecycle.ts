@@ -12,7 +12,7 @@ export type CompanyType = typeof START_MODE_NEW | typeof START_MODE_EXISTING;
 export type CompanyInitState =
   | "NOT_STARTED"
   | "OPENING_IN_PROGRESS"
-  | "OPENING_READY"
+  | "OPENING_VALIDATED"
   | "OPENING_POSTED"
   | "OPENING_LOCKED"
   | "ACTIVE";
@@ -120,7 +120,7 @@ export function companyCapabilities(
     isExistingCompany &&
     (initState === "NOT_STARTED" ||
       initState === "OPENING_IN_PROGRESS" ||
-      initState === "OPENING_READY" ||
+      initState === "OPENING_VALIDATED" ||
       initState === "OPENING_POSTED");
   const closed = initState === "OPENING_LOCKED" || initState === "ACTIVE";
   return {
@@ -132,7 +132,7 @@ export function companyCapabilities(
     canCreateOpeningBalance:
       isExistingCompany &&
       (initState === "NOT_STARTED" || initState === "OPENING_IN_PROGRESS"),
-    canPostOpening: isExistingCompany && initState === "OPENING_READY",
+    canPostOpening: isExistingCompany && initState === "OPENING_VALIDATED",
     canLockOpening: isExistingCompany && initState === "OPENING_POSTED",
     isNormalAccountingEnabled: !isExistingCompany || closed,
   };
@@ -158,7 +158,7 @@ export function deriveCompanyInitState(input: CompanyLifecycleInput): CompanyIni
 
   if (rank === 0) return "NOT_STARTED";
   if (rank <= 2) return "OPENING_IN_PROGRESS";
-  if (rank === 3) return "OPENING_READY";
+  if (rank === 3) return "OPENING_VALIDATED";
   if (rank === 4) return "OPENING_POSTED";
 
   // rank 5 = migration locked; once the first fiscal period exists the company
@@ -166,31 +166,6 @@ export function deriveCompanyInitState(input: CompanyLifecycleInput): CompanyIni
   // still awaited.
   const hasPeriod = (input.periods ?? []).length > 0;
   return hasPeriod ? "ACTIVE" : "OPENING_LOCKED";
-}
-
-// Nav items hidden per company type. A NEW company never touches the opening
-// migration or the opening invoice, so those entries are filtered out (their
-// routes also redirect).
-export function filterNavByCompanyType<T extends { id: string }>(
-  items: readonly T[],
-  settings?: CompanyLifecycleSettingsLike | null,
-): T[] {
-  const type = companyTypeOf(settings);
-  if (type === START_MODE_NEW) {
-    const hidden = new Set(HIDDEN_NAV_IDS_FOR_NEW);
-    return items.filter((item) => !hidden.has(item.id));
-  }
-  return [...items];
-}
-
-// Ids hidden for a NEW company, as a set (used by the sidebar to drop pinned
-// entries too). Empty set for EXISTING.
-export function hiddenNavIdsForNew(
-  settings?: CompanyLifecycleSettingsLike | null,
-): ReadonlySet<string> {
-  return companyTypeOf(settings) === START_MODE_NEW
-    ? new Set(HIDDEN_NAV_IDS_FOR_NEW)
-    : new Set<string>();
 }
 
 // Generalized nav hiding driven by both the persisted company type and the
@@ -223,7 +198,7 @@ export function isTransactionalAllowed(
 export const INIT_STATE_LABELS: Record<CompanyInitState, string> = {
   NOT_STARTED: "لم يبدأ بعد",
   OPENING_IN_PROGRESS: "رصيد الافتتاح قيد الإعداد",
-  OPENING_READY: "رصيد الافتتاح جاهز للمراجعة",
+  OPENING_VALIDATED: "رصيد الافتتاح مُتحقق منه",
   OPENING_POSTED: "رصيد الافتتاح مُرّحل",
   OPENING_LOCKED: "أُقفل الرصيد — بانتظار أول فترة مالية",
   ACTIVE: "العمليات جارية",

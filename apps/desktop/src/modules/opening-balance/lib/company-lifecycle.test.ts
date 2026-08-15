@@ -3,8 +3,6 @@ import {
   companyTypeOf,
   companyCapabilities,
   deriveCompanyInitState,
-  filterNavByCompanyType,
-  hiddenNavIdsForNew,
   hiddenNavIds,
   isTransactionalAllowed,
   OPENING_NAV_ID,
@@ -64,7 +62,7 @@ describe("deriveCompanyInitState", () => {
     ).toBe("OPENING_IN_PROGRESS");
     expect(
       deriveCompanyInitState({ settings: EXISTING, migrations: [{ status: "Approved" }], periods: [] }),
-    ).toBe("OPENING_READY");
+    ).toBe("OPENING_VALIDATED");
     expect(
       deriveCompanyInitState({ settings: EXISTING, migrations: [{ status: "Posted" }], periods: [] }),
     ).toBe("OPENING_POSTED");
@@ -94,27 +92,7 @@ describe("deriveCompanyInitState", () => {
   });
 });
 
-describe("filterNavByCompanyType", () => {
-  const items = [
-    { id: "opening-balance-migration" },
-    { id: "opening-balance" },
-    { id: "fiscal-periods" },
-    { id: "dashboard" },
-  ] as { id: string }[];
-
-  it("hides ALL opening entries for a NEW company, keeps everything else", () => {
-    const filtered = filterNavByCompanyType(items, NEW);
-    expect(filtered.map((i) => i.id)).toEqual(["fiscal-periods", "dashboard"]);
-  });
-
-  it("keeps the opening entries for an EXISTING company", () => {
-    expect(filterNavByCompanyType(items, EXISTING).map((i) => i.id)).toEqual(items.map((i) => i.id));
-  });
-
-  it("keeps everything while settings are unknown (default EXISTING)", () => {
-    expect(filterNavByCompanyType(items, undefined).map((i) => i.id)).toEqual(items.map((i) => i.id));
-  });
-
+describe("opening nav ids / company constants", () => {
   it("uses the single opening nav id", () => {
     expect(OPENING_NAV_ID).toBe("opening-balance-migration");
     expect(OPENING_INVOICE_NAV_ID).toBe("opening-balance");
@@ -122,17 +100,6 @@ describe("filterNavByCompanyType", () => {
     expect(HIDDEN_NAV_IDS_FOR_NEW).toContain(OPENING_INVOICE_NAV_ID);
     expect(COMPANY_TYPE_NEW).toBe(START_MODE_NEW);
     expect(COMPANY_TYPE_EXISTING).toBe(START_MODE_EXISTING);
-  });
-});
-
-describe("hiddenNavIdsForNew", () => {
-  it("returns the opening ids as a set only for a NEW company", () => {
-    expect([...hiddenNavIdsForNew(NEW)]).toEqual([...HIDDEN_NAV_IDS_FOR_NEW]);
-  });
-
-  it("returns an empty set for an EXISTING company or while loading", () => {
-    expect(hiddenNavIdsForNew(EXISTING).size).toBe(0);
-    expect(hiddenNavIdsForNew(undefined).size).toBe(0);
   });
 });
 
@@ -148,7 +115,7 @@ describe("hiddenNavIds", () => {
   });
 
   it("EXISTING company before OPENING_LOCKED hides the transactional nav ids instead", () => {
-    for (const state of ["NOT_STARTED", "OPENING_IN_PROGRESS", "OPENING_READY", "OPENING_POSTED"] as const) {
+    for (const state of ["NOT_STARTED", "OPENING_IN_PROGRESS", "OPENING_VALIDATED", "OPENING_POSTED"] as const) {
       const hidden = hiddenNavIds(COMPANY_TYPE_EXISTING, state);
       expect([...hidden]).toEqual([...TRANSACTIONAL_NAV_IDS]);
     }
@@ -173,7 +140,7 @@ describe("isTransactionalAllowed", () => {
   it("EXISTING companies transact once OPENING_LOCKED or ACTIVE (gate lifts at the lock)", () => {
     expect(isTransactionalAllowed(COMPANY_TYPE_EXISTING, "OPENING_LOCKED")).toBe(true);
     expect(isTransactionalAllowed(COMPANY_TYPE_EXISTING, "ACTIVE")).toBe(true);
-    for (const state of ["NOT_STARTED", "OPENING_IN_PROGRESS", "OPENING_READY", "OPENING_POSTED"] as const) {
+    for (const state of ["NOT_STARTED", "OPENING_IN_PROGRESS", "OPENING_VALIDATED", "OPENING_POSTED"] as const) {
       expect(isTransactionalAllowed(COMPANY_TYPE_EXISTING, state)).toBe(false);
     }
   });
@@ -209,8 +176,8 @@ describe("companyCapabilities", () => {
     expect(caps.isNormalAccountingEnabled).toBe(false);
   });
 
-  it("EXISTING / OPENING_READY: workflow open, ready to post (no create)", () => {
-    const caps = companyCapabilities(COMPANY_TYPE_EXISTING, "OPENING_READY");
+  it("EXISTING / OPENING_VALIDATED: workflow open, ready to post (no create)", () => {
+    const caps = companyCapabilities(COMPANY_TYPE_EXISTING, "OPENING_VALIDATED");
     expect(caps.canAccessOpeningWorkflow).toBe(true);
     expect(caps.canCreateOpeningBalance).toBe(false);
     expect(caps.canPostOpening).toBe(true);

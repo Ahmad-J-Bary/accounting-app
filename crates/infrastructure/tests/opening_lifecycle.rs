@@ -20,8 +20,8 @@ use application::use_cases::opening_balance::types::{
     CreateOpeningBalanceMigrationCommand, OpeningLineInput,
 };
 use application::use_cases::opening_balance::{
-    ClearOpeningDraftUseCase, CreateOpeningBalanceUseCase, GetOpeningDraftUseCase,
-    SaveOpeningDraftUseCase,
+    CancelOpeningBalanceUseCase, ClearOpeningDraftUseCase, CreateOpeningBalanceUseCase,
+    GetOpeningDraftUseCase, ReopenOpeningBalanceUseCase, SaveOpeningDraftUseCase,
 };
 use chrono::Utc;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
@@ -32,7 +32,7 @@ use domain::shared::AccountId;
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{
     SqliteAccountRepository, SqliteJournalEntryRepository, SqliteOpeningDraftRepository,
-    SqliteOpeningMigrationRepository, SqliteSettingsRepository,
+    SqliteOpeningMigrationRepository, SqliteOpeningPostingRepository, SqliteSettingsRepository,
 };
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -324,4 +324,60 @@ async fn opening_journal_entries_preserved_after_lock() {
     .await
     .unwrap();
     assert_eq!(count, 1, "locking must NEVER delete the opening journal entries");
+}
+
+// ---------------------------------------------------------------------------
+// Reopen / cancel are opening-workflow mutations too: once the lifecycle is
+// sealed (any Locked migration) they are rejected — the workflow is read-only.
+// ---------------------------------------------------------------------------
+#[tokio::test]
+async fn reopen_rejected_once_lifecycle_locked() {
+    let pool = build_pool().await;
+    let cancelled = uuid::Uuid::new_v4().to_string();
+    insert_migration(pool.as_ref(), &cancelled, "Cancelled").await;
+    insert_migration(pool.as_ref(), &uuid::Uuid::new_v4().to_string(), "Locked").await;
+
+    let err = ReopenOpeningBalanceUseCase::new(migration_repo(&pool))
+        .execute(cancelled)
+        .await
+        .expect_err("reopening must be blocked once the lifecycle is sealed");
+    assert!(matches!(err, AppError::Forbidden(_)), "expected Forbidden, got {err:?}");
+}
+
+#[tokio::test]
+async fn reopen_allowed_when_only_cancelled() {
+    let pool = build_pool().await;
+    let cancelled = uuid::Uuid::new_v4().to_string();
+    insert_migration(pool.as_ref(), &cancelled, "Cancelled").await;
+
+    ReopenOpeningBalanceUseCase::new(migration_repo(&pool))
+        .execute(cancelled.clone())
+        .await
+        .expect("a cancelled-only migration keeps the restart path open");
+
+    let status: String =
+        sqlx::query_scalar("SELECT status FROM opening_balance_migrations WHERE id = ?")
+            .bind(&cancelled)
+            .fetch_one(pool.as_ref())
+            .await
+            .unwrap();
+    assert_eq!(status, "Draft", "reopen must flip the migration back to Draft");
+}
+
+#[tokio::test]
+async fn cancel_rejected_once_lifecycle_locked() {
+    let pool = build_pool().await;
+    let posted_id = uuid::Uuid::new_v4().to_string();
+    insert_migration(pool.as_ref(), &posted_id, "Posted").await;
+    insert_migration(pool.as_ref(), &uuid::Uuid::new_v4().to_string(), "Locked").await;
+
+    let err = CancelOpeningBalanceUseCase::new(
+        migration_repo(&pool),
+        Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
+        Arc::new(SqliteOpeningPostingRepository::new(pool.clone())),
+    )
+    .execute(posted_id)
+    .await
+    .expect_err("cancelling must be blocked once the lifecycle is sealed");
+    assert!(matches!(err, AppError::Forbidden(_)), "expected Forbidden, got {err:?}");
 }
