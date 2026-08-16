@@ -9,8 +9,6 @@ use std::sync::Arc;
 
 use application::errors::AppError;
 use application::ports::opening_draft_repository::OpeningDraftRepository;
-use application::ports::opening_migration_repository::OpeningMigrationRepository;
-use application::ports::settings_repository::SettingsRepository;
 use application::use_cases::opening_balance::{
     ClearOpeningDraftUseCase, GetOpeningDraftUseCase, SaveOpeningDraftUseCase,
 };
@@ -49,25 +47,6 @@ fn save_uc(pool: &Arc<sqlx::SqlitePool>) -> SaveOpeningDraftUseCase {
         Arc::new(SqliteSettingsRepository::new(pool.clone())),
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
     )
-}
-
-async fn set_start_mode(pool: &Arc<sqlx::SqlitePool>, mode: &str) {
-    let settings_repo = Arc::new(SqliteSettingsRepository::new(pool.clone()));
-    let mut settings = settings_repo.get().await.unwrap();
-    settings.accounting_start_mode = mode.into();
-    settings_repo.save(&settings).await.unwrap();
-}
-
-async fn insert_migration(pool: &sqlx::SqlitePool, id: &str, status: &str) {
-    sqlx::query(
-        "INSERT INTO opening_balance_migrations (id, cutover_date, status, notes, posted_at, created_at, updated_at)
-         VALUES (?, datetime('now'), ?, NULL, NULL, datetime('now'), datetime('now'))",
-    )
-    .bind(id)
-    .bind(status)
-    .execute(pool)
-    .await
-    .unwrap();
 }
 
 // ---------------------------------------------------------------------------

@@ -12,6 +12,7 @@
 //!   - `list_all` returns the registered partners;
 //!   - the capital ledger has an empty `lines` array but populated
 //!     `opening_entries` (the exact shape that used to drop the partners);
+//!
 //! and that editing a partner's registered capital re-syncs the capital
 //! account's static opening balance so partner.amount_local == account balance.
 

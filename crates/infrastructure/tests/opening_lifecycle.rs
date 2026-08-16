@@ -10,12 +10,10 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use application::errors::AppError;
-use application::ports::account_repository::AccountRepository;
 use application::ports::journal_entry_repository::JournalEntryRepository;
 use application::ports::opening_draft_repository::OpeningDraftRepository;
 use application::ports::opening_migration_repository::OpeningMigrationRepository;
 use application::ports::settings_repository::SettingsRepository;
-use application::use_cases::opening_balance::create::START_MODE_EXISTING;
 use application::use_cases::opening_balance::types::{
     CreateOpeningBalanceMigrationCommand, OpeningLineInput,
 };
@@ -34,7 +32,6 @@ use infrastructure::repositories::{
     SqliteAccountRepository, SqliteJournalEntryRepository, SqliteOpeningDraftRepository,
     SqliteOpeningMigrationRepository, SqliteOpeningPostingRepository, SqliteSettingsRepository,
 };
-use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 

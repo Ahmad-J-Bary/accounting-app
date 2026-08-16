@@ -112,6 +112,7 @@ pub(crate) async fn validate_posting_period(
 ///    `ob_reversal:`, `profit_distribution:`) — the residual reclassification
 ///    posts a `GeneralJournal` while the migration is still Posted, so the gate
 ///    cannot rely on journal type alone.
+///
 /// NEW companies never carry a migration, so the gate is a no-op for them.
 async fn validate_opening_gate(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
