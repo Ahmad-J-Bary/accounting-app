@@ -271,7 +271,7 @@ mod tests {
             AccountPurpose::Inventory
         } else if code == "125" && account_type == AccountType::Assets {
             AccountPurpose::Bank
-        } else if code == "225" && account_type == AccountType::Liabilities {
+        } else if code == "224" && account_type == AccountType::Liabilities {
             AccountPurpose::Loan
         } else if code.starts_with("11") && account_type == AccountType::Assets {
             AccountPurpose::FixedAsset
@@ -308,7 +308,7 @@ mod tests {
         assert_eq!(account_subledger_kind(&account("1101", AccountType::Assets)), Some(SubledgerKind::FixedAssets));
         assert_eq!(account_subledger_kind(&account("1102", AccountType::Assets)), Some(SubledgerKind::FixedAssets));
         assert_eq!(account_subledger_kind(&account("125", AccountType::Assets)), Some(SubledgerKind::Bank));
-        assert_eq!(account_subledger_kind(&account("225", AccountType::Liabilities)), Some(SubledgerKind::Loan));
+        assert_eq!(account_subledger_kind(&account("224", AccountType::Liabilities)), Some(SubledgerKind::Loan));
         assert_eq!(account_subledger_kind(&account("1001", AccountType::Assets)), None, "cash is not a sub-ledger");
         assert_eq!(account_subledger_kind(&account("51", AccountType::Equity)), None);
     }

@@ -98,7 +98,7 @@ impl CreatePartnerUseCase {
             account_type: AccountType::Equity,
             parent_id: Some(capital_parent.id),
             category: AccountCategory::Detail,
-            level: 4,
+            level: 3,
             opening_balance: capital_amount,
             balance: capital_amount,
             debit: Decimal::ZERO,
