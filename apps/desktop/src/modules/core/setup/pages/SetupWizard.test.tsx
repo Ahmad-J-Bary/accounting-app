@@ -51,11 +51,45 @@ describe("SetupWizard company type", () => {
     expect(fresh).toHaveAttribute("data-state", "unchecked");
 
     expect(
-      screen.getByText("شركة موجودة مسبقًا وسيتم إدخال وضعها المالي عند بدء استخدام النظام."),
+      screen.getByText("لديك بيانات مالية سابقة وتريد نقل الوضع الحالي للشركة إلى التطبيق."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("شركة جديدة وسيبدأ تسجيل العمليات المحاسبية من بداية استخدام النظام."),
+      screen.getByText("ستبدأ المحاسبة من بداية نشاط الشركة داخل التطبيق."),
     ).toBeInTheDocument();
+  });
+
+  it("shows a clear selected state on the EXISTING card by default", async () => {
+    vi.mocked(currencyService.isSetupComplete).mockResolvedValue(true);
+    vi.mocked(settingsService.getSettings).mockResolvedValue({
+      company_name: "شركتي",
+      currency: "SAR",
+    } as never);
+
+    renderSetup();
+
+    await screen.findByText("نوع الشركة");
+    const existingCard = screen.getByLabelText("شركة قائمة").closest("label");
+    const newCard = screen.getByLabelText("شركة جديدة").closest("label");
+    expect(existingCard?.className).toContain("ring-emerald-200");
+    expect(newCard?.className).not.toContain("ring-emerald-200");
+  });
+
+  it("moves the clear selected state when شركة جديدة is picked", async () => {
+    const user = userEvent.setup();
+    vi.mocked(currencyService.isSetupComplete).mockResolvedValue(true);
+    vi.mocked(settingsService.getSettings).mockResolvedValue({
+      company_name: "شركتي",
+      currency: "SAR",
+    } as never);
+
+    renderSetup();
+    await screen.findByText("نوع الشركة");
+    await user.click(screen.getByLabelText("شركة جديدة"));
+
+    const existingCard = screen.getByLabelText("شركة قائمة").closest("label");
+    const newCard = screen.getByLabelText("شركة جديدة").closest("label");
+    expect(existingCard?.className).not.toContain("ring-emerald-200");
+    expect(newCard?.className).toContain("ring-emerald-200");
   });
 
   it("persists the chosen company type in the update settings payload", async () => {

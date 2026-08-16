@@ -7,6 +7,7 @@ import {
   companyTypeOf,
   companyCapabilities,
   deriveCompanyInitState,
+  COMPANY_TYPE_NEW,
   type CompanyLifecycleSettingsLike,
   type CompanyCapabilities,
   type CompanyInitState,
@@ -47,16 +48,25 @@ export interface CompanyInitStateResult {
 
 // Derived (never stored) initialization state of the company lifecycle: company
 // type plus opening-migration progress plus first-fiscal-period existence.
+// NEW companies are always ACTIVE, so their lifecycle queries are skipped
+// entirely (no opening requests for companies that never had an opening setup).
 export function useCompanyInitState(): CompanyInitStateResult {
   const settings = useCompanyTypeSettings();
+  const isNewCompany = settings?.accounting_start_mode === COMPANY_TYPE_NEW;
   const { data: migrations, isSuccess: migrationsLoaded } = useQuery({
     queryKey: QUERY_KEYS.openingBalanceMigrations,
     queryFn: () => openingBalanceService.listMigrations(),
+    enabled: !isNewCompany,
   });
   const { data: periods, isSuccess: periodsLoaded } = useQuery({
     queryKey: QUERY_KEYS.fiscalPeriods,
     queryFn: () => fiscalPeriodService.listFiscalPeriods(),
+    enabled: !isNewCompany,
   });
+
+  if (isNewCompany) {
+    return { initState: "ACTIVE" as const, isReady: Boolean(settings) };
+  }
 
   return {
     initState: deriveCompanyInitState({ settings, migrations, periods }),

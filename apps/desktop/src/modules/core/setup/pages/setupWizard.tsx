@@ -180,20 +180,48 @@ export default function SetupWizard() {
             <div className="text-right space-y-2">
               <label className="block text-sm font-medium text-slate-700 mb-1.5">نوع الشركة</label>
               <RadioGroup value={companyType} onValueChange={setCompanyType} className="gap-2">
-                <div className="flex items-start gap-3 border border-slate-200 rounded-lg p-3 bg-white cursor-pointer transition-colors hover:border-slate-300">
+                <label
+                  htmlFor="company-type-existing"
+                  className={`flex items-start gap-3 border rounded-lg p-3 cursor-pointer transition-all ${
+                    companyType === COMPANY_TYPE_EXISTING
+                      ? "border-emerald-400 bg-emerald-50 ring-2 ring-emerald-200"
+                      : "border-slate-200 bg-white hover:border-slate-300"
+                  }`}
+                >
                   <RadioGroupItem value={COMPANY_TYPE_EXISTING} id="company-type-existing" aria-label="شركة قائمة" className="mt-1" />
-                  <label htmlFor="company-type-existing" className="cursor-pointer">
-                    <p className="text-sm font-bold text-slate-800">شركة قائمة</p>
-                    <p className="text-xs text-slate-500 mt-0.5">شركة موجودة مسبقًا وسيتم إدخال وضعها المالي عند بدء استخدام النظام.</p>
-                  </label>
-                </div>
-                <div className="flex items-start gap-3 border border-slate-200 rounded-lg p-3 bg-white cursor-pointer transition-colors hover:border-slate-300">
+                  <span className="flex-1">
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-bold text-slate-800">شركة قائمة</span>
+                      {companyType === COMPANY_TYPE_EXISTING && (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                      )}
+                    </span>
+                    <span className="block text-xs text-slate-500 mt-0.5">
+                      لديك بيانات مالية سابقة وتريد نقل الوضع الحالي للشركة إلى التطبيق.
+                    </span>
+                  </span>
+                </label>
+                <label
+                  htmlFor="company-type-new"
+                  className={`flex items-start gap-3 border rounded-lg p-3 cursor-pointer transition-all ${
+                    companyType === COMPANY_TYPE_NEW
+                      ? "border-emerald-400 bg-emerald-50 ring-2 ring-emerald-200"
+                      : "border-slate-200 bg-white hover:border-slate-300"
+                  }`}
+                >
                   <RadioGroupItem value={COMPANY_TYPE_NEW} id="company-type-new" aria-label="شركة جديدة" className="mt-1" />
-                  <label htmlFor="company-type-new" className="cursor-pointer">
-                    <p className="text-sm font-bold text-slate-800">شركة جديدة</p>
-                    <p className="text-xs text-slate-500 mt-0.5">شركة جديدة وسيبدأ تسجيل العمليات المحاسبية من بداية استخدام النظام.</p>
-                  </label>
-                </div>
+                  <span className="flex-1">
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-bold text-slate-800">شركة جديدة</span>
+                      {companyType === COMPANY_TYPE_NEW && (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                      )}
+                    </span>
+                    <span className="block text-xs text-slate-500 mt-0.5">
+                      ستبدأ المحاسبة من بداية نشاط الشركة داخل التطبيق.
+                    </span>
+                  </span>
+                </label>
               </RadioGroup>
             </div>
             {!currenciesReady && (
