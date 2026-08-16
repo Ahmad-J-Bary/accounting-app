@@ -32,6 +32,7 @@ import { ProfitAllocationCard } from "../components/ProfitAllocationCard";
 import { GuidedTransitionWizard } from "../components/GuidedTransitionWizard";
 import { OpeningDashboard } from "../components/OpeningDashboard";
 import { deriveOpeningSnapshot } from "../lib/derive-opening-snapshot";
+import { selectLatestOpenMigration } from "../lib/migration-labels";
 
 interface ComputedProfit {
   net_profit: string;
@@ -88,10 +89,7 @@ export default function OpeningBalanceMigration() {
 
   // Overview dashboard snapshot over the most recent (non-cancelled) migration.
   const latestMigration = useMemo(
-    () =>
-      [...migrations]
-        .filter((m) => m.status !== "Cancelled")
-        .sort((a, b) => b.cutover_date.localeCompare(a.cutover_date))[0] ?? null,
+    () => selectLatestOpenMigration(migrations),
     [migrations],
   );
   const snapshot = useMemo(

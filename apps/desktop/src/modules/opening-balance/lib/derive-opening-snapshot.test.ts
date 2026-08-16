@@ -110,4 +110,47 @@ describe("deriveOpeningSnapshot", () => {
     expect(ok.totalEquity).toBe(1000);
     expect(ok.status).toBe("Approved");
   });
+
+  it("does not block a classified residual from verifying (residual_applied comes at lock)", () => {
+    const pos = {
+      ...samplePosition(),
+      opening_equity_adjustment: "45",
+      other_equity: "45",
+      classification: "RetainedEarnings",
+      residual_applied: false,
+    };
+    const s = deriveOpeningSnapshot({ status: "Validated", position: pos });
+    expect(s.balanced).toBe(true);
+    expect(s.blockers.length).toBe(0);
+    expect(s.blockers.some((b) => b.includes("تصنيف الرصيد المتبقي"))).toBe(false);
+    // verification-ready, but not lock-ready until the plug is moved into the ledger
+    expect(s.readyToLock).toBe(false);
+  });
+
+  it("blocks an unclassified residual from verifying", () => {
+    const pos = {
+      ...samplePosition(),
+      opening_equity_adjustment: "45",
+      other_equity: "45",
+      classification: null,
+      residual_applied: false,
+    };
+    const s = deriveOpeningSnapshot({ status: "Draft", position: pos });
+    expect(s.balanced).toBe(true);
+    expect(s.blockers.some((b) => b.includes("غير مصنّف"))).toBe(true);
+    expect(s.readyToLock).toBe(false);
+  });
+
+  it("is ready to lock once the classified residual is applied", () => {
+    const pos = {
+      ...samplePosition(),
+      opening_equity_adjustment: "45",
+      other_equity: "45",
+      classification: "PartnerDrawings",
+      residual_applied: true,
+    };
+    const s = deriveOpeningSnapshot({ status: "Approved", position: pos });
+    expect(s.blockers.length).toBe(0);
+    expect(s.readyToLock).toBe(true);
+  });
 });

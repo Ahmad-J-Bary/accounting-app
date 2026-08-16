@@ -19,6 +19,7 @@ interface WizardShellProps {
   isNexting?: boolean;
   isFinal?: boolean;
   nextLabel?: string;
+  canNextHint?: string;
   onNext: () => void;
   onPrev: () => void;
   // Draft persistence (Save → Exit → Continue later):
@@ -44,6 +45,7 @@ export function WizardShell({
   isNexting = false,
   isFinal = false,
   nextLabel,
+  canNextHint,
   onNext,
   onPrev,
   onSave,
@@ -150,10 +152,16 @@ export function WizardShell({
         <span className="text-xs font-semibold text-slate-500 tabular-nums">
           الخطوة {stepIndex + 1} من {steps.length}
         </span>
+        {!canNext && canNextHint && (
+          <span className="basis-full text-2xs font-semibold text-amber-600">
+            {canNextHint}
+          </span>
+        )}
         <Button
           size="sm"
           onClick={onNext}
           disabled={!canNext || isNexting}
+          title={!canNext ? canNextHint : undefined}
           className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
         >
           {isNexting ? "جارٍ التنفيذ..." : (nextLabel || (isFinal ? "إنهاء" : "التالي"))}

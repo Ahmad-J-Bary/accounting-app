@@ -507,7 +507,7 @@ export function GuidedTransitionWizard() {
       residual,
       hints,
     };
-  }, [w.cashBanks, w.derivedAr, w.derivedAp, w.faRows, w.assetsManual, w.loans, w.liabilitiesManual, w.partnerEquity, w.equityManual, w.inventoryTotal, w.reconciliation, w.effectiveInventory, w.materials]);
+  }, [w.cashBanks, w.derivedAr, w.derivedAp, w.faRows, w.assetsManual, w.loans, w.liabilitiesManual, w.partnerEquity, w.equityManual, w.inventoryTotal, w.reconciliation, w.effectiveInventory, w.materials, w.missingAccountHints]);
 
   // ── Progress checklist (§15): every section's done-state, derived from data
   // and the reached step so the user never has to remember what is finished.
@@ -533,7 +533,7 @@ export function GuidedTransitionWizard() {
       { key: "balanced", label: "متوازن", done: w.savedTotals.balanced },
       { key: "ready", label: "جاهز للترحيل", done: w.step >= STEP_REVIEW && w.canNext },
     ];
-  }, [w.derivedAr, w.derivedAp, w.loans, w.liabilitiesManual, w.partnerEquity, w.equityManual, w.cashBanks, w.faRows, w.inventoryPosted, w.inventoryTotal, w.step, w.cutoverDate, w.reconciliation, w.totals, w.canNext]);
+  }, [w.derivedAr, w.derivedAp, w.loans, w.liabilitiesManual, w.partnerEquity, w.equityManual, w.cashBanks, w.faRows, w.inventoryPosted, w.inventoryTotal, w.step, w.cutoverDate, w.reconciliation, w.savedTotals, w.canNext]);
 
   const wizard = (
     <WizardShell
@@ -548,6 +548,7 @@ export function GuidedTransitionWizard() {
       isNexting={w.busy}
       isFinal={w.step === w.steps.length - 1}
       nextLabel={w.nextLabel}
+      canNextHint={w.nextDisabledReason}
       onNext={w.handleNext}
       onPrev={() => w.setStep((s) => Math.max(0, s - 1))}
       onSave={isNew ? undefined : handleSaveDraft}

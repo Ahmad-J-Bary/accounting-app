@@ -47,6 +47,11 @@ import {
   type InventoryEntry,
 } from "@modules/opening-balance/lib/derive-rows";
 import { defaultAccountFor } from "@modules/opening-balance/lib/auto-accounts";
+import {
+  reconciliationReadiness,
+  canValidateOpening,
+  selectLatestOpenMigration,
+} from "@modules/opening-balance/lib/migration-labels";
 
 // Step indices for the ExistingCompany 15-step layout.
 export const STEP_REVIEW = 9;
@@ -161,6 +166,31 @@ export function useOpeningBalanceWizard() {
         } catch {
           setHasDraft(false);
         }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsReady, startMode]);
+
+  // ── Persisted migration + reconciliation (re-entry at any step) ──────────
+  // `migration`/`reconciliation` are session state that the review-save fills,
+  // so re-entering the wizard (tab switch, save-exit-continue, reload) left a
+  // Draft migration with its reconciliation unloaded → STEP_VALIDATE dead-ended
+  // with «احفظ الأرصدة أولاً» while the «التسوية» checklist stayed ✗. Load the
+  // latest non-cancelled migration + its reconciliation on mount instead.
+  const migrationLoaded = useRef(false);
+  useEffect(() => {
+    if (!settingsReady || startMode !== START_MODE_EXISTING || migrationLoaded.current) return;
+    migrationLoaded.current = true;
+    openingBalanceService
+      .listMigrations()
+      .then((list) => {
+        const latest = selectLatestOpenMigration(list);
+        if (!latest) return;
+        setMigration(latest);
+        return openingBalanceService
+          .getReconciliation(latest.id)
+          .then((recon) => setReconciliation(recon))
+          .catch(() => {});
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -718,7 +748,10 @@ export function useOpeningBalanceWizard() {
       case STEP_REVIEW:
         return savedTotals.balanced && totals.total > 0;
       case STEP_VALIDATE:
-        return !!migration && migration.status === "Validated";
+        // The «تأكيد التحقق» action itself produces the Validated status, so the
+        // gate is "editable + equations/reconciliation ready", not "already
+        // validated" (otherwise the step dead-ends on a Draft migration).
+        return canValidateOpening(migration, reconciliation);
       case STEP_POST:
         return !!migration && migration.status === "Validated";
       case STEP_LOCK:
@@ -728,7 +761,7 @@ export function useOpeningBalanceWizard() {
       default:
         return true;
     }
-  }, [step, startMode, cutoverDate, totals, savedTotals, migration, firstPeriodStart, firstPeriodEnd]);
+  }, [step, startMode, cutoverDate, totals, savedTotals, migration, reconciliation, firstPeriodStart, firstPeriodEnd]);
 
   // Back-navigation stays open until the migration is sealed: Draft/Validated/
   // Approved may all be edited again by going back to the review step. Only a
@@ -752,6 +785,25 @@ export function useOpeningBalanceWizard() {
       default: return undefined;
     }
   }, [step, startMode]);
+
+  // Human-readable reason when the next button is disabled, so the «تأكيد
+  // التحقق» step never looks silently stuck (an unclassified residual, an
+  // unbalanced equation, or unreconciled sub-ledgers all show here).
+  const nextDisabledReason = useMemo(() => {
+    if (startMode === START_MODE_NEW) return undefined;
+    if (step !== STEP_VALIDATE) return undefined;
+    if (!migration) return "احفظ الأرصدة وفحص التسوية أولاً (خطوة المراجعة)";
+    if (["Posted", "Locked", "Cancelled"].includes(migration.status)) return "التحويل مؤشَّر أو مقفل — لا يمكن التحقق من جديد";
+    const readiness = reconciliation ? reconciliationReadiness(reconciliation) : null;
+    if (readiness && !readiness.readyToPost) {
+      // Precise blockers (dr≠cr / which sub-ledgers mismatch), excluding the
+      // 53-clearance message which belongs to the lock step only.
+      const reasons = readiness.blockers.filter((b) => !b.includes("لم يُصفَّر بعد"));
+      if (reasons.length) return reasons.join(" · ");
+      return "المعادلة غير متوازنة أو توجد واجهات فرعية غير مطابقة";
+    }
+    return undefined;
+  }, [startMode, step, migration, reconciliation]);
 
   const runStep = async () => {
     try {
@@ -817,6 +869,12 @@ export function useOpeningBalanceWizard() {
 
       if (step === STEP_VALIDATE) {
         setBusy(true);
+        // Idempotent when the user re-enters the step after already validating
+        // (back-navigation path): the validate API only accepts a Draft.
+        if (migration.status === "Validated") {
+          setBusy(false);
+          return true;
+        }
         const updated = await openingBalanceService.validateMigration(migration.id, "system");
         setMigration(updated);
         invalidateMigrations();
@@ -924,6 +982,7 @@ export function useOpeningBalanceWizard() {
     canPrev,
     committed,
     nextLabel,
+    nextDisabledReason,
     handleNext,
     steps,
     hasDraft,

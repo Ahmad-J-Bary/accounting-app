@@ -103,13 +103,24 @@ export function deriveOpeningSnapshot(input: {
   for (const row of position.unreconciled_items) {
     blockers.push(`رقم مطابقة غير محلول: ${row.label}`);
   }
-  const residualPending =
-    !!position.classification &&
-    !position.residual_applied &&
-    toNum(position.opening_equity_adjustment) > 0;
-  if (residualPending) blockers.push("تصنيف الرصيد المتبقي لم يُطبَّق على الحساب بعد");
+  // Verification gate: a residual that was explicitly classified is valid even
+  // before the plug is moved into the ledger. Only an unclassified residual
+  // (no accountant decision while an amount is pending) blocks verification.
+  const residualAmount = toNum(position.opening_equity_adjustment);
+  const residualUnclassified = residualAmount > 0 && !position.classification;
+  if (residualUnclassified) {
+    blockers.push("الرصيد المتبقي (53) غير مصنّف بعد");
+  }
 
-  const readyToLock = hasData && position.is_balanced && position.unreconciled_items.length === 0 && !residualPending;
+  // Lock gate: the classified residual must additionally have been moved into
+  // the ledger (residual_applied), so the 53 clearance is real.
+  const residualPending = !!position.classification && !position.residual_applied && residualAmount > 0;
+  const readyToLock =
+    hasData &&
+    position.is_balanced &&
+    position.unreconciled_items.length === 0 &&
+    !residualUnclassified &&
+    !residualPending;
 
   return {
     status,

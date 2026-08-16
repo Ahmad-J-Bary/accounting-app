@@ -1,5 +1,23 @@
 import type { AccountDto } from "@erp/shared-types";
 
+export interface MigrationLite {
+  id: string;
+  status: string;
+  cutover_date: string;
+}
+
+/** Most recent non-cancelled migration — the "current" opening transition.
+ * Shared by the overview dashboard and the wizard so both always read the
+ * same persisted truth. */
+export function selectLatestOpenMigration<T extends MigrationLite>(
+  migrations: readonly T[] | null | undefined,
+): T | null {
+  if (!migrations || migrations.length === 0) return null;
+  const open = migrations.filter((m) => m.status !== "Cancelled");
+  if (open.length === 0) return null;
+  return [...open].sort((a, b) => b.cutover_date.localeCompare(a.cutover_date))[0];
+}
+
 export interface AccountLine {
   key: string;
   account_id: string;
@@ -73,6 +91,21 @@ export function reconciliationReadiness(recon: ReadinessInput): Readiness {
     !controlZero && "رصيد الافتتاح (53) لم يُصفَّر بعد",
   ].filter(Boolean) as string[];
   return { controlZero, readyToPost, readyToLock, blockers };
+}
+
+/** Verify gate for the wizard's «تأكيد التحقق» step: the migration must be
+ * editable (Draft/Validated/Approved) and pass the post-readiness equations
+ * (debit = credit and every sub-ledger reconciled). An unclassified residual is
+ * rejected structurally (no plug line → debit ≠ credit) by the backend; the
+ * frontend mirrors that gate here. */
+export function canValidateOpening(
+  migration: { status: string } | null,
+  reconciliation: ReadinessInput | null,
+): boolean {
+  if (!migration) return false;
+  if (["Posted", "Locked", "Cancelled"].includes(migration.status)) return false;
+  const readiness = reconciliation ? reconciliationReadiness(reconciliation) : null;
+  return readiness?.readyToPost ?? false;
 }
 
 export function readinessLabel(r: Readiness): string {
