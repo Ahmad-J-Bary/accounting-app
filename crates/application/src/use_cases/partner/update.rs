@@ -3,6 +3,7 @@ use rust_decimal::Decimal;
 use chrono::Utc;
 use domain::accounting::partner::ProfitSharingType;
 use domain::shared::ids::PartnerId;
+use domain::settings::START_MODE_EXISTING;
 
 use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::partner_repository::PartnerRepository;
@@ -38,6 +39,7 @@ impl UpdatePartnerUseCase {
     pub async fn execute(
         &self,
         req: UpdatePartnerRequest,
+        accounting_start_mode: String,
     ) -> Result<(), AppError> {
         let partner_id = req.id.parse::<PartnerId>().map_err(|_| AppError::NotFound("معرف الشريك غير صالح".into()))?;
         let mut partner = self.repo.find_by_id(&partner_id).await?
@@ -75,26 +77,40 @@ impl UpdatePartnerUseCase {
             req.manual_ratio,
         ).map_err(AppError::Domain)?;
 
-        // Resolve renamed linked accounts BEFORE the transaction so reads are
-        // part of the decision; the write is then atomic in one tx.
+        // Resolve renamed linked accounts + (existing-company) capital amount
+        // re-sync BEFORE the transaction so reads are part of the decision; the
+        // write is then atomic in one tx.
         let mut capital_replacement = None;
         let mut drawings_replacement = None;
-        if old_name != req.name {
+        let sync_capital_amount = accounting_start_mode == START_MODE_EXISTING;
+        if old_name != req.name || sync_capital_amount {
             if let Some(cap_id) = partner.linked_account_id {
                 if let Some(mut acc) = self.account_repo.find_by_id(&cap_id).await? {
-                    acc.name_ar = req.name.clone();
-                    acc.name_en = req.name.clone();
+                    if old_name != req.name {
+                        acc.name_ar = req.name.clone();
+                        acc.name_en = req.name.clone();
+                    }
+                    // Existing-company registered capital lives as the capital
+                    // account's static opening balance (create.rs books it with
+                    // "no journal"); re-sync it so partner.amount_local always
+                    // equals capital.opening_balance (Sec 4 / Sec 13).
+                    if sync_capital_amount {
+                        acc.opening_balance = partner.amount_local;
+                        acc.balance = partner.amount_local + acc.debit - acc.credit;
+                    }
                     acc.updated_at = Utc::now();
                     capital_replacement = Some(acc);
                 }
             }
-            if let Some(draw_id) = partner.drawings_account_id {
-                if let Some(mut acc) = self.account_repo.find_by_id(&draw_id).await? {
-                    let draw_account_name = format!("مسحوبات {}", req.name);
-                    acc.name_ar = draw_account_name.clone();
-                    acc.name_en = draw_account_name;
-                    acc.updated_at = Utc::now();
-                    drawings_replacement = Some(acc);
+            if old_name != req.name {
+                if let Some(draw_id) = partner.drawings_account_id {
+                    if let Some(mut acc) = self.account_repo.find_by_id(&draw_id).await? {
+                        let draw_account_name = format!("مسحوبات {}", req.name);
+                        acc.name_ar = draw_account_name.clone();
+                        acc.name_en = draw_account_name;
+                        acc.updated_at = Utc::now();
+                        drawings_replacement = Some(acc);
+                    }
                 }
             }
         }

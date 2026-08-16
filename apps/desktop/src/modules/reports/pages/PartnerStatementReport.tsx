@@ -7,7 +7,7 @@ import { computePartnerStatement } from "@modules/reports/lib/partnerStatement";
 import { usePartnerProfitShareReport } from "@modules/reports/hooks/usePartnerProfitShareReport";
 import { PartnerStatementView } from "@modules/reports/components/PartnerStatementView";
 import { ReportFilterBar } from "@widgets/reports/ReportFilterBar";
-import { ReportLoadingSkeleton } from "@widgets/reports";
+import { ReportLoadingSkeleton, ReportErrorState } from "@widgets/reports";
 import { useReportFilters } from "@shared/hooks/useReportFilters";
 
 export default function PartnerStatementReport() {
@@ -21,7 +21,7 @@ export default function PartnerStatementReport() {
     new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
     new Date().toISOString().split("T")[0]
   );
-  const { loading, reportData } = usePartnerProfitShareReport(filters);
+  const { loading, reportData, error, loadReportData } = usePartnerProfitShareReport(filters);
 
   const fromTs = useMemo(() => new Date(`${filters.from_date}T00:00:00`).getTime(), [filters.from_date]);
 
@@ -83,7 +83,9 @@ export default function PartnerStatementReport() {
       tableContent={
         loading ? (
           <ReportLoadingSkeleton />
-        ) : !loading && computed.rows.length === 0 ? (
+        ) : error ? (
+          <ReportErrorState onRetry={loadReportData} />
+        ) : reportData.partners.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <Users className="mb-3 h-12 w-12" />
             <p className="text-sm font-bold">لا يوجد شركاء لعرض كشف الحساب</p>

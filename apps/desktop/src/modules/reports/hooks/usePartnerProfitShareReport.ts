@@ -176,6 +176,7 @@ export function usePartnerProfitShareReport(filters: IncomeStatementFilters): Re
     refreshing: isRefetching,
     lastLoadedAt,
     reportData: resolvedData,
+    error: isError,
     loadReportData: async () => {
       await Promise.all([
         baseRefetch(),

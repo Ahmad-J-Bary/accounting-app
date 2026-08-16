@@ -281,6 +281,10 @@ async fn upsert_account_tx<'a>(
          ON CONFLICT(id) DO UPDATE SET
             name_ar = excluded.name_ar,
             name_en = excluded.name_en,
+            opening_balance = excluded.opening_balance,
+            balance = excluded.balance,
+            debit = excluded.debit,
+            credit = excluded.credit,
             updated_at = excluded.updated_at"
     )
     .bind(account.id.0.to_string())

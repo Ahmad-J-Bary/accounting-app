@@ -8,7 +8,7 @@ import { computePartnerProfitShare } from "@modules/reports/lib/partnerProfitSha
 import { usePartnerProfitShareReport } from "@modules/reports/hooks/usePartnerProfitShareReport";
 import { PartnerProfitShareView } from "@modules/reports/components/PartnerProfitShareView";
 import { ReportFilterBar } from "@widgets/reports/ReportFilterBar";
-import { ReportLoadingSkeleton } from "@widgets/reports";
+import { ReportLoadingSkeleton, ReportErrorState } from "@widgets/reports";
 import { useReportFilters } from "@shared/hooks/useReportFilters";
 
 export default function PartnerProfitShareReport() {
@@ -18,7 +18,7 @@ export default function PartnerProfitShareReport() {
     new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
     new Date().toISOString().split("T")[0]
   );
-  const { loading, reportData } = usePartnerProfitShareReport(filters);
+  const { loading, reportData, error, loadReportData } = usePartnerProfitShareReport(filters);
 
   const computed = useMemo(() => {
     return computePartnerProfitShare(
@@ -66,7 +66,9 @@ export default function PartnerProfitShareReport() {
       tableContent={
         loading ? (
           <ReportLoadingSkeleton />
-        ) : !loading && computed.rows.length === 0 ? (
+        ) : error ? (
+          <ReportErrorState onRetry={loadReportData} />
+        ) : reportData.partners.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <Users className="mb-3 h-12 w-12" />
             <p className="text-sm font-bold">لا يوجد شركاء نشطون لعرض التقرير</p>

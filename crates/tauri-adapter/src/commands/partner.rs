@@ -159,6 +159,11 @@ pub async fn update_partner(
     let amt = Decimal::from_str(&amount).map_err(|e| e.to_string())?;
     let ratio = manual_ratio.and_then(|r| Decimal::from_str(&r).ok());
 
+    // Company type is read from persisted settings (never trusted from the
+    // client): for an existing company an amount edit re-syncs the capital
+    // account's static opening balance to the registered amount.
+    let settings = state.settings_repo.get().await.map_err(|e| e.to_string())?;
+
     UpdatePartnerUseCase::new(
         state.partner_repo.clone(),
         state.account_repo.clone(),
@@ -172,5 +177,5 @@ pub async fn update_partner(
         is_amount_in_original,
         sharing_type,
         manual_ratio: ratio,
-    }).await.map_err(|e| e.to_string())
+    }, settings.accounting_start_mode).await.map_err(|e| e.to_string())
 }

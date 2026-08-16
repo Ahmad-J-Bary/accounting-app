@@ -46,11 +46,36 @@ export function computePartnerProfitShare(
     ? partners.filter((p) => {
         if (!p.linked_account_id) return true;
         const ledger = partnerLedgers[p.linked_account_id];
-        if (!ledger || !ledger.lines) return false;
-        return ledger.lines.some((line) => {
+        // The partner list is the authority; a partner whose capital ledger is
+        // absent (e.g. a transient fetch failure) must never be hidden.
+        if (!ledger) return true;
+        const lines = ledger.lines ?? [];
+        const lineBeforeTo = lines.some((line) => {
           const lineTs = new Date(line.date).getTime();
           return Number.isFinite(lineTs) && lineTs <= toTs;
         });
+        if (lineBeforeTo) return true;
+        // Existing-company opening records partner capital as the capital
+        // account's static opening balance; the migration's opening journal is
+        // surfaced by the ledger as opening entries, NOT lines, so those
+        // partners have an empty `lines` array and must not be dropped as
+        // "unexisted" (Sec 4 / Sec 13).
+        const openings = (ledger.opening_entries ?? []).length
+          ? (ledger.opening_entries ?? [])
+          : ledger.opening_entry
+            ? [ledger.opening_entry]
+            : [];
+        const openingBeforeTo = openings.some((entry) => {
+          const entryTs = new Date(entry.date).getTime();
+          return Number.isFinite(entryTs) && entryTs <= toTs;
+        });
+        if (openingBeforeTo) return true;
+        // No dated evidence: the capital lives purely as the account's static
+        // opening balance and the migration posted no journal line for it, or
+        // the partner was registered without ledger activity. The partner
+        // record is authoritative — never hide a real partner for lacking
+        // journal lines.
+        return lines.length === 0 && openings.length === 0;
       })
     : partners;
 
