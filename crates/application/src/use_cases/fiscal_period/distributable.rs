@@ -8,7 +8,9 @@ use domain::accounting::JournalEntryStatus;
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
-use crate::use_cases::fiscal_period::types::DistributableProfitDto;
+use crate::use_cases::fiscal_period::types::{
+    AUTH_ALLOCATION_SOURCE_PREFIX, DistributableProfitDto,
+};
 
 /// Computes the distributable profit for a window (Sec 18 / Sec 22):
 ///
@@ -74,7 +76,7 @@ impl GetDistributableProfitUseCase {
         let mut allocated = Decimal::ZERO;
         for entry in &entries {
             if let Some(source_id) = &entry.source_id {
-                if source_id.starts_with("profit_distribution:") {
+                if source_id.starts_with(AUTH_ALLOCATION_SOURCE_PREFIX) {
                     allocated += entry.total_base_debit();
                 }
             }

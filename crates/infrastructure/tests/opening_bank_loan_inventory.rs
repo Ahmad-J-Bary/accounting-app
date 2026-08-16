@@ -382,7 +382,10 @@ async fn exact_465_scenario_full_lifecycle_reconciles_posts_and_locks() {
 
     // Reclassify the residual plug off the Opening Balance Equity account 53
     // into retained earnings (accountant's explicit choice), then lock.
-    SetResidualClassificationUseCase::new(Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())))
+    SetResidualClassificationUseCase::new(
+        Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
+        Arc::new(SqliteAccountRepository::new(pool.clone())),
+    )
         .execute(SetResidualClassificationCommand {
             migration_id: id.clone(),
             classification: "RetainedEarnings".into(),

@@ -12,6 +12,7 @@ use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::partner_repository::PartnerRepository;
+use crate::use_cases::fiscal_period::types::AUTH_ALLOCATION_SOURCE_PREFIX;
 use crate::use_cases::opening_balance::types::{
     AllocateNetProfitCommand, NetProfitAllocationDto, PartnerAllocationShare,
 };
@@ -151,7 +152,7 @@ impl AllocateNetProfitUseCase {
         // the same migration must resolve to the already-posted distribution
         // instead of creating a second journal (Sec 8 / Sec 10 / Sec 45). The
         // DB-level UNIQUE(source_type, source_id) backs this up.
-        let source_id = format!("profit_distribution:{}", migration.id);
+        let source_id = format!("{AUTH_ALLOCATION_SOURCE_PREFIX}{}", migration.id);
         if let Some(existing) = self.journal_repo.find_by_source_id(&source_id).await? {
             return self.dto_from_existing(&existing, net_profit).await;
         }

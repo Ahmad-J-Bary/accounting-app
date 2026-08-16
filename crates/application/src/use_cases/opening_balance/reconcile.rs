@@ -12,12 +12,13 @@ use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::opening_item_repository::OpeningItemRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
+use crate::use_cases::opening_balance::obe::{
+    obe_control_net, opening_source_id, OPENING_EQUITY_ACCOUNT_CODE,
+};
 use crate::use_cases::opening_balance::types::{
     KIND_AR, KIND_AP, KIND_FIXED_ASSET, KIND_INVENTORY, KIND_BANK, KIND_LOAN, OpeningItemInput,
     OpeningReconciliationDto, ReconciliationRow,
 };
-
-const OPENING_EQUITY_ACCOUNT_CODE: &str = "53";
 
 /// The six sub-ledgers supported by the opening-balance reconciliation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -203,34 +204,21 @@ impl GetOpeningReconciliationUseCase {
         // posting journal *and* any residual reclassification journal. The
         // residual journal's OBE leg cancels the posting OBE leg, so a
         // reclassified migration nets to zero here.
-        let mut obe_net = Decimal::ZERO;
-        let (mut debit_total, mut credit_total) = (Decimal::ZERO, Decimal::ZERO);
-        let mut found_posting = false;
-        for source_id in [
-            format!("opening_balance:{migration_id}"),
-            format!("residual_classification:{migration_id}"),
-        ] {
-            if let Some(entry) = self.journal_repo.find_by_source_id(&source_id).await? {
-                if !found_posting {
-                    debit_total = entry.lines.iter().map(|l| l.debit.base_amount).sum();
-                    credit_total = entry.lines.iter().map(|l| l.credit.base_amount).sum();
-                    found_posting = true;
-                }
-                if let Some(obe_account_id) = obe_account_id {
-                    for line in &entry.lines {
-                        if line.account_id == obe_account_id {
-                            obe_net += line.debit.base_amount - line.credit.base_amount;
-                        }
-                    }
-                }
-            }
-        }
-        let (debit_total, credit_total, opening_control_balance) = if found_posting {
-            (debit_total, credit_total, obe_net)
-        } else {
-            let (d, c) = drift_totals(&migration, &self.account_repo).await?;
-            (d, c, d - c)
-        };
+        let (debit_total, credit_total, opening_control_balance) =
+            if let Some(entry) = self
+                .journal_repo
+                .find_by_source_id(&opening_source_id(&migration_id))
+                .await?
+            {
+                (
+                    entry.lines.iter().map(|l| l.debit.base_amount).sum(),
+                    entry.lines.iter().map(|l| l.credit.base_amount).sum(),
+                    obe_control_net(&self.journal_repo, obe_account_id, &migration_id).await?,
+                )
+            } else {
+                let (d, c) = drift_totals(&migration, &self.account_repo).await?;
+                (d, c, d - c)
+            };
 
         Ok(OpeningReconciliationDto {
             rows,

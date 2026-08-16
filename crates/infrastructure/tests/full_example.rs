@@ -221,7 +221,7 @@ async fn full_example_explicit_classification_balances_and_never_forces_profit()
 
     // Record an explicit classification on the migration and verify it persists
     // as a real residual class — RetainedEarnings, never "NetProfit".
-    SetResidualClassificationUseCase::new(migration_repo.clone())
+    SetResidualClassificationUseCase::new(migration_repo.clone(), account_repo.clone())
         .execute(SetResidualClassificationCommand {
             migration_id: migration.id.clone(),
             classification: "RetainedEarnings".into(),

@@ -45,6 +45,7 @@ export interface OpeningPositionControlDto {
 
   classification: string | null;
   residual_applied: boolean;
+  obe_pending_reclassification: boolean;
   difference_message: string | null;
 
   unreconciled_items: UnreconciledRow[];

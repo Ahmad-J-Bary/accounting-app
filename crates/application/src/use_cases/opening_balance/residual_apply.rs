@@ -8,8 +8,9 @@ use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::opening_posting_repository::OpeningPostingRepository;
-
-const OPENING_EQUITY_ACCOUNT_CODE: &str = "53";
+use crate::use_cases::opening_balance::obe::{
+    obe_control_net, residual_source_id, OPENING_EQUITY_ACCOUNT_CODE,
+};
 
 /// Moves the residual equity (the Opening Balance Control / OBE 53 balance) of
 /// a posted opening-balance migration into the accountant-chosen classification
@@ -78,8 +79,23 @@ impl ApplyResidualToLedgerUseCase {
             .map(|a| a.id)
             .ok_or_else(|| AppError::NotFound("حساب الرصيد الافتتاحي (53) غير موجود".into()))?;
 
-        let _ = self.account_repo.find_by_id(&residual_account_id).await?
+        let target = self.account_repo.find_by_id(&residual_account_id).await?
             .ok_or_else(|| AppError::NotFound("حساب التصنيف غير موجود".into()))?;
+
+        // The residual is an equity clearing item; it may only be moved into an
+        // equity-family passive purpose (Retained Earnings / Opening Equity /
+        // General / Partner Current). Routing it to an operating, sub-ledger or
+        // registered-capital account is rejected (profit must never silently
+        // change capital). Defense-in-depth: even if the classification was
+        // recorded before this guard existed, the apply step refuses it.
+        if target.account_type != domain::accounting::account::AccountType::Equity
+            || !target.purpose.is_residual_classification_target()
+        {
+            return Err(AppError::Invalid(
+                "حساب تصنيف الرصيد المتبقي يجب أن يكون من حسابات حقوق الملكية (أرباح مبقاة / رصيد افتتاحي / عام / جاري شريك) وليس من الأصول أو المصاريف أو رأس المال المسجل"
+                    .into(),
+            ));
+        }
 
         let base_currency = Currency::new("SAR", "SAR", "ريال", "ر.س", 2, false);
         let amount = MonetaryAmount::from_base(residual_amount.abs(), base_currency.clone());
@@ -116,7 +132,7 @@ impl ApplyResidualToLedgerUseCase {
             lines,
             migration.cutover_date,
             "ترحيل تصنيف الرصيد المتبقي".to_string(),
-            Some(format!("residual_classification:{migration_id}")),
+            Some(residual_source_id(&migration_id)),
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
         entry.post().map_err(|e| AppError::Invalid(e.to_string()))?;
@@ -137,24 +153,6 @@ impl ApplyResidualToLedgerUseCase {
         let obe_account_id = self
             .account_repo.find_by_code(OPENING_EQUITY_ACCOUNT_CODE).await?
             .map(|a| a.id);
-
-        let Some(obe_account_id) = obe_account_id else {
-            return Ok(Decimal::ZERO);
-        };
-
-        let mut balance = Decimal::ZERO;
-        for source_id in [
-            format!("opening_balance:{migration_id}"),
-            format!("residual_classification:{migration_id}"),
-        ] {
-            if let Some(entry) = self.journal_repo.find_by_source_id(&source_id).await? {
-                for line in &entry.lines {
-                    if line.account_id == obe_account_id {
-                        balance += line.debit.base_amount - line.credit.base_amount;
-                    }
-                }
-            }
-        }
-        Ok(balance)
+        obe_control_net(&self.journal_repo, obe_account_id, migration_id).await
     }
 }

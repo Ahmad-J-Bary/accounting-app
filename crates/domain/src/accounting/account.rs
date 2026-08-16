@@ -71,6 +71,36 @@ impl AccountPurpose {
             AccountPurpose::OpeningBalanceEquity => "opening_balance_equity",
         }
     }
+
+    /// Whether an account carrying this purpose is an acceptable target for
+    /// reclassifying the residual Opening Balance Equity (53). The residual is
+    /// an equity clearing item, so it may only land in an equity-family/passive
+    /// purpose — never in an operating account or in registered partner capital
+    /// (profit must never silently change capital). `PartnerCapital` is
+    /// deliberately excluded: contributing the residual as capital is an
+    /// explicit separate contribution event, not a reclassification.
+    pub fn is_residual_classification_target(self) -> bool {
+        matches!(
+            self,
+            AccountPurpose::RetainedEarnings
+                | AccountPurpose::OpeningBalanceEquity
+                | AccountPurpose::General
+                | AccountPurpose::PartnerCurrent
+        )
+    }
+
+    /// Whether the account is part of the equity family (used for balance-sheet
+    /// placement and classification guards).
+    pub fn is_equity(self) -> bool {
+        matches!(
+            self,
+            AccountPurpose::PartnerCapital
+                | AccountPurpose::PartnerDrawings
+                | AccountPurpose::PartnerCurrent
+                | AccountPurpose::RetainedEarnings
+                | AccountPurpose::OpeningBalanceEquity
+        )
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -332,12 +362,59 @@ mod tests {
         )
     }
 
-    #[test]
+#[test]
     fn account_creation_with_valid_data_succeeds() {
         let account = create_test_account("1001", "النقدية", "Cash", AccountType::Assets).unwrap();
         assert_eq!(account.code, "1001");
         assert_eq!(account.name_ar, "النقدية");
         assert_eq!(account.balance, Decimal::ZERO);
+    }
+
+    #[test]
+    fn residual_classification_targets_are_equity_family_passive() {
+        // Allowed targets for reclassifying the Opening Balance Equity (53).
+        assert!(AccountPurpose::RetainedEarnings.is_residual_classification_target());
+        assert!(AccountPurpose::OpeningBalanceEquity.is_residual_classification_target());
+        assert!(AccountPurpose::General.is_residual_classification_target());
+        assert!(AccountPurpose::PartnerCurrent.is_residual_classification_target());
+        // Registered capital is NEVER a residual reclassification target.
+        assert!(!AccountPurpose::PartnerCapital.is_residual_classification_target());
+        assert!(!AccountPurpose::PartnerDrawings.is_residual_classification_target());
+        // Operating / sub-ledger purposes are rejected too.
+        for p in [
+            AccountPurpose::Receivable,
+            AccountPurpose::Payable,
+            AccountPurpose::Inventory,
+            AccountPurpose::FixedAsset,
+            AccountPurpose::Bank,
+            AccountPurpose::Loan,
+        ] {
+            assert!(!p.is_residual_classification_target(), "{p:?} must be rejected");
+        }
+    }
+
+    #[test]
+    fn equity_family_purpose_detection() {
+        for p in [
+            AccountPurpose::PartnerCapital,
+            AccountPurpose::PartnerDrawings,
+            AccountPurpose::PartnerCurrent,
+            AccountPurpose::RetainedEarnings,
+            AccountPurpose::OpeningBalanceEquity,
+        ] {
+            assert!(p.is_equity(), "{p:?} must be equity");
+        }
+        for p in [
+            AccountPurpose::General,
+            AccountPurpose::Receivable,
+            AccountPurpose::Payable,
+            AccountPurpose::Inventory,
+            AccountPurpose::FixedAsset,
+            AccountPurpose::Bank,
+            AccountPurpose::Loan,
+        ] {
+            assert!(!p.is_equity(), "{p:?} must not be equity");
+        }
     }
 
     #[test]

@@ -85,6 +85,12 @@ pub struct OpeningPositionControlDto {
     pub classification: Option<String>,
     /// True when the residual has been moved into the ledger.
     pub residual_applied: bool,
+    /// True while the migration's own opening lines still carry an Opening
+    /// Balance Equity (53) balance that has not yet been reclassified. A
+    /// balanced classified migration may still hold 45 on 53 until lock; this
+    /// surfaces that the transition is not yet complete (post-lock
+    /// presentation must show 53 zeroed).
+    pub obe_pending_reclassification: bool,
     /// Empty when balanced; otherwise a human-readable pointer to the existing
     /// residual workflow so the difference is never silently hidden.
     pub difference_message: Option<String>,
@@ -325,6 +331,8 @@ pub fn compute_dto(
         opening_historical_result,
         classification: classification_label(migration.residual_classification),
         residual_applied: migration.residual_applied_at.is_some(),
+        obe_pending_reclassification: opening_equity != Decimal::ZERO
+            && migration.residual_applied_at.is_none(),
         difference_message,
         unreconciled_items: vec![],
         validation_errors: vec![],

@@ -30,6 +30,7 @@ function samplePosition(): OpeningPositionControlDto {
     opening_historical_result: "0",
     classification: null,
     residual_applied: false,
+    obe_pending_reclassification: false,
     difference_message: null,
     unreconciled_items: [],
     validation_errors: [],

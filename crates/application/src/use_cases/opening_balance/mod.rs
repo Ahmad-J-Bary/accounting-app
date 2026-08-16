@@ -15,11 +15,13 @@ pub mod position;
 pub mod guard;
 pub mod draft;
 pub mod update;
+pub mod obe;
 
 pub use allocate::AllocateNetProfitUseCase;
 pub use guard::{assert_opening_workflow_writable, opening_lifecycle_closed, opening_window_active};
 pub use net_profit::ComputeNetProfitUseCase;
 pub use cancel::CancelOpeningBalanceUseCase;
+pub use obe::{obe_control_net, opening_source_id, residual_source_id, OPENING_EQUITY_ACCOUNT_CODE};
 pub use classify::SetResidualClassificationUseCase;
 pub use create::CreateOpeningBalanceUseCase;
 pub use draft::{ClearOpeningDraftUseCase, GetOpeningDraftUseCase, SaveOpeningDraftUseCase};

@@ -153,7 +153,10 @@ pub async fn set_opening_balance_residual_classification(
     state: State<'_, AppState>,
     request: SetResidualClassificationCommand,
 ) -> Result<(), String> {
-    SetResidualClassificationUseCase::new(state.opening_migration_repo.clone())
+    SetResidualClassificationUseCase::new(
+        state.opening_migration_repo.clone(),
+        state.account_repo.clone(),
+    )
         .execute(request)
         .await
         .map_err(|e| e.to_string())

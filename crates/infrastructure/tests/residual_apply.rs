@@ -162,7 +162,7 @@ let mut migration = OpeningBalanceMigration::new(
     posting_repo.post(&migration, &entry).await.unwrap();
 
     // Classify residual as retained earnings targeting account 52.
-    SetResidualClassificationUseCase::new(migration_repo.clone())
+    SetResidualClassificationUseCase::new(migration_repo.clone(), account_repo.clone())
         .execute(SetResidualClassificationCommand {
             migration_id: migration_id.clone(),
             classification: "RetainedEarnings".into(),
