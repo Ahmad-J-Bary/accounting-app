@@ -55,6 +55,10 @@ export interface CreateOpeningBalanceMigrationRequest {
   source_reference?: string | null;
 }
 
+export interface UpdateOpeningMigrationLinesRequest extends CreateOpeningBalanceMigrationRequest {
+  migration_id: string;
+}
+
 export interface SetResidualClassificationRequest {
   migration_id: string;
   classification: string;
@@ -95,10 +99,10 @@ export interface ComputeNetProfitRequest {
 }
 
 export interface OpeningItemInput {
-  kind: string; // KIND_AR | KIND_AP | KIND_INVENTORY | KIND_FIXED_ASSET
-  entity_id: string; // real customer/supplier/material/asset id
+  kind: string; // KIND_AR | KIND_AP | KIND_INVENTORY | KIND_FIXED_ASSET | KIND_BANK | KIND_LOAN
+  entity_id: string; // real customer/supplier/material/asset id or ledger AccountId for bank/loan
   reference?: string | null;
-  amount: string; // AR/AP net balance, inventory total cost, FA net book value
+  amount: string; // AR/AP net balance, inventory total cost, FA net book value, bank/loan balance
   qty: string;
 }
 
@@ -130,6 +134,9 @@ export interface OpeningReconciliationDto {
 export const openingBalanceService = {
   async createMigration(request: CreateOpeningBalanceMigrationRequest): Promise<OpeningBalanceMigrationDto> {
     return await invoke<OpeningBalanceMigrationDto>('create_opening_balance_migration', { request });
+  },
+  async updateMigrationLines(request: UpdateOpeningMigrationLinesRequest): Promise<OpeningBalanceMigrationDto> {
+    return await invoke<OpeningBalanceMigrationDto>('update_opening_balance_migration_lines', { request });
   },
   async listMigrations(): Promise<OpeningBalanceMigrationDto[]> {
     return await invoke<OpeningBalanceMigrationDto[]>('list_opening_balance_migrations', {});

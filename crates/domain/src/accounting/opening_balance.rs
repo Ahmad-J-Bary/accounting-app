@@ -158,6 +158,37 @@ impl OpeningBalanceMigration {
         self.updated_at = Utc::now();
     }
 
+    /// Replaces the migration's opening lines while the migration is still
+    /// editable (Draft / Validated). Editing lines invalidates any prior
+    /// validation: the status is reset to `Draft` and the audit trail cleared,
+    /// so the wizard can go back, fix a line and re-run the lifecycle.
+    pub fn replace_lines(&mut self, lines: Vec<OpeningBalanceLine>) -> Result<(), DomainError> {
+        self.require_status(
+            &[MigrationStatus::Draft, MigrationStatus::Validated],
+            "لا يمكن تعديل بنود الترحيل بعد نشره أو قفله",
+        )?;
+        if lines.is_empty() {
+            return Err(DomainError::Invalid(
+                "يجب إدخال بند واحد على الأقل في رصيد الافتتاح".into(),
+            ));
+        }
+        for line in &lines {
+            if line.amount <= Decimal::ZERO {
+                return Err(DomainError::Invalid(
+                    "قيم أرصدة الافتتاح يجب أن تكون أكبر من الصفر".into(),
+                ));
+            }
+        }
+        self.lines = lines;
+        self.status = MigrationStatus::Draft;
+        self.validated_by = None;
+        self.validated_at = None;
+        self.approved_by = None;
+        self.approved_at = None;
+        self.updated_at = Utc::now();
+        Ok(())
+    }
+
     /// Optional metadata used to trace the migration back to its source
     /// (e.g. the prior accounting system and a local reference number).
     pub fn set_source(&mut self, company_id: Option<String>, source_system: Option<String>, source_reference: Option<String>) {

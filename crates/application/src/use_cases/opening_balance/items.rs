@@ -2,9 +2,10 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use domain::assets::FixedAssetId;
-use domain::shared::ids::{CustomerId, MaterialId, SupplierId};
+use domain::shared::ids::{AccountId, CustomerId, MaterialId, SupplierId};
 
 use crate::errors::AppError;
+use crate::ports::account_repository::AccountRepository;
 use crate::ports::asset_repository::AssetRepository;
 use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::material_repository::MaterialRepository;
@@ -12,14 +13,16 @@ use crate::ports::opening_item_repository::OpeningItemRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::supplier_repository::SupplierRepository;
 use crate::use_cases::opening_balance::types::{
-    KIND_AR, KIND_AP, KIND_FIXED_ASSET, KIND_INVENTORY, OpeningItemsDto, SaveOpeningItemsCommand,
+    KIND_AR, KIND_AP, KIND_FIXED_ASSET, KIND_INVENTORY, KIND_BANK, KIND_LOAN, OpeningItemsDto,
+    SaveOpeningItemsCommand,
 };
 
-/// Persists the sub-ledger item links (AR / AP / Inventory / Fixed Assets) for
-/// an opening-balance migration. Every item references a REAL entity created
-/// through the same module; the reference is validated before it is stored so
-/// the migration can never point at a nonexistent customer/supplier/material/
-/// asset. This is the single source of the sub-ledger reconciliation input.
+/// Persists the sub-ledger item links (AR / AP / Inventory / Fixed Assets /
+/// Bank / Loan) for an opening-balance migration. Every item references a REAL
+/// entity created through the same module; the reference is validated before it
+/// is stored so the migration can never point at a nonexistent customer/
+/// supplier/material/asset/ledger-account. This is the single source of the
+/// sub-ledger reconciliation input.
 pub struct SaveOpeningItemsUseCase {
     migration_repo: Arc<dyn OpeningMigrationRepository>,
     item_repo: Arc<dyn OpeningItemRepository>,
@@ -27,6 +30,7 @@ pub struct SaveOpeningItemsUseCase {
     supplier_repo: Arc<dyn SupplierRepository>,
     material_repo: Arc<dyn MaterialRepository>,
     asset_repo: Arc<dyn AssetRepository>,
+    account_repo: Arc<dyn AccountRepository>,
 }
 
 impl SaveOpeningItemsUseCase {
@@ -38,6 +42,7 @@ impl SaveOpeningItemsUseCase {
         supplier_repo: Arc<dyn SupplierRepository>,
         material_repo: Arc<dyn MaterialRepository>,
         asset_repo: Arc<dyn AssetRepository>,
+        account_repo: Arc<dyn AccountRepository>,
     ) -> Self {
         Self {
             migration_repo,
@@ -46,6 +51,7 @@ impl SaveOpeningItemsUseCase {
             supplier_repo,
             material_repo,
             asset_repo,
+            account_repo,
         }
     }
 
@@ -93,6 +99,12 @@ impl SaveOpeningItemsUseCase {
                         .map_err(|_| AppError::Invalid("معرف الأصل الثابت غير صالح".into()))?);
                     self.asset_repo.find_asset_by_id(&id).await?
                         .ok_or_else(|| AppError::NotFound(format!("الأصل الثابت غير موجود: {}", it.entity_id)))?;
+                }
+                KIND_BANK | KIND_LOAN => {
+                    let id = AccountId::from_str(&it.entity_id)
+                        .map_err(|_| AppError::Invalid("معرف الحساب غير صالح".into()))?;
+                    self.account_repo.find_by_id(&id).await?
+                        .ok_or_else(|| AppError::NotFound(format!("الحساب غير موجود: {}", it.entity_id)))?;
                 }
                 _ => {
                     return Err(AppError::Invalid(format!("نوع بند غير معروف: {}", it.kind)));

@@ -465,6 +465,7 @@ async fn inventory_opening_in_statement_posts_once_and_reconciles() {
         Arc::new(SqliteSupplierRepository::new(pool.clone())),
         Arc::new(SqliteMaterialRepository::new(pool.clone())),
         Arc::new(SqliteAssetRepository::new(pool.clone())),
+        Arc::new(SqliteAccountRepository::new(pool.clone())),
     )
     .execute(SaveOpeningItemsCommand {
         migration_id: migration_id.clone(),

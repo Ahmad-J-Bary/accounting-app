@@ -26,6 +26,8 @@ export function defaultAccountFor(accounts: readonly AccountDto[], kind: AutoAcc
       );
     }
     case "bank": {
+      const byPurpose = list.find((a) => a.purpose === "bank");
+      if (byPurpose) return byPurpose.id;
       return (
         list.find(
           (a) => a.account_type === "Assets" && a.category === "Detail" && /بنك/i.test(a.name_ar),
@@ -33,6 +35,8 @@ export function defaultAccountFor(accounts: readonly AccountDto[], kind: AutoAcc
       );
     }
     case "loan": {
+      const byPurpose = list.find((a) => a.purpose === "loan");
+      if (byPurpose) return byPurpose.id;
       return (
         list.find(
           (a) =>

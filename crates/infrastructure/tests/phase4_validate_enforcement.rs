@@ -197,6 +197,7 @@ async fn validate_rejects_draft_whose_subledger_does_not_reconcile() {
         supplier_repo,
         material_repo,
         asset_repo,
+        Arc::new(infrastructure::repositories::SqliteAccountRepository::new(pool.clone())),
     )
     .execute(SaveOpeningItemsCommand {
         migration_id: draft.0.id.clone(),

@@ -153,6 +153,7 @@ async fn save_ar_item(pool: &Arc<sqlx::SqlitePool>, migration_id: &str, amount: 
         Arc::new(SqliteSupplierRepository::new(pool.clone())),
         Arc::new(SqliteMaterialRepository::new(pool.clone())),
         Arc::new(SqliteAssetRepository::new(pool.clone())),
+        Arc::new(SqliteAccountRepository::new(pool.clone())),
     )
     .execute(SaveOpeningItemsCommand {
         migration_id: migration_id.to_string(),

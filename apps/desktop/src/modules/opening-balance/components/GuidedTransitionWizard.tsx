@@ -485,6 +485,12 @@ export function GuidedTransitionWizard() {
       }
     }
     hints.push(...inventoryMismatchHints(w.effectiveInventory, w.materials));
+    // Amounts entered on rows that resolved no ledger account: they would be
+    // silently dropped from the saved lines while still counting in the
+    // section totals — the exact source of the GL ≠ wizard mismatch.
+    for (const hint of w.missingAccountHints) {
+      hints.push(`${hint} — اختر حساباً من القائمة ليُضمَّن في بنود الميزانية ودفتر الأستاذ.`);
+    }
 
     return {
       cash,
@@ -524,7 +530,7 @@ export function GuidedTransitionWizard() {
       { key: "loans", label: "القروض والخصوم", done: loansT > 0 || otherLiab > 0 || w.step > 7 },
       { key: "partners", label: "رؤوس أموال الشركاء", done: cap > 0 || otherEq > 0 || w.step > 8 },
       { key: "reconcile", label: "التسوية", done: !!w.reconciliation && w.reconciliation.all_reconciled },
-      { key: "balanced", label: "متوازن", done: w.totals.balanced },
+      { key: "balanced", label: "متوازن", done: w.savedTotals.balanced },
       { key: "ready", label: "جاهز للترحيل", done: w.step >= STEP_REVIEW && w.canNext },
     ];
   }, [w.derivedAr, w.derivedAp, w.loans, w.liabilitiesManual, w.partnerEquity, w.equityManual, w.cashBanks, w.faRows, w.inventoryPosted, w.inventoryTotal, w.step, w.cutoverDate, w.reconciliation, w.totals, w.canNext]);
@@ -559,7 +565,7 @@ export function GuidedTransitionWizard() {
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_330px] gap-4 items-start" dir="rtl">
       {wizard}
       <aside className="lg:sticky lg:top-4 space-y-3 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto custom-scrollbar">
-        <OpeningPositionSummary {...summary} plugAmount={w.totals.plugAmount} balanced={w.totals.balanced} />
+        <OpeningPositionSummary {...summary} plugAmount={w.totals.plugAmount} balanced={w.savedTotals.balanced} />
         <OpeningProgressChecklist items={checklistItems} />
       </aside>
     </div>

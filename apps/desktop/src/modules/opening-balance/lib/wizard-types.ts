@@ -5,6 +5,8 @@ export const KIND_AR = "AR";
 export const KIND_AP = "AP";
 export const KIND_INVENTORY = "Inventory";
 export const KIND_FIXED_ASSET = "FixedAsset";
+export const KIND_BANK = "Bank";
+export const KIND_LOAN = "Loan";
 
 export const START_MODE_NEW = "NewCompany";
 export const START_MODE_EXISTING = "ExistingCompanyMigration";

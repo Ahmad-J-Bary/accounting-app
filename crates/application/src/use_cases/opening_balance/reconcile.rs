@@ -13,19 +13,21 @@ use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::opening_item_repository::OpeningItemRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::use_cases::opening_balance::types::{
-    KIND_AR, KIND_AP, KIND_FIXED_ASSET, KIND_INVENTORY, OpeningItemInput, OpeningReconciliationDto,
-    ReconciliationRow,
+    KIND_AR, KIND_AP, KIND_FIXED_ASSET, KIND_INVENTORY, KIND_BANK, KIND_LOAN, OpeningItemInput,
+    OpeningReconciliationDto, ReconciliationRow,
 };
 
 const OPENING_EQUITY_ACCOUNT_CODE: &str = "53";
 
-/// The four sub-ledgers supported by the opening-balance reconciliation.
+/// The six sub-ledgers supported by the opening-balance reconciliation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SubledgerKind {
     Ar,
     Ap,
     Inventory,
     FixedAssets,
+    Bank,
+    Loan,
 }
 
 impl SubledgerKind {
@@ -35,11 +37,20 @@ impl SubledgerKind {
             Self::Ap => "AP",
             Self::Inventory => "Inventory",
             Self::FixedAssets => "FixedAssets",
+            Self::Bank => "Bank",
+            Self::Loan => "Loan",
         }
     }
 
-    pub fn all() -> [SubledgerKind; 4] {
-        [Self::Ar, Self::Ap, Self::Inventory, Self::FixedAssets]
+    pub fn all() -> [SubledgerKind; 6] {
+        [
+            Self::Ar,
+            Self::Ap,
+            Self::Inventory,
+            Self::FixedAssets,
+            Self::Bank,
+            Self::Loan,
+        ]
     }
 }
 
@@ -52,6 +63,8 @@ pub fn account_subledger_kind(account: &Account) -> Option<SubledgerKind> {
         AccountPurpose::Payable => Some(SubledgerKind::Ap),
         AccountPurpose::Inventory => Some(SubledgerKind::Inventory),
         AccountPurpose::FixedAsset => Some(SubledgerKind::FixedAssets),
+        AccountPurpose::Bank => Some(SubledgerKind::Bank),
+        AccountPurpose::Loan => Some(SubledgerKind::Loan),
         _ => None,
     }
 }
@@ -82,6 +95,8 @@ pub fn detail_subledger_totals(items: &[OpeningItemInput]) -> HashMap<SubledgerK
             KIND_AP => SubledgerKind::Ap,
             KIND_INVENTORY => SubledgerKind::Inventory,
             KIND_FIXED_ASSET => SubledgerKind::FixedAssets,
+            KIND_BANK => SubledgerKind::Bank,
+            KIND_LOAN => SubledgerKind::Loan,
             _ => continue,
         };
         if let Ok(value) = Decimal::from_str(&it.amount) {
@@ -107,7 +122,7 @@ pub fn readiness_blockers(
     }
     if !recon.all_reconciled {
         blockers.push(
-            "الواجهات الفرعية غير مطابقة: إجمالي بنود التفاصيل (العملاء/الموردون/المخزون/الأصول الثابتة) لا يساوي دفتر الأستاذ".into(),
+            "الواجهات الفرعية غير مطابقة: إجمالي بنود التفاصيل (العملاء/الموردون/المخزون/الأصول الثابتة/البنوك/القروض) لا يساوي دفتر الأستاذ".into(),
         );
     }
     if require_control_zero && recon.opening_control_balance != Decimal::ZERO {
@@ -266,6 +281,10 @@ mod tests {
             AccountPurpose::Payable
         } else if code.starts_with("1204") && account_type == AccountType::Assets {
             AccountPurpose::Inventory
+        } else if code == "125" && account_type == AccountType::Assets {
+            AccountPurpose::Bank
+        } else if code == "225" && account_type == AccountType::Liabilities {
+            AccountPurpose::Loan
         } else if code.starts_with("11") && account_type == AccountType::Assets {
             AccountPurpose::FixedAsset
         } else {
@@ -300,6 +319,8 @@ mod tests {
         assert_eq!(account_subledger_kind(&account("120401", AccountType::Assets)), Some(SubledgerKind::Inventory));
         assert_eq!(account_subledger_kind(&account("1101", AccountType::Assets)), Some(SubledgerKind::FixedAssets));
         assert_eq!(account_subledger_kind(&account("1102", AccountType::Assets)), Some(SubledgerKind::FixedAssets));
+        assert_eq!(account_subledger_kind(&account("125", AccountType::Assets)), Some(SubledgerKind::Bank));
+        assert_eq!(account_subledger_kind(&account("225", AccountType::Liabilities)), Some(SubledgerKind::Loan));
         assert_eq!(account_subledger_kind(&account("1001", AccountType::Assets)), None, "cash is not a sub-ledger");
         assert_eq!(account_subledger_kind(&account("51", AccountType::Equity)), None);
     }
@@ -347,6 +368,8 @@ mod tests {
             OpeningItemInput { kind: KIND_AP.into(), entity_id: "c".into(), reference: None, amount: "30.00".into(), qty: "1".into() },
             OpeningItemInput { kind: KIND_INVENTORY.into(), entity_id: "m1".into(), reference: None, amount: "200.00".into(), qty: "10".into() },
             OpeningItemInput { kind: KIND_FIXED_ASSET.into(), entity_id: "f1".into(), reference: None, amount: "900.00".into(), qty: "1".into() },
+            OpeningItemInput { kind: KIND_BANK.into(), entity_id: "b1".into(), reference: None, amount: "40.00".into(), qty: "1".into() },
+            OpeningItemInput { kind: KIND_LOAN.into(), entity_id: "l1".into(), reference: None, amount: "50.00".into(), qty: "1".into() },
             OpeningItemInput { kind: "Unknown".into(), entity_id: "x".into(), reference: None, amount: "999.00".into(), qty: "1".into() },
         ];
         let totals = detail_subledger_totals(&items);
@@ -354,5 +377,7 @@ mod tests {
         assert_eq!(totals.get(&SubledgerKind::Ap).copied().unwrap_or_default(), Decimal::new(3000, 2));
         assert_eq!(totals.get(&SubledgerKind::Inventory).copied().unwrap_or_default(), Decimal::new(20000, 2));
         assert_eq!(totals.get(&SubledgerKind::FixedAssets).copied().unwrap_or_default(), Decimal::new(90000, 2));
+        assert_eq!(totals.get(&SubledgerKind::Bank).copied().unwrap_or_default(), Decimal::new(4000, 2));
+        assert_eq!(totals.get(&SubledgerKind::Loan).copied().unwrap_or_default(), Decimal::new(5000, 2));
     }
 }

@@ -12,6 +12,7 @@ use application::use_cases::opening_balance::{
     OpeningPositionControlDto, OpeningReconciliationDto, PostOpeningBalanceResult, PostOpeningBalanceUseCase,
     ReopenOpeningBalanceUseCase, SaveOpeningDraftUseCase, SaveOpeningItemsCommand, SaveOpeningItemsUseCase,
     SetResidualClassificationCommand, SetResidualClassificationUseCase,
+    UpdateOpeningMigrationLinesCommand, UpdateOpeningMigrationLinesUseCase,
     ValidateOpeningBalanceUseCase,
 };
 use tauri::State;
@@ -22,6 +23,21 @@ pub async fn create_opening_balance_migration(
     request: CreateOpeningBalanceMigrationCommand,
 ) -> Result<OpeningMigrationDto, String> {
     CreateOpeningBalanceUseCase::new(
+        state.opening_migration_repo.clone(),
+        state.account_repo.clone(),
+        state.settings_repo.clone(),
+    )
+        .execute(request)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn update_opening_balance_migration_lines(
+    state: State<'_, AppState>,
+    request: UpdateOpeningMigrationLinesCommand,
+) -> Result<OpeningMigrationDto, String> {
+    UpdateOpeningMigrationLinesUseCase::new(
         state.opening_migration_repo.clone(),
         state.account_repo.clone(),
         state.settings_repo.clone(),
@@ -216,6 +232,7 @@ pub async fn save_opening_balance_items(
         state.supplier_repo.clone(),
         state.material_repo.clone(),
         state.asset_repo.clone(),
+        state.account_repo.clone(),
     )
     .execute(command)
     .await

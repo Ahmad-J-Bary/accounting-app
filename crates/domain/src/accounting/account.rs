@@ -47,6 +47,8 @@ pub enum AccountPurpose {
     Payable,            // ذمم موردين (2203)
     Inventory,          // مخزون (1204)
     FixedAsset,         // أصول ثابتة (11)
+    Bank,               // بنوك (أصل متداول)
+    Loan,               // قروض (التزام)
     RetainedEarnings,   // أرباح مبقاة (52)
     OpeningBalanceEquity, // رصيد افتتاحي (53)
 }
@@ -63,6 +65,8 @@ impl AccountPurpose {
             AccountPurpose::Payable => "payable",
             AccountPurpose::Inventory => "inventory",
             AccountPurpose::FixedAsset => "fixed_asset",
+            AccountPurpose::Bank => "bank",
+            AccountPurpose::Loan => "loan",
             AccountPurpose::RetainedEarnings => "retained_earnings",
             AccountPurpose::OpeningBalanceEquity => "opening_balance_equity",
         }

@@ -27,6 +27,8 @@ import {
   KIND_AP,
   KIND_FIXED_ASSET,
   KIND_INVENTORY,
+  KIND_BANK,
+  KIND_LOAN,
   START_MODE_NEW,
   START_MODE_EXISTING,
   OPENING_EQUITY_CODE,
@@ -600,8 +602,73 @@ export function useOpeningBalanceWizard() {
         items.push({ kind: KIND_INVENTORY, entity_id: r.material_id, reference: r.name, amount: String(r.value), qty: String(toNum(r.qty)) });
       }
     }
+    const accountName = (id: string) => accounts.find((a) => a.id === id)?.name_ar || null;
+    for (const l of cashBanks) {
+      if (l.kind === "bank" && toNum(l.amount) !== 0 && l.account_id) {
+        items.push({ kind: KIND_BANK, entity_id: l.account_id, reference: accountName(l.account_id), amount: l.amount, qty: "0" });
+      }
+    }
+    for (const l of loans) {
+      if (toNum(l.amount) !== 0 && l.account_id) {
+        items.push({ kind: KIND_LOAN, entity_id: l.account_id, reference: accountName(l.account_id), amount: l.amount, qty: "0" });
+      }
+    }
     return items;
-  }, [derivedAr, derivedAp, faRows, effectiveInventory]);
+  }, [derivedAr, derivedAp, faRows, effectiveInventory, cashBanks, loans, accounts]);
+
+  // Single source of truth (§ review step): the GL balance must be computed
+  // from the LINES THAT WILL ACTUALLY BE SAVED. `collectLines` drops any row
+  // without an assigned ledger account, so `totals.balanced` (which counts
+  // every section) can disagree with the backend reconciliation. `savedBalanced`
+  // is the truth the review gate and the reviewer use.
+  const savedTotals = useMemo(() => {
+    const lines = collectLines();
+    const byId = new Map(accounts.map((a) => [a.id, a]));
+    let dr = 0;
+    let cr = 0;
+    for (const l of lines) {
+      const acc = byId.get(l.account_id);
+      if (!acc) continue;
+      const debitNature = acc.account_type === "Assets" || acc.account_type === "Expenses";
+      if (debitNature) dr += toNum(l.amount);
+      else cr += toNum(l.amount);
+    }
+    return { debit: dr, credit: cr, balanced: Math.abs(dr - cr) < 0.01 };
+  }, [collectLines, accounts]);
+
+  // Amounts entered on rows that could not (yet) resolve a ledger account.
+  // These are the exact rows the old code silently dropped while still counting
+  // them in `totals` — the source of the GL Dr 305 / Cr 415 mismatch.
+  const missingAccounts = useMemo(() => {
+    const hints: { section: string; amount: number }[] = [];
+    for (const l of cashBanks) {
+      if (toNum(l.amount) !== 0 && !l.account_id) {
+        hints.push({ section: l.kind === "bank" ? "البنوك" : "النقد", amount: toNum(l.amount) });
+      }
+    }
+    for (const l of loans) {
+      if (toNum(l.amount) !== 0 && !l.account_id) {
+        hints.push({ section: "القروض", amount: toNum(l.amount) });
+      }
+    }
+    for (const l of [...assetsManual, ...liabilitiesManual, ...equityManual]) {
+      if (toNum(l.amount) !== 0 && !l.account_id) {
+        hints.push({ section: "بند يدوي", amount: toNum(l.amount) });
+      }
+    }
+    if (inventoryTotal !== 0 && !effectiveInventoryAccountId) {
+      hints.push({ section: "المخزون", amount: inventoryTotal });
+    }
+    return hints;
+  }, [cashBanks, loans, assetsManual, liabilitiesManual, equityManual, inventoryTotal, effectiveInventoryAccountId]);
+
+  const missingAccountHints = useMemo(
+    () =>
+      missingAccounts.map(
+        (h) => `${h.section}: ${h.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} بدون حساب`,
+      ),
+    [missingAccounts],
+  );
 
   const invalidateMigrations = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.openingBalanceMigrations });
@@ -649,7 +716,7 @@ export function useOpeningBalanceWizard() {
       case 0:
         return startMode === START_MODE_EXISTING && !!cutoverDate;
       case STEP_REVIEW:
-        return totals.balanced && totals.total > 0;
+        return savedTotals.balanced && totals.total > 0;
       case STEP_VALIDATE:
         return !!migration && migration.status === "Validated";
       case STEP_POST:
@@ -661,9 +728,15 @@ export function useOpeningBalanceWizard() {
       default:
         return true;
     }
-  }, [step, startMode, cutoverDate, totals, migration, firstPeriodStart, firstPeriodEnd]);
+  }, [step, startMode, cutoverDate, totals, savedTotals, migration, firstPeriodStart, firstPeriodEnd]);
 
-  const committed = step >= STEP_REVIEW;
+  // Back-navigation stays open until the migration is sealed: Draft/Validated/
+  // Approved may all be edited again by going back to the review step. Only a
+  // Posted or Locked (or Cancelled) migration locks the wizard in place.
+  const committed =
+    startMode === START_MODE_EXISTING &&
+    !!migration &&
+    ["Posted", "Locked", "Cancelled"].includes(migration.status);
   const canPrev = step > 0 && !committed && !busy;
 
   const nextLabel = useMemo(() => {
@@ -700,30 +773,42 @@ export function useOpeningBalanceWizard() {
 
       if (step === STEP_REVIEW) {
         setBusy(true);
-        const created = await openingBalanceService.createMigration({
+        const payload = {
           cutover_date: new Date(cutoverDate).toISOString(),
           notes: notes || null,
           lines: collectLines(),
           source_system: sourceSystem || null,
           source_reference: sourceReference || null,
-        });
+        };
+        // A migration that already exists (Draft/Validated/Approved) is updated
+        // in place — the back-navigation path — instead of tripping the
+        // duplicate-cutover guard of the create use case.
+        const editableMigration =
+          migration &&
+          ["Draft", "Validated", "Approved"].includes(migration.status);
+        const saved = editableMigration
+          ? await openingBalanceService.updateMigrationLines({
+              migration_id: migration.id,
+              ...payload,
+            })
+          : await openingBalanceService.createMigration(payload);
         if (residualClassification && residualAccountId) {
           await openingBalanceService.setResidualClassification({
-            migration_id: created.id,
+            migration_id: saved.id,
             classification: residualClassification,
             residual_account_id: residualAccountId,
           });
         }
         await openingBalanceService.saveMigrationItems({
-          migration_id: created.id,
+          migration_id: saved.id,
           items: collectItems(),
         });
-        const recon = await openingBalanceService.getReconciliation(created.id);
-        setMigration(created);
+        const recon = await openingBalanceService.getReconciliation(saved.id);
+        setMigration(saved);
         setReconciliation(recon);
         invalidateMigrations();
         await clearDraft();
-        toast.success("تم حفظ المسودة وفحص التسوية");
+        toast.success(editableMigration ? "تم تحديث المسودة وإعادة فحص التسوية" : "تم حفظ المسودة وفحص التسوية");
         setBusy(false);
         return true;
       }
@@ -832,6 +917,8 @@ export function useOpeningBalanceWizard() {
     updateLine,
     collectLines,
     totals,
+    savedTotals,
+    missingAccountHints,
     obeAccountId,
     canNext,
     canPrev,

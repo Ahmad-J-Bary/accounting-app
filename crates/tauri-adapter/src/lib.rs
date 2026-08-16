@@ -184,6 +184,7 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::export::save_file,
             // Opening balance migration
             commands::opening_balance::create_opening_balance_migration,
+            commands::opening_balance::update_opening_balance_migration_lines,
             commands::opening_balance::list_opening_balance_migrations,
             commands::opening_balance::post_opening_balance_migration,
             commands::opening_balance::allocate_net_profit,

@@ -17,6 +17,8 @@ pub fn purpose_from_str(value: &str) -> AccountPurpose {
         "payable" => AccountPurpose::Payable,
         "inventory" => AccountPurpose::Inventory,
         "fixed_asset" => AccountPurpose::FixedAsset,
+        "bank" => AccountPurpose::Bank,
+        "loan" => AccountPurpose::Loan,
         "retained_earnings" => AccountPurpose::RetainedEarnings,
         "opening_balance_equity" => AccountPurpose::OpeningBalanceEquity,
         _ => AccountPurpose::General,

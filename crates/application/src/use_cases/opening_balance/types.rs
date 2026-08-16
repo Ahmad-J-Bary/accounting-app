@@ -20,6 +20,16 @@ pub struct CreateOpeningBalanceMigrationCommand {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+pub struct UpdateOpeningMigrationLinesCommand {
+    pub migration_id: String,
+    pub cutover_date: String,
+    pub notes: Option<String>,
+    pub lines: Vec<OpeningLineInput>,
+    pub source_system: Option<String>,
+    pub source_reference: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct SetResidualClassificationCommand {
     pub migration_id: String,
     pub classification: String,
@@ -93,13 +103,15 @@ pub const KIND_AR: &str = "AR";
 pub const KIND_AP: &str = "AP";
 pub const KIND_INVENTORY: &str = "Inventory";
 pub const KIND_FIXED_ASSET: &str = "FixedAsset";
+pub const KIND_BANK: &str = "Bank";
+pub const KIND_LOAN: &str = "Loan";
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct OpeningItemInput {
-    pub kind: String,          // KIND_AR | KIND_AP | KIND_INVENTORY | KIND_FIXED_ASSET
-    pub entity_id: String,     // real customer/supplier/material/asset id
+    pub kind: String,          // KIND_AR | KIND_AP | KIND_INVENTORY | KIND_FIXED_ASSET | KIND_BANK | KIND_LOAN
+    pub entity_id: String,     // real customer/supplier/material/asset id or ledger AccountId for bank/loan
     pub reference: Option<String>,
-    pub amount: String,        // AR/AP net balance, inventory total cost, FA net book value
+    pub amount: String,        // AR/AP net balance, inventory total cost, FA net book value, bank/loan balance
     pub qty: String,
 }
 
