@@ -136,45 +136,43 @@ impl AccountQueries {
             .await
             .map_err(|e| AccountUseCaseError::JournalRepositoryError(e.to_string()))?;
 
-        let mut accounts_with_opening_entries: std::collections::HashSet<AccountId> = std::collections::HashSet::new();
-        let mut opening_entries_net = Decimal::ZERO;
-
-        for entry in &journal_entries {
-            let is_opening = entry.journal_type == domain::accounting::JournalType::AccountOpeningBalance
-                || entry.journal_type == domain::accounting::JournalType::CashOpeningBalance
-                || entry.description.contains("رصيد افتتاحي")
-                || entry.description.contains("أول المدة");
-            if is_opening {
-                for line in &entry.lines {
-                    if id_set.contains(&line.account_id) {
-                        accounts_with_opening_entries.insert(line.account_id);
-                        let d = line.base_debit();
-                        let c = line.base_credit();
-                        opening_entries_net += d - c;
-                    }
-                }
-            }
-        }
-
         let static_opening: Decimal = account_ids
             .iter()
             .map(|id| opening_balance_map.get(id).copied().unwrap_or(Decimal::ZERO))
             .sum();
 
-        let opening_balance = if static_opening != Decimal::ZERO {
-            static_opening
-        } else {
-            opening_entries_net
-        };
+        // The opening balance is the account's STATIC opening (existing-company
+        // seed / registered capital). Opening JOURNAL lines are themselves real
+        // posted lines surfaced in `lines` (or diverted into `opening_entries`
+        // when a static balance exists), so they must never be folded into the
+        // opening balance again — the frontend's beginning balance is
+        // SUM(posted lines before from_date), not this field plus lines.
+        let opening_balance = static_opening;
 
         let mut lines = Vec::new();
         let mut opening_entry: Option<LedgerOpeningInfo> = None;
         let mut opening_entries: Vec<LedgerOpeningInfo> = Vec::new();
-        let mut running_balance_base = Decimal::ZERO;
+        // The GL starts from the account's opening position (static opening only;
+        // opening journal lines are already in `lines` for non-static accounts),
+        // so running and closing balances follow rule 6: Beginning + Dr - Cr.
+        // `opening_balance` is a magnitude; it lands on the account's normal
+        // side (credit-normal accounts carry it as a negative debit - credit net).
+        let signed_opening = match first_account.normal_balance() {
+            domain::accounting::account::NormalBalance::Debit => opening_balance,
+            domain::accounting::account::NormalBalance::Credit => -opening_balance,
+        };
+        let mut running_balance_base = signed_opening;
         let mut running_balance_original = Decimal::ZERO;
 
         let mut sorted_entries = journal_entries;
-        sorted_entries.sort_by_key(|a| a.created_at);
+        // The GL runs on the ACCOUNTING date (`entry_date`), never `created_at`.
+        // `created_at` is only a tiebreak so simultaneous backdated postings keep
+        // a deterministic order.
+        sorted_entries.sort_by(|a, b| {
+            a.entry_date
+                .cmp(&b.entry_date)
+                .then_with(|| a.created_at.cmp(&b.created_at))
+        });
 
         for entry in sorted_entries {
             let account_lines: Vec<_> = entry
@@ -186,12 +184,18 @@ impl AccountQueries {
                 continue;
             }
 
-            // Skip AccountOpeningBalance entries for accounts that have a
-            // static opening_balance in the DB — the synthetic opening row
-            // already represents this balance in the frontend. Every such
-            // opening entry is kept in `opening_entries` so the frontend can
-            // aggregate ALL opening balances (not just the latest one).
-            if entry.journal_type == domain::accounting::JournalType::AccountOpeningBalance
+            // Skip opening journals for accounts that have a static
+            // opening_balance in the DB — the synthetic opening row already
+            // represents this balance in the frontend. Every such opening entry
+            // is kept in `opening_entries` so the frontend can aggregate ALL
+            // opening balances (not just the latest one).
+            let is_static_opening = matches!(
+                entry.journal_type,
+                domain::accounting::JournalType::AccountOpeningBalance
+                    | domain::accounting::JournalType::CashOpeningBalance
+                    | domain::accounting::JournalType::MaterialOpeningBalance
+            );
+            if is_static_opening
                 && account_lines.iter().any(|l| {
                     opening_balance_map.get(&l.account_id).copied().unwrap_or(Decimal::ZERO) > Decimal::ZERO
                 })

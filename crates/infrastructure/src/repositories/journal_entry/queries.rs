@@ -122,7 +122,9 @@ pub async fn list_by_accounts(pool: &SqlitePool, account_ids: &[AccountId]) -> R
          FROM journal_entries je
          JOIN journal_lines jl ON je.id = jl.journal_entry_id
          WHERE jl.account_id IN ({})
-         ORDER BY je.entry_date DESC",
+           AND je.status = 'Posted'
+           AND je.reversal_of_entry_id IS NULL
+         ORDER BY je.entry_date ASC",
         placeholders.join(",")
     );
 
