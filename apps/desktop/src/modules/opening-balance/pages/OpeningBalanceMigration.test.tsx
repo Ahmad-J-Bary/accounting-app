@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import OpeningBalanceMigration from "@modules/opening-balance/pages/OpeningBalanceMigration";
 import { SidePanelSettingsProvider } from "@app/providers/SidePanelSettingsProvider";
 import { SidebarLayoutProvider } from "@app/providers/SidebarLayoutProvider";
+import { TabProvider } from "@app/providers/TabProvider";
 import { settingsService } from "@modules/core/api/settingsService";
 import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
 import { openingBalanceService } from "@modules/accounting/api/openingBalanceService";
@@ -87,14 +89,16 @@ function renderPage(initialPath = "/opening-balance-migration") {
   const ui = render(
     <MemoryRouter initialEntries={[initialPath]}>
       <QueryClientProvider client={qc}>
-        <SidePanelSettingsProvider>
-          <SidebarLayoutProvider>
-            <Routes>
-              <Route path="/opening-balance-migration" element={<OpeningBalanceMigration />} />
-              <Route path="/dashboard" element={<div>DASHBOARD_ROOT</div>} />
-            </Routes>
-          </SidebarLayoutProvider>
-        </SidePanelSettingsProvider>
+        <TabProvider>
+          <SidePanelSettingsProvider>
+            <SidebarLayoutProvider>
+              <Routes>
+                <Route path="/opening-balance-migration" element={<OpeningBalanceMigration />} />
+                <Route path="/dashboard" element={<div>DASHBOARD_ROOT</div>} />
+              </Routes>
+            </SidebarLayoutProvider>
+          </SidePanelSettingsProvider>
+        </TabProvider>
       </QueryClientProvider>
     </MemoryRouter>,
   );
@@ -157,12 +161,16 @@ describe("OpeningBalanceMigration company-type gate", () => {
     vi.mocked(fiscalPeriodService.listFiscalPeriods).mockResolvedValue([
       { id: "p1", status: "Open", start_date: "2026-01-01", end_date: "2026-12-31" } as never,
     ]);
+    const user = userEvent.setup();
     const { qc } = renderPage();
     await waitFor(() => expect(qc.getQueryData(QUERY_KEYS.openingBalanceMigrations)).toBeTruthy());
     // The opening page stays and the wizard resumes on the ACTIVE completion step.
     expect(await screen.findByText("اكتمل إعداد الشركة ✓")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "الانتقال إلى لوحة التحكم" })).toBeInTheDocument();
     expect(screen.queryByText("DASHBOARD_ROOT")).not.toBeInTheDocument();
+    // The dashboard button moves through the tab system (not just the URL).
+    await user.click(screen.getByRole("button", { name: "الانتقال إلى لوحة التحكم" }));
+    expect(await screen.findByText("DASHBOARD_ROOT")).toBeInTheDocument();
   });
 
   it("keeps a Locked EXISTING company with no first period on the locked-completion onboarding (no redirect)", async () => {

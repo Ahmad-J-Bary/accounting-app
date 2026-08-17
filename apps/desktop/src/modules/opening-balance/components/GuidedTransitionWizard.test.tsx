@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { TabProvider } from "@app/providers/TabProvider";
 import { GuidedTransitionWizard } from "@modules/opening-balance/components/GuidedTransitionWizard";
 import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
 import { settingsService } from "@modules/core/api/settingsService";
@@ -113,14 +114,19 @@ const LOCKED_MIGRATION = {
   updated_at: "2026-01-02T00:00:00.000Z",
 };
 
-function renderWizard() {
+function renderWizard(initialPath = "/opening-balance-migration") {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[initialPath]}>
       <QueryClientProvider client={qc}>
-        <GuidedTransitionWizard />
+        <TabProvider>
+          <Routes>
+            <Route path="/opening-balance-migration" element={<GuidedTransitionWizard />} />
+            <Route path="/dashboard" element={<div>DASHBOARD_ROOT</div>} />
+          </Routes>
+        </TabProvider>
       </QueryClientProvider>
     </MemoryRouter>,
   );
@@ -204,10 +210,27 @@ describe("GuidedTransitionWizard", () => {
     vi.mocked(settingsService.getSettings).mockResolvedValue({ accounting_start_mode: "ExistingCompanyMigration" } as never);
     vi.mocked(openingBalanceService.listMigrations).mockResolvedValue([LOCKED_MIGRATION as never]);
     vi.mocked(fiscalPeriodService.listFiscalPeriods).mockResolvedValue([PERIOD as never]);
+    const user = userEvent.setup();
     renderWizard();
     expect(await screen.findByText("اكتمل إعداد الشركة ✓")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "الانتقال إلى لوحة التحكم" })).toBeInTheDocument();
     // The opening position summary is an opening control — hidden once locked.
     expect(screen.queryByText("المركز الافتتاحي")).not.toBeInTheDocument();
+    // Draft controls are sealed controls too — hidden once the migration is Locked.
+    expect(screen.queryByRole("button", { name: "حفظ المسودة" })).not.toBeInTheDocument();
+    // «الانتقال إلى لوحة التحكم» moves through the tab system to the dashboard.
+    await user.click(screen.getByRole("button", { name: "الانتقال إلى لوحة التحكم" }));
+    expect(await screen.findByText("DASHBOARD_ROOT")).toBeInTheDocument();
+  });
+
+  it("the final step's «إنهاء» button also transitions to the dashboard", async () => {
+    vi.mocked(settingsService.getSettings).mockResolvedValue({ accounting_start_mode: "ExistingCompanyMigration" } as never);
+    vi.mocked(openingBalanceService.listMigrations).mockResolvedValue([LOCKED_MIGRATION as never]);
+    vi.mocked(fiscalPeriodService.listFiscalPeriods).mockResolvedValue([PERIOD as never]);
+    const user = userEvent.setup();
+    renderWizard();
+    expect(await screen.findByText("اكتمل إعداد الشركة ✓")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "إنهاء" }));
+    expect(await screen.findByText("DASHBOARD_ROOT")).toBeInTheDocument();
   });
 });

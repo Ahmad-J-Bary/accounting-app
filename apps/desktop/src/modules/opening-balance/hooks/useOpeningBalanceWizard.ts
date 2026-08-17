@@ -257,6 +257,9 @@ export function useOpeningBalanceWizard() {
   }, [settingsReady, startMode]);
 
   const saveDraft = useCallback(async (): Promise<boolean> => {
+    // A Locked migration is sealed — the backend rejects saving a draft, so
+    // treat it as a no-op instead of surfacing the IPC error.
+    if (migration?.status === "Locked") return false;
     const draft: WizardDraft = {
       step,
       cutoverDate,
@@ -286,7 +289,7 @@ export function useOpeningBalanceWizard() {
       toast.error("فشل حفظ المسودة: " + e);
       return false;
     }
-  }, [step, cutoverDate, sourceSystem, sourceReference, notes, residualClassification, residualAccountId, cashBanks, loans, assetsManual, liabilitiesManual, equityManual, faOverrides, inventoryInputs, inventoryAccountId, inventoryPosted]);
+  }, [step, cutoverDate, sourceSystem, sourceReference, notes, residualClassification, residualAccountId, cashBanks, loans, assetsManual, liabilitiesManual, equityManual, faOverrides, inventoryInputs, inventoryAccountId, inventoryPosted, migration]);
 
   const clearDraft = useCallback(async () => {
     setHasDraft(false);

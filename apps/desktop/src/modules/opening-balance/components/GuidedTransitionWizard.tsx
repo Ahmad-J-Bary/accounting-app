@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check } from "lucide-react";
+import { TabContext } from "@app/providers/TabContext";
 import type { AccountDto, ResidualClassificationSpecDto } from "@erp/shared-types";
 import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
@@ -28,12 +29,38 @@ export function GuidedTransitionWizard() {
   const w = useOpeningBalanceWizard();
   const isNew = w.startMode === START_MODE_NEW;
   const navigate = useNavigate();
+  const tabs = useContext(TabContext);
   const [savingDraft, setSavingDraft] = useState(false);
   const [exiting, setExiting] = useState(false);
 
+  // The shell renders every page inside a TAB whose route comes from
+  // `openTab` — plain `navigate("/dashboard")` only rewrites the URL and leaves
+  // the current tab on the opening page. Real navigation closes the opening tab
+  // and switches to the dashboard tab via TabProvider (falls back to navigate
+  // when no tab shell is present, e.g. in isolated component tests).
+  const goDashboard = () => {
+    if (tabs) {
+      tabs.closeTab(tabs.activeTabId);
+      tabs.openTab({ id: "/dashboard", title: "لوحة التحكم", path: "/dashboard" });
+      return;
+    }
+    navigate("/dashboard");
+  };
+
+  const handleNext = () => {
+    // The final step's «إنهاء» finishes the flow: transition to the dashboard
+    // instead of remaining stuck on the completion step.
+    if (w.step === w.steps.length - 1) {
+      goDashboard();
+      return;
+    }
+    void w.handleNext();
+  };
+
   // Save → Exit → Continue later: persist the editor inputs then leave. A NEW
-  // company has nothing to save (no migration workflow), so the buttons are
-  // only provided for the Existing-company wizard.
+  // company has nothing to save (no migration workflow). A Locked migration is
+  // sealed — no draft controls either (the backend rejects saving after lock).
+  const sealed = !isNew && w.migration?.status === "Locked";
   const handleSaveDraft = async () => {
     setSavingDraft(true);
     await w.saveDraft();
@@ -44,7 +71,7 @@ export function GuidedTransitionWizard() {
     setExiting(true);
     const ok = await w.saveDraft();
     setExiting(false);
-    if (ok) navigate("/dashboard");
+    if (ok) goDashboard();
   };
 
   const renderDone = () => {
@@ -71,7 +98,7 @@ export function GuidedTransitionWizard() {
           </div>
         )}
         <div className="flex justify-center pt-1">
-          <Button size="sm" onClick={() => navigate("/dashboard")} className="bg-green-600 hover:bg-green-700 text-white font-bold">
+          <Button size="sm" onClick={goDashboard} className="bg-green-600 hover:bg-green-700 text-white font-bold">
             الانتقال إلى لوحة التحكم
           </Button>
         </div>
@@ -571,11 +598,11 @@ export function GuidedTransitionWizard() {
       isFinal={w.step === w.steps.length - 1}
       nextLabel={w.nextLabel}
       canNextHint={w.nextDisabledReason}
-      onNext={w.handleNext}
+      onNext={handleNext}
       onPrev={() => w.setStep((s) => Math.max(0, s - 1))}
-      onSave={isNew ? undefined : handleSaveDraft}
+      onSave={isNew || sealed ? undefined : handleSaveDraft}
       saving={savingDraft}
-      onExit={isNew ? undefined : handleExit}
+      onExit={isNew || sealed ? undefined : handleExit}
       exiting={exiting}
     >
       {renderStep()}
