@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isOpeningLine, getOpeningCreationDate, getOpeningTotals, computeOpeningBalance, computeClosingBalance } from "./openingLines";
+import { isOpeningLine, getOpeningCreationDate, getOpeningTotals, computeOpeningBalance, computeClosingBalance, markEntryRunFirsts } from "./openingLines";
 
 const openingLine = (journal_type: string, date: string, debit_base = "0", credit_base = "0", description = "") => ({
   journal_type,
@@ -158,5 +158,41 @@ describe("computeClosingBalance", () => {
 
   it("uses the absolute value for the magnitude", () => {
     expect(computeClosingBalance(150, 200)).toEqual({ net: -50, sign: "دائن" });
+  });
+});
+
+describe("markEntryRunFirsts (one journal = one header)", () => {
+  const run = (journal_id: string) => ({ journal_id });
+
+  it("flags only the first row of each adjacent same-journal run", () => {
+    expect(markEntryRunFirsts([
+      run("9"), run("9"), run("9"),
+      run("10"), run("10"),
+      run("11"),
+    ])).toEqual([true, false, false, true, false, true]);
+  });
+
+  it("returns an empty array for no lines", () => {
+    expect(markEntryRunFirsts([])).toEqual([]);
+  });
+
+  it("flags every row when journals are unique", () => {
+    expect(markEntryRunFirsts([run("a"), run("b"), run("c")])).toEqual([true, true, true]);
+  });
+
+  it("keeps adjacent same-journal rows adjacent under one header (reclassification joint)", () => {
+    // Journal 10 (Dr 53 / Cr 52) after entry 9 — statement shows
+    // entry-number/type/date once for the pair.
+    expect(markEntryRunFirsts([
+      run("9"),
+      run("10"),
+      run("10"),
+    ])).toEqual([true, true, false]);
+  });
+
+  it("detects a journal interrupted by another journal as two separate runs", () => {
+    expect(markEntryRunFirsts([
+      run("10"), run("9"), run("10"),
+    ])).toEqual([true, true, true]);
   });
 });

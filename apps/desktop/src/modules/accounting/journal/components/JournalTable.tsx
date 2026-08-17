@@ -18,7 +18,7 @@ import { getHeaderText, getPrimitiveCellValue, SHARED_COLUMN_IDS } from "./group
 
 import type { JournalEntryDto } from "@erp/shared-types";
 import type { JournalFilters } from "@modules/accounting/api/journalEntryService";
-import { toJournalLines, toJournalLinesSingleLine, type JournalRowLine, type JournalSingleLineRow } from "../lib/journal-view";
+import { toJournalLines, toJournalLinesSingleLine, journalTwoLineCompare, type JournalRowLine, type JournalSingleLineRow } from "../lib/journal-view";
 
 type DisplayMode = "two-line" | "one-line";
 
@@ -114,24 +114,7 @@ export function JournalTable({
     data: twoLineData,
     defaultField: (localStorage.getItem("journal-sort-field-two-line") as SortFieldTwoLine) || "entry_number",
     defaultDirection: "desc",
-    sortFn: (a, b, field, direction) => {
-      let comparison = 0;
-      switch (field) {
-        case "entry_number":
-          comparison = (parseInt(a.entry_number || "0", 10) || 0) - (parseInt(b.entry_number || "0", 10) || 0);
-          break;
-        case "created_at":
-          comparison = new Date(a.entry_date).getTime() - new Date(b.entry_date).getTime();
-          break;
-        case "journal_type":
-          comparison = (a.journal_type_display || "").localeCompare(b.journal_type_display || "", "ar");
-          break;
-        case "account":
-          comparison = (a.account_name || "").localeCompare(b.account_name || "", "ar");
-          break;
-      }
-      return direction === "asc" ? comparison : -comparison;
-    }
+    sortFn: (a, b, field, direction) => journalTwoLineCompare(a, b, field as SortFieldTwoLine, direction),
   });
 
   const singleLineSort = useSortable({

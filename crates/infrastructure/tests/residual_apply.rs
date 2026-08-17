@@ -271,3 +271,122 @@ async fn apply_residual_rejects_unclassified_or_draft_migration() {
         err
     );
 }
+
+#[tokio::test]
+async fn apply_residual_is_idempotent_and_clears_obe_53() {
+    let pool = build_pool().await;
+    let migration_repo: Arc<dyn OpeningMigrationRepository> =
+        Arc::new(SqliteOpeningMigrationRepository::new(pool.clone()));
+    let account_repo = Arc::new(SqliteAccountRepository::new(pool.clone()));
+    let journal_repo: Arc<dyn JournalEntryRepository> =
+        Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
+    let posting_repo: Arc<dyn OpeningPostingRepository> =
+        Arc::new(SqliteOpeningPostingRepository::new(pool.clone()));
+    let apply = ApplyResidualToLedgerUseCase::new(
+        migration_repo.clone(),
+        account_repo.clone(),
+        journal_repo.clone(),
+        posting_repo.clone(),
+    );
+
+    // Asset 150 / Liab 50 / Capital 70 → residual credit 30 on OBE (53).
+    let asset = seed_account(pool.as_ref(), "1208", "أصول تجريبية", "Assets", "12").await;
+    let liability = seed_account(pool.as_ref(), "2208", "خصوم تجريبية", "Liabilities", "22").await;
+    let capital = seed_account(pool.as_ref(), "510001", "رأس مال تجريبي", "Equity", "51").await;
+    let obe = account_id_by_code(pool.as_ref(), "53").await;
+    let retained = account_id_by_code(pool.as_ref(), "52").await;
+
+    let cutover = Utc::now();
+    let migration_id = uuid::Uuid::new_v4().to_string();
+    let mut migration = OpeningBalanceMigration::new(
+        migration_id.clone(),
+        cutover,
+        None,
+        vec![
+            OpeningBalanceLine { account_id: asset, amount: dec!(150), description: None },
+            OpeningBalanceLine { account_id: liability, amount: dec!(50), description: None },
+            OpeningBalanceLine { account_id: capital, amount: dec!(70), description: None },
+            OpeningBalanceLine { account_id: obe, amount: dec!(30), description: None },
+        ],
+    )
+    .unwrap();
+    migration_repo.create(&migration).await.unwrap();
+    migration.validate("tester").unwrap();
+    migration.approve("tester").unwrap();
+    migration.mark_posted().unwrap();
+    migration_repo.update(&migration).await.unwrap();
+
+    let mut entry = JournalEntry::new(
+        "OB-R-1001".to_string(),
+        JournalType::AccountOpeningBalance,
+        vec![
+            line(asset, dec!(150), dec!(0)),
+            line(liability, dec!(0), dec!(50)),
+            line(capital, dec!(0), dec!(70)),
+            line(obe, dec!(0), dec!(30)),
+        ],
+        cutover,
+        "قيد ترحيل رصيد افتتاح الشركة".to_string(),
+        Some(format!("opening_balance:{}", migration.id)),
+    )
+    .unwrap();
+    entry.post().unwrap();
+    posting_repo.post(&migration, &entry).await.unwrap();
+
+    SetResidualClassificationUseCase::new(migration_repo.clone(), account_repo.clone())
+        .execute(SetResidualClassificationCommand {
+            migration_id: migration_id.clone(),
+            classification: "RetainedEarnings".into(),
+            residual_account_id: Some(retained.0.to_string()),
+        })
+        .await
+        .unwrap();
+
+    // First apply succeeds → exactly one reclassification journal.
+    apply.execute(migration_id.clone()).await.unwrap();
+    let residual_journals = || async {
+        sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM journal_entries WHERE source_id = ?",
+        )
+        .bind(format!("residual_classification:{migration_id}"))
+        .fetch_one(pool.as_ref())
+        .await
+        .unwrap()
+    };
+    assert_eq!(residual_journals().await, 1, "exactly one residual journal after first apply");
+
+    // Second apply is rejected with the Arabic Conflict message and creates
+    // nothing: still exactly one reclassification journal.
+    let err = apply.execute(migration_id.clone()).await.unwrap_err();
+    assert!(
+        err.to_string().contains("بالفعل"),
+        "double apply must be rejected as already applied: {}",
+        err
+    );
+    assert_eq!(residual_journals().await, 1, "no second journal on double apply");
+
+    // OBE (53) nets to zero across posting + reclassification journals.
+    let obe_nets: f64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(CAST(jl.debit_base AS REAL) - CAST(jl.credit_base AS REAL)), 0.0) FROM journal_lines jl
+         JOIN journal_entries je ON je.id = jl.journal_entry_id
+         WHERE jl.account_id = ? AND (je.source_id LIKE 'opening_balance:%' OR je.source_id LIKE 'residual_classification:%')",
+    )
+    .bind(obe.0.to_string())
+    .fetch_one(pool.as_ref())
+    .await
+    .unwrap();
+    assert_eq!(obe_nets, 0.0, "OBE 53 must net to zero after reclassification");
+
+    // Retained earnings holds the residual exactly once.
+    let retained_credited: f64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(CAST(jl.credit_base AS REAL)), 0.0) FROM journal_lines jl
+         JOIN journal_entries je ON je.id = jl.journal_entry_id
+         WHERE jl.account_id = ? AND je.source_id = ?",
+    )
+    .bind(retained.0.to_string())
+    .bind(format!("residual_classification:{migration_id}"))
+    .fetch_one(pool.as_ref())
+    .await
+    .unwrap();
+    assert_eq!(retained_credited, 30.0, "retained earnings credited exactly the residual");
+}

@@ -23,6 +23,21 @@ const OPEN_PIVOT_PREFIXES: [&str; 3] = [
     "ob_reversal:",
 ];
 
+/// Posting lifecycle of an opening-balance migration — one journal per step:
+///
+/// 1. `PostOpeningBalanceUseCase` posts the whole opening position as a single
+///    `AccountOpeningBalance` journal (`opening_balance:{id}`). The residual
+///    (Debit − Credit) lands on the Opening Balance Equity account 53; until
+///    the reclassification step, 53 carries the uncleared residual.
+/// 2. `ApplyResidualToLedgerUseCase` then books the residual as one
+///    `GeneralJournal` entry (`residual_classification:{id}`) — two legs,
+///    e.g. `Dr 53 / Cr retained earnings` for a credit residual — clearing 53
+///    into the accountant-chosen equity account. After both journals, 53 nets
+///    to exactly zero (`obe_control_net`).
+///
+/// The two journals are distinct, mandatory lifecycle events, never two
+/// renderings of one amount; the OPEN_PIVOT_PREFIXES below group them for
+/// control/reconciliation, and reversal prefixes cover the JV3 pivot-back.
 pub struct PostOpeningBalanceUseCase {
     repo: Arc<dyn OpeningMigrationRepository>,
     detail_repo: Arc<dyn OpeningItemRepository>,

@@ -26,6 +26,13 @@ use crate::use_cases::opening_balance::obe::{
 /// or the reverse legs for a debit residual. The journal is a real, auditable
 /// `GeneralJournal` entry and the reclassification timestamp is persisted
 /// atomically with it, so the lock gate can prove 53 was re-classified.
+///
+/// The reclassification is ONE accounting event per migration, never two:
+/// exactly one journal carries `residual_classification:{migration_id}` (the
+/// DB also enforces it with a UNIQUE index on (source_type, source_id)); once
+/// applied, `residual_applied_at` is set and every further apply is rejected
+/// with a Conflict. Together with the `opening_balance:{migration_id}` posting
+/// journal it nets account 53 to zero (`obe_control_net`).
 pub struct ApplyResidualToLedgerUseCase {
     repo: Arc<dyn OpeningMigrationRepository>,
     account_repo: Arc<dyn AccountRepository>,

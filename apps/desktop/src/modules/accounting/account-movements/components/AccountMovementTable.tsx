@@ -13,7 +13,7 @@ import { getLeftBorderClass, getRowBorderClass, getRowBackgroundClass } from "@s
 import type { AccountLedgerLineDto } from "@erp/shared-types";
 import { formatDateTime, formatNumber } from "@shared/lib/format";
 import { getHeaderText, getPrimitiveCellValue } from "@modules/accounting/journal/components/groupedTableUtils";
-import { computeClosingBalance, isOpeningLine } from "@modules/accounting/account-movements/lib/openingLines";
+import { computeClosingBalance, isOpeningLine, markEntryRunFirsts } from "@modules/accounting/account-movements/lib/openingLines";
 import { Download } from "lucide-react";
 import { Button } from "@shared/ui/button";
 
@@ -46,6 +46,9 @@ type MovementRow = AccountLedgerLineDto & {
   side: "debit" | "credit";
   amount_base: number;
   isOpening: boolean;
+  /** First row of an adjacent run sharing the same journal — entry-number /
+   * type / date are rendered once across the run. */
+  isFirstInEntry: boolean;
 };
 
 type EnrichedOriginalLine = AccountLedgerLineDto & {
@@ -179,8 +182,14 @@ export function AccountMovementTable({
         side: debitBase > 0 ? "debit" : "credit",
         amount_base: debitBase > 0 ? debitBase : creditBase,
         isOpening: isOpeningLine(line),
+        isFirstInEntry: false,
       });
     }
+
+    const firsts = markEntryRunFirsts(cleanLines);
+    rows.forEach((row, idx) => {
+      row.isFirstInEntry = firsts[idx];
+    });
 
     return rows;
   }, [cleanLines]);
@@ -191,7 +200,7 @@ export function AccountMovementTable({
         id: "entry_number",
         header: "رقم القيد",
         label: "رقم القيد",
-        accessor: (r) => formatNumber(parseInt(r.entry_number) || 0),
+        accessor: (r) => (r.isFirstInEntry ? formatNumber(parseInt(r.entry_number) || 0) : ""),
         className: "font-black text-slate-900 text-center"
       },
       {
@@ -199,14 +208,18 @@ export function AccountMovementTable({
         header: "نوع الحركة",
         label: "نوع الحركة",
         accessor: (r) => (
-          <span className={cn(
-            "inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter",
-            r.isOpening
-              ? "bg-indigo-100/60 text-indigo-700"
-              : "bg-slate-100 text-slate-600"
-          )}>
-            {r.typeLabel}
-          </span>
+          r.isFirstInEntry ? (
+            <span className={cn(
+              "inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter",
+              r.isOpening
+                ? "bg-indigo-100/60 text-indigo-700"
+                : "bg-slate-100 text-slate-600"
+            )}>
+              {r.typeLabel}
+            </span>
+          ) : (
+            <span />
+          )
         ),
       },
     ];
@@ -343,7 +356,7 @@ export function AccountMovementTable({
       if (col.id === "date") {
         return dateCol("date", label, (row) => {
           const r = row as unknown as MovementRow;
-          return r.date;
+          return r.isFirstInEntry ? r.date : "";
         });
       }
 
@@ -364,8 +377,8 @@ export function AccountMovementTable({
         width: estimateExcelWidth(label, getColumnSampleValues(col)),
         accessor: (row) => {
           const r = row as unknown as MovementRow;
-          if (col.id === "entry_number") return parseInt(r.entry_number, 10) || 0;
-          if (col.id === "journal_type") return r.typeLabel;
+          if (col.id === "entry_number") return r.isFirstInEntry ? (parseInt(r.entry_number, 10) || 0) : "";
+          if (col.id === "journal_type") return r.isFirstInEntry ? r.typeLabel : "";
           if (col.id === "description") return r.description;
           return "";
         },

@@ -55,6 +55,10 @@ export interface JournalRowLine {
   created_at: string;
   account_name: string;
   account_code?: string;
+  /** Entry-level sort anchor for the account column: every line of one journal
+   * shares the same value, so a multi-line entry stays adjacent (one header)
+   * even when the register is sorted by account. */
+  groupSortAccount: string;
   side: "debit" | "credit";
   amount_base: number;
   amount_original: number;
@@ -131,6 +135,8 @@ export function toJournalLines(entry: JournalEntryDto): JournalRowLine[] {
   }
 
   const lines: JournalRowLine[] = [];
+  const groupSortAccount =
+    entry.lines[0]?.account_name || entry.lines[0]?.account_id || "";
 
   for (const l of entry.lines) {
     const d = parseFloat(l.debit || "0");
@@ -164,6 +170,7 @@ export function toJournalLines(entry: JournalEntryDto): JournalRowLine[] {
         created_at: entry.created_at,
         account_name: l.account_name || l.account_id,
         account_code: l.account_code,
+        groupSortAccount,
         side: "debit",
         amount_base: debitBase,
         amount_original: isOrig ? d : 0,
@@ -183,6 +190,7 @@ export function toJournalLines(entry: JournalEntryDto): JournalRowLine[] {
         created_at: entry.created_at,
         account_name: l.account_name || l.account_id,
         account_code: l.account_code,
+        groupSortAccount,
         side: "credit",
         amount_base: creditBase,
         amount_original: isOrig ? c : 0,
@@ -410,4 +418,38 @@ export function toJournalLinesSingleLine(entry: JournalEntryDto): JournalSingleL
     debit_currency: debitCurrency,
     credit_currency: creditCurrency,
   }];
+}
+
+export type JournalTwoLineSortField = "entry_number" | "created_at" | "journal_type" | "account";
+export type SortDirection = "asc" | "desc";
+
+/**
+ * Two-line journal-register comparator. The `account` field compares the
+ * ENTRY-level anchor (`groupSortAccount`) shared by every line of a journal,
+ * never the per-line account — so a multi-line entry (e.g. the residual
+ * reclassification: Dr 53 / Cr 52) always sorts as one adjacent group under
+ * one header, regardless of the selected column.
+ */
+export function journalTwoLineCompare(
+  a: JournalRowLine,
+  b: JournalRowLine,
+  field: JournalTwoLineSortField,
+  direction: SortDirection,
+): number {
+  let comparison = 0;
+  switch (field) {
+    case "entry_number":
+      comparison = (parseInt(a.entry_number || "0", 10) || 0) - (parseInt(b.entry_number || "0", 10) || 0);
+      break;
+    case "created_at":
+      comparison = new Date(a.entry_date).getTime() - new Date(b.entry_date).getTime();
+      break;
+    case "journal_type":
+      comparison = (a.journal_type_display || "").localeCompare(b.journal_type_display || "", "ar");
+      break;
+    case "account":
+      comparison = (a.groupSortAccount || "").localeCompare(b.groupSortAccount || "", "ar");
+      break;
+  }
+  return direction === "asc" ? comparison : -comparison;
 }

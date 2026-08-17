@@ -104,6 +104,17 @@ export function computeOpeningBalance(
 
 export type ClosingSign = "مدين" | "دائن" | "متزن";
 
+/**
+ * Flags each row of a ledger-light list with whether it is the FIRST row of an
+ * adjacent run sharing the same journal (`journal_id`). A journal that spans
+ * several accounts (e.g. the residual reclassification: Dr 53 / Cr 52 of one
+ * GeneralJournal) then renders entry-number / type / date once, under one
+ * "journal header", while every movement row stays visible.
+ */
+export function markEntryRunFirsts(lines: { journal_id: string }[]): boolean[] {
+  return lines.map((line, idx) => idx === 0 || line.journal_id !== lines[idx - 1].journal_id);
+}
+
 // Closing balance = |totalDebit - totalCredit|. Its state (debit/credit) is
 // decided by whichever side is larger: debit when the debit total wins,
 // credit when the credit total wins, balanced when they are equal.
