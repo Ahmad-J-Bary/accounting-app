@@ -177,7 +177,7 @@ impl FixedAssetUseCases {
             ),
         ];
 
-        let entry = JournalEntry::new(
+        let mut entry = JournalEntry::new(
             self.journal_repo.get_next_entry_number().await?,
             domain::accounting::JournalType::GeneralJournal,
             lines,
@@ -186,6 +186,17 @@ impl FixedAssetUseCases {
             Some(asset.id.0.to_string()),
         )
         .map_err(|e| AppError::Invalid(e.to_string()))?;
+
+        // Opening acquisitions (addition_type = "existing") book an opening
+        // balance, so they are tagged `fixed_asset_opening`. The migration
+        // posting flow uses this tag (not the journal type) to auto-reverse the
+        // per-asset GeneralJournal when the migration aggregate already carries
+        // the same account/amount — a plain GeneralJournal would otherwise
+        // double-book fixed assets in Trial Balance / Balance Sheet (R1 / 158
+        // only covered Account/MaterialOpeningBalance journals).
+        if req.addition_type == "existing" {
+            entry.source_type = Some("fixed_asset_opening".to_string());
+        }
 
         // --- Update account balances (computed in memory, persisted below) ---
         let base_amount = req.purchase_cost.to_base(req.fx_rate);

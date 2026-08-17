@@ -163,11 +163,15 @@ impl JournalEntryRepository for MockJournalRepository {
         account_id: Option<domain::shared::AccountId>,
         partner_id: Option<uuid::Uuid>,
         status: Option<domain::accounting::JournalEntryStatus>,
+        exclude_reversal_pairs: bool,
     ) -> Result<Vec<JournalEntry>, AppError> {
         let entries = self.entries.lock().unwrap();
         Ok(entries
             .iter()
             .filter(|e| {
+                if exclude_reversal_pairs && e.reversal_of_entry_id.is_some() {
+                    return false;
+                }
                 if let Some(from) = from_date {
                     if e.entry_date < from {
                         return false;

@@ -65,6 +65,7 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
         account_id: Option<AccountId>,
         partner_id: Option<uuid::Uuid>,
         status: Option<domain::accounting::JournalEntryStatus>,
+        exclude_reversal_pairs: bool,
     ) -> Result<Vec<JournalEntry>, AppError> {
         queries::list_with_filters(
             &self.pool,
@@ -74,6 +75,7 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
             account_id,
             partner_id,
             status,
+            exclude_reversal_pairs,
         )
         .await
     }

@@ -203,15 +203,19 @@ impl PostOpeningBalanceUseCase {
         let mut seen: HashSet<String> = HashSet::new();
 
         for journal in self.journal_repo.list_all().await? {
-            // Only posted standalone Account/MaterialOpeningBalance journals can
-            // pre-book an opening position that the migration would duplicate.
+            // Only posted standalone opening journals can pre-book an opening
+            // position that the migration would duplicate. That covers per-entity
+            // Account/MaterialOpeningBalance journals AND GeneralJournal fixed
+            // asset openings (booked by `FixedAssetUseCases::create_asset` with
+            // `addition_type = "existing"`, tagged `fixed_asset_opening`) — a
+            // plain GeneralJournal would silently double-book the same assets.
             if journal.status != JournalEntryStatus::Posted {
                 continue;
             }
             let is_opening = matches!(
                 journal.journal_type,
                 JournalType::AccountOpeningBalance | JournalType::MaterialOpeningBalance
-            );
+            ) || journal.source_type.as_deref() == Some("fixed_asset_opening");
             if !is_opening {
                 continue;
             }

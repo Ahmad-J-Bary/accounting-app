@@ -35,6 +35,11 @@ export default function Journal() {
   const [reversingId, setReversingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
+  // Clean journal view: posted entries only, both sides of a reversal pair
+  // hidden. Toggle off to see the full audit trail (Draft/Cancelled/Reversed
+  // originals + their Posted contra journals).
+  const [excludeReversals, setExcludeReversals] = useState(true);
+
   useEffect(() => {
     localStorage.setItem("journal-display-mode", displayMode);
   }, [displayMode]);
@@ -49,7 +54,11 @@ export default function Journal() {
 
   // Fetch all entries; the date range is applied client-side (local dates),
   // mirroring the Account Movements page for consistent behavior.
-  const queryFilters = useMemo<JournalFilters>(() => ({}), []);
+  const queryFilters = useMemo<JournalFilters>(() => (
+    excludeReversals
+      ? { status: 'Posted', exclude_reversal_pairs: true }
+      : {}
+  ), [excludeReversals]);
 
   const fetchData = useCallback(() => {
     return journalEntryService.listJournalEntries(queryFilters);
@@ -157,6 +166,21 @@ export default function Journal() {
                 </SelectContent>
               </Select>
               
+              <div className="flex items-center gap-1 ml-2">
+                <button
+                  type="button"
+                  onClick={() => setExcludeReversals(v => !v)}
+                  className={`px-3 py-2 rounded-lg text-sm font-bold border transition-colors ${
+                    excludeReversals
+                      ? "bg-slate-800 text-white border-slate-800"
+                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
+                  }`}
+                  title="إخفاء القيود المعكوسة والعكسية (الوضع النظيف) / عرض مسار التدقيق الكامل"
+                >
+                  {excludeReversals ? "إخفاء المعكوسات" : "عرض كل القيود"}
+                </button>
+              </div>
+
               <div className="flex items-center gap-1 ml-2 border-slate-200 border rounded-lg overflow-hidden">
                 <button
                   type="button"

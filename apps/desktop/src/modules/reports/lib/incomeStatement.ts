@@ -182,6 +182,12 @@ const getAccountPeriodNet = (predicate: (acc?: AccountDto) => boolean, revenueSi
     let credit = 0;
     for (const entry of entries) {
       if (!isWithinRange(entry.entry_date, fromTs, toTs)) continue;
+      // Same reversal-pair rule as the backend ledger (`list_by_accounts`:
+      // `status='Posted' AND reversal_of_entry_id IS NULL`): the Reversed
+      // original and its Posted contra journal are mathematically neutral and
+      // must never move an income-statement balance.
+      if (entry.reversal_of_entry_id) continue;
+      if (entry.status && entry.status !== "Posted") continue;
       for (const line of entry.lines) {
         const acc = accountMap.get(line.account_id);
         if (acc && predicate(acc)) {

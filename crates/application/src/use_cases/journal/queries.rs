@@ -32,11 +32,13 @@ impl ListJournalEntriesUseCase {
         account_id: Option<String>,
         partner_id: Option<String>,
         status: Option<String>,
+        exclude_reversal_pairs: Option<bool>,
     ) -> Result<Vec<JournalEntryDto>, AppError> {
         let from = from_date.and_then(|d| parse_date_bound(&d, false));
         let to = to_date.and_then(|d| parse_date_bound(&d, true));
         let acc_id = account_id.and_then(|id| id.parse::<AccountId>().ok());
         let part_id = partner_id.and_then(|id| Uuid::parse_str(&id).ok());
+        let exclude_reversal_pairs = exclude_reversal_pairs.unwrap_or(false);
         let status_enum = status.and_then(|s| match s.as_str() {
             "Draft" => Some(JournalEntryStatus::Draft),
             "Posted" => Some(JournalEntryStatus::Posted),
@@ -58,7 +60,7 @@ impl ListJournalEntriesUseCase {
 
         let entries = self
             .repo
-            .list_with_filters(from, to, repo_journal_type, acc_id, part_id, status_enum)
+            .list_with_filters(from, to, repo_journal_type, acc_id, part_id, status_enum, exclude_reversal_pairs)
             .await?;
 
         let mut dtos = Vec::new();
@@ -111,7 +113,7 @@ impl ListJournalEntriesUseCase {
 
         let entries = self
             .repo
-            .list_with_filters(from, to, None, acc_id, part_id, Some(JournalEntryStatus::Posted))
+            .list_with_filters(from, to, None, acc_id, part_id, Some(JournalEntryStatus::Posted), false)
             .await?;
 
         let mut dtos = Vec::with_capacity(entries.len());

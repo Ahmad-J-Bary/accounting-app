@@ -60,6 +60,7 @@ impl GetDistributableProfitUseCase {
                 None,
                 None,
                 Some(JournalEntryStatus::Posted),
+                false,
             )
             .await?;
 

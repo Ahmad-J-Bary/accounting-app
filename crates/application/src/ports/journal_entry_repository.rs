@@ -27,6 +27,7 @@ pub trait JournalEntryRepository: Send + Sync {
         account_id: Option<AccountId>,
         partner_id: Option<uuid::Uuid>,
         status: Option<domain::accounting::JournalEntryStatus>,
+        exclude_reversal_pairs: bool,
     ) -> Result<Vec<JournalEntry>, AppError>;
     async fn get_next_entry_number(&self) -> Result<String, AppError>;
     async fn find_by_source_id(&self, source_id: &str) -> Result<Option<JournalEntry>, AppError>;

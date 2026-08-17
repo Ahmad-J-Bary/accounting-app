@@ -154,6 +154,7 @@ pub async fn list_with_filters(
     account_id: Option<AccountId>,
     partner_id: Option<uuid::Uuid>,
     status: Option<JournalEntryStatus>,
+    exclude_reversal_pairs: bool,
 ) -> Result<Vec<JournalEntry>, AppError> {
     let mut query_str = "SELECT DISTINCT je.id, je.entry_number, je.journal_type, je.source_id, je.source_type, je.reversal_of_entry_id, je.entry_date, je.description, je.status, je.created_at, je.posted_at, je.reversed_at, je.updated_at FROM journal_entries je JOIN journal_lines jl ON je.id = jl.journal_entry_id WHERE 1=1".to_string();
     
@@ -167,6 +168,10 @@ pub async fn list_with_filters(
     if account_id.is_some() { query_str.push_str(" AND jl.account_id = ?"); }
     if partner_id.is_some() { query_str.push_str(" AND jl.partner_id = ?"); }
     if status.is_some() { query_str.push_str(" AND je.status = ?"); }
+    // The clean daily journal (command + its view) hides both sides of a
+    // reversal pair (the Reversed original and the Posted contra journal).
+    // The full audit mode (report queries, audit view) keeps them.
+    if exclude_reversal_pairs { query_str.push_str(" AND je.reversal_of_entry_id IS NULL"); }
     
     query_str.push_str(" ORDER BY CAST(je.entry_number AS INTEGER) DESC");
 
@@ -194,16 +199,38 @@ pub async fn list_with_filters(
 }
 
 pub async fn get_next_entry_number(pool: &SqlitePool) -> Result<String, AppError> {
-    let row: (Option<i64>,) = sqlx::query_as("SELECT MAX(CAST(entry_number AS INTEGER)) FROM journal_entries")
-        .fetch_one(pool)
-        .await
-        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
-    
-    let next = match row.0 {
-        Some(n) => n + 1,
-        None => 1,
-    };
-    Ok(next.to_string())
+    // A real allocated sequence (migration 160): seed once, always stay ahead
+    // of any number written outside the sequence (legacy rows, migration 158's
+    // generated numbers), persist the increment, and return the allocated
+    // number. The transaction makes retrieval + increment atomic, so two
+    // concurrent journal-creation flows can never receive the same number —
+    // the UNIQUE entry_number constraint stays an assertion, not the allocator.
+    let mut tx = pool.begin().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    sqlx::query(
+        "INSERT INTO journal_numbering (id, next_value) VALUES (1, COALESCE((SELECT MAX(CAST(entry_number AS INTEGER)) FROM journal_entries), 0) + 1) ON CONFLICT(id) DO NOTHING"
+    )
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    sqlx::query(
+        "UPDATE journal_numbering SET next_value = MAX(next_value, (SELECT COALESCE(MAX(CAST(entry_number AS INTEGER)), 0) FROM journal_entries) + 1) WHERE id = 1"
+    )
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    let next_value: i64 = sqlx::query_scalar(
+        "UPDATE journal_numbering SET next_value = next_value + 1 WHERE id = 1 RETURNING next_value"
+    )
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    Ok((next_value - 1).to_string())
 }
 
 pub async fn load_lines(pool: &SqlitePool, entry_id: &str) -> Result<Vec<JournalLine>, AppError> {

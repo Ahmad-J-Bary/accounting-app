@@ -55,6 +55,7 @@ impl ComputePeriodNetProfitUseCase {
                 None,
                 None,
                 Some(JournalEntryStatus::Posted),
+                false,
             )
             .await?;
 
