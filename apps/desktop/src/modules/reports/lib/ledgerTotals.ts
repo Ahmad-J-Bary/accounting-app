@@ -45,6 +45,10 @@ export function computeLedgerTotals(
   const accountsWithOpeningEntries = new Set<string>();
 
   for (const entry of entries) {
+    if (entry.status && entry.status !== "Posted") {
+      continue;
+    }
+
     const desc = entry.description || "";
     const isOpeningEntry =
       entry.journal_type === "CashOpeningBalance" ||
@@ -81,6 +85,13 @@ export function computeLedgerTotals(
   const periodNetMap = new Map<string, { debit: number; credit: number }>();
 
   for (const entry of entries) {
+    // Financial statements only ever aggregate POSTED entries. A Draft that
+    // leaks into the report feed (defensive belt against the backend
+    // Posted-only command) must never move a GL balance.
+    if (entry.status && entry.status !== "Posted") {
+      continue;
+    }
+
     const entryDate = toLocalDateStr(entry.entry_date);
 
     // Exclude entries strictly after toDate

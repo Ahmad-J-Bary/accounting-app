@@ -17,10 +17,10 @@ export function useReportBaseData(filters?: ReportFilters) {
 
   const journalEntriesQuery = useQuery({
     queryKey: QUERY_KEYS.journalEntries(filters ? { from_date: filters.from_date, to_date: filters.to_date } : {}),
-    queryFn: () => journalEntryService.listJournalEntries(filters ? {
-      from_date: toUtcBound(filters.from_date, false),
-      to_date: toUtcBound(filters.to_date, true),
-    } : {}),
+    queryFn: () => journalEntryService.listPostedJournalEntries(
+      filters ? toUtcBound(filters.from_date, false) : undefined,
+      filters ? toUtcBound(filters.to_date, true) : undefined,
+    ),
   });
 
   const salesInvoicesQuery = useQuery({

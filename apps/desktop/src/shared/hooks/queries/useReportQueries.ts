@@ -33,7 +33,10 @@ export function useTrialBalance(filters?: { from_date?: string; to_date?: string
     queryFn: async () => {
       const [accounts, entries] = await Promise.all([
         accountingService.getChartOfAccounts(),
-        journalEntryService.listJournalEntries({}),
+        journalEntryService.listPostedJournalEntries(
+          filters?.from_date ? toUtcBound(filters.from_date, false) : undefined,
+          filters?.to_date ? toUtcBound(filters.to_date, true) : undefined,
+        ),
       ]);
 
       const { ledgerTotals } = computeLedgerTotals(

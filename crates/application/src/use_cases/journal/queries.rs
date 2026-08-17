@@ -92,6 +92,35 @@ impl ListJournalEntriesUseCase {
         Ok(dtos)
     }
 
+    /// Report-scoped listing: returns ONLY posted journal entries (optionally
+    /// narrowed by account / partner). Drafts and cancelled entries must never
+    /// reach financial statements — an unposted entry is not part of the GL.
+    /// Routing every report consumer through this method (instead of letting
+    /// each call site pass a status filter) prevents Draft leakage regressions.
+    pub async fn execute_posted(
+        &self,
+        from_date: Option<String>,
+        to_date: Option<String>,
+        account_id: Option<String>,
+        partner_id: Option<String>,
+    ) -> Result<Vec<JournalEntryDto>, AppError> {
+        let from = from_date.and_then(|d| parse_date_bound(&d, false));
+        let to = to_date.and_then(|d| parse_date_bound(&d, true));
+        let acc_id = account_id.and_then(|id| id.parse::<AccountId>().ok());
+        let part_id = partner_id.and_then(|id| Uuid::parse_str(&id).ok());
+
+        let entries = self
+            .repo
+            .list_with_filters(from, to, None, acc_id, part_id, Some(JournalEntryStatus::Posted))
+            .await?;
+
+        let mut dtos = Vec::with_capacity(entries.len());
+        for entry in entries {
+            dtos.push(self.map_to_dto(entry).await?);
+        }
+        Ok(dtos)
+    }
+
     pub async fn get_details(&self, id: String) -> Result<JournalEntryDto, AppError> {
         let entry_id = id
             .parse()
@@ -143,4 +172,62 @@ fn parse_date_bound(value: &str, end_of_day: bool) -> Option<DateTime<Utc>> {
     }
 
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::mocks::{MockAccountRepository, MockJournalRepository};
+    use domain::accounting::{JournalEntry, JournalEntryStatus, JournalLine, JournalType};
+    use domain::shared::{AccountId, Currency, MonetaryAmount, Money};
+    use rust_decimal_macros::dec;
+    use uuid::Uuid;
+
+    fn balanced_entry(number: &str, desc: &str, account_id: AccountId) -> JournalEntry {
+        let base = Currency::new("S", "عملة أساسية", "Base", "B", 2, true);
+        let amount = MonetaryAmount::new(Money::new(dec!(100), base.clone()), dec!(1));
+        let zero = MonetaryAmount::zero(base);
+        JournalEntry::new(
+            number.to_string(),
+            JournalType::GeneralJournal,
+            vec![
+                JournalLine::new(account_id, amount.clone(), zero.clone(), desc.to_string()),
+                JournalLine::new(account_id, zero, amount, desc.to_string()),
+            ],
+            chrono::Utc::now(),
+            desc.to_string(),
+            None,
+        )
+        .unwrap()
+    }
+
+    #[tokio::test]
+    async fn execute_posted_returns_only_posted_entries() {
+        let journal_repo = Arc::new(MockJournalRepository::default());
+        let account_repo = Arc::new(MockAccountRepository::default());
+        let account = AccountId(Uuid::new_v4());
+
+        let draft = balanced_entry("1", "draft-fa-opening", account);
+        let mut posted = balanced_entry("2", "posted-migration", account);
+        posted.post().unwrap();
+        let mut reversed = balanced_entry("3", "reversed", account);
+        reversed.post().unwrap();
+        reversed.reverse().unwrap();
+        let mut cancelled = balanced_entry("4", "cancelled", account);
+        cancelled.status = JournalEntryStatus::Cancelled;
+
+        journal_repo
+            .entries
+            .lock()
+            .unwrap()
+            .extend([draft.clone(), posted.clone(), reversed.clone(), cancelled.clone()]);
+
+        let use_case = ListJournalEntriesUseCase::new(journal_repo.clone(), account_repo.clone());
+        let result = use_case.execute_posted(None, None, None, None).await.unwrap();
+
+        assert_eq!(result.len(), 1, "only the Posted entry reaches reports");
+        assert_eq!(result[0].description, "posted-migration");
+        assert_ne!(result[0].description, "draft-fa-opening",
+            "a Draft FA opening journal must never reach the reports");
+    }
 }

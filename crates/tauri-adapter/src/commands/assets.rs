@@ -58,7 +58,7 @@ pub async fn create_fixed_asset(
         _ => None,
     };
 
-    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone());
+    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone(), state.settings_repo.clone(), state.opening_migration_repo.clone());
     let id = use_case.create_asset(CreateAssetRequest {
         code,
         name,
@@ -133,7 +133,7 @@ pub async fn update_fixed_asset(
         _ => None,
     };
 
-    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone());
+    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone(), state.settings_repo.clone(), state.opening_migration_repo.clone());
     use_case.update_asset(asset_id, CreateAssetRequest {
         code,
         name,
@@ -163,7 +163,7 @@ pub async fn delete_fixed_asset(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let id = FixedAssetId(Uuid::parse_str(&asset_id).map_err(|e| e.to_string())?);
-    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone());
+    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone(), state.settings_repo.clone(), state.opening_migration_repo.clone());
     use_case.delete_asset(id).await.map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -172,7 +172,7 @@ pub async fn delete_fixed_asset(
 pub async fn list_fixed_assets(
     state: State<'_, AppState>,
 ) -> Result<Vec<FixedAsset>, String> {
-    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone());
+    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone(), state.settings_repo.clone(), state.opening_migration_repo.clone());
     use_case.list_assets().await.map_err(|e| e.to_string())
 }
 
@@ -258,7 +258,7 @@ pub async fn create_asset_category(
         "Fixed" => AssetType::Fixed,
         _ => AssetType::Consumable,
     };
-    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone());
+    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone(), state.settings_repo.clone(), state.opening_migration_repo.clone());
     let id = use_case.create_category(name, atype).await.map_err(|e| e.to_string())?;
     Ok(id.to_string())
 }
@@ -272,7 +272,7 @@ pub async fn list_asset_categories(
         "Fixed" => AssetType::Fixed,
         _ => AssetType::Consumable,
     };
-    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone());
+    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone(), state.settings_repo.clone(), state.opening_migration_repo.clone());
     use_case.list_categories(atype).await.map_err(|e| e.to_string())
 }
 
@@ -287,7 +287,7 @@ pub async fn post_asset_depreciation(
         .map(|d| d.with_timezone(&chrono::Utc))
         .map_err(|e| e.to_string())?;
 
-    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone());
+    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone(), state.settings_repo.clone(), state.opening_migration_repo.clone());
     use_case.post_depreciation(id, dt).await.map_err(|e| e.to_string())
 }
 
@@ -297,7 +297,7 @@ pub async fn list_asset_movements(
     state: State<'_, AppState>,
 ) -> Result<Vec<domain::assets::AssetMovement>, String> {
     let id = Uuid::parse_str(&asset_id).map_err(|e| e.to_string())?;
-    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone());
+    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone(), state.settings_repo.clone(), state.opening_migration_repo.clone());
     use_case.list_movements(id).await.map_err(|e| e.to_string())
 }
 
@@ -317,6 +317,6 @@ pub async fn run_yearly_rotation(
         .map(|d| d.with_timezone(&chrono::Utc))
         .map_err(|e| e.to_string())?;
 
-    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone());
+    let use_case = FixedAssetUseCases::new(state.asset_repo.clone(), state.journal_entry_repo.clone(), state.account_repo.clone(), state.settings_repo.clone(), state.opening_migration_repo.clone());
     use_case.run_yearly_rotation(dt).await.map_err(|e| e.to_string())
 }

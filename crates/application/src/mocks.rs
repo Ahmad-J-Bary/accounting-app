@@ -4,10 +4,14 @@ use crate::ports::account_repository::AccountRepository;
 use crate::ports::asset_repository::AssetRepository;
 use crate::ports::fiscal_period_repository::FiscalPeriodRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
+use crate::ports::opening_migration_repository::OpeningMigrationRepository;
+use crate::ports::settings_repository::SettingsRepository;
 use domain::accounting::account::Account;
 use domain::accounting::fiscal_period::FiscalPeriod;
+use domain::accounting::opening_balance::OpeningBalanceMigration;
 use domain::assets::{FixedAsset, FixedAssetId, AssetCategory, AssetMovement, DepreciationSchedule, AssetType};
 use domain::accounting::{JournalEntry, JournalEntryId};
+use domain::settings::CompanySettings;
 use domain::shared::ids::FiscalPeriodId;
 use domain::shared::AccountId;
 use crate::errors::AppError;
@@ -153,14 +157,51 @@ impl JournalEntryRepository for MockJournalRepository {
     async fn list_by_accounts(&self, _account_ids: &[domain::shared::AccountId]) -> Result<Vec<JournalEntry>, AppError> { Ok(vec![]) }
     async fn list_with_filters(
         &self,
-        _from_date: Option<chrono::DateTime<chrono::Utc>>,
-        _to_date: Option<chrono::DateTime<chrono::Utc>>,
-        _journal_type: Option<domain::accounting::JournalType>,
-        _account_id: Option<domain::shared::AccountId>,
-        _partner_id: Option<uuid::Uuid>,
-        _status: Option<domain::accounting::JournalEntryStatus>,
+        from_date: Option<chrono::DateTime<chrono::Utc>>,
+        to_date: Option<chrono::DateTime<chrono::Utc>>,
+        journal_type: Option<domain::accounting::JournalType>,
+        account_id: Option<domain::shared::AccountId>,
+        partner_id: Option<uuid::Uuid>,
+        status: Option<domain::accounting::JournalEntryStatus>,
     ) -> Result<Vec<JournalEntry>, AppError> {
-        Ok(self.entries.lock().unwrap().clone())
+        let entries = self.entries.lock().unwrap();
+        Ok(entries
+            .iter()
+            .filter(|e| {
+                if let Some(from) = from_date {
+                    if e.entry_date < from {
+                        return false;
+                    }
+                }
+                if let Some(to) = to_date {
+                    if e.entry_date > to {
+                        return false;
+                    }
+                }
+                if let Some(jt) = journal_type.as_ref() {
+                    if &e.journal_type != jt {
+                        return false;
+                    }
+                }
+                if let Some(acc) = account_id.as_ref() {
+                    if !e.lines.iter().any(|l| &l.account_id == acc) {
+                        return false;
+                    }
+                }
+                if let Some(pid) = partner_id {
+                    if !e.lines.iter().any(|l| l.partner_id == Some(pid)) {
+                        return false;
+                    }
+                }
+                if let Some(s) = status.as_ref() {
+                    if &e.status != s {
+                        return false;
+                    }
+                }
+                true
+            })
+            .cloned()
+            .collect())
     }
     async fn get_next_entry_number(&self) -> Result<String, AppError> {
         let entries = self.entries.lock().unwrap();
@@ -229,9 +270,7 @@ impl AccountRepository for MockAccountRepository {
 
 pub struct MockFiscalPeriodRepository {
     pub periods: Mutex<Vec<FiscalPeriod>>,
-}
-
-impl MockFiscalPeriodRepository {
+}impl MockFiscalPeriodRepository {
     pub fn new() -> Self {
         Self::default()
     }
@@ -273,6 +312,74 @@ impl FiscalPeriodRepository for MockFiscalPeriodRepository {
         let mut periods = self.periods.lock().unwrap();
         periods.retain(|p| p.id != period.id);
         periods.push(period.clone());
+        Ok(())
+    }
+}
+
+pub struct MockSettingsRepository {
+    pub settings: Mutex<CompanySettings>,
+}
+
+impl MockSettingsRepository {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl Default for MockSettingsRepository {
+    fn default() -> Self {
+        Self { settings: Mutex::new(CompanySettings::default()) }
+    }
+}
+
+#[async_trait]
+impl SettingsRepository for MockSettingsRepository {
+    async fn get(&self) -> Result<CompanySettings, AppError> {
+        Ok(self.settings.lock().unwrap().clone())
+    }
+
+    async fn save(&self, settings: &CompanySettings) -> Result<(), AppError> {
+        let mut store = self.settings.lock().unwrap();
+        *store = settings.clone();
+        Ok(())
+    }
+}
+
+pub struct MockOpeningMigrationRepository {
+    pub migrations: Mutex<Vec<OpeningBalanceMigration>>,
+}
+
+impl MockOpeningMigrationRepository {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl Default for MockOpeningMigrationRepository {
+    fn default() -> Self {
+        Self { migrations: Mutex::new(Vec::new()) }
+    }
+}
+
+#[async_trait]
+impl OpeningMigrationRepository for MockOpeningMigrationRepository {
+    async fn create(&self, m: &OpeningBalanceMigration) -> Result<(), AppError> {
+        self.migrations.lock().unwrap().push(m.clone());
+        Ok(())
+    }
+    async fn update(&self, _m: &OpeningBalanceMigration) -> Result<(), AppError> {
+        Ok(())
+    }
+    async fn find_by_id(&self, id: &str) -> Result<Option<OpeningBalanceMigration>, AppError> {
+        Ok(self.migrations.lock().unwrap().iter().find(|m| m.id == id).cloned())
+    }
+    async fn find_by_cutover_date(&self, _cutover_date: &str) -> Result<Vec<OpeningBalanceMigration>, AppError> {
+        Ok(self.migrations.lock().unwrap().clone())
+    }
+    async fn list(&self) -> Result<Vec<OpeningBalanceMigration>, AppError> {
+        Ok(self.migrations.lock().unwrap().clone())
+    }
+    async fn delete(&self, _id: &str) -> Result<(), AppError> {
         Ok(())
     }
 }

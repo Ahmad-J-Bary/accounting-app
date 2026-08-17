@@ -54,4 +54,18 @@ describe("FixedAssetForm", () => {
     expect(screen.queryByText("شراء جديد")).not.toBeInTheDocument();
     expect(screen.queryByText("أصل سابق")).not.toBeInTheDocument();
   });
+
+  it("EXISTING company after the opening window is sealed: natural purchase workflow is auto-selected", () => {
+    renderWithCompanyType(
+      <FixedAssetForm
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+        currencies={[]}
+      />,
+      COMPANY_TYPE_EXISTING as never,
+      [{ status: "Locked" }],
+    );
+    expect(screen.getByText("شراء أصل جديد")).toBeInTheDocument();
+    expect(screen.queryByText(/إضافة أصل سابق/)).not.toBeInTheDocument();
+  });
 });

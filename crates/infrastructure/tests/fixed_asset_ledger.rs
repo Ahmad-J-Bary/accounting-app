@@ -159,7 +159,17 @@ async fn fixed_asset_acquisition_and_depreciation_reconcile_asset_ledger() {
         Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
     let account_repo: Arc<dyn AccountRepository> =
         Arc::new(SqliteAccountRepository::new(pool.clone()));
-    let uc = FixedAssetUseCases::new(asset_repo.clone(), journal_repo.clone(), account_repo.clone());
+    let settings_repo: Arc<dyn application::ports::settings_repository::SettingsRepository> =
+        Arc::new(SqliteSettingsRepository::new(pool.clone()));
+    let opening_migration_repo: Arc<dyn OpeningMigrationRepository> =
+        Arc::new(SqliteOpeningMigrationRepository::new(pool.clone()));
+    let uc = FixedAssetUseCases::new(
+        asset_repo.clone(),
+        journal_repo.clone(),
+        account_repo.clone(),
+        settings_repo.clone(),
+        opening_migration_repo.clone(),
+    );
 
     // The asset category must exist before the asset (FK on asset_categories).
     let category = domain::assets::AssetCategory::new(

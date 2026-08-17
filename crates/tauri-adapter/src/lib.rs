@@ -88,6 +88,7 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             // Journal Entries
             commands::journal::create_journal_entry,
             commands::journal::list_journal_entries,
+            commands::journal::list_posted_journal_entries,
             commands::journal::get_journal_entry_details,
             commands::journal::post_journal_entry,
             commands::journal::reverse_journal_entry,

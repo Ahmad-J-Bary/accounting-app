@@ -34,6 +34,23 @@ pub async fn list_journal_entries(
 }
 
 #[tauri::command]
+pub async fn list_posted_journal_entries(
+    from_date: Option<String>,
+    to_date: Option<String>,
+    account_id: Option<String>,
+    partner_id: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<Vec<JournalEntryDto>, String> {
+    ListJournalEntriesUseCase::new(
+        state.journal_entry_repo.clone(),
+        state.account_repo.clone(),
+    )
+    .execute_posted(from_date, to_date, account_id, partner_id)
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn get_journal_entry_details(
     id: String,
     state: State<'_, AppState>,

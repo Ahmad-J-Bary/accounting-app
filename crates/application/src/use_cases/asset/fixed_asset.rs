@@ -2,8 +2,11 @@ use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::asset_repository::AssetRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
+use crate::ports::opening_migration_repository::OpeningMigrationRepository;
+use crate::ports::settings_repository::SettingsRepository;
 use chrono::Utc;
-use domain::accounting::{JournalEntry, JournalLine};
+use domain::accounting::{JournalEntry, JournalLine, MigrationStatus};
+use domain::settings::START_MODE_EXISTING;
 use domain::assets::{
     AssetCategory, AssetMovement, AssetMovementType, AssetType, DepreciationMethod, FixedAsset, FixedAssetId,
 };
@@ -18,6 +21,8 @@ pub struct FixedAssetUseCases {
     repo: Arc<dyn AssetRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
     account_repo: Arc<dyn AccountRepository>,
+    settings_repo: Arc<dyn SettingsRepository>,
+    opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -54,8 +59,36 @@ impl FixedAssetUseCases {
         repo: Arc<dyn AssetRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
         account_repo: Arc<dyn AccountRepository>,
+        settings_repo: Arc<dyn SettingsRepository>,
+        opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
     ) -> Self {
-        Self { repo, journal_repo, account_repo }
+        Self {
+            repo,
+            journal_repo,
+            account_repo,
+            settings_repo,
+            opening_migration_repo,
+        }
+    }
+
+    /// Whether the company is still inside its opening-preparation window: an
+    /// existing company whose opening migration is not yet sealed. Mirrors the
+    /// repository opening gate (`insert_entry`/`validate_opening_gate`) so the
+    /// fixed-asset module and daily-log posting agree on when the migration
+    /// aggregate owns the GL opening position.
+    async fn opening_preparation_active(&self) -> Result<bool, AppError> {
+        let settings = self.settings_repo.get().await?;
+        if settings.accounting_start_mode != START_MODE_EXISTING {
+            return Ok(false);
+        }
+        let migrations = self.opening_migration_repo.list().await?;
+        let pending = migrations
+            .iter()
+            .filter(|m| {
+                m.status != MigrationStatus::Cancelled && m.status != MigrationStatus::Locked
+            })
+            .count();
+        Ok(pending > 0)
     }
 
     pub async fn create_asset(
@@ -115,6 +148,19 @@ impl FixedAssetUseCases {
             req.purchase_cost.clone(),
             movement_desc,
         );
+
+        // Opening-preparation window (Phase 2): while the company is preparing
+        // its opening migration, fixed-asset records are SUBLEDGER data only —
+        // the migration aggregate posts the single GL opening journal. Writing a
+        // per-asset GeneralJournal here would book the same opening balance twice
+        // (subledger + migration) in Trial Balance / Balance Sheet. No journal
+        // and no account-balance mutation are persisted in this window.
+        if self.opening_preparation_active().await? {
+            self.repo
+                .save_asset_with_accounting(&asset, &[movement], &[], &[])
+                .await?;
+            return Ok(asset.id);
+        }
 
         let lines = vec![
             JournalLine::new(
@@ -436,7 +482,10 @@ impl FixedAssetUseCases {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mocks::{MockAssetRepository, MockJournalRepository, MockAccountRepository};
+    use crate::mocks::{
+        MockAccountRepository, MockAssetRepository, MockJournalRepository,
+        MockOpeningMigrationRepository, MockSettingsRepository,
+    };
     use domain::shared::Currency;
     use rust_decimal_macros::dec;
 
@@ -450,7 +499,15 @@ mod tests {
         let asset_repo = Arc::new(MockAssetRepository::default());
         let journal_repo = Arc::new(MockJournalRepository::default());
         let account_repo = Arc::new(MockAccountRepository::default());
-        let use_cases = FixedAssetUseCases::new(asset_repo.clone(), journal_repo.clone(), account_repo.clone());
+        let settings_repo = Arc::new(MockSettingsRepository::default());
+        let opening_migration_repo = Arc::new(MockOpeningMigrationRepository::default());
+        let use_cases = FixedAssetUseCases::new(
+            asset_repo.clone(),
+            journal_repo.clone(),
+            account_repo.clone(),
+            settings_repo.clone(),
+            opening_migration_repo.clone(),
+        );
 
         let purchase_date = Utc::now();
         let cost = Money::new(dec!(12000), test_currency());

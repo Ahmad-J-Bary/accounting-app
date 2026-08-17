@@ -38,7 +38,7 @@ export function useChartOfAccountsTree() {
     queryFn: async () => {
       const [accounts, entries] = await Promise.all([
         accountingService.getChartOfAccounts(),
-        journalEntryService.listJournalEntries({}),
+        journalEntryService.listPostedJournalEntries(),
       ]);
 
       const { ledgerTotals } = computeLedgerTotals(accounts, entries);

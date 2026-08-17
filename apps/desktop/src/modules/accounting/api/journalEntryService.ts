@@ -16,6 +16,20 @@ export const journalEntryService = {
     return await invoke<JournalEntryDto[]>('list_journal_entries', filters || {});
   },
 
+  async listPostedJournalEntries(
+    fromDate?: string,
+    toDate?: string,
+    accountId?: string,
+    partnerId?: string,
+  ): Promise<JournalEntryDto[]> {
+    return await invoke<JournalEntryDto[]>('list_posted_journal_entries', {
+      fromDate,
+      toDate,
+      accountId,
+      partnerId,
+    });
+  },
+
   async getJournalEntryDetails(id: string): Promise<JournalEntryDto> {
     return await invoke<JournalEntryDto>('get_journal_entry_details', { id });
   },

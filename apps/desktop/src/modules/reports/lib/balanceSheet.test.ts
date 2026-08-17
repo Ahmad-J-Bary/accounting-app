@@ -334,4 +334,20 @@ describe("computeBalanceSheet", () => {
     expect(result.totalCurrentLiabilities).toBe(5000);
     expect(result.isBalanced).toBe(true);
   });
+
+  it("shows the fixed-asset opening as 200 exactly once via ledgerTotals", () => {
+    const accounts: AccountDto[] = [
+      acc({ id: "fa1", code: "1115", name_ar: "أصول ثابتة", account_type: "Assets", balance: "99999" }),
+      acc({ id: "eq1", code: "52", name_ar: "رأس المال", account_type: "Equity", balance: "99999" }),
+    ];
+    const ledgerTotals = new Map([
+      ["fa1", { debit: 200, credit: 0 }],
+      ["eq1", { debit: 0, credit: 200 }],
+    ]);
+    const result = computeBalanceSheet(accounts, { netProfit: 0, totalDrawings: 0 }, ledgerTotals);
+    expect(result.totalFixedAssets).toBe(200);
+    expect(result.totalAssets).toBe(200);
+    expect(result.totalEquity).toBe(200);
+    expect(result.isBalanced).toBe(true);
+  });
 });

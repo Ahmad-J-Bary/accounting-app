@@ -66,7 +66,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
     const fetchStatement = async () => {
       try {
         setLoading(true);
-        const data = await journalEntryService.listJournalEntries({ partner_id: partnerId });
+        const data = await journalEntryService.listPostedJournalEntries(undefined, undefined, undefined, partnerId);
         const sorted = data.sort(
           (a, b) => new Date(a.entry_date).getTime() - new Date(b.entry_date).getTime()
         );

@@ -62,14 +62,20 @@ export const sidePanelValue = {
  * immediately without needing a settingsService mock). The opening-lifecycle
  * queries (migrations + fiscal periods) are seeded to empty lists so the state
  * resolves to NOT_STARTED (EXISTING) — the workflow is open and its controls
- * visible, matching what these form/panel tests assert.
+ * visible, matching what these form/panel tests assert. An optional migrations
+ * seed lets tests model a sealed opening window (e.g. a `Locked` migration →
+ * OPENING_LOCKED / ACTIVE).
  */
-export function renderWithCompanyType(ui: ReactNode, companyType: CompanyType) {
+export function renderWithCompanyType(
+  ui: ReactNode,
+  companyType: CompanyType,
+  migrations?: Array<{ status?: string }>,
+) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   qc.setQueryData(QUERY_KEYS.settings, { accounting_start_mode: companyType });
-  qc.setQueryData(QUERY_KEYS.openingBalanceMigrations, []);
+  qc.setQueryData(QUERY_KEYS.openingBalanceMigrations, migrations ?? []);
   qc.setQueryData(QUERY_KEYS.fiscalPeriods, []);
   const expectedInitState: "ACTIVE" | "NOT_STARTED" =
     companyType === START_MODE_EXISTING ? "NOT_STARTED" : "ACTIVE";

@@ -34,7 +34,7 @@ export function useBalanceSheetReport(filters: IncomeStatementFilters): ReportSt
 
   const allEntriesQuery = useQuery({
     queryKey: QUERY_KEYS.journalEntries({}),
-    queryFn: () => journalEntryService.listJournalEntries({}),
+    queryFn: () => journalEntryService.listPostedJournalEntries(),
   });
 
   const [resolvedData, setResolvedData] = useState<LoadedBalanceSheetData>(emptyData);

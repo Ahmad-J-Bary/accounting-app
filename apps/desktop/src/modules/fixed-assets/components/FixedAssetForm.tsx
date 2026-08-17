@@ -95,21 +95,22 @@ export function FixedAssetForm({
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
   const { rateMap, baseCurrency } = useCurrencyContext();
-  const { isExistingCompany } = useCompanyCapabilities();
+  const { canAccessOpeningWorkflow } = useCompanyCapabilities();
 
   const isEditing = !!asset;
 
   // --- Mode ---
-  // An existing company (شركة قائمة) only adds previous assets (أول المدة): the
-  // mode follows the company type, no choice is offered. A NEW company only
-  // buys new assets (natural purchase workflow).
+  // While an existing company is still in its opening-preparation window the
+  // form only adds previous assets (أول المدة): the mode follows the lifecycle,
+  // no choice is offered. Once the company is ACTIVE (or for a NEW company)
+  // the natural purchase workflow applies instead.
   const [additionType, setAdditionType] = useState<"new" | "existing">(
-    isExistingCompany ? "existing" : "new",
+    canAccessOpeningWorkflow ? "existing" : "new",
   );
 
   useEffect(() => {
-    setAdditionType(isExistingCompany ? "existing" : "new");
-  }, [isExistingCompany]);
+    setAdditionType(canAccessOpeningWorkflow ? "existing" : "new");
+  }, [canAccessOpeningWorkflow]);
 
   // --- Basic info ---
   const [code, setCode] = useState(asset?.code ?? "");
