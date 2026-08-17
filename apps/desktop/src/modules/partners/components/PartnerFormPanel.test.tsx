@@ -71,6 +71,22 @@ describe("PartnerFormPanel (customers & suppliers)", () => {
     expect(screen.getByText("البيانات المالية")).toBeInTheDocument();
     expect(screen.getByText("الرصيد الافتتاحي")).toBeInTheDocument();
   });
+
+  it("EXISTING company: supplier form defaults the balance direction to credit (دائن)", () => {
+    renderForm("supplier", COMPANY_TYPE_EXISTING);
+    const creditBtn = screen.getByRole("button", { name: "دائن" });
+    const debitBtn = screen.getByRole("button", { name: "مدين" });
+    expect(creditBtn.className).toContain("bg-emerald-100");
+    expect(debitBtn.className).not.toContain("bg-blue-100");
+  });
+
+  it("EXISTING company: customer form keeps the debit (مدين) default", () => {
+    renderForm("customer", COMPANY_TYPE_EXISTING);
+    const debitBtn = screen.getByRole("button", { name: "مدين" });
+    const creditBtn = screen.getByRole("button", { name: "دائن" });
+    expect(debitBtn.className).toContain("bg-blue-100");
+    expect(creditBtn.className).not.toContain("bg-emerald-100");
+  });
 });
 
 describe("PartnerDetailPanel (customer/supplier detail)", () => {

@@ -47,9 +47,11 @@ describe("FixedAssetForm", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("EXISTING company: the previous-asset (أول المدة) addition toggle is available", () => {
+  it("EXISTING company: previous-asset (أول المدة) mode is auto-selected with no choice toggle", () => {
     renderForm(COMPANY_TYPE_EXISTING);
-    expect(screen.getByText("شراء جديد")).toBeInTheDocument();
-    expect(screen.getByText("أصل سابق")).toBeInTheDocument();
+    expect(screen.getByText("إضافة أصل سابق (أول المدة)")).toBeInTheDocument();
+    expect(screen.getByText("بيانات الأصل السابق")).toBeInTheDocument();
+    expect(screen.queryByText("شراء جديد")).not.toBeInTheDocument();
+    expect(screen.queryByText("أصل سابق")).not.toBeInTheDocument();
   });
 });

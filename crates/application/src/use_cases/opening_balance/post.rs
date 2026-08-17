@@ -9,6 +9,7 @@ use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::opening_item_repository::OpeningItemRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::opening_posting_repository::OpeningPostingRepository;
+use crate::use_cases::journal::ReverseJournalEntryUseCase;
 use crate::use_cases::opening_balance::reconcile::{readiness_blockers, GetOpeningReconciliationUseCase};
 use crate::use_cases::opening_balance::types::{OpeningMigrationDto, PostOpeningBalanceResult};
 
@@ -76,18 +77,15 @@ impl PostOpeningBalanceUseCase {
         // of every opening sub-ledger. If an account included in this migration
         // was ALREADY booked by a standalone per-entity opening journal (posted
         // while the opening window was closed), posting the migration again
-        // would double-book the same balance. Fail loudly instead of silently
-        // netting the GL.
-        let dupes = self.already_booked_opening_accounts(&id).await?;
-        if !dupes.is_empty() {
-            let msg = dupes
-                .iter()
-                .map(|(name, amount)| {
-                    format!("الحساب {name} مسجل رصيده الافتتاحي ({amount}) كقيد مستقل سابقاً — لا يمكن ترحيله ضمن الرصيد الافتتاحي مرة أخرى؛ ألغِ القيد المستقل (Reversal) أولاً")
-                })
-                .collect::<Vec<_>>()
-                .join("؛ ");
-            return Err(AppError::Forbidden(msg));
+        // would double-book the same balance. Each duplicated standalone
+        // journal is AUTO-REVERSED at post time (audit-preserving Reversal +
+        // original kept, the same shape as migration 158), so the migration can
+        // post and the GL still nets to exactly one opening movement.
+        let dupes = self.duplicate_standalone_opening_journals(&id).await?;
+        for entry in dupes {
+            ReverseJournalEntryUseCase::new(self.journal_repo.clone())
+                .execute(entry.id.to_string())
+                .await?;
         }
 
         let base_currency = Currency::new("SAR", "SAR", "ريال", "ر.س", 2, false);
@@ -145,14 +143,16 @@ impl PostOpeningBalanceUseCase {
         })
     }
 
-    /// Returns the accounts (with booked amounts) that already have a POSTED
-    /// standalone opening journal on the migration's line amount, i.e. whose
-    /// opening balance was booked directly by a per-entity journal while the
-    /// opening window was closed. Posting the migration would duplicate them.
-    async fn already_booked_opening_accounts(
+    /// Returns the POSTED standalone per-entity opening journals whose lines
+    /// match a migration line's account and amount — i.e. journals that already
+    /// booked an opening balance while the opening window was closed. Posting
+    /// the migration would duplicate those balances, so each one found is
+    /// auto-reversed before the aggregate posts (the aggregate remains the
+    /// canonical GL owner of the opening position).
+    async fn duplicate_standalone_opening_journals(
         &self,
         id: &str,
-    ) -> Result<Vec<(String, String)>, AppError> {
+    ) -> Result<Vec<JournalEntry>, AppError> {
         use std::collections::{HashMap, HashSet};
 
         let migration = self.repo.find_by_id(id).await?
@@ -170,7 +170,7 @@ impl PostOpeningBalanceUseCase {
                 .push(line.amount);
         }
 
-        let mut flagged: Vec<(String, String)> = Vec::new();
+        let mut flagged: Vec<JournalEntry> = Vec::new();
         let mut seen: HashSet<String> = HashSet::new();
 
         for journal in self.journal_repo.list_all().await? {
@@ -199,14 +199,8 @@ impl PostOpeningBalanceUseCase {
                 } else {
                     line.credit.amount()
                 };
-                if amounts.contains(&booked) && seen.insert(line.account_id.0.to_string()) {
-                    let name = self
-                        .account_repo
-                        .find_by_id(&line.account_id)
-                        .await?
-                        .map(|a| a.name_ar)
-                        .unwrap_or_else(|| line.account_id.0.to_string());
-                    flagged.push((name.clone(), format!("{booked}")));
+                if amounts.contains(&booked) && seen.insert(journal.id.0.to_string()) {
+                    flagged.push(journal.clone());
                 }
             }
         }

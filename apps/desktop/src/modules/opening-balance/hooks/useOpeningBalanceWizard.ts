@@ -549,6 +549,7 @@ export function useOpeningBalanceWizard() {
           unit_id: r.default_unit_id ?? undefined,
           warehouse_id: r.default_warehouse_id || defaultWarehouseId || undefined,
           unit_price: r.cost,
+          discount_percent: "0",
           notes: "",
         })),
         tax_amount: "0",

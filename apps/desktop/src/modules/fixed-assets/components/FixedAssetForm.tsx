@@ -18,8 +18,6 @@ import {
   Landmark,
   BadgeDollarSign,
   FileText,
-  ShoppingCart,
-  Archive,
 } from "lucide-react";
 import { accountingService } from "@modules/accounting/api/accountingService";
 import { warehouseService } from "@modules/inventory/api/warehouseService";
@@ -97,12 +95,21 @@ export function FixedAssetForm({
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
   const { rateMap, baseCurrency } = useCurrencyContext();
-  const { canAccessOpeningWorkflow } = useCompanyCapabilities();
+  const { isExistingCompany } = useCompanyCapabilities();
 
   const isEditing = !!asset;
 
   // --- Mode ---
-  const [additionType, setAdditionType] = useState<"new" | "existing">("new");
+  // An existing company (شركة قائمة) only adds previous assets (أول المدة): the
+  // mode follows the company type, no choice is offered. A NEW company only
+  // buys new assets (natural purchase workflow).
+  const [additionType, setAdditionType] = useState<"new" | "existing">(
+    isExistingCompany ? "existing" : "new",
+  );
+
+  useEffect(() => {
+    setAdditionType(isExistingCompany ? "existing" : "new");
+  }, [isExistingCompany]);
 
   // --- Basic info ---
   const [code, setCode] = useState(asset?.code ?? "");
@@ -376,37 +383,6 @@ export function FixedAssetForm({
     >
       {/* ── Section 1: Basic Info ── */}
       <SidebarSection title="البيانات الأساسية" icon={<FileText className="w-3.5 h-3.5" />} defaultOpen>
-        {/* Addition Type Toggle (hidden when editing; a NEW company only buys
-            new assets — no "previous asset / أول المدة" opening entry) */}
-        {!isEditing && canAccessOpeningWorkflow && (
-        <div className="flex rounded-lg border border-slate-200 overflow-hidden bg-slate-50 mb-3">
-          <button
-            type="button"
-            onClick={() => setAdditionType("new")}
-            className={`flex-1 py-2.5 text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
-              additionType === "new"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            <ShoppingCart className="w-3.5 h-3.5" />
-            شراء جديد
-          </button>
-          <button
-            type="button"
-            onClick={() => setAdditionType("existing")}
-            className={`flex-1 py-2.5 text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
-              additionType === "existing"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            <Archive className="w-3.5 h-3.5" />
-            أصل سابق
-          </button>
-        </div>
-        )}
-
         <FormField label="نوع الأصل" required>
           <Select dir="rtl" value={assetType} onValueChange={(v) => setAssetType(v as "buildings_land" | "equipment" | "furniture")}>
             <SelectTrigger className="bg-white border-slate-200 h-9 w-full text-right text-xs font-bold text-slate-800">

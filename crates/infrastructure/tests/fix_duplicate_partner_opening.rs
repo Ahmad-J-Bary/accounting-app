@@ -1,16 +1,16 @@
 //! Phase 3 regression — the migration aggregate journal is the SINGLE canonical
 //! GL owner of every Opening sub-ledger (R1). When an entity's opening balance
 //! is booked by a standalone per-entity journal (customer/supplier created
-//! while the opening window was closed), re-posting a migration that includes
-//! that same account must be BLOCKED — not silently double-booked. Reversing
-//! the per-entity journal releases the account so the migration can post, and
-//! the GL then carries exactly ONE opening movement.
+//! while the opening window was closed), the migration must never double-book
+//! that balance: post-time AUTO-REVERSAL cancels each duplicated standalone
+//! journal (audit-preserving Reversal + original kept), so the migration posts
+//! and the GL carries exactly ONE opening movement.
 //!
 //! This mirrors the live-DB duplication (customer «عمار» 1231 / supplier
 //! «مراد» 2231 / inventory 121) fixed by migration 158: here a customer is
 //! created BEFORE any migration exists (window inactive -> per-entity journal),
-//! then a migration including the same AR account is blocked until that
-//! per-entity journal is reversed.
+//! then a migration including the same AR account auto-reverses that journal
+//! during post instead of failing.
 
 use std::str::FromStr;
 use std::sync::Arc;
@@ -95,11 +95,12 @@ async fn gl_net(pool: &sqlx::SqlitePool, account_id: &AccountId) -> Decimal {
 // ---------------------------------------------------------------------------
 // Step 1: a customer is created with an opening balance BEFORE any migration
 // window exists -> the old defect: a standalone per-entity AccountOpeningBalance
-// journal is posted to AR (Dr) / 53 (Cr). From then on, a migration including
-// the SAME account must not post until that journal is reversed.
+// journal is posted to AR (Dr) / 53 (Cr). Posting a migration that includes
+// the SAME account must NOT double-book: the standalone journal is auto-reversed
+// at post time and the GL nets to exactly one opening movement.
 // ---------------------------------------------------------------------------
 #[tokio::test]
-async fn migration_posting_blocked_while_per_entity_opening_journal_is_posted() {
+async fn migration_posting_auto_reverses_standalone_per_entity_opening_journal() {
     let pool = build_pool().await;
     set_start_mode(&pool, START_MODE_EXISTING).await;
 
@@ -141,6 +142,12 @@ async fn migration_posting_blocked_while_per_entity_opening_journal_is_posted() 
     .expect("create customer outside window");
 
     let ar_account_id = AccountId::from_str(created.account_id.as_deref().unwrap()).unwrap();
+    let per_entity_id: String =
+        sqlx::query_scalar("SELECT id FROM journal_entries WHERE source_id = ? LIMIT 1")
+            .bind(&created.id)
+            .fetch_one(&*pool)
+            .await
+            .unwrap();
     let per_entity: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries WHERE source_id = ?")
             .bind(&created.id)
@@ -208,7 +215,9 @@ async fn migration_posting_blocked_while_per_entity_opening_journal_is_posted() 
         .await
         .expect("approve");
 
-    let post = PostOpeningBalanceUseCase::new(
+    // 3) Posting the migration AUTO-REVERSES the duplicated standalone journal
+    //    (audit-preserving) and posts the aggregate — no manual step.
+    PostOpeningBalanceUseCase::new(
         migration_repo.clone(),
         item_repo.clone(),
         account_repo.clone(),
@@ -216,20 +225,38 @@ async fn migration_posting_blocked_while_per_entity_opening_journal_is_posted() 
         posting_repo.clone(),
     )
     .execute(migration_id.clone())
-    .await;
-    assert!(
-        post.is_err(),
-        "R1: posting a migration over an already-booked standalone opening journal must be blocked"
-    );
-    let err = post.err().unwrap().to_string();
-    assert!(
-        err.contains("عميل عمار"),
-        "blocker must name the offending account: {err}"
-    );
+    .await
+    .expect("R1: posting auto-reverses the duplicated standalone opening journal");
 
-    // 3) GL must NOT have double-booked the opening balance yet: the migration
-    //    never posted, only the standalone journal carries the balance.
+    {
+        let status: String = sqlx::query_scalar("SELECT status FROM journal_entries WHERE id = ?")
+            .bind(&per_entity_id)
+            .fetch_one(&*pool)
+            .await
+            .unwrap();
+        assert_eq!(status, "Reversed", "standalone original journal is Reversed");
+        let reversals: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM journal_entries WHERE reversal_of_entry_id = ?",
+        )
+        .bind(&per_entity_id)
+        .fetch_one(&*pool)
+        .await
+        .unwrap();
+        assert_eq!(reversals, 1, "a true audit-preserving Reversal journal exists");
+    }
+
+    // 4) GL nets to exactly ONE opening movement (800): the reversal cancels
+    //    the standalone posting, the migration aggregate carries the canonical
+    //    position — never 800+800.
     assert_eq!(gl_net(&pool, &ar_account_id).await, Decimal::from(800));
+    let migration_journals: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM journal_entries WHERE source_id = ?",
+    )
+    .bind(format!("opening_balance:{migration_id}"))
+    .fetch_one(&*pool)
+    .await
+    .unwrap();
+    assert_eq!(migration_journals, 1, "exactly one migration aggregate journal");
 }
 
 // ---------------------------------------------------------------------------

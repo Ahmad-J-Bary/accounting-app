@@ -56,8 +56,13 @@ export function PartnerFormPanel({
   saving
 }: PartnerFormPanelProps) {
   const { currencies, baseCurrency, rateMap } = useCurrencyContext();
-  const { canAccessOpeningWorkflow } = useCompanyCapabilities();
+  const { canAccessOpeningWorkflow, isExistingCompany } = useCompanyCapabilities();
   const isCustomer = type === "customer";
+  // An existing company (شركة قائمة) records opening balances against vendors
+  // as liabilities (credit is the normal balance), so the supplier direction
+  // defaults to دائن.
+  const defaultBalanceDirection: "debit" | "credit" =
+    isExistingCompany && !isCustomer ? "credit" : "debit";
   const title = isCustomer 
     ? (partner ? "تعديل بيانات العميل" : "إضافة عميل جديد")
     : (partner ? "تعديل بيانات المورد" : "إضافة مورد جديد");
@@ -68,7 +73,9 @@ export function PartnerFormPanel({
 
   const [form, setForm] = useState({ name: "", phone: "", address: "", notes: "" });
   const [openingBalance, setOpeningBalance] = useState("0");
-  const [balanceDirection, setBalanceDirection] = useState<"debit" | "credit">("debit");
+  const [balanceDirection, setBalanceDirection] = useState<"debit" | "credit">(
+    defaultBalanceDirection,
+  );
   const [currency, setCurrency] = useState(baseCurrency?.code || "");
 
   const oldDebitRef = useRef("0");
@@ -101,12 +108,12 @@ export function PartnerFormPanel({
     } else {
       setForm({ name: "", phone: "", address: "", notes: "" });
       setOpeningBalance("0");
-      setBalanceDirection("debit");
+      setBalanceDirection(defaultBalanceDirection);
       setCurrency(baseCurrency?.code || "");
       oldDebitRef.current = "0";
       oldCreditRef.current = "0";
     }
-  }, [partner, baseCurrency]);
+  }, [partner, baseCurrency, defaultBalanceDirection]);
 
   const balanceChanged = partner != null && (
     computedDebit !== oldDebitRef.current || computedCredit !== oldCreditRef.current
