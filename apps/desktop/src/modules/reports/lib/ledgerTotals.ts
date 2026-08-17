@@ -45,6 +45,13 @@ export function computeLedgerTotals(
   const accountsWithOpeningEntries = new Set<string>();
 
   for (const entry of entries) {
+    // Reversal pairs are excluded from the GL exactly like the backend ledger
+    // (`list_by_accounts` keeps `status='Posted' AND reversal_of_entry_id IS
+    // NULL`): the original becomes Reversed and the contra journal is dropped,
+    // so a reversed entry is mathematically neutral and never moves a balance.
+    if (entry.reversal_of_entry_id) {
+      continue;
+    }
     if (entry.status && entry.status !== "Posted") {
       continue;
     }
@@ -87,7 +94,12 @@ export function computeLedgerTotals(
   for (const entry of entries) {
     // Financial statements only ever aggregate POSTED entries. A Draft that
     // leaks into the report feed (defensive belt against the backend
-    // Posted-only command) must never move a GL balance.
+    // Posted-only command) must never move a GL balance. Reversal journals are
+    // excluded too — their pair (original + contra) is neutral, and the
+    // backend ledger surfaces neither side.
+    if (entry.reversal_of_entry_id) {
+      continue;
+    }
     if (entry.status && entry.status !== "Posted") {
       continue;
     }

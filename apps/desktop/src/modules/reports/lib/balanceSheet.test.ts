@@ -350,4 +350,54 @@ describe("computeBalanceSheet", () => {
     expect(result.totalEquity).toBe(200);
     expect(result.isBalanced).toBe(true);
   });
+
+  it("exact opening scenario: FA once, residual once, A = L + E", () => {
+    const accounts: AccountDto[] = [
+      acc({ id: "fa1", code: "111", name_ar: "أصول ثابتة", account_type: "Assets" }),
+      acc({ id: "cash1", code: "121", name_ar: "صندوق", account_type: "Assets" }),
+      acc({ id: "loan1", code: "221", name_ar: "قرض بنكي", account_type: "Liabilities" }),
+      acc({ id: "cap1", code: "311", name_ar: "رأس المال", account_type: "Equity" }),
+      acc({ id: "obe1", code: "315", name_ar: "أرباح مرحلة", account_type: "Equity" }),
+      acc({ id: "res1", code: "316", name_ar: "رصيد افتتاحي معاد تصنيفه", account_type: "Equity" }),
+    ];
+
+    // Posted opening journal (Dr: FA 200, Cash 150 / Cr: Loan 50, Capital 70,
+    // OBE 230) followed by the residual reclassification journal (Dr OBE 30 /
+    // Cr designated residual 30) — OBE nets to 200, the residual appears once.
+    const ledgerTotals = new Map([
+      ["fa1", { openingDebit: 200, openingCredit: 0, periodDebit: 0, periodCredit: 0, debit: 200, credit: 0, endingBalance: 200 }],
+      ["cash1", { openingDebit: 150, openingCredit: 0, periodDebit: 0, periodCredit: 0, debit: 150, credit: 0, endingBalance: 150 }],
+      ["loan1", { openingDebit: 0, openingCredit: 50, periodDebit: 0, periodCredit: 0, debit: 0, credit: 50, endingBalance: -50 }],
+      ["cap1", { openingDebit: 0, openingCredit: 70, periodDebit: 0, periodCredit: 0, debit: 0, credit: 70, endingBalance: -70 }],
+      ["obe1", { openingDebit: 0, openingCredit: 230, periodDebit: 30, periodCredit: 0, debit: 30, credit: 230, endingBalance: -200 }],
+      ["res1", { openingDebit: 0, openingCredit: 0, periodDebit: 0, periodCredit: 30, debit: 0, credit: 30, endingBalance: -30 }],
+    ]);
+
+    const result = computeBalanceSheet(
+      accounts,
+      { netProfit: 0, totalDrawings: 0 },
+      ledgerTotals as unknown as Map<string, { debit: number; credit: number }>,
+    );
+
+    expect(result.totalFixedAssets).toBe(200);
+    expect(result.totalCurrentAssets).toBe(150);
+    expect(result.totalAssets).toBe(350);
+
+    expect(result.totalLiabilities).toBe(50);
+    expect(result.totalEquity).toBe(300);
+    expect(result.totalLiabilitiesEquity).toBe(350);
+    expect(result.isBalanced).toBe(true);
+
+    // Fixed asset contributes exactly its single GL amount.
+    const faSection = result.sections.find(s => s.id === "fixed-assets")!;
+    expect(faSection.rows).toHaveLength(1);
+    expect(faSection.rows[0].value).toBe(200);
+
+    // The residual appears exactly once in equity; OBE keeps the retained part.
+    const eqSection = result.sections.find(s => s.id === "equity")!;
+    const resRow = eqSection.rows.find(r => r.label === "رصيد افتتاحي معاد تصنيفه");
+    expect(resRow?.value).toBe(30);
+    const obeRow = eqSection.rows.find(r => r.label === "أرباح مرحلة");
+    expect(obeRow?.value).toBe(200);
+  });
 });

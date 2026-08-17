@@ -95,14 +95,20 @@ export function computeTreeTotals(
     const subTree = computeTreeTotals(accounts, ltMap, acc.id, depth + 1);
     const lt = ltMap.get(acc.id);
 
-    let openingDebit = lt?.openingDebit ?? 0;
-    let openingCredit = lt?.openingCredit ?? 0;
-    let periodDebit = lt?.periodDebit ?? 0;
-    let periodCredit = lt?.periodCredit ?? 0;
-    let totDebit = lt?.debit ?? 0;
-    let totCredit = lt?.credit ?? 0;
+    // A parent node is a rollup: its amounts are derived ONLY from its
+    // descendants. Any stray posting/static opening on a parent must never be
+    // double-counted on top of the children — this matches the balance sheet
+    // (`children.length > 0 ? childrenBalance : ownBalance`) and the backend
+    // chart rollup, which computes parent balances as the children sum.
+    const hasChildren = subTree.length > 0;
+    let openingDebit = hasChildren ? 0 : (lt?.openingDebit ?? 0);
+    let openingCredit = hasChildren ? 0 : (lt?.openingCredit ?? 0);
+    let periodDebit = hasChildren ? 0 : (lt?.periodDebit ?? 0);
+    let periodCredit = hasChildren ? 0 : (lt?.periodCredit ?? 0);
+    let totDebit = hasChildren ? 0 : (lt?.debit ?? 0);
+    let totCredit = hasChildren ? 0 : (lt?.credit ?? 0);
 
-    if (subTree.length > 0) {
+    if (hasChildren) {
       openingDebit += subTree.reduce((s, c) => s + c.openingDebit, 0);
       openingCredit += subTree.reduce((s, c) => s + c.openingCredit, 0);
       periodDebit += subTree.reduce((s, c) => s + c.periodDebit, 0);
