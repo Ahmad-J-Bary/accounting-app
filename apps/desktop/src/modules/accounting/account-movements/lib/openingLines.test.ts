@@ -78,6 +78,30 @@ describe("getOpeningTotals", () => {
   });
 });
 
+describe("Phase 6 report/date semantics", () => {
+  const ammarLines = () => [
+    openingLine("AccountOpeningBalance", "2026-01-01T00:00:00Z", "80", "0"),
+  ];
+
+  it("range 2026-01-01 → 2026-08-16 surfaces exactly one opening movement", () => {
+    expect(getOpeningTotals(ammarLines(), "2026-01-01", "2026-08-16")).toEqual({ debit: 80, credit: 0 });
+  });
+
+  it("range 2026-02-01 → 2026-08-16 excludes the opening as a movement", () => {
+    expect(getOpeningTotals(ammarLines(), "2026-02-01", "2026-08-16")).toEqual({ debit: 0, credit: 0 });
+  });
+
+  it("the opening appears only as the beginning balance for 2026-02-01+, never a second movement", () => {
+    expect(computeOpeningBalance(ammarLines(), 0, "2026-02-01", "2026-08-16")).toBe(80);
+    expect(getOpeningTotals(ammarLines(), "2026-02-01", "2026-08-16")).toEqual({ debit: 0, credit: 0 });
+  });
+
+  it("the opening creation date is the accounting date, not the journal created_at", () => {
+    expect(getOpeningCreationDate({ date: "2026-08-03T18:12:52Z" }, ammarLines())).toBe("2026-01-01");
+    expect(getOpeningCreationDate(null, ammarLines())).toBe("2026-01-01");
+  });
+});
+
 describe("computeOpeningBalance", () => {
   it("uses the posted opening journal line as the beginning balance (no static double count)", () => {
     const lines = [
