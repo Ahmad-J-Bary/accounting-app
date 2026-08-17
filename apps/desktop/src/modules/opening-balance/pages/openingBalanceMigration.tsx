@@ -248,35 +248,46 @@ export default function OpeningBalanceMigration() {
       .finally(() => setReconLoading(false));
   }, [reconId]);
 
-  // The opening workflow is only reachable while it is still open (Phase 5):
-  // a NEW company never has one, and once an EXISTING company's migration is
-  // Locked (OPENING_LOCKED … ACTIVE) the workflow closes for good — the pages
-  // are hidden from navigation and direct URLs redirect away. Settings still
-  // loading = no redirect.
-  if (settings && !companyCapabilities(companyTypeOf(settings), initState).canAccessOpeningWorkflow) {
+  // Phase 6: a NEW company never has an opening page (redirect). An EXISTING
+  // company is allowed to stay even once the migration is Locked (OPENING_LOCKED
+  // … ACTIVE) so the post-transition onboarding completes in place instead of
+  // throwing the user out mid-wizard. Settings still loading = no redirect.
+  if (settings && companyCapabilities(companyTypeOf(settings), initState).isNewCompany) {
     return <Navigate to="/dashboard" replace />;
   }
 
+  // Once the opening workflow is sealed the page shows ONLY the post-transition
+  // onboarding (wizard) — every opening-management control disappears.
+  const openingClosed = initState === "OPENING_LOCKED" || initState === "ACTIVE";
+
   return (
     <OperationalTableTemplate
-      title="رصيد افتتاح الشركة"
+      title={openingClosed ? "اكتمال إعداد الشركة" : "رصيد افتتاح الشركة"}
       badge={<Badge className="bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-50">{INIT_STATE_LABELS[initState]}</Badge>}
       toolbar={
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => refetchMigrations()} className="border-slate-200 hover:bg-slate-50 font-bold">
-            <RefreshCw className="w-4 h-4 ml-2 text-slate-500" /> تحديث
-          </Button>
-        </div>
+        openingClosed ? undefined : (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => refetchMigrations()} className="border-slate-200 hover:bg-slate-50 font-bold">
+              <RefreshCw className="w-4 h-4 ml-2 text-slate-500" /> تحديث
+            </Button>
+          </div>
+        )
       }
       tableContent={
         <div className="flex flex-col h-full overflow-auto p-4 gap-4">
-          <Tabs value={tab} onValueChange={setTab} dir="rtl">
+          <Tabs value={openingClosed ? "wizard" : tab} onValueChange={(v) => !openingClosed && setTab(v)} dir="rtl">
             <TabsList className="bg-white border border-slate-200 p-1 h-11 rounded-xl shadow-sm mb-1">
-              <TabsTrigger value="overview" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">نظرة عامة</TabsTrigger>
-              <TabsTrigger value="wizard" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">المعالج</TabsTrigger>
-              <TabsTrigger value="list" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">قائمة الترحيلات</TabsTrigger>
-              <TabsTrigger value="position" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">المركز والتسوية</TabsTrigger>
-              <TabsTrigger value="allocation" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">توزيع الأرباح</TabsTrigger>
+              {!openingClosed && (
+                <>
+                  <TabsTrigger value="overview" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">نظرة عامة</TabsTrigger>
+                  <TabsTrigger value="list" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">قائمة الترحيلات</TabsTrigger>
+                  <TabsTrigger value="position" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">المركز والتسوية</TabsTrigger>
+                  <TabsTrigger value="allocation" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">توزيع الأرباح</TabsTrigger>
+                </>
+              )}
+              <TabsTrigger value="wizard" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">
+                {openingClosed ? "إعداد أول فترة تشغيلية" : "المعالج"}
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="mt-2 space-y-4">

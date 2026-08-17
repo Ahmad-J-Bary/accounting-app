@@ -130,7 +130,7 @@ describe("OpeningBalanceMigration company-type gate", () => {
     expect(screen.getByText("ابدأ المعالج")).toBeInTheDocument();
   });
 
-  it("redirects a fully ACTIVE EXISTING company away like a NEW one", async () => {
+  it("keeps a fully ACTIVE EXISTING company on the post-transition completion step (no redirect)", async () => {
     vi.mocked(settingsService.getSettings).mockResolvedValue({
       accounting_start_mode: START_MODE_EXISTING,
     } as never);
@@ -159,11 +159,13 @@ describe("OpeningBalanceMigration company-type gate", () => {
     ]);
     const { qc } = renderPage();
     await waitFor(() => expect(qc.getQueryData(QUERY_KEYS.openingBalanceMigrations)).toBeTruthy());
-    expect(await screen.findByText("DASHBOARD_ROOT")).toBeInTheDocument();
-    expect(screen.queryByText("رصيد افتتاح الشركة")).not.toBeInTheDocument();
+    // The opening page stays and the wizard resumes on the ACTIVE completion step.
+    expect(await screen.findByText("اكتمل إعداد الشركة ✓")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "الانتقال إلى لوحة التحكم" })).toBeInTheDocument();
+    expect(screen.queryByText("DASHBOARD_ROOT")).not.toBeInTheDocument();
   });
 
-  it("redirects away once Locked but the first fiscal period is still pending (OPENING_LOCKED)", async () => {
+  it("keeps a Locked EXISTING company with no first period on the locked-completion onboarding (no redirect)", async () => {
     vi.mocked(settingsService.getSettings).mockResolvedValue({
       accounting_start_mode: START_MODE_EXISTING,
     } as never);
@@ -190,8 +192,13 @@ describe("OpeningBalanceMigration company-type gate", () => {
     vi.mocked(fiscalPeriodService.listFiscalPeriods).mockResolvedValue([] as never);
     const { qc } = renderPage();
     await waitFor(() => expect(qc.getQueryData(QUERY_KEYS.openingBalanceMigrations)).toBeTruthy());
-    expect(await screen.findByText("DASHBOARD_ROOT")).toBeInTheDocument();
-    expect(screen.queryByText("رصيد افتتاح الشركة")).not.toBeInTheDocument();
+    // The wizard resumes directly at the locked-completion onboarding instead of
+    // throwing the user back to the dashboard; opening management controls vanish.
+    expect(await screen.findByText("تم التحويل بنجاح ✓")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "بدء أول فترة تشغيلية" })).toBeInTheDocument();
+    expect(screen.queryByText("قائمة الترحيلات")).not.toBeInTheDocument();
+    expect(screen.queryByText("المركز والتسوية")).not.toBeInTheDocument();
+    expect(screen.queryByText("DASHBOARD_ROOT")).not.toBeInTheDocument();
   });
 
   it("shows an OPENING_IN_PROGRESS badge once a draft migration exists", async () => {

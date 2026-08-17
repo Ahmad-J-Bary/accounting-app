@@ -172,6 +172,9 @@ export function useOpeningBalanceWizard() {
   const [firstPeriodStart, setFirstPeriodStart] = useState(() => toLocalDatePart(new Date()));
   const [firstPeriodEnd, setFirstPeriodEnd] = useState(() => `${new Date().getFullYear()}-12-31`);
   const [firstPeriod, setFirstPeriod] = useState<FiscalPeriodDto | null>(null);
+  // Post-lock onboarding: until the accountant presses [بدء أول فترة تشغيلية] the
+  // locked-completion panel is shown instead of the first-period form.
+  const [onboardingStarted, setOnboardingStarted] = useState(false);
 
   const startModeLoaded = useRef(false);
   const [settingsReady, setSettingsReady] = useState(false);
@@ -343,6 +346,30 @@ export function useOpeningBalanceWizard() {
     queryFn: () => fixedAssetService.list(),
     enabled: existing,
   });
+
+  // First fiscal period existence drives the post-lock re-entry target: a period
+  // already present (ACTIVE) resumes the wizard at the completion step.
+  const { data: fiscalPeriods = [], isSuccess: fiscalPeriodsLoaded } = useQuery({
+    queryKey: QUERY_KEYS.fiscalPeriods,
+    queryFn: () => fiscalPeriodService.listFiscalPeriods(),
+    enabled: existing,
+  });
+
+  // Re-entry after the transition is sealed: a Locked migration can no longer
+  // walk the opening steps, so the wizard resumes directly at the onboarding —
+  // the first-period step while OPENING_LOCKED, the completion step once ACTIVE.
+  // Guarded to run exactly once once migration + first-period data resolve.
+  const postLockJumped = useRef(false);
+  useEffect(() => {
+    if (!settingsReady || startMode !== START_MODE_EXISTING) return;
+    if (postLockJumped.current) return;
+    if (!migration || migration.status !== "Locked") return;
+    if (!fiscalPeriodsLoaded) return;
+    postLockJumped.current = true;
+    const hasPeriod = fiscalPeriods.length > 0 || !!firstPeriod;
+    setStep(hasPeriod ? STEPS_EXISTING.length - 1 : STEP_FIRST_PERIOD);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsReady, startMode, migration, fiscalPeriods, fiscalPeriodsLoaded]);
 
   // ── Residual-classification spec (meaning-first: system picks the account) ─
   const { data: residualSpecs = [] } = useQuery({
@@ -858,11 +885,11 @@ export function useOpeningBalanceWizard() {
       case STEP_LOCK:
         return !!migration && migration.status === "Posted" && residualResolved;
       case STEP_FIRST_PERIOD:
-        return datesValid;
+        return (migration?.status !== "Locked" || onboardingStarted || !!firstPeriod) && datesValid;
       default:
         return true;
     }
-  }, [step, startMode, cutoverDate, totals, savedTotals, migration, reconciliation, residualResolved, firstPeriodStart, firstPeriodEnd]);
+  }, [step, startMode, cutoverDate, totals, savedTotals, migration, reconciliation, residualResolved, firstPeriodStart, firstPeriodEnd, onboardingStarted]);
 
   // Back-navigation stays open until the migration is sealed: Draft/Validated/
   // Approved may all be edited again by going back to the review step. Only a
@@ -904,6 +931,9 @@ export function useOpeningBalanceWizard() {
       }
       return undefined;
     }
+    if (step === STEP_FIRST_PERIOD && migration?.status === "Locked" && !onboardingStarted) {
+      return "اضغط «بدء أول فترة تشغيلية» لبدء إعداد أول فترة تشغيلية";
+    }
     if (step !== STEP_VALIDATE) return undefined;
     if (!migration) return "احفظ الأرصدة وفحص التسوية أولاً (خطوة المراجعة)";
     if (["Posted", "Locked", "Cancelled"].includes(migration.status)) return "التحويل مؤشَّر أو مقفل — لا يمكن التحقق من جديد";
@@ -916,7 +946,7 @@ export function useOpeningBalanceWizard() {
       return "المعادلة غير متوازنة أو توجد واجهات فرعية غير مطابقة";
     }
     return undefined;
-  }, [startMode, step, migration, reconciliation, residualResolved]);
+  }, [startMode, step, migration, reconciliation, residualResolved, onboardingStarted]);
 
   const runStep = async () => {
     try {
@@ -1112,6 +1142,8 @@ export function useOpeningBalanceWizard() {
     setFirstPeriodEnd,
     firstPeriod,
     createFirstPeriod,
+    onboardingStarted,
+    beginFirstPeriodSetup: () => setOnboardingStarted(true),
     customers,
     suppliers,
     materials,

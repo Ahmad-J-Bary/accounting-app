@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Check } from "lucide-react";
 import type { AccountDto, ResidualClassificationSpecDto } from "@erp/shared-types";
 import { Input } from "@shared/ui/input";
+import { Button } from "@shared/ui/button";
 import { ConfirmDialog } from "@shared/ui/confirm-dialog";
 import { cn } from "@shared/lib/utils";
 import { StatusBadge } from "@shared/ui/status-badge";
@@ -46,27 +47,37 @@ export function GuidedTransitionWizard() {
     if (ok) navigate("/dashboard");
   };
 
-  const renderDone = () => (
-    <div className="space-y-3">
-      <div className={"rounded-lg p-4 text-center " + (isNew || w.migration?.status === "Locked" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700")}>
-        <p className="text-base font-black">
-          {isNew ? "تم بدء المحاسبة بنجاح ✓" : w.migration?.status === "Locked" ? "اكتمل المعالج بنجاح ✓" : "اكتمل المعالج"}
-        </p>
-        <p className="text-xs mt-1">
-          {isNew ? (
-            "أول فترة مالية جاهزة — ابدأ تسجيل الحركات اليومية من الصفحات الرئيسية."
-          ) : (
-            <>حالة الترحيل النهائية: <StatusBadge status={w.migration?.status || ""} /> — تاريخ القطع: {toLocalDateStr(w.migration?.cutover_date || "")}</>
-          )}
-        </p>
-      </div>
-      {w.firstPeriod && (
-        <div className="rounded-lg p-3 text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-          أول فترة مالية: {toLocalDateStr(w.firstPeriod.start_date)} ← {toLocalDateStr(w.firstPeriod.end_date)}
+  const renderDone = () => {
+    const locked = w.migration?.status === "Locked";
+    return (
+      <div className="space-y-3">
+        <div className={"rounded-lg p-4 text-center " + (isNew || locked ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700")}>
+          <p className="text-base font-black">
+            {isNew ? "تم بدء المحاسبة بنجاح ✓" : locked ? "اكتمل إعداد الشركة ✓" : "اكتمل المعالج"}
+          </p>
+          <p className="text-xs mt-1">
+            {isNew ? (
+              "أول فترة مالية جاهزة — الشركة الآن في وضع المحاسبة العادي ويمكن تسجيل الحركات اليومية."
+            ) : locked ? (
+              "التحويل مكتمل: الرصيد الافتتاحي مقفول نهائياً وأول فترة تشغيلية جاهزة — الشركة الآن في وضع المحاسبة العادي."
+            ) : (
+              <>حالة الترحيل النهائية: <StatusBadge status={w.migration?.status || ""} /> — تاريخ القطع: {toLocalDateStr(w.migration?.cutover_date || "")}</>
+            )}
+          </p>
         </div>
-      )}
-    </div>
-  );
+        {w.firstPeriod && (
+          <div className="rounded-lg p-3 text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+            أول فترة مالية: {toLocalDateStr(w.firstPeriod.start_date)} ← {toLocalDateStr(w.firstPeriod.end_date)}
+          </div>
+        )}
+        <div className="flex justify-center pt-1">
+          <Button size="sm" onClick={() => navigate("/dashboard")} className="bg-green-600 hover:bg-green-700 text-white font-bold">
+            الانتقال إلى لوحة التحكم
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   const renderTotalsSummary = () => (
     <div className="space-y-3">
@@ -384,30 +395,64 @@ export function GuidedTransitionWizard() {
           </div>
         );
       }
-      case 13:
+      case 13: {
+        // Post-transition onboarding (Step 14, 1-based): once the migration is
+        // Locked this step no longer belongs to the opening workflow — it first
+        // confirms the sealed transition (checklist) then sets up the first
+        // operational period. The first-period form is revealed only after the
+        // accountant presses [بدء أول فترة تشغيلية].
+        const locked = w.migration?.status === "Locked";
+        const showCompletionPanel = locked && !w.firstPeriod && !w.onboardingStarted;
         return (
-          <div className="space-y-3">
-            <p className="text-xs text-slate-500">
-              أُقفل الرصيد الافتتاحي. حدّد الآن نافذة أول فترة تشغيلية ستُقيد عليها الحركات الجديدة
-              (عادةً من اليوم التالي لتاريخ القطع حتى نهاية السنة). لا يمكن ترحيل أي حركة خارج فترة
-              مفتوحة.
-            </p>
-            <FirstPeriodFields
-              start={w.firstPeriodStart}
-              end={w.firstPeriodEnd}
-              onStart={w.setFirstPeriodStart}
-              onEnd={w.setFirstPeriodEnd}
-              created={w.firstPeriod}
-            />
-            {w.firstPeriod ? (
-              <div className="rounded-lg p-3 text-xs font-bold bg-green-50 text-green-700 border border-green-200">
-                تم إنشاء أول فترة تشغيلية ✓ — يمكنك المتابعة لتسجيل الحركات اليومية.
+          <div className="space-y-4">
+            {locked && !w.firstPeriod && (
+              <>
+                <LockedCompletionPanel
+                  posted={!!w.migration && ["Posted", "Locked"].includes(w.migration.status)}
+                  reconciled={w.reconciliation?.all_reconciled === true}
+                  locked={locked}
+                />
+                {!w.onboardingStarted && (
+                  <div className="flex justify-center">
+                    <Button
+                      size="sm"
+                      onClick={w.beginFirstPeriodSetup}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                    >
+                      بدء أول فترة تشغيلية
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+            {(w.onboardingStarted || !locked || !!w.firstPeriod) && (
+              <div className="space-y-3">
+                {!showCompletionPanel && (
+                  <p className="text-xs text-slate-500">
+                    أُقفل الرصيد الافتتاحي. حدّد الآن نافذة أول فترة تشغيلية ستُقيد عليها الحركات الجديدة
+                    (عادةً من اليوم التالي لتاريخ القطع حتى نهاية السنة). لا يمكن ترحيل أي حركة خارج فترة
+                    مفتوحة.
+                  </p>
+                )}
+                <FirstPeriodFields
+                  start={w.firstPeriodStart}
+                  end={w.firstPeriodEnd}
+                  onStart={w.setFirstPeriodStart}
+                  onEnd={w.setFirstPeriodEnd}
+                  created={w.firstPeriod}
+                />
+                {w.firstPeriod ? (
+                  <div className="rounded-lg p-3 text-xs font-bold bg-green-50 text-green-700 border border-green-200">
+                    تم إنشاء أول فترة تشغيلية ✓ — اضغط «التالي» لإكمال الإعداد أو انتقل إلى لوحة التحكم.
+                  </div>
+                ) : w.onboardingStarted ? (
+                  <p className="text-xs text-slate-400">اضغط «إنشاء أول فترة تشغيلية» لإنشائها ثم تابع.</p>
+                ) : null}
               </div>
-            ) : (
-              <p className="text-xs text-slate-400">اضغط «إنشاء أول فترة تشغيلية» لإنشائها ثم تابع.</p>
             )}
           </div>
         );
+      }
       case 14:
         return renderDone();
       default:
@@ -537,7 +582,10 @@ export function GuidedTransitionWizard() {
     </WizardShell>
   );
 
-  if (isNew) return wizard;
+  // Once the migration is sealed the opening position summary / progress
+  // checklist are opening controls — no longer relevant. The wizard shows only
+  // the post-transition onboarding.
+  if (isNew || w.migration?.status === "Locked") return wizard;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_330px] gap-4 items-start" dir="rtl">
@@ -621,6 +669,47 @@ function FirstPeriodFields({
           تم إنشاء الفترة: {toLocalDateStr(created.start_date)} ← {toLocalDateStr(created.end_date)}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Locked-completion panel: shown after the migration is sealed (Phase 6).
+// Presents the four confirmation checkmarks then the "next step" call-to-action.
+export function LockedCompletionPanel({
+  posted,
+  reconciled,
+  locked,
+}: {
+  posted: boolean;
+  reconciled: boolean;
+  locked: boolean;
+}) {
+  const items = [
+    { label: "الأرصدة الافتتاحية مُرحّلة إلى دفتر الأستاذ", done: posted },
+    { label: "التسوية مكتملة ومتوازنة (دليل الحسابات = السجلات المساعدة)", done: reconciled },
+    { label: "التحويل مقفول نهائياً — لا يُقبل أي تعديل لاحق", done: locked },
+    { label: "الشركة في وضع المحاسبة العادي — الحركات اليومية متاحة", done: locked },
+  ];
+  return (
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 space-y-2">
+      <p className="text-sm font-black text-emerald-700">تم التحويل بنجاح ✓</p>
+      <p className="text-xs text-emerald-600">اكتملت مرحلة الرصيد الافتتاحي بجميع خطواتها:</p>
+      <ul className="space-y-1.5">
+        {items.map((it) => (
+          <li key={it.label} className="flex items-center gap-2 text-xs font-semibold text-emerald-800">
+            <span className={"rounded-full p-0.5 " + (it.done ? "bg-emerald-600 text-white" : "bg-amber-400 text-amber-900")}>
+              <Check className="w-3.5 h-3.5" />
+            </span>
+            {it.label}
+          </li>
+        ))}
+      </ul>
+      <div className="pt-0.5 rounded-lg bg-white border border-emerald-200 p-3 space-y-1">
+        <p className="text-xs font-bold text-emerald-800">الخطوة التالية: إعداد أول فترة تشغيلية</p>
+        <p className="text-xs text-emerald-600">
+          تُقيد الحركات الجديدة على فترة مالية مفتوحة — عادةً من اليوم التالي لتاريخ القطع حتى نهاية السنة.
+        </p>
+      </div>
     </div>
   );
 }
