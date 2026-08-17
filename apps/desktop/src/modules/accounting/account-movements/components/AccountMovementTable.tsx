@@ -13,7 +13,7 @@ import { getLeftBorderClass, getRowBorderClass, getRowBackgroundClass } from "@s
 import type { AccountLedgerLineDto } from "@erp/shared-types";
 import { formatDateTime, formatNumber } from "@shared/lib/format";
 import { getHeaderText, getPrimitiveCellValue } from "@modules/accounting/journal/components/groupedTableUtils";
-import { computeClosingBalance, isOpeningLine, openingEntriesToLines } from "@modules/accounting/account-movements/lib/openingLines";
+import { computeClosingBalance, isOpeningLine } from "@modules/accounting/account-movements/lib/openingLines";
 import { Download } from "lucide-react";
 import { Button } from "@shared/ui/button";
 
@@ -58,7 +58,6 @@ export function AccountMovementTable({
   search,
   onSearchChange,
   accountName,
-  openingEntries = [],
 }: AccountMovementTableProps) {
   const { isBaseCurrency, currencySuffix, hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { settings, getDensityPadding } = useTableSettings();
@@ -142,13 +141,7 @@ export function AccountMovementTable({
     });
   }, [lines, accountName]);
 
-  const mergedLines = useMemo<EnrichedOriginalLine[]>(() => {
-    const openingRows = openingEntriesToLines(openingEntries).map((line) => ({
-      ...line,
-      typeLabel: "رصيد افتتاحي",
-    }));
-    return [...openingRows, ...enrichedLines];
-  }, [openingEntries, enrichedLines]);
+  const mergedLines = enrichedLines;
 
   const { sortedData: sortedOriginalLines, sortField, sortDirection, handleSort } = useSortable({
     data: mergedLines,

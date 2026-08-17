@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isOpeningLine, getOpeningCreationDate, getOpeningTotals, computeClosingBalance, openingEntriesToLines } from "./openingLines";
+import { isOpeningLine, getOpeningCreationDate, getOpeningTotals, computeOpeningBalance, computeClosingBalance } from "./openingLines";
 
 const openingLine = (journal_type: string, date: string, debit_base = "0", credit_base = "0", description = "") => ({
   journal_type,
@@ -57,34 +57,7 @@ describe("getOpeningTotals", () => {
       openingLine("AccountOpeningBalance", "2026-08-03T18:12:52Z", "0", "123"),
       openingLine("AccountOpeningBalance", "2026-08-03T19:38:03Z", "0", "777"),
     ];
-    expect(getOpeningTotals(lines, [], "2026-01-01", "2026-08-03")).toEqual({ debit: 0, credit: 900 });
-  });
-
-  it("aggregates all opening entries across children (account 223 scenario)", () => {
-    const entries = [
-      { date: "2026-08-03T18:12:52Z", debit_base: "123", credit_base: "0" },
-      { date: "2026-08-03T19:38:03Z", debit_base: "777", credit_base: "0" },
-    ];
-    expect(getOpeningTotals([], entries, "2026-01-01", "2026-08-03")).toEqual({ debit: 900, credit: 0 });
-  });
-
-  it("aggregates additional opening balances added to one account", () => {
-    const entries = [
-      { date: "2026-08-03T18:12:52Z", debit_base: "123", credit_base: "0" },
-      { date: "2026-08-10T09:00:00Z", debit_base: "456", credit_base: "0" },
-    ];
-    expect(getOpeningTotals([], entries, "2026-01-01", "2026-08-03")).toEqual({ debit: 123, credit: 0 });
-  });
-
-  it("includes opening entry amounts", () => {
-    const openingEntry = { date: "2026-08-03T18:12:52Z", debit_base: "123", credit_base: "0" };
-    expect(getOpeningTotals([], [openingEntry], "2026-01-01", "2026-08-03")).toEqual({ debit: 123, credit: 0 });
-  });
-
-  it("adds opening entry amounts on top of opening lines (caller avoids overlap)", () => {
-    const lines = [openingLine("AccountOpeningBalance", "2026-08-03T18:12:52Z", "123", "0")];
-    const openingEntry = { date: "2026-08-03T18:12:52Z", debit_base: "123", credit_base: "0" };
-    expect(getOpeningTotals(lines, [openingEntry], "2026-01-01", "2026-08-03")).toEqual({ debit: 246, credit: 0 });
+    expect(getOpeningTotals(lines, "2026-01-01", "2026-08-03")).toEqual({ debit: 0, credit: 900 });
   });
 
   it("excludes opening lines outside the range", () => {
@@ -92,45 +65,57 @@ describe("getOpeningTotals", () => {
       openingLine("AccountOpeningBalance", "2026-08-03T18:12:52Z", "0", "123"),
       openingLine("AccountOpeningBalance", "2026-09-10T00:00:00Z", "0", "777"),
     ];
-    expect(getOpeningTotals(lines, [], "2026-01-01", "2026-08-03")).toEqual({ debit: 0, credit: 123 });
+    expect(getOpeningTotals(lines, "2026-01-01", "2026-08-03")).toEqual({ debit: 0, credit: 123 });
   });
 
-  it("excludes opening entries outside the range", () => {
-    const openingEntry = { date: "2026-09-10T00:00:00Z", debit_base: "777", credit_base: "0" };
-    expect(getOpeningTotals([], [openingEntry], "2026-01-01", "2026-08-03")).toEqual({ debit: 0, credit: 0 });
+  it("returns zeroes when nothing is in range", () => {
+    expect(getOpeningTotals([], "2026-01-01", "2026-08-03")).toEqual({ debit: 0, credit: 0 });
   });
 
   it("ignores non-opening lines", () => {
     const lines = [openingLine("SalesJournal", "2026-08-01T00:00:00Z", "50", "0", "فاتورة بيع")];
-    expect(getOpeningTotals(lines, [], "2026-01-01", "2026-08-03")).toEqual({ debit: 0, credit: 0 });
-  });
-
-  it("returns zeroes when nothing is in range", () => {
-    expect(getOpeningTotals([], [], "2026-01-01", "2026-08-03")).toEqual({ debit: 0, credit: 0 });
+    expect(getOpeningTotals(lines, "2026-01-01", "2026-08-03")).toEqual({ debit: 0, credit: 0 });
   });
 });
 
-describe("openingEntriesToLines", () => {
-  it("converts each opening entry into a line detected as opening", () => {
-    const entries = [
-      { entry_number: "1", description: "رصيد افتتاحي عميل", date: "2026-08-03T18:12:52Z", debit_base: "111", credit_base: "0" },
-      { entry_number: "2", description: "رصيد افتتاحي مورد", date: "2026-08-03T19:00:00Z", debit_base: "0", credit_base: "555" },
+describe("computeOpeningBalance", () => {
+  it("uses the posted opening journal line as the beginning balance (no static double count)", () => {
+    const lines = [
+      openingLine("AccountOpeningBalance", "2026-08-03T18:12:52Z", "0", "180"),
     ];
-    const lines = openingEntriesToLines(entries);
-    expect(lines).toHaveLength(2);
-    expect(lines[0]).toMatchObject({
-      entry_number: "1",
-      description: "رصيد افتتاحي عميل",
-      date: "2026-08-03T18:12:52Z",
-      debit_base: "111",
-      credit_base: "0",
-      journal_type: "رصيد افتتاحي",
-    });
-    expect(lines.every((l) => isOpeningLine(l))).toBe(true);
+    expect(computeOpeningBalance(lines, 180, "2026-08-04", "2026-12-31")).toBe(-180);
   });
 
-  it("returns an empty array when there are no opening entries", () => {
-    expect(openingEntriesToLines([])).toEqual([]);
+  it("sums movements before from_date on top of the opening line", () => {
+    const lines = [
+      openingLine("AccountOpeningBalance", "2026-08-03T18:12:52Z", "300", "0"),
+      { journal_type: "SalesJournal", description: "بيع", date: "2026-08-02T10:00:00Z", debit_base: "100", credit_base: "0" },
+    ];
+    // Opening 300 (Dr) + 100 Dr before from → 400
+    expect(computeOpeningBalance(lines, 0, "2026-08-04", "2026-12-31")).toBe(400);
+  });
+
+  it("falls back to the static opening balance when no opening journal line exists", () => {
+    const lines = [
+      { journal_type: "SalesJournal", description: "بيع", date: "2026-07-01T10:00:00Z", debit_base: "50", credit_base: "0" },
+    ];
+    expect(computeOpeningBalance(lines, 120, "2026-08-04", "2026-12-31")).toBe(170);
+  });
+
+  it("returns zero when the opening journal is created after the period end", () => {
+    const lines = [
+      openingLine("AccountOpeningBalance", "2026-10-01T18:12:52Z", "0", "180"),
+    ];
+    expect(computeOpeningBalance(lines, 180, "2026-08-04", "2026-08-31")).toBe(0);
+  });
+
+  it("returns the static base when no from_date is given and no opening line exists", () => {
+    expect(computeOpeningBalance([], 120, undefined, undefined)).toBe(120);
+  });
+
+  it("returns zero when no from_date is given and an opening line exists", () => {
+    const lines = [openingLine("AccountOpeningBalance", "2026-08-03T18:12:52Z", "0", "180")];
+    expect(computeOpeningBalance(lines, 180, undefined, undefined)).toBe(0);
   });
 });
 

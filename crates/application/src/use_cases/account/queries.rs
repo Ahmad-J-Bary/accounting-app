@@ -1,5 +1,5 @@
 use super::error::AccountUseCaseError;
-use super::types::{AccountLedger, LedgerLine, LedgerOpeningInfo};
+use super::types::{AccountLedger, LedgerLine};
 use crate::dto::account_dto::AccountDto;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
@@ -141,27 +141,19 @@ impl AccountQueries {
             .map(|id| opening_balance_map.get(id).copied().unwrap_or(Decimal::ZERO))
             .sum();
 
-        // The opening balance is the account's STATIC opening (existing-company
-        // seed / registered capital). Opening JOURNAL lines are themselves real
-        // posted lines surfaced in `lines` (or diverted into `opening_entries`
-        // when a static balance exists), so they must never be folded into the
-        // opening balance again — the frontend's beginning balance is
-        // SUM(posted lines before from_date), not this field plus lines.
+        // The opening balance field is METADATA (subledger seed / registered
+        // capital). Phase 5: the movement that establishes the beginning is the
+        // POSTED opening journal itself. Every posted AccountOpeningBalance /
+        // CashOpeningBalance / MaterialOpeningBalance line is surfaced in `lines`
+        // as the one historical transaction, so the same opening amount is never
+        // shown twice. `opening_entries` therefore carries NO synthetic rows.
         let opening_balance = static_opening;
 
         let mut lines = Vec::new();
-        let mut opening_entry: Option<LedgerOpeningInfo> = None;
-        let mut opening_entries: Vec<LedgerOpeningInfo> = Vec::new();
-        // The GL starts from the account's opening position (static opening only;
-        // opening journal lines are already in `lines` for non-static accounts),
-        // so running and closing balances follow rule 6: Beginning + Dr - Cr.
-        // `opening_balance` is a magnitude; it lands on the account's normal
-        // side (credit-normal accounts carry it as a negative debit - credit net).
-        let signed_opening = match first_account.normal_balance() {
-            domain::accounting::account::NormalBalance::Debit => opening_balance,
-            domain::accounting::account::NormalBalance::Credit => -opening_balance,
-        };
-        let mut running_balance_base = signed_opening;
+        // The GL running balance starts from zero: the posted opening journal
+        // (when it exists) contributes its Dr/Cr as the movement that opens the
+        // account. Static `opening_balance` metadata never moves the GL again.
+        let mut running_balance_base = Decimal::ZERO;
         let mut running_balance_original = Decimal::ZERO;
 
         let mut sorted_entries = journal_entries;
@@ -181,38 +173,6 @@ impl AccountQueries {
                 .filter(|l| id_set.contains(&l.account_id))
                 .collect();
             if account_lines.is_empty() {
-                continue;
-            }
-
-            // Skip opening journals for accounts that have a static
-            // opening_balance in the DB — the synthetic opening row already
-            // represents this balance in the frontend. Every such opening entry
-            // is kept in `opening_entries` so the frontend can aggregate ALL
-            // opening balances (not just the latest one).
-            let is_static_opening = matches!(
-                entry.journal_type,
-                domain::accounting::JournalType::AccountOpeningBalance
-                    | domain::accounting::JournalType::CashOpeningBalance
-                    | domain::accounting::JournalType::MaterialOpeningBalance
-            );
-            if is_static_opening
-                && account_lines.iter().any(|l| {
-                    opening_balance_map.get(&l.account_id).copied().unwrap_or(Decimal::ZERO) > Decimal::ZERO
-                })
-            {
-                for line in &account_lines {
-                    let info = LedgerOpeningInfo {
-                        entry_number: entry.entry_number.clone(),
-                        description: line.description.clone(),
-                        date: entry.entry_date,
-                        debit_base: line.base_debit(),
-                        credit_base: line.base_credit(),
-                    };
-                    if opening_entry.is_none() {
-                        opening_entry = Some(info.clone());
-                    }
-                    opening_entries.push(info);
-                }
                 continue;
             }
 
@@ -319,8 +279,8 @@ impl AccountQueries {
             account_name,
             opening_balance_base: opening_balance,
             opening_balance_original: Decimal::ZERO,
-            opening_entry,
-            opening_entries,
+            opening_entry: None,
+            opening_entries: vec![],
             lines,
             total_debit_base,
             total_credit_base,

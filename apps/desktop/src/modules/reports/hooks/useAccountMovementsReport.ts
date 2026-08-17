@@ -3,7 +3,7 @@ import { useChartOfAccounts, useAccountLedger } from "@shared/hooks/queries/useA
 import type { AccountDto, AccountLedgerLineDto, OpeningEntryDto } from "@erp/shared-types";
 import type { ReportFilters } from "@shared/types/filters";
 import type { ReportState } from "@shared/types/report";
-import { getOpeningCreationDate, getOpeningTotals, isOpeningLine } from "@modules/accounting/account-movements/lib/openingLines";
+import { getOpeningTotals, isOpeningLine, computeOpeningBalance } from "@modules/accounting/account-movements/lib/openingLines";
 import { toLocalDateStr } from "@shared/lib/format";
 
 export type LoadedAccountMovementsData = {
@@ -51,33 +51,12 @@ export function useAccountMovementsReport(
   const reportData = useMemo<LoadedAccountMovementsData>(() => {
     const lines = ledger?.lines ?? [];
 
-    const openingBalance = (() => {
-      let absOpening = parseFloat(ledger?.opening_balance_base || "0");
-
-      // The opening balance only exists once its opening entry was created.
-      // If the period ends before that creation date, the balance did not
-      // exist yet — hide it instead of "going back in time".
-      if (filters.to_date) {
-        const created = getOpeningCreationDate(ledger?.opening_entry, lines);
-        if (created && created > filters.to_date) {
-          absOpening = 0;
-        }
-      }
-
-      if (!filters.from_date) return absOpening;
-
-      let debitBefore = 0;
-      let creditBefore = 0;
-      for (const line of lines) {
-        if (isOpeningLine(line)) continue;
-        const d = toLocalDateStr(line.date);
-        if (d < filters.from_date) {
-          debitBefore += parseFloat(line.debit_base || "0");
-          creditBefore += parseFloat(line.credit_base || "0");
-        }
-      }
-      return absOpening + debitBefore - creditBefore;
-    })();
+    const openingBalance = computeOpeningBalance(
+      lines,
+      parseFloat(ledger?.opening_balance_base || "0"),
+      filters.from_date,
+      filters.to_date,
+    );
 
     const openingBalanceDate = filters.from_date
       || (openingEntry?.date || "");
@@ -99,7 +78,7 @@ export function useAccountMovementsReport(
       { debit: 0, credit: 0 },
     );
 
-    const openingTotals = getOpeningTotals(lines, ledger?.opening_entries ?? [], filters.from_date, filters.to_date);
+    const openingTotals = getOpeningTotals(lines, filters.from_date, filters.to_date);
 
     return {
       accounts,

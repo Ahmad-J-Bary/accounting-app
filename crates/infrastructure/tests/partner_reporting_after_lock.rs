@@ -3,18 +3,24 @@
 //!
 //! The bug: for an EXISTING company, partner capital is booked as the capital
 //! account's static `opening_balance` (no creation journal). The migration
-//! journal surfaced by `get_ledger` for such accounts is exposed as
-//! `opening_entries`, NOT `lines`. The old report filters dropped any partner
-//! whose capital ledger had zero `lines`, collapsing the statement/profit-share
-//! rows to empty even though real partners exist in the DB.
+//! journal surfaced by `get_ledger` for such accounts used to be exposed as
+//! `opening_entries`, NOT `lines`, and the old report filter dropped any
+//! partner whose capital ledger had zero `lines`, collapsing the
+//! statement/profit-share rows to empty even though real partners exist.
 //!
-//! These tests pin the DATA contract the reports depend on: after POST + LOCK
+//! Phase 5 contract: the POSTED opening journal IS the single GL movement.
+//! `get_ledger` surfaces it as a real posted `lines` transaction («رصيد
+//! افتتاحي») and `opening_entries` carries nothing synthetic — the same
+//! opening amount is never shown twice. These tests pin the data contract the
+//! reports depend on: after POST + LOCK
 //!   - `list_all` returns the registered partners;
-//!   - the capital ledger has an empty `lines` array but populated
-//!     `opening_entries` (the exact shape that used to drop the partners);
+//!   - the capital ledger has exactly ONE `lines` movement (the posted opening
+//!     journal line) and an EMPTY `opening_entries` array;
+//!   - `opening_balance_base` (the static metadata) still carries the
+//!     registered capital for reports that read it as a fallback;
 //!
 //! and that editing a partner's registered capital re-syncs the capital
-//! account's static opening balance so partner.amount_local == account balance.
+//!     account's static opening balance so partner.amount_local == account balance.
 
 use std::str::FromStr;
 use std::sync::Arc;
@@ -188,7 +194,7 @@ async fn register_partner(
 // misread as "partner does not exist".
 // ---------------------------------------------------------------------------
 #[tokio::test]
-async fn existing_company_partners_survive_post_lock_and_ledger_exposes_opening_entries() {
+async fn existing_company_partners_survive_post_lock_and_ledger_exposes_single_opening_line() {
     let pool = build_pool().await;
     set_start_mode(&pool, START_MODE_EXISTING).await;
 
@@ -228,9 +234,10 @@ async fn existing_company_partners_survive_post_lock_and_ledger_exposes_opening_
     assert!(names.contains(&"أحمد"), "أحمد must be listed");
     assert!(names.contains(&"محمد"), "محمد must be listed");
 
-    // The ledger shape the reports consume: capital ledger has an EMPTY `lines`
-    // array (the static opening balance is not journal lines) but NON-EMPTY
-    // `opening_entries` carrying the registered capital.
+    // The ledger shape the reports consume: the POSTED opening journal line
+    // (the migration's account balance) is the ONE `lines` movement — a real
+    // historical transaction titled «رصيد افتتاحي» — and `opening_entries`
+    // carries NO synthetic rows (the same amount must never appear twice).
     let account_repo: Arc<dyn AccountRepository> =
         Arc::new(SqliteAccountRepository::new(pool.clone()));
     let journal_repo: Arc<dyn JournalEntryRepository> =
@@ -238,14 +245,18 @@ async fn existing_company_partners_survive_post_lock_and_ledger_exposes_opening_
     let queries = AccountQueries::new(account_repo.clone(), journal_repo.clone());
 
     let ledger_ahmad = queries.get_ledger(&[ahmad_cap]).await.expect("أحمد ledger");
-    assert_eq!(ledger_ahmad.lines.len(), 0, "static capital is not surfaced as journal lines");
-    assert!(!ledger_ahmad.opening_entries.is_empty(), "أحمد opening entries must carry the capital");
-    assert!(ledger_ahmad.opening_entry.is_some());
+    assert_eq!(ledger_ahmad.lines.len(), 1, "أحمد ledger must expose exactly one posted opening journal line");
+    assert_eq!(ledger_ahmad.lines[0].debit_base, Decimal::ZERO);
+    assert_eq!(ledger_ahmad.lines[0].credit_base, Decimal::from(180));
+    assert!(ledger_ahmad.opening_entries.is_empty(), "opening_entries must carry no synthetic rows");
+    assert!(ledger_ahmad.opening_entry.is_none());
     assert_eq!(ledger_ahmad.opening_balance_base, Decimal::from(180));
 
     let ledger_mohammad = queries.get_ledger(&[mohammad_cap]).await.expect("محمد ledger");
-    assert_eq!(ledger_mohammad.lines.len(), 0, "static capital is not surfaced as journal lines");
-    assert!(!ledger_mohammad.opening_entries.is_empty(), "محمد opening entries must carry the capital");
+    assert_eq!(ledger_mohammad.lines.len(), 1, "محمد ledger must expose exactly one posted opening journal line");
+    assert_eq!(ledger_mohammad.lines[0].debit_base, Decimal::ZERO);
+    assert_eq!(ledger_mohammad.lines[0].credit_base, Decimal::from(120));
+    assert!(ledger_mohammad.opening_entries.is_empty(), "opening_entries must carry no synthetic rows");
     assert_eq!(ledger_mohammad.opening_balance_base, Decimal::from(120));
 
     // The opening journal is persisted exactly once (no duplicate partner lines).

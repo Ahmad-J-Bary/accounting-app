@@ -222,7 +222,7 @@ const getAccountPeriodNet = (predicate: (acc?: AccountDto) => boolean, revenueSi
         return ledgerSum + parseNumber(line.debit_base) - parseNumber(line.credit_base);
       }, 0);
       // الرصيد الافتتاحي لبند المصروف يُضاف إلى إجمالي المصاريف
-      const opening = getOpeningTotals(ledger.lines, ledger.opening_entries, undefined, filters.to_date);
+      const opening = getOpeningTotals(ledger.lines, undefined, filters.to_date);
       const openingNet = opening.debit - opening.credit;
       const staticOpening = parseNumber(ledger.opening_balance_base);
       return {

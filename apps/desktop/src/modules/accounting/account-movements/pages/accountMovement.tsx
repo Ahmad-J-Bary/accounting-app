@@ -23,7 +23,7 @@ import type {
 } from "@erp/shared-types";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { AccountMovementTable } from "../components/AccountMovementTable";
-import { computeClosingBalance, getOpeningCreationDate, getOpeningTotals, isOpeningLine } from "../lib/openingLines";
+import { computeClosingBalance, computeOpeningBalance, getOpeningTotals, isOpeningLine } from "../lib/openingLines";
 import { toLocalDateStr } from "@shared/lib/format";
 import { useDataTable } from "@shared/hooks";
 import { toast } from "sonner";
@@ -117,34 +117,16 @@ export default function AccountMovement() {
     detectType();
   }, [accountId]);
 
-  const openingBalance = useMemo(() => {
-    let absOpening = parseFloat(ledger?.opening_balance_base || "0");
-
-    // The opening balance only exists once its opening entry was created.
-    // If the period ends before that creation date, the balance did not
-    // exist yet — hide it instead of "going back in time".
-    if (dateFilters.to_date) {
-      const created = getOpeningCreationDate(ledger?.opening_entry, ledger?.lines || []);
-      if (created && created > dateFilters.to_date) {
-        absOpening = 0;
-      }
-    }
-
-    if (!dateFilters.from_date) return absOpening;
-
-    const allLines = ledger?.lines || [];
-    let debitBefore = 0;
-    let creditBefore = 0;
-    for (const line of allLines) {
-      if (isOpeningLine(line)) continue;
-      const d = toLocalDateStr(line.date);
-      if (d < dateFilters.from_date) {
-        debitBefore += parseFloat(line.debit_base || "0");
-        creditBefore += parseFloat(line.credit_base || "0");
-      }
-    }
-    return absOpening + debitBefore - creditBefore;
-  }, [ledger, dateFilters]);
+  const openingBalance = useMemo(
+    () =>
+      computeOpeningBalance(
+        ledger?.lines || [],
+        parseFloat(ledger?.opening_balance_base || "0"),
+        dateFilters.from_date,
+        dateFilters.to_date,
+      ),
+    [ledger, dateFilters],
+  );
 
   const openingEntry = useMemo(() => {
     const oe = ledger?.opening_entry || null;
@@ -152,7 +134,7 @@ export default function AccountMovement() {
 
     const { from_date, to_date } = dateFilters;
     if (from_date || to_date) {
-      const d = (oe.date || "").split("T")[0];
+      const d = toLocalDateStr(oe.date || "");
       if (from_date && d < from_date) return null;
       if (to_date && d > to_date) return null;
     }
@@ -165,7 +147,7 @@ export default function AccountMovement() {
   }, [dateFilters.from_date, openingEntry?.date]);
 
   const { debit: openingDebitTotal, credit: openingCreditTotal } = useMemo(
-    () => getOpeningTotals(ledger?.lines || [], ledger?.opening_entries ?? [], dateFilters.from_date, dateFilters.to_date),
+    () => getOpeningTotals(ledger?.lines || [], dateFilters.from_date, dateFilters.to_date),
     [ledger, dateFilters],
   );
 
