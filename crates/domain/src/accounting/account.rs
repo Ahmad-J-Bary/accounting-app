@@ -51,6 +51,14 @@ pub enum AccountPurpose {
     Loan,               // قروض (التزام)
     RetainedEarnings,   // أرباح مبقاة (52)
     OpeningBalanceEquity, // رصيد افتتاحي (53)
+    /// تعديل حقوق ملكية افتتاحي — tailored equity absorption of an opening
+    /// residual that is not attributable to retained earnings (521).
+    OpeningEquityAdjustment,
+    /// تعديل فترة سابقة — correction of a prior-period opening residual (525).
+    PriorPeriodAdjustment,
+    /// حقوق ملكية أخرى — generic residual-equity bucket for a residual that the
+    /// accountant decides is equity but outside the named buckets (526).
+    OtherEquity,
 }
 
 impl AccountPurpose {
@@ -69,6 +77,9 @@ impl AccountPurpose {
             AccountPurpose::Loan => "loan",
             AccountPurpose::RetainedEarnings => "retained_earnings",
             AccountPurpose::OpeningBalanceEquity => "opening_balance_equity",
+            AccountPurpose::OpeningEquityAdjustment => "opening_equity_adjustment",
+            AccountPurpose::PriorPeriodAdjustment => "prior_period_adjustment",
+            AccountPurpose::OtherEquity => "other_equity",
         }
     }
 
@@ -78,7 +89,9 @@ impl AccountPurpose {
     /// purpose — never in an operating account or in registered partner capital
     /// (profit must never silently change capital). `PartnerCapital` is
     /// deliberately excluded: contributing the residual as capital is an
-    /// explicit separate contribution event, not a reclassification.
+    /// explicit separate contribution event, not a reclassification. The
+    /// classification-specific rule (`ResidualClassification::account_purpose`)
+    /// is the authoritative gate; this method is the equity-family backstop.
     pub fn is_residual_classification_target(self) -> bool {
         matches!(
             self,
@@ -86,6 +99,9 @@ impl AccountPurpose {
                 | AccountPurpose::OpeningBalanceEquity
                 | AccountPurpose::General
                 | AccountPurpose::PartnerCurrent
+                | AccountPurpose::OpeningEquityAdjustment
+                | AccountPurpose::PriorPeriodAdjustment
+                | AccountPurpose::OtherEquity
         )
     }
 
@@ -99,6 +115,9 @@ impl AccountPurpose {
                 | AccountPurpose::PartnerCurrent
                 | AccountPurpose::RetainedEarnings
                 | AccountPurpose::OpeningBalanceEquity
+                | AccountPurpose::OpeningEquityAdjustment
+                | AccountPurpose::PriorPeriodAdjustment
+                | AccountPurpose::OtherEquity
         )
     }
 }
@@ -377,6 +396,9 @@ mod tests {
         assert!(AccountPurpose::OpeningBalanceEquity.is_residual_classification_target());
         assert!(AccountPurpose::General.is_residual_classification_target());
         assert!(AccountPurpose::PartnerCurrent.is_residual_classification_target());
+        assert!(AccountPurpose::OpeningEquityAdjustment.is_residual_classification_target());
+        assert!(AccountPurpose::PriorPeriodAdjustment.is_residual_classification_target());
+        assert!(AccountPurpose::OtherEquity.is_residual_classification_target());
         // Registered capital is NEVER a residual reclassification target.
         assert!(!AccountPurpose::PartnerCapital.is_residual_classification_target());
         assert!(!AccountPurpose::PartnerDrawings.is_residual_classification_target());
@@ -401,6 +423,9 @@ mod tests {
             AccountPurpose::PartnerCurrent,
             AccountPurpose::RetainedEarnings,
             AccountPurpose::OpeningBalanceEquity,
+            AccountPurpose::OpeningEquityAdjustment,
+            AccountPurpose::PriorPeriodAdjustment,
+            AccountPurpose::OtherEquity,
         ] {
             assert!(p.is_equity(), "{p:?} must be equity");
         }

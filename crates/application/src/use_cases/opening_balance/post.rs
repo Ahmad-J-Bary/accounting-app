@@ -71,6 +71,20 @@ impl PostOpeningBalanceUseCase {
             return Err(AppError::Invalid("ترحيل الرصيد الافتتاحي بلا بنود".into()));
         }
 
+        // Phase 4 guard: an UNRESOLVED residual can never be posted. The
+        // residual (net assets − recognized equity) is either reclassified into
+        // a designated equity account or the user fixes the lines; posting
+        // would leave an unexplained balance in OBE 53 silently.
+        if migration
+            .residual_classification
+            .map(|c| !c.allows_posting())
+            .unwrap_or(false)
+        {
+            return Err(AppError::Forbidden(
+                "الفرق غير محلول: رصيد الميزانية الباقي غير مصنَّف — صنّف الرصيد المتبقي أو عالج الفرق قبل الترحيل".into(),
+            ));
+        }
+
         // Enforcement gate: a migration may only be posted when its opening lines
         // are in equilibrium (Debit = Credit) AND the entered sub-ledger details
         // reconcile to the general-ledger opening lines. No silent plug account.

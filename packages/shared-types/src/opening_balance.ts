@@ -24,6 +24,22 @@ export interface UnreconciledRow {
   general_ledger: string;
 }
 
+export interface ResidualDesignatedAccountDto {
+  id: string;
+  code: string;
+  name_ar: string;
+}
+
+export interface ResidualClassificationSpecDto {
+  key: string;
+  label_ar: string;
+  allows_posting: boolean;
+  requires_confirmation: boolean;
+  allowed_purposes: string[];
+  designated_account: ResidualDesignatedAccountDto | null;
+  treatment_ar: string;
+}
+
 export interface OpeningPositionControlDto {
   opening_status: string;
   cutover_date: string;

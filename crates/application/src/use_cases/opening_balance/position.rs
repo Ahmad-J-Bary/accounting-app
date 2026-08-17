@@ -259,6 +259,9 @@ fn purpose_to_str(purpose: AccountPurpose) -> &'static str {
         AccountPurpose::Loan => "loan",
         AccountPurpose::RetainedEarnings => "retained_earnings",
         AccountPurpose::OpeningBalanceEquity => "opening_balance_equity",
+        AccountPurpose::OpeningEquityAdjustment => "opening_equity_adjustment",
+        AccountPurpose::PriorPeriodAdjustment => "prior_period_adjustment",
+        AccountPurpose::OtherEquity => "other_equity",
     }
 }
 

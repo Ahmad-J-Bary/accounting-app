@@ -1,5 +1,5 @@
 import { invoke } from '@shared/lib/invoke';
-import type { OpeningPositionControlDto } from '@erp/shared-types';
+import type { OpeningPositionControlDto, ResidualClassificationSpecDto } from '@erp/shared-types';
 
 export type OpeningMigrationStatus =
   | 'Draft'
@@ -178,6 +178,9 @@ export const openingBalanceService = {
   },
   async applyResidual(migrationId: string): Promise<void> {
     return await invoke<void>('apply_opening_balance_residual_classification', { id: migrationId });
+  },
+  async getResidualClassificationSpec(): Promise<ResidualClassificationSpecDto[]> {
+    return await invoke<ResidualClassificationSpecDto[]>('get_opening_balance_residual_classification_spec', {});
   },
   async getOpeningPositionControl(id: string): Promise<OpeningPositionControlDto> {
     return await invoke<OpeningPositionControlDto>('get_opening_position_control', { id });

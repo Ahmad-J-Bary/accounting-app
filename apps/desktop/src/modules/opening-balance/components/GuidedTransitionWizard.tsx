@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Check } from "lucide-react";
+import type { AccountDto, ResidualClassificationSpecDto } from "@erp/shared-types";
 import { Input } from "@shared/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
+import { ConfirmDialog } from "@shared/ui/confirm-dialog";
+import { cn } from "@shared/lib/utils";
 import { StatusBadge } from "@shared/ui/status-badge";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { toLocalDateStr, toFixed, fmtMoney } from "@shared/lib/format";
@@ -88,43 +91,17 @@ export function GuidedTransitionWizard() {
       </div>
 
       {w.totals.residual !== 0 && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 space-y-2">
-          <p className="text-xs font-semibold text-amber-700">
-            الرصيد المتبقي (غير مسجل من النظام السابق): {toFixed(w.totals.residual, 2)}
-          </p>
-          {w.totals.residual > 0 ? (
-            <p className="text-xs text-amber-600">
-              يُحسب الرصيد تلقائياً وطبيعته قرار محاسب صريح — لا تُسوّى قسراً. اختر تصنيفاً وحساباً وسيضيف
-              المعالج بند موازنة على حساب الرصيد الافتتاحي (53) يعاد تصنيفه بعد الترحيل.
-            </p>
-          ) : (
-            <p className="text-xs text-amber-600">
-              الرصيد المتبقي سالب (الخصوم/الملكية تزيد عن الأصول). أضف بنداً يدوياً مديناً (مثال: مسحوبات
-              الشركاء أو حساب تسوية) في الخطوات السابقة لموازنة القيد.
-            </p>
-          )}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <Select value={w.residualClassification} onValueChange={w.setResidualClassification}>
-              <SelectTrigger className="h-9 bg-white border-slate-200 text-xs" aria-label="تصنيف الفرق المتبقي">
-                <SelectValue placeholder="التصنيف (اختياري)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="RetainedEarnings">أرباح مبقاة</SelectItem>
-                <SelectItem value="OpeningEquityAdjustment">تعديل حقوق ملكية افتتاحي</SelectItem>
-                <SelectItem value="PriorPeriodAdjustment">تعديل فترة سابقة</SelectItem>
-                <SelectItem value="OtherEquity">حقوق ملكية أخرى</SelectItem>
-                <SelectItem value="UnresolvedDifference">فرق غير محلول</SelectItem>
-              </SelectContent>
-            </Select>
-            <AccountCombobox
-              accounts={w.accounts}
-              options={w.detailAccounts.filter((a) => a.account_type === "Equity")}
-              value={w.residualAccountId}
-              onValueChange={w.setResidualAccountId}
-              placeholder="حساب حامل الفرق (مثال: 52)"
-            />
-          </div>
-        </div>
+        <ResidualClassificationSection
+          residual={w.totals.residual}
+          plugAmount={w.totals.plugAmount}
+          specs={w.residualSpecs}
+          value={w.residualClassification}
+          onValueChange={w.handleClassificationChange}
+          residualAccountId={w.residualAccountId}
+          onResidualAccountChange={w.setResidualAccountId}
+          accounts={w.accounts}
+          spec={w.residualSpec}
+        />
       )}
 
       {w.totals.plugAmount !== 0 && (
@@ -644,6 +621,188 @@ function FirstPeriodFields({
           تم إنشاء الفترة: {toLocalDateStr(created.start_date)} ← {toLocalDateStr(created.end_date)}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Residual classification: the user picks the ACCOUNTING MEANING, the system
+// picks the designated account (Phase 4). Classification cards replace the raw
+// drop-down; the account is only chosen explicitly in Advanced mode, filtered
+// to the classification's controlled purposes. UnresolvedDifference blocks
+// posting/locking and never carries an account.
+export function ResidualClassificationSection({
+  residual,
+  plugAmount,
+  specs,
+  value,
+  onValueChange,
+  residualAccountId,
+  onResidualAccountChange,
+  accounts,
+  spec,
+}: {
+  residual: number;
+  plugAmount: number;
+  specs: ResidualClassificationSpecDto[];
+  value: string;
+  onValueChange: (key: string) => void;
+  residualAccountId: string;
+  onResidualAccountChange: (accountId: string) => void;
+  accounts: AccountDto[];
+  spec: ResidualClassificationSpecDto | undefined;
+}) {
+  const [advanced, setAdvanced] = useState(false);
+  const [confirmKey, setConfirmKey] = useState<string | null>(null);
+  const confirmSpec = specs.find((s) => s.key === confirmKey);
+
+  const apply = (key: string) => {
+    onValueChange(key);
+    setAdvanced(false);
+  };
+
+  const onPick = (key: string) => {
+    if (key === value) return;
+    const candidate = specs.find((s) => s.key === key);
+    if (candidate?.requires_confirmation) {
+      setConfirmKey(key);
+      return;
+    }
+    apply(key);
+  };
+
+  const effectiveAccount = accounts.find((a) => a.id === residualAccountId);
+  const advancedOptions = spec
+    ? accounts.filter(
+        (a) =>
+          a.account_type === "Equity" &&
+          (a.purpose ? spec.allowed_purposes.includes(a.purpose) : false) &&
+          a.is_active,
+      )
+    : [];
+
+  return (
+    <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 space-y-3">
+      <p className="text-xs font-semibold text-amber-700">
+        الرصيد المتبقي (غير مسجل من النظام السابق): {toFixed(residual, 2)}
+      </p>
+      {residual > 0 ? (
+        <p className="text-xs text-amber-600">
+          يُحسب الرصيد تلقائياً وطبيعته قرار محاسب صريح — لا تُسوّى قسراً. اختر المعنى المحاسبي وسيختار
+          النظام الحساب المخصص تلقائياً (52 / 521 / 525 / 526) ويضيف بند موازنة على حساب الرصيد الافتتاحي
+          (53) يُعاد تصنيفه بعد الترحيل.
+        </p>
+      ) : (
+        <p className="text-xs text-amber-600">
+          الرصيد المتبقي سالب (الخصوم/الملكية تزيد عن الأصول). أضف بنداً يدوياً مديناً (مثال: مسحوبات
+          الشركاء أو حساب تسوية) في الخطوات السابقة لموازنة القيد.
+        </p>
+      )}
+
+      {residual > 0 && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" role="radiogroup" aria-label="تصنيف الفرق المتبقي">
+            {specs.map((s) => {
+              const selected = s.key === value;
+              return (
+                <button
+                  key={s.key}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => onPick(s.key)}
+                  className={cn(
+                    "flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs font-bold transition-colors",
+                    selected
+                      ? "border-blue-400 bg-blue-50 text-blue-700 ring-1 ring-blue-400"
+                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
+                    !s.allows_posting && "text-red-600",
+                  )}
+                >
+                  <span className="truncate">{s.label_ar}</span>
+                  {selected && <Check className="h-4 w-4 shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+
+          {value === "UnresolvedDifference" && (
+            <div className="rounded-lg border border-red-200 bg-red-50/70 p-3 space-y-1">
+              <p className="text-xs font-bold text-red-700">
+                فرق غير محلول — لن يُرحَّل ولن يُقفَل حتى يُحل الفرق
+              </p>
+              <p className="text-xs text-red-600">
+                صحّح الأرصدة في الخطوات السابقة أو اختر تصنيفاً لحقوق الملكية أعلاه. لا يحمل هذا التصنيف
+                حساباً، ولن يُنشأ أي قيد.
+              </p>
+            </div>
+          )}
+
+          {value !== "" && value !== "UnresolvedDifference" && (
+            <div className="rounded-lg border border-blue-200 bg-white p-3 space-y-1.5">
+              <p className="text-xs font-semibold text-blue-700">معاينة قبل التسجيل:</p>
+              {plugAmount !== 0 && (
+                <p className="text-xs text-slate-600">
+                  القيمة: <span className="tabular-nums font-bold text-slate-800">{toFixed(plugAmount, 2)}</span>{" "}
+                  — نوع المعالجة: <span className="font-bold text-slate-800">{spec?.label_ar ?? value}</span>
+                </p>
+              )}
+              <p className="text-xs text-slate-600">{spec?.treatment_ar ?? ""}</p>
+              {(spec?.designated_account || effectiveAccount) && (
+                <p className="text-xs text-slate-600">
+                  الحساب المخصص:{" "}
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-slate-600">
+                      {(spec?.designated_account ?? effectiveAccount)?.code ?? ""}
+                    </span>
+                    <span className="font-bold text-slate-800">
+                      {(spec?.designated_account ?? effectiveAccount)?.name_ar ?? ""}
+                    </span>
+                  </span>
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2 justify-between pt-0.5">
+            <button
+              type="button"
+              onClick={() => setAdvanced((v) => !v)}
+              className="text-[11px] font-semibold text-slate-500 underline decoration-dotted hover:text-slate-700"
+              aria-expanded={advanced}
+            >
+              {advanced ? "إغلاق الوضع المتقدم" : "اختيار الحساب يدوياً (وضع متقدم)"}
+            </button>
+            {advanced && (
+              <div className="w-full md:max-w-xs">
+                <AccountCombobox
+                  accounts={accounts}
+                  options={advancedOptions}
+                  value={residualAccountId}
+                  onValueChange={onResidualAccountChange}
+                  placeholder="حساب حقوق ملكية بالغرض المحدد"
+                  emptyText="لا توجد حسابات بالغرض المحدد لهذا التصنيف"
+                  disabled={value === "" || value === "UnresolvedDifference" || advancedOptions.length === 0}
+                />
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      <ConfirmDialog
+        open={confirmKey !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmKey(null);
+        }}
+        title={`تأكيد تصنيف «${confirmSpec?.label_ar ?? ""}»`}
+        description="هذا التصنيف يعالج تصحيح خطأ من سنوات سابقة ولا يصحّح الأرباح المبقاة مباشرة. هل تريد المتابعة؟"
+        confirmLabel="تأكيد التصنيف"
+        cancelLabel="إلغاء"
+        onConfirm={() => {
+          if (confirmKey) apply(confirmKey);
+          setConfirmKey(null);
+        }}
+      />
     </div>
   );
 }

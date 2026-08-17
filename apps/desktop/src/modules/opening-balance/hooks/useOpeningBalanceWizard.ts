@@ -1,7 +1,7 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { AccountDto, FiscalPeriodDto, CustomerDto, SupplierDto } from "@erp/shared-types";
+import type { AccountDto, FiscalPeriodDto, CustomerDto, SupplierDto, ResidualClassificationSpecDto } from "@erp/shared-types";
 import type { WizardStepDef } from "@modules/opening-balance/components/WizardShell";
 import { queryClient, QUERY_KEYS } from "@shared/hooks/queryClient";
 import { toLocalDatePart } from "@shared/lib/format";
@@ -59,6 +59,63 @@ export const STEP_VALIDATE = 10;
 export const STEP_POST = 11;
 export const STEP_LOCK = 12;
 export const STEP_FIRST_PERIOD = 13;
+
+// Residual classifications. The backend spec endpoint is the source of truth
+// (`get_opening_balance_residual_classification_spec`); this fallback mirrors
+// it so the wizard still renders a coherent meaning-first UI when the query
+// has not loaded yet (or is unavailable in tests).
+export const RESIDUAL_SPEC_FALLBACK: ResidualClassificationSpecDto[] = [
+  {
+    key: "RetainedEarnings",
+    label_ar: "أرباح مبقاة",
+    allows_posting: true,
+    requires_confirmation: false,
+    allowed_purposes: ["retained_earnings"],
+    designated_account: null,
+    treatment_ar:
+      "سيتم نقل الرصيد من حساب التسوية الافتتاحية (53) إلى الأرباح المبقاة (52) كأرباح محققة غير موزعة من سنوات سابقة.",
+  },
+  {
+    key: "OpeningEquityAdjustment",
+    label_ar: "تعديل حقوق ملكية افتتاحي",
+    allows_posting: true,
+    requires_confirmation: false,
+    allowed_purposes: ["opening_equity_adjustment"],
+    designated_account: null,
+    treatment_ar:
+      "سيتم نقل الرصيد من حساب التسوية الافتتاحية (53) إلى حساب «تعديل حقوق ملكية افتتاحي» (521) — يُستخدم عند إعادة بيان رأس المال إما بزيادة أو نقصان.",
+  },
+  {
+    key: "PriorPeriodAdjustment",
+    label_ar: "تعديل فترة سابقة",
+    allows_posting: true,
+    requires_confirmation: true,
+    allowed_purposes: ["prior_period_adjustment"],
+    designated_account: null,
+    treatment_ar:
+      "سيتم نقل الرصيد من حساب التسوية الافتتاحية (53) إلى حساب «تعديل فترة سابقة» (525) — يعالج تصحيح خطأ من سنوات سابقة ولا يصحّح الأرباح المبقاة مباشرة.",
+  },
+  {
+    key: "OtherEquity",
+    label_ar: "حقوق ملكية أخرى",
+    allows_posting: true,
+    requires_confirmation: false,
+    allowed_purposes: ["other_equity"],
+    designated_account: null,
+    treatment_ar:
+      "سيتم نقل الرصيد من حساب التسوية الافتتاحية (53) إلى حساب «حقوق ملكية أخرى» (526) — يلزم اعتماده في الأرباح المبقاة أو تعديلات حقوق الملكية الأخرى عند التسوية.",
+  },
+  {
+    key: "UnresolvedDifference",
+    label_ar: "فرق غير محلول",
+    allows_posting: false,
+    requires_confirmation: false,
+    allowed_purposes: [],
+    designated_account: null,
+    treatment_ar:
+      "الفرق غير محلول: لن يُرحَّل ولن يُقفَل حتى يُحل الفرق أو يُغيَّر التصنيف.",
+  },
+];
 
 // JSON scratch the wizard persists so Save → Exit → Continue Later restores the
 // mid-editing inputs. Derived (module) rows are never stored: they re-derive
@@ -287,6 +344,37 @@ export function useOpeningBalanceWizard() {
     enabled: existing,
   });
 
+  // ── Residual-classification spec (meaning-first: system picks the account) ─
+  const { data: residualSpecs = [] } = useQuery({
+    queryKey: QUERY_KEYS.residualClassificationSpec,
+    queryFn: () => openingBalanceService.getResidualClassificationSpec(),
+    enabled: existing,
+  });
+  const residualSpecsReady = useMemo(
+    () => (residualSpecs.length > 0 ? residualSpecs : RESIDUAL_SPEC_FALLBACK),
+    [residualSpecs],
+  );
+  const residualSpec = useMemo(
+    () => residualSpecsReady.find((s) => s.key === residualClassification),
+    [residualSpecsReady, residualClassification],
+  );
+  const residualUnresolved = residualClassification === "UnresolvedDifference";
+
+  // The user chooses the accounting MEANING; the system resolves the designated
+  // account (52/521/525/526). Advanced mode overrides the account manually.
+  const handleClassificationChange = useCallback(
+    (key: string) => {
+      setResidualClassification(key);
+      if (key === "UnresolvedDifference" || key === "") {
+        setResidualAccountId("");
+        return;
+      }
+      const spec = residualSpecsReady.find((s) => s.key === key);
+      setResidualAccountId(spec?.designated_account?.id ?? "");
+    },
+    [residualSpecsReady],
+  );
+
   // ── Module-derived rows (read-only derivation) ───────────────────────────
   const derivedAr: DerivedRow[] = useMemo(() => deriveAr(customers, accounts), [customers, accounts]);
   const derivedAp: DerivedRow[] = useMemo(() => deriveAp(suppliers, accounts), [suppliers, accounts]);
@@ -343,12 +431,24 @@ export function useOpeningBalanceWizard() {
     [accounts],
   );
 
-  // The residual plug on 53 is only added for a credit residual (net assets >
-  // explicit equity) that the accountant classified; a debit residual must be
-  // closed by an explicit manual line instead.
+  // The residual plug on 53 is added for a credit residual (net assets > explicit
+  // equity) once the accountant picked a classification (any non-empty one,
+  // INCLUDING UnresolvedDifference): the plug balances the migration lines so
+  // the draft can be saved and validated. An UNRESOLVED difference then blocks
+  // POSTING and LOCKING (never the plug itself); the residual target account
+  // only matters for the post-post reclassification journal, so it is not a
+  // plug precondition. A debit residual must be closed by an explicit manual
+  // line instead.
   const hasResidualPlug = useMemo(
-    () => residual > 0 && !!residualClassification && !!residualAccountId && !!obeAccountId,
-    [residual, residualClassification, residualAccountId, obeAccountId],
+    () => residual > 0 && !!residualClassification && !!obeAccountId,
+    [residual, residualClassification, obeAccountId],
+  );
+
+  // A posted/pluggable migration may only be posted or locked when the credit
+  // residual was classified to a REAL equity meaning (or there is no residual).
+  const residualResolved = useMemo(
+    () => residual <= 0 || (!!residualClassification && !residualUnresolved && !!residualAccountId),
+    [residual, residualClassification, residualUnresolved, residualAccountId],
   );
 
   const totals = useMemo(() => {
@@ -754,15 +854,15 @@ export function useOpeningBalanceWizard() {
         // validated" (otherwise the step dead-ends on a Draft migration).
         return canValidateOpening(migration, reconciliation);
       case STEP_POST:
-        return !!migration && migration.status === "Validated";
+        return !!migration && migration.status === "Validated" && residualResolved;
       case STEP_LOCK:
-        return !!migration && migration.status === "Posted";
+        return !!migration && migration.status === "Posted" && residualResolved;
       case STEP_FIRST_PERIOD:
         return datesValid;
       default:
         return true;
     }
-  }, [step, startMode, cutoverDate, totals, savedTotals, migration, reconciliation, firstPeriodStart, firstPeriodEnd]);
+  }, [step, startMode, cutoverDate, totals, savedTotals, migration, reconciliation, residualResolved, firstPeriodStart, firstPeriodEnd]);
 
   // Back-navigation stays open until the migration is sealed: Draft/Validated/
   // Approved may all be edited again by going back to the review step. Only a
@@ -792,6 +892,18 @@ export function useOpeningBalanceWizard() {
   // unbalanced equation, or unreconciled sub-ledgers all show here).
   const nextDisabledReason = useMemo(() => {
     if (startMode === START_MODE_NEW) return undefined;
+    if (step === STEP_POST) {
+      if (migration && migration.status === "Validated" && !residualResolved) {
+        return "الفرق غير محلول: صنّف الرصيد المتبقي إلى حساب حقوق ملكية قبل الترحيل";
+      }
+      return undefined;
+    }
+    if (step === STEP_LOCK) {
+      if (migration && migration.status === "Posted" && !residualResolved) {
+        return "الفرق غير محلول: لا يمكن قفل الترحيل حتى يُحل الرصيد المتبقي (صنّفه أو عالج الفرق)";
+      }
+      return undefined;
+    }
     if (step !== STEP_VALIDATE) return undefined;
     if (!migration) return "احفظ الأرصدة وفحص التسوية أولاً (خطوة المراجعة)";
     if (["Posted", "Locked", "Cancelled"].includes(migration.status)) return "التحويل مؤشَّر أو مقفل — لا يمكن التحقق من جديد";
@@ -804,7 +916,7 @@ export function useOpeningBalanceWizard() {
       return "المعادلة غير متوازنة أو توجد واجهات فرعية غير مطابقة";
     }
     return undefined;
-  }, [startMode, step, migration, reconciliation]);
+  }, [startMode, step, migration, reconciliation, residualResolved]);
 
   const runStep = async () => {
     try {
@@ -845,11 +957,11 @@ export function useOpeningBalanceWizard() {
               ...payload,
             })
           : await openingBalanceService.createMigration(payload);
-        if (residualClassification && residualAccountId) {
+        if (residualClassification) {
           await openingBalanceService.setResidualClassification({
             migration_id: saved.id,
             classification: residualClassification,
-            residual_account_id: residualAccountId,
+            residual_account_id: residualAccountId || null,
           });
         }
         await openingBalanceService.saveMigrationItems({
@@ -892,8 +1004,9 @@ export function useOpeningBalanceWizard() {
         setMigration(res.migration);
         invalidateMigrations();
         // Move the classified 53 plug out into the chosen account so the OBE
-        // control zeroes and the lock gate can be satisfied.
-        if (residualClassification && residualAccountId && totals.plugAmount !== 0) {
+        // control zeroes and the lock gate can be satisfied. UnresolvedDifference
+        // is gated before posting, so only real classifications reach this.
+        if (residualClassification && !residualUnresolved && residualAccountId && totals.plugAmount !== 0) {
           await openingBalanceService.applyResidual(migration.id);
         }
         toast.success("تم الترحيل (متوازن)");
@@ -942,6 +1055,10 @@ export function useOpeningBalanceWizard() {
     setResidualClassification,
     residualAccountId,
     setResidualAccountId,
+    residualSpecs: residualSpecsReady,
+    residualSpec,
+    residualUnresolved,
+    handleClassificationChange,
     assetsManual,
     setAssetsManual,
     liabilitiesManual,

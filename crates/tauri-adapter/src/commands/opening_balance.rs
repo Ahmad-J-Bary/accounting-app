@@ -7,10 +7,11 @@ use application::use_cases::opening_balance::{
     ComputeNetProfitCommand, ComputeNetProfitUseCase, ComputedNetProfitDto,
     CreateOpeningBalanceMigrationCommand,
     CreateOpeningBalanceUseCase, GetOpeningDraftUseCase, GetOpeningPositionControlUseCase, GetOpeningReconciliationUseCase,
+    GetResidualClassificationSpecUseCase,
     ListOpeningMigrationsUseCase,
     LockOpeningBalanceUseCase, NetProfitAllocationDto, OpeningItemsDto, OpeningMigrationDto,
     OpeningPositionControlDto, OpeningReconciliationDto, PostOpeningBalanceResult, PostOpeningBalanceUseCase,
-    ReopenOpeningBalanceUseCase, SaveOpeningDraftUseCase, SaveOpeningItemsCommand, SaveOpeningItemsUseCase,
+    ReopenOpeningBalanceUseCase, ResidualClassificationSpec, SaveOpeningDraftUseCase, SaveOpeningItemsCommand, SaveOpeningItemsUseCase,
     SetResidualClassificationCommand, SetResidualClassificationUseCase,
     UpdateOpeningMigrationLinesCommand, UpdateOpeningMigrationLinesUseCase,
     ValidateOpeningBalanceUseCase,
@@ -176,6 +177,16 @@ pub async fn apply_opening_balance_residual_classification(
     .execute(id)
     .await
     .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_opening_balance_residual_classification_spec(
+    state: State<'_, AppState>,
+) -> Result<Vec<ResidualClassificationSpec>, String> {
+    GetResidualClassificationSpecUseCase::new(state.account_repo.clone())
+        .execute()
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

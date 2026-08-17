@@ -137,6 +137,34 @@ pub struct OpeningReconciliationDto {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub struct ResidualDesignatedAccountDto {
+    pub id: String,
+    pub code: String,
+    pub name_ar: String,
+}
+
+/// Read-only specification of one residual classification — the contract that
+/// keeps the "user picks meaning, system picks the account" rule in ONE place:
+/// the frontend renders options, the Advanced-mode account filter and the post
+/// preview from this spec; the domain/use-case validation enforces it.
+#[derive(Debug, Clone, Serialize)]
+pub struct ResidualClassificationSpec {
+    pub key: String,
+    pub label_ar: String,
+    pub allows_posting: bool,
+    pub requires_confirmation: bool,
+    /// Account purposes the classification may target (exactly one for real
+    /// classifications; empty for UnresolvedDifference).
+    pub allowed_purposes: Vec<String>,
+    /// The designated account the system would resolve for the classification
+    /// (None when no designated account exists in the chart, or for
+    /// UnresolvedDifference).
+    pub designated_account: Option<ResidualDesignatedAccountDto>,
+    /// Plain-Arabic treatment/preview copy shown before posting.
+    pub treatment_ar: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct ReconciliationRow {
     pub key: String,
     pub subledger: Decimal,

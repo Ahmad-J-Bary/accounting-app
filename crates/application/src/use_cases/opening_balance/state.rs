@@ -116,6 +116,20 @@ impl LockOpeningBalanceUseCase {
             ));
         }
 
+        // Phase 4 guard: an UNRESOLVED residual must never be locked — the
+        // residual must be reclassified into a designated equity account first
+        // (the readiness gate below structurally requires OBE 53 = 0, but this
+        // explicit guard gives the exact reason to the user).
+        if migration
+            .residual_classification
+            .map(|c| !c.allows_posting())
+            .unwrap_or(false)
+        {
+            return Err(AppError::Forbidden(
+                "الفرق غير محلول: لا يمكن قفل الترحيل حتى يُحل الرصيد المتبقي (صنّفه أو عالج الفرق)".into(),
+            ));
+        }
+
         // Gate FIRST, transition after: the Opening Balance Control (53) must be
         // zero and the sub-ledgers reconciled before the aggregate is marked
         // Locked, so a rejected lock never mutates the migration even in memory

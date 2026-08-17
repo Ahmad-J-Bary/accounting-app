@@ -77,6 +77,7 @@ export const QUERY_KEYS = {
   stockAdjustments: ["stock-adjustments"] as const,
   openingBalanceMigrations: ["opening-balance-migrations"] as const,
   openingDraft: ["opening-wizard-draft"] as const,
+  residualClassificationSpec: ["opening-balance", "residual-classification-spec"] as const,
   fiscalPeriods: ["fiscal-periods"] as const,
   distributableProfit: (start?: string, end?: string) => ["fiscal-periods", "distributable-profit", start, end] as const,
 } as const;

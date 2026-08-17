@@ -229,6 +229,12 @@ impl MockAccountRepository {
     }
 }
 
+impl From<Vec<Account>> for MockAccountRepository {
+    fn from(accounts: Vec<Account>) -> Self {
+        Self { accounts: Mutex::new(accounts) }
+    }
+}
+
 impl Default for MockAccountRepository {
     fn default() -> Self {
         Self { accounts: Mutex::new(Vec::new()) }
@@ -367,7 +373,10 @@ impl OpeningMigrationRepository for MockOpeningMigrationRepository {
         self.migrations.lock().unwrap().push(m.clone());
         Ok(())
     }
-    async fn update(&self, _m: &OpeningBalanceMigration) -> Result<(), AppError> {
+    async fn update(&self, m: &OpeningBalanceMigration) -> Result<(), AppError> {
+        let mut migrations = self.migrations.lock().unwrap();
+        migrations.retain(|x| x.id != m.id);
+        migrations.push(m.clone());
         Ok(())
     }
     async fn find_by_id(&self, id: &str) -> Result<Option<OpeningBalanceMigration>, AppError> {

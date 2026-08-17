@@ -1,3 +1,4 @@
+use crate::accounting::account::AccountPurpose;
 use crate::shared::errors::DomainError;
 use crate::shared::ids::AccountId;
 use chrono::{DateTime, Utc};
@@ -82,6 +83,46 @@ impl ResidualClassification {
             "UnresolvedDifference" => Some(Self::UnresolvedDifference),
             _ => None,
         }
+    }
+
+    /// Arabic label of the classification as shown to the user («ما طبيعة هذا
+    /// الرصيد؟»).
+    pub fn label_ar(self) -> &'static str {
+        match self {
+            Self::RetainedEarnings => "أرباح مبقاة",
+            Self::OpeningEquityAdjustment => "تعديل حقوق ملكية افتتاحي",
+            Self::PriorPeriodAdjustment => "تعديل فترة سابقة",
+            Self::OtherEquity => "حقوق ملكية أخرى",
+            Self::UnresolvedDifference => "فرق غير محلول",
+        }
+    }
+
+    /// The ONE controlled account purpose this classification may post to —
+    /// the user chooses accounting meaning, the system chooses the account.
+    /// `UnresolvedDifference` has no purpose: it never carries a balance, so it
+    /// blocks posting and locking.
+    pub fn account_purpose(self) -> Option<AccountPurpose> {
+        match self {
+            Self::RetainedEarnings => Some(AccountPurpose::RetainedEarnings),
+            Self::OpeningEquityAdjustment => Some(AccountPurpose::OpeningEquityAdjustment),
+            Self::PriorPeriodAdjustment => Some(AccountPurpose::PriorPeriodAdjustment),
+            Self::OtherEquity => Some(AccountPurpose::OtherEquity),
+            Self::UnresolvedDifference => None,
+        }
+    }
+
+    /// Whether a migration classified this way may be posted (and later locked).
+    /// Only `UnresolvedDifference` blocks — an unclassified residual must be
+    /// resolved before any posting/locking occurs.
+    pub fn allows_posting(self) -> bool {
+        !matches!(self, Self::UnresolvedDifference)
+    }
+
+    /// Whether the integration must show an explicit warning + confirmation
+    /// before this classification is accepted (prior-period corrections are
+    /// deliberate accounting judgements).
+    pub fn requires_confirmation(self) -> bool {
+        matches!(self, Self::PriorPeriodAdjustment)
     }
 }
 
@@ -523,5 +564,86 @@ mod tests {
             Some(account_id),
         );
         assert!(m2.mark_residual_applied().is_ok());
+    }
+
+    #[test]
+    fn each_classification_maps_to_one_controlled_purpose_only() {
+        use crate::accounting::account::AccountPurpose;
+        assert_eq!(
+            ResidualClassification::RetainedEarnings.account_purpose(),
+            Some(AccountPurpose::RetainedEarnings)
+        );
+        assert_eq!(
+            ResidualClassification::OpeningEquityAdjustment.account_purpose(),
+            Some(AccountPurpose::OpeningEquityAdjustment)
+        );
+        assert_eq!(
+            ResidualClassification::PriorPeriodAdjustment.account_purpose(),
+            Some(AccountPurpose::PriorPeriodAdjustment)
+        );
+        assert_eq!(
+            ResidualClassification::OtherEquity.account_purpose(),
+            Some(AccountPurpose::OtherEquity)
+        );
+        // Unresolved difference never maps to an account.
+        assert_eq!(
+            ResidualClassification::UnresolvedDifference.account_purpose(),
+            None
+        );
+    }
+
+    #[test]
+    fn unresolved_difference_blocks_posting_but_others_allow_it() {
+        for c in [
+            ResidualClassification::RetainedEarnings,
+            ResidualClassification::OpeningEquityAdjustment,
+            ResidualClassification::PriorPeriodAdjustment,
+            ResidualClassification::OtherEquity,
+        ] {
+            assert!(c.allows_posting(), "{c:?} must allow posting");
+        }
+        assert!(!ResidualClassification::UnresolvedDifference.allows_posting());
+    }
+
+    #[test]
+    fn prior_period_requires_confirmation_only() {
+        assert!(ResidualClassification::PriorPeriodAdjustment.requires_confirmation());
+        for c in [
+            ResidualClassification::RetainedEarnings,
+            ResidualClassification::OpeningEquityAdjustment,
+            ResidualClassification::OtherEquity,
+            ResidualClassification::UnresolvedDifference,
+        ] {
+            assert!(!c.requires_confirmation(), "{c:?} must not require confirmation");
+        }
+    }
+
+    #[test]
+    fn classification_never_targets_operating_or_registered_capital_purpose() {
+        use crate::accounting::account::AccountPurpose;
+        for c in [
+            ResidualClassification::RetainedEarnings,
+            ResidualClassification::OpeningEquityAdjustment,
+            ResidualClassification::PriorPeriodAdjustment,
+            ResidualClassification::OtherEquity,
+        ] {
+            let purpose = c.account_purpose().expect("real classification has a purpose");
+            // The mapped purpose is always equity-family and passive.
+            assert!(purpose.is_equity(), "{c:?} → {purpose:?} must be equity");
+            for forbidden in [
+                AccountPurpose::General,
+                AccountPurpose::PartnerCapital,
+                AccountPurpose::PartnerDrawings,
+                AccountPurpose::Receivable,
+                AccountPurpose::Payable,
+                AccountPurpose::Inventory,
+                AccountPurpose::FixedAsset,
+                AccountPurpose::Bank,
+                AccountPurpose::Loan,
+                AccountPurpose::OpeningBalanceEquity,
+            ] {
+                assert_ne!(purpose, forbidden, "{c:?} must never map to {forbidden:?}");
+            }
+        }
     }
 }
