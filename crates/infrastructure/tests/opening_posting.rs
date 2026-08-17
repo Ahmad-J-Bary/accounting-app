@@ -154,32 +154,45 @@ async fn opening_cancel_persists_canonical_source_type() {
     )
     .unwrap();
 
+    // The posted opening journal the migration produced (AccountOpeningBalance).
     let c = test_currency();
-    let mut reversal = JournalEntry::new(
-        "OB-1001".to_string(),
-        JournalType::OpeningBalanceReversal,
+    let mut original = JournalEntry::new(
+        "OB-1000".to_string(),
+        JournalType::AccountOpeningBalance,
         vec![
             JournalLine::new(
-                acc_b,
+                acc_a,
                 MonetaryAmount::new(Money::new(dec!(300), c.clone()), dec!(1)),
                 MonetaryAmount::zero(c.clone()),
-                "عكس".to_string(),
+                "رصيد افتتاح".to_string(),
             ),
             JournalLine::new(
-                acc_a,
+                acc_b,
                 MonetaryAmount::zero(c.clone()),
                 MonetaryAmount::new(Money::new(dec!(300), c), dec!(1)),
-                "عكس".to_string(),
+                "رصيد افتتاح".to_string(),
             ),
         ],
         Utc::now(),
-        "عكس ترحيل رصيد الافتتاح".to_string(),
-        Some(format!("ob_reversal:{migration_id}")),
+        "ترحيل رصيد الافتتاح".to_string(),
+        Some(format!("opening_balance:{migration_id}")),
     )
     .unwrap();
+    original.post().unwrap();
+
+    // The cancellational contra inherits the original's type and links back.
+    let mut reversal = JournalEntry::create_reversal(
+        &original,
+        "OB-1001".to_string(),
+        Utc::now(),
+        "عكس ترحيل رصيد الافتتاح".to_string(),
+    )
+    .unwrap();
+    reversal = reversal.with_source_type("opening_balance_reversal".to_string());
+    assert_eq!(reversal.journal_type, JournalType::AccountOpeningBalance);
     reversal.post().unwrap();
 
-    repo.cancel(&migration, &reversal).await.unwrap();
+    repo.cancel(&migration, &reversal, &original).await.unwrap();
 
     let stored: (String, Option<String>) = sqlx::query_as(
         "SELECT journal_type, source_type FROM journal_entries WHERE id = ?",
@@ -188,7 +201,7 @@ async fn opening_cancel_persists_canonical_source_type() {
     .fetch_one(pool.as_ref())
     .await
     .unwrap();
-    assert_eq!(stored.0, "OpeningBalanceReversal");
+    assert_eq!(stored.0, "AccountOpeningBalance", "a reversal is a relationship, not a type");
     assert_eq!(
         stored.1.as_deref(),
         Some("opening_balance_reversal"),

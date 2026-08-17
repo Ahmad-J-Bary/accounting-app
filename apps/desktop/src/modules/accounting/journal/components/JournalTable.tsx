@@ -163,12 +163,17 @@ export function JournalTable({
             <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">
               {e.journal_type_display}
             </span>
+            {e.is_contra && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-700">
+                عكس
+              </span>
+            )}
             {e.status === "Reversed" && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-red-100 text-red-600">
                 معكوس
               </span>
             )}
-            {e.status === "Posted" && onReverse && (
+            {e.status === "Posted" && !e.is_contra && onReverse && (
               <Button
                 size="sm"
                 variant="ghost"
@@ -266,12 +271,17 @@ export function JournalTable({
             <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">
               {e.journal_type_display}
             </span>
+            {e.is_contra && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-700">
+                عكس
+              </span>
+            )}
             {e.status === "Reversed" && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-red-100 text-red-600">
                 معكوس
               </span>
             )}
-            {e.status === "Posted" && onReverse && (
+            {e.status === "Posted" && !e.is_contra && onReverse && (
               <Button
                 size="sm"
                 variant="ghost"

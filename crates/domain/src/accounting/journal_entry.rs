@@ -35,8 +35,6 @@ pub enum JournalType {
     ProfitDistribution,// توزيع أرباح على الشركاء
     PartnerDrawing,   // سحب شريك (مسحوبات)
     Capitalization,   // رسملة الأرباح المبقاة إلى رأس المال
-    OpeningBalanceReversal,// عكس ترحيل رصيد الافتتاح
-    Reversal,           // قيد عكسي عام (قيد معاكس لأي قيد مرحّل)
 }
 
 impl std::fmt::Display for JournalType {
@@ -67,8 +65,6 @@ impl std::fmt::Display for JournalType {
             Self::ProfitDistribution => "توزيع أرباح",
             Self::PartnerDrawing => "سحب شريك",
             Self::Capitalization => "رسملة الأرباح المبقاة",
-            Self::OpeningBalanceReversal => "عكس ترحيل رصيد الافتتاح",
-            Self::Reversal => "قيد عكسي",
         };
         write!(f, "{}", s)
     }
@@ -105,24 +101,19 @@ impl JournalType {
             Self::ProfitDistribution => "profit_distribution",
             Self::PartnerDrawing => "partner_drawing",
             Self::Capitalization => "capitalization",
-            Self::OpeningBalanceReversal => "opening_balance_reversal",
-            Self::Reversal => "reversal",
         }
     }
 
     /// Whether a journal of this type bypasses fiscal-period gating. Opening
     /// balances are a Company Setup / Lifecycle step (they post before the
-    /// first operational period exists) and reversals are the explicit
-    /// correction mechanism for closed/locked financial history — both must be
-    /// allowed regardless of the entry date's period status.
+    /// first operational period exists). Reversals are NOT a type — they are a
+    /// relationship between two entries (`reversal_of_entry_id`), and posting a
+    /// contra of ANY type is period-exempt so closed/locked financial history
+    /// can be corrected; callers decide that from the relationship, not here.
     pub fn is_period_exempt(self) -> bool {
         matches!(
             self,
-            Self::CashOpeningBalance
-                | Self::AccountOpeningBalance
-                | Self::MaterialOpeningBalance
-                | Self::OpeningBalanceReversal
-                | Self::Reversal
+            Self::CashOpeningBalance | Self::AccountOpeningBalance | Self::MaterialOpeningBalance
         )
     }
 }
@@ -259,9 +250,10 @@ impl JournalEntry {
     }
 
     /// Builds a true contra (reversing) entry for `original`: every line has its
-    /// debit and credit swapped, the entry is typed `Reversal`, and it is linked
-    /// back to the original through `reversal_of_entry_id`. Only posted entries
-    /// can be reversed.
+    /// debit and credit swapped, the entry keeps the ORIGINAL's journal type
+    /// (a reversal is a relationship, never a separate accounting type), and it
+    /// is linked back to the original through `reversal_of_entry_id`. Only
+    /// posted entries can be reversed.
     pub fn create_reversal(
         original: &Self,
         entry_number: String,
@@ -288,7 +280,7 @@ impl JournalEntry {
 
         let mut reversal = Self::new(
             entry_number,
-            JournalType::Reversal,
+            original.journal_type,
             lines,
             entry_date,
             description,
@@ -599,7 +591,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(reversal.journal_type, JournalType::Reversal);
+        assert_eq!(reversal.journal_type, JournalType::CashReceipt, "a reversal is a relationship, not a type — the contra keeps the original's type");
         assert_eq!(reversal.reversal_of_entry_id, Some(original.id));
         assert_eq!(reversal.source_type.as_deref(), Some("cash_receipt"));
         assert!(reversal.is_balanced());
@@ -690,12 +682,12 @@ mod tests {
             JournalType::CashOpeningBalance,
             JournalType::AccountOpeningBalance,
             JournalType::MaterialOpeningBalance,
-            JournalType::OpeningBalanceReversal,
-            JournalType::Reversal,
         ] {
             assert!(t.is_period_exempt(), "{t:?} should be period-exempt");
         }
-        assert!(!JournalType::GeneralJournal.is_period_exempt());
+        // Reversals are not an accounting type at all — period exemption for a
+        // contra is decided from the reversal_of_entry_id relationship.
+        assert!(!JournalType::GeneralJournal.is_period_exempt(), "GeneralJournal is not an opening type");
         assert!(!JournalType::CashReceipt.is_period_exempt());
         assert!(!JournalType::PurchaseJournal.is_period_exempt());
         assert!(!JournalType::ProfitDistribution.is_period_exempt());

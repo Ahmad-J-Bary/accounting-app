@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
+use domain::accounting::journal_entry::{JournalEntry, JournalLine};
 use domain::accounting::MigrationStatus;
 
 use crate::errors::AppError;
@@ -68,7 +68,11 @@ impl CancelOpeningBalanceUseCase {
             ));
         }
 
-        // Reverse each line by swapping debit and credit.
+        // Reverse each line by swapping debit and credit. The contra KEEPS the
+        // original journal type (AccountOpeningBalance) — a reversal is a
+        // relationship, not a new accounting type — and links back to the
+        // original through reversal_of_entry_id, exactly like any other
+        // reversal pair. The original is then marked Reversed.
         let reversed_lines: Vec<JournalLine> = posted
             .lines
             .iter()
@@ -83,17 +87,22 @@ impl CancelOpeningBalanceUseCase {
 
         let mut reversal = JournalEntry::new(
             self.journal_repo.get_next_entry_number().await?,
-            JournalType::OpeningBalanceReversal,
+            posted.journal_type,
             reversed_lines,
             migration.cutover_date,
             "عكس ترحيل رصيد الافتتاح (إلغاء)".to_string(),
             Some(format!("ob_reversal:{}", migration.id)),
-        ).map_err(|e| AppError::Invalid(e.to_string()))?;
+        ).map_err(|e| AppError::Invalid(e.to_string()))?
+        .with_source_type("opening_balance_reversal".to_string());
 
+        reversal.reversal_of_entry_id = Some(posted.id);
         reversal.post().map_err(|e| AppError::Invalid(e.to_string()))?;
 
+        let mut posted = posted;
+        posted.reverse().map_err(|e| AppError::Invalid(e.to_string()))?;
+
         migration.un_post().map_err(AppError::Domain)?;
-        self.posting_repo.cancel(&migration, &reversal).await?;
+        self.posting_repo.cancel(&migration, &reversal, &posted).await?;
 
         Ok(OpeningMigrationDto(migration))
     }

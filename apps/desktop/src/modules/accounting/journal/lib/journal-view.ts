@@ -50,6 +50,10 @@ export interface JournalRowLine {
   entry_number: string;
   journal_type_display: string;
   status?: string;
+  /** True when this entry is a reversal contra of another entry (display-only
+   * derivation of `reversal_of_entry_id`). A reversal is a relationship, not a
+   * type — so the semantic type above is unchanged, only badged differently. */
+  is_contra?: boolean;
   description: string;
   entry_date: string;
   created_at: string;
@@ -165,6 +169,7 @@ export function toJournalLines(entry: JournalEntryDto): JournalRowLine[] {
         entry_number: entry.entry_number,
         journal_type_display: journalTypeDisplay,
         status: entry.status,
+        is_contra: Boolean(entry.reversal_of_entry_id),
         description: entry.description,
         entry_date: entry.entry_date,
         created_at: entry.created_at,
@@ -185,6 +190,7 @@ export function toJournalLines(entry: JournalEntryDto): JournalRowLine[] {
         entry_number: entry.entry_number,
         journal_type_display: journalTypeDisplay,
         status: entry.status,
+        is_contra: Boolean(entry.reversal_of_entry_id),
         description: entry.description,
         entry_date: entry.entry_date,
         created_at: entry.created_at,
@@ -267,6 +273,8 @@ export interface JournalSingleLineRow {
   entry_number: string;
   journal_type_display: string;
   status?: string;
+  /** True when this entry is a reversal contra (see JournalRowLine.is_contra). */
+  is_contra?: boolean;
   description: string;
   entry_date: string;
   created_at: string;
@@ -404,6 +412,7 @@ export function toJournalLinesSingleLine(entry: JournalEntryDto): JournalSingleL
     entry_number: entry.entry_number,
     journal_type_display: journalTypeDisplay,
     status: entry.status,
+    is_contra: Boolean(entry.reversal_of_entry_id),
     description: entry.description,
     entry_date: entry.entry_date,
     created_at: entry.created_at,

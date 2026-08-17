@@ -111,7 +111,7 @@ let mut reversal = JournalEntry::create_reversal(
         .await
         .unwrap()
         .expect("reversal must exist");
-    assert_eq!(stored_reversal.journal_type, JournalType::Reversal);
+assert_eq!(stored_reversal.journal_type, JournalType::CashReceipt, "a reversal is a relationship, not a type — the contra keeps the original's type");
     assert_eq!(stored_reversal.reversal_of_entry_id, Some(original.id));
     assert_eq!(stored_reversal.source_type.as_deref(), Some("cash_receipt"));
     assert_eq!(stored_reversal.status, JournalEntryStatus::Posted);
@@ -206,13 +206,15 @@ async fn orphan_cleanup_removes_dangling_reversals_and_resets_reversed_originals
     let pool = build_pool().await;
 
     // A reversal pointing at a non-existent entry (dangling link) — exactly the
-    // failure mode the 142 integrity migration repairs.
+    // failure mode the 142 integrity migration repairs. Contras inherit the
+    // original's type, so the row below is a CashReceipt contra (not a
+    // semantic `Reversal` type).
     let orphan_reversal_id = uuid::Uuid::new_v4().to_string();
     let ghost_id = uuid::Uuid::new_v4().to_string();
     sqlx::query(
         r#"INSERT INTO journal_entries (id, entry_number, journal_type, source_id, source_type,
              reversal_of_entry_id, entry_date, description, status, created_at, posted_at, reversed_at, updated_at)
-           VALUES (?, 'REV-ORPHAN', 'Reversal', ?, NULL, ?,
+           VALUES (?, 'REV-ORPHAN', 'CashReceipt', ?, NULL, ?,
              datetime('now'), 'orphan unit', 'Posted', datetime('now'), datetime('now'), NULL, datetime('now'))"#
     )
     .bind(&orphan_reversal_id)
@@ -237,19 +239,19 @@ async fn orphan_cleanup_removes_dangling_reversals_and_resets_reversed_originals
     .unwrap();
 
     // Re-run the 142 migration body (fresh DB already has it applied once, but the
-    // logic must be re-runnable/idempotent on top of existing data).
+    // logic must be re-runnable/idempotent on top of existing data). The cleanup
+    // is relationship-based (`reversal_of_entry_id`), matching the normalized
+    // semantic model — a reversal is never identified by its journal_type.
     let mig = r#"
         DELETE FROM journal_entries
-         WHERE journal_type = 'Reversal'
-           AND (reversal_of_entry_id IS NULL
-                OR reversal_of_entry_id NOT IN (SELECT id FROM journal_entries));
+         WHERE reversal_of_entry_id IS NOT NULL
+           AND reversal_of_entry_id NOT IN (SELECT id FROM journal_entries);
         UPDATE journal_entries
            SET status = 'Posted', reversed_at = NULL, updated_at = datetime('now')
          WHERE status = 'Reversed'
            AND NOT EXISTS (
                SELECT 1 FROM journal_entries r
-                WHERE r.journal_type = 'Reversal'
-                  AND r.reversal_of_entry_id = journal_entries.id
+                WHERE r.reversal_of_entry_id = journal_entries.id
            );
     "#;
     for stmt in mig.split(';').map(str::trim).filter(|s| !s.is_empty()) {
@@ -275,7 +277,7 @@ async fn orphan_cleanup_removes_dangling_reversals_and_resets_reversed_originals
 
     // No-op on the unchanged ghost row: count still zero.
     let remaining: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries WHERE journal_type = 'Reversal'")
+        sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries WHERE reversal_of_entry_id IS NOT NULL")
             .fetch_one(pool.as_ref())
             .await
             .unwrap();

@@ -176,7 +176,9 @@ async fn reopened_period_accepts_posting_again() {
     assert!(res.is_ok(), "Reopened period must accept posting: {:?}", res);
 }
 
-/// A reversal (explicit correction mechanism) is allowed inside a closed period.
+/// A reversal contra (linked via `reversal_of_entry_id`) is allowed inside a
+/// closed period, regardless of which semantic `journal_type` it inherits —
+/// the exemption is relationship-based, not type-based.
 #[tokio::test]
 async fn reversal_in_closed_period_is_allowed() {
     let pool = build_pool().await;
@@ -185,10 +187,40 @@ async fn reversal_in_closed_period_is_allowed() {
 
     let mut period = period_2026();
     period_repo.create(&period).await.unwrap();
+
+    let (acc_a, acc_b) = real_accounts(pool.as_ref()).await;
+    let mut original = JournalEntry::new(
+        "JE-REV-ORIG".to_string(),
+        JournalType::CashReceipt,
+        balanced_lines(dec!(100), acc_a, acc_b),
+        utc("2026-06-15T10:00:00Z"),
+        "أصل قابل للعكس".to_string(),
+        None,
+    )
+    .unwrap();
+    original.post().unwrap();
+    journal_repo.save(&original).await.unwrap();
+
+    // Lock down the period, then reverse through the atomic reversal pair.
     period.close("admin", FiscalPeriodStatus::Closed).unwrap();
     period_repo.update(&period).await.unwrap();
 
-    let res = post_dated(&journal_repo, &pool, JournalType::Reversal, utc("2026-06-20T09:00:00Z")).await;
+    // The contra inherits `CashReceipt` and carries the reversal relationship.
+    let mut reversal = JournalEntry::create_reversal(
+        &original,
+        "JE-REV-CONTRA".to_string(),
+        utc("2026-06-20T09:00:00Z"),
+        "عكس في فترة مغلقة".to_string(),
+    )
+    .unwrap();
+    assert!(reversal.reversal_of_entry_id.is_some());
+    assert_eq!(reversal.journal_type, JournalType::CashReceipt);
+    reversal.post().unwrap();
+    original.reverse().unwrap();
+
+    // The reversal flow persists both rows in one transaction; posting the
+    // contra inside a closed period must be allowed (relationship exemption).
+    let res = journal_repo.save_reversal_pair(&reversal, &original).await;
     assert!(res.is_ok(), "Reversal must bypass period gating: {:?}", res);
 }
 

@@ -11,9 +11,17 @@ pub trait OpeningPostingRepository: Send + Sync {
     async fn post(&self, migration: &OpeningBalanceMigration, entry: &JournalEntry) -> Result<(), AppError>;
 
     /// Persists an opening-balance cancellation atomically: the generated
-    /// reversing journal entry and the migration status change (Posted ->
+    /// reversing journal entry (`reversal` — which already carries
+    /// `reversal_of_entry_id` pointing at the aggregate), the ORIGINAL
+    /// aggregate journal flipped to `Reversed` (a reversal is a relationship:
+    /// type/status/link), and the migration status change (Posted ->
     /// Cancelled) are committed in a single SQLite transaction.
-    async fn cancel(&self, migration: &OpeningBalanceMigration, reversal: &JournalEntry) -> Result<(), AppError>;
+    async fn cancel(
+        &self,
+        migration: &OpeningBalanceMigration,
+        reversal: &JournalEntry,
+        original: &JournalEntry,
+    ) -> Result<(), AppError>;
 
     /// Persists the residual reclassification atomically: the journal that
     /// moves the Opening Balance Control (53) balance into the accountant-chosen

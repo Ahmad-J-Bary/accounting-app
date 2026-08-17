@@ -8,7 +8,9 @@
 //! Covered here:
 //!   - create -> validate -> approve -> post -> cancel;
 //!   - the reversal journal swaps debit/credit so each account nets back to 0;
-//!   - exactly one `OpeningBalanceReversal` journal, source `ob_reversal:{id}`;
+//!   - the reversal contra (linked via `reversal_of_entry_id`, journal_type
+//!     inherited from the original — a reversal is a relationship, not a type)
+//!     swaps debit/credit so each account nets back to 0, source `ob_reversal:{id}`;
 //!   - the migration row is persisted as Cancelled;
 //!   - the whole ledger stays balanced after cancel.
 
@@ -185,15 +187,30 @@ async fn posted_opening_is_cancelled_with_balanced_reversal() {
         "Cancelled"
     );
 
-    // Exactly one OpeningBalanceReversal journal with the canonical source id.
+    // Exactly one cancellational contra (`ob_reversal:` provenance) linked to
+    // the opening journal via `reversal_of_entry_id`; its journal_type is
+    // inherited from the original — a reversal is a relationship, not a type.
     let (count, source): (i64, Option<String>) = sqlx::query_as(
-        "SELECT COUNT(*), MAX(source_id) FROM journal_entries WHERE journal_type = 'OpeningBalanceReversal'",
+        "SELECT COUNT(*), MAX(source_id) FROM journal_entries WHERE source_id LIKE 'ob_reversal:%'",
     )
     .fetch_one(&*pool)
     .await
     .unwrap();
     assert_eq!(count, 1, "exactly one reversal journal");
     assert_eq!(source.as_deref(), Some(format!("ob_reversal:{id}").as_str()));
+
+    let (contra_type, original_status): (String, String) = sqlx::query_as(
+        "SELECT j.journal_type, o.status
+           FROM journal_entries j
+           JOIN journal_entries o ON o.id = j.reversal_of_entry_id
+          WHERE j.source_id = ?",
+    )
+    .bind(format!("ob_reversal:{id}"))
+    .fetch_one(&*pool)
+    .await
+    .unwrap();
+    assert_eq!(contra_type, "AccountOpeningBalance", "the contra inherits the original's type");
+    assert_eq!(original_status, "Reversed", "the opening original is marked Reversed");
 
     // Each account nets back to zero (opening + reversal cancel out).
     let (d, c): (f64, f64) = sqlx::query_as(
@@ -233,7 +250,7 @@ async fn posted_opening_is_cancelled_with_balanced_reversal() {
         .expect("idempotent cancel");
     assert_eq!(again.0.status, domain::accounting::MigrationStatus::Cancelled);
     let reversal_count: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM journal_entries WHERE journal_type = 'OpeningBalanceReversal'",
+        "SELECT COUNT(*) FROM journal_entries WHERE source_id LIKE 'ob_reversal:%'",
     )
     .fetch_one(&*pool)
     .await

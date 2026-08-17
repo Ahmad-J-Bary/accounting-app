@@ -124,7 +124,7 @@ describe("computeLedgerTotals — reversal is mathematically neutral", () => {
     });
     const reversal = entry({
       id: "r1",
-      journal_type: "Reversal",
+      journal_type: "GeneralJournal",
       reversal_of_entry_id: "m1",
       lines: [line("cash1", "0", "100"), line("eq1", "100", "0")],
     });
@@ -143,7 +143,7 @@ describe("computeLedgerTotals — reversal is mathematically neutral", () => {
     // with the backend ledger, which surfaces neither side of the pair.
     const reversal = entry({
       id: "r1",
-      journal_type: "Reversal",
+      journal_type: "GeneralJournal",
       reversal_of_entry_id: "m1",
       lines: [line("cash1", "0", "100"), line("eq1", "100", "0")],
     });
@@ -161,7 +161,7 @@ describe("computeLedgerTotals — reversal is mathematically neutral", () => {
     });
     const reversal = entry({
       id: "r1",
-      journal_type: "Reversal",
+      journal_type: "GeneralJournal",
       reversal_of_entry_id: "m1",
       lines: [line("cash1", "0", "100"), line("eq1", "100", "0")],
     });

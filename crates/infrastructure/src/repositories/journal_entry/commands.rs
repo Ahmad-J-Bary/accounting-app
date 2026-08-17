@@ -51,9 +51,11 @@ pub async fn save_reversal_pair(
 /// or outside every existing period once periods are in use.
 ///
 /// Graduated enforcement so legacy/fresh databases keep working:
-///  * Period-exempt journal types (opening balances, reversals) skip the check
-///    — they are the explicit mechanisms for pre-period setup and for
-///    correcting closed/locked financial history.
+///  * Period-exempt journal types (opening balances) skip the check — they are
+///    the explicit pre-period setup mechanism.
+///  * A contra entry of ANY type (`reversal_of_entry_id` set) also skips the
+///    check — reversals are a relationship, and correcting closed/locked
+///    financial history is their documented purpose.
 ///  * If NO fiscal period exists at all, writes are allowed (periods not yet
 ///    adopted).
 ///  * Otherwise the entry date must be covered by an Open/Reopened period.
@@ -61,8 +63,9 @@ pub(crate) async fn validate_posting_period(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
     entry_date: DateTime<Utc>,
     journal_type: JournalType,
+    reversal_of_entry_id: Option<&JournalEntryId>,
 ) -> Result<(), AppError> {
-    if journal_type.is_period_exempt() {
+    if journal_type.is_period_exempt() || reversal_of_entry_id.is_some() {
         return Ok(());
     }
 
@@ -107,7 +110,8 @@ pub(crate) async fn validate_posting_period(
 /// accounting before the opening position is Locked). Opening-workflow
 /// journals are exempt two ways:
 ///  * period exemption (`is_period_exempt`: Cash/Account/Material opening
-///    balances and reversals), and
+///    balances), plus any contra entry (`reversal_of_entry_id` set — reversals
+///    are a relationship, not a type), and
 ///  * opening pivot source ids (`opening_balance:`, `residual_classification:`,
 ///    `ob_reversal:`, `profit_distribution:`) — the residual reclassification
 ///    posts a `GeneralJournal` while the migration is still Posted, so the gate
@@ -118,7 +122,7 @@ async fn validate_opening_gate(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
     entry: &JournalEntry,
 ) -> Result<(), AppError> {
-    if entry.journal_type.is_period_exempt() {
+    if entry.journal_type.is_period_exempt() || entry.reversal_of_entry_id.is_some() {
         return Ok(());
     }
     if let Some(src) = entry.source_id.as_deref() {
@@ -170,7 +174,7 @@ pub(crate) async fn insert_entry(
     // must belong to an Open/Reopened period (or be a period-exempt opening /
     // reversal). Drafts may be edited freely; they only get checked on posting.
     if entry.status == JournalEntryStatus::Posted {
-        validate_posting_period(tx, entry.entry_date, entry.journal_type).await?;
+        validate_posting_period(tx, entry.entry_date, entry.journal_type, entry.reversal_of_entry_id.as_ref()).await?;
         validate_opening_gate(tx, entry).await?;
     }
 

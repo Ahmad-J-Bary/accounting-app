@@ -28,10 +28,11 @@ impl OpeningPostingRepository for SqliteOpeningPostingRepository {
             .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
         // Shared journal persistence (single INSERT guaranteed by the schema
-        // UNIQUE(source_type, source_id) index). Opening journals
-        // (AccountOpeningBalance / OpeningBalanceReversal / reclassification)
-        // are period-exempt or pre-date any period, so fiscal-period gating in
-        // `insert_entry` never blocks an opening lifecycle write here.
+        // UNIQUE(source_type, source_id) index). Opening aggregate journals
+        // (AccountOpeningBalance) and contra/reclassification pairs are
+        // period-exempt (type) or reversal-linked (relationship), so
+        // fiscal-period gating in `insert_entry` never blocks an opening
+        // lifecycle write here.
         crate::repositories::journal_entry::insert_entry(&mut tx, entry).await?;
 
         sqlx::query(
@@ -51,14 +52,23 @@ impl OpeningPostingRepository for SqliteOpeningPostingRepository {
         Ok(())
     }
 
-    async fn cancel(&self, migration: &OpeningBalanceMigration, reversal: &JournalEntry) -> Result<(), AppError> {
+    async fn cancel(
+        &self,
+        migration: &OpeningBalanceMigration,
+        reversal: &JournalEntry,
+        original: &JournalEntry,
+    ) -> Result<(), AppError> {
         let mut tx = self
             .pool
             .begin()
             .await
             .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
+        // A cancellation is a full reversal pair: persist the contra AND mark
+        // the original aggregate Reversed in the same transaction (audit trail,
+        // atomic; nothing is deleted).
         crate::repositories::journal_entry::insert_entry(&mut tx, reversal).await?;
+        crate::repositories::journal_entry::insert_entry(&mut tx, original).await?;
 
         sqlx::query(
             "UPDATE opening_balance_migrations SET status = 'Cancelled', posted_at = ?, updated_at = ? WHERE id = ?"

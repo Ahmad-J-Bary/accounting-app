@@ -212,6 +212,13 @@ impl PostOpeningBalanceUseCase {
             if journal.status != JournalEntryStatus::Posted {
                 continue;
             }
+            // A reversal contra (linked via `reversal_of_entry_id`) is never a
+            // duplicate of the migration — a reversal is a relationship, and the
+            // contra inherits the original's journal_type, so it could otherwise
+            // match the type-based `is_opening` check below.
+            if journal.reversal_of_entry_id.is_some() {
+                continue;
+            }
             let is_opening = matches!(
                 journal.journal_type,
                 JournalType::AccountOpeningBalance | JournalType::MaterialOpeningBalance
