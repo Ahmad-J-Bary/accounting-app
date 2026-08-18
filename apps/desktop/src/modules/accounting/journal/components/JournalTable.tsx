@@ -18,7 +18,7 @@ import { getHeaderText, getPrimitiveCellValue, SHARED_COLUMN_IDS } from "./group
 
 import type { JournalEntryDto } from "@erp/shared-types";
 import type { JournalFilters } from "@modules/accounting/api/journalEntryService";
-import { auditGroupKey, toJournalLines, toJournalLinesSingleLine, journalTwoLineCompare, type JournalRowLine, type JournalSingleLineRow } from "../lib/journal-view";
+import { auditGroupKey, toJournalLines, toJournalLinesSingleLine, journalTwoLineCompare, type JournalRowLine, type JournalSingleLineRow, type ReversalContext } from "../lib/journal-view";
 
 type DisplayMode = "two-line" | "one-line";
 
@@ -36,6 +36,9 @@ interface JournalTableProps {
   displayMode?: DisplayMode;
   onReverse?: (id: string) => void;
   reversingId?: string | null;
+  /** Reversal-pair lookup (built once over the full fetch by the page) used to
+   * show each audit entry's counterpart number (عكس القيد #N / عكسه القيد #M). */
+  reversalContext?: ReversalContext;
 }
 
 type SortFieldTwoLine = "entry_number" | "created_at" | "journal_type" | "account";
@@ -88,6 +91,7 @@ export function JournalTable({
   displayMode = "two-line",
   onReverse,
   reversingId,
+  reversalContext,
 }: JournalTableProps) {
   const { isBaseCurrency, currencySuffix: cs, hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { settings, getDensityPadding } = useTableSettings();
@@ -99,20 +103,20 @@ export function JournalTable({
 
   // ============ DATA (computed for both modes, but typed separately) ============
   const twoLineData = useMemo(() => {
-    const lines = entries.flatMap(e => toJournalLines(e));
+    const lines = entries.flatMap(e => toJournalLines(e, reversalContext));
     return lines.map((line, idx) => ({
       ...line,
       isFirstInGroup: idx === 0 || line.group_key !== lines[idx - 1].group_key,
     })) as JournalTableRow[];
-  }, [entries]);
+  }, [entries, reversalContext]);
 
   const singleLineData = useMemo(() => {
-    const lines = entries.flatMap(e => toJournalLinesSingleLine(e));
+    const lines = entries.flatMap(e => toJournalLinesSingleLine(e, reversalContext));
     return lines.map((line, idx) => ({
       ...line,
       isFirstInGroup: idx === 0 || line.group_key !== lines[idx - 1].group_key,
     })) as JournalSingleLineTableRow[];
-  }, [entries]);
+  }, [entries, reversalContext]);
 
   // ============ SORTING (separate hooks per mode) ============
   const twoLineSort = useSortable({
@@ -164,41 +168,48 @@ export function JournalTable({
         header: "نوع الحركة",
         label: "نوع الحركة",
         accessor: (e) => e.isFirstInGroup ? (
-          <span className="inline-flex items-center gap-1">
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">
-              {e.journal_type_display}
+          <span className="inline-flex flex-col items-start gap-0.5">
+            <span className="inline-flex items-center gap-1">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">
+                {e.journal_type_display}
+              </span>
+              {e.is_contra && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-700">
+                  عكس
+                </span>
+              )}
+              {e.status === "Reversed" && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-red-100 text-red-600">
+                  معكوس
+                </span>
+              )}
+              {e.status === "Draft" && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-200 text-slate-600">
+                  مسودة
+                </span>
+              )}
+              {e.status === "Cancelled" && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-300 text-slate-700">
+                  ملغي
+                </span>
+              )}
+              {e.status === "Posted" && !e.is_contra && onReverse && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={reversingId === e.id}
+                  onClick={() => onReverse(e.id)}
+                  className="h-6 px-2 text-[10px] font-bold text-red-600 hover:bg-red-50"
+                >
+                  <Undo2 className="w-3 h-3 ml-1" />
+                  {reversingId === e.id ? "جارٍ..." : "عكس"}
+                </Button>
+              )}
             </span>
-            {e.is_contra && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-700">
-                عكس
+            {e.reversal_entry_number && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-slate-50 text-slate-500">
+                {e.is_contra ? `عكس القيد #${e.reversal_entry_number}` : `عكسه القيد #${e.reversal_entry_number}`}
               </span>
-            )}
-            {e.status === "Reversed" && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-red-100 text-red-600">
-                معكوس
-              </span>
-            )}
-            {e.status === "Draft" && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-200 text-slate-600">
-                مسودة
-              </span>
-            )}
-            {e.status === "Cancelled" && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-300 text-slate-700">
-                ملغي
-              </span>
-            )}
-            {e.status === "Posted" && !e.is_contra && onReverse && (
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={reversingId === e.id}
-                onClick={() => onReverse(e.id)}
-                className="h-6 px-2 text-[10px] font-bold text-red-600 hover:bg-red-50"
-              >
-                <Undo2 className="w-3 h-3 ml-1" />
-                {reversingId === e.id ? "جارٍ..." : "عكس"}
-              </Button>
             )}
           </span>
         ) : "",
@@ -282,41 +293,48 @@ export function JournalTable({
         header: "نوع الحركة",
         label: "نوع الحركة",
         accessor: (e) => (
-          <span className="inline-flex items-center gap-1">
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">
-              {e.journal_type_display}
+          <span className="inline-flex flex-col items-start gap-0.5">
+            <span className="inline-flex items-center gap-1">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-tighter">
+                {e.journal_type_display}
+              </span>
+              {e.is_contra && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-700">
+                  عكس
+                </span>
+              )}
+              {e.status === "Reversed" && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-red-100 text-red-600">
+                  معكوس
+                </span>
+              )}
+              {e.status === "Draft" && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-200 text-slate-600">
+                  مسودة
+                </span>
+              )}
+              {e.status === "Cancelled" && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-300 text-slate-700">
+                  ملغي
+                </span>
+              )}
+              {e.status === "Posted" && !e.is_contra && onReverse && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={reversingId === e.id}
+                  onClick={() => onReverse(e.id)}
+                  className="h-6 px-2 text-[10px] font-bold text-red-600 hover:bg-red-50"
+                >
+                  <Undo2 className="w-3 h-3 ml-1" />
+                  {reversingId === e.id ? "جارٍ..." : "عكس"}
+                </Button>
+              )}
             </span>
-            {e.is_contra && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-700">
-                عكس
+            {e.reversal_entry_number && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-slate-50 text-slate-500">
+                {e.is_contra ? `عكس القيد #${e.reversal_entry_number}` : `عكسه القيد #${e.reversal_entry_number}`}
               </span>
-            )}
-            {e.status === "Reversed" && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-red-100 text-red-600">
-                معكوس
-              </span>
-            )}
-            {e.status === "Draft" && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-200 text-slate-600">
-                مسودة
-              </span>
-            )}
-            {e.status === "Cancelled" && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-300 text-slate-700">
-                ملغي
-              </span>
-            )}
-            {e.status === "Posted" && !e.is_contra && onReverse && (
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={reversingId === e.id}
-                onClick={() => onReverse(e.id)}
-                className="h-6 px-2 text-[10px] font-bold text-red-600 hover:bg-red-50"
-              >
-                <Undo2 className="w-3 h-3 ml-1" />
-                {reversingId === e.id ? "جارٍ..." : "عكس"}
-              </Button>
             )}
           </span>
         ),
@@ -560,7 +578,7 @@ export function JournalTable({
   const auditGroupedData = useMemo(() => {
     if (auditEntriesSorted.length === 0) return [];
     if (isTwoLine) {
-      const lines = auditEntriesSorted.flatMap((e) => toJournalLines(e)) as JournalRowLine[];
+      const lines = auditEntriesSorted.flatMap((e) => toJournalLines(e, reversalContext)) as JournalRowLine[];
       const rows = lines.map((line, idx) => ({
         ...line,
         isFirstInGroup: idx === 0 || line.group_key !== lines[idx - 1].group_key,
@@ -577,7 +595,7 @@ export function JournalTable({
       if (group.length > 0) groups.push(group);
       return groups;
     }
-    const lines = auditEntriesSorted.flatMap((e) => toJournalLinesSingleLine(e)) as JournalSingleLineRow[];
+    const lines = auditEntriesSorted.flatMap((e) => toJournalLinesSingleLine(e, reversalContext)) as JournalSingleLineRow[];
     const rows = lines.map((line, idx) => ({
       ...line,
       isFirstInGroup: idx === 0 || line.group_key !== lines[idx - 1].group_key,
@@ -593,7 +611,7 @@ export function JournalTable({
     }
     if (group.length > 0) groups.push(group);
     return groups;
-  }, [auditEntriesSorted, isTwoLine]);
+  }, [auditEntriesSorted, isTwoLine, reversalContext]);
 
   // ============ SUMMARY COLUMNS ============
   const summaryColumns = useMemo<SummaryColumn[]>(() => {

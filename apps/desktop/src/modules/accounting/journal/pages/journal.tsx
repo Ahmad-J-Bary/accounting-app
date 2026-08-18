@@ -15,7 +15,7 @@ import { invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
 // Refactored Components & Hooks
 import { useDataTable } from '@shared/hooks';
 import { JournalTable } from '@modules/accounting/journal/components/JournalTable';
-import { partitionJournalEntries } from "@modules/accounting/journal/lib/journal-view";
+import { partitionJournalEntries, type ReversalContext } from "@modules/accounting/journal/lib/journal-view";
 import { JOURNAL_TYPES } from "@modules/accounting/journal/lib/journal-config";
 
 type DisplayMode = "two-line" | "one-line";
@@ -66,6 +66,7 @@ export default function Journal() {
 
   const {
     filtered: entries,
+    data: allEntries,
     loading,
     search,
     setSearch,
@@ -74,6 +75,20 @@ export default function Journal() {
     fetchData,
     searchFields: ["entry_number", "description"],
   });
+
+  // Reversal-pair lookups resolved over the FULL fetch (pre-search / pre-date),
+  // so a pair split by filters still shows its counterpart's entry number.
+  const reversalContext = useMemo<ReversalContext>(() => {
+    const entryNumberById = new Map<string, string>();
+    const reversedById = new Map<string, string>();
+    for (const e of allEntries) {
+      entryNumberById.set(e.id, e.entry_number);
+      if (e.reversal_of_entry_id) {
+        reversedById.set(e.reversal_of_entry_id, e.entry_number);
+      }
+    }
+    return { entryNumberById, reversedById };
+  }, [allEntries]);
 
   const displayEntries = useMemo(() => {
     let list = entries;
@@ -157,6 +172,7 @@ export default function Journal() {
           displayMode={displayMode}
           onReverse={handleReverse}
           reversingId={reversingId}
+          reversalContext={reversalContext}
           filterBar={
             <div className="flex flex-wrap items-center gap-2">
               <Select 

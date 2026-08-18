@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toJournalLines, journalTwoLineCompare, classifyEntryForReport, partitionJournalEntries, auditGroupKey, deriveJournalTypeDisplay, type JournalRowLine } from "./journal-view";
+import { toJournalLines, toJournalLinesSingleLine, reversalEntryNumber, journalTwoLineCompare, classifyEntryForReport, partitionJournalEntries, auditGroupKey, deriveJournalTypeDisplay, type JournalRowLine } from "./journal-view";
 import { hasAccountingEffect, isOfficialJournalEntry, isAuditEntry, isPostedLedgerEntry } from "@modules/reports/lib/report-policies";
 
 const makeLine = (
@@ -345,5 +345,140 @@ describe("explicit report policies (PHASE 3)", () => {
     expect(classifyEntryForReport(zeroEffect)).toBe("audit");
     const { audit } = partitionJournalEntries([residualClassificationEntry, zeroEffect]);
     expect(audit.map((e) => e.id)).toEqual(["e-zero"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PHASE 4 — reversal display & semantics: a reversal is a relationship
+// (reversal_of_entry_id), never an entry type. Display labels are derived from
+// state — the contra journal AND the Reversed original carry the " — معكوس"
+// suffix; the audit archive shows each party's counterpart entry number.
+// ---------------------------------------------------------------------------
+describe("deriveJournalTypeDisplay — reversal suffix derived from state (PHASE 4)", () => {
+  const openingEntry = (overrides: Partial<any> = {}) =>
+    makeOperationalEntry({
+      journal_type: "AccountOpeningBalance",
+      journal_type_display: "رصيد افتتاحي",
+      ...overrides,
+    });
+
+  it("the original is rendered plainly: رصيد افتتاحي", () => {
+    expect(deriveJournalTypeDisplay(openingEntry())).toBe("رصيد افتتاحي");
+  });
+
+  it("the contra journal (reversal_of_entry_id set, still Posted) is rendered رصيد افتتاحي — معكوس", () => {
+    const contra = openingEntry({ reversal_of_entry_id: "e3" });
+    expect(deriveJournalTypeDisplay(contra)).toBe("رصيد افتتاحي — معكوس");
+  });
+
+  it("the Reversed original is rendered رصيد افتتاحي — معكوس too", () => {
+    const reversed = openingEntry({ status: "Reversed" });
+    expect(deriveJournalTypeDisplay(reversed)).toBe("رصيد افتتاحي — معكوس");
+  });
+
+  it("Draft and Cancelled entries never gain the reversal suffix", () => {
+    expect(deriveJournalTypeDisplay(openingEntry({ status: "Draft" }))).toBe("رصيد افتتاحي");
+    expect(deriveJournalTypeDisplay(openingEntry({ status: "Cancelled" }))).toBe("رصيد افتتاحي");
+  });
+
+  it("a General Journal contra also derives the suffix on its base label", () => {
+    const contra = makeOperationalEntry({ reversal_of_entry_id: "e3" });
+    expect(deriveJournalTypeDisplay(contra)).toBe("اليومية العامة — معكوس");
+  });
+});
+
+describe("reversalEntryNumber — counterpart resolution over ReversalContext (PHASE 4)", () => {
+  const ctx = {
+    entryNumberById: new Map([
+      ["e3", "3"],
+      ["e8", "8"],
+    ]),
+    reversedById: new Map([["e3", "8"]]),
+  };
+
+  it("resolves the ORIGINAL's number on a contra journal", () => {
+    const contra = makeOperationalEntry({ id: "e8", entry_number: "8", reversal_of_entry_id: "e3" });
+    expect(reversalEntryNumber(contra, ctx)).toBe("3");
+  });
+
+  it("resolves the CONTRA's number on a Reversed original", () => {
+    const reversed = makeOperationalEntry({ id: "e3", entry_number: "3", status: "Reversed" });
+    expect(reversalEntryNumber(reversed, ctx)).toBe("8");
+  });
+
+  it("returns undefined without a context (or for plain entries)", () => {
+    expect(reversalEntryNumber(makeOperationalEntry({ reversal_of_entry_id: "e3" }))).toBeUndefined();
+    expect(reversalEntryNumber(makeOperationalEntry(), ctx)).toBeUndefined();
+  });
+
+  it("toJournalLines (two-line) carries the counterpart number on every leg", () => {
+    const contra = makeOperationalEntry({ id: "e8", entry_number: "8", reversal_of_entry_id: "e3" });
+    const lines = toJournalLines(contra, ctx);
+    expect(lines.length).toBeGreaterThan(0);
+    expect(lines.every((l) => l.reversal_entry_number === "3")).toBe(true);
+    expect(lines.every((l) => l.is_contra)).toBe(true);
+  });
+
+  it("toJournalLinesSingleLine (one-line) carries the counterpart number too", () => {
+    const reversed = makeOperationalEntry({ id: "e3", entry_number: "3", status: "Reversed" });
+    const rows = toJournalLinesSingleLine(reversed, ctx);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].reversal_entry_number).toBe("8");
+  });
+
+  it("the suffix label and the counterpart number are derived together on both shapes", () => {
+    const contra = makeOperationalEntry({
+      id: "e8",
+      entry_number: "8",
+      reversal_of_entry_id: "e3",
+      journal_type: "AccountOpeningBalance",
+      journal_type_display: "رصيد افتتاحي",
+    });
+    const [line] = toJournalLines(contra, ctx);
+    expect(line.journal_type_display).toBe("رصيد افتتاحي — معكوس");
+    expect(line.reversal_entry_number).toBe("3");
+
+    const [single] = toJournalLinesSingleLine(contra, ctx);
+    expect(single.journal_type_display).toBe("رصيد افتتاحي — معكوس");
+    expect(single.reversal_entry_number).toBe("3");
+  });
+});
+
+describe("temporary reversed preparation journals are never active transactions (PHASE 4)", () => {
+  it("a preparation entry auto-reversed with its Posted contra both stay in audit, the pair stays adjacent", () => {
+    // A temporary preparation journal (e.g. a legacy standalone opening that
+    // got auto-reversed when the aggregate migration was posted): the original
+    // is now status=Reversed, its adjusted contra is Posted with the link.
+    const prep = makeOperationalEntry({ id: "prep", entry_number: "7", status: "Reversed" });
+    const contra = makeOperationalEntry({ id: "c1", entry_number: "12", reversal_of_entry_id: "prep" });
+    const official = makeOperationalEntry({ id: "e1", entry_number: "2" });
+
+    const { operational, audit } = partitionJournalEntries([prep, contra, official]);
+
+    expect(operational.map((e) => e.id)).toEqual(["e1"]);
+    expect(audit.map((e) => e.id)).toEqual(["prep", "c1"]);
+    // One audit story: contra groups under its original.
+    expect(auditGroupKey(contra)).toBe(auditGroupKey(prep));
+    expect(auditGroupKey(prep)).toBe("prep");
+  });
+
+  it("every derived row captures the reversal relationship as state, never as an entry type", () => {
+    const prep = makeOperationalEntry({ id: "prep", entry_number: "7", status: "Reversed" });
+    const contra = makeOperationalEntry({ id: "c1", entry_number: "12", reversal_of_entry_id: "prep" });
+    const official = makeOperationalEntry({ id: "e1", entry_number: "2" });
+    const ctx = {
+      entryNumberById: new Map([
+        ["prep", "7"],
+        ["c1", "12"],
+      ]),
+      reversedById: new Map([["prep", "12"]]),
+    };
+
+    const registerLines = [official, prep, contra].flatMap((e) => toJournalLines(e, ctx));
+    // Only the official entry contributes to the operational register surface;
+    // both parties carry the reversal state on their own (audit-only) rows.
+    expect(registerLines.filter((l) => l.status === "Reversed")).toHaveLength(2);
+    expect(registerLines.filter((l) => l.is_contra)).toHaveLength(2);
+    expect(registerLines.filter((l) => l.reversal_entry_number)).toHaveLength(4);
   });
 });

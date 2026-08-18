@@ -47,10 +47,13 @@ function classifyAssetSubType(line: JournalLineDto): "أبنية وأراضي" |
 
 /**
  * Arabic display label for a journal ENTRY (display-only derivation). The
- * source of truth stays the `journal_type` variant; status and the reversal
- * relationship are surfaced separately as badges (عكس / معكوس / مسودة / ملغي),
- * never baked into the stored label. Shared by both the two-line and one-line
- * report shapes so the derivation cannot drift between them.
+ * source of truth stays the `journal_type` variant; the reversal relationship
+ * is a state flag, never a type — a contra journal (`reversal_of_entry_id`
+ * set) or a Reversed original is badged (عكس / معكوس) AND suffixed with
+ * " — معكوس" so the label itself reads e.g. "رصيد افتتاحي — معكوس". Draft /
+ * Cancelled statuses are surfaced separately as badges (مسودة / ملغي). Shared
+ * by both the two-line and one-line report shapes so the derivation cannot
+ * drift between them.
  */
 export function deriveJournalTypeDisplay(entry: JournalEntryDto): string {
   let journalTypeDisplay = entry.journal_type_display;
@@ -121,7 +124,34 @@ export function deriveJournalTypeDisplay(entry: JournalEntryDto): string {
     }
   }
 
-  return journalTypeDisplay;
+  const isReversalParty = Boolean(entry.reversal_of_entry_id) || entry.status === "Reversed";
+  return isReversalParty ? `${journalTypeDisplay} — معكوس` : journalTypeDisplay;
+}
+
+/**
+ * Lookup context (built ONCE over the full journal fetch, so a reversal pair
+ * split by a date filter still resolves its counterpart): entry id → its own
+ * number, and reversed original id → the number of the contra that reversed it.
+ */
+export interface ReversalContext {
+  entryNumberById: ReadonlyMap<string, string>;
+  reversedById: ReadonlyMap<string, string>;
+}
+
+/**
+ * The counterpart entry number of a reversal pair, derived from state only
+ * (never stored): a contra journal resolves its Reversed original's number,
+ * a Reversed original resolves its Posted contra's number.
+ */
+export function reversalEntryNumber(entry: JournalEntryDto, ctx?: ReversalContext): string | undefined {
+  if (!ctx) return undefined;
+  if (entry.reversal_of_entry_id) {
+    return ctx.entryNumberById.get(entry.reversal_of_entry_id);
+  }
+  if (entry.status === "Reversed") {
+    return ctx.reversedById.get(entry.id);
+  }
+  return undefined;
 }
 
 export interface JournalRowLine {
@@ -134,6 +164,10 @@ export interface JournalRowLine {
    * derivation of `reversal_of_entry_id`). A reversal is a relationship, not a
    * type — so the semantic type above is unchanged, only badged differently. */
   is_contra?: boolean;
+  /** Counterpart entry number of a reversal pair (display-only derivation via
+   * `ReversalContext`): the original's number on a contra, the contra's number
+   * on a Reversed original. */
+  reversal_entry_number?: string;
   description: string;
   entry_date: string;
   created_at: string;
@@ -149,8 +183,9 @@ export interface JournalRowLine {
   currency?: string;
 }
 
-export function toJournalLines(entry: JournalEntryDto): JournalRowLine[] {
+export function toJournalLines(entry: JournalEntryDto, ctx?: ReversalContext): JournalRowLine[] {
   const journalTypeDisplay = deriveJournalTypeDisplay(entry);
+  const reversalNumber = reversalEntryNumber(entry, ctx);
 
   const lines: JournalRowLine[] = [];
   const groupSortAccount =
@@ -184,6 +219,7 @@ export function toJournalLines(entry: JournalEntryDto): JournalRowLine[] {
         journal_type_display: journalTypeDisplay,
         status: entry.status,
         is_contra: Boolean(entry.reversal_of_entry_id),
+        reversal_entry_number: reversalNumber,
         description: entry.description,
         entry_date: entry.entry_date,
         created_at: entry.created_at,
@@ -205,6 +241,7 @@ export function toJournalLines(entry: JournalEntryDto): JournalRowLine[] {
         journal_type_display: journalTypeDisplay,
         status: entry.status,
         is_contra: Boolean(entry.reversal_of_entry_id),
+        reversal_entry_number: reversalNumber,
         description: entry.description,
         entry_date: entry.entry_date,
         created_at: entry.created_at,
@@ -289,6 +326,8 @@ export interface JournalSingleLineRow {
   status?: string;
   /** True when this entry is a reversal contra (see JournalRowLine.is_contra). */
   is_contra?: boolean;
+  /** Counterpart entry number of a reversal pair (see JournalRowLine.reversal_entry_number). */
+  reversal_entry_number?: string;
   description: string;
   entry_date: string;
   created_at: string;
@@ -304,8 +343,9 @@ export interface JournalSingleLineRow {
   credit_currency?: string;
 }
 
-export function toJournalLinesSingleLine(entry: JournalEntryDto): JournalSingleLineRow[] {
+export function toJournalLinesSingleLine(entry: JournalEntryDto, ctx?: ReversalContext): JournalSingleLineRow[] {
   const journalTypeDisplay = deriveJournalTypeDisplay(entry);
+  const reversalNumber = reversalEntryNumber(entry, ctx);
 
   const debits = entry.lines.filter((l) => parseFloat(l.debit || "0") > 0);
   const credits = entry.lines.filter((l) => parseFloat(l.credit || "0") > 0);
@@ -361,6 +401,7 @@ export function toJournalLinesSingleLine(entry: JournalEntryDto): JournalSingleL
     journal_type_display: journalTypeDisplay,
     status: entry.status,
     is_contra: Boolean(entry.reversal_of_entry_id),
+    reversal_entry_number: reversalNumber,
     description: entry.description,
     entry_date: entry.entry_date,
     created_at: entry.created_at,
