@@ -57,6 +57,7 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
         queries::list_by_accounts(&self.pool, account_ids).await
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn list_with_filters(
         &self,
         from_date: Option<chrono::DateTime<chrono::Utc>>,

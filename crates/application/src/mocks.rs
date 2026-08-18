@@ -155,6 +155,7 @@ impl JournalEntryRepository for MockJournalRepository {
     async fn list_all(&self) -> Result<Vec<JournalEntry>, AppError> { Ok(self.entries.lock().unwrap().clone()) }
     async fn list_by_account(&self, _account_id: &domain::shared::AccountId) -> Result<Vec<JournalEntry>, AppError> { Ok(vec![]) }
     async fn list_by_accounts(&self, _account_ids: &[domain::shared::AccountId]) -> Result<Vec<JournalEntry>, AppError> { Ok(vec![]) }
+    #[allow(clippy::too_many_arguments)]
     async fn list_with_filters(
         &self,
         from_date: Option<chrono::DateTime<chrono::Utc>>,

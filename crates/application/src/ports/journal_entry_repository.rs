@@ -37,6 +37,7 @@ pub trait JournalEntryRepository: Send + Sync {
     async fn list_all(&self) -> Result<Vec<JournalEntry>, AppError>;
     async fn list_by_account(&self, account_id: &AccountId) -> Result<Vec<JournalEntry>, AppError>;
     async fn list_by_accounts(&self, account_ids: &[AccountId]) -> Result<Vec<JournalEntry>, AppError>;
+    #[allow(clippy::too_many_arguments)]
     async fn list_with_filters(
         &self,
         from_date: Option<DateTime<Utc>>,

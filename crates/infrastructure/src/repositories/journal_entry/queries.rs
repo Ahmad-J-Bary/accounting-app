@@ -151,6 +151,7 @@ pub async fn list_by_accounts(pool: &SqlitePool, account_ids: &[AccountId]) -> R
     Ok(entries)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn list_with_filters(
     pool: &SqlitePool,
     from_date: Option<DateTime<Utc>>,
