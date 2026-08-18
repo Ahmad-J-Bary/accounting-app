@@ -560,6 +560,39 @@ async fn canonical_residual_lifecycle_two_official_entries_and_verdict_gate() {
     assert_eq!(numbers.len(), numbers.iter().collect::<std::collections::HashSet<_>>().len(),
         "Entry Numbers must be distinct");
 
+    // -- Phase 6 integrity: each logical entry is exactly ONE register entry --
+    // The opening migration must surface as a SINGLE daily-journal entry
+    // carrying EVERY opening line; the residual journal as a SINGLE entry with
+    // its Dr/Cr pair. A per-line split (entries multiplied by lines) is a
+    // regression that would show the migration as N separate numbered rows.
+    let opening = feed
+        .iter()
+        .find(|e| e.source_id.as_deref() == Some(aggregate_source.as_str()))
+        .expect("the opening migration reaches the feed exactly once");
+    assert_eq!(feed.iter().filter(|e| e.source_id.as_deref() == Some(aggregate_source.as_str())).count(), 1,
+        "the opening migration must NEVER unnest into per-line journal entries");
+    assert_eq!(opening.journal_type, JournalType::AccountOpeningBalance,
+        "entry 9 stays an AccountOpeningBalance (Opening Migration)");
+    assert_eq!(opening.lines.len(), full_lines(&fx.accounts).len(),
+        "the migration is ONE entry holding every opening line");
+    assert!(opening.lines.iter().all(|l| l.debit != "0" || l.credit != "0"),
+        "every migration line carries a real amount");
+    assert_eq!(opening.total_base_debit, dec!(465).to_string());
+    assert_eq!(opening.total_base_credit, dec!(465).to_string());
+
+    let residual = feed
+        .iter()
+        .find(|e| e.source_id.as_deref() == Some(residual_source.as_str()))
+        .expect("the residual classification reaches the feed exactly once");
+    assert_eq!(feed.iter().filter(|e| e.source_id.as_deref() == Some(residual_source.as_str())).count(), 1,
+        "the residual pair must NEVER unnest into two separate entries");
+    assert_eq!(residual.journal_type, JournalType::GeneralJournal,
+        "entry 10 stays a GeneralJournal (Residual Classification)");
+    assert_eq!(residual.lines.len(), 2,
+        "the residual classification is ONE entry with exactly its Dr 45 / Cr 45 pair");
+    assert_eq!(residual.total_base_debit, dec!(45).to_string());
+    assert_eq!(residual.total_base_credit, dec!(45).to_string());
+
     // Schema-wide backstop: no journal (of any kind) with blank metadata.
     let blanks: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM journal_entries

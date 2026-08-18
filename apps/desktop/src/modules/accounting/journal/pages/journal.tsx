@@ -30,7 +30,7 @@ export default function Journal() {
   const [journalType, setJournalType] = useState<JournalType>(typeParam || 'GeneralJournal');
 
   const [displayMode, setDisplayMode] = useState<DisplayMode>(
-    () => (localStorage.getItem("journal-display-mode") as DisplayMode) || "two-line"
+    () => (localStorage.getItem("journal-display-mode") as DisplayMode) || "one-line"
   );
 
   const [reversingId, setReversingId] = useState<string | null>(null);

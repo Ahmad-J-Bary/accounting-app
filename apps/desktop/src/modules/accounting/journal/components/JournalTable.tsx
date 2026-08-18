@@ -88,7 +88,7 @@ export function JournalTable({
   search, 
   onSearchChange, 
   filterBar, 
-  displayMode = "two-line",
+  displayMode = "one-line",
   onReverse,
   reversingId,
   reversalContext,

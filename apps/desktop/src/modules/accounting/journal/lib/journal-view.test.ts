@@ -279,6 +279,36 @@ describe("Daily Journal: exactly the two official entries, no blank Entry metada
 });
 
 // ---------------------------------------------------------------------------
+// PHASE 6 — the General Journal register aggregates to ONE row per logical
+// journal entry: the 10-line Opening Migration collapses to a single row
+// (465 / 465) and the 2-line Residual Classification to a single row (45 / 45).
+// Lines must never surface as separate numbered entries; the register shows
+// the header number + description once per entry.
+// ---------------------------------------------------------------------------
+describe("General Journal aggregate row — one row per logical entry (PHASE 6)", () => {
+  it("the 10-line Opening Migration collapses to exactly ONE row", () => {
+    const rows = toJournalLinesSingleLine(openingMigrationEntry);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].entry_number).toBe("1");
+    expect(rows[0].description).toBe("قيد ترحيل رصيد افتتاح الشركة");
+    expect(rows[0].debit_amount_base).toBe(465);
+    expect(rows[0].credit_amount_base).toBe(465);
+    expect(rows[0].debit_account_names).toContain("الأصول الثابتة");
+    expect(rows[0].debit_account_names).toContain("المخزون");
+    expect(rows[0].credit_account_names).toContain("رصيد افتتاحي");
+  });
+
+  it("the 2-line Residual Classification collapses to exactly ONE row", () => {
+    const rows = toJournalLinesSingleLine(residualClassificationEntry);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].entry_number).toBe("2");
+    expect(rows[0].description).toBe("ترحيل تصنيف الرصيد المتبقي");
+    expect(rows[0].debit_amount_base).toBe(45);
+    expect(rows[0].credit_amount_base).toBe(45);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // PHASE 3 — explicit report policies: the official GENERAL JOURNAL feed, the
 // separated AUDIT archive, and the posted-ledger policy (GL / TB / BS) each
 // name their own predicate. No generic filter is shared blindly.
