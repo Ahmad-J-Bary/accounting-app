@@ -102,6 +102,24 @@ export function computeOpeningBalance(
   return base + debitBefore - creditBefore;
 }
 
+// Running balance (الرصيد الجاري) per row in display order, seeded by the
+// beginning balance (`openingBalance`) and accumulating Dr − Cr per line.
+// The seed is the pre-range beginning; each posted line moves it by its own
+// debit/credit effect — so a single opening movement of 80 yields [80], never
+// [160], and reversal pairs (excluded upstream) can never double it.
+export function computeRunningBalance(
+  lines: LedgerLineAmountLike[],
+  openingBalance: number,
+): number[] {
+  const running: number[] = [];
+  let balance = openingBalance;
+  for (const line of lines) {
+    balance += parseFloat(line.debit_base || "0") - parseFloat(line.credit_base || "0");
+    running.push(balance);
+  }
+  return running;
+}
+
 export type ClosingSign = "مدين" | "دائن" | "متزن";
 
 /**

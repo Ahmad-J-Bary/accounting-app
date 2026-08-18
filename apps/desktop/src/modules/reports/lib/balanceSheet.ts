@@ -110,11 +110,12 @@ function buildAccountTree(
         ownBalance = parseNum(acc.balance);
       }
       const childrenBalance = children.reduce((s, c) => s + c.balance, 0);
+      const makhzoonOwn = acc.name_ar.includes("مخزون") && ownBalance !== 0;
       return {
         id: acc.id,
         code: acc.code,
         name: acc.name_ar,
-        balance: children.length > 0 ? childrenBalance : ownBalance,
+        balance: makhzoonOwn ? ownBalance : children.length > 0 ? childrenBalance : ownBalance,
         accountType: acc.account_type,
         depth: 0,
         purpose: acc.purpose ?? undefined,
@@ -204,7 +205,7 @@ export function computeBalanceSheet(
           cleaned.push({
             ...a,
             name: "المخزون",
-            balance: inventoryBalance !== undefined ? inventoryBalance : a.balance,
+            balance: inventoryBalance !== undefined && inventoryBalance !== 0 ? inventoryBalance : a.balance,
             children: [],
           });
           inventoryHandled = true;

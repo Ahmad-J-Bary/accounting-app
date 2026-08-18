@@ -101,14 +101,21 @@ export function computeTreeTotals(
     // (`children.length > 0 ? childrenBalance : ownBalance`) and the backend
     // chart rollup, which computes parent balances as the children sum.
     const hasChildren = subTree.length > 0;
-    let openingDebit = hasChildren ? 0 : (lt?.openingDebit ?? 0);
-    let openingCredit = hasChildren ? 0 : (lt?.openingCredit ?? 0);
-    let periodDebit = hasChildren ? 0 : (lt?.periodDebit ?? 0);
-    let periodCredit = hasChildren ? 0 : (lt?.periodCredit ?? 0);
-    let totDebit = hasChildren ? 0 : (lt?.debit ?? 0);
-    let totCredit = hasChildren ? 0 : (lt?.credit ?? 0);
+    const hasOwnPostings =
+      !!lt &&
+      (lt.openingDebit !== 0 ||
+        lt.openingCredit !== 0 ||
+        lt.periodDebit !== 0 ||
+        lt.periodCredit !== 0);
+    const keepOwn = acc.name_ar.includes("مخزون") && hasOwnPostings;
+    let openingDebit = hasChildren && !keepOwn ? 0 : (lt?.openingDebit ?? 0);
+    let openingCredit = hasChildren && !keepOwn ? 0 : (lt?.openingCredit ?? 0);
+    let periodDebit = hasChildren && !keepOwn ? 0 : (lt?.periodDebit ?? 0);
+    let periodCredit = hasChildren && !keepOwn ? 0 : (lt?.periodCredit ?? 0);
+    let totDebit = hasChildren && !keepOwn ? 0 : (lt?.debit ?? 0);
+    let totCredit = hasChildren && !keepOwn ? 0 : (lt?.credit ?? 0);
 
-    if (hasChildren) {
+    if (hasChildren && !keepOwn) {
       openingDebit += subTree.reduce((s, c) => s + c.openingDebit, 0);
       openingCredit += subTree.reduce((s, c) => s + c.openingCredit, 0);
       periodDebit += subTree.reduce((s, c) => s + c.periodDebit, 0);

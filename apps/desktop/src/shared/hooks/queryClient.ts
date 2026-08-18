@@ -64,8 +64,7 @@ export const QUERY_KEYS = {
   incomeStatement: ["reports", "income-statement"] as const,
   balanceSheet: ["reports", "balance-sheet"] as const,
   partnerProfitShare: ["reports", "partner-profit-share"] as const,
-  trialBalance: (filters?: { from_date?: string; to_date?: string }) =>
-    ["reports", "trial-balance", filters] as const,
+  trialBalance: ["reports", "trial-balance"] as const,
 
   fixedAssets: ["fixed-assets"] as const,
   productionOrders: ["production-orders"] as const,

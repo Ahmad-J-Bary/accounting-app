@@ -185,8 +185,8 @@ export default function AccountMovement() {
   }, [ledger, accountType, dateFilters]);
 
   const closing = useMemo(
-    () => computeClosingBalance(totals.debit + openingDebitTotal, totals.credit + openingCreditTotal),
-    [totals, openingDebitTotal, openingCreditTotal],
+    () => computeClosingBalance(openingBalance + totals.debit + openingDebitTotal, totals.credit + openingCreditTotal),
+    [openingBalance, totals, openingDebitTotal, openingCreditTotal],
   );
 
   const openingClosing = useMemo(

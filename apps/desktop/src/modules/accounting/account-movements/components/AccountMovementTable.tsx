@@ -13,7 +13,7 @@ import { getLeftBorderClass, getRowBorderClass, getRowBackgroundClass } from "@s
 import type { AccountLedgerLineDto } from "@erp/shared-types";
 import { formatDateTime, formatNumber } from "@shared/lib/format";
 import { getHeaderText, getPrimitiveCellValue } from "@modules/accounting/journal/components/groupedTableUtils";
-import { computeClosingBalance, isOpeningLine, markEntryRunFirsts } from "@modules/accounting/account-movements/lib/openingLines";
+import { computeClosingBalance, computeRunningBalance, isOpeningLine, markEntryRunFirsts } from "@modules/accounting/account-movements/lib/openingLines";
 import { Download } from "lucide-react";
 import { Button } from "@shared/ui/button";
 
@@ -49,6 +49,10 @@ type MovementRow = AccountLedgerLineDto & {
   /** First row of an adjacent run sharing the same journal — entry-number /
    * type / date are rendered once across the run. */
   isFirstInEntry: boolean;
+  /** Running balance (الرصيد الجاري) seeded by the beginning balance. */
+  balance: number;
+  /** Synthetic Beginning Balance row (رصيد سابق / أول الفترة). */
+  isBeginning?: boolean;
 };
 
 type EnrichedOriginalLine = AccountLedgerLineDto & {
@@ -61,6 +65,8 @@ export function AccountMovementTable({
   search,
   onSearchChange,
   accountName,
+  openingBalance,
+  openingBalanceDate,
 }: AccountMovementTableProps) {
   const { isBaseCurrency, currencySuffix, hasSecondaryCurrencies } = useBaseCurrencyColumns();
   const { settings, getDensityPadding } = useTableSettings();
@@ -170,9 +176,10 @@ export function AccountMovementTable({
   const cleanLines = sortedOriginalLines;
 
   const tableData = useMemo(() => {
+    const runningBalances = computeRunningBalance(cleanLines, openingBalance || 0);
     const rows: MovementRow[] = [];
 
-    for (const line of cleanLines) {
+    cleanLines.forEach((line, idx) => {
       const debitBase = parseFloat(line.debit_base || "0");
       const creditBase = parseFloat(line.credit_base || "0");
 
@@ -183,16 +190,45 @@ export function AccountMovementTable({
         amount_base: debitBase > 0 ? debitBase : creditBase,
         isOpening: isOpeningLine(line),
         isFirstInEntry: false,
+        balance: runningBalances[idx],
       });
-    }
+    });
 
     const firsts = markEntryRunFirsts(cleanLines);
     rows.forEach((row, idx) => {
       row.isFirstInEntry = firsts[idx];
     });
 
+    if (openingBalance !== 0 && openingBalance !== undefined) {
+      const sign = openingBalance > 0 ? "debit" : "credit";
+      rows.unshift({
+        date: openingBalanceDate || "",
+        journal_id: "",
+        entry_number: "",
+        journal_type: "",
+        source_id: null,
+        description: "رصيد سابق / أول الفترة",
+        opposite_account_name: "",
+        currency: "",
+        fx_rate: "",
+        debit_base: sign === "debit" ? String(Math.abs(openingBalance)) : "0",
+        credit_base: sign === "credit" ? String(Math.abs(openingBalance)) : "0",
+        balance_base: String(openingBalance),
+        debit_original: "",
+        credit_original: "",
+        balance_original: "",
+        typeLabel: "رصيد سابق",
+        side: sign,
+        amount_base: Math.abs(openingBalance),
+        isOpening: false,
+        isFirstInEntry: true,
+        balance: openingBalance,
+        isBeginning: true,
+      });
+    }
+
     return rows;
-  }, [cleanLines]);
+  }, [cleanLines, openingBalance, openingBalanceDate]);
 
   const allColumns = useMemo<UnifiedColumn<MovementRow>[]>(() => {
     const cols: UnifiedColumn<MovementRow>[] = [
@@ -200,7 +236,7 @@ export function AccountMovementTable({
         id: "entry_number",
         header: "رقم القيد",
         label: "رقم القيد",
-        accessor: (r) => (r.isFirstInEntry ? formatNumber(parseInt(r.entry_number) || 0) : ""),
+        accessor: (r) => (r.isFirstInEntry && !r.isBeginning ? formatNumber(parseInt(r.entry_number) || 0) : ""),
         className: "font-black text-slate-900 text-center"
       },
       {
@@ -211,7 +247,9 @@ export function AccountMovementTable({
           r.isFirstInEntry ? (
             <span className={cn(
               "inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter",
-              r.isOpening
+              r.isBeginning
+                ? "bg-amber-100/70 text-amber-700"
+                : r.isOpening
                 ? "bg-indigo-100/60 text-indigo-700"
                 : "bg-slate-100 text-slate-600"
             )}>
@@ -260,7 +298,23 @@ export function AccountMovementTable({
       });
     });
 
+    const baseSymbol = baseCurrency?.symbol || baseCurrency?.code || "";
     cols.push(
+      {
+        id: "balance",
+        header: `الرصيد${currencySuffix(baseSymbol)}`,
+        label: `الرصيد${currencySuffix(baseSymbol)}`,
+        align: "center",
+        accessor: (r) => {
+          const b = r.balance ?? 0;
+          if (b === 0) return <span className="text-slate-300">—</span>;
+          const formatted = formatAmount(Math.abs(b), { currencyCode: baseCurrency?.code || "" });
+          return b > 0
+            ? <span className="tabular-nums font-black text-blue-700">{formatted}</span>
+            : <span className="tabular-nums font-black text-emerald-700">−{formatted}</span>;
+        },
+        className: "tabular-nums font-black",
+      },
       {
         id: "description",
         header: "البيان",
@@ -277,7 +331,7 @@ export function AccountMovementTable({
       },
     );
     return cols;
-  }, [sortedCurrencies, formatAmount, isBaseCurrency, currencySuffix]);
+  }, [sortedCurrencies, formatAmount, isBaseCurrency, currencySuffix, baseCurrency]);
 
   const defaultVisible = useMemo(() => {
     const def: string[] = ["entry_number", "journal_type"];
@@ -291,7 +345,7 @@ export function AccountMovementTable({
         def.push(`credit_${curr.code}`);
       }
     });
-    def.push("description", "date");
+    def.push("balance", "description", "date");
     return def;
   }, [sortedCurrencies, isBaseCurrency]);
 
@@ -377,8 +431,9 @@ export function AccountMovementTable({
         width: estimateExcelWidth(label, getColumnSampleValues(col)),
         accessor: (row) => {
           const r = row as unknown as MovementRow;
-          if (col.id === "entry_number") return r.isFirstInEntry ? (parseInt(r.entry_number, 10) || 0) : "";
+          if (col.id === "entry_number") return r.isFirstInEntry ? (r.isBeginning ? "" : (parseInt(r.entry_number, 10) || 0)) : "";
           if (col.id === "journal_type") return r.isFirstInEntry ? r.typeLabel : "";
+          if (col.id === "balance") return r.balance ?? 0;
           if (col.id === "description") return r.description;
           return "";
         },
@@ -416,16 +471,17 @@ export function AccountMovementTable({
   );
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
-    const totalDebit = cleanLines.reduce(
+    const totalDebit = tableData.reduce(
       (s, l) => s + parseFloat(l.debit_base || "0"),
       0,
     );
-    const totalCredit = cleanLines.reduce(
+    const totalCredit = tableData.reduce(
       (s, l) => s + parseFloat(l.credit_base || "0"),
       0,
     );
     const { net: closingNet, sign: closingSign } = computeClosingBalance(totalDebit, totalCredit);
-    const rowCount = tableData.length;
+    const hasBeginning = tableData.some(l => l.isBeginning);
+    const rowCount = tableData.length - (hasBeginning ? 1 : 0);
     const baseSymbol = baseCurrency?.symbol || baseCurrency?.code || "";
 
     return enrichedColumns.map((col) => {
@@ -482,7 +538,7 @@ export function AccountMovementTable({
 
       return { id: `${id}_spacer`, columnId: id, label: "", value: "" };
     });
-  }, [cleanLines, formatAmount, enrichedColumns, isBaseCurrency, baseCurrency, currencySuffix, tableData.length]);
+  }, [tableData, formatAmount, enrichedColumns, isBaseCurrency, baseCurrency, currencySuffix]);
 
   const visibleColumnIds = useMemo(
     () => new Set(visibleColumns.map(c => c.id)),
@@ -554,7 +610,9 @@ export function AccountMovementTable({
             className={cn(
               "transition-all duration-75",
               getRowBorderClass(settings.borderStyle),
-              row.isOpening
+              row.isBeginning
+                ? "bg-amber-50/60 border-b border-amber-100"
+                : row.isOpening
                 ? "bg-indigo-50/40 border-b border-indigo-100"
                 : getRowBackgroundClass(false, rowIdx, settings.zebraRows, settings.rowHoverEffect),
             )}

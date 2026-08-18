@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isOpeningLine, getOpeningCreationDate, getOpeningTotals, computeOpeningBalance, computeClosingBalance, markEntryRunFirsts } from "./openingLines";
+import { isOpeningLine, getOpeningCreationDate, getOpeningTotals, computeOpeningBalance, computeRunningBalance, computeClosingBalance, markEntryRunFirsts } from "./openingLines";
 
 const openingLine = (journal_type: string, date: string, debit_base = "0", credit_base = "0", description = "") => ({
   journal_type,
@@ -158,6 +158,57 @@ describe("computeClosingBalance", () => {
 
   it("uses the absolute value for the magnitude", () => {
     expect(computeClosingBalance(150, 200)).toEqual({ net: -50, sign: "دائن" });
+  });
+});
+
+describe("computeRunningBalance", () => {
+  it("seeds from the beginning balance and accumulates Dr − Cr per row", () => {
+    const lines = [
+      openingLine("SalesJournal", "2026-08-05T10:00:00Z", "20", "0", "بيع"),
+      openingLine("SalesJournal", "2026-08-06T10:00:00Z", "0", "30", "رد"),
+    ];
+    expect(computeRunningBalance(lines, 80)).toEqual([100, 70]);
+  });
+
+  it("returns an empty array when there are no lines", () => {
+    expect(computeRunningBalance([], 80)).toEqual([]);
+  });
+
+  it("yields a credit running balance when credits outweigh debits", () => {
+    const lines = [openingLine("SalesJournal", "2026-08-05T10:00:00Z", "0", "50", "بيع")];
+    expect(computeRunningBalance(lines, 0)).toEqual([-50]);
+  });
+});
+
+describe("Phase 5 statement display semantics (AR 1231 = 80)", () => {
+  const arLine = () => [openingLine("AccountOpeningBalance", "2026-01-01T00:00:00Z", "80", "0")];
+
+  it("opening in-range → beginning = 0 (no beginning row) and running = [80], never [160]", () => {
+    const beginning = computeOpeningBalance(arLine(), 0, "2026-01-01", "2026-08-16");
+    expect(beginning).toBe(0);
+    expect(computeRunningBalance(arLine(), beginning)).toEqual([80]);
+  });
+
+  it("opening before-range → beginning = 80 and no in-range movement row", () => {
+    const beginning = computeOpeningBalance(arLine(), 0, "2026-02-01", "2026-08-16");
+    expect(beginning).toBe(80);
+    expect(computeRunningBalance([], beginning)).toEqual([]);
+  });
+
+  it("closing = beginning + period net stays 80, never 160", () => {
+    // Opening in-range: the opening movement is the period net, beginning = 0.
+    expect(computeClosingBalance(0 + 80, 0)).toEqual({ net: 80, sign: "مدين" });
+    // Opening before-range: beginning = 80, no in-range movements.
+    expect(computeClosingBalance(80 + 0, 0)).toEqual({ net: 80, sign: "مدين" });
+  });
+
+  it("the subledger episode of Ammar is the same single 80 — no extra GL row is added", () => {
+    // Lines are drawn only from posted journal lines (phase3 e2e asserts the
+    // AR ledger has exactly one movement); a separate subledger row cannot
+    // count the balance again.
+    const lines = arLine();
+    expect(lines.length).toBe(1);
+    expect(computeRunningBalance(lines, 0)).toEqual([80]);
   });
 });
 

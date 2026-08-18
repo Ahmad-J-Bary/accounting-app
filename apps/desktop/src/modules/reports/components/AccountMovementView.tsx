@@ -16,7 +16,7 @@ type AccountMovementViewProps = {
 
 export function AccountMovementView({ data, loading, search, onSearchChange, symbol }: AccountMovementViewProps) {
   const { accountName, openingBalance, openingEntry, openingEntries, openingBalanceDate, filteredLines, totals, openingDebitTotal, openingCreditTotal } = data;
-  const closing = computeClosingBalance(totals.debit + openingDebitTotal, totals.credit + openingCreditTotal);
+  const closing = computeClosingBalance(openingBalance + totals.debit + openingDebitTotal, totals.credit + openingCreditTotal);
   const openingClosing = computeClosingBalance(openingDebitTotal, openingCreditTotal);
 
   return (

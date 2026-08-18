@@ -29,14 +29,11 @@ export function useTrialBalance(filters?: { from_date?: string; to_date?: string
     accounts: AccountDto[];
     ledgerTotals: Map<string, AccountLedgerTotal>;
   }>({
-    queryKey: QUERY_KEYS.trialBalance(filters),
+    queryKey: QUERY_KEYS.trialBalance,
     queryFn: async () => {
       const [accounts, entries] = await Promise.all([
         accountingService.getChartOfAccounts(),
-        journalEntryService.listPostedJournalEntries(
-          filters?.from_date ? toUtcBound(filters.from_date, false) : undefined,
-          filters?.to_date ? toUtcBound(filters.to_date, true) : undefined,
-        ),
+        journalEntryService.listPostedJournalEntries(),
       ]);
 
       const { ledgerTotals } = computeLedgerTotals(
