@@ -26,25 +26,24 @@ pub fn reject_pl_account(account: &Account) -> Result<(), AppError> {
 }
 
 /// True while an opening-balance migration setup is "in flight" — i.e. its
-/// window is still open (Draft → Approved). The window closes when the
-/// migration is Posted (the aggregate opening journal enters the ledger and the
-/// company starts operating), Locked, or Cancelled.
+/// window is still open. The window closes only when every migration reaches
+/// `Locked` or is `Cancelled`; it stays open through Posting (Draft → Validated
+/// → Approved → Posted) so the company's opening position is complete before it
+/// starts operating (Phase 3: one canonical opening GL posting).
 ///
 /// This is the context switch behind the ONE accounting system: while the
-/// window is open, module create flows (customer/supplier/partner/capital)
-/// record balances as part of the migration instead of posting their own
-/// independent opening journals, and a new-company cash capital contribution
-/// is not allowed. After the window closes the company behaves exactly like a
-/// new company.
+/// window is open, module create flows (customer/supplier/partner/capital/
+/// material/asset/account) record balances as part of the migration instead of
+/// posting their own independent opening journals, and a new-company cash
+/// capital contribution is not allowed. After the window closes the company
+/// behaves exactly like a new company.
 pub async fn opening_window_active(
     repo: &Arc<dyn OpeningMigrationRepository>,
 ) -> Result<bool, AppError> {
     let migrations = repo.list().await?;
-    Ok(migrations.iter().any(|m| matches!(
+    Ok(migrations.iter().any(|m| !matches!(
         m.status,
-        MigrationStatus::Draft
-            | MigrationStatus::Validated
-            | MigrationStatus::Approved
+        MigrationStatus::Cancelled | MigrationStatus::Locked
     )))
 }
 

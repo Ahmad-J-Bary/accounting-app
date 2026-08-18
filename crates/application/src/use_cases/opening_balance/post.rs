@@ -172,31 +172,33 @@ impl PostOpeningBalanceUseCase {
         })
     }
 
-    /// Returns the POSTED standalone per-entity opening journals whose lines
-    /// match a migration line's account and amount — i.e. journals that already
-    /// booked an opening balance while the opening window was closed. Posting
-    /// the migration would duplicate those balances, so each one found is
-    /// auto-reversed before the aggregate posts (the aggregate remains the
-    /// canonical GL owner of the opening position).
+    /// Returns the POSTED standalone per-entity opening journals that booked an
+    /// opening balance on any account covered by the migration's opening lines
+    /// (account membership, regardless of amount) — i.e. journals created while
+    /// the opening window was closed. Posting the migration would duplicate
+    /// those balances, so each one found is auto-reversed before the aggregate
+    /// posts (the aggregate remains the canonical GL owner of the opening
+    /// position). A temporary preparation entry can therefore never survive as a
+    /// second permanent GL balance next to the aggregate: original + reversal
+    /// = 0 and only the final opening journal remains in the reports.
     async fn duplicate_standalone_opening_journals(
         &self,
         id: &str,
     ) -> Result<Vec<JournalEntry>, AppError> {
-        use std::collections::{HashMap, HashSet};
+        use std::collections::HashSet;
 
         let migration = self.repo.find_by_id(id).await?
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
 
-        // Group migration line amounts by account: an opening journal may only
-        // be a duplicate when its line matches one of these amounts exactly.
-        let mut expected: HashMap<String, Vec<rust_decimal::Decimal>> = HashMap::new();
+        // The set of accounts the migration's opening lines cover. Any posted
+        // standalone opening journal touching one of these accounts pre-books a
+        // balance the aggregate is about to book itself — the exact amount is
+        // irrelevant because the aggregate is the canonical GL owner.
+        let mut expected: HashSet<String> = HashSet::new();
         for line in &migration.lines {
             let account = self.account_repo.find_by_id(&line.account_id).await?
                 .ok_or_else(|| AppError::NotFound(format!("الحساب غير موجود: {}", line.account_id)))?;
-            expected
-                .entry(account.id.0.to_string())
-                .or_default()
-                .push(line.amount);
+            expected.insert(account.id.0.to_string());
         }
 
         let mut flagged: Vec<JournalEntry> = Vec::new();
@@ -233,13 +235,10 @@ impl PostOpeningBalanceUseCase {
             }
 
             for line in &journal.lines {
-                let Some(amounts) = expected.get(&line.account_id.0.to_string()) else { continue };
-                let booked = if !line.debit.amount().is_zero() {
-                    line.debit.amount()
-                } else {
-                    line.credit.amount()
-                };
-                if amounts.contains(&booked) && seen.insert(journal.id.0.to_string()) {
+                if !expected.contains(&line.account_id.0.to_string()) {
+                    continue;
+                }
+                if seen.insert(journal.id.0.to_string()) {
                     flagged.push(journal.clone());
                 }
             }
