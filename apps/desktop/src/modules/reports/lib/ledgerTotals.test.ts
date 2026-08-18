@@ -179,6 +179,26 @@ describe("computeLedgerTotals — reversal is mathematically neutral", () => {
   });
 });
 
+describe("computeLedgerTotals — a zero-effect residual never moves a balance", () => {
+  const cash = account("cash1", "1910", "Assets");
+  const equity = account("eq1", "52", "Equity");
+
+  it("a Posted residual classification with all-zero lines changes nothing", () => {
+    const residual = entry({
+      id: "r0",
+      journal_type: "GeneralJournal",
+      description: "ترحيل تصنيف الرصيد المتبقي",
+      lines: [line("cash1", "0", "0"), line("eq1", "0", "0")],
+    });
+
+    const withZeroEffect = computeLedgerTotals([cash, equity], [residual]);
+    expect(withZeroEffect.ledgerTotals.get("cash1")?.endingBalance).toBe(0);
+    expect(withZeroEffect.ledgerTotals.get("eq1")?.endingBalance).toBe(0);
+    expect(withZeroEffect.ledgerTotals.get("cash1")?.periodDebit).toBe(0);
+    expect(withZeroEffect.ledgerTotals.get("eq1")?.periodCredit).toBe(0);
+  });
+});
+
 describe("computeLedgerTotals — opening journal inside the period is never re-added", () => {
   const fa = account("fa1", "1115", "Assets");
   const equity = account("eq1", "52", "Equity");

@@ -53,9 +53,11 @@ export default function Journal() {
     }
   }, [typeParam, journalType]);
 
-  // Fetch ALL entries (operational + audit). The operational/audit split is
-  // equivalent to the backend `exclude_reversal_pairs` SQL rule and is done
-  // client-side so both views share one source of truth.
+  // Fetch ALL entries (official + audit). Each report names its own explicit
+  // policy (`@modules/reports/lib/report-policies`): the GENERAL JOURNAL shows
+  // only official Posted entries with an accounting effect, the audit archive
+  // keeps the full non-operational history (Draft / Cancelled / Reversed /
+  // contra). One shared fetch + client-side partition = one source of truth.
   const queryFilters = useMemo<JournalFilters>(() => ({}), []);
 
   const fetchData = useCallback(() => {

@@ -736,7 +736,6 @@ async fn temporary_prep_entry_never_survives_after_opening_completes() {
     )
     .unwrap();
     legacy.post().unwrap();
-    let legacy_id = legacy.id.to_string();
     journal_repo.save(&legacy).await.unwrap();
 
     // The migration (with its own canonical AR 80) then runs the full flow;
@@ -780,7 +779,9 @@ async fn temporary_prep_entry_never_survives_after_opening_completes() {
     assert!(official.iter().all(|e| !e.1.trim().is_empty() && !e.2.trim().is_empty()),
         "every official entry carries non-blank metadata");
 
-    // The posted feed carries exactly one reversal contra (the audit artifact).
+    // The posted feed applies the POSTED-LEDGER policy (ReversalScope): the
+    // reversal contra is excluded SERVER-SIDE — only the two official entries
+    // reach it, while the audit archive (the full register) keeps the contra.
     let feed = ListJournalEntriesUseCase::new(
         Arc::new(SqliteJournalEntryRepository::new(fx.pool.clone())),
         Arc::new(SqliteAccountRepository::new(fx.pool.clone())),
@@ -788,11 +789,9 @@ async fn temporary_prep_entry_never_survives_after_opening_completes() {
     .execute_posted(None, None, None, None)
     .await
     .unwrap();
-    let contras: Vec<_> = feed.iter().filter(|e| e.reversal_of_entry_id.is_some()).collect();
-    assert_eq!(contras.len(), 1, "one reversal contra in the posted feed");
-    assert!(contras[0].reversal_of_entry_id.as_deref() == Some(legacy_id.as_str()),
-        "contra points back at the legacy original");
-    assert!(!contras[0].entry_number.trim().is_empty(), "contra has its own entry number");
+    assert_eq!(feed.len(), 2, "only the two official entries reach the posted feed");
+    assert!(feed.iter().all(|e| e.reversal_of_entry_id.is_none()),
+        "the reversal contra is excluded from the posted feed (the audit archive keeps it)");
 
     // Report surface: the AR ledger shows ONLY the aggregate movement.
     let queries = AccountQueries::new(

@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use sqlx::SqlitePool;
 use application::errors::AppError;
-use application::ports::journal_entry_repository::JournalEntryRepository;
+use application::ports::journal_entry_repository::{JournalEntryRepository, ReversalScope};
 use domain::accounting::journal_entry::{JournalEntry};
 use domain::shared::{JournalEntryId, AccountId};
 use std::sync::Arc;
@@ -65,7 +65,7 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
         account_id: Option<AccountId>,
         partner_id: Option<uuid::Uuid>,
         status: Option<domain::accounting::JournalEntryStatus>,
-        exclude_reversal_pairs: bool,
+        reversal_scope: ReversalScope,
     ) -> Result<Vec<JournalEntry>, AppError> {
         queries::list_with_filters(
             &self.pool,
@@ -75,7 +75,7 @@ impl JournalEntryRepository for SqliteJournalEntryRepository {
             account_id,
             partner_id,
             status,
-            exclude_reversal_pairs,
+            reversal_scope,
         )
         .await
     }

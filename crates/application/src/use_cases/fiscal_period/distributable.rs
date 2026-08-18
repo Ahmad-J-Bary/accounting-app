@@ -7,7 +7,7 @@ use domain::accounting::JournalEntryStatus;
 
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
-use crate::ports::journal_entry_repository::JournalEntryRepository;
+use crate::ports::journal_entry_repository::{JournalEntryRepository, ReversalScope};
 use crate::use_cases::fiscal_period::types::{
     AUTH_ALLOCATION_SOURCE_PREFIX, DistributableProfitDto,
 };
@@ -51,6 +51,8 @@ impl GetDistributableProfitUseCase {
         let to = crate::use_cases::fiscal_period::net_profit::parse_period_bound(&period_end)?;
 
         let accounts = self.account_repo.list_all().await?;
+        // The POSTED-LEDGER policy (see `ReversalScope`): only Posted entries
+        // with no reversal relationship feed the distributable-profit window.
         let entries = self
             .journal_repo
             .list_with_filters(
@@ -60,7 +62,7 @@ impl GetDistributableProfitUseCase {
                 None,
                 None,
                 Some(JournalEntryStatus::Posted),
-                false,
+                ReversalScope::PostedLedger,
             )
             .await?;
 

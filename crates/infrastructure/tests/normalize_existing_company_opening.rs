@@ -662,16 +662,17 @@ async fn legacy_standalone_opening_journal_auto_reversed_even_on_amount_mismatch
     let ar_ledger = queries.get_ledger(&[ar]).await.expect("AR ledger");
     assert_eq!(ar_ledger.lines.len(), 1, "report surface hides the reversal pair");
 
-    // Feed: aggregate + the reversal contra (frontend drops contras). The
-    // Reversed legacy original is gone from the feed.
+    // Feed: the POSTED-LEDGER policy (ReversalScope) keeps ONLY the aggregate —
+    // the reversal contra is excluded server-side and the Reversed legacy
+    // original is gone from the feed.
     let feed = ListJournalEntriesUseCase::new(journal_repo.clone(), account_repo.clone())
         .execute_posted(None, None, None, None)
         .await
         .unwrap();
     let aggregate_entry = feed.iter().find(|e| e.source_id.as_deref() == Some(aggregate.as_str()));
     assert!(aggregate_entry.is_some(), "aggregate is in the feed");
-    assert!(feed.iter().any(|e| e.reversal_of_entry_id.is_some()),
-        "the reversal contra is present (and the frontend drops it)");
+    assert!(feed.iter().all(|e| e.reversal_of_entry_id.is_none()),
+        "neither side of a reversal pair reaches the posted report feed");
     assert!(feed.iter().all(|e| e.status == "Posted"));
 }
 

@@ -1,7 +1,7 @@
 use crate::dto::journal_entry_dto::JournalEntryDto;
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
-use crate::ports::journal_entry_repository::JournalEntryRepository;
+use crate::ports::journal_entry_repository::{JournalEntryRepository, ReversalScope};
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use domain::accounting::{JournalEntryStatus, JournalType};
 use domain::shared::ids::AccountId;
@@ -32,13 +32,11 @@ impl ListJournalEntriesUseCase {
         account_id: Option<String>,
         partner_id: Option<String>,
         status: Option<String>,
-        exclude_reversal_pairs: Option<bool>,
     ) -> Result<Vec<JournalEntryDto>, AppError> {
         let from = from_date.and_then(|d| parse_date_bound(&d, false));
         let to = to_date.and_then(|d| parse_date_bound(&d, true));
         let acc_id = account_id.and_then(|id| id.parse::<AccountId>().ok());
         let part_id = partner_id.and_then(|id| Uuid::parse_str(&id).ok());
-        let exclude_reversal_pairs = exclude_reversal_pairs.unwrap_or(false);
         let status_enum = status.and_then(|s| match s.as_str() {
             "Draft" => Some(JournalEntryStatus::Draft),
             "Posted" => Some(JournalEntryStatus::Posted),
@@ -58,9 +56,13 @@ impl ListJournalEntriesUseCase {
             _ => journal_type,
         };
 
+        // The management / daily-journal register is the FULL register: the
+        // official-vs-audit split is a REPORT concern (see `report-policies`
+        // on the client), so every status and both sides of every reversal
+        // pair are fetched and partitioned client-side.
         let entries = self
             .repo
-            .list_with_filters(from, to, repo_journal_type, acc_id, part_id, status_enum, exclude_reversal_pairs)
+            .list_with_filters(from, to, repo_journal_type, acc_id, part_id, status_enum, ReversalScope::All)
             .await?;
 
         let mut dtos = Vec::new();
@@ -94,11 +96,14 @@ impl ListJournalEntriesUseCase {
         Ok(dtos)
     }
 
-    /// Report-scoped listing: returns ONLY posted journal entries (optionally
-    /// narrowed by account / partner). Drafts and cancelled entries must never
-    /// reach financial statements — an unposted entry is not part of the GL.
-    /// Routing every report consumer through this method (instead of letting
-    /// each call site pass a status filter) prevents Draft leakage regressions.
+    /// Report-scoped listing: returns ONLY the POSTED-LEDGER feed (see
+    /// `ReversalScope::PostedLedger`) — Posted entries with no reversal
+    /// relationship, optionally narrowed by account / partner. Drafts,
+    /// cancelled entries and either side of a reversal pair must never reach
+    /// financial statements; the frontend keeps its own named policy as a
+    /// defensive belt. Routing every report consumer through this method
+    /// (instead of letting each call site pass a status filter) prevents Draft
+    /// leakage regressions.
     pub async fn execute_posted(
         &self,
         from_date: Option<String>,
@@ -113,7 +118,7 @@ impl ListJournalEntriesUseCase {
 
         let entries = self
             .repo
-            .list_with_filters(from, to, None, acc_id, part_id, Some(JournalEntryStatus::Posted), false)
+            .list_with_filters(from, to, None, acc_id, part_id, Some(JournalEntryStatus::Posted), ReversalScope::PostedLedger)
             .await?;
 
         let mut dtos = Vec::with_capacity(entries.len());
@@ -217,12 +222,16 @@ mod tests {
         reversed.reverse().unwrap();
         let mut cancelled = balanced_entry("4", "cancelled", account);
         cancelled.status = JournalEntryStatus::Cancelled;
+        let mut contra = balanced_entry("5", "contra-journal", account);
+        contra.post().unwrap();
+        contra.reversal_of_entry_id =
+            Some(domain::shared::JournalEntryId(Uuid::new_v4()));
 
         journal_repo
             .entries
             .lock()
             .unwrap()
-            .extend([draft.clone(), posted.clone(), reversed.clone(), cancelled.clone()]);
+            .extend([draft.clone(), posted.clone(), reversed.clone(), cancelled.clone(), contra.clone()]);
 
         let use_case = ListJournalEntriesUseCase::new(journal_repo.clone(), account_repo.clone());
         let result = use_case.execute_posted(None, None, None, None).await.unwrap();
@@ -231,5 +240,9 @@ mod tests {
         assert_eq!(result[0].description, "posted-migration");
         assert_ne!(result[0].description, "draft-fa-opening",
             "a Draft FA opening journal must never reach the reports");
+        assert!(
+            result.iter().all(|e| e.reversal_of_entry_id.is_none()),
+            "a Posted contra journal must never reach the reports feed"
+        );
     }
 }

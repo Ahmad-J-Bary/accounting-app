@@ -1,5 +1,6 @@
 use sqlx::SqlitePool;
 use application::errors::AppError;
+use application::ports::journal_entry_repository::ReversalScope;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType, JournalEntryStatus};
 use domain::shared::{JournalEntryId, AccountId};
 use super::models::{JournalEntryRow, JournalLineRow};
@@ -111,6 +112,10 @@ pub async fn list_by_account(pool: &SqlitePool, account_id: &AccountId) -> Resul
     Ok(entries)
 }
 
+/// GENERAL LEDGER feed — the POSTED-LEDGER policy (see `ReversalScope`):
+/// only Posted entries with no reversal relationship. A Draft / Cancelled /
+/// Reversed original and either side of a reversal pair must never reach the
+/// account ledger.
 pub async fn list_by_accounts(pool: &SqlitePool, account_ids: &[AccountId]) -> Result<Vec<JournalEntry>, AppError> {
     if account_ids.is_empty() {
         return Ok(vec![]);
@@ -154,7 +159,7 @@ pub async fn list_with_filters(
     account_id: Option<AccountId>,
     partner_id: Option<uuid::Uuid>,
     status: Option<JournalEntryStatus>,
-    exclude_reversal_pairs: bool,
+    reversal_scope: ReversalScope,
 ) -> Result<Vec<JournalEntry>, AppError> {
     let mut query_str = "SELECT DISTINCT je.id, je.entry_number, je.journal_type, je.source_id, je.source_type, je.reversal_of_entry_id, je.entry_date, je.description, je.status, je.created_at, je.posted_at, je.reversed_at, je.updated_at FROM journal_entries je JOIN journal_lines jl ON je.id = jl.journal_entry_id WHERE 1=1".to_string();
     
@@ -168,10 +173,13 @@ pub async fn list_with_filters(
     if account_id.is_some() { query_str.push_str(" AND jl.account_id = ?"); }
     if partner_id.is_some() { query_str.push_str(" AND jl.partner_id = ?"); }
     if status.is_some() { query_str.push_str(" AND je.status = ?"); }
-    // The clean daily journal (command + its view) hides both sides of a
-    // reversal pair (the Reversed original and the Posted contra journal).
-    // The full audit mode (report queries, audit view) keeps them.
-    if exclude_reversal_pairs { query_str.push_str(" AND je.reversal_of_entry_id IS NULL"); }
+    // The POSTED-LEDGER scope hides both sides of a reversal pair (the
+    // Reversed original and the Posted contra journal) — the explicit policy
+    // for GL / Trial Balance / Balance Sheet / net-profit feeds. The `All`
+    // scope keeps them for the management list / audit archive.
+    if reversal_scope == ReversalScope::PostedLedger {
+        query_str.push_str(" AND je.reversal_of_entry_id IS NULL");
+    }
     
     query_str.push_str(" ORDER BY CAST(je.entry_number AS INTEGER) DESC");
 

@@ -5,7 +5,7 @@ use domain::accounting::{JournalEntry, JournalEntryStatus};
 
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
-use crate::ports::journal_entry_repository::JournalEntryRepository;
+use crate::ports::journal_entry_repository::{JournalEntryRepository, ReversalScope};
 use crate::use_cases::fiscal_period::types::{ComputedPeriodProfitDto, ComputePeriodProfitCommand};
 
 /// Computes net profit for an explicit accounting window (Sec 19 / Sec 20) —
@@ -46,6 +46,8 @@ impl ComputePeriodNetProfitUseCase {
             ));
         }
 
+        // The POSTED-LEDGER policy (see `ReversalScope`): only Posted entries
+        // with no reversal relationship feed the window's net profit.
         let entries = self
             .journal_repo
             .list_with_filters(
@@ -55,7 +57,7 @@ impl ComputePeriodNetProfitUseCase {
                 None,
                 None,
                 Some(JournalEntryStatus::Posted),
-                false,
+                ReversalScope::PostedLedger,
             )
             .await?;
 

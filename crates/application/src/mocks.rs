@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::asset_repository::AssetRepository;
 use crate::ports::fiscal_period_repository::FiscalPeriodRepository;
-use crate::ports::journal_entry_repository::JournalEntryRepository;
+use crate::ports::journal_entry_repository::{JournalEntryRepository, ReversalScope};
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::settings_repository::SettingsRepository;
 use domain::accounting::account::Account;
@@ -163,13 +163,13 @@ impl JournalEntryRepository for MockJournalRepository {
         account_id: Option<domain::shared::AccountId>,
         partner_id: Option<uuid::Uuid>,
         status: Option<domain::accounting::JournalEntryStatus>,
-        exclude_reversal_pairs: bool,
+        reversal_scope: ReversalScope,
     ) -> Result<Vec<JournalEntry>, AppError> {
         let entries = self.entries.lock().unwrap();
         Ok(entries
             .iter()
             .filter(|e| {
-                if exclude_reversal_pairs && e.reversal_of_entry_id.is_some() {
+                if reversal_scope == ReversalScope::PostedLedger && e.reversal_of_entry_id.is_some() {
                     return false;
                 }
                 if let Some(from) = from_date {

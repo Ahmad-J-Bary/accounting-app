@@ -2,6 +2,7 @@ import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
 import { SYSTEM_ACCOUNT_IDS } from "@erp/shared-types";
 import { toLocalDateStr } from "@shared/lib/format";
 import type { AccountDto, JournalEntryDto } from "@erp/shared-types";
+import { isPostedLedgerEntry } from "@modules/reports/lib/report-policies";
 
 export interface AccountLedgerTotal {
   openingDebit: number;
@@ -63,14 +64,12 @@ export function computeLedgerTotals(
   const accountsWithOpeningEntries = new Set<string>();
 
   for (const entry of entries) {
-    // Reversal pairs are excluded from the GL exactly like the backend ledger
-    // (`list_by_accounts` keeps `status='Posted' AND reversal_of_entry_id IS
-    // NULL`): the original becomes Reversed and the contra journal is dropped,
-    // so a reversed entry is mathematically neutral and never moves a balance.
-    if (entry.reversal_of_entry_id) {
-      continue;
-    }
-    if (entry.status && entry.status !== "Posted") {
+    // The POSTED-LEDGER policy (see `report-policies`): exactly the entries
+    // the backend ledger surfaces (`list_by_accounts`) — Posted with no
+    // reversal relationship. A reversal pair (original + contra) is neutral
+    // and the backend ledger surfaces neither side; a Draft / Cancelled /
+    // Reversed original is never part of the GL.
+    if (!isPostedLedgerEntry(entry)) {
       continue;
     }
 
@@ -111,15 +110,12 @@ export function computeLedgerTotals(
   const periodNetMap = new Map<string, { debit: number; credit: number }>();
 
   for (const entry of entries) {
-    // Financial statements only ever aggregate POSTED entries. A Draft that
-    // leaks into the report feed (defensive belt against the backend
-    // Posted-only command) must never move a GL balance. Reversal journals are
-    // excluded too — their pair (original + contra) is neutral, and the
-    // backend ledger surfaces neither side.
-    if (entry.reversal_of_entry_id) {
-      continue;
-    }
-    if (entry.status && entry.status !== "Posted") {
+    // Financial statements only ever aggregate POSTED-LEDGER entries (see
+    // `report-policies`): Posted with no reversal relationship. A Draft that
+    // leaks into the report feed (defensive belt against the backend posted
+    // command) must never move a GL balance, and neither side of a reversal
+    // pair is ever counted.
+    if (!isPostedLedgerEntry(entry)) {
       continue;
     }
 

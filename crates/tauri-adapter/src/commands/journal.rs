@@ -22,14 +22,13 @@ pub async fn list_journal_entries(
     account_id: Option<String>,
     partner_id: Option<String>,
     status: Option<String>,
-    exclude_reversal_pairs: Option<bool>,
     state: State<'_, AppState>,
 ) -> Result<Vec<JournalEntryDto>, String> {
     ListJournalEntriesUseCase::new(
         state.journal_entry_repo.clone(),
         state.account_repo.clone(),
     )
-    .execute(from_date, to_date, journal_type, account_id, partner_id, status, exclude_reversal_pairs)
+    .execute(from_date, to_date, journal_type, account_id, partner_id, status)
     .await
     .map_err(|e| e.to_string())
 }

@@ -10,7 +10,7 @@ use domain::shared::AccountId;
 
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
-use crate::ports::journal_entry_repository::JournalEntryRepository;
+use crate::ports::journal_entry_repository::{JournalEntryRepository, ReversalScope};
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::use_cases::opening_balance::types::{ComputedNetProfitDto, ComputeNetProfitCommand};
 
@@ -56,6 +56,9 @@ impl ComputeNetProfitUseCase {
         let (from, to) = parse_period(cmd.period_start.as_deref(), cmd.period_end.as_deref())
             .unwrap_or((None, Some(cutover_end_of_day(migration.cutover_date))));
 
+        // The POSTED-LEDGER policy (see `ReversalScope`): only Posted entries
+        // with no reversal relationship feed profit — a reversal contra journal
+        // must never move net profit.
         let entries = self.journal_repo
             .list_with_filters(
                 from,
@@ -64,7 +67,7 @@ impl ComputeNetProfitUseCase {
                 None,
                 None,
                 Some(JournalEntryStatus::Posted),
-                false,
+                ReversalScope::PostedLedger,
             )
             .await?;
 

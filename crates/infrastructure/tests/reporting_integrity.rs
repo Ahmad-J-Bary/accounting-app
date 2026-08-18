@@ -259,13 +259,13 @@ async fn exact_opening_with_residual_is_balanced_and_appears_once() {
 
 // ---------------------------------------------------------------------------
 // 2. REVERSAL NEUTRALITY — a reversed entry must not move the GL: the backend
-//    ledger surfaces neither side of the pair, while the posted report feed
-//    carries exactly the contra row (`reversal_of_entry_id` set, journal_type
-//    inherited from the original — a reversal is a relationship, not a type) —
-//    the contract the frontend `computeLedgerTotals` mirrors.
+//    ledger surfaces neither side of the pair, and the posted report feed
+//    applies the POSTED-LEDGER policy (ReversalScope) so it carries NEITHER
+//    side either — the contract the frontend `computeLedgerTotals` mirrors.
+//    Reversed records are never deleted; both sides stay in the audit archive.
 // ---------------------------------------------------------------------------
 #[tokio::test]
-async fn reversed_entry_is_neutral_in_ledger_and_feed_carries_only_the_contra() {
+async fn reversed_entry_is_neutral_in_ledger_and_report_feed() {
     let pool = build_pool().await;
     let journal_repo: Arc<dyn JournalEntryRepository> =
         Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
@@ -339,17 +339,16 @@ async fn reversed_entry_is_neutral_in_ledger_and_feed_carries_only_the_contra() 
     assert_eq!(after.lines.len(), 0, "the ledger surfaces NEITHER side of the pair");
     assert_eq!(after.closing_balance_base, dec!(0), "reversal is mathematically neutral");
 
-    // The posted report feed carries ONLY the contra row (the original
-    // is Reversed and not Posted). A reversal is a relationship, not a type, so
-    // the contra inherits the original's journal_type (GeneralJournal here) and
-    // remains identifiable via `reversal_of_entry_id`. The frontend
-    // `computeLedgerTotals` drops any entry with `reversal_of_entry_id` set, so
-    // reports stay consistent with the backend ledger.
+    // The posted report feed carries the POSTED-LEDGER policy (ReversalScope
+    // on `execute_posted`): the contra row is ALSO excluded server-side, so
+    // financial statements never receive either side of the pair. A reversal
+    // is a relationship, not a type — the contra inherits the original's
+    // journal_type and stays identifiable in the audit archive via
+    // `reversal_of_entry_id` (records are never deleted).
     let feed = ListJournalEntriesUseCase::new(journal_repo.clone(), account_repo.clone())
         .execute_posted(None, None, None, None)
         .await
         .unwrap();
-    assert_eq!(feed.len(), 1, "only the contra reaches the report feed");
-    assert_eq!(feed[0].journal_type, JournalType::GeneralJournal, "the contra inherits the original's type");
-    assert_eq!(feed[0].reversal_of_entry_id.as_deref(), Some(entry_id.as_str()));
+    assert_eq!(feed.len(), 0, "the report feed carries NEITHER side of the pair");
+    assert!(feed.iter().all(|e| e.reversal_of_entry_id.is_none()));
 }

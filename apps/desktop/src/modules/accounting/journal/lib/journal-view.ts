@@ -1,4 +1,5 @@
 import type { JournalEntryDto, JournalLineDto } from "@erp/shared-types";
+import { isOfficialJournalEntry } from "@modules/reports/lib/report-policies";
 
 const isOriginalAmount = (currencyCode?: string, fxRate?: string) => {
   const rate = parseFloat(fxRate || "1");
@@ -414,14 +415,18 @@ export type JournalEntryReportClass = "operational" | "audit";
 
 /**
  * Reporting policy: a journal is OPERATIONAL only when it is a Posted
- * entry with no reversal relationship. Reversed originals, their Posted contra
- * journals, and Draft/Cancelled entries are never operational — they belong to
- * the separated audit archive so Original / Reversal / Final Opening can never
- * appear as three normal transactions.
+ * entry with no reversal relationship AND an accounting effect (the official
+ * GENERAL JOURNAL policy). Reversed originals, their Posted contra journals,
+ * Draft / Cancelled entries and zero-effect postings are never operational —
+ * they belong to the separated audit archive so Original / Reversal / Final
+ * Opening can never appear as three normal transactions.
+ *
+ * Delegates to the shared explicit policy (`report-policies`) so the journal
+ * view and the financial statements can never drift apart on the published
+ * semantics.
  */
 export function classifyEntryForReport(entry: JournalEntryDto): JournalEntryReportClass {
-  const isOperational = entry.status === "Posted" && !entry.reversal_of_entry_id;
-  return isOperational ? "operational" : "audit";
+  return isOfficialJournalEntry(entry) ? "operational" : "audit";
 }
 
 export function partitionJournalEntries(entries: JournalEntryDto[]): {

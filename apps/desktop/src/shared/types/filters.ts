@@ -21,7 +21,6 @@ export interface JournalFilters {
   account_id?: string;
   partner_id?: string;
   status?: string;
-  exclude_reversal_pairs?: boolean;
   [key: string]: unknown;
 }
 

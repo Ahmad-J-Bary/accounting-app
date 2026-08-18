@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { toJournalLines, journalTwoLineCompare, classifyEntryForReport, partitionJournalEntries, auditGroupKey, deriveJournalTypeDisplay, type JournalRowLine } from "./journal-view";
+import { hasAccountingEffect, isOfficialJournalEntry, isAuditEntry, isPostedLedgerEntry } from "@modules/reports/lib/report-policies";
 
 const makeLine = (
   account_name: string,
@@ -113,25 +114,45 @@ const makeEntry = (overrides: Partial<any>): any => ({
   ...overrides,
 });
 
+/** A JournalLineDto carrying a real non-zero accounting effect. */
+const makeLineDto = (account_id: string, debit: string, credit: string) => ({
+  account_id,
+  account_code: "",
+  currency: "S",
+  fx_rate: "1",
+  debit,
+  credit,
+  debit_base: debit,
+  credit_base: credit,
+  description: "",
+});
+
+/** A Posted, no-reversal entry with an accounting effect (the default shape). */
+const makeOperationalEntry = (overrides: Partial<any> = {}) =>
+  makeEntry({
+    lines: [makeLineDto("a1", "10", "0"), makeLineDto("a2", "0", "10")],
+    ...overrides,
+  });
+
 describe("classifyEntryForReport", () => {
-  it("a Posted entry with no reversal relationship is operational", () => {
-    expect(classifyEntryForReport(makeEntry({}))).toBe("operational");
+  it("a Posted entry with no reversal relationship and an effect is operational", () => {
+    expect(classifyEntryForReport(makeOperationalEntry())).toBe("operational");
   });
 
   it("a Posted contra journal (reversal_of_entry_id set) is audit, not operational", () => {
-    expect(classifyEntryForReport(makeEntry({ reversal_of_entry_id: "e0" }))).toBe("audit");
+    expect(classifyEntryForReport(makeOperationalEntry({ reversal_of_entry_id: "e0" }))).toBe("audit");
   });
 
   it("Reversed, Draft and Cancelled entries are never operational", () => {
-    expect(classifyEntryForReport(makeEntry({ status: "Reversed" }))).toBe("audit");
-    expect(classifyEntryForReport(makeEntry({ status: "Draft" }))).toBe("audit");
-    expect(classifyEntryForReport(makeEntry({ status: "Cancelled" }))).toBe("audit");
+    expect(classifyEntryForReport(makeOperationalEntry({ status: "Reversed" }))).toBe("audit");
+    expect(classifyEntryForReport(makeOperationalEntry({ status: "Draft" }))).toBe("audit");
+    expect(classifyEntryForReport(makeOperationalEntry({ status: "Cancelled" }))).toBe("audit");
   });
 });
 
 describe("partitionJournalEntries", () => {
   it("separates the operational posted list from the audit archive", () => {
-    const operational = makeEntry({ id: "e1" });
+    const operational = makeOperationalEntry({ id: "e1" });
     const contra = makeEntry({ id: "e2", reversal_of_entry_id: "e1" });
     const reversed = makeEntry({ id: "e3", status: "Reversed" });
     const draft = makeEntry({ id: "e4", status: "Draft" });
@@ -254,5 +275,75 @@ describe("Daily Journal: exactly the two official entries, no blank Entry metada
   it("deriveJournalTypeDisplay is non-blank for both official entries", () => {
     expect(deriveJournalTypeDisplay(openingMigrationEntry).trim().length).toBeGreaterThan(0);
     expect(deriveJournalTypeDisplay(residualClassificationEntry).trim().length).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PHASE 3 — explicit report policies: the official GENERAL JOURNAL feed, the
+// separated AUDIT archive, and the posted-ledger policy (GL / TB / BS) each
+// name their own predicate. No generic filter is shared blindly.
+// ---------------------------------------------------------------------------
+describe("hasAccountingEffect (final Posted Residual Classification policy)", () => {
+  const zeroLine = (debit: string, credit: string) => ({
+    account_id: "a53",
+    account_code: "53",
+    debit,
+    credit,
+    fx_rate: "1",
+    currency: "S",
+    debit_base: debit,
+    credit_base: credit,
+  });
+
+  it("the real residual classification (Dr 53 / Cr 52) has an accounting effect", () => {
+    expect(hasAccountingEffect(residualClassificationEntry)).toBe(true);
+  });
+
+  it("a Posted residual with all-zero lines has NO accounting effect", () => {
+    const zeroEffect = makeEntry({ id: "e-zero", status: "Posted", lines: [zeroLine("0", "0")] });
+    expect(hasAccountingEffect(zeroEffect)).toBe(false);
+  });
+
+  it("an entry with no lines has no accounting effect", () => {
+    expect(hasAccountingEffect(makeEntry({ id: "e-empty" }))).toBe(false);
+  });
+});
+
+describe("explicit report policies (PHASE 3)", () => {
+  it("GENERAL JOURNAL: Draft / Cancelled / Reversed / contra / zero-effect are never official", () => {
+    expect(isOfficialJournalEntry(makeOperationalEntry())).toBe(true);
+    expect(isOfficialJournalEntry(makeOperationalEntry({ status: "Draft" }))).toBe(false);
+    expect(isOfficialJournalEntry(makeOperationalEntry({ status: "Cancelled" }))).toBe(false);
+    expect(isOfficialJournalEntry(makeOperationalEntry({ status: "Reversed" }))).toBe(false);
+    expect(isOfficialJournalEntry(makeOperationalEntry({ reversal_of_entry_id: "e0" }))).toBe(false);
+    expect(isOfficialJournalEntry(makeEntry({ status: "Posted", lines: [] }))).toBe(false);
+  });
+
+  it("GENERAL JOURNAL: final Opening Migration and Residual WITH effect are official", () => {
+    expect(isOfficialJournalEntry(openingMigrationEntry)).toBe(true);
+    expect(isOfficialJournalEntry(residualClassificationEntry)).toBe(true);
+  });
+
+  it("AUDIT: everything non-official is archived (Draft / Cancelled / Reversed / contra)", () => {
+    expect(isAuditEntry(makeOperationalEntry({ status: "Draft" }))).toBe(true);
+    expect(isAuditEntry(makeOperationalEntry({ status: "Cancelled" }))).toBe(true);
+    expect(isAuditEntry(makeOperationalEntry({ status: "Reversed" }))).toBe(true);
+    expect(isAuditEntry(makeOperationalEntry({ reversal_of_entry_id: "e0" }))).toBe(true);
+    expect(isAuditEntry(makeOperationalEntry())).toBe(false);
+  });
+
+  it("POSTED-LEDGER (GL / TB / BS): Posted with no reversal relationship", () => {
+    expect(isPostedLedgerEntry(makeEntry({}))).toBe(true);
+    expect(isPostedLedgerEntry(makeEntry({ status: "Draft" }))).toBe(false);
+    expect(isPostedLedgerEntry(makeEntry({ status: "Cancelled" }))).toBe(false);
+    expect(isPostedLedgerEntry(makeEntry({ status: "Reversed" }))).toBe(false);
+    expect(isPostedLedgerEntry(makeEntry({ reversal_of_entry_id: "e0" }))).toBe(false);
+  });
+
+  it("a zero-effect Posted residual is archived — never a blank operational row", () => {
+    const zeroEffect = makeEntry({ id: "e-zero", status: "Posted", lines: [] });
+    expect(classifyEntryForReport(zeroEffect)).toBe("audit");
+    const { audit } = partitionJournalEntries([residualClassificationEntry, zeroEffect]);
+    expect(audit.map((e) => e.id)).toEqual(["e-zero"]);
   });
 });
