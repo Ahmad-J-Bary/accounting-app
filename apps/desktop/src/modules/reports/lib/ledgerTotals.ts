@@ -23,6 +23,24 @@ function isCreditNatureAccount(account: AccountDto): boolean {
 }
 
 /**
+ * An opening-migration pivot source: the canonical aggregate posting
+ * (`opening_balance:{id}`), its residual reclassification
+ * (`residual_classification:{id}`) and its cancellation contra
+ * (`ob_reversal:{id}`). These are official opening-workflow steps — the
+ * residual must be treated as part of the opening position (pre-period), never
+ * as an operational period movement, and its account rows must not double-add
+ * a stale static `opening_balance`.
+ */
+function isOpeningMigrationPivot(entry: JournalEntryDto): boolean {
+  const source = entry.source_id || "";
+  return (
+    source.startsWith("opening_balance:") ||
+    source.startsWith("residual_classification:") ||
+    source.startsWith("ob_reversal:")
+  );
+}
+
+/**
  * Computes general ledger totals for all accounts with strict date range partitioning:
  * 1. Opening entries (opening journal types) and entries before fromDate -> Pre-Period Opening Balance.
  * 2. Operational entries between fromDate and toDate -> Period Movements (Period Debit & Credit).
@@ -58,6 +76,7 @@ export function computeLedgerTotals(
 
     const desc = entry.description || "";
     const isOpeningEntry =
+      isOpeningMigrationPivot(entry) ||
       entry.journal_type === "CashOpeningBalance" ||
       entry.journal_type === "AccountOpeningBalance" ||
       entry.journal_type === "MaterialOpeningBalance" ||
@@ -113,6 +132,7 @@ export function computeLedgerTotals(
 
     const desc = entry.description || "";
     const isOpeningEntry =
+      isOpeningMigrationPivot(entry) ||
       entry.journal_type === "CashOpeningBalance" ||
       entry.journal_type === "AccountOpeningBalance" ||
       entry.journal_type === "MaterialOpeningBalance" ||

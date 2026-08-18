@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toJournalLines, journalTwoLineCompare, classifyEntryForReport, partitionJournalEntries, auditGroupKey, type JournalRowLine } from "./journal-view";
+import { toJournalLines, journalTwoLineCompare, classifyEntryForReport, partitionJournalEntries, auditGroupKey, deriveJournalTypeDisplay, type JournalRowLine } from "./journal-view";
 
 const makeLine = (
   account_name: string,
@@ -152,5 +152,107 @@ describe("auditGroupKey (Phase 4)", () => {
     const contra = makeEntry({ id: "contra", reversal_of_entry_id: "orig" });
     expect(auditGroupKey(contra)).toBe(auditGroupKey(original));
     expect(auditGroupKey(original)).toBe("orig");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 7 — the EXISTING-company Daily Journal holds EXACTLY the two official
+// entries (Opening Migration + Residual Classification), both operational, and
+// every GL row carries non-blank Entry Number / Entry Type at its group start
+// (child lines share the parent entry's metadata — never silently blank).
+// ---------------------------------------------------------------------------
+const phase7Line = (
+  account_id: string,
+  account_name: string,
+  account_code: string,
+  debit: string,
+  credit: string,
+) => ({
+  account_id,
+  account_name,
+  account_code,
+  debit,
+  credit,
+  fx_rate: "1",
+  currency: "S",
+  debit_base: debit,
+  credit_base: credit,
+});
+
+const phase7OpeningEntry = makeEntry({
+  id: "1",
+  entry_number: "1",
+  journal_type: "AccountOpeningBalance",
+  journal_type_display: "قيد افتتاح الشركة",
+  description: "قيد ترحيل رصيد افتتاح الشركة",
+  entry_date: "2026-01-01",
+  lines: [
+    phase7Line("a1910", "النقد والصندوق", "1910", "25", "0"),
+    phase7Line("a1911", "البنوك", "1911", "40", "0"),
+    phase7Line("a1912", "الذمم المدينة", "1912", "80", "0"),
+    phase7Line("a1913", "المخزون", "1913", "120", "0"),
+    phase7Line("a1114", "الأصول الثابتة", "1114", "200", "0"),
+    phase7Line("a2910", "الذمم الدائنة", "2910", "0", "70"),
+    phase7Line("a224", "القروض", "224", "0", "50"),
+    phase7Line("a3911", "جاري أحمد", "3911", "0", "180"),
+    phase7Line("a3912", "جاري محمد", "3912", "0", "120"),
+    phase7Line("a53", "رصيد افتتاحي", "53", "0", "45"),
+  ],
+});
+
+const phase7ResidualEntry = makeEntry({
+  id: "2",
+  entry_number: "2",
+  journal_type: "GeneralJournal",
+  journal_type_display: "اليومية العامة",
+  description: "ترحيل تصنيف الرصيد المتبقي",
+  entry_date: "2026-01-01",
+  lines: [
+    phase7Line("a53", "رصيد افتتاحي", "53", "45", "0"),
+    phase7Line("a3913", "أرباح مرحلة", "3913", "0", "45"),
+  ],
+});
+
+describe("Phase 7 — Daily Journal: exactly the two official entries, no blank Entry metadata", () => {
+  it("only the Opening Migration and the Residual Classification are operational", () => {
+    const { operational, audit } = partitionJournalEntries([
+      phase7OpeningEntry,
+      phase7ResidualEntry,
+    ]);
+    expect(operational.map((e) => e.entry_number)).toEqual(["1", "2"]);
+    expect(audit).toEqual([]);
+    expect(operational.every((e) => classifyEntryForReport(e) === "operational")).toBe(true);
+  });
+
+  it("every GL row (group start included) carries non-blank Entry Number and Entry Type", () => {
+    const lines = [
+      ...toJournalLines(phase7OpeningEntry),
+      ...toJournalLines(phase7ResidualEntry),
+    ];
+
+    // Group starts are exactly the two official entries.
+    const groups = lines.filter(
+      (l, i) => i === 0 || l.group_key !== lines[i - 1].group_key,
+    );
+    expect(groups).toHaveLength(2);
+    expect(groups.map((g) => g.entry_number)).toEqual(["1", "2"]);
+
+    // Every line carries the parent entry's non-blank metadata (the table only
+    // hides the cell on child rows — the values are never missing).
+    for (const l of lines) {
+      expect(l.entry_number.trim().length).toBeGreaterThan(0);
+      expect(l.journal_type_display.trim().length).toBeGreaterThan(0);
+    }
+
+    // The residual journal keeps both legs in one group with its own number.
+    const residualLines = toJournalLines(phase7ResidualEntry);
+    expect(residualLines).toHaveLength(2);
+    expect(residualLines.every((l) => l.entry_number === "2")).toBe(true);
+    expect(residualLines.every((l) => l.group_key === "2")).toBe(true);
+  });
+
+  it("deriveJournalTypeDisplay is non-blank for both official entries", () => {
+    expect(deriveJournalTypeDisplay(phase7OpeningEntry).trim().length).toBeGreaterThan(0);
+    expect(deriveJournalTypeDisplay(phase7ResidualEntry).trim().length).toBeGreaterThan(0);
   });
 });
