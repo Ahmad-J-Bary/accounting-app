@@ -842,4 +842,30 @@ async fn temporary_prep_entry_never_survives_after_opening_completes() {
     );
     let ar_ledger = queries.get_ledger(&[accounts.ar]).await.expect("AR ledger");
     assert_eq!(ar_ledger.lines.len(), 1, "report surface hides the reversal pair");
+
+    // The FULL register (the source the Audit archive reads —
+    // `execute` with ReversalScope::All): it carries the COMPLETE
+    // non-operational history — the Reversed legacy original AND its Posted
+    // contra, records never deleted — while the operational surface stays
+    // exactly the two official entries.
+    let full = ListJournalEntriesUseCase::new(
+        Arc::new(SqliteJournalEntryRepository::new(fx.pool.clone())),
+        Arc::new(SqliteAccountRepository::new(fx.pool.clone())),
+    )
+    .execute(None, None, None, None, None, None)
+    .await
+    .unwrap();
+    assert_eq!(full.len(), 4, "full register = 2 official + legacy original + its contra");
+    assert_eq!(full.iter().filter(|e| e.reversal_of_entry_id.is_some()).count(), 1,
+        "exactly the contra carries the reversal link");
+    assert_eq!(full.iter().filter(|e| e.status == "Reversed").count(), 1,
+        "the Reversed legacy original stays in the archive (records never deleted)");
+    assert_eq!(full.iter().filter(|e| e.status == "Posted").count(), 3,
+        "2 official + the Posted contra");
+    assert_eq!(full.iter().filter(|e| e.reversal_of_entry_id.is_none() && e.status == "Posted").count(), 2,
+        "the two official entries are the only operational rows");
+    let ata_contra = full.iter().find(|e| e.reversal_of_entry_id.is_some()).expect("contra present");
+    let legacy_id = legacy.id.0.to_string();
+    assert_eq!(ata_contra.reversal_of_entry_id.as_deref(), Some(legacy_id.as_str()),
+        "the contra points back at the legacy original — the audit archive keeps the pair linked");
 }
