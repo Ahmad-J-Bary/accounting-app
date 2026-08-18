@@ -45,8 +45,19 @@ export interface SaveAccountCommand {
 export interface AccountLedgerLineDto {
   date: string;
   journal_id: string;
+  /** Canonical parent Journal Entry identity (same value as journal_id). */
+  entry_id: string;
   entry_number: string;
   journal_type: string;
+  /** Canonical machine tag (e.g. "account_opening_balance") — never parse types from text. */
+  entry_type: string;
+  entry_status: string;
+  /** Final Movement Type label for display — render verbatim, never re-derive. */
+  journal_type_display: string;
+  /** Whether this line establishes an opening balance (backend-computed). */
+  is_opening: boolean;
+  line_id: string;
+  account_id: string;
   source_id: string | null;
   description: string;
   opposite_account_name: string;

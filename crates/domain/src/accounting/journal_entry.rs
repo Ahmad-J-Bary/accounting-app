@@ -120,6 +120,11 @@ impl JournalType {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JournalLine {
+    /// Stable line identity (journal_lines.id). Auto-assigned for freshly
+    /// created lines; hydrated from the DB when a persisted entry is loaded so
+    /// the GL can expose a canonical `line_id` with every movement.
+    #[serde(default)]
+    pub id: String,
     pub account_id: AccountId,
     pub partner_id: Option<Uuid>, // For tracking customers/suppliers/partners
     pub debit: MonetaryAmount,
@@ -135,6 +140,7 @@ impl JournalLine {
         description: String,
     ) -> Self {
         Self {
+            id: Uuid::new_v4().to_string(),
             account_id,
             partner_id: None,
             debit,
@@ -270,6 +276,7 @@ impl JournalEntry {
             .lines
             .iter()
             .map(|l| JournalLine {
+                id: Uuid::new_v4().to_string(),
                 account_id: l.account_id,
                 partner_id: l.partner_id,
                 debit: l.credit.clone(),

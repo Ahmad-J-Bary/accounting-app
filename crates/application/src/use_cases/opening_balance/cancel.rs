@@ -77,6 +77,7 @@ impl CancelOpeningBalanceUseCase {
             .lines
             .iter()
             .map(|l| JournalLine {
+                id: uuid::Uuid::new_v4().to_string(),
                 account_id: l.account_id,
                 partner_id: l.partner_id,
                 debit: l.credit.clone(),
@@ -127,6 +128,7 @@ mod tests {
             "test".to_string(),
         );
         let reversed = JournalLine {
+            id: uuid::Uuid::new_v4().to_string(),
             account_id: line.account_id,
             partner_id: line.partner_id,
             debit: line.credit.clone(),

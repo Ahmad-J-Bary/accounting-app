@@ -127,8 +127,21 @@ impl From<AccountLedger> for AccountLedgerDto {
 pub struct AccountLedgerLineDto {
     pub date: String,
     pub journal_id: String,
+    /// Canonical parent Journal Entry identity (same value as `journal_id`,
+    /// kept under the spec's `entry_id` name).
+    pub entry_id: String,
     pub entry_number: String,
     pub journal_type: String,
+    /// Canonical machine tag (`JournalType::source_type`), e.g.
+    /// "account_opening_balance" — the UI must never re-derive types from text.
+    pub entry_type: String,
+    pub entry_status: String,
+    /// Final Movement Type label for display; the UI renders it verbatim.
+    pub journal_type_display: String,
+    /// Whether this line establishes an opening balance (backend-computed).
+    pub is_opening: bool,
+    pub line_id: String,
+    pub account_id: String,
     pub source_id: Option<String>,
     pub description: String,
     pub opposite_account_name: String,
@@ -144,11 +157,19 @@ pub struct AccountLedgerLineDto {
 
 impl From<LedgerLine> for AccountLedgerLineDto {
     fn from(line: LedgerLine) -> Self {
+        let journal_id = line.journal_id.0.to_string();
         Self {
             date: line.date.to_rfc3339(),
-            journal_id: line.journal_id.0.to_string(),
+            journal_id: journal_id.clone(),
+            entry_id: journal_id,
             entry_number: line.entry_number,
             journal_type: line.journal_type.to_string(),
+            entry_type: line.entry_type,
+            entry_status: line.entry_status,
+            journal_type_display: line.journal_type_display,
+            is_opening: line.is_opening,
+            line_id: line.line_id,
+            account_id: line.account_id.0.to_string(),
             source_id: line.source_id,
             description: line.description,
             opposite_account_name: line.opposite_account_name,

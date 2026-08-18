@@ -7,8 +7,15 @@ const filters = { from_date: "2026-01-01", to_date: "2026-08-04" };
 function line(overrides: Partial<AccountLedgerLineDto> & { date: string; debit_base: string; credit_base: string }): AccountLedgerLineDto {
   return {
     journal_id: "j1",
+    entry_id: "j1",
     entry_number: "1",
     journal_type: "ExpenseVoucher",
+    entry_type: "expense_voucher",
+    entry_status: "Posted",
+    journal_type_display: "سند مصاريف",
+    is_opening: false,
+    line_id: "l1",
+    account_id: "a1",
     source_id: null,
     description: "",
     opposite_account_name: "",
@@ -23,7 +30,7 @@ function line(overrides: Partial<AccountLedgerLineDto> & { date: string; debit_b
 }
 
 function openingLine(date: string, debit_base: string, credit_base = "0", description = "رصيد افتتاحي") {
-  return line({ date, debit_base, credit_base, journal_type: "AccountOpeningBalance", description });
+  return line({ date, debit_base, credit_base, journal_type: "AccountOpeningBalance", entry_type: "account_opening_balance", journal_type_display: "رصيد افتتاحي", is_opening: true, description });
 }
 
 function ledger(overrides: Partial<AccountLedgerDto> & { lines?: AccountLedgerLineDto[] }): AccountLedgerDto {

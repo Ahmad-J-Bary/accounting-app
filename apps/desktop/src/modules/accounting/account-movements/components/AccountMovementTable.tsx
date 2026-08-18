@@ -49,7 +49,6 @@ interface AccountMovementTableProps {
 }
 
 type MovementRow = AccountLedgerLineDto & {
-  typeLabel: string;
   side: "debit" | "credit";
   amount_base: number;
   isOpening: boolean;
@@ -57,10 +56,6 @@ type MovementRow = AccountLedgerLineDto & {
   balance: number;
   /** Synthetic Beginning Balance row (رصيد سابق / أول الفترة). */
   isBeginning?: boolean;
-};
-
-type EnrichedOriginalLine = AccountLedgerLineDto & {
-  typeLabel: string;
 };
 
 /**
@@ -124,83 +119,10 @@ export function AccountMovementTable({
 
   const { exportData, baseCurrency, rateMap, sortedCurrencies, formatAmount, baseCode, ratesSheet, currencyMode } = useExportSetup();
 
-  const enrichedLines = useMemo(() => {
-    return lines.map((line) => {
-      let typeLabel = line.journal_type;
-
-      if (typeLabel === "GeneralJournal" || typeLabel === "اليومية العامة") {
-        const desc = line.description || "";
-        const isDepreciation = desc.includes("إهلاك سنوي") || desc.includes("إهلاك");
-        const isOpening = desc.includes("إضافة أصل سابق") || desc.includes("أول المدة");
-        const isPurchase = desc.includes("شراء أصل ثابت") || desc.includes("اثبات شراء");
-
-        if (isDepreciation || isOpening || isPurchase) {
-          let assetType = "أصول ثابتة";
-          const opposite = line.opposite_account_name || "";
-
-          if (
-            opposite.includes("أبنية") ||
-            opposite.includes("أراضي") ||
-            opposite.includes("المباني") ||
-            opposite.includes("الأراضي") ||
-            accountName.includes("أبنية") ||
-            accountName.includes("أراضي") ||
-            accountName.includes("المباني") ||
-            accountName.includes("الأراضي")
-          ) {
-            assetType = "أبنية وأراضي";
-          } else if (
-            opposite.includes("معدات") ||
-            opposite.includes("تجهيزات") ||
-            opposite.includes("الآلات") ||
-            opposite.includes("المعدات") ||
-            accountName.includes("معدات") ||
-            accountName.includes("تجهيزات") ||
-            accountName.includes("الآلات") ||
-            accountName.includes("المعدات")
-          ) {
-            assetType = "معدات وتجهيزات";
-          } else if (
-            opposite.includes("أثاث") ||
-            opposite.includes("مفروشات") ||
-            opposite.includes("المفروشات") ||
-            accountName.includes("أثاث") ||
-            accountName.includes("مفروشات") ||
-            accountName.includes("المفروشات")
-          ) {
-            assetType = "أثاث ومفروشات";
-          }
-
-          if (isDepreciation) {
-            typeLabel = "إهلاك سنوي";
-          } else if (isOpening) {
-            typeLabel = `رصيد افتتاحي للأصول الثابتة / ${assetType}`;
-          } else if (isPurchase) {
-            typeLabel = `شراء أصل ثابت / ${assetType}`;
-          }
-        } else {
-          typeLabel = "اليومية العامة";
-        }
-      } else {
-        if (typeLabel === "GeneralJournal") typeLabel = "اليومية العامة";
-        if (
-          typeLabel === "AccountOpeningBalance" ||
-          typeLabel === "CashOpeningBalance" ||
-          typeLabel === "رصيد افتتاحي لحساب" ||
-          typeLabel === "رصيد افتتاحي للخزينة"
-        ) {
-          typeLabel = "رصيد افتتاحي";
-        }
-      }
-
-      return {
-        ...line,
-        typeLabel,
-      } satisfies EnrichedOriginalLine;
-    });
-  }, [lines, accountName]);
-
-  const mergedLines = enrichedLines;
+  // The Movement Type label is supplied CANONICALLY by the backend
+  // (`journal_type_display`) — no per-line reconstruction from descriptions
+  // happens in React.
+  const mergedLines = lines;
 
   const { sortedData: sortedOriginalLines, sortField, sortDirection, handleSort } = useSortable({
     data: mergedLines,
@@ -216,7 +138,7 @@ export function AccountMovementTable({
           comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
           break;
         case "journal_type":
-          comparison = (a.typeLabel || "").localeCompare(b.typeLabel || "", "ar");
+          comparison = (a.journal_type_display || "").localeCompare(b.journal_type_display || "", "ar");
           break;
       }
       return direction === "asc" ? comparison : -comparison;
@@ -235,7 +157,6 @@ export function AccountMovementTable({
 
       rows.push({
         ...line,
-        typeLabel: line.typeLabel,
         side: debitBase > 0 ? "debit" : "credit",
         amount_base: debitBase > 0 ? debitBase : creditBase,
         isOpening: isOpeningLine(line),
@@ -248,8 +169,15 @@ export function AccountMovementTable({
       rows.unshift({
         date: openingBalanceDate || "",
         journal_id: "",
+        entry_id: "",
         entry_number: "",
         journal_type: "",
+        entry_type: "",
+        entry_status: "",
+        journal_type_display: "رصيد سابق",
+        is_opening: false,
+        line_id: "",
+        account_id: "",
         source_id: null,
         description: "رصيد سابق / أول الفترة",
         opposite_account_name: "",
@@ -261,7 +189,6 @@ export function AccountMovementTable({
         debit_original: "",
         credit_original: "",
         balance_original: "",
-        typeLabel: "رصيد سابق",
         side: sign,
         amount_base: Math.abs(openingBalance),
         isOpening: false,
@@ -305,7 +232,7 @@ export function AccountMovementTable({
               ? "bg-indigo-100/60 text-indigo-700"
               : "bg-slate-100 text-slate-600"
           )}>
-            {r.typeLabel}
+            {r.journal_type_display}
           </span>
         ),
       },
@@ -481,7 +408,7 @@ export function AccountMovementTable({
         accessor: (row) => {
           const r = row as unknown as MovementRow;
           if (col.id === "entry_number") return r.isBeginning ? "" : (parseInt(r.entry_number, 10) || 0);
-          if (col.id === "journal_type") return r.typeLabel;
+          if (col.id === "journal_type") return r.journal_type_display;
           if (col.id === "balance") return r.balance ?? 0;
           if (col.id === "description") return r.description;
           return "";

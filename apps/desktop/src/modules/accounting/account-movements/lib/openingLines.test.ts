@@ -30,6 +30,11 @@ describe("isOpeningLine", () => {
   it("rejects ordinary lines", () => {
     expect(isOpeningLine({ journal_type: "SalesJournal", description: "فاتورة بيع" })).toBe(false);
   });
+
+  it("lets the backend is_opening flag win over the legacy heuristic", () => {
+    expect(isOpeningLine({ journal_type: "GeneralJournal", description: "إثبات رصيد افتتاحي للمورد", is_opening: false })).toBe(false);
+    expect(isOpeningLine({ journal_type: "GeneralJournal", description: "فاتورة بيع", is_opening: true })).toBe(true);
+  });
 });
 
 describe("getOpeningCreationDate", () => {

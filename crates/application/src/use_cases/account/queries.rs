@@ -1,5 +1,6 @@
 use super::error::AccountUseCaseError;
 use super::types::{AccountLedger, LedgerLine};
+use super::display::{derive_journal_type_display, is_opening_line};
 use crate::dto::account_dto::AccountDto;
 use crate::ports::account_repository::AccountRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
@@ -130,6 +131,16 @@ impl AccountQueries {
 
         let id_set: std::collections::HashSet<AccountId> = account_ids.iter().copied().collect();
 
+        let view_account_name = if account_ids.len() == 1 {
+            first_account.name_ar.clone()
+        } else {
+            format!(
+                "{} + {} حسابات فرعية",
+                first_account.name_ar,
+                account_ids.len() - 1
+            )
+        };
+
         let journal_entries = self
             .journal_repo
             .list_by_accounts(account_ids)
@@ -248,6 +259,17 @@ impl AccountQueries {
                     journal_id: entry.id,
                     entry_number: entry.entry_number.clone(),
                     journal_type: effective_type,
+                    entry_type: effective_type.source_type().to_string(),
+                    entry_status: format!("{:?}", entry.status),
+                    journal_type_display: derive_journal_type_display(
+                        effective_type,
+                        &line.description,
+                        &opposite_account_name,
+                        &view_account_name,
+                    ),
+                    is_opening: is_opening_line(effective_type, &line.description),
+                    line_id: line.id.clone(),
+                    account_id: line.account_id,
                     source_id: entry.source_id.clone(),
                     description: line.description.clone(),
                     opposite_account_name: opposite_account_name.clone(),
@@ -268,15 +290,9 @@ impl AccountQueries {
         let total_debit_original = lines.iter().map(|l| l.debit_original).sum();
         let total_credit_original = lines.iter().map(|l| l.credit_original).sum();
 
-        let account_name = if account_ids.len() == 1 {
-            first_account.name_ar.clone()
-        } else {
-            format!("{} + {} حسابات فرعية", first_account.name_ar, account_ids.len() - 1)
-        };
-
         Ok(AccountLedger {
             account_id: first_account.id,
-            account_name,
+            account_name: view_account_name,
             opening_balance_base: opening_balance,
             opening_balance_original: Decimal::ZERO,
             opening_entry: None,

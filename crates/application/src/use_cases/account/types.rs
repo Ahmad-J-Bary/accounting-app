@@ -60,6 +60,16 @@ pub struct LedgerLine {
     pub journal_id: domain::shared::ids::JournalEntryId,
     pub entry_number: String,
     pub journal_type: domain::accounting::JournalType,
+    /// Canonical machine tag (`JournalType::source_type`), e.g.
+    /// "account_opening_balance", so the UI classifies without string parsing.
+    pub entry_type: String,
+    pub entry_status: String,
+    /// Final Movement Type label for display — the UI renders it verbatim.
+    pub journal_type_display: String,
+    /// Whether this line establishes an opening balance (backend-computed).
+    pub is_opening: bool,
+    pub line_id: String,
+    pub account_id: AccountId,
     pub source_id: Option<String>,
     pub description: String,
     pub opposite_account_name: String,

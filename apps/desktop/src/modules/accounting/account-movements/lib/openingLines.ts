@@ -1,7 +1,15 @@
 import type { AccountLedgerLineDto } from "@erp/shared-types";
 import { toLocalDateStr } from "@shared/lib/format";
 
-export function isOpeningLine(l: Pick<AccountLedgerLineDto, "journal_type" | "description">): boolean {
+// Opening classification is computed ONCE by the backend (`is_opening`).
+// The legacy type/description heuristic below is only a fallback for
+// fixtures and callers that still pass lines without the canonical flag.
+type OpeningLineLike = Pick<AccountLedgerLineDto, "journal_type" | "description"> & {
+  is_opening?: boolean;
+};
+
+export function isOpeningLine(l: OpeningLineLike): boolean {
+  if (l.is_opening !== undefined) return l.is_opening;
   const desc = l.description || "";
   return (
     l.journal_type === "AccountOpeningBalance" ||

@@ -580,6 +580,15 @@ async fn canonical_residual_lifecycle_two_official_entries_and_verdict_gate() {
         assert!(ledger.lines.iter().all(|l| !l.entry_number.trim().is_empty()
             && matches!(l.journal_type, JournalType::AccountOpeningBalance | JournalType::GeneralJournal)),
             "every GL row carries non-blank Entry Number / an official Entry Type");
+        assert!(ledger.lines.iter().all(|l| {
+            !l.line_id.trim().is_empty()
+                && !l.account_id.0.to_string().trim().is_empty()
+                && !l.entry_status.trim().is_empty()
+                && !l.entry_type.trim().is_empty()
+                && !l.journal_type_display.trim().is_empty()
+                && !l.journal_id.0.to_string().trim().is_empty()
+        }),
+            "every GL row carries canonical parent/line identity metadata");
     }
 
     // -- GL holds every amount exactly once --------------------------------

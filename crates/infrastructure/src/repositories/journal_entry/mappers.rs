@@ -97,6 +97,7 @@ pub fn row_to_line(r: JournalLineRow) -> JournalLine {
         fx_rate,
     };
     let mut line = JournalLine::new(account_id, debit, credit, r.description);
+    line.id = r.id;
     line.partner_id = partner_id;
     line
 }

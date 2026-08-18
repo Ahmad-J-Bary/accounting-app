@@ -5,6 +5,7 @@ pub mod create;
 pub mod update;
 pub mod delete;
 pub mod queries;
+pub mod display;
 
 pub use error::AccountUseCaseError;
 pub use types::CreateAccountCommand;

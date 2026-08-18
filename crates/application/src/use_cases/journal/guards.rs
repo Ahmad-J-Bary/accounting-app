@@ -53,6 +53,7 @@ mod tests {
     fn line(account: AccountId) -> JournalLine {
         let c = currency();
         JournalLine {
+            id: Uuid::new_v4().to_string(),
             account_id: account,
             partner_id: None,
             debit: MonetaryAmount::new(Money::new(rust_decimal::Decimal::ONE, c.clone()), rust_decimal::Decimal::ONE),
