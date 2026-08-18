@@ -18,12 +18,16 @@ import { getHeaderText, getPrimitiveCellValue, SHARED_COLUMN_IDS } from "./group
 
 import type { JournalEntryDto } from "@erp/shared-types";
 import type { JournalFilters } from "@modules/accounting/api/journalEntryService";
-import { toJournalLines, toJournalLinesSingleLine, journalTwoLineCompare, type JournalRowLine, type JournalSingleLineRow } from "../lib/journal-view";
+import { auditGroupKey, toJournalLines, toJournalLinesSingleLine, journalTwoLineCompare, type JournalRowLine, type JournalSingleLineRow } from "../lib/journal-view";
 
 type DisplayMode = "two-line" | "one-line";
 
 interface JournalTableProps {
   entries: JournalEntryDto[];
+  /** Phase 4 audit archive: Reversed originals + contra journals + Draft +
+   * Cancelled. Rendered in a clearly separated section below the operational
+   * posted list, never interleaved with normal transactions. */
+  auditEntries?: JournalEntryDto[];
   loading: boolean;
   search: string;
   onSearchChange: (val: string) => void;
@@ -76,6 +80,7 @@ function buildJournalMergeRanges(rows: JournalTableRow[], visibleColumnIds: stri
 
 export function JournalTable({ 
   entries, 
+  auditEntries,
   loading, 
   search, 
   onSearchChange, 
@@ -171,6 +176,16 @@ export function JournalTable({
             {e.status === "Reversed" && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-red-100 text-red-600">
                 معكوس
+              </span>
+            )}
+            {e.status === "Draft" && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-200 text-slate-600">
+                مسودة
+              </span>
+            )}
+            {e.status === "Cancelled" && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-300 text-slate-700">
+                ملغي
               </span>
             )}
             {e.status === "Posted" && !e.is_contra && onReverse && (
@@ -279,6 +294,16 @@ export function JournalTable({
             {e.status === "Reversed" && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-red-100 text-red-600">
                 معكوس
+              </span>
+            )}
+            {e.status === "Draft" && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-200 text-slate-600">
+                مسودة
+              </span>
+            )}
+            {e.status === "Cancelled" && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-300 text-slate-700">
+                ملغي
               </span>
             )}
             {e.status === "Posted" && !e.is_contra && onReverse && (
@@ -517,6 +542,58 @@ export function JournalTable({
       return groups;
     }
   }, [isTwoLine, twoLineSort.sortedData, singleLineSort.sortedData]);
+
+  // ============ AUDIT ARCHIVE (Phase 4 — separated section) ============
+  // Reversal pairs are kept adjacent via auditGroupKey so the Reversed
+  // original and its contra always read as ONE audit story, never as two
+  // interleaved operational rows.
+  const auditEntriesSorted = useMemo(() => {
+    const list = auditEntries || [];
+    return [...list].sort((a, b) => {
+      const ga = auditGroupKey(a);
+      const gb = auditGroupKey(b);
+      if (ga !== gb) return ga.localeCompare(gb);
+      return (parseInt(a.entry_number || "0", 10) || 0) - (parseInt(b.entry_number || "0", 10) || 0);
+    });
+  }, [auditEntries]);
+
+  const auditGroupedData = useMemo(() => {
+    if (auditEntriesSorted.length === 0) return [];
+    if (isTwoLine) {
+      const lines = auditEntriesSorted.flatMap((e) => toJournalLines(e)) as JournalRowLine[];
+      const rows = lines.map((line, idx) => ({
+        ...line,
+        isFirstInGroup: idx === 0 || line.group_key !== lines[idx - 1].group_key,
+      })) as JournalTableRow[];
+      const groups: JournalTableRow[][] = [];
+      let group: JournalTableRow[] = [];
+      for (const row of rows) {
+        if (row.isFirstInGroup && group.length > 0) {
+          groups.push(group);
+          group = [];
+        }
+        group.push(row);
+      }
+      if (group.length > 0) groups.push(group);
+      return groups;
+    }
+    const lines = auditEntriesSorted.flatMap((e) => toJournalLinesSingleLine(e)) as JournalSingleLineRow[];
+    const rows = lines.map((line, idx) => ({
+      ...line,
+      isFirstInGroup: idx === 0 || line.group_key !== lines[idx - 1].group_key,
+    })) as JournalSingleLineTableRow[];
+    const groups: JournalSingleLineTableRow[][] = [];
+    let group: JournalSingleLineTableRow[] = [];
+    for (const row of rows) {
+      if (row.isFirstInGroup && group.length > 0) {
+        groups.push(group);
+        group = [];
+      }
+      group.push(row);
+    }
+    if (group.length > 0) groups.push(group);
+    return groups;
+  }, [auditEntriesSorted, isTwoLine]);
 
   // ============ SUMMARY COLUMNS ============
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
@@ -777,6 +854,98 @@ export function JournalTable({
   }, [getColumnSampleValues, getTwoLineExportValue, getSingleLineExportValue, sortedData, enrichedColumns, isTwoLine, exportData, baseCode, rateMap, ratesSheet, sortedCurrencies, hasSecondaryCurrencies, currencyMode]);
 
   // ============ RENDER BODY ============
+  // Shared group-grid renderer used by BOTH the operational list and the
+  // separated audit archive (Phase 4) so the two sections stay visually and
+  // behaviorally consistent.
+  const renderGroupGrid = (
+    group: (JournalTableRow | JournalSingleLineTableRow)[],
+    groupIdx: number,
+    keyPrefix: string,
+  ) => {
+    const first = group[0];
+    const rowCount = group.length;
+
+    return (
+      <div
+        key={`${keyPrefix}-${first.group_key}-${groupIdx}`}
+        dir="rtl"
+        className={cn(
+          "transition-all duration-75",
+          getRowBorderClass(settings.borderStyle),
+          getRowBackgroundClass(false, groupIdx, settings.zebraRows, settings.rowHoverEffect),
+        )}
+        style={{
+          display: "grid",
+          gridTemplateColumns,
+          gridTemplateRows: `repeat(${rowCount}, auto)`,
+        }}
+      >
+        {visibleColumns.flatMap((col, colIdx) => {
+          const columnPosition = colIdx + 1;
+          const isShared = SHARED_COLUMN_IDS.has(col.id);
+
+          if (isShared) {
+            const twoLineCol = col as UnifiedColumn<JournalTableRow>;
+            const singleLineCol = col as UnifiedColumn<JournalSingleLineTableRow>;
+            const cellValue = isTwoLine
+              ? (typeof twoLineCol.accessor === "function"
+                  ? twoLineCol.accessor(first as JournalTableRow, 0)
+                  : ((first as JournalTableRow)[twoLineCol.accessor as keyof JournalTableRow] as ReactNode))
+              : (typeof singleLineCol.accessor === "function"
+                  ? singleLineCol.accessor(first as JournalSingleLineTableRow, 0)
+                  : ((first as JournalSingleLineTableRow)[singleLineCol.accessor as keyof JournalSingleLineTableRow] as ReactNode));
+
+            return (
+              <GroupedEntrySharedCell
+                key={`${col.id}`}
+                rowCount={rowCount}
+                columnPosition={columnPosition}
+                densityClassName={getDensityPadding()}
+                borderClassName={cellBorderClass}
+                className={col.className}
+                fontSize={settings.fontSize}
+                fontFamily={settings.fontFamily}
+              >
+                {cellValue}
+              </GroupedEntrySharedCell>
+            );
+          }
+
+          return group.map((row, rowIdx) => {
+            const twoLineCol = col as UnifiedColumn<JournalTableRow>;
+            const singleLineCol = col as UnifiedColumn<JournalSingleLineTableRow>;
+            const val = isTwoLine
+              ? (typeof twoLineCol.accessor === "function"
+                  ? twoLineCol.accessor(row as JournalTableRow, rowIdx)
+                  : ((row as JournalTableRow)[twoLineCol.accessor as keyof JournalTableRow] as ReactNode))
+              : (typeof singleLineCol.accessor === "function"
+                  ? singleLineCol.accessor(row as JournalSingleLineTableRow, rowIdx)
+                  : ((row as JournalSingleLineTableRow)[singleLineCol.accessor as keyof JournalSingleLineTableRow] as ReactNode));
+
+            return (
+              <div
+                key={`${col.id}-${rowIdx}`}
+                style={{
+                  gridRow: rowIdx + 1,
+                  gridColumn: String(columnPosition),
+                  ...getCellStyle(),
+                }}
+                className={cn(
+                  getDensityPadding(),
+                  cellBorderClass,
+                  "text-slate-600",
+                  col.className,
+                )}
+              >
+                {val || ""}
+              </div>
+            );
+          });
+        })}
+      </div>
+    );
+  };
+
   const renderBody = () => {
     if (loading) {
       return Array.from({ length: 5 }).map((_, idx) => (
@@ -812,90 +981,7 @@ export function JournalTable({
       return <EmptyState message="لا توجد قيود يومية مسجلة" />;
     }
 
-    return groupedData.map((group, groupIdx) => {
-      const first = group[0];
-      const rowCount = group.length;
-
-      return (
-        <div
-          key={`group-${first.group_key}-${groupIdx}`}
-          dir="rtl"
-          className={cn(
-            "transition-all duration-75",
-            getRowBorderClass(settings.borderStyle),
-            getRowBackgroundClass(false, groupIdx, settings.zebraRows, settings.rowHoverEffect),
-          )}
-          style={{
-            display: "grid",
-            gridTemplateColumns,
-            gridTemplateRows: `repeat(${rowCount}, auto)`,
-          }}
-        >
-          {visibleColumns.flatMap((col, colIdx) => {
-            const columnPosition = colIdx + 1;
-            const isShared = SHARED_COLUMN_IDS.has(col.id);
-
-            if (isShared) {
-              const twoLineCol = col as UnifiedColumn<JournalTableRow>;
-              const singleLineCol = col as UnifiedColumn<JournalSingleLineTableRow>;
-              const cellValue = isTwoLine
-                ? (typeof twoLineCol.accessor === "function"
-                    ? twoLineCol.accessor(first as JournalTableRow, 0)
-                    : ((first as JournalTableRow)[twoLineCol.accessor as keyof JournalTableRow] as ReactNode))
-                : (typeof singleLineCol.accessor === "function"
-                    ? singleLineCol.accessor(first as JournalSingleLineTableRow, 0)
-                    : ((first as JournalSingleLineTableRow)[singleLineCol.accessor as keyof JournalSingleLineTableRow] as ReactNode));
-
-              return (
-                <GroupedEntrySharedCell
-                  key={`${col.id}`}
-                  rowCount={rowCount}
-                  columnPosition={columnPosition}
-                  densityClassName={getDensityPadding()}
-                  borderClassName={cellBorderClass}
-                  className={col.className}
-                  fontSize={settings.fontSize}
-                  fontFamily={settings.fontFamily}
-                >
-                  {cellValue}
-                </GroupedEntrySharedCell>
-              );
-            }
-
-            return group.map((row, rowIdx) => {
-              const twoLineCol = col as UnifiedColumn<JournalTableRow>;
-              const singleLineCol = col as UnifiedColumn<JournalSingleLineTableRow>;
-              const val = isTwoLine
-                ? (typeof twoLineCol.accessor === "function"
-                    ? twoLineCol.accessor(row as JournalTableRow, rowIdx)
-                    : ((row as JournalTableRow)[twoLineCol.accessor as keyof JournalTableRow] as ReactNode))
-                : (typeof singleLineCol.accessor === "function"
-                    ? singleLineCol.accessor(row as JournalSingleLineTableRow, rowIdx)
-                    : ((row as JournalSingleLineTableRow)[singleLineCol.accessor as keyof JournalSingleLineTableRow] as ReactNode));
-
-              return (
-                <div
-                  key={`${col.id}-${rowIdx}`}
-                  style={{
-                    gridRow: rowIdx + 1,
-                    gridColumn: String(columnPosition),
-                    ...getCellStyle(),
-                  }}
-                  className={cn(
-                    getDensityPadding(),
-                    cellBorderClass,
-                    "text-slate-600",
-                    col.className,
-                  )}
-                >
-                  {val || ""}
-                </div>
-              );
-            });
-          })}
-        </div>
-      );
-    });
+    return groupedData.map((group, groupIdx) => renderGroupGrid(group, groupIdx, "group"));
   };
 
   return (
@@ -944,6 +1030,16 @@ export function JournalTable({
         />
 
         {renderBody()}
+
+        {auditGroupedData.length > 0 && (
+          <div dir="rtl">
+            <div className="flex items-center justify-between px-4 py-2 bg-amber-50 border-y-2 border-amber-300" style={{ fontFamily: settings.fontFamily, fontSize: settings.fontSize }}>
+              <span className="text-sm font-black text-amber-800">أرشيف التدقيق — القيود المعكوسة والملغاة</span>
+              <span className="text-xs font-bold text-amber-700">{(auditEntries || []).length} قيد</span>
+            </div>
+            {auditGroupedData.map((group, groupIdx) => renderGroupGrid(group, groupIdx, "audit"))}
+          </div>
+        )}
       </div>
 
       {showSummary && (

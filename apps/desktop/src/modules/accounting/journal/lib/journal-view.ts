@@ -44,32 +44,14 @@ function classifyAssetSubType(line: JournalLineDto): "أبنية وأراضي" |
   return null;
 }
 
-export interface JournalRowLine {
-  group_key: string;
-  id: string;
-  entry_number: string;
-  journal_type_display: string;
-  status?: string;
-  /** True when this entry is a reversal contra of another entry (display-only
-   * derivation of `reversal_of_entry_id`). A reversal is a relationship, not a
-   * type — so the semantic type above is unchanged, only badged differently. */
-  is_contra?: boolean;
-  description: string;
-  entry_date: string;
-  created_at: string;
-  account_name: string;
-  account_code?: string;
-  /** Entry-level sort anchor for the account column: every line of one journal
-   * shares the same value, so a multi-line entry stays adjacent (one header)
-   * even when the register is sorted by account. */
-  groupSortAccount: string;
-  side: "debit" | "credit";
-  amount_base: number;
-  amount_original: number;
-  currency?: string;
-}
-
-export function toJournalLines(entry: JournalEntryDto): JournalRowLine[] {
+/**
+ * Arabic display label for a journal ENTRY (display-only derivation). The
+ * source of truth stays the `journal_type` variant; status and the reversal
+ * relationship are surfaced separately as badges (عكس / معكوس / مسودة / ملغي),
+ * never baked into the stored label. Shared by both the two-line and one-line
+ * report shapes so the derivation cannot drift between them.
+ */
+export function deriveJournalTypeDisplay(entry: JournalEntryDto): string {
   let journalTypeDisplay = entry.journal_type_display;
 
   if (
@@ -137,6 +119,37 @@ export function toJournalLines(entry: JournalEntryDto): JournalRowLine[] {
       }
     }
   }
+
+  return journalTypeDisplay;
+}
+
+export interface JournalRowLine {
+  group_key: string;
+  id: string;
+  entry_number: string;
+  journal_type_display: string;
+  status?: string;
+  /** True when this entry is a reversal contra of another entry (display-only
+   * derivation of `reversal_of_entry_id`). A reversal is a relationship, not a
+   * type — so the semantic type above is unchanged, only badged differently. */
+  is_contra?: boolean;
+  description: string;
+  entry_date: string;
+  created_at: string;
+  account_name: string;
+  account_code?: string;
+  /** Entry-level sort anchor for the account column: every line of one journal
+   * shares the same value, so a multi-line entry stays adjacent (one header)
+   * even when the register is sorted by account. */
+  groupSortAccount: string;
+  side: "debit" | "credit";
+  amount_base: number;
+  amount_original: number;
+  currency?: string;
+}
+
+export function toJournalLines(entry: JournalEntryDto): JournalRowLine[] {
+  const journalTypeDisplay = deriveJournalTypeDisplay(entry);
 
   const lines: JournalRowLine[] = [];
   const groupSortAccount =
@@ -291,73 +304,7 @@ export interface JournalSingleLineRow {
 }
 
 export function toJournalLinesSingleLine(entry: JournalEntryDto): JournalSingleLineRow[] {
-  let journalTypeDisplay = entry.journal_type_display;
-
-  if (
-    entry.journal_type === "CashSalesJournal" ||
-    entry.journal_type === "CreditSalesJournal"
-  ) {
-    journalTypeDisplay = "مبيعات نقدية";
-  }
-  if (entry.journal_type === "PurchaseReturnJournal") {
-    journalTypeDisplay = "مرتجعات المشتريات";
-  }
-  if (entry.journal_type === "SalesReturnJournal") {
-    journalTypeDisplay = "مرتجعات المبيعات";
-  }
-  if (entry.journal_type === "SupplierReceiptJournal") {
-    journalTypeDisplay = "سند قبض من مورد";
-  }
-  if (entry.journal_type === "CustomerPaymentJournal") {
-    journalTypeDisplay = "سند دفع لعميل";
-  }
-
-  if (entry.journal_type === "GeneralJournal") {
-    const desc = entry.description || "";
-    const isDepreciation = desc.includes("إهلاك سنوي") || desc.includes("إهلاك");
-    const isOpening = desc.includes("إضافة أصل سابق") || desc.includes("أول المدة");
-    const isPurchase = desc.includes("شراء أصل ثابت") || desc.includes("اثبات شراء");
-
-    if (isDepreciation || isOpening || isPurchase) {
-      let assetType: string = "أصول ثابتة";
-      for (const line of entry.lines) {
-        if (line.account_purpose === "fixed_asset") continue;
-        const subtype = classifyAssetSubType(line);
-        if (subtype) {
-          assetType = subtype;
-          break;
-        }
-      }
-
-      if (isDepreciation) {
-        journalTypeDisplay = "إهلاك سنوي";
-      } else if (isOpening) {
-        journalTypeDisplay = `رصيد افتتاحي للأصول الثابتة / ${assetType}`;
-      } else if (isPurchase) {
-        journalTypeDisplay = `شراء أصل ثابت / ${assetType}`;
-      }
-    } else {
-      const debits = entry.lines.filter((l) => parseFloat(l.debit || "0") > 0);
-      const credits = entry.lines.filter((l) => parseFloat(l.credit || "0") > 0);
-      if (debits.length === 1 && credits.length === 1) {
-        const drLine = debits[0];
-        const crLine = credits[0];
-        if (
-          (drLine.partner_id && !crLine.partner_id) ||
-          crLine.account_code?.startsWith("332") ||
-          crLine.account_name?.includes("خصوم مكتسبة")
-        ) {
-          journalTypeDisplay = "حسم مكتسب";
-        } else if (
-          (!drLine.partner_id && crLine.partner_id) ||
-          drLine.account_code?.startsWith("47") ||
-          drLine.account_name?.includes("خصوم ممنوحة")
-        ) {
-          journalTypeDisplay = "حسم ممنوح";
-        }
-      }
-    }
-  }
+  const journalTypeDisplay = deriveJournalTypeDisplay(entry);
 
   const debits = entry.lines.filter((l) => parseFloat(l.debit || "0") > 0);
   const credits = entry.lines.filter((l) => parseFloat(l.credit || "0") > 0);
@@ -461,4 +408,39 @@ export function journalTwoLineCompare(
       break;
   }
   return direction === "asc" ? comparison : -comparison;
+}
+
+export type JournalEntryReportClass = "operational" | "audit";
+
+/**
+ * Phase 4 reporting policy: a journal is OPERATIONAL only when it is a Posted
+ * entry with no reversal relationship. Reversed originals, their Posted contra
+ * journals, and Draft/Cancelled entries are never operational — they belong to
+ * the separated audit archive so Original / Reversal / Final Opening can never
+ * appear as three normal transactions.
+ */
+export function classifyEntryForReport(entry: JournalEntryDto): JournalEntryReportClass {
+  const isOperational = entry.status === "Posted" && !entry.reversal_of_entry_id;
+  return isOperational ? "operational" : "audit";
+}
+
+export function partitionJournalEntries(entries: JournalEntryDto[]): {
+  operational: JournalEntryDto[];
+  audit: JournalEntryDto[];
+} {
+  const operational: JournalEntryDto[] = [];
+  const audit: JournalEntryDto[] = [];
+  for (const entry of entries) {
+    (classifyEntryForReport(entry) === "operational" ? operational : audit).push(entry);
+  }
+  return { operational, audit };
+}
+
+/**
+ * Audit-archive ordering key: a reversal is a relationship — the contra
+ * journal carries `reversal_of_entry_id` pointing at the Reversed original.
+ * Grouping by this key keeps each pair adjacent in the audit section.
+ */
+export function auditGroupKey(entry: JournalEntryDto): string {
+  return entry.reversal_of_entry_id || entry.id;
 }

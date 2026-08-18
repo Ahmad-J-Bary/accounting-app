@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toJournalLines, journalTwoLineCompare, type JournalRowLine } from "./journal-view";
+import { toJournalLines, journalTwoLineCompare, classifyEntryForReport, partitionJournalEntries, auditGroupKey, type JournalRowLine } from "./journal-view";
 
 const makeLine = (
   account_name: string,
@@ -91,5 +91,66 @@ describe("journalTwoLineCompare (group-level account anchor)", () => {
   it("sorts by entry date", () => {
     const older = { ...e9, entry_date: "2026-01-01" };
     expect(journalTwoLineCompare(older, residualDr, "created_at", "asc")).toBeLessThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 4 reporting policy: operational vs audit archive split.
+// ---------------------------------------------------------------------------
+const makeEntry = (overrides: Partial<any>): any => ({
+  id: "e1",
+  entry_number: "1",
+  journal_type: "GeneralJournal",
+  journal_type_display: "اليومية العامة",
+  status: "Posted",
+  description: "قيد اختبار",
+  entry_date: "2026-01-01",
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+  total_base_debit: "0",
+  total_base_credit: "0",
+  lines: [],
+  ...overrides,
+});
+
+describe("classifyEntryForReport (Phase 4)", () => {
+  it("a Posted entry with no reversal relationship is operational", () => {
+    expect(classifyEntryForReport(makeEntry({}))).toBe("operational");
+  });
+
+  it("a Posted contra journal (reversal_of_entry_id set) is audit, not operational", () => {
+    expect(classifyEntryForReport(makeEntry({ reversal_of_entry_id: "e0" }))).toBe("audit");
+  });
+
+  it("Reversed, Draft and Cancelled entries are never operational", () => {
+    expect(classifyEntryForReport(makeEntry({ status: "Reversed" }))).toBe("audit");
+    expect(classifyEntryForReport(makeEntry({ status: "Draft" }))).toBe("audit");
+    expect(classifyEntryForReport(makeEntry({ status: "Cancelled" }))).toBe("audit");
+  });
+});
+
+describe("partitionJournalEntries (Phase 4)", () => {
+  it("separates the operational posted list from the audit archive", () => {
+    const operational = makeEntry({ id: "e1" });
+    const contra = makeEntry({ id: "e2", reversal_of_entry_id: "e1" });
+    const reversed = makeEntry({ id: "e3", status: "Reversed" });
+    const draft = makeEntry({ id: "e4", status: "Draft" });
+    const cancelled = makeEntry({ id: "e5", status: "Cancelled" });
+
+    const { operational: ops, audit } = partitionJournalEntries([
+      operational, contra, reversed, draft, cancelled,
+    ]);
+
+    expect(ops.map((e) => e.id)).toEqual(["e1"]);
+    expect(audit.map((e) => e.id)).toEqual(["e2", "e3", "e4", "e5"]);
+  });
+});
+
+describe("auditGroupKey (Phase 4)", () => {
+  it("keeps a reversal pair together: the contra points at the original", () => {
+    const original = makeEntry({ id: "orig" });
+    const contra = makeEntry({ id: "contra", reversal_of_entry_id: "orig" });
+    expect(auditGroupKey(contra)).toBe(auditGroupKey(original));
+    expect(auditGroupKey(original)).toBe("orig");
   });
 });

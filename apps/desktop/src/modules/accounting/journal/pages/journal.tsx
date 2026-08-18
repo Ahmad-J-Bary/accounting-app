@@ -15,6 +15,7 @@ import { invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
 // Refactored Components & Hooks
 import { useDataTable } from '@shared/hooks';
 import { JournalTable } from '@modules/accounting/journal/components/JournalTable';
+import { partitionJournalEntries } from "@modules/accounting/journal/lib/journal-view";
 import { JOURNAL_TYPES } from "@modules/accounting/journal/lib/journal-config";
 
 type DisplayMode = "two-line" | "one-line";
@@ -35,10 +36,10 @@ export default function Journal() {
   const [reversingId, setReversingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  // Clean journal view: posted entries only, both sides of a reversal pair
-  // hidden. Toggle off to see the full audit trail (Draft/Cancelled/Reversed
-  // originals + their Posted contra journals).
-  const [excludeReversals, setExcludeReversals] = useState(true);
+  // Phase 4 reporting policy: the normal posted list NEVER contains reversed
+  // originals or their contra journals — those live in the separated audit
+  // archive shown only when the toggle is on.
+  const [showAudit, setShowAudit] = useState(false);
 
   useEffect(() => {
     localStorage.setItem("journal-display-mode", displayMode);
@@ -52,13 +53,10 @@ export default function Journal() {
     }
   }, [typeParam, journalType]);
 
-  // Fetch all entries; the date range is applied client-side (local dates),
-  // mirroring the Account Movements page for consistent behavior.
-  const queryFilters = useMemo<JournalFilters>(() => (
-    excludeReversals
-      ? { status: 'Posted', exclude_reversal_pairs: true }
-      : {}
-  ), [excludeReversals]);
+  // Fetch ALL entries (operational + audit). The operational/audit split is
+  // equivalent to the backend `exclude_reversal_pairs` SQL rule and is done
+  // client-side so both views share one source of truth.
+  const queryFilters = useMemo<JournalFilters>(() => ({}), []);
 
   const fetchData = useCallback(() => {
     return journalEntryService.listJournalEntries(queryFilters);
@@ -107,6 +105,13 @@ export default function Journal() {
     return list;
   }, [entries, journalType, dateFilters.from_date, dateFilters.to_date]);
 
+  // Split the (date + type filtered) register into the operational posted list
+  // and the separated audit archive (Reversed / contra / Draft / Cancelled).
+  const { operational, audit } = useMemo(
+    () => partitionJournalEntries(displayEntries),
+    [displayEntries],
+  );
+
   const journalTitle = JOURNAL_TYPES.find(t => t.value === (journalType || 'GeneralJournal'))?.label || 'القيود اليومية';
 
   const handleReverse = useCallback(async (id: string) => {
@@ -141,7 +146,8 @@ export default function Journal() {
       tableContent={
         <JournalTable
           key={`journal-table-${journalType || 'GeneralJournal'}-${displayMode}`}
-          entries={displayEntries}
+          entries={operational}
+          auditEntries={showAudit ? audit : undefined}
           loading={loading}
           search={search}
           onSearchChange={setSearch}
@@ -169,15 +175,15 @@ export default function Journal() {
               <div className="flex items-center gap-1 ml-2">
                 <button
                   type="button"
-                  onClick={() => setExcludeReversals(v => !v)}
+                  onClick={() => setShowAudit(v => !v)}
                   className={`px-3 py-2 rounded-lg text-sm font-bold border transition-colors ${
-                    excludeReversals
+                    showAudit
                       ? "bg-slate-800 text-white border-slate-800"
                       : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
                   }`}
-                  title="إخفاء القيود المعكوسة والعكسية (الوضع النظيف) / عرض مسار التدقيق الكامل"
+                  title="عرض / إخفاء أرشيف التدقيق: القيود المعكوسة والملغاة والمسودات — منفصل عن القيود التشغيلية"
                 >
-                  {excludeReversals ? "إخفاء المعكوسات" : "عرض كل القيود"}
+                  {showAudit ? "إخفاء أرشيف التدقيق" : "عرض أرشيف التدقيق"}
                 </button>
               </div>
 
