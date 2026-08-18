@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@shared/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
@@ -15,13 +16,14 @@ import { StatCard } from "@widgets/stats/StatCard";
 import { StatusBadge } from '@widgets/stats/StatusBadge';
 import { QuickActions } from '@app/shell/QuickActions';
 
+import { QUERY_KEYS } from '@shared/hooks/queryClient';
 import { journalEntryService } from '@modules/accounting/api/journalEntryService';
 import { paymentService } from '@modules/payments/api/paymentService';
 import { materialService } from '@modules/inventory/api/materialService';
 import { categoryService } from '@modules/inventory/api/categoryService';
+import { stockMovementService } from '@modules/inventory/api/stockMovementService';
 import { computeDashboardKpis } from '@modules/accounting/dashboard/lib/gl-kpis';
-
-import type { JournalEntryDto, Payment, MaterialDto, CategoryDto } from "@erp/shared-types";
+import { computeInventoryProjection, inventoryAdjustmentNets } from '@modules/reports/lib/inventory';
 
 import { useCurrencyContext, type CurrencyDisplayMode } from "@app/providers/CurrencyContext";
 
@@ -33,41 +35,59 @@ const CHART_COLORS = ["#2563eb", "#10b981", "#f59e0b", "#64748b", "#8b5cf6", "#e
 export default function Dashboard() {
   const { formatAmount, displayMode, baseCurrency, currencies } = useCurrencyContext();
   const [localDisplayMode, setLocalDisplayMode] = useState<CurrencyDisplayMode | "both">(displayMode);
-  const [recentJournals, setRecentJournals] = useState<JournalEntryDto[]>([]);
-  const [allJournalEntries, setAllJournalEntries] = useState<JournalEntryDto[]>([]);
-  const [paymentEntries, setPaymentEntries] = useState<Payment[]>([]);
-  const [productItems, setProductItems] = useState<MaterialDto[]>([]);
-  const [categories, setCategories] = useState<CategoryDto[]>([]);
-  const [, setLoading] = useState(true);
+
+  // React Query feeds, invalidated after every accounting mutation (see
+  // `ALL_REPORT_KEYS` / `ALL_INVENTORY_KEYS`) — the dashboard refreshes with
+  // the posted ledger instead of a full page reload.
+  const journalQuery = useQuery({
+    queryKey: QUERY_KEYS.dashboard,
+    queryFn: () => journalEntryService.listPostedJournalEntries(),
+  });
+  const paymentsQuery = useQuery({
+    queryKey: QUERY_KEYS.payments,
+    queryFn: () => paymentService.listPayments(),
+  });
+  const materialsQuery = useQuery({
+    queryKey: QUERY_KEYS.materials,
+    queryFn: () => materialService.list(),
+  });
+  const categoriesQuery = useQuery({
+    queryKey: QUERY_KEYS.categories,
+    queryFn: () => categoryService.list(),
+  });
+  const stockMovementsQuery = useQuery({
+    queryKey: QUERY_KEYS.stockMovements,
+    queryFn: () => stockMovementService.list(),
+  });
+
+  const allJournalEntries = useMemo(() => journalQuery.data ?? [], [journalQuery.data]);
+  const paymentEntries = useMemo(() => paymentsQuery.data ?? [], [paymentsQuery.data]);
+  const productItems = useMemo(() => materialsQuery.data ?? [], [materialsQuery.data]);
+  const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
+  const stockMovements = useMemo(() => stockMovementsQuery.data ?? [], [stockMovementsQuery.data]);
 
   const toNumber = (value?: string | null) => {
     const parsed = Number.parseFloat(value ?? "0");
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
-  useEffect(() => {
-    setLoading(true);
-    Promise.all([
-      journalEntryService.listJournalEntries(),
-      paymentService.listPayments(),
-      materialService.list(),
-      categoryService.list(),
-    ])
-      .then(([entries, paymentData, productData, catData]) => {
-        setAllJournalEntries(entries);
-        setRecentJournals(entries.slice(0, 5));
-        setPaymentEntries(paymentData);
-        setProductItems(productData);
-        setCategories(catData);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
-
   // === GL-computed KPIs (from the posted ledger: DR/CR respected by account nature) ===
   const glKpis = useMemo(() => computeDashboardKpis(allJournalEntries), [allJournalEntries]);
 
-  const { sales: postedSalesTotal, purchases: approvedPurchasesTotal, cashBalance, receivables, payables, inventory, monthly: glMonthly } = glKpis;
+  const { sales: postedSalesTotal, purchases: approvedPurchasesTotal, cashBalance, receivables, payables, monthly: glMonthly } = glKpis;
+
+  // === المخزون = نفس إسقاط "بضاعة آخر المدة" في قائمة الدخل (نفس الوظيفة،
+  // نفس تاريخ الاستحقاق): مخزون أول المدة + حركات الفترة + تسويات 331/45. ===
+  const inventory = useMemo(() => {
+    const adjustments = inventoryAdjustmentNets(allJournalEntries);
+    return computeInventoryProjection(
+      stockMovements,
+      { fromTs: 0, toTs: Date.now() },
+      adjustments,
+    ).closingInventory;
+  }, [stockMovements, allJournalEntries]);
+
+  const recentJournals = useMemo(() => allJournalEntries.slice(0, 5), [allJournalEntries]);
 
   const lowStock = useMemo(() => productItems.filter(
     (p) => toNumber(p.total_available) < toNumber(p.minimum_stock)

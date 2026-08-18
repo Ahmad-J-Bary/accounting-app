@@ -64,7 +64,8 @@ export const QUERY_KEYS = {
   incomeStatement: ["reports", "income-statement"] as const,
   balanceSheet: ["reports", "balance-sheet"] as const,
   partnerProfitShare: ["reports", "partner-profit-share"] as const,
-  trialBalance: ["reports", "trial-balance"] as const,
+  trialBalance: (from?: string, to?: string) => ["reports", "trial-balance", from, to] as const,
+  dashboard: ["reports", "dashboard"] as const,
 
   fixedAssets: ["fixed-assets"] as const,
   productionOrders: ["production-orders"] as const,
@@ -87,6 +88,7 @@ export const ALL_REPORT_KEYS: readonly (readonly unknown[])[] = [
   QUERY_KEYS.incomeStatement,
   QUERY_KEYS.balanceSheet,
   QUERY_KEYS.partnerProfitShare,
+  QUERY_KEYS.dashboard,
   ["journal-entries"] as const,
   QUERY_KEYS.chartOfAccounts,
   QUERY_KEYS.chartOfAccountsTree,

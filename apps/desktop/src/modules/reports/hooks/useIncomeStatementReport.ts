@@ -20,14 +20,10 @@ export function useIncomeStatementReport(): ReportState<LoadedIncomeStatementDat
     const run = async () => {
       setLoadingLedgers(true);
       try {
-        const { stockMovementsByMaterial, expenseLedgers } = await loadMaterialExpenseLedgers(
-          baseData.materials,
-          baseData.expenseAccounts
-        );
+        const stockMovementsByMaterial = await loadMaterialExpenseLedgers(baseData.materials);
         if (active) {
           setResolvedData({
             ...baseData,
-            expenseLedgers,
             stockMovementsByMaterial,
           });
           setLastLoadedAt(new Date());

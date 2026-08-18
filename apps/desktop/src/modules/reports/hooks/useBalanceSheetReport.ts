@@ -52,16 +52,14 @@ export function useBalanceSheetReport(filters: IncomeStatementFilters): ReportSt
     const run = async () => {
       setLoadingLedgers(true);
       try {
-        const { stockMovementsByMaterial, expenseLedgers } = await loadMaterialExpenseLedgers(
-          baseData.materials,
-          baseData.expenseAccounts
+        const stockMovementsByMaterial = await loadMaterialExpenseLedgers(
+          baseData.materials
         );
         if (!active) return;
 
         const incomeStatementData = {
           ...emptyIncomeStatementData,
           ...baseData,
-          expenseLedgers,
           stockMovementsByMaterial,
         };
 

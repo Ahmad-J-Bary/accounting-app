@@ -1,10 +1,9 @@
-import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
 import { startOfDay, endOfDay, isWithinRange } from "@modules/reports/lib/date-utils";
-import { getOpeningTotals, isOpeningLine } from "@modules/accounting/account-movements/lib/openingLines";
+import { computeGlAccountNets } from "@modules/reports/lib/glAccountNets";
+import { computeInventoryProjection } from "@modules/reports/lib/inventory";
 import type { ReportFilters } from "@shared/types/filters";
 import type {
   AccountDto,
-  AccountLedgerDto,
   InvoiceDto,
   JournalEntryDto,
   MaterialDto,
@@ -21,8 +20,7 @@ export type LoadedIncomeStatementData = {
   purchaseInvoices: InvoiceDto[];
   purchaseReturns: PurchaseReturnDto[];
   salesReturns: SalesReturnDto[];
-  expenseAccounts: AccountDto[];
-  expenseLedgers: Map<string, AccountLedgerDto>;
+  expenseAccounts?: AccountDto[];
   stockMovementsByMaterial: Map<string, StockMovementDetailDto[]>;
   materials: MaterialDto[];
   accounts?: AccountDto[];
@@ -70,39 +68,24 @@ export const emptyIncomeStatementData: LoadedIncomeStatementData = {
   purchaseInvoices: [],
   purchaseReturns: [],
   salesReturns: [],
-  expenseAccounts: [],
-  expenseLedgers: new Map(),
   stockMovementsByMaterial: new Map(),
   materials: [],
   accounts: [],
   entries: [],
 };
 
-export function parseNumber(value?: string | number | null) {
-  return parseSafeNumber(value);
-}
+/**
+ * Operational expense-account codes excluded from "إجمالي المصاريف": their
+ * economics flow through dedicated lines of the statement instead — purchases
+ * (41) and sales returns (42) stay in the trading section, drawings (44) are a
+ * contra-equity item, inventory settlement losses (45) and discounts granted
+ * (47) adjust inventory / revenue, and depreciation (46) is reported on its
+ * own line. Expense accounts are otherwise identified SEMANTICALLY by
+ * `account_type === "Expenses"`, never by name matching.
+ */
+const OPERATIONAL_EXPENSE_EXCLUDED_CODES = new Set(["41", "42", "44", "45", "46", "47"]);
 
-function getInvoiceBaseTotal(invoice: InvoiceDto) {
-  const v2Total = parseNumber(invoice.total_amount_v2?.base_amount);
-  if (v2Total > 0) return v2Total;
-  const total = parseNumber(invoice.total_amount);
-  const rate = parseNumber(invoice.exchange_rate) || 1;
-  return total / rate;
-}
-
-function getReturnBaseTotal(document: PurchaseReturnDto | SalesReturnDto) {
-  const directTotal = parseNumber(document.total_amount);
-  if (directTotal > 0) return directTotal;
-  return (document.lines ?? []).reduce((sum, line) => sum + parseNumber(line.line_total), 0);
-}
-
-function getSignedMovementValue(movement: StockMovementDetailDto) {
-  if (movement.movement_type === "Transfer") return 0;
-  const base = parseNumber(movement.total_cost_base);
-  const orig = parseNumber(movement.total_cost);
-  const value = base !== 0 ? base : orig;
-  return movement.is_inflow ? value : -value;
-}
+const SYSTEM_DEPRECIATION_ID = "00000000-0000-0000-0000-000000000046";
 
 export function computeIncomeStatement(
   filters: IncomeStatementFilters,
@@ -111,144 +94,69 @@ export function computeIncomeStatement(
   const fromTs = startOfDay(filters.from_date);
   const toTs = endOfDay(filters.to_date);
 
+  const accounts = data.accounts ?? [];
+  const entries = data.entries ?? [];
+  const nets = computeGlAccountNets(entries, { fromTs, toTs, accounts });
+
+  // --- Authoritative posted-ledger flows (same projection the Dashboard
+  // consumes in `glAccountNets`). Sales ≠ Receivables and Purchases ≠
+  // Payables: each line is taken from its own account, only for the period. ---
+  const salesTotal = nets.netByCodes(["311", "312"]);
+  const purchaseTotal = nets.netByCodes(["41"]);
+  const purchaseReturnsTotal = nets.netByCodes(["32"]);
+  const salesReturnsTotal = nets.netByCodes(["42"]);
+  const discountsEarned = nets.netByCodes(["332"]);
+  const discountsGranted = nets.netByCodes(["47"]);
+
+  // Inventory settlement adjustments that flow into closing inventory.
+  const adjustmentGains = nets.netByCodes(["331"]);
+  const adjustmentLosses = nets.netByCodes(["45"]);
+
+  const depAccounts = accounts.filter(
+    (account) => account.id === SYSTEM_DEPRECIATION_ID || account.code === "46",
+  );
+  const depreciationExpense = nets.netForAccounts(depAccounts.map((account) => account.id));
+
+  // --- بضاعة أول المدة / بضاعة آخر المدة — the SHARED stock-movement
+  // projection (also used by Dashboard). Opening + period in/out (periodic,
+  // excluding Adjustment/Damaged/Transfer) + 331−45 settlement net. ---
+  const movements = Array.from(data.stockMovementsByMaterial.values()).flat();
+  const { openingInventory, closingInventory } = computeInventoryProjection(
+    movements,
+    { fromTs, toTs },
+    { gains: adjustmentGains, losses: adjustmentLosses },
+  );
+
+  // --- Operating expenses, classified semantically (Expenses type, minus the
+  // operational accounts above) with normal-balance sign — no name matching,
+  // no hardcoded parent-UUID, no blind Math.abs. ---
+  const expenseRows = accounts
+    .filter(
+      (account) =>
+        account.account_type === "Expenses" && !OPERATIONAL_EXPENSE_EXCLUDED_CODES.has(account.code),
+    )
+    .map((account) => ({ label: account.name_ar, value: nets.accountNets.get(account.id)?.net ?? 0 }))
+    .filter((row) => row.value !== 0)
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  // إجمالي المصاريف = مصاريف التشغيل + مصروف الإهلاك السنوي
+  const totalExpenses = expenseRows.reduce((sum, row) => sum + row.value, 0) + depreciationExpense;
+
+  // --- Trading totals (periodic): Revenue side vs Liabilities side. ---
+  const totalRevenue = salesTotal + closingInventory + purchaseReturnsTotal + discountsEarned;
+  const totalLiabilities = openingInventory + purchaseTotal + salesReturnsTotal + discountsGranted;
+  const grossProfit = totalRevenue - totalLiabilities;
+
+  // صافي الأرباح (أثر التسويات ضمن مجمل الربح عبر بضاعة آخر المدة)
+  const netProfit = grossProfit - totalExpenses;
+
+  // Invoice counts remain available for display labels (المبيعات N فاتورة مرحلة).
   const postedSales = data.salesInvoices.filter(
     (invoice) => invoice.status === "Posted" && isWithinRange(invoice.issued_at, fromTs, toTs),
   );
   const postedPurchases = data.purchaseInvoices.filter(
     (invoice) => invoice.status === "Posted" && isWithinRange(invoice.issued_at, fromTs, toTs),
   );
-
-  const salesTotal = postedSales.reduce((sum, invoice) => sum + getInvoiceBaseTotal(invoice), 0);
-  const purchaseTotal = postedPurchases.reduce((sum, invoice) => sum + getInvoiceBaseTotal(invoice), 0);
-  const purchaseReturnsTotal = data.purchaseReturns
-    .filter((document) => isWithinRange(document.return_date, fromTs, toTs))
-    .reduce((sum, document) => sum + getReturnBaseTotal(document), 0);
-  const salesReturnsTotal = data.salesReturns
-    .filter((document) => isWithinRange(document.return_date, fromTs, toTs))
-    .reduce((sum, document) => sum + getReturnBaseTotal(document), 0);
-
-  // Discounts granted = sum of line-level discounts from posted sales invoices
-  const discountsGranted = postedSales.reduce((sum, invoice) => {
-    const v2 = parseNumber(invoice.discount_amount_v2?.base_amount);
-    const disc = v2 > 0 ? v2 : (parseNumber(invoice.discount_amount) / (parseNumber(invoice.exchange_rate) || 1));
-    return sum + disc;
-  }, 0);
-
-  // Discounts earned = sum of line-level discounts from posted purchase invoices
-  const discountsEarned = postedPurchases.reduce((sum, invoice) => {
-    const v2 = parseNumber(invoice.discount_amount_v2?.base_amount);
-    const disc = v2 > 0 ? v2 : (parseNumber(invoice.discount_amount) / (parseNumber(invoice.exchange_rate) || 1));
-    return sum + disc;
-  }, 0);
-
-  // 1. استثناء التسويات والتالف من حركات المخزون الفعلية للحصول على بضاعة آخر المدة قبل التسوية
-  const isAdjustmentOrDamage = (type: string) => type === "Adjustment" || type === "Damaged";
-
-  // OpeningBalance movements always count toward opening inventory (regardless of date)
-  const openingInventory = Array.from(data.stockMovementsByMaterial.values()).reduce((sum, movements) => {
-    return sum + movements.reduce((materialSum, movement) => {
-      const movementTs = new Date(movement.movement_date).getTime();
-      if (!Number.isFinite(movementTs) || movementTs > toTs) return materialSum;
-      if (movement.movement_type === "OpeningBalance") {
-        return materialSum + getSignedMovementValue(movement);
-      }
-      if (movementTs >= fromTs) return materialSum;
-      return materialSum + getSignedMovementValue(movement);
-    }, 0);
-  }, 0);
-
-  const periodMovementsBefore = Array.from(data.stockMovementsByMaterial.values()).reduce((sum, movements) => {
-    const movementTotal = movements.reduce((materialSum, movement) => {
-      const movementTs = new Date(movement.movement_date).getTime();
-      if (!Number.isFinite(movementTs) || movementTs < fromTs || movementTs > toTs) {
-        return materialSum;
-      }
-      if (movement.movement_type === "OpeningBalance" || isAdjustmentOrDamage(movement.movement_type)) {
-        return materialSum;
-      }
-      return materialSum + getSignedMovementValue(movement);
-    }, 0);
-    return sum + movementTotal;
-  }, 0);
-
-  const closingInventoryBefore = openingInventory + periodMovementsBefore;
-
-  // 2. حساب القيم التشغيلية للحسابات المخصصة من قيود اليومية للفترة المحددة
-  const accountMap = new Map((data.accounts || []).map((acc) => [acc.id, acc]));
-  const entries = data.entries || [];
-
-const getAccountPeriodNet = (predicate: (acc?: AccountDto) => boolean, revenueSide: boolean) => {
-    let debit = 0;
-    let credit = 0;
-    for (const entry of entries) {
-      if (!isWithinRange(entry.entry_date, fromTs, toTs)) continue;
-      // Same reversal-pair rule as the backend ledger (`list_by_accounts`:
-      // `status='Posted' AND reversal_of_entry_id IS NULL`): the Reversed
-      // original and its Posted contra journal are mathematically neutral and
-      // must never move an income-statement balance.
-      if (entry.reversal_of_entry_id) continue;
-      if (entry.status && entry.status !== "Posted") continue;
-      for (const line of entry.lines) {
-        const acc = accountMap.get(line.account_id);
-        if (acc && predicate(acc)) {
-          debit += parseFloat(line.debit_base || line.debit || "0");
-          credit += parseFloat(line.credit_base || line.credit || "0");
-        }
-      }
-    }
-    // حسابات الإيرادات/المقابلات (أرقام تبدأ بـ 3) تُعامل عكسياً: رصيدها دائن
-    if (revenueSide) {
-      return credit - debit;
-    }
-    return debit - credit;
-  };
-
-  const SYSTEM_DEPRECIATION_ID = "00000000-0000-0000-0000-000000000046";
-  const matchCode = (codes: string[]) => (acc: AccountDto) => codes.includes(acc.code);
-
-  const adjustmentGains = getAccountPeriodNet(matchCode(["331"]), true);
-  const adjustmentLosses = getAccountPeriodNet(matchCode(["45"]), false);
-  const depreciationExpense = getAccountPeriodNet(
-    (acc) => acc.id === SYSTEM_DEPRECIATION_ID || acc.code === "46",
-    false,
-  );
-
-  // 3. احتساب بضاعة آخر المدة النهائية بعد التسويات والتالف
-  const closingInventory = closingInventoryBefore + adjustmentGains - adjustmentLosses;
-
-  // 4. مصاريف التشغيل الأساسية من API المصاريف
-  const baseExpenseRows = data.expenseAccounts
-    .map((account) => {
-      const ledger = data.expenseLedgers.get(account.id);
-      if (!ledger) return { label: account.name_ar, value: 0 };
-      // حركة الفترة (يُستثنى منها الرصيد الافتتاحي لعدم تكرار الاحتساب)
-      const periodNet = ledger.lines.reduce((ledgerSum, line) => {
-        if (isOpeningLine(line)) return ledgerSum;
-        if (!isWithinRange(line.date, fromTs, toTs)) return ledgerSum;
-        return ledgerSum + parseNumber(line.debit_base) - parseNumber(line.credit_base);
-      }, 0);
-      // الرصيد الافتتاحي لبند المصروف يُضاف إلى إجمالي المصاريف
-      const opening = getOpeningTotals(ledger.lines, undefined, filters.to_date);
-      const openingNet = opening.debit - opening.credit;
-      const staticOpening = parseNumber(ledger.opening_balance_base);
-      return {
-        label: account.name_ar,
-        value: periodNet + (openingNet !== 0 ? openingNet : staticOpening),
-      };
-    })
-    .filter((r) => r.value !== 0);
-
-  // 5. إجمالي المصاريف = مصاريف التشغيل الأساسية + مصروف الإهلاك السنوي
-  const expenseRows = [...baseExpenseRows];
-  const totalExpenses = expenseRows.reduce((s, r) => s + r.value, 0) + depreciationExpense;
-
-  // 6. حساب مجاميع المتاجرة (باستخدام بضاعة آخر المدة بعد التسوية لتتدفق التسويات عبر المخزون → COGS)
-  const totalRevenue = salesTotal + closingInventory + purchaseReturnsTotal + discountsEarned;
-  const totalLiabilities = openingInventory + purchaseTotal + salesReturnsTotal + discountsGranted;
-  const grossProfit = totalRevenue - totalLiabilities;
-
-  // 7. صافي الأرباح (أثر التسويات ضمن مجمل الربح عبر بضاعة آخر المدة)
-  const netProfit = grossProfit - totalExpenses;
 
   const sections: IncomeStatementSection[] = [
     {
@@ -292,7 +200,7 @@ const getAccountPeriodNet = (predicate: (acc?: AccountDto) => boolean, revenueSi
       totalValue: netProfit,
       rows: [
         { label: "إجمالي الأرباح", value: grossProfit },
-        { label: `إجمالي المصاريف`, value: totalExpenses },
+        { label: "إجمالي المصاريف", value: totalExpenses },
       ],
     },
   ];

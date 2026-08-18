@@ -1,15 +1,14 @@
-import type { JournalEntryDto, JournalLineDto } from "@erp/shared-types";
-import { isPostedLedgerEntry } from "@modules/reports/lib/report-policies";
+import type { JournalEntryDto } from "@erp/shared-types";
+import {
+  computeGlAccountNets,
+  type GlAccountNets,
+} from "@modules/reports/lib/glAccountNets";
 
 /**
  * GL-driven dashboard KPIs. Every tile is computed from the posted-ledger
- * feed (`isPostedLedgerEntry`: Posted with no reversal relationship — the same
- * policy the backend ledger surfaces for GL / Trial Balance / Balance Sheet).
- *
- * Account nature (normal balance) comes from the enriched `account_type`
- * (Assets/Liabilities/Equity/Revenue/Expenses) with an `account_purpose`
- * fallback, so the tiles keep working even when a line was fetched through a
- * path that did not enrich the account type.
+ * feed through `computeGlAccountNets` — the SAME projection the Income
+ * Statement consumes, so a Dr/Cr never moves one report and disappears from
+ * another (see `reports/lib/glAccountNets`).
  *
  * Tile semantics:
  *   - `sales`        — credit-normal Revenue flows (net credit).
@@ -17,7 +16,12 @@ import { isPostedLedgerEntry } from "@modules/reports/lib/report-policies";
  *   - `cashBalance`  — Bank + General purposes, signed (positive = net liquid position).
  *   - `receivables`  — net Receivable position, reported as a magnitude.
  *   - `payables`     — net Payable position, reported as a magnitude.
- *   - `inventory`    — net Inventory position, signed (positive = asset on hand).
+ *
+ * `inventory` is intentionally NOT here: in this (periodic) inventory model the
+ * GL inventory accounts are only touched by adjustments/damage, not by regular
+ * sales/purchases posting — the authoritative valuation lives in the shared
+ * stock-movement projection (`reports/lib/inventory`) used by both the Dashboard
+ * and "بضاعة آخر المدة".
  */
 
 export interface DashboardKpis {
@@ -26,7 +30,6 @@ export interface DashboardKpis {
   cashBalance: number;
   receivables: number;
   payables: number;
-  inventory: number;
 }
 
 /** One month of the income series, keyed by `YYYY-MM` (display labels are a
@@ -37,96 +40,38 @@ export interface GlMonthlyIncome {
   expenses: number;
 }
 
-const CREDIT_NORMAL_TYPES = new Set(["Liabilities", "Equity", "Revenue"]);
-
-/** 1 for credit-normal accounts, −1 for debit-normal (Assets / Expenses). */
-function normalSign(accountType?: string): 1 | -1 {
-  return accountType && CREDIT_NORMAL_TYPES.has(accountType) ? 1 : -1;
-}
-
-/** Purpose → account-type fallback for the (rare) un-enriched line. */
-function purposeTypeFallback(accountPurpose?: string): string | undefined {
-  if (!accountPurpose) return undefined;
-  if (accountPurpose === "receivable" || accountPurpose === "inventory" || accountPurpose === "bank") {
-    return "Assets";
-  }
-  if (accountPurpose === "payable" || accountPurpose === "loan") {
-    return "Liabilities";
-  }
-  if (
-    accountPurpose === "partner_capital" ||
-    accountPurpose === "partner_drawings" ||
-    accountPurpose === "partner_current" ||
-    accountPurpose === "retained_earnings" ||
-    accountPurpose === "opening_balance_equity" ||
-    accountPurpose === "opening_equity_adjustment" ||
-    accountPurpose === "prior_period_adjustment" ||
-    accountPurpose === "other_equity"
-  ) {
-    return "Equity";
-  }
-  return undefined;
-}
-
-function lineType(line: JournalLineDto): string | undefined {
-  return line.account_type || purposeTypeFallback(line.account_purpose);
-}
-
-/** Signed net movement of one ledger line in base currency. */
-function lineNet(line: JournalLineDto): number {
-  const debit = parseFloat(line.debit_base ?? line.debit ?? "0");
-  const credit = parseFloat(line.credit_base ?? line.credit ?? "0");
-  const sign = normalSign(lineType(line));
-  return sign === 1 ? credit - debit : debit - credit;
-}
-
 export function computeDashboardKpis(entries: JournalEntryDto[]): DashboardKpis & { monthly: GlMonthlyIncome[] } {
-  let sales = 0;
-  let purchases = 0;
+  const nets: GlAccountNets = computeGlAccountNets(entries);
+
+  const sales = nets.typeNets.Revenue;
+  const purchases = Math.abs(nets.typeNets.Expenses);
+
   let cashBalance = 0;
   let receivable = 0;
   let payable = 0;
-  let inventory = 0;
   const byMonth = new Map<string, { revenue: number; expenses: number }>();
 
-  for (const entry of entries) {
-    if (!isPostedLedgerEntry(entry)) continue;
+  for (const line of nets.lines) {
+    const monthKey = line.entryDate ? line.entryDate.slice(0, 7) : undefined;
+    const accountType = line.accountType;
 
-    const monthKey = entry.entry_date ? entry.entry_date.slice(0, 7) : undefined;
-
-    for (const line of entry.lines) {
-      const net = lineNet(line);
-      const accountType = lineType(line);
-      const purpose = line.account_purpose;
-
-      // Income-statement flows — grouped by account type.
+    if (monthKey) {
+      const bucket = byMonth.get(monthKey) || { revenue: 0, expenses: 0 };
       if (accountType === "Revenue") {
-        sales += net;
-        if (monthKey) {
-          const bucket = byMonth.get(monthKey) || { revenue: 0, expenses: 0 };
-          bucket.revenue += net;
-          byMonth.set(monthKey, bucket);
-        }
+        bucket.revenue += line.net;
       } else if (accountType === "Expenses") {
-        purchases += net;
-        if (monthKey) {
-          const bucket = byMonth.get(monthKey) || { revenue: 0, expenses: 0 };
-          bucket.expenses += net;
-          byMonth.set(monthKey, bucket);
-        }
+        bucket.expenses += line.net;
       }
+      byMonth.set(monthKey, bucket);
+    }
 
-      // Balance-sheet positions — grouped by account purpose so Cash/AR/AP/
-      // Inventory stay meaningful even when the chart mixes general accounts.
-      if (purpose === "bank" || purpose === "general") {
-        cashBalance += net;
-      } else if (purpose === "receivable") {
-        receivable += net;
-      } else if (purpose === "payable") {
-        payable += net;
-      } else if (purpose === "inventory") {
-        inventory += net;
-      }
+    const purpose = line.accountPurpose;
+    if (purpose === "bank" || purpose === "general") {
+      cashBalance += line.net;
+    } else if (purpose === "receivable") {
+      receivable += line.net;
+    } else if (purpose === "payable") {
+      payable += line.net;
     }
   }
 
@@ -140,11 +85,10 @@ export function computeDashboardKpis(entries: JournalEntryDto[]): DashboardKpis 
 
   return {
     sales,
-    purchases: Math.abs(purchases),
+    purchases,
     cashBalance,
     receivables: Math.abs(receivable),
     payables: Math.abs(payable),
-    inventory,
     monthly,
   };
 }

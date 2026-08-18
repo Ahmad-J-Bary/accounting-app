@@ -79,17 +79,15 @@ describe("computeDashboardKpis (GL-driven tiles)", () => {
     expect(kpis.cashBalance).toBe(650);
   });
 
-  it("rolls receivable / payable / inventory positions from their purposes", () => {
+  it("rolls receivable / payable positions from their purposes", () => {
     const kpis = computeDashboardKpis([
       entry([
         makeLine("receivable", "Assets", 800, 150),
         makeLine("payable", "Liabilities", 60, 400),
-        makeLine("inventory", "Assets", 900, 200),
       ]),
     ]);
     expect(kpis.receivables).toBe(650);
     expect(kpis.payables).toBe(340);
-    expect(kpis.inventory).toBe(700);
   });
 
   it("assigns a credit normal sign to payable purpose even without account_type", () => {

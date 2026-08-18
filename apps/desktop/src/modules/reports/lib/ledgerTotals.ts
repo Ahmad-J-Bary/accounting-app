@@ -73,14 +73,15 @@ export function computeLedgerTotals(
       continue;
     }
 
-    const desc = entry.description || "";
+    // Opening is decided by the canonical journal-type / opening-workflow
+    // source markers ONLY — never by description keywords ("رصيد افتتاحي" /
+    // "أول المدة") so a NORMAL post-opening transaction that merely mentions
+    // the words can never be misclassified as an opening movement.
     const isOpeningEntry =
       isOpeningMigrationPivot(entry) ||
       entry.journal_type === "CashOpeningBalance" ||
       entry.journal_type === "AccountOpeningBalance" ||
-      entry.journal_type === "MaterialOpeningBalance" ||
-      desc.includes("رصيد افتتاحي") ||
-      desc.includes("أول المدة");
+      entry.journal_type === "MaterialOpeningBalance";
 
     if (isOpeningEntry) {
       for (const line of entry.lines) {
@@ -126,14 +127,15 @@ export function computeLedgerTotals(
       continue;
     }
 
-    const desc = entry.description || "";
+    // Opening is decided by the canonical journal-type / opening-workflow
+    // source markers ONLY — never by description keywords ("رصيد افتتاحي" /
+    // "أول المدة") so a NORMAL post-opening transaction that merely mentions
+    // the words can never be misclassified as an opening movement.
     const isOpeningEntry =
       isOpeningMigrationPivot(entry) ||
       entry.journal_type === "CashOpeningBalance" ||
       entry.journal_type === "AccountOpeningBalance" ||
-      entry.journal_type === "MaterialOpeningBalance" ||
-      desc.includes("رصيد افتتاحي") ||
-      desc.includes("أول المدة");
+      entry.journal_type === "MaterialOpeningBalance";
 
     const isPrePeriod = isOpeningEntry || (fromDateStr != null && entryDate < fromDateStr);
 

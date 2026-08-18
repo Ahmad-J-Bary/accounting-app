@@ -59,10 +59,8 @@ export function usePartnerProfitShareReport(filters: IncomeStatementFilters): Re
     const run = async () => {
       setLoadingLedgers(true);
       try {
-        const expenseItems = baseData.expenseAccounts;
-        const { stockMovementsByMaterial, expenseLedgers } = await loadMaterialExpenseLedgers(
-          baseData.materials,
-          expenseItems
+        const stockMovementsByMaterial = await loadMaterialExpenseLedgers(
+          baseData.materials
         );
         if (!active) return;
 
@@ -71,10 +69,10 @@ export function usePartnerProfitShareReport(filters: IncomeStatementFilters): Re
           purchaseInvoices: baseData.purchaseInvoices,
           purchaseReturns: baseData.purchaseReturns,
           salesReturns: baseData.salesReturns,
-          expenseAccounts: expenseItems,
-          expenseLedgers,
           stockMovementsByMaterial,
           materials: baseData.materials,
+          accounts: baseData.accounts,
+          entries: baseData.entries,
         };
 
         const incomeStatementResult = computeIncomeStatement(filters, incomeStatementData);

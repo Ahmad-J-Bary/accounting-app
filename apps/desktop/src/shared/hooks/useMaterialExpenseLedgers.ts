@@ -1,23 +1,20 @@
 import { useCallback } from "react";
 import { materialService } from "@modules/inventory/api/materialService";
-import { accountingService } from "@modules/accounting/api/accountingService";
-import type { AccountDto, AccountLedgerDto, MaterialDto, StockMovementDetailDto } from "@erp/shared-types";
-
-export interface MaterialExpenseLedgers {
-  stockMovementsByMaterial: Map<string, StockMovementDetailDto[]>;
-  expenseLedgers: Map<string, AccountLedgerDto>;
-}
+import type { MaterialDto, StockMovementDetailDto } from "@erp/shared-types";
 
 /**
- * Fetches stock movements for all materials and ledgers for the given expense
- * accounts. Used by all report hooks to build the income statement inputs.
+ * Fetches stock movements for all materials. Used by the report hooks to build
+ * the shared inventory projection (opening + periodic closing, the same
+ * valuation the Dashboard consumes).
+ *
+ * Expense ledgers are intentionally NOT fetched here anymore: operating
+ * expenses are aggregated from the enriched posted-ledger feed (each line
+ * carries `account_type`/`account_purpose`), so there is no per-account N+1
+ * call and no stale-ledger window.
  */
 export function useMaterialExpenseLedgers() {
   const load = useCallback(
-    async (
-      materials: MaterialDto[],
-      expenseAccounts: AccountDto[],
-    ): Promise<MaterialExpenseLedgers> => {
+    async (materials: MaterialDto[]): Promise<Map<string, StockMovementDetailDto[]>> => {
       const movementResults = await Promise.allSettled(
         materials.map(async (material) => ({
           materialId: material.id,
@@ -32,21 +29,7 @@ export function useMaterialExpenseLedgers() {
         }
       });
 
-      const ledgerResults = await Promise.allSettled(
-        expenseAccounts.map(async (account) => ({
-          accountId: account.id,
-          ledger: await accountingService.getAccountLedger([account.id]),
-        })),
-      );
-
-      const expenseLedgers = new Map<string, AccountLedgerDto>();
-      ledgerResults.forEach((result) => {
-        if (result.status === "fulfilled") {
-          expenseLedgers.set(result.value.accountId, result.value.ledger);
-        }
-      });
-
-      return { stockMovementsByMaterial, expenseLedgers };
+      return stockMovementsByMaterial;
     },
     [],
   );
