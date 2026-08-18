@@ -155,6 +155,7 @@ impl ListJournalEntriesUseCase {
                     line.account_name = Some(acc.name_ar);
                     line.account_code = Some(acc.code);
                     line.account_purpose = Some(acc.purpose.to_str().to_string());
+                    line.account_type = Some(format!("{:?}", acc.account_type));
                 }
             }
         }

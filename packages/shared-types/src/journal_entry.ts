@@ -32,6 +32,7 @@ export interface JournalLineDto {
   account_code?: string;
   account_name?: string;
   account_purpose?: string;
+  account_type?: string;
   partner_id?: string;
   currency: string;
   fx_rate: string;

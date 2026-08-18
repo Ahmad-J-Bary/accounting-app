@@ -8,6 +8,8 @@ pub struct JournalLineDto {
     pub account_name: Option<String>,
     #[serde(default)]
     pub account_purpose: Option<String>,
+    #[serde(default)]
+    pub account_type: Option<String>,
     pub partner_id: Option<String>,
     pub currency: String,
     pub fx_rate: String,
@@ -86,6 +88,7 @@ impl From<JournalLine> for JournalLineDto {
             account_code: None,
             account_name: None,
             account_purpose: None,
+            account_type: None,
             partner_id: line.partner_id.map(|id| id.to_string()),
             currency: line.debit.currency().code.clone(),
             fx_rate: fx_rate.to_string(),

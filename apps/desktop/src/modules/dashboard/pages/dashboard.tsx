@@ -16,14 +16,12 @@ import { StatusBadge } from '@widgets/stats/StatusBadge';
 import { QuickActions } from '@app/shell/QuickActions';
 
 import { journalEntryService } from '@modules/accounting/api/journalEntryService';
-import { invoiceService } from '@modules/invoicing/api/invoiceService';
-import { returnService } from '@modules/invoicing/api/returnService';
 import { paymentService } from '@modules/payments/api/paymentService';
 import { materialService } from '@modules/inventory/api/materialService';
 import { categoryService } from '@modules/inventory/api/categoryService';
-import { accountingService } from '@modules/accounting/api/accountingService';
+import { computeDashboardKpis } from '@modules/accounting/dashboard/lib/gl-kpis';
 
-import type { InvoiceDto, JournalEntryDto, Payment, MaterialDto, ReceivablesPayablesSummary, CategoryDto } from "@erp/shared-types";
+import type { JournalEntryDto, Payment, MaterialDto, CategoryDto } from "@erp/shared-types";
 
 import { useCurrencyContext, type CurrencyDisplayMode } from "@app/providers/CurrencyContext";
 
@@ -36,14 +34,10 @@ export default function Dashboard() {
   const { formatAmount, displayMode, baseCurrency, currencies } = useCurrencyContext();
   const [localDisplayMode, setLocalDisplayMode] = useState<CurrencyDisplayMode | "both">(displayMode);
   const [recentJournals, setRecentJournals] = useState<JournalEntryDto[]>([]);
-  const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
-  const [purchaseInvoices, setPurchaseInvoices] = useState<InvoiceDto[]>([]);
+  const [allJournalEntries, setAllJournalEntries] = useState<JournalEntryDto[]>([]);
   const [paymentEntries, setPaymentEntries] = useState<Payment[]>([]);
   const [productItems, setProductItems] = useState<MaterialDto[]>([]);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
-  const [rpSummary, setRpSummary] = useState<ReceivablesPayablesSummary | null>(null);
-  const [totalSalesReturns, setTotalSalesReturns] = useState(0);
-  const [totalPurchaseReturns, setTotalPurchaseReturns] = useState(0);
   const [, setLoading] = useState(true);
 
   const toNumber = (value?: string | null) => {
@@ -55,69 +49,25 @@ export default function Dashboard() {
     setLoading(true);
     Promise.all([
       journalEntryService.listJournalEntries(),
-      invoiceService.listInvoicesByType("Sales"),
-      invoiceService.listInvoicesByType("Purchase"),
       paymentService.listPayments(),
       materialService.list(),
       categoryService.list(),
-      accountingService.getReceivablesPayablesSummary(),
-      returnService.listSalesReturns(),
-      returnService.listPurchaseReturns(),
     ])
-      .then(([entries, salesData, purchaseData, paymentData, productData, catData, rpData, salesReturns, purchaseReturns]) => {
+      .then(([entries, paymentData, productData, catData]) => {
+        setAllJournalEntries(entries);
         setRecentJournals(entries.slice(0, 5));
-        setInvoices(salesData);
-        setPurchaseInvoices(purchaseData);
         setPaymentEntries(paymentData);
         setProductItems(productData);
         setCategories(catData);
-        setRpSummary(rpData);
-        const totalSalesReturns = (salesReturns as { total_amount: string }[]).reduce((s, r) => s + toNumber(r.total_amount), 0);
-        const totalPurchaseReturns = (purchaseReturns as { total_amount: string }[]).reduce((s, r) => s + toNumber(r.total_amount), 0);
-        setTotalSalesReturns(totalSalesReturns);
-        setTotalPurchaseReturns(totalPurchaseReturns);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
-  // === KPI Computations ===
-  const postedSalesTotal = useMemo(() => invoices
-    .filter((i) => i.status === "Posted")
-    .reduce((sum, i) => sum + toNumber(i.total_amount), 0) - totalSalesReturns, [invoices, totalSalesReturns]);
+  // === GL-computed KPIs (from the posted ledger: DR/CR respected by account nature) ===
+  const glKpis = useMemo(() => computeDashboardKpis(allJournalEntries), [allJournalEntries]);
 
-  const approvedPurchasesTotal = useMemo(() => purchaseInvoices
-    .filter((i) => i.status !== "Draft" && i.status !== "Cancelled")
-    .reduce((sum, i) => sum + toNumber(i.total_amount), 0) - totalPurchaseReturns, [purchaseInvoices, totalPurchaseReturns]);
-
-  const totalCashIn = useMemo(() => paymentEntries
-    .filter((p) => ["Receipt", "CashIn", "SupplierReceipt"].includes(p.payment_type))
-    .reduce((s, p) => s + toNumber(p.amount), 0), [paymentEntries]);
-
-  const totalCashOut = useMemo(() => paymentEntries
-    .filter((p) => ["SupplierPayment", "CustomerPayment", "CashOut"].includes(p.payment_type))
-    .reduce((s, p) => s + toNumber(p.amount), 0), [paymentEntries]);
-
-  const cashBalance = totalCashIn - totalCashOut;
-
-  const inventoryValue = useMemo(() => productItems.reduce((sum, p) => {
-    const avgCost = toNumber(p.average_cost_base);
-    const fifoPrice = toNumber(p.last_purchase_price_base);
-    const price = avgCost || fifoPrice;
-    const totalRecv = toNumber(p.total_received);
-    const totalAvail = toNumber(p.total_available);
-    const totalSold = toNumber(p.total_sold);
-    const totalDamaged = toNumber(p.total_damaged);
-    if (avgCost > 0 && totalRecv > 0) {
-      const transferQty = Math.max(0, totalRecv - totalAvail - totalSold - totalDamaged);
-      const purchaseQty = totalRecv - transferQty;
-      if (purchaseQty > 0 && totalRecv !== purchaseQty) {
-        const correctedPrice = avgCost * totalRecv / purchaseQty;
-        return sum + totalAvail * correctedPrice;
-      }
-    }
-    return sum + totalAvail * price;
-  }, 0), [productItems]);
+  const { sales: postedSalesTotal, purchases: approvedPurchasesTotal, cashBalance, receivables, payables, inventory, monthly: glMonthly } = glKpis;
 
   const lowStock = useMemo(() => productItems.filter(
     (p) => toNumber(p.total_available) < toNumber(p.minimum_stock)
@@ -127,12 +77,12 @@ export default function Dashboard() {
     { title: "المبيعات", value: postedSalesTotal, icon: TrendingUp },
     { title: "المشتريات", value: approvedPurchasesTotal, icon: ShoppingCart },
     { title: "الرصيد النقدي", value: cashBalance, icon: Wallet },
-    { title: "ذمم العملاء", value: rpSummary ? parseFloat(rpSummary.total_receivables) : 0, icon: Users },
-    { title: "ذمم الموردين", value: rpSummary ? parseFloat(rpSummary.total_payables) : 0, icon: Truck },
-    { title: "المخزون", value: inventoryValue, icon: Package },
-  ], [postedSalesTotal, approvedPurchasesTotal, cashBalance, rpSummary, inventoryValue]);
+    { title: "ذمم العملاء", value: receivables, icon: Users },
+    { title: "ذمم الموردين", value: payables, icon: Truck },
+    { title: "المخزون", value: inventory, icon: Package },
+  ], [postedSalesTotal, approvedPurchasesTotal, cashBalance, receivables, payables, inventory]);
 
-  // === Revenue chart from real invoices (group by month) ===
+  // === Revenue/Expenses chart from GL (posted ledger, grouped by month) ===
   const revenueChartData = useMemo(() => {
     const monthly = new Map<string, { revenue: number; expenses: number }>();
     const now = new Date();
@@ -140,24 +90,20 @@ export default function Dashboard() {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       monthly.set(MONTH_NAMES[d.getMonth()], { revenue: 0, expenses: 0 });
     }
-    invoices.filter(i => i.status === "Posted").forEach(inv => {
-      const d = new Date(inv.issued_at);
+    glMonthly.forEach(({ yearMonth, revenue, expenses }) => {
+      const d = new Date(`${yearMonth}-01T00:00:00`);
+      if (Number.isNaN(d.getTime())) return;
       const name = MONTH_NAMES[d.getMonth()];
       if (monthly.has(name)) {
-        monthly.get(name)!.revenue += toNumber(inv.total_amount);
-      }
-    });
-    purchaseInvoices.filter(i => i.status === "Posted").forEach(inv => {
-      const d = new Date(inv.issued_at);
-      const name = MONTH_NAMES[d.getMonth()];
-      if (monthly.has(name)) {
-        monthly.get(name)!.expenses += toNumber(inv.total_amount);
+        const cur = monthly.get(name)!;
+        cur.revenue += revenue;
+        cur.expenses += expenses;
       }
     });
     return Array.from(monthly.entries()).map(([month, data]) => ({
       month, ...data
     }));
-  }, [invoices, purchaseInvoices]);
+  }, [glMonthly]);
 
   // === Category distribution from real materials ===
   const catNameById = useMemo(() => {
@@ -181,14 +127,7 @@ export default function Dashboard() {
     }));
   }, [productItems, catNameById]);
 
-  // === Recent posted invoices (up to 5) ===
-  const recentSales = useMemo(() =>
-    invoices
-      .filter(i => i.status === "Posted")
-      .sort((a, b) => new Date(b.issued_at).getTime() - new Date(a.issued_at).getTime())
-      .slice(0, 5),
-  [invoices]);
-
+  // === Recent payments (up to 5) ===
   const recentPayments = useMemo(() =>
     paymentEntries
       .sort((a, b) => new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime())
@@ -382,33 +321,36 @@ export default function Dashboard() {
         </div>
       </DashboardCard>
 
-      <DashboardCard span={8} title="أحدث النشاطات" subtitle="الفواتير والمدفوعات والقيود الأخيرة">
+      <DashboardCard span={8} title="أحدث النشاطات" subtitle="القيود والمدفوعات الأخيرة">
         <Tabs defaultValue="sales" className="w-full">
           <TabsList className="bg-slate-100 p-1 rounded-xl mb-6">
-            <TabsTrigger value="sales" className="rounded-lg font-bold data-[state=active]:bg-white">المبيعات</TabsTrigger>
+            <TabsTrigger value="sales" className="rounded-lg font-bold data-[state=active]:bg-white">القيود</TabsTrigger>
             <TabsTrigger value="payments" className="rounded-lg font-bold data-[state=active]:bg-white">المدفوعات</TabsTrigger>
-            <TabsTrigger value="journal" className="rounded-lg font-bold data-[state=active]:bg-white">القيود</TabsTrigger>
           </TabsList>
 
           <TabsContent value="sales" className="m-0">
-            {recentSales.length > 0 ? (
+            {recentJournals.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-slate-400 font-black text-[10px] uppercase tracking-widest border-b border-slate-100">
-                      <th className="text-right pb-4">رقم الفاتورة</th>
-                      <th className="text-right pb-4">العميل</th>
+                      <th className="text-right pb-4">رقم القيد</th>
+                      <th className="text-right pb-4">البيان</th>
                       <th className="text-left pb-4">المبلغ</th>
                       <th className="text-left pb-4">الحالة</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {recentSales.map((inv) => (
-                      <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-4 font-black text-blue-600">{formatNumber(parseInt(inv.invoice_number) || 0)}</td>
-                        <td className="py-4 font-bold text-slate-700">{inv.customer_name || "زبون نقدي"}</td>
-                        <td className="py-4 text-left tabular-nums font-black">{formatAmount(toNumber(inv.total_amount), { mode: localDisplayMode })}</td>
-                        <td className="py-4 text-left"><StatusBadge status={inv.status} /></td>
+                    {recentJournals.map((j) => (
+                      <tr key={j.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="py-4 font-black text-blue-600">{formatNumber(parseInt(j.entry_number) || 0)}</td>
+                        <td className="py-4 font-bold text-slate-700 truncate max-w-[200px]">{j.description}</td>
+                        <td className="py-4 text-left tabular-nums font-black">
+                          {toNumber(j.total_base_debit) > 0
+                            ? formatAmount(toNumber(j.total_base_debit), { mode: localDisplayMode })
+                            : formatAmount(toNumber(j.total_base_credit), { mode: localDisplayMode })}
+                        </td>
+                        <td className="py-4 text-left"><StatusBadge status={j.status} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -416,7 +358,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="flex items-center justify-center h-[200px] text-slate-300 font-bold text-sm">
-                لا توجد فواتير مبيعات مسجلة بعد
+                لا توجد قيود يومية مسجلة بعد
               </div>
             )}
           </TabsContent>
@@ -450,41 +392,6 @@ export default function Dashboard() {
             ) : (
               <div className="flex items-center justify-center h-[200px] text-slate-300 font-bold text-sm">
                 لا توجد مدفوعات مسجلة بعد
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="journal" className="m-0">
-            {recentJournals.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-slate-400 font-black text-[10px] uppercase tracking-widest border-b border-slate-100">
-                      <th className="text-right pb-4">رقم القيد</th>
-                      <th className="text-right pb-4">البيان</th>
-                      <th className="text-left pb-4">المدين/الدائن</th>
-                      <th className="text-left pb-4">الحالة</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {recentJournals.map((j) => (
-                      <tr key={j.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-4 font-black text-blue-600">{formatNumber(parseInt(j.entry_number) || 0)}</td>
-                        <td className="py-4 font-bold text-slate-700 truncate max-w-[200px]">{j.description}</td>
-                        <td className="py-4 text-left tabular-nums font-black">
-                          {toNumber(j.total_base_debit) > 0
-                            ? formatAmount(toNumber(j.total_base_debit), { mode: localDisplayMode })
-                            : formatAmount(toNumber(j.total_base_credit), { mode: localDisplayMode })}
-                        </td>
-                        <td className="py-4 text-left"><StatusBadge status={j.status} /></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-[200px] text-slate-300 font-bold text-sm">
-                لا توجد قيود يومية مسجلة بعد
               </div>
             )}
           </TabsContent>
