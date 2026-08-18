@@ -8,7 +8,7 @@ use crate::use_cases::opening_balance::types::OpeningMigrationDto;
 /// Re-opens a cancelled (pre-posting) opening-balance migration back to
 /// `Draft` so it can be edited and re-run through the lifecycle. Guarded by the
 /// domain to reject migrations that were cancelled only after posting (those
-/// must be re-created instead), and by the Phase 5 lifecycle: once ANY
+/// must be re-created instead), and by the lifecycle: once ANY
 /// migration is Locked the workflow is sealed and cannot be re-opened.
 pub struct ReopenOpeningBalanceUseCase {
     migration_repo: Arc<dyn OpeningMigrationRepository>,
@@ -23,7 +23,7 @@ impl ReopenOpeningBalanceUseCase {
         let migration = self.migration_repo.find_by_id(&id).await?
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
 
-        // Phase 5: the opening lifecycle is a one-way door — once any migration
+        // The opening lifecycle is a one-way door — once any migration
         // is Locked the workflow closes and cancelled migrations stay cancelled.
         if opening_lifecycle_closed(&self.migration_repo).await? {
             return Err(AppError::Forbidden(

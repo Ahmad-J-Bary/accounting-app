@@ -1,4 +1,4 @@
--- 150: Fiscal periods (Sec 20 of the Accounting Domain Hardening phase)
+-- 150: Fiscal periods (Sec 20 of the Accounting Domain Hardening)
 --
 -- A fiscal period is the reporting window a net-profit figure belongs to. It is
 -- independent from the opening-balance cutover: the cutover records the

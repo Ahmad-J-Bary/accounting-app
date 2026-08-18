@@ -44,7 +44,7 @@ import PartnerProfitShareReport from '@modules/reports/pages/PartnerProfitShareR
 import PartnerStatementReport from '@modules/reports/pages/PartnerStatementReport';
 import FiscalPeriodsPage from '@modules/accounting/fiscal-periods/pages/FiscalPeriodsPage';
 
-// Phase 5: while an EXISTING company is still in its opening workflow
+// While an EXISTING company is still in its opening workflow
 // (before OPENING_LOCKED), daily-log transactional pages are blocked and
 // redirected to the opening migration; master-data / opening pages stay open.
 // Until the lifecycle queries resolve we stay permissive to avoid flash-gating.

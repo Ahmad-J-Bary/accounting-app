@@ -161,7 +161,7 @@ async fn equity_statement_reconciles_with_partner_ledgers() {
 
     // Opening sequence: profit allocation runs while the migration is still
     // Posted (pre-lock), then the migration is sealed (Locked) before any
-    // operational capital/drawing event is posted — Phase 4 forbids normal
+    // operational capital/drawing event is posted — the gate forbids normal
     // journals while an unsealed migration exists.
     AllocateNetProfitUseCase::new(
         Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),

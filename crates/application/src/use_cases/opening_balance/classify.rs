@@ -14,7 +14,7 @@ use crate::use_cases::opening_balance::types::SetResidualClassificationCommand;
 /// opening-balance migration. The system computes the residual but never decides
 /// its nature; this is a deliberate accounting judgement (Sec 6 / Sec 8).
 ///
-/// Phase 4 — the user chooses the ACCOUNTING MEANING, the system chooses the
+/// The user chooses the ACCOUNTING MEANING, the system chooses the
 /// appropriate ACCOUNT:
 ///   * When `residual_account_id` is absent, the designated account of the
 ///     classification's single controlled purpose is resolved automatically

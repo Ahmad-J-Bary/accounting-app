@@ -1,4 +1,4 @@
-//! Residual reclassification target guard (Phase 2 audit finding B1).
+//! Residual reclassification target guard (company-lifecycle audit finding B1).
 //!
 //! The residual Opening Balance Equity (53) is an equity clearing item: its
 //! classification target must be an equity-type account with an acceptable

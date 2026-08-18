@@ -42,7 +42,7 @@ impl CreateOpeningBalanceUseCase {
             ));
         }
 
-        // Phase 5: once a migration is Locked the lifecycle is sealed — no new
+        // Once a migration is Locked the lifecycle is sealed — no new
         // opening migrations can be created afterwards (only Cancelled
         // migrations keep the restart path open).
         if super::guard::opening_lifecycle_closed(&self.repo).await? {

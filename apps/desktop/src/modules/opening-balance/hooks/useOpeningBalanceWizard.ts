@@ -190,7 +190,7 @@ export function useOpeningBalanceWizard() {
       .catch(() => setSettingsReady(true));
   }, []);
 
-  // ── Persisted wizard draft (Save → Exit → Continue later; Phase 4) ────────
+  // ── Persisted wizard draft (Save → Exit → Continue later) ────────
   const [hasDraft, setHasDraft] = useState(false);
   const draftHydrated = useRef(false);
 

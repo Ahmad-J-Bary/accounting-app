@@ -1,4 +1,4 @@
-//! Phase 1 — the opening window is the single-posting boundary for BOTH sides
+//! The opening window is the single-posting boundary for BOTH sides
 //! of the ledger:
 //!
 //!   1. Partner balance edits (customer / supplier update) are deferred to the

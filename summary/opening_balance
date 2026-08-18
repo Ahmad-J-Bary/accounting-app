@@ -1,23 +1,23 @@
 # Work Summary — Accounting App (إصلاح رصيد الافتتاح / ترحيل الشركة)
 
 ## Goal (الجلسة الحالية)
-إنهاء **Phase C–H** من "محرك ترحيل الأرصدة الافتتاحية" لشركة قائمة (ExistingCompanyMigration) والفصل بين الشريك ومساهمة رأس المال، مع بناء المسار الكامل domain → port → infra → use case → Tauri → frontend، وترجيح كل مرحلة عبر الشيكات والاختبارات.
+إنهاء **المراحل C–H** من "محرك ترحيل الأرصدة الافتتاحية" لشركة قائمة (ExistingCompanyMigration) والفصل بين الشريك ومساهمة رأس المال، مع بناء المسار الكامل domain → port → infra → use case → Tauri → frontend، وترجيح كل مرحلة عبر الشيكات والاختبارات.
 
 ## Status
 - **كل المراحل C → I اكتملت** — cargo check/clippy, tsc, eslint, vitest 100/100, cargo test (application 7 + domain 5) نظيفة.
-- **Phase A (مكتمل)**: فصل الشريك عن القيود المالية؛ `JournalType::CapitalContribution` + `CreateCapitalContributionUseCase` (Dr مصدر تمويل / Cr رأس مال شريك)؛ حذف side-effect `consolidated_capital` من CRUD الشريك.
-- **Phase B (مكتمل)**: `accounting_start_mode` (NewCompany|ExistingCompanyMigration) في settings + منصبي الوضع في واجهة الشركاء.
-- **Phase C (مكتمل)**: محرك ترحيل الأرصدة الأساسي.
-- **Phase D (مكتمل)**: التحقق من معادلة Assets=Liabilities+Equity + توزيع صافي الربح على الشركاء (مدخل يدوي كما اختار المستخدم).
-- **Phase E (مكتمل)**: تسميات/رسم القيود + `ProfitDistribution` واصلاح `CapitalContribution` في طبقات الخرائط.
-- **Phase F (مكتمل)**: atomicity معزول للميزة الجديدة (معاملة SQLite واحدة لترحيل الرصيد)، بلا لمس `UnitOfWork` العالمي (ظل stub) و`foreign_keys=false` كما هو (قرار مُعزول).
-- **Phase G (مكتمل)**: شيكات البوابات + اختبارات وحدات لتوزيع الأرباح + توثيق.
-- **Phase H (مكتمل)**: دورة حياة الترحيل — إلغاء/عكس رصيد مفتوح مُرحَّل بقيد ترحيل عكسي حقيقي.
-- **Phase I (مكتمل)**: نموذج حالات كامل Draft/Validated/Approved/Posted/Locked/Cancelled + حقول تتبع الأصل/المُفحص/المُعتمد + جداول تفاصيل الواجهات الفرعية.
+- **مكتمل — فصل الشريك عن القيود المالية**: `JournalType::CapitalContribution` + `CreateCapitalContributionUseCase` (Dr مصدر تمويل / Cr رأس مال شريك)؛ حذف side-effect `consolidated_capital` من CRUD الشريك.
+- **مكتمل — وضع بدء الشركة**: `accounting_start_mode` (NewCompany|ExistingCompanyMigration) في settings + منصبي الوضع في واجهة الشركاء.
+- **مكتمل — محرك ترحيل الأرصدة**: محرك ترحيل الأرصدة الأساسي.
+- **مكتمل — التوازن وتوزيع الأرباح**: التحقق من معادلة Assets=Liabilities+Equity + توزيع صافي الربح على الشركاء (مدخل يدوي كما اختار المستخدم).
+- **مكتمل — التسميات والخرائط**: تسميات/رسم القيود + `ProfitDistribution` واصلاح `CapitalContribution` في طبقات الخرائط.
+- **مكتمل — Atomicity معزول**: atomicity معزول للميزة الجديدة (معاملة SQLite واحدة لترحيل الرصيد)، بلا لمس `UnitOfWork` العالمي (ظل stub) و`foreign_keys=false` كما هو (قرار مُعزول).
+- **مكتمل — البوابات والتوثيق**: شيكات البوابات + اختبارات وحدات لتوزيع الأرباح + توثيق.
+- **مكتمل — دورة حياة الترحيل**: دورة حياة الترحيل — إلغاء/عكس رصيد مفتوح مُرحَّل بقيد ترحيل عكسي حقيقي.
+- **مكتمل — نموذج حالات الترحيل**: نموذج حالات كامل Draft/Validated/Approved/Posted/Locked/Cancelled + حقول تتبع الأصل/المُفحص/المُعتمد + جداول تفاصيل الواجهات الفرعية.
 
 ## تفاصيل المراحل المكتملة
 
-### Phase I — نموذج حالة الترحيل + تفاصيل الواجهات الفرعية
+### نموذج حالة الترحيل + تفاصيل الواجهات الفرعية
 - **Domain** `opening_balance.rs`: `MigrationStatus` → 6 حالات (`Draft→Validated→Approved→Posted→Locked` + `Cancelled`)، حقول جديدة `company_id/source_system/source_reference/validated_at&by/approved_at&by/locked_at`، انتقالات `validate/approve/mark_posted(يتطلب Approved)/lock/unlock/un_post/cancel`، +5 unit tests.
 - **Migration 140** `140_opening_migration_state.sql`: ALTER للعمود الجديدة + جداول `opening_balance_customer_items/supplier_items/inventory_items/fixed_assets` (FK→migration, CASCADE) + indexes.
 - **Port/Infra**: `OpeningMigrationRepository::find_by_cutover_date` + تحديث `models/mappers/queries` للأعمدة الجديدة.
@@ -30,7 +30,7 @@
 - `cargo clippy -p domain -p application -p infrastructure -p tauri-adapter` ✓
 - `cargo test -p domain` → 5 opening_balance + كل السلسلة ✓ · `cargo test -p application` → 7 ✓
 
-### Phase H — إلغاء / عكس ترحيل مفتوح
+### إلغاء / عكس ترحيل مفتوح
 - **Domain**: `OpeningBalanceMigration::un_post()` (يسمح فقط Posted→Cancelled، عكس `mark_posted`)؛ `JournalType::OpeningBalanceReversal` + Display "عكس ترحيل رصيد الافتتاح".
 - **Port**: `OpeningPostingRepository::cancel(migration, reversal)`.
 - **Infra** `posting.rs`: أُعِيدت البنى داخل `insert_journal` مساعِد مشترك مُعاد استخدامه من `post`، وأُضيف `cancel` الذي يدرج القيد العكسي + `UPDATE status='Cancelled'` في معاملة واحدة.
@@ -43,25 +43,25 @@
 - `cargo clippy -p domain -p application -p infrastructure -p tauri-adapter` ✓
 - `cargo test -p application` → 7 tests pass (توزيع + إلغاء عكسي + أخرى)
 
-### Phase C — المحرك (سابقاً)
+### المحرك (سابقاً)
 - Domain: `crates/domain/src/accounting/opening_balance.rs` (MigrationStatus/OpeningBalanceLine/OpeningBalanceMigration).
 - DB: `139_opening_balance_migrations.sql`.
 - Port: `opening_migration_repository.rs`؛ Infra: `repositories/opening_balance/{mod,models,mappers,queries}.rs`.
 - Use cases: `Create/List/PostOpeningBalanceUseCase`؛ Tauri: `commands/opening_balance.rs`؛ Container: `opening_migration_repo`.
 - Wizard `openingBalanceMigration.tsx` + مسار `/opening-balance-migration` + nav.
 
-### Phase D — توزيع الأرباح والتحقق
+### توزيع الأرباح والتحقق
 - **D1**: `PostOpeningBalanceUseCase` — يحسب `debit_sum`/`credit_sum`، يعبّر عن الهوية Assets=Liab+Equity عبر توازنها، يزن بكافرة OBE (53) عند الخلل، ويرجع `PostOpeningBalanceResult{migration, debit_total, credit_total, equity_balanced}`.
 - **D2**: `AllocateNetProfitUseCase` (جديد) — مدخل `AllocateNetProfitCommand{migration_id, net_profit}`؛ يشترط حالة Posted؛ يحسب نسبة كل شريك (Manual أو نسبة رأس المال كما في `partnerProfitShare.ts`)؛ يقرّب الأسهم ويضبط الفرق على الأكبر؛ يبني قيد `ProfitDistribution` (Dr 52 / Cr 51X لكل شريك؛ ينعكس للخسارة)؛ `adjust_shares_to_sum` + `ratio_for` كدوال نقية قابلة للاختبار. أمر Tauri جديد `allocate_net_profit`.
 - **D3**: المعالج يضيف بطاقة "توزيع صافي الربح" (اختيار ترحيل مرحّل + مدخل صافي الربح + معاينة الحصص + رقم القيد).
 
-### Phase E — التسميات والخرائط
+### التسميات والخرائط
 - `JournalType::ProfitDistribution` أُضيف مع تسمية "توزيع أرباح" في Display.
 - Infra `journal_entry/mappers.rs`: فرع `"ProfitDistribution"`.
 - TS `JournalType` union في `shared-types/journal_entry.ts`: أضيف `'CapitalContribution' | 'ProfitDistribution'`.
 - `journal-config.ts`: `CapitalContribution: "مساهمة رأس مال"`, `ProfitDistribution: "توزيع أرباح"`.
 
-### Phase F — Atomicity معزول
+### Atomicity معزول
 - Port جديد `opening_posting_repository.rs` + `SqliteOpeningPostingRepository` (`repositories/opening_balance/posting.rs`) يكتب قيد اليومية + علامة Posted في معاملة SQLite واحدة.
 - `PostOpeningBalanceUseCase` يستخدمه بدل `journal_repo.save` + `repo.update`؛ الحقل الجديد `opening_posting_repo` في الـ Container.
 
@@ -86,25 +86,25 @@
 - Use cases: `crates/application/src/use_cases/opening_balance/{create,list,post,allocate}.rs`
 - Tauri: `crates/tauri-adapter/src/commands/opening_balance.rs`, `bootstrap/container.rs`, `lib.rs`
 - Frontend: `apps/desktop/src/modules/accounting/api/openingBalanceService.ts`, `modules/opening-balance/pages/openingBalanceMigration.tsx`, `modules/accounting/journal/lib/journal-config.ts`, `app/router/ErpRoutes.tsx`, `app/shell/routeRegistry.ts`, `packages/shared-types/src/journal_entry.ts`
-- Phase H: `crates/application/src/use_cases/opening_balance/cancel.rs`, `crates/infrastructure/src/repositories/opening_balance/posting.rs`, `crates/tauri-adapter/src/commands/opening_balance.rs`
+- دورة حياة الترحيل: `crates/application/src/use_cases/opening_balance/cancel.rs`, `crates/infrastructure/src/repositories/opening_balance/posting.rs`, `crates/tauri-adapter/src/commands/opening_balance.rs`
 
-### Phase M — Auto Net-Profit from ledger (توزيع تلقائي)
+### Auto Net-Profit from ledger (توزيع تلقائي)
 - New `ComputeNetProfitUseCase` (`net_profit.rs`): reads posted entries (status=Posted) up to the migration's cutover day end-of-day via `list_with_filters`, then classifies each line by `AccountType` (Revenue: credit−debit; Expenses: debit−credit); returns `ComputedNetProfitDto{net_profit, total_revenue, total_expenses, gross_profit, entry_count}`. Pure `compute_ledger_totals` free function + 4 unit tests (revenue/exp separation, drafts excluded, reversal nets to zero, unknown-account skipped).
 - Tauri `compute_opening_balance_net_profit` registered; frontend `openingBalanceService.computeNetProfit` + "احسب من اليومية" button on the allocate card (pre-fills net_profit + shows revenue/expense/net summary with entry count). Manual override still supported.
 
-### Phase N — `source_type` standardization + reopen cancelled migration
+### `source_type` standardization + reopen cancelled migration
 - **N1**: Added canonical `JournalType::source_type() -> &'static str` (snake_case tags for all 25 variants). Infra `insert_entry` now persists the canonical tag whenever a caller leaves `source_type` None — one central, future-proof default covering all ~30 creation sites (no per-site duplication). `create_reversal` also uses the canonical tag of the original type (previously Debug-formatted `CashReceipt`).
 - **N2**: `OpeningBalanceMigration::reopen()` (Cancelled→Draft, clears validate/approve/post/lock audit) + `ReopenOpeningBalanceUseCase` + Tauri `reopen_opening_balance_migration` + a "إعادة فتح" button on cancelled migrations. +2 domain tests (reopen resets audit; rejects posted/draft).
 - Tests updated for canonical labels: domain `cash_receipt`, infra `draft_entry_has_no_reversal_metadata` expects `general_journal`.
 - Gates: workspace check, clippy 4 crates (clean), domain 54, application 12, infrastructure 8 (3 lib + 5 integration), tsc/eslint (0 errors, 46 pre-existing warnings), vitest 100 — all green.
 
-### Phase I - State Machine (Draft/Validated/Approved/Posted/Locked/Cancelled)
+### State Machine (Draft/Validated/Approved/Posted/Locked/Cancelled)
 - Domain `opening_balance.rs`: 6-state `MigrationStatus` + fields company_id/source_system/source_reference/validated_by/at/approved_by/at/locked_at; transitions validate/approve/lock/unlock/mark_posted/un_post/cancel; mark_posted requires Approved; +5 unit tests.
 - Migration `140_opening_migration_state.sql`: ALTER columns + new tables opening_balance_customer_items/supplier_items/inventory_items/fixed_assets (FK -> migration, ON DELETE CASCADE).
 - Port `find_by_cutover_date`; infra models/mappers/queries expanded; create guards duplicate active cutover; cancel handles all states (Locked forbidden, Posted -> reversal path).
 - Tauri: validate/approve/lock commands; frontend status badges + per-status actions.
 
-### Phase J - Sub-ledger Details + Reconciliation
+### Sub-ledger Details + Reconciliation
 - types.rs: OpeningCustomerItem/SupplierItem/InventoryItem/FixedAssetItem, SaveOpeningDetailsCommand, OpeningDetailsDto, OpeningReconciliationDto, ReconciliationRow.
 - Port `opening_detail_repository.rs` (replace_details/load_details); infra `repositories/opening_balance/details.rs` (atomic replace inside one tx, string-encoded decimals).
 - SaveOpeningDetailsUseCase (blocks Posted/Locked/Cancelled); GetOpeningReconciliationUseCase (AR/AP via effective_balance, Inventory via material summary total_available*average_cost_base, FA via net_book_value; debit/credit + opening control from posted journal, else drift classification of lines; obe account code 53).
@@ -112,19 +112,19 @@
 - Frontend: service saveDetails/getReconciliation + reconciliation card (rows AR/AP/Inventory/FA matched vs GL, debit=credit, control 53 = 0).
 - Gates: cargo check --workspace, clippy 4 crates, domain 49 tests, application 8 tests, tsc, eslint, vitest 100 tests all pass.
 
-### Phase K - Reversal + Wizard
+### Reversal + Wizard
 - K1: JournalType::Reversal + reversal_of_entry_id + source_type persisted (migration 141); fixed dropped reversed_at in repo save; ReverseJournalEntryUseCase now posts a true contra entry (create_reversal swaps debit/credit, links original, source_type=original type) then marks original Reversed. Frontend: JournalType/JournalEntryStatus unions synced, journal page shows عكس action for Posted + معكوس badge.
 - K2: WizardShell component + 15-step wizard (/opening-balance-wizard) collecting company info, assets/liabilities/equity lines, AR/AP/Inventory/FA details, equation A=L+E, commit+reconcile, then validate/approve/post/lock via existing commands.
 
-### Phase L1 - Capitalization / Partner Equity Statement
+### Capitalization / Partner Equity Statement
 - CreateCapitalContributionUseCase already existed and is wired (partners page).
 - New GetPartnerEquityStatementUseCase (equity module): per partner registered capital (amount_local) + cumulative ledger balance of linked capital account (sum credit_base - debit_base, status != Draft) => profit_allocated + total_equity; Tauri get_partner_equity_statement + PartnerEquityCard on partners page (بيان شركاء).
 
-### Phase L2 - Multi-scenario integration tests + migration bug fix
+### Multi-scenario integration tests + migration bug fix
 - New integration suite crates/infrastructure/tests/reversal_lifecycle.rs (5 tests) on a temp-file SQLite DB exercising the real repo: full reversal lifecycle persists metadata (JournalType::Reversal + reversal_of_entry_id + source_type + swapped lines), drafts carry no reversal metadata, use case rejects reversing an already-reversed entry, schema forward-complete, and orphan cleanup.
 - FOUND + FIXED latent bug: migration 130 added depreciation_method to fixed_assets, but migration 004 already ships that column -> "duplicate column name" on FRESH installs. The pool's healing loop then marked 130..141 as applied WITHOUT running them, silently dropping the opening-balance tables (139/140) and journal reversal columns (141) on new DBs. Migration 130 is now a no-op (column already exists via 004); fresh installs now apply every migration.
 
-### Phase L3 — Real UnitOfWork + atomic reversal + orphan cleanup
+### Real UnitOfWork + atomic reversal + orphan cleanup
 - sqlite_unit_of_work.rs: real begin()/commit()/rollback() driving a dedicated PoolConnection with explicit BEGIN IMMEDIATE / COMMIT / ROLLBACK (no 'static Transaction leak). +3 unit tests (rollback discards writes, commit persists, nested begin rejected, commit-without-begin no-op).
 - JournalEntryRepository::save_reversal_pair persists the reversal + its Reversed original in ONE transaction; ReverseJournalEntryUseCase now uses it (true cross-row atomicity).
 - Migration 142_reversal_integrity_cleanup.sql (idempotent): deletes Reversal entries with id a dangling reversing_of_entry_id (or NULL link) and resets stranded 'Reversed' originals back to Posted.
@@ -133,14 +133,14 @@
 
 > After M+N: gates — workspace check ✓, clippy 4 crates ✓ (0 warnings), domain 54 ✓, application 12 ✓ (10 opening_balance + 2), infrastructure 8 ✓ (3 lib + 5 integration), tsc ✓, eslint 0 errors / 46 pre-existing warnings, vitest 100 ✓. `JournalType::source_type()` central default at persist — source_type never NULL going forward; explicit overrides still honored. Reopen guarded to Cancelled cancellation (post-posting reversals not re-openable; create a new migration instead).
 
-### Phase O — Posting & Reconciliation hardening (ثغرات النشر والمطابقة)
+### Posting & Reconciliation hardening (ثغرات النشر والمطابقة)
 - **O1 — `source_type` لقيد الافتتاح/العكسي**: `insert_journal` (يخدم post+cancel) أُضيف له `source_type` في INSERT العمودي مع fallback `entry.source_type.or_else(|| entry.journal_type.source_type())` — أُغلق التجاوز المركزي (كان العمود يُحذف من SQL فيُخزَّن NULL، والوسم القانوني `account_opening_balance`/`opening_balance_reversal` كان يُفقد).
 - **O2 — منع النشر غير المتوازن (إزالة auto-plug)**: بلوك الـ plug إلى حساب 53 في `post.rs` حُذف؛ `PostOpeningBalanceUseCase` يشغّل `readiness_blockers(&recon, false)` ويرفض النشر إذا `!debit_equals_credit` أو `!all_reconciled`. DTO `equity_balanced` يعكس `debit_equals_credit` (دائماً true الآن). الواجهة: رسالة toast "تم الترحيل (متوازن)" فقط.
 - **O3 — تسوية GL مصحّحة + إجبار كامل**: `reconcile.rs` أُعيد بناؤه — `SubledgerKind{Ar,Ap,Inventory,FixedAssets}` + دوال نقية `account_subledger_kind` (سوابق 1203*/2203*/1204*/11*) و`gl_bucket_totals` (من بنود الترحيل، لا الأرصدة المخزنة) و`detail_subledger_totals` و`readiness_blockers(recon, require_control_zero)`؛ `GetOpeningReconciliationUseCase` خُفّض إلى 4 حقن. `LockOpeningBalanceUseCase` يشغّل `readiness_blockers(true)` — يرفض القفل إذا رصيد 53 ≠ 0 (يطبّق "Control == 0 قبل القفل" فعلياً لا تعليقاً).
 - **O4 — الاختبارات**: +2 integration `crates/infrastructure/tests/opening_posting.rs` (post يخزّن `account_opening_balance` + حالة Posted؛ cancel مع `OpeningBalanceReversal` يخزّن `opening_balance_reversal` + حالة Cancelled) على sqlite حقيقي؛ +2 unit في `reconcile.rs` (تصنيف الأكواد ورفض النقد، مدخلات post vs lock). واجهة: سطر حالة "جاهز للترحيل/القفل" في بطاقة التسوية (الصفحتان) يعرض blockers.
 - **Gates**: workspace check ✓, clippy 4 crates ✓ (0 warnings), domain ✓, application 14 ✓, infrastructure 10 ✓ (3 lib + 5 reversal + 2 opening_posting), tsc ✓, eslint 0 errors / 46 pre-existing warnings, vitest 100 ✓.
 
-### Phase P � Partner drawings (contra-equity), residual classification & atomic partner creation
+### Partner drawings (contra-equity), residual classification & atomic partner creation
 - **P1 � save_with_accounts (atomic partner creation)**: New port method
   \PartnerRepository::save_with_accounts\ + Sqlite impl persisting partner + capital (51X) +
   drawings (44X) in ONE SQLite transaction (helpers \insert_account_tx\/\insert_partner_tx\).
@@ -172,13 +172,13 @@ ormal_balance()\ instead of hardcoded type matches (enables
   (domain 66 + application 21 + infra lib 3 + integration opening 2 + reversal 5 + partner_atomicity 2) ? �
   tsc ? � eslint 0 errors (46 pre-existing warnings) ? � vitest 100 ? � \docs/accounting-model.md\ added.
 
-### Phase Q — Consolidated Opening Balance page (single entry, module-derived wizard)
+### Consolidated Opening Balance page (single entry, module-derived wizard)
 - **Q1 — One page, one entry**: `/opening-balance-migration` becomes the only entry; the 15-step standalone wizard page `/opening-balance-wizard` is deleted and its route now `<Navigate>`s to the consolidated page. `routeRegistry` carries a single menu label; `MigrationListCard` trimmed to settled history (Lock on Posted / Reopen on Cancelled; Draft/Validated/Approved action rows and onValidate/onApprove/onPost removed).
 - **Q2 — Read-only Opening Position Control Center**: `OpeningPositionControlDto` extended with `opening_status`, `cutover_date`, `unreconciled_items` (sub-ledger rows), `validation_errors` (readiness blockers) via `readiness_blockers(&recon, false)`; `GetOpeningPositionControlUseCase::new` now takes detail+journal repos. `PositionControlCard` renders status badge + cutover + assets/liabilities/equity/net/difference + unreconciled + blocker panels.
-- **Q3 — Module-derived 10-step wizard** (`GuidedTransitionWizard`, embedded): Company Start → Partners & Capital → Assets → Liabilities → Reconciliation → Review → Validate → Post → Lock → Done. Lines are DERIVED from modules (AR from customers, AP from suppliers, FA at net book value, partner equity) + manual only for cash/bank/other; AR/AP/FA items collected from real entity ids; Inventory read-only info linking to the Phase-3 opening-invoice flow; 53 plug on credit residual with explicit classification. Company Start mode selector (New/Existing) relocated from /partners into wizard Step 1, persisted via settings; validate/post/lock run the existing backend gates at steps 6/7/8.
-- **Gates**: cargo check --workspace ✓ � cargo test (domain 63 + application 74 + infrastructure 49 all green; phase4_validate_enforcement 3 new) ✓ � tsc --noEmit exit 0 ✓ � eslint --quiet clean ✓ � vitest ✓ � vite build ✓. Known pre-existing env block: `cargo test -p tauri-adapter --lib` fails 0xc0000139 (unrelated to changes).
+- **Q3 — Module-derived 10-step wizard** (`GuidedTransitionWizard`, embedded): Company Start → Partners & Capital → Assets → Liabilities → Reconciliation → Review → Validate → Post → Lock → Done. Lines are DERIVED from modules (AR from customers, AP from suppliers, FA at net book value, partner equity) + manual only for cash/bank/other; AR/AP/FA items collected from real entity ids; Inventory read-only info linking to the opening-invoice flow; 53 plug on credit residual with explicit classification. Company Start mode selector (New/Existing) relocated from /partners into wizard Step 1, persisted via settings; validate/post/lock run the existing backend gates at steps 6/7/8.
+- **Gates**: cargo check --workspace ✓ � cargo test (domain 63 + application 74 + infrastructure 49 all green; opening_validate_enforcement 3 new) ✓ � tsc --noEmit exit 0 ✓ � eslint --quiet clean ✓ � vitest ✓ � vite build ✓. Known pre-existing env block: `cargo test -p tauri-adapter --lib` fails 0xc0000139 (unrelated to changes).
 
-### Phase 5 — Financial Periods as core accounting infrastructure (الفترات المالية)
+### Financial Periods as core accounting infrastructure (الفترات المالية)
 - **R6 — Graduated legacy-safe enforcement** (`journal_entry/commands.rs`): single choke point `validate_posting_period()` called from `insert_entry()` ONLY when the entry status is `Posted` (drafts freely editable until the Draft→Posted transition). Logic: exempt types (`is_period_exempt()`: CashOpeningBalance/AccountOpeningBalance/MaterialOpeningBalance/OpeningBalanceReversal/Reversal) skip; **no periods exist → allow** (legacy DBs keep writing); a date covered only by non-posting statuses, or not covered by any period when periods exist, → `AppError::Forbidden` with Arabic message. No global `post()` gate was added, matching the user-chosen graduated model.
 - **R6 Domain**: `FiscalPeriodStatus::Locked` (permanent seal — `can_post()` true only for Open/Reopened; `lock()` allowed from Open/Closing/Closed/Reopened, `reopen()` rejects Locked) + `locked_at/locked_by` fields; `contains()` inclusive both ends. `JournalType::is_period_exempt()` + unit tests.
 - **R6 Infra**: migration `153_fiscal_periods_lock.sql` (locked_at/locked_by); `fiscal_period/mod.rs` CRUD + rows extended. `close.rs` treats Locked as terminal/idempotent; new `LockFiscalPeriodUseCase` (idempotent on Locked) + `ReopenFiscalPeriodUseCase` (Closed→Reopened; Locked/Cancelled rejected) with DTO/command types; Tauri `lock_fiscal_period` + `reopen_fiscal_period` registered. Requirement-8 integration suite `crates/infrastructure/tests/fiscal_period_guard.rs` (9 scenarios) on a real temp-file SQLite: new-company period accepts posting; outside-all-periods rejected; Closed rejected; Locked rejected; Reopened accepts; reversal inside Closed OK (exempt); opening-balance bypasses; no-periods legacy allowed; Draft save inside Closed OK but posting it rejected. Requirement-8 checks: New Company→Period ✓, Existing→Opening→Period ✓ (wizard), Closed rejected ✓, Locked rejected ✓.
@@ -186,7 +186,7 @@ ormal_balance()\ instead of hardcoded type matches (enables
 - **Wizard integration**: `useOpeningBalanceWizard` splits steps into `STEPS_EXISTING` (11: …Lock → First Period → Done) and `STEPS_NEW` (2: Start → Done); `firstPeriodStart/End` + `firstPeriod` state + idempotent `createFirstPeriod()` (no-op when the window is unchanged so navigating back never duplicates). NewCompany creates the first financial period inline in Step 1; ExistingCompany creates it in the new "أول فترة تشغيلية" step after Lock; footer label switches to "إنشاء الفترة الأولى والبدء"/"إنشاء أول فترة تشغيلية". `canNext` gates on valid dates (start<end), NOT on an existing period, so the create action stays reachable. Wizard test file 3 green (NewCompany 2-step, create+finish, ExistingCompany 11-step).
 - **Gates**: cargo check -p domain -p application -p infrastructure -p tauri-adapter ✓; cargo test (domain + application 69 all green; infrastructure all green incl. fiscal_period_guard 9/9) ✓; `tsc --noEmit` exit 0 ✓; eslint --quiet clean ✓; vitest 134/134 ✓; vite build ✓. Known pre-existing env block: `cargo test -p tauri-adapter --lib` fails 0xc0000139 (unrelated).
 
-### Phase 7 — UI/UX unification for the three admin pages (UI-only, backend untouched)
+### UI/UX unification for the three admin pages (UI-only, backend untouched)
 Scope (user-confirmed): رصيد افتتاح الشركة / معالج الرصيد الافتتاحي / الفترات المالية — one design language only, fewer data-entry clicks, DRY where genuinely duplicated, page/hook responsibility split, perf where real (duplicate queries, unnecessary refetch), a11y + responsive.
 - **WP1 — Formatting DRY**: new `fmtMoney(value, digits=2)` in `shared/lib/format.ts` (Intl ar-SY, collapses null/undefined/NaN → "0.00") replacing 35× `toFixed(parseFloat(x||"0"),2)` across ProfitAllocationCard/ReconciliationCard/PositionControlCard/GuidedTransitionWizard/FiscalPeriodsPage; 16× `.split("T")[0]` → `toLocalDateStr`; migration `<Select>` was built 3× → shared `MigrationPicker`; deleted stale local `toDateInput`. Query keys: `QUERY_KEYS.distributableProfit(start?,end?)` added; FiscalPeriodsPage swapped literal arrays → `QUERY_KEYS`.
 - **WP2 — Shared components** (thin wrappers, not a second design system): `shared/ui/section-card.tsx` (SectionCard: title/icon/description/action/contentClassName mirroring existing card classes); `widgets/table-shell/LoadingState.tsx` (skeleton rows, role="status"); `MigrationPicker.tsx` (shared migration Select: cutover — status — line count); `ReconciliationStatusBanner.tsx` + pure `reconciliationReadiness()`/`readinessLabel()` in `migration-labels.ts`. Adopted across all three migration cards; wizard step 5 now uses the shared readiness banner (duplicated blockers logic deleted).
@@ -196,7 +196,7 @@ Scope (user-confirmed): رصيد افتتاح الشركة / معالج الرص
 - **WP6 — Tests**: new `derive-rows.test.ts` (8), `migration-labels.test.ts` (6), `fmtMoney`/`toLocalDateStr` blocks in `format.test.ts` (8); wizard component imports re-pointed to lib.
 - **Gates**: `tsc --noEmit` exit 0 ✓ · eslint clean (0 errors/warnings on changed files) ✓ · vitest 154/154 ✓ · `vite build` ✓. Work is uncommitted on top of `b6c2fa3`.
 
-### Phase 8 — v0.9.10 release gate: accounting regression suites + minimal DRY + UI/UX consistency (opening + periods only)
+### v0.9.10 release gate: accounting regression suites + minimal DRY + UI/UX consistency (opening + periods only)
 Scope (user-confirmed): close every audited test gap with new infrastructure integration suites, fix the real defects they surface, minimal DRY cleanup introduced by the opening work, and a UI/UX normalization limited to opening-balance + fiscal-periods (old modules untouched).
 - **New integration suites** (9 files, 12 tests) on real temp-file SQLite via `run_migrations`, all under `crates/infrastructure/tests/`:
   - `critical_existing_company.rs` (2) / `critical_new_company.rs` (4): full company-setup ledger paths (partner/capital/cash/bank/customer/supplier/equity) asserting Debit=Credit and A=L+E after each step.

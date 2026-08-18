@@ -33,7 +33,7 @@ function account(
   };
 }
 
-/** Canonical post-Phase-2 chart: loans = 224 under 22 under 2; partner
+/** Canonical chart: loans = 224 under 22 under 2; partner
  *  current (54) and drawings (44) under the equity root (5). */
 function canonicalChart(): AccountDto[] {
   const c = (code: string, name: string, type: string, parent: string | null, purpose?: string) =>
@@ -85,7 +85,7 @@ function flatten(nodes: AccountTreeNode[]): AccountTreeNode[] {
   return out;
 }
 
-describe("buildTree — chart of accounts hierarchy (Phase 2)", () => {
+describe("buildTree — chart of accounts hierarchy", () => {
   it("produces exactly the five canonical roots ordered by code", () => {
     const roots = buildTree(canonicalChart());
     expect(roots.map((r) => r.code)).toEqual(["1", "2", "3", "4", "5"]);

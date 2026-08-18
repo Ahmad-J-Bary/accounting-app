@@ -1,4 +1,4 @@
--- Phase 2 — Unified Company Accounting Model (ONE accounting system).
+-- Unified Company Accounting Model (ONE accounting system).
 -- Replaces the parallel free-text sub-ledger tables (Opening Customer / Opening
 -- Supplier / Opening Inventory / Opening Asset) with a single link table whose
 -- rows reference REAL entities. Existing vs New company now differ only by the

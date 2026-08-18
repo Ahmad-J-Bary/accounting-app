@@ -46,7 +46,7 @@ impl SaveOpeningDraftUseCase {
                 "مسودة الرصيد الافتتاحي كبيرة جداً — قلّص البيانات ثم أعد الحفظ".into(),
             ));
         }
-        // Phase 5: draft writes are opening-workflow writes — rejected for NEW
+        // Draft writes are opening-workflow writes — rejected for NEW
         // companies and once the lifecycle is closed (a Locked migration).
         assert_opening_workflow_writable(&self.settings_repo, &self.migration_repo).await?;
         self.repo.save(data).await

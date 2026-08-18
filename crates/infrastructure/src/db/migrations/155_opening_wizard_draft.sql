@@ -1,4 +1,4 @@
--- Phase 4: per-company opening-balance wizard draft. Stores the frontend
+-- Per-company opening-balance wizard draft. Stores the frontend
 -- editor state (cutover date, source fields, notes, cash/bank/loan rows,
 -- manual asset/liability/equity lines, fixed-asset opening overrides, inventory
 -- inputs, residual classification, first-fiscal-period window, current step) as

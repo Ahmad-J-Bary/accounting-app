@@ -1,4 +1,4 @@
-//! Phase 3 — no remaining opening duplication (One Company Model).
+//! No remaining opening duplication (One Company Model).
 //!
 //! Covered here:
 //! - Inventory opening goes through the EXISTING unified-invoice module
@@ -10,7 +10,7 @@
 //!   RecordOpeningStockUseCase, which posted its own duplicate journal, is gone).
 //! - Creating a Chart of Accounts account while a migration window is open
 //!   defers the per-account AccountOpeningBalance journal (static zero), the
-//!   same treatment Phase 2 applies to customer/supplier create, so the same
+//!   same treatment the company lifecycle applies to customer/supplier create, so the same
 //!   balance can never be posted twice (R1). After the window closes behaviour
 //!   is unchanged (NewCompany baseline).
 
@@ -46,7 +46,7 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_phase3_inventory_opening_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!("acc_opening_no_duplication_{}.sqlite", uuid::Uuid::new_v4()));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);

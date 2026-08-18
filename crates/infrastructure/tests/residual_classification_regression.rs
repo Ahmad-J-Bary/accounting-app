@@ -1,4 +1,4 @@
-//! Phase 7 — full-stack EXISTING-company opening regression in the RESIDUAL
+//! Full-stack EXISTING-company opening regression in the RESIDUAL
 //! variant. The unbalanced position is posted exactly once, its residual is
 //! classified to Retained Earnings through exactly one more journal, and the
 //! company locks with a consistent Trial Balance and Balance Sheet:
@@ -77,7 +77,7 @@ fn test_currency() -> Currency {
 
 fn fresh_db_path(tag: &str) -> String {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_phase7_{}_{}.sqlite", tag, uuid::Uuid::new_v4()));
+    path.push(format!("acc_residual_classification_{}_{}.sqlite", tag, uuid::Uuid::new_v4()));
     path.to_str().unwrap().to_string()
 }
 
@@ -195,7 +195,7 @@ struct Accounts {
     retained: AccountId,
 }
 
-/// Seeds the Phase 7 chart-family accounts. Loan uses the canonical chart code
+/// Seeds the chart-family accounts. Loan uses the canonical chart code
 /// 224; OBE is the real 53 control account from the seeded chart.
 async fn seed_accounts(pool: &Arc<sqlx::SqlitePool>) -> Accounts {
     Accounts {
@@ -296,7 +296,7 @@ fn line(account: AccountId, amount: &str) -> OpeningLineInput {
     OpeningLineInput { account_id: account.to_string(), amount: amount.into(), description: None }
 }
 
-/// The exact Phase 7 lines: Cash 25 / Bank 40 / AR 80 / Inventory 120 / FA 200
+/// The exact lines: Cash 25 / Bank 40 / AR 80 / Inventory 120 / FA 200
 /// (Dr 465) vs AP 70 / Loans 50 / Ahmad 180 / Mohammad 120 (Cr 420) + OBE 53 45
 /// (Cr 45) — line-balanced with the residual parked on the control account.
 fn full_lines(a: &Accounts) -> Vec<OpeningLineInput> {
@@ -442,7 +442,7 @@ struct Fixture {
     migration_id: String,
 }
 
-/// A fully prepared Phase 7 fixture: accounts, partners, entities, a draft
+/// A fully prepared fixture: accounts, partners, entities, a draft
 /// migration carrying the canonical residual lines and the reconciled
 /// sub-ledger items.
 async fn fixture(tag: &str, cutover: &str) -> Fixture {
@@ -456,11 +456,11 @@ async fn fixture(tag: &str, cutover: &str) -> Fixture {
             cutover_date: cutover.to_string(),
             notes: None,
             lines: full_lines(&accounts),
-            source_system: Some("phase7".into()),
+            source_system: Some("residual_classification".into()),
             source_reference: Some("P7-2025".into()),
         })
         .await
-        .expect("create Phase 7 draft migration");
+        .expect("create draft migration");
     let migration_id = draft.0.id.clone();
     let entities = seed_entities(&pool).await;
     save_items(&pool, &migration_id, subledger_items(&accounts, &entities)).await;

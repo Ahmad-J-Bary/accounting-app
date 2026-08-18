@@ -1,4 +1,4 @@
-//! Phase 2 — migration 162 normalizes legacy `Reversal` / `OpeningBalanceReversal`
+//! Migration 162 normalizes legacy `Reversal` / `OpeningBalanceReversal`
 //! journal-type rows into the semantic model where a reversal is a relationship
 //! (`reversal_of_entry_id`), never a journal type:
 //!   1) linked contras inherit the original's journal_type;

@@ -1,4 +1,4 @@
-//! Bank / Loan / Inventory opening reconciliation (Phase 11-12).
+//! Bank / Loan / Inventory opening reconciliation.
 //! The P0 scenario: EXISTING company opens Cash 25, Bank 40, AR 80, Inventory
 //! 120, FA 200 (Dr 465) vs AP 70, Loan 50, Capital 300, residual 45 on 53 (Cr
 //! 465). Every sub-ledger incl. the new Bank (`bank` purpose) and Loan (`loan`
@@ -323,7 +323,7 @@ fn create_cmd(lines: Vec<OpeningLineInput>, s: Option<&str>) -> CreateOpeningBal
 }
 
 // ---------------------------------------------------------------------------
-// Phase 11 — the exact 465/465 scenario end-to-end: reconciled, validated,
+// The exact 465/465 scenario end-to-end: reconciled, validated,
 // approved, posted (465/465, equity balanced), residual reclassified (53 -> 0),
 // locked, and the position control sees Assets 465 / Liabilities 120 / Equity
 // 345 with zero equity difference.

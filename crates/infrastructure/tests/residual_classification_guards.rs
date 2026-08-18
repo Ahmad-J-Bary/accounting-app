@@ -138,7 +138,7 @@ async fn post_migration_with_classification(
     migration.approve("tester").unwrap();
     migration_repo.update(&migration).await.unwrap();
 
-    // Phase 4 auto-mode: the SYSTEM resolves the designated account for the
+    // Auto-mode: the SYSTEM resolves the designated account for the
     // classification the user chose. Status is Approved (wizard Step 2 order).
     SetResidualClassificationUseCase::new(migration_repo.clone(), account_repo.clone())
         .execute(SetResidualClassificationCommand {

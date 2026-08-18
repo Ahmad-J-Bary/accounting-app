@@ -1,4 +1,4 @@
-//! Phase 8 — Current Period resolution. A transaction dated at any point must
+//! Current Period resolution. A transaction dated at any point must
 //! resolve to exactly the fiscal period that contains it (`find_by_date`), and
 //! the CreateFiscalPeriodUseCase must reject a new period that overlaps an
 //! existing one so reporting windows never double-count a date.

@@ -8,7 +8,7 @@
 //! partner whose capital ledger had zero `lines`, collapsing the
 //! statement/profit-share rows to empty even though real partners exist.
 //!
-//! Phase 5 contract: the POSTED opening journal IS the single GL movement.
+//! Contract: the POSTED opening journal IS the single GL movement.
 //! `get_ledger` surfaces it as a real posted `lines` transaction («رصيد
 //! افتتاحي») and `opening_entries` carries nothing synthetic — the same
 //! opening amount is never shown twice. These tests pin the data contract the

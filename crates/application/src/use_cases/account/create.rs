@@ -103,7 +103,7 @@ impl CreateAccountUseCase {
         // the migration's aggregate journal owns the ledger. New CoA accounts
         // are created with a static zero opening balance and the per-account
         // AccountOpeningBalance journal below is deferred — the same treatment
-        // Phase 2 applies to customer/supplier create, so the same balance can
+        // the company lifecycle applies to customer/supplier create, so the same balance can
         // never be posted twice (R1).
         let opening_window = opening_window_active(&self.opening_migration_repo)
             .await

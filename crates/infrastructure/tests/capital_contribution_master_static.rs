@@ -118,7 +118,7 @@ async fn funding_account_id(pool: &sqlx::SqlitePool) -> AccountId {
     AccountId::from_str(&id).unwrap()
 }
 
-/// Phase F contract (audit finding F6, user-approved): master-data capital is
+/// Audit contract (finding F6, user-approved): master-data capital is
 /// the OFFICIAL REGISTERED amount and stays static; the ledger is the truth for
 /// equity. A capital contribution only posts a journal — it never mutates
 /// partner.amount_local, and the equity statement reads the ledger balance.
@@ -139,7 +139,7 @@ async fn contribution_keeps_master_static_and_ledger_is_truth() {
         funding.to_string(),
         Decimal::from(500),
         false,
-        Some("phase-f-contrib-1".into()),
+        Some("legacy-contrib-1".into()),
     )
     .await
     .expect("contribution must post");

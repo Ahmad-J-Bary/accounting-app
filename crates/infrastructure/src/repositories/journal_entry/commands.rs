@@ -106,7 +106,7 @@ pub(crate) async fn validate_posting_period(
 }
 
 /// Rejects posting NORMAL operational journals while an EXISTING company's
-/// opening-balance migration has not been sealed yet (Phase 4: no daily
+/// opening-balance migration has not been sealed yet (no daily
 /// accounting before the opening position is Locked). Opening-workflow
 /// journals are exempt two ways:
 ///  * period exemption (`is_period_exempt`: Cash/Account/Material opening

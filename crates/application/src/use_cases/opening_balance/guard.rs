@@ -29,7 +29,7 @@ pub fn reject_pl_account(account: &Account) -> Result<(), AppError> {
 /// window is still open. The window closes only when every migration reaches
 /// `Locked` or is `Cancelled`; it stays open through Posting (Draft → Validated
 /// → Approved → Posted) so the company's opening position is complete before it
-/// starts operating (Phase 3: one canonical opening GL posting).
+/// starts operating (the single canonical opening GL posting).
 ///
 /// This is the context switch behind the ONE accounting system: while the
 /// window is open, module create flows (customer/supplier/partner/capital/
@@ -49,7 +49,7 @@ pub async fn opening_window_active(
 
 /// True once an EXISTING company's opening lifecycle is sealed — any migration
 /// has reached Locked. After that the opening workflow is closed for good and
-/// becomes read-only history (Phase 5: no new writes, no new migrations).
+/// becomes read-only history (no new writes, no new migrations).
 pub async fn opening_lifecycle_closed(
     repo: &Arc<dyn OpeningMigrationRepository>,
 ) -> Result<bool, AppError> {
@@ -59,7 +59,7 @@ pub async fn opening_lifecycle_closed(
         .any(|m| m.status == MigrationStatus::Locked))
 }
 
-/// Phase 5 backend capability guard for opening-workflow WRITES (persisting the
+/// Backend capability guard for opening-workflow WRITES (persisting the
 /// wizard draft, creating a migration, …): only legal while the lifecycle is
 /// still open — an EXISTING company with no Locked migration yet. NEW companies
 /// never touch the workflow; once closed (a Locked migration exists) the

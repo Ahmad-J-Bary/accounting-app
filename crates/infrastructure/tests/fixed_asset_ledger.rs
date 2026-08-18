@@ -1,4 +1,4 @@
-//! Phase 8 — Fixed Asset through the REAL use cases and repository. Creating an
+//! Fixed Asset through the REAL use cases and repository. Creating an
 //! asset posts a balanced acquisition journal (Dr asset / Cr payment account)
 //! with its AssetMovement; posting depreciation writes a balanced expense /
 //! accumulated-depreciation journal; and the Asset Ledger reconciles:

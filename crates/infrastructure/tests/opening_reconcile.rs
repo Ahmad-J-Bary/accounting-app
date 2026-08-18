@@ -1,4 +1,4 @@
-//! Phase 8 — Opening Reconciliation direct test. `GetOpeningReconciliationUseCase`
+//! Opening Reconciliation direct test. `GetOpeningReconciliationUseCase`
 //! reports each sub-ledger (AR / AP / Inventory / Fixed Assets) compared against
 //! the migration's own general-ledger opening lines. A migration whose AR
 //! sub-ledger item (700) matches its GL receivable line (700) reconciles; a

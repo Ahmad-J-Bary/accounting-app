@@ -71,7 +71,7 @@ function entry(
   };
 }
 
-/** The Phase 7 RESIDUAL chart: the two partner-capital accounts, the OBE 53
+/** The RESIDUAL chart: the two partner-capital accounts, the OBE 53
  * control account and the Retained Earnings target, plus the operating items. */
 function residualAccounts(): AccountDto[] {
   return [
@@ -95,7 +95,7 @@ function openingMigrationJournal(): JournalEntryDto {
   return entry({
     id: "1",
     entry_number: "1",
-    source_id: "opening_balance:phase7-migration",
+    source_id: "opening_balance:existing-company-migration",
     journal_type: "AccountOpeningBalance",
     description: "قيد ترحيل رصيد افتتاح الشركة",
     entry_date: "2026-01-01",
@@ -119,7 +119,7 @@ function residualJournal(): JournalEntryDto {
   return entry({
     id: "2",
     entry_number: "2",
-    source_id: "residual_classification:phase7-migration",
+    source_id: "residual_classification:existing-company-migration",
     description: "ترحيل تصنيف الرصيد المتبقي",
     entry_date: "2026-01-01",
     lines: [
@@ -129,7 +129,7 @@ function residualJournal(): JournalEntryDto {
   });
 }
 
-describe("Phase 7 — residual classification: TB Dr=Cr and BS 465 = 120 + 345 from the two official entries", () => {
+describe("Residual classification: TB Dr=Cr and BS 465 = 120 + 345 from the two official entries", () => {
   it("canonical verdict: every account exactly once, RE arrives via the residual, OBE nets to zero", () => {
     const accounts = residualAccounts();
     const { ledgerTotals } = computeLedgerTotals(accounts, [openingMigrationJournal(), residualJournal()]);

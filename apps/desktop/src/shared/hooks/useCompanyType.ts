@@ -28,7 +28,7 @@ export function useCompanyType(): ReturnType<typeof companyTypeOf> {
   return companyTypeOf(useCompanyTypeSettings());
 }
 
-// State-aware capabilities (Phase 5): the opening workflow is open ONLY while
+// State-aware capabilities: the opening workflow is open ONLY while
 // an EXISTING company is still before OPENING_LOCKED. While the lifecycle
 // queries resolve we fall back to the permissive ACTIVE state so neither the
 // transactional pages nor the opening workflow flash as blocked during startup.

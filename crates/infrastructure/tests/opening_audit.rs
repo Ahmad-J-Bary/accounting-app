@@ -1,4 +1,4 @@
-//! Phase 8 — opening-balance audit trail. Each lifecycle transition stamps its
+//! Opening-balance audit trail. Each lifecycle transition stamps its
 //! metadata on the migration row AND the journal in the same transaction, so a
 //! company's setup can be audited after the fact: who validated, who approved,
 //! when it was posted, when it was locked.

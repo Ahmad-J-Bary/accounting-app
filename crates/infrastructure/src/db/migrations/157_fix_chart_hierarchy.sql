@@ -1,6 +1,6 @@
 -- 157: Fix Chart of Accounts hierarchy
 --
--- Phase 2 audit fixes (post-015 numbering: one digit per level):
+-- Chart-hierarchy audit fixes (post-015 numbering: one digit per level):
 --   1) Loans: 225 -> 224 (the historical "224" was Opening Balance Equity,
 --      converted to 53 by migration 128 / pool.rs; 224 is now free for loans).
 --      Same account id, so posted journal lines stay untouched.

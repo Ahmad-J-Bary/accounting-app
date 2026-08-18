@@ -1,7 +1,7 @@
 -- R1: Convert only the pristine/unconfigured company row to
 -- ExistingCompanyMigration. The pristine row is the untouched seed inserted by
 -- migration 002 (id='default') and renamed by migration 005 to its default
--- company name 'شركة بردى للصناعة'; it still carries the pre-Phase-2 default
+-- company name 'شركة بردى للصناعة'; it still carries the legacy default
 -- 'NewCompany'. Any company whose name was customized is left untouched (no
 -- data loss). New rows get EXISTING from the setup screen.
 UPDATE settings

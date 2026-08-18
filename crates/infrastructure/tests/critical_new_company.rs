@@ -1,4 +1,4 @@
-//! Phase 8 — critical path for a NEW company (no opening migration), through
+//! Critical path for a NEW company (no opening migration), through
 //! the real application use cases against a real SQLite database.
 //!
 //! Under test:

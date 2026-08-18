@@ -1,6 +1,6 @@
 -- 159: Designated residual-classification accounts
 --
--- Phase 4: the user chooses the ACCOUNTING MEANING of the opening residual and
+-- The user chooses the ACCOUNTING MEANING of the opening residual and
 -- the SYSTEM chooses the designated account — one controlled purpose per
 -- classification, never an arbitrary balancing account. Retained earnings (52)
 -- already exists; this migration ensures the three remaining designated detail

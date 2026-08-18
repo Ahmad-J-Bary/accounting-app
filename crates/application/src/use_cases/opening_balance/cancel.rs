@@ -28,7 +28,7 @@ impl CancelOpeningBalanceUseCase {
     }
 
     pub async fn execute(&self, id: String) -> Result<OpeningMigrationDto, AppError> {
-        // Phase 5: once any migration is Locked the lifecycle is sealed; the
+        // Once any migration is Locked the lifecycle is sealed; the
         // only mutation from then on is read-only history.
         if opening_lifecycle_closed(&self.migration_repo).await? {
             return Err(AppError::Forbidden(

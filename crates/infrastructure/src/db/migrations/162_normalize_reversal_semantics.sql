@@ -1,4 +1,4 @@
--- 162: Normalize journal entry semantics (Phase 2).
+-- 162: Normalize journal entry semantics.
 --
 -- The accounting model separates three orthogonal attributes:
 --   * journal_type  — the semantic business kind (e.g. AccountOpeningBalance),

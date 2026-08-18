@@ -116,7 +116,7 @@ impl LockOpeningBalanceUseCase {
             ));
         }
 
-        // Phase 4 guard: an UNRESOLVED residual must never be locked — the
+        // Guard: an UNRESOLVED residual must never be locked — the
         // residual must be reclassified into a designated equity account first
         // (the readiness gate below structurally requires OBE 53 = 0, but this
         // explicit guard gives the exact reason to the user).

@@ -236,7 +236,7 @@ net      = revenue − expenses
 ```
 
 - Ledger-only, keyed on explicit accounting dates — never on a migration cutover
-  (the fix point of this phase). The legacy migration-keyed
+  (the fix point of this work). The legacy migration-keyed
   `ComputeNetProfitUseCase` is kept as a thin backward-compat wrapper.
 - Only `JournalEntryStatus::Posted` entries count; draft entries and partner
   drawings (contra-equity, `is_drawings_account()`) are excluded automatically.

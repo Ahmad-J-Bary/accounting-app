@@ -1,4 +1,4 @@
-//! Phase 5 — financial-reporting integrity.
+//! Financial-reporting integrity.
 //!
 //! All reports read from ONE authoritative GL source: the posted journal
 //! lines. This suite pins the invariants that make the reports trustworthy:
@@ -50,7 +50,7 @@ fn test_currency() -> Currency {
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_phase5_report_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!("acc_reporting_integrity_{}.sqlite", uuid::Uuid::new_v4()));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);

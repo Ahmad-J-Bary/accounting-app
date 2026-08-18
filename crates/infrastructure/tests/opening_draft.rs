@@ -1,4 +1,4 @@
-//! Phase 4 — resumable opening-balance wizard draft store.
+//! Resumable opening-balance wizard draft store.
 //!
 //! A lightweight per-app JSON scratch pad (Save → Exit → Continue Later). The
 //! repository round-trips a serialized wizard state and the use cases enforce
@@ -38,7 +38,7 @@ fn repo(pool: &Arc<sqlx::SqlitePool>) -> Arc<dyn OpeningDraftRepository> {
     Arc::new(SqliteOpeningDraftRepository::new(pool.clone()))
 }
 
-/// Save use case with the Phase 5 lifecycle guard wired in (real settings +
+/// Save use case with the lifecycle guard wired in (real settings +
 /// migration repos against the test db — defaults to an EXISTING company with
 /// no Locked migration, so the workflow is open).
 fn save_uc(pool: &Arc<sqlx::SqlitePool>) -> SaveOpeningDraftUseCase {

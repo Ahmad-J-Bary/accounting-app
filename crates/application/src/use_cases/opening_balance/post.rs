@@ -71,7 +71,7 @@ impl PostOpeningBalanceUseCase {
             return Err(AppError::Invalid("ترحيل الرصيد الافتتاحي بلا بنود".into()));
         }
 
-        // Phase 4 guard: an UNRESOLVED residual can never be posted. The
+        // Guard: an UNRESOLVED residual can never be posted. The
         // residual (net assets − recognized equity) is either reclassified into
         // a designated equity account or the user fixes the lines; posting
         // would leave an unexplained balance in OBE 53 silently.
@@ -102,7 +102,7 @@ impl PostOpeningBalanceUseCase {
             return Err(AppError::Invalid(blockers.join("؛ ")));
         }
 
-        // R1 prevention (Phase 3): the migration aggregate owns the GL position
+        // R1 prevention: the migration aggregate owns the GL position
         // of every opening sub-ledger. If an account included in this migration
         // was ALREADY booked by a standalone per-entity opening journal (posted
         // while the opening window was closed), posting the migration again

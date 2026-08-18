@@ -105,7 +105,7 @@ export function Sidebar({ collapsed: _collapsed, onClose }: SidebarProps) {
     }
   };
 
-  // Nav entries gated by company lifecycle (Phase 4): NEW hides opening items;
+  // Nav entries gated by company lifecycle: NEW hides opening items;
   // EXISTING hides transactional items until the migration is sealed, then hides
   // the opening items once ACTIVE. Until the state resolves we stay permissive.
   const hiddenItemIds = useMemo(

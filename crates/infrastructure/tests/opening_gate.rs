@@ -1,4 +1,4 @@
-//! Phase 4 — existing-company opening gate.
+//! Existing-company opening gate.
 //!
 //! `validate_opening_gate` (journal_entry/commands.rs) forbids persisting normal
 //! Posted operational journals while an EXISTING company still has an

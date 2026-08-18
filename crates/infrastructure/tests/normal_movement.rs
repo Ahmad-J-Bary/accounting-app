@@ -1,4 +1,4 @@
-//! Phase 8 — Normal Movement: the everyday business path exercised through the
+//! Normal Movement: the everyday business path exercised through the
 //! unified invoice module against a real database.
 //!
 //! Covered here:

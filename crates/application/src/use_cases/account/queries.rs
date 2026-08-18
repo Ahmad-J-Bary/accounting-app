@@ -142,7 +142,7 @@ impl AccountQueries {
             .sum();
 
         // The opening balance field is METADATA (subledger seed / registered
-        // capital). Phase 5: the movement that establishes the beginning is the
+        // capital). The movement that establishes the beginning is the
         // POSTED opening journal itself. Every posted AccountOpeningBalance /
         // CashOpeningBalance / MaterialOpeningBalance line is surfaced in `lines`
         // as the one historical transaction, so the same opening amount is never

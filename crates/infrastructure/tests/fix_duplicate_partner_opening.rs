@@ -1,4 +1,4 @@
-//! Phase 3 regression — the migration aggregate journal is the SINGLE canonical
+//! Regression — the migration aggregate journal is the SINGLE canonical
 //! GL owner of every Opening sub-ledger (R1). When an entity's opening balance
 //! is booked by a standalone per-entity journal (customer/supplier created
 //! while the opening window was closed), the migration must never double-book

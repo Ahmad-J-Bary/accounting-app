@@ -1,4 +1,4 @@
-//! Phase 8 — Bank scenario on a NEW company: create a bank account through the
+//! Bank scenario on a NEW company: create a bank account through the
 //! real CreateAccountUseCase, post cash movements through it, and verify the
 //! live bank ledger reconciles (Dr bank / Cr cash on deposit; the reverse on
 //! withdrawal). The bank ledger is read from `journal_lines` (source of truth),

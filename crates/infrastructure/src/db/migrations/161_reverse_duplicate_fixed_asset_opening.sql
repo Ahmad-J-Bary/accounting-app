@@ -1,6 +1,6 @@
 -- 161: Reverse duplicated fixed-asset opening GeneralJournal entries.
 --
--- Phase 3 defect (R1) extension: the opening-balance migration's aggregate
+-- Defect (R1) extension: the opening-balance migration's aggregate
 -- journal is the single canonical GL owner of every opening subledger. But a
 -- fixed asset opened as "existing" books its OWN GeneralJournal
 -- (Dr asset / Cr payment, description "إضافة أصل سابق (أول المدة)")

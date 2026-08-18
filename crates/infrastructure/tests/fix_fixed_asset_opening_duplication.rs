@@ -1,4 +1,4 @@
-//! Phase 2 — Fixed-asset opening duplication. Opening fixed-asset details are
+//! Fixed-asset opening duplication. Opening fixed-asset details are
 //! SUBLEDGER data; the General Ledger must hold the opening value exactly once.
 //!
 //! Scenario: Car = 150, Equipment = 50. Fixed Asset Subledger = 200 and GL

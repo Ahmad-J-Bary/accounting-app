@@ -1,4 +1,4 @@
-//! Phase 2 — Company Type (persisted in settings.accounting_start_mode).
+//! Company Type (persisted in settings.accounting_start_mode).
 //!
 //! Under test:
 //!   - fresh DB default is EXISTING ("ExistingCompanyMigration") — proves both

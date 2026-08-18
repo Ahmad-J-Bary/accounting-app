@@ -105,7 +105,7 @@ export interface CompanyCapabilities {
 // the opening lifecycle?" — every form, page, route guard and nav filter reads
 // these capabilities (via `useCompanyCapabilities`) instead of repeating
 // `if (type === NEW) ... else ...` / `if (initState === "ACTIVE") ...` checks.
-// Lifecycle (Phase 5):
+// Lifecycle:
 //   EXISTING: NOT_STARTED → IN_PROGRESS → READY(Validated) → POSTED →
 //   OPENING_LOCKED → ACTIVE
 // The opening workflow is reachable ONLY before the migration is Locked; once
@@ -169,7 +169,7 @@ export function deriveCompanyInitState(input: CompanyLifecycleInput): CompanyIni
 }
 
 // Generalized nav hiding driven by both the persisted company type and the
-// derived initialization state (Phases 4–5):
+// derived initialization state:
 //  * NEW company                                  → opening nav ids hidden for good.
 //  * EXISTING once the workflow closes            → opening nav ids hidden
 //    (OPENING_LOCKED: locked but first fiscal period pending, and ACTIVE).

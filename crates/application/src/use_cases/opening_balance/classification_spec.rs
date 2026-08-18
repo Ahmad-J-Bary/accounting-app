@@ -11,7 +11,7 @@ use crate::use_cases::opening_balance::types::{
 
 /// Every residual classification maps to ONE controlled account purpose — the
 /// user chooses the ACCOUNTING MEANING, the system chooses the appropriate
-/// account (Phase 4). Only `UnresolvedDifference` has no purpose/account and
+/// account. Only `UnresolvedDifference` has no purpose/account and
 /// blocks posting & locking.
 pub const CLASSIFICATIONS: [ResidualClassification; 5] = [
     ResidualClassification::RetainedEarnings,

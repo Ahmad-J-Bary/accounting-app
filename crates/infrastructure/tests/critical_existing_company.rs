@@ -1,4 +1,4 @@
-//! Phase 8 — critical path for an EXISTING company (Company Setup → Normal
+//! Critical path for an EXISTING company (Company Setup → Normal
 //! operation), exercised through the real application use cases against a real
 //! SQLite database.
 //!

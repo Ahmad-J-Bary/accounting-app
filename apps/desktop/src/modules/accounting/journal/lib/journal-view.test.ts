@@ -95,7 +95,7 @@ describe("journalTwoLineCompare (group-level account anchor)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Phase 4 reporting policy: operational vs audit archive split.
+// Reporting policy: operational vs audit archive split.
 // ---------------------------------------------------------------------------
 const makeEntry = (overrides: Partial<any>): any => ({
   id: "e1",
@@ -113,7 +113,7 @@ const makeEntry = (overrides: Partial<any>): any => ({
   ...overrides,
 });
 
-describe("classifyEntryForReport (Phase 4)", () => {
+describe("classifyEntryForReport", () => {
   it("a Posted entry with no reversal relationship is operational", () => {
     expect(classifyEntryForReport(makeEntry({}))).toBe("operational");
   });
@@ -129,7 +129,7 @@ describe("classifyEntryForReport (Phase 4)", () => {
   });
 });
 
-describe("partitionJournalEntries (Phase 4)", () => {
+describe("partitionJournalEntries", () => {
   it("separates the operational posted list from the audit archive", () => {
     const operational = makeEntry({ id: "e1" });
     const contra = makeEntry({ id: "e2", reversal_of_entry_id: "e1" });
@@ -146,7 +146,7 @@ describe("partitionJournalEntries (Phase 4)", () => {
   });
 });
 
-describe("auditGroupKey (Phase 4)", () => {
+describe("auditGroupKey", () => {
   it("keeps a reversal pair together: the contra points at the original", () => {
     const original = makeEntry({ id: "orig" });
     const contra = makeEntry({ id: "contra", reversal_of_entry_id: "orig" });
@@ -156,12 +156,12 @@ describe("auditGroupKey (Phase 4)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Phase 7 — the EXISTING-company Daily Journal holds EXACTLY the two official
+// The EXISTING-company Daily Journal holds EXACTLY the two official
 // entries (Opening Migration + Residual Classification), both operational, and
 // every GL row carries non-blank Entry Number / Entry Type at its group start
 // (child lines share the parent entry's metadata — never silently blank).
 // ---------------------------------------------------------------------------
-const phase7Line = (
+const openingLine = (
   account_id: string,
   account_name: string,
   account_code: string,
@@ -179,7 +179,7 @@ const phase7Line = (
   credit_base: credit,
 });
 
-const phase7OpeningEntry = makeEntry({
+const openingMigrationEntry = makeEntry({
   id: "1",
   entry_number: "1",
   journal_type: "AccountOpeningBalance",
@@ -187,20 +187,20 @@ const phase7OpeningEntry = makeEntry({
   description: "قيد ترحيل رصيد افتتاح الشركة",
   entry_date: "2026-01-01",
   lines: [
-    phase7Line("a1910", "النقد والصندوق", "1910", "25", "0"),
-    phase7Line("a1911", "البنوك", "1911", "40", "0"),
-    phase7Line("a1912", "الذمم المدينة", "1912", "80", "0"),
-    phase7Line("a1913", "المخزون", "1913", "120", "0"),
-    phase7Line("a1114", "الأصول الثابتة", "1114", "200", "0"),
-    phase7Line("a2910", "الذمم الدائنة", "2910", "0", "70"),
-    phase7Line("a224", "القروض", "224", "0", "50"),
-    phase7Line("a3911", "جاري أحمد", "3911", "0", "180"),
-    phase7Line("a3912", "جاري محمد", "3912", "0", "120"),
-    phase7Line("a53", "رصيد افتتاحي", "53", "0", "45"),
+    openingLine("a1910", "النقد والصندوق", "1910", "25", "0"),
+    openingLine("a1911", "البنوك", "1911", "40", "0"),
+    openingLine("a1912", "الذمم المدينة", "1912", "80", "0"),
+    openingLine("a1913", "المخزون", "1913", "120", "0"),
+    openingLine("a1114", "الأصول الثابتة", "1114", "200", "0"),
+    openingLine("a2910", "الذمم الدائنة", "2910", "0", "70"),
+    openingLine("a224", "القروض", "224", "0", "50"),
+    openingLine("a3911", "جاري أحمد", "3911", "0", "180"),
+    openingLine("a3912", "جاري محمد", "3912", "0", "120"),
+    openingLine("a53", "رصيد افتتاحي", "53", "0", "45"),
   ],
 });
 
-const phase7ResidualEntry = makeEntry({
+const residualClassificationEntry = makeEntry({
   id: "2",
   entry_number: "2",
   journal_type: "GeneralJournal",
@@ -208,16 +208,16 @@ const phase7ResidualEntry = makeEntry({
   description: "ترحيل تصنيف الرصيد المتبقي",
   entry_date: "2026-01-01",
   lines: [
-    phase7Line("a53", "رصيد افتتاحي", "53", "45", "0"),
-    phase7Line("a3913", "أرباح مرحلة", "3913", "0", "45"),
+    openingLine("a53", "رصيد افتتاحي", "53", "45", "0"),
+    openingLine("a3913", "أرباح مرحلة", "3913", "0", "45"),
   ],
 });
 
-describe("Phase 7 — Daily Journal: exactly the two official entries, no blank Entry metadata", () => {
+describe("Daily Journal: exactly the two official entries, no blank Entry metadata", () => {
   it("only the Opening Migration and the Residual Classification are operational", () => {
     const { operational, audit } = partitionJournalEntries([
-      phase7OpeningEntry,
-      phase7ResidualEntry,
+      openingMigrationEntry,
+      residualClassificationEntry,
     ]);
     expect(operational.map((e) => e.entry_number)).toEqual(["1", "2"]);
     expect(audit).toEqual([]);
@@ -226,8 +226,8 @@ describe("Phase 7 — Daily Journal: exactly the two official entries, no blank 
 
   it("every GL row (group start included) carries non-blank Entry Number and Entry Type", () => {
     const lines = [
-      ...toJournalLines(phase7OpeningEntry),
-      ...toJournalLines(phase7ResidualEntry),
+      ...toJournalLines(openingMigrationEntry),
+      ...toJournalLines(residualClassificationEntry),
     ];
 
     // Group starts are exactly the two official entries.
@@ -245,14 +245,14 @@ describe("Phase 7 — Daily Journal: exactly the two official entries, no blank 
     }
 
     // The residual journal keeps both legs in one group with its own number.
-    const residualLines = toJournalLines(phase7ResidualEntry);
+    const residualLines = toJournalLines(residualClassificationEntry);
     expect(residualLines).toHaveLength(2);
     expect(residualLines.every((l) => l.entry_number === "2")).toBe(true);
     expect(residualLines.every((l) => l.group_key === "2")).toBe(true);
   });
 
   it("deriveJournalTypeDisplay is non-blank for both official entries", () => {
-    expect(deriveJournalTypeDisplay(phase7OpeningEntry).trim().length).toBeGreaterThan(0);
-    expect(deriveJournalTypeDisplay(phase7ResidualEntry).trim().length).toBeGreaterThan(0);
+    expect(deriveJournalTypeDisplay(openingMigrationEntry).trim().length).toBeGreaterThan(0);
+    expect(deriveJournalTypeDisplay(residualClassificationEntry).trim().length).toBeGreaterThan(0);
   });
 });

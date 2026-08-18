@@ -1,4 +1,4 @@
-//! Phase 8 regression — creating a material with multiple units must not hit
+//! Regression — creating a material with multiple units must not hit
 //! SQLite code 787 (FOREIGN KEY constraint failed).
 //!
 //! materials.default_purchase_unit_id / default_sale_unit_id (migration 049)

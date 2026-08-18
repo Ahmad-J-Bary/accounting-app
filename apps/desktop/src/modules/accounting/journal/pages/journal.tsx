@@ -36,7 +36,7 @@ export default function Journal() {
   const [reversingId, setReversingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  // Phase 4 reporting policy: the normal posted list NEVER contains reversed
+  // Reporting policy: the normal posted list NEVER contains reversed
   // originals or their contra journals — those live in the separated audit
   // archive shown only when the toggle is on.
   const [showAudit, setShowAudit] = useState(false);

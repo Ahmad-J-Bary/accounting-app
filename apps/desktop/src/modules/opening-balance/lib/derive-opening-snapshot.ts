@@ -1,4 +1,4 @@
-// Phase 4 — derive the opening dashboard snapshot from the persisted opening
+// Derive the opening dashboard snapshot from the persisted opening
 // position-control data. Pure and data-driven (no live wizard state): every
 // section amount comes from the migration's account-bucketed detail lines, so
 // the overview tab reads the same truth the backend reports.

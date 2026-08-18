@@ -1,4 +1,4 @@
-//! Phase 8 — Opening-balance Cancel through the REAL use cases. After a
+//! Opening-balance Cancel through the REAL use cases. After a
 //! migration is posted, CancelOpeningBalanceUseCase must reverse it with a true
 //! contra journal (source `ob_reversal:{id}`) and mark the migration Cancelled,
 //! leaving every account back at its pre-opening net and the ledger balanced.

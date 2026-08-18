@@ -248,7 +248,7 @@ export default function OpeningBalanceMigration() {
       .finally(() => setReconLoading(false));
   }, [reconId]);
 
-  // Phase 6: a NEW company never has an opening page (redirect). An EXISTING
+  // A NEW company never has an opening page (redirect). An EXISTING
   // company is allowed to stay even once the migration is Locked (OPENING_LOCKED
   // … ACTIVE) so the post-transition onboarding completes in place instead of
   // throwing the user out mid-wizard. Settings still loading = no redirect.

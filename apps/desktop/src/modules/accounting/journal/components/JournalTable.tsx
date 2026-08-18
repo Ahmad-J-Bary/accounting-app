@@ -24,7 +24,7 @@ type DisplayMode = "two-line" | "one-line";
 
 interface JournalTableProps {
   entries: JournalEntryDto[];
-  /** Phase 4 audit archive: Reversed originals + contra journals + Draft +
+  /** Audit archive: Reversed originals + contra journals + Draft +
    * Cancelled. Rendered in a clearly separated section below the operational
    * posted list, never interleaved with normal transactions. */
   auditEntries?: JournalEntryDto[];
@@ -543,7 +543,7 @@ export function JournalTable({
     }
   }, [isTwoLine, twoLineSort.sortedData, singleLineSort.sortedData]);
 
-  // ============ AUDIT ARCHIVE (Phase 4 — separated section) ============
+  // ============ AUDIT ARCHIVE (separated section) ============
   // Reversal pairs are kept adjacent via auditGroupKey so the Reversed
   // original and its contra always read as ONE audit story, never as two
   // interleaved operational rows.
@@ -855,7 +855,7 @@ export function JournalTable({
 
   // ============ RENDER BODY ============
   // Shared group-grid renderer used by BOTH the operational list and the
-  // separated audit archive (Phase 4) so the two sections stay visually and
+  // separated audit archive so the two sections stay visually and
   // behaviorally consistent.
   const renderGroupGrid = (
     group: (JournalTableRow | JournalSingleLineTableRow)[],

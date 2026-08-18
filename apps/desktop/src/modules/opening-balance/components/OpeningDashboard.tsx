@@ -14,7 +14,7 @@ interface OpeningDashboardProps {
 }
 
 /**
- * Phase 4 overview dashboard: shows the 8 opening sections with their booked
+ * Overview dashboard: shows the 8 opening sections with their booked
  * amounts and done-states, the accounting-equation totals, and any remaining
  * blockers before the position can be posted/locked.
  */

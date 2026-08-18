@@ -1,4 +1,4 @@
-//! Phase 8 — Partner Capitalization. Capitalizing retained earnings (52) into a
+//! Partner Capitalization. Capitalizing retained earnings (52) into a
 //! partner's capital account is a real, auditable journal event through the
 //! CapitalizeRetainedEarningsUseCase — it must reduce retained earnings and
 //! increase the partner capital ledger while keeping the whole ledger balanced,

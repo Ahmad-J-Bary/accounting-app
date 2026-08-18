@@ -1,4 +1,4 @@
-//! Phase 5 — opening lifecycle & feature gating (backend).
+//! Opening lifecycle & feature gating (backend).
 //!
 //! The opening-balance workflow is a lifecycle, not a permanent mode: writable
 //! only while an EXISTING company is still before OPENING_LOCKED. NEW companies

@@ -1,4 +1,4 @@
-//! Phase 5 — the posted opening journal is the ONE GL movement.
+//! The posted opening journal is the ONE GL movement.
 //!
 //! After an EXISTING-company opening is validated → posted → locked, the
 //! opening amount must appear in the general ledger exactly once: as the posted

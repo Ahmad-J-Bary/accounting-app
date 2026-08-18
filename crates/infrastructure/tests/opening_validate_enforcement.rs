@@ -1,9 +1,9 @@
-//! Phase 4 — structural validation is enforced BEFORE a migration is marked
+//! Structural validation is enforced BEFORE a migration is marked
 //! validated (Draft → Validated).
 //!
 //! Previously `ValidateOpeningBalanceUseCase` only flipped the domain state;
 //! the accounting-equation and sub-ledger gates were deferred to Post/Lock.
-//! Phase 4 makes Validate run the same `readiness_blockers` checks as Posting:
+//! Validate runs the same `readiness_blockers` checks as Posting:
 //! the opening lines must be in equilibrium (Debit = Credit) AND each entered
 //! sub-ledger detail (AR/AP/Inventory/FA) must reconcile to the general-ledger
 //! opening lines. A migration that fails either gate stays in Draft.
@@ -37,7 +37,7 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_phase4_validate_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!("acc_opening_validate_{}.sqlite", uuid::Uuid::new_v4()));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);

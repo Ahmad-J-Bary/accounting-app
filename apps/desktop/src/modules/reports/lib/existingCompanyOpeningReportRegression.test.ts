@@ -71,7 +71,7 @@ function entry(
   };
 }
 
-/** The single canonical Phase 6 chart: one flat leaf per economic balance. */
+/** The single canonical chart: one flat leaf per economic balance. */
 function canonicalAccounts(): AccountDto[] {
   return [
     acc({ id: "cash1", code: "1910", name_ar: "النقد والصندوق" }),
@@ -107,7 +107,7 @@ function canonicalOpeningJournal(): JournalEntryDto {
   });
 }
 
-describe("Phase 6 — both reports derive from the one authoritative posted GL", () => {
+describe("Both reports derive from the one authoritative posted GL", () => {
   it("canonical scenario: Trial Balance Dr = Cr and Balance Sheet A 465 = L 120 + E 345 via the shared ledgerTotals", () => {
     const accounts = canonicalAccounts();
     const { ledgerTotals } = computeLedgerTotals(accounts, [canonicalOpeningJournal()]);
@@ -206,7 +206,7 @@ describe("Phase 6 — both reports derive from the one authoritative posted GL",
   });
 });
 
-describe("Phase 6 — المخزون Summary parent keeps its own GL line", () => {
+describe("المخزون Summary parent keeps its own GL line", () => {
   const accounts: AccountDto[] = [
     acc({ id: "p_inv", code: "1204", name_ar: "المخزون", purpose: "inventory" }),
     acc({ id: "c_closing", code: "120401", name_ar: "بضاعة آخر المدة", parent_id: "p_inv" }),

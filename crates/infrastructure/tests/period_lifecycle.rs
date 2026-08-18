@@ -1,4 +1,4 @@
-//! Phase 8 — Financial Period lifecycle through the REAL use cases. Create,
+//! Financial Period lifecycle through the REAL use cases. Create,
 //! close, reopen and lock a fiscal period end-to-end, and verify that the
 //! posting guard reacts to each status (closed rejects, reopened accepts, locked
 //! rejects and cannot be reopened) — all driven by the use cases, not by

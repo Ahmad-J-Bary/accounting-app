@@ -1,4 +1,4 @@
-//! Phase 2 audit findings B4 and D1 regression tests:
+//! Company-lifecycle audit findings B4 and D1 regression tests:
 //!
 //! * A posted migration whose Opening Balance Equity (53) is still non-zero
 //!   cannot be locked; the rejected attempt must leave the migration `Posted`

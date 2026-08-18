@@ -700,7 +700,7 @@ function FirstPeriodFields({
   );
 }
 
-// ── Locked-completion panel: shown after the migration is sealed (Phase 6).
+// ── Locked-completion panel: shown after the migration is sealed.
 // Presents the four confirmation checkmarks then the "next step" call-to-action.
 export function LockedCompletionPanel({
   posted,
@@ -742,7 +742,7 @@ export function LockedCompletionPanel({
 }
 
 // ── Residual classification: the user picks the ACCOUNTING MEANING, the system
-// picks the designated account (Phase 4). Classification cards replace the raw
+// picks the designated account. Classification cards replace the raw
 // drop-down; the account is only chosen explicitly in Advanced mode, filtered
 // to the classification's controlled purposes. UnresolvedDifference blocks
 // posting/locking and never carries an account.

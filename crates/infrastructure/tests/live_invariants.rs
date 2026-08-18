@@ -1,4 +1,4 @@
-//! Phase 8 — live accounting invariants after a realistic sequence of normal
+//! Live accounting invariants after a realistic sequence of normal
 //! postings on a NEW company (window closed, real ledger events everywhere).
 //!
 //! The ledger is always the source of truth: we drive the customer/supplier/

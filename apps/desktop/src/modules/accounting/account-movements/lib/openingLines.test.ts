@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isOpeningLine, getOpeningCreationDate, getOpeningTotals, computeOpeningBalance, computeRunningBalance, computeClosingBalance, markEntryRunFirsts } from "./openingLines";
+import { isOpeningLine, getOpeningCreationDate, getOpeningTotals, computeOpeningBalance, computeRunningBalance, computeClosingBalance, markEntryRunFirsts, groupMovementLinesByJournal } from "./openingLines";
 
 const openingLine = (journal_type: string, date: string, debit_base = "0", credit_base = "0", description = "") => ({
   journal_type,
@@ -78,7 +78,7 @@ describe("getOpeningTotals", () => {
   });
 });
 
-describe("Phase 6 report/date semantics", () => {
+describe("report/date semantics for the opening movement", () => {
   const ammarLines = () => [
     openingLine("AccountOpeningBalance", "2026-01-01T00:00:00Z", "80", "0"),
   ];
@@ -180,7 +180,7 @@ describe("computeRunningBalance", () => {
   });
 });
 
-describe("Phase 5 statement display semantics (AR 1231 = 80)", () => {
+describe("statement display semantics (AR 1231 = 80)", () => {
   const arLine = () => [openingLine("AccountOpeningBalance", "2026-01-01T00:00:00Z", "80", "0")];
 
   it("opening in-range → beginning = 0 (no beginning row) and running = [80], never [160]", () => {
@@ -203,7 +203,8 @@ describe("Phase 5 statement display semantics (AR 1231 = 80)", () => {
   });
 
   it("the subledger episode of Ammar is the same single 80 — no extra GL row is added", () => {
-    // Lines are drawn only from posted journal lines (phase3 e2e asserts the
+    // Lines are drawn only from posted journal lines (the opening no-duplication
+    // e2e asserts the
     // AR ledger has exactly one movement); a separate subledger row cannot
     // count the balance again.
     const lines = arLine();
@@ -245,5 +246,37 @@ describe("markEntryRunFirsts (one journal = one header)", () => {
     expect(markEntryRunFirsts([
       run("10"), run("9"), run("10"),
     ])).toEqual([true, true, true]);
+  });
+});
+
+describe("groupMovementLinesByJournal (one journal = one visual group)", () => {
+  const row = (journal_id: string) => ({ journal_id });
+
+  it("keeps every line of a multi-line journal in a single group", () => {
+    expect(groupMovementLinesByJournal([
+      row("9"), row("9"), row("9"), row("9"), row("9"), row("9"),
+    ])).toEqual([[row("9"), row("9"), row("9"), row("9"), row("9"), row("9")]]);
+  });
+
+  it("separates distinct journals even when they share the same sort key", () => {
+    expect(groupMovementLinesByJournal([
+      row("9"), row("10"), row("10"),
+    ]).map((g) => g.map((r) => r.journal_id))).toEqual([["9"], ["10", "10"]]);
+  });
+
+  it("returns one group per journal preserving first-seen order", () => {
+    expect(groupMovementLinesByJournal([
+      row("9"), row("9"), row("10"), row("11"),
+    ]).map((g) => g.map((r) => r.journal_id))).toEqual([["9", "9"], ["10"], ["11"]]);
+  });
+
+  it("isolates the synthetic beginning row (empty journal_id) as its own group", () => {
+    expect(groupMovementLinesByJournal([
+      row(""), row("9"), row("9"),
+    ]).map((g) => g.map((r) => r.journal_id))).toEqual([[""], ["9", "9"]]);
+  });
+
+  it("returns an empty array for no lines", () => {
+    expect(groupMovementLinesByJournal([])).toEqual([]);
   });
 });

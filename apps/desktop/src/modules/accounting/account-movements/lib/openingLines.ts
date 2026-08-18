@@ -38,7 +38,7 @@ type LedgerLineAmountLike = Pick<AccountLedgerLineDto, "journal_type" | "descrip
 
 // Aggregated opening debit/credit within the optional date range (from, to),
 // across the POSTED opening journal lines in `lines`. The posted opening
-// journal IS the single GL movement (Phase 5) — there are no synthetic opening
+// journal IS the single GL movement — there are no synthetic opening
 // rows, so this must never aggregate opening metadata on top of the lines.
 export function getOpeningTotals(
   lines: LedgerLineAmountLike[],
@@ -131,6 +131,32 @@ export type ClosingSign = "مدين" | "دائن" | "متزن";
  */
 export function markEntryRunFirsts(lines: { journal_id: string }[]): boolean[] {
   return lines.map((line, idx) => idx === 0 || line.journal_id !== lines[idx - 1].journal_id);
+}
+
+type JournalGroupable = { journal_id: string };
+
+/**
+ * Groups ledger rows by the owning journal (`journal_id`) KEY, preserving
+ * first-seen order. One visual header is then shared by every line of a
+ * multi-line journal (e.g. the 11-line opening migration or the 2-line
+ * residual reclassification) regardless of the applied sort, because grouping
+ * is by identity — never by row adjacency. Rows sharing a journal_id always
+ * land in the same group; a row with an empty journal_id (e.g. the synthetic
+ * "رصيد سابق / أول الفترة" beginning row) becomes its own singleton group.
+ */
+export function groupMovementLinesByJournal<T extends JournalGroupable>(lines: T[]): T[][] {
+  const groups: T[][] = [];
+  const byJournal = new Map<string, T[]>();
+  for (const line of lines) {
+    let group = byJournal.get(line.journal_id);
+    if (!group) {
+      group = [];
+      byJournal.set(line.journal_id, group);
+      groups.push(group);
+    }
+    group.push(line);
+  }
+  return groups;
 }
 
 // Closing balance = |totalDebit - totalCredit|. Its state (debit/credit) is

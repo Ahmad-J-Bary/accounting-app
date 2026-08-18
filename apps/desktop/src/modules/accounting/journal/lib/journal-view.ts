@@ -413,7 +413,7 @@ export function journalTwoLineCompare(
 export type JournalEntryReportClass = "operational" | "audit";
 
 /**
- * Phase 4 reporting policy: a journal is OPERATIONAL only when it is a Posted
+ * Reporting policy: a journal is OPERATIONAL only when it is a Posted
  * entry with no reversal relationship. Reversed originals, their Posted contra
  * journals, and Draft/Cancelled entries are never operational — they belong to
  * the separated audit archive so Original / Reversal / Final Opening can never

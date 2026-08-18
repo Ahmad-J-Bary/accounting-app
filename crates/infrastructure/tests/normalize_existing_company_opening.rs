@@ -1,4 +1,4 @@
-//! Phase 3 — Normalize the Existing Company opening posting: OPENING SUBLEDGER
+//! Normalize the Existing Company opening posting: OPENING SUBLEDGER
 //! DETAILS → VALIDATION/RECONCILIATION → ONE CANONICAL OPENING GL POSTING →
 //! OPTIONAL RESIDUAL CLASSIFICATION → LOCK.
 //!
@@ -177,7 +177,7 @@ fn line(account: AccountId, amount: &str) -> OpeningLineInput {
 }
 
 // ---------------------------------------------------------------------------
-// 1. The exact Phase 3 scenario end-to-end: AR 80 / AP 70 / Inventory 120 /
+// 1. The exact scenario end-to-end: AR 80 / AP 70 / Inventory 120 /
 //    FA 200 (Car 150 + Equipment 50 subledger) / Bank 40 / Loan 50 / Capital 300
 //    / cash 25 → one aggregate posting → residual 45 → retained earnings → lock.
 //    Report surfaces (ledger + posted feed) show exactly ONE effect per account.
@@ -236,7 +236,7 @@ async fn canonical_full_lifecycle_single_gl_effect_per_subledger() {
     .execute(CreateOpeningBalanceMigrationCommand {
         cutover_date: chrono::Utc::now().to_rfc3339(),
         notes: None,
-        source_system: Some("phase3".into()),
+        source_system: Some("legacy".into()),
         source_reference: None,
         lines: vec![
             line(accounts.cash, "25"),

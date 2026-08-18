@@ -1,4 +1,4 @@
-// Phase 5 — route-level lifecycle gating (`OpeningTransactionGate` in
+// Route-level lifecycle gating (`OpeningTransactionGate` in
 // ErpRoutes) plus deep-link / direct-URL access in every lifecycle state.
 // The page-level redirects (opening pages closing once the workflow is sealed)
 // are asserted separately in the real-page tests; here the page modules are

@@ -149,7 +149,7 @@ impl FixedAssetUseCases {
             movement_desc,
         );
 
-        // Opening-preparation window (Phase 2): while the company is preparing
+        // Opening-preparation window: while the company is preparing
         // its opening migration, fixed-asset records are SUBLEDGER data only —
         // the migration aggregate posts the single GL opening journal. Writing a
         // per-asset GeneralJournal here would book the same opening balance twice

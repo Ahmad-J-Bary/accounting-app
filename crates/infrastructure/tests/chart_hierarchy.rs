@@ -1,4 +1,4 @@
-//! Phase 2 — Chart of Accounts hierarchy regression suite.
+//! Chart of Accounts hierarchy regression suite.
 //!
 //! After migration 157 the canonical chart must satisfy:
 //!   - القروض is code "224" (never "225"), a Detail Liability under

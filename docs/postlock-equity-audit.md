@@ -1,6 +1,6 @@
-# PHASE 1 — مراجعة نطاق ما بعد إقفال حقوق الملكية / الفترات (Post-Lock Equity & Period-Closing Audit)
+# مراجعة نطاق ما بعد إقفال حقوق الملكية / الفترات (Post-Lock Equity & Period-Closing Audit)
 
-> قراءة فقط (Phase 1 of the follow-up task): consolidated findings over the
+> قراءة فقط (follow-up task): consolidated findings over the
 > post-lock equity model — Opening Balance Equity (53), retained earnings (52),
 > partner capital/current, period closing and profit distribution — with exact
 > `file:line` references. Decision scope: **implemented items 4–5** below;

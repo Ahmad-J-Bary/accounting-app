@@ -1,4 +1,4 @@
-//! Phase 2 — Unified Company Accounting Model: New vs Existing companies
+//! Unified Company Accounting Model: New vs Existing companies
 //! differ ONLY by lifecycle context (an open opening-balance migration window).
 //!
 //! Covered here:
@@ -39,7 +39,7 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_phase2_lifecycle_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!("acc_company_lifecycle_{}.sqlite", uuid::Uuid::new_v4()));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);

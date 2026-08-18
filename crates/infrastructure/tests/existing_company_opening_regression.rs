@@ -1,4 +1,4 @@
-//! Phase 6 — full-stack accounting regression for the EXISTING-company
+//! Full-stack accounting regression for the EXISTING-company
 //! opening. One scenario ties every layer together:
 //!
 //!   CHART      — the canonical loan account is code 224 under 22 -> 2; Partner
@@ -75,7 +75,7 @@ fn test_currency() -> Currency {
 
 async fn build_pool() -> Arc<sqlx::SqlitePool> {
     let mut path = std::env::temp_dir();
-    path.push(format!("acc_phase6_{}.sqlite", uuid::Uuid::new_v4()));
+    path.push(format!("acc_existing_company_opening_{}.sqlite", uuid::Uuid::new_v4()));
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())
         .unwrap()
         .create_if_missing(true);
@@ -163,7 +163,7 @@ struct Accounts {
     historical_equity: AccountId,
 }
 
-/// Seeds the Phase 6 chart-derived accounts. The loan uses the canonical chart
+/// Seeds the chart-derived accounts. The loan uses the canonical chart
 /// account code 224 (purpose `loan`) — the same account the wizard resolves —
 /// so the CHART assertion and the OPENING posting share the real account.
 async fn seed_accounts(pool: &Arc<sqlx::SqlitePool>) -> Accounts {
@@ -267,7 +267,7 @@ fn line(account: AccountId, amount: &str) -> OpeningLineInput {
     OpeningLineInput { account_id: account.to_string(), amount: amount.into(), description: None }
 }
 
-/// The exact Phase 6 lines: Cash 65 / AR 80 / Inventory 120 / FA 200 (Dr 465)
+/// The exact lines: Cash 65 / AR 80 / Inventory 120 / FA 200 (Dr 465)
 /// vs AP 70 / Loans 50 / Partner Capital 300 / Historical Equity 45 (Cr 465).
 /// Explicitly balanced — no OBE plug at all.
 fn full_lines(a: &Accounts) -> Vec<OpeningLineInput> {
@@ -365,7 +365,7 @@ async fn save_items(pool: &Arc<sqlx::SqlitePool>, migration_id: &str, items: Vec
     .expect("save sub-ledger items");
 }
 
-/// A fully prepared Phase 6 fixture: account ids, entity ids and a migration id
+/// A fully prepared fixture: account ids, entity ids and a migration id
 /// referencing those exact account ids, with the sub-ledger items saved.
 struct Fixture {
     pool: Arc<sqlx::SqlitePool>,
@@ -387,7 +387,7 @@ async fn fixture(cutover: &str) -> Fixture {
             source_reference: Some("P6-2025".into()),
         })
         .await
-        .expect("create Phase 6 migration");
+        .expect("create migration");
     let migration_id = draft.0.id.clone();
     save_items(&pool, &migration_id, subledger_items(&accounts, &entities)).await;
 
@@ -411,7 +411,7 @@ async fn post_fixture(fx: &Fixture) {
 // ---------------------------------------------------------------------------
 // 1. CHART OF ACCOUNTS — canonical 224 / 54 hierarchy, unique codes, valid
 //    acyclic tree. (Domain assertions; the full chart suite lives in
-//    chart_hierarchy.rs — this pins the Phase 6 scenario's loan account.)
+//    chart_hierarchy.rs — this pins the scenario's loan account.)
 // ---------------------------------------------------------------------------
 #[tokio::test]
 async fn chart_canonical_loan_224_and_partner_current_54_under_equity() {
@@ -495,7 +495,7 @@ async fn opening_exact_465_scenario_validates_posts_and_locks() {
 
 // ---------------------------------------------------------------------------
 // 3. GL — Customer Ammar's receivable is exactly ONE opening movement (80,
-//    never 80+80); `opening_entries` is the empty Phase-5 carrier.
+//    never 80+80); `opening_entries` is the empty carrier.
 // ---------------------------------------------------------------------------
 #[tokio::test]
 async fn gl_customer_ammar_is_exactly_one_opening_movement() {
@@ -673,7 +673,7 @@ async fn final_trial_balance_balanced_gl_equals_journal_and_reports_read_only() 
     assert!(pos.is_balanced, "final trial balance must be balanced");
     assert!(pos.validation_errors.is_empty(), "no readiness blockers after lock");
 
-    // GL == journal lines: one posted AccountOpeningBalance with the 8 Phase 6
+    // GL == journal lines: one posted AccountOpeningBalance with the 8
     // lines; the AR account's ledger exposes exactly its line.
     let gl_lines: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM journal_lines jl

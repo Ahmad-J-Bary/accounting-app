@@ -6,18 +6,25 @@ import { TableShell } from "@widgets/table-shell/TableShell";
 import { Skeleton } from "@shared/ui/skeleton";
 import { EmptyState } from "@widgets/table-shell/EmptyState";
 import { useExportSetup, useUnifiedColumns, useSortable, useBaseCurrencyColumns, useTableSettings, useGridResize, type GridResizeContent } from "@shared/hooks";
-import type { ExcelExportColumn } from "@shared/lib/excel";
+import type { ExcelExportColumn, ExcelExportOptions } from "@shared/lib/excel";
 import { dateCol, executeExport, estimateExcelWidth, debitCreditAmountCols } from "@shared/lib/excel";
 import { cn } from "@shared/lib/utils";
 import { getLeftBorderClass, getRowBorderClass, getRowBackgroundClass } from "@shared/lib/table-utils";
 import type { AccountLedgerLineDto } from "@erp/shared-types";
 import { formatDateTime, formatNumber } from "@shared/lib/format";
 import { getHeaderText, getPrimitiveCellValue } from "@modules/accounting/journal/components/groupedTableUtils";
-import { computeClosingBalance, computeRunningBalance, isOpeningLine, markEntryRunFirsts } from "@modules/accounting/account-movements/lib/openingLines";
+import { GroupedEntrySharedCell } from "@modules/accounting/journal/components/GroupedEntrySharedCell";
+import { computeClosingBalance, computeRunningBalance, isOpeningLine, groupMovementLinesByJournal } from "@modules/accounting/account-movements/lib/openingLines";
 import { Download } from "lucide-react";
 import { Button } from "@shared/ui/button";
 
 type SortField = "entry_number" | "date" | "journal_type";
+
+/** Columns that belong to the JOURNAL (parent entry), not to a single
+ * movement line. They are rendered ONCE per journal as a vertically-spanning
+ * cell, so a visible movement line never shows a blank Entry Number / blank
+ * Movement Type. */
+const JOURNAL_SHARED_COLUMN_IDS = new Set(["entry_number", "journal_type", "date"]);
 
 interface OpeningEntryInfo {
   entry_number: string;
@@ -46,9 +53,6 @@ type MovementRow = AccountLedgerLineDto & {
   side: "debit" | "credit";
   amount_base: number;
   isOpening: boolean;
-  /** First row of an adjacent run sharing the same journal — entry-number /
-   * type / date are rendered once across the run. */
-  isFirstInEntry: boolean;
   /** Running balance (الرصيد الجاري) seeded by the beginning balance. */
   balance: number;
   /** Synthetic Beginning Balance row (رصيد سابق / أول الفترة). */
@@ -58,6 +62,52 @@ type MovementRow = AccountLedgerLineDto & {
 type EnrichedOriginalLine = AccountLedgerLineDto & {
   typeLabel: string;
 };
+
+/**
+ * Merges the journal-shared columns (Entry Number / Movement Type / Date)
+ * vertically across each multi-line journal for the Excel export, so a
+ * movement line is never exported with a blank Entry Number / Movement Type.
+ * Rows are merged only while their `journal_id` is unchanged AND non-empty
+ * (the synthetic beginning row stays its own single cell).
+ */
+function buildMovementMergeRanges(
+  rows: MovementRow[],
+  visibleColumnIds: string[],
+): NonNullable<ExcelExportOptions["mergeCells"]> {
+  const mergeableColumns = ["entry_number", "journal_type", "date"].filter((columnId) =>
+    visibleColumnIds.includes(columnId),
+  );
+
+  if (mergeableColumns.length === 0 || rows.length <= 1) {
+    return [];
+  }
+
+  const merges: NonNullable<ExcelExportOptions["mergeCells"]> = [];
+  let startIndex = 0;
+
+  while (startIndex < rows.length) {
+    const journalId = rows[startIndex]?.journal_id;
+    let endIndex = startIndex;
+
+    while (endIndex + 1 < rows.length && rows[endIndex + 1]?.journal_id === journalId) {
+      endIndex += 1;
+    }
+
+    if (endIndex > startIndex && journalId) {
+      mergeableColumns.forEach((columnId) => {
+        merges.push({
+          columnId,
+          startRow: startIndex,
+          endRow: endIndex,
+        });
+      });
+    }
+
+    startIndex = endIndex + 1;
+  }
+
+  return merges;
+}
 
 export function AccountMovementTable({
   lines,
@@ -189,14 +239,8 @@ export function AccountMovementTable({
         side: debitBase > 0 ? "debit" : "credit",
         amount_base: debitBase > 0 ? debitBase : creditBase,
         isOpening: isOpeningLine(line),
-        isFirstInEntry: false,
         balance: runningBalances[idx],
       });
-    });
-
-    const firsts = markEntryRunFirsts(cleanLines);
-    rows.forEach((row, idx) => {
-      row.isFirstInEntry = firsts[idx];
     });
 
     if (openingBalance !== 0 && openingBalance !== undefined) {
@@ -221,7 +265,6 @@ export function AccountMovementTable({
         side: sign,
         amount_base: Math.abs(openingBalance),
         isOpening: false,
-        isFirstInEntry: true,
         balance: openingBalance,
         isBeginning: true,
       });
@@ -230,13 +273,23 @@ export function AccountMovementTable({
     return rows;
   }, [cleanLines, openingBalance, openingBalanceDate]);
 
+  // Group rows by the owning journal KEY so every line of a multi-line journal
+  // (e.g. the 11-line opening migration, the 2-line residual reclassification)
+  // shares ONE spanning header — a visible movement line never shows a blank
+  // Entry Number / blank Movement Type. The synthetic beginning row (empty
+  // journal_id) is its own singleton group.
+  const groupedTableData = useMemo(
+    () => groupMovementLinesByJournal(tableData),
+    [tableData],
+  );
+
   const allColumns = useMemo<UnifiedColumn<MovementRow>[]>(() => {
     const cols: UnifiedColumn<MovementRow>[] = [
       {
         id: "entry_number",
         header: "رقم القيد",
         label: "رقم القيد",
-        accessor: (r) => (r.isFirstInEntry && !r.isBeginning ? formatNumber(parseInt(r.entry_number) || 0) : ""),
+        accessor: (r) => (r.isBeginning ? "" : formatNumber(parseInt(r.entry_number) || 0)),
         className: "font-black text-slate-900 text-center"
       },
       {
@@ -244,20 +297,16 @@ export function AccountMovementTable({
         header: "نوع الحركة",
         label: "نوع الحركة",
         accessor: (r) => (
-          r.isFirstInEntry ? (
-            <span className={cn(
-              "inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter",
-              r.isBeginning
-                ? "bg-amber-100/70 text-amber-700"
-                : r.isOpening
-                ? "bg-indigo-100/60 text-indigo-700"
-                : "bg-slate-100 text-slate-600"
-            )}>
-              {r.typeLabel}
-            </span>
-          ) : (
-            <span />
-          )
+          <span className={cn(
+            "inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter",
+            r.isBeginning
+              ? "bg-amber-100/70 text-amber-700"
+              : r.isOpening
+              ? "bg-indigo-100/60 text-indigo-700"
+              : "bg-slate-100 text-slate-600"
+          )}>
+            {r.typeLabel}
+          </span>
         ),
       },
     ];
@@ -410,7 +459,7 @@ export function AccountMovementTable({
       if (col.id === "date") {
         return dateCol("date", label, (row) => {
           const r = row as unknown as MovementRow;
-          return r.isFirstInEntry ? r.date : "";
+          return r.date;
         });
       }
 
@@ -431,14 +480,22 @@ export function AccountMovementTable({
         width: estimateExcelWidth(label, getColumnSampleValues(col)),
         accessor: (row) => {
           const r = row as unknown as MovementRow;
-          if (col.id === "entry_number") return r.isFirstInEntry ? (r.isBeginning ? "" : (parseInt(r.entry_number, 10) || 0)) : "";
-          if (col.id === "journal_type") return r.isFirstInEntry ? r.typeLabel : "";
+          if (col.id === "entry_number") return r.isBeginning ? "" : (parseInt(r.entry_number, 10) || 0);
+          if (col.id === "journal_type") return r.typeLabel;
           if (col.id === "balance") return r.balance ?? 0;
           if (col.id === "description") return r.description;
           return "";
         },
       };
     });
+
+    // Merge the journal-shared columns (Entry Number / Movement Type / Date)
+    // vertically across each multi-line journal so the Excel export mirrors
+    // the screen and never contains blank cells for a visible movement line.
+    const merges = buildMovementMergeRanges(
+      tableData,
+      exportColumns.filter((c) => !c.hidden).map((col) => col.id),
+    );
 
     await executeExport(exportData, {
       sheetName: "كشف حركة الحساب",
@@ -448,6 +505,7 @@ export function AccountMovementTable({
       summary: Object.keys(summary).length > 0 ? summary : undefined,
       summaryLabel: "المجموع",
       currencyRatesSheet: ratesSheet,
+      mergeCells: merges,
     });
   }, [enrichedColumns, tableData, accountName, exportData, getColumnSampleValues, baseCode, rateMap, ratesSheet, sortedCurrencies, hasSecondaryCurrencies, currencyMode]);
 
@@ -602,57 +660,92 @@ export function AccountMovementTable({
 
     return (
       <>
-        {/* Movement Rows — one row per movement */}
-        {tableData.map((row, rowIdx) => (
-          <div
-            key={`row-${row.entry_number}-${rowIdx}`}
-            dir="rtl"
-            className={cn(
-              "transition-all duration-75",
-              getRowBorderClass(settings.borderStyle),
-              row.isBeginning
-                ? "bg-amber-50/60 border-b border-amber-100"
-                : row.isOpening
-                ? "bg-indigo-50/40 border-b border-indigo-100"
-                : getRowBackgroundClass(false, rowIdx, settings.zebraRows, settings.rowHoverEffect),
-            )}
-            style={{
-              display: "grid",
-              gridTemplateColumns,
-            }}
-          >
-            {visibleColumns.map((col, colIdx) => {
-              const columnPosition = colIdx + 1;
-              const val = typeof col.accessor === "function"
-                ? col.accessor(row, rowIdx)
-                : (row[col.accessor as keyof MovementRow] as ReactNode);
+        {/* Movement Groups — each journal shares one spanning header, so a
+            visible movement line never shows a blank Entry Number / Movement
+            Type. Shared columns span the group; per-row columns render once
+            per line. */}
+        {groupedTableData.map((group, groupIdx) => {
+          const first = group[0];
+          const rowCount = group.length;
+          const containerBg = first.isBeginning
+            ? "bg-amber-50/60"
+            : first.isOpening
+            ? "bg-indigo-50/40"
+            : getRowBackgroundClass(false, groupIdx, settings.zebraRows, settings.rowHoverEffect);
 
-              return (
-                <div
-                  key={col.id}
-                  style={{
-                    gridColumn: String(columnPosition),
-                    minWidth: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    textAlign: "center",
-                    fontSize: `${settings.fontSize}px`,
-                    fontFamily: settings.fontFamily,
-                  }}
-                  className={cn(
-                    getDensityPadding(),
-                    cellBorderClass,
-                    "text-slate-600",
-                    col.className,
-                  )}
-                >
-                  {val || ""}
-                </div>
-              );
-            })}
-          </div>
-        ))}
+          return (
+            <div
+              key={`group-${first.journal_id}-${groupIdx}`}
+              dir="rtl"
+              className={cn(
+                "transition-all duration-75",
+                getRowBorderClass(settings.borderStyle),
+                containerBg,
+              )}
+              style={{
+                display: "grid",
+                gridTemplateColumns,
+                gridTemplateRows: `repeat(${rowCount}, auto)`,
+              }}
+            >
+              {visibleColumns.flatMap((col, colIdx) => {
+                const columnPosition = colIdx + 1;
+
+                if (JOURNAL_SHARED_COLUMN_IDS.has(col.id)) {
+                  const val = typeof col.accessor === "function"
+                    ? col.accessor(first, 0)
+                    : (first[col.accessor as keyof MovementRow] as ReactNode);
+
+                  return (
+                    <GroupedEntrySharedCell
+                      key={col.id}
+                      rowCount={rowCount}
+                      columnPosition={columnPosition}
+                      densityClassName={getDensityPadding()}
+                      borderClassName={cellBorderClass}
+                      className={col.className}
+                      fontSize={settings.fontSize}
+                      fontFamily={settings.fontFamily}
+                    >
+                      {val}
+                    </GroupedEntrySharedCell>
+                  );
+                }
+
+                return group.map((row, rowIdx) => {
+                  const val = typeof col.accessor === "function"
+                    ? col.accessor(row, rowIdx)
+                    : (row[col.accessor as keyof MovementRow] as ReactNode);
+
+                  return (
+                    <div
+                      key={`${col.id}-${rowIdx}`}
+                      style={{
+                        gridRow: rowIdx + 1,
+                        gridColumn: String(columnPosition),
+                        minWidth: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        textAlign: "center",
+                        fontSize: `${settings.fontSize}px`,
+                        fontFamily: settings.fontFamily,
+                      }}
+                      className={cn(
+                        getDensityPadding(),
+                        cellBorderClass,
+                        "text-slate-600",
+                        col.className,
+                      )}
+                    >
+                      {val || ""}
+                    </div>
+                  );
+                });
+              })}
+            </div>
+          );
+        })}
       </>
     );
   };

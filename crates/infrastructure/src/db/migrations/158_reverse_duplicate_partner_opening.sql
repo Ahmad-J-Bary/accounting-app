@@ -1,6 +1,6 @@
 -- 158: Reverse duplicated per-entity partner/material opening journals.
 --
--- Phase 3 defect (R1): the opening-balance migration's aggregate journal is the
+-- Defect (R1): the opening-balance migration's aggregate journal is the
 -- single canonical GL owner of every Opening subledger (AR / AP / Inventory).
 -- But when a customer / supplier / material-opening invoice is recorded while
 -- `opening_window_active()` is false (the migration does not exist yet, or is
