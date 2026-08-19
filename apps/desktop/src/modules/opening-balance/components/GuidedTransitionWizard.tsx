@@ -1,7 +1,6 @@
 import { useMemo, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { Check } from "lucide-react";
 import { TabContext } from "@app/providers/TabContext";
 import type { AccountDto, ResidualClassificationSpecDto } from "@erp/shared-types";
@@ -13,7 +12,7 @@ import { StatusBadge } from "@shared/ui/status-badge";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { toLocalDateStr, toFixed, fmtMoney } from "@shared/lib/format";
 import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
-import { invalidateAccountingMutationQueries, queryClient, QUERY_KEYS } from "@shared/hooks/queryClient";
+import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
 import {
   type OpeningBalanceMigrationDto,
@@ -422,6 +421,29 @@ export function GuidedTransitionWizard() {
                   creditTotal={w.reconciliation.credit_total}
                 />
                 <ReconciliationStatusBanner readiness={reconciliationReadiness(w.reconciliation)} />
+              </div>
+            )}
+            {w.residualClassification === "RetainedEarnings" && (
+              <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 space-y-2">
+                <p className="text-xs font-bold text-indigo-700">
+                  التصنيف المعتمد: الأرباح المبقاة — تُرحَّل إلى حسابها وتظهر في الميزانية العمومية ضمن بند
+                  «الأرباح المبقاة» منفصلةً عن رأس مال الشركاء.
+                </p>
+                <p className="text-xs text-indigo-600">
+                  بعد ترحيل الرصيد الافتتاحي وقفله يصير صافي الأرباح متاحاً للتوزيع على الشركاء عبر
+                  آلية التوزيع الموحّدة (تصنّف الحصص بحسب نسب التقاسم المسجّلة وتُقيَّد على الحسابات الجارية
+                  دون المساس برأس المال).
+                </p>
+                <Button
+                  size="sm"
+                  onClick={() => goTo(
+                    `/accounting/profit-distribution?source=opening&migration=${w.migration?.id ?? ""}`,
+                    "توزيع الأرباح",
+                  )}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                >
+                  توزيع الأرباح
+                </Button>
               </div>
             )}
           </div>

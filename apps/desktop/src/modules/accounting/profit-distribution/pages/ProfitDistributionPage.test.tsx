@@ -64,6 +64,13 @@ const LOCKED = {
   updated_at: "2026-01-02T00:00:00.000Z",
 };
 
+const DRAFT = {
+  ...LOCKED,
+  id: "m-draft",
+  status: "Draft",
+  locked_at: null,
+};
+
 const PREVIEW_45 = {
   entry_number: "",
   net_profit: "45",
@@ -145,6 +152,15 @@ describe("ProfitDistributionPage", () => {
     expect(await screen.findByText(/ترحيل بتاريخ/)).toBeInTheDocument();
     expect(await screen.findByText("تأكيد التوزيع")).toBeInTheDocument();
     expect((await screen.findAllByText("45.00")).length).toBeGreaterThan(0);
+  });
+
+  it("shows that distribution is available AFTER posting when the queried migration is not posted yet", async () => {
+    vi.mocked(openingBalanceService.listMigrations).mockResolvedValue([DRAFT as never]);
+    renderPage("/accounting/profit-distribution?source=opening&migration=m-draft");
+    expect(await screen.findByText("التوزيع متاح بعد ترحيل الرصيد الافتتاحي وقفله")).toBeInTheDocument();
+    expect(screen.queryByText("تأكيد التوزيع")).not.toBeInTheDocument();
+    expect(openingBalanceService.previewProfitDistribution).not.toHaveBeenCalled();
+    expect(openingBalanceService.allocateNetProfit).not.toHaveBeenCalled();
   });
 
   it("skips preview (no journal) and posts a full distribution of the available 45 via the same shares", async () => {

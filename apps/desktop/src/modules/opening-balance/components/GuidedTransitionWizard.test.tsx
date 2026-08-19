@@ -258,4 +258,29 @@ describe("GuidedTransitionWizard", () => {
     expect(await screen.findByText("PROFIT_DISTRIBUTION_ROOT")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "احسب من اليومية" })).not.toBeInTheDocument();
   });
+
+  it("review step shows [توزيع الأرباح] when retained earnings is the residual classification", async () => {
+    vi.mocked(settingsService.getSettings).mockResolvedValue({ accounting_start_mode: "ExistingCompanyMigration" } as never);
+    vi.mocked(openingBalanceService.listMigrations).mockResolvedValue([] as never);
+    vi.mocked(openingBalanceService.getOpeningDraft).mockResolvedValue(
+      JSON.stringify({ step: 9, residualClassification: "RetainedEarnings" }) as never,
+    );
+    const user = userEvent.setup();
+    renderWizard();
+    expect(await screen.findByText("سيتم عند «حفظ وفحص التسوية»:")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "توزيع الأرباح" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "توزيع الأرباح" }));
+    expect(await screen.findByText("PROFIT_DISTRIBUTION_ROOT")).toBeInTheDocument();
+  });
+
+  it("review step hides [توزيع الأرباح] when the residual classification is not retained earnings", async () => {
+    vi.mocked(settingsService.getSettings).mockResolvedValue({ accounting_start_mode: "ExistingCompanyMigration" } as never);
+    vi.mocked(openingBalanceService.listMigrations).mockResolvedValue([] as never);
+    vi.mocked(openingBalanceService.getOpeningDraft).mockResolvedValue(
+      JSON.stringify({ step: 9, residualClassification: "PartnerCapital" }) as never,
+    );
+    renderWizard();
+    expect(await screen.findByText("سيتم عند «حفظ وفحص التسوية»:")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "توزيع الأرباح" })).not.toBeInTheDocument();
+  });
 });

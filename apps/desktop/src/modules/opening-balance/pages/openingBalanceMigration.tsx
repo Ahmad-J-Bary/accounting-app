@@ -15,7 +15,6 @@ import type { OpeningPositionControlDto } from "@erp/shared-types";
 import {
   openingBalanceService,
   type OpeningBalanceMigrationDto,
-  type NetProfitAllocationDto,
   type OpeningReconciliationDto,
 } from "@modules/accounting/api/openingBalanceService";
 import { invalidateAccountingMutationQueries, queryClient, QUERY_KEYS } from "@shared/hooks/queryClient";
@@ -28,29 +27,15 @@ import {
 import { MigrationListCard } from "../components/MigrationListCard";
 import { ReconciliationCard } from "../components/ReconciliationCard";
 import { PositionControlCard } from "../components/PositionControlCard";
-import { ProfitAllocationCard } from "../components/ProfitAllocationCard";
 import { GuidedTransitionWizard } from "../components/GuidedTransitionWizard";
 import { OpeningDashboard } from "../components/OpeningDashboard";
 import { deriveOpeningSnapshot } from "../lib/derive-opening-snapshot";
 import { selectLatestOpenMigration } from "../lib/migration-labels";
 
-interface ComputedProfit {
-  net_profit: string;
-  total_revenue: string;
-  total_expenses: string;
-  entry_count: number;
-}
-
 export default function OpeningBalanceMigration() {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [transitioningTo, setTransitioningTo] = useState<string | null>(null);
-  const [allocMigrationId, setAllocMigrationId] = useState<string>("");
-  const [netProfit, setNetProfit] = useState("");
   const [confirmAction, setConfirmAction] = useState<{ type: "cancel" | "reopen"; id: string } | null>(null);
-  const [allocResult, setAllocResult] = useState<NetProfitAllocationDto | null>(null);
-  const [allocating, setAllocating] = useState(false);
-  const [computingProfit, setComputingProfit] = useState(false);
-  const [computedProfit, setComputedProfit] = useState<ComputedProfit | null>(null);
   const [reconId, setReconId] = useState<string>("");
   const [reconciliation, setReconciliation] = useState<OpeningReconciliationDto | null>(null);
   const [reconLoading, setReconLoading] = useState(false);
@@ -143,51 +128,6 @@ export default function OpeningBalanceMigration() {
     setConfirmAction(null);
     if (confirmAction.type === "cancel") await handleCancel(id);
     else await handleReopen(id);
-  };
-
-  const postedMigrations = useMemo(
-    () => migrations.filter((m) => m.status === "Posted"),
-    [migrations],
-  );
-
-  const handleAllocate = async () => {
-    if (!allocMigrationId) return toast.error("اختر ترحيلاً مرحّلاً");
-    if (!netProfit || isNaN(parseFloat(netProfit))) return toast.error("أدخل صافي الربح");
-    setAllocating(true);
-    setAllocResult(null);
-    try {
-      const res = await openingBalanceService.allocateNetProfit({
-        source: { OpeningMigration: { migration_id: allocMigrationId } },
-        net_profit: netProfit,
-        idempotency_key: crypto.randomUUID(),
-      });
-      setAllocResult(res);
-      toast.success("تم توزيع أرباح الترحيل على الشركاء");
-      refetchMigrations();
-      await invalidateAccountingMutationQueries(queryClient);
-    } catch (e) {
-      toast.error("فشل توزيع الأرباح: " + e);
-    } finally {
-      setAllocating(false);
-    }
-  };
-
-  const handleComputeProfit = async () => {
-    if (!allocMigrationId) return toast.error("اختر ترحيلاً مرحّلاً");
-    setComputingProfit(true);
-    setComputedProfit(null);
-    try {
-      const res = await openingBalanceService.computeNetProfit({
-        migration_id: allocMigrationId,
-      });
-      setComputedProfit(res);
-      setNetProfit(String(res.net_profit));
-      toast.success("تم احتساب صافي الربح من قيدات اليومية حتى تاريخ القطع");
-    } catch (e) {
-      toast.error("فشل احتساب صافي الربح: " + e);
-    } finally {
-      setComputingProfit(false);
-    }
   };
 
   const reconcileCandidates = useMemo(
@@ -283,7 +223,6 @@ export default function OpeningBalanceMigration() {
                   <TabsTrigger value="overview" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">نظرة عامة</TabsTrigger>
                   <TabsTrigger value="list" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">قائمة الترحيلات</TabsTrigger>
                   <TabsTrigger value="position" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">المركز والتسوية</TabsTrigger>
-                  <TabsTrigger value="allocation" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">توزيع الأرباح</TabsTrigger>
                 </>
               )}
               <TabsTrigger value="wizard" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">
@@ -348,22 +287,6 @@ export default function OpeningBalanceMigration() {
                 onReconIdChange={setReconId}
                 loading={reconLoading}
                 reconciliation={reconciliation}
-              />
-            </TabsContent>
-
-            <TabsContent value="allocation" className="mt-2 space-y-4">
-              <ProfitAllocationCard
-                postedMigrations={postedMigrations}
-                allocMigrationId={allocMigrationId}
-                onAllocMigrationIdChange={setAllocMigrationId}
-                netProfit={netProfit}
-                onNetProfitChange={setNetProfit}
-                allocating={allocating}
-                computingProfit={computingProfit}
-                allocResult={allocResult}
-                computedProfit={computedProfit}
-                onCompute={handleComputeProfit}
-                onAllocate={handleAllocate}
               />
             </TabsContent>
           </Tabs>

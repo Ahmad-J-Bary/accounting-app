@@ -52,6 +52,12 @@ export default function ProfitDistributionPage() {
     [candidates, migrationId],
   );
 
+  const queriedMigration = useMemo(
+    () => migrations.find((m) => m.id === migrationId) ?? null,
+    [migrations, migrationId],
+  );
+  const notPostedYet = kind === "opening" && migrationId !== "" && queriedMigration !== null && queriedMigration.status !== "Posted" && queriedMigration.status !== "Locked";
+
   const window = useMemo(() => {
     if (kind === "opening" && migration) {
       const day = migration.cutover_date.slice(0, 10);
@@ -129,6 +135,19 @@ export default function ProfitDistributionPage() {
             </div>
           )}
 
+          {notPostedYet && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-800 space-y-1.5">
+              <p className="font-bold">
+                التوزيع متاح بعد ترحيل الرصيد الافتتاحي وقفله
+              </p>
+              <p>
+                الرصيد الافتتاحي المحدد ({queriedMigration ? STATUS_LABEL[queriedMigration.status] : "جاري الإعداد"}).
+                يُرحَّل الرصيد في المرحلة «الترحيل» ثم يُقفل لاحقاً — عندها تظهر الأرباح المبقاة هنا كمصدر
+                للتوزيع. أكمل مراحل المعالج أولاً ثم عد إلى هذه الصفحة.
+              </p>
+            </div>
+          )}
+
           {source && window ? (
             <ProfitDistributionWorkflow
               source={source}
@@ -138,7 +157,9 @@ export default function ProfitDistributionPage() {
             />
           ) : (
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-xs text-slate-500">
-              اختر المصدر والترحيل لعرض الأرصدة المتاحة للتوزيع.
+              {kind === "opening" && migrationId
+                ? "الترحيل المحدد غير ظاهر في قائمة الترحيلات المتاحة للتوزيع."
+                : "اختر المصدر والترحيل لعرض الأرصدة المتاحة للتوزيع."}
             </div>
           )}
         </div>
