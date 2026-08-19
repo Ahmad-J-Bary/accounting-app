@@ -76,7 +76,8 @@ describe("computeDashboardKpis (GL-driven tiles)", () => {
         makeLine("general", "Assets", 350, 100),
       ]),
     ]);
-    expect(kpis.cashBalance).toBe(650);
+    expect(kpis.bank).toBe(400);
+    expect(kpis.cash).toBe(250);
   });
 
   it("rolls receivable / payable positions from their purposes", () => {
@@ -88,6 +89,16 @@ describe("computeDashboardKpis (GL-driven tiles)", () => {
     ]);
     expect(kpis.receivables).toBe(650);
     expect(kpis.payables).toBe(340);
+  });
+
+  it("computes loan balances from loan-purpose accounts", () => {
+    const kpis = computeDashboardKpis([
+      entry([
+        makeLine("loan", "Liabilities", 60, 400),
+        makeLine("loan", "Liabilities", 0, 50),
+      ]),
+    ]);
+    expect(kpis.loans).toBe(390);
   });
 
   it("assigns a credit normal sign to payable purpose even without account_type", () => {
@@ -126,7 +137,7 @@ describe("computeDashboardKpis (GL-driven tiles)", () => {
       ], { status: "Cancelled" }),
     ]);
     expect(kpis.receivables).toBe(100);
-    expect(kpis.cashBalance).toBe(100);
+    expect(kpis.cash).toBe(100);
   });
 
   it("builds a monthly income series keyed by YYYY-MM", () => {

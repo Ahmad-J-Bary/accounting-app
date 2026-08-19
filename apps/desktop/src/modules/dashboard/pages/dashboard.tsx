@@ -4,7 +4,8 @@ import { Button } from "@shared/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import {
-  TrendingUp, ShoppingCart, Wallet, Users, Truck, Package, Download, LayoutDashboard, Bell, DollarSign
+  Wallet, Users, Truck, Package, Download, LayoutDashboard, Bell, DollarSign,
+  Building2, Landmark
 } from "lucide-react";
 import { formatDate, formatNumber } from '@shared/lib/format';
 import {
@@ -12,9 +13,10 @@ import {
   PieChart, Pie, Cell
 } from "recharts";
 import { DashboardLayout, DashboardCard } from "@widgets/templates/DashboardLayout";
-import { StatCard } from "@widgets/stats/StatCard";
 import { StatusBadge } from '@widgets/stats/StatusBadge';
 import { QuickActions } from '@app/shell/QuickActions';
+import { DashboardSection } from '@widgets/dashboard/DashboardSection';
+import { FinancialMetricCard } from '@widgets/dashboard/FinancialMetricCard';
 
 import { QUERY_KEYS } from '@shared/hooks/queryClient';
 import { journalEntryService } from '@modules/accounting/api/journalEntryService';
@@ -74,7 +76,7 @@ export default function Dashboard() {
   // === GL-computed KPIs (from the posted ledger: DR/CR respected by account nature) ===
   const glKpis = useMemo(() => computeDashboardKpis(allJournalEntries), [allJournalEntries]);
 
-  const { sales: postedSalesTotal, purchases: approvedPurchasesTotal, cashBalance, receivables, payables, monthly: glMonthly } = glKpis;
+  const { sales, purchases, cash, bank, receivables, payables, loans, monthly: glMonthly } = glKpis;
 
   // === المخزون = نفس إسقاط "بضاعة آخر المدة" في قائمة الدخل (نفس الوظيفة،
   // نفس تاريخ الاستحقاق): مخزون أول المدة + حركات الفترة + تسويات 331/45. ===
@@ -87,20 +89,14 @@ export default function Dashboard() {
     ).closingInventory;
   }, [stockMovements, allJournalEntries]);
 
+  const liTotal = useMemo(() => cash + bank + receivables, [cash, bank, receivables]);
+  const aliTotal = useMemo(() => payables + loans, [payables, loans]);
+
   const recentJournals = useMemo(() => allJournalEntries.slice(0, 5), [allJournalEntries]);
 
   const lowStock = useMemo(() => productItems.filter(
     (p) => toNumber(p.total_available) < toNumber(p.minimum_stock)
   ), [productItems]);
-
-  const kpis = useMemo(() => [
-    { title: "المبيعات", value: postedSalesTotal, icon: TrendingUp },
-    { title: "المشتريات", value: approvedPurchasesTotal, icon: ShoppingCart },
-    { title: "الرصيد النقدي", value: cashBalance, icon: Wallet },
-    { title: "ذمم العملاء", value: receivables, icon: Users },
-    { title: "ذمم الموردين", value: payables, icon: Truck },
-    { title: "المخزون", value: inventory, icon: Package },
-  ], [postedSalesTotal, approvedPurchasesTotal, cashBalance, receivables, payables, inventory]);
 
   // === Revenue/Expenses chart from GL (posted ledger, grouped by month) ===
   const revenueChartData = useMemo(() => {
@@ -221,13 +217,43 @@ export default function Dashboard() {
           </div>
         </>
       }
-      widgets={
-        kpis.map((k, i) => (
-          <StatCard key={i} label={k.title} value={formatAmount(k.value, { mode: localDisplayMode })} icon={k.icon} />
-        ))
-      }
     >
-      {/* Top Row: Chart + Categories */}
+      {/* Row 1: لي / علي sections */}
+      <div className="col-span-12 lg:col-span-7">
+        <DashboardSection title="لي" total={liTotal} subtitle="ما للشركة من أرصدة رئيسية" displayMode={localDisplayMode}>
+          <FinancialMetricCard label="الصندوق (الخزينة)" value={cash} icon={Wallet} displayMode={localDisplayMode} />
+          {bank !== 0 && <FinancialMetricCard label="رصيد البنك" value={bank} icon={Building2} displayMode={localDisplayMode} />}
+          <FinancialMetricCard label="ذمم العملاء" value={receivables} icon={Users} displayMode={localDisplayMode} />
+        </DashboardSection>
+      </div>
+
+      <div className="col-span-12 lg:col-span-5">
+        <DashboardSection title="علي" total={aliTotal} subtitle="ما على الشركة من التزامات رئيسية" displayMode={localDisplayMode}>
+          <FinancialMetricCard label="ذمم الموردين" value={payables} icon={Truck} displayMode={localDisplayMode} />
+          {loans !== 0 && <FinancialMetricCard label="القروض" value={loans} icon={Landmark} displayMode={localDisplayMode} />}
+        </DashboardSection>
+      </div>
+
+      {/* Row 2: Operational metrics */}
+      <DashboardCard span={4} title="المبيعات" subtitle="إيرادات الفترة">
+        <div className="text-3xl font-black tabular-nums text-slate-900">
+          {formatAmount(sales, { mode: localDisplayMode })}
+        </div>
+      </DashboardCard>
+
+      <DashboardCard span={4} title="المشتريات" subtitle="مشتريات الفترة">
+        <div className="text-3xl font-black tabular-nums text-slate-900">
+          {formatAmount(purchases, { mode: localDisplayMode })}
+        </div>
+      </DashboardCard>
+
+      <DashboardCard span={4} title="المخزون" subtitle="قيمة المخزون الحالية">
+        <div className="text-3xl font-black tabular-nums text-slate-900">
+          {formatAmount(inventory, { mode: localDisplayMode })}
+        </div>
+      </DashboardCard>
+
+      {/* Charts + Alerts + Recent Activity */}
       <DashboardCard 
         span={8} 
         title="الإيرادات والمصروفات" 
