@@ -34,7 +34,7 @@ use application::use_cases::currency::commands::CurrencyCommands;
 use application::use_cases::currency::queries::CurrencyQueries;
 use application::use_cases::currency::setup::CurrencySetupUseCase;
 use application::use_cases::material::MaterialCodeUseCases;
-use infrastructure::{
+use infrastructure::db::backup;use infrastructure::{
     create_pool, run_migrations, SqliteAccountRepository, SqliteAssetRepository,
     SqliteAuditLogRepository, SqliteCategoryRepository, SqliteCodePrefixRepository,
     SqliteConsumableRepository, SqliteCurrencyRepository, SqliteCustomerRepository,
@@ -57,6 +57,7 @@ use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct AppState {
+    pub pool: infrastructure::DbPool,
     pub customer_repo: Arc<dyn CustomerRepository>,
     pub material_repo: Arc<dyn MaterialRepository>,
     pub category_repo: Arc<dyn CategoryRepository>,
@@ -106,6 +107,12 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
             format!("Migration error: {}", e)
         })?;
 
+    // Startup integrity check — report (not block) on a corrupt database so a
+    // corrupted ledger is still discoverable via get_database_health.
+    if let Err(e) = backup::quick_check(&pool).await {
+        eprintln!("⚠️ Startup quick_check failed: {e}");
+    }
+
     let material_repo = Arc::new(SqliteMaterialRepository::new(pool.clone()));
     let category_repo = Arc::new(SqliteCategoryRepository::new(pool.clone()));
     let stock_movement_repo = Arc::new(SqliteStockMovementRepository::new(pool.clone()));
@@ -125,6 +132,7 @@ pub async fn build_app_state(database_url: &str) -> Result<AppState, String> {
     let warehouse_repo = Arc::new(SqliteWarehouseRepository::new(pool.clone()));
 
     Ok(AppState {
+        pool: pool.clone(),
         customer_repo: customer_repo.clone() as Arc<dyn CustomerRepository>,
         material_repo: material_repo.clone() as Arc<dyn MaterialRepository>,
         category_repo: category_repo.clone() as Arc<dyn CategoryRepository>,

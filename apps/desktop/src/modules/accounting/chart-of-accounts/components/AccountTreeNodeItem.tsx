@@ -2,7 +2,7 @@ import { FileText, FolderOpen, Folder, Lock, ShieldCheck, Hash } from "lucide-re
 import { cn } from '@shared/lib/utils';
 import { formatCurrency } from '@shared/lib/format';
 import { TYPE_LABELS, type AccountTreeNode, type ToggleNodeHandler } from "../lib/types";
-import { isSummaryAccount } from "../lib/tree-utils";
+import { isSummaryAccount, isOpeningStockAccount } from "../lib/tree-utils";
 import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
 import { TreeItem } from '@widgets/tree-sidebar/TreeItem';
 
@@ -108,9 +108,13 @@ export function AccountTreeNodeItem({
           </span>
         </div>
         <div className="w-[120px] text-left tabular-nums">
-          <span className={cn("text-sm font-medium", parseSafeNumber(node.balance) >= 0 ? "text-slate-700" : "text-red-600")}>
-            {formatCurrency(parseSafeNumber(node.balance))}
-          </span>
+          {isOpeningStockAccount(node.name_ar) ? (
+            <span className="text-sm font-medium text-slate-400">({formatCurrency(parseSafeNumber(node.balance))})</span>
+          ) : (
+            <span className={cn("text-sm font-medium", parseSafeNumber(node.balance) >= 0 ? "text-slate-700" : "text-red-600")}>
+              {formatCurrency(parseSafeNumber(node.balance))}
+            </span>
+          )}
         </div>
       </>
     );

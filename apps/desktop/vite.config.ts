@@ -2,9 +2,13 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
 import path from 'path';
 
+const host = process.env.TAURI_DEV_HOST;
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // prevent Vite from obscuring Rust compiler errors
+  clearScreen: false,
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -16,10 +20,19 @@ export default defineConfig({
     },
   },
   server: {
-    host: '0.0.0.0',
+    host: host || '0.0.0.0',
     port: parseInt(process.env.VITE_PORT || '3000'),
+    strictPort: true,
+    // dedicated HMR port for remote/mobile debugging via TAURI_DEV_HOST
+    hmr: host
+      ? { protocol: 'ws', host, port: 3001 }
+      : undefined,
     watch: {
       ignored: ['**/src-tauri/**'],
+      // Poll so edits to workspace packages (reached through pnpm junctions
+      // on Windows) are reliably detected and HMR timestamps update.
+      usePolling: true,
+      interval: 100,
     },
   },
   build: {

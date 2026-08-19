@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildTree, getVisibleRootTree } from "./tree-utils";
+import { buildTree, getVisibleRootTree, isOpeningStockAccount } from "./tree-utils";
 import type { AccountDto } from "@erp/shared-types";
 import type { AccountTreeNode } from "./types";
 
@@ -149,6 +149,15 @@ describe("buildTree — chart of accounts hierarchy", () => {
       const codes = node.children.map((c) => c.code);
       expect([...codes].sort((a, b) => a.localeCompare(b))).toEqual(codes);
     }
+  });
+});
+
+describe("isOpeningStockAccount", () => {
+  it("matches بضاعة أول المدة only", () => {
+    expect(isOpeningStockAccount("بضاعة أول المدة")).toBe(true);
+    expect(isOpeningStockAccount("بضاعة آخر المدة")).toBe(false);
+    expect(isOpeningStockAccount("المخزون")).toBe(false);
+    expect(isOpeningStockAccount("بضاعة")).toBe(false);
   });
 });
 

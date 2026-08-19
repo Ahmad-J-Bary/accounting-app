@@ -13,6 +13,7 @@ uuid = { workspace = true }
 sqlx = { workspace = true, features = ["chrono", "_rt-tokio"] }
 chrono = { workspace = true }
 rust_decimal = { workspace = true }
+serde = { workspace = true }
 serde_json = { workspace = true }
 
 [dev-dependencies]

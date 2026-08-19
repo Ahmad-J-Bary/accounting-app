@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { buildTree, getVisibleRootTree, getErrorMessage } from "../lib/tree-utils";
+import { computeTreeBalances } from "../lib/tree-balances";
 import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
 import type { AccountTreeNode, ToggleNodeHandler } from "../lib/types";
 import { AccountTreeNodeItem } from "../components/AccountTreeNodeItem";
@@ -13,21 +14,6 @@ import { accountingService } from '@modules/accounting/api/accountingService';
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 
 const ROOT_ACCOUNT_ID = "__chart_of_accounts_root__";
-
-// Compute balances from actual general ledger totals, then propagate up the tree
-// so every parent's balance = sum of its direct children's balances.
-function computeTreeBalances(nodes: AccountTreeNode[], ltMap: Map<string, { debit: number; credit: number }>): AccountTreeNode[] {
-  return nodes.map(node => {
-    const lt = ltMap.get(node.id);
-    const ownBalance = lt ? lt.debit - lt.credit : 0;
-    if (!node.children?.length) {
-      return { ...node, balance: String(ownBalance) };
-    }
-    const computedChildren = computeTreeBalances(node.children, ltMap);
-    const childrenSum = computedChildren.reduce((sum, child) => sum + parseSafeNumber(child.balance), 0);
-    return { ...node, balance: String(childrenSum), children: computedChildren };
-  });
-}
 
 export default function Accounting() {
   const queryClient = useQueryClient();

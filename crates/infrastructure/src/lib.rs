@@ -2,7 +2,7 @@ pub mod db;
 pub mod repositories;
 pub use sqlx;
 
-pub use db::pool::{create_pool, run_migrations};
+pub use db::{backup, mapper, pool::{create_pool, run_migrations, DbPool}};
 pub use repositories::SqliteCustomerRepository;
 pub use repositories::SqliteMaterialRepository;
 pub use repositories::SqliteCategoryRepository;

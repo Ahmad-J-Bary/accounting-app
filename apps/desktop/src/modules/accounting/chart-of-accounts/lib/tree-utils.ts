@@ -5,6 +5,14 @@ export const isSummaryAccount = (
   _account: Pick<AccountDto, "category" | "level">,
 ): boolean => true; // All accounts are Summary (can have children)
 
+/**
+ * Opening-stock account (بضاعة أول المدة): within the Chart of Accounts its
+ * balance is NOT counted into the parent / assets totals — it is only a
+ * display-only figure shown in parentheses next to the account name.
+ */
+export const isOpeningStockAccount = (name: string): boolean =>
+  name.includes("بضاعة أول المدة");
+
 export function buildTree(accounts: AccountDto[]): AccountTreeNode[] {
   const map = new Map<string, AccountTreeNode>();
   const roots: AccountTreeNode[] = [];

@@ -1,7 +1,86 @@
 pub mod bootstrap;
 pub mod commands;
 
-use tauri::Manager;
+use std::path::PathBuf;
+use tauri::{Emitter, Manager};
+
+use crate::bootstrap::container::AppState;
+
+/// Apply a staged restore at startup, BEFORE the connection pool opens.
+///
+/// A restore staged by `import_database`/`import_database_from_bytes` lives at
+/// `<data_dir>/erp.pending.sqlite` plus a `restore.pending.json` marker. Since
+/// the previous launch closed the pool (process exit), swapping files here is
+/// safe on every platform and the natural startup path then runs migrations and
+/// integrity checks against the restored file.
+fn apply_pending_restore(data_dir: &std::path::Path, db_path: &std::path::Path) {
+    let Ok(Some(pending)) = infrastructure::db::backup::take_pending_marker(data_dir) else {
+        return;
+    };
+    let pending_path = PathBuf::from(&pending.pending_db);
+    if !pending_path.exists() {
+        eprintln!("⚠️ Pending restore file missing: {}", pending.pending_db);
+        return;
+    }
+    eprintln!("♻️ Applying pending restore from {}", pending.pending_db);
+    if let Err(e) = infrastructure::db::backup::replace_db_file(db_path, &pending_path) {
+        eprintln!("⚠️ Failed to apply pending restore: {e}");
+    }
+    let _ = std::fs::remove_file(&pending_path);
+}
+
+/// Create an automatic backup on startup (if enabled and due), then trim old
+/// backups per the configured retention policy.
+async fn run_startup_backup(app: tauri::AppHandle, state: AppState) {
+    use infrastructure::db::backup as b;
+    let pool = state.pool;
+    let is_enabled = b::get_config(&pool, "backup_auto_enabled")
+        .await
+        .map(|v| v.map(|s| s == "true").unwrap_or(true))
+        .unwrap_or(true);
+    if !is_enabled {
+        return;
+    }
+
+    let Ok(data_dir) = app.path().app_data_dir() else {
+        return;
+    };
+    let db_path = data_dir.join("erp.db");
+    let use_same_location = b::get_config(&pool, "backup_use_same_location")
+        .await
+        .map(|v| v.map(|s| s == "true").unwrap_or(true))
+        .unwrap_or(true);
+    let custom_path = b::get_config(&pool, "backup_custom_path").await.unwrap_or(None);
+    let backup_dir = b::resolve_backup_dir(&db_path, use_same_location, custom_path.as_deref());
+
+    let last_auto = b::get_config(&pool, "backup_last_auto").await.unwrap_or(None);
+    let today = chrono::Local::now().format("%Y%m%d").to_string();
+    if last_auto.as_deref() == Some(&today) {
+        return;
+    }
+
+    if std::fs::create_dir_all(&backup_dir).is_err() {
+        return;
+    }
+    let filename = b::backup_filename(b::BACKUP_PREFIX);
+    let dest = backup_dir.join(&filename);
+    if let Err(e) = b::create_snapshot(&pool, &dest).await {
+        eprintln!("⚠️ Startup auto-backup failed: {e}");
+        return;
+    }
+    let _ = b::set_config(&pool, "backup_last_auto", &today).await;
+
+    let retention = b::get_config(&pool, "backup_retention_days")
+        .await
+        .ok()
+        .flatten()
+        .and_then(|s| s.parse::<u64>().ok())
+        .unwrap_or(30);
+    if let Err(e) = b::cleanup_old_backups(&backup_dir, retention) {
+        eprintln!("⚠️ Backup cleanup failed: {e}");
+    }
+    let _ = app.emit("backup-created", filename);
+}
 
 pub fn run() -> tauri::Builder<tauri::Wry> {
     tauri::Builder::default()
@@ -183,6 +262,20 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::settle::settle_partner_balance,
             // Export commands
             commands::export::save_file,
+            // Backup / restore commands
+            commands::backup::backup_database_now,
+            commands::backup::list_backups,
+            commands::backup::get_backup_config,
+            commands::backup::set_backup_config,
+            commands::backup::export_database,
+            commands::backup::export_database_to_bytes,
+            commands::backup::import_database,
+            commands::backup::import_database_from_bytes,
+            commands::backup::pending_restore_status,
+            commands::backup::cancel_pending_restore,
+            commands::backup::delete_backup_file,
+            commands::backup::request_app_restart,
+            commands::backup::get_database_health,
             // Opening balance migration
             commands::opening_balance::create_opening_balance_migration,
             commands::opening_balance::update_opening_balance_migration_lines,
@@ -223,13 +316,26 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
                     .expect("Failed to create app data directory");
             }
             let db_path = app_data_dir.join("erp.db");
+
+            // Apply any staged restore BEFORE the pool opens (file swap is only
+            // safe while no connection exists). Migrations + integrity checks
+            // then run against the restored file via the normal startup path.
+            apply_pending_restore(&app_data_dir, &db_path);
+
             let database_url = format!("sqlite:{}?mode=rwc", db_path.display());
 
             let app_state = tauri::async_runtime::block_on(bootstrap::container::build_app_state(
                 &database_url,
             ))
             .expect("Failed to create app state");
-            app.manage(app_state);
+            app.manage(app_state.clone());
+
+            // Start the daily auto-backup in the background (best effort).
+            let backup_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                run_startup_backup(backup_handle, app_state).await;
+            });
+
             Ok(())
         })
 }

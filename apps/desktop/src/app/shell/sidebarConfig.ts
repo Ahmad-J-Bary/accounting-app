@@ -3,7 +3,8 @@ import {
   ShoppingCart, Wallet, Package, Warehouse, AlertTriangle,
   Factory, ClipboardCheck, BarChart3, Shield, Settings, History, Layers,
   HardDrive, Folders, DollarSign, Undo2, GitMerge, ArrowLeftRight,
-  Link, FolderPlus, Building2, Minus, PackageOpen, Coins, CalendarDays
+  Link, FolderPlus, Building2, Minus, PackageOpen, Coins, CalendarDays,
+  Database
 } from "lucide-react";
 import type { NavLayoutType, NavSidebarSettings } from '@shared/types/sidebar-settings';
 import type { SidebarGroupConfig, SidebarItemConfig } from '@shared/types/sidebar-config';
@@ -16,6 +17,7 @@ export const ICON_MAP: Record<string, React.ElementType> = {
   Factory, ClipboardCheck, BarChart3, Shield, Settings, History, Layers,
   HardDrive, Folders, DollarSign, Undo2, GitMerge, ArrowLeftRight,
   Link, FolderPlus, Building2, Minus, PackageOpen, Coins, CalendarDays,
+  Database,
 };
 
 export interface NavItem {
