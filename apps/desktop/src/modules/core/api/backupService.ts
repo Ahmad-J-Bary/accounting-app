@@ -6,13 +6,22 @@ export interface BackupFileInfo {
   size: number;
   label: string;
   timestamp: number;
+  backup_type: string;
+  sha256: string | null;
+  schema_version: number | null;
+  app_version: string | null;
+  company_scope: string | null;
+  status: string | null;
+  verified: boolean;
 }
 
 export interface BackupConfig {
   use_same_location: boolean;
   custom_path: string | null;
   backup_dir: string;
-  retention_days: number;
+  keep_daily: number;
+  keep_weekly: number;
+  keep_monthly: number;
   auto_backup_enabled: boolean;
   last_auto_backup: string | null;
 }
@@ -22,6 +31,8 @@ export interface PendingRestoreInfo {
   source_label: string;
   created_at: string;
 }
+
+export type BackupType = 'manual' | 'auto' | 'pre_import';
 
 export const backupService = {
   async backupNow(): Promise<BackupFileInfo> {
@@ -36,10 +47,15 @@ export const backupService = {
   async setConfig(partial: {
     use_same_location?: boolean;
     custom_path?: string;
-    retention_days?: number;
+    keep_daily?: number;
+    keep_weekly?: number;
+    keep_monthly?: number;
     auto_backup_enabled?: boolean;
   }): Promise<BackupConfig> {
     return await invoke<BackupConfig>('set_backup_config', partial);
+  },
+  async applyRetention(): Promise<{ removed: string[] }> {
+    return await invoke<{ removed: string[] }>('apply_backup_retention');
   },
   async exportToBytes(): Promise<number[]> {
     return await invoke<number[]>('export_database_to_bytes');

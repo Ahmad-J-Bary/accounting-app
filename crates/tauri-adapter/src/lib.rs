@@ -4,6 +4,8 @@ pub mod commands;
 use std::path::PathBuf;
 use tauri::{Emitter, Manager};
 
+use infrastructure::db::backup::RetentionPolicy;
+
 use crate::bootstrap::container::AppState;
 
 /// Apply a staged restore at startup, BEFORE the connection pool opens.
@@ -30,10 +32,10 @@ fn apply_pending_restore(data_dir: &std::path::Path, db_path: &std::path::Path) 
 }
 
 /// Create an automatic backup on startup (if enabled and due), then trim old
-/// backups per the configured retention policy.
+/// backups per the configured tiered retention policy.
 async fn run_startup_backup(app: tauri::AppHandle, state: AppState) {
     use infrastructure::db::backup as b;
-    let pool = state.pool;
+    let pool = state.pool.clone();
     let is_enabled = b::get_config(&pool, "backup_auto_enabled")
         .await
         .map(|v| v.map(|s| s == "true").unwrap_or(true))
@@ -56,30 +58,94 @@ async fn run_startup_backup(app: tauri::AppHandle, state: AppState) {
     let last_auto = b::get_config(&pool, "backup_last_auto").await.unwrap_or(None);
     let today = chrono::Local::now().format("%Y%m%d").to_string();
     if last_auto.as_deref() == Some(&today) {
+        // Still trim per policy even when today's backup already exists.
+        apply_retention(&app, &state).await;
         return;
     }
 
     if std::fs::create_dir_all(&backup_dir).is_err() {
         return;
     }
-    let filename = b::backup_filename(b::BACKUP_PREFIX);
+    let filename = match b::next_backup_filename(&backup_dir, b::BACKUP_PREFIX) {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("⚠️ Startup auto-backup filename failed: {e}");
+            return;
+        }
+    };
     let dest = backup_dir.join(&filename);
     if let Err(e) = b::create_snapshot(&pool, &dest).await {
         eprintln!("⚠️ Startup auto-backup failed: {e}");
         return;
     }
-    let _ = b::set_config(&pool, "backup_last_auto", &today).await;
 
-    let retention = b::get_config(&pool, "backup_retention_days")
+    // Verify (quick check) before declaring success, then record metadata.
+    let verification = match b::verify_backup(&dest, false).await {
+        Ok(v) if v.full_ok() => v,
+        Ok(v) => {
+            let _ = std::fs::remove_file(&dest);
+            let reason = if v.integrity_ok {
+                format!("missing tables: {}", v.missing_tables.join(", "))
+            } else {
+                "integrity check failed".to_string()
+            };
+            eprintln!("⚠️ Startup auto-backup failed verification ({reason})");
+            return;
+        }
+        Err(e) => {
+            let _ = std::fs::remove_file(&dest);
+            eprintln!("⚠️ Startup auto-backup verification error: {e}");
+            return;
+        }
+    };
+    let meta = b::build_meta(&pool, &filename, &dest, b::BackupType::Auto, &verification).await;
+    if let Err(e) = b::save_sidecar(&backup_dir, &meta) {
+        eprintln!("⚠️ Failed to save auto-backup metadata: {e}");
+    }
+    let _ = b::set_config(&pool, "backup_last_auto", &today).await;
+    let _ = app.emit("backup-created", filename);
+
+    apply_retention(&app, &state).await;
+}
+
+/// Apply the configured tiered retention policy, removing eligible auto backups.
+async fn apply_retention(app: &tauri::AppHandle, state: &AppState) {
+    use infrastructure::db::backup as b;
+    let Ok(data_dir) = app.path().app_data_dir() else {
+        return;
+    };
+    let db_path = data_dir.join("erp.db");
+    let use_same_location = b::get_config(&state.pool, "backup_use_same_location")
+        .await
+        .map(|v| v.map(|s| s == "true").unwrap_or(true))
+        .unwrap_or(true);
+    let custom_path = b::get_config(&state.pool, "backup_custom_path").await.unwrap_or(None);
+    let backup_dir = b::resolve_backup_dir(&db_path, use_same_location, custom_path.as_deref());
+
+    let policy = RetentionPolicy {
+        daily: retention_value(state, "backup_keep_daily", RetentionPolicy::default().daily).await,
+        weekly: retention_value(state, "backup_keep_weekly", RetentionPolicy::default().weekly).await,
+        monthly: retention_value(state, "backup_keep_monthly", RetentionPolicy::default().monthly)
+            .await,
+    };
+    match b::list_backup_files(&backup_dir) {
+        Ok(files) => {
+            if let Err(e) = b::apply_retention(&backup_dir, policy, &files) {
+                eprintln!("⚠️ Backup retention failed: {e}");
+            }
+        }
+        Err(e) => eprintln!("⚠️ Backup retention listing failed: {e}"),
+    }
+}
+
+/// Read a retention bucket value from `app_config`, falling back to a default.
+async fn retention_value(state: &AppState, key: &str, fallback: u32) -> u32 {
+    infrastructure::db::backup::get_config(&state.pool, key)
         .await
         .ok()
         .flatten()
-        .and_then(|s| s.parse::<u64>().ok())
-        .unwrap_or(30);
-    if let Err(e) = b::cleanup_old_backups(&backup_dir, retention) {
-        eprintln!("⚠️ Backup cleanup failed: {e}");
-    }
-    let _ = app.emit("backup-created", filename);
+        .and_then(|s| s.parse::<u32>().ok())
+        .unwrap_or(fallback)
 }
 
 pub fn run() -> tauri::Builder<tauri::Wry> {
@@ -267,6 +333,7 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::backup::list_backups,
             commands::backup::get_backup_config,
             commands::backup::set_backup_config,
+            commands::backup::apply_backup_retention,
             commands::backup::export_database,
             commands::backup::export_database_to_bytes,
             commands::backup::import_database,

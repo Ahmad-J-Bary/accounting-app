@@ -37,10 +37,21 @@ function formatSize(bytes: number): string {
 }
 
 function formatLabel(label: string): string {
-  // erp_backup_20260819_093000 -> 2026/08/19 09:30:00
-  const m = label.replace(/^erp_backup_/, '').match(/^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})$/);
+  // accounting_backup_20260819_093000 -> 2026/08/19 09:30:00
+  const m = label.replace(/^(erp_backup_|accounting_backup_|erp_pre_restore_)/, '').match(/^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})$/);
   if (!m) return label;
   return `${m[1]}/${m[2]}/${m[3]} ${m[4]}:${m[5]}:${m[6]}`;
+}
+
+function typeBadge(b: BackupFileInfo) {
+  if (!b.backup_type) return null;
+  const label =
+    b.backup_type === 'manual' ? 'يدوية' :
+    b.backup_type === 'pre_import' ? 'قبل الاستيراد' : 'تلقائية';
+  const cls =
+    b.backup_type === 'manual' ? 'bg-blue-50 text-blue-700' :
+    b.backup_type === 'pre_import' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600';
+  return <Badge variant="outline" className={`${cls} text-[10px]`}>{label}</Badge>;
 }
 
 export default function BackupsPage() {
@@ -168,13 +179,19 @@ export default function BackupsPage() {
   };
 
   const handleConfigChange = async (patch: Partial<BackupConfig>) => {
-    const saved = await backupService.setConfig({
-      use_same_location: patch.use_same_location,
-      custom_path: patch.custom_path,
-      retention_days: patch.retention_days,
-      auto_backup_enabled: patch.auto_backup_enabled,
-    });
-    setConfig(saved);
+    try {
+      const saved = await backupService.setConfig({
+        use_same_location: patch.use_same_location,
+        custom_path: patch.custom_path,
+        keep_daily: patch.keep_daily,
+        keep_weekly: patch.keep_weekly,
+        keep_monthly: patch.keep_monthly,
+        auto_backup_enabled: patch.auto_backup_enabled,
+      });
+      setConfig(saved);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    }
   };
 
   if (loading) {
@@ -299,18 +316,60 @@ export default function BackupsPage() {
                   <Input
                     value={config.custom_path ?? ''}
                     readOnly
-                    placeholder="المجلد الافتراضي ضمن بيانات التطبيق"
+                    placeholder="فريق دفعة أو اتركه فارغًا للافتراضي"
+                    className="flex-1"
                   />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    type="button"
+                    onClick={async () => {
+                      const dir = await open({ directory: true, multiple: false });
+                      if (dir && typeof dir === 'string') {
+                        await handleConfigChange({ custom_path: dir });
+                      }
+                    }}
+                  >
+                    <FolderOpen className="w-4 h-4 ml-1" /> اختيار
+                  </Button>
+                  {config.custom_path && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      type="button"
+                      onClick={() => void handleConfigChange({ custom_path: '' })}
+                    >
+                      مسح
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
             <div>
-              <label className="text-xs font-bold text-slate-500 block mb-1">عدد أيام الاحتفاظ بالنسخ</label>
+              <label className="text-xs font-bold text-slate-500 block mb-1">احتفاظ يومي (نسخ تلقائية)</label>
               <Input
                 type="number"
                 min={0}
-                value={config.retention_days}
-                onChange={(e) => void handleConfigChange({ retention_days: Number(e.target.value) })}
+                value={config.keep_daily}
+                onChange={(e) => void handleConfigChange({ keep_daily: Math.max(0, Number(e.target.value)) })}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-500 block mb-1">احتفاظ أسبوعي</label>
+              <Input
+                type="number"
+                min={0}
+                value={config.keep_weekly}
+                onChange={(e) => void handleConfigChange({ keep_weekly: Math.max(0, Number(e.target.value)) })}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-500 block mb-1">احتفاظ شهري</label>
+              <Input
+                type="number"
+                min={0}
+                value={config.keep_monthly}
+                onChange={(e) => void handleConfigChange({ keep_monthly: Math.max(0, Number(e.target.value)) })}
               />
             </div>
             <div className="flex items-end md:col-span-2">
@@ -318,6 +377,32 @@ export default function BackupsPage() {
                 مجلد النسخ الحالي: <span dir="ltr" className="font-mono">{config.backup_dir}</span>
               </p>
             </div>
+          </div>
+          <div className="mt-4 border-t border-slate-100 pt-4 flex items-center justify-between">
+            <p className="text-xs text-slate-400">
+              0 في أي حقل = لا حد (أبقِ كل النسخ تلقائية). التحكم ينطبق على النسخ التلقائية فقط، أما اليدوية وقبل الاستيراد فتُحفظ حتى حذفها يدويًا.
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={operating}
+              onClick={async () => {
+                setOperating(true);
+                try {
+                  const res = await backupService.applyRetention();
+                  toast.success(res.removed.length > 0
+                    ? `تمت إزالة ${res.removed.length} نسخة قديمة`
+                    : 'لا توجد نسخ قديمة لإزالتها');
+                  await load(true);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : String(e));
+                } finally {
+                  setOperating(false);
+                }
+              }}
+            >
+              <Trash2 className="w-4 h-4 ml-1" /> تنظيف النسخ القديمة
+            </Button>
           </div>
         </div>
       )}
@@ -339,11 +424,23 @@ export default function BackupsPage() {
           <div className="divide-y divide-slate-100">
             {backups.map((b) => (
               <div key={b.name} className="flex items-center justify-between gap-3 px-5 py-3">
-                <div className="flex items-center gap-3">
-                  <Database className="w-4 h-4 text-slate-400" />
-                  <div>
-                    <p className="font-bold text-sm text-slate-700" dir="ltr">{b.name}</p>
-                    <p className="text-xs text-slate-400">{formatLabel(b.label)} • {formatSize(b.size)}</p>
+                <div className="flex items-center gap-3 min-w-0">
+                  <Database className="w-4 h-4 text-slate-400 shrink-0" />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-sm text-slate-700 truncate" dir="ltr">{b.name}</p>
+                      {typeBadge(b)}
+                      {b.verified && (
+                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 text-[10px]">
+                          موثقة ✓
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {formatLabel(b.label)} • {formatSize(b.size)}
+                      {b.company_scope ? ` • ${b.company_scope}` : ''}
+                      {b.schema_version ? ` • إصدار القاعدة ${b.schema_version}` : ''}
+                    </p>
                   </div>
                 </div>
                 <div className="flex gap-2">

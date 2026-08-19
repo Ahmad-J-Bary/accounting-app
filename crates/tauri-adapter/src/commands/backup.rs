@@ -4,7 +4,7 @@ use std::str::FromStr as _;
 
 use crate::bootstrap::container::AppState;
 use infrastructure::db::backup::{
-    self, BackupFileInfo, PendingRestore,
+    self, BackupFileInfo, BackupType, PendingRestore, RetentionPolicy,
 };
 
 /// Resolve the live DB path (mirrors setup logic in lib.rs).
@@ -31,27 +31,64 @@ async fn resolve_backup_dir(app: &AppHandle, state: &AppState) -> Result<PathBuf
     Ok(backup::resolve_backup_dir(&db_path, use_same_location, custom_path.as_deref()))
 }
 
-/// Create a manual backup snapshot immediately.
-#[tauri::command]
-pub async fn backup_database_now(
-    app: AppHandle,
-    state: State<'_, AppState>,
+async fn read_policy(state: &AppState) -> Result<RetentionPolicy, String> {
+    Ok(RetentionPolicy {
+        daily: config_value(&state.pool, "backup_keep_daily", RetentionPolicy::default().daily).await,
+        weekly: config_value(&state.pool, "backup_keep_weekly", RetentionPolicy::default().weekly).await,
+        monthly: config_value(&state.pool, "backup_keep_monthly", RetentionPolicy::default().monthly)
+            .await,
+    })
+}
+
+async fn config_value(pool: &infrastructure::sqlx::SqlitePool, key: &str, fallback: u32) -> u32 {
+    backup::get_config(pool, key)
+        .await
+        .ok()
+        .flatten()
+        .and_then(|s| s.parse::<u32>().ok())
+        .unwrap_or(fallback)
+}
+
+/// Create a typed backup (snapshot → verify → sidecar metadata) in `dir`.
+///
+/// `full_verify` runs `PRAGMA integrity_check` (manual backups); cheaper
+/// `quick_check` is used for automatic/pre-import snapshots.
+async fn create_typed_backup(
+    app: &AppHandle,
+    state: &AppState,
+    backup_type: BackupType,
+    full_verify: bool,
 ) -> Result<BackupFileInfo, String> {
-    let backup_dir = resolve_backup_dir(&app, &state).await?;
+    let backup_dir = resolve_backup_dir(app, state).await?;
     std::fs::create_dir_all(&backup_dir)
         .map_err(|e| format!("Failed to create backup dir: {e}"))?;
 
-    let filename = backup::backup_filename(backup::BACKUP_PREFIX);
+    let filename = backup::next_backup_filename(&backup_dir, backup::BACKUP_PREFIX)?;
     let dest = backup_dir.join(&filename);
+
     backup::create_snapshot(&state.pool, &dest).await?;
 
-    let meta = std::fs::metadata(&dest).map_err(|e| format!("Failed to stat backup: {e}"))?;
-    let ts = meta
-        .modified()
-        .ok()
-        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-        .map(|d| d.as_secs() as i64)
-        .unwrap_or(0);
+    // Verify BEFORE declaring success — never trust fs success alone.
+    let verification = match backup::verify_backup(&dest, full_verify).await {
+        Ok(v) if v.full_ok() => v,
+        Ok(v) => {
+            let _ = std::fs::remove_file(&dest);
+            let reason = if v.integrity_ok {
+                format!("Missing tables: {}", v.missing_tables.join(", "))
+            } else {
+                "integrity check failed".to_string()
+            };
+            return Err(format!("فشل التحقق من النسخة الاحتياطية: {reason}"));
+        }
+        Err(e) => {
+            let _ = std::fs::remove_file(&dest);
+            return Err(format!("فشل التحقق من النسخة الاحتياطية: {e}"));
+        }
+    };
+
+    let meta = backup::build_meta(&state.pool, &filename, &dest, backup_type, &verification).await;
+    backup::save_sidecar(&backup_dir, &meta)
+        .map_err(|e| format!("فشل حفظ بيانات النسخة الاحتياطية: {e}"))?;
 
     Ok(BackupFileInfo {
         label: filename
@@ -60,9 +97,25 @@ pub async fn backup_database_now(
             .to_string(),
         name: filename,
         path: dest.to_string_lossy().to_string(),
-        size: meta.len(),
-        timestamp: ts,
+        size: meta.size_bytes,
+        timestamp: meta.timestamp_secs,
+        backup_type: meta.backup_type.clone(),
+        sha256: Some(meta.sha256.clone()),
+        schema_version: Some(meta.schema_version),
+        app_version: Some(meta.app_version.clone()),
+        company_scope: meta.company_scope.clone(),
+        status: Some(meta.status.clone()),
+        verified: true,
     })
+}
+
+/// Create a manual backup snapshot immediately (full integrity verification).
+#[tauri::command]
+pub async fn backup_database_now(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<BackupFileInfo, String> {
+    create_typed_backup(&app, &state, BackupType::Manual, true).await
 }
 
 /// List existing backups from the active backup directory.
@@ -75,7 +128,7 @@ pub async fn list_backups(
     backup::list_backup_files(&backup_dir)
 }
 
-/// Get the current backup configuration (dir, retention, last auto-backup).
+/// Get the current backup configuration (dir, retention policy, last auto-backup).
 #[tauri::command]
 pub async fn get_backup_config(
     app: AppHandle,
@@ -85,14 +138,24 @@ pub async fn get_backup_config(
         .await
         .map(|v| v.map(|s| s == "true").unwrap_or(true))?;
     let custom_path = backup::get_config(&state.pool, "backup_custom_path").await?;
-    let retention = backup::get_config(&state.pool, "backup_retention_days")
-        .await?
-        .and_then(|s| s.parse::<u32>().ok())
-        .unwrap_or(30);
     let auto_backup = backup::get_config(&state.pool, "backup_auto_enabled")
         .await
         .map(|v| v.map(|s| s == "true").unwrap_or(true))?;
     let last_auto = backup::get_config(&state.pool, "backup_last_auto").await?;
+
+    // Tiered policy with legacy days-based fallback: 30 days ≈ 4 weeks.
+    let policy = read_policy(&state).await?;
+    let legacy_days = backup::get_config(&state.pool, "backup_retention_days")
+        .await?
+        .and_then(|s| s.parse::<u32>().ok());
+    let (daily, weekly, monthly) = if policy == RetentionPolicy::default()
+        && legacy_days.is_some()
+        && legacy_days != Some(30)
+    {
+        (0u32, legacy_days.unwrap_or(0) / 7, 0u32)
+    } else {
+        (policy.daily, policy.weekly, policy.monthly)
+    };
 
     let db_path = resolve_db_path(&app)?;
     let backup_dir = backup::resolve_backup_dir(&db_path, use_same_location, custom_path.as_deref());
@@ -101,35 +164,74 @@ pub async fn get_backup_config(
         "use_same_location": use_same_location,
         "custom_path": custom_path,
         "backup_dir": backup_dir.to_string_lossy().to_string(),
-        "retention_days": retention,
+        "keep_daily": daily,
+        "keep_weekly": weekly,
+        "keep_monthly": monthly,
         "auto_backup_enabled": auto_backup,
         "last_auto_backup": last_auto,
     }))
 }
 
 /// Update backup settings.
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn set_backup_config(
     app: AppHandle,
     state: State<'_, AppState>,
     use_same_location: Option<bool>,
     custom_path: Option<String>,
-    retention_days: Option<u32>,
+    keep_daily: Option<u32>,
+    keep_weekly: Option<u32>,
+    keep_monthly: Option<u32>,
     auto_backup_enabled: Option<bool>,
 ) -> Result<serde_json::Value, String> {
     if let Some(v) = use_same_location {
         backup::set_config(&state.pool, "backup_use_same_location", &v.to_string()).await?;
     }
     if let Some(v) = custom_path {
-        backup::set_config(&state.pool, "backup_custom_path", &v).await?;
+        let trimmed = v.trim().to_string();
+        if !trimmed.is_empty() {
+            // Validate the custom directory is creatable now, fail fast.
+            std::fs::create_dir_all(&trimmed)
+                .map_err(|e| format!("تعذر استخدام المجلد المخصص ({e})"))?;
+        }
+        backup::set_config(&state.pool, "backup_custom_path", &trimmed).await?;
     }
-    if let Some(v) = retention_days {
-        backup::set_config(&state.pool, "backup_retention_days", &v.to_string()).await?;
+    if let Some(v) = keep_daily {
+        backup::set_config(&state.pool, "backup_keep_daily", &v.to_string()).await?;
+    }
+    if let Some(v) = keep_weekly {
+        backup::set_config(&state.pool, "backup_keep_weekly", &v.to_string()).await?;
+    }
+    if let Some(v) = keep_monthly {
+        backup::set_config(&state.pool, "backup_keep_monthly", &v.to_string()).await?;
     }
     if let Some(v) = auto_backup_enabled {
         backup::set_config(&state.pool, "backup_auto_enabled", &v.to_string()).await?;
     }
+    // Enforce the new policy immediately.
+    let _ = apply_retention_impl(&app, &state).await;
     get_backup_config(app, state).await
+}
+
+/// Apply the retained-policy cleanup now and report how many backups were removed.
+#[tauri::command]
+pub async fn apply_backup_retention(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
+    apply_retention_impl(&app, &state).await
+}
+
+async fn apply_retention_impl(
+    app: &AppHandle,
+    state: &AppState,
+) -> Result<serde_json::Value, String> {
+    let backup_dir = resolve_backup_dir(app, state).await?;
+    let backups = backup::list_backup_files(&backup_dir)?;
+    let policy = read_policy(state).await?;
+    let removed = backup::apply_retention(&backup_dir, policy, &backups)?;
+    Ok(serde_json::json!({ "removed": removed }))
 }
 
 /// Export the live DB to a standalone snapshot file (`VACUUM INTO`).
@@ -150,7 +252,7 @@ pub async fn export_database(
 /// Export the live DB to a byte array (used by the frontend to save anywhere).
 #[tauri::command]
 pub async fn export_database_to_bytes(state: State<'_, AppState>) -> Result<Vec<u8>, String> {
-    let filename = backup::backup_filename("erp_export_");
+    let filename = backup::backup_filename(backup::EXPORT_PREFIX);
     let tmp = std::env::temp_dir().join(filename);
     backup::create_snapshot(&state.pool, &tmp).await?;
     let bytes = std::fs::read(&tmp).map_err(|e| format!("Failed to read snapshot: {e}"))?;
@@ -176,12 +278,40 @@ async fn validate_sqlite_file(path: &Path) -> Result<(), String> {
     result
 }
 
+/// Stage a source file/bytes for restart-based restore, snapshotting the CURRENT
+/// DB into a typed pre-import backup first (never trimmed by retention).
+async fn stage_restore(
+    app: &AppHandle,
+    state: &AppState,
+    source: &Path,
+    source_label: &str,
+) -> Result<serde_json::Value, String> {
+    // Make sure the incoming file is a sane SQLite DB before committing.
+    validate_sqlite_file(source).await?;
+
+    let data_dir = resolve_data_dir(app)?;
+    let pending = data_dir.join("erp.pending.sqlite");
+    let _ = std::fs::remove_file(&pending);
+    std::fs::copy(source, &pending)
+        .map_err(|e| format!("Failed to copy restore file: {e}"))?;
+
+    // Automatic safety backup of the CURRENT DB (type = pre_import, kept forever).
+    let pre = create_typed_backup(app, state, BackupType::PreImport, false).await?;
+
+    let marker = PendingRestore {
+        pending_db: pending.to_string_lossy().to_string(),
+        source_label: source_label.to_string(),
+        created_at: chrono::Local::now().to_rfc3339(),
+    };
+    backup::write_pending_marker(&data_dir, &marker)?;
+
+    Ok(serde_json::json!({
+        "pending": marker.pending_db,
+        "auto_backup": pre.path,
+    }))
+}
+
 /// Import a database from a source file (restart-based swap).
-///
-/// The incoming file is copied to `<data_dir>/erp.pending.sqlite`, an
-/// auto-backup of the CURRENT DB is snapshotted, and a marker is written. On
-/// the next startup the pending file replaces the live DB BEFORE the pool
-/// opens — the only safe way to swap a WAL-mode DB that a pool keeps open.
 #[tauri::command]
 pub async fn import_database(
     app: AppHandle,
@@ -192,39 +322,12 @@ pub async fn import_database(
     if !source.exists() {
         return Err("ملف النسخة الاحتياطية غير موجود".into());
     }
-
-    // Make sure the incoming file is a sane SQLite DB before committing.
-    validate_sqlite_file(source).await?;
-
-    let data_dir = resolve_data_dir(&app)?;
-    let pending = data_dir.join("erp.pending.sqlite");
-    let _ = std::fs::remove_file(&pending);
-    std::fs::copy(source, &pending)
-        .map_err(|e| format!("Failed to copy restore file: {e}"))?;
-
-    // Snapshot the CURRENT DB into an auto-backup before any swap.
-    let backup_dir = resolve_backup_dir(&app, &state).await?;
-    std::fs::create_dir_all(&backup_dir)
-        .map_err(|e| format!("Failed to create backup dir: {e}"))?;
-    let pre_file = backup::backup_filename("erp_pre_restore_");
-    let pre_backup = backup_dir.join(&pre_file);
-    backup::create_snapshot(&state.pool, &pre_backup).await?;
-
-    let marker = PendingRestore {
-        pending_db: pending.to_string_lossy().to_string(),
-        source_label: source
-            .file_name()
-            .and_then(|f| f.to_str())
-            .unwrap_or("backup")
-            .to_string(),
-        created_at: chrono::Local::now().to_rfc3339(),
-    };
-    backup::write_pending_marker(&data_dir, &marker)?;
-
-    Ok(serde_json::json!({
-        "pending": marker.pending_db,
-        "auto_backup": pre_backup.to_string_lossy().to_string(),
-    }))
+    let label = source
+        .file_name()
+        .and_then(|f| f.to_str())
+        .unwrap_or("backup")
+        .to_string();
+    stage_restore(&app, &state, source, &label).await
 }
 
 /// Import a database from raw bytes (restart-based swap).
@@ -238,27 +341,7 @@ pub async fn import_database_from_bytes(
     let pending = data_dir.join("erp.pending.sqlite");
     std::fs::write(&pending, &bytes)
         .map_err(|e| format!("Failed to write imported database: {e}"))?;
-
-    validate_sqlite_file(&pending).await?;
-
-    let backup_dir = resolve_backup_dir(&app, &state).await?;
-    std::fs::create_dir_all(&backup_dir)
-        .map_err(|e| format!("Failed to create backup dir: {e}"))?;
-    let pre_file = backup::backup_filename("erp_pre_restore_");
-    let pre_backup = backup_dir.join(&pre_file);
-    backup::create_snapshot(&state.pool, &pre_backup).await?;
-
-    let marker = PendingRestore {
-        pending_db: pending.to_string_lossy().to_string(),
-        source_label: "استيراد من بايتات".to_string(),
-        created_at: chrono::Local::now().to_rfc3339(),
-    };
-    backup::write_pending_marker(&data_dir, &marker)?;
-
-    Ok(serde_json::json!({
-        "pending": marker.pending_db,
-        "auto_backup": pre_backup.to_string_lossy().to_string(),
-    }))
+    stage_restore(&app, &state, &pending, "استيراد من بايتات").await
 }
 
 /// Read the current pending-restore status (if any).
@@ -308,7 +391,7 @@ pub async fn get_database_health(state: State<'_, AppState>) -> Result<serde_jso
     }
 }
 
-/// Delete a backup file from the active backup directory.
+/// Delete a backup file (and its sidecar) from the active backup directory.
 #[tauri::command]
 pub async fn delete_backup_file(
     app: AppHandle,
@@ -318,7 +401,7 @@ pub async fn delete_backup_file(
     if file_name.contains("..") || file_name.contains('/') || file_name.contains('\\') {
         return Err("Invalid backup file name".into());
     }
-    if !file_name.starts_with(backup::BACKUP_PREFIX) || !file_name.ends_with(".sqlite") {
+    if !backup::is_backup_name(&file_name) || !file_name.ends_with(".sqlite") {
         return Err("Invalid backup file name".into());
     }
     let backup_dir = resolve_backup_dir(&app, &state).await?;
@@ -326,5 +409,7 @@ pub async fn delete_backup_file(
     if !path.exists() {
         return Err("ملف النسخة الاحتياطية غير موجود".into());
     }
-    std::fs::remove_file(&path).map_err(|e| format!("Failed to delete backup: {e}"))
+    std::fs::remove_file(&path).map_err(|e| format!("Failed to delete backup: {e}"))?;
+    let _ = std::fs::remove_file(backup::sidecar_path(&backup_dir, &file_name));
+    Ok(())
 }
