@@ -9,6 +9,12 @@ export default defineConfig({
   plugins: [react()],
   // prevent Vite from obscuring Rust compiler errors
   clearScreen: false,
+  // Never esbuild-prebundle the linked workspace packages: they are consumed
+  // straight from source (raw .ts), and pre-bundling caches a stale copy in
+  // node_modules/.vite, breaking HMR for edits inside packages/*.
+  optimizeDeps: {
+    exclude: ['@erp/shared-types'],
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -29,6 +35,10 @@ export default defineConfig({
       : undefined,
     watch: {
       ignored: ['**/src-tauri/**'],
+      // Explicitly watch workspace packages (outside the app root, so chokidar
+      // would not scan them by default). Files not in the module graph simply
+      // produce no reload; runtime imports from packages/* get HMR.
+      include: [path.posix.join(path.resolve(__dirname, '../../packages').replace(/\\/g, '/'), '**/*')],
       // Poll so edits to workspace packages (reached through pnpm junctions
       // on Windows) are reliably detected and HMR timestamps update.
       usePolling: true,
