@@ -2,15 +2,17 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use domain::accounting::account::{Account, AccountCategory, AccountType};
+use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::accounting::partner::{Partner, ProfitSharingType};
 use domain::shared::currency::Currency;
 use domain::shared::ids::{AccountId, PartnerId};
+use domain::shared::monetary_amount::MonetaryAmount;
 use application::ports::account_repository::AccountRepository;
 use application::ports::journal_entry_repository::JournalEntryRepository;
 use application::ports::partner_repository::PartnerRepository;
 use application::use_cases::equity::GetPartnerEquityStatementUseCase;
 use application::use_cases::opening_balance::{
-    AllocateNetProfitCommand, AllocateNetProfitUseCase,
+    AllocateNetProfitUseCase, DistributeProfitCommand, ProfitDistributionSource,
 };
 use application::use_cases::partner::{
     CreateCapitalContributionUseCase, CreatePartnerDrawingUseCase,
@@ -159,6 +161,27 @@ async fn equity_statement_reconciles_with_partner_ledgers() {
     let journal_repo: Arc<dyn JournalEntryRepository> =
         Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
 
+    // Feed retained earnings from the opening-balance-equity control account (53)
+    // so the 600 distribution has an available pool (Sec 7) while partner capital
+    // stays untouched (Sec 10).
+    let retained = account_repo.find_by_code("52").await.unwrap().expect("retained earnings account");
+    let obe = account_repo.find_by_code("53").await.unwrap().expect("opening balance equity account");
+    let c = test_currency();
+    let mut seed = JournalEntry::new(
+        uuid::Uuid::new_v4().to_string(),
+        JournalType::AccountOpeningBalance,
+        vec![
+            JournalLine::new(obe.id, MonetaryAmount::from_base(Decimal::from(600), c.clone()), MonetaryAmount::zero(c.clone()), "رصيد افتتاحي".to_string()),
+            JournalLine::new(retained.id, MonetaryAmount::zero(c.clone()), MonetaryAmount::from_base(Decimal::from(600), c.clone()), "تمييز الأرباح المبقاة".to_string()),
+        ],
+        chrono::Utc::now(),
+        "تغذية الأرباح المبقاة من رصيد الافتتاح".to_string(),
+        Some(format!("equity_gl_seed_{}", uuid::Uuid::new_v4())),
+    )
+    .unwrap();
+    seed.post().unwrap();
+    journal_repo.save(&seed).await.unwrap();
+
     // Opening sequence: profit allocation runs while the migration is still
     // Posted (pre-lock), then the migration is sealed (Locked) before any
     // operational capital/drawing event is posted — the gate forbids normal
@@ -169,9 +192,10 @@ async fn equity_statement_reconciles_with_partner_ledgers() {
         account_repo.clone(),
         journal_repo.clone(),
     )
-    .execute(AllocateNetProfitCommand {
-        migration_id: migration_id.clone(),
+    .execute(DistributeProfitCommand {
+        source: ProfitDistributionSource::OpeningMigration { migration_id: migration_id.clone() },
         net_profit: "600".to_string(),
+        idempotency_key: uuid::Uuid::new_v4().to_string(),
     })
     .await
     .unwrap();

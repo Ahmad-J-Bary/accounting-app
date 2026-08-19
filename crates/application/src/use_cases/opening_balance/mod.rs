@@ -18,7 +18,7 @@ pub mod draft;
 pub mod update;
 pub mod obe;
 
-pub use allocate::AllocateNetProfitUseCase;
+pub use allocate::{AllocateNetProfitUseCase, PreviewProfitDistributionUseCase};
 pub use guard::{assert_opening_workflow_writable, opening_lifecycle_closed, opening_window_active};
 pub use net_profit::ComputeNetProfitUseCase;
 pub use cancel::CancelOpeningBalanceUseCase;
@@ -43,10 +43,12 @@ pub use position::{
 pub use state::{ApproveOpeningBalanceUseCase, LockOpeningBalanceUseCase, ValidateOpeningBalanceUseCase};
 pub use update::UpdateOpeningMigrationLinesUseCase;
 pub use types::{
-    AllocateNetProfitCommand, ComputedNetProfitDto, ComputeNetProfitCommand,
-    CreateOpeningBalanceMigrationCommand, KIND_AR, KIND_AP, KIND_FIXED_ASSET, KIND_INVENTORY,
+    ComputedNetProfitDto, ComputeNetProfitCommand,
+    CreateOpeningBalanceMigrationCommand, DistributeProfitCommand, KIND_AR, KIND_AP,
+    KIND_FIXED_ASSET, KIND_INVENTORY,
     KIND_BANK, KIND_LOAN, NetProfitAllocationDto, OpeningItemInput, OpeningItemsDto, OpeningLineInput,
     OpeningMigrationDto, OpeningReconciliationDto, PartnerAllocationShare, PostOpeningBalanceResult,
-    ReconciliationRow, ResidualClassificationSpec, SaveOpeningItemsCommand,
+    PreviewProfitDistributionCommand, ProfitDistributionSource, ReconciliationRow,
+    ResidualClassificationSpec, SaveOpeningItemsCommand,
     SetResidualClassificationCommand, UpdateOpeningMigrationLinesCommand,
 };

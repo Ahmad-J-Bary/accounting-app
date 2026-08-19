@@ -157,8 +157,9 @@ export default function OpeningBalanceMigration() {
     setAllocResult(null);
     try {
       const res = await openingBalanceService.allocateNetProfit({
-        migration_id: allocMigrationId,
+        source: { OpeningMigration: { migration_id: allocMigrationId } },
         net_profit: netProfit,
+        idempotency_key: crypto.randomUUID(),
       });
       setAllocResult(res);
       toast.success("تم توزيع أرباح الترحيل على الشركاء");

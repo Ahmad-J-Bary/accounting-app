@@ -43,6 +43,7 @@ import BalanceSheetReport from '@modules/reports/pages/BalanceSheetReport';
 import PartnerProfitShareReport from '@modules/reports/pages/PartnerProfitShareReport';
 import PartnerStatementReport from '@modules/reports/pages/PartnerStatementReport';
 import FiscalPeriodsPage from '@modules/accounting/fiscal-periods/pages/FiscalPeriodsPage';
+import ProfitDistributionPage from '@modules/accounting/profit-distribution/pages/ProfitDistributionPage';
 
 // While an EXISTING company is still in its opening workflow
 // (before OPENING_LOCKED), daily-log transactional pages are blocked and
@@ -76,6 +77,7 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/accounting/reports/partner-statement" element={<PartnerStatementReport />} />
       <Route path="/accounting/fiscal-periods" element={<FiscalPeriodsPage />} />
       <Route path="/accounting/reports/fiscal-periods" element={<Navigate to="/accounting/fiscal-periods" replace />} />
+      <Route path="/accounting/profit-distribution" element={<ProfitDistributionPage />} />
       <Route path="/accounting/account-ledger/:accountId" element={<AccountMovement />} />
       <Route path="/journal" element={<OpeningTransactionGate><Journal /></OpeningTransactionGate>} />
       <Route path="/customers" element={<PartyPage entityName="customer" />} />

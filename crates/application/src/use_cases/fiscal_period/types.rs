@@ -54,9 +54,12 @@ pub struct DistributableProfitDto {
     /// i.e. historical/accumulated result booked in the chart.
     pub retained_earnings_balance: String,
     /// Total already allocated to partners via `profit_distribution:*` source
-    /// journals (idempotency-safe: counts only the posted allocation).
+    /// journals (display-only «المُوزَّع سابقاً»). Retained earnings ALREADY
+    /// nets each distribution, so this is NOT subtracted from `distributable`.
     pub allocated_to_date: String,
-    /// distributable = current_period_profit + retained_earnings − allocated.
+    /// distributable = current_period_profit + retained_earnings. This is the
+    /// amount still available to distribute (remaining), because the retained
+    /// account already nets prior distributions.
     pub distributable: String,
 }
 

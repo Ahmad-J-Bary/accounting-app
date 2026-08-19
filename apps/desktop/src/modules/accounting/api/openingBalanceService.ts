@@ -78,10 +78,33 @@ export interface NetProfitAllocationDto {
   net_profit: string;
   allocated_total: string;
   shares: PartnerAllocationShare[];
+  posted: boolean;
 }
 
-export interface AllocateNetProfitRequest {
-  migration_id: string;
+/**
+ * The source/context of a profit distribution — ONE distribution engine
+ * consumes this explicit source instead of the frontend rebuilding per-source
+ * logic. Mirrors the backend `ProfitDistributionSource` enum as an external
+ * (serde) tagged union:
+ *   { OpeningMigration: { migration_id } } | { ClosedPeriod: { period_id } }
+ */
+export type ProfitDistributionSource =
+  | { OpeningMigration: { migration_id: string } }
+  | { ClosedPeriod: { period_id: string } };
+
+export interface DistributeProfitCommand {
+  source: ProfitDistributionSource;
+  net_profit: string;
+  /**
+   * Client-supplied idempotency key: re-submitting the SAME key resolves the
+   * already-posted distribution instead of creating a duplicate journal. A
+   * different key is a NEW (e.g. partial) distribution event.
+   */
+  idempotency_key: string;
+}
+
+export interface PreviewProfitDistributionCommand {
+  source: ProfitDistributionSource;
   net_profit: string;
 }
 
@@ -159,8 +182,11 @@ export const openingBalanceService = {
   async lockMigration(id: string): Promise<OpeningBalanceMigrationDto> {
     return await invoke<OpeningBalanceMigrationDto>('lock_opening_balance_migration', { id });
   },
-  async allocateNetProfit(request: AllocateNetProfitRequest): Promise<NetProfitAllocationDto> {
+  async allocateNetProfit(request: DistributeProfitCommand): Promise<NetProfitAllocationDto> {
     return await invoke<NetProfitAllocationDto>('allocate_net_profit', { request });
+  },
+  async previewProfitDistribution(request: PreviewProfitDistributionCommand): Promise<NetProfitAllocationDto> {
+    return await invoke<NetProfitAllocationDto>('preview_profit_distribution', { request });
   },
   async computeNetProfit(request: ComputeNetProfitRequest): Promise<ComputedNetProfitDto> {
     return await invoke<ComputedNetProfitDto>('compute_opening_balance_net_profit', { request });

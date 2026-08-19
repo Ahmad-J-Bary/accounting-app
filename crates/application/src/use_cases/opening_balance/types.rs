@@ -48,9 +48,32 @@ pub struct PostOpeningBalanceResult {
     pub equity_balanced: bool,
 }
 
+/// The source/context of a profit distribution. ONE distribution engine
+/// consumes this explicit source instead of the frontend rebuilding per-source
+/// logic (Sec 2: "احفظ مصدر الأرباح مقابل آلية توزيع واحدة").
+#[derive(Debug, Clone, Deserialize)]
+pub enum ProfitDistributionSource {
+    /// Retained earnings carried by an Existing Company opening migration
+    /// (opening residual classified as retained earnings).
+    OpeningMigration { migration_id: String },
+    /// Profits of a closed fiscal period (slotted for a later phase; the
+    /// distribution engine rejects it until that window is implemented).
+    ClosedPeriod { period_id: String },
+}
+
 #[derive(Debug, Deserialize, Clone)]
-pub struct AllocateNetProfitCommand {
-    pub migration_id: String,
+pub struct DistributeProfitCommand {
+    pub source: ProfitDistributionSource,
+    pub net_profit: String,
+    /// Client-supplied idempotency key: re-submitting the SAME key resolves the
+    /// already-posted distribution instead of creating a duplicate journal
+    /// (Sec 15). A different key is a NEW (e.g. partial) distribution event.
+    pub idempotency_key: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct PreviewProfitDistributionCommand {
+    pub source: ProfitDistributionSource,
     pub net_profit: String,
 }
 
@@ -89,6 +112,9 @@ pub struct NetProfitAllocationDto {
     pub net_profit: Decimal,
     pub allocated_total: Decimal,
     pub shares: Vec<PartnerAllocationShare>,
+    /// True when this DTO came from a POSTED distribution journal; false when
+    /// it is a read-only preview projection (no journal created).
+    pub posted: bool,
 }
 
 // ---------- Opening sub-ledger items (link to REAL entities) ----------

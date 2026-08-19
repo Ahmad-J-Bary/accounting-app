@@ -1,17 +1,18 @@
 use crate::bootstrap::container::AppState;
 use application::use_cases::opening_balance::{
-    AllocateNetProfitCommand, AllocateNetProfitUseCase,
+    AllocateNetProfitUseCase,
     ApplyResidualToLedgerUseCase,
     ApproveOpeningBalanceUseCase, CancelOpeningBalanceUseCase,
     ClearOpeningDraftUseCase,
     ComputeNetProfitCommand, ComputeNetProfitUseCase, ComputedNetProfitDto,
     CreateOpeningBalanceMigrationCommand,
-    CreateOpeningBalanceUseCase, GetOpeningDraftUseCase, GetOpeningPositionControlUseCase, GetOpeningReconciliationUseCase,
+    CreateOpeningBalanceUseCase, DistributeProfitCommand, GetOpeningDraftUseCase, GetOpeningPositionControlUseCase, GetOpeningReconciliationUseCase,
     GetResidualClassificationSpecUseCase,
     ListOpeningMigrationsUseCase,
     LockOpeningBalanceUseCase, NetProfitAllocationDto, OpeningItemsDto, OpeningMigrationDto,
     OpeningPositionControlDto, OpeningReconciliationDto, PostOpeningBalanceResult, PostOpeningBalanceUseCase,
-    ReopenOpeningBalanceUseCase, ResidualClassificationSpec, SaveOpeningDraftUseCase, SaveOpeningItemsCommand, SaveOpeningItemsUseCase,
+    PreviewProfitDistributionCommand, PreviewProfitDistributionUseCase, ReopenOpeningBalanceUseCase,
+    ResidualClassificationSpec, SaveOpeningDraftUseCase, SaveOpeningItemsCommand, SaveOpeningItemsUseCase,
     SetResidualClassificationCommand, SetResidualClassificationUseCase,
     UpdateOpeningMigrationLinesCommand, UpdateOpeningMigrationLinesUseCase,
     ValidateOpeningBalanceUseCase,
@@ -78,9 +79,25 @@ pub async fn post_opening_balance_migration(
 #[tauri::command]
 pub async fn allocate_net_profit(
     state: State<'_, AppState>,
-    request: AllocateNetProfitCommand,
+    request: DistributeProfitCommand,
 ) -> Result<NetProfitAllocationDto, String> {
     AllocateNetProfitUseCase::new(
+        state.opening_migration_repo.clone(),
+        state.partner_repo.clone(),
+        state.account_repo.clone(),
+        state.journal_entry_repo.clone(),
+    )
+    .execute(request)
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn preview_profit_distribution(
+    state: State<'_, AppState>,
+    request: PreviewProfitDistributionCommand,
+) -> Result<NetProfitAllocationDto, String> {
+    PreviewProfitDistributionUseCase::new(
         state.opening_migration_repo.clone(),
         state.partner_repo.clone(),
         state.account_repo.clone(),

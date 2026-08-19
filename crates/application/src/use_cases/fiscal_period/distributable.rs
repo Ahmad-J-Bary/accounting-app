@@ -14,15 +14,18 @@ use crate::use_cases::fiscal_period::types::{
 
 /// Computes the distributable profit for a window (Sec 18 / Sec 22):
 ///
-///   distributable = current_period_profit + retained_earnings − allocated
+///   distributable = current_period_profit + retained_earnings
 ///
 /// * `current_period_profit` — ledger net profit over the window (posted
 ///   journals, revenue − expenses).
 /// * `retained_earnings_balance` — balance of the retained-earnings account
 ///   (purpose `RetainedEarnings`), i.e. historical/accumulated result.
-/// * `allocated_to_date` — the absolute (unsigned) value of every posted
-///   `profit_distribution:{...}` journal, so already-allocated profit is never
-///   counted twice (idempotency-safe).
+///
+/// A distribution debits retained earnings, so the retained account ALREADY
+/// nets every posted `profit_distribution:{...}` event: the result is the
+/// amount still available (remaining), and partial distributions shrink it
+/// correctly. `allocated_to_date` is exposed separately as a DISPLAY-only
+/// figure («المُوزَّع سابقاً») — it must NOT be subtracted again.
 ///
 /// This is a READ-ONLY projection: it never posts, allocates or creates
 /// anything. Allocation remains a separate command (Sec 22).
@@ -86,7 +89,7 @@ impl GetDistributableProfitUseCase {
         }
 
         let current_period_profit = totals.net.round_dp(2);
-        let distributable = current_period_profit + retained - allocated;
+        let distributable = current_period_profit + retained;
 
         Ok(DistributableProfitDto {
             period_id: None,

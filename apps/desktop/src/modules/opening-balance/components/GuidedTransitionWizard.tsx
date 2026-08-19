@@ -16,12 +16,8 @@ import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
 import { invalidateAccountingMutationQueries, queryClient, QUERY_KEYS } from "@shared/hooks/queryClient";
 import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
 import {
-  openingBalanceService,
-  type ComputedNetProfitDto,
-  type NetProfitAllocationDto,
   type OpeningBalanceMigrationDto,
 } from "@modules/accounting/api/openingBalanceService";
-import { ProfitAllocationCard } from "@modules/opening-balance/components/ProfitAllocationCard";
 import { WizardShell } from "@modules/opening-balance/components/WizardShell";
 import { WizardLineEditor } from "@modules/opening-balance/components/WizardLineEditor";
 import { useOpeningBalanceWizard, STEP_REVIEW } from "@modules/opening-balance/hooks/useOpeningBalanceWizard";
@@ -125,6 +121,10 @@ export function GuidedTransitionWizard() {
             migration={w.migration}
             firstPeriod={w.firstPeriod}
             onViewBalanceSheet={() => goTo("/accounting/reports/balance-sheet", "الميزانية العمومية")}
+            onDistribute={() => goTo(
+              `/accounting/profit-distribution?source=opening&migration=${w.migration!.id}`,
+              "توزيع الأرباح",
+            )}
           />
         )}
         <div className="flex justify-center pt-1">
@@ -473,6 +473,10 @@ export function GuidedTransitionWizard() {
                   migration={w.migration}
                   firstPeriod={w.firstPeriod}
                   onViewBalanceSheet={() => goTo("/accounting/reports/balance-sheet", "الميزانية العمومية")}
+                  onDistribute={() => goTo(
+                    `/accounting/profit-distribution?source=opening&migration=${w.migration!.id}`,
+                    "توزيع الأرباح",
+                  )}
                 />
                 {!w.onboardingStarted && (
                   <div className="flex justify-center">
@@ -779,24 +783,20 @@ export function LockedCompletionPanel({
 // ── Retained-earnings overview: shown once the migration is locked. It reads
 // the historical retained balance (as at cutover) and — once the first
 // operational period exists — the current retained balance and the amount
-// available for distribution. The [توزيع الأرباح] action reuses the EXISTING
-// profit-distribution engine (ProfitAllocationCard), never a second mechanism.
+// available for distribution. The [توزيع الأرباح] action navigates INTO the
+// general-purpose profit-distribution workflow with the source preselected
+// (`source=opening&migration=<id>`) — the SAME engine, never a second mechanism.
 function RetainedEarningsOverview({
   migration,
   firstPeriod,
   onViewBalanceSheet,
+  onDistribute,
 }: {
   migration: OpeningBalanceMigrationDto;
   firstPeriod: { start_date: string; end_date: string } | null;
   onViewBalanceSheet: () => void;
+  onDistribute: () => void;
 }) {
-  const [showDistribution, setShowDistribution] = useState(false);
-  const [allocating, setAllocating] = useState(false);
-  const [computingProfit, setComputingProfit] = useState(false);
-  const [netProfit, setNetProfit] = useState("");
-  const [allocResult, setAllocResult] = useState<NetProfitAllocationDto | null>(null);
-  const [computedProfit, setComputedProfit] = useState<ComputedNetProfitDto | null>(null);
-
   const AS_AT_CUTOVER_START = "1970-01-01T00:00:00Z";
   const endOfCutover = useMemo(() => {
     const day = migration.cutover_date.slice(0, 10);
@@ -820,46 +820,13 @@ function RetainedEarningsOverview({
   const currentRetained = current.data
     ? parseSafeNumber(current.data.retained_earnings_balance)
     : historicalRetained;
+  const currentDistributed = current.data
+    ? parseSafeNumber(current.data.allocated_to_date)
+    : parseSafeNumber(asAtLock.data?.allocated_to_date);
   const available =
     current.data
       ? parseSafeNumber(current.data.distributable)
       : parseSafeNumber(asAtLock.data?.distributable);
-
-  const handleCompute = async () => {
-    setComputingProfit(true);
-    setComputedProfit(null);
-    try {
-      const res = await openingBalanceService.computeNetProfit({ migration_id: migration.id });
-      setComputedProfit(res);
-      setNetProfit(String(res.net_profit));
-    } catch (e) {
-      toast.error("فشل احتساب صافي الربح: " + e);
-    } finally {
-      setComputingProfit(false);
-    }
-  };
-
-  const handleAllocate = async () => {
-    if (!netProfit || isNaN(parseFloat(netProfit))) {
-      toast.error("أدخل صافي الربح");
-      return;
-    }
-    setAllocating(true);
-    setAllocResult(null);
-    try {
-      const res = await openingBalanceService.allocateNetProfit({
-        migration_id: migration.id,
-        net_profit: netProfit,
-      });
-      setAllocResult(res);
-      toast.success("تم توزيع أرباح الترحيل على الشركاء");
-      await invalidateAccountingMutationQueries(queryClient);
-    } catch (e) {
-      toast.error("فشل توزيع الأرباح: " + e);
-    } finally {
-      setAllocating(false);
-    }
-  };
 
   return (
     <div className="rounded-lg border border-indigo-200 bg-white p-3 space-y-3">
@@ -868,7 +835,7 @@ function RetainedEarningsOverview({
         <span className="text-[11px] font-semibold text-slate-400">المتاح للتوزيع حسب النموذج المحاسبي</span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3 space-y-1">
           <p className="text-[11px] font-semibold text-slate-500">الأرباح المبقاة التاريخية</p>
           <p className="text-lg font-black tabular-nums text-slate-800">{fmtMoney(historicalRetained)}</p>
@@ -877,8 +844,12 @@ function RetainedEarningsOverview({
           <p className="text-[11px] font-semibold text-slate-500">الأرباح المبقاة الحالية</p>
           <p className="text-lg font-black tabular-nums text-slate-800">{fmtMoney(currentRetained)}</p>
         </div>
+        <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3 space-y-1">
+          <p className="text-[11px] font-semibold text-slate-500">المُوزَّع سابقاً</p>
+          <p className="text-lg font-black tabular-nums text-slate-800">{fmtMoney(currentDistributed)}</p>
+        </div>
         <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 space-y-1">
-          <p className="text-[11px] font-semibold text-emerald-600">الأرباح المتاحة للتوزيع</p>
+          <p className="text-[11px] font-semibold text-emerald-600">المتبقي للتوزيع</p>
           <p className="text-lg font-black tabular-nums text-emerald-700">{fmtMoney(available)}</p>
         </div>
       </div>
@@ -887,26 +858,10 @@ function RetainedEarningsOverview({
         <Button variant="outline" size="sm" onClick={onViewBalanceSheet} className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold">
           عرض الأرباح المبقاة
         </Button>
-        <Button size="sm" onClick={() => setShowDistribution((v) => !v)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
-          {showDistribution ? "إغلاق توزيع الأرباح" : "توزيع الأرباح"}
+        <Button size="sm" onClick={onDistribute} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+          توزيع الأرباح
         </Button>
       </div>
-
-      {showDistribution && (
-        <ProfitAllocationCard
-          postedMigrations={[migration]}
-          allocMigrationId={migration.id}
-          onAllocMigrationIdChange={() => {}}
-          netProfit={netProfit}
-          onNetProfitChange={setNetProfit}
-          allocating={allocating}
-          computingProfit={computingProfit}
-          allocResult={allocResult}
-          computedProfit={computedProfit}
-          onCompute={handleCompute}
-          onAllocate={handleAllocate}
-        />
-      )}
     </div>
   );
 }
