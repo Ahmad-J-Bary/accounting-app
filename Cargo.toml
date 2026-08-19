@@ -32,6 +32,11 @@ infrastructure = { path = "crates/infrastructure" }
 [profile.dev]
 opt-level = 0
 
+# Keep workspace crates fast to compile (opt 0) while compiling heavy
+# dependencies (tauri, sqlx, tokio, ...) optimized for a snappier dev binary.
+[profile.dev.package."*"]
+opt-level = 2
+
 [profile.release]
 panic = "abort"
 lto = true
