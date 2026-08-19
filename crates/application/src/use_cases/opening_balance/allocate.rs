@@ -273,11 +273,9 @@ impl AllocateNetProfitUseCase {
         // distributions keyed only by the migration (`profit_distribution:{id}`)
         // are still resolved so an existing distribution is never duplicated.
         let event_source_id = format!("{AUTH_ALLOCATION_SOURCE_PREFIX}{migration_id}:{}", cmd.idempotency_key);
-        for source_id in [legacy_source_id.as_ref(), Some(&event_source_id)] {
-            if let Some(source_id) = source_id {
-                if let Some(existing) = self.journal_repo.find_by_source_id(source_id).await? {
-                    return self.dto_from_existing(&existing, net_profit).await;
-                }
+        for source_id in [legacy_source_id.as_ref(), Some(&event_source_id)].into_iter().flatten() {
+            if let Some(existing) = self.journal_repo.find_by_source_id(source_id).await? {
+                return self.dto_from_existing(&existing, net_profit).await;
             }
         }
 
