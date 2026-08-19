@@ -28,7 +28,12 @@ vi.mock("@modules/accounting/api/fiscalPeriodService", () => ({
     lockFiscalPeriod: vi.fn(),
     reopenFiscalPeriod: vi.fn(),
     computePeriodNetProfit: vi.fn(),
-    getDistributableProfit: vi.fn(),
+    getDistributableProfit: vi.fn().mockResolvedValue({
+      current_period_profit: "0",
+      retained_earnings_balance: "45",
+      allocated_to_date: "0",
+      distributable: "45",
+    }),
   },
   periodWindowFromDateInput: (start: string, end: string) => ({
     start_date: new Date(`${start}T00:00:00Z`).toISOString(),

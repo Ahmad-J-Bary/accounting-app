@@ -26,6 +26,8 @@ vi.mock("@modules/accounting/api/openingBalanceService", () => ({
     postMigration: vi.fn(),
     lockMigration: vi.fn(),
     applyResidual: vi.fn(),
+    computeNetProfit: vi.fn(),
+    allocateNetProfit: vi.fn(),
   },
 }));
 
@@ -37,7 +39,12 @@ vi.mock("@modules/accounting/api/fiscalPeriodService", () => ({
     lockFiscalPeriod: vi.fn(),
     reopenFiscalPeriod: vi.fn(),
     computePeriodNetProfit: vi.fn(),
-    getDistributableProfit: vi.fn(),
+    getDistributableProfit: vi.fn().mockResolvedValue({
+      current_period_profit: "0",
+      retained_earnings_balance: "45",
+      allocated_to_date: "0",
+      distributable: "45",
+    }),
   },
   periodWindowFromDateInput: (start: string, end: string) => ({
     start_date: new Date(`${start}T00:00:00Z`).toISOString(),
@@ -232,5 +239,28 @@ describe("GuidedTransitionWizard", () => {
     expect(await screen.findByText("اكتمل إعداد الشركة ✓")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "إنهاء" }));
     expect(await screen.findByText("DASHBOARD_ROOT")).toBeInTheDocument();
+  });
+
+  it("Locked completion shows the retained-earnings summary with the balance-sheet and distribution actions", async () => {
+    vi.mocked(settingsService.getSettings).mockResolvedValue({ accounting_start_mode: "ExistingCompanyMigration" } as never);
+    vi.mocked(openingBalanceService.listMigrations).mockResolvedValue([LOCKED_MIGRATION as never]);
+    vi.mocked(fiscalPeriodService.listFiscalPeriods).mockResolvedValue([PERIOD as never]);
+    vi.mocked(openingBalanceService.computeNetProfit).mockResolvedValue({ net_profit: "500" } as never);
+    vi.mocked(openingBalanceService.allocateNetProfit).mockResolvedValue({ net_profit_allocated: "500" } as never);
+    const user = userEvent.setup();
+    renderWizard();
+    expect(await screen.findByText("اكتمل إعداد الشركة ✓")).toBeInTheDocument();
+    // The retained-earnings summary card shows the available distribution figure.
+    expect(await screen.findByText(/الأرباح المتاحة للتوزيع/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "عرض الأرباح المبقاة" })).toBeInTheDocument();
+    // [توزيع الأرباح] expands the profit-distribution card — no re-render of the whole wizard.
+    await user.click(screen.getByRole("button", { name: "توزيع الأرباح" }));
+    expect(screen.getByRole("button", { name: "احسب من اليومية" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "احسب من اليومية" }));
+    await waitFor(() => {
+      expect(openingBalanceService.computeNetProfit).toHaveBeenCalledWith(
+        expect.objectContaining({ migration_id: "m-locked" }),
+      );
+    });
   });
 });

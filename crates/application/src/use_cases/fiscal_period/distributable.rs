@@ -98,7 +98,10 @@ impl GetDistributableProfitUseCase {
     }
 }
 
-fn retained_earnings_balance(
+/// Balance of the retained-earnings (purpose `RetainedEarnings`) accounts
+/// derived from the posted ledger. `pub(crate)` so `AllocateNetProfitUseCase`
+/// guards its distribution cap with the exact same figure.
+pub(crate) fn retained_earnings_balance(
     accounts: &[domain::accounting::account::Account],
     entries: &[domain::accounting::JournalEntry],
 ) -> Decimal {

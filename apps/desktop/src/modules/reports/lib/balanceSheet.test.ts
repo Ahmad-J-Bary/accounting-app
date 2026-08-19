@@ -400,4 +400,51 @@ describe("computeBalanceSheet", () => {
     const obeRow = eqSection.rows.find(r => r.label === "أرباح مرحلة");
     expect(obeRow?.value).toBe(200);
   });
+
+  it("groups equity container children by purpose (retained earnings separated)", () => {
+    // Real-chart shape: "حقوق الملكية" (5) is a tree container holding capital
+    // (51 partner_capital), retained earnings (52 retained_earnings) and the
+    // opening-clearing account (53).
+    const accounts: AccountDto[] = [
+      acc({ id: "e5", code: "5", name_ar: "حقوق الملكية", account_type: "Equity", parent_id: null, balance: "0" }),
+      acc({ id: "e51", code: "51", name_ar: "رأس المال", account_type: "Equity", parent_id: "e5", balance: "300", purpose: "partner_capital" }),
+      acc({ id: "e52", code: "52", name_ar: "الأرباح المبقاة", account_type: "Equity", parent_id: "e5", balance: "45", purpose: "retained_earnings" }),
+      acc({ id: "e53", code: "53", name_ar: "رصيد افتتاحي", account_type: "Equity", parent_id: "e5", balance: "0", purpose: "opening_balance_equity" }),
+    ];
+    const result = computeBalanceSheet(accounts, { netProfit: 0, totalDrawings: 0 });
+    const eqSection = result.sections.find(s => s.id === "equity")!;
+
+    // Container keeps its exact balance (the purpose buckets must sum to it).
+    const container = eqSection.rows.find(r => r.label === "حقوق الملكية");
+    expect(container?.value).toBe(345);
+    expect(container?.children).toBeDefined();
+
+    const partnerCapital = container!.children!.find(r => r.label === "رأس مال الشركاء");
+    const retained = container!.children!.find(r => r.label === "الأرباح المبقاة");
+    const other = container!.children!.find(r => r.label === "حقوق ملكية أخرى");
+
+    expect(partnerCapital?.value).toBe(300);
+    expect(partnerCapital?.children?.map(r => r.label)).toEqual(["رأس المال"]);
+    expect(retained?.value).toBe(45);
+    expect(retained?.children?.map(r => r.label)).toEqual(["الأرباح المبقاة"]);
+    expect(other?.value).toBe(0);
+    expect(other?.children?.map(r => r.label)).toEqual(["رصيد افتتاحي"]);
+
+    expect(result.totalEquity).toBe(345);
+  });
+
+  it("keeps leaf-only equity charts flat (no container grouping)", () => {
+    // A chart WITHOUT a tree-account container keeps the legacy flat rows —
+    // retained earnings already shows on its own line.
+    const accounts: AccountDto[] = [
+      acc({ id: "51", code: "51", name_ar: "رأس المال", account_type: "Equity", balance: "300", purpose: "partner_capital" }),
+      acc({ id: "52", code: "52", name_ar: "الأرباح المبقاة", account_type: "Equity", balance: "45", purpose: "retained_earnings" }),
+    ];
+    const result = computeBalanceSheet(accounts, { netProfit: 0, totalDrawings: 0 });
+    const eqSection = result.sections.find(s => s.id === "equity")!;
+    const labels = eqSection.rows.map(r => r.label);
+    expect(labels).toContain("رأس المال");
+    expect(labels).toContain("الأرباح المبقاة");
+    expect(result.totalEquity).toBe(345);
+  });
 });

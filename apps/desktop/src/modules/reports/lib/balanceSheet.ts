@@ -279,6 +279,73 @@ export function computeBalanceSheet(
     return result;
   }
 
+  /**
+   * Equity rows grouped by account purpose so retained earnings and partner
+   * capital appear on their own lines (رأس مال الشركاء / الأرباح المبقاة /
+   * حقوق ملكية أخرى). Each tree-account container (e.g. "حقوق الملكية") keeps
+   * its exact balance and renders its transitive leaves bucketed by purpose;
+   * standalone leaves and non-tree parents keep the legacy flat walk, so
+   * charts without a container produce byte-identical output.
+   */
+  function buildGroupedEquityRows(accounts: AccountBalance[]): BalanceSheetRow[] {
+    const result: BalanceSheetRow[] = [];
+    const consumed = new Set<string>();
+
+    const bucketLabel = (leaf: AccountBalance): string => {
+      if (leaf.purpose === "partner_capital") return "رأس مال الشركاء";
+      if (leaf.purpose === "retained_earnings") return "الأرباح المبقاة";
+      return "حقوق ملكية أخرى";
+    };
+
+    const groupedChildren = (leaves: AccountBalance[], depth: number): BalanceSheetRow[] => {
+      const buckets = new Map<string, AccountBalance[]>();
+      for (const leaf of leaves) {
+        const key = leaf.purpose === "partner_capital"
+          ? "partner_capital"
+          : leaf.purpose === "retained_earnings"
+            ? "retained_earnings"
+            : "other";
+        const group = buckets.get(key) ?? [];
+        group.push(leaf);
+        buckets.set(key, group);
+      }
+      return Array.from(buckets.entries()).map(([key, bucketLeaves]) => ({
+        label: key === "other" ? "حقوق ملكية أخرى" : bucketLabel(bucketLeaves[0]),
+        value: bucketLeaves.reduce((s, l) => s + l.balance, 0),
+        depth,
+        children: bucketLeaves.map((l) => ({
+          label: isAccDep(l.name) ? `(-) ${l.name}` : l.name,
+          value: isAccDep(l.name) ? Math.abs(l.balance) : l.balance,
+          depth: depth + 1,
+        })),
+      }));
+    };
+
+    for (const a of accounts) {
+      if (a.children.length > 0 && isTreeAccount(a.name)) {
+        const leaves: AccountBalance[] = [];
+        const collect = (n: AccountBalance) => {
+          if (n.children.length > 0) {
+            n.children.forEach(collect);
+          } else {
+            leaves.push(n);
+            consumed.add(n.id);
+          }
+        };
+        collect(a);
+        result.push({
+          label: a.name,
+          value: a.balance,
+          depth: 0,
+          children: groupedChildren(leaves, 1),
+        });
+      } else if (!consumed.has(a.id)) {
+        result.push(...buildSectionRows([a]));
+      }
+    }
+    return result;
+  }
+
   const totalFixedAssets = assets.fixed.reduce((s, a) => s + a.balance, 0);
   const totalCurrentAssets = assets.current.reduce((s, a) => s + a.balance, 0);
   const totalAssets = totalFixedAssets + totalCurrentAssets;
@@ -327,7 +394,7 @@ export function computeBalanceSheet(
       totalLabel: "إجمالي حقوق الملكية",
       totalValue: totalEquity,
       rows: [
-        ...buildSectionRows(allEquity),
+        ...buildGroupedEquityRows(allEquity),
         { label: "صافي الأرباح", value: profitLoss.netProfit, depth: 0 },
         { label: "إجمالي المسحوبات", value: -profitLoss.totalDrawings, depth: 0 },
       ],

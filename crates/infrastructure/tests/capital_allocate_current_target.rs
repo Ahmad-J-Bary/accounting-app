@@ -147,20 +147,72 @@ async fn seed_partner_with_current(pool: &Arc<sqlx::SqlitePool>) -> PartnerId {
 
 /// Inserts a Posted migration header row (schema from migrations 139/140).
 async fn insert_posted_migration(pool: &sqlx::SqlitePool, id: &str) {
+    insert_migration_with_status(pool, id, "Posted").await;
+}
+
+/// Inserts a migration header row with an explicit status.
+async fn insert_migration_with_status(pool: &sqlx::SqlitePool, id: &str, status: &str) {
     sqlx::query(
         "INSERT INTO opening_balance_migrations (id, cutover_date, status, notes, posted_at, created_at, updated_at)
-         VALUES (?, datetime('now'), 'Posted', NULL, datetime('now'), datetime('now'), datetime('now'))",
+         VALUES (?, datetime('now'), ?, NULL, datetime('now'), datetime('now'), datetime('now'))",
     )
     .bind(id)
+    .bind(status)
     .execute(pool)
     .await
     .unwrap();
+}
+
+/// Posts a balanced journal crediting retained earnings (52) so a subsequent
+/// allocation has available profit to distribute (Sec 7 cap guard).
+async fn seed_retained_credit(pool: &Arc<sqlx::SqlitePool>, amount: Decimal) {
+    let account_repo: Arc<dyn AccountRepository> = Arc::new(SqliteAccountRepository::new(pool.clone()));
+    let retained = account_repo
+        .find_by_code("52")
+        .await
+        .unwrap()
+        .expect("retained earnings account");
+    let contra = account_repo
+        .find_by_code("519999")
+        .await
+        .unwrap()
+        .expect("capital account");
+
+    let c = test_currency();
+    let mut entry = JournalEntry::new(
+        uuid::Uuid::new_v4().to_string(),
+        JournalType::AccountOpeningBalance,
+        vec![
+            JournalLine::new(
+                contra.id,
+                MonetaryAmount::from_base(amount, c.clone()),
+                MonetaryAmount::zero(c.clone()),
+                "تغذية الأرباح المبقاة".to_string(),
+            ),
+            JournalLine::new(
+                retained.id,
+                MonetaryAmount::zero(c.clone()),
+                MonetaryAmount::from_base(amount, c.clone()),
+                "تغذية الأرباح المبقاة".to_string(),
+            ),
+        ],
+        chrono::Utc::now(),
+        "تغذية الأرباح المبقاة قبل التوزيع".to_string(),
+        Some("cap_test_seed".to_string()),
+    )
+    .unwrap();
+    entry.post().unwrap();
+    let journal_repo: Arc<dyn JournalEntryRepository> =
+        Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
+    journal_repo.save(&entry).await.unwrap();
 }
 
 #[tokio::test]
 async fn allocation_credits_current_account_not_capital() {
     let pool = build_pool().await;
     seed_partner_with_current(&pool).await;
+    // A distribution needs an available pool first (Sec 7 cap).
+    seed_retained_credit(&pool, Decimal::from(600)).await;
 
     let migration_id = uuid::Uuid::new_v4().to_string();
     insert_posted_migration(pool.as_ref(), &migration_id).await;
@@ -277,4 +329,97 @@ async fn equity_statement_profit_equals_current_balance() {
     assert_eq!(row.profit_allocated, row.current_balance);
     assert_eq!(row.ledger_balance, "0", "رأس المال غير متأثر بحركة الأرباح");
     assert_eq!(row.total_equity, "300", "خصم المسحوبات غير موجود بعد");
+}
+
+#[tokio::test]
+async fn allocation_is_rejected_beyond_available() {
+    let pool = build_pool().await;
+    seed_partner_with_current(&pool).await;
+    // Only 200 is available; the requested 500 must be rejected (Sec 7).
+    seed_retained_credit(&pool, Decimal::from(200)).await;
+
+    let migration_id = uuid::Uuid::new_v4().to_string();
+    insert_posted_migration(pool.as_ref(), &migration_id).await;
+
+    let allocate = AllocateNetProfitUseCase::new(
+        Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
+        Arc::new(SqlitePartnerRepository::new(pool.clone())),
+        Arc::new(SqliteAccountRepository::new(pool.clone())),
+        Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
+    );
+    let err = allocate
+        .execute(AllocateNetProfitCommand {
+            migration_id,
+            net_profit: "500".to_string(),
+        })
+        .await
+        .expect_err("distribution beyond the available pool must be rejected");
+    assert!(
+        err.to_string().contains("يتجاوز الأرباح المتاحة"),
+        "unexpected error: {err}"
+    );
+}
+
+#[tokio::test]
+async fn allocation_is_allowed_within_available() {
+    let pool = build_pool().await;
+    seed_partner_with_current(&pool).await;
+    seed_retained_credit(&pool, Decimal::from(600)).await;
+
+    let migration_id = uuid::Uuid::new_v4().to_string();
+    insert_posted_migration(pool.as_ref(), &migration_id).await;
+
+    let allocate = AllocateNetProfitUseCase::new(
+        Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
+        Arc::new(SqlitePartnerRepository::new(pool.clone())),
+        Arc::new(SqliteAccountRepository::new(pool.clone())),
+        Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
+    );
+    let result = allocate
+        .execute(AllocateNetProfitCommand {
+            migration_id,
+            net_profit: "400".to_string(),
+        })
+        .await
+        .expect("distribution within the available pool must post");
+    assert_eq!(result.allocated_total, Decimal::from(400));
+}
+
+#[tokio::test]
+async fn allocation_after_lock_is_allowed() {
+    let pool = build_pool().await;
+    seed_partner_with_current(&pool).await;
+    seed_retained_credit(&pool, Decimal::from(600)).await;
+
+    let migration_id = uuid::Uuid::new_v4().to_string();
+    // Locked — not just Posted — distribution must stay reachable (Sec 10).
+    insert_migration_with_status(pool.as_ref(), &migration_id, "Locked").await;
+
+    let allocate = AllocateNetProfitUseCase::new(
+        Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
+        Arc::new(SqlitePartnerRepository::new(pool.clone())),
+        Arc::new(SqliteAccountRepository::new(pool.clone())),
+        Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
+    );
+    let result = allocate
+        .execute(AllocateNetProfitCommand {
+            migration_id: migration_id.clone(),
+            net_profit: "500".to_string(),
+        })
+        .await
+        .expect("allocation on a Locked migration must post");
+
+    assert_eq!(result.allocated_total, Decimal::from(500));
+    assert_eq!(result.shares.len(), 1);
+
+    // Idempotency holds across the lock: a re-run resolves the same journal.
+    let rerun = allocate
+        .execute(AllocateNetProfitCommand {
+            migration_id,
+            net_profit: "500".to_string(),
+        })
+        .await
+        .unwrap();
+    assert_eq!(rerun.entry_number, result.entry_number);
+    assert_eq!(rerun.allocated_total, Decimal::from(500));
 }

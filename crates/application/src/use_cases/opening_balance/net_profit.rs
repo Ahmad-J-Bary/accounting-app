@@ -97,8 +97,9 @@ fn parse_period(start: Option<&str>, end: Option<&str>) -> Option<PeriodBounds> 
 }
 
 /// Inclusive end-of-day bound so posted entries dated on the cutover day itself
-/// are part of the ledger window.
-fn cutover_end_of_day(cutover_date: DateTime<Utc>) -> DateTime<Utc> {
+/// are part of the ledger window. `pub(crate)` so `AllocateNetProfitUseCase`
+/// computes its distribution cap over the identical window.
+pub(crate) fn cutover_end_of_day(cutover_date: DateTime<Utc>) -> DateTime<Utc> {
     let day = cutover_date.date_naive();
     let end = day.and_hms_opt(23, 59, 59).expect("valid time");
     DateTime::<Utc>::from_naive_utc_and_offset(end, Utc)

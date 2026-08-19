@@ -4,15 +4,17 @@ use rust_decimal::Decimal;
 use std::str::FromStr;
 use domain::accounting::journal_entry::{JournalEntry, JournalLine, JournalType};
 use domain::accounting::partner::ProfitSharingType;
-use domain::accounting::MigrationStatus;
-use domain::shared::{Currency, MonetaryAmount, AccountId};
+use domain::accounting::{JournalEntryStatus, MigrationStatus};
+use domain::shared::{AccountId, Currency, MonetaryAmount};
 
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
-use crate::ports::journal_entry_repository::JournalEntryRepository;
+use crate::ports::journal_entry_repository::{JournalEntryRepository, ReversalScope};
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::partner_repository::PartnerRepository;
+use crate::use_cases::fiscal_period::distributable::retained_earnings_balance;
 use crate::use_cases::fiscal_period::types::AUTH_ALLOCATION_SOURCE_PREFIX;
+use crate::use_cases::opening_balance::net_profit::{compute_ledger_totals, cutover_end_of_day};
 use crate::use_cases::opening_balance::types::{
     AllocateNetProfitCommand, NetProfitAllocationDto, PartnerAllocationShare,
 };
@@ -121,6 +123,36 @@ fn validate_ratio_list(ratios: &[(String, Decimal)]) -> Result<Decimal, AppError
     Ok(total)
 }
 
+/// Available-for-distribution pool over a set of posted ledger entries,
+/// mirroring `GetDistributableProfitUseCase` exactly:
+///
+///   available = current_period_profit + retained_earnings − allocated
+///
+/// * `current_period_profit` — `compute_ledger_totals().net` over the window.
+/// * `retained_earnings` — the retained-earnings (purpose `RetainedEarnings`)
+///   ledger balance over the window (includes the residual classification).
+/// * `allocated` — the absolute debit of every posted
+///   `profit_distribution:{...}` journal, so already-allocated profit is never
+///   counted twice (idempotency-safe).
+pub(crate) fn available_for_distribution(
+    accounts: &[domain::accounting::account::Account],
+    entries: &[JournalEntry],
+) -> Decimal {
+    let totals = compute_ledger_totals(accounts, entries);
+    let retained = retained_earnings_balance(accounts, entries);
+
+    let mut allocated = Decimal::ZERO;
+    for entry in entries {
+        if let Some(source_id) = &entry.source_id {
+            if source_id.starts_with(AUTH_ALLOCATION_SOURCE_PREFIX) {
+                allocated += entry.total_base_debit();
+            }
+        }
+    }
+
+    totals.net + retained - allocated
+}
+
 pub struct AllocateNetProfitUseCase {
     migration_repo: Arc<dyn OpeningMigrationRepository>,
     partner_repo: Arc<dyn PartnerRepository>,
@@ -144,7 +176,10 @@ impl AllocateNetProfitUseCase {
 
         let migration = self.migration_repo.find_by_id(&cmd.migration_id).await?
             .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
-        if migration.status != MigrationStatus::Posted {
+        // Distribution stays possible after the migration is sealed (Sec 10:
+        // "توزيع الأرباح" remains reachable post-lock). Idempotency still keys
+        // on the migration, so re-running after a lock resolves the SAME journal.
+        if !matches!(migration.status, MigrationStatus::Posted | MigrationStatus::Locked) {
             return Err(AppError::Forbidden("يجب ترحيل الرصيد الافتتاحي قبل توزيع الأرباح".into()));
         }
 
@@ -164,6 +199,33 @@ impl AllocateNetProfitUseCase {
                 allocated_total: Decimal::ZERO,
                 shares: vec![],
             });
+        }
+
+        // Sec 7: never distribute more than the amount actually available. The
+        // available pool over the migration's window follows the same model as
+        // `GetDistributableProfitUseCase`: current-period profit + retained
+        // earnings − already-allocated profit distributions. A loss (negative
+        // net profit) grows retained earnings, so no cap applies to it.
+        if net_profit > Decimal::ZERO {
+            let accounts = self.account_repo.list_all().await?;
+            let entries = self
+                .journal_repo
+                .list_with_filters(
+                    None,
+                    Some(cutover_end_of_day(migration.cutover_date)),
+                    None,
+                    None,
+                    None,
+                    Some(JournalEntryStatus::Posted),
+                    ReversalScope::PostedLedger,
+                )
+                .await?;
+            let available = available_for_distribution(&accounts, &entries).round_dp(2);
+            if net_profit > available {
+                return Err(AppError::Invalid(format!(
+                    "المبلغ المطلوب توزيعه ({net_profit}) يتجاوز الأرباح المتاحة للتوزيع ({available}) — لا يُسمح بتوزيع أكثر من المتاح"
+                )));
+            }
         }
 
         let partners = self.partner_repo.list_all(false).await?;
@@ -480,5 +542,114 @@ mod tests {
             ("C".into(), Decimal::new(3334, 2)),
         ]);
         assert!(r.is_ok());
+    }
+
+    // --- distribution cap (Sec 7) ---
+
+    use domain::accounting::account::{Account, AccountCategory, AccountPurpose, AccountType};
+    use domain::accounting::journal_entry::JournalType;
+    use domain::shared::MonetaryAmount;
+
+    fn test_currency() -> Currency {
+        Currency::new("SAR", "SAR", "ريال", "ر.س", 2, false)
+    }
+
+    fn cap_account(code: &str, purpose: AccountPurpose, account_type: AccountType) -> Account {
+        Account::new(
+            code.to_string(),
+            format!("account {code}"),
+            format!("account {code}"),
+            account_type,
+            None,
+            AccountCategory::Detail,
+            1,
+            Decimal::ZERO,
+            Decimal::ZERO,
+            Decimal::ZERO,
+            test_currency(),
+            Decimal::ONE,
+            None,
+        )
+        .unwrap()
+        .with_purpose(purpose)
+    }
+
+    fn cap_posted(
+        account_id: AccountId,
+        debit: i64,
+        credit: i64,
+        source_id: Option<String>,
+        journal_type: JournalType,
+    ) -> JournalEntry {
+        let mut entry = JournalEntry::new(
+            format!("JEC-{}", uuid::Uuid::new_v4()),
+            journal_type,
+            vec![JournalLine::new(
+                account_id,
+                MonetaryAmount::from_base(Decimal::new(debit, 0), test_currency()),
+                MonetaryAmount::from_base(Decimal::new(credit, 0), test_currency()),
+                "test".into(),
+            )],
+            chrono::Utc::now(),
+            "test".into(),
+            source_id,
+        )
+        .unwrap();
+        entry.status = JournalEntryStatus::Posted;
+        entry
+    }
+
+    #[test]
+    fn available_is_profit_plus_retained_minus_allocated() {
+        let retained = cap_account("52", AccountPurpose::RetainedEarnings, AccountType::Equity);
+        let partner_current = cap_account("549999", AccountPurpose::PartnerCurrent, AccountType::Equity);
+        let revenue = cap_account("4001", AccountPurpose::General, AccountType::Revenue);
+        let expenses = cap_account("5001", AccountPurpose::General, AccountType::Expenses);
+
+        let entries = vec![
+            // Historical retained from the residual classification: +500 credit.
+            cap_posted(retained.id, 0, 500, Some("residual_classification:1".into()), JournalType::AccountOpeningBalance),
+            // Current-period profit: revenue 1000 − expenses 300 → +700.
+            cap_posted(revenue.id, 0, 1000, None, JournalType::GeneralJournal),
+            cap_posted(expenses.id, 300, 0, None, JournalType::GeneralJournal),
+            // An earlier profit distribution (200) already debited retained.
+            cap_posted(
+                retained.id,
+                200,
+                0,
+                Some(format!("{AUTH_ALLOCATION_SOURCE_PREFIX}prev")),
+                JournalType::ProfitDistribution,
+            ),
+            // Retained leg of that distribution is balanced by the partner leg.
+            cap_posted(partner_current.id, 0, 200, None, JournalType::ProfitDistribution),
+        ];
+
+        // available = 700 (net) + 300 (retained 500 − 200 allocated) − 200 = 800.
+        assert_eq!(available_for_distribution(&[retained, partner_current, revenue, expenses], &entries), Decimal::new(800, 0));
+    }
+
+    #[test]
+    fn available_ignores_drafts_and_non_retained_credit() {
+        let retained = cap_account("52", AccountPurpose::RetainedEarnings, AccountType::Equity);
+        let capital = cap_account("51", AccountPurpose::PartnerCapital, AccountType::Equity);
+
+        // A draft journal hitting retained earnings: excluded by the posted-ledger
+        // policy, so it must not inflate the pool.
+        let mut draft_profit = cap_posted(
+            retained.id,
+            0,
+            999,
+            None,
+            JournalType::GeneralJournal,
+        );
+        draft_profit.status = JournalEntryStatus::Draft;
+
+        let entries = vec![
+            // A capital credit must NOT count toward retained earnings.
+            cap_posted(capital.id, 0, 5000, None, JournalType::AccountOpeningBalance),
+            draft_profit,
+        ];
+
+        assert_eq!(available_for_distribution(&[retained, capital], &entries), Decimal::ZERO);
     }
 }

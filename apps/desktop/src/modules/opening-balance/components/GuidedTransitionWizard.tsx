@@ -1,5 +1,7 @@
 import { useMemo, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Check } from "lucide-react";
 import { TabContext } from "@app/providers/TabContext";
 import type { AccountDto, ResidualClassificationSpecDto } from "@erp/shared-types";
@@ -10,6 +12,16 @@ import { cn } from "@shared/lib/utils";
 import { StatusBadge } from "@shared/ui/status-badge";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { toLocalDateStr, toFixed, fmtMoney } from "@shared/lib/format";
+import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
+import { invalidateAccountingMutationQueries, queryClient, QUERY_KEYS } from "@shared/hooks/queryClient";
+import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
+import {
+  openingBalanceService,
+  type ComputedNetProfitDto,
+  type NetProfitAllocationDto,
+  type OpeningBalanceMigrationDto,
+} from "@modules/accounting/api/openingBalanceService";
+import { ProfitAllocationCard } from "@modules/opening-balance/components/ProfitAllocationCard";
 import { WizardShell } from "@modules/opening-balance/components/WizardShell";
 import { WizardLineEditor } from "@modules/opening-balance/components/WizardLineEditor";
 import { useOpeningBalanceWizard, STEP_REVIEW } from "@modules/opening-balance/hooks/useOpeningBalanceWizard";
@@ -45,6 +57,17 @@ export function GuidedTransitionWizard() {
       return;
     }
     navigate("/dashboard");
+  };
+
+  // Opens any route through the tab system (closing the current opening tab) so
+  // the navigation behaves identically to every other report transition.
+  const goTo = (path: string, title: string) => {
+    if (tabs) {
+      tabs.closeTab(tabs.activeTabId);
+      tabs.openTab({ id: path, title, path });
+      return;
+    }
+    navigate(path);
   };
 
   const handleNext = () => {
@@ -96,6 +119,13 @@ export function GuidedTransitionWizard() {
           <div className="rounded-lg p-3 text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
             أول فترة مالية: {toLocalDateStr(w.firstPeriod.start_date)} ← {toLocalDateStr(w.firstPeriod.end_date)}
           </div>
+        )}
+        {locked && w.migration && (
+          <RetainedEarningsOverview
+            migration={w.migration}
+            firstPeriod={w.firstPeriod}
+            onViewBalanceSheet={() => goTo("/accounting/reports/balance-sheet", "الميزانية العمومية")}
+          />
         )}
         <div className="flex justify-center pt-1">
           <Button size="sm" onClick={goDashboard} className="bg-green-600 hover:bg-green-700 text-white font-bold">
@@ -439,6 +469,11 @@ export function GuidedTransitionWizard() {
                   reconciled={w.reconciliation?.all_reconciled === true}
                   locked={locked}
                 />
+                <RetainedEarningsOverview
+                  migration={w.migration}
+                  firstPeriod={w.firstPeriod}
+                  onViewBalanceSheet={() => goTo("/accounting/reports/balance-sheet", "الميزانية العمومية")}
+                />
                 {!w.onboardingStarted && (
                   <div className="flex justify-center">
                     <Button
@@ -741,6 +776,141 @@ export function LockedCompletionPanel({
   );
 }
 
+// ── Retained-earnings overview: shown once the migration is locked. It reads
+// the historical retained balance (as at cutover) and — once the first
+// operational period exists — the current retained balance and the amount
+// available for distribution. The [توزيع الأرباح] action reuses the EXISTING
+// profit-distribution engine (ProfitAllocationCard), never a second mechanism.
+function RetainedEarningsOverview({
+  migration,
+  firstPeriod,
+  onViewBalanceSheet,
+}: {
+  migration: OpeningBalanceMigrationDto;
+  firstPeriod: { start_date: string; end_date: string } | null;
+  onViewBalanceSheet: () => void;
+}) {
+  const [showDistribution, setShowDistribution] = useState(false);
+  const [allocating, setAllocating] = useState(false);
+  const [computingProfit, setComputingProfit] = useState(false);
+  const [netProfit, setNetProfit] = useState("");
+  const [allocResult, setAllocResult] = useState<NetProfitAllocationDto | null>(null);
+  const [computedProfit, setComputedProfit] = useState<ComputedNetProfitDto | null>(null);
+
+  const AS_AT_CUTOVER_START = "1970-01-01T00:00:00Z";
+  const endOfCutover = useMemo(() => {
+    const day = migration.cutover_date.slice(0, 10);
+    return day ? new Date(`${day}T23:59:59Z`).toISOString() : "";
+  }, [migration.cutover_date]);
+
+  const asAtLock = useQuery({
+    queryKey: QUERY_KEYS.distributableProfit(AS_AT_CUTOVER_START, endOfCutover),
+    queryFn: () => fiscalPeriodService.getDistributableProfit(AS_AT_CUTOVER_START, endOfCutover),
+    enabled: !!migration.id && !!endOfCutover,
+  });
+
+  const current = useQuery({
+    queryKey: QUERY_KEYS.distributableProfit(firstPeriod?.start_date ?? "", firstPeriod?.end_date ?? ""),
+    queryFn: () =>
+      fiscalPeriodService.getDistributableProfit(firstPeriod?.start_date ?? "", firstPeriod?.end_date ?? ""),
+    enabled: !!firstPeriod?.start_date && !!firstPeriod?.end_date,
+  });
+
+  const historicalRetained = parseSafeNumber(asAtLock.data?.retained_earnings_balance);
+  const currentRetained = current.data
+    ? parseSafeNumber(current.data.retained_earnings_balance)
+    : historicalRetained;
+  const available =
+    current.data
+      ? parseSafeNumber(current.data.distributable)
+      : parseSafeNumber(asAtLock.data?.distributable);
+
+  const handleCompute = async () => {
+    setComputingProfit(true);
+    setComputedProfit(null);
+    try {
+      const res = await openingBalanceService.computeNetProfit({ migration_id: migration.id });
+      setComputedProfit(res);
+      setNetProfit(String(res.net_profit));
+    } catch (e) {
+      toast.error("فشل احتساب صافي الربح: " + e);
+    } finally {
+      setComputingProfit(false);
+    }
+  };
+
+  const handleAllocate = async () => {
+    if (!netProfit || isNaN(parseFloat(netProfit))) {
+      toast.error("أدخل صافي الربح");
+      return;
+    }
+    setAllocating(true);
+    setAllocResult(null);
+    try {
+      const res = await openingBalanceService.allocateNetProfit({
+        migration_id: migration.id,
+        net_profit: netProfit,
+      });
+      setAllocResult(res);
+      toast.success("تم توزيع أرباح الترحيل على الشركاء");
+      await invalidateAccountingMutationQueries(queryClient);
+    } catch (e) {
+      toast.error("فشل توزيع الأرباح: " + e);
+    } finally {
+      setAllocating(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-indigo-200 bg-white p-3 space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-black text-slate-700">الأرباح المبقاة</p>
+        <span className="text-[11px] font-semibold text-slate-400">المتاح للتوزيع حسب النموذج المحاسبي</span>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3 space-y-1">
+          <p className="text-[11px] font-semibold text-slate-500">الأرباح المبقاة التاريخية</p>
+          <p className="text-lg font-black tabular-nums text-slate-800">{fmtMoney(historicalRetained)}</p>
+        </div>
+        <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3 space-y-1">
+          <p className="text-[11px] font-semibold text-slate-500">الأرباح المبقاة الحالية</p>
+          <p className="text-lg font-black tabular-nums text-slate-800">{fmtMoney(currentRetained)}</p>
+        </div>
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 space-y-1">
+          <p className="text-[11px] font-semibold text-emerald-600">الأرباح المتاحة للتوزيع</p>
+          <p className="text-lg font-black tabular-nums text-emerald-700">{fmtMoney(available)}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 justify-between pt-0.5">
+        <Button variant="outline" size="sm" onClick={onViewBalanceSheet} className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold">
+          عرض الأرباح المبقاة
+        </Button>
+        <Button size="sm" onClick={() => setShowDistribution((v) => !v)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+          {showDistribution ? "إغلاق توزيع الأرباح" : "توزيع الأرباح"}
+        </Button>
+      </div>
+
+      {showDistribution && (
+        <ProfitAllocationCard
+          postedMigrations={[migration]}
+          allocMigrationId={migration.id}
+          onAllocMigrationIdChange={() => {}}
+          netProfit={netProfit}
+          onNetProfitChange={setNetProfit}
+          allocating={allocating}
+          computingProfit={computingProfit}
+          allocResult={allocResult}
+          computedProfit={computedProfit}
+          onCompute={handleCompute}
+          onAllocate={handleAllocate}
+        />
+      )}
+    </div>
+  );
+}
+
 // ── Residual classification: the user picks the ACCOUNTING MEANING, the system
 // picks the designated account. Classification cards replace the raw
 // drop-down; the account is only chosen explicitly in Advanced mode, filtered
@@ -876,6 +1046,18 @@ export function ResidualClassificationSection({
                   </span>
                 </p>
               )}
+            </div>
+          )}
+
+          {value === "RetainedEarnings" && plugAmount !== 0 && (
+            <div className="rounded-lg border border-green-200 bg-green-50/70 p-3 space-y-1">
+              <p className="text-xs font-bold text-green-700">
+                ✓ تم تصنيف الرصيد كأرباح مبقاة — {toFixed(plugAmount, 2)}
+              </p>
+              <p className="text-xs text-green-600">
+                بعد إكمال الترحيل تُرحَّل هذه القيمة إلى حساب الأرباح المبقاة (52) وتظهر في الميزانية
+                العمومية ضمن بند «الأرباح المبقاة» منفصلةً عن رأس مال الشركاء.
+              </p>
             </div>
           )}
 
