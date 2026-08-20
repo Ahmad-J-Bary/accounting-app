@@ -26,6 +26,13 @@ const root = path.resolve(__dirname, '..');
 const cratesRoot = path.join(root, 'crates');
 const markerFile = path.join(root, 'apps', 'desktop', 'src-tauri', 'src', 'watch_touch.rs');
 
+// Files outside crates/ that still force a rebuild when edited: the workspace
+// manifest (members / workspace.dependencies) and (if present) cargo config.
+const extraWatchFiles = [
+  path.join(root, 'Cargo.toml'),
+  path.join(root, '.cargo', 'config.toml'),
+].filter((f) => fs.existsSync(f));
+
 const DEBOUNCE_MS = 300;
 const POLL_MS = 1000;
 
@@ -84,9 +91,49 @@ function schedule() {
 function handleEvent(eventType, filename) {
   if (!filename) return;
   if (typeof filename !== 'string') filename = String(filename);
+  // A brand-new crate directory (rename/rename:dir) brings a Cargo.toml with
+  // it — schedule so the new workspace member is picked up immediately.
+  if (eventType && eventType.startsWith('rename')) {
+    const abs = path.isAbsolute(filename) ? filename : path.join(cratesRoot, filename);
+    try {
+      if (fs.statSync(abs).isDirectory() && fs.existsSync(path.join(abs, 'Cargo.toml'))) {
+        schedule();
+        return;
+      }
+    } catch {
+      /* stat race — the entry vanished; keep filtering by name below */
+    }
+  }
   if (path.isAbsolute(filename)) filename = path.relative(cratesRoot, filename);
   if (!isTargetName(filename)) return;
   schedule();
+}
+
+/** Watch a single extra file (root Cargo.toml, .cargo/config.toml). Falls back
+ *  to a cheap mtime poll if the native file watcher is unavailable. */
+function watchExtraFile(file) {
+  const onError = (err) => {
+    console.warn(`[watch-crates] file watcher for ${path.basename(file)} unavailable (${err.message}); polling`);
+  };
+  try {
+    const w = fs.watch(file, { persistent: true }, (eventType) => {
+      if (eventType === 'change' || eventType === 'rename') schedule();
+    });
+    w.on('error', onError);
+  } catch (err) {
+    onError(err);
+    let lastMtime = 0;
+    setInterval(() => {
+      let mtime = 0;
+      try {
+        mtime = fs.statSync(file).mtimeMs;
+      } catch {
+        return;
+      }
+      if (lastMtime && lastMtime !== mtime) schedule();
+      lastMtime = mtime;
+    }, POLL_MS);
+  }
 }
 
 /** Shallow mtime-based fallback for platforms/archives without recursive watch. */
@@ -117,6 +164,14 @@ function startPolling() {
       }
     };
     walk(cratesRoot);
+    // Also track the extra out-of-tree files (root Cargo.toml, cargo config).
+    for (const file of extraWatchFiles) {
+      try {
+        now.set(file, fs.statSync(file).mtimeMs);
+      } catch {
+        /* file vanished */
+      }
+    }
     for (const [file, mtime] of now) {
       const before = lastSeen.get(file);
       if (before !== undefined && before !== mtime) {
@@ -150,6 +205,10 @@ function main() {
       startPolling();
     });
     console.log(`[watch-crates] watching ${path.relative(root, cratesRoot).replace(/\\/g, '/')}/ for changes`);
+    for (const file of extraWatchFiles) {
+      watchExtraFile(file);
+      console.log(`[watch-crates] watching ${path.relative(root, file).replace(/\\/g, '/')} for changes`);
+    }
   } catch (err) {
     console.warn(`[watch-crates] recursive watch unavailable: ${err.message}; using polling`);
     startPolling();
