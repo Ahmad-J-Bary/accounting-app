@@ -44,13 +44,6 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
 
   return (
     <div className="space-y-3">
-      <div>
-        <p className="font-bold text-slate-600 text-sm">النسخ الاحتياطية المحفوظة</p>
-        <p className="text-xs text-slate-400 mt-1">
-          الاستعادة تستبدل القاعدة الحالية بالنسخة المختارة — تُنشأ نسخة احتياطية تلقائية قبل المتابعة.
-        </p>
-      </div>
-
       {pending ? (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
           <Lock className="w-4 h-4" />
@@ -104,7 +97,7 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600" disabled={disabled}>
+                    <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600" disabled={disabled} aria-label="حذف النسخة الاحتياطية">
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </AlertDialogTrigger>

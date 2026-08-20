@@ -31,13 +31,6 @@ export function ExportPanel({ onDone }: { onDone: () => Promise<void> }) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <p className="font-bold text-slate-600 text-sm">تصدير قاعدة البيانات</p>
-        <p className="text-xs text-slate-400 mt-1">
-          تنشئ ملف قاعدة بيانات مستقلًا (SQLite) في المكان الذي تختاره — نسخة كاملة وقابلة للنقل لأي جهاز.
-        </p>
-      </div>
-
       <Button
         size="sm"
         variant="outline"

@@ -1,20 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-  Info, Settings2, PlusCircle, Archive, Upload, Download,
-  Power, X, AlertTriangle, RefreshCw,
+  Power, X, AlertTriangle, RefreshCw, DatabaseBackup,
 } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
 import { Button } from "@shared/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@shared/ui/alert-dialog";
 import { toast } from "sonner";
 import {
   backupService,
@@ -22,24 +10,12 @@ import {
   type BackupConfig,
   type PendingRestoreInfo,
 } from "../../api/backupService";
-import { DatabaseInfoPanel } from "./panels/DatabaseInfoPanel";
-import { BackupSettingsPanel } from "./panels/BackupSettingsPanel";
-import { ManualBackupPanel } from "./panels/ManualBackupPanel";
-import { BackupListPanel } from "./panels/BackupListPanel";
-import { ImportPanel } from "./panels/ImportPanel";
-import { ExportPanel } from "./panels/ExportPanel";
-import { formatLabel } from "../lib/backupFormat";
+import { DatabaseStatusSection } from "./sections/DatabaseStatusSection";
+import { ActionsSection } from "./sections/ActionsSection";
+import { HistorySection } from "./sections/HistorySection";
+import { SettingsSection } from "./sections/SettingsSection";
 
 type Health = "checking" | "ok" | "error";
-
-const TABS = [
-  { id: "info", label: "معلومات قاعدة البيانات", icon: Info },
-  { id: "settings", label: "إعدادات النسخ", icon: Settings2 },
-  { id: "manual", label: "نسخة يدوية", icon: PlusCircle },
-  { id: "list", label: "النسخ الاحتياطية", icon: Archive },
-  { id: "import", label: "استيراد", icon: Upload },
-  { id: "export", label: "تصدير", icon: Download },
-];
 
 export function DataBackupSection() {
   const [backups, setBackups] = useState<BackupFileInfo[]>([]);
@@ -50,7 +26,7 @@ export function DataBackupSection() {
   const [healthMsg, setHealthMsg] = useState("");
   const [loading, setLoading] = useState(true);
   const [operating, setOperating] = useState(false);
-  const [restoreTarget, setRestoreTarget] = useState<BackupFileInfo | null>(null);
+  const [restorePreset, setRestorePreset] = useState<BackupFileInfo | null>(null);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -117,23 +93,11 @@ export function DataBackupSection() {
   };
 
   const handleRestore = async (b: BackupFileInfo) => {
-    setRestoreTarget(b);
+    setRestorePreset(b);
   };
 
-  const handleRestoreConfirmed = async () => {
-    if (!restoreTarget) return;
-    setOperating(true);
-    try {
-      await backupService.importFromFile(restoreTarget.path);
-      toast.success("تم تجهيز الاستعادة — سيتم إعادة تشغيل التطبيق لتطبيقها");
-      setRestoreTarget(null);
-      const p = await backupService.getPendingRestore();
-      setPending(p);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : String(e));
-    } finally {
-      setOperating(false);
-    }
+  const handlePresetConsumed = () => {
+    setRestorePreset(null);
   };
 
   const handleCancelRestore = async () => {
@@ -164,7 +128,17 @@ export function DataBackupSection() {
   }
 
   return (
-    <div className="space-y-4" dir="rtl">
+    <div className="space-y-5" dir="rtl">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-lg font-black text-slate-800 flex items-center gap-2">
+          <DatabaseBackup className="w-5 h-5 text-blue-600" />
+          البيانات والنسخ الاحتياطية
+        </h2>
+        <Button onClick={() => void load(true)} variant="outline" size="sm">
+          <RefreshCw className="w-4 h-4 ml-1" /> تحديث
+        </Button>
+      </div>
+
       {/* Health error banner */}
       {health === "error" && (
         <div className="flex items-start gap-3 p-4 rounded-xl border border-red-200 bg-red-50 text-red-700">
@@ -208,99 +182,37 @@ export function DataBackupSection() {
         </div>
       )}
 
-      <Tabs defaultValue="info" className="w-full">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <TabsList className="bg-slate-100 p-1 rounded-xl h-auto flex-wrap">
-            {TABS.map((t) => (
-              <TabsTrigger
-                key={t.id}
-                value={t.id}
-                className="flex items-center gap-1.5 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm px-3 py-2"
-              >
-                <t.icon className="w-4 h-4" />
-                {t.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          <Button onClick={() => void load(true)} variant="outline" size="sm">
-            <RefreshCw className="w-4 h-4 ml-1" /> تحديث
-          </Button>
-        </div>
+      <DatabaseStatusSection
+        dbInfo={dbInfo}
+        backups={backups}
+        config={config}
+        health={health}
+        healthMsg={healthMsg}
+        loading={loading}
+      />
 
-        <TabsContent value="info" className="mt-4">
-          <DatabaseInfoPanel
-            dbInfo={dbInfo}
-            backups={backups}
-            config={config}
-            health={health}
-            healthMsg={healthMsg}
-            loading={loading}
-          />
-        </TabsContent>
-        <TabsContent value="settings" className="mt-4">
-          {config && (
-            <BackupSettingsPanel
-              config={config}
-              operating={operating}
-              onConfigChange={handleConfigChange}
-              onApplyRetention={handleRetention}
-            />
-          )}
-        </TabsContent>
-        <TabsContent value="manual" className="mt-4">
-          <ManualBackupPanel operating={operating} onDone={() => load(true)} />
-        </TabsContent>
-        <TabsContent value="list" className="mt-4">
-          <BackupListPanel
-            backups={backups}
-            pending={pending}
-            operating={operating}
-            onRestore={handleRestore}
-            onDone={() => load(true)}
-          />
-        </TabsContent>
-        <TabsContent value="import" className="mt-4">
-          <ImportPanel backups={backups} operating={operating} onImported={() => load(true)} />
-        </TabsContent>
-        <TabsContent value="export" className="mt-4">
-          <ExportPanel onDone={() => load(true)} />
-        </TabsContent>
-      </Tabs>
+      <ActionsSection
+        operating={operating}
+        onDone={() => load(true)}
+        preset={restorePreset}
+        onPresetConsumed={handlePresetConsumed}
+      />
 
-      {/* Restore confirmation */}
-      {restoreTarget && (
-        <AlertDialog open onOpenChange={(o) => { if (!o) setRestoreTarget(null); }}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>تأكيد الاستعادة</AlertDialogTitle>
-              <AlertDialogDescription asChild>
-                <div className="space-y-3">
-                  <p className="text-sm">
-                    النسخة: <span dir="ltr" className="font-mono text-xs">{restoreTarget.name}</span> —{" "}
-                    {formatLabel(restoreTarget.label)}
-                  </p>
-                  <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm font-bold leading-relaxed">
-                    سيتم استبدال قاعدة البيانات الحالية. سيتم إنشاء نسخة احتياطية تلقائية لبياناتك الحالية قبل
-                    المتابعة.
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    ستعود قاعدة البيانات الحالية للعمل بهذه النسخة، وسيُعاد تشغيل التطبيق لتطبيق التغيير.
-                  </p>
-                </div>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={operating}>إلغاء</AlertDialogCancel>
-              <AlertDialogAction
-                disabled={operating}
-                onClick={(e) => { e.preventDefault(); void handleRestoreConfirmed(); }}
-                className="bg-amber-600 hover:bg-amber-700"
-              >
-                {operating ? "جارٍ التحقق..." : "متابعة وإعادة التشغيل"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+      <HistorySection
+        backups={backups}
+        pending={pending}
+        operating={operating}
+        onRestore={handleRestore}
+        onDone={() => load(true)}
+      />
+
+      {config && (
+        <SettingsSection
+          config={config}
+          operating={operating}
+          onConfigChange={handleConfigChange}
+          onApplyRetention={handleRetention}
+        />
       )}
     </div>
   );

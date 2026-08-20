@@ -75,13 +75,6 @@ export function ManualBackupPanel({
 
   return (
     <div className="space-y-4">
-      <div>
-        <p className="font-bold text-slate-600 text-sm">نسخة احتياطية يدوية</p>
-        <p className="text-xs text-slate-400 mt-1">
-          تُنشئ لقطة أمان محلية ومتسقة للقاعدة الحالية وتتحقق من سلامتها قبل الاعتراف بالنجاح.
-        </p>
-      </div>
-
       <Button
         size="sm"
         className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-10 text-sm font-bold gap-2"
@@ -93,9 +86,10 @@ export function ManualBackupPanel({
       </Button>
 
       {showBar && (
-        <div className="space-y-2">
+        <div role="status" aria-live="polite" className="space-y-2">
           <Progress
             value={PHASE_VALUE[phase]}
+            aria-label="تقدم النسخة الاحتياطية"
             className={phase === "completed" ? "[&>div]:bg-emerald-600" : phase === "failed" ? "[&>div]:bg-rose-600" : ""}
           />
           <div className="flex items-center gap-2 text-xs font-bold">
