@@ -34,6 +34,30 @@ export function formatTimestamp(ts: number): string {
   }).format(d);
 }
 
+/** Format a unix-second timestamp as date only (YYYY/MM/DD, latin digits). */
+export function formatDate(ts: number): string {
+  if (!ts) return "—";
+  const d = new Date(ts * 1000);
+  return new Intl.DateTimeFormat("ar-SY", {
+    numberingSystem: "latn",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+}
+
+/** Format a unix-second timestamp as time only (HH:MM, latin digits). */
+export function formatTime(ts: number): string {
+  if (!ts) return "—";
+  const d = new Date(ts * 1000);
+  return new Intl.DateTimeFormat("ar-SY", {
+    numberingSystem: "latn",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
+}
+
 /** Format a YYYYMMDD day token (from the backend's last_auto_backup). */
 export function formatDayToken(token: string | null): string {
   if (!token) return "—";
@@ -61,6 +85,23 @@ export function typeBadge(backup_type: string | null | undefined) {
       {label}
     </Badge>
   );
+}
+
+/** Health tri-state for a backup file, derived from backend `status`/`verified`.
+ *  Color is never the only signal — callers must render icon + text. */
+export type BackupStatusKind = "ok" | "pending" | "invalid";
+
+export function backupStatus(b: {
+  status: string | null | undefined;
+  verified: boolean | undefined;
+}): { kind: BackupStatusKind; label: string; tone: "emerald" | "amber" | "rose" } {
+  if (b.verified && b.status === "ok") {
+    return { kind: "ok", label: "صالحة", tone: "emerald" };
+  }
+  if (b.status && b.status !== "ok") {
+    return { kind: "invalid", label: "غير صالحة", tone: "rose" };
+  }
+  return { kind: "pending", label: "تحتاج تحقق", tone: "amber" };
 }
 
 /** Reasons an inspected import candidate must be rejected (Arabic). */

@@ -1,7 +1,12 @@
-import { Database, HardDrive, CalendarClock, ShieldCheck, Layers, UserRound, CheckCircle2, AlertTriangle } from "lucide-react";
+import {
+  Database, HardDrive, ListChecks, Users, Layers, Building2,
+  CalendarClock, ShieldCheck, AlertTriangle, CheckCircle2, XCircle, Loader2,
+} from "lucide-react";
 import pkg from "../../../../../../package.json";
 import type { BackupFileInfo, BackupConfig, DatabaseInfo } from "../../../api/backupService";
-import { formatSize, formatTimestamp, formatDayToken } from "../../lib/backupFormat";
+import {
+  formatSize, formatTimestamp, formatDayToken, backupStatus,
+} from "../../lib/backupFormat";
 
 interface Props {
   dbInfo: DatabaseInfo | null;
@@ -35,73 +40,134 @@ export function DatabaseStatusSection({ dbInfo, backups, config, health, healthM
     );
   }
 
-  const latest = [...backups].sort((a, b) => b.timestamp - a.timestamp)[0] ?? null;
+  const latest =
+    [...backups].sort((a, b) => b.timestamp - a.timestamp)[0] ?? null;
+  const latestStatus = latest ? backupStatus(latest) : null;
   const rollbacked = dbInfo.last_restore_status === "rolled_back";
   const restoreApplied = dbInfo.last_restore_status === "applied";
 
   return (
     <div className="space-y-3">
+      {/* Hero status card */}
       {health === "error" ? (
-        <div className="flex items-start gap-3 p-4 rounded-xl border border-red-200 bg-red-50 text-red-700">
-          <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0" />
+        <div className="rounded-2xl border border-red-200 bg-gradient-to-br from-red-50 to-rose-50/60 p-6 flex items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-red-500 text-white flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-9 h-9" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-slate-500">قاعدة البيانات</p>
+            <p className="text-2xl font-black text-red-700">يتطلب انتباهًا</p>
+            <p className="text-xs font-medium text-red-600 mt-0.5">
+              {healthMsg || "فشل فحص السلامة — يرجى إنشاء نسخة احتياطية فورًا والاتصال بالدعم."}
+            </p>
+          </div>
+        </div>
+      ) : health === "checking" ? (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 flex items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">
+            <Loader2 className="w-9 h-9 animate-spin" />
+          </div>
           <div>
-            <p className="font-bold">انتباه: فشل فحص سلامة قاعدة البيانات</p>
-            <p className="text-sm mt-1">{healthMsg || "يرجى إنشاء نسخة احتياطية فورًا والاتصال بالدعم."}</p>
+            <p className="text-sm font-bold text-slate-500">قاعدة البيانات</p>
+            <p className="text-2xl font-black text-slate-600">جاري الفحص...</p>
           </div>
         </div>
       ) : (
-        <div className="flex items-center gap-3 p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800">
-          <ShieldCheck className="w-6 h-6 shrink-0" />
-          <div>
-            <p className="font-black">قاعدة البيانات سليمة</p>
-            <p className="text-xs mt-0.5">بياناتك محفوظة بشكل آمن ومتسق — لا إجراء مطلوب.</p>
+        <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50/60 p-6 flex items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shrink-0">
+            <ShieldCheck className="w-9 h-9" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-slate-500">قاعدة البيانات</p>
+            <p className="text-2xl font-black text-emerald-700">✓ سليمة</p>
+            <p className="text-xs font-medium text-emerald-700/80 mt-0.5">
+              بياناتك محفوظة بشكل آمن ومتسق — لا إجراء مطلوب.
+            </p>
           </div>
         </div>
       )}
 
+      {/* State strip: auto backup + last restore flags */}
+      <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-500 px-1">
+        <span className={dbInfo.auto_backup_enabled ? "text-emerald-600" : "text-slate-400"}>
+          {dbInfo.auto_backup_enabled ? "النسخ التلقائي مفعّل" : "النسخ التلقائي معطّل"}
+        </span>
+        {dbInfo.last_auto_backup ? (
+          <span className="text-slate-400">
+            • آخر نسخة يومية: {formatDayToken(dbInfo.last_auto_backup)}
+          </span>
+        ) : null}
+        {rollbacked ? (
+          <span className="text-rose-600">
+            • ⚠ تم التراجع عن استعادة سابقة
+          </span>
+        ) : restoreApplied ? (
+          <span className="text-emerald-600">
+            • <CheckCircle2 className="w-3.5 h-3.5 inline ml-0.5" /> اكتملت استعادة سابقة
+          </span>
+        ) : null}
+      </div>
+
+      {/* Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <Row icon={HardDrive} label="حجم قاعدة البيانات">
           {formatSize(dbInfo.db_size_bytes)}
-          <span className="block text-xs font-medium text-slate-400 mt-1">
-            {dbInfo.journal_entry_count.toLocaleString("ar-EG")} قيد • {dbInfo.account_count.toLocaleString("ar-EG")} حساب
-          </span>
         </Row>
         <Row icon={Layers} label="إصدار قاعدة البيانات">
           <span dir="ltr" className="font-mono text-xs">{dbInfo.schema_version}</span>
         </Row>
-        <Row icon={UserRound} label="الشركة الحالية">
+        <Row icon={ListChecks} label="عدد القيود">
+          {dbInfo.journal_entry_count.toLocaleString("ar-EG")}
+        </Row>
+        <Row icon={Users} label="عدد الحسابات">
+          {dbInfo.account_count.toLocaleString("ar-EG")}
+        </Row>
+        <Row icon={Building2} label="الشركة الحالية">
           {dbInfo.company_name ?? "—"}
         </Row>
         <Row icon={CalendarClock} label="آخر نسخة احتياطية">
-          {latest ? formatTimestamp(latest.timestamp) : "لا توجد نسخ احتياطية بعد"}
+          {latest ? (
+            <>
+              {formatTimestamp(latest.timestamp)}
+              {latestStatus && (
+                <span
+                  className={`inline-flex items-center gap-1 mt-1 rounded-full px-2 py-0.5 ring-1 ring-inset text-[10px] font-bold ${
+                    latestStatus.tone === "emerald"
+                      ? "bg-emerald-50 text-emerald-700 ring-emerald-200 border border-emerald-200"
+                      : latestStatus.tone === "rose"
+                        ? "bg-rose-50 text-rose-700 ring-rose-200 border border-rose-200"
+                        : "bg-amber-50 text-amber-700 ring-amber-200 border border-amber-200"
+                  }`}
+                >
+                  {latestStatus.tone === "emerald" ? (
+                    <CheckCircle2 className="w-3 h-3" />
+                  ) : latestStatus.tone === "rose" ? (
+                    <XCircle className="w-3 h-3" />
+                  ) : (
+                    <AlertTriangle className="w-3 h-3" />
+                  )}
+                  {latestStatus.label}
+                </span>
+              )}
+            </>
+          ) : (
+            "لا توجد نسخ احتياطية بعد"
+          )}
         </Row>
-        <div className="md:col-span-2">
-          <Row icon={ShieldCheck} label="حالة النسخ الاحتياطي">
-            <span className={dbInfo.auto_backup_enabled ? "text-emerald-600" : "text-slate-500"}>
-              {dbInfo.auto_backup_enabled ? "مفعّل" : "معطّل"} (تلقائي)
-            </span>
-            {dbInfo.last_auto_backup ? (
-              <span className="block text-xs font-medium text-slate-400 mt-1">
-                آخر نسخة يومية: {formatDayToken(dbInfo.last_auto_backup)}
-              </span>
-            ) : null}
-            {rollbacked ? (
-              <span className="block text-xs font-bold text-rose-600 mt-1">⚠️ تم التراجع عن استعادة سابقة</span>
-            ) : restoreApplied ? (
-              <span className="block text-xs font-bold text-emerald-600 mt-1">
-                <CheckCircle2 className="w-3.5 h-3.5 inline ml-1" /> اكتملت استعادة سابقة
-              </span>
-            ) : null}
-          </Row>
-        </div>
       </div>
 
-      <p className="text-xs text-slate-400 flex items-center gap-1.5 flex-wrap">
-        <Database className="w-3.5 h-3.5" />
-        المسار: <span dir="ltr" className="font-mono">{dbInfo.db_path}</span>
-        <span className="text-slate-300">•</span>
-        إصدار التطبيق <span dir="ltr" className="font-mono">{pkg.version}</span>
-      </p>
+      {/* Advanced details — technical info tucked away */}
+      <details className="rounded-xl border border-slate-100 bg-white p-3 group">
+        <summary className="cursor-pointer text-xs font-bold text-slate-500 flex items-center gap-1.5 select-none">
+          <Database className="w-3.5 h-3.5" />
+          تفاصيل متقدمة
+          <span className="text-slate-300 transition-transform group-open:rotate-90">◂</span>
+        </summary>
+        <div className="mt-2 space-y-1 text-[11px] font-mono text-slate-400" dir="ltr">
+          <p>المسار: {dbInfo.db_path}</p>
+          <p>إصدار التطبيق: {pkg.version}</p>
+        </div>
+      </details>
     </div>
   );
 }

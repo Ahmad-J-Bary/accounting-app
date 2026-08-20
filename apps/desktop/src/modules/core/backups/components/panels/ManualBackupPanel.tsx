@@ -25,7 +25,7 @@ export function ManualBackupPanel({
     setBusy(true);
     try {
       const info = await backupService.backupNow();
-      toast.success(`تم إنشاء نسخة احتياطية (${formatSize(info.size)})`);
+      toast.success(`تم إنشاء النسخة ✓ (${formatSize(info.size)})`);
       await onDone();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));

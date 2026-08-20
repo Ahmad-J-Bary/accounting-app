@@ -136,6 +136,9 @@ export const backupService = {
   async copyFileBackup(fileName: string, destPath: string): Promise<void> {
     return await invoke<void>('copy_backup_file', { file_name: fileName, destPath });
   },
+  async openBackupLocation(path: string): Promise<void> {
+    return await invoke<void>('open_backup_location', { path });
+  },
   async getPendingRestore(): Promise<PendingRestoreInfo | null> {
     return await invoke<PendingRestoreInfo | null>('pending_restore_status');
   },

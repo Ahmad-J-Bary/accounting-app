@@ -577,3 +577,30 @@ pub async fn copy_backup_file(
     }
     Ok(())
 }
+
+/// Open a directory (backup folder, DB folder, ...) in the OS file manager.
+#[tauri::command]
+pub async fn open_backup_location(app: AppHandle, path: String) -> Result<(), String> {
+    use tauri_plugin_shell::ShellExt;
+    if path.trim().is_empty() {
+        return Err("المسار غير صحيح".into());
+    }
+    let p = std::path::PathBuf::from(&path);
+    if !p.exists() {
+        return Err("المسار غير موجود".into());
+    }
+    // Opening a file with the shell would launch its default app — the backup UI
+    // means "reveal in file manager", so open the parent directory instead.
+    let target = if p.is_dir() {
+        p
+    } else {
+        p.parent()
+            .filter(|d| !d.as_os_str().is_empty())
+            .map(|d| d.to_path_buf())
+            .unwrap_or_else(|| std::path::PathBuf::from("."))
+    };
+    let display = target.to_string_lossy().into_owned();
+    app.shell()
+        .open(display, None)
+        .map_err(|e| format!("فشل فتح المجلد: {e}"))
+}

@@ -167,7 +167,9 @@ export function InspectFileFlow({ mode, operating, preset = null, onPresetConsum
                   <Badge variant="outline" className="ml-1 bg-rose-50 text-rose-700 text-[10px]">أحدث من المدعوم</Badge>
                 ) : upgradable ? (
                   <span className="text-amber-600 mr-1">(سيتم ترقيته إلى {insp.supported_version})</span>
-                ) : null}
+                ) : (
+                  <span className="text-emerald-600 mr-1">(متوافق مع الإصدار المدعوم {insp.supported_version})</span>
+                )}
               </p>
             </div>
             <div className="space-y-1">

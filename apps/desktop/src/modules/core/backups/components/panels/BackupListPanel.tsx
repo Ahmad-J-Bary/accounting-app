@@ -1,4 +1,4 @@
-﻿import { Database, Trash2, Save, ShieldCheck, Lock } from "lucide-react";
+﻿import { Database, Trash2, Save, ShieldCheck, Lock, FolderOpen } from "lucide-react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { Button } from "@shared/ui/button";
 import { Badge } from "@shared/ui/badge";
@@ -15,7 +15,9 @@ import {
 } from "@shared/ui/alert-dialog";
 import { toast } from "sonner";
 import { backupService, type BackupFileInfo, type PendingRestoreInfo } from "../../../api/backupService";
-import { formatSize, formatTimestamp, typeBadge, formatLabel } from "../../lib/backupFormat";
+import {
+  formatSize, formatTimestamp, typeBadge, formatLabel, formatDate, formatTime, backupStatus,
+} from "../../lib/backupFormat";
 
 interface Props {
   backups: BackupFileInfo[];
@@ -23,6 +25,29 @@ interface Props {
   operating: boolean;
   onRestore: (b: BackupFileInfo) => Promise<void>;
   onDone: () => Promise<void>;
+}
+
+const STATUS_STYLES = {
+  emerald: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  amber: "bg-amber-50 text-amber-700 border-amber-200",
+  rose: "bg-rose-50 text-rose-700 border-rose-200",
+} as const;
+
+function StatusPill({ b }: { b: BackupFileInfo }) {
+  const s = backupStatus(b);
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${STATUS_STYLES[s.tone]}`}
+    >
+      <span
+        aria-hidden
+        className={`w-1.5 h-1.5 rounded-full ${
+          s.tone === "emerald" ? "bg-emerald-500" : s.tone === "amber" ? "bg-amber-500" : "bg-rose-500"
+        }`}
+      />
+      {s.label}
+    </span>
+  );
 }
 
 export function BackupListPanel({ backups, pending, operating, onRestore, onDone }: Props) {
@@ -42,6 +67,49 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
     }
   };
 
+  const handleOpen = async (b: BackupFileInfo) => {
+    try {
+      await backupService.openBackupLocation(b.path);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const handleDelete = async (b: BackupFileInfo) => {
+    try {
+      await backupService.deleteFileBackup(b.name);
+      toast.success("تم حذف النسخة الاحتياطية");
+      await onDone();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const ConfirmDelete = ({ b }: { b: BackupFileInfo }) => (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600" disabled={disabled} aria-label="حذف النسخة الاحتياطية">
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>حذف النسخة الاحتياطية</AlertDialogTitle>
+          <AlertDialogDescription>
+            هل تريد حذف «{formatLabel(b.label)}» نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.
+            تُحذف النسخ الاحتياطية فقط — قاعدة البيانات الحالية لا تتأثر أبدًا.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>إلغاء</AlertDialogCancel>
+          <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => void handleDelete(b)}>
+            حذف نهائيًا
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
   return (
     <div className="space-y-3">
       {pending ? (
@@ -57,81 +125,118 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
           <p>لا توجد نسخ احتياطية بعد</p>
         </div>
       ) : (
-        <div className="divide-y divide-slate-100 border border-slate-100 rounded-xl">
-          {backups.map((b) => (
-            <div key={b.name} className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-4 py-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <Database className="w-4 h-4 text-slate-400 shrink-0" />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-bold text-sm text-slate-700 truncate" dir="ltr">{b.name}</p>
-                    {typeBadge(b.backup_type)}
-                    {b.verified && (
-                      <Badge variant="outline" className="bg-emerald-50 text-emerald-700 text-[10px]">
-                        موثقة ✓
-                      </Badge>
-                    )}
+        <>
+          {/* Desktop: responsive table */}
+          <div className="hidden md:block rounded-xl border border-slate-100 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 text-xs font-bold text-slate-400">
+                  <th className="text-right px-4 py-2.5">النسخة</th>
+                  <th className="text-right px-4 py-2.5">التاريخ</th>
+                  <th className="text-right px-4 py-2.5">الحجم</th>
+                  <th className="text-right px-4 py-2.5">الحالة</th>
+                  <th className="text-right px-4 py-2.5">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {backups.map((b) => (
+                  <tr key={b.name} className="align-middle">
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center gap-2 min-w-0 max-w-xs">
+                        <Database className="w-4 h-4 text-slate-400 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-700 truncate" dir="ltr" title={b.label}>
+                            {b.name}
+                          </p>
+                          <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                            {typeBadge(b.backup_type)}
+                            {b.schema_version ? (
+                              <span dir="ltr" className="text-[10px] text-slate-400 font-mono">
+                                v{b.schema_version}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <p className="font-bold text-slate-600">{formatDate(b.timestamp)}</p>
+                      <p className="text-xs text-slate-400">{formatTime(b.timestamp)}</p>
+                    </td>
+                    <td className="px-4 py-2.5 text-slate-600 font-bold">{formatSize(b.size)}</td>
+                    <td className="px-4 py-2.5"><StatusPill b={b} /></td>
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center gap-1">
+                        <Button size="sm" variant="outline" disabled={disabled} onClick={() => void onRestore(b)}>
+                          استعادة
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={disabled}
+                          aria-label="نسخ النسخة إلى مكان آخر"
+                          onClick={() => void handleCopy(b)}
+                        >
+                          <Save className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={disabled}
+                          aria-label="فتح موقع النسخة"
+                          onClick={() => void handleOpen(b)}
+                        >
+                          <FolderOpen className="w-4 h-4" />
+                        </Button>
+                        <ConfirmDelete b={b} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile: stacked cards */}
+          <div className="md:hidden space-y-2">
+            {backups.map((b) => (
+              <div key={b.name} className="rounded-xl border border-slate-100 bg-white p-3 space-y-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Database className="w-4 h-4 text-slate-400 shrink-0" />
+                    <p className="font-bold text-sm text-slate-700 truncate max-w-[180px]" dir="ltr" title={b.label}>
+                      {b.name}
+                    </p>
                   </div>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    {formatTimestamp(b.timestamp)} • {formatSize(b.size)}
-                    {b.schema_version ? ` • إصدار القاعدة ${b.schema_version}` : ""}
-                  </p>
+                  <StatusPill b={b} />
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {typeBadge(b.backup_type)}
+                  {b.schema_version ? (
+                    <span dir="ltr" className="text-[10px] text-slate-400 font-mono">
+                      v{b.schema_version}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-xs text-slate-400">
+                  {formatTimestamp(b.timestamp)} • {formatSize(b.size)}
+                </p>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <Button size="sm" variant="outline" disabled={disabled} onClick={() => void onRestore(b)}>
+                    استعادة
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={disabled} onClick={() => void handleCopy(b)}>
+                    <Save className="w-3.5 h-3.5 ml-1" /> نسخ
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={disabled} onClick={() => void handleOpen(b)}>
+                    <FolderOpen className="w-3.5 h-3.5 ml-1" /> فتح الموقع
+                  </Button>
+                  <ConfirmDelete b={b} />
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={disabled}
-                  onClick={() => void onRestore(b)}
-                >
-                  استعادة
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={disabled}
-                  onClick={() => void handleCopy(b)}
-                >
-                  <Save className="w-3.5 h-3.5 ml-1" /> نسخ
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600" disabled={disabled} aria-label="حذف النسخة الاحتياطية">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>حذف النسخة الاحتياطية</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        هل تريد حذف «{formatLabel(b.label)}» نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.
-                        تُحذف النسخ الاحتياطية فقط — قاعدة البيانات الحالية لا تتأثر أبدًا.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                      <AlertDialogAction
-                        className="bg-red-600 hover:bg-red-700"
-                        onClick={async () => {
-                          try {
-                            await backupService.deleteFileBackup(b.name);
-                            toast.success("تم حذف النسخة الاحتياطية");
-                            await onDone();
-                          } catch (e) {
-                            toast.error(e instanceof Error ? e.message : String(e));
-                          }
-                        }}
-                      >
-                        حذف نهائيًا
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       )}
 
       <p className="text-xs text-slate-400 flex items-center gap-1.5">

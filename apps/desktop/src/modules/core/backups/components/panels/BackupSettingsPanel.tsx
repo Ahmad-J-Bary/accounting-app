@@ -3,7 +3,8 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { Button } from "@shared/ui/button";
 import { Switch } from "@shared/ui/switch";
 import { Input } from "@shared/ui/input";
-import type { BackupConfig } from "../../../api/backupService";
+import { toast } from "sonner";
+import { backupService, type BackupConfig } from "../../../api/backupService";
 
 interface Props {
   config: BackupConfig;
@@ -14,6 +15,14 @@ interface Props {
 
 export function BackupSettingsPanel({ config, operating, onConfigChange, onApplyRetention }: Props) {
   const custom = !config.use_same_location;
+
+  const handleOpenFolder = async () => {
+    try {
+      await backupService.openBackupLocation(config.backup_dir);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -27,6 +36,43 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
           disabled={operating}
           onCheckedChange={(v) => void onConfigChange({ auto_backup_enabled: v })}
         />
+      </div>
+
+      <div className="border-t border-slate-100 pt-5 space-y-3">
+        <p className="font-bold text-slate-600 text-sm">الاحتفاظ بالنسخ التلقائية</p>
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="text-xs font-bold text-slate-500 block mb-1">يومي</label>
+            <Input
+              type="number"
+              min={0}
+              disabled={operating}
+              value={config.keep_daily}
+              onChange={(e) => void onConfigChange({ keep_daily: Math.max(0, Number(e.target.value)) })}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-500 block mb-1">أسبوعي</label>
+            <Input
+              type="number"
+              min={0}
+              disabled={operating}
+              value={config.keep_weekly}
+              onChange={(e) => void onConfigChange({ keep_weekly: Math.max(0, Number(e.target.value)) })}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-500 block mb-1">شهري</label>
+            <Input
+              type="number"
+              min={0}
+              disabled={operating}
+              value={config.keep_monthly}
+              onChange={(e) => void onConfigChange({ keep_monthly: Math.max(0, Number(e.target.value)) })}
+            />
+          </div>
+        </div>
+        <p className="text-xs text-slate-400">0 في أي حقل = لا حد. ينطبق التحكم على النسخ التلقائية فقط.</p>
       </div>
 
       <div className="border-t border-slate-100 pt-5 space-y-3">
@@ -88,49 +134,26 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
           </div>
         )}
 
-        <p className="text-xs text-slate-400">
-          مجلد النسخ الحالي: <span dir="ltr" className="font-mono">{config.backup_dir}</span>
-        </p>
-      </div>
-
-      <div className="border-t border-slate-100 pt-5 space-y-3">
-        <p className="font-bold text-slate-600 text-sm">الاحتفاظ بالنسخ التلقائية</p>
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="text-xs font-bold text-slate-500 block mb-1">يومي</label>
-            <Input
-              type="number"
-              min={0}
-              disabled={operating}
-              value={config.keep_daily}
-              onChange={(e) => void onConfigChange({ keep_daily: Math.max(0, Number(e.target.value)) })}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-slate-500 block mb-1">أسبوعي</label>
-            <Input
-              type="number"
-              min={0}
-              disabled={operating}
-              value={config.keep_weekly}
-              onChange={(e) => void onConfigChange({ keep_weekly: Math.max(0, Number(e.target.value)) })}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-slate-500 block mb-1">شهري</label>
-            <Input
-              type="number"
-              min={0}
-              disabled={operating}
-              value={config.keep_monthly}
-              onChange={(e) => void onConfigChange({ keep_monthly: Math.max(0, Number(e.target.value)) })}
-            />
-          </div>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
+          <p className="text-xs text-slate-400">
+            مجلد النسخ الحالي: <span dir="ltr" className="font-mono">{config.backup_dir}</span>
+          </p>
+          <Button size="sm" variant="outline" disabled={operating} onClick={() => void handleOpenFolder()}>
+            <FolderOpen className="w-4 h-4 ml-1" /> فتح مجلد النسخ
+          </Button>
         </div>
-        <p className="text-xs text-slate-400">0 في أي حقل = لا حد. ينطبق التحكم على النسخ التلقائية فقط.</p>
-        <Button size="sm" variant="outline" disabled={operating} onClick={() => void onApplyRetention()}>
-          <Trash2 className="w-4 h-4 ml-1" /> تنظيف النسخ القديمة
-        </Button>
+
+        <div className="flex items-center gap-2 pt-1">
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-rose-600 hover:text-rose-700 border-rose-200 hover:border-rose-300 hover:bg-rose-50"
+            disabled={operating}
+            onClick={() => void onApplyRetention()}
+          >
+            <Trash2 className="w-4 h-4 ml-1" /> تنظيف النسخ القديمة
+          </Button>
+        </div>
       </div>
     </div>
   );
