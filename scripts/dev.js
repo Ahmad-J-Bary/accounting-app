@@ -16,34 +16,52 @@ if (process.platform === 'linux') {
   delete env.LD_PRELOAD;
 }
 
-function spawnTauri(cmd, args, opts) {
-  const child = spawn(cmd, args, { stdio: 'inherit', ...opts });
-  child.on('exit', (code) => process.exit(code ?? 1));
-  child.on('error', (err) => {
-    console.error(`Failed to spawn ${cmd}:`, err.message);
-    process.exit(1);
+// Workspace Rust bridge: Tauri's dev watcher only watches the app dir
+// (apps/desktop/src-tauri), but the real Rust code lives in crates/*. This
+// child rewrites an inert marker inside src-tauri on any crates change so
+// `tauri dev` rebuilds + restarts automatically (see scripts/watch-crates.js).
+let watcherChild = null;
+
+function spawnWatcher() {
+  const node = process.execPath;
+  watcherChild = spawn(node, [path.join(root, 'scripts', 'watch-crates.js')], {
+    cwd: root,
+    env,
+    stdio: 'inherit',
+    windowsHide: true,
+  });
+  watcherChild.on('error', (err) => {
+    console.warn(`[dev.js] crates watcher failed to start: ${err.message} (dev continues)`);
   });
 }
 
-switch (process.platform) {
-  case 'linux': {
-    const envScript = path.join(root, 'scripts', 'env-local-deps.sh');
-    const homeDir = require('os').homedir();
-    const localPrefix = path.join(homeDir, '.local', 'linux-build-prefix');
-    if (fs.existsSync(envScript) && fs.existsSync(path.join(localPrefix, 'usr', 'bin'))) {
-      const bashCmd = `source "${envScript}" >/dev/null 2>&1 && exec pnpm exec tauri dev`;
-      spawnTauri('bash', ['-c', bashCmd], { cwd: desktopDir, env });
-    } else {
-      spawnDirect();
-    }
-    break;
+function stopWatcher() {
+  if (watcherChild && !watcherChild.killed) {
+    watcherChild.kill();
+    watcherChild = null;
   }
-  case 'win32':
-    spawnDirect();
-    break;
-  default:
-    spawnDirect();
-    break;
+}
+
+function spawnTauri(cmd, args, opts) {
+  const child = spawn(cmd, args, { stdio: 'inherit', ...opts });
+  child.on('exit', (code) => {
+    stopWatcher();
+    if (code) {
+      console.warn(
+        '\n[dev.js] tauri dev exited with a non-zero code.\n' +
+        '  If the error is "The process cannot access the file because it is being used by\n' +
+        '  another process (os error 32)", a previous desktop.exe / cargo process still holds\n' +
+        '  the build outputs. Close the running app (or kill stale desktop.exe / cargo) and\n' +
+        '  run pnpm tauri:dev again.',
+      );
+    }
+    process.exit(code ?? 1);
+  });
+  child.on('error', (err) => {
+    stopWatcher();
+    console.error(`Failed to spawn ${cmd}:`, err.message);
+    process.exit(1);
+  });
 }
 
 function ensureDist() {
@@ -70,4 +88,28 @@ function spawnDirect() {
   } else {
     spawnTauri(pnpmPath, ['exec', 'tauri', 'dev'], { cwd: desktopDir, env });
   }
+}
+
+// The watcher runs for every platform (win32 straight, linux through the env
+// wrapper below). Start it before `tauri dev` so the marker exists up front.
+spawnWatcher();
+
+process.on('SIGINT', () => stopWatcher());
+
+switch (process.platform) {
+  case 'linux': {
+    const envScript = path.join(root, 'scripts', 'env-local-deps.sh');
+    const homeDir = require('os').homedir();
+    const localPrefix = path.join(homeDir, '.local', 'linux-build-prefix');
+    if (fs.existsSync(envScript) && fs.existsSync(path.join(localPrefix, 'usr', 'bin'))) {
+      const bashCmd = `source "${envScript}" >/dev/null 2>&1 && exec pnpm exec tauri dev`;
+      spawnTauri('bash', ['-c', bashCmd], { cwd: desktopDir, env });
+    } else {
+      spawnDirect();
+    }
+    break;
+  }
+  default:
+    spawnDirect();
+    break;
 }

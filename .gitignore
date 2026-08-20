@@ -28,6 +28,9 @@ src-tauri/gen
 src-tauri/WebView2Loader.dll
 **/dist
 
+# Dev-only Rust watcher marker (rewritten on every crates/* change)
+**/src-tauri/src/watch_touch.rs
+
 # Workspace
 .turbo
 .next
