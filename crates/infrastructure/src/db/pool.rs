@@ -24,6 +24,17 @@ pub async fn create_pool(database_url: &str) -> Result<DbPool, sqlx::Error> {
     Ok(Arc::new(pool))
 }
 
+/// Highest migration version this build can apply (the schema the app supports).
+pub fn latest_schema_version() -> u32 {
+    let migrator = sqlx::migrate!("./src/db/migrations");
+    migrator
+        .migrations
+        .iter()
+        .map(|m| m.version)
+        .max()
+        .unwrap_or(0) as u32
+}
+
 /// Check if a column exists in a table
 async fn column_exists(pool: &SqlitePool, table: &str, column: &str) -> bool {
     sqlx::query_scalar::<_, i64>(&format!(

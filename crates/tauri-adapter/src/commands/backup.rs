@@ -1,10 +1,9 @@
 use tauri::{AppHandle, Manager, State};
 use std::path::{Path, PathBuf};
-use std::str::FromStr as _;
 
 use crate::bootstrap::container::AppState;
 use infrastructure::db::backup::{
-    self, BackupFileInfo, BackupType, PendingRestore, RetentionPolicy,
+    self, BackupFileInfo, BackupType, DatabaseInspection, PendingRestore, RetentionPolicy,
 };
 
 /// Resolve the live DB path (mirrors setup logic in lib.rs).
@@ -159,6 +158,7 @@ pub async fn get_backup_config(
 
     let db_path = resolve_db_path(&app)?;
     let backup_dir = backup::resolve_backup_dir(&db_path, use_same_location, custom_path.as_deref());
+    let last_restore_status = backup::get_config(&state.pool, "backup_last_restore_status").await?;
 
     Ok(serde_json::json!({
         "use_same_location": use_same_location,
@@ -169,6 +169,7 @@ pub async fn get_backup_config(
         "keep_monthly": monthly,
         "auto_backup_enabled": auto_backup,
         "last_auto_backup": last_auto,
+        "last_restore_status": last_restore_status,
     }))
 }
 
@@ -260,43 +261,52 @@ pub async fn export_database_to_bytes(state: State<'_, AppState>) -> Result<Vec<
     Ok(bytes)
 }
 
-/// Verify that `path` is a valid SQLite database via a read-only pool.
-async fn validate_sqlite_file(path: &Path) -> Result<(), String> {
-    if !path.exists() {
-        return Err("الملف غير موجود".into());
+/// Read-only metadata about a candidate import file (shown to the user before
+/// import so they can confirm what they're restoring).
+#[tauri::command]
+pub async fn inspect_database_file(
+    source_path: String,
+) -> Result<DatabaseInspection, String> {
+    let source = Path::new(&source_path);
+    if !source.exists() {
+        return Err("ملف النسخة الاحتياطية غير موجود".into());
     }
-    let url = format!("sqlite:{}?mode=ro", path.to_string_lossy());
-    let opts = infrastructure::sqlx::sqlite::SqliteConnectOptions::from_str(&url)
-        .map_err(|e| format!("Invalid sqlite URL: {e}"))?;
-    let pool = infrastructure::sqlx::sqlite::SqlitePoolOptions::new()
-        .max_connections(1)
-        .connect_with(opts)
-        .await
-        .map_err(|e| format!("الملف ليس قاعدة بيانات سليمة: {e}"))?;
-    let result = backup::quick_check(&pool).await;
-    pool.close().await;
-    result
+    backup::inspect_database_file(source).await
 }
 
-/// Stage a source file/bytes for restart-based restore, snapshotting the CURRENT
-/// DB into a typed pre-import backup first (never trimmed by retention).
+/// Stage a source file/bytes for restart-based restore.
+///
+/// Order matters and is enforced for safety:
+/// 1. Snapshot the CURRENT DB into a typed pre-import backup (kept forever) —
+///    the user always has a rollback copy BEFORE the incoming file is touched.
+/// 2. Validate the candidate on a throwaway copy (migrations, integrity, FK,
+///    posted-entry balance) — an invalid DB is rejected here and *nothing*
+///    about the current state changes.
+/// 3. Only then copy to `erp.pending.sqlite` and write the restart marker.
 async fn stage_restore(
     app: &AppHandle,
     state: &AppState,
     source: &Path,
     source_label: &str,
 ) -> Result<serde_json::Value, String> {
-    // Make sure the incoming file is a sane SQLite DB before committing.
-    validate_sqlite_file(source).await?;
+    // 1) Safety snapshot of the CURRENT DB first (untrimmed by retention).
+    let pre = create_typed_backup(app, state, BackupType::PreImport, false).await?;
 
+    // 2) Validate the candidate on a throwaway copy — reject before staging.
+    let report = backup::validate_import_candidate(source).await?;
+    if !report.ok {
+        return Err(format!(
+            "رُفض الاستيراد — والنسخة الاحتياطية التلقائية محفوظة: {}",
+            report.errors.join(" | ")
+        ));
+    }
+
+    // 3) Copy the validated file and write the restart marker.
     let data_dir = resolve_data_dir(app)?;
     let pending = data_dir.join("erp.pending.sqlite");
     let _ = std::fs::remove_file(&pending);
     std::fs::copy(source, &pending)
         .map_err(|e| format!("Failed to copy restore file: {e}"))?;
-
-    // Automatic safety backup of the CURRENT DB (type = pre_import, kept forever).
-    let pre = create_typed_backup(app, state, BackupType::PreImport, false).await?;
 
     let marker = PendingRestore {
         pending_db: pending.to_string_lossy().to_string(),
@@ -308,6 +318,7 @@ async fn stage_restore(
     Ok(serde_json::json!({
         "pending": marker.pending_db,
         "auto_backup": pre.path,
+        "report": report,
     }))
 }
 

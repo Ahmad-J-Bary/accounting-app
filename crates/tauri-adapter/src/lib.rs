@@ -15,20 +15,47 @@ use crate::bootstrap::container::AppState;
 /// the previous launch closed the pool (process exit), swapping files here is
 /// safe on every platform and the natural startup path then runs migrations and
 /// integrity checks against the restored file.
-fn apply_pending_restore(data_dir: &std::path::Path, db_path: &std::path::Path) {
+fn apply_pending_restore(data_dir: &std::path::Path, db_path: &std::path::Path) -> bool {
     let Ok(Some(pending)) = infrastructure::db::backup::take_pending_marker(data_dir) else {
-        return;
+        return false;
     };
     let pending_path = PathBuf::from(&pending.pending_db);
     if !pending_path.exists() {
         eprintln!("⚠️ Pending restore file missing: {}", pending.pending_db);
-        return;
+        return false;
     }
     eprintln!("♻️ Applying pending restore from {}", pending.pending_db);
     if let Err(e) = infrastructure::db::backup::replace_db_file(db_path, &pending_path) {
         eprintln!("⚠️ Failed to apply pending restore: {e}");
+        return false;
     }
     let _ = std::fs::remove_file(&pending_path);
+    true
+}
+
+/// Post-swap validation of a just-applied restore/import. Returns an error (with
+/// a user-facing message) when the imported database must be rolled back.
+async fn validate_applied_restore(pool: &infrastructure::sqlx::SqlitePool) -> Result<(), String> {
+    use infrastructure::db::backup as b;
+    if let Err(e) = b::quick_check(pool).await {
+        return Err(format!("فشل فحص سلامة القاعدة بعد الاستعادة: {e}"));
+    }
+    // Ensure the restored journal ledger is still internally consistent before
+    // the app becomes usable. Foreign keys are enforced by the pool options, and
+    // the sqlite-level FK check below is OOM-safe on restore-sized DBs.
+    let fk_violations = infrastructure::sqlx::query_as::<_, (String, i64, String, i64)>(
+        "SELECT \"table\", rowid, parent, fkid FROM pragma_foreign_key_check",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| format!("فشل فحص العلاقات بعد الاستعادة: {e}"))?;
+    if !fk_violations.is_empty() {
+        return Err(format!(
+            "انتهاكات علاقات في القاعدة المستعادة ({}): لا يمكن تفعيلها",
+            fk_violations.len()
+        ));
+    }
+    Ok(())
 }
 
 /// Create an automatic backup on startup (if enabled and due), then trim old
@@ -334,6 +361,7 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::backup::get_backup_config,
             commands::backup::set_backup_config,
             commands::backup::apply_backup_retention,
+            commands::backup::inspect_database_file,
             commands::backup::export_database,
             commands::backup::export_database_to_bytes,
             commands::backup::import_database,
@@ -385,16 +413,60 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             let db_path = app_data_dir.join("erp.db");
 
             // Apply any staged restore BEFORE the pool opens (file swap is only
-            // safe while no connection exists). Migrations + integrity checks
-            // then run against the restored file via the normal startup path.
-            apply_pending_restore(&app_data_dir, &db_path);
+            // safe while no connection exists). The previous DB is retained at
+            // `<db>.pre_restore` so a failed validation can roll back.
+            let restore_applied = apply_pending_restore(&app_data_dir, &db_path);
 
             let database_url = format!("sqlite:{}?mode=rwc", db_path.display());
 
-            let app_state = tauri::async_runtime::block_on(bootstrap::container::build_app_state(
-                &database_url,
-            ))
-            .expect("Failed to create app state");
+            let app_state = if restore_applied {
+                // Do NOT hard-fail on a bad migration of an imported DB (e.g. a
+                // newer-schema DB that reached this point); roll back instead.
+                match tauri::async_runtime::block_on(bootstrap::container::build_app_state(
+                    &database_url,
+                )) {
+                    Ok(state) => state,
+                    Err(e) => {
+                        eprintln!("⚠️ Import failed to start after restore ({e}); rolling back");
+                        rollback_and_rebuild(&database_url, &db_path, app);
+                        return Ok(());
+                    }
+                }
+            } else {
+                tauri::async_runtime::block_on(bootstrap::container::build_app_state(
+                    &database_url,
+                ))
+                .expect("Failed to create app state")
+            };
+
+            if restore_applied {
+                use infrastructure::db::backup as b;
+                // Post-swap accounting safety: the imported DB may have passed
+                // pre-import validation but a mismatch here reverts it.
+                let valid = tauri::async_runtime::block_on(validate_applied_restore(
+                    &app_state.pool,
+                ));
+                match valid {
+                    Ok(()) => {
+                        let _ = std::fs::remove_file(db_path.with_extension("db.pre_restore"));
+                        let _ = tauri::async_runtime::block_on(b::set_config(
+                            &app_state.pool,
+                            "backup_last_restore_status",
+                            "applied",
+                        ));
+                        eprintln!("✅ Restore applied and validated.");
+                    }
+                    Err(e) => {
+                        eprintln!("⚠️ Restore rolled back: {e}");
+                        drop(app_state);
+                        let _ = app.emit("restore-rejected", e.clone());
+                        // Re-open the previous DB in place of the rejected one.
+                        rollback_and_rebuild(&database_url, &db_path, app);
+                        return Ok(());
+                    }
+                }
+            }
+
             app.manage(app_state.clone());
 
             // Start the daily auto-backup in the background (best effort).
@@ -405,4 +477,37 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
 
             Ok(())
         })
+}
+
+/// Swap the rejected import back to the previous DB and rebuild the app state
+/// bound to that previous DB. Only safe BEFORE the app manages any state.
+fn rollback_and_rebuild(
+    database_url: &str,
+    db_path: &std::path::Path,
+    app: &tauri::App,
+) {
+    use infrastructure::db::backup as b;
+    if let Err(e) = b::rollback_restore(db_path) {
+        eprintln!("⚠️ Rollback failed: {e}");
+        return;
+    }
+    match tauri::async_runtime::block_on(bootstrap::container::build_app_state(database_url)) {
+        Ok(state) => {
+            // Record the rejection INSIDE the restored previous DB so the UI can
+            // surface it (the rejected import file is preserved as <db>.rejected).
+            let _ = tauri::async_runtime::block_on(b::set_config(
+                &state.pool,
+                "backup_last_restore_status",
+                "rolled_back",
+            ));
+            app.manage(state.clone());
+            let backup_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                run_startup_backup(backup_handle, state).await;
+            });
+        }
+        Err(e) => {
+            eprintln!("⚠️ Failed to rebuild app state after rollback: {e}");
+        }
+    }
 }

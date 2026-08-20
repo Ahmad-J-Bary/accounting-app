@@ -24,6 +24,26 @@ export interface BackupConfig {
   keep_monthly: number;
   auto_backup_enabled: boolean;
   last_auto_backup: string | null;
+  last_restore_status: string | null;
+}
+
+export interface DatabaseInspection {
+  schema_version: number;
+  supported_version: number;
+  newer_than_supported: boolean;
+  tables_present: boolean;
+  missing_tables: string[];
+  integrity_ok: boolean;
+  company_scope: string | null;
+  size_bytes: number;
+  journal_entry_count: number;
+  account_count: number;
+}
+
+export interface ValidationReport {
+  ok: boolean;
+  errors: string[];
+  warnings: string[];
 }
 
 export interface PendingRestoreInfo {
@@ -57,14 +77,17 @@ export const backupService = {
   async applyRetention(): Promise<{ removed: string[] }> {
     return await invoke<{ removed: string[] }>('apply_backup_retention');
   },
+  async inspectBackupFile(sourcePath: string): Promise<DatabaseInspection> {
+    return await invoke<DatabaseInspection>('inspect_database_file', { sourcePath });
+  },
   async exportToBytes(): Promise<number[]> {
     return await invoke<number[]>('export_database_to_bytes');
   },
   async exportToFile(destPath: string): Promise<void> {
     return await invoke<void>('export_database', { destPath });
   },
-  async importFromFile(sourcePath: string): Promise<{ pending: string; auto_backup: string }> {
-    return await invoke<{ pending: string; auto_backup: string }>('import_database', {
+  async importFromFile(sourcePath: string): Promise<{ pending: string; auto_backup: string; report?: ValidationReport }> {
+    return await invoke<{ pending: string; auto_backup: string; report?: ValidationReport }>('import_database', {
       sourcePath,
     });
   },

@@ -25,9 +25,16 @@ import {
   type BackupFileInfo,
   type BackupConfig,
   type PendingRestoreInfo,
+  type DatabaseInspection,
 } from '../../api/backupService';
 
 type Health = 'checking' | 'ok' | 'error';
+
+interface ConfirmTarget {
+  path: string;
+  label: string;
+  inspection: DatabaseInspection | null;
+}
 
 function formatSize(bytes: number): string {
   if (!bytes) return '—';
@@ -62,6 +69,8 @@ export default function BackupsPage() {
   const [healthMsg, setHealthMsg] = useState('');
   const [loading, setLoading] = useState(true);
   const [operating, setOperating] = useState(false);
+  const [confirmTarget, setConfirmTarget] = useState<ConfirmTarget | null>(null);
+  const [inspectingWarnings, setInspectingWarnings] = useState<string[]>([]);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -118,31 +127,60 @@ export default function BackupsPage() {
   };
 
   const handleImport = async () => {
-    setOperating(true);
     try {
       const path = await open({
         multiple: false,
         filters: [{ name: 'قاعدة بيانات SQLite', extensions: ['sqlite', 'db'] }],
       });
       if (!path || typeof path !== 'string') return;
-      await backupService.importFromFile(path);
-      toast.success('تم تجهيز الاستعادة — سيتم إعادة تشغيل التطبيق لتطبيقها');
-      const p = await backupService.getPendingRestore();
-      setPending(p);
+      await inspectForConfirm(path, path.split(/[\\/]/).pop() ?? 'ملف مستورد');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
-    } finally {
-      setOperating(false);
     }
   };
 
-  const handleRestoreFromList = async (path: string) => {
+  const handleRestoreFromList = async (b: BackupFileInfo) => {
+    await inspectForConfirm(b.path, b.name);
+  };
+
+  /// Inspect an import candidate and open the confirmation dialog (metadata +
+  /// warning). Newer-than-supported or invalid DBs are rejected here too.
+  const inspectForConfirm = async (path: string, label: string) => {
     setOperating(true);
     try {
-      await backupService.importFromFile(path);
+      const inspection = await backupService.inspectBackupFile(path);
+      if (inspection.newer_than_supported) {
+        toast.error(`رُفض الملف: إصدار قاعدة البيانات (${inspection.schema_version}) أحدث مما يدعمه التطبيق (${inspection.supported_version}).`);
+        setOperating(false);
+        return;
+      }
+      if (!inspection.tables_present) {
+        toast.error(`الملف لا يحتوي على جداول القواعد المطلوبة: ${inspection.missing_tables.join(', ')}`);
+        setOperating(false);
+        return;
+      }
+      if (!inspection.integrity_ok) {
+        toast.error('رُفض الملف: فشل فحص سلامة قاعدة البيانات');
+        setOperating(false);
+        return;
+      }
+      setInspectingWarnings(inspection.newer_than_supported ? ['إصدار أحدث'] : []);
+      setConfirmTarget({ path, label, inspection });
+    } catch (e) {
+      setOperating(false);
+      toast.error(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const handleImportConfirmed = async () => {
+    if (!confirmTarget) return;
+    setOperating(true);
+    try {
+      await backupService.importFromFile(confirmTarget.path);
       toast.success('تم تجهيز الاستعادة — سيتم إعادة تشغيل التطبيق لتطبيقها');
       const p = await backupService.getPendingRestore();
       setPending(p);
+      setConfirmTarget(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -246,6 +284,20 @@ export default function BackupsPage() {
             <Button size="sm" variant="outline" onClick={handleCancelRestore} disabled={operating}>
               <X className="w-4 h-4 ml-1" /> إلغاء
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Rollback banner: a staged import was rejected at startup and the DB
+          was automatically reverted to its previous state */}
+      {config?.last_restore_status === 'rolled_back' && (
+        <div className="flex items-start gap-3 p-4 rounded-xl border border-red-200 bg-red-50 text-red-700">
+          <AlertTriangle className="w-5 h-5 mt-0.5" />
+          <div>
+            <p className="font-bold">تم التراجع عن الاستعادة تلقائيًا</p>
+            <p className="text-sm mt-1">
+              رُفضت البيانات المستوردة بعد الفحص (السلامة/العلاقات) وتمت استعادة قاعدتك السابقة. بياناتك السابقة سليمة.
+            </p>
           </div>
         </div>
       )}
@@ -447,7 +499,7 @@ export default function BackupsPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => void handleRestoreFromList(b.path)}
+                    onClick={() => void handleRestoreFromList(b)}
                     disabled={operating || !!pending}
                   >
                     استعادة
@@ -482,6 +534,66 @@ export default function BackupsPage() {
           </div>
         )}
       </div>
+
+      {/* Import / restore confirmation */}
+      {confirmTarget && (
+        <AlertDialog open onOpenChange={(o) => { if (!o) setConfirmTarget(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>تأكيد الاستعادة/الاستيراد</AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-2">
+                  <p className="text-sm">
+                    الملف: <span dir="ltr" className="font-mono text-xs">{confirmTarget.label}</span>
+                  </p>
+                  {confirmTarget.inspection && (
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 space-y-1">
+                      <p>الحجم: <span dir="ltr" className="font-mono">{formatSize(confirmTarget.inspection.size_bytes)}</span></p>
+                      <p>
+                        إصدار القاعدة: <span dir="ltr" className="font-mono">{confirmTarget.inspection.schema_version}</span>
+                        {confirmTarget.inspection.newer_than_supported
+                          ? <span className="text-red-600"> (أحدث من المدعوم {confirmTarget.inspection.supported_version})</span>
+                          : confirmTarget.inspection.schema_version < confirmTarget.inspection.supported_version
+                            ? <span className="text-amber-600"> (سيتم ترقيته إلى {confirmTarget.inspection.supported_version})</span>
+                            : null}
+                      </p>
+                      {confirmTarget.inspection.company_scope && (
+                        <p>الشركة: {confirmTarget.inspection.company_scope}</p>
+                      )}
+                      <p>
+                        القيود: {confirmTarget.inspection.journal_entry_count.toLocaleString('ar-EG')} •
+                        الحسابات: {confirmTarget.inspection.account_count.toLocaleString('ar-EG')}
+                      </p>
+                      <p className={confirmTarget.inspection.tables_present && confirmTarget.inspection.integrity_ok ? 'text-emerald-600' : 'text-red-600'}>
+                        {confirmTarget.inspection.tables_present && confirmTarget.inspection.integrity_ok
+                          ? 'البنية سليمة والجداول مكتملة ✓'
+                          : 'انتباه: بنية غير مكتملة'}
+                      </p>
+                    </div>
+                  )}
+                  {inspectingWarnings.length > 0 && (
+                    <p className="text-sm text-amber-700">{inspectingWarnings.join(' • ')}</p>
+                  )}
+                  <p className="text-sm font-bold text-amber-700">
+                    تحذير: سيتم استبدال قاعدة البيانات الحالية. تُنشأ نسخة احتياطية تلقائية من بياناتك الحالية قبل الاستيراد، ولا يمكن التراجع بعد اكتمالها.
+                  </p>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={operating}>إلغاء</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={operating}
+                onClick={() => void handleImportConfirmed()}
+                className="bg-amber-600 hover:bg-amber-700"
+              >
+                <ShieldCheck className="w-4 h-4 ml-1" />
+                {operating ? 'جارٍ التحقق...' : 'متابعة وإعادة التشغيل'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }

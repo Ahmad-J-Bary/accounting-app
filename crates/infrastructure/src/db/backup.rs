@@ -626,10 +626,311 @@ pub fn apply_retention(
     Ok(removed)
 }
 
+// ─── Import inspection & validation ────────────────────────────────────────
+
+/// Read-only inspection of a standalone database file the user wants to import.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct DatabaseInspection {
+    pub schema_version: u32,
+    pub supported_version: u32,
+    pub newer_than_supported: bool,
+    pub tables_present: bool,
+    pub missing_tables: Vec<String>,
+    pub integrity_ok: bool,
+    pub company_scope: Option<String>,
+    pub size_bytes: u64,
+    pub journal_entry_count: u64,
+    pub account_count: u64,
+}
+
+/// Result of validating an import candidate on a throwaway copy.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ValidationReport {
+    pub ok: bool,
+    pub errors: Vec<String>,
+    pub warnings: Vec<String>,
+}
+
+impl ValidationReport {
+    fn new() -> Self {
+        ValidationReport { ok: true, errors: Vec::new(), warnings: Vec::new() }
+    }
+}
+
+/// Open a single read-only connection to a standalone SQLite file.
+async fn open_readonly(path: &Path) -> Result<SqlitePool, String> {
+    let url = format!("sqlite:{}?mode=ro", path.to_string_lossy());
+    let opts = SqliteConnectOptions::from_str(&url)
+        .map_err(|e| format!("Invalid sqlite URL: {e}"))?
+        .busy_timeout(std::time::Duration::from_secs(5));
+    SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect_with(opts)
+        .await
+        .map_err(|e| format!("الملف ليس قاعدة بيانات سليمة: {e}"))
+}
+
+/// Read-only metadata about a candidate import file (schema version, tables,
+/// integrity, counts) — never opens the live database.
+pub async fn inspect_database_file(path: &Path) -> Result<DatabaseInspection, String> {
+    if !path.is_file() {
+        return Err("الملف غير موجود".into());
+    }
+    let size_bytes = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+
+    let pool = open_readonly(path).await?;
+
+    let schema_version = sqlx::query_scalar::<_, i64>(
+        "SELECT COALESCE(MAX(version), 0) FROM _sqlx_migrations",
+    )
+    .fetch_one(&pool)
+    .await
+    .map(|v| v.max(0) as u32)
+    .unwrap_or(0);
+
+    let supported_version = crate::db::pool::latest_schema_version();
+
+    let table_q: Vec<String> =
+        sqlx::query_scalar("SELECT name FROM sqlite_master WHERE type = 'table'")
+            .fetch_all(&pool)
+            .await
+            .unwrap_or_default();
+    let missing_tables: Vec<String> = EXPECTED_TABLES
+        .iter()
+        .filter(|t| !table_q.iter().any(|n| n == *t))
+        .map(|t| t.to_string())
+        .collect();
+
+    let integrity_ok = quick_check(&pool).await.is_ok();
+
+    let company_scope: Option<String> = sqlx::query_scalar(
+        "SELECT company_name FROM settings WHERE id = (SELECT id FROM settings LIMIT 1)",
+    )
+    .fetch_optional(&pool)
+    .await
+    .ok()
+    .flatten();
+
+    let journal_entry_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries")
+        .fetch_one(&pool)
+        .await
+        .unwrap_or(0);
+    let account_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM accounts")
+        .fetch_one(&pool)
+        .await
+        .unwrap_or(0);
+
+    pool.close().await;
+
+    Ok(DatabaseInspection {
+        schema_version,
+        supported_version,
+        newer_than_supported: schema_version > supported_version,
+        tables_present: missing_tables.is_empty(),
+        missing_tables,
+        integrity_ok,
+        company_scope,
+        size_bytes,
+        journal_entry_count: journal_entry_count.max(0) as u64,
+        account_count: account_count.max(0) as u64,
+    })
+}
+
+/// SQLite `PRAGMA foreign_key_check` — returns one row per FK violation.
+async fn foreign_key_violations(pool: &SqlitePool) -> Result<Vec<String>, String> {
+    let rows: Vec<(String, i64, String, i64)> =
+        sqlx::query_as("SELECT \"table\", rowid, parent, fkid FROM pragma_foreign_key_check")
+            .fetch_all(pool)
+            .await
+            .map_err(|e| format!("Failed to run foreign_key_check: {e}"))?;
+    // SQLite returns rowid=0 for violations in tables WITHOUT an explicit
+    // INTEGER PRIMARY KEY, so use the parent name + rowid only when meaningful.
+    Ok(rows
+        .iter()
+        .map(|(child, rowid, parent, fkid)| {
+            format!("{child}(rowid {rowid}) → {parent}[fk {fkid}]")
+        })
+        .collect())
+}
+
+/// Posted journal entries whose `debit_base !== credit_base` beyond tolerance.
+async fn unbalanced_posted_entries(pool: &SqlitePool) -> Result<Vec<String>, String> {
+    let rows: Vec<(String, f64)> = sqlx::query_as(
+        "SELECT je.entry_number,
+                COALESCE(SUM(CAST(jl.debit_base AS REAL)), 0)
+              - COALESCE(SUM(CAST(jl.credit_base AS REAL)), 0) AS diff
+         FROM journal_lines jl
+         JOIN journal_entries je ON je.id = jl.journal_entry_id
+         WHERE je.status = 'Posted'
+         GROUP BY je.id
+         HAVING ABS(diff) > 0.01
+         ORDER BY je.entry_number",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| format!("Failed to scan posted entries: {e}"))?;
+    Ok(rows
+        .iter()
+        .map(|(n, d)| format!("{n} (فرق {:.2})", d.abs()))
+        .collect())
+}
+
+/// Trial-balance deviation: Assets − Liabilities − Equity − Revenue + Expenses,
+/// computed on POSTED ledger lines grouped by account type. Should be ~0 for a
+/// self-consistent double-entry ledger.
+async fn accounting_equation_deviation(pool: &SqlitePool) -> Result<f64, String> {
+    let rows: Vec<(String, f64)> = sqlx::query_as(
+        "SELECT a.account_type,
+                COALESCE(SUM(CAST(jl.debit_base AS REAL)), 0)
+              - COALESCE(SUM(CAST(jl.credit_base AS REAL)), 0) AS net
+         FROM journal_lines jl
+         JOIN journal_entries je ON je.id = jl.journal_entry_id
+         JOIN accounts a ON a.id = jl.account_id
+         WHERE je.status = 'Posted'
+         GROUP BY a.account_type",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| format!("Failed to compute balance-sheet deviation: {e}"))?;
+
+    let mut assets = 0f64;
+    let mut liabilities = 0f64;
+    let mut equity = 0f64;
+    let mut revenue = 0f64;
+    let mut expenses = 0f64;
+    for (ty, net) in &rows {
+        match ty.as_str() {
+            "Assets" => assets += net,
+            "Liabilities" => liabilities += net,
+            "Equity" => equity += net,
+            "Revenue" => revenue += net,
+            "Expenses" => expenses += net,
+            _ => {}
+        }
+    }
+    // Assets + Expenses should equal Liabilities + Equity + Revenue.
+    Ok(assets + expenses - liabilities - equity - revenue)
+}
+
+/// Validate an import/restore candidate WITHOUT touching the live database:
+/// copies it to a temp file, applies migrations if supported (upgrading older
+/// schema DBs), then checks integrity, foreign keys and accounting balance.
+/// On failure the report is returned and nothing has been changed.
+pub async fn validate_import_candidate(path: &Path) -> Result<ValidationReport, String> {
+    if !path.is_file() {
+        return Err("الملف غير موجود".into());
+    }
+    let mut report = ValidationReport::new();
+
+    // Work on a private copy so a failed migration/validation harms nothing.
+    let tmp = std::env::temp_dir().join(format!(
+        "erp_validate_{}_{}.sqlite",
+        chrono::Local::now().format("%Y%m%d_%H%M%S"),
+        uuid::Uuid::new_v4()
+    ));
+    let _ = std::fs::remove_file(&tmp);
+    std::fs::copy(path, &tmp).map_err(|e| format!("Failed to copy candidate: {e}"))?;
+
+    // 1) Open read-write and run migrations (applies older → supported schema).
+    let url = format!("sqlite:{}?mode=rwc", tmp.to_string_lossy());
+    let opts = SqliteConnectOptions::from_str(&url)
+        .map_err(|e| format!("Invalid sqlite URL: {e}"))?
+        .busy_timeout(std::time::Duration::from_secs(10))
+        .foreign_keys(true);
+    let pool = match SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect_with(opts)
+        .await
+    {
+        Ok(p) => p,
+        Err(e) => {
+            let _ = std::fs::remove_file(&tmp);
+            return Err(format!("الملف ليس قاعدة بيانات سليمة: {e}"));
+        }
+    };
+
+    if let Err(e) = crate::db::pool::run_migrations(&pool).await {
+        report.errors.push(format!("فشل تطبيق ترقيات قاعدة البيانات: {e}"));
+        report.ok = false;
+    }
+
+    // 2) Full integrity check.
+    match integrity_check(&pool).await {
+        Ok(()) => {}
+        Err(e) => {
+            report.errors.push(format!("فشل فحص سلامة قاعدة البيانات: {e}"));
+            report.ok = false;
+        }
+    }
+
+    // 3) Foreign keys.
+    match foreign_key_violations(&pool).await {
+        Ok(v) if !v.is_empty() => {
+            report
+                .errors
+                .push(format!("انتهاكات علاقات (Foreign Key): {}", v.join("، ")));
+            report.ok = false;
+        }
+        Ok(_) => {}
+        Err(e) => {
+            report.errors.push(e);
+            report.ok = false;
+        }
+    }
+
+    // 4) Per-entry balance gate on posted journals.
+    match unbalanced_posted_entries(&pool).await {
+        Ok(v) if !v.is_empty() => {
+            report.errors.push(format!(
+                "قيود مرحلة غير متوازنة (مدين ≠ دائن): {}",
+                v.join("، ")
+            ));
+            report.ok = false;
+        }
+        Ok(_) => {}
+        Err(e) => {
+            report.errors.push(e);
+            report.ok = false;
+        }
+    }
+
+    // 5) Balance-sheet equation — reported as a warning, not a gate.
+    match accounting_equation_deviation(&pool).await {
+        Ok(d) if d.abs() > 1.0 => {
+            report.warnings.push(format!(
+                "انحراف معادلة الميزانية (الأصول ≠ الخصوم + حقوق الملكية + صافي الدخل): {:.2}",
+                d
+            ));
+        }
+        Ok(_) => {}
+        Err(e) => report.warnings.push(e),
+    }
+
+    pool.close().await;
+    let _ = std::fs::remove_file(&tmp);
+
+    // Make sure we never mark a newer-than-supported DB as importable.
+    if report.ok {
+        let inspection = inspect_database_file(path).await?;
+        if inspection.newer_than_supported {
+            report.errors.push(format!(
+                "إصدار قاعدة البيانات ({}) أحدث مما يدعمه التطبيق ({}).",
+                inspection.schema_version, inspection.supported_version
+            ));
+            report.ok = false;
+        }
+    }
+
+    Ok(report)
+}
+
 // ─── Restore ───────────────────────────────────────────────────────────────
 
 /// Copy a standalone SQLite snapshot over the live DB path, deleting any stale
 /// WAL/SHM side files. Only call this while NO connections are open.
+///
+/// The previous DB is retained at `<db>.pre_restore` until post-swap validation
+/// passes (see [`rollback_restore`]); the caller decides when to discard it.
 pub fn replace_db_file(db_path: &Path, source: &Path) -> Result<(), String> {
     if !source.exists() {
         return Err("Restore source file does not exist".into());
@@ -642,14 +943,39 @@ pub fn replace_db_file(db_path: &Path, source: &Path) -> Result<(), String> {
     let shm = format!("{}-shm", db_path.to_string_lossy());
     let _ = std::fs::remove_file(&wal);
     let _ = std::fs::remove_file(&shm);
+    let _ = std::fs::remove_file(db_path.with_extension("db.pre_restore"));
 
     if db_path.exists() {
         std::fs::rename(db_path, db_path.with_extension("db.pre_restore"))
             .map_err(|e| format!("Failed to move current DB aside: {e}"))?;
     }
     std::fs::rename(&tmp, db_path).map_err(|e| format!("Failed to install restored DB: {e}"))?;
-    let _ = std::fs::remove_file(db_path.with_extension("db.pre_restore"));
     Ok(())
+}
+
+/// Roll an applied-but-rejected restore back to the DB state that existed before
+/// the swap (`<db>.pre_restore`). The rejected import is preserved at
+/// `<db>.rejected` for inspection. Only call while NO connections are open.
+///
+/// Returns `true` when a rollback actually happened.
+pub fn rollback_restore(db_path: &Path) -> Result<bool, String> {
+    let old = db_path.with_extension("db.pre_restore");
+    if !old.exists() {
+        return Ok(false);
+    }
+    // Preserve the failed import for forensic inspection.
+    let rejected = db_path.with_extension("db.rejected");
+    let _ = std::fs::remove_file(&rejected);
+    if db_path.exists() {
+        std::fs::rename(db_path, &rejected)
+            .map_err(|e| format!("Failed to preserve rejected DB: {e}"))?;
+    }
+    let wal = format!("{}-wal", db_path.to_string_lossy());
+    let shm = format!("{}-shm", db_path.to_string_lossy());
+    let _ = std::fs::remove_file(&wal);
+    let _ = std::fs::remove_file(&shm);
+    std::fs::rename(&old, db_path).map_err(|e| format!("Failed to restore previous DB: {e}"))?;
+    Ok(true)
 }
 
 /// Marker file name used to scope a pending restore.
