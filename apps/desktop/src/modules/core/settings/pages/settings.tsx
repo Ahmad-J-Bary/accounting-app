@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Building, FileText, DollarSign, Palette, ChevronDown, ChevronUp, Table2, PanelRightOpen, Settings as SettingsIcon, Globe, ShieldCheck, Sliders, FileDown } from "lucide-react";
+import { Building, FileText, DollarSign, Palette, ChevronDown, ChevronUp, Table2, PanelRightOpen, Settings as SettingsIcon, Globe, ShieldCheck, Sliders, FileDown, Database } from "lucide-react";
 import { settingsService } from '@modules/core/api/settingsService';
 import type { CompanySettings as CompanySettingsType } from "@erp/shared-types";
 import { cn } from "@shared/lib/utils";
@@ -18,6 +18,7 @@ import { WarehouseSettings } from "../components/WarehouseSettings";
 import { AppearanceSettings } from "../components/AppearanceSettings";
 import { LocalizationSettings } from "../components/LocalizationSettings";
 import { ExportSettings } from "../components/ExportSettings";
+import { DataBackupSection } from "@modules/core/backups/components/DataBackupSection";
 
 import { SettingsLayout } from "@widgets/templates/SettingsLayout";
 
@@ -73,6 +74,7 @@ export default function Settings() {
     { id: "warehouses", label: "المستودعات", icon: Building },
     { id: "localization", label: "اللغة والمنطقة", icon: Globe },
     { id: "export", label: "إعدادات التصدير", icon: FileDown },
+    { id: "backups", label: "البيانات والنسخ الاحتياطية", icon: Database },
     { id: "security", label: "الأمان والوصول", icon: ShieldCheck },
     { id: "about", label: "حول التطبيق", icon: SettingsIcon },
   ];
@@ -114,6 +116,8 @@ export default function Settings() {
         return <LocalizationSettings settings={settings} onChange={handleChange} />;
       case "export":
         return <ExportSettings />;
+      case "backups":
+        return <DataBackupSection />;
       case "security":
         break;
       default:

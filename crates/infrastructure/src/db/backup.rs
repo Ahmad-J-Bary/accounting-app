@@ -641,6 +641,10 @@ pub struct DatabaseInspection {
     pub size_bytes: u64,
     pub journal_entry_count: u64,
     pub account_count: u64,
+    /// Filesystem creation time (unix seconds) — `None` when unavailable.
+    pub created_at: Option<i64>,
+    /// Filesystem last-modified time (unix seconds) — `None` when unavailable.
+    pub modified_at: Option<i64>,
 }
 
 /// Result of validating an import candidate on a throwaway copy.
@@ -676,7 +680,10 @@ pub async fn inspect_database_file(path: &Path) -> Result<DatabaseInspection, St
     if !path.is_file() {
         return Err("الملف غير موجود".into());
     }
-    let size_bytes = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+    let metadata = std::fs::metadata(path).map_err(|e| format!("فشل قراءة معلومات الملف: {e}"))?;
+    let size_bytes = metadata.len();
+    let created_at = metadata.created().ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_secs() as i64);
+    let modified_at = metadata.modified().ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_secs() as i64);
 
     let pool = open_readonly(path).await?;
 
@@ -731,6 +738,8 @@ pub async fn inspect_database_file(path: &Path) -> Result<DatabaseInspection, St
         integrity_ok,
         company_scope,
         size_bytes,
+        created_at,
+        modified_at,
         journal_entry_count: journal_entry_count.max(0) as u64,
         account_count: account_count.max(0) as u64,
     })

@@ -369,6 +369,8 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::backup::pending_restore_status,
             commands::backup::cancel_pending_restore,
             commands::backup::delete_backup_file,
+            commands::backup::copy_backup_file,
+            commands::backup::get_database_info,
             commands::backup::request_app_restart,
             commands::backup::get_database_health,
             // Opening balance migration

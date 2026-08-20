@@ -1,4 +1,5 @@
 ﻿import type { ReactElement } from 'react';
+import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useCompanyTypeSettings, useCompanyInitState } from '@shared/hooks';
 import {
@@ -44,7 +45,6 @@ import PartnerProfitShareReport from '@modules/reports/pages/PartnerProfitShareR
 import PartnerStatementReport from '@modules/reports/pages/PartnerStatementReport';
 import FiscalPeriodsPage from '@modules/accounting/fiscal-periods/pages/FiscalPeriodsPage';
 import ProfitDistributionPage from '@modules/accounting/profit-distribution/pages/ProfitDistributionPage';
-import BackupsPage from '@modules/core/backups/pages/backups';
 
 // While an EXISTING company is still in its opening workflow
 // (before OPENING_LOCKED), daily-log transactional pages are blocked and
@@ -63,9 +63,24 @@ function OpeningTransactionGate({ children }: { children: ReactElement }) {
   return children;
 }
 
+// The backups UI now lives in the Settings section. Keep the old route alive
+// as a redirect that opens the "backups" settings tab.
+function RedirectToBackupsSettings() {
+  useEffect(() => {
+    localStorage.setItem("erp_settings_active_nav", "backups");
+  }, []);
+  return <Navigate to="/settings" replace />;
+}
+
 export function ErpRoutes({ location }: { location?: string | Partial<Location> }) {
   return (
     <Routes location={location}>
+      <Route
+        path="/backups"
+        element={
+          <RedirectToBackupsSettings />
+        }
+      />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/partners" element={<Partners />} />
       <Route path="/accounting" element={<Accounting />} />
@@ -116,7 +131,6 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/adjustments" element={<OpeningTransactionGate><Adjustments /></OpeningTransactionGate>} />
       <Route path="/users" element={<Users />} />
       <Route path="/settings" element={<Settings />} />
-      <Route path="/backups" element={<BackupsPage />} />
       <Route path="/audit-log" element={<AuditLog />} />
       <Route path="/fixed-assets" element={<FixedAssets />} />
       <Route path="/currencies" element={<Navigate to="/settings" replace />} />

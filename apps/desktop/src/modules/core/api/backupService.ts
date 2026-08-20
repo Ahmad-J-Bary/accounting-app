@@ -1,4 +1,5 @@
 import { invoke } from '@shared/lib/invoke';
+import { listen } from '@tauri-apps/api/event';
 
 export interface BackupFileInfo {
   name: string;
@@ -27,6 +28,18 @@ export interface BackupConfig {
   last_restore_status: string | null;
 }
 
+export interface DatabaseInfo {
+  db_path: string;
+  db_size_bytes: number;
+  schema_version: number;
+  company_name: string | null;
+  journal_entry_count: number;
+  account_count: number;
+  last_auto_backup: string | null;
+  last_restore_status: string | null;
+  auto_backup_enabled: boolean;
+}
+
 export interface DatabaseInspection {
   schema_version: number;
   supported_version: number;
@@ -38,6 +51,8 @@ export interface DatabaseInspection {
   size_bytes: number;
   journal_entry_count: number;
   account_count: number;
+  created_at: number | null;
+  modified_at: number | null;
 }
 
 export interface ValidationReport {
@@ -54,6 +69,12 @@ export interface PendingRestoreInfo {
 
 export type BackupType = 'manual' | 'auto' | 'pre_import';
 
+export type BackupProgressPhase = 'creating' | 'verifying' | 'completed' | 'failed';
+
+export interface BackupProgressEvent {
+  phase: BackupProgressPhase;
+}
+
 export const backupService = {
   async backupNow(): Promise<BackupFileInfo> {
     return await invoke<BackupFileInfo>('backup_database_now');
@@ -63,6 +84,9 @@ export const backupService = {
   },
   async getConfig(): Promise<BackupConfig> {
     return await invoke<BackupConfig>('get_backup_config');
+  },
+  async getDatabaseInfo(): Promise<DatabaseInfo> {
+    return await invoke<DatabaseInfo>('get_database_info');
   },
   async setConfig(partial: {
     use_same_location?: boolean;
@@ -94,6 +118,9 @@ export const backupService = {
   async deleteFileBackup(fileName: string): Promise<void> {
     return await invoke<void>('delete_backup_file', { file_name: fileName });
   },
+  async copyFileBackup(fileName: string, destPath: string): Promise<void> {
+    return await invoke<void>('copy_backup_file', { file_name: fileName, destPath });
+  },
   async getPendingRestore(): Promise<PendingRestoreInfo | null> {
     return await invoke<PendingRestoreInfo | null>('pending_restore_status');
   },
@@ -105,5 +132,8 @@ export const backupService = {
   },
   async getHealth(): Promise<{ status: 'ok' | 'error'; message?: string }> {
     return await invoke<{ status: 'ok' | 'error'; message?: string }>('get_database_health');
+  },
+  async listenBackupProgress(cb: (e: BackupProgressEvent) => void): Promise<() => void> {
+    return await listen<BackupProgressEvent>('backup-progress', (event) => cb(event.payload));
   },
 };

@@ -1,10 +1,31 @@
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use std::path::{Path, PathBuf};
 
 use crate::bootstrap::container::AppState;
 use infrastructure::db::backup::{
     self, BackupFileInfo, BackupType, DatabaseInspection, PendingRestore, RetentionPolicy,
 };
+
+/// Progress payload emitted as the `backup-progress` event during a manual backup.
+#[derive(Clone, serde::Serialize)]
+struct BackupProgress {
+    phase: &'static str,
+}
+
+impl BackupProgress {
+    fn creating() -> Self {
+        BackupProgress { phase: "creating" }
+    }
+    fn verifying() -> Self {
+        BackupProgress { phase: "verifying" }
+    }
+    fn completed() -> Self {
+        BackupProgress { phase: "completed" }
+    }
+    fn failed() -> Self {
+        BackupProgress { phase: "failed" }
+    }
+}
 
 /// Resolve the live DB path (mirrors setup logic in lib.rs).
 fn resolve_db_path(app: &AppHandle) -> Result<PathBuf, String> {
@@ -65,13 +86,18 @@ async fn create_typed_backup(
     let filename = backup::next_backup_filename(&backup_dir, backup::BACKUP_PREFIX)?;
     let dest = backup_dir.join(&filename);
 
+    let _ = app.emit("backup-progress", BackupProgress::creating());
+
     backup::create_snapshot(&state.pool, &dest).await?;
+
+    let _ = app.emit("backup-progress", BackupProgress::verifying());
 
     // Verify BEFORE declaring success — never trust fs success alone.
     let verification = match backup::verify_backup(&dest, full_verify).await {
         Ok(v) if v.full_ok() => v,
         Ok(v) => {
             let _ = std::fs::remove_file(&dest);
+            let _ = app.emit("backup-progress", BackupProgress::failed());
             let reason = if v.integrity_ok {
                 format!("Missing tables: {}", v.missing_tables.join(", "))
             } else {
@@ -81,6 +107,7 @@ async fn create_typed_backup(
         }
         Err(e) => {
             let _ = std::fs::remove_file(&dest);
+            let _ = app.emit("backup-progress", BackupProgress::failed());
             return Err(format!("فشل التحقق من النسخة الاحتياطية: {e}"));
         }
     };
@@ -88,6 +115,8 @@ async fn create_typed_backup(
     let meta = backup::build_meta(&state.pool, &filename, &dest, backup_type, &verification).await;
     backup::save_sidecar(&backup_dir, &meta)
         .map_err(|e| format!("فشل حفظ بيانات النسخة الاحتياطية: {e}"))?;
+
+    let _ = app.emit("backup-progress", BackupProgress::completed());
 
     Ok(BackupFileInfo {
         label: filename
@@ -422,5 +451,85 @@ pub async fn delete_backup_file(
     }
     std::fs::remove_file(&path).map_err(|e| format!("Failed to delete backup: {e}"))?;
     let _ = std::fs::remove_file(backup::sidecar_path(&backup_dir, &file_name));
+    Ok(())
+}
+
+/// Metadata about the live database for the "Database Information" panel.
+#[tauri::command]
+pub async fn get_database_info(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
+    let db_path = resolve_db_path(&app)?;
+    let db_size_bytes =
+        std::fs::metadata(&db_path).map(|m| m.len()).unwrap_or(0);
+
+    let schema_version = backup::get_schema_version(&state.pool).await;
+    let company_name = backup::company_scope(&state.pool).await;
+
+    let journal_entry_count: i64 =
+        infrastructure::sqlx::query_scalar("SELECT COUNT(*) FROM journal_entries")
+            .fetch_one(&*state.pool)
+            .await
+            .unwrap_or(0);
+    let account_count: i64 =
+        infrastructure::sqlx::query_scalar("SELECT COUNT(*) FROM accounts")
+            .fetch_one(&*state.pool)
+            .await
+            .unwrap_or(0);
+
+    let last_auto_backup = backup::get_config(&state.pool, "backup_last_auto").await?;
+    let last_restore_status =
+        backup::get_config(&state.pool, "backup_last_restore_status").await?;
+    let auto_backup_enabled = backup::get_config(&state.pool, "backup_auto_enabled")
+        .await
+        .map(|v| v.map(|s| s == "true").unwrap_or(true))?;
+
+    Ok(serde_json::json!({
+        "db_path": db_path.to_string_lossy(),
+        "db_size_bytes": db_size_bytes,
+        "schema_version": schema_version,
+        "company_name": company_name,
+        "journal_entry_count": journal_entry_count.max(0),
+        "account_count": account_count.max(0),
+        "last_auto_backup": last_auto_backup,
+        "last_restore_status": last_restore_status,
+        "auto_backup_enabled": auto_backup_enabled,
+    }))
+}
+
+/// Copy an existing backup file to a user-chosen destination (portable copy).
+#[tauri::command]
+pub async fn copy_backup_file(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    file_name: String,
+    dest_path: String,
+) -> Result<(), String> {
+    if file_name.contains("..") || file_name.contains('/') || file_name.contains('\\') {
+        return Err("Invalid backup file name".into());
+    }
+    if !backup::is_backup_name(&file_name) || !file_name.ends_with(".sqlite") {
+        return Err("Invalid backup file name".into());
+    }
+    if dest_path.trim().is_empty() {
+        return Err("الوجهة غير صحيحة".into());
+    }
+    let backup_dir = resolve_backup_dir(&app, &state).await?;
+    let source = backup_dir.join(&file_name);
+    if !source.exists() {
+        return Err("ملف النسخة الاحتياطية غير موجود".into());
+    }
+    let dest = PathBuf::from(&dest_path);
+    std::fs::create_dir_all(dest.parent().unwrap_or(&dest)).map_err(|e| format!("Failed to prepare destination: {e}"))?;
+    std::fs::copy(&source, &dest).map_err(|e| format!("فشل نسخ الملف: {e}"))?;
+
+    // Verify the copy actually matches the source before reporting success.
+    let src_sha = backup::file_sha256(&source)?;
+    let dst_sha = backup::file_sha256(&dest)?;
+    if src_sha != dst_sha {
+        let _ = std::fs::remove_file(&dest);
+        return Err("فشل التحقق من الملف المنسوخ".into());
+    }
     Ok(())
 }

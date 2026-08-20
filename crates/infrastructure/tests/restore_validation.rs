@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use infrastructure::db::backup::validate_import_candidate;
+use infrastructure::db::backup::{inspect_database_file, validate_import_candidate};
 use infrastructure::db::pool::run_migrations;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
@@ -97,6 +97,23 @@ async fn balanced_import_candidate_passes() {
     let _ = std::fs::remove_file(&candidate);
     assert!(report.ok, "expected OK, got: {:?}", report.errors);
     assert!(report.errors.is_empty(), "expected no errors, got {:?}", report.errors);
+}
+
+#[tokio::test]
+async fn inspection_reports_file_timestamps() {
+    let (candidate, pool) = build_candidate("imp_ts", &balanced_lines()).await;
+    let inspection = inspect_database_file(&candidate).await.unwrap();
+    pool.close().await;
+    let _ = std::fs::remove_file(&candidate);
+    assert!(
+        inspection.created_at.is_some(),
+        "expected filesystem created_at to be available on Windows"
+    );
+    assert!(
+        inspection.modified_at.is_some(),
+        "expected filesystem modified_at to be available"
+    );
+    assert!(inspection.size_bytes > 0, "expected a non-zero file size");
 }
 
 #[tokio::test]
