@@ -1,3 +1,4 @@
+import { publishSettingsUpdated } from "@shared/hooks/settingsEvents";
 import { Building, Globe, Mail, Phone, MapPin, Save } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@shared/ui/input";
@@ -56,7 +57,7 @@ export function CompanySettings({ settings, onChange }: CompanySettingsProps) {
         numeral_system: settings.numeral_system || "western",
         accounting_start_mode: settings.accounting_start_mode ?? COMPANY_TYPE_EXISTING,
       });
-      window.dispatchEvent(new CustomEvent("erp:settings-updated"));
+      publishSettingsUpdated();
       toast.success("تم الحفظ", { description: "تم حفظ بيانات الشركة بنجاح" });
     } catch (e) {
       toast.error("خطأ في الحفظ", { description: String(e) });

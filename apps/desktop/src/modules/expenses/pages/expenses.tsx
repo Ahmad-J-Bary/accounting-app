@@ -21,7 +21,7 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
 import { executeExport, buildCurrencySummary, applyVisibilityToCurrencyCols, currencyAmountCols } from "@shared/lib/excel";
 import type { ExcelExportColumn } from "@shared/lib/excel";
-import { QUERY_KEYS } from "@shared/hooks/queryClient";
+import { QUERY_KEYS, PAYMENT_RECEIPT_KEYS, invalidateKeys, queryClient } from "@shared/hooks/queryClient";
 import { toast } from "sonner";
 
 // The "مصاريف أخرى" parent account ID in the chart of accounts
@@ -93,6 +93,7 @@ export default function Expenses() {
     try {
       setVoucherSaving(true);
       await paymentService.createPayment(payload);
+      await invalidateKeys(queryClient, PAYMENT_RECEIPT_KEYS);
       await refresh(true);
       toast.success("تم تسجيل سند الصرف بنجاح");
       setIsVoucherOpen(false);

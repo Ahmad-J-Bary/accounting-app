@@ -61,6 +61,28 @@ export function DataBackupSection() {
     void load();
   }, [load]);
 
+  // Live restore-rejected signal: the backend rolled back an applied restore
+  // after post-swap validation. Refresh the config so the rollback banner and
+  // restore history reflect reality, and surface the reason to the user.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    backupService
+      .listenRestoreRejected((message) => {
+        toast.error(
+          message
+            ? `تم رفض البيانات المستوردة بعد الفحص وتم التراجع تلقائيًا: ${message}`
+            : "تم رفض البيانات المستوردة بعد الفحص وتم التراجع تلقائيًا.",
+        );
+        void load(true);
+      })
+      .then((fn) => {
+        unlisten = fn;
+      });
+    return () => {
+      unlisten?.();
+    };
+  }, [load]);
+
   const handleConfigChange = async (patch: Partial<BackupConfig>) => {
     try {
       const saved = await backupService.setConfig({

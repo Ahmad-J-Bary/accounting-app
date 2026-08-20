@@ -8,7 +8,7 @@ import { SectionCard } from "@shared/ui/section-card";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { fmtMoney } from "@shared/lib/format";
 import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
-import { invalidateAccountingMutationQueries, QUERY_KEYS } from "@shared/hooks/queryClient";
+import { PROFIT_DISTRIBUTION_KEYS, invalidateKeys, QUERY_KEYS } from "@shared/hooks/queryClient";
 import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
 import {
   openingBalanceService,
@@ -82,7 +82,7 @@ export function ProfitDistributionWorkflow({
     onSuccess: async (res) => {
       setPostedResult(res);
       toast.success(`تم توزيع الأرباح على الشركاء — ${res.entry_number}`);
-      await invalidateAccountingMutationQueries(qc);
+      await invalidateKeys(qc, PROFIT_DISTRIBUTION_KEYS);
       await refetchDistributable();
     },
     onError: (e) => {

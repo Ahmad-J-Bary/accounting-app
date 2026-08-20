@@ -7,5 +7,6 @@ export function useWarehouses() {
   return useQuery<WarehouseDto[]>({
     queryKey: QUERY_KEYS.warehouses,
     queryFn: () => warehouseService.list(),
+    staleTime: 60_000,
   });
 }

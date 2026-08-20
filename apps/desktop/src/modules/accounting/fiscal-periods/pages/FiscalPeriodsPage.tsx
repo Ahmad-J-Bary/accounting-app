@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { invalidateAccountingMutationQueries, QUERY_KEYS } from "@shared/hooks/queryClient";
+import { FISCAL_MUTATION_KEYS, invalidateKeys, QUERY_KEYS } from "@shared/hooks/queryClient";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { toLocalDateStr } from "@shared/lib/format";
@@ -51,8 +51,7 @@ export default function FiscalPeriodsPage() {
   });
 
   const invalidate = useCallback(() => {
-    qc.invalidateQueries({ queryKey: QUERY_KEYS.fiscalPeriods });
-    invalidateAccountingMutationQueries(qc);
+    void invalidateKeys(qc, FISCAL_MUTATION_KEYS);
   }, [qc]);
 
   const create = useMutation({

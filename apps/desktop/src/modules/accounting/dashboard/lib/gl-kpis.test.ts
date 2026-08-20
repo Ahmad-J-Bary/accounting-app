@@ -45,7 +45,34 @@ const makeEntry = (overrides: Partial<JournalEntryDto>): JournalEntryDto => ({
 const entry = (lines: JournalLineDto[], overrides: Partial<JournalEntryDto> = {}) =>
   makeEntry({ lines, ...overrides });
 
+const june_15_2026 = new Date(2026, 5, 15).getTime();
+const june_30_2026 = new Date(2026, 5, 30, 23, 59, 59, 999).getTime();
+const july_15_2026 = new Date(2026, 6, 15).getTime();
+
 describe("computeDashboardKpis (GL-driven tiles)", () => {
+  it("filters the tiles and monthly series to the given period range", () => {
+    const before = entry(
+      [makeLine("receivable", "Assets", 100, 0), makeLine(undefined, "Revenue", 0, 500)],
+      { entry_date: new Date(2026, 4, 1).toISOString() },
+    );
+    const june = entry(
+      [makeLine("receivable", "Assets", 200, 0), makeLine(undefined, "Revenue", 0, 300)],
+      { entry_date: "2026-06-15" },
+    );
+    const after = entry(
+      [makeLine("receivable", "Assets", 50, 0), makeLine(undefined, "Revenue", 0, 700)],
+      { entry_date: new Date(2026, 6, 15).toISOString() },
+    );
+
+    const kpis = computeDashboardKpis([before, june, after], {
+      fromTs: june_15_2026,
+      toTs: june_30_2026,
+    });
+
+    expect(kpis.receivables).toBe(200);
+    expect(kpis.sales).toBe(300);
+    expect(kpis.monthly).toEqual([{ yearMonth: "2026-06", revenue: 300, expenses: 0 }]);
+  });
   it("computes sales from credit-normal Revenue flows only", () => {
     const kpis = computeDashboardKpis([
       entry([

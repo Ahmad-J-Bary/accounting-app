@@ -30,7 +30,7 @@ import {
 } from "../lib/invoiceUtils";
 import { useDocumentFinancials } from "../lib/useDocumentFinancials";
 import { type DocumentColumn } from "@widgets/document-shell/GenericDocumentGrid";
-import { invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
+import { SALE_KEYS, PURCHASE_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 
 export interface InvoiceHeaderState {
   id?: string;
@@ -566,11 +566,11 @@ export function useInvoiceLifecycle({
 
       if (andPost) {
         await invoiceService.postInvoice(result.id);
-        await invalidateAccountingMutationQueries(queryClient);
+        await invalidateKeys(queryClient, invoiceType === "Sales" ? SALE_KEYS : PURCHASE_KEYS);
         toast.success("تم الحفظ والترحيل بنجاح");
       } else {
         toast.success("تم حفظ المسودة");
-        await invalidateAccountingMutationQueries(queryClient);
+        await invalidateKeys(queryClient, invoiceType === "Sales" ? SALE_KEYS : PURCHASE_KEYS);
       }
 
       const listTabId =
@@ -594,7 +594,7 @@ export function useInvoiceLifecycle({
     setSaving(true);
     try {
       await invoiceService.reopenInvoice(headerState.id);
-      await invalidateAccountingMutationQueries(queryClient);
+      await invalidateKeys(queryClient, invoiceType === "Sales" ? SALE_KEYS : PURCHASE_KEYS);
       toast.success("تم إلغاء الترحيل بنجاح. الفاتورة الآن مسودة.");
       setHeaderState((s) => ({ ...s, status: "Draft" }));
       const invoicePath = invoiceType === "Sales"

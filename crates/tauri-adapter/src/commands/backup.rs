@@ -6,7 +6,8 @@ use infrastructure::db::backup::{
     self, BackupFileInfo, BackupType, DatabaseInspection, PendingRestore, RetentionPolicy,
 };
 
-/// Progress payload emitted as the `backup-progress` event during a manual backup.
+/// Progress payload emitted as the `backup-progress` event during a manual
+/// backup, an export, or the safety-snapshot/validation stages of a restore.
 #[derive(Clone, serde::Serialize)]
 struct BackupProgress {
     phase: &'static str,
@@ -18,6 +19,21 @@ impl BackupProgress {
     }
     fn verifying() -> Self {
         BackupProgress { phase: "verifying" }
+    }
+    fn exporting() -> Self {
+        BackupProgress { phase: "exporting" }
+    }
+    fn snapshotting_original() -> Self {
+        BackupProgress { phase: "snapshotting_original" }
+    }
+    fn validating() -> Self {
+        BackupProgress { phase: "validating" }
+    }
+    fn copying() -> Self {
+        BackupProgress { phase: "copying" }
+    }
+    fn staged() -> Self {
+        BackupProgress { phase: "staged" }
     }
     fn completed() -> Self {
         BackupProgress { phase: "completed" }
@@ -269,6 +285,7 @@ async fn apply_retention_impl(
 /// Export the live DB to a standalone snapshot file (`VACUUM INTO`).
 #[tauri::command]
 pub async fn export_database(
+    app: AppHandle,
     state: State<'_, AppState>,
     dest_path: String,
 ) -> Result<(), String> {
@@ -278,17 +295,31 @@ pub async fn export_database(
     {
         return Err("فشل التصدير: يجب أن يكون الملف بصيغة .sqlite أو .db".into());
     }
-    backup::create_snapshot(&state.pool, dest).await
+    let _ = app.emit("backup-progress", BackupProgress::exporting());
+    if let Err(e) = backup::create_snapshot(&state.pool, dest).await {
+        let _ = app.emit("backup-progress", BackupProgress::failed());
+        return Err(e);
+    }
+    let _ = app.emit("backup-progress", BackupProgress::completed());
+    Ok(())
 }
 
 /// Export the live DB to a byte array (used by the frontend to save anywhere).
 #[tauri::command]
-pub async fn export_database_to_bytes(state: State<'_, AppState>) -> Result<Vec<u8>, String> {
+pub async fn export_database_to_bytes(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<Vec<u8>, String> {
+    let _ = app.emit("backup-progress", BackupProgress::exporting());
     let filename = backup::backup_filename(backup::EXPORT_PREFIX);
     let tmp = std::env::temp_dir().join(filename);
-    backup::create_snapshot(&state.pool, &tmp).await?;
+    if let Err(e) = backup::create_snapshot(&state.pool, &tmp).await {
+        let _ = app.emit("backup-progress", BackupProgress::failed());
+        return Err(e);
+    }
     let bytes = std::fs::read(&tmp).map_err(|e| format!("Failed to read snapshot: {e}"))?;
     let _ = std::fs::remove_file(&tmp);
+    let _ = app.emit("backup-progress", BackupProgress::completed());
     Ok(bytes)
 }
 
@@ -321,11 +352,14 @@ async fn stage_restore(
     source_label: &str,
 ) -> Result<serde_json::Value, String> {
     // 1) Safety snapshot of the CURRENT DB first (untrimmed by retention).
+    let _ = app.emit("backup-progress", BackupProgress::snapshotting_original());
     let pre = create_typed_backup(app, state, BackupType::PreImport, false).await?;
 
     // 2) Validate the candidate on a throwaway copy — reject before staging.
+    let _ = app.emit("backup-progress", BackupProgress::validating());
     let report = backup::validate_import_candidate(source).await?;
     if !report.ok {
+        let _ = app.emit("backup-progress", BackupProgress::failed());
         return Err(format!(
             "رُفض الاستيراد — والنسخة الاحتياطية التلقائية محفوظة: {}",
             report.errors.join(" | ")
@@ -333,6 +367,7 @@ async fn stage_restore(
     }
 
     // 3) Copy the validated file and write the restart marker.
+    let _ = app.emit("backup-progress", BackupProgress::copying());
     let data_dir = resolve_data_dir(app)?;
     let pending = data_dir.join("erp.pending.sqlite");
     let _ = std::fs::remove_file(&pending);
@@ -345,6 +380,8 @@ async fn stage_restore(
         created_at: chrono::Local::now().to_rfc3339(),
     };
     backup::write_pending_marker(&data_dir, &marker)?;
+
+    let _ = app.emit("backup-progress", BackupProgress::staged());
 
     Ok(serde_json::json!({
         "pending": marker.pending_db,

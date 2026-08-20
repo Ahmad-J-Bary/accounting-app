@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { useChartOfAccounts } from "@shared/hooks/queries/useAccountQueries";
-import { DateRangePicker } from "@widgets/reports";
+import { ReportFilterBar } from "@widgets/reports/ReportFilterBar";
 import { useReportFilters } from "@shared/hooks/useReportFilters";
 import { useAccountMovementsReport } from "../hooks/useAccountMovementsReport";
 import { AccountMovementView } from "../components/AccountMovementView";
@@ -26,7 +26,7 @@ export default function AccountMovementsReport() {
     return getDescendantIds(selectedAccountId, accounts);
   }, [selectedAccountId, accounts]);
 
-  const { loading, reportData } = useAccountMovementsReport(accountIds, filters);
+  const { loading, refreshing, lastLoadedAt, reportData, loadReportData } = useAccountMovementsReport(accountIds, filters);
 
   const symbol = baseCurrency?.symbol || baseCurrency?.code || "";
 
@@ -48,14 +48,14 @@ export default function AccountMovementsReport() {
         </Select>
       }
       toolbar={
-        <div className="flex items-center gap-2 flex-wrap">
-          <DateRangePicker
-            from={filters.from_date}
-            to={filters.to_date}
-            onFromChange={(v) => setFilters({ from_date: v })}
-            onToChange={(v) => setFilters({ to_date: v })}
-          />
-        </div>
+        <ReportFilterBar
+          filters={filters}
+          onFiltersChange={setFilters}
+          showCurrencySelect={false}
+          refreshing={refreshing}
+          onRefresh={() => void loadReportData()}
+          lastLoadedAt={lastLoadedAt}
+        />
       }
       tableContent={
         <AccountMovementView

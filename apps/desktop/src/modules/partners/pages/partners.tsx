@@ -21,7 +21,7 @@ import { toast } from "sonner";
 import { paymentService } from '@modules/payments/api/paymentService';
 import { type CreatePaymentRequest } from '@erp/shared-types';
 import { usePartnerRatios } from '@modules/partners/hooks/usePartnerRatios';
-import { queryClient, invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
+import { queryClient, PARTNER_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { START_MODE_EXISTING } from "@modules/opening-balance/lib/wizard-types";
 
 export default function Partners() {
@@ -104,7 +104,7 @@ export default function Partners() {
         );
       }
       setActivePanel(null);
-      await invalidateAccountingMutationQueries(queryClient);
+      await invalidateKeys(queryClient, PARTNER_MUTATION_KEYS);
       refresh(true);
     } catch (error) {
       toast.error("خطأ: " + error);
@@ -118,7 +118,7 @@ export default function Partners() {
     try {
       await partnerService.deletePartner(id);
       toast.success("تم الحذف بنجاح");
-      await invalidateAccountingMutationQueries(queryClient);
+      await invalidateKeys(queryClient, PARTNER_MUTATION_KEYS);
       refresh(true);
     } catch (error) {
       toast.error("فشل الحذف: " + error);
@@ -129,7 +129,7 @@ export default function Partners() {
     try {
       setDrawingsSaving(true);
       await paymentService.createPayment(payload);
-      await invalidateAccountingMutationQueries(queryClient);
+      await invalidateKeys(queryClient, PARTNER_MUTATION_KEYS);
       await refresh(true);
       setActivePanel(null);
       toast.success("تم تسجيل سند المسحوبات بنجاح");
@@ -155,7 +155,7 @@ export default function Partners() {
       setActivePanel(null);
       setSelectedId(null);
       setEditPartner(null);
-      await invalidateAccountingMutationQueries(queryClient);
+      await invalidateKeys(queryClient, PARTNER_MUTATION_KEYS);
       refresh(true);
       toast.success("تم تسجيل مساهمة رأس المال بنجاح");
     } catch (error) {

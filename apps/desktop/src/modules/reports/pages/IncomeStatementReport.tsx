@@ -19,7 +19,7 @@ export default function IncomeStatementReport() {
     new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
     new Date().toISOString().split("T")[0]
   );
-  const { loading, lastLoadedAt, reportData } = useIncomeStatementReport();
+  const { loading, refreshing, lastLoadedAt, reportData, loadReportData } = useIncomeStatementReport();
 
   const computed = useMemo(() => {
     return computeIncomeStatement(filters, reportData);
@@ -53,6 +53,9 @@ return activeCurrency
           onCurrencyChange={setSelectedCurrency}
           currencies={currencies}
           baseCurrencyCode={baseCurrency?.code}
+          refreshing={refreshing}
+          onRefresh={() => void loadReportData()}
+          lastLoadedAt={lastLoadedAt}
         />
       }
       tableContent={

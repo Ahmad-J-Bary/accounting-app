@@ -69,7 +69,16 @@ export interface PendingRestoreInfo {
 
 export type BackupType = 'manual' | 'auto' | 'pre_import';
 
-export type BackupProgressPhase = 'creating' | 'verifying' | 'completed' | 'failed';
+export type BackupProgressPhase =
+  | 'creating'
+  | 'verifying'
+  | 'exporting'
+  | 'snapshotting_original'
+  | 'validating'
+  | 'copying'
+  | 'staged'
+  | 'completed'
+  | 'failed';
 
 export interface BackupProgressEvent {
   phase: BackupProgressPhase;
@@ -141,6 +150,13 @@ export const backupService = {
   },
   async listenBackupProgress(cb: (e: BackupProgressEvent) => void): Promise<() => void> {
     return await listen<BackupProgressEvent>('backup-progress', (event) => cb(event.payload));
+  },
+  async listenRestoreRejected(cb: (message: string) => void): Promise<() => void> {
+    return await listen<{ message?: string }>('restore-rejected', (event) => {
+      const p = event.payload as unknown;
+      if (typeof p === "string") cb(p);
+      else cb((p as { message?: string })?.message ?? "");
+    });
   },
   async getStartupBlock(): Promise<StartupBlockInfo | null> {
     return await invoke<StartupBlockInfo | null>('get_startup_block');

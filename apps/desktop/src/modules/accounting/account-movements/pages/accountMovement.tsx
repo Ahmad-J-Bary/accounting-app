@@ -26,6 +26,7 @@ import { AccountMovementTable } from "../components/AccountMovementTable";
 import { computeClosingBalance, computeOpeningBalance, getOpeningTotals, isOpeningLine } from "../lib/openingLines";
 import { toLocalDateStr } from "@shared/lib/format";
 import { useDataTable } from "@shared/hooks";
+import { invalidateKeys, PAYMENT_RECEIPT_KEYS, queryClient } from "@shared/hooks/queryClient";
 import { toast } from "sonner";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 
@@ -200,6 +201,7 @@ export default function AccountMovement() {
     try {
       setSavingVoucher(true);
       await paymentService.createPayment(payload);
+      await invalidateKeys(queryClient, PAYMENT_RECEIPT_KEYS);
       await refresh(true);
       toast.success("تم تسجيل السند بنجاح");
       setIsVoucherOpen(false);

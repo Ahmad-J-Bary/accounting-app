@@ -1,3 +1,4 @@
+import { publishSettingsUpdated } from "@shared/hooks/settingsEvents";
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { currencyService, type WorldCurrency } from '@modules/core/api/currencyService';
@@ -103,7 +104,7 @@ export default function SetupWizard() {
     setSaving(true);
     try {
       await settingsService.getSettings().then(s => saveCompanySettings(s.currency));
-      window.dispatchEvent(new CustomEvent("erp:settings-updated"));
+      publishSettingsUpdated();
       setStep("done");
       setTimeout(() => navigate("/dashboard", { replace: true }), 1500);
     } catch (e) {
@@ -119,7 +120,7 @@ export default function SetupWizard() {
     try {
       await currencyService.setupCurrencies(baseCode, secondaryCode ?? undefined);
       await saveCompanySettings(baseCode);
-      window.dispatchEvent(new CustomEvent("erp:settings-updated"));
+      publishSettingsUpdated();
       setStep("done");
       setTimeout(() => navigate("/dashboard", { replace: true }), 1500);
     } catch (e) {

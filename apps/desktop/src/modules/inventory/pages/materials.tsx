@@ -26,7 +26,7 @@ import { ReturnFromMaterialPanel } from '@modules/inventory/components/ReturnFro
 import { AdjustmentForm } from '@modules/inventory/components/AdjustmentForm';
 import { useTabs } from "@app/providers/TabContext";
 import { buildStockByWarehouse } from '@modules/inventory/lib/stockUtils';
-import { QUERY_KEYS, queryClient, invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
+import { QUERY_KEYS, queryClient, INVENTORY_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 
 export default function Materials() {
   const { openTab } = useTabs();
@@ -129,7 +129,7 @@ export default function Materials() {
       setTransferPreset(null);
       loadCategories();
       loadInventoryData();
-      invalidateAccountingMutationQueries(queryClient);
+      invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
       refresh();
     } catch (e) {
       toast.error('فشل التحويل: ' + e);
@@ -154,7 +154,7 @@ export default function Materials() {
       setShowDamagedPanel(false);
       loadCategories();
       loadInventoryData();
-      invalidateAccountingMutationQueries(queryClient);
+      invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
       refresh();
       toast.success(`تم تسجيل التالف للمادة بنجاح`);
     } catch (e: unknown) {
@@ -171,7 +171,7 @@ export default function Materials() {
       setShowAdjustmentPanel(false);
       loadCategories();
       loadInventoryData();
-      invalidateAccountingMutationQueries(queryClient);
+      invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
       refresh();
       toast.success('تم إنشاء التسوية بنجاح');
     } catch (e: unknown) {

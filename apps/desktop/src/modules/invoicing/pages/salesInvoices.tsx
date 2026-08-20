@@ -14,7 +14,7 @@ import { InvoicePartySelector } from '../components/InvoicePartySelector';
 import { useInvoiceLifecycle } from '../hooks/useInvoiceLifecycle';
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { customerService } from "@modules/partners/api/customerService";
-import { invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
+import { SALE_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { useExportSetup } from "@shared/hooks";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { executeExport } from "@shared/lib/excel";
@@ -347,17 +347,17 @@ export default function SalesInvoices() {
       }}
       onPost={async (id) => {
         await invoiceService.postInvoice(id);
-        await invalidateAccountingMutationQueries(queryClient);
+        await invalidateKeys(queryClient, SALE_KEYS);
         await loadData(false);
       }}
       onDelete={async (id) => {
         await invoiceService.deleteInvoice(id);
-        await invalidateAccountingMutationQueries(queryClient);
+        await invalidateKeys(queryClient, SALE_KEYS);
         await loadData(false);
       }}
       onReopen={async (id) => {
         await invoiceService.reopenInvoice(id);
-        await invalidateAccountingMutationQueries(queryClient);
+        await invalidateKeys(queryClient, SALE_KEYS);
         await loadData(false);
       }}
       formatMonetaryAmount={formatMonetaryAmount}

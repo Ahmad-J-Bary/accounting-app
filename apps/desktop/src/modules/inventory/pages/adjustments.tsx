@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useQueryClient } from '@tanstack/react-query';
-import { invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
+import { INVENTORY_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { Button } from "@shared/ui/button";
 import { Plus, Eye, Settings2, Trash2, Download } from "lucide-react";
 import { adjustmentService } from '@modules/inventory/api/adjustmentService';
@@ -60,9 +60,7 @@ export default function AdjustmentsPage() {
       await adjustmentService.create(payload);
       setShowDialog(false);
       refresh(true);
-      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
-      queryClient.invalidateQueries({ queryKey: ['materials'] });
-      await invalidateAccountingMutationQueries(queryClient);
+      await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
       toast.success("تم تسجيل تسوية الجرد بنجاح");
     } catch (e: unknown) {
       toast.error("فشل الحفظ: " + e);
@@ -88,9 +86,7 @@ export default function AdjustmentsPage() {
       setShowDialog(false);
       setSelectedItem(null);
       refresh(true);
-      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
-      queryClient.invalidateQueries({ queryKey: ['materials'] });
-      await invalidateAccountingMutationQueries(queryClient);
+      await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
       toast.success("تم تعديل التسوية بنجاح");
     } catch (e: unknown) {
       toast.error("فشل التعديل: " + e);
@@ -115,9 +111,7 @@ export default function AdjustmentsPage() {
       setSelectedItem(null);
       setShowDialog(false);
       refresh(true);
-      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
-      queryClient.invalidateQueries({ queryKey: ['materials'] });
-      await invalidateAccountingMutationQueries(queryClient);
+      await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
     } catch (e) {
       toast.error("فشل الحذف: " + e);
     }

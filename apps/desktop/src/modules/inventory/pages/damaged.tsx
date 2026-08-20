@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useQueryClient } from '@tanstack/react-query';
-import { invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
+import { INVENTORY_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { Button } from "@shared/ui/button";
 import { Plus, Download } from "lucide-react";
 import { damagedService } from '@modules/inventory/api/damagedService';
@@ -59,9 +59,7 @@ export default function DamagedPage() {
       await damagedService.create(payload);
       setShowDialog(false);
       refresh(true);
-      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
-      queryClient.invalidateQueries({ queryKey: ['materials'] });
-      await invalidateAccountingMutationQueries(queryClient);
+      await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
       toast.success("تم تسجيل التالف بنجاح");
     } catch (e: unknown) {
       toast.error("فشل الحفظ: " + e);
@@ -82,9 +80,7 @@ export default function DamagedPage() {
       setShowDialog(false);
       setSelectedItem(null);
       refresh(true);
-      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
-      queryClient.invalidateQueries({ queryKey: ['materials'] });
-      await invalidateAccountingMutationQueries(queryClient);
+      await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
       toast.success("تم التعديل بنجاح");
     } catch (e: unknown) {
       toast.error("فشل التعديل: " + e);
@@ -109,9 +105,7 @@ export default function DamagedPage() {
       setSelectedItem(null);
       setShowDialog(false);
       refresh(true);
-      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
-      queryClient.invalidateQueries({ queryKey: ['materials'] });
-      await invalidateAccountingMutationQueries(queryClient);
+      await invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
     } catch (e) {
       toast.error("فشل الحذف: " + e);
     }

@@ -1,3 +1,4 @@
+import { publishSettingsUpdated } from "@shared/hooks/settingsEvents";
 import { useEffect, useState } from "react";
 import { Warehouse, Save, Building } from "lucide-react";
 import { Label } from "@shared/ui/label";
@@ -42,7 +43,7 @@ export function WarehouseSettings({ settings, onChange }: WarehouseSettingsProps
         sales_warehouse_id: settings.sales_warehouse_id,
         numeral_system: settings.numeral_system || "western",
       });
-      window.dispatchEvent(new CustomEvent("erp:settings-updated"));
+      publishSettingsUpdated();
       toast.success("تم الحفظ", { description: "تم حفظ إعدادات المستودعات بنجاح" });
     } catch (e) {
       toast.error("خطأ في الحفظ", { description: String(e) });

@@ -36,6 +36,9 @@ import FixedAssets from '@modules/fixed-assets/pages/fixedAssets';
 
 import Expenses from '@modules/expenses/pages/expenses';
 
+import InventoryValuationReport from '@modules/reports/pages/InventoryValuationReport';
+import InventoryLowStockReport from '@modules/reports/pages/InventoryLowStockReport';
+
 import AccountMovementsReport from '@modules/reports/pages/AccountMovementsReport';
 import AccountMovement from '@modules/accounting/account-movements/pages/accountMovement';
 import IncomeStatementReport from '@modules/reports/pages/IncomeStatementReport';
@@ -118,6 +121,8 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/categories" element={<Categories />} />
       <Route path="/inventory" element={<OpeningTransactionGate><Inventory /></OpeningTransactionGate>} />
       <Route path="/inventory/transfers" element={<OpeningTransactionGate><Transfers /></OpeningTransactionGate>} />
+      <Route path="/inventory/reports/valuation" element={<InventoryValuationReport />} />
+      <Route path="/inventory/reports/low-stock" element={<InventoryLowStockReport />} />
       <Route path="/inventory/warehouses" element={<Warehouses />} />
       <Route path="/inventory/purchases/:materialId" element={<OpeningTransactionGate><MaterialMovementsPage /></OpeningTransactionGate>} />
       <Route path="/inventory/sales/:materialId" element={<OpeningTransactionGate><MaterialMovementsPage /></OpeningTransactionGate>} />

@@ -21,7 +21,7 @@ import { InvoiceList } from "../components/InvoiceList";
 import { useInvoiceLifecycle } from "../hooks/useInvoiceLifecycle";
 import { invoiceService } from "@modules/invoicing/api/invoiceService";
 import { supplierService } from "@modules/partners/api/supplierService";
-import { invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
+import { PURCHASE_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { buildInvoiceLineExportColumns } from "../lib/invoice-export-columns";
 export default function PurchaseInvoices() {
   const location = useLocation();
@@ -392,13 +392,13 @@ export default function PurchaseInvoices() {
       }}
       onPost={async (id) => {
         await invoiceService.postInvoice(id);
-        await invalidateAccountingMutationQueries(queryClient);
+        await invalidateKeys(queryClient, PURCHASE_KEYS);
         await loadData(false);
       }}
       onDelete={async (id) => {
         try {
           await invoiceService.deleteInvoice(id);
-          await invalidateAccountingMutationQueries(queryClient);
+          await invalidateKeys(queryClient, PURCHASE_KEYS);
           toast.success("تم حذف الفاتورة والقيود المرتبطة بها");
           await loadData(false);
         }
@@ -407,7 +407,7 @@ export default function PurchaseInvoices() {
       onReopen={async (id) => {
         try {
           await invoiceService.reopenInvoice(id);
-          await invalidateAccountingMutationQueries(queryClient);
+          await invalidateKeys(queryClient, PURCHASE_KEYS);
           toast.success("تم إلغاء الترحيل وإعادة الفاتورة لمسودة");
           await loadData(false);
         }

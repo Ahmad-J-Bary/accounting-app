@@ -18,7 +18,7 @@ export default function PartnerProfitShareReport() {
     new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
     new Date().toISOString().split("T")[0]
   );
-  const { loading, reportData, error, loadReportData } = usePartnerProfitShareReport(filters);
+  const { loading, refreshing, lastLoadedAt, reportData, error, loadReportData } = usePartnerProfitShareReport(filters);
 
   const computed = useMemo(() => {
     return computePartnerProfitShare(
@@ -51,6 +51,9 @@ export default function PartnerProfitShareReport() {
           onCurrencyChange={setSelectedCurrency}
           currencies={currencies}
           baseCurrencyCode={baseCurrency?.code}
+          refreshing={refreshing}
+          onRefresh={() => void loadReportData()}
+          lastLoadedAt={lastLoadedAt}
           extraFilters={
             <Button
               size="sm"

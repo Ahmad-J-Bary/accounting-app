@@ -7,5 +7,6 @@ export function useCategories() {
   return useQuery<CategoryDto[]>({
     queryKey: QUERY_KEYS.categories,
     queryFn: () => categoryService.list(),
+    staleTime: 60_000,
   });
 }

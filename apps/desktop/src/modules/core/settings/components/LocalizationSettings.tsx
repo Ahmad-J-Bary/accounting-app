@@ -1,3 +1,4 @@
+import { publishSettingsUpdated } from "@shared/hooks/settingsEvents";
 import { Hash, Languages, Save } from "lucide-react";
 import { Label } from "@shared/ui/label";
 import { Button } from "@shared/ui/button";
@@ -53,7 +54,7 @@ export function LocalizationSettings({ settings, onChange }: LocalizationSetting
         numeral_system: settings.numeral_system || "western",
       });
       setNumberingSystem(settings.numeral_system || "western");
-      window.dispatchEvent(new CustomEvent("erp:settings-updated"));
+      publishSettingsUpdated();
       toast.success("تم الحفظ", { description: "تم حفظ نظام الأرقام بنجاح" });
     } catch (e) {
       toast.error("خطأ في الحفظ", { description: String(e) });

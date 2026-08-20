@@ -6,7 +6,8 @@ export const queryClient = new QueryClient({
       staleTime: 0,
       gcTime: 10 * 60 * 1000,
       retry: 1,
-      refetchOnWindowFocus: true,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
     },
   },
 });
@@ -15,6 +16,7 @@ export const QUERY_KEYS = {
   partners: ["partners"] as const,
   partner: (id: string) => ["partners", id] as const,
   partnerLedger: (id: string) => ["partners", id, "ledger"] as const,
+  partnerEquityStatement: ["partner-equity-statement"] as const,
 
   customers: ["customers"] as const,
   customer: (id: string) => ["customers", id] as const,
@@ -29,6 +31,7 @@ export const QUERY_KEYS = {
   materials: ["materials"] as const,
   material: (id: string) => ["materials", id] as const,
   materialMovements: (id: string) => ["materials", id, "movements"] as const,
+  materialExpenseLedger: (id: string) => ["materials", id, "ledger-movements"] as const,
   stockMovements: ["stock-movements"] as const,
 
   chartOfAccounts: ["chart-of-accounts"] as const,
@@ -128,10 +131,134 @@ export const ALL_ACCOUNTING_MUTATION_KEYS: readonly (readonly unknown[])[] = [
   QUERY_KEYS.fiscalPeriods,
 ];
 
-export async function invalidateAccountingMutationQueries(queryClient: QueryClient) {
+/** Keys every financial report/dashboard/ledger view depends on. More than one
+ * domain below includes these because posting any journal entry can legally touch
+ * any account classification. */
+const REPORT_CORE_KEYS: readonly (readonly unknown[])[] = [
+  ["journal-entries"] as const,
+  ["account-ledger"] as const,
+  ["account-ledger-lines"] as const,
+  QUERY_KEYS.dashboard,
+  QUERY_KEYS.incomeStatement,
+  QUERY_KEYS.balanceSheet,
+  QUERY_KEYS.partnerProfitShare,
+  ["reports", "trial-balance"] as const,
+  QUERY_KEYS.receivablesPayables,
+  QUERY_KEYS.salesReturns,
+  QUERY_KEYS.purchaseReturns,
+  QUERY_KEYS.chartOfAccounts,
+  QUERY_KEYS.chartOfAccountsTree,
+];
+
+/** Keys affected by posting/deleting/reopening a SALES invoice. */
+export const SALE_KEYS: readonly (readonly unknown[])[] = [
+  ...REPORT_CORE_KEYS,
+  QUERY_KEYS.salesInvoices,
+  QUERY_KEYS.customers,
+  QUERY_KEYS.partners,
+  QUERY_KEYS.stockMovements,
+  QUERY_KEYS.materials,
+];
+
+/** Keys affected by posting/deleting/reopening a PURCHASE invoice. */
+export const PURCHASE_KEYS: readonly (readonly unknown[])[] = [
+  ...REPORT_CORE_KEYS,
+  QUERY_KEYS.purchaseInvoices,
+  QUERY_KEYS.suppliers,
+  QUERY_KEYS.partners,
+  QUERY_KEYS.stockMovements,
+  QUERY_KEYS.materials,
+];
+
+/** Keys affected by a customer payment (receipt), supplier payment, or its
+ * create/update/delete. */
+export const PAYMENT_RECEIPT_KEYS: readonly (readonly unknown[])[] = [
+  ...REPORT_CORE_KEYS,
+  QUERY_KEYS.payments,
+  QUERY_KEYS.customers,
+  QUERY_KEYS.suppliers,
+  QUERY_KEYS.partners,
+];
+
+/** Keys affected by stock movements, adjustments, damaged goods, transfers,
+ * production orders, and material master changes. */
+export const INVENTORY_MUTATION_KEYS: readonly (readonly unknown[])[] = [
+  ...REPORT_CORE_KEYS,
+  QUERY_KEYS.stockMovements,
+  QUERY_KEYS.materials,
+  QUERY_KEYS.materialsByCategory,
+  QUERY_KEYS.damagedItems,
+  QUERY_KEYS.stockAdjustments,
+  QUERY_KEYS.productionOrders,
+  QUERY_KEYS.categories,
+  QUERY_KEYS.warehouses,
+];
+
+/** Keys affected by a direct journal post/reversal (touches every classification). */
+export const JOURNAL_MUTATION_KEYS: readonly (readonly unknown[])[] = [
+  ...REPORT_CORE_KEYS,
+  QUERY_KEYS.payments,
+  QUERY_KEYS.salesInvoices,
+  QUERY_KEYS.purchaseInvoices,
+  QUERY_KEYS.customers,
+  QUERY_KEYS.suppliers,
+  QUERY_KEYS.partners,
+  QUERY_KEYS.stockMovements,
+  QUERY_KEYS.materials,
+];
+
+/** Keys affected by partner operations (capital, drawings, profit share, settle). */
+export const PARTNER_MUTATION_KEYS: readonly (readonly unknown[])[] = [
+  ...REPORT_CORE_KEYS,
+  QUERY_KEYS.partners,
+  QUERY_KEYS.partnerEquityStatement,
+  QUERY_KEYS.fixedAssets,
+  QUERY_KEYS.receivablesPayables,
+  QUERY_KEYS.payments,
+];
+
+/** Opening-balance lifecycle (create/post/lock) touches everything financial. */
+export const OPENING_MUTATION_KEYS: readonly (readonly unknown[])[] = ALL_ACCOUNTING_MUTATION_KEYS;
+
+/** Fiscal-period create/close/lock/reopen. */
+export const FISCAL_MUTATION_KEYS: readonly (readonly unknown[])[] = [
+  QUERY_KEYS.fiscalPeriods,
+  QUERY_KEYS.distributableProfit(),
+  ...REPORT_CORE_KEYS,
+];
+
+/** Profit distribution posts a journal entry — near-umbrella invalidation. */
+export const PROFIT_DISTRIBUTION_KEYS: readonly (readonly unknown[])[] = [
+  ...ALL_ACCOUNTING_MUTATION_KEYS,
+  QUERY_KEYS.distributableProfit(),
+  QUERY_KEYS.partnerEquityStatement,
+];
+
+/** Settings changes (company, localization, warehouse setup, currencies, backup
+ * location) refresh settings consumers and currency context. */
+export const SETTINGS_MUTATION_KEYS: readonly (readonly unknown[])[] = [
+  QUERY_KEYS.settings,
+  QUERY_KEYS.currencyContext,
+  QUERY_KEYS.todayRates,
+];
+
+/** Chart-of-accounts structure changes (create/update/delete/activate). */
+export const CHART_MUTATION_KEYS: readonly (readonly unknown[])[] = [
+  QUERY_KEYS.chartOfAccounts,
+  QUERY_KEYS.chartOfAccountsTree,
+];
+
+/** Invalidate exactly the given keys against ACTIVE observers (the default
+ * refetch type) so only views that are on screen refetch — minimal churn. */
+export async function invalidateKeys(
+  queryClient: QueryClient,
+  keys: readonly (readonly unknown[])[],
+) {
   await Promise.all(
-    ALL_ACCOUNTING_MUTATION_KEYS.map((queryKey) =>
-      queryClient.invalidateQueries({ queryKey, refetchType: "all" }),
-    ),
+    keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
   );
+}
+
+export async function invalidateAccountingMutationQueries(queryClient: QueryClient) {
+  await invalidateKeys(queryClient, ALL_ACCOUNTING_MUTATION_KEYS);
 }

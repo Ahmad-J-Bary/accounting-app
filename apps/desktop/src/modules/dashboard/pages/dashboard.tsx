@@ -1,11 +1,10 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Button } from "@shared/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import {
-  Wallet, Users, Truck, Package, Download, LayoutDashboard, Bell, DollarSign,
-  Building2, Landmark
+  Wallet, Users, Truck, Package, LayoutDashboard, Bell, DollarSign,
+  Building2, Landmark, Loader2
 } from "lucide-react";
 import { formatDate, formatNumber } from '@shared/lib/format';
 import {
@@ -18,14 +17,7 @@ import { QuickActions } from '@app/shell/QuickActions';
 import { DashboardSection } from '@widgets/dashboard/DashboardSection';
 import { FinancialMetricCard } from '@widgets/dashboard/FinancialMetricCard';
 
-import { QUERY_KEYS } from '@shared/hooks/queryClient';
-import { journalEntryService } from '@modules/accounting/api/journalEntryService';
-import { paymentService } from '@modules/payments/api/paymentService';
-import { materialService } from '@modules/inventory/api/materialService';
-import { categoryService } from '@modules/inventory/api/categoryService';
-import { stockMovementService } from '@modules/inventory/api/stockMovementService';
-import { computeDashboardKpis } from '@modules/accounting/dashboard/lib/gl-kpis';
-import { computeInventoryProjection, inventoryAdjustmentNets } from '@modules/reports/lib/inventory';
+import { useDashboardMetrics, type DashboardPeriod } from "@modules/dashboard/hooks/useDashboardMetrics";
 
 import { useCurrencyContext, type CurrencyDisplayMode } from "@app/providers/CurrencyContext";
 
@@ -37,66 +29,30 @@ const CHART_COLORS = ["#2563eb", "#10b981", "#f59e0b", "#64748b", "#8b5cf6", "#e
 export default function Dashboard() {
   const { formatAmount, displayMode, baseCurrency, currencies } = useCurrencyContext();
   const [localDisplayMode, setLocalDisplayMode] = useState<CurrencyDisplayMode | "both">(displayMode);
+  const [period, setPeriod] = useState<DashboardPeriod>("this_month");
 
   // React Query feeds, invalidated after every accounting mutation (see
   // `ALL_REPORT_KEYS` / `ALL_INVENTORY_KEYS`) — the dashboard refreshes with
-  // the posted ledger instead of a full page reload.
-  const journalQuery = useQuery({
-    queryKey: QUERY_KEYS.dashboard,
-    queryFn: () => journalEntryService.listPostedJournalEntries(),
-  });
-  const paymentsQuery = useQuery({
-    queryKey: QUERY_KEYS.payments,
-    queryFn: () => paymentService.listPayments(),
-  });
-  const materialsQuery = useQuery({
-    queryKey: QUERY_KEYS.materials,
-    queryFn: () => materialService.list(),
-  });
-  const categoriesQuery = useQuery({
-    queryKey: QUERY_KEYS.categories,
-    queryFn: () => categoryService.list(),
-  });
-  const stockMovementsQuery = useQuery({
-    queryKey: QUERY_KEYS.stockMovements,
-    queryFn: () => stockMovementService.list(),
-  });
-
-  const allJournalEntries = useMemo(() => journalQuery.data ?? [], [journalQuery.data]);
-  const paymentEntries = useMemo(() => paymentsQuery.data ?? [], [paymentsQuery.data]);
-  const productItems = useMemo(() => materialsQuery.data ?? [], [materialsQuery.data]);
-  const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
-  const stockMovements = useMemo(() => stockMovementsQuery.data ?? [], [stockMovementsQuery.data]);
+  // the posted ledger instead of a full page reload. GL tiles + the revenue
+  // chart are filtered client-side to the selected period through the same
+  // projection the Income Statement consumes (`computeGlAccountNets`).
+  const { data, refreshing } = useDashboardMetrics(period);
 
   const toNumber = (value?: string | null) => {
     const parsed = Number.parseFloat(value ?? "0");
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
-  // === GL-computed KPIs (from the posted ledger: DR/CR respected by account nature) ===
-  const glKpis = useMemo(() => computeDashboardKpis(allJournalEntries), [allJournalEntries]);
-
-  const { sales, purchases, cash, bank, receivables, payables, loans, monthly: glMonthly } = glKpis;
-
-  // === المخزون = نفس إسقاط "بضاعة آخر المدة" في قائمة الدخل (نفس الوظيفة،
-  // نفس تاريخ الاستحقاق): مخزون أول المدة + حركات الفترة + تسويات 331/45. ===
-  const inventory = useMemo(() => {
-    const adjustments = inventoryAdjustmentNets(allJournalEntries);
-    return computeInventoryProjection(
-      stockMovements,
-      { fromTs: 0, toTs: Date.now() },
-      adjustments,
-    ).closingInventory;
-  }, [stockMovements, allJournalEntries]);
+  const { sales, purchases, cash, bank, receivables, payables, loans, monthly: glMonthly } = data.kpis;
 
   const liTotal = useMemo(() => cash + bank + receivables, [cash, bank, receivables]);
   const aliTotal = useMemo(() => payables + loans, [payables, loans]);
 
-  const recentJournals = useMemo(() => allJournalEntries.slice(0, 5), [allJournalEntries]);
+  const recentJournals = useMemo(() => data.journalEntries.slice(0, 5), [data.journalEntries]);
 
-  const lowStock = useMemo(() => productItems.filter(
+  const lowStock = useMemo(() => data.materials.filter(
     (p) => toNumber(p.total_available) < toNumber(p.minimum_stock)
-  ), [productItems]);
+  ), [data.materials]);
 
   // === Revenue/Expenses chart from GL (posted ledger, grouped by month) ===
   const revenueChartData = useMemo(() => {
@@ -124,31 +80,31 @@ export default function Dashboard() {
   // === Category distribution from real materials ===
   const catNameById = useMemo(() => {
     const map = new Map<string, string>();
-    categories.forEach(c => map.set(c.id, c.name));
+    data.categories.forEach(c => map.set(c.id, c.name));
     return map;
-  }, [categories]);
+  }, [data.categories]);
 
   const pieData = useMemo(() => {
     const catMap = new Map<string, number>();
-    productItems.forEach(p => {
+    data.materials.forEach(p => {
       const firstCatId = p.category_ids?.[0];
       const name = firstCatId ? (catNameById.get(firstCatId) || "أخرى") : "بدون تصنيف";
       catMap.set(name, (catMap.get(name) || 0) + 1);
     });
-    const total = productItems.length || 1;
+    const total = data.materials.length || 1;
     return Array.from(catMap.entries()).map(([name, count], idx) => ({
       name,
       value: Math.round((count / total) * 100),
       color: CHART_COLORS[idx % CHART_COLORS.length],
     }));
-  }, [productItems, catNameById]);
+  }, [data.materials, catNameById]);
 
   // === Recent payments (up to 5) ===
   const recentPayments = useMemo(() =>
-    paymentEntries
+    data.payments
       .sort((a, b) => new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime())
       .slice(0, 5),
-  [paymentEntries]);
+  [data.payments]);
 
   const secondaryCurrencies = currencies.filter(c => !c.is_base);
 
@@ -201,7 +157,7 @@ export default function Dashboard() {
                 كلاهما
               </button>
             </div>
-            <Select defaultValue="this_month">
+            <Select value={period} onValueChange={(v) => setPeriod(v as DashboardPeriod)}>
               <SelectTrigger className="w-[180px] h-12 bg-white rounded-xl border-slate-200 shadow-sm">
                 <SelectValue />
               </SelectTrigger>
@@ -211,9 +167,12 @@ export default function Dashboard() {
                 <SelectItem value="this_year">هذه السنة</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" className="h-12 px-6 rounded-xl border-slate-200 bg-white hover:bg-slate-50">
-              <Download className="w-4 h-4 ml-2" /> تصدير التقرير
-            </Button>
+            {refreshing && (
+              <span className="flex h-12 items-center gap-1.5 rounded-xl bg-white px-4 border border-slate-200 shadow-sm text-slate-500 text-xs">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                جارٍ التحديث…
+              </span>
+            )}
           </div>
         </>
       }
@@ -249,7 +208,7 @@ export default function Dashboard() {
 
       <DashboardCard span={4} title="المخزون" subtitle="قيمة المخزون الحالية">
         <div className="text-3xl font-black tabular-nums text-slate-900">
-          {formatAmount(inventory, { mode: localDisplayMode })}
+          {formatAmount(data.inventory, { mode: localDisplayMode })}
         </div>
       </DashboardCard>
 

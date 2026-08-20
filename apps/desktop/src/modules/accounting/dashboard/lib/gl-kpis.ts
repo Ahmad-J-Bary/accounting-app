@@ -44,8 +44,11 @@ export interface GlMonthlyIncome {
   expenses: number;
 }
 
-export function computeDashboardKpis(entries: JournalEntryDto[]): DashboardKpis & { monthly: GlMonthlyIncome[] } {
-  const nets: GlAccountNets = computeGlAccountNets(entries);
+export function computeDashboardKpis(
+  entries: JournalEntryDto[],
+  range?: { fromTs?: number; toTs?: number },
+): DashboardKpis & { monthly: GlMonthlyIncome[] } {
+  const nets: GlAccountNets = computeGlAccountNets(entries, range);
 
   const sales = nets.typeNets.Revenue;
   const purchases = Math.abs(nets.typeNets.Expenses);

@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useQueryClient } from '@tanstack/react-query';
-import { invalidateAccountingMutationQueries } from "@shared/hooks/queryClient";
+import { SALE_KEYS, PURCHASE_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { Button } from "@shared/ui/button";
 
 import { Save, X, Loader2, Download } from "lucide-react";
@@ -502,9 +502,7 @@ export function ReturnsEditor({ returnType, partyType, parties, materials, wareh
       }
 
       toast.success(returnId ? "تم تحديث المرتجع بنجاح" : "تم تسجيل المرتجع بنجاح");
-      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
-      queryClient.invalidateQueries({ queryKey: ['materials'] });
-      await invalidateAccountingMutationQueries(queryClient);
+      await invalidateKeys(queryClient, [...SALE_KEYS, ...PURCHASE_KEYS]);
       onSaved();
     } catch (e) {
       toast.error("فشل " + (returnId ? "تحديث" : "تسجيل") + " المرتجع: " + e);

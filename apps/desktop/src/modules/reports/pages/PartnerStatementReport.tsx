@@ -21,7 +21,7 @@ export default function PartnerStatementReport() {
     new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
     new Date().toISOString().split("T")[0]
   );
-  const { loading, reportData, error, loadReportData } = usePartnerProfitShareReport(filters);
+  const { loading, refreshing, lastLoadedAt, reportData, error, loadReportData } = usePartnerProfitShareReport(filters);
 
   const fromTs = useMemo(() => new Date(`${filters.from_date}T00:00:00`).getTime(), [filters.from_date]);
 
@@ -78,6 +78,9 @@ export default function PartnerStatementReport() {
           onCurrencyChange={setSelectedCurrency}
           currencies={currencies}
           baseCurrencyCode={baseCurrency?.code}
+          refreshing={refreshing}
+          onRefresh={() => void loadReportData()}
+          lastLoadedAt={lastLoadedAt}
         />
       }
       tableContent={

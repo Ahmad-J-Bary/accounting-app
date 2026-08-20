@@ -13,6 +13,7 @@ import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTem
 import { buildStockByWarehouse } from '@modules/inventory/lib/stockUtils';
 import { useStockMovements, useMaterials } from "@shared/hooks/queries/useMaterialQueries";
 import { useWarehouses } from "@shared/hooks/queries/useWarehouseQueries";
+import { INVENTORY_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { useExportSetup } from "@shared/hooks";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { dateCol, executeExport } from "@shared/lib/excel";
@@ -42,8 +43,7 @@ export default function Transfers() {
       toast.success('تم إنشاء التحويل بنجاح');
       setTransferFormOpen(false);
       setTransferFormData(null);
-      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
-      queryClient.invalidateQueries({ queryKey: ['materials'] });
+      void invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
     } catch (e) {
       toast.error(e as string);
     } finally {
@@ -59,8 +59,7 @@ export default function Transfers() {
       toast.success('تم تحديث التحويل بنجاح');
       setTransferFormOpen(false);
       setTransferFormData(null);
-      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
-      queryClient.invalidateQueries({ queryKey: ['materials'] });
+      void invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
     } catch (e) {
       toast.error(e as string);
     } finally {
@@ -73,8 +72,7 @@ export default function Transfers() {
       await transferService.delete(reference);
       toast.success('تم حذف التحويل بنجاح');
       setTransferDetailData(null);
-      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
-      queryClient.invalidateQueries({ queryKey: ['materials'] });
+      void invalidateKeys(queryClient, INVENTORY_MUTATION_KEYS);
     } catch (e) {
       toast.error(e as string);
     }

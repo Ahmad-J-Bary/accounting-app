@@ -1,11 +1,16 @@
 import { useState } from "react";
-import { Download, FileDown, CheckCircle2 } from "lucide-react";
+import { Download, FileDown, CheckCircle2, Loader2 } from "lucide-react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { Button } from "@shared/ui/button";
 import { toast } from "sonner";
 import { backupService } from "../../../api/backupService";
+import {
+  useBackupProgress,
+  BACKUP_PROGRESS_LABELS,
+} from "@shared/hooks/useBackupProgress";
 
 export function ExportPanel({ onDone }: { onDone: () => Promise<void> }) {
+  const phase = useBackupProgress();
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -29,6 +34,8 @@ export function ExportPanel({ onDone }: { onDone: () => Promise<void> }) {
     }
   };
 
+  const emitting = busy && phase === "exporting";
+
   return (
     <div className="space-y-4">
       <Button
@@ -38,9 +45,15 @@ export function ExportPanel({ onDone }: { onDone: () => Promise<void> }) {
         disabled={busy}
         onClick={() => void handleExport()}
       >
-        {busy ? <FileDown className="w-4 h-4 ml-1 animate-pulse" /> : <Download className="w-4 h-4 ml-1" />}
+        {emitting ? <Loader2 className="w-4 h-4 ml-1 animate-spin" /> : busy ? <FileDown className="w-4 h-4 ml-1 animate-pulse" /> : <Download className="w-4 h-4 ml-1" />}
         {busy ? "جارٍ التصدير..." : "تصدير قاعدة البيانات"}
       </Button>
+
+      {busy && phase && (
+        <div className="text-xs font-bold text-slate-500">
+          {BACKUP_PROGRESS_LABELS[phase]}
+        </div>
+      )}
 
       {done && (
         <div className="flex items-center gap-2 text-xs font-bold text-emerald-600">

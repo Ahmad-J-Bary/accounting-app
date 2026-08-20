@@ -19,7 +19,7 @@ export default function BalanceSheetReport() {
     new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
     new Date().toISOString().split("T")[0]
   );
-  const { loading, reportData } = useBalanceSheetReport(filters);
+  const { loading, refreshing, lastLoadedAt, reportData, loadReportData } = useBalanceSheetReport(filters);
 
   const computed = useMemo(() => {
     return computeBalanceSheet(
@@ -54,6 +54,9 @@ export default function BalanceSheetReport() {
           onCurrencyChange={setSelectedCurrency}
           currencies={currencies}
           baseCurrencyCode={baseCurrency?.code}
+          refreshing={refreshing}
+          onRefresh={() => void loadReportData()}
+          lastLoadedAt={lastLoadedAt}
         />
       }
       tableContent={

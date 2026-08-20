@@ -14,6 +14,7 @@ export function useChartOfAccounts() {
   return useQuery<AccountDto[]>({
     queryKey: QUERY_KEYS.chartOfAccounts,
     queryFn: () => accountingService.getChartOfAccounts(),
+    staleTime: 60_000,
   });
 }
 
@@ -29,6 +30,7 @@ export function useExpenseItems() {
   return useQuery<AccountDto[]>({
     queryKey: QUERY_KEYS.expenseItems,
     queryFn: () => accountingService.getExpenseItems(),
+    staleTime: 60_000,
   });
 }
 

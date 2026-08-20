@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
+import { Button } from "@shared/ui/button";
+import { RefreshCw, Loader2 } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { DateRangePicker } from "@widgets/reports";
 import type { ReportFilters } from "@shared/types/report";
@@ -16,6 +18,9 @@ export interface ReportFilterBarProps {
   currencies?: Currency[];
   baseCurrencyCode?: string;
   extraFilters?: ReactNode;
+  refreshing?: boolean;
+  onRefresh?: () => void | Promise<void>;
+  lastLoadedAt?: Date | null;
 }
 
 function formatCurrencyLabel(c: Currency): string {
@@ -35,6 +40,9 @@ export function ReportFilterBar({
   currencies = [],
   baseCurrencyCode,
   extraFilters,
+  refreshing = false,
+  onRefresh,
+  lastLoadedAt,
 }: ReportFilterBarProps) {
   const { baseCurrency } = useCurrencyContext();
 
@@ -101,6 +109,34 @@ export function ReportFilterBar({
         onToChange={(v) => onFiltersChange({ to_date: v })}
         showSeparator={showSelect || !!extraFilters}
       />
+
+      {onRefresh && !refreshing && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-9 gap-1.5 rounded-lg border-slate-200 bg-white text-xs text-slate-600"
+          onClick={() => void onRefresh()}
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+          تحديث
+        </Button>
+      )}
+      {refreshing && (
+        <span className="flex h-9 items-center gap-1.5 rounded-lg bg-white px-2.5 text-xs text-slate-500">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          جارٍ التحديث…
+        </span>
+      )}
+      {lastLoadedAt && !refreshing && (
+        <span className="text-xs text-slate-400">
+          آخر تحديث:{" "}
+          {lastLoadedAt.toLocaleTimeString("ar-EG", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </span>
+      )}
     </div>
   );
 }
