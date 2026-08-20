@@ -14,8 +14,15 @@ import { DatabaseStatusSection } from "./sections/DatabaseStatusSection";
 import { ActionsSection } from "./sections/ActionsSection";
 import { HistorySection } from "./sections/HistorySection";
 import { SettingsSection } from "./sections/SettingsSection";
+import { friendlyBackupError, RESTORE_STATUS_SEEN_KEY } from "../lib/backupErrors";
+import { ErrorDetails } from "../lib/ErrorDetails";
 
 type Health = "checking" | "ok" | "error";
+
+const RESTORE_STATUS_TOASTS: Record<string, string> = {
+  applied: "تمت الاستعادة بنجاح ✓ — بياناتك سليمة.",
+  rolled_back: "تم التراجع عن الاستعادة تلقائيًا — بياناتك السابقة سليمة.",
+};
 
 export function DataBackupSection() {
   const [backups, setBackups] = useState<BackupFileInfo[]>([]);
@@ -42,6 +49,20 @@ export function DataBackupSection() {
       setConfig(c);
       setPending(p);
       setDbInfo(d);
+
+      // One-shot toast when a restore transitioned across reloads
+      // (e.g. applied/rolled_back after restart) — never fires again for the
+      // same status until the next restore is staged (see InspectFileFlow).
+      const status = c?.last_restore_status ?? null;
+      if (status && status !== localStorage.getItem(RESTORE_STATUS_SEEN_KEY)) {
+        localStorage.setItem(RESTORE_STATUS_SEEN_KEY, status);
+        const message = RESTORE_STATUS_TOASTS[status];
+        if (message) {
+          if (status === "applied") toast.success(message);
+          else toast.error(message);
+        }
+      }
+
       if (h.status === "ok") {
         setHealth("ok");
         setHealthMsg("");
@@ -70,7 +91,7 @@ export function DataBackupSection() {
       .listenRestoreRejected((message) => {
         toast.error(
           message
-            ? `تم رفض البيانات المستوردة بعد الفحص وتم التراجع تلقائيًا: ${message}`
+            ? `تم رفض البيانات المستوردة بعد الفحص وتم التراجع تلقائيًا: ${friendlyBackupError(message).friendly}`
             : "تم رفض البيانات المستوردة بعد الفحص وتم التراجع تلقائيًا.",
         );
         void load(true);
@@ -95,7 +116,7 @@ export function DataBackupSection() {
       });
       setConfig(saved);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : String(e));
+      toast.error(friendlyBackupError(e).friendly);
     }
   };
 
@@ -108,7 +129,7 @@ export function DataBackupSection() {
       );
       await load(true);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : String(e));
+      toast.error(friendlyBackupError(e).friendly);
     } finally {
       setOperating(false);
     }
@@ -128,7 +149,7 @@ export function DataBackupSection() {
       setPending(null);
       toast.info("تم إلغاء الاستعادة المعلقة");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : String(e));
+      toast.error(friendlyBackupError(e).friendly);
     }
   };
 
@@ -136,7 +157,7 @@ export function DataBackupSection() {
     try {
       await backupService.requestRestart();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : String(e));
+      toast.error(friendlyBackupError(e).friendly);
     }
   };
 
@@ -167,7 +188,8 @@ export function DataBackupSection() {
           <AlertTriangle className="w-5 h-5 mt-0.5" />
           <div>
             <p className="font-bold">تحذير: فشل فحص سلامة قاعدة البيانات</p>
-            <p className="text-sm mt-1">{healthMsg || "يرجى إنشاء نسخة احتياطية فورًا والاتصال بالدعم."}</p>
+            <p className="text-sm mt-1">{friendlyBackupError(healthMsg || "integrity check failed").friendly}</p>
+            <ErrorDetails detail={friendlyBackupError(healthMsg || "integrity check failed").detail} />
           </div>
         </div>
       )}
@@ -204,6 +226,13 @@ export function DataBackupSection() {
         </div>
       )}
 
+      <ActionsSection
+        operating={operating}
+        onDone={() => load(true)}
+        preset={restorePreset}
+        onPresetConsumed={handlePresetConsumed}
+      />
+
       <DatabaseStatusSection
         dbInfo={dbInfo}
         backups={backups}
@@ -211,13 +240,6 @@ export function DataBackupSection() {
         health={health}
         healthMsg={healthMsg}
         loading={loading}
-      />
-
-      <ActionsSection
-        operating={operating}
-        onDone={() => load(true)}
-        preset={restorePreset}
-        onPresetConsumed={handlePresetConsumed}
       />
 
       <HistorySection

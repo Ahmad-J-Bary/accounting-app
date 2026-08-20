@@ -1,7 +1,6 @@
 ﻿import { Database, Trash2, Save, ShieldCheck, Lock, FolderOpen } from "lucide-react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { Button } from "@shared/ui/button";
-import { Badge } from "@shared/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,8 +15,10 @@ import {
 import { toast } from "sonner";
 import { backupService, type BackupFileInfo, type PendingRestoreInfo } from "../../../api/backupService";
 import {
-  formatSize, formatTimestamp, typeBadge, formatLabel, formatDate, formatTime, backupStatus,
+  formatSize, formatTimestamp, typeBadge, formatLabel, formatDate, formatTime,
 } from "../../lib/backupFormat";
+import { friendlyBackupError } from "../../lib/backupErrors";
+import { BackupStatusBadge } from "../BackupStatusBadge";
 
 interface Props {
   backups: BackupFileInfo[];
@@ -25,29 +26,6 @@ interface Props {
   operating: boolean;
   onRestore: (b: BackupFileInfo) => Promise<void>;
   onDone: () => Promise<void>;
-}
-
-const STATUS_STYLES = {
-  emerald: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  amber: "bg-amber-50 text-amber-700 border-amber-200",
-  rose: "bg-rose-50 text-rose-700 border-rose-200",
-} as const;
-
-function StatusPill({ b }: { b: BackupFileInfo }) {
-  const s = backupStatus(b);
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${STATUS_STYLES[s.tone]}`}
-    >
-      <span
-        aria-hidden
-        className={`w-1.5 h-1.5 rounded-full ${
-          s.tone === "emerald" ? "bg-emerald-500" : s.tone === "amber" ? "bg-amber-500" : "bg-rose-500"
-        }`}
-      />
-      {s.label}
-    </span>
-  );
 }
 
 export function BackupListPanel({ backups, pending, operating, onRestore, onDone }: Props) {
@@ -63,7 +41,7 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
       await backupService.copyFileBackup(b.name, dest);
       toast.success("تم نسخ النسخة الاحتياطية إلى الوجهة المختارة");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : String(e));
+      toast.error(friendlyBackupError(e).friendly);
     }
   };
 
@@ -71,7 +49,7 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
     try {
       await backupService.openBackupLocation(b.path);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : String(e));
+      toast.error(friendlyBackupError(e).friendly);
     }
   };
 
@@ -81,7 +59,7 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
       toast.success("تم حذف النسخة الاحتياطية");
       await onDone();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : String(e));
+      toast.error(friendlyBackupError(e).friendly);
     }
   };
 
@@ -164,7 +142,7 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
                       <p className="text-xs text-slate-400">{formatTime(b.timestamp)}</p>
                     </td>
                     <td className="px-4 py-2.5 text-slate-600 font-bold">{formatSize(b.size)}</td>
-                    <td className="px-4 py-2.5"><StatusPill b={b} /></td>
+                    <td className="px-4 py-2.5"><BackupStatusBadge backup={b} /></td>
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-1">
                         <Button size="sm" variant="outline" disabled={disabled} onClick={() => void onRestore(b)}>
@@ -208,7 +186,7 @@ export function BackupListPanel({ backups, pending, operating, onRestore, onDone
                       {b.name}
                     </p>
                   </div>
-                  <StatusPill b={b} />
+                  <BackupStatusBadge backup={b} />
                 </div>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {typeBadge(b.backup_type)}

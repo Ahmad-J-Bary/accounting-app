@@ -10,6 +10,8 @@ import {
   backupProgressValue,
 } from "@shared/hooks/useBackupProgress";
 import { formatSize } from "../../lib/backupFormat";
+import { friendlyBackupError, type BackupError } from "../../lib/backupErrors";
+import { ErrorDetails } from "../../lib/ErrorDetails";
 
 export function ManualBackupPanel({
   operating,
@@ -20,15 +22,19 @@ export function ManualBackupPanel({
 }) {
   const phase = useBackupProgress();
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<BackupError | null>(null);
 
   const handleBackup = async () => {
     setBusy(true);
+    setError(null);
     try {
       const info = await backupService.backupNow();
       toast.success(`تم إنشاء النسخة ✓ (${formatSize(info.size)})`);
       await onDone();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : String(e));
+      const err = friendlyBackupError(e);
+      setError(err);
+      toast.error(err.friendly);
     } finally {
       setBusy(false);
     }
@@ -68,16 +74,24 @@ export function ManualBackupPanel({
         </div>
       )}
 
-      {phase === "completed" && !busy && !operating && (
+      {phase === "completed" && !busy && !operating && !error && (
         <div className="flex items-center gap-2 text-xs font-bold text-emerald-700">
           <CheckCircle2 className="w-4 h-4 text-emerald-600" />
           {BACKUP_PROGRESS_LABELS.completed}
         </div>
       )}
-      {phase === "failed" && !busy && !operating && (
+      {(phase === "failed" && !busy && !operating && !error) ? (
         <div className="flex items-center gap-2 text-xs font-bold text-rose-600">
           <XCircle className="w-4 h-4 text-rose-600" />
           {BACKUP_PROGRESS_LABELS.failed}
+        </div>
+      ) : null}
+      {error && !busy && (
+        <div role="alert" className="rounded-lg bg-rose-50 border border-rose-200 p-3 text-rose-700">
+          <p className="flex items-center gap-1.5 text-xs font-bold">
+            <XCircle className="w-4 h-4 shrink-0" /> {error.friendly}
+          </p>
+          <ErrorDetails detail={error.detail} />
         </div>
       )}
     </div>

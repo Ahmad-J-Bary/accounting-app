@@ -1,12 +1,15 @@
 import {
   Database, HardDrive, ListChecks, Users, Layers, Building2,
-  CalendarClock, ShieldCheck, AlertTriangle, CheckCircle2, XCircle, Loader2,
+  CalendarClock, ShieldCheck, AlertTriangle, CheckCircle2, Loader2,
 } from "lucide-react";
 import pkg from "../../../../../../package.json";
 import type { BackupFileInfo, BackupConfig, DatabaseInfo } from "../../../api/backupService";
 import {
-  formatSize, formatTimestamp, formatDayToken, backupStatus,
+  formatSize, formatTimestamp, formatDayToken,
 } from "../../lib/backupFormat";
+import { friendlyBackupError } from "../../lib/backupErrors";
+import { ErrorDetails } from "../../lib/ErrorDetails";
+import { BackupStatusBadge } from "../BackupStatusBadge";
 
 interface Props {
   dbInfo: DatabaseInfo | null;
@@ -31,7 +34,7 @@ function Row({ icon: Icon, label, children }: { icon: typeof Database; label: st
   );
 }
 
-export function DatabaseStatusSection({ dbInfo, backups, config, health, healthMsg, loading }: Props) {
+export function DatabaseStatusSection({ dbInfo, backups, health, healthMsg, loading }: Props) {
   if (loading || !dbInfo) {
     return (
       <p className="text-sm text-slate-400 font-bold py-8 text-center">
@@ -42,9 +45,9 @@ export function DatabaseStatusSection({ dbInfo, backups, config, health, healthM
 
   const latest =
     [...backups].sort((a, b) => b.timestamp - a.timestamp)[0] ?? null;
-  const latestStatus = latest ? backupStatus(latest) : null;
   const rollbacked = dbInfo.last_restore_status === "rolled_back";
   const restoreApplied = dbInfo.last_restore_status === "applied";
+  const healthErr = friendlyBackupError(healthMsg || "integrity check failed");
 
   return (
     <div className="space-y-3">
@@ -58,8 +61,9 @@ export function DatabaseStatusSection({ dbInfo, backups, config, health, healthM
             <p className="text-sm font-bold text-slate-500">قاعدة البيانات</p>
             <p className="text-2xl font-black text-red-700">يتطلب انتباهًا</p>
             <p className="text-xs font-medium text-red-600 mt-0.5">
-              {healthMsg || "فشل فحص السلامة — يرجى إنشاء نسخة احتياطية فورًا والاتصال بالدعم."}
+              {healthErr.friendly}
             </p>
+            <ErrorDetails detail={healthErr.detail} />
           </div>
         </div>
       ) : health === "checking" ? (
@@ -127,29 +131,12 @@ export function DatabaseStatusSection({ dbInfo, backups, config, health, healthM
         </Row>
         <Row icon={CalendarClock} label="آخر نسخة احتياطية">
           {latest ? (
-            <>
+            <div className="space-y-1">
               {formatTimestamp(latest.timestamp)}
-              {latestStatus && (
-                <span
-                  className={`inline-flex items-center gap-1 mt-1 rounded-full px-2 py-0.5 ring-1 ring-inset text-[10px] font-bold ${
-                    latestStatus.tone === "emerald"
-                      ? "bg-emerald-50 text-emerald-700 ring-emerald-200 border border-emerald-200"
-                      : latestStatus.tone === "rose"
-                        ? "bg-rose-50 text-rose-700 ring-rose-200 border border-rose-200"
-                        : "bg-amber-50 text-amber-700 ring-amber-200 border border-amber-200"
-                  }`}
-                >
-                  {latestStatus.tone === "emerald" ? (
-                    <CheckCircle2 className="w-3 h-3" />
-                  ) : latestStatus.tone === "rose" ? (
-                    <XCircle className="w-3 h-3" />
-                  ) : (
-                    <AlertTriangle className="w-3 h-3" />
-                  )}
-                  {latestStatus.label}
-                </span>
-              )}
-            </>
+              <div>
+                <BackupStatusBadge backup={latest} icon />
+              </div>
+            </div>
           ) : (
             "لا توجد نسخ احتياطية بعد"
           )}

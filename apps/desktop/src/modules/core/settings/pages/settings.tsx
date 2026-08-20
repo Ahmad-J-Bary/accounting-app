@@ -119,7 +119,7 @@ export default function Settings() {
       case "backups":
         return <DataBackupSection />;
       case "security":
-        break;
+        return <UnderDevelopmentSection />;
       default:
         return <UnderDevelopmentSection />;
     }

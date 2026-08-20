@@ -13,6 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@shared/ui/alert-dialog";
+import { Progress } from "@shared/ui/progress";
 import { toast } from "sonner";
 import {
   backupService,
@@ -20,6 +21,13 @@ import {
   type DatabaseInspection,
 } from "../../api/backupService";
 import { formatSize, formatTimestamp, inspectRejectionReason } from "../lib/backupFormat";
+import {
+  useBackupProgress,
+  BACKUP_PROGRESS_LABELS,
+  backupProgressValue,
+} from "@shared/hooks/useBackupProgress";
+import { friendlyBackupError, RESTORE_STATUS_SEEN_KEY, type BackupError } from "../lib/backupErrors";
+import { ErrorDetails } from "../lib/ErrorDetails";
 
 export type InspectMode = "import" | "restore";
 
@@ -71,12 +79,17 @@ export function InspectFileFlow({ mode, operating, preset = null, onPresetConsum
   const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [staged, setStaged] = useState(false);
+  const [flowError, setFlowError] = useState<BackupError | null>(null);
+  const phase = useBackupProgress();
 
   const copy = MODE[mode];
 
   useEffect(() => {
     if (!preset) return;
     let cancelled = false;
+    setFlowError(null);
+    setStaged(false);
     void (async () => {
       try {
         const inspection = await backupService.inspectBackupFile(preset.path);
@@ -85,7 +98,11 @@ export function InspectFileFlow({ mode, operating, preset = null, onPresetConsum
           setConfirmOpen(false);
         }
       } catch (e) {
-        if (!cancelled) toast.error(e instanceof Error ? e.message : String(e));
+        if (!cancelled) {
+          const err = friendlyBackupError(e);
+          setFlowError(err);
+          toast.error(err.friendly);
+        }
       }
     })();
     return () => {
@@ -94,6 +111,8 @@ export function InspectFileFlow({ mode, operating, preset = null, onPresetConsum
   }, [preset]);
 
   const handlePick = async () => {
+    setFlowError(null);
+    setStaged(false);
     try {
       const path = await open({
         multiple: false,
@@ -104,22 +123,29 @@ export function InspectFileFlow({ mode, operating, preset = null, onPresetConsum
       const label = path.split(/[\\/]/).pop() ?? "ملف مستورد";
       setCandidate({ path, label, inspection, appVersion: null });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : String(e));
+      const err = friendlyBackupError(e);
+      setFlowError(err);
+      toast.error(err.friendly);
     }
   };
 
   const handleConfirm = async () => {
     if (!candidate) return;
     setBusy(true);
+    setFlowError(null);
     try {
       await backupService.importFromFile(candidate.path);
+      localStorage.removeItem(RESTORE_STATUS_SEEN_KEY);
       toast.success(copy.doneToast);
       setConfirmOpen(false);
       setCandidate(null);
+      setStaged(true);
       onPresetConsumed?.();
       await onDone();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : String(e));
+      const err = friendlyBackupError(e);
+      setFlowError(err);
+      toast.error(err.friendly);
     } finally {
       setBusy(false);
     }
@@ -219,6 +245,21 @@ export function InspectFileFlow({ mode, operating, preset = null, onPresetConsum
         </div>
       )}
 
+      {staged && !busy && (
+        <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-emerald-700 text-sm font-bold">
+          <CheckCircle2 className="w-4 h-4 shrink-0" /> {copy.doneToast} ✓
+        </div>
+      )}
+
+      {flowError && !busy && (
+        <div role="alert" className="rounded-lg bg-rose-50 border border-rose-200 p-3 text-rose-700">
+          <p className="flex items-center gap-1.5 text-xs font-bold">
+            <AlertTriangle className="w-4 h-4 shrink-0" /> {flowError.friendly}
+          </p>
+          <ErrorDetails detail={flowError.detail} />
+        </div>
+      )}
+
       <AlertDialog open={confirmOpen} onOpenChange={(o) => { if (!o) setConfirmOpen(false); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -261,6 +302,16 @@ export function InspectFileFlow({ mode, operating, preset = null, onPresetConsum
                   </div>
                 )}
                 <p className="text-xs text-slate-500">{copy.note}</p>
+                {busy && phase ? (
+                  <div role="status" aria-live="polite" className="space-y-1.5">
+                    <Progress
+                      value={backupProgressValue(phase)}
+                      aria-label="تقدم التجهيز"
+                      className="[&>div]:bg-emerald-600"
+                    />
+                    <p className="text-xs font-bold text-slate-500">{BACKUP_PROGRESS_LABELS[phase]}</p>
+                  </div>
+                ) : null}
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
