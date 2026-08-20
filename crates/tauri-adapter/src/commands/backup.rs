@@ -99,7 +99,14 @@ async fn create_typed_backup(
     std::fs::create_dir_all(&backup_dir)
         .map_err(|e| format!("Failed to create backup dir: {e}"))?;
 
-    let filename = backup::next_backup_filename(&backup_dir, backup::BACKUP_PREFIX)?;
+    // Pre-import safety snapshots get a dedicated prefix so retention never
+    // misclassifies them as `auto` (even if the sidecar is lost).
+    let prefix = if backup_type == BackupType::PreImport {
+        backup::PREIMPORT_PREFIX
+    } else {
+        backup::BACKUP_PREFIX
+    };
+    let filename = backup::next_backup_filename(&backup_dir, prefix)?;
     let dest = backup_dir.join(&filename);
 
     let _ = app.emit("backup-progress", BackupProgress::creating());
@@ -136,7 +143,7 @@ async fn create_typed_backup(
 
     Ok(BackupFileInfo {
         label: filename
-            .trim_start_matches(backup::BACKUP_PREFIX)
+            .trim_start_matches(prefix)
             .trim_end_matches(".sqlite")
             .to_string(),
         name: filename,
@@ -297,6 +304,7 @@ pub async fn export_database(
     }
     let _ = app.emit("backup-progress", BackupProgress::exporting());
     if let Err(e) = backup::create_snapshot(&state.pool, dest).await {
+        let _ = std::fs::remove_file(dest);
         let _ = app.emit("backup-progress", BackupProgress::failed());
         return Err(e);
     }
@@ -360,6 +368,9 @@ async fn stage_restore(
     let report = backup::validate_import_candidate(source).await?;
     if !report.ok {
         let _ = app.emit("backup-progress", BackupProgress::failed());
+        // The byte-import path writes raw bytes to erp.pending.sqlite BEFORE
+        // this validation; sweep it so no stale candidate is left on disk.
+        let _ = std::fs::remove_file(resolve_data_dir(app)?.join("erp.pending.sqlite"));
         return Err(format!(
             "رُفض الاستيراد — والنسخة الاحتياطية التلقائية محفوظة: {}",
             report.errors.join(" | ")

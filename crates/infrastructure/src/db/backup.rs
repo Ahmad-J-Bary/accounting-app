@@ -21,7 +21,9 @@
 //! Retention is tiered: among automatically-created backups only, the newest
 //! [RETENTION_POLICY_DEFAULT.daily] day-buckets, `weekly` week-buckets and
 //! `monthly` month-buckets are kept. Manual and pre-import backups are kept
-//! until explicitly deleted by the user.
+//! until explicitly deleted by the user. Pre-import safety snapshots use the
+//! dedicated [`PREIMPORT_PREFIX`] so they stay classified `pre_import` even
+//! without a sidecar — retention can therefore never trim them.
 
 use std::path::{Path, PathBuf};
 use std::str::FromStr as _;
@@ -34,6 +36,11 @@ use sha2::{Digest, Sha256};
 
 /// Canonical backup file name prefix, e.g. `accounting_backup_20260819_093000.sqlite`.
 pub const BACKUP_PREFIX: &str = "accounting_backup_";
+/// Prefix for the untrimmed safety snapshot taken before an import/restore.
+/// A dedicated prefix (matching the legacy `erp_pre_restore_` naming) means the
+/// file is classified `pre_import` by name alone, so retention can never
+/// delete it even if its sidecar metadata is lost.
+pub const PREIMPORT_PREFIX: &str = "erp_pre_restore_";
 /// Legacy prefixes recognized so existing backups remain visible/deletable.
 pub const LEGACY_PREFIXES: [&str; 2] = ["erp_backup_", "erp_pre_restore_"];
 /// Prefix for user-initiated export files.
@@ -108,14 +115,16 @@ pub fn backup_filename(prefix: &str) -> String {
 
 /// Does `name` look like a backup file we recognize?
 pub fn is_backup_name(name: &str) -> bool {
-    name.starts_with(BACKUP_PREFIX) || LEGACY_PREFIXES.iter().any(|p| name.starts_with(p))
+    name.starts_with(BACKUP_PREFIX)
+        || name.starts_with(PREIMPORT_PREFIX)
+        || LEGACY_PREFIXES.iter().any(|p| name.starts_with(p))
 }
 
 /// Derive the backup type for a file name when no sidecar exists.
 fn infer_type(name: &str) -> String {
     if name.starts_with(BACKUP_PREFIX) {
         "auto".into()
-    } else if name.starts_with("erp_pre_restore_") {
+    } else if name.starts_with(PREIMPORT_PREFIX) || name.starts_with("erp_pre_restore_") {
         "pre_import".into()
     } else {
         "auto".into()
@@ -124,7 +133,10 @@ fn infer_type(name: &str) -> String {
 
 /// Derive the user-facing label (timestamp token) from a backup file name.
 fn label_from_name(name: &str) -> String {
-    for prefix in std::iter::once(BACKUP_PREFIX).chain(LEGACY_PREFIXES.iter().copied()) {
+    for prefix in std::iter::once(BACKUP_PREFIX)
+        .chain(std::iter::once(PREIMPORT_PREFIX))
+        .chain(LEGACY_PREFIXES.iter().copied())
+    {
         if let Some(rest) = name.strip_prefix(prefix) {
             return rest.trim_end_matches(".sqlite").to_string();
         }
@@ -1443,5 +1455,32 @@ mod tests {
         assert!(r.pending.is_none());
         assert!(r.rolled_back);
         assert_eq!(std::fs::read(&db_path).unwrap(), b"old-bytes");
+    }
+
+    #[test]
+    fn pre_import_prefix_classifies_by_name_alone() {
+        let name = "erp_pre_restore_20260820_093000.sqlite";
+        assert!(is_backup_name(name));
+        assert_eq!(infer_type(name), "pre_import");
+        assert_eq!(label_from_name(name), "20260820_093000");
+        // Generic prefixes stay `auto` by name.
+        assert_eq!(infer_type("accounting_backup_20260820_093000.sqlite"), "auto");
+        assert_eq!(infer_type("erp_backup_20260820_093000.sqlite"), "auto");
+    }
+
+    #[test]
+    fn retention_never_trims_sidecarless_pre_import() {
+        let dir = tmp_data_dir("prekeep");
+        let name = "erp_pre_restore_20260820_093000.sqlite";
+        std::fs::write(dir.join(name), b"snapshot").unwrap();
+        // No sidecar — the name alone must keep it classified `pre_import`.
+        let backups = list_backup_files(&dir).unwrap();
+        assert_eq!(backups.len(), 1);
+        assert_eq!(backups[0].backup_type, "pre_import");
+        // An active policy must not touch it even with no metadata to rely on.
+        let policy = RetentionPolicy { daily: 1, weekly: 0, monthly: 0 };
+        let removed = apply_retention(&dir, policy, &backups).unwrap();
+        assert!(removed.is_empty(), "pre_import snapshot must never be trimmed");
+        assert!(dir.join(name).exists());
     }
 }
