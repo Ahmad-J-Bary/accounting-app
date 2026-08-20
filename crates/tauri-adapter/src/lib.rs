@@ -1,48 +1,46 @@
 pub mod bootstrap;
 pub mod commands;
 
-use std::path::PathBuf;
 use tauri::{Emitter, Manager};
 
 use infrastructure::db::backup::RetentionPolicy;
 
 use crate::bootstrap::container::AppState;
 
-/// Apply a staged restore at startup, BEFORE the connection pool opens.
-///
-/// A restore staged by `import_database`/`import_database_from_bytes` lives at
-/// `<data_dir>/erp.pending.sqlite` plus a `restore.pending.json` marker. Since
-/// the previous launch closed the pool (process exit), swapping files here is
-/// safe on every platform and the natural startup path then runs migrations and
-/// integrity checks against the restored file.
-fn apply_pending_restore(data_dir: &std::path::Path, db_path: &std::path::Path) -> bool {
-    let Ok(Some(pending)) = infrastructure::db::backup::take_pending_marker(data_dir) else {
-        return false;
-    };
-    let pending_path = PathBuf::from(&pending.pending_db);
-    if !pending_path.exists() {
-        eprintln!("⚠️ Pending restore file missing: {}", pending.pending_db);
-        return false;
-    }
-    eprintln!("♻️ Applying pending restore from {}", pending.pending_db);
-    if let Err(e) = infrastructure::db::backup::replace_db_file(db_path, &pending_path) {
-        eprintln!("⚠️ Failed to apply pending restore: {e}");
-        return false;
-    }
-    let _ = std::fs::remove_file(&pending_path);
-    true
+/// Startup state payload surfaced to the frontend when the app refuses to open
+/// because the database schema is newer than this build.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct StartupBlock {
+    pub reason: String,
+    pub found_version: u32,
+    pub supported_version: u32,
+}
+
+/// Managed startup state (whether the app is blocked and why). Always managed,
+/// exactly once per process.
+#[derive(Debug, Clone, Default)]
+pub struct ManagedStartup {
+    pub block: Option<StartupBlock>,
 }
 
 /// Post-swap validation of a just-applied restore/import. Returns an error (with
 /// a user-facing message) when the imported database must be rolled back.
+/// Mirrors the pre-import gates (integrity, required tables, foreign keys,
+/// per-entry debit=credit). Balance-sheet deviation is logged as a warning only.
 async fn validate_applied_restore(pool: &infrastructure::sqlx::SqlitePool) -> Result<(), String> {
     use infrastructure::db::backup as b;
-    if let Err(e) = b::quick_check(pool).await {
+    if let Err(e) = b::integrity_check(pool).await {
         return Err(format!("فشل فحص سلامة القاعدة بعد الاستعادة: {e}"));
     }
-    // Ensure the restored journal ledger is still internally consistent before
-    // the app becomes usable. Foreign keys are enforced by the pool options, and
-    // the sqlite-level FK check below is OOM-safe on restore-sized DBs.
+    let missing = b::missing_tables(pool, &b::REQUIRED_TABLES)
+        .await
+        .unwrap_or_default();
+    if !missing.is_empty() {
+        return Err(format!(
+            "الجداول الأساسية مفقودة في القاعدة المستعادة: {}",
+            missing.join("، ")
+        ));
+    }
     let fk_violations = infrastructure::sqlx::query_as::<_, (String, i64, String, i64)>(
         "SELECT \"table\", rowid, parent, fkid FROM pragma_foreign_key_check",
     )
@@ -54,6 +52,21 @@ async fn validate_applied_restore(pool: &infrastructure::sqlx::SqlitePool) -> Re
             "انتهاكات علاقات في القاعدة المستعادة ({}): لا يمكن تفعيلها",
             fk_violations.len()
         ));
+    }
+    match b::unbalanced_posted_entries(pool).await {
+        Ok(v) if !v.is_empty() => {
+            return Err(format!(
+                "قيود مرحلة غير متوازنة في القاعدة المستعادة (مدين ≠ دائن): {}",
+                v.join("، ")
+            ));
+        }
+        Ok(_) => {}
+        Err(e) => return Err(format!("فشل فحص توازن القيود بعد الاستعادة: {e}")),
+    }
+    if let Ok(d) = b::accounting_equation_deviation(pool).await {
+        if d.abs() > 1.0 {
+            eprintln!("⚠️ انحراف معادلة الميزانية بعد الاستعادة (تحذير فقط): {d:.2}");
+        }
     }
     Ok(())
 }
@@ -373,6 +386,7 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             commands::backup::get_database_info,
             commands::backup::request_app_restart,
             commands::backup::get_database_health,
+            commands::startup::get_startup_block,
             // Opening balance migration
             commands::opening_balance::create_opening_balance_migration,
             commands::opening_balance::update_opening_balance_migration_lines,
@@ -414,23 +428,64 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             }
             let db_path = app_data_dir.join("erp.db");
 
-            // Apply any staged restore BEFORE the pool opens (file swap is only
-            // safe while no connection exists). The previous DB is retained at
-            // `<db>.pre_restore` so a failed validation can roll back.
-            let restore_applied = apply_pending_restore(&app_data_dir, &db_path);
+            // 1) Newer-schema guard — BEFORE touching any file. A database from
+            //    a newer app version must never be migrated/healed/overwritten.
+            {
+                use infrastructure::db::backup as b;
+                let block = match tauri::async_runtime::block_on(b::check_schema_block(&db_path)) {
+                    Ok(Some((found, supported))) => Some(StartupBlock {
+                        reason: "newer-schema".to_string(),
+                        found_version: found,
+                        supported_version: supported,
+                    }),
+                    Ok(None) => None,
+                    Err(e) => {
+                        eprintln!("⚠️ Schema check warning: {e}");
+                        None
+                    }
+                };
+                if block.is_some() {
+                    eprintln!("⚠️ Database schema is newer than this app; refusing to open.");
+                    app.manage(ManagedStartup { block });
+                    return Ok(());
+                }
+            }
+
+            // 2) Crash-safe reconciliation of any pending/interrupted restore
+            //    (marker kept until the swap is validated and finalized).
+            let reconcile = {
+                use infrastructure::db::backup as b;
+                match b::reconcile_pending_restore(&app_data_dir, &db_path) {
+                    Ok(r) => r,
+                    Err(e) => {
+                        eprintln!("⚠️ Restore reconciliation failed: {e}");
+                        b::ReconcileResult::default()
+                    }
+                }
+            };
+            if reconcile.rolled_back {
+                eprintln!("♻️ Recuperated the previous database after an interrupted restore.");
+            }
 
             let database_url = format!("sqlite:{}?mode=rwc", db_path.display());
 
+            let restore_applied = reconcile.pending.is_some();
+
             let app_state = if restore_applied {
                 // Do NOT hard-fail on a bad migration of an imported DB (e.g. a
-                // newer-schema DB that reached this point); roll back instead.
+                // schema that reached this point unexpectedly); roll back instead.
                 match tauri::async_runtime::block_on(bootstrap::container::build_app_state(
                     &database_url,
                 )) {
                     Ok(state) => state,
                     Err(e) => {
                         eprintln!("⚠️ Import failed to start after restore ({e}); rolling back");
+                        if let Some(p) = &reconcile.pending {
+                            let _ = std::fs::remove_file(&p.pending_db);
+                        }
+                        let _ = infrastructure::db::backup::remove_pending_marker(&app_data_dir);
                         rollback_and_rebuild(&database_url, &db_path, app);
+                        app.manage(ManagedStartup { block: None });
                         return Ok(());
                     }
                 }
@@ -444,7 +499,8 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
             if restore_applied {
                 use infrastructure::db::backup as b;
                 // Post-swap accounting safety: the imported DB may have passed
-                // pre-import validation but a mismatch here reverts it.
+                // pre-import validation but a mismatch here reverts it. The
+                // pending marker is removed only after this succeeds.
                 let valid = tauri::async_runtime::block_on(validate_applied_restore(
                     &app_state.pool,
                 ));
@@ -456,20 +512,27 @@ pub fn run() -> tauri::Builder<tauri::Wry> {
                             "backup_last_restore_status",
                             "applied",
                         ));
+                        if let Some(p) = &reconcile.pending {
+                            let _ = std::fs::remove_file(&p.pending_db);
+                        }
+                        let _ = b::remove_pending_marker(&app_data_dir);
                         eprintln!("✅ Restore applied and validated.");
                     }
                     Err(e) => {
                         eprintln!("⚠️ Restore rolled back: {e}");
                         drop(app_state);
                         let _ = app.emit("restore-rejected", e.clone());
+                        let _ = b::remove_pending_marker(&app_data_dir);
                         // Re-open the previous DB in place of the rejected one.
                         rollback_and_rebuild(&database_url, &db_path, app);
+                        app.manage(ManagedStartup { block: None });
                         return Ok(());
                     }
                 }
             }
 
             app.manage(app_state.clone());
+            app.manage(ManagedStartup { block: None });
 
             // Start the daily auto-backup in the background (best effort).
             let backup_handle = app.handle().clone();

@@ -30,3 +30,4 @@ pub mod export;
 pub mod opening_balance;
 pub mod fiscal_period;
 pub mod backup;
+pub mod startup;

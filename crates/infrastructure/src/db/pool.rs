@@ -35,6 +35,33 @@ pub fn latest_schema_version() -> u32 {
         .unwrap_or(0) as u32
 }
 
+/// Refuse to operate on a database whose migration ledger is ahead of this
+/// build (a schema created by a NEWER app version). Returns an error instead of
+/// allowing the migration/healing loop to mutate the newer DB's ledger.
+/// A fresh database (no ledger table yet) is permitted.
+pub async fn ensure_schema_supported(pool: &SqlitePool) -> Result<(), String> {
+    let has_ledger: bool = sqlx::query_scalar(
+        "SELECT COUNT(*) > 0 FROM sqlite_master WHERE type = 'table' AND name = '_sqlx_migrations'",
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|e| format!("Failed to inspect migration ledger: {e}"))?;
+    if !has_ledger {
+        return Ok(());
+    }
+    let max: i64 = sqlx::query_scalar("SELECT COALESCE(MAX(version), 0) FROM _sqlx_migrations")
+        .fetch_one(pool)
+        .await
+        .map_err(|e| format!("Failed to read migration ledger: {e}"))?;
+    let supported = latest_schema_version() as i64;
+    if max > supported {
+        return Err(format!(
+            "قاعدة البيانات من إصدار أحدث ({max}) — الحد الأقصى المدعوم ({supported}). يُرجى تحديث التطبيق."
+        ));
+    }
+    Ok(())
+}
+
 /// Check if a column exists in a table
 async fn column_exists(pool: &SqlitePool, table: &str, column: &str) -> bool {
     sqlx::query_scalar::<_, i64>(&format!(
@@ -208,6 +235,16 @@ async fn ensure_opening_balance_equity_account(pool: &SqlitePool) {
 }
 
 pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::migrate::MigrateError> {
+    // Defensive gate: never run the healing loop against a schema that is newer
+    // than this build supports — the heal path DELETEs unknown migration-ledger
+    // rows (VersionMissing), which would corrupt the ledger of a future-version
+    // database instead of protecting it.
+    if let Err(msg) = ensure_schema_supported(pool).await {
+        return Err(sqlx::migrate::MigrateError::Source(
+            std::io::Error::other(msg).into(),
+        ));
+    }
+
     let migrator = sqlx::migrate!("./src/db/migrations");
 
     loop {

@@ -53,6 +53,23 @@ pub const EXPECTED_TABLES: [&str; 10] = [
     "_sqlx_migrations",
 ];
 
+/// Required tables AFTER migrations have been applied (an older schema is
+/// upgraded first). Used when certifying snapshots and import candidates.
+pub const REQUIRED_TABLES: [&str; 12] = [
+    "accounts",
+    "journal_entries",
+    "journal_lines",
+    "unified_invoices",
+    "unified_invoice_lines",
+    "materials",
+    "partners",
+    "settings",
+    "app_config",
+    "_sqlx_migrations",
+    "audit_logs",
+    "fiscal_periods",
+];
+
 // ─── Naming & snapshots ────────────────────────────────────────────────────
 
 /// Escape an SQL string literal by doubling single quotes.
@@ -143,6 +160,19 @@ pub async fn integrity_check(pool: &SqlitePool) -> Result<(), String> {
     } else {
         Err(format!("Database integrity check failed: {}", bad.join(" | ")))
     }
+}
+
+/// Names of tables from `required` that are absent from the database.
+pub async fn missing_tables(pool: &SqlitePool, required: &[&str]) -> Result<Vec<String>, String> {
+    let tables: Vec<String> = sqlx::query_scalar("SELECT name FROM sqlite_master WHERE type = 'table'")
+        .fetch_all(pool)
+        .await
+        .map_err(|e| format!("Failed to read schema: {e}"))?;
+    Ok(required
+        .iter()
+        .filter(|t| !tables.iter().any(|n| n == *t))
+        .map(|t| t.to_string())
+        .collect())
 }
 
 /// `PRAGMA quick_check`. A faster, slightly weaker variant used at startup.
@@ -269,6 +299,15 @@ pub struct BackupMeta {
     pub integrity: String,
     pub tables_present: bool,
     pub verified_at: String,
+    /// Journal rows present in the snapshot at verification time.
+    pub journal_entry_count: u64,
+    /// Account rows present in the snapshot at verification time.
+    pub account_count: u64,
+    /// Whether every posted journal in the snapshot was balanced (debit ≈ credit).
+    pub posted_balance_ok: bool,
+    /// Balance-sheet deviation (only recorded on full-path verification).
+    #[serde(default)]
+    pub balance_deviation: Option<f64>,
 }
 
 /// Info returned to the frontend for one backup file.
@@ -287,6 +326,10 @@ pub struct BackupFileInfo {
     pub company_scope: Option<String>,
     pub status: Option<String>,
     pub verified: bool,
+    /// Journal rows recorded in the sidecar (None for legacy files).
+    pub journal_entry_count: Option<u64>,
+    /// Account rows recorded in the sidecar (None for legacy files).
+    pub account_count: Option<u64>,
 }
 
 pub fn sidecar_path(dir: &Path, name: &str) -> PathBuf {
@@ -343,20 +386,31 @@ pub fn save_sidecar(dir: &Path, meta: &BackupMeta) -> Result<(), String> {
 pub struct Verification {
     pub integrity_ok: bool,
     pub missing_tables: Vec<String>,
+    /// Rows in `journal_entries` read from the snapshot.
+    pub journal_entry_count: u64,
+    /// Rows in `accounts` read from the snapshot.
+    pub account_count: u64,
+    /// Every `Posted` journal in the snapshot is balanced (debit ≈ credit).
+    pub posted_balance_ok: bool,
+    /// Balance-sheet deviation (Assets+Expenses − Liabilities−Equity−Revenue).
+    /// Only computed on the full verification path; `None` otherwise.
+    pub balance_deviation: Option<f64>,
     pub sha256: String,
     pub verified_at: String,
 }
 
 impl Verification {
     pub fn full_ok(&self) -> bool {
-        self.integrity_ok && self.missing_tables.is_empty()
+        self.integrity_ok && self.missing_tables.is_empty() && self.posted_balance_ok
     }
 }
 
 /// Verify a standalone snapshot file WITHOUT touching the live database:
-/// read-only open, integrity (or quick) check, expected accounting tables, SHA.
+/// read-only open, integrity (or quick) check, required accounting tables,
+/// journal/account counts, per-entry balance of posted journals, SHA.
 ///
-/// `full = true` runs `PRAGMA integrity_check`; otherwise `quick_check`.
+/// `full = true` runs `PRAGMA integrity_check` and computes the balance-sheet
+/// deviation; otherwise `quick_check` is used (deviation left as `None`).
 pub async fn verify_backup(path: &Path, full: bool) -> Result<Verification, String> {
     if !path.exists() {
         return Err("Backup file does not exist".into());
@@ -381,24 +435,42 @@ pub async fn verify_backup(path: &Path, full: bool) -> Result<Verification, Stri
         quick_check(&pool).await.is_ok()
     };
 
-    let tables: Vec<String> = sqlx::query_scalar("SELECT name FROM sqlite_master WHERE type = 'table'")
-        .fetch_all(&pool)
+    let missing_tables = missing_tables(&pool, &REQUIRED_TABLES)
         .await
-        .map_err(|e| format!("Failed to read backup schema: {e}"))?;
-    let missing_tables: Vec<String> = EXPECTED_TABLES
-        .iter()
-        .filter(|t| !tables.iter().any(|n| n == *t))
-        .map(|t| t.to_string())
-        .collect();
+        .unwrap_or_default();
 
-    pool.close().await;
+    let journal_entry_count = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM journal_entries")
+        .fetch_one(&pool)
+        .await
+        .unwrap_or(0)
+        .max(0) as u64;
+    let account_count = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM accounts")
+        .fetch_one(&pool)
+        .await
+        .unwrap_or(0)
+        .max(0) as u64;
 
-    Ok(Verification {
+    let posted_balance_ok = unbalanced_posted_entries(&pool).await
+        .map(|v| v.is_empty())
+        .unwrap_or(true);
+    let balance_deviation = if full {
+        accounting_equation_deviation(&pool).await.ok()
+    } else {
+        None
+    };
+
+    let verified = Verification {
         integrity_ok,
         missing_tables,
+        journal_entry_count,
+        account_count,
+        posted_balance_ok,
+        balance_deviation,
         sha256: file_sha256(path)?,
         verified_at: chrono::Local::now().to_rfc3339(),
-    })
+    };
+    pool.close().await;
+    Ok(verified)
 }
 
 /// Build a sidecar [`BackupMeta`] for a freshly created, verified snapshot.
@@ -438,6 +510,10 @@ pub async fn build_meta(
         },
         tables_present: verification.missing_tables.is_empty(),
         verified_at: verification.verified_at.clone(),
+        journal_entry_count: verification.journal_entry_count,
+        account_count: verification.account_count,
+        posted_balance_ok: verification.posted_balance_ok,
+        balance_deviation: verification.balance_deviation,
     }
 }
 
@@ -495,6 +571,8 @@ pub fn list_backup_files(dir: &Path) -> Result<Vec<BackupFileInfo>, String> {
             company_scope: meta.as_ref().and_then(|m| m.company_scope.clone()),
             status: meta.as_ref().map(|m| m.status.clone()),
             verified,
+            journal_entry_count: meta.as_ref().map(|m| m.journal_entry_count),
+            account_count: meta.as_ref().map(|m| m.account_count),
         });
     }
     files.sort_by(|a, b| b.name.cmp(&a.name));
@@ -674,6 +752,37 @@ async fn open_readonly(path: &Path) -> Result<SqlitePool, String> {
         .map_err(|e| format!("الملف ليس قاعدة بيانات سليمة: {e}"))
 }
 
+/// Detect whether `db_path` is a SQLite database whose schema version is NEWER
+/// than this build supports. `Ok(None)` for a file that is absent, lacks a
+/// migration ledger (fresh DB), or is at a supported version.
+pub async fn check_schema_block(db_path: &Path) -> Result<Option<(u32, u32)>, String> {
+    if !db_path.is_file() {
+        return Ok(None);
+    }
+    let pool = open_readonly(db_path).await?;
+    let has_ledger: bool = sqlx::query_scalar(
+        "SELECT COUNT(*) > 0 FROM sqlite_master WHERE type = 'table' AND name = '_sqlx_migrations'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap_or(false);
+    if !has_ledger {
+        pool.close().await;
+        return Ok(None);
+    }
+    let max: i64 = sqlx::query_scalar("SELECT COALESCE(MAX(version), 0) FROM _sqlx_migrations")
+        .fetch_one(&pool)
+        .await
+        .unwrap_or(0);
+    pool.close().await;
+    let supported = crate::db::pool::latest_schema_version();
+    if max.max(0) as u32 > supported {
+        Ok(Some((max.max(0) as u32, supported)))
+    } else {
+        Ok(None)
+    }
+}
+
 /// Read-only metadata about a candidate import file (schema version, tables,
 /// integrity, counts) — never opens the live database.
 pub async fn inspect_database_file(path: &Path) -> Result<DatabaseInspection, String> {
@@ -763,7 +872,7 @@ async fn foreign_key_violations(pool: &SqlitePool) -> Result<Vec<String>, String
 }
 
 /// Posted journal entries whose `debit_base !== credit_base` beyond tolerance.
-async fn unbalanced_posted_entries(pool: &SqlitePool) -> Result<Vec<String>, String> {
+pub async fn unbalanced_posted_entries(pool: &SqlitePool) -> Result<Vec<String>, String> {
     let rows: Vec<(String, f64)> = sqlx::query_as(
         "SELECT je.entry_number,
                 COALESCE(SUM(CAST(jl.debit_base AS REAL)), 0)
@@ -787,7 +896,7 @@ async fn unbalanced_posted_entries(pool: &SqlitePool) -> Result<Vec<String>, Str
 /// Trial-balance deviation: Assets − Liabilities − Equity − Revenue + Expenses,
 /// computed on POSTED ledger lines grouped by account type. Should be ~0 for a
 /// self-consistent double-entry ledger.
-async fn accounting_equation_deviation(pool: &SqlitePool) -> Result<f64, String> {
+pub async fn accounting_equation_deviation(pool: &SqlitePool) -> Result<f64, String> {
     let rows: Vec<(String, f64)> = sqlx::query_as(
         "SELECT a.account_type,
                 COALESCE(SUM(CAST(jl.debit_base AS REAL)), 0)
@@ -858,9 +967,35 @@ pub async fn validate_import_candidate(path: &Path) -> Result<ValidationReport, 
         }
     };
 
+    // 0) Never migrate/heal a schema newer than this build supports — doing so
+    //    could DELETE unknown migration-ledger rows from a newer DB.
+    if let Err(e) = crate::db::pool::ensure_schema_supported(&pool).await {
+        report.errors.push(e);
+        report.ok = false;
+        pool.close().await;
+        let _ = std::fs::remove_file(&tmp);
+        return Ok(report);
+    }
+
     if let Err(e) = crate::db::pool::run_migrations(&pool).await {
         report.errors.push(format!("فشل تطبيق ترقيات قاعدة البيانات: {e}"));
         report.ok = false;
+    }
+
+    // 1b) Required tables present after migration (explicit gate — catches files
+    //     whose integrity/FK/balance checks would otherwise pass vacuously).
+    match missing_tables(&pool, &REQUIRED_TABLES).await {
+        Ok(missing) if !missing.is_empty() => {
+            report
+                .errors
+                .push(format!("الجداول الأساسية مفقودة: {}", missing.join("، ")));
+            report.ok = false;
+        }
+        Ok(_) => {}
+        Err(e) => {
+            report.errors.push(e);
+            report.ok = false;
+        }
     }
 
     // 2) Full integrity check.
@@ -995,7 +1130,7 @@ pub fn pending_marker_path(data_dir: &Path) -> PathBuf {
 }
 
 /// Pending-restore marker content (JSON).
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct PendingRestore {
     pub pending_db: String,
     pub source_label: String,
@@ -1010,18 +1145,128 @@ pub fn write_pending_marker(data_dir: &Path, pending: &PendingRestore) -> Result
         .map_err(|e| format!("Failed to write restore marker: {e}"))
 }
 
-/// Read and delete the pending-restore marker.
-pub fn take_pending_marker(data_dir: &Path) -> Result<Option<PendingRestore>, String> {
+/// Read the pending-restore marker WITHOUT removing it. Deletion is deferred
+/// until a restore has been applied AND validated (see [`reconcile_pending_restore`]).
+pub fn read_pending_marker(data_dir: &Path) -> Result<Option<PendingRestore>, String> {
     let path = pending_marker_path(data_dir);
     if !path.exists() {
         return Ok(None);
     }
     let json = std::fs::read_to_string(&path)
         .map_err(|e| format!("Failed to read restore marker: {e}"))?;
-    let pending: PendingRestore = serde_json::from_str(&json)
-        .map_err(|e| format!("Failed to parse restore marker: {e}"))?;
-    std::fs::remove_file(&path).map_err(|e| format!("Failed to remove restore marker: {e}"))?;
-    Ok(Some(pending))
+    serde_json::from_str(&json)
+        .map(Some)
+        .map_err(|e| format!("Failed to parse restore marker: {e}"))
+}
+
+/// Delete the pending-restore marker file (call only after the restore has been
+/// finalized — applied or rolled back).
+pub fn remove_pending_marker(data_dir: &Path) -> Result<(), String> {
+    let path = pending_marker_path(data_dir);
+    if path.exists() {
+        std::fs::remove_file(&path)
+            .map_err(|e| format!("Failed to remove restore marker: {e}"))?;
+    }
+    Ok(())
+}
+
+/// Result of reconciling pending/interrupted restore state at startup.
+#[derive(Debug, Clone, Default)]
+pub struct ReconcileResult {
+    /// `Some` when a staged restore was applied (or an unfinished one recovered)
+    /// and the caller MUST run post-swap validation on the current DB.
+    pub pending: Option<PendingRestore>,
+    /// `true` when the previous database was recovered without applying anything
+    /// (the interrupted swap was rolled back; nothing needs validation).
+    pub rolled_back: bool,
+}
+
+/// Crash-safe resolution of the on-disk restore state at startup.
+///
+/// The swap in [`replace_db_file`] involves several renames; a crash between
+/// them can leave any combination of `{marker, erp.db, erp.db.pre_restore,
+/// erp.db.restore, erp.pending.sqlite}`. This function deterministically turns
+/// that state into either a restore that must be validated (roll forward /
+/// complete), a recovery of the previous database (roll back), or a clean no-op
+/// with stale temp files removed. The marker is intentionally NOT deleted here.
+pub fn reconcile_pending_restore(data_dir: &Path, db_path: &Path) -> Result<ReconcileResult, String> {
+    let marker = read_pending_marker(data_dir)?;
+    let staged = data_dir.join("erp.pending.sqlite");
+    let rest = db_path.with_extension("db.restore");
+    let pre = db_path.with_extension("db.pre_restore");
+    let wal = PathBuf::from(format!("{}-wal", db_path.to_string_lossy()));
+    let shm = PathBuf::from(format!("{}-shm", db_path.to_string_lossy()));
+
+    let mut result = ReconcileResult::default();
+
+    if let Some(m) = &marker {
+        let staged_from_marker = PathBuf::from(&m.pending_db);
+        if !staged_from_marker.exists() {
+            // The staged file vanished (deleted/cancelled) — nothing to apply.
+            let _ = remove_pending_marker(data_dir);
+            let _ = std::fs::remove_file(&rest);
+            let _ = std::fs::remove_file(&staged);
+            if !db_path.exists() && pre.exists() {
+                // Crash after the old DB was moved aside: recover it.
+                let _ = std::fs::remove_file(&wal);
+                let _ = std::fs::remove_file(&shm);
+                std::fs::rename(&pre, db_path)
+                    .map_err(|e| format!("Failed to recover previous DB: {e}"))?;
+                result.rolled_back = true;
+            }
+            return Ok(result);
+        }
+
+        if !db_path.exists() && pre.exists() && rest.exists() {
+            // Crash after `rename(db -> db.pre_restore)` but before
+            // `rename(db.restore -> db)`: complete the interrupted swap.
+            let _ = std::fs::remove_file(&wal);
+            let _ = std::fs::remove_file(&shm);
+            std::fs::rename(&rest, db_path)
+                .map_err(|e| format!("Failed to complete interrupted swap: {e}"))?;
+            result.pending = Some(m.clone());
+            return Ok(result);
+        }
+
+        if db_path.exists() && pre.exists() {
+            // The swap already happened (current DB installed, previous kept
+            // aside) but was never finalized — re-validate, then finalize.
+            result.pending = Some(m.clone());
+        } else {
+            // Normal staged-but-not-yet-applied restore (or a crash before the
+            // final rename): apply it now. The previous DB is moved to
+            // `db.pre_restore` so a failed validation can still roll back.
+            replace_db_file(db_path, &staged_from_marker)?;
+            result.pending = Some(m.clone());
+        }
+        // Marker deliberately left in place — the caller removes it only after
+        // post-swap validation succeeds (or explicitly on rollback).
+    } else if pre.exists() {
+        if db_path.exists() {
+            // Marker missing but a previous DB is still aside: the restore was
+            // applied and will be validated (a crash between install and
+            // finalize, or a legacy run that deleted the marker too early).
+            result.pending = Some(PendingRestore {
+                pending_db: db_path.to_string_lossy().to_string(),
+                source_label: "إتمام استعادة سابقة".to_string(),
+                created_at: chrono::Local::now().to_rfc3339(),
+            });
+        } else {
+            // Crash after the old DB moved aside with no marker: roll back to it.
+            let _ = std::fs::remove_file(&wal);
+            let _ = std::fs::remove_file(&shm);
+            let _ = std::fs::remove_file(&rest);
+            std::fs::rename(&pre, db_path)
+                .map_err(|e| format!("Failed to recover previous DB: {e}"))?;
+            result.rolled_back = true;
+        }
+    } else {
+        // Nothing pending — sweep stale temp files.
+        let _ = std::fs::remove_file(&rest);
+        let _ = std::fs::remove_file(&staged);
+    }
+
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -1042,6 +1287,8 @@ mod tests {
             company_scope: None,
             status: None,
             verified: true,
+            journal_entry_count: None,
+            account_count: None,
         }
     }
 
@@ -1086,5 +1333,115 @@ mod tests {
         assert_ne!(bucket_key(D1, "week").1, bucket_key(D2, "week").1);
         assert_eq!(bucket_key(D1, "month").1, bucket_key(D2, "month").1);
         assert_ne!(bucket_key(D1, "month").1, bucket_key(D3, "month").1);
+    }
+
+    fn tmp_data_dir(tag: &str) -> PathBuf {
+        let base = std::env::temp_dir().join(format!(
+            "aa_backup_reconcile_{tag}_{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(&base).unwrap();
+        base
+    }
+
+    fn staged_path(dir: &Path) -> PathBuf {
+        dir.join("erp.pending.sqlite")
+    }
+
+    fn write_marker(dir: &Path) {
+        write_pending_marker(
+            dir,
+            &PendingRestore {
+                pending_db: staged_path(dir).display().to_string(),
+                source_label: "test".to_string(),
+                created_at: "now".to_string(),
+            },
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn reconcile_clean_state_is_noop() {
+        let dir = tmp_data_dir("clean");
+        let db_path = dir.join("erp.db");
+        let r = reconcile_pending_restore(&dir, &db_path).unwrap();
+        assert!(r.pending.is_none());
+        assert!(!r.rolled_back);
+        assert!(!db_path.exists());
+    }
+
+    #[test]
+    fn reconcile_applies_normal_staged_restore() {
+        let dir = tmp_data_dir("apply");
+        let db_path = dir.join("erp.db");
+        std::fs::write(&db_path, b"old-bytes").unwrap();
+        std::fs::write(staged_path(&dir), b"staged-bytes").unwrap();
+        write_marker(&dir);
+        let r = reconcile_pending_restore(&dir, &db_path).unwrap();
+        assert!(r.pending.is_some());
+        assert!(!r.rolled_back);
+        assert_eq!(std::fs::read(&db_path).unwrap(), b"staged-bytes");
+        assert_eq!(
+            std::fs::read(db_path.with_extension("db.pre_restore")).unwrap(),
+            b"old-bytes"
+        );
+        // marker kept until post-swap validation finalizes the restore
+        assert!(pending_marker_path(&dir).exists());
+    }
+
+    #[test]
+    fn reconcile_completes_interrupted_swap() {
+        // Crash between `db -> db.pre_restore` and `db.restore -> db`.
+        let dir = tmp_data_dir("swap");
+        let db_path = dir.join("erp.db");
+        std::fs::write(staged_path(&dir), b"staged-bytes").unwrap();
+        write_marker(&dir);
+        std::fs::write(db_path.with_extension("db.pre_restore"), b"old-bytes").unwrap();
+        std::fs::write(db_path.with_extension("db.restore"), b"staged-bytes").unwrap();
+        let r = reconcile_pending_restore(&dir, &db_path).unwrap();
+        assert!(r.pending.is_some());
+        assert!(!r.rolled_back);
+        assert_eq!(std::fs::read(&db_path).unwrap(), b"staged-bytes");
+        assert!(!db_path.with_extension("db.restore").exists());
+    }
+
+    #[test]
+    fn reconcile_recovers_previous_db_when_staged_missing() {
+        // Staged file vanished (cancelled) after the old DB was moved aside.
+        let dir = tmp_data_dir("recover");
+        let db_path = dir.join("erp.db");
+        write_marker(&dir);
+        std::fs::write(db_path.with_extension("db.pre_restore"), b"old-bytes").unwrap();
+        let r = reconcile_pending_restore(&dir, &db_path).unwrap();
+        assert!(r.pending.is_none());
+        assert!(r.rolled_back);
+        assert_eq!(std::fs::read(&db_path).unwrap(), b"old-bytes");
+        assert!(!pending_marker_path(&dir).exists());
+    }
+
+    #[test]
+    fn reconcile_validates_unfinalized_applied_restore() {
+        // Marker gone but db + pre both present: restore was installed but never
+        // finalized -> must re-validate, so `pending` is regenerated.
+        let dir = tmp_data_dir("unfinalized");
+        let db_path = dir.join("erp.db");
+        std::fs::write(&db_path, b"new-bytes").unwrap();
+        std::fs::write(db_path.with_extension("db.pre_restore"), b"old-bytes").unwrap();
+        let r = reconcile_pending_restore(&dir, &db_path).unwrap();
+        assert!(r.pending.is_some());
+        assert!(!r.rolled_back);
+    }
+
+    #[test]
+    fn reconcile_rolls_back_orphaned_pre_without_db() {
+        // Crash after the old DB moved aside, with no marker: recover it.
+        let dir = tmp_data_dir("orphan");
+        let db_path = dir.join("erp.db");
+        std::fs::write(db_path.with_extension("db.pre_restore"), b"old-bytes").unwrap();
+        let r = reconcile_pending_restore(&dir, &db_path).unwrap();
+        assert!(r.pending.is_none());
+        assert!(r.rolled_back);
+        assert_eq!(std::fs::read(&db_path).unwrap(), b"old-bytes");
     }
 }

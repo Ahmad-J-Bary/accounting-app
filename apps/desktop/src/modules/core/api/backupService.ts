@@ -75,6 +75,12 @@ export interface BackupProgressEvent {
   phase: BackupProgressPhase;
 }
 
+export interface StartupBlockInfo {
+  reason: string;
+  found_version: number;
+  supported_version: number;
+}
+
 export const backupService = {
   async backupNow(): Promise<BackupFileInfo> {
     return await invoke<BackupFileInfo>('backup_database_now');
@@ -135,5 +141,8 @@ export const backupService = {
   },
   async listenBackupProgress(cb: (e: BackupProgressEvent) => void): Promise<() => void> {
     return await listen<BackupProgressEvent>('backup-progress', (event) => cb(event.payload));
+  },
+  async getStartupBlock(): Promise<StartupBlockInfo | null> {
+    return await invoke<StartupBlockInfo | null>('get_startup_block');
   },
 };

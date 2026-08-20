@@ -134,6 +134,8 @@ async fn create_typed_backup(
         company_scope: meta.company_scope.clone(),
         status: Some(meta.status.clone()),
         verified: true,
+        journal_entry_count: Some(meta.journal_entry_count),
+        account_count: Some(meta.account_count),
     })
 }
 
@@ -406,9 +408,14 @@ pub async fn pending_restore_status(app: AppHandle) -> Result<Option<serde_json:
 #[tauri::command]
 pub async fn cancel_pending_restore(app: AppHandle) -> Result<(), String> {
     let data_dir = resolve_data_dir(&app)?;
-    if let Some(pending) = backup::take_pending_marker(&data_dir)? {
+    if let Some(pending) = backup::read_pending_marker(&data_dir)? {
         let _ = std::fs::remove_file(pending.pending_db);
+        backup::remove_pending_marker(&data_dir)?;
     }
+    // Sweep any staged/stale temp files tied to a restore.
+    let _ = std::fs::remove_file(data_dir.join("erp.pending.sqlite"));
+    let db_path = resolve_db_path(&app)?;
+    let _ = std::fs::remove_file(db_path.with_extension("db.restore"));
     Ok(())
 }
 
