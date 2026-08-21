@@ -37,7 +37,7 @@ database never does.
 Development never deletes, resets, or recreates your database:
 
 - The DB lives in the OS app-data dir (`app_data_dir()`), not in the repo.
-- Restarts, Rust rebuilds, and frontend reloads all reuse the same `erp.db`.
+- Restarts, Rust rebuilds, and frontend reloads all reuse the same `almowakeb.sqlite`.
 - `scripts/clean.js` removes **build artifacts only** (`node_modules`, `dist`,
   `target`, `gen`, `tsbuildinfo`). It never touches app data.
 

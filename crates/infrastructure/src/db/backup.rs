@@ -12,7 +12,7 @@
 //! out of the live accounting schema (see `app_config`, migration 163, for
 //! user-level backup settings).
 //!
-//! Restore is restart-based: a validated copy is staged to `<data_dir>/erp.pending.sqlite`
+//! Restore is restart-based: a validated copy is staged to `<data_dir>/almowakeb.pending.sqlite`
 //! and a marker file is written; on the next app startup the swap happens
 //! *before* the connection pool is opened, so the file replacement is safe on
 //! every platform. Fresh migrations + integrity checks then run against the
@@ -34,17 +34,21 @@ use sqlx::SqlitePool;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sha2::{Digest, Sha256};
 
-/// Canonical backup file name prefix, e.g. `accounting_backup_20260819_093000.sqlite`.
-pub const BACKUP_PREFIX: &str = "accounting_backup_";
+/// Canonical backup file name prefix, e.g. `almowakeb_backup_20260819_093000.sqlite`.
+pub const BACKUP_PREFIX: &str = "almowakeb_backup_";
 /// Prefix for the untrimmed safety snapshot taken before an import/restore.
-/// A dedicated prefix (matching the legacy `erp_pre_restore_` naming) means the
-/// file is classified `pre_import` by name alone, so retention can never
-/// delete it even if its sidecar metadata is lost.
-pub const PREIMPORT_PREFIX: &str = "erp_pre_restore_";
+/// A dedicated prefix means the file is classified `pre_import` by name alone,
+/// so retention can never delete it even if its sidecar metadata is lost.
+pub const PREIMPORT_PREFIX: &str = "almowakeb_pre_restore_";
 /// Legacy prefixes recognized so existing backups remain visible/deletable.
-pub const LEGACY_PREFIXES: [&str; 2] = ["erp_backup_", "erp_pre_restore_"];
+pub const LEGACY_PREFIXES: [&str; 4] = [
+    "erp_backup_",
+    "erp_pre_restore_",
+    "accounting_backup_",
+    "accounting_export_",
+];
 /// Prefix for user-initiated export files.
-pub const EXPORT_PREFIX: &str = "accounting_export_";
+pub const EXPORT_PREFIX: &str = "almowakeb_export_";
 
 /// Accounting tables that a valid backup must contain.
 pub const EXPECTED_TABLES: [&str; 10] = [
@@ -124,19 +128,31 @@ pub fn is_backup_name(name: &str) -> bool {
 fn infer_type(name: &str) -> String {
     if name.starts_with(BACKUP_PREFIX) {
         "auto".into()
-    } else if name.starts_with(PREIMPORT_PREFIX) || name.starts_with("erp_pre_restore_") {
+    } else if name.starts_with(PREIMPORT_PREFIX) {
         "pre_import".into()
     } else {
-        "auto".into()
+        // Legacy prefixes: erp_backup_ -> auto, erp_pre_restore_ -> pre_import
+        if name.starts_with("erp_pre_restore_") {
+            "pre_import".into()
+        } else {
+            "auto".into()
+        }
     }
 }
 
 /// Derive the user-facing label (timestamp token) from a backup file name.
 fn label_from_name(name: &str) -> String {
-    for prefix in std::iter::once(BACKUP_PREFIX)
-        .chain(std::iter::once(PREIMPORT_PREFIX))
-        .chain(LEGACY_PREFIXES.iter().copied())
-    {
+    // Try canonical prefixes first, then legacy prefixes
+    let all_prefixes = [
+        BACKUP_PREFIX,
+        PREIMPORT_PREFIX,
+        EXPORT_PREFIX,
+        "erp_backup_",
+        "erp_pre_restore_",
+        "accounting_backup_",
+        "accounting_export_",
+    ];
+    for prefix in all_prefixes {
         if let Some(rest) = name.strip_prefix(prefix) {
             return rest.trim_end_matches(".sqlite").to_string();
         }
@@ -954,7 +970,7 @@ pub async fn validate_import_candidate(path: &Path) -> Result<ValidationReport, 
 
     // Work on a private copy so a failed migration/validation harms nothing.
     let tmp = std::env::temp_dir().join(format!(
-        "erp_validate_{}_{}.sqlite",
+        "almowakeb_validate_{}_{}.sqlite",
         chrono::Local::now().format("%Y%m%d_%H%M%S"),
         uuid::Uuid::new_v4()
     ));
@@ -1196,14 +1212,14 @@ pub struct ReconcileResult {
 /// Crash-safe resolution of the on-disk restore state at startup.
 ///
 /// The swap in [`replace_db_file`] involves several renames; a crash between
-/// them can leave any combination of `{marker, erp.db, erp.db.pre_restore,
-/// erp.db.restore, erp.pending.sqlite}`. This function deterministically turns
+/// them can leave any combination of `{marker, almowakeb.sqlite, almowakeb.sqlite.pre_restore,
+/// almowakeb.sqlite.restore, almowakeb.pending.sqlite}`. This function deterministically turns
 /// that state into either a restore that must be validated (roll forward /
 /// complete), a recovery of the previous database (roll back), or a clean no-op
 /// with stale temp files removed. The marker is intentionally NOT deleted here.
 pub fn reconcile_pending_restore(data_dir: &Path, db_path: &Path) -> Result<ReconcileResult, String> {
     let marker = read_pending_marker(data_dir)?;
-    let staged = data_dir.join("erp.pending.sqlite");
+    let staged = data_dir.join("almowakeb.pending.sqlite");
     let rest = db_path.with_extension("db.restore");
     let pre = db_path.with_extension("db.pre_restore");
     let wal = PathBuf::from(format!("{}-wal", db_path.to_string_lossy()));
@@ -1358,7 +1374,7 @@ mod tests {
     }
 
     fn staged_path(dir: &Path) -> PathBuf {
-        dir.join("erp.pending.sqlite")
+        dir.join("almowakeb.pending.sqlite")
     }
 
     fn write_marker(dir: &Path) {
@@ -1376,7 +1392,7 @@ mod tests {
     #[test]
     fn reconcile_clean_state_is_noop() {
         let dir = tmp_data_dir("clean");
-        let db_path = dir.join("erp.db");
+        let db_path = dir.join("almowakeb.sqlite");
         let r = reconcile_pending_restore(&dir, &db_path).unwrap();
         assert!(r.pending.is_none());
         assert!(!r.rolled_back);
@@ -1386,7 +1402,7 @@ mod tests {
     #[test]
     fn reconcile_applies_normal_staged_restore() {
         let dir = tmp_data_dir("apply");
-        let db_path = dir.join("erp.db");
+        let db_path = dir.join("almowakeb.sqlite");
         std::fs::write(&db_path, b"old-bytes").unwrap();
         std::fs::write(staged_path(&dir), b"staged-bytes").unwrap();
         write_marker(&dir);
@@ -1406,7 +1422,7 @@ mod tests {
     fn reconcile_completes_interrupted_swap() {
         // Crash between `db -> db.pre_restore` and `db.restore -> db`.
         let dir = tmp_data_dir("swap");
-        let db_path = dir.join("erp.db");
+        let db_path = dir.join("almowakeb.sqlite");
         std::fs::write(staged_path(&dir), b"staged-bytes").unwrap();
         write_marker(&dir);
         std::fs::write(db_path.with_extension("db.pre_restore"), b"old-bytes").unwrap();
@@ -1422,7 +1438,7 @@ mod tests {
     fn reconcile_recovers_previous_db_when_staged_missing() {
         // Staged file vanished (cancelled) after the old DB was moved aside.
         let dir = tmp_data_dir("recover");
-        let db_path = dir.join("erp.db");
+        let db_path = dir.join("almowakeb.sqlite");
         write_marker(&dir);
         std::fs::write(db_path.with_extension("db.pre_restore"), b"old-bytes").unwrap();
         let r = reconcile_pending_restore(&dir, &db_path).unwrap();
@@ -1437,7 +1453,7 @@ mod tests {
         // Marker gone but db + pre both present: restore was installed but never
         // finalized -> must re-validate, so `pending` is regenerated.
         let dir = tmp_data_dir("unfinalized");
-        let db_path = dir.join("erp.db");
+        let db_path = dir.join("almowakeb.sqlite");
         std::fs::write(&db_path, b"new-bytes").unwrap();
         std::fs::write(db_path.with_extension("db.pre_restore"), b"old-bytes").unwrap();
         let r = reconcile_pending_restore(&dir, &db_path).unwrap();
@@ -1449,7 +1465,7 @@ mod tests {
     fn reconcile_rolls_back_orphaned_pre_without_db() {
         // Crash after the old DB moved aside, with no marker: recover it.
         let dir = tmp_data_dir("orphan");
-        let db_path = dir.join("erp.db");
+        let db_path = dir.join("almowakeb.sqlite");
         std::fs::write(db_path.with_extension("db.pre_restore"), b"old-bytes").unwrap();
         let r = reconcile_pending_restore(&dir, &db_path).unwrap();
         assert!(r.pending.is_none());
@@ -1459,19 +1475,19 @@ mod tests {
 
     #[test]
     fn pre_import_prefix_classifies_by_name_alone() {
-        let name = "erp_pre_restore_20260820_093000.sqlite";
+        let name = "almowakeb_pre_restore_20260820_093000.sqlite";
         assert!(is_backup_name(name));
         assert_eq!(infer_type(name), "pre_import");
         assert_eq!(label_from_name(name), "20260820_093000");
         // Generic prefixes stay `auto` by name.
-        assert_eq!(infer_type("accounting_backup_20260820_093000.sqlite"), "auto");
+        assert_eq!(infer_type("almowakeb_backup_20260820_093000.sqlite"), "auto");
         assert_eq!(infer_type("erp_backup_20260820_093000.sqlite"), "auto");
     }
 
     #[test]
     fn retention_never_trims_sidecarless_pre_import() {
         let dir = tmp_data_dir("prekeep");
-        let name = "erp_pre_restore_20260820_093000.sqlite";
+        let name = "almowakeb_pre_restore_20260820_093000.sqlite";
         std::fs::write(dir.join(name), b"snapshot").unwrap();
         // No sidecar — the name alone must keep it classified `pre_import`.
         let backups = list_backup_files(&dir).unwrap();

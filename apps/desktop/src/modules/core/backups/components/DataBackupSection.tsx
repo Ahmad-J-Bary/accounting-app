@@ -51,8 +51,6 @@ export function DataBackupSection() {
       setDbInfo(d);
 
       // One-shot toast when a restore transitioned across reloads
-      // (e.g. applied/rolled_back after restart) — never fires again for the
-      // same status until the next restore is staged (see InspectFileFlow).
       const status = c?.last_restore_status ?? null;
       if (status && status !== localStorage.getItem(RESTORE_STATUS_SEEN_KEY)) {
         localStorage.setItem(RESTORE_STATUS_SEEN_KEY, status);
@@ -82,9 +80,7 @@ export function DataBackupSection() {
     void load();
   }, [load]);
 
-  // Live restore-rejected signal: the backend rolled back an applied restore
-  // after post-swap validation. Refresh the config so the rollback banner and
-  // restore history reflect reality, and surface the reason to the user.
+  // Live restore-rejected signal
   useEffect(() => {
     let unlisten: (() => void) | undefined;
     backupService
@@ -171,16 +167,20 @@ export function DataBackupSection() {
   }
 
   return (
-    <div className="space-y-5" dir="rtl">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-black text-slate-800 flex items-center gap-2">
-          <DatabaseBackup className="w-5 h-5 text-blue-600" />
-          البيانات والنسخ الاحتياطية
-        </h2>
+    <div className="min-h-screen bg-slate-50/30 p-4 lg:p-6 space-y-6" dir="rtl">
+      {/* Page Header */}
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-1">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <DatabaseBackup className="w-6 h-6 text-blue-600" />
+            البيانات والنسخ الاحتياطية
+          </h1>
+          <p className="text-slate-500 font-medium text-base">إدارة قاعدة البيانات والنسخ الاحتياطية</p>
+        </div>
         <Button onClick={() => void load(true)} variant="outline" size="sm">
           <RefreshCw className="w-4 h-4 ml-1" /> تحديث
         </Button>
-      </div>
+      </header>
 
       {/* Health error banner */}
       {health === "error" && (
@@ -226,13 +226,7 @@ export function DataBackupSection() {
         </div>
       )}
 
-      <ActionsSection
-        operating={operating}
-        onDone={() => load(true)}
-        preset={restorePreset}
-        onPresetConsumed={handlePresetConsumed}
-      />
-
+      {/* Section 1: Data Status */}
       <DatabaseStatusSection
         dbInfo={dbInfo}
         backups={backups}
@@ -242,6 +236,15 @@ export function DataBackupSection() {
         loading={loading}
       />
 
+      {/* Section 2: Data Actions */}
+      <ActionsSection
+        operating={operating}
+        onDone={() => load(true)}
+        preset={restorePreset}
+        onPresetConsumed={handlePresetConsumed}
+      />
+
+      {/* Section 3: Backup History */}
       <HistorySection
         backups={backups}
         pending={pending}
@@ -250,6 +253,7 @@ export function DataBackupSection() {
         onDone={() => load(true)}
       />
 
+      {/* Section 4-6: Settings */}
       {config && (
         <SettingsSection
           config={config}

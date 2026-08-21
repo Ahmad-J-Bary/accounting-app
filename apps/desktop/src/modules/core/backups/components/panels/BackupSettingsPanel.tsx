@@ -2,10 +2,33 @@ import { FolderOpen, Trash2 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Button } from "@shared/ui/button";
 import { Switch } from "@shared/ui/switch";
-import { Input } from "@shared/ui/input";
 import { cn } from "@shared/lib/utils";
 import { toast } from "sonner";
 import { backupService, type BackupConfig } from "../../../api/backupService";
+
+const RETENTION_PRESETS: { label: string; value: string; daily: number; weekly: number; monthly: number }[] = [
+  { label: "آخر يوم", value: "1d", daily: 1, weekly: 0, monthly: 0 },
+  { label: "آخر 3 أيام", value: "3d", daily: 3, weekly: 0, monthly: 0 },
+  { label: "آخر 7 أيام", value: "7d", daily: 7, weekly: 0, monthly: 0 },
+  { label: "آخر 14 يوم", value: "14d", daily: 14, weekly: 0, monthly: 0 },
+  { label: "آخر 30 يوم", value: "30d", daily: 0, weekly: 4, monthly: 1 },
+  { label: "آخر 60 يوم", value: "60d", daily: 0, weekly: 8, monthly: 2 },
+  { label: "آخر 90 يوم", value: "90d", daily: 0, weekly: 12, monthly: 3 },
+  { label: "آخر 6 أشهر", value: "6m", daily: 0, weekly: 0, monthly: 6 },
+  { label: "آخر سنة", value: "1y", daily: 0, weekly: 0, monthly: 12 },
+  { label: "بدون حد", value: "none", daily: 0, weekly: 0, monthly: 0 },
+];
+
+function findRetentionPreset(daily: number, weekly: number, monthly: number): string {
+  // Find matching preset
+  for (const p of RETENTION_PRESETS) {
+    if (p.daily === daily && p.weekly === weekly && p.monthly === monthly) {
+      return p.value;
+    }
+  }
+  // Default to "last 7 days" if no match
+  return "7d";
+}
 
 interface Props {
   config: BackupConfig;
@@ -16,6 +39,7 @@ interface Props {
 
 export function BackupSettingsPanel({ config, operating, onConfigChange, onApplyRetention }: Props) {
   const custom = !config.use_same_location;
+  const currentPreset = findRetentionPreset(config.keep_daily, config.keep_weekly, config.keep_monthly);
 
   const handleOpenFolder = async () => {
     try {
@@ -36,61 +60,55 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
     }
   };
 
+  const handleRetentionChange = async (value: string) => {
+    const preset = RETENTION_PRESETS.find((p) => p.value === value);
+    if (preset) {
+      await onConfigChange({
+        keep_daily: preset.daily,
+        keep_weekly: preset.weekly,
+        keep_monthly: preset.monthly,
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="font-bold text-slate-600 text-sm">نسخ احتياطي تلقائي عند بدء التشغيل</p>
-          <p className="text-xs text-slate-400">تُنشأ نسخة يومية تلقائية عند فتح التطبيق (لقطة أمان محلية).</p>
+      {/* Auto backup toggle */}
+      <div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="space-y-0.5">
+            <p className="font-bold text-slate-800 text-sm">النسخ الاحتياطي التلقائي</p>
+            <p className="text-xs text-slate-400">إنشاء نسخة احتياطية تلقائية عند بدء تشغيل التطبيق.</p>
+          </div>
+          <Switch
+            checked={config.auto_backup_enabled}
+            disabled={operating}
+            onCheckedChange={(v) => void onConfigChange({ auto_backup_enabled: v })}
+          />
         </div>
-        <Switch
-          checked={config.auto_backup_enabled}
+      </div>
+
+      {/* Retention */}
+      <div className="border-t border-slate-100 pt-5">
+        <label className="font-bold text-slate-800 text-sm block mb-1">الاحتفاظ بالنسخ الاحتياطية</label>
+        <p className="text-xs text-slate-400 mb-3">ينطبق على النسخ الاحتياطية التلقائية فقط.</p>
+        <select
+          value={currentPreset}
           disabled={operating}
-          onCheckedChange={(v) => void onConfigChange({ auto_backup_enabled: v })}
-        />
+          onChange={(e) => void handleRetentionChange(e.target.value)}
+          className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 focus:ring-blue-500 focus:border-blue-500 w-full md:w-auto"
+        >
+          {RETENTION_PRESETS.map((p) => (
+            <option key={p.value} value={p.value}>
+              {p.label}
+            </option>
+          ))}
+        </select>
       </div>
 
+      {/* Backup location */}
       <div className="border-t border-slate-100 pt-5 space-y-3">
-        <p className="font-bold text-slate-600 text-sm">الاحتفاظ بالنسخ التلقائية</p>
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="text-xs font-bold text-slate-500 block mb-1">يومي</label>
-            <Input
-              type="number"
-              min={0}
-              disabled={operating}
-              value={config.keep_daily}
-              onChange={(e) => void onConfigChange({ keep_daily: Math.max(0, Number(e.target.value)) })}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-slate-500 block mb-1">أسبوعي</label>
-            <Input
-              type="number"
-              min={0}
-              disabled={operating}
-              value={config.keep_weekly}
-              onChange={(e) => void onConfigChange({ keep_weekly: Math.max(0, Number(e.target.value)) })}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-slate-500 block mb-1">شهري</label>
-            <Input
-              type="number"
-              min={0}
-              disabled={operating}
-              value={config.keep_monthly}
-              onChange={(e) => void onConfigChange({ keep_monthly: Math.max(0, Number(e.target.value)) })}
-            />
-          </div>
-        </div>
-        <p className="text-xs text-slate-400">0 في أي حقل = لا حد. ينطبق التحكم على النسخ التلقائية فقط.</p>
-      </div>
-
-      <div className="space-y-2 pt-2 border-t border-slate-100">
-        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-          موقع النسخ الاحتياطي
-        </label>
+        <label className="font-bold text-slate-800 text-sm block">مكان النسخ الاحتياطية</label>
 
         <label
           className={cn(
@@ -109,7 +127,7 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
             className="h-4 w-4 accent-blue-600"
           />
           <div className="space-y-0.5">
-            <div className="text-sm font-bold text-slate-700">النسخ بجانب قاعدة البيانات</div>
+            <div className="text-sm font-bold text-slate-700">بجانب بيانات البرنامج</div>
             <div className="text-[10px] text-slate-400">حفظ النسخ الاحتياطية بجانب ملف قاعدة البيانات الأصلي</div>
           </div>
         </label>
@@ -131,7 +149,7 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
             className="h-4 w-4 accent-blue-600"
           />
           <div className="space-y-0.5 flex-1">
-            <div className="text-sm font-bold text-slate-700">موقع مخصص</div>
+            <div className="text-sm font-bold text-slate-700">مجلد مخصص</div>
             <div className="text-[10px] text-slate-400">اختيار مجلد محدد للنسخ الاحتياطية</div>
           </div>
         </label>
@@ -142,21 +160,15 @@ export function BackupSettingsPanel({ config, operating, onConfigChange, onApply
               {config.custom_path || "لم يتم اختيار مجلد بعد"}
             </div>
             <Button variant="outline" size="sm" disabled={operating} onClick={() => void pickCustomFolder()} className="shrink-0 h-9 rounded-xl">
-              <FolderOpen className="h-4 w-4 mr-1" /> تصفح...
+              <FolderOpen className="h-4 w-4 mr-1" /> اختيار المجلد
             </Button>
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between pt-2">
-          <p className="text-xs text-slate-400">
-            مجلد النسخ الحالي: <span dir="ltr" className="font-mono">{config.backup_dir}</span>
-          </p>
+        <div className="flex items-center gap-2 pt-2">
           <Button size="sm" variant="outline" disabled={operating} onClick={() => void handleOpenFolder()}>
-            <FolderOpen className="h-4 w-4 mr-1" /> فتح مجلد النسخ
+            <FolderOpen className="h-4 w-4 mr-1" /> فتح المجلد
           </Button>
-        </div>
-
-        <div className="flex items-center gap-2 pt-1">
           <Button
             size="sm"
             variant="outline"

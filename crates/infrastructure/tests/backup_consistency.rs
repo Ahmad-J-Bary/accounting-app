@@ -74,7 +74,7 @@ async fn snapshot_under_active_writes_is_consistent_and_standalone() {
         uuid::Uuid::new_v4()
     ));
     std::fs::create_dir_all(&dir).unwrap();
-    let db = dir.join("erp.db");
+    let db = dir.join("almowakeb.sqlite");
     let url = format!("sqlite:{}?mode=rwc", db.to_string_lossy());
     let pool = create_pool(&url).await.unwrap();
     run_migrations(&pool).await.unwrap();

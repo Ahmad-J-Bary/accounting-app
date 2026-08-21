@@ -87,7 +87,7 @@ async fn run_startup_backup(app: tauri::AppHandle, state: AppState) {
     let Ok(data_dir) = app.path().app_data_dir() else {
         return;
     };
-    let db_path = data_dir.join("erp.db");
+    let db_path = data_dir.join("almowakeb.sqlite");
     let use_same_location = b::get_config(&pool, "backup_use_same_location")
         .await
         .map(|v| v.map(|s| s == "true").unwrap_or(true))
@@ -154,7 +154,7 @@ async fn apply_retention(app: &tauri::AppHandle, state: &AppState) {
     let Ok(data_dir) = app.path().app_data_dir() else {
         return;
     };
-    let db_path = data_dir.join("erp.db");
+    let db_path = data_dir.join("almowakeb.sqlite");
     let use_same_location = b::get_config(&state.pool, "backup_use_same_location")
         .await
         .map(|v| v.map(|s| s == "true").unwrap_or(true))
@@ -424,11 +424,57 @@ commands::backup::get_database_info,
                 .path()
                 .app_data_dir()
                 .expect("Failed to get app data directory");
+
+            // 0a) Identifier migration: if the new data dir is empty but the
+            //     old com.almowakeb.erp directory has data, copy it over.
+            if !app_data_dir.exists() || !app_data_dir.join("almowakeb.sqlite").exists() {
+                // Try to find legacy data directory based on old identifier
+                if let Some(old_data_dir) = find_legacy_data_dir() {
+                    if old_data_dir.exists() && old_data_dir.join("erp.db").exists() {
+                        eprintln!("🔄 Legacy app data directory detected: {}", old_data_dir.display());
+                        // Ensure new data dir exists
+                        let _ = std::fs::create_dir_all(&app_data_dir);
+                        // Copy all files from old to new
+                        if let Err(e) = copy_dir_contents(&old_data_dir, &app_data_dir) {
+                            eprintln!("⚠️ Failed to migrate legacy app data: {e}");
+                        } else {
+                            eprintln!("✅ Legacy app data migrated from {}", old_data_dir.display());
+                        }
+                    }
+                }
+            }
+
             if !app_data_dir.exists() {
                 std::fs::create_dir_all(&app_data_dir)
                     .expect("Failed to create app data directory");
             }
-            let db_path = app_data_dir.join("erp.db");
+            let db_path = app_data_dir.join("almowakeb.sqlite");
+
+            // 0) Legacy database migration — if almowakeb.sqlite does not exist
+            //    but erp.db does, safely copy it over using VACUUM INTO.
+            if !db_path.exists() {
+                let legacy_db = app_data_dir.join("erp.db");
+                if legacy_db.exists() {
+                    eprintln!("🔄 Legacy database detected: erp.db → almowakeb.sqlite");
+                    // Create a safety snapshot first
+                    let legacy_backup = app_data_dir.join(format!(
+                        "erp.db.legacy_backup_{}",
+                        chrono::Local::now().format("%Y%m%d_%H%M%S")
+                    ));
+                    if let Err(e) = std::fs::copy(&legacy_db, &legacy_backup) {
+                        eprintln!("⚠️ Failed to create legacy safety backup: {e}");
+                    }
+                    // Use VACUUM INTO for safe copy (WAL-compatible)
+                    // We can't use VACUUM INTO from here (no pool yet), so use file copy.
+                    // The schema guard + reconcile + migrations will validate later.
+                    if let Err(e) = std::fs::copy(&legacy_db, &db_path) {
+                        eprintln!("⚠️ Failed to migrate legacy database: {e}");
+                    } else {
+                        eprintln!("✅ Legacy database migrated to almowakeb.sqlite");
+                        eprintln!("   Legacy file preserved at: {}", legacy_backup.display());
+                    }
+                }
+            }
 
             // 1) Newer-schema guard — BEFORE touching any file. A database from
             //    a newer app version must never be migrated/healed/overwritten.
@@ -508,6 +554,7 @@ commands::backup::get_database_info,
                 ));
                 match valid {
                     Ok(()) => {
+                        let _ = std::fs::remove_file(db_path.with_extension("sqlite.pre_restore"));
                         let _ = std::fs::remove_file(db_path.with_extension("db.pre_restore"));
                         let _ = tauri::async_runtime::block_on(b::set_config(
                             &app_state.pool,
@@ -544,6 +591,47 @@ commands::backup::get_database_info,
 
             Ok(())
         })
+}
+
+/// Detect the legacy data directory for the old `com.almowakeb.erp` identifier.
+/// Returns `Some(path)` if found, `None` otherwise.
+fn find_legacy_data_dir() -> Option<std::path::PathBuf> {
+    let legacy_id = "com.almowakeb.erp";
+    match std::env::consts::OS {
+        "windows" => {
+            // %APPDATA%/com.almowakeb.erp
+            std::env::var("APPDATA")
+                .ok()
+                .map(|appdata| std::path::PathBuf::from(appdata).join(legacy_id))
+        }
+        "macos" => {
+            // ~/Library/Application Support/com.almowakeb.erp
+            std::env::home_dir()
+                .map(|home| home.join("Library/Application Support").join(legacy_id))
+        }
+        _ => {
+            // Linux/other: ~/.local/share/com.almowakeb.erp
+            std::env::home_dir()
+                .map(|home| home.join(".local/share").join(legacy_id))
+        }
+    }
+}
+
+/// Copy all files from `src` to `dst` (non-recursive, skipping existing).
+fn copy_dir_contents(src: &std::path::Path, dst: &std::path::Path) -> Result<(), String> {
+    let _ = std::fs::create_dir_all(dst);
+    for entry in std::fs::read_dir(src).map_err(|e| format!("Failed to read legacy dir: {e}"))? {
+        let entry = entry.map_err(|e| format!("Failed to read entry: {e}"))?;
+        let file_type = entry.file_type().map_err(|e| format!("Failed to get type: {e}"))?;
+        if file_type.is_file() {
+            let dest = dst.join(entry.file_name());
+            if !dest.exists() {
+                std::fs::copy(entry.path(), &dest)
+                    .map_err(|e| format!("Failed to copy {}: {e}", entry.file_name().to_string_lossy()))?;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Swap the rejected import back to the previous DB and rebuild the app state

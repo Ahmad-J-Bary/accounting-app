@@ -25,7 +25,7 @@ export function ExportPanel({ onDone }: { onDone: () => Promise<void> }) {
     setError(null);
     try {
       const path = await save({
-        defaultPath: `erp_export_${new Date().toISOString().slice(0, 19).replace(/[^0-9]/g, "")}.sqlite`,
+        defaultPath: `almowakeb_export_${new Date().toISOString().slice(0, 19).replace(/[^0-9]/g, "")}.sqlite`,
         filters: [{ name: "قاعدة بيانات SQLite", extensions: ["sqlite", "db"] }],
       });
       if (!path) return;

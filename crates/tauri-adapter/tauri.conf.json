@@ -1,7 +1,7 @@
 {
   "productName": "Almowakeb",
   "version": "0.10.0",
-  "identifier": "com.almowakeb.erp",
+  "identifier": "com.almowakeb.app",
   "build": {
     "frontendDist": "../../apps/desktop/dist",
     "devUrl": "http://localhost:3000",

@@ -7,7 +7,7 @@
 --   - CashPayment (extra)  : Dr 221 / Cr 122 (settles the 221 liability)
 --
 -- Run once against the app DB, e.g.:
---   sqlite3 "C:\Users\ahmad\AppData\Roaming\com.almowakeb.erp\erp.db" < scripts/fix-extra-costs-journal.sql
+--   sqlite3 "C:\Users\ahmad\AppData\Roaming\com.almowakeb.app\almowakeb.sqlite" < scripts/fix-extra-costs-journal.sql
 --
 -- NOTE: statements are intentionally ASCII-only so they survive any shell encoding.
 --       (Match by journal type / account codes / source linkage, not by Arabic text.)

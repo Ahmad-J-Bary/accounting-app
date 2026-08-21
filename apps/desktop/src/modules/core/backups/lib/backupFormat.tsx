@@ -11,9 +11,9 @@ export function formatSize(bytes: number): string {
 
 /** Format a backup filename timestamp label (YYYYMMDD_HHMMSS) into a date-time. */
 export function formatLabel(label: string): string {
-  // accounting_backup_20260819_093000 -> 2026/08/19 09:30:00
+  // Strip all known prefixes (canonical + legacy) to extract timestamp
   const m = label
-    .replace(/^(erp_backup_|accounting_backup_|erp_pre_restore_)/, "")
+    .replace(/^(almowakeb_backup_|almowakeb_pre_restore_|almowakeb_export_|erp_backup_|accounting_backup_|erp_pre_restore_|accounting_export_)/, "")
     .match(/^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})$/);
   if (!m) return label;
   return `${m[1]}/${m[2]}/${m[3]} ${m[4]}:${m[5]}:${m[6]}`;

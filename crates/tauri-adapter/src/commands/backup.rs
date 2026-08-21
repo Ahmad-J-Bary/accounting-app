@@ -50,7 +50,7 @@ fn resolve_db_path(app: &AppHandle) -> Result<PathBuf, String> {
         .path()
         .app_data_dir()
         .map_err(|e| format!("Failed to get app data dir: {e}"))?;
-    Ok(app_data_dir.join("erp.db"))
+    Ok(app_data_dir.join("almowakeb.sqlite"))
 }
 
 fn resolve_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -353,7 +353,7 @@ pub async fn inspect_database_file(
 /// 2. Validate the candidate on a throwaway copy (migrations, integrity, FK,
 ///    posted-entry balance) — an invalid DB is rejected here and *nothing*
 ///    about the current state changes.
-/// 3. Only then copy to `erp.pending.sqlite` and write the restart marker.
+/// 3. Only then copy to `almowakeb.pending.sqlite` and write the restart marker.
 async fn stage_restore(
     app: &AppHandle,
     state: &AppState,
@@ -369,9 +369,9 @@ async fn stage_restore(
     let report = backup::validate_import_candidate(source).await?;
     if !report.ok {
         let _ = app.emit("backup-progress", BackupProgress::failed());
-        // The byte-import path writes raw bytes to erp.pending.sqlite BEFORE
+        // The byte-import path writes raw bytes to almowakeb.pending.sqlite BEFORE
         // this validation; sweep it so no stale candidate is left on disk.
-        let _ = std::fs::remove_file(resolve_data_dir(app)?.join("erp.pending.sqlite"));
+        let _ = std::fs::remove_file(resolve_data_dir(app)?.join("almowakeb.pending.sqlite"));
         return Err(format!(
             "رُفض الاستيراد — والنسخة الاحتياطية التلقائية محفوظة: {}",
             report.errors.join(" | ")
@@ -381,7 +381,7 @@ async fn stage_restore(
     // 3) Copy the validated file and write the restart marker.
     let _ = app.emit("backup-progress", BackupProgress::copying());
     let data_dir = resolve_data_dir(app)?;
-    let pending = data_dir.join("erp.pending.sqlite");
+    let pending = data_dir.join("almowakeb.pending.sqlite");
     let _ = std::fs::remove_file(&pending);
     std::fs::copy(source, &pending)
         .map_err(|e| format!("Failed to copy restore file: {e}"))?;
@@ -429,7 +429,7 @@ pub async fn import_database_from_bytes(
     bytes: Vec<u8>,
 ) -> Result<serde_json::Value, String> {
     let data_dir = resolve_data_dir(&app)?;
-    let pending = data_dir.join("erp.pending.sqlite");
+    let pending = data_dir.join("almowakeb.pending.sqlite");
     std::fs::write(&pending, &bytes)
         .map_err(|e| format!("Failed to write imported database: {e}"))?;
     stage_restore(&app, &state, &pending, "استيراد من بايتات").await
@@ -462,8 +462,9 @@ pub async fn cancel_pending_restore(app: AppHandle) -> Result<(), String> {
         backup::remove_pending_marker(&data_dir)?;
     }
     // Sweep any staged/stale temp files tied to a restore.
-    let _ = std::fs::remove_file(data_dir.join("erp.pending.sqlite"));
+    let _ = std::fs::remove_file(data_dir.join("almowakeb.pending.sqlite"));
     let db_path = resolve_db_path(&app)?;
+    let _ = std::fs::remove_file(db_path.with_extension("sqlite.restore"));
     let _ = std::fs::remove_file(db_path.with_extension("db.restore"));
     Ok(())
 }

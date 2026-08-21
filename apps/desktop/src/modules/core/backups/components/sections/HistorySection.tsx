@@ -1,5 +1,4 @@
-import { Archive } from "lucide-react";
-import { SectionCard } from "@shared/ui/section-card";
+import { SettingsSection } from "@widgets/templates/SettingsLayout";
 import { BackupListPanel } from "../panels/BackupListPanel";
 import type { BackupFileInfo, PendingRestoreInfo } from "../../../api/backupService";
 
@@ -13,12 +12,8 @@ interface Props {
 
 export function HistorySection({ backups, pending, operating, onRestore, onDone }: Props) {
   return (
-    <SectionCard
-      title="سجل النسخ الاحتياطية"
-      icon={<Archive className="w-4 h-4 text-slate-600" />}
-      description="استعادة نسخة تستبدل القاعدة الحالية بالنسخة المختارة — تُنشأ نسخة احتياطية تلقائية قبل المتابعة."
-    >
+    <SettingsSection title="النسخ الاحتياطية">
       <BackupListPanel backups={backups} pending={pending} operating={operating} onRestore={onRestore} onDone={onDone} />
-    </SectionCard>
+    </SettingsSection>
   );
 }
