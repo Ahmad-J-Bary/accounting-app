@@ -111,7 +111,14 @@ export const backupService = {
     keep_monthly?: number;
     auto_backup_enabled?: boolean;
   }): Promise<BackupConfig> {
-    return await invoke<BackupConfig>('set_backup_config', partial);
+    return await invoke<BackupConfig>('set_backup_config', {
+      useSameLocation: partial.use_same_location,
+      customPath: partial.custom_path,
+      keepDaily: partial.keep_daily,
+      keepWeekly: partial.keep_weekly,
+      keepMonthly: partial.keep_monthly,
+      autoBackupEnabled: partial.auto_backup_enabled,
+    });
   },
   async applyRetention(): Promise<{ removed: string[] }> {
     return await invoke<{ removed: string[] }>('apply_backup_retention');
@@ -131,10 +138,10 @@ export const backupService = {
     });
   },
   async deleteFileBackup(fileName: string): Promise<void> {
-    return await invoke<void>('delete_backup_file', { file_name: fileName });
+    return await invoke<void>('delete_backup_file', { fileName });
   },
   async copyFileBackup(fileName: string, destPath: string): Promise<void> {
-    return await invoke<void>('copy_backup_file', { file_name: fileName, destPath });
+    return await invoke<void>('copy_backup_file', { fileName, destPath });
   },
   async openBackupLocation(path: string): Promise<void> {
     return await invoke<void>('open_backup_location', { path });
