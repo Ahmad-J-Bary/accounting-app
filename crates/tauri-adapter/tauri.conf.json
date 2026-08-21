@@ -21,6 +21,7 @@
     }
   },
   "bundle": {
-    "active": false
+    "active": false,
+    "icon": ["../../apps/desktop/src-tauri/icons/icon.png"]
   }
 }

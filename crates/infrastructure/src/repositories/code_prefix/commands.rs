@@ -14,9 +14,7 @@ pub async fn get_next_sequence(pool: &SqlitePool, category_id: &str) -> Result<u
     .map_err(|e| AppError::Infrastructure(e.to_string()))?
     .rows_affected();
 
-    let seq: i64;
-
-    if rows_affected == 0 {
+    let seq: i64 = if rows_affected == 0 {
         let prefix_row: Option<(String,)> = sqlx::query_as(
             "SELECT code_prefix FROM categories WHERE id = ? AND code_prefix IS NOT NULL"
         )
@@ -41,7 +39,7 @@ pub async fn get_next_sequence(pool: &SqlitePool, category_id: &str) -> Result<u
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-        seq = 0;
+        0
     } else {
         let row: (i64,) = sqlx::query_as(
             "SELECT next_seq - 1 FROM category_code_prefixes WHERE category_id = ?"
@@ -51,8 +49,8 @@ pub async fn get_next_sequence(pool: &SqlitePool, category_id: &str) -> Result<u
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
 
-        seq = row.0;
-    }
+        row.0
+    };
 
     tx.commit().await.map_err(|e| AppError::Infrastructure(e.to_string()))?;
     Ok(seq as u64)

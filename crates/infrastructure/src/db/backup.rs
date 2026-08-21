@@ -677,7 +677,7 @@ pub fn retention_keep_set(
                 newest_per_bucket.push((key, b));
             }
         }
-        newest_per_bucket.sort_by(|a, b| b.1.timestamp.cmp(&a.1.timestamp));
+        newest_per_bucket.sort_by_key(|a| std::cmp::Reverse(a.1.timestamp));
         for (_, b) in newest_per_bucket.into_iter().take(count as usize) {
             if !keep.contains(&b.name) {
                 keep.push(b.name.clone());
