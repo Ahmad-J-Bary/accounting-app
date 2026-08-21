@@ -1,6 +1,6 @@
 {
   "productName": "Almowakeb",
-  "version": "0.9.12",
+  "version": "0.10.0",
   "identifier": "com.almowakeb.erp",
   "build": {
     "frontendDist": "../../apps/desktop/dist",
@@ -22,6 +22,8 @@
   },
   "bundle": {
     "active": false,
-    "icon": ["../../apps/desktop/src-tauri/icons/icon.png"]
+    "icon": [
+      "../../apps/desktop/src-tauri/icons/icon.png"
+    ]
   }
 }
