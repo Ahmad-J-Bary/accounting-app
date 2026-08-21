@@ -191,6 +191,7 @@ async fn retention_value(state: &AppState, key: &str, fallback: u32) -> u32 {
 pub fn run() -> tauri::Builder<tauri::Wry> {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             // Unified Invoices

@@ -1,4 +1,5 @@
 use tauri::{AppHandle, Emitter, Manager, State};
+use tauri_plugin_opener::OpenerExt;
 use std::path::{Path, PathBuf};
 
 use crate::bootstrap::container::AppState;
@@ -592,7 +593,6 @@ pub async fn copy_backup_file(
 /// Open a directory (backup folder, DB folder, ...) in the OS file manager.
 #[tauri::command]
 pub async fn open_backup_location(app: AppHandle, path: String) -> Result<(), String> {
-    use tauri_plugin_shell::ShellExt;
     if path.trim().is_empty() {
         return Err("المسار غير صحيح".into());
     }
@@ -611,7 +611,7 @@ pub async fn open_backup_location(app: AppHandle, path: String) -> Result<(), St
             .unwrap_or_else(|| std::path::PathBuf::from("."))
     };
     let display = target.to_string_lossy().into_owned();
-    app.shell()
-        .open(display, None)
+    app.opener()
+        .open_path(display, None::<&str>)
         .map_err(|e| format!("فشل فتح المجلد: {e}"))
 }
