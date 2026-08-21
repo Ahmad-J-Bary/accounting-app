@@ -8,6 +8,7 @@ import { formatDateTime, formatNumber } from "@shared/lib/format";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { executeExport, dateCol, buildCurrencySummary, currencyAmountCols } from "@shared/lib/excel";
 import { PAYMENT_TYPE_LABELS } from "@modules/payments/lib/constants";
+import { isIncomingPayment, signedBaseAmount, OUTGOING_PAYMENT_TYPES } from "@modules/payments/lib/payment-utils";
 import { ArrowDownCircle, ArrowUpCircle, Download, Filter } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@shared/ui/select";
@@ -64,8 +65,8 @@ export function PaymentsTable({
     return payments.filter(
       (p) => {
         if (typeFilter === "all") return true;
-        if (typeFilter === "incoming") return ["Receipt", "CashIn", "SupplierReceipt"].includes(p.payment_type);
-        if (typeFilter === "outgoing") return ["SupplierPayment", "CustomerPayment", "CashOut", "ExpenseVoucher", "DrawingsVoucher"].includes(p.payment_type);
+        if (typeFilter === "incoming") return isIncomingPayment(p.payment_type);
+        if (typeFilter === "outgoing") return (OUTGOING_PAYMENT_TYPES as readonly string[]).includes(p.payment_type);
         return p.payment_type === typeFilter;
       },
     );
@@ -140,7 +141,7 @@ export function PaymentsTable({
         label: "النوع",
         accessor: (p) => (
           <div className="flex items-center gap-2">
-            {["Receipt", "CashIn", "SupplierReceipt"].includes(p.payment_type) ? (
+            {isIncomingPayment(p.payment_type) ? (
               <ArrowDownCircle className="w-3.5 h-3.5 text-emerald-500" />
             ) : (
               <ArrowUpCircle className="w-3.5 h-3.5 text-rose-500" />
@@ -164,7 +165,7 @@ export function PaymentsTable({
             const amount = parseFloat(p.amount) || 0;
             if (amount === 0) return "";
             const baseAmount = toBase(amount, p.currency_code);
-            const signed = ["Receipt", "CashIn", "SupplierReceipt"].includes(p.payment_type) ? baseAmount : -baseAmount;
+            const signed = signedBaseAmount(baseAmount, p.payment_type);
             return formatAmount(signed, { currencyCode: curr.code });
           },
           className: isBase
@@ -261,12 +262,11 @@ export function PaymentsTable({
   });
 
   const handleExport = useCallback(async () => {
-    const INCOMING_TYPES = ["Receipt", "CashIn", "SupplierReceipt"];
     const currCols = currencyAmountCols("amount", "المبلغ", (row) => {
       const p = row as unknown as Payment;
       const amount = parseFloat(p.amount) || 0;
       const baseAmount = toBase(amount, p.currency_code);
-      return INCOMING_TYPES.includes(p.payment_type) ? baseAmount : -baseAmount;
+      return signedBaseAmount(baseAmount, p.payment_type);
     }, sortedCurrencies, formatAmount, "", hasSecondaryCurrencies, hasSecondaryCurrencies, currencyMode, baseCode, rateMap);
 
     const visibleIds = new Set(enrichedColumns.filter(c => c.visible !== false).map(c => c.id));
@@ -307,12 +307,11 @@ export function PaymentsTable({
   }, [sortedData, sortedCurrencies, accounts, formatAmount, toBase, currencyMode, baseCode, rateMap, exportData, hasSecondaryCurrencies, enrichedColumns, ratesSheet]);
 
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
-    const INCOMING_TYPES = ["Receipt", "CashIn", "SupplierReceipt"];
     const baseTotal = sortedData.reduce((sum, p) => {
       const amt = parseFloat(p.amount) || 0;
       if (amt === 0) return sum;
       const baseAmount = toBase(amt, p.currency_code);
-      return sum + (INCOMING_TYPES.includes(p.payment_type) ? baseAmount : -baseAmount);
+      return sum + signedBaseAmount(baseAmount, p.payment_type);
     }, 0);
 
     return enrichedColumns.map((col) => {
