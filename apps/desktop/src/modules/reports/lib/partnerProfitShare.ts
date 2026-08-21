@@ -30,6 +30,73 @@ export type PartnerProfitShareComputed = {
   rows: PartnerProfitShareRow[];
 };
 
+/**
+ * Resolve the effective profit-sharing ratio for a partner.
+ *
+ * Business rule (spec Sec 23): Manual wins; otherwise the ratio is
+ * capital-based — either on LOCAL (base) capital or on the partner's
+ * ORIGINAL (own-currency) capital.
+ *
+ * @param localRatio    - Partner's capital ratio in base currency.
+ * @param originalRatio - Partner's capital ratio in own currency.
+ * @param partner       - The partner record.
+ * @returns The resolved profit-sharing ratio as a percentage.
+ */
+export function resolveProfitShareRatio(
+  localRatio: number,
+  originalRatio: number,
+  partner: { profit_sharing_type?: string; profit_sharing_ratio?: string | null }
+): number {
+  if (partner.profit_sharing_type === "Manual") {
+    return partner.profit_sharing_ratio ? parseFloat(partner.profit_sharing_ratio) : 0;
+  }
+  if (partner.profit_sharing_type === "BasedOnCapitalOriginal") {
+    return originalRatio;
+  }
+  return localRatio;
+}
+
+/**
+ * Filter partners to those with ledger evidence before a given date.
+ *
+ * A partner is kept if:
+ * - They have no linked account (new partner without ledger yet)
+ * - Their ledger is absent (transient fetch failure)
+ * - They have journal lines or opening entries before the cutoff
+ * - They have no dated evidence at all (capital is a static opening balance)
+ */
+export function filterPartnersWithLedgerEntries(
+  partners: PartnerDto[],
+  partnerLedgers: Record<string, AccountLedgerDto>,
+  toDate?: string
+): PartnerDto[] {
+  if (!toDate) return partners;
+  const toTs = endOfDay(toDate);
+
+  return partners.filter((p) => {
+    if (!p.linked_account_id) return true;
+    const ledger = partnerLedgers[p.linked_account_id];
+    if (!ledger) return true;
+    const lines = ledger.lines ?? [];
+    const lineBeforeTo = lines.some((line) => {
+      const lineTs = new Date(line.date).getTime();
+      return Number.isFinite(lineTs) && lineTs <= toTs;
+    });
+    if (lineBeforeTo) return true;
+    const openings = (ledger.opening_entries ?? []).length
+      ? (ledger.opening_entries ?? [])
+      : ledger.opening_entry
+        ? [ledger.opening_entry]
+        : [];
+    const openingBeforeTo = openings.some((entry) => {
+      const entryTs = new Date(entry.date).getTime();
+      return Number.isFinite(entryTs) && entryTs <= toTs;
+    });
+    if (openingBeforeTo) return true;
+    return lines.length === 0 && openings.length === 0;
+  });
+}
+
 export function computePartnerProfitShare(
   partners: PartnerDto[],
   netProfit: number,
@@ -40,43 +107,8 @@ export function computePartnerProfitShare(
   partnerLedgers?: Record<string, AccountLedgerDto>,
   toDate?: string,
 ): PartnerProfitShareComputed {
-  const toTs = toDate ? endOfDay(toDate) : Infinity;
-
   const existedPartners = partnerLedgers
-    ? partners.filter((p) => {
-        if (!p.linked_account_id) return true;
-        const ledger = partnerLedgers[p.linked_account_id];
-        // The partner list is the authority; a partner whose capital ledger is
-        // absent (e.g. a transient fetch failure) must never be hidden.
-        if (!ledger) return true;
-        const lines = ledger.lines ?? [];
-        const lineBeforeTo = lines.some((line) => {
-          const lineTs = new Date(line.date).getTime();
-          return Number.isFinite(lineTs) && lineTs <= toTs;
-        });
-        if (lineBeforeTo) return true;
-        // Existing-company opening records partner capital as the capital
-        // account's static opening balance; the migration's opening journal is
-        // surfaced by the ledger as opening entries, NOT lines, so those
-        // partners have an empty `lines` array and must not be dropped as
-        // "unexisted" (Sec 4 / Sec 13).
-        const openings = (ledger.opening_entries ?? []).length
-          ? (ledger.opening_entries ?? [])
-          : ledger.opening_entry
-            ? [ledger.opening_entry]
-            : [];
-        const openingBeforeTo = openings.some((entry) => {
-          const entryTs = new Date(entry.date).getTime();
-          return Number.isFinite(entryTs) && entryTs <= toTs;
-        });
-        if (openingBeforeTo) return true;
-        // No dated evidence: the capital lives purely as the account's static
-        // opening balance and the migration posted no journal line for it, or
-        // the partner was registered without ledger activity. The partner
-        // record is authoritative — never hide a real partner for lacking
-        // journal lines.
-        return lines.length === 0 && openings.length === 0;
-      })
+    ? filterPartnersWithLedgerEntries(partners, partnerLedgers, toDate)
     : partners;
 
   const totalCapital = existedPartners.reduce((s, p) => s + parseFloat(p.amount_local || "0"), 0);
@@ -89,17 +121,7 @@ export function computePartnerProfitShare(
     const originalAmount = parseFloat(p.amount_original || "0");
     const originalRatio = totalOriginalCapital > 0 ? (originalAmount / totalOriginalCapital) * 100 : 0;
 
-    // Per-partner profit-sharing type (spec Sec 23): Manual wins; otherwise the
-    // ratio is capital-based — either on LOCAL (base) capital or on the
-    // partner's ORIGINAL (own-currency) capital, which stays currency-independent.
-    let profitShareRatio: number;
-    if (p.profit_sharing_type === "Manual") {
-      profitShareRatio = p.profit_sharing_ratio ? parseFloat(p.profit_sharing_ratio) : 0;
-    } else if (p.profit_sharing_type === "BasedOnCapitalOriginal") {
-      profitShareRatio = originalRatio;
-    } else {
-      profitShareRatio = capitalRatio;
-    }
+    const profitShareRatio = resolveProfitShareRatio(capitalRatio, originalRatio, p);
 
     const profitShareAmount = netProfit * (profitShareRatio / 100);
     const drawings = partnerDrawings[p.id] || 0;

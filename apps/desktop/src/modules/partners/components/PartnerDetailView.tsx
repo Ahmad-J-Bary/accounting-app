@@ -10,6 +10,7 @@ import {
 } from "@widgets/sidebar-shell";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { toFixed } from "@shared/lib/format";
+import { resolveProfitShareRatio } from "@modules/reports/lib/partnerProfitShare";
 
 type PartnerWithRatios = PartnerDto & {
   calculatedRatio: number;
@@ -34,9 +35,11 @@ export function PartnerDetailView({
 }: PartnerDetailViewProps) {
   const { formatAmount } = useCurrencyContext();
 
-  const actualProfitRatio = partner.profit_sharing_type === "Manual"
-    ? parseFloat(partner.profit_sharing_ratio || "0")
-    : partner.calculatedCapitalRatio;
+  const actualProfitRatio = resolveProfitShareRatio(
+    partner.calculatedCapitalRatio,
+    partner.calculatedCapitalRatio,
+    partner
+  );
 
   const actions: SidebarAction[] = [
     ...(onEdit

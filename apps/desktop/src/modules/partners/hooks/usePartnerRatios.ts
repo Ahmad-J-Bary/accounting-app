@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { resolveProfitShareRatio } from "@modules/reports/lib/partnerProfitShare";
 import type { PartnerDto } from '@modules/partners/api/partnerService';
 
 
@@ -53,27 +54,17 @@ export function usePartnerRatios({ partners, strategy }: UsePartnerRatiosProps) 
       const eff: ProfitSharingStrategy =
         strategy === "auto" ? ownType : (strategy as ProfitSharingStrategy);
 
-      let capitalRatio = 0;
-      let ratio = 0;
+      const localRatio = ratioOfLocal(baseAmount);
+      const originalRatio = ratioOfOriginal(amountOriginal);
 
-      if (eff === "Manual") {
-        capitalRatio = ratioOfLocal(baseAmount);
-        ratio = parseFloat(p.profit_sharing_ratio || "0");
-      } else if (eff === "BasedOnCapitalOriginal") {
-        // Original amounts are in each partner's own currency; the percentage
-        // is computed on the raw (unconverted) totals.
-        capitalRatio = ratioOfOriginal(amountOriginal);
-        ratio = capitalRatio;
-      } else {
-        // BasedOnCapitalLocal: compare local (base-currency) capital.
-        capitalRatio = ratioOfLocal(baseAmount);
-        ratio = capitalRatio;
-      }
+      // When strategy is overridden, force the effective type to match
+      const effPartner = eff === "auto" ? p : { ...p, profit_sharing_type: eff };
+      const ratio = resolveProfitShareRatio(localRatio, originalRatio, effPartner);
 
       return {
         ...p,
         calculatedRatio: ratio,
-        calculatedCapitalRatio: capitalRatio,
+        calculatedCapitalRatio: localRatio,
         displayAmountBase: baseAmount
       };
     });
