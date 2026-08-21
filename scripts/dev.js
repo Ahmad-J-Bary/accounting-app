@@ -83,10 +83,10 @@ async function ensureSingleInstance(port) {
     const lock = JSON.parse(fs.readFileSync(LOCK_FILE, 'utf8'));
     if (lock && lock.pid && pidAlive(lock.pid)) {
       console.error(
-        `\n[dev.js] Another pnpm tauri:dev session is already running (PID ${lock.pid}, ` +
+        `\n[dev.js] Another pnpm start session is already running (PID ${lock.pid}, ` +
           `started ${lock.startedAt}, port ${lock.port}).`,
       );
-      console.error('Stop it first, then run pnpm tauri:dev again.');
+      console.error('Stop it first, then run pnpm start again.');
       console.error(`If that session is gone, delete the stale lock: "${LOCK_FILE}"\n`);
       process.exit(1);
     }
@@ -98,7 +98,7 @@ async function ensureSingleInstance(port) {
     if (await isViteServedOn(port)) {
       console.error(
         `\n[dev.js] Port ${port} is already serving Vite — another dev session appears ` +
-          'to be running. Stop it first, then run pnpm tauri:dev again.\n',
+          'to be running. Stop it first, then run pnpm start again.\n',
       );
       process.exit(1);
     }
@@ -171,7 +171,7 @@ function spawnTauri(cmd, args, opts) {
           '  • If the error is "The process cannot access the file because it is being used by\n' +
           '    another process (os error 32)", a previous desktop.exe / cargo process still holds\n' +
           '    the build outputs. Close the running app (or kill stale desktop.exe / cargo) and\n' +
-          '    run pnpm tauri:dev again.\n' +
+          '    run pnpm start again.\n' +
           '  • A cargo compile error does NOT normally exit this session: tauri dev keeps\n' +
           '    watching, so fixing the code rebuilds automatically. If the session did exit\n' +
           '    during a build, the compile error is printed above.\n',
@@ -188,10 +188,7 @@ function spawnTauri(cmd, args, opts) {
 }
 
 function ensureDist() {
-  const distDir = path.join(desktopDir, 'dist');
-  if (!fs.existsSync(distDir)) {
-    fs.mkdirSync(distDir, { recursive: true });
-  }
+  fs.mkdirSync(path.join(desktopDir, 'dist'), { recursive: true });
 }
 
 function spawnDirect() {

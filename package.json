@@ -8,7 +8,6 @@
     "dev": "pnpm --filter desktop dev",
     "build": "pnpm --filter desktop build",
     "tauri": "pnpm --filter desktop tauri",
-    "tauri:dev": "pnpm --filter desktop tauri:dev",
     "lint": "pnpm --filter desktop lint",
     "test": "pnpm --filter desktop test",
     "typecheck": "pnpm --filter desktop tsc --noEmit",
