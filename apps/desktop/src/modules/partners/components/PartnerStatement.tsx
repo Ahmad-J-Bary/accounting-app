@@ -17,6 +17,7 @@ import { Loader2, ArrowRightLeft, TrendingUp, TrendingDown } from "lucide-react"
 import { Button } from "@shared/ui/button";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { toLocalString, formatNumber } from "@shared/lib/format";
+import { partnerDirectionMultiplier } from "@shared/lib/balance-utils";
 
 interface PartnerStatementProps {
   partnerId: string;
@@ -55,7 +56,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
   const [error, setError] = useState<string | null>(null);
   const { currencies, baseCurrency } = useCurrencyContext();
 
-  const balanceDirection = partnerType === "customer" ? 1 : -1;
+  const dirMul = partnerDirectionMultiplier(partnerType);
 
   const sortedCurrencies = useMemo(() => {
     if (!baseCurrency) return currencies;
@@ -178,7 +179,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
                     const d = lines.reduce((sum, l) => sum + parseFloat(l.debit), 0);
                     const cr = lines.reduce((sum, l) => sum + parseFloat(l.credit), 0);
                     runningBalances[c.code] =
-                      (runningBalances[c.code] || 0) + (d - cr) * balanceDirection;
+                      (runningBalances[c.code] || 0) + (d - cr) * dirMul;
                     return {
                       code: c.code,
                       symbol: c.symbol,
@@ -244,7 +245,7 @@ export const PartnerStatement: React.FC<PartnerStatementProps> = ({
           {sortedCurrencies.map((targetCurr, targetIdx) => {
             const t = totals.find((t) => t.currencyCode === targetCurr.code);
             if (!t) return null;
-            const bal = (t.debit - t.credit) * balanceDirection;
+            const bal = (t.debit - t.credit) * dirMul;
             return (
               <TableRow key={targetCurr.code} className="bg-slate-50 font-bold">
                 <TableCell className="text-slate-400 text-xs" colSpan={3}>

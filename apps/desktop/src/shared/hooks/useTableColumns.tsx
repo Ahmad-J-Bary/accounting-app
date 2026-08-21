@@ -3,6 +3,11 @@ import type { UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import type { SummaryColumn } from "@widgets/table-shell/TableSummary";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useBaseCurrencyColumns } from "./useBaseCurrencyColumns";
+import {
+  effectiveBalance as calcEffectiveBalance,
+  effectiveBalanceBase,
+  balanceDirectionLabel,
+} from "@shared/lib/balance-utils";
 
 export function useTableColumns() {
   const { currencies, baseCurrency, formatAmount, toBase } = useCurrencyContext();
@@ -10,22 +15,22 @@ export function useTableColumns() {
 
   const getAccountStatusColumn = useCallback(<T extends { balance?: number | string; debit?: number | string; credit?: number | string }>(
     sortableHeader: React.ReactNode,
-    options?: { isCreditFirst?: boolean }
+    options?: { partnerType?: "customer" | "supplier" }
   ): UnifiedColumn<T> => {
-    const isCreditFirst = options?.isCreditFirst ?? false;
+    const partnerType = options?.partnerType ?? "customer";
     return {
       id: "status",
       header: sortableHeader,
       label: "حالة الحساب",
       accessor: (item) => {
-        // Prefer recomputing from debit/credit for accuracy (fallback to stored balance)
-        const effectiveBalance = (item.debit !== undefined && item.credit !== undefined)
-          ? (Number(item.debit || 0) - Number(item.credit || 0)) * (isCreditFirst ? -1 : 1)
-          : Number(item.balance || 0);
-        const bal = effectiveBalance;
+        const bal = effectiveBalanceBase(
+          item.debit !== undefined ? Number(item.debit || 0) : undefined,
+          item.credit !== undefined ? Number(item.credit || 0) : undefined,
+          Number(item.balance || 0),
+          partnerType
+        );
         if (bal === 0) return <span className="text-slate-300">—</span>;
-        const isPositive = bal > 0;
-        const isDebit = isCreditFirst ? !isPositive : isPositive;
+        const isDebit = bal > 0;
         return (
           <span className={`font-bold ${isDebit ? "text-red-600" : "text-emerald-600"}`}>
             {isDebit ? "مدين" : "دائن"}
@@ -60,26 +65,37 @@ export function useTableColumns() {
     enrichedColumns: UnifiedColumn<T>[],
     items: T[],
     countLabel: string,
-    options?: { isCreditFirst?: boolean }
+    options?: { partnerType?: "customer" | "supplier" }
   ): SummaryColumn[] => {
-    const isCreditFirst = options?.isCreditFirst ?? false;
-    const totalBal = items.reduce((sum, item) => {
-      const effectiveBalance = (item.debit !== undefined && item.credit !== undefined)
-        ? (Number(item.debit || 0) - Number(item.credit || 0)) * (isCreditFirst ? -1 : 1)
-        : Number(item.balance || 0);
-      return sum + effectiveBalance;
+    const partnerType = options?.partnerType ?? "customer";
+    const totalEffectiveBalance = items.reduce((sum, item) => {
+      return sum + effectiveBalanceBase(
+        item.debit !== undefined ? Number(item.debit || 0) : undefined,
+        item.credit !== undefined ? Number(item.credit || 0) : undefined,
+        Number(item.balance || 0),
+        partnerType
+      );
     }, 0);
-    const isPositive = totalBal > 0;
-    const overallIsDebit = isCreditFirst ? !isPositive : isPositive;
-    const overall = totalBal !== 0 ? (overallIsDebit ? "مدين" : "دائن") : null;
-    const overallColor = overallIsDebit ? 'text-red-600' : (totalBal !== 0 ? 'text-emerald-600' : 'text-slate-400');
+    const overallLabel = totalEffectiveBalance !== 0 ? balanceDirectionLabel(
+      totalEffectiveBalance > 0 ? totalEffectiveBalance : 0,
+      totalEffectiveBalance < 0 ? -totalEffectiveBalance : 0,
+      partnerType
+    ) : null;
+    const overallColor = totalEffectiveBalance > 0
+      ? 'text-red-600'
+      : totalEffectiveBalance < 0
+      ? 'text-emerald-600'
+      : 'text-slate-400';
 
     const baseTotal = items.reduce((sum, item) => {
-      const effectiveBalance = (item.debit !== undefined && item.credit !== undefined)
-        ? (Number(item.debit || 0) - Number(item.credit || 0)) * (isCreditFirst ? -1 : 1)
-        : Number(item.balance || 0);
-      if (effectiveBalance === 0) return sum;
-      return sum + toBase(effectiveBalance, item.currency || baseCurrency?.code || "");
+      const effBal = effectiveBalanceBase(
+        item.debit !== undefined ? Number(item.debit || 0) : undefined,
+        item.credit !== undefined ? Number(item.credit || 0) : undefined,
+        Number(item.balance || 0),
+        partnerType
+      );
+      if (effBal === 0) return sum;
+      return sum + toBase(effBal, item.currency || baseCurrency?.code || "");
     }, 0);
 
     const colIds = enrichedColumns.map(c => c.id);
@@ -107,7 +123,7 @@ export function useTableColumns() {
         return {
           id: `${id}_summary`,
           columnId: id,
-          label: overall ? `الرصيد / ${overall}` : "—",
+          label: overallLabel ? `الرصيد / ${overallLabel}` : "—",
           value: baseTotal !== 0 ? formatAmount(baseTotal, { currencyCode: currCode }) : "—",
           className: valueClass,
         };

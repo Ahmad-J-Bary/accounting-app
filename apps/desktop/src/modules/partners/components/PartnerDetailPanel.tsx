@@ -3,6 +3,7 @@ import { Pencil, Trash2, BookOpen, FileText, Scale } from "lucide-react";
 import type { CustomerDto, SupplierDto, PartnerDto } from "@erp/shared-types";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { toFixed } from "@shared/lib/format";
+import { effectiveBalance, balanceDirectionLabel } from "@shared/lib/balance-utils";
 import { useTabs } from "@app/providers/TabContext";
 import { useCompanyCapabilities } from "@shared/hooks";
 import { toast } from "sonner";
@@ -56,8 +57,8 @@ export function PartnerDetailPanel({
   const p = partner as CustomerDto | SupplierDto;
   const pDebit = "debit" in partner ? parseFloat(p.debit) || 0 : 0;
   const pCredit = "credit" in partner ? parseFloat(p.credit) || 0 : 0;
-  const effectiveBalance = isCustomer ? pDebit - pCredit : pCredit - pDebit;
-  const isBalanceZero = effectiveBalance === 0;
+  const bal = effectiveBalance(pDebit, pCredit, type);
+  const isBalanceZero = bal === 0;
   const hasAccountId = (p: typeof partner): p is CustomerDto | SupplierDto => "account_id" in p;
   const partnerAccountId = hasAccountId(partner) ? partner.account_id : null;
 
@@ -128,11 +129,11 @@ export function PartnerDetailPanel({
           toast.info("الرصيد صفر — لا حاجة للتسوية");
           return;
         }
-        const isDebt = effectiveBalance > 0;
+        const isDebt = bal > 0;
         const voucherLabel = isCustomer
           ? (isDebt ? "سند قبض (RCV)" : "سند دفع لعميل (CPY)")
           : (isDebt ? "سند دفع (PAY)" : "سند قبض من مورد (SRC)");
-        const amount = Math.abs(effectiveBalance);
+        const amount = Math.abs(bal);
         const ok = confirm(`تأكيد تسديد رصيد "${partner.name}"؟\nسيتم إنشاء ${voucherLabel} بقيمة ${amount}`);
         if (!ok) return;
         setSettling(true);
@@ -206,11 +207,11 @@ export function PartnerDetailPanel({
                 ...(canAccessOpeningWorkflow
                   ? [
                       { label: "الرصيد الافتتاحي", value: partner.opening_balance || "0" },
-                      { label: "اتجاه الرصيد", value: settled ? "—" : (parseFloat(partner.debit || "0") > 0 ? "مدين" : "دائن") },
+                      { label: "اتجاه الرصيد", value: settled ? "—" : balanceDirectionLabel(parseFloat(partner.debit || "0"), parseFloat(partner.credit || "0"), type) },
                     ]
                   : []),
                 { label: "العملة", value: currencyName ? `${currencyName.code} - ${currencyName.name_ar}` : baseCurrency?.code || "" },
-                { label: "الرصيد الحالي", value: settled ? "0" : String(effectiveBalance) },
+                { label: "الرصيد الحالي", value: settled ? "0" : String(bal) },
               ]}
             />
             {partner.notes && (

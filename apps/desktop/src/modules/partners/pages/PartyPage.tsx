@@ -12,6 +12,7 @@ import type { AccountDto, CreatePaymentRequest, CustomerDto, SupplierDto, Create
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useTabs } from "@app/providers/TabContext";
 import { useEntityList, useExportSetup, useBaseCurrencyColumns } from "@shared/hooks";
+import { effectiveBalance, balanceDirectionLabel } from "@shared/lib/balance-utils";
 import { currencyAmountCols, executeExport, buildCurrencySummary, applyVisibilityToCurrencyCols } from '@shared/lib/excel';
 import type { ExcelExportColumn } from '@shared/lib/excel';
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
@@ -150,8 +151,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
 
       const debit = Number(item.debit || 0);
       const credit = Number(item.credit || 0);
-      const effectiveBalance = (debit - credit) * (cfg.isCreditFirst ? -1 : 1);
-      const statusLabel = effectiveBalance === 0 ? "" : effectiveBalance > 0 ? "مدين" : "دائن";
+      const statusLabel = balanceDirectionLabel(debit, credit, entityName);
 
       return [
         item.code,
@@ -236,7 +236,6 @@ export default function PartyPage({ entityName }: PartyPageProps) {
   // ── Handle Excel Export ──
 
   const handleExport = useCallback(async () => {
-    const isCreditFirst = entityName === 'supplier';
     const currCols = currencyAmountCols("balance", "الرصيد", (row) => {
       const absBal = Math.abs(Number(row.balance || 0));
       if (absBal === 0) return 0;
@@ -254,9 +253,7 @@ export default function PartyPage({ entityName }: PartyPageProps) {
         accessor: (row) => {
           const debit = Number(row.debit || 0);
           const credit = Number(row.credit || 0);
-          const effectiveBalance = (debit - credit) * (isCreditFirst ? -1 : 1);
-          if (effectiveBalance === 0) return '—';
-          return effectiveBalance > 0 ? 'دائن' : 'مدين';
+          return balanceDirectionLabel(debit, credit, entityName);
         },
       },
       ...currCols,

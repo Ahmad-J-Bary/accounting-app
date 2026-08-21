@@ -18,6 +18,7 @@ import { type CreatePaymentRequest } from "@erp/shared-types";
 
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { effectiveBalanceBase, balanceDirectionLabel } from "@shared/lib/balance-utils";
 import { getExchangeRate } from "@shared/lib/currency-strategy";
 import { executeExport, buildCurrencySummary, applyVisibilityToCurrencyCols, currencyAmountCols } from "@shared/lib/excel";
 import type { ExcelExportColumn } from "@shared/lib/excel";
@@ -154,11 +155,11 @@ export default function Expenses() {
       { id: "name", label: "اسم البند", accessor: (row) => String((row as unknown as AccountDto).name_ar ?? "") },
       { id: "status", label: "حالة الحساب", accessor: (row) => {
         const c = row as unknown as AccountDto;
-        const bal = c.debit !== undefined && c.credit !== undefined
-          ? Number(c.debit || 0) - Number(c.credit || 0)
-          : Number(c.balance || 0);
-        if (bal === 0) return "";
-        return bal > 0 ? "مدين" : "دائن";
+        return balanceDirectionLabel(
+          c.debit !== undefined ? Number(c.debit || 0) : 0,
+          c.credit !== undefined ? Number(c.credit || 0) : 0,
+          "customer"
+        );
       } },
       ...currCols,
     ];

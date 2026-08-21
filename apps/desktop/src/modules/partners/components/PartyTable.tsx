@@ -125,7 +125,7 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
       },
     ];
 
-    cols.push(getAccountStatusColumn("حالة الحساب", cfg.isCreditFirst ? { isCreditFirst: true } : undefined) as UnifiedColumn<T>);
+    cols.push(getAccountStatusColumn("حالة الحساب", { partnerType: cfg.isCreditFirst ? "supplier" : "customer" }) as UnifiedColumn<T>);
 
     const balanceCols = getBalanceColumns().map((c) => {
       const m = c.id.match(/^balance_(.+)$/);
@@ -198,7 +198,7 @@ export function PartyTable<T extends { id: string; name: string; code?: string; 
     enrichedColumns as UnifiedColumn<{ balance?: number | string; debit?: number | string; credit?: number | string; currency?: string }>[],
     sortedData,
     cfg.summaryLabel,
-    cfg.isCreditFirst ? { isCreditFirst: true } : undefined
+    cfg.isCreditFirst ? { partnerType: "supplier" } : { partnerType: "customer" }
   );
 
   return (
