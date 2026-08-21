@@ -25,8 +25,12 @@ target/
 # Tauri
 src-tauri/target
 src-tauri/gen
+**/gen/schemas
 src-tauri/WebView2Loader.dll
 **/dist
+
+# Duplicate icons — canonical set lives in apps/desktop/src-tauri/icons/
+crates/tauri-adapter/icons/
 
 # Dev-only Rust watcher marker (rewritten on every crates/* change)
 **/src-tauri/src/watch_touch.rs
@@ -51,3 +55,6 @@ out
 .env
 .env.*
 !.env.example
+
+# Empty/leftover files
+components.json
