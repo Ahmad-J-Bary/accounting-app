@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
-import OpeningBalanceMigration from "@modules/opening-balance/pages/OpeningBalanceMigration";
+import OpeningBalanceMigration from "@modules/opening-balance/pages/openingBalanceMigration";
 import { SidePanelSettingsProvider } from "@app/providers/SidePanelSettingsProvider";
 import { SidebarLayoutProvider } from "@app/providers/SidebarLayoutProvider";
 import { TabProvider } from "@app/providers/TabProvider";

@@ -9,8 +9,17 @@ const FROM_TS = new Date("2026-01-01T00:00:00").getTime();
 function partner(id: string, name: string, amount: string, capitalAccount?: string): PartnerDto {
   return {
     id,
+    code: "",
     name,
+    phone: null,
+    address: null,
+    debit: "0",
+    credit: "0",
+    opening_balance: "0",
+    balance: "0",
     currency: "S",
+    notes: null,
+    is_active: true,
     exchange_rate: "1",
     amount_local: amount,
     amount_original: amount,
@@ -173,7 +182,7 @@ describe("computePartnerProfitShare", () => {
 
   it("keeps a partner with a fully empty capital ledger", () => {
     const partners = [partner("p1", "محمد", "120", "c1")];
-    const partnerLedgers: Record<string, AccountLedgerDto> = { c1: ledger() };
+    const partnerLedgers: Record<string, AccountLedgerDto> = { c1: ledger({}) };
 
     const computed = computePartnerProfitShare(partners, 1000, 0, 0, {}, 0, partnerLedgers, TO_DATE);
 

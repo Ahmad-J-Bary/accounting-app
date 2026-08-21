@@ -107,8 +107,17 @@ describe("PartnerStatementReport empty/error/data branching", () => {
       partners: [
         {
           id: "p1",
+          code: "",
           name: "أحمد",
+          phone: null,
+          address: null,
+          debit: "0",
+          credit: "0",
+          opening_balance: "0",
+          balance: "0",
           currency: "S",
+          notes: null,
+          is_active: true,
           exchange_rate: "1",
           amount_local: "180",
           amount_original: "180",

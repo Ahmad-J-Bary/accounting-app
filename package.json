@@ -10,7 +10,7 @@
     "tauri": "pnpm --filter desktop tauri",
     "lint": "pnpm --filter desktop lint",
     "test": "pnpm --filter desktop test",
-    "typecheck": "pnpm --filter desktop tsc --noEmit",
+    "typecheck": "pnpm --filter desktop typecheck",
     "clean": "node scripts/clean.js"
   },
   "devDependencies": {

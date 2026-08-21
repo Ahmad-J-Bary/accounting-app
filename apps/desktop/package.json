@@ -13,7 +13,8 @@
     "tauri": "pnpm exec tauri",
     "tauri:dev": "node ../../scripts/dev.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@erp/shared-types": "workspace:*",

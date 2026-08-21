@@ -16,6 +16,7 @@ export type ReportState<TData> = {
   lastLoadedAt: Date | null;
   reportData: TData;
   loadReportData: () => Promise<void>;
+  error?: boolean;
 };
 
 export type ReportFilterBarProps = {

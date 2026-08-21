@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import SetupWizard from "@modules/core/setup/pages/SetupWizard";
+import SetupWizard from "@modules/core/setup/pages/setupWizard";
 import { currencyService } from "@modules/core/api/currencyService";
 import { settingsService } from "@modules/core/api/settingsService";
 import { COMPANY_TYPE_EXISTING, COMPANY_TYPE_NEW } from "@modules/opening-balance/lib/wizard-types";

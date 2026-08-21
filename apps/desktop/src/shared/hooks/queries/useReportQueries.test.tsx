@@ -61,6 +61,7 @@ const accounts: AccountDto[] = [
 ];
 
 const opening: JournalEntryDto = {
+  id: "op1",
   entry_number: "op1",
   journal_type: "AccountOpeningBalance",
   journal_type_display: "",
@@ -74,8 +75,8 @@ const opening: JournalEntryDto = {
   status: "Posted",
   total_base_debit: "225",
   total_base_credit: "225",
-  created_at: "2026-01-01",
-  updated_at: "2026-01-01",
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
 };
 
 describe("useTrialBalance — authoritative full posted GL feed", () => {
