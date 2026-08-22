@@ -14,6 +14,7 @@ interface WizardShellProps {
   subtitle?: string;
   steps: WizardStepDef[];
   stepIndex: number;
+  stepOrder?: number[];
   canPrev?: boolean;
   canNext?: boolean;
   isNexting?: boolean;
@@ -38,6 +39,7 @@ export function WizardShell({
   subtitle,
   steps,
   stepIndex,
+  stepOrder,
   canPrev = true,
   canNext = true,
   isNexting = false,
@@ -51,7 +53,11 @@ export function WizardShell({
   completedSteps,
   children,
 }: WizardShellProps) {
-  const progress = ((stepIndex + 1) / steps.length) * 100;
+  // stepOrder maps visual position → actual step index. If not provided, use natural order.
+  const orderedIndices = stepOrder ?? steps.map((_, i) => i);
+  const visualPosition = new Map(orderedIndices.map((idx, pos) => [idx, pos]));
+  const currentVisualPos = visualPosition.get(stepIndex) ?? 0;
+  const progress = ((currentVisualPos + 1) / steps.length) * 100;
 
   return (
     <div className="flex flex-col gap-4 w-full" dir="rtl">
@@ -63,10 +69,11 @@ export function WizardShell({
 
         <CardContent className="pt-0">
           <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1">
-            {steps.map((s, i) => {
-              const active = i === stepIndex;
-              const passed = completedSteps?.has(i) ?? false;
-              const clickable = canNavigateToStep?.(i) ?? false;
+            {orderedIndices.map((idx, pos) => {
+              const s = steps[idx];
+              const active = idx === stepIndex;
+              const passed = completedSteps?.has(idx) ?? false;
+              const clickable = canNavigateToStep?.(idx) ?? false;
               return (
                 <div
                   key={s.id}
@@ -74,7 +81,7 @@ export function WizardShell({
                     "flex flex-1 flex-col items-center gap-1 min-w-[3.5rem] transition-colors",
                     clickable && "cursor-pointer hover:bg-slate-50 rounded-lg",
                   )}
-                  onClick={() => clickable && onStepClick?.(i)}
+                  onClick={() => clickable && onStepClick?.(idx)}
                 >
                   <div
                     className={cn(
@@ -88,7 +95,7 @@ export function WizardShell({
                     title={s.label}
                     aria-current={active ? "step" : undefined}
                   >
-                    {passed ? <Check className="w-4 h-4 stroke-[3]" /> : <span className="text-xs font-bold font-mono">{i + 1}</span>}
+                    {passed ? <Check className="w-4 h-4 stroke-[3]" /> : <span className="text-xs font-bold font-mono">{pos + 1}</span>}
                   </div>
                   <span
                     className={cn(
@@ -127,7 +134,7 @@ export function WizardShell({
           <ChevronRight className="w-4 h-4 ml-1.5" /> السابق
         </Button>
         <span className="text-xs font-semibold text-slate-500 tabular-nums">
-          الخطوة {stepIndex + 1} من {steps.length}
+          الخطوة {currentVisualPos + 1} من {steps.length}
         </span>
         {!canNext && canNextHint && (
           <span className="basis-full text-2xs font-semibold text-amber-600">

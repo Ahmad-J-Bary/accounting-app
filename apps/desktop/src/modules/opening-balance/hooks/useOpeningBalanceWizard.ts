@@ -59,6 +59,53 @@ export const STEP_REVIEW = 7;
 export const STEP_ACTION = 8;       // Merged: validate + post + lock
 export const STEP_FIRST_PERIOD = 9;
 
+/**
+ * Dynamic visual step order logic:
+ * 1. Data-entry steps (index < dataEntryEnd) start in default natural order.
+ * 2. When a stage becomes completed:
+ *    - If all preceding stages in the CURRENT dynamic order (`stepOrder`) are completed,
+ *      it does NOT reorder and stays in its current position.
+ *    - If NOT all preceding stages in the CURRENT dynamic order (`stepOrder`) are completed,
+ *      it is reordered to be placed right after the last completed stage in `stepOrder`.
+ * 3. Completing all stages does NOT reset the order to the initial sequence.
+ * 4. Fixed steps (index >= dataEntryEnd) always remain fixed at the end.
+ */
+export function updateStepOrder(
+  prevOrder: number[],
+  completedSteps: Set<number>,
+  dataEntryEnd: number
+): number[] {
+  const nextOrder = [...prevOrder];
+
+  for (let i = 0; i < nextOrder.length; i++) {
+    const step = nextOrder[i];
+    if (step >= dataEntryEnd) continue;
+
+    if (completedSteps.has(step)) {
+      let allPrecedingCompleted = true;
+      let lastCompletedIdx = -1;
+
+      for (let j = 0; j < i; j++) {
+        if (completedSteps.has(nextOrder[j])) {
+          lastCompletedIdx = j;
+        } else {
+          allPrecedingCompleted = false;
+        }
+      }
+
+      if (!allPrecedingCompleted) {
+        const targetIdx = lastCompletedIdx + 1;
+        if (targetIdx < i) {
+          nextOrder.splice(i, 1);
+          nextOrder.splice(targetIdx, 0, step);
+        }
+      }
+    }
+  }
+
+  return nextOrder;
+}
+
 // Residual classifications. The backend spec endpoint is the source of truth
 // (`get_opening_balance_residual_classification_spec`); this fallback mirrors
 // it so the wizard still renders a coherent meaning-first UI when the query
@@ -132,10 +179,14 @@ interface WizardDraft {
   liabilitiesManual: WizLine[];
   equityManual: WizLine[];
   partnerCurrentManual: WizLine[];
+  arManualLines: WizLine[];
+  faManualLines: WizLine[];
   faOverrides: Record<string, string>;
   inventoryInputs: Record<string, { qty: string; cost: string }>;
   inventoryAccountId: string;
   inventoryPosted: boolean;
+  userCompletedSteps: number[];
+  stepOrder?: number[];
 }
 
 export function useOpeningBalanceWizard() {
@@ -151,6 +202,8 @@ export function useOpeningBalanceWizard() {
   const [liabilitiesManual, setLiabilitiesManual] = useState<WizLine[]>([]);
   const [equityManual, setEquityManual] = useState<WizLine[]>([]);
   const [partnerCurrentManual, setPartnerCurrentManual] = useState<WizLine[]>([]);
+  const [arManualLines, setArManualLines] = useState<WizLine[]>([]);
+  const [faManualLines, setFaManualLines] = useState<WizLine[]>([]);
   // Amount-only sections (auto-default accounts, overridable manually).
   const [cashBanks, setCashBanks] = useState<WizLine[]>([]);
   const [loans, setLoans] = useState<WizLine[]>([]);
@@ -175,6 +228,8 @@ export function useOpeningBalanceWizard() {
   // Post-lock onboarding: until the accountant presses [بدء أول فترة تشغيلية] the
   // locked-completion panel is shown instead of the first-period form.
   const [onboardingStarted, setOnboardingStarted] = useState(false);
+  const [userCompletedSteps, setUserCompletedSteps] = useState<Set<number>>(new Set());
+  const [stepOrder, setStepOrder] = useState<number[]>(() => [...Array(STEPS_EXISTING.length).keys()]);
 
   const startModeLoaded = useRef(false);
   const [settingsReady, setSettingsReady] = useState(false);
@@ -207,10 +262,14 @@ export function useOpeningBalanceWizard() {
     if (Array.isArray(d.liabilitiesManual)) setLiabilitiesManual(d.liabilitiesManual);
     if (Array.isArray(d.equityManual)) setEquityManual(d.equityManual);
     if (Array.isArray(d.partnerCurrentManual)) setPartnerCurrentManual(d.partnerCurrentManual);
+    if (Array.isArray(d.arManualLines)) setArManualLines(d.arManualLines);
+    if (Array.isArray(d.faManualLines)) setFaManualLines(d.faManualLines);
     if (d.faOverrides) setFaOverrides(d.faOverrides);
     if (d.inventoryInputs) setInventoryInputs(d.inventoryInputs);
     if (typeof d.inventoryAccountId === "string") setInventoryAccountId(d.inventoryAccountId);
     if (typeof d.inventoryPosted === "boolean") setInventoryPosted(d.inventoryPosted);
+    if (Array.isArray(d.userCompletedSteps)) setUserCompletedSteps(new Set(d.userCompletedSteps));
+    if (Array.isArray(d.stepOrder) && d.stepOrder.length > 0) setStepOrder(d.stepOrder);
   };
 
   useEffect(() => {
@@ -273,10 +332,14 @@ export function useOpeningBalanceWizard() {
       liabilitiesManual,
       equityManual,
       partnerCurrentManual,
+      arManualLines,
+      faManualLines,
       faOverrides,
       inventoryInputs,
       inventoryAccountId,
       inventoryPosted,
+      userCompletedSteps: [...userCompletedSteps],
+      stepOrder,
     };
     try {
       const json = JSON.stringify(draft);
@@ -289,7 +352,7 @@ export function useOpeningBalanceWizard() {
       toast.error("فشل حفظ المسودة: " + e);
       return false;
     }
-  }, [step, cutoverDate, sourceSystem, sourceReference, notes, residualClassification, residualAccountId, cashBanks, loans, liabilitiesManual, equityManual, partnerCurrentManual, faOverrides, inventoryInputs, inventoryAccountId, inventoryPosted, migration]);
+  }, [step, cutoverDate, sourceSystem, sourceReference, notes, residualClassification, residualAccountId, cashBanks, loans, liabilitiesManual, equityManual, partnerCurrentManual, arManualLines, faManualLines, faOverrides, inventoryInputs, inventoryAccountId, inventoryPosted, userCompletedSteps, stepOrder, migration]);
 
   // Silent auto-save: persists the draft without toasts or user feedback.
   const autoSaveDraft = useCallback(async () => {
@@ -298,7 +361,10 @@ export function useOpeningBalanceWizard() {
       step, cutoverDate, sourceSystem, sourceReference, notes,
       residualClassification, residualAccountId, cashBanks, loans,
       liabilitiesManual, equityManual, partnerCurrentManual,
+      arManualLines, faManualLines,
       faOverrides, inventoryInputs, inventoryAccountId, inventoryPosted,
+      userCompletedSteps: [...userCompletedSteps],
+      stepOrder,
     };
     try {
       const json = JSON.stringify(draft);
@@ -308,7 +374,7 @@ export function useOpeningBalanceWizard() {
     } catch {
       // Silent failure — auto-save is best-effort.
     }
-  }, [step, cutoverDate, sourceSystem, sourceReference, notes, residualClassification, residualAccountId, cashBanks, loans, liabilitiesManual, equityManual, partnerCurrentManual, faOverrides, inventoryInputs, inventoryAccountId, inventoryPosted, migration]);
+  }, [step, cutoverDate, sourceSystem, sourceReference, notes, residualClassification, residualAccountId, cashBanks, loans, liabilitiesManual, equityManual, partnerCurrentManual, arManualLines, faManualLines, faOverrides, inventoryInputs, inventoryAccountId, inventoryPosted, userCompletedSteps, stepOrder, migration]);
 
   const clearDraft = useCallback(async () => {
     setHasDraft(false);
@@ -468,12 +534,14 @@ export function useOpeningBalanceWizard() {
   const cashBanksTotal = sumLines(cashBanks);
   const loansTotal = sumLines(loans);
   const arTotal = sumLines(derivedAr);
+  const arManualTotal = sumLines(arManualLines);
   const apTotal = sumLines(derivedAp);
   const faTotal = sumLines(faRows);
+  const faManualTotal = sumLines(faManualLines);
   const equityTotal = sumLines(partnerEquity);
   const partnerCurrentTotal = sumLines(partnerCurrentManual);
 
-  const debit = manualAssetsTotal + cashBanksTotal + inventoryTotal + arTotal + faTotal;
+  const debit = manualAssetsTotal + cashBanksTotal + inventoryTotal + arTotal + arManualTotal + faTotal + faManualTotal;
   const credit = manualLiabilitiesTotal + loansTotal + apTotal + equityTotal + manualEquityTotal + partnerCurrentTotal;
   const residual = debit - credit;
 
@@ -795,6 +863,16 @@ export function useOpeningBalanceWizard() {
         lines.push({ account_id: l.account_id, amount: l.amount, description: "بند يدوي" });
       }
     }
+    for (const l of arManualLines) {
+      if (l.account_id && l.amount) {
+        lines.push({ account_id: l.account_id, amount: l.amount, description: "ذمم مدينة — رصيد افتتاحي" });
+      }
+    }
+    for (const l of faManualLines) {
+      if (l.account_id && l.amount) {
+        lines.push({ account_id: l.account_id, amount: l.amount, description: "أصول ثابتة — رصيد افتتاحي" });
+      }
+    }
     if (inventoryTotal !== 0 && effectiveInventoryAccountId) {
       lines.push({
         account_id: effectiveInventoryAccountId,
@@ -816,6 +894,8 @@ export function useOpeningBalanceWizard() {
     loans,
     liabilitiesManual,
     equityManual,
+    arManualLines,
+    faManualLines,
     inventoryTotal,
     effectiveInventoryAccountId,
     hasResidualPlug,
@@ -887,6 +967,16 @@ export function useOpeningBalanceWizard() {
         hints.push({ section: "بند يدوي", amount: toNum(l.amount) });
       }
     }
+    for (const l of arManualLines) {
+      if (toNum(l.amount) !== 0 && !l.account_id) {
+        hints.push({ section: "ذمم مدينة يدوية", amount: toNum(l.amount) });
+      }
+    }
+    for (const l of faManualLines) {
+      if (toNum(l.amount) !== 0 && !l.account_id) {
+        hints.push({ section: "أصول ثابتة يدوية", amount: toNum(l.amount) });
+      }
+    }
     for (const l of partnerCurrentManual) {
       if (toNum(l.amount) !== 0 && !l.account_id) {
         hints.push({ section: "حساب جاري شريك", amount: toNum(l.amount) });
@@ -896,7 +986,7 @@ export function useOpeningBalanceWizard() {
       hints.push({ section: "المخزون", amount: inventoryTotal });
     }
     return hints;
-  }, [cashBanks, loans, assetsManual, liabilitiesManual, equityManual, partnerCurrentManual, inventoryTotal, effectiveInventoryAccountId]);
+  }, [cashBanks, loans, assetsManual, liabilitiesManual, equityManual, arManualLines, faManualLines, partnerCurrentManual, inventoryTotal, effectiveInventoryAccountId]);
 
   const missingAccountHints = useMemo(
     () =>
@@ -976,13 +1066,17 @@ export function useOpeningBalanceWizard() {
     if (startMode === START_MODE_NEW) {
       return step === 0 ? "إنشاء الفترة الأولى والبدء" : undefined;
     }
+    // Data-entry steps (0-6): show "إكمال" if not yet explicitly completed
+    if (step >= 0 && step < STEP_REVIEW) {
+      return userCompletedSteps.has(step) ? undefined : "إكمال";
+    }
     switch (step) {
       case STEP_REVIEW: return "حفظ وفحص التسوية";
       case STEP_ACTION: return "تنفيذ (تحقق + ترحيل + قفل)";
       case STEP_FIRST_PERIOD: return "إنشاء أول فترة تشغيلية";
       default: return undefined;
     }
-  }, [step, startMode]);
+  }, [step, startMode, userCompletedSteps]);
 
   // Human-readable reason when the next button is disabled, so the «تأكيد
   // التحقق» step never looks silently stuck (an unclassified residual, an
@@ -1113,13 +1207,82 @@ export function useOpeningBalanceWizard() {
     }
   };
 
+  const markStepComplete = useCallback(async (s: number) => {
+    setUserCompletedSteps((prev) => {
+      const next = new Set(prev);
+      next.add(s);
+      return next;
+    });
+    await autoSaveDraft();
+  }, [autoSaveDraft]);
+
+  // Data-driven + user-explicit completed steps (single source of truth).
+  const completedSteps = useMemo(() => {
+    const set = new Set<number>();
+    for (let i = 0; i < steps.length; i++) {
+      if (userCompletedSteps.has(i)) {
+        set.add(i);
+        continue;
+      }
+      if (i === 0) {
+        set.add(i);
+      } else if (i === 1 && cashBanks.length > 0) {
+        set.add(i);
+      } else if (i === 2 && (derivedAr.length > 0 || arManualLines.length > 0)) {
+        set.add(i);
+      } else if (i === 3 && inventoryTotal > 0) {
+        set.add(i);
+      } else if (i === 4 && (faRows.length > 0 || faManualLines.length > 0)) {
+        set.add(i);
+      } else if (i === 5 && (derivedAp.length > 0 || loans.length > 0 || liabilitiesManual.length > 0)) {
+        set.add(i);
+      } else if (i === 6 && (partnerEquity.length > 0 || equityManual.length > 0 || partnerCurrentManual.length > 0)) {
+        set.add(i);
+      } else if (i === STEP_REVIEW && migration) {
+        set.add(i);
+      } else if (i === STEP_ACTION && migration) {
+        if (["Validated", "Posted", "Locked"].includes(migration.status)) set.add(i);
+      } else if (i === STEP_FIRST_PERIOD && firstPeriod) {
+        set.add(i);
+      }
+    }
+    return set;
+  }, [
+    steps, cashBanks, derivedAr, arManualLines, inventoryTotal,
+    faRows, faManualLines, derivedAp, loans, liabilitiesManual,
+    partnerEquity, partnerCurrentManual, equityManual,
+    userCompletedSteps, migration, firstPeriod,
+  ]);
+
+  // Dynamic visual step order state.
+  useEffect(() => {
+    const dataEntryEnd = Math.min(STEP_REVIEW, steps.length);
+    setStepOrder((prev) => {
+      const base = prev.length === steps.length ? prev : [...Array(steps.length).keys()];
+      return updateStepOrder(base, completedSteps, dataEntryEnd);
+    });
+  }, [completedSteps, steps.length]);
+
+  const handlePrev = useCallback(() => {
+    setStep((s) => {
+      const pos = stepOrder.indexOf(s);
+      if (pos <= 0) return s;
+      return stepOrder[pos - 1];
+    });
+  }, [stepOrder]);
+
   const handleNext = async () => {
     const runOnNext = startMode === START_MODE_NEW ? step === 0 : step === STEP_REVIEW || step === STEP_ACTION;
     if (runOnNext) {
       const ok = await runStep();
       if (!ok) return;
     }
-    setStep((s) => Math.min(s + 1, steps.length - 1));
+    // Advance to the next step according to the dynamic visual order.
+    setStep((s) => {
+      const pos = stepOrder.indexOf(s);
+      if (pos === -1 || pos >= stepOrder.length - 1) return s;
+      return stepOrder[pos + 1];
+    });
     await autoSaveDraft();
   };
 
@@ -1189,6 +1352,10 @@ export function useOpeningBalanceWizard() {
     setPartnerCurrentManual,
     partnerCurrentManualRows,
     savePartnerCurrentAccount,
+    arManualLines,
+    setArManualLines,
+    faManualLines,
+    setFaManualLines,
     saveCustomerOpening,
     saveSupplierOpening,
     savePartnerCapital,
@@ -1209,8 +1376,13 @@ export function useOpeningBalanceWizard() {
     nextLabel,
     nextDisabledReason,
     handleNext,
+    handlePrev,
     navigateToStep,
     canNavigateToStep,
+    userCompletedSteps,
+    markStepComplete,
+    completedSteps,
+    stepOrder,
     steps,
     hasDraft,
     saveDraft,

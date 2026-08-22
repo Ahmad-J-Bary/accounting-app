@@ -71,42 +71,17 @@ export function GuidedTransitionWizard() {
       goDashboard();
       return;
     }
+    // Data-entry steps (0-6): first click marks step complete, second click advances.
+    // NewCompany mode is excluded — its step 0 directly runs the step action.
+    if (w.startMode !== START_MODE_NEW && w.step >= 0 && w.step < STEP_REVIEW && !w.userCompletedSteps.has(w.step)) {
+      void w.markStepComplete(w.step);
+      return;
+    }
     void w.handleNext();
   };
 
-  // Completed steps for clickable step indicators — data-driven, not sequential.
-  const completedSteps = useMemo(() => {
-    const set = new Set<number>();
-    for (let i = 0; i < w.steps.length; i++) {
-      if (i === 0) {
-        set.add(i);
-      } else if (i === 1 && w.cashBanks.length > 0) {
-        set.add(i);
-      } else if (i === 2 && w.derivedAr.length > 0) {
-        set.add(i);
-      } else if (i === 3 && w.inventoryTotal > 0) {
-        set.add(i);
-      } else if (i === 4 && w.faRows.length > 0) {
-        set.add(i);
-      } else if (i === 5 && (w.derivedAp.length > 0 || w.loans.length > 0 || w.liabilitiesManual.length > 0)) {
-        set.add(i);
-      } else if (i === 6 && (w.partnerEquity.length > 0 || w.equityManual.length > 0 || w.partnerCurrentManual.length > 0)) {
-        set.add(i);
-      } else if (i === STEP_REVIEW && w.migration) {
-        set.add(i);
-      } else if (i === STEP_ACTION && w.migration) {
-        if (["Validated", "Posted", "Locked"].includes(w.migration.status)) set.add(i);
-      } else if (i === 9 && w.firstPeriod) {
-        set.add(i);
-      }
-    }
-    return set;
-  }, [
-    w.steps, w.cashBanks, w.derivedAr, w.inventoryTotal,
-    w.faRows, w.derivedAp, w.loans, w.liabilitiesManual,
-    w.partnerEquity, w.partnerCurrentManual, w.equityManual,
-    w.migration, w.firstPeriod,
-  ]);
+  // Use completedSteps from the hook (single source of truth).
+  const completedSteps = w.completedSteps;
 
   const renderDone = () => {
     const locked = w.migration?.status === "Locked";
@@ -307,7 +282,7 @@ export function GuidedTransitionWizard() {
         return (
           <div className="space-y-3">
             <p className="text-xs text-slate-500">
-              أرصدة العملاء تُشتق من سجل العملاء ويمكن تعديلها هنا مباشرة.
+              أرصدة العملاء تُشتق من سجل العملاء ويمكن تعديلها هنا مباشرة. يمكنك أيضاً إضافة بنود يدوية.
             </p>
             <InlineRows
               title="الذمم المدينة — العملاء (مشتقة)"
@@ -317,8 +292,17 @@ export function GuidedTransitionWizard() {
               nativeHint="debit"
             />
             {w.derivedAr.length === 0 && (
-              <p className="text-xs text-slate-400">لا يوجد عملاء بأرصدة — أضفهم من صفحة «العملاء» أو تخطَّ.</p>
+              <p className="text-xs text-slate-400">لا يوجد عملاء بأرصدة — أضفهم من صفحة «العملاء» أو أدخل بنداً يدوياً.</p>
             )}
+            <div className="space-y-2">
+              <div className="text-xs font-semibold text-slate-600">بنود ذمم مدينة يدوية</div>
+              <WizardLineEditor rows={w.arManualLines} setter={w.setArManualLines} updateLine={w.updateLine} placeholder="ابحث واختر حساب الذمم..." accounts={w.accounts} detailAccounts={w.detailAccounts} />
+            </div>
+            <div className="flex justify-start pt-1">
+              <Button size="sm" variant="outline" onClick={() => goTo("/customers", "العملاء")} className="border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
+                الانتقال إلى صفحة العملاء
+              </Button>
+            </div>
           </div>
         );
       case 3:
@@ -342,7 +326,7 @@ export function GuidedTransitionWizard() {
           <div className="space-y-3">
             <p className="text-xs text-slate-500">
               صافي القيمة الدفترية (التكلفة − مجمع الإهلاك) مشتق من سجل الأصول الثابتة. التعديل هنا يؤثر على
-              قيمة الافتتاح في المعالج فقط — سجل الأصول والاستهلاك يبقى كما هو.
+              قيمة الافتتاح في المعالج فقط — سجل الأصول والاستهلاك يبقى كما هو. يمكنك أيضاً إضافة أصول يدوية.
             </p>
             <InlineRows
               title="الأصول الثابتة (مشتقة — صافي القيمة الدفترية)"
@@ -352,8 +336,17 @@ export function GuidedTransitionWizard() {
               nativeHint="debit"
             />
             {w.faRows.length === 0 && (
-              <p className="text-xs text-slate-400">لا توجد أصول ثابتة نشطة.</p>
+              <p className="text-xs text-slate-400">لا توجد أصول ثابتة نشطة — أدخل أصولاً يدوياً أو أضفها من صفحة الأصول.</p>
             )}
+            <div className="space-y-2">
+              <div className="text-xs font-semibold text-slate-600">أصول ثابتة يدوية</div>
+              <WizardLineEditor rows={w.faManualLines} setter={w.setFaManualLines} updateLine={w.updateLine} placeholder="ابحث واختر حساب الأصل..." accounts={w.accounts} detailAccounts={w.detailAccounts} />
+            </div>
+            <div className="flex justify-start pt-1">
+              <Button size="sm" variant="outline" onClick={() => goTo("/fixed-assets", "الأصول الثابتة")} className="border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
+                الانتقال إلى صفحة الأصول الثابتة
+              </Button>
+            </div>
           </div>
         );
       case 5:
@@ -388,6 +381,11 @@ export function GuidedTransitionWizard() {
               <div className="text-xs font-semibold text-slate-600">التزامات أخرى (يدوي)</div>
               <WizardLineEditor rows={w.liabilitiesManual} setter={w.setLiabilitiesManual} updateLine={w.updateLine} placeholder="ابحث واختر حساب التزام..." accounts={w.accounts} detailAccounts={w.detailAccounts} />
             </div>
+            <div className="flex justify-start pt-1">
+              <Button size="sm" variant="outline" onClick={() => goTo("/suppliers", "الموردون")} className="border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
+                الانتقال إلى صفحة الموردين
+              </Button>
+            </div>
           </div>
         );
       case 6:
@@ -417,6 +415,11 @@ export function GuidedTransitionWizard() {
               <div className="text-xs font-semibold text-slate-600">حقوق ملكية أخرى (يدوي)</div>
               <WizardLineEditor rows={w.equityManual} setter={w.setEquityManual} updateLine={w.updateLine} placeholder="ابحث واختر حساب حقوق ملكية..." accounts={w.accounts} detailAccounts={w.detailAccounts} />
             </div>
+            <div className="flex justify-start pt-1">
+              <Button size="sm" variant="outline" onClick={() => goTo("/partners", "الشركاء")} className="border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
+                الانتقال إلى صفحة الشركاء
+              </Button>
+            </div>
           </div>
         );
       case 7:
@@ -428,8 +431,8 @@ export function GuidedTransitionWizard() {
               <p className="text-xs text-slate-500">
                 حفظ المسودة (بنود الميزانية) وتفاصيل السجل المساعد ثم فحص تسوية الأرصدة مع دفتر الأستاذ.
                 عدد البنود: {w.collectLines().length} ·
-                العملاء: {w.derivedAr.length} · الموردون: {w.derivedAp.length} ·
-                الأصول الثابتة: {w.faRows.length} · حقوق الشركاء: {w.partnerEquity.length + w.partnerCurrentManual.length}
+                العملاء: {w.derivedAr.length + w.arManualLines.length} · الموردون: {w.derivedAp.length} ·
+                الأصول الثابتة: {w.faRows.length + w.faManualLines.length} · حقوق الشركاء: {w.partnerEquity.length + w.partnerCurrentManual.length}
               </p>
             </div>
             {w.reconciliation && (
@@ -578,9 +581,9 @@ export function GuidedTransitionWizard() {
   const summary = useMemo(() => {
     const cash = sumLines(w.cashBanks.filter((l) => l.kind === "cash"));
     const bank = sumLines(w.cashBanks.filter((l) => l.kind === "bank"));
-    const receivables = sumLines(w.derivedAr);
+    const receivables = sumLines(w.derivedAr) + sumLines(w.arManualLines);
     const inventory = w.inventoryTotal;
-    const fixedAssets = sumLines(w.faRows);
+    const fixedAssets = sumLines(w.faRows) + sumLines(w.faManualLines);
     const suppliers = sumLines(w.derivedAp);
     const loans = sumLines(w.loans);
     const otherLiabilities = sumLines(w.liabilitiesManual);
@@ -643,12 +646,12 @@ export function GuidedTransitionWizard() {
       residual,
       hints,
     };
-  }, [w.cashBanks, w.derivedAr, w.derivedAp, w.faRows, w.loans, w.liabilitiesManual, w.partnerEquity, w.partnerCurrentManual, w.equityManual, w.inventoryTotal, w.reconciliation, w.effectiveInventory, w.materials, w.missingAccountHints]);
+  }, [w.cashBanks, w.derivedAr, w.arManualLines, w.inventoryTotal, w.faRows, w.faManualLines, w.derivedAp, w.loans, w.liabilitiesManual, w.partnerEquity, w.partnerCurrentManual, w.equityManual, w.reconciliation, w.effectiveInventory, w.materials, w.missingAccountHints]);
 
   // ── Progress checklist (§15): every section's done-state, derived from data
   // and the reached step so the user never has to remember what is finished.
   const checklistItems: ChecklistItem[] = useMemo(() => {
-    const ar = sumLines(w.derivedAr);
+    const ar = sumLines(w.derivedAr) + sumLines(w.arManualLines);
     const ap = sumLines(w.derivedAp);
     const loansT = sumLines(w.loans);
     const otherLiab = sumLines(w.liabilitiesManual);
@@ -656,7 +659,7 @@ export function GuidedTransitionWizard() {
     const partnerCurr = sumLines(w.partnerCurrentManual);
     const otherEq = sumLines(w.equityManual);
     const cashBank = sumLines(w.cashBanks);
-    const fa = sumLines(w.faRows);
+    const fa = sumLines(w.faRows) + sumLines(w.faManualLines);
     return [
       { key: "cutover", label: "تاريخ القطع", done: !!w.cutoverDate },
       { key: "cash", label: "أرصدة النقد والبنوك", done: cashBank > 0 || w.step > 1 },
@@ -669,7 +672,10 @@ export function GuidedTransitionWizard() {
       { key: "balanced", label: "متوازن", done: w.savedTotals.balanced },
       { key: "ready", label: "جاهز للترحيل", done: w.step >= STEP_REVIEW && w.canNext },
     ];
-  }, [w.derivedAr, w.derivedAp, w.loans, w.liabilitiesManual, w.partnerEquity, w.equityManual, w.cashBanks, w.faRows, w.inventoryPosted, w.inventoryTotal, w.step, w.cutoverDate, w.reconciliation, w.savedTotals, w.canNext]);
+  }, [w.derivedAr, w.arManualLines, w.derivedAp, w.loans, w.liabilitiesManual, w.partnerEquity, w.equityManual, w.cashBanks, w.faRows, w.faManualLines, w.inventoryPosted, w.inventoryTotal, w.step, w.cutoverDate, w.reconciliation, w.savedTotals, w.canNext]);
+
+  // Use stepOrder from the hook (single source of truth).
+  const stepOrder = w.stepOrder;
 
   const wizard = (
     <WizardShell
@@ -679,6 +685,7 @@ export function GuidedTransitionWizard() {
         : "جمع الأرصدة قسماً بقسم (نقد وبنوك، عملاء، مخزون، أصول ثابتة، مورden والالتزامات، شركاء) ثم إتمام الترحيل ثم إنشاء أول فترة تشغيلية."}
       steps={w.steps}
       stepIndex={w.step}
+      stepOrder={stepOrder}
       canNext={w.canNext}
       canPrev={w.canPrev}
       isNexting={w.busy}
@@ -686,7 +693,7 @@ export function GuidedTransitionWizard() {
       nextLabel={w.nextLabel}
       canNextHint={w.nextDisabledReason}
       onNext={handleNext}
-      onPrev={() => w.setStep((s) => Math.max(0, s - 1))}
+      onPrev={w.handlePrev}
       onStepClick={w.navigateToStep}
       canNavigateToStep={w.canNavigateToStep}
       completedSteps={completedSteps}
