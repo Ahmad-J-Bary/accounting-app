@@ -173,16 +173,17 @@ describe("GuidedTransitionWizard", () => {
     expect(await screen.findByText("تم بدء المحاسبة بنجاح ✓")).toBeInTheDocument();
   });
 
-  it("ExistingCompany mode runs the 15-step transition incl. the first-period step", async () => {
+  it("ExistingCompany mode runs the 11-step transition incl. the first-period step", async () => {
     vi.mocked(settingsService.getSettings).mockResolvedValue({ accounting_start_mode: "ExistingCompanyMigration" } as never);
     renderWizard();
     expect(await screen.findByText("معالج التحويل الموجه (شركة قائمة)")).toBeInTheDocument();
     expect(screen.getByText("أول فترة تشغيلية")).toBeInTheDocument();
     expect(screen.getByText("النقد والبنوك")).toBeInTheDocument();
     expect(screen.getByText("المخزون")).toBeInTheDocument();
-    expect(screen.getByText("الشركاء وحقوق الملكية")).toBeInTheDocument();
+    expect(screen.getAllByText("حقوق الشركاء").length).toBeGreaterThan(0);
     expect(screen.queryByText("الشركاء ورأس المال")).not.toBeInTheDocument();
-    expect(screen.getByText("القفل")).toBeInTheDocument();
+    expect(screen.getByText("إتمام الترحيل")).toBeInTheDocument();
+    expect(screen.getAllByText("الموردون والالتزامات").length).toBeGreaterThan(0);
     expect(screen.getByText("اكتمال")).toBeInTheDocument();
   });
 
@@ -263,7 +264,7 @@ describe("GuidedTransitionWizard", () => {
     vi.mocked(settingsService.getSettings).mockResolvedValue({ accounting_start_mode: "ExistingCompanyMigration" } as never);
     vi.mocked(openingBalanceService.listMigrations).mockResolvedValue([] as never);
     vi.mocked(openingBalanceService.getOpeningDraft).mockResolvedValue(
-      JSON.stringify({ step: 9, residualClassification: "RetainedEarnings" }) as never,
+      JSON.stringify({ step: 7, residualClassification: "RetainedEarnings" }) as never,
     );
     const user = userEvent.setup();
     renderWizard();
@@ -277,7 +278,7 @@ describe("GuidedTransitionWizard", () => {
     vi.mocked(settingsService.getSettings).mockResolvedValue({ accounting_start_mode: "ExistingCompanyMigration" } as never);
     vi.mocked(openingBalanceService.listMigrations).mockResolvedValue([] as never);
     vi.mocked(openingBalanceService.getOpeningDraft).mockResolvedValue(
-      JSON.stringify({ step: 9, residualClassification: "PartnerCapital" }) as never,
+      JSON.stringify({ step: 7, residualClassification: "PartnerCapital" }) as never,
     );
     renderWizard();
     expect(await screen.findByText("سيتم عند «حفظ وفحص التسوية»:")).toBeInTheDocument();

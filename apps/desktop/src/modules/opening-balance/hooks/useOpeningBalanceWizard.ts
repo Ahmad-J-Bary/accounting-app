@@ -42,6 +42,7 @@ import {
   deriveAp,
   deriveFa,
   derivePartnerEquity,
+  derivePartnerCurrentAccounts,
   deriveInventoryRows,
   sumLines,
   type InventoryEntry,
@@ -53,12 +54,10 @@ import {
   selectLatestOpenMigration,
 } from "@modules/opening-balance/lib/migration-labels";
 
-// Step indices for the ExistingCompany 15-step layout.
-export const STEP_REVIEW = 9;
-export const STEP_VALIDATE = 10;
-export const STEP_POST = 11;
-export const STEP_LOCK = 12;
-export const STEP_FIRST_PERIOD = 13;
+// Step indices for the ExistingCompany 11-step layout.
+export const STEP_REVIEW = 7;
+export const STEP_ACTION = 8;       // Merged: validate + post + lock
+export const STEP_FIRST_PERIOD = 9;
 
 // Residual classifications. The backend spec endpoint is the source of truth
 // (`get_opening_balance_residual_classification_spec`); this fallback mirrors
@@ -130,9 +129,9 @@ interface WizardDraft {
   residualAccountId: string;
   cashBanks: WizLine[];
   loans: WizLine[];
-  assetsManual: WizLine[];
   liabilitiesManual: WizLine[];
   equityManual: WizLine[];
+  partnerCurrentManual: WizLine[];
   faOverrides: Record<string, string>;
   inventoryInputs: Record<string, { qty: string; cost: string }>;
   inventoryAccountId: string;
@@ -151,6 +150,7 @@ export function useOpeningBalanceWizard() {
   const [assetsManual, setAssetsManual] = useState<WizLine[]>([]);
   const [liabilitiesManual, setLiabilitiesManual] = useState<WizLine[]>([]);
   const [equityManual, setEquityManual] = useState<WizLine[]>([]);
+  const [partnerCurrentManual, setPartnerCurrentManual] = useState<WizLine[]>([]);
   // Amount-only sections (auto-default accounts, overridable manually).
   const [cashBanks, setCashBanks] = useState<WizLine[]>([]);
   const [loans, setLoans] = useState<WizLine[]>([]);
@@ -204,9 +204,9 @@ export function useOpeningBalanceWizard() {
     if (typeof d.residualAccountId === "string") setResidualAccountId(d.residualAccountId);
     if (Array.isArray(d.cashBanks)) setCashBanks(d.cashBanks);
     if (Array.isArray(d.loans)) setLoans(d.loans);
-    if (Array.isArray(d.assetsManual)) setAssetsManual(d.assetsManual);
     if (Array.isArray(d.liabilitiesManual)) setLiabilitiesManual(d.liabilitiesManual);
     if (Array.isArray(d.equityManual)) setEquityManual(d.equityManual);
+    if (Array.isArray(d.partnerCurrentManual)) setPartnerCurrentManual(d.partnerCurrentManual);
     if (d.faOverrides) setFaOverrides(d.faOverrides);
     if (d.inventoryInputs) setInventoryInputs(d.inventoryInputs);
     if (typeof d.inventoryAccountId === "string") setInventoryAccountId(d.inventoryAccountId);
@@ -234,7 +234,7 @@ export function useOpeningBalanceWizard() {
   // ── Persisted migration + reconciliation (re-entry at any step) ──────────
   // `migration`/`reconciliation` are session state that the review-save fills,
   // so re-entering the wizard (tab switch, save-exit-continue, reload) left a
-  // Draft migration with its reconciliation unloaded → STEP_VALIDATE dead-ended
+  // Draft migration with its reconciliation unloaded → STEP_ACTION dead-ended
   // with «احفظ الأرصدة أولاً» while the «التسوية» checklist stayed ✗. Load the
   // latest non-cancelled migration + its reconciliation on mount instead.
   const migrationLoaded = useRef(false);
@@ -270,9 +270,9 @@ export function useOpeningBalanceWizard() {
       residualAccountId,
       cashBanks,
       loans,
-      assetsManual,
       liabilitiesManual,
       equityManual,
+      partnerCurrentManual,
       faOverrides,
       inventoryInputs,
       inventoryAccountId,
@@ -289,7 +289,26 @@ export function useOpeningBalanceWizard() {
       toast.error("فشل حفظ المسودة: " + e);
       return false;
     }
-  }, [step, cutoverDate, sourceSystem, sourceReference, notes, residualClassification, residualAccountId, cashBanks, loans, assetsManual, liabilitiesManual, equityManual, faOverrides, inventoryInputs, inventoryAccountId, inventoryPosted, migration]);
+  }, [step, cutoverDate, sourceSystem, sourceReference, notes, residualClassification, residualAccountId, cashBanks, loans, liabilitiesManual, equityManual, partnerCurrentManual, faOverrides, inventoryInputs, inventoryAccountId, inventoryPosted, migration]);
+
+  // Silent auto-save: persists the draft without toasts or user feedback.
+  const autoSaveDraft = useCallback(async () => {
+    if (migration?.status === "Locked") return;
+    const draft: WizardDraft = {
+      step, cutoverDate, sourceSystem, sourceReference, notes,
+      residualClassification, residualAccountId, cashBanks, loans,
+      liabilitiesManual, equityManual, partnerCurrentManual,
+      faOverrides, inventoryInputs, inventoryAccountId, inventoryPosted,
+    };
+    try {
+      const json = JSON.stringify(draft);
+      await openingBalanceService.saveOpeningDraft(json);
+      setHasDraft(true);
+      queryClient.setQueryData<string | null>(QUERY_KEYS.openingDraft, json);
+    } catch {
+      // Silent failure — auto-save is best-effort.
+    }
+  }, [step, cutoverDate, sourceSystem, sourceReference, notes, residualClassification, residualAccountId, cashBanks, loans, liabilitiesManual, equityManual, partnerCurrentManual, faOverrides, inventoryInputs, inventoryAccountId, inventoryPosted, migration]);
 
   const clearDraft = useCallback(async () => {
     setHasDraft(false);
@@ -410,6 +429,7 @@ export function useOpeningBalanceWizard() {
   const derivedAp: DerivedRow[] = useMemo(() => deriveAp(suppliers, accounts), [suppliers, accounts]);
   const derivedFa: DerivedRow[] = useMemo(() => deriveFa(fixedAssets, accounts), [fixedAssets, accounts]);
   const partnerEquity: DerivedRow[] = useMemo(() => derivePartnerEquity(partners, accounts), [partners, accounts]);
+  const partnerCurrentDerived: DerivedRow[] = useMemo(() => derivePartnerCurrentAccounts(partners, accounts), [partners, accounts]);
 
   // Fixed assets may carry a wizard-side opening NBV override (migration only).
   const faRows: DerivedRow[] = useMemo(() => {
@@ -451,9 +471,10 @@ export function useOpeningBalanceWizard() {
   const apTotal = sumLines(derivedAp);
   const faTotal = sumLines(faRows);
   const equityTotal = sumLines(partnerEquity);
+  const partnerCurrentTotal = sumLines(partnerCurrentManual);
 
   const debit = manualAssetsTotal + cashBanksTotal + inventoryTotal + arTotal + faTotal;
-  const credit = manualLiabilitiesTotal + loansTotal + apTotal + equityTotal + manualEquityTotal;
+  const credit = manualLiabilitiesTotal + loansTotal + apTotal + equityTotal + manualEquityTotal + partnerCurrentTotal;
   const residual = debit - credit;
 
   const obeAccountId = useMemo(
@@ -485,7 +506,7 @@ export function useOpeningBalanceWizard() {
     const plugAmount = hasResidualPlug ? residual : 0;
     const debitTotal = debit;
     const liabilities = manualLiabilitiesTotal + loansTotal + apTotal;
-    const equity = manualEquityTotal + equityTotal;
+    const equity = manualEquityTotal + equityTotal + partnerCurrentTotal;
     const creditTotal = credit + plugAmount;
     return {
       debit: debitTotal,
@@ -507,6 +528,7 @@ export function useOpeningBalanceWizard() {
     apTotal,
     manualEquityTotal,
     equityTotal,
+    partnerCurrentTotal,
   ]);
 
   const detailAccounts = useMemo(
@@ -540,6 +562,24 @@ export function useOpeningBalanceWizard() {
   const addLoanRow = useCallback(() => {
     setLoans((prev) => [...prev, { key: newLine().key, account_id: defaultLoanAccount || "", amount: "", kind: "loan" }]);
   }, [defaultLoanAccount]);
+
+  const addManualDebitLine = useCallback(() => {
+    setAssetsManual((prev) => [
+      ...prev,
+      { key: newLine().key, account_id: "", amount: "", kind: "manual" },
+    ]);
+  }, []);
+
+  const updateManualDebitLine = useCallback(
+    (key: string, patch: Partial<WizLine>) => {
+      setAssetsManual((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
+    },
+    [],
+  );
+
+  const removeManualDebitLine = useCallback((key: string) => {
+    setAssetsManual((prev) => prev.filter((l) => l.key !== key));
+  }, []);
 
   // ── Inline module saves (window-safe: no journals while the window is open) ─
   const saveCustomerOpening = useCallback(
@@ -633,6 +673,31 @@ export function useOpeningBalanceWizard() {
     [partners],
   );
 
+  const savePartnerCurrentAccount = useCallback(
+    async (row: DerivedRow, value: string): Promise<boolean> => {
+      setPartnerCurrentManual((prev) => {
+        const idx = prev.findIndex((l) => l.key === row.key);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = { ...next[idx], amount: value || "0" };
+          return next;
+        }
+        return [...prev, { key: row.key, account_id: row.account_id, amount: value || "0", kind: "manual" as const }];
+      });
+      toast.success("تم تحديث الحساب الجاري للشريك");
+      return true;
+    },
+    [],
+  );
+
+  const partnerCurrentManualRows: DerivedRow[] = useMemo(() => {
+    const byKey = new Map(partnerCurrentManual.map((l) => [l.key, l]));
+    return partnerCurrentDerived.map((dr) => {
+      const manual = byKey.get(dr.key);
+      return manual ? { ...dr, amount: manual.amount, account_id: manual.account_id || dr.account_id } : dr;
+    });
+  }, [partnerCurrentDerived, partnerCurrentManual]);
+
   // Fixed assets: the module stays authoritative (cost/depreciation), so the
   // inline edit only adjusts the migration's opening valuation per asset.
   const saveFixedAssetOverride = useCallback(async (row: DerivedRow, value: string): Promise<boolean> => {
@@ -710,6 +775,11 @@ export function useOpeningBalanceWizard() {
     for (const r of [...derivedAr, ...derivedAp, ...faRows, ...partnerEquity]) {
       lines.push({ account_id: r.account_id, amount: r.amount, description: undefined });
     }
+    for (const l of partnerCurrentManual) {
+      if (l.account_id && l.amount) {
+        lines.push({ account_id: l.account_id, amount: l.amount, description: "حساب جاري شريك — رصيد افتتاحي" });
+      }
+    }
     for (const l of cashBanks) {
       if (l.account_id && l.amount) {
         lines.push({ account_id: l.account_id, amount: l.amount, description: "نقد وبنوك — رصيد افتتاحي" });
@@ -720,7 +790,7 @@ export function useOpeningBalanceWizard() {
         lines.push({ account_id: l.account_id, amount: l.amount, description: "قروض — رصيد افتتاحي" });
       }
     }
-    for (const l of [...assetsManual, ...liabilitiesManual, ...equityManual]) {
+    for (const l of [...liabilitiesManual, ...equityManual]) {
       if (l.account_id && l.amount) {
         lines.push({ account_id: l.account_id, amount: l.amount, description: "بند يدوي" });
       }
@@ -741,9 +811,9 @@ export function useOpeningBalanceWizard() {
     derivedAp,
     faRows,
     partnerEquity,
+    partnerCurrentManual,
     cashBanks,
     loans,
-    assetsManual,
     liabilitiesManual,
     equityManual,
     inventoryTotal,
@@ -817,11 +887,16 @@ export function useOpeningBalanceWizard() {
         hints.push({ section: "بند يدوي", amount: toNum(l.amount) });
       }
     }
+    for (const l of partnerCurrentManual) {
+      if (toNum(l.amount) !== 0 && !l.account_id) {
+        hints.push({ section: "حساب جاري شريك", amount: toNum(l.amount) });
+      }
+    }
     if (inventoryTotal !== 0 && !effectiveInventoryAccountId) {
       hints.push({ section: "المخزون", amount: inventoryTotal });
     }
     return hints;
-  }, [cashBanks, loans, assetsManual, liabilitiesManual, equityManual, inventoryTotal, effectiveInventoryAccountId]);
+  }, [cashBanks, loans, assetsManual, liabilitiesManual, equityManual, partnerCurrentManual, inventoryTotal, effectiveInventoryAccountId]);
 
   const missingAccountHints = useMemo(
     () =>
@@ -878,15 +953,9 @@ export function useOpeningBalanceWizard() {
         return startMode === START_MODE_EXISTING && !!cutoverDate;
       case STEP_REVIEW:
         return savedTotals.balanced && totals.total > 0;
-      case STEP_VALIDATE:
-        // The «تأكيد التحقق» action itself produces the Validated status, so the
-        // gate is "editable + equations/reconciliation ready", not "already
-        // validated" (otherwise the step dead-ends on a Draft migration).
-        return canValidateOpening(migration, reconciliation);
-      case STEP_POST:
-        return !!migration && migration.status === "Validated" && residualResolved;
-      case STEP_LOCK:
-        return !!migration && migration.status === "Posted" && residualResolved;
+      case STEP_ACTION:
+        // Merged gate: can validate + residual resolved
+        return canValidateOpening(migration, reconciliation) && residualResolved;
       case STEP_FIRST_PERIOD:
         return (migration?.status !== "Locked" || onboardingStarted || !!firstPeriod) && datesValid;
       default:
@@ -909,9 +978,7 @@ export function useOpeningBalanceWizard() {
     }
     switch (step) {
       case STEP_REVIEW: return "حفظ وفحص التسوية";
-      case STEP_VALIDATE: return "تأكيد التحقق";
-      case STEP_POST: return "تأكيد الترحيل";
-      case STEP_LOCK: return "تأكيد القفل";
+      case STEP_ACTION: return "تنفيذ (تحقق + ترحيل + قفل)";
       case STEP_FIRST_PERIOD: return "إنشاء أول فترة تشغيلية";
       default: return undefined;
     }
@@ -922,32 +989,19 @@ export function useOpeningBalanceWizard() {
   // unbalanced equation, or unreconciled sub-ledgers all show here).
   const nextDisabledReason = useMemo(() => {
     if (startMode === START_MODE_NEW) return undefined;
-    if (step === STEP_POST) {
-      if (migration && migration.status === "Validated" && !residualResolved) {
-        return "الفرق غير محلول: صنّف الرصيد المتبقي إلى حساب حقوق ملكية قبل الترحيل";
-      }
-      return undefined;
-    }
-    if (step === STEP_LOCK) {
-      if (migration && migration.status === "Posted" && !residualResolved) {
-        return "الفرق غير محلول: لا يمكن قفل الترحيل حتى يُحل الرصيد المتبقي (صنّفه أو عالج الفرق)";
-      }
-      return undefined;
-    }
     if (step === STEP_FIRST_PERIOD && migration?.status === "Locked" && !onboardingStarted) {
       return "اضغط «بدء أول فترة تشغيلية» لبدء إعداد أول فترة تشغيلية";
     }
-    if (step !== STEP_VALIDATE) return undefined;
+    if (step !== STEP_ACTION) return undefined;
     if (!migration) return "احفظ الأرصدة وفحص التسوية أولاً (خطوة المراجعة)";
-    if (["Posted", "Locked", "Cancelled"].includes(migration.status)) return "التحويل مؤشَّر أو مقفل — لا يمكن التحقق من جديد";
+    if (["Posted", "Locked", "Cancelled"].includes(migration.status)) return "التحويل مقفول بالفعل";
     const readiness = reconciliation ? reconciliationReadiness(reconciliation) : null;
     if (readiness && !readiness.readyToPost) {
-      // Precise blockers (dr≠cr / which sub-ledgers mismatch), excluding the
-      // 53-clearance message which belongs to the lock step only.
       const reasons = readiness.blockers.filter((b) => !b.includes("لم يُصفَّر بعد"));
       if (reasons.length) return reasons.join(" · ");
       return "المعادلة غير متوازنة أو توجد واجهات فرعية غير مطابقة";
     }
+    if (!residualResolved) return "الفرق غير محلول: صنّف الرصيد المتبقي قبل التنفيذ";
     return undefined;
   }, [startMode, step, migration, reconciliation, residualResolved, onboardingStarted]);
 
@@ -1013,47 +1067,43 @@ export function useOpeningBalanceWizard() {
 
       if (!migration) return false;
 
-      if (step === STEP_VALIDATE) {
+      if (step === STEP_ACTION) {
         setBusy(true);
-        // Idempotent when the user re-enters the step after already validating
-        // (back-navigation path): the validate API only accepts a Draft.
-        if (migration.status === "Validated") {
+        try {
+          // 1. Validate (if Draft)
+          let current = migration;
+          if (current.status === "Draft") {
+            current = await openingBalanceService.validateMigration(current.id, "system");
+            setMigration(current);
+            invalidateMigrations();
+          }
+          // 2. Approve + Post (if Validated)
+          if (current.status === "Validated") {
+            const approved = await openingBalanceService.approveMigration(current.id, "system");
+            current = approved;
+            const res = await openingBalanceService.postMigration(current.id);
+            current = res.migration;
+            setMigration(current);
+            invalidateMigrations();
+            if (residualClassification && !residualUnresolved && residualAccountId && totals.plugAmount !== 0) {
+              await openingBalanceService.applyResidual(current.id);
+            }
+          }
+          // 3. Lock (if Posted)
+          if (current.status === "Posted") {
+            current = await openingBalanceService.lockMigration(current.id);
+            setMigration(current);
+            invalidateMigrations();
+            await clearDraft();
+          }
+          toast.success("تم إتمام الترحيل بنجاح");
           setBusy(false);
           return true;
+        } catch (e) {
+          setBusy(false);
+          toast.error("فشلت العملية: " + e);
+          return false;
         }
-        const updated = await openingBalanceService.validateMigration(migration.id, "system");
-        setMigration(updated);
-        invalidateMigrations();
-        setBusy(false);
-        return true;
-      }
-      if (step === STEP_POST) {
-        setBusy(true);
-        // The backend only posts an Approved migration. Approval is folded into
-        // the "تأكيد الترحيل" step so the wizard never dead-ends at Post.
-        const approved = await openingBalanceService.approveMigration(migration.id, "system");
-        setMigration(approved);
-        const res = await openingBalanceService.postMigration(migration.id);
-        setMigration(res.migration);
-        invalidateMigrations();
-        // Move the classified 53 plug out into the chosen account so the OBE
-        // control zeroes and the lock gate can be satisfied. UnresolvedDifference
-        // is gated before posting, so only real classifications reach this.
-        if (residualClassification && !residualUnresolved && residualAccountId && totals.plugAmount !== 0) {
-          await openingBalanceService.applyResidual(migration.id);
-        }
-        toast.success("تم الترحيل (متوازن)");
-        setBusy(false);
-        return true;
-      }
-      if (step === STEP_LOCK) {
-        setBusy(true);
-        const updated = await openingBalanceService.lockMigration(migration.id);
-        setMigration(updated);
-        invalidateMigrations();
-        await clearDraft();
-        setBusy(false);
-        return true;
       }
       return true;
     } catch (e) {
@@ -1064,13 +1114,33 @@ export function useOpeningBalanceWizard() {
   };
 
   const handleNext = async () => {
-    const runOnNext = startMode === START_MODE_NEW ? step === 0 : step === STEP_REVIEW || (step >= STEP_VALIDATE && step <= STEP_FIRST_PERIOD);
+    const runOnNext = startMode === START_MODE_NEW ? step === 0 : step === STEP_REVIEW || step === STEP_ACTION;
     if (runOnNext) {
       const ok = await runStep();
       if (!ok) return;
     }
     setStep((s) => Math.min(s + 1, steps.length - 1));
+    await autoSaveDraft();
   };
+
+  // Navigate to a step by clicking on the step indicator.
+  const navigateToStep = useCallback(async (target: number) => {
+    if (target === step) return;
+    if (committed) return;
+    if (target >= STEP_REVIEW && !migration) return;
+    await autoSaveDraft();
+    setStep(target);
+  }, [step, committed, migration, autoSaveDraft]);
+
+  // Steps before review (0-8) are always clickable; after review only completed
+  // steps that precede the current position are clickable.
+  const canNavigateToStep = useCallback((target: number): boolean => {
+    if (committed) return false;
+    if (target === step) return false;
+    if (target < STEP_REVIEW) return true;
+    if (target >= STEP_REVIEW && !migration) return false;
+    return target < step;
+  }, [step, migration, committed]);
 
   return {
     step,
@@ -1115,6 +1185,10 @@ export function useOpeningBalanceWizard() {
     setFaOverrides,
     saveFixedAssetOverride,
     partnerEquity,
+    partnerCurrentManual,
+    setPartnerCurrentManual,
+    partnerCurrentManualRows,
+    savePartnerCurrentAccount,
     saveCustomerOpening,
     saveSupplierOpening,
     savePartnerCapital,
@@ -1135,10 +1209,15 @@ export function useOpeningBalanceWizard() {
     nextLabel,
     nextDisabledReason,
     handleNext,
+    navigateToStep,
+    canNavigateToStep,
     steps,
     hasDraft,
     saveDraft,
     clearDraft,
+    addManualDebitLine,
+    updateManualDebitLine,
+    removeManualDebitLine,
     firstPeriodStart,
     setFirstPeriodStart,
     firstPeriodEnd,
@@ -1166,23 +1245,19 @@ export function useOpeningBalanceWizard() {
   };
 }
 
-// ExistingCompany: full 15-step guided transition incl. the first period.
+// ExistingCompany: full 11-step guided transition incl. the first period.
 export const STEPS_EXISTING: WizardStepDef[] = [
-  { id: "company-start", label: "بدء الحسابات" },
-  { id: "cash-banks", label: "النقد والبنوك" },
-  { id: "customers", label: "الذمم المدينة" },
-  { id: "inventory", label: "المخزون" },
-  { id: "fixed-assets", label: "الأصول الثابتة" },
-  { id: "other-assets", label: "أصول أخرى" },
-  { id: "suppliers", label: "الذمم الدائنة" },
-  { id: "loans", label: "القروض" },
-  { id: "partners-equity", label: "الشركاء وحقوق الملكية" },
-  { id: "review", label: "المراجعة والحفظ" },
-  { id: "validate", label: "التحقق" },
-  { id: "post", label: "الترحيل" },
-  { id: "lock", label: "القفل" },
-  { id: "first-period", label: "أول فترة تشغيلية" },
-  { id: "done", label: "اكتمال" },
+  { id: "company-start",      label: "بدء الحسابات" },
+  { id: "cash-banks",         label: "النقد والبنوك" },
+  { id: "customers",          label: "الذمم المدينة" },
+  { id: "inventory",          label: "المخزون" },
+  { id: "fixed-assets",       label: "الأصول الثابتة" },
+  { id: "suppliers-loans",    label: "الموردون والالتزامات" },
+  { id: "partners-equity",    label: "حقوق الشركاء" },
+  { id: "review",             label: "المراجعة والحفظ" },
+  { id: "action",             label: "إتمام الترحيل" },
+  { id: "first-period",       label: "أول فترة تشغيلية" },
+  { id: "done",               label: "اكتمال" },
 ];
 
 // NewCompany: the wizard only creates the first financial period, then finishes.

@@ -69,7 +69,7 @@ describe("WizardShell", () => {
   });
 
   it("marks passed steps with a check and the active step with its number", () => {
-    renderShell({ stepIndex: 1 });
+    renderShell({ stepIndex: 1, completedSteps: new Set([0]) });
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.queryByText("1")).not.toBeInTheDocument();
   });

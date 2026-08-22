@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { ChevronRight, ChevronLeft, Check, Save, LogOut } from "lucide-react";
+import { ChevronRight, ChevronLeft, Check } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
 import { cn } from "@shared/lib/utils";
@@ -22,18 +22,16 @@ interface WizardShellProps {
   canNextHint?: string;
   onNext: () => void;
   onPrev: () => void;
-  // Draft persistence (Save → Exit → Continue later):
-  onSave?: () => void;
-  saving?: boolean;
-  onExit?: () => void;
-  exiting?: boolean;
+  onStepClick?: (index: number) => void;
+  canNavigateToStep?: (index: number) => boolean;
+  completedSteps?: Set<number>;
   children: ReactNode;
 }
 
 /**
  * Lightweight multi-step shell: renders a numbered progress header, the active
- * step content, and prev/next navigation. Validation of the current step is the
- * caller's responsibility (via `canNext`).
+ * step content, and prev/next navigation. Step indicators are clickable for
+ * completed steps. Auto-save is handled by the caller on step transitions.
  */
 export function WizardShell({
   title,
@@ -48,10 +46,9 @@ export function WizardShell({
   canNextHint,
   onNext,
   onPrev,
-  onSave,
-  saving = false,
-  onExit,
-  exiting = false,
+  onStepClick,
+  canNavigateToStep,
+  completedSteps,
   children,
 }: WizardShellProps) {
   const progress = ((stepIndex + 1) / steps.length) * 100;
@@ -68,9 +65,17 @@ export function WizardShell({
           <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1">
             {steps.map((s, i) => {
               const active = i === stepIndex;
-              const passed = i < stepIndex;
+              const passed = completedSteps?.has(i) ?? false;
+              const clickable = canNavigateToStep?.(i) ?? false;
               return (
-                <div key={s.id} className="flex flex-1 flex-col items-center gap-1 min-w-[3.5rem]">
+                <div
+                  key={s.id}
+                  className={cn(
+                    "flex flex-1 flex-col items-center gap-1 min-w-[3.5rem] transition-colors",
+                    clickable && "cursor-pointer hover:bg-slate-50 rounded-lg",
+                  )}
+                  onClick={() => clickable && onStepClick?.(i)}
+                >
                   <div
                     className={cn(
                       "flex items-center justify-center w-8 h-8 rounded-full border-2 shadow-sm transition-all",
@@ -111,35 +116,7 @@ export function WizardShell({
         <CardContent className="pt-4">{children}</CardContent>
       </Card>
 
-      <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-        {(onSave || onExit) && (
-          <div className="flex items-center gap-2">
-            {onSave && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onSave}
-                disabled={saving || isNexting}
-                className="border-slate-200 text-slate-700 font-bold"
-              >
-                <Save className="w-4 h-4 ml-1.5" /> {saving ? "جارٍ الحفظ..." : "حفظ المسودة"}
-              </Button>
-            )}
-            {onExit && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onExit}
-                disabled={exiting || isNexting}
-                className="text-slate-500 font-bold"
-                title="حفظ المسودة والخروج للاستكمال لاحقاً"
-              >
-                <LogOut className="w-4 h-4 ml-1.5" /> {exiting ? "جارٍ الحفظ..." : "خروج للاحقًا"}
-              </Button>
-            )}
-          </div>
-        )}
-        <div className="flex-1" />
+      <div className="flex items-center justify-between border-t border-slate-100 pt-3">
         <Button
           variant="outline"
           size="sm"

@@ -66,6 +66,20 @@ export function derivePartnerEquity(partners: readonly PartnerDto[], accounts: r
     }));
 }
 
+export function derivePartnerCurrentAccounts(partners: readonly PartnerDto[], accounts: readonly AccountDto[]): DerivedRow[] {
+  return partners
+    .filter((p) => p.current_account_id)
+    .map((p) => ({
+      key: `pc_${p.id}`,
+      entity_id: p.id,
+      label: `${p.code || ""} — ${p.name} (جاري)`,
+      account_id: p.current_account_id as string,
+      account_code: codeOf(accounts, p.current_account_id),
+      amount: "0",
+      kind: "Equity" as const,
+    }));
+}
+
 export interface InventoryRow {
   name: string;
   available: number;

@@ -14,11 +14,11 @@ const H = {
   receivables: 80000,
   inventory: 120000,
   fixedAssets: 200000,
-  otherAssets: 0,
   suppliers: 70000,
   loans: 50000,
   otherLiabilities: 0,
   partnerCapital: 300000,
+  partnerCurrent: 0,
   otherEquity: 0,
   residual: 45000,
 };

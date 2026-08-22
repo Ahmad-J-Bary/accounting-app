@@ -11,11 +11,11 @@ export interface OpeningPositionSummaryProps {
   receivables: number;
   inventory: number;
   fixedAssets: number;
-  otherAssets: number;
   suppliers: number;
   loans: number;
   otherLiabilities: number;
   partnerCapital: number;
+  partnerCurrent: number;
   otherEquity: number;
   /** Net Assets − Recognized Equity (debit − credit before any plug). */
   residual: number;
@@ -53,21 +53,21 @@ export function OpeningPositionSummary({
   receivables,
   inventory,
   fixedAssets,
-  otherAssets,
   suppliers,
   loans,
   otherLiabilities,
   partnerCapital,
+  partnerCurrent,
   otherEquity,
   residual,
   plugAmount,
   balanced,
   hints = [],
 }: OpeningPositionSummaryProps) {
-  const totalAssets = cash + bank + receivables + inventory + fixedAssets + otherAssets;
+  const totalAssets = cash + bank + receivables + inventory + fixedAssets;
   const totalLiabilities = suppliers + loans + otherLiabilities;
   const netAssets = totalAssets - totalLiabilities;
-  const recognizedEquity = partnerCapital + otherEquity;
+  const recognizedEquity = partnerCapital + partnerCurrent + otherEquity;
   const equityWithPlug = recognizedEquity + Math.max(plugAmount, 0);
 
   return (
@@ -103,7 +103,6 @@ export function OpeningPositionSummary({
           <Row label="الذمم المدينة (العملاء)" value={receivables} />
           <Row label="رصيد المخزون" value={inventory} />
           <Row label="الأصول الثابتة (صافي)" value={fixedAssets} />
-          <Row label="أصول أخرى (يدوي)" value={otherAssets} />
           <div className="pt-1 border-t border-blue-100">
             <Row label="إجمالي الأصول" value={totalAssets} strong />
           </div>
@@ -126,6 +125,7 @@ export function OpeningPositionSummary({
         <div className="border border-indigo-100 rounded-lg p-2 space-y-1 bg-indigo-50/40">
           <SectionLabel color="text-indigo-700">حقوق الملكية (E)</SectionLabel>
           <Row label="رأس مال الشركاء" value={partnerCapital} />
+          <Row label="الحسابات الجارية" value={partnerCurrent} />
           <Row label="حقوق ملكية أخرى" value={otherEquity} />
           {plugAmount > 0 && <Row label="تسوية الرصيد الافتتاحي (53)" value={plugAmount} />}
           <div className="pt-1 border-t border-indigo-100">

@@ -19,8 +19,8 @@ import {
 } from "@modules/accounting/api/openingBalanceService";
 import { WizardShell } from "@modules/opening-balance/components/WizardShell";
 import { WizardLineEditor } from "@modules/opening-balance/components/WizardLineEditor";
-import { useOpeningBalanceWizard, STEP_REVIEW } from "@modules/opening-balance/hooks/useOpeningBalanceWizard";
-import { START_MODE_NEW, toNum, type DerivedRow } from "@modules/opening-balance/lib/wizard-types";
+import { useOpeningBalanceWizard, STEP_REVIEW, STEP_ACTION } from "@modules/opening-balance/hooks/useOpeningBalanceWizard";
+import { START_MODE_NEW, toNum, type DerivedRow, type WizLine } from "@modules/opening-balance/lib/wizard-types";
 import { sumLines, inventoryMismatchHints } from "@modules/opening-balance/lib/derive-rows";
 import { reconciliationReadiness, RECON_ROW_LABEL } from "@modules/opening-balance/lib/migration-labels";
 import { ReconciliationStatusBanner } from "@modules/opening-balance/components/ReconciliationStatusBanner";
@@ -29,6 +29,7 @@ import { InlineBalanceRow } from "@modules/opening-balance/components/InlineBala
 import { InventorySection } from "@modules/opening-balance/components/InventorySection";
 import { ReconciliationRowsTable } from "@modules/opening-balance/components/ReconciliationRowsTable";
 import { AccountCombobox } from "@modules/opening-balance/components/AccountCombobox";
+import { AccountLineRow } from "@modules/opening-balance/components/AccountLineRow";
 import { OpeningPositionSummary } from "@modules/opening-balance/components/OpeningPositionSummary";
 import { OpeningProgressChecklist, type ChecklistItem } from "@modules/opening-balance/components/OpeningProgressChecklist";
 
@@ -37,8 +38,6 @@ export function GuidedTransitionWizard() {
   const isNew = w.startMode === START_MODE_NEW;
   const navigate = useNavigate();
   const tabs = useContext(TabContext);
-  const [savingDraft, setSavingDraft] = useState(false);
-  const [exiting, setExiting] = useState(false);
 
   // The shell renders every page inside a TAB whose route comes from
   // `openTab` — plain `navigate("/dashboard")` only rewrites the URL and leaves
@@ -75,22 +74,39 @@ export function GuidedTransitionWizard() {
     void w.handleNext();
   };
 
-  // Save → Exit → Continue later: persist the editor inputs then leave. A NEW
-  // company has nothing to save (no migration workflow). A Locked migration is
-  // sealed — no draft controls either (the backend rejects saving after lock).
-  const sealed = !isNew && w.migration?.status === "Locked";
-  const handleSaveDraft = async () => {
-    setSavingDraft(true);
-    await w.saveDraft();
-    setSavingDraft(false);
-  };
-
-  const handleExit = async () => {
-    setExiting(true);
-    const ok = await w.saveDraft();
-    setExiting(false);
-    if (ok) goDashboard();
-  };
+  // Completed steps for clickable step indicators — data-driven, not sequential.
+  const completedSteps = useMemo(() => {
+    const set = new Set<number>();
+    for (let i = 0; i < w.steps.length; i++) {
+      if (i === 0) {
+        set.add(i);
+      } else if (i === 1 && w.cashBanks.length > 0) {
+        set.add(i);
+      } else if (i === 2 && w.derivedAr.length > 0) {
+        set.add(i);
+      } else if (i === 3 && w.inventoryTotal > 0) {
+        set.add(i);
+      } else if (i === 4 && w.faRows.length > 0) {
+        set.add(i);
+      } else if (i === 5 && (w.derivedAp.length > 0 || w.loans.length > 0 || w.liabilitiesManual.length > 0)) {
+        set.add(i);
+      } else if (i === 6 && (w.partnerEquity.length > 0 || w.equityManual.length > 0 || w.partnerCurrentManual.length > 0)) {
+        set.add(i);
+      } else if (i === STEP_REVIEW && w.migration) {
+        set.add(i);
+      } else if (i === STEP_ACTION && w.migration) {
+        if (["Validated", "Posted", "Locked"].includes(w.migration.status)) set.add(i);
+      } else if (i === 9 && w.firstPeriod) {
+        set.add(i);
+      }
+    }
+    return set;
+  }, [
+    w.steps, w.cashBanks, w.derivedAr, w.inventoryTotal,
+    w.faRows, w.derivedAp, w.loans, w.liabilitiesManual,
+    w.partnerEquity, w.partnerCurrentManual, w.equityManual,
+    w.migration, w.firstPeriod,
+  ]);
 
   const renderDone = () => {
     const locked = w.migration?.status === "Locked";
@@ -157,7 +173,7 @@ export function GuidedTransitionWizard() {
         </div>
       </div>
 
-      {w.totals.residual !== 0 && (
+      {w.totals.residual > 0 && (
         <ResidualClassificationSection
           residual={w.totals.residual}
           plugAmount={w.totals.plugAmount}
@@ -168,6 +184,18 @@ export function GuidedTransitionWizard() {
           onResidualAccountChange={w.setResidualAccountId}
           accounts={w.accounts}
           spec={w.residualSpec}
+        />
+      )}
+
+      {w.totals.residual < 0 && (
+        <NegativeResidualSection
+          residual={w.totals.residual}
+          manualLines={w.assetsManual}
+          onAdd={w.addManualDebitLine}
+          onUpdate={w.updateManualDebitLine}
+          onRemove={w.removeManualDebitLine}
+          accounts={w.accounts}
+          detailAccounts={w.detailAccounts}
         />
       )}
 
@@ -330,18 +358,9 @@ export function GuidedTransitionWizard() {
         );
       case 5:
         return (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <p className="text-xs text-slate-500">
-              الأصول الأخرى الباقية (استثمارات، سلف، مصروفات مقدمة...) تُدخل كبنود يدوية.
-            </p>
-            <WizardLineEditor rows={w.assetsManual} setter={w.setAssetsManual} updateLine={w.updateLine} placeholder="ابحث واختر حساب أصل..." accounts={w.accounts} detailAccounts={w.detailAccounts} />
-          </div>
-        );
-      case 6:
-        return (
-          <div className="space-y-3">
-            <p className="text-xs text-slate-500">
-              أرصدة الموردين تُشتق من سجل الموردين ويمكن تعديلها هنا مباشرة.
+              أرصدة الموردين (مشتقة) + القروض والالتزامات (يدوي) — جميعها طبيعة دائن (خصوم).
             </p>
             <InlineRows
               title="الذمم الدائنة — الموردون (مشتقة)"
@@ -353,11 +372,6 @@ export function GuidedTransitionWizard() {
             {w.derivedAp.length === 0 && (
               <p className="text-xs text-slate-400">لا توجد أرصدة موردين مستحقة.</p>
             )}
-          </div>
-        );
-      case 7:
-        return (
-          <div className="space-y-4">
             <AutoAmountSection
               title="القروض"
               hint="قروض وتسليفات بنكية — تُقيد كالتزام على حساب قرض."
@@ -376,11 +390,11 @@ export function GuidedTransitionWizard() {
             </div>
           </div>
         );
-      case 8:
+      case 6:
         return (
           <div className="space-y-3">
             <p className="text-xs text-slate-500">
-              رؤوس أموال الشركاء (طبيعة دائن) تُشتق من سجل الشركاء وقابلة للتعديل هنا.
+              حقوق الشركاء: رؤوس أموال (مشتقة من سجل الشركاء) + حسابات جارية + حقوق ملكية يدوية — جميعها طبيعة دائن.
             </p>
             <InlineRows
               title="رؤوس أموال الشركاء (مشتقة)"
@@ -392,13 +406,20 @@ export function GuidedTransitionWizard() {
             {w.partnerEquity.length === 0 && (
               <p className="text-xs text-slate-400">لا يوجد شركاء برأس مال — أضفهم عبر صفحة «الشركاء ورأس المال» أو أدخل حقوق ملكية يدوياً.</p>
             )}
+            <InlineRows
+              title="الحسابات الجارية للشركاء"
+              rows={w.partnerCurrentManualRows}
+              onSave={w.savePartnerCurrentAccount}
+              label="الحساب الجاري"
+              nativeHint="credit"
+            />
             <div className="space-y-1.5">
               <div className="text-xs font-semibold text-slate-600">حقوق ملكية أخرى (يدوي)</div>
               <WizardLineEditor rows={w.equityManual} setter={w.setEquityManual} updateLine={w.updateLine} placeholder="ابحث واختر حساب حقوق ملكية..." accounts={w.accounts} detailAccounts={w.detailAccounts} />
             </div>
           </div>
         );
-      case 9:
+      case 7:
         return (
           <div className="space-y-4">
             {renderTotalsSummary()}
@@ -408,7 +429,7 @@ export function GuidedTransitionWizard() {
                 حفظ المسودة (بنود الميزانية) وتفاصيل السجل المساعد ثم فحص تسوية الأرصدة مع دفتر الأستاذ.
                 عدد البنود: {w.collectLines().length} ·
                 العملاء: {w.derivedAr.length} · الموردون: {w.derivedAp.length} ·
-                الأصول الثابتة: {w.faRows.length} · رأس مال الشركاء: {w.partnerEquity.length}
+                الأصول الثابتة: {w.faRows.length} · حقوق الشركاء: {w.partnerEquity.length + w.partnerCurrentManual.length}
               </p>
             </div>
             {w.reconciliation && (
@@ -448,19 +469,13 @@ export function GuidedTransitionWizard() {
             )}
           </div>
         );
-      case 10:
-      case 11:
-      case 12: {
-        const labels: Record<number, [string, string]> = {
-          10: ["التحقق", "تأكيد أن البيانات صحيحة ومكتملة قبل الانتقال للاعتماد. تُجبر هنا تسوية البنود مع دفتر الأستاذ."],
-          11: ["الترحيل", "تسجيل قيد الرصيد الافتتاحي في دفتر الأستاذ العام."],
-          12: ["القفل", "تثبيت الترحيل نهائياً وصفير رصيد حساب 53 ومنع أي تعديل مستقبلي."],
-        };
-        const [title, desc] = labels[w.step];
+      case STEP_ACTION: {
         return (
           <div className="space-y-3">
-            <p className="text-sm font-bold text-slate-700">{title}</p>
-            <p className="text-xs text-slate-500">{desc}</p>
+            <p className="text-sm font-bold text-slate-700">إتمام الترحيل</p>
+            <p className="text-xs text-slate-500">
+              تأكيد صحة البيانات وتسجيل قيد الرصيد الافتتاحي في دفتر الأستاذ ثم تثبيته نهائياً ومنع أي تعديل مستقبلي.
+            </p>
             <div className="text-xs font-semibold text-slate-600 flex items-center">
               الحالة الحالية:
               {w.migration ? (
@@ -470,16 +485,27 @@ export function GuidedTransitionWizard() {
               )}
               {w.migration && w.migration.notes && <span> · {w.migration.notes}</span>}
             </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 space-y-1.5">
+              {[
+                { label: "التحقق من صحة البيانات", done: ["Validated", "Posted", "Locked"].includes(w.migration?.status || "") },
+                { label: "ترحيل قيد الرصيد الافتتاحي", done: ["Posted", "Locked"].includes(w.migration?.status || "") },
+                { label: "القفل النهائي", done: w.migration?.status === "Locked" },
+              ].map((item) => (
+                <div key={item.label} className="flex items-center gap-2 text-xs font-semibold">
+                  <span className={cn("rounded-full p-0.5", item.done ? "bg-emerald-600 text-white" : "bg-slate-300 text-white")}>
+                    <Check className="w-3 h-3" />
+                  </span>
+                  <span className={item.done ? "text-emerald-700" : "text-slate-500"}>{item.label}</span>
+                </div>
+              ))}
+            </div>
             {w.busy && <p className="text-xs text-blue-600 font-semibold">جارٍ التنفيذ...</p>}
           </div>
         );
       }
-      case 13: {
-        // Post-transition onboarding (Step 14, 1-based): once the migration is
-        // Locked this step no longer belongs to the opening workflow — it first
-        // confirms the sealed transition (checklist) then sets up the first
-        // operational period. The first-period form is revealed only after the
-        // accountant presses [بدء أول فترة تشغيلية].
+      case 9: {
+        // Post-lock onboarding: once the migration is Locked this step sets up
+        // the first operational period.
         const locked = w.migration?.status === "Locked";
         const showCompletionPanel = locked && !w.firstPeriod && !w.onboardingStarted;
         return (
@@ -541,7 +567,7 @@ export function GuidedTransitionWizard() {
           </div>
         );
       }
-      case 14:
+      case 10:
         return renderDone();
       default:
         return null;
@@ -555,23 +581,23 @@ export function GuidedTransitionWizard() {
     const receivables = sumLines(w.derivedAr);
     const inventory = w.inventoryTotal;
     const fixedAssets = sumLines(w.faRows);
-    const otherAssets = sumLines(w.assetsManual);
     const suppliers = sumLines(w.derivedAp);
     const loans = sumLines(w.loans);
     const otherLiabilities = sumLines(w.liabilitiesManual);
     const partnerCapital = sumLines(w.partnerEquity);
+    const partnerCurrent = sumLines(w.partnerCurrentManual);
     const otherEquity = sumLines(w.equityManual);
 
-    const totalAssets = cash + bank + receivables + inventory + fixedAssets + otherAssets;
+    const totalAssets = cash + bank + receivables + inventory + fixedAssets;
     const totalLiabilities = suppliers + loans + otherLiabilities;
-    const recognizedEquity = partnerCapital + otherEquity;
+    const recognizedEquity = partnerCapital + partnerCurrent + otherEquity;
     const residual = totalAssets - totalLiabilities - recognizedEquity;
 
     // Smart, section-targeted hints (§14): tell the accountant WHICH section
     // needs fixing and by how much, never "journal line 17 is invalid".
     const hints: string[] = [];
     if (residual > 0.01) {
-      hints.push(`إجمالي الأصول أكبر من الخصوم وحقوق الملكية بمبلغ ${toFixed(residual, 2)} — صُنّف الرصيد المتبقي من قسم «الشركاء وحقوق الملكية».`);
+      hints.push(`إجمالي الأصول أكبر من الخصوم وحقوق الملكية بمبلغ ${toFixed(residual, 2)} — صُنّف الرصيد المتبقي من قسم «حقوق الشركاء».`);
     } else if (residual < -0.01) {
       hints.push(`الخصوم وحقوق الملكية تزيد عن الأصول بمبلغ ${toFixed(-residual, 2)} — أضف بنداً مديناً (مثل مسحوبات الشركاء أو تسوية) في أحد أقسام الأصول.`);
     }
@@ -608,16 +634,16 @@ export function GuidedTransitionWizard() {
       receivables,
       inventory,
       fixedAssets,
-      otherAssets,
       suppliers,
       loans,
       otherLiabilities,
       partnerCapital,
+      partnerCurrent,
       otherEquity,
       residual,
       hints,
     };
-  }, [w.cashBanks, w.derivedAr, w.derivedAp, w.faRows, w.assetsManual, w.loans, w.liabilitiesManual, w.partnerEquity, w.equityManual, w.inventoryTotal, w.reconciliation, w.effectiveInventory, w.materials, w.missingAccountHints]);
+  }, [w.cashBanks, w.derivedAr, w.derivedAp, w.faRows, w.loans, w.liabilitiesManual, w.partnerEquity, w.partnerCurrentManual, w.equityManual, w.inventoryTotal, w.reconciliation, w.effectiveInventory, w.materials, w.missingAccountHints]);
 
   // ── Progress checklist (§15): every section's done-state, derived from data
   // and the reached step so the user never has to remember what is finished.
@@ -627,6 +653,7 @@ export function GuidedTransitionWizard() {
     const loansT = sumLines(w.loans);
     const otherLiab = sumLines(w.liabilitiesManual);
     const cap = sumLines(w.partnerEquity);
+    const partnerCurr = sumLines(w.partnerCurrentManual);
     const otherEq = sumLines(w.equityManual);
     const cashBank = sumLines(w.cashBanks);
     const fa = sumLines(w.faRows);
@@ -636,9 +663,8 @@ export function GuidedTransitionWizard() {
       { key: "customers", label: "العملاء (الذمم المدينة)", done: ar > 0 || w.step > 2 },
       { key: "inventory", label: "المخزون (ترحيل البضاعة)", done: !!w.inventoryPosted || w.inventoryTotal === 0 || w.step > 3 },
       { key: "fixed-assets", label: "الأصول الثابتة", done: fa > 0 || w.step > 4 },
-      { key: "suppliers", label: "الموردون (الذمم الدائنة)", done: ap > 0 || w.step > 6 },
-      { key: "loans", label: "القروض والخصوم", done: loansT > 0 || otherLiab > 0 || w.step > 7 },
-      { key: "partners", label: "رؤوس أموال الشركاء", done: cap > 0 || otherEq > 0 || w.step > 8 },
+      { key: "suppliers-loans", label: "الموردون والالتزامات", done: ap > 0 || loansT > 0 || otherLiab > 0 || w.step > 5 },
+      { key: "partners", label: "حقوق الشركاء", done: cap > 0 || partnerCurr > 0 || otherEq > 0 || w.step > 6 },
       { key: "reconcile", label: "التسوية", done: !!w.reconciliation && w.reconciliation.all_reconciled },
       { key: "balanced", label: "متوازن", done: w.savedTotals.balanced },
       { key: "ready", label: "جاهز للترحيل", done: w.step >= STEP_REVIEW && w.canNext },
@@ -650,7 +676,7 @@ export function GuidedTransitionWizard() {
       title={isNew ? "بدء محاسبة شركة جديدة" : "معالج التحويل الموجه (شركة قائمة)"}
       subtitle={isNew
         ? "أنشئ أول فترة مالية وابدأ تسجيل الحركات اليومية — لا يوجد رصيد افتتاحي في هذا الوضع."
-        : "جمع الأرصدة قسماً بقسم (نقد وبنوك، عملاء، مخزون، أصول ثابتة، موردون، قروض، شركاء) ثم التحقق والاعتماد والترحيل والقفل ثم إنشاء أول فترة تشغيلية."}
+        : "جمع الأرصدة قسماً بقسم (نقد وبنوك، عملاء، مخزون، أصول ثابتة، مورden والالتزامات، شركاء) ثم إتمام الترحيل ثم إنشاء أول فترة تشغيلية."}
       steps={w.steps}
       stepIndex={w.step}
       canNext={w.canNext}
@@ -661,10 +687,9 @@ export function GuidedTransitionWizard() {
       canNextHint={w.nextDisabledReason}
       onNext={handleNext}
       onPrev={() => w.setStep((s) => Math.max(0, s - 1))}
-      onSave={isNew || sealed ? undefined : handleSaveDraft}
-      saving={savingDraft}
-      onExit={isNew || sealed ? undefined : handleExit}
-      exiting={exiting}
+      onStepClick={w.navigateToStep}
+      canNavigateToStep={w.canNavigateToStep}
+      completedSteps={completedSteps}
     >
       {renderStep()}
     </WizardShell>
@@ -1078,6 +1103,105 @@ export function ResidualClassificationSection({
           setConfirmKey(null);
         }}
       />
+    </div>
+  );
+}
+
+// ── Negative residual: when liabilities + equity > assets (debit residual), the
+// accountant must add manual debit lines to balance the entry. This section
+// provides an inline editor directly in the Review step.
+function NegativeResidualSection({
+  residual,
+  manualLines,
+  onAdd,
+  onUpdate,
+  onRemove,
+  accounts,
+  detailAccounts,
+}: {
+  residual: number;
+  manualLines: WizLine[];
+  onAdd: () => void;
+  onUpdate: (key: string, patch: Partial<WizLine>) => void;
+  onRemove: (key: string) => void;
+  accounts: AccountDto[];
+  detailAccounts: AccountDto[];
+}) {
+  const total = sumLines(manualLines);
+  const balanced = Math.abs(residual + total) < 0.01;
+  return (
+    <div className="rounded-lg border border-red-200 bg-red-50/60 p-3 space-y-3">
+      <p className="text-xs font-semibold text-red-700">
+        الرصيد المتبقي سالب: {toFixed(residual, 2)}
+      </p>
+      <p className="text-xs text-red-600">
+        الخصوم/الملكية تزيد عن الأصول. أضف بنداً مديناً لموازنة القيد
+        (مثال: مسحوبات الشركاء، حساب تسوية، خسارة افتتاحية).
+      </p>
+      <NegativeManualLinesEditor
+        lines={manualLines}
+        onAdd={onAdd}
+        onUpdate={onUpdate}
+        onRemove={onRemove}
+        accounts={accounts}
+        detailAccounts={detailAccounts}
+      />
+      {manualLines.length > 0 && (
+        <div className={"rounded-lg p-2 text-xs font-semibold " + (balanced ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700")}>
+          {balanced
+            ? `متوازن بعد الإضافة — الفرق: ${toFixed(residual + total, 2)}`
+            : `الفرق بعد الإضافة: ${toFixed(residual + total, 2)}`}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Inline editor for negative-residual manual debit lines.
+function NegativeManualLinesEditor({
+  lines,
+  onAdd,
+  onUpdate,
+  onRemove,
+  accounts,
+  detailAccounts,
+}: {
+  lines: WizLine[];
+  onAdd: () => void;
+  onUpdate: (key: string, patch: Partial<WizLine>) => void;
+  onRemove: (key: string) => void;
+  accounts: AccountDto[];
+  detailAccounts: AccountDto[];
+}) {
+  return (
+    <div className="space-y-2">
+      {lines.map((l) => {
+        const amountNum = parseFloat(l.amount);
+        const amountInvalid = l.amount.trim() !== "" && (Number.isNaN(amountNum) || amountNum <= 0);
+        return (
+          <AccountLineRow
+            key={l.key}
+            accountId={l.account_id}
+            onAccountChange={(id) => onUpdate(l.key, { account_id: id })}
+            amount={l.amount}
+            onAmountChange={(amount) => onUpdate(l.key, { amount })}
+            onRemove={() => onRemove(l.key)}
+            accounts={accounts}
+            options={detailAccounts}
+            placeholder="ابحث واختر حساب أصل..."
+            showErrorMessage={amountInvalid}
+          />
+        );
+      })}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={onAdd}
+        className="w-full border-dashed border-red-300 text-red-600 hover:bg-red-50 font-bold"
+      >
+        + إضافة بند مدين
+      </Button>
     </div>
   );
 }
