@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { AccountDto, FiscalPeriodDto, CustomerDto, SupplierDto, ResidualClassificationSpecDto } from "@erp/shared-types";
 import type { WizardStepDef } from "@modules/opening-balance/components/WizardShell";
+
+type AssetType = "buildings_land" | "equipment" | "furniture";
 import { queryClient, QUERY_KEYS } from "@shared/hooks/queryClient";
 import { toLocalDatePart } from "@shared/lib/format";
 import { accountingService } from "@modules/accounting/api/accountingService";
@@ -434,6 +436,11 @@ export function useOpeningBalanceWizard() {
     queryFn: () => fixedAssetService.list(),
     enabled: existing,
   });
+  const { data: assetCategories = [] } = useQuery({
+    queryKey: ["asset-categories"],
+    queryFn: () => fixedAssetService.listCategories(),
+    enabled: existing,
+  });
 
   // First fiscal period existence drives the post-lock re-entry target: a period
   // already present (ACTIVE) resumes the wizard at the completion step.
@@ -777,7 +784,12 @@ export function useOpeningBalanceWizard() {
 
   const createCustomer = useCallback(async (name: string, amount: string): Promise<boolean> => {
     try {
-      const created = await customerService.create({ code: "", name, phone: null, address: null, opening_balance: amount || "0" });
+      const created = await customerService.create({
+        code: "", name, phone: null, address: null,
+        opening_balance: amount || "0",
+        debit: amount || "0",
+        credit: "0",
+      });
       queryClient.setQueryData<CustomerDto[]>(QUERY_KEYS.customers, (old) => [...(old ?? []), created]);
       await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts });
       toast.success(`تم إنشاء العميل "${name}" بنجاح`);
@@ -790,7 +802,12 @@ export function useOpeningBalanceWizard() {
 
   const createSupplier = useCallback(async (name: string, amount: string): Promise<boolean> => {
     try {
-      const created = await supplierService.create({ code: "", name, phone: null, address: null, opening_balance: amount || "0" });
+      const created = await supplierService.create({
+        code: "", name, phone: null, address: null,
+        opening_balance: amount || "0",
+        debit: "0",
+        credit: amount || "0",
+      });
       queryClient.setQueryData<SupplierDto[]>(QUERY_KEYS.suppliers, (old) => [...(old ?? []), created]);
       await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts });
       toast.success(`تم إنشاء المورد "${name}" بنجاح`);
@@ -801,31 +818,71 @@ export function useOpeningBalanceWizard() {
     }
   }, []);
 
-  const createFixedAssetQuick = useCallback(async (data: { name: string; cost: string; categoryId: string }): Promise<boolean> => {
+  const createFixedAssetQuick = useCallback(async (data: { name: string; cost: string; assetType: AssetType }): Promise<boolean> => {
     try {
-      // Find relevant GL accounts for fixed assets
-      const assetAccount = accounts.find((a) => a.name_ar.includes("أصول ثابتة") && a.category === "Detail");
-      const depAccount = accounts.find((a) => a.name_ar.includes("إهلاك") && a.category === "Detail" && a.name_ar.includes("مجمع"));
-      const accumDepAccount = accounts.find((a) => a.name_ar.includes("مجمع الإهلاك") && a.category === "Detail");
+      // Auto-map GL accounts by asset type keywords (same logic as FixedAssetForm)
+      const findAccount = (keywords: string[], accountType?: string): AccountDto | undefined => {
+        return accounts.find((a) => {
+          if (accountType && a.account_type !== accountType) return false;
+          const name = (a.name_ar || "").toLowerCase();
+          return keywords.some((k) => name.includes(k.toLowerCase()));
+        });
+      };
 
-      if (!assetAccount || !depAccount || !accumDepAccount) {
+      let assetKeywords: string[];
+      if (data.assetType === "buildings_land") {
+        assetKeywords = ["أبنية", "أراضي", "أصول ثابتة"];
+      } else if (data.assetType === "equipment") {
+        assetKeywords = ["معدات", "تجهيزات"];
+      } else {
+        assetKeywords = ["أثاث", "مفروشات"];
+      }
+
+      const assetAcc = findAccount(assetKeywords, "Assets");
+      let depAcc = assetAcc;
+      let accDepAcc = assetAcc;
+
+      if (data.assetType !== "buildings_land") {
+        depAcc =
+          findAccount(["إهلاك", ...assetKeywords], "Expenses") ||
+          findAccount(["إهلاك"], "Expenses");
+        accDepAcc =
+          findAccount(["مجمع إهلاك", ...assetKeywords], "Assets") ||
+          findAccount(["مجمع إهلاك"], "Assets");
+      }
+
+      // Find matching category by asset type
+      const matchedCategory = assetCategories.find((c) => {
+        const lower = (c.name || "").toLowerCase();
+        if (data.assetType === "buildings_land") return lower.includes("أبنية") || lower.includes("أراضي");
+        if (data.assetType === "equipment") return lower.includes("معدات") || lower.includes("تجهيزات");
+        return lower.includes("أثاث") || lower.includes("مفروشات");
+      });
+
+      if (!assetAcc || !depAcc || !accDepAcc) {
         toast.error("لم يتم العثور على حسابات الأصول الثابتة في دليل الحسابات");
+        return false;
+      }
+
+      const categoryId = matchedCategory?.id || assetCategories[0]?.id || "";
+      if (!categoryId) {
+        toast.error("لم يتم العثور على فئة أصول ثابتة");
         return false;
       }
 
       await fixedAssetService.create({
         code: "",
         name: data.name,
-        category_id: data.categoryId,
+        category_id: categoryId,
         purchase_date: new Date().toISOString().split("T")[0],
         purchase_cost: data.cost,
         currency: appSettings?.currency || "SAR",
         fx_rate: "1",
-        useful_life_months: 120,
-        asset_account_id: assetAccount.id,
-        depreciation_account_id: depAccount.id,
-        accumulated_depreciation_account_id: accumDepAccount.id,
-        payment_account_id: assetAccount.id,
+        useful_life_months: data.assetType === "buildings_land" ? 0 : 120,
+        asset_account_id: assetAcc.id,
+        depreciation_account_id: depAcc.id,
+        accumulated_depreciation_account_id: accDepAcc.id,
+        payment_account_id: assetAcc.id,
         addition_type: "existing",
       });
 
@@ -837,7 +894,7 @@ export function useOpeningBalanceWizard() {
       toast.error("فشل إنشاء الأصل الثابت: " + e);
       return false;
     }
-  }, [accounts, appSettings]);
+  }, [accounts, appSettings, assetCategories]);
 
   const createPartnerQuick = useCallback(async (data: { name: string; amount: string }): Promise<boolean> => {
     try {

@@ -23,7 +23,6 @@ import { QuickCreateInline } from "@modules/opening-balance/components/QuickCrea
 import { QuickCreateFixedAsset } from "@modules/opening-balance/components/QuickCreateFixedAsset";
 import { QuickCreatePartner } from "@modules/opening-balance/components/QuickCreatePartner";
 import { useOpeningBalanceWizard, STEP_REVIEW, STEP_ACTION } from "@modules/opening-balance/hooks/useOpeningBalanceWizard";
-import { fixedAssetService } from "@modules/fixed-assets/api/fixedAssetService";
 import { START_MODE_NEW, toNum, type DerivedRow, type WizLine } from "@modules/opening-balance/lib/wizard-types";
 import { sumLines, inventoryMismatchHints } from "@modules/opening-balance/lib/derive-rows";
 import { reconciliationReadiness, RECON_ROW_LABEL } from "@modules/opening-balance/lib/migration-labels";
@@ -86,12 +85,6 @@ export function GuidedTransitionWizard() {
 
   // Use completedSteps from the hook (single source of truth).
   const completedSteps = w.completedSteps;
-
-  // Fetch asset categories for quick-create fixed assets
-  const { data: assetCategories = [] } = useQuery({
-    queryKey: ["asset-categories"],
-    queryFn: () => fixedAssetService.listCategories(),
-  });
 
   const renderDone = () => {
     const locked = w.migration?.status === "Locked";
@@ -309,6 +302,7 @@ export function GuidedTransitionWizard() {
                 label="عميل"
                 placeholder="اسم العميل"
                 amountLabel="الرصيد الافتتاحي"
+                direction="debit"
                 onCreate={(name, amount) => w.createCustomer(name, amount)}
               />
               <Button size="sm" variant="outline" onClick={() => goTo("/customers", "العملاء")} className="h-8 shrink-0 border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
@@ -355,7 +349,6 @@ export function GuidedTransitionWizard() {
               <WizardLineEditor rows={w.faManualLines} setter={w.setFaManualLines} updateLine={w.updateLine} placeholder="ابحث واختر حساب الأصل..." accounts={w.accounts} detailAccounts={w.detailAccounts} />
             </div>
             <QuickCreateFixedAsset
-              categories={assetCategories}
               onCreate={(data) => w.createFixedAssetQuick(data)}
             />
             <div className="flex justify-start pt-1">
@@ -386,6 +379,7 @@ export function GuidedTransitionWizard() {
                 label="مورد"
                 placeholder="اسم المورد"
                 amountLabel="الرصيد الافتتاحي"
+                direction="credit"
                 onCreate={(name, amount) => w.createSupplier(name, amount)}
               />
               <Button size="sm" variant="outline" onClick={() => goTo("/suppliers", "الموردون")} className="h-8 shrink-0 border-blue-200 text-blue-700 font-bold hover:bg-blue-50">

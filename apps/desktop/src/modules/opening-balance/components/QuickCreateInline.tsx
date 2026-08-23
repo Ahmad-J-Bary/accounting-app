@@ -7,6 +7,7 @@ interface QuickCreateInlineProps {
   label: string;
   placeholder: string;
   amountLabel: string;
+  direction?: "debit" | "credit";
   onCreate: (name: string, amount: string) => Promise<boolean>;
 }
 
@@ -15,7 +16,7 @@ interface QuickCreateInlineProps {
  * Used in opening-balance wizard stages to create entities (customer/supplier)
  * and assign an opening amount in one step.
  */
-export function QuickCreateInline({ label, placeholder, amountLabel, onCreate }: QuickCreateInlineProps) {
+export function QuickCreateInline({ label, placeholder, amountLabel, direction, onCreate }: QuickCreateInlineProps) {
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [creating, setCreating] = useState(false);
@@ -35,15 +36,15 @@ export function QuickCreateInline({ label, placeholder, amountLabel, onCreate }:
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50/60 px-2 py-1">
+    <div className="w-full rounded-lg border border-emerald-200 bg-emerald-50/60 p-2">
+      <div className="flex items-center gap-2">
         <Plus className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
         <span className="text-xs font-bold text-emerald-700 shrink-0">{label}</span>
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={placeholder}
-          className="h-7 w-32 border-emerald-200 text-xs bg-white"
+          className="h-7 flex-1 border-emerald-200 text-xs bg-white"
           disabled={creating}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -60,7 +61,7 @@ export function QuickCreateInline({ label, placeholder, amountLabel, onCreate }:
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           placeholder={amountLabel}
-          className="h-7 w-24 border-emerald-200 text-xs text-right tabular-nums bg-white"
+          className="h-7 w-28 border-emerald-200 text-xs text-right tabular-nums bg-white"
           disabled={creating}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -69,12 +70,17 @@ export function QuickCreateInline({ label, placeholder, amountLabel, onCreate }:
             }
           }}
         />
+        {direction && (
+          <span className="text-2xs font-semibold text-slate-400 shrink-0">
+            {direction === "debit" ? "مدين" : "دائن"}
+          </span>
+        )}
         <Button
           type="button"
           size="sm"
           onClick={() => void handleCreate()}
           disabled={creating || !name.trim() || !amount.trim()}
-          className="h-7 px-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
+          className="h-7 px-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
         >
           {creating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
         </Button>
