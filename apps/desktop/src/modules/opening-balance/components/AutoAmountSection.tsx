@@ -1,95 +1,99 @@
-import { X } from "lucide-react";
+import { useState } from "react";
+import { Check, Pencil } from "lucide-react";
 import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
 import { toFixed } from "@shared/lib/format";
-import type { AccountDto } from "@erp/shared-types";
 import { toNum, type WizLine } from "@modules/opening-balance/lib/wizard-types";
-import { AccountCombobox } from "@modules/opening-balance/components/AccountCombobox";
 
 interface AutoAmountSectionProps {
   title: string;
   hint?: string;
   rows: WizLine[];
-  onAdd: () => void;
   onPatch: (key: string, patch: Partial<WizLine>) => void;
-  onRemove: (key: string) => void;
-  accounts: AccountDto[];
-  detailAccounts: AccountDto[];
-  defaultAccount: string;
-  addLabel?: string;
+  fixedAccountName: string;
 }
 
 /**
- * Amount-only section: the accountant types an amount and the account is
- * auto-defaulted (from the section's semantic default) with a manual override.
- * Used for cash/banks and loans — no debit/credit thinking required.
+ * Amount-only section with a fixed account: the accountant types an amount
+ * and the account is auto-resolved (no manual override).
+ * Default state: read-only value + "تعديل" button.
+ * Editing state: editable input + "حفظ" button.
  */
-export function AutoAmountSection({
-  title,
-  hint,
-  rows,
-  onAdd,
-  onPatch,
-  onRemove,
-  accounts,
-  detailAccounts,
-  defaultAccount,
-  addLabel,
-}: AutoAmountSectionProps) {
-  const total = rows.reduce((s, r) => s + toNum(r.amount), 0);
+export function AutoAmountSection({ title, hint, rows, onPatch, fixedAccountName }: AutoAmountSectionProps) {
+  const [editing, setEditing] = useState(false);
+  const [localValue, setLocalValue] = useState("");
+
+  const startEdit = (row: WizLine) => {
+    setLocalValue(row.amount);
+    setEditing(true);
+  };
+
+  const save = (key: string) => {
+    onPatch(key, { amount: localValue });
+    setEditing(false);
+  };
+
   return (
     <div className="space-y-2">
       <p className="text-xs font-bold text-slate-700">{title}</p>
       {hint && <p className="text-xs text-slate-500">{hint}</p>}
-      {rows.length === 0 && <p className="text-xs text-slate-400 py-1">لا توجد بنود بعد — أضف بنداً وأدخل المبلغ.</p>}
       {rows.map((r) => {
-        const invalid = r.amount.trim() !== "" && toNum(r.amount) <= 0;
+        const invalid = editing && localValue.trim() !== "" && toNum(localValue) <= 0;
         return (
           <div key={r.key} className="flex items-stretch gap-2">
-            <div className="w-36 shrink-0">
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={r.amount}
-                onChange={(e) => onPatch(r.key, { amount: e.target.value })}
-                placeholder="المبلغ"
-                aria-label="المبلغ"
-                className={"h-9 text-right tabular-nums " + (invalid ? "border-red-400" : "border-slate-200")}
-              />
+            <div className="flex-1 min-w-0 rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 flex items-center">
+              <span className="text-xs font-bold text-slate-700 truncate">{fixedAccountName}</span>
             </div>
-            <div className="flex-1 min-w-0">
-              <AccountCombobox
-                accounts={accounts}
-                options={detailAccounts}
-                value={r.account_id}
-                onValueChange={(id) => onPatch(r.key, { account_id: id })}
-                placeholder={defaultAccount ? "تم اختيار الحساب الافتراضي" : "اختر الحساب..."}
-                disabled={false}
-              />
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              type="button"
-              aria-label="حذف البند"
-              onClick={() => onRemove(r.key)}
-              className="h-9 w-9 shrink-0 text-slate-400 hover:text-red-600"
-            >
-              <X className="w-4 h-4" />
-            </Button>
+            {editing ? (
+              <>
+                <div className="w-36 shrink-0">
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={localValue}
+                    onChange={(e) => setLocalValue(e.target.value)}
+                    placeholder="المبلغ"
+                    aria-label="المبلغ"
+                    autoFocus
+                    className={"h-9 text-right tabular-nums " + (invalid ? "border-red-400" : "border-slate-200")}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="default"
+                  onClick={() => save(r.key)}
+                  className="h-9 px-3 text-xs font-bold shrink-0"
+                  aria-label="حفظ المبلغ"
+                >
+                  <Check className="w-3.5 h-3.5 ml-1" />
+                  حفظ
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="w-36 shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 flex items-center justify-end">
+                  <span className="tabular-nums text-xs font-bold text-slate-700">
+                    {r.amount && toNum(r.amount) > 0 ? toFixed(toNum(r.amount), 2) : "—"}
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => startEdit(r)}
+                  className="h-9 px-3 text-xs font-bold shrink-0 border-blue-200 text-blue-700 hover:bg-blue-50"
+                  aria-label="تعديل المبلغ"
+                >
+                  <Pencil className="w-3.5 h-3.5 ml-1" />
+                  تعديل
+                </Button>
+              </>
+            )}
           </div>
         );
       })}
-      <Button type="button" variant="outline" size="sm" onClick={onAdd} className="border-slate-200 text-slate-600 font-bold">
-        + {addLabel || "إضافة بند"}
-      </Button>
-      {total > 0 && (
-        <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-xs font-semibold text-slate-600">
-          <span>الإجمالي</span>
-          <span className="tabular-nums font-bold">{toFixed(total, 2)}</span>
-        </div>
-      )}
     </div>
   );
 }

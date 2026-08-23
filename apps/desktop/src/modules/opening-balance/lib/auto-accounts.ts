@@ -49,6 +49,10 @@ export function defaultAccountFor(accounts: readonly AccountDto[], kind: AutoAcc
     case "inventory": {
       const byPurpose = list.find((a) => a.purpose === "inventory");
       if (byPurpose) return byPurpose.id;
+      const byName = list.find(
+        (a) => a.account_type === "Assets" && a.category === "Detail" && /بضاعة أول المدة/.test(a.name_ar),
+      );
+      if (byName) return byName.id;
       const byCode1204 = list.find((a) => a.code.startsWith("1204"));
       const byCode1201 = list.find((a) => a.code === "1201");
       return (byCode1204 || byCode1201)?.id || "";

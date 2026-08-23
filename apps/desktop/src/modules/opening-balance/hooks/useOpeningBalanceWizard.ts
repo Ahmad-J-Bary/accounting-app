@@ -534,6 +534,38 @@ export function useOpeningBalanceWizard() {
   const defaultInventoryAccount = useMemo(() => defaultAccountFor(accounts, "inventory"), [accounts]);
   const effectiveInventoryAccountId = inventoryAccountId || defaultInventoryAccount;
 
+  // Fixed account names for display (code — name_ar)
+  const fixedCashAccountName = useMemo(() => {
+    const a = accounts.find((acc) => acc.id === defaultCashAccount);
+    return a ? `${a.code} - ${a.name_ar}` : "";
+  }, [accounts, defaultCashAccount]);
+  const fixedBankAccountName = useMemo(() => {
+    const a = accounts.find((acc) => acc.id === defaultBankAccount);
+    return a ? `${a.code} - ${a.name_ar}` : "";
+  }, [accounts, defaultBankAccount]);
+  const fixedLoanAccountName = useMemo(() => {
+    const a = accounts.find((acc) => acc.id === defaultLoanAccount);
+    return a ? `${a.code} - ${a.name_ar}` : "";
+  }, [accounts, defaultLoanAccount]);
+
+  // ── Ensure one row per kind exists (auto-initialized on first load) ───────
+  useEffect(() => {
+    if (accounts.length === 0) return;
+    setCashBanks((prev) => {
+      const hasCash = prev.some((l) => l.kind === "cash");
+      const hasBank = prev.some((l) => l.kind === "bank");
+      if (hasCash && hasBank) return prev;
+      const next = [...prev];
+      if (!hasCash) next.push({ key: newLine().key, account_id: defaultCashAccount, amount: "", kind: "cash" });
+      if (!hasBank) next.push({ key: newLine().key, account_id: defaultBankAccount, amount: "", kind: "bank" });
+      return next;
+    });
+    setLoans((prev) => {
+      if (prev.length > 0) return prev;
+      return [{ key: newLine().key, account_id: defaultLoanAccount, amount: "", kind: "loan" }];
+    });
+  }, [accounts, defaultCashAccount, defaultBankAccount, defaultLoanAccount]);
+
   // ── Totals (never asked from the user) ───────────────────────────────────
   const manualAssetsTotal = sumLines(assetsManual);
   const manualLiabilitiesTotal = sumLines(liabilitiesManual);
@@ -1365,7 +1397,7 @@ export function useOpeningBalanceWizard() {
       }
       if (i === 0) {
         set.add(i);
-      } else if (i === 1 && cashBanks.length > 0) {
+      } else if (i === 1 && cashBanks.some((l) => toNum(l.amount) > 0)) {
         set.add(i);
       } else if (i === 2 && derivedAr.length > 0) {
         set.add(i);
@@ -1373,7 +1405,7 @@ export function useOpeningBalanceWizard() {
         set.add(i);
       } else if (i === 4 && faRows.length > 0) {
         set.add(i);
-      } else if (i === 5 && (derivedAp.length > 0 || loans.length > 0 || liabilitiesManual.length > 0)) {
+      } else if (i === 5 && (derivedAp.length > 0 || loans.some((l) => toNum(l.amount) > 0) || liabilitiesManual.length > 0)) {
         set.add(i);
       } else if (i === 6 && (partnerEquity.length > 0 || equityManual.length > 0 || partnerCurrentManual.length > 0)) {
         set.add(i);
@@ -1474,12 +1506,9 @@ export function useOpeningBalanceWizard() {
     setCashBanks,
     loans,
     setLoans,
-    addCashRow,
-    addBankRow,
-    addLoanRow,
-    defaultCashAccount,
-    defaultBankAccount,
-    defaultLoanAccount,
+    fixedCashAccountName,
+    fixedBankAccountName,
+    fixedLoanAccountName,
     derivedAr,
     derivedAp,
     faRows,
@@ -1547,13 +1576,6 @@ export function useOpeningBalanceWizard() {
     effectiveInventory,
     inventoryTotal,
     setInventoryRow,
-    inventoryAccountId,
-    setInventoryAccountId,
-    effectiveInventoryAccountId,
-    defaultInventoryAccount,
-    inventoryPosted,
-    inventoryPosting,
-    handlePostInventoryInvoice,
     defaultWarehouseId,
   };
 }

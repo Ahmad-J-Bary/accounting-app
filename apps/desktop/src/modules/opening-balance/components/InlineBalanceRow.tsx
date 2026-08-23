@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, Pencil } from "lucide-react";
 import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
 import { Badge } from "@shared/ui/badge";
@@ -14,24 +14,33 @@ interface InlineBalanceRowProps {
 }
 
 /**
- * A derived module row whose opening value can be tuned inline. Saving calls
- * the owning module's service (window-safe) and the derivation recomputes.
+ * A derived module row whose opening value can be tuned inline.
+ * Default state: read-only value + "تعديل" button.
+ * Editing state: editable input + "حفظ" button.
  */
 export function InlineBalanceRow({ row, onSave, label, nativeHint = "debit", disabled = false }: InlineBalanceRowProps) {
   const [value, setValue] = useState(row.amount);
+  const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  useEffect(() => setValue(row.amount), [row.amount]);
+  useEffect(() => {
+    setValue(row.amount);
+    if (!editing) setEditing(false);
+  }, [row.amount]);
 
   const save = async () => {
     setSaving(true);
     try {
       await onSave(row, value);
+      setEditing(false);
     } finally {
       setSaving(false);
     }
   };
 
-  const changed = value !== row.amount;
+  const startEdit = () => {
+    setValue(row.amount);
+    setEditing(true);
+  };
 
   return (
     <div className="flex items-center gap-2 px-3 py-1.5 text-xs">
@@ -42,29 +51,51 @@ export function InlineBalanceRow({ row, onSave, label, nativeHint = "debit", dis
       </div>
       <div className="flex items-center gap-1.5 shrink-0">
         <span className="text-2xs font-semibold text-slate-400">{label}</span>
-        <Input
-          type="number"
-          min={0}
-          step="0.01"
-          value={value}
-          disabled={disabled}
-          onChange={(e) => setValue(e.target.value)}
-          aria-label={label}
-          className="h-8 w-32 border-slate-200 text-right tabular-nums text-xs"
-        />
-        <span className="text-2xs text-slate-400">{nativeHint === "debit" ? "مدين" : "دائن"}</span>
-        <Button
-          type="button"
-          size="sm"
-          variant={changed ? "default" : "outline"}
-          onClick={save}
-          disabled={disabled || saving || !changed}
-          className="h-8 px-2 text-xs font-bold"
-          aria-label="حفظ الرصيد"
-        >
-          {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-          حفظ
-        </Button>
+        {editing ? (
+          <>
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={value}
+              disabled={disabled}
+              onChange={(e) => setValue(e.target.value)}
+              aria-label={label}
+              className="h-8 w-32 border-slate-200 text-right tabular-nums text-xs"
+              autoFocus
+            />
+            <span className="text-2xs text-slate-400">{nativeHint === "debit" ? "مدين" : "دائن"}</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="default"
+              onClick={() => void save()}
+              disabled={disabled || saving}
+              className="h-8 px-2 text-xs font-bold"
+              aria-label="حفظ الرصيد"
+            >
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              حفظ
+            </Button>
+          </>
+        ) : (
+          <>
+            <span className="tabular-nums text-xs font-bold text-slate-700 w-32 text-right">{parseFloat(row.amount || "0").toFixed(2)}</span>
+            <span className="text-2xs text-slate-400">{nativeHint === "debit" ? "مدين" : "دائن"}</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={startEdit}
+              disabled={disabled}
+              className="h-8 px-2 text-xs font-bold border-blue-200 text-blue-700 hover:bg-blue-50"
+              aria-label="تعديل الرصيد"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              تعديل
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

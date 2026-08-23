@@ -265,25 +265,15 @@ export function GuidedTransitionWizard() {
             <AutoAmountSection
               title="الصندوق والنقد"
               rows={w.cashBanks.filter((l) => l.kind === "cash")}
-              onAdd={w.addCashRow}
               onPatch={(key, patch) => w.updateLine(w.setCashBanks, key, patch)}
-              onRemove={(key) => w.setCashBanks((prev) => prev.filter((x) => x.key !== key))}
-              accounts={w.accounts}
-              detailAccounts={w.detailAccounts}
-              defaultAccount={w.defaultCashAccount}
-              addLabel="إضافة صندوق/نقد"
+              fixedAccountName={w.fixedCashAccountName}
             />
             <AutoAmountSection
               title="البنوك"
               hint="تُقيد أرصدة الشيكات والحسابات البنكية هنا على حساب بنكي."
               rows={w.cashBanks.filter((l) => l.kind === "bank")}
-              onAdd={w.addBankRow}
               onPatch={(key, patch) => w.updateLine(w.setCashBanks, key, patch)}
-              onRemove={(key) => w.setCashBanks((prev) => prev.filter((x) => x.key !== key))}
-              accounts={w.accounts}
-              detailAccounts={w.detailAccounts}
-              defaultAccount={w.defaultBankAccount}
-              addLabel="إضافة حساب بنكي"
+              fixedAccountName={w.fixedBankAccountName}
             />
           </div>
         );
@@ -323,14 +313,7 @@ export function GuidedTransitionWizard() {
             rows={w.effectiveInventory}
             onRowChange={w.setInventoryRow}
             total={w.inventoryTotal}
-            accountId={w.effectiveInventoryAccountId}
-            defaultAccount={w.defaultInventoryAccount}
-            onAccountChange={w.setInventoryAccountId}
-            posted={w.inventoryPosted}
-            posting={w.inventoryPosting}
-            onPost={() => { void w.handlePostInventoryInvoice(); }}
-            accounts={w.accounts}
-            detailAccounts={w.detailAccounts}
+            onNavigateToInvoice={() => goTo("/opening-balance", "فاتورة أول المدة")}
           />
         );
       case 4:
@@ -393,13 +376,8 @@ export function GuidedTransitionWizard() {
               title="القروض"
               hint="قروض وتسليفات بنكية — تُقيد كالتزام على حساب قرض."
               rows={w.loans}
-              onAdd={w.addLoanRow}
               onPatch={(key, patch) => w.updateLine(w.setLoans, key, patch)}
-              onRemove={(key) => w.setLoans((prev) => prev.filter((x) => x.key !== key))}
-              accounts={w.accounts}
-              detailAccounts={w.detailAccounts}
-              defaultAccount={w.defaultLoanAccount}
-              addLabel="إضافة قرض"
+              fixedAccountName={w.fixedLoanAccountName}
             />
             <div className="space-y-2">
               <div className="text-xs font-semibold text-slate-600">التزامات أخرى (يدوي)</div>
@@ -686,7 +664,7 @@ export function GuidedTransitionWizard() {
       { key: "cutover", label: "تاريخ القطع", done: !!w.cutoverDate },
       { key: "cash", label: "أرصدة النقد والبنوك", done: cashBank > 0 || w.step > 1 },
       { key: "customers", label: "العملاء (الذمم المدينة)", done: ar > 0 || w.step > 2 },
-      { key: "inventory", label: "المخزون (ترحيل البضاعة)", done: !!w.inventoryPosted || w.inventoryTotal === 0 || w.step > 3 },
+      { key: "inventory", label: "المخزون", done: w.inventoryTotal === 0 || w.step > 3 },
       { key: "fixed-assets", label: "الأصول الثابتة", done: fa > 0 || w.step > 4 },
       { key: "suppliers-loans", label: "الموردون والالتزامات", done: ap > 0 || loansT > 0 || otherLiab > 0 || w.step > 5 },
       { key: "partners", label: "حقوق الشركاء", done: cap > 0 || partnerCurr > 0 || otherEq > 0 || w.step > 6 },
@@ -694,7 +672,7 @@ export function GuidedTransitionWizard() {
       { key: "balanced", label: "متوازن", done: w.savedTotals.balanced },
       { key: "ready", label: "جاهز للترحيل", done: w.step >= STEP_REVIEW && w.canNext },
     ];
-  }, [w.derivedAr, w.arManualLines, w.derivedAp, w.loans, w.liabilitiesManual, w.partnerEquity, w.equityManual, w.cashBanks, w.faRows, w.inventoryPosted, w.inventoryTotal, w.step, w.cutoverDate, w.reconciliation, w.savedTotals, w.canNext]);
+  }, [w.derivedAr, w.arManualLines, w.derivedAp, w.loans, w.liabilitiesManual, w.partnerEquity, w.equityManual, w.cashBanks, w.faRows, w.inventoryTotal, w.step, w.cutoverDate, w.reconciliation, w.savedTotals, w.canNext]);
 
   // Use stepOrder from the hook (single source of truth).
   const stepOrder = w.stepOrder;
