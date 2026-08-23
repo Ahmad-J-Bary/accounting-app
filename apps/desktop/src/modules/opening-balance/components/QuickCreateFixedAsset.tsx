@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Loader2, Calendar } from "lucide-react";
+import { Plus, Loader2, Calendar, X } from "lucide-react";
 import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
@@ -24,12 +24,8 @@ interface QuickCreateFixedAssetProps {
   }) => Promise<boolean>;
 }
 
-/**
- * Quick-create a fixed asset inline: two-row layout.
- * Row 1: name + cost + date + create button
- * Row 2: asset type + warehouse (conditional)
- */
 export function QuickCreateFixedAsset({ warehouses, onCreate }: QuickCreateFixedAssetProps) {
+  const [expanded, setExpanded] = useState(false);
   const [name, setName] = useState("");
   const [cost, setCost] = useState("");
   const [assetType, setAssetType] = useState<AssetType>("equipment");
@@ -54,15 +50,32 @@ export function QuickCreateFixedAsset({ warehouses, onCreate }: QuickCreateFixed
       if (ok) {
         setName("");
         setCost("");
+        setExpanded(false);
       }
     } finally {
       setCreating(false);
     }
   };
 
+  if (!expanded) {
+    return (
+      <div className="flex items-center gap-2 flex-wrap">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setExpanded(true)}
+          className="h-8 shrink-0 rounded-full border-emerald-300 bg-emerald-50 px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400 transition-all"
+        >
+          <Plus className="w-3.5 h-3.5 ml-1" />
+          إضافة أصل ثابت
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full rounded-lg border border-emerald-200 bg-emerald-50/60 p-2.5 space-y-2">
-      {/* Row 1: name + cost + date + button */}
       <div className="flex items-center gap-2">
         <Plus className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
         <span className="text-xs font-bold text-emerald-700 shrink-0">أصل ثابت</span>
@@ -72,6 +85,7 @@ export function QuickCreateFixedAsset({ warehouses, onCreate }: QuickCreateFixed
           placeholder="اسم الأصل"
           className="h-7 flex-1 min-w-[120px] border-emerald-200 text-xs bg-white"
           disabled={creating}
+          autoFocus
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -116,8 +130,16 @@ export function QuickCreateFixedAsset({ warehouses, onCreate }: QuickCreateFixed
         >
           {creating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
         </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => { setExpanded(false); setName(""); setCost(""); }}
+          className="h-7 w-7 p-0 text-slate-400 hover:text-slate-600 shrink-0"
+        >
+          <X className="w-3.5 h-3.5" />
+        </Button>
       </div>
-      {/* Row 2: asset type + warehouse (conditional) */}
       <div className="flex items-center gap-2 pl-6">
         <Select value={assetType} onValueChange={(v) => setAssetType(v as AssetType)} disabled={creating}>
           <SelectTrigger className="h-7 flex-1 border-emerald-200 text-xs bg-white">

@@ -215,7 +215,7 @@ pub(crate) async fn insert_entry(
         .await
         .map_err(|e| AppError::Infrastructure(e.to_string()))?;
     } else {
-        sqlx::query(
+        let insert_result = sqlx::query(
             "INSERT INTO journal_entries (id, entry_number, journal_type, source_id, source_type, entry_date, description, status, created_at, posted_at, reversed_at, updated_at, reversal_of_entry_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
         .bind(entry.id.0.to_string())
@@ -232,8 +232,81 @@ pub(crate) async fn insert_entry(
         .bind(chrono::Utc::now().to_rfc3339())
         .bind(entry.reversal_of_entry_id.map(|id| id.0.to_string()))
         .execute(&mut **tx)
-        .await
-        .map_err(duplicate_source)?;
+        .await;
+
+        match insert_result {
+            Ok(_) => {}
+            Err(e) if e.to_string().contains("UNIQUE constraint failed") => {
+                // Another row with the same (source_type, source_id) exists.
+                // This is common when a partner's opening balance is updated:
+                // the create step posted the initial journal and the update
+                // step now re-posts the adjusted balance.  Instead of
+                // surfacing a conflict error we update the existing entry in
+                // place so the ledger stays idempotent for the same business
+                // event.
+                if let (Some(ref st), Some(ref sid)) = (&source_type, &entry.source_id) {
+                    let conflict_id: Option<String> = sqlx::query_scalar(
+                        "SELECT id FROM journal_entries WHERE source_type = ? AND source_id = ? AND id != ? LIMIT 1"
+                    )
+                    .bind(st)
+                    .bind(sid)
+                    .bind(entry.id.0.to_string())
+                    .fetch_optional(&mut **tx)
+                    .await
+                    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+                    if let Some(existing_id) = conflict_id {
+                        sqlx::query(
+                            "UPDATE journal_entries SET journal_type = ?, entry_number = ?, entry_date = ?, description = ?, status = ?, posted_at = ?, reversed_at = ?, updated_at = ?, reversal_of_entry_id = ? WHERE id = ?"
+                        )
+                        .bind(format!("{:?}", entry.journal_type))
+                        .bind(&entry.entry_number)
+                        .bind(entry.entry_date.to_rfc3339())
+                        .bind(&entry.description)
+                        .bind(format!("{:?}", entry.status))
+                        .bind(entry.posted_at.map(|d| d.to_rfc3339()))
+                        .bind(entry.reversed_at.map(|d| d.to_rfc3339()))
+                        .bind(chrono::Utc::now().to_rfc3339())
+                        .bind(entry.reversal_of_entry_id.map(|id| id.0.to_string()))
+                        .bind(&existing_id)
+                        .execute(&mut **tx)
+                        .await
+                        .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+                        // Replace lines under the existing entry id
+                        sqlx::query("DELETE FROM journal_lines WHERE journal_entry_id = ?")
+                            .bind(&existing_id)
+                            .execute(&mut **tx)
+                            .await
+                            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+                        for line in &entry.lines {
+                            sqlx::query(
+                                "INSERT INTO journal_lines (id, journal_entry_id, account_id, partner_id, currency, fx_rate, debit, debit_base, credit, credit_base, description, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                            )
+                            .bind(Uuid::new_v4().to_string())
+                            .bind(&existing_id)
+                            .bind(line.account_id.0.to_string())
+                            .bind(line.partner_id.map(|id| id.to_string()))
+                            .bind(&line.debit.currency().code)
+                            .bind(line.debit.fx_rate.to_string())
+                            .bind(line.debit.amount().to_string())
+                            .bind(line.debit.base_amount.to_string())
+                            .bind(line.credit.amount().to_string())
+                            .bind(line.credit.base_amount.to_string())
+                            .bind(&line.description)
+                            .bind(chrono::Utc::now().to_rfc3339())
+                            .execute(&mut **tx)
+                            .await
+                            .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+                        }
+                        return Ok(());
+                    }
+                }
+                return Err(duplicate_source(e));
+            }
+            Err(e) => return Err(duplicate_source(e)),
+        }
     }
 
     sqlx::query("DELETE FROM journal_lines WHERE journal_entry_id = ?")

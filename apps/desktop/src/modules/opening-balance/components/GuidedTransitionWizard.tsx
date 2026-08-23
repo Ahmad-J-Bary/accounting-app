@@ -281,7 +281,7 @@ export function GuidedTransitionWizard() {
         return (
           <div className="space-y-3">
             <p className="text-xs text-slate-500">
-              أرصدة العملاء تُشتق من سجل العملاء ويمكن تعديلها هنا مباشرة. يمكنك أيضاً إنشاء عميل جديد وتسجيل رصيد افتتاحي.
+              أرصدة العملاء المشتقة — يمكنك التعديل أو إنشاء عميل جديد.
             </p>
             <InlineRows
               title="الذمم المدينة — العملاء (مشتقة)"
@@ -290,9 +290,6 @@ export function GuidedTransitionWizard() {
               label="رصيد العميل"
               nativeHint="debit"
             />
-            {w.derivedAr.length === 0 && (
-              <p className="text-xs text-slate-400">لا يوجد عملاء بأرصدة — أضفهم من صفحة «العملاء» أو أنشئ عميلاً جديداً.</p>
-            )}
             <div className="flex items-center gap-2 pt-1">
               <QuickCreateInline
                 label="عميل"
@@ -320,8 +317,7 @@ export function GuidedTransitionWizard() {
         return (
           <div className="space-y-3">
             <p className="text-xs text-slate-500">
-              صافي القيمة الدفترية (التكلفة − مجمع الإهلاك) مشتق من سجل الأصول الثابتة. التعديل هنا يؤثر على
-              قيمة الافتتاح في المعالج فقط — سجل الأصول والاستهلاك يبقى كما هو. يمكنك أيضاً إنشاء أصل ثابت جديد.
+              صافي القيمة الدفترية مشتق من سجل الأصول — يمكنك التعديل أو إنشاء أصل جديد.
             </p>
             <InlineRows
               title="الأصول الثابتة (مشتقة — صافي القيمة الدفترية)"
@@ -330,15 +326,12 @@ export function GuidedTransitionWizard() {
               label="القيمة الافتتاحية"
               nativeHint="debit"
             />
-            {w.faRows.length === 0 && (
-              <p className="text-xs text-slate-400">لا توجد أصول ثابتة نشطة — أنشئ أصلاً جديداً أو أضفه من صفحة الأصول.</p>
-            )}
-            <QuickCreateFixedAsset
-              warehouses={warehouses}
-              onCreate={(data) => w.createFixedAssetQuick(data)}
-            />
-            <div className="flex justify-start pt-1">
-              <Button size="sm" variant="outline" onClick={() => goTo("/fixed-assets", "الأصول الثابتة")} className="border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
+            <div className="flex items-center gap-2 pt-1">
+              <QuickCreateFixedAsset
+                warehouses={warehouses}
+                onCreate={(data) => w.createFixedAssetQuick(data)}
+              />
+              <Button size="sm" variant="outline" onClick={() => goTo("/fixed-assets", "الأصول الثابتة")} className="h-8 shrink-0 border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
                 صفحة الأصول الثابتة ←
               </Button>
             </div>
@@ -348,7 +341,7 @@ export function GuidedTransitionWizard() {
         return (
           <div className="space-y-4">
             <p className="text-xs text-slate-500">
-              أرصدة الموردين (مشتقة) + القروض والالتزامات (يدوي) — جميعها طبيعة دائن (خصوم). يمكنك أيضاً إنشاء مورد جديد وتسجيل رصيد افتتاحي.
+              أرصدة الموردين + القروض والالتزامات — جميعها طبيعة دائن.
             </p>
             <InlineRows
               title="الذمم الدائنة — الموردون (مشتقة)"
@@ -357,9 +350,6 @@ export function GuidedTransitionWizard() {
               label="رصيد المورد"
               nativeHint="credit"
             />
-            {w.derivedAp.length === 0 && (
-              <p className="text-xs text-slate-400">لا توجد أرصدة موردين مستحقة — أنشئ مورداً جديداً أو أضفه من صفحة الموردين.</p>
-            )}
             <div className="flex items-center gap-2 pt-1">
               <QuickCreateInline
                 label="مورد"
@@ -379,7 +369,7 @@ export function GuidedTransitionWizard() {
               onPatch={(key, patch) => w.updateLine(w.setLoans, key, patch)}
               fixedAccountName={w.fixedLoanAccountName}
             />
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="text-xs font-semibold text-slate-600">التزامات أخرى (يدوي)</div>
               <WizardLineEditor rows={w.liabilitiesManual} setter={w.setLiabilitiesManual} updateLine={w.updateLine} placeholder="ابحث واختر حساب التزام..." accounts={w.accounts} detailAccounts={w.detailAccounts} />
             </div>
@@ -389,7 +379,7 @@ export function GuidedTransitionWizard() {
         return (
           <div className="space-y-3">
             <p className="text-xs text-slate-500">
-              حقوق الشركاء: رؤوس أموال (مشتقة من سجل الشركاء) + حسابات جارية + حقوق ملكية يدوية — جميعها طبيعة دائن. يمكنك أيضاً إنشاء شريك جديد وتسجيل رأس ماله.
+              رؤوس أموال + حسابات جارية + حقوق ملكية — جميعها طبيعة دائن.
             </p>
             <InlineRows
               title="رؤوس أموال الشركاء (مشتقة)"
@@ -398,9 +388,6 @@ export function GuidedTransitionWizard() {
               label="رأس المال"
               nativeHint="credit"
             />
-            {w.partnerEquity.length === 0 && (
-              <p className="text-xs text-slate-400">لا يوجد شركاء برأس مال — أنشئ شريكاً جديداً أو أضفه من صفحة الشركاء.</p>
-            )}
             <div className="flex items-center gap-2 pt-1">
               <QuickCreatePartner
                 onCreate={(data) => w.createPartnerQuick(data)}
@@ -672,7 +659,7 @@ export function GuidedTransitionWizard() {
       { key: "balanced", label: "متوازن", done: w.savedTotals.balanced },
       { key: "ready", label: "جاهز للترحيل", done: w.step >= STEP_REVIEW && w.canNext },
     ];
-  }, [w.derivedAr, w.arManualLines, w.derivedAp, w.loans, w.liabilitiesManual, w.partnerEquity, w.equityManual, w.cashBanks, w.faRows, w.inventoryTotal, w.step, w.cutoverDate, w.reconciliation, w.savedTotals, w.canNext]);
+  }, [w.derivedAr, w.arManualLines, w.derivedAp, w.loans, w.liabilitiesManual, w.partnerEquity, w.partnerCurrentManual, w.equityManual, w.cashBanks, w.faRows, w.inventoryTotal, w.step, w.cutoverDate, w.reconciliation, w.savedTotals, w.canNext]);
 
   // Use stepOrder from the hook (single source of truth).
   const stepOrder = w.stepOrder;

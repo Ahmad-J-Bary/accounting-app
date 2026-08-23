@@ -692,6 +692,9 @@ export function useOpeningBalanceWizard() {
       const c = customers.find((x) => x.id === row.entity_id);
       if (!c) return false;
       try {
+        const oldOb = toNum(c.opening_balance);
+        const newOb = toNum(value);
+        const adjustedDebit = String(toNum(c.debit) - oldOb + newOb);
         const updated = await customerService.update({
           id: c.id,
           code: c.code,
@@ -699,7 +702,7 @@ export function useOpeningBalanceWizard() {
           phone: c.phone,
           address: c.address,
           account_id: c.account_id,
-          debit: c.debit,
+          debit: adjustedDebit,
           credit: c.credit,
           opening_balance: value || "0",
           currency: c.currency,
@@ -724,6 +727,9 @@ export function useOpeningBalanceWizard() {
       const s = suppliers.find((x) => x.id === row.entity_id);
       if (!s) return false;
       try {
+        const oldOb = toNum(s.opening_balance);
+        const newOb = toNum(value);
+        const adjustedCredit = String(toNum(s.credit) - oldOb + newOb);
         const updated = await supplierService.update({
           id: s.id,
           code: s.code,
@@ -732,7 +738,7 @@ export function useOpeningBalanceWizard() {
           address: s.address,
           account_id: s.account_id,
           debit: s.debit,
-          credit: s.credit,
+          credit: adjustedCredit,
           opening_balance: value || "0",
           currency: s.currency,
           notes: s.notes,
