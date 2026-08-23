@@ -534,14 +534,13 @@ export function useOpeningBalanceWizard() {
   const cashBanksTotal = sumLines(cashBanks);
   const loansTotal = sumLines(loans);
   const arTotal = sumLines(derivedAr);
-  const arManualTotal = sumLines(arManualLines);
   const apTotal = sumLines(derivedAp);
   const faTotal = sumLines(faRows);
   const faManualTotal = sumLines(faManualLines);
   const equityTotal = sumLines(partnerEquity);
   const partnerCurrentTotal = sumLines(partnerCurrentManual);
 
-  const debit = manualAssetsTotal + cashBanksTotal + inventoryTotal + arTotal + arManualTotal + faTotal + faManualTotal;
+  const debit = manualAssetsTotal + cashBanksTotal + inventoryTotal + arTotal + faTotal + faManualTotal;
   const credit = manualLiabilitiesTotal + loansTotal + apTotal + equityTotal + manualEquityTotal + partnerCurrentTotal;
   const residual = debit - credit;
 
@@ -774,6 +773,96 @@ export function useOpeningBalanceWizard() {
     return true;
   }, []);
 
+  // ── Quick-create entities from the wizard ──────────────────────────────────
+
+  const createCustomer = useCallback(async (name: string, amount: string): Promise<boolean> => {
+    try {
+      const created = await customerService.create({ code: "", name, phone: null, address: null, opening_balance: amount || "0" });
+      queryClient.setQueryData<CustomerDto[]>(QUERY_KEYS.customers, (old) => [...(old ?? []), created]);
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts });
+      toast.success(`تم إنشاء العميل "${name}" بنجاح`);
+      return true;
+    } catch (e) {
+      toast.error("فشل إنشاء العميل: " + e);
+      return false;
+    }
+  }, []);
+
+  const createSupplier = useCallback(async (name: string, amount: string): Promise<boolean> => {
+    try {
+      const created = await supplierService.create({ code: "", name, phone: null, address: null, opening_balance: amount || "0" });
+      queryClient.setQueryData<SupplierDto[]>(QUERY_KEYS.suppliers, (old) => [...(old ?? []), created]);
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts });
+      toast.success(`تم إنشاء المورد "${name}" بنجاح`);
+      return true;
+    } catch (e) {
+      toast.error("فشل إنشاء المورد: " + e);
+      return false;
+    }
+  }, []);
+
+  const createFixedAssetQuick = useCallback(async (data: { name: string; cost: string; categoryId: string }): Promise<boolean> => {
+    try {
+      // Find relevant GL accounts for fixed assets
+      const assetAccount = accounts.find((a) => a.name_ar.includes("أصول ثابتة") && a.category === "Detail");
+      const depAccount = accounts.find((a) => a.name_ar.includes("إهلاك") && a.category === "Detail" && a.name_ar.includes("مجمع"));
+      const accumDepAccount = accounts.find((a) => a.name_ar.includes("مجمع الإهلاك") && a.category === "Detail");
+
+      if (!assetAccount || !depAccount || !accumDepAccount) {
+        toast.error("لم يتم العثور على حسابات الأصول الثابتة في دليل الحسابات");
+        return false;
+      }
+
+      await fixedAssetService.create({
+        code: "",
+        name: data.name,
+        category_id: data.categoryId,
+        purchase_date: new Date().toISOString().split("T")[0],
+        purchase_cost: data.cost,
+        currency: appSettings?.currency || "SAR",
+        fx_rate: "1",
+        useful_life_months: 120,
+        asset_account_id: assetAccount.id,
+        depreciation_account_id: depAccount.id,
+        accumulated_depreciation_account_id: accumDepAccount.id,
+        payment_account_id: assetAccount.id,
+        addition_type: "existing",
+      });
+
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.fixedAssets });
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts });
+      toast.success(`تم إنشاء الأصل "${data.name}" بنجاح`);
+      return true;
+    } catch (e) {
+      toast.error("فشل إنشاء الأصل الثابت: " + e);
+      return false;
+    }
+  }, [accounts, appSettings]);
+
+  const createPartnerQuick = useCallback(async (data: { name: string; amount: string }): Promise<boolean> => {
+    try {
+      const currency = appSettings?.currency || "SAR";
+      await partnerService.addPartner({
+        code: "",
+        name: data.name,
+        currency,
+        exchangeRate: "1",
+        amount: data.amount,
+        isAmountInOriginal: false,
+        sharingType: "BasedOnCapitalLocal",
+        manualRatio: null,
+      });
+
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partners });
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts });
+      toast.success(`تم إنشاء الشريك "${data.name}" بنجاح`);
+      return true;
+    } catch (e) {
+      toast.error("فشل إنشاء الشريك: " + e);
+      return false;
+    }
+  }, [appSettings]);
+
   const setInventoryRow = useCallback((materialId: string, patch: { qty?: string; cost?: string }) => {
     setInventoryInputs((prev) => {
       const cur = prev[materialId] || { qty: "", cost: "" };
@@ -841,46 +930,43 @@ export function useOpeningBalanceWizard() {
   const collectLines = useCallback((): OpeningLineInput[] => {
     const lines: OpeningLineInput[] = [];
     for (const r of [...derivedAr, ...derivedAp, ...faRows, ...partnerEquity]) {
-      lines.push({ account_id: r.account_id, amount: r.amount, description: undefined });
+      if (r.account_id && toNum(r.amount) > 0) {
+        lines.push({ account_id: r.account_id, amount: r.amount, description: undefined });
+      }
     }
     for (const l of partnerCurrentManual) {
-      if (l.account_id && l.amount) {
+      if (l.account_id && toNum(l.amount) > 0) {
         lines.push({ account_id: l.account_id, amount: l.amount, description: "حساب جاري شريك — رصيد افتتاحي" });
       }
     }
     for (const l of cashBanks) {
-      if (l.account_id && l.amount) {
+      if (l.account_id && toNum(l.amount) > 0) {
         lines.push({ account_id: l.account_id, amount: l.amount, description: "نقد وبنوك — رصيد افتتاحي" });
       }
     }
     for (const l of loans) {
-      if (l.account_id && l.amount) {
+      if (l.account_id && toNum(l.amount) > 0) {
         lines.push({ account_id: l.account_id, amount: l.amount, description: "قروض — رصيد افتتاحي" });
       }
     }
     for (const l of [...liabilitiesManual, ...equityManual]) {
-      if (l.account_id && l.amount) {
+      if (l.account_id && toNum(l.amount) > 0) {
         lines.push({ account_id: l.account_id, amount: l.amount, description: "بند يدوي" });
       }
     }
-    for (const l of arManualLines) {
-      if (l.account_id && l.amount) {
-        lines.push({ account_id: l.account_id, amount: l.amount, description: "ذمم مدينة — رصيد افتتاحي" });
-      }
-    }
     for (const l of faManualLines) {
-      if (l.account_id && l.amount) {
+      if (l.account_id && toNum(l.amount) > 0) {
         lines.push({ account_id: l.account_id, amount: l.amount, description: "أصول ثابتة — رصيد افتتاحي" });
       }
     }
-    if (inventoryTotal !== 0 && effectiveInventoryAccountId) {
+    if (inventoryTotal > 0 && effectiveInventoryAccountId) {
       lines.push({
         account_id: effectiveInventoryAccountId,
         amount: String(inventoryTotal),
         description: "مخزون أول المدة",
       });
     }
-    if (hasResidualPlug) {
+    if (hasResidualPlug && totals.plugAmount > 0) {
       lines.push({ account_id: obeAccountId, amount: String(totals.plugAmount), description: "بند تسوية الرصيد المتبقي" });
     }
     return lines;
@@ -905,22 +991,34 @@ export function useOpeningBalanceWizard() {
 
   const collectItems = useCallback((): OpeningItemInput[] => {
     const items: OpeningItemInput[] = [];
-    for (const r of derivedAr) items.push({ kind: KIND_AR, entity_id: r.entity_id, reference: r.label, amount: r.amount, qty: "0" });
-    for (const r of derivedAp) items.push({ kind: KIND_AP, entity_id: r.entity_id, reference: r.label, amount: r.amount, qty: "0" });
-    for (const r of faRows) items.push({ kind: KIND_FIXED_ASSET, entity_id: r.entity_id, reference: r.label, amount: r.amount, qty: "0" });
+    for (const r of derivedAr) {
+      if (toNum(r.amount) > 0) {
+        items.push({ kind: KIND_AR, entity_id: r.entity_id, reference: r.label, amount: r.amount, qty: "0" });
+      }
+    }
+    for (const r of derivedAp) {
+      if (toNum(r.amount) > 0) {
+        items.push({ kind: KIND_AP, entity_id: r.entity_id, reference: r.label, amount: r.amount, qty: "0" });
+      }
+    }
+    for (const r of faRows) {
+      if (toNum(r.amount) > 0) {
+        items.push({ kind: KIND_FIXED_ASSET, entity_id: r.entity_id, reference: r.label, amount: r.amount, qty: "0" });
+      }
+    }
     for (const r of effectiveInventory) {
-      if (r.value !== 0) {
+      if (r.value > 0) {
         items.push({ kind: KIND_INVENTORY, entity_id: r.material_id, reference: r.name, amount: String(r.value), qty: String(toNum(r.qty)) });
       }
     }
     const accountName = (id: string) => accounts.find((a) => a.id === id)?.name_ar || null;
     for (const l of cashBanks) {
-      if (l.kind === "bank" && toNum(l.amount) !== 0 && l.account_id) {
+      if (l.kind === "bank" && toNum(l.amount) > 0 && l.account_id) {
         items.push({ kind: KIND_BANK, entity_id: l.account_id, reference: accountName(l.account_id), amount: l.amount, qty: "0" });
       }
     }
     for (const l of loans) {
-      if (toNum(l.amount) !== 0 && l.account_id) {
+      if (toNum(l.amount) > 0 && l.account_id) {
         items.push({ kind: KIND_LOAN, entity_id: l.account_id, reference: accountName(l.account_id), amount: l.amount, qty: "0" });
       }
     }
@@ -953,40 +1051,35 @@ export function useOpeningBalanceWizard() {
   const missingAccounts = useMemo(() => {
     const hints: { section: string; amount: number }[] = [];
     for (const l of cashBanks) {
-      if (toNum(l.amount) !== 0 && !l.account_id) {
+      if (toNum(l.amount) > 0 && !l.account_id) {
         hints.push({ section: l.kind === "bank" ? "البنوك" : "النقد", amount: toNum(l.amount) });
       }
     }
     for (const l of loans) {
-      if (toNum(l.amount) !== 0 && !l.account_id) {
+      if (toNum(l.amount) > 0 && !l.account_id) {
         hints.push({ section: "القروض", amount: toNum(l.amount) });
       }
     }
     for (const l of [...assetsManual, ...liabilitiesManual, ...equityManual]) {
-      if (toNum(l.amount) !== 0 && !l.account_id) {
+      if (toNum(l.amount) > 0 && !l.account_id) {
         hints.push({ section: "بند يدوي", amount: toNum(l.amount) });
       }
     }
-    for (const l of arManualLines) {
-      if (toNum(l.amount) !== 0 && !l.account_id) {
-        hints.push({ section: "ذمم مدينة يدوية", amount: toNum(l.amount) });
-      }
-    }
     for (const l of faManualLines) {
-      if (toNum(l.amount) !== 0 && !l.account_id) {
+      if (toNum(l.amount) > 0 && !l.account_id) {
         hints.push({ section: "أصول ثابتة يدوية", amount: toNum(l.amount) });
       }
     }
     for (const l of partnerCurrentManual) {
-      if (toNum(l.amount) !== 0 && !l.account_id) {
+      if (toNum(l.amount) > 0 && !l.account_id) {
         hints.push({ section: "حساب جاري شريك", amount: toNum(l.amount) });
       }
     }
-    if (inventoryTotal !== 0 && !effectiveInventoryAccountId) {
+    if (inventoryTotal > 0 && !effectiveInventoryAccountId) {
       hints.push({ section: "المخزون", amount: inventoryTotal });
     }
     return hints;
-  }, [cashBanks, loans, assetsManual, liabilitiesManual, equityManual, arManualLines, faManualLines, partnerCurrentManual, inventoryTotal, effectiveInventoryAccountId]);
+  }, [cashBanks, loans, assetsManual, liabilitiesManual, equityManual, faManualLines, partnerCurrentManual, inventoryTotal, effectiveInventoryAccountId]);
 
   const missingAccountHints = useMemo(
     () =>
@@ -1228,7 +1321,7 @@ export function useOpeningBalanceWizard() {
         set.add(i);
       } else if (i === 1 && cashBanks.length > 0) {
         set.add(i);
-      } else if (i === 2 && (derivedAr.length > 0 || arManualLines.length > 0)) {
+      } else if (i === 2 && derivedAr.length > 0) {
         set.add(i);
       } else if (i === 3 && inventoryTotal > 0) {
         set.add(i);
@@ -1248,7 +1341,7 @@ export function useOpeningBalanceWizard() {
     }
     return set;
   }, [
-    steps, cashBanks, derivedAr, arManualLines, inventoryTotal,
+    steps, cashBanks, derivedAr, inventoryTotal,
     faRows, faManualLines, derivedAp, loans, liabilitiesManual,
     partnerEquity, partnerCurrentManual, equityManual,
     userCompletedSteps, migration, firstPeriod,
@@ -1359,6 +1452,10 @@ export function useOpeningBalanceWizard() {
     saveCustomerOpening,
     saveSupplierOpening,
     savePartnerCapital,
+    createCustomer,
+    createSupplier,
+    createFixedAssetQuick,
+    createPartnerQuick,
     migration,
     reconciliation,
     busy,

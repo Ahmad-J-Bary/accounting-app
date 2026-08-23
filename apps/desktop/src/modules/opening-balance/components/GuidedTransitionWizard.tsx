@@ -19,7 +19,11 @@ import {
 } from "@modules/accounting/api/openingBalanceService";
 import { WizardShell } from "@modules/opening-balance/components/WizardShell";
 import { WizardLineEditor } from "@modules/opening-balance/components/WizardLineEditor";
+import { QuickCreateInline } from "@modules/opening-balance/components/QuickCreateInline";
+import { QuickCreateFixedAsset } from "@modules/opening-balance/components/QuickCreateFixedAsset";
+import { QuickCreatePartner } from "@modules/opening-balance/components/QuickCreatePartner";
 import { useOpeningBalanceWizard, STEP_REVIEW, STEP_ACTION } from "@modules/opening-balance/hooks/useOpeningBalanceWizard";
+import { fixedAssetService } from "@modules/fixed-assets/api/fixedAssetService";
 import { START_MODE_NEW, toNum, type DerivedRow, type WizLine } from "@modules/opening-balance/lib/wizard-types";
 import { sumLines, inventoryMismatchHints } from "@modules/opening-balance/lib/derive-rows";
 import { reconciliationReadiness, RECON_ROW_LABEL } from "@modules/opening-balance/lib/migration-labels";
@@ -82,6 +86,12 @@ export function GuidedTransitionWizard() {
 
   // Use completedSteps from the hook (single source of truth).
   const completedSteps = w.completedSteps;
+
+  // Fetch asset categories for quick-create fixed assets
+  const { data: assetCategories = [] } = useQuery({
+    queryKey: ["asset-categories"],
+    queryFn: () => fixedAssetService.listCategories(),
+  });
 
   const renderDone = () => {
     const locked = w.migration?.status === "Locked";
@@ -282,7 +292,7 @@ export function GuidedTransitionWizard() {
         return (
           <div className="space-y-3">
             <p className="text-xs text-slate-500">
-              أرصدة العملاء تُشتق من سجل العملاء ويمكن تعديلها هنا مباشرة. يمكنك أيضاً إضافة بنود يدوية.
+              أرصدة العملاء تُشتق من سجل العملاء ويمكن تعديلها هنا مباشرة. يمكنك أيضاً إنشاء عميل جديد وتسجيل رصيد افتتاحي.
             </p>
             <InlineRows
               title="الذمم المدينة — العملاء (مشتقة)"
@@ -292,15 +302,17 @@ export function GuidedTransitionWizard() {
               nativeHint="debit"
             />
             {w.derivedAr.length === 0 && (
-              <p className="text-xs text-slate-400">لا يوجد عملاء بأرصدة — أضفهم من صفحة «العملاء» أو أدخل بنداً يدوياً.</p>
+              <p className="text-xs text-slate-400">لا يوجد عملاء بأرصدة — أضفهم من صفحة «العملاء» أو أنشئ عميلاً جديداً.</p>
             )}
-            <div className="space-y-2">
-              <div className="text-xs font-semibold text-slate-600">بنود ذمم مدينة يدوية</div>
-              <WizardLineEditor rows={w.arManualLines} setter={w.setArManualLines} updateLine={w.updateLine} placeholder="ابحث واختر حساب الذمم..." accounts={w.accounts} detailAccounts={w.detailAccounts} />
-            </div>
-            <div className="flex justify-start pt-1">
-              <Button size="sm" variant="outline" onClick={() => goTo("/customers", "العملاء")} className="border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
-                الانتقال إلى صفحة العملاء
+            <div className="flex items-center gap-2 pt-1">
+              <QuickCreateInline
+                label="عميل"
+                placeholder="اسم العميل"
+                amountLabel="الرصيد الافتتاحي"
+                onCreate={(name, amount) => w.createCustomer(name, amount)}
+              />
+              <Button size="sm" variant="outline" onClick={() => goTo("/customers", "العملاء")} className="h-8 shrink-0 border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
+                صفحة العملاء ←
               </Button>
             </div>
           </div>
@@ -326,7 +338,7 @@ export function GuidedTransitionWizard() {
           <div className="space-y-3">
             <p className="text-xs text-slate-500">
               صافي القيمة الدفترية (التكلفة − مجمع الإهلاك) مشتق من سجل الأصول الثابتة. التعديل هنا يؤثر على
-              قيمة الافتتاح في المعالج فقط — سجل الأصول والاستهلاك يبقى كما هو. يمكنك أيضاً إضافة أصول يدوية.
+              قيمة الافتتاح في المعالج فقط — سجل الأصول والاستهلاك يبقى كما هو. يمكنك أيضاً إنشاء أصل ثابت جديد.
             </p>
             <InlineRows
               title="الأصول الثابتة (مشتقة — صافي القيمة الدفترية)"
@@ -336,15 +348,19 @@ export function GuidedTransitionWizard() {
               nativeHint="debit"
             />
             {w.faRows.length === 0 && (
-              <p className="text-xs text-slate-400">لا توجد أصول ثابتة نشطة — أدخل أصولاً يدوياً أو أضفها من صفحة الأصول.</p>
+              <p className="text-xs text-slate-400">لا توجد أصول ثابتة نشطة — أنشئ أصلاً جديداً أو أضفه من صفحة الأصول.</p>
             )}
             <div className="space-y-2">
               <div className="text-xs font-semibold text-slate-600">أصول ثابتة يدوية</div>
               <WizardLineEditor rows={w.faManualLines} setter={w.setFaManualLines} updateLine={w.updateLine} placeholder="ابحث واختر حساب الأصل..." accounts={w.accounts} detailAccounts={w.detailAccounts} />
             </div>
+            <QuickCreateFixedAsset
+              categories={assetCategories}
+              onCreate={(data) => w.createFixedAssetQuick(data)}
+            />
             <div className="flex justify-start pt-1">
               <Button size="sm" variant="outline" onClick={() => goTo("/fixed-assets", "الأصول الثابتة")} className="border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
-                الانتقال إلى صفحة الأصول الثابتة
+                صفحة الأصول الثابتة ←
               </Button>
             </div>
           </div>
@@ -353,7 +369,7 @@ export function GuidedTransitionWizard() {
         return (
           <div className="space-y-4">
             <p className="text-xs text-slate-500">
-              أرصدة الموردين (مشتقة) + القروض والالتزامات (يدوي) — جميعها طبيعة دائن (خصوم).
+              أرصدة الموردين (مشتقة) + القروض والالتزامات (يدوي) — جميعها طبيعة دائن (خصوم). يمكنك أيضاً إنشاء مورد جديد وتسجيل رصيد افتتاحي.
             </p>
             <InlineRows
               title="الذمم الدائنة — الموردون (مشتقة)"
@@ -363,8 +379,19 @@ export function GuidedTransitionWizard() {
               nativeHint="credit"
             />
             {w.derivedAp.length === 0 && (
-              <p className="text-xs text-slate-400">لا توجد أرصدة موردين مستحقة.</p>
+              <p className="text-xs text-slate-400">لا توجد أرصدة موردين مستحقة — أنشئ مورداً جديداً أو أضفه من صفحة الموردين.</p>
             )}
+            <div className="flex items-center gap-2 pt-1">
+              <QuickCreateInline
+                label="مورد"
+                placeholder="اسم المورد"
+                amountLabel="الرصيد الافتتاحي"
+                onCreate={(name, amount) => w.createSupplier(name, amount)}
+              />
+              <Button size="sm" variant="outline" onClick={() => goTo("/suppliers", "الموردون")} className="h-8 shrink-0 border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
+                صفحة الموردين ←
+              </Button>
+            </div>
             <AutoAmountSection
               title="القروض"
               hint="قروض وتسليفات بنكية — تُقيد كالتزام على حساب قرض."
@@ -381,18 +408,13 @@ export function GuidedTransitionWizard() {
               <div className="text-xs font-semibold text-slate-600">التزامات أخرى (يدوي)</div>
               <WizardLineEditor rows={w.liabilitiesManual} setter={w.setLiabilitiesManual} updateLine={w.updateLine} placeholder="ابحث واختر حساب التزام..." accounts={w.accounts} detailAccounts={w.detailAccounts} />
             </div>
-            <div className="flex justify-start pt-1">
-              <Button size="sm" variant="outline" onClick={() => goTo("/suppliers", "الموردون")} className="border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
-                الانتقال إلى صفحة الموردين
-              </Button>
-            </div>
           </div>
         );
       case 6:
         return (
           <div className="space-y-3">
             <p className="text-xs text-slate-500">
-              حقوق الشركاء: رؤوس أموال (مشتقة من سجل الشركاء) + حسابات جارية + حقوق ملكية يدوية — جميعها طبيعة دائن.
+              حقوق الشركاء: رؤوس أموال (مشتقة من سجل الشركاء) + حسابات جارية + حقوق ملكية يدوية — جميعها طبيعة دائن. يمكنك أيضاً إنشاء شريك جديد وتسجيل رأس ماله.
             </p>
             <InlineRows
               title="رؤوس أموال الشركاء (مشتقة)"
@@ -402,8 +424,16 @@ export function GuidedTransitionWizard() {
               nativeHint="credit"
             />
             {w.partnerEquity.length === 0 && (
-              <p className="text-xs text-slate-400">لا يوجد شركاء برأس مال — أضفهم عبر صفحة «الشركاء ورأس المال» أو أدخل حقوق ملكية يدوياً.</p>
+              <p className="text-xs text-slate-400">لا يوجد شركاء برأس مال — أنشئ شريكاً جديداً أو أضفه من صفحة الشركاء.</p>
             )}
+            <div className="flex items-center gap-2 pt-1">
+              <QuickCreatePartner
+                onCreate={(data) => w.createPartnerQuick(data)}
+              />
+              <Button size="sm" variant="outline" onClick={() => goTo("/partners", "الشركاء")} className="h-8 shrink-0 border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
+                صفحة الشركاء ←
+              </Button>
+            </div>
             <InlineRows
               title="الحسابات الجارية للشركاء"
               rows={w.partnerCurrentManualRows}
@@ -414,11 +444,6 @@ export function GuidedTransitionWizard() {
             <div className="space-y-1.5">
               <div className="text-xs font-semibold text-slate-600">حقوق ملكية أخرى (يدوي)</div>
               <WizardLineEditor rows={w.equityManual} setter={w.setEquityManual} updateLine={w.updateLine} placeholder="ابحث واختر حساب حقوق ملكية..." accounts={w.accounts} detailAccounts={w.detailAccounts} />
-            </div>
-            <div className="flex justify-start pt-1">
-              <Button size="sm" variant="outline" onClick={() => goTo("/partners", "الشركاء")} className="border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
-                الانتقال إلى صفحة الشركاء
-              </Button>
             </div>
           </div>
         );
@@ -431,7 +456,7 @@ export function GuidedTransitionWizard() {
               <p className="text-xs text-slate-500">
                 حفظ المسودة (بنود الميزانية) وتفاصيل السجل المساعد ثم فحص تسوية الأرصدة مع دفتر الأستاذ.
                 عدد البنود: {w.collectLines().length} ·
-                العملاء: {w.derivedAr.length + w.arManualLines.length} · الموردون: {w.derivedAp.length} ·
+                العملاء: {w.derivedAr.length} · الموردون: {w.derivedAp.length} ·
                 الأصول الثابتة: {w.faRows.length + w.faManualLines.length} · حقوق الشركاء: {w.partnerEquity.length + w.partnerCurrentManual.length}
               </p>
             </div>
