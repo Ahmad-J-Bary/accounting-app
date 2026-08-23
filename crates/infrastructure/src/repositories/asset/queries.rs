@@ -85,3 +85,24 @@ pub async fn get_depreciation_schedule(pool: &SqlitePool, asset_id: &Uuid) -> Re
 
     Ok(rows.into_iter().map(row_to_schedule).collect())
 }
+
+pub async fn get_next_asset_number(pool: &SqlitePool) -> Result<i32, AppError> {
+    let next_num: i32 = sqlx::query_scalar(
+        r#"
+        SELECT COALESCE(MIN(candidate), 1)
+        FROM (
+            SELECT 1 as candidate
+            UNION ALL
+            SELECT CAST(code AS INTEGER) + 1 as candidate FROM fixed_assets WHERE code GLOB '[0-9]*'
+        )
+        WHERE candidate NOT IN (
+            SELECT CAST(code AS INTEGER) FROM fixed_assets WHERE code GLOB '[0-9]*'
+        )
+        "#
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|e| AppError::Infrastructure(e.to_string()))?;
+
+    Ok(next_num)
+}

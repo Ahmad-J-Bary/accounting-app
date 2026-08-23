@@ -93,10 +93,13 @@ impl FixedAssetUseCases {
 
     pub async fn create_asset(
         &self,
-        req: CreateAssetRequest,
+        mut req: CreateAssetRequest,
     ) -> Result<FixedAssetId, AppError> {
+        let next_num = self.repo.get_next_asset_number().await?;
+        req.code = next_num.to_string();
+
         let asset = FixedAsset::new(
-            req.code,
+            req.code.clone(),
             req.name,
             req.category_id,
             req.warehouse_id,

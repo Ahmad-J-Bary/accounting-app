@@ -88,4 +88,8 @@ impl AssetRepository for SqliteAssetRepository {
     ) -> Result<(), AppError> {
         commands::delete_asset_with_accounting(&self.pool, id, entries).await
     }
+
+    async fn get_next_asset_number(&self) -> Result<i32, AppError> {
+        queries::get_next_asset_number(&self.pool).await
+    }
 }

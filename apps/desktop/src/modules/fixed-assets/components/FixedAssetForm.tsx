@@ -113,7 +113,7 @@ export function FixedAssetForm({
   }, [canAccessOpeningWorkflow]);
 
   // --- Basic info ---
-  const [code, setCode] = useState(asset?.code ?? "");
+  const code = asset?.code ?? "";
   const [name, setName] = useState(asset?.name ?? "");
   const [assetType, setAssetType] = useState<"buildings_land" | "equipment" | "furniture" | "">("");
   const [categoryId, setCategoryId] = useState(asset?.category_id ?? "");
@@ -318,10 +318,10 @@ export function FixedAssetForm({
 
   // Validation
   const canSave = useMemo(() => {
-    const base = !!code && !!name && !!categoryId && !!assetType && !!purchaseCost && !!currency;
+    const base = !!name && !!categoryId && !!assetType && !!purchaseCost && !!currency;
     if (!base) return false;
     return !accountMappingError;
-  }, [code, name, categoryId, assetType, purchaseCost, currency, accountMappingError]);
+  }, [name, categoryId, assetType, purchaseCost, currency, accountMappingError]);
 
   const handleSave = async () => {
     if (!canSave) return;
@@ -337,7 +337,7 @@ export function FixedAssetForm({
     setSaving(true);
     try {
       const req: CreateFixedAssetRequest = {
-        code,
+        code: asset?.code ?? "",
         name,
         category_id: categoryId,
         warehouse_id: isNonDepreciable ? undefined : warehouseId,
@@ -398,16 +398,17 @@ export function FixedAssetForm({
 
         </FormField>
 
-        {/* Code & Name - second */}
-        <div className="grid grid-cols-2 gap-3">
-          <FormField label="الكود" required>
-            <Input
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="مثال: FA-001"
-              className="bg-white border-slate-200 h-9 text-xs"
-            />
-          </FormField>
+        {/* Code (read-only for editing) & Name */}
+        <div className={`gap-3 ${code ? "grid grid-cols-[auto_1fr]" : ""}`}>
+          {code && (
+            <FormField label="الكود">
+              <Input
+                value={code}
+                readOnly
+                className="bg-slate-50 border-slate-200 h-9 text-xs font-mono cursor-not-allowed w-20"
+              />
+            </FormField>
+          )}
 
           <FormField label="الاسم" required>
             <Input

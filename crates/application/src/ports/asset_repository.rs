@@ -42,4 +42,6 @@ pub trait AssetRepository: Send + Sync {
         id: &FixedAssetId,
         entries: &[domain::shared::ids::JournalEntryId],
     ) -> Result<(), AppError>;
+
+    async fn get_next_asset_number(&self) -> Result<i32, AppError>;
 }

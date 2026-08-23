@@ -182,7 +182,7 @@ interface WizardDraft {
   equityManual: WizLine[];
   partnerCurrentManual: WizLine[];
   arManualLines: WizLine[];
-  faManualLines: WizLine[];
+  faManualLines?: WizLine[]; // kept optional for backward compat with old drafts
   faOverrides: Record<string, string>;
   inventoryInputs: Record<string, { qty: string; cost: string }>;
   inventoryAccountId: string;
@@ -205,7 +205,7 @@ export function useOpeningBalanceWizard() {
   const [equityManual, setEquityManual] = useState<WizLine[]>([]);
   const [partnerCurrentManual, setPartnerCurrentManual] = useState<WizLine[]>([]);
   const [arManualLines, setArManualLines] = useState<WizLine[]>([]);
-  const [faManualLines, setFaManualLines] = useState<WizLine[]>([]);
+  const [faManualLines, setFaManualLines] = useState<WizLine[]>([]); // backward compat; no longer used in calculations
   // Amount-only sections (auto-default accounts, overridable manually).
   const [cashBanks, setCashBanks] = useState<WizLine[]>([]);
   const [loans, setLoans] = useState<WizLine[]>([]);
@@ -543,11 +543,10 @@ export function useOpeningBalanceWizard() {
   const arTotal = sumLines(derivedAr);
   const apTotal = sumLines(derivedAp);
   const faTotal = sumLines(faRows);
-  const faManualTotal = sumLines(faManualLines);
   const equityTotal = sumLines(partnerEquity);
   const partnerCurrentTotal = sumLines(partnerCurrentManual);
 
-  const debit = manualAssetsTotal + cashBanksTotal + inventoryTotal + arTotal + faTotal + faManualTotal;
+  const debit = manualAssetsTotal + cashBanksTotal + inventoryTotal + arTotal + faTotal;
   const credit = manualLiabilitiesTotal + loansTotal + apTotal + equityTotal + manualEquityTotal + partnerCurrentTotal;
   const residual = debit - credit;
 
@@ -818,7 +817,7 @@ export function useOpeningBalanceWizard() {
     }
   }, []);
 
-  const createFixedAssetQuick = useCallback(async (data: { name: string; cost: string; assetType: AssetType }): Promise<boolean> => {
+  const createFixedAssetQuick = useCallback(async (data: { name: string; cost: string; assetType: AssetType; purchaseDate: string; warehouseId: string | undefined }): Promise<boolean> => {
     try {
       // Auto-map GL accounts by asset type keywords (same logic as FixedAssetForm)
       const findAccount = (keywords: string[], accountType?: string): AccountDto | undefined => {
@@ -874,7 +873,8 @@ export function useOpeningBalanceWizard() {
         code: "",
         name: data.name,
         category_id: categoryId,
-        purchase_date: new Date().toISOString().split("T")[0],
+        warehouse_id: data.warehouseId,
+        purchase_date: new Date(data.purchaseDate).toISOString(),
         purchase_cost: data.cost,
         currency: appSettings?.currency || "SAR",
         fx_rate: "1",
@@ -1011,11 +1011,6 @@ export function useOpeningBalanceWizard() {
         lines.push({ account_id: l.account_id, amount: l.amount, description: "بند يدوي" });
       }
     }
-    for (const l of faManualLines) {
-      if (l.account_id && toNum(l.amount) > 0) {
-        lines.push({ account_id: l.account_id, amount: l.amount, description: "أصول ثابتة — رصيد افتتاحي" });
-      }
-    }
     if (inventoryTotal > 0 && effectiveInventoryAccountId) {
       lines.push({
         account_id: effectiveInventoryAccountId,
@@ -1038,7 +1033,6 @@ export function useOpeningBalanceWizard() {
     liabilitiesManual,
     equityManual,
     arManualLines,
-    faManualLines,
     inventoryTotal,
     effectiveInventoryAccountId,
     hasResidualPlug,
@@ -1122,11 +1116,6 @@ export function useOpeningBalanceWizard() {
         hints.push({ section: "بند يدوي", amount: toNum(l.amount) });
       }
     }
-    for (const l of faManualLines) {
-      if (toNum(l.amount) > 0 && !l.account_id) {
-        hints.push({ section: "أصول ثابتة يدوية", amount: toNum(l.amount) });
-      }
-    }
     for (const l of partnerCurrentManual) {
       if (toNum(l.amount) > 0 && !l.account_id) {
         hints.push({ section: "حساب جاري شريك", amount: toNum(l.amount) });
@@ -1136,7 +1125,7 @@ export function useOpeningBalanceWizard() {
       hints.push({ section: "المخزون", amount: inventoryTotal });
     }
     return hints;
-  }, [cashBanks, loans, assetsManual, liabilitiesManual, equityManual, faManualLines, partnerCurrentManual, inventoryTotal, effectiveInventoryAccountId]);
+  }, [cashBanks, loans, assetsManual, liabilitiesManual, equityManual, partnerCurrentManual, inventoryTotal, effectiveInventoryAccountId]);
 
   const missingAccountHints = useMemo(
     () =>
@@ -1382,7 +1371,7 @@ export function useOpeningBalanceWizard() {
         set.add(i);
       } else if (i === 3 && inventoryTotal > 0) {
         set.add(i);
-      } else if (i === 4 && (faRows.length > 0 || faManualLines.length > 0)) {
+      } else if (i === 4 && faRows.length > 0) {
         set.add(i);
       } else if (i === 5 && (derivedAp.length > 0 || loans.length > 0 || liabilitiesManual.length > 0)) {
         set.add(i);
@@ -1399,7 +1388,7 @@ export function useOpeningBalanceWizard() {
     return set;
   }, [
     steps, cashBanks, derivedAr, inventoryTotal,
-    faRows, faManualLines, derivedAp, loans, liabilitiesManual,
+    faRows, derivedAp, loans, liabilitiesManual,
     partnerEquity, partnerCurrentManual, equityManual,
     userCompletedSteps, migration, firstPeriod,
   ]);
@@ -1504,8 +1493,6 @@ export function useOpeningBalanceWizard() {
     savePartnerCurrentAccount,
     arManualLines,
     setArManualLines,
-    faManualLines,
-    setFaManualLines,
     saveCustomerOpening,
     saveSupplierOpening,
     savePartnerCapital,

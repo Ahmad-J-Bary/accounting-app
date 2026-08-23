@@ -14,6 +14,7 @@ import { toLocalDateStr, toFixed, fmtMoney } from "@shared/lib/format";
 import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
 import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
+import { warehouseService } from "@modules/inventory/api/warehouseService";
 import {
   type OpeningBalanceMigrationDto,
 } from "@modules/accounting/api/openingBalanceService";
@@ -85,6 +86,11 @@ export function GuidedTransitionWizard() {
 
   // Use completedSteps from the hook (single source of truth).
   const completedSteps = w.completedSteps;
+
+  const { data: warehouses = [] } = useQuery({
+    queryKey: ["warehouses"],
+    queryFn: () => warehouseService.list(),
+  });
 
   const renderDone = () => {
     const locked = w.migration?.status === "Locked";
@@ -344,11 +350,8 @@ export function GuidedTransitionWizard() {
             {w.faRows.length === 0 && (
               <p className="text-xs text-slate-400">لا توجد أصول ثابتة نشطة — أنشئ أصلاً جديداً أو أضفه من صفحة الأصول.</p>
             )}
-            <div className="space-y-2">
-              <div className="text-xs font-semibold text-slate-600">أصول ثابتة يدوية</div>
-              <WizardLineEditor rows={w.faManualLines} setter={w.setFaManualLines} updateLine={w.updateLine} placeholder="ابحث واختر حساب الأصل..." accounts={w.accounts} detailAccounts={w.detailAccounts} />
-            </div>
             <QuickCreateFixedAsset
+              warehouses={warehouses}
               onCreate={(data) => w.createFixedAssetQuick(data)}
             />
             <div className="flex justify-start pt-1">
@@ -451,7 +454,7 @@ export function GuidedTransitionWizard() {
                 حفظ المسودة (بنود الميزانية) وتفاصيل السجل المساعد ثم فحص تسوية الأرصدة مع دفتر الأستاذ.
                 عدد البنود: {w.collectLines().length} ·
                 العملاء: {w.derivedAr.length} · الموردون: {w.derivedAp.length} ·
-                الأصول الثابتة: {w.faRows.length + w.faManualLines.length} · حقوق الشركاء: {w.partnerEquity.length + w.partnerCurrentManual.length}
+                الأصول الثابتة: {w.faRows.length} · حقوق الشركاء: {w.partnerEquity.length + w.partnerCurrentManual.length}
               </p>
             </div>
             {w.reconciliation && (
@@ -602,7 +605,7 @@ export function GuidedTransitionWizard() {
     const bank = sumLines(w.cashBanks.filter((l) => l.kind === "bank"));
     const receivables = sumLines(w.derivedAr) + sumLines(w.arManualLines);
     const inventory = w.inventoryTotal;
-    const fixedAssets = sumLines(w.faRows) + sumLines(w.faManualLines);
+    const fixedAssets = sumLines(w.faRows);
     const suppliers = sumLines(w.derivedAp);
     const loans = sumLines(w.loans);
     const otherLiabilities = sumLines(w.liabilitiesManual);
@@ -665,7 +668,7 @@ export function GuidedTransitionWizard() {
       residual,
       hints,
     };
-  }, [w.cashBanks, w.derivedAr, w.arManualLines, w.inventoryTotal, w.faRows, w.faManualLines, w.derivedAp, w.loans, w.liabilitiesManual, w.partnerEquity, w.partnerCurrentManual, w.equityManual, w.reconciliation, w.effectiveInventory, w.materials, w.missingAccountHints]);
+  }, [w.cashBanks, w.derivedAr, w.arManualLines, w.inventoryTotal, w.faRows, w.derivedAp, w.loans, w.liabilitiesManual, w.partnerEquity, w.partnerCurrentManual, w.equityManual, w.reconciliation, w.effectiveInventory, w.materials, w.missingAccountHints]);
 
   // ── Progress checklist (§15): every section's done-state, derived from data
   // and the reached step so the user never has to remember what is finished.
@@ -678,7 +681,7 @@ export function GuidedTransitionWizard() {
     const partnerCurr = sumLines(w.partnerCurrentManual);
     const otherEq = sumLines(w.equityManual);
     const cashBank = sumLines(w.cashBanks);
-    const fa = sumLines(w.faRows) + sumLines(w.faManualLines);
+    const fa = sumLines(w.faRows);
     return [
       { key: "cutover", label: "تاريخ القطع", done: !!w.cutoverDate },
       { key: "cash", label: "أرصدة النقد والبنوك", done: cashBank > 0 || w.step > 1 },
@@ -691,7 +694,7 @@ export function GuidedTransitionWizard() {
       { key: "balanced", label: "متوازن", done: w.savedTotals.balanced },
       { key: "ready", label: "جاهز للترحيل", done: w.step >= STEP_REVIEW && w.canNext },
     ];
-  }, [w.derivedAr, w.arManualLines, w.derivedAp, w.loans, w.liabilitiesManual, w.partnerEquity, w.equityManual, w.cashBanks, w.faRows, w.faManualLines, w.inventoryPosted, w.inventoryTotal, w.step, w.cutoverDate, w.reconciliation, w.savedTotals, w.canNext]);
+  }, [w.derivedAr, w.arManualLines, w.derivedAp, w.loans, w.liabilitiesManual, w.partnerEquity, w.equityManual, w.cashBanks, w.faRows, w.inventoryPosted, w.inventoryTotal, w.step, w.cutoverDate, w.reconciliation, w.savedTotals, w.canNext]);
 
   // Use stepOrder from the hook (single source of truth).
   const stepOrder = w.stepOrder;
