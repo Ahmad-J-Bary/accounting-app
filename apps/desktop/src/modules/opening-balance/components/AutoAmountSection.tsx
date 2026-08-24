@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Plus, X, Trash2 } from "lucide-react";
+import { Check, Plus, X, Trash2, Pencil } from "lucide-react";
 import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
 import { toFixed } from "@shared/lib/format";
@@ -134,6 +134,7 @@ export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedA
             onClick={() => startEdit(existingRow)}
             className="h-8 px-2 text-xs font-bold shrink-0 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
           >
+            <Pencil className="w-3.5 h-3.5" />
             تعديل
           </Button>
           {onDelete && (

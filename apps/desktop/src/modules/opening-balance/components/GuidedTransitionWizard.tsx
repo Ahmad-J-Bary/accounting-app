@@ -281,24 +281,27 @@ export function GuidedTransitionWizard() {
         return (
           <div className="space-y-3">
             <InlineRows
-              title="الذمم المدينة — العملاء "
+              title="الذمم المدينة — العملاء"
               rows={w.derivedAr}
               onSave={w.saveCustomerOpening}
+              onDelete={(row) => w.saveCustomerOpening(row, "0")}
               label="رصيد العميل"
               nativeHint="debit"
+              addForm={
+                <QuickCreateInline
+                  label="عميل"
+                  placeholder="اسم العميل"
+                  amountLabel="الرصيد الافتتاحي"
+                  direction="debit"
+                  onCreate={(name, amount) => w.createCustomer(name, amount)}
+                  navLink={
+                    <Button size="sm" variant="outline" onClick={() => goTo("/customers", "العملاء")} className="h-8 shrink-0 border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
+                      صفحة العملاء ←
+                    </Button>
+                  }
+                />
+              }
             />
-            <div className="flex items-center gap-2 pt-1">
-              <QuickCreateInline
-                label="عميل"
-                placeholder="اسم العميل"
-                amountLabel="الرصيد الافتتاحي"
-                direction="debit"
-                onCreate={(name, amount) => w.createCustomer(name, amount)}
-              />
-              <Button size="sm" variant="outline" onClick={() => goTo("/customers", "العملاء")} className="h-8 shrink-0 border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
-                صفحة العملاء ←
-              </Button>
-            </div>
           </div>
         );
       case 3:
@@ -324,16 +327,18 @@ export function GuidedTransitionWizard() {
               })}
               label="القيمة الافتتاحية"
               nativeHint="debit"
+              addForm={
+                <QuickCreateFixedAsset
+                  warehouses={warehouses}
+                  onCreate={(data) => w.createFixedAssetQuick(data)}
+                  navLink={
+                    <Button size="sm" variant="outline" onClick={() => goTo("/fixed-assets", "الأصول الثابتة")} className="h-8 shrink-0 border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
+                      صفحة الأصول الثابتة ←
+                    </Button>
+                  }
+                />
+              }
             />
-            <div className="flex items-center gap-2 pt-1">
-              <QuickCreateFixedAsset
-                warehouses={warehouses}
-                onCreate={(data) => w.createFixedAssetQuick(data)}
-              />
-              <Button size="sm" variant="outline" onClick={() => goTo("/fixed-assets", "الأصول الثابتة")} className="h-8 shrink-0 border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
-                صفحة الأصول الثابتة ←
-              </Button>
-            </div>
           </div>
         );
       case 5:
@@ -343,21 +348,24 @@ export function GuidedTransitionWizard() {
               title="الذمم الدائنة — الموردون"
               rows={w.derivedAp}
               onSave={w.saveSupplierOpening}
+              onDelete={(row) => w.saveSupplierOpening(row, "0")}
               label="رصيد المورد"
               nativeHint="credit"
+              addForm={
+                <QuickCreateInline
+                  label="مورد"
+                  placeholder="اسم المورد"
+                  amountLabel="الرصيد الافتتاحي"
+                  direction="credit"
+                  onCreate={(name, amount) => w.createSupplier(name, amount)}
+                  navLink={
+                    <Button size="sm" variant="outline" onClick={() => goTo("/suppliers", "الموردون")} className="h-8 shrink-0 border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
+                      صفحة الموردين ←
+                    </Button>
+                  }
+                />
+              }
             />
-            <div className="flex items-center gap-2 pt-1">
-              <QuickCreateInline
-                label="مورد"
-                placeholder="اسم المورد"
-                amountLabel="الرصيد الافتتاحي"
-                direction="credit"
-                onCreate={(name, amount) => w.createSupplier(name, amount)}
-              />
-              <Button size="sm" variant="outline" onClick={() => goTo("/suppliers", "الموردون")} className="h-8 shrink-0 border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
-                صفحة الموردين ←
-              </Button>
-            </div>
             <AutoAmountSection
               title="القروض"
               rows={w.loans}
@@ -388,15 +396,17 @@ export function GuidedTransitionWizard() {
               onSave={w.savePartnerCapital}
               label="رأس المال"
               nativeHint="credit"
+              addForm={
+                <QuickCreatePartner
+                  onCreate={(data) => w.createPartnerQuick(data)}
+                  navLink={
+                    <Button size="sm" variant="outline" onClick={() => goTo("/partners", "الشركاء")} className="h-8 shrink-0 border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
+                      صفحة الشركاء ←
+                    </Button>
+                  }
+                />
+              }
             />
-            <div className="flex items-center gap-2 pt-1">
-              <QuickCreatePartner
-                onCreate={(data) => w.createPartnerQuick(data)}
-              />
-              <Button size="sm" variant="outline" onClick={() => goTo("/partners", "الشركاء")} className="h-8 shrink-0 border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
-                صفحة الشركاء ←
-              </Button>
-            </div>
             {w.partnerCurrentManualRows.length > 0 && (
               <InlineRows
                 title="الحسابات الجارية للشركاء"
@@ -669,7 +679,7 @@ export function GuidedTransitionWizard() {
       { key: "reconcile", label: "التسوية", done: !!w.reconciliation && w.reconciliation.all_reconciled },
       { key: "balanced", label: "متوازن", done: w.savedTotals.balanced },
       { key: "ready", label: "جاهز للترحيل", done: w.step >= STEP_REVIEW && w.canNext },
-    ];
+    ].sort((a, b) => (a.done === b.done ? 0 : a.done ? -1 : 1));
   }, [w.derivedAr, w.arManualLines, w.derivedAp, w.loans, w.liabilitiesManual, w.partnerEquity, w.partnerCurrentManual, w.equityManual, w.cashBanks, w.faRows, w.inventoryTotal, w.step, w.cutoverDate, w.reconciliation, w.savedTotals, w.canNext]);
 
   // Use stepOrder from the hook (single source of truth).
@@ -723,6 +733,7 @@ function InlineRows({
   onDelete,
   label,
   nativeHint,
+  addForm,
 }: {
   title: string;
   rows: DerivedRow[];
@@ -730,6 +741,7 @@ function InlineRows({
   onDelete?: (row: DerivedRow) => void;
   label: string;
   nativeHint?: "debit" | "credit";
+  addForm?: React.ReactNode;
 }) {
   return (
     <div className="space-y-1">
@@ -741,7 +753,7 @@ function InlineRows({
           </span>
         )}
       </div>
-      {rows.length === 0 ? (
+      {rows.length === 0 && !addForm ? (
         <p className="text-xs text-slate-400 py-1.5">لا توجد بنود مشتقة.</p>
       ) : (
         <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 bg-slate-50/40">
@@ -755,6 +767,7 @@ function InlineRows({
               nativeHint={nativeHint}
             />
           ))}
+          {addForm}
         </div>
       )}
     </div>

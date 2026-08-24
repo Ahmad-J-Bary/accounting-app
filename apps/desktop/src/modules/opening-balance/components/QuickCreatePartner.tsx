@@ -1,16 +1,18 @@
 import { useState } from "react";
-import { Plus, Loader2, X } from "lucide-react";
+import { Plus, Loader2, X, Check } from "lucide-react";
 import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
+import { Badge } from "@shared/ui/badge";
 
 interface QuickCreatePartnerProps {
   onCreate: (data: {
     name: string;
     amount: string;
   }) => Promise<boolean>;
+  navLink?: React.ReactNode;
 }
 
-export function QuickCreatePartner({ onCreate }: QuickCreatePartnerProps) {
+export function QuickCreatePartner({ onCreate, navLink }: QuickCreatePartnerProps) {
   const [expanded, setExpanded] = useState(false);
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
@@ -31,9 +33,15 @@ export function QuickCreatePartner({ onCreate }: QuickCreatePartnerProps) {
     }
   };
 
+  const cancel = () => {
+    setExpanded(false);
+    setName("");
+    setAmount("");
+  };
+
   if (!expanded) {
     return (
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="px-3 py-1.5">
         <Button
           type="button"
           variant="outline"
@@ -44,20 +52,20 @@ export function QuickCreatePartner({ onCreate }: QuickCreatePartnerProps) {
           <Plus className="w-3.5 h-3.5 ml-1" />
           إضافة شريك
         </Button>
+        {navLink}
       </div>
     );
   }
 
   return (
-    <div className="w-full rounded-lg border border-emerald-200 bg-emerald-50/60 p-2">
-      <div className="flex items-center gap-2">
-        <Plus className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-        <span className="text-xs font-bold text-emerald-700 shrink-0">شريك</span>
+    <>
+      <div className="flex items-center gap-2 px-3 py-1.5 text-xs">
+        <Badge variant="outline" className="text-2xs bg-emerald-50 text-emerald-700 border-emerald-200 shrink-0">جديد</Badge>
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="اسم الشريك"
-          className="h-7 flex-1 border-emerald-200 text-xs bg-white"
+          className="h-8 flex-1 border-slate-200 text-xs bg-white"
           disabled={creating}
           autoFocus
           onKeyDown={(e) => {
@@ -75,7 +83,7 @@ export function QuickCreatePartner({ onCreate }: QuickCreatePartnerProps) {
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           placeholder="رأس المال"
-          className="h-7 w-28 border-emerald-200 text-xs text-right tabular-nums bg-white"
+          className="h-8 w-32 border-slate-200 text-xs text-right tabular-nums bg-white"
           disabled={creating}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -90,20 +98,22 @@ export function QuickCreatePartner({ onCreate }: QuickCreatePartnerProps) {
           size="sm"
           onClick={() => void handleCreate()}
           disabled={creating || !name.trim() || !amount.trim()}
-          className="h-7 px-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+          className="h-8 px-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
         >
-          {creating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+          {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+          حفظ
         </Button>
         <Button
           type="button"
           size="sm"
           variant="ghost"
-          onClick={() => { setExpanded(false); setName(""); setAmount(""); }}
-          className="h-7 w-7 p-0 text-slate-400 hover:text-slate-600 shrink-0"
+          onClick={cancel}
+          className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 shrink-0"
         >
           <X className="w-3.5 h-3.5" />
         </Button>
       </div>
-    </div>
+      {navLink && <div className="px-3 pb-1">{navLink}</div>}
+    </>
   );
 }
