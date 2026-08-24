@@ -125,7 +125,7 @@ export function FixedAssetForm({
 
   // --- Purchase ---
   const [purchaseDate, setPurchaseDate] = useState(
-    asset ? new Date(asset.purchase_date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0]
+    asset ? asset.purchase_date.split("T")[0] : new Date().toLocaleDateString("en-CA")
   );
   const [purchaseCost, setPurchaseCost] = useState(asset?.purchase_cost?.amount ?? "");
   const [currency, setCurrency] = useState(asset?.purchase_cost?.currency?.code ?? "");
@@ -193,9 +193,11 @@ export function FixedAssetForm({
     (async () => {
       let cats = await fixedAssetService.listCategories("Fixed");
 
-      // Auto-create default categories if none exist
-      if (cats.length === 0) {
-        for (const def of DEFAULT_CATEGORIES) {
+      // Ensure every default category exists (heal DBs holding only some)
+      const existingNames = new Set(cats.map((c) => c.name));
+      const missing = DEFAULT_CATEGORIES.filter((def) => !existingNames.has(def.name));
+      if (missing.length > 0) {
+        for (const def of missing) {
           await fixedAssetService.createCategory(def.name, "Fixed");
         }
         cats = await fixedAssetService.listCategories("Fixed");

@@ -37,6 +37,7 @@ export interface DerivedRow {
   account_code: string;
   amount: string;
   kind: "AR" | "AP" | "FixedAsset" | "Equity";
+  category?: string;
 }
 
 export function newLine(): WizLine {

@@ -25,7 +25,7 @@ export function InlineBalanceRow({ row, onSave, onDelete, label, nativeHint = "d
   const [saving, setSaving] = useState(false);
   useEffect(() => {
     setValue(row.amount);
-    if (!editing) setEditing(false);
+    setEditing(false);
   }, [row.amount]);
 
   const save = async () => {
@@ -45,15 +45,10 @@ export function InlineBalanceRow({ row, onSave, onDelete, label, nativeHint = "d
 
   return (
     <div className="flex items-center gap-2 px-3 py-1.5 text-xs">
-      <div className="flex items-center gap-2 min-w-0 flex-1">
-        <Badge variant="outline" className="text-2xs bg-blue-50 text-blue-700 border-blue-200 shrink-0">مشتق</Badge>
-        <span className="text-2xs font-bold text-slate-400 tabular-nums shrink-0">{row.account_code || "—"}</span>
-        <span className="truncate text-slate-700">{row.label}</span>
-      </div>
-      <div className="flex items-center gap-1.5 shrink-0">
-        <span className="text-2xs font-semibold text-slate-400">{label}</span>
-        {editing ? (
-          <>
+      {editing ? (
+        <>
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            <span className="text-2xs font-semibold text-slate-400">{label}</span>
             <Input
               type="number"
               min={0}
@@ -66,31 +61,41 @@ export function InlineBalanceRow({ row, onSave, onDelete, label, nativeHint = "d
               autoFocus
             />
             <span className="text-2xs text-slate-400">{nativeHint === "debit" ? "مدين" : "دائن"}</span>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => void save()}
-              disabled={disabled || saving}
-              className="h-8 px-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
-              aria-label="حفظ الرصيد"
-            >
-              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-              حفظ
-            </Button>
+          </div>
+          <div className="flex flex-col items-center gap-1 shrink-0">
             <Button
               type="button"
               size="sm"
               variant="ghost"
               onClick={() => { setEditing(false); setValue(row.amount); }}
               disabled={disabled}
-              className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 shrink-0"
+              className="h-7 w-7 p-0 text-slate-400 hover:text-slate-600"
               aria-label="إلغاء التعديل"
             >
               <X className="w-3.5 h-3.5" />
             </Button>
-          </>
-        ) : (
-          <>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => void save()}
+              disabled={disabled || saving}
+              className="h-7 px-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
+              aria-label="حفظ الرصيد"
+            >
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className="text-2xs font-bold text-slate-400 tabular-nums shrink-0">{row.account_code || "—"}</span>
+            {row.category && (
+              <Badge variant="outline" className="text-2xs shrink-0 border-slate-200 text-slate-500">{row.category}</Badge>
+            )}
+            <span className="truncate text-slate-700">{row.label}</span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
             <span className="tabular-nums text-xs font-bold text-slate-700 w-32 text-right">{parseFloat(row.amount || "0").toFixed(2)}</span>
             <span className="text-2xs text-slate-400">{nativeHint === "debit" ? "مدين" : "دائن"}</span>
             <Button
@@ -117,9 +122,9 @@ export function InlineBalanceRow({ row, onSave, onDelete, label, nativeHint = "d
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             )}
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

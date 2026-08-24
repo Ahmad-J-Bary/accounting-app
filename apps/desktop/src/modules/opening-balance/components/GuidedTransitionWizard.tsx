@@ -321,11 +321,7 @@ export function GuidedTransitionWizard() {
               title="الأصول الثابتة"
               rows={w.faRows}
               onSave={w.saveFixedAssetOverride}
-              onDelete={(row) => w.setFaOverrides((prev) => {
-                const next = { ...prev };
-                delete next[row.entity_id];
-                return next;
-              })}
+              onDelete={w.deleteFixedAsset}
               label="القيمة الافتتاحية"
               nativeHint="debit"
               addForm={

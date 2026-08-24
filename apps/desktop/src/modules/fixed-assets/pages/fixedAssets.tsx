@@ -12,6 +12,7 @@ import type {
 } from "@erp/shared-types";
 import { toast } from "sonner";
 import { dateCol, executeExport, buildCurrencySummary, mergeCurrencySummaries, applyVisibilityToCurrencyCols, currencyAmountCols } from "@shared/lib/excel";
+import { toLocalDateStr } from "@shared/lib/format";
 import type { ExcelExportColumn } from "@shared/lib/excel";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { SharedTable } from "@widgets/table-shell/SharedTable";
@@ -261,11 +262,10 @@ export default function FixedAssetsPage() {
           className: "max-w-[200px] truncate text-xs",
         },
         {
-          id: "created_at",
-          header: "التاريخ",
-          accessor: (r: FixedAssetDto) =>
-            new Date(r.created_at).toLocaleString("ar-SA"),
-          className: "w-36 text-center text-xs",
+          id: "purchase_date",
+          header: "تاريخ الحيازة",
+          accessor: (r: FixedAssetDto) => toLocalDateStr(r.purchase_date),
+          className: "w-36 text-center text-xs tabular-nums",
         },
         {
           id: "actions",
@@ -357,7 +357,7 @@ export default function FixedAssetsPage() {
       ...depCols,
       ...nbvCols,
       { id: "notes", label: "التوصيف", hidden: !visibleColumnIds.includes("notes"), accessor: (row) => String((row as Record<string, unknown>).notes ?? "") },
-      { ...dateCol("created_at", "التاريخ", (row) => (row as Record<string, unknown>).created_at as string), hidden: !visibleColumnIds.includes("created_at") },
+      { ...dateCol("purchase_date", "تاريخ الحيازة", (row) => (row as Record<string, unknown>).purchase_date as string), hidden: !visibleColumnIds.includes("purchase_date") },
     ];
 
     await executeExport(exportData, {
@@ -385,7 +385,7 @@ export default function FixedAssetsPage() {
         ids.push(`net_book_value_${curr.code}`);
       }
     });
-    ids.push("notes", "created_at", "actions");
+    ids.push("notes", "purchase_date", "actions");
     return ids;
   }, [currencies, isBaseCurrency, assetTypeFilter]);
 

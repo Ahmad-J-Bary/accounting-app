@@ -88,6 +88,27 @@ export function toUtcBound(date: string, endOfDay: boolean): string {
   return new Date(`${date}${suffix}`).toISOString();
 }
 
+/**
+ * Converts a local date string (YYYY-MM-DD) picked by the user into an ISO
+ * timestamp that is safe to send to the backend WITHOUT timezone drift.
+ *
+ * Problem: `new Date("2024-01-15")` is parsed as UTC midnight, so in UTC+3
+ * it becomes "2024-01-14T21:00:00Z" — effectively the previous day.
+ *
+ * Solution: append "T12:00:00" (local noon) so that even in the extreme
+ * UTC+14 / UTC-12 offsets the date portion never crosses a day boundary.
+ *
+ * The backend only stores and displays the DATE portion (purchase_date),
+ * so the exact time component is irrelevant — only the date matters.
+ */
+export function localDateToIso(dateStr: string): string {
+  if (!dateStr) return new Date().toISOString();
+  // If it already looks like a full ISO string, return as-is
+  if (dateStr.includes("T") || dateStr.includes("Z")) return dateStr;
+  // "YYYY-MM-DD" → parse as local noon to avoid UTC offset shifting the day
+  return new Date(`${dateStr}T12:00:00`).toISOString();
+}
+
 export function toFixed(n: number, digits: number): string {
   return new Intl.NumberFormat("ar-SY", {
     numberingSystem: _numberingSystem,

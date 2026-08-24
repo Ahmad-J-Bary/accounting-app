@@ -49,19 +49,29 @@ const fixedAssets = [
     name: "حافلة",
     status: "Active",
     asset_account_id: "a1",
+    category_id: "cat1",
     purchase_cost: { amount: "1000" },
     accumulated_depreciation: { amount: "200" },
   },
-  { id: "f2", code: "FA2", name: "متقاعد", status: "Disposed", asset_account_id: "a1" },
-  { id: "f3", code: "FA3", name: "صفر صافٍ", status: "Active", asset_account_id: "a1", purchase_cost: { amount: "100" }, accumulated_depreciation: { amount: "100" } },
+  { id: "f2", code: "FA2", name: "متقاعد", status: "Disposed", asset_account_id: "a1", category_id: "" },
+  { id: "f3", code: "FA3", name: "صفر صافٍ", status: "Active", asset_account_id: "a1", category_id: "", purchase_cost: { amount: "100" }, accumulated_depreciation: { amount: "100" } },
 ] as FixedAssetDto[];
+
+const assetCategories = [
+  { id: "cat1", name: "معدات وتجهيزات", asset_type: "Fixed" as const },
+];
 
 describe("deriveFa", () => {
   it("computes net book value (cost - depreciation)", () => {
-    const rows = deriveFa(fixedAssets, accounts);
+    const rows = deriveFa(fixedAssets, accounts, assetCategories);
     expect(rows).toHaveLength(1);
     expect(rows[0].amount).toBe("800");
     expect(rows[0].kind).toBe("FixedAsset");
+  });
+
+  it("maps category name from asset categories", () => {
+    const rows = deriveFa(fixedAssets, accounts, assetCategories);
+    expect(rows[0].category).toBe("معدات وتجهيزات");
   });
 });
 

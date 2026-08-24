@@ -60,7 +60,6 @@ export function QuickCreatePartner({ onCreate, navLink }: QuickCreatePartnerProp
   return (
     <>
       <div className="flex items-center gap-2 px-3 py-1.5 text-xs">
-        <Badge variant="outline" className="text-2xs bg-emerald-50 text-emerald-700 border-emerald-200 shrink-0">جديد</Badge>
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}

@@ -1,6 +1,6 @@
 // Pure derivation functions: turn owning-module DTOs into the wizard's
 // read-only "derived" opening lines. No hooks, no services — unit-testable.
-import type { AccountDto, CustomerDto, SupplierDto, PartnerDto, FixedAssetDto, MaterialDto } from "@erp/shared-types";
+import type { AccountDto, CustomerDto, SupplierDto, PartnerDto, FixedAssetDto, MaterialDto, AssetCategoryDto } from "@erp/shared-types";
 import type { DerivedRow } from "./wizard-types";
 import { toNum } from "./wizard-types";
 import { toFixed, fmtMoney } from "@shared/lib/format";
@@ -37,7 +37,10 @@ export function deriveAp(suppliers: readonly SupplierDto[], accounts: readonly A
     }));
 }
 
-export function deriveFa(fixedAssets: readonly FixedAssetDto[], accounts: readonly AccountDto[]): DerivedRow[] {
+export function deriveFa(fixedAssets: readonly FixedAssetDto[], accounts: readonly AccountDto[], categories: readonly AssetCategoryDto[] = []): DerivedRow[] {
+  const catMap = new Map<string, string>();
+  for (const c of categories) catMap.set(c.id, c.name);
+
   return fixedAssets
     .filter((a) => a.status === "Active" && a.asset_account_id)
     .map((a) => ({
@@ -48,6 +51,7 @@ export function deriveFa(fixedAssets: readonly FixedAssetDto[], accounts: readon
       account_code: codeOf(accounts, a.asset_account_id),
       amount: String(toNum(a.purchase_cost?.amount) - toNum(a.accumulated_depreciation?.amount)),
       kind: "FixedAsset" as const,
+      category: catMap.get(a.category_id) || "",
     }))
     .filter((r) => toNum(r.amount) !== 0);
 }

@@ -61,7 +61,6 @@ export function QuickCreateInline({ label, placeholder, amountLabel, direction, 
   return (
     <>
       <div className="flex items-center gap-2 px-3 py-1.5 text-xs">
-        <Badge variant="outline" className="text-2xs bg-emerald-50 text-emerald-700 border-emerald-200 shrink-0">جديد</Badge>
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -98,25 +97,27 @@ export function QuickCreateInline({ label, placeholder, amountLabel, direction, 
             {direction === "debit" ? "مدين" : "دائن"}
           </span>
         )}
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => void handleCreate()}
-          disabled={creating || !name.trim() || !amount.trim()}
-          className="h-8 px-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
-        >
-          {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-          حفظ
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          onClick={cancel}
-          className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 shrink-0"
-        >
-          <X className="w-3.5 h-3.5" />
-        </Button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => void handleCreate()}
+            disabled={creating || !name.trim() || !amount.trim()}
+            className="h-8 px-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+          >
+            {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+            حفظ
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={cancel}
+            className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 shrink-0"
+          >
+            <X className="w-3.5 h-3.5" />
+          </Button>
+        </div>
       </div>
       {navLink && <div className="px-3 pb-1">{navLink}</div>}
     </>

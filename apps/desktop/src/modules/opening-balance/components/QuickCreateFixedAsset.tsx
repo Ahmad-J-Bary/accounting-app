@@ -32,7 +32,7 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
   const [name, setName] = useState("");
   const [cost, setCost] = useState("");
   const [assetType, setAssetType] = useState<AssetType>("equipment");
-  const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split("T")[0]);
+  const [purchaseDate, setPurchaseDate] = useState(new Date().toLocaleDateString("en-CA"));
   const [warehouseId, setWarehouseId] = useState<string>("none");
   const [creating, setCreating] = useState(false);
 
@@ -88,7 +88,6 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
     <>
       <div className="space-y-0.5">
         <div className="flex items-center gap-2 px-3 py-1.5 text-xs">
-          <Badge variant="outline" className="text-2xs bg-emerald-50 text-emerald-700 border-emerald-200 shrink-0">جديد</Badge>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -134,24 +133,14 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
           <Button
             type="button"
             size="sm"
-            onClick={() => void handleCreate()}
-            disabled={creating || !name.trim() || !cost.trim()}
-            className="h-8 px-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
-          >
-            {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-            حفظ
-          </Button>
-          <Button
-            type="button"
-            size="sm"
             variant="ghost"
             onClick={cancel}
-            className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 shrink-0"
+            className="h-7 w-7 p-0 text-slate-400 hover:text-slate-600 shrink-0"
           >
             <X className="w-3.5 h-3.5" />
           </Button>
         </div>
-        <div className="flex items-center gap-2 pl-6 px-3 pb-1.5">
+        <div className="flex items-center gap-2 px-3 pb-1.5">
           <Select value={assetType} onValueChange={(v) => setAssetType(v as AssetType)} disabled={creating}>
             <SelectTrigger className="h-7 flex-1 border-slate-200 text-xs bg-white">
               <SelectValue placeholder="نوع الأصل" />
@@ -179,6 +168,15 @@ export function QuickCreateFixedAsset({ warehouses, onCreate, navLink }: QuickCr
               </SelectContent>
             </Select>
           )}
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => void handleCreate()}
+            disabled={creating || !name.trim() || !cost.trim()}
+            className="h-7 px-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+          >
+            {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+          </Button>
         </div>
       </div>
       {navLink && <div className="px-3 pb-1">{navLink}</div>}

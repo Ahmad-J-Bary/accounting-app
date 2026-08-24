@@ -1,7 +1,7 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { AccountDto, FiscalPeriodDto, CustomerDto, SupplierDto, ResidualClassificationSpecDto } from "@erp/shared-types";
+import type { AccountDto, FiscalPeriodDto, CustomerDto, SupplierDto, ResidualClassificationSpecDto, AssetCategoryDto } from "@erp/shared-types";
 import type { WizardStepDef } from "@modules/opening-balance/components/WizardShell";
 
 type AssetType = "buildings_land" | "automotive" | "equipment" | "furniture";
@@ -500,7 +500,7 @@ export function useOpeningBalanceWizard() {
   // ── Module-derived rows (read-only derivation) ───────────────────────────
   const derivedAr: DerivedRow[] = useMemo(() => deriveAr(customers, accounts), [customers, accounts]);
   const derivedAp: DerivedRow[] = useMemo(() => deriveAp(suppliers, accounts), [suppliers, accounts]);
-  const derivedFa: DerivedRow[] = useMemo(() => deriveFa(fixedAssets, accounts), [fixedAssets, accounts]);
+  const derivedFa: DerivedRow[] = useMemo(() => deriveFa(fixedAssets, accounts, assetCategories), [fixedAssets, accounts, assetCategories]);
   const partnerEquity: DerivedRow[] = useMemo(() => derivePartnerEquity(partners, accounts), [partners, accounts]);
   const partnerCurrentDerived: DerivedRow[] = useMemo(() => derivePartnerCurrentAccounts(partners, accounts), [partners, accounts]);
 
@@ -817,6 +817,24 @@ export function useOpeningBalanceWizard() {
     return true;
   }, []);
 
+  const deleteFixedAsset = useCallback(async (row: DerivedRow): Promise<boolean> => {
+    try {
+      await fixedAssetService.delete(row.entity_id);
+      setFaOverrides((prev) => {
+        const next = { ...prev };
+        delete next[row.entity_id];
+        return next;
+      });
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.fixedAssets });
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts });
+      toast.success("تم حذف الأصل من صفحة الأصول الثابتة");
+      return true;
+    } catch (e) {
+      toast.error("فشل حذف الأصل: " + e);
+      return false;
+    }
+  }, []);
+
   // ── Quick-create entities from the wizard ──────────────────────────────────
 
   const createCustomer = useCallback(async (name: string, amount: string): Promise<boolean> => {
@@ -890,8 +908,7 @@ export function useOpeningBalanceWizard() {
           findAccount(["مجمع إهلاك"], "Assets");
       }
 
-      // Find matching category by asset type
-      let matchedCategory = assetCategories.find((c) => {
+      const findCat = (list: AssetCategoryDto[]) => list.find((c) => {
         const lower = (c.name || "").toLowerCase();
         if (data.assetType === "buildings_land") return lower.includes("أبنية") || lower.includes("أراضي");
         if (data.assetType === "automotive") return lower.includes("آليات") || lower.includes("سيارات") || lower.includes("مركبات");
@@ -899,20 +916,23 @@ export function useOpeningBalanceWizard() {
         return lower.includes("أثاث") || lower.includes("مفروشات");
       });
 
-      // Auto-create categories if none exist (mirrors FixedAssetForm behavior)
-      if (!matchedCategory && assetCategories.length === 0) {
+      let matchedCategory = findCat(assetCategories);
+
+      if (!matchedCategory) {
         const DEFAULTS = ["أبنية وأراضي", "آليات", "معدات وتجهيزات", "أثاث ومفروشات"];
-        for (const catName of DEFAULTS) {
-          await fixedAssetService.createCategory(catName, "Fixed");
+        const existing = new Set(assetCategories.map((c) => c.name));
+        let changed = false;
+        for (const name of DEFAULTS) {
+          if (!existing.has(name)) {
+            await fixedAssetService.createCategory(name, "Fixed");
+            changed = true;
+          }
         }
-        const refreshed = await fixedAssetService.listCategories("Fixed");
-        matchedCategory = refreshed.find((c) => {
-          const lower = (c.name || "").toLowerCase();
-          if (data.assetType === "buildings_land") return lower.includes("أبنية") || lower.includes("أراضي");
-          if (data.assetType === "automotive") return lower.includes("آليات") || lower.includes("سيارات") || lower.includes("مركبات");
-          if (data.assetType === "equipment") return lower.includes("معدات") || lower.includes("تجهيزات");
-          return lower.includes("أثاث") || lower.includes("مفروشات");
-        }) || refreshed[0];
+        if (changed) {
+          await queryClient.invalidateQueries({ queryKey: ["asset-categories"] });
+          const refreshed = await fixedAssetService.listCategories("Fixed");
+          matchedCategory = findCat(refreshed);
+        }
       }
 
       if (!assetAcc || !depAcc || !accDepAcc) {
@@ -1540,6 +1560,7 @@ export function useOpeningBalanceWizard() {
     faOverrides,
     setFaOverrides,
     saveFixedAssetOverride,
+    deleteFixedAsset,
     partnerEquity,
     partnerCurrentManual,
     setPartnerCurrentManual,
