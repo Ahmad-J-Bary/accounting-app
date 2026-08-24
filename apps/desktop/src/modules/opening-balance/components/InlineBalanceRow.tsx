@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Check, Loader2, Pencil } from "lucide-react";
+import { Check, Loader2, Pencil, X, Trash2 } from "lucide-react";
 import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
 import { Badge } from "@shared/ui/badge";
@@ -8,6 +8,7 @@ import type { DerivedRow } from "@modules/opening-balance/lib/wizard-types";
 interface InlineBalanceRowProps {
   row: DerivedRow;
   onSave: (row: DerivedRow, value: string) => Promise<boolean> | boolean;
+  onDelete?: (row: DerivedRow) => void;
   label: string;
   nativeHint?: "debit" | "credit";
   disabled?: boolean;
@@ -18,7 +19,7 @@ interface InlineBalanceRowProps {
  * Default state: read-only value + "تعديل" button.
  * Editing state: editable input + "حفظ" button.
  */
-export function InlineBalanceRow({ row, onSave, label, nativeHint = "debit", disabled = false }: InlineBalanceRowProps) {
+export function InlineBalanceRow({ row, onSave, onDelete, label, nativeHint = "debit", disabled = false }: InlineBalanceRowProps) {
   const [value, setValue] = useState(row.amount);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -68,14 +69,24 @@ export function InlineBalanceRow({ row, onSave, label, nativeHint = "debit", dis
             <Button
               type="button"
               size="sm"
-              variant="default"
               onClick={() => void save()}
               disabled={disabled || saving}
-              className="h-8 px-2 text-xs font-bold"
+              className="h-8 px-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
               aria-label="حفظ الرصيد"
             >
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
               حفظ
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => { setEditing(false); setValue(row.amount); }}
+              disabled={disabled}
+              className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 shrink-0"
+              aria-label="إلغاء التعديل"
+            >
+              <X className="w-3.5 h-3.5" />
             </Button>
           </>
         ) : (
@@ -88,12 +99,24 @@ export function InlineBalanceRow({ row, onSave, label, nativeHint = "debit", dis
               variant="outline"
               onClick={startEdit}
               disabled={disabled}
-              className="h-8 px-2 text-xs font-bold border-blue-200 text-blue-700 hover:bg-blue-50"
+              className="h-8 px-2 text-xs font-bold border-emerald-300 text-emerald-700 hover:bg-emerald-50"
               aria-label="تعديل الرصيد"
             >
               <Pencil className="w-3.5 h-3.5" />
               تعديل
             </Button>
+            {onDelete && !disabled && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => onDelete(row)}
+                className="h-8 w-8 p-0 text-red-400 hover:bg-red-50 hover:text-red-600 shrink-0"
+                aria-label="حذف التجاوز"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
           </>
         )}
       </div>

@@ -259,32 +259,29 @@ export function GuidedTransitionWizard() {
         if (isNew) return renderDone();
         return (
           <div className="space-y-4">
-            <p className="text-xs text-slate-500">
-              أدخل أرصدة الصندوق والبنوك كمبالغ فقط — الحساب الافتراضي يُقترح تلقائياً ويمكن تغييره يدوياً.
-            </p>
             <AutoAmountSection
               title="الصندوق والنقد"
               rows={w.cashBanks.filter((l) => l.kind === "cash")}
               onPatch={(key, patch) => w.updateLine(w.setCashBanks, key, patch)}
+              onDelete={(key) => w.updateLine(w.setCashBanks, key, { amount: "" })}
               fixedAccountName={w.fixedCashAccountName}
+              nativeHint="debit"
             />
             <AutoAmountSection
               title="البنوك"
-              hint="تُقيد أرصدة الشيكات والحسابات البنكية هنا على حساب بنكي."
               rows={w.cashBanks.filter((l) => l.kind === "bank")}
               onPatch={(key, patch) => w.updateLine(w.setCashBanks, key, patch)}
+              onDelete={(key) => w.updateLine(w.setCashBanks, key, { amount: "" })}
               fixedAccountName={w.fixedBankAccountName}
+              nativeHint="debit"
             />
           </div>
         );
       case 2:
         return (
           <div className="space-y-3">
-            <p className="text-xs text-slate-500">
-              أرصدة العملاء المشتقة — يمكنك التعديل أو إنشاء عميل جديد.
-            </p>
             <InlineRows
-              title="الذمم المدينة — العملاء (مشتقة)"
+              title="الذمم المدينة — العملاء "
               rows={w.derivedAr}
               onSave={w.saveCustomerOpening}
               label="رصيد العميل"
@@ -316,13 +313,15 @@ export function GuidedTransitionWizard() {
       case 4:
         return (
           <div className="space-y-3">
-            <p className="text-xs text-slate-500">
-              صافي القيمة الدفترية مشتق من سجل الأصول — يمكنك التعديل أو إنشاء أصل جديد.
-            </p>
             <InlineRows
-              title="الأصول الثابتة (مشتقة — صافي القيمة الدفترية)"
+              title="الأصول الثابتة"
               rows={w.faRows}
               onSave={w.saveFixedAssetOverride}
+              onDelete={(row) => w.setFaOverrides((prev) => {
+                const next = { ...prev };
+                delete next[row.entity_id];
+                return next;
+              })}
               label="القيمة الافتتاحية"
               nativeHint="debit"
             />
@@ -340,11 +339,8 @@ export function GuidedTransitionWizard() {
       case 5:
         return (
           <div className="space-y-4">
-            <p className="text-xs text-slate-500">
-              أرصدة الموردين + القروض والالتزامات — جميعها طبيعة دائن.
-            </p>
             <InlineRows
-              title="الذمم الدائنة — الموردون (مشتقة)"
+              title="الذمم الدائنة — الموردون"
               rows={w.derivedAp}
               onSave={w.saveSupplierOpening}
               label="رصيد المورد"
@@ -364,13 +360,21 @@ export function GuidedTransitionWizard() {
             </div>
             <AutoAmountSection
               title="القروض"
-              hint="قروض وتسليفات بنكية — تُقيد كالتزام على حساب قرض."
               rows={w.loans}
               onPatch={(key, patch) => w.updateLine(w.setLoans, key, patch)}
+              onDelete={(key) => w.updateLine(w.setLoans, key, { amount: "" })}
               fixedAccountName={w.fixedLoanAccountName}
+              nativeHint="credit"
             />
             <div className="space-y-1.5">
-              <div className="text-xs font-semibold text-slate-600">التزامات أخرى (يدوي)</div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700">التزامات أخرى</span>
+                {w.liabilitiesManual.some((l) => parseFloat(l.amount) > 0) && (
+                  <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-bold text-emerald-700 tabular-nums">
+                    {toFixed(w.liabilitiesManual.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0), 2)}
+                  </span>
+                )}
+              </div>
               <WizardLineEditor rows={w.liabilitiesManual} setter={w.setLiabilitiesManual} updateLine={w.updateLine} placeholder="ابحث واختر حساب التزام..." accounts={w.accounts} detailAccounts={w.detailAccounts} />
             </div>
           </div>
@@ -378,11 +382,8 @@ export function GuidedTransitionWizard() {
       case 6:
         return (
           <div className="space-y-3">
-            <p className="text-xs text-slate-500">
-              رؤوس أموال + حسابات جارية + حقوق ملكية — جميعها طبيعة دائن.
-            </p>
             <InlineRows
-              title="رؤوس أموال الشركاء (مشتقة)"
+              title="الشركاء ورأس المال"
               rows={w.partnerEquity}
               onSave={w.savePartnerCapital}
               label="رأس المال"
@@ -396,15 +397,25 @@ export function GuidedTransitionWizard() {
                 صفحة الشركاء ←
               </Button>
             </div>
-            <InlineRows
-              title="الحسابات الجارية للشركاء"
-              rows={w.partnerCurrentManualRows}
-              onSave={w.savePartnerCurrentAccount}
-              label="الحساب الجاري"
-              nativeHint="credit"
-            />
+            {w.partnerCurrentManualRows.length > 0 && (
+              <InlineRows
+                title="الحسابات الجارية للشركاء"
+                rows={w.partnerCurrentManualRows}
+                onSave={w.savePartnerCurrentAccount}
+                onDelete={(row) => w.setPartnerCurrentManual((prev) => prev.filter((l) => l.key !== row.key))}
+                label="الحساب الجاري"
+                nativeHint="credit"
+              />
+            )}
             <div className="space-y-1.5">
-              <div className="text-xs font-semibold text-slate-600">حقوق ملكية أخرى (يدوي)</div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700">حقوق ملكية أخرى</span>
+                {w.equityManual.some((l) => parseFloat(l.amount) > 0) && (
+                  <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-bold text-emerald-700 tabular-nums">
+                    {toFixed(w.equityManual.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0), 2)}
+                  </span>
+                )}
+              </div>
               <WizardLineEditor rows={w.equityManual} setter={w.setEquityManual} updateLine={w.updateLine} placeholder="ابحث واختر حساب حقوق ملكية..." accounts={w.accounts} detailAccounts={w.detailAccounts} />
             </div>
           </div>
@@ -709,29 +720,40 @@ function InlineRows({
   title,
   rows,
   onSave,
+  onDelete,
   label,
   nativeHint,
 }: {
   title: string;
   rows: DerivedRow[];
   onSave: (row: DerivedRow, value: string) => Promise<boolean>;
+  onDelete?: (row: DerivedRow) => void;
   label: string;
   nativeHint?: "debit" | "credit";
 }) {
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-slate-600">{title}</span>
-        <span className="tabular-nums text-xs font-bold text-slate-700">
-          {rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0).toFixed(2)}
-        </span>
+        <span className="text-xs font-bold text-slate-700">{title}</span>
+        {rows.some((r) => parseFloat(r.amount) > 0) && (
+          <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-bold text-emerald-700 tabular-nums">
+            {rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0).toFixed(2)}
+          </span>
+        )}
       </div>
       {rows.length === 0 ? (
         <p className="text-xs text-slate-400 py-1.5">لا توجد بنود مشتقة.</p>
       ) : (
         <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 bg-slate-50/40">
           {rows.map((r) => (
-            <InlineBalanceRow key={r.key} row={r} onSave={onSave} label={label} nativeHint={nativeHint} />
+            <InlineBalanceRow
+              key={r.key}
+              row={r}
+              onSave={onSave}
+              onDelete={onDelete}
+              label={label}
+              nativeHint={nativeHint}
+            />
           ))}
         </div>
       )}

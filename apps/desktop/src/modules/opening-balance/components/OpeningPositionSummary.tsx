@@ -112,7 +112,7 @@ export function OpeningPositionSummary({
           <SectionLabel color="text-emerald-700">الخصوم (L)</SectionLabel>
           <Row label="الذمم الدائنة (الموردون)" value={suppliers} />
           <Row label="قروض وتسليفات" value={loans} />
-          <Row label="خصوم أخرى (يدوي)" value={otherLiabilities} />
+          <Row label="خصوم أخرى" value={otherLiabilities} />
           <div className="pt-1 border-t border-emerald-100">
             <Row label="إجمالي الخصوم" value={totalLiabilities} strong />
           </div>

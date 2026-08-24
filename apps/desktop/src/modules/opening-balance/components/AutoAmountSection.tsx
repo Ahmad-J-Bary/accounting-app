@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Plus, X } from "lucide-react";
+import { Check, Plus, X, Trash2 } from "lucide-react";
 import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
 import { toFixed } from "@shared/lib/format";
@@ -10,7 +10,9 @@ interface AutoAmountSectionProps {
   hint?: string;
   rows: WizLine[];
   onPatch: (key: string, patch: Partial<WizLine>) => void;
+  onDelete?: (key: string) => void;
   fixedAccountName: string;
+  nativeHint?: "debit" | "credit";
 }
 
 /**
@@ -20,7 +22,7 @@ interface AutoAmountSectionProps {
  * - After save: positive balance shows saved value + edit button; 0/empty returns to add pill
  * - Exactly one of: add pill / edit form / saved row is visible at any time
  */
-export function AutoAmountSection({ title, hint, rows, onPatch, fixedAccountName }: AutoAmountSectionProps) {
+export function AutoAmountSection({ title, hint, rows, onPatch, onDelete, fixedAccountName, nativeHint }: AutoAmountSectionProps) {
   const [editing, setEditing] = useState(false);
   const [localValue, setLocalValue] = useState("");
 
@@ -43,7 +45,14 @@ export function AutoAmountSection({ title, hint, rows, onPatch, fixedAccountName
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-bold text-slate-700">{title}</p>
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold text-slate-700">{title}</span>
+        {existingRow && toNum(existingRow.amount) > 0 && (
+          <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-bold text-emerald-700 tabular-nums">
+            {toFixed(toNum(existingRow.amount), 2)}
+          </span>
+        )}
+      </div>
       {hint && <p className="text-xs text-slate-500">{hint}</p>}
 
       {(!existingRow || toNum(existingRow.amount) <= 0) && !editing && (
@@ -60,11 +69,11 @@ export function AutoAmountSection({ title, hint, rows, onPatch, fixedAccountName
       )}
 
       {editing && (
-        <div className="flex items-stretch gap-2">
-          <div className="flex-1 min-w-0 rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 flex items-center">
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0 rounded-lg border border-slate-200 bg-slate-50/60 px-2 py-1.5 flex items-center">
             <span className="text-xs font-bold text-slate-700 truncate">{fixedAccountName}</span>
           </div>
-          <div className="w-36 shrink-0">
+          <div className="w-32 shrink-0">
             <Input
               type="number"
               min={0}
@@ -74,7 +83,7 @@ export function AutoAmountSection({ title, hint, rows, onPatch, fixedAccountName
               placeholder="الرصيد الافتتاحي"
               aria-label="الرصيد الافتتاحي"
               autoFocus
-              className={"h-9 text-right tabular-nums " + (localValue.trim() !== "" && toNum(localValue) <= 0 ? "border-red-400" : "border-slate-200")}
+              className={"h-8 text-right tabular-nums text-xs " + (localValue.trim() !== "" && toNum(localValue) <= 0 ? "border-red-400" : "border-slate-200")}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && existingRow) {
                   e.preventDefault();
@@ -83,12 +92,14 @@ export function AutoAmountSection({ title, hint, rows, onPatch, fixedAccountName
               }}
             />
           </div>
+          {nativeHint && (
+            <span className="text-2xs text-slate-400 shrink-0">{nativeHint === "debit" ? "مدين" : "دائن"}</span>
+          )}
           <Button
             type="button"
             size="sm"
-            variant="default"
             onClick={() => existingRow && save(existingRow.key)}
-            className="h-9 px-3 text-xs font-bold shrink-0"
+            className="h-8 px-2 text-xs font-bold shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white"
           >
             <Check className="w-3.5 h-3.5 ml-1" />
             حفظ
@@ -98,7 +109,7 @@ export function AutoAmountSection({ title, hint, rows, onPatch, fixedAccountName
             size="sm"
             variant="ghost"
             onClick={() => setEditing(false)}
-            className="h-9 w-9 p-0 text-slate-400 hover:text-slate-600 shrink-0"
+            className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 shrink-0"
           >
             <X className="w-3.5 h-3.5" />
           </Button>
@@ -107,21 +118,36 @@ export function AutoAmountSection({ title, hint, rows, onPatch, fixedAccountName
 
       {existingRow && toNum(existingRow.amount) > 0 && !editing && (
         <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0 rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 flex items-center">
+          <div className="flex-1 min-w-0 rounded-lg border border-slate-200 bg-slate-50/60 px-2 py-1.5 flex items-center">
             <span className="text-xs font-bold text-slate-700 truncate">{fixedAccountName}</span>
           </div>
-          <div className="w-36 shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 flex items-center justify-end">
+          <div className="w-32 shrink-0 rounded-lg border border-slate-200 bg-white px-2 py-1.5 flex items-center justify-end">
             <span className="tabular-nums text-xs font-bold text-slate-700">{toFixed(toNum(existingRow.amount), 2)}</span>
           </div>
+          {nativeHint && (
+            <span className="text-2xs text-slate-400 shrink-0">{nativeHint === "debit" ? "مدين" : "دائن"}</span>
+          )}
           <Button
             type="button"
             size="sm"
             variant="outline"
             onClick={() => startEdit(existingRow)}
-            className="h-9 px-3 text-xs font-bold shrink-0 border-blue-200 text-blue-700 hover:bg-blue-50"
+            className="h-8 px-2 text-xs font-bold shrink-0 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
           >
             تعديل
           </Button>
+          {onDelete && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => onDelete(existingRow.key)}
+              className="h-8 w-8 p-0 text-red-400 hover:bg-red-50 hover:text-red-600 shrink-0"
+              aria-label="حذف الرصيد"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
       )}
     </div>

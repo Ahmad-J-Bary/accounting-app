@@ -56,11 +56,13 @@ describe("WizardLineEditor", () => {
     expect(screen.getByText("لا توجد بنود بعد")).toBeInTheDocument();
   });
 
-  it("adds a row via the add button", async () => {
+it("adds a row via the add button", async () => {
     const user = userEvent.setup();
     render(<Harness />);
+    await user.click(screen.getByRole("button", { name: /تعديل/ }));
     expect(screen.getAllByRole("combobox")).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: /إضافة بند/ }));
+    // New row starts in edit mode immediately (no "تعديل" click needed)
     expect(screen.getAllByRole("combobox")).toHaveLength(2);
   });
 
