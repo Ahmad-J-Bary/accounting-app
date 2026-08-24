@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import type { AccountDto, FiscalPeriodDto, CustomerDto, SupplierDto, ResidualClassificationSpecDto } from "@erp/shared-types";
 import type { WizardStepDef } from "@modules/opening-balance/components/WizardShell";
 
-type AssetType = "buildings_land" | "equipment" | "furniture";
+type AssetType = "buildings_land" | "automotive" | "equipment" | "furniture";
 import { queryClient, QUERY_KEYS } from "@shared/hooks/queryClient";
 import { toLocalDatePart } from "@shared/lib/format";
 import { accountingService } from "@modules/accounting/api/accountingService";
@@ -869,6 +869,8 @@ export function useOpeningBalanceWizard() {
       let assetKeywords: string[];
       if (data.assetType === "buildings_land") {
         assetKeywords = ["أبنية", "أراضي", "أصول ثابتة"];
+      } else if (data.assetType === "automotive") {
+        assetKeywords = ["آليات", "سيارات", "مركبات", "نقليات", "ثقيلة"];
       } else if (data.assetType === "equipment") {
         assetKeywords = ["معدات", "تجهيزات"];
       } else {
@@ -889,12 +891,29 @@ export function useOpeningBalanceWizard() {
       }
 
       // Find matching category by asset type
-      const matchedCategory = assetCategories.find((c) => {
+      let matchedCategory = assetCategories.find((c) => {
         const lower = (c.name || "").toLowerCase();
         if (data.assetType === "buildings_land") return lower.includes("أبنية") || lower.includes("أراضي");
+        if (data.assetType === "automotive") return lower.includes("آليات") || lower.includes("سيارات") || lower.includes("مركبات");
         if (data.assetType === "equipment") return lower.includes("معدات") || lower.includes("تجهيزات");
         return lower.includes("أثاث") || lower.includes("مفروشات");
       });
+
+      // Auto-create categories if none exist (mirrors FixedAssetForm behavior)
+      if (!matchedCategory && assetCategories.length === 0) {
+        const DEFAULTS = ["أبنية وأراضي", "آليات", "معدات وتجهيزات", "أثاث ومفروشات"];
+        for (const catName of DEFAULTS) {
+          await fixedAssetService.createCategory(catName, "Fixed");
+        }
+        const refreshed = await fixedAssetService.listCategories("Fixed");
+        matchedCategory = refreshed.find((c) => {
+          const lower = (c.name || "").toLowerCase();
+          if (data.assetType === "buildings_land") return lower.includes("أبنية") || lower.includes("أراضي");
+          if (data.assetType === "automotive") return lower.includes("آليات") || lower.includes("سيارات") || lower.includes("مركبات");
+          if (data.assetType === "equipment") return lower.includes("معدات") || lower.includes("تجهيزات");
+          return lower.includes("أثاث") || lower.includes("مفروشات");
+        }) || refreshed[0];
+      }
 
       if (!assetAcc || !depAcc || !accDepAcc) {
         toast.error("لم يتم العثور على حسابات الأصول الثابتة في دليل الحسابات");

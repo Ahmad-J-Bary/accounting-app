@@ -227,11 +227,91 @@ async fn ensure_opening_balance_equity_account(pool: &SqlitePool) {
         let _ = sqlx::query(
             "UPDATE accounts SET code = '53', name_ar = 'رصيد افتتاحي', name_en = 'Opening Balance Equity', parent_id = (SELECT id FROM accounts WHERE code = '5'), account_type = 'Equity', category = 'Detail', level = 2, purpose = 'opening_balance_equity', updated_at = datetime('now') WHERE code = '224'"
         ).execute(pool).await;
-        // If 224 didn't exist either (e.g. deleted by migration 128), create 53 fresh
+        // 4. If 224 didn't exist either (e.g. deleted by migration 128), create 53 fresh
         let _ = sqlx::query(
             "INSERT OR IGNORE INTO accounts (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, purpose, is_active, created_at, updated_at) SELECT '00000000-0000-0000-0000-000000000053', '53', 'رصيد افتتاحي', 'Opening Balance Equity', 'Equity', (SELECT id FROM accounts WHERE code = '5'), 'Detail', 2, '0', '0', 'opening_balance_equity', 1, datetime('now'), datetime('now') WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE code = '53')"
         ).execute(pool).await;
     }
+}
+
+/// Ensure fixed asset accounts (111 أبنية وأراضي, 112 آليات, 113 معدات وتجهيزات, 114 أثاث ومفروشات)
+/// and asset_categories ("آليات") are correctly initialized and numbered in the database.
+async fn ensure_fixed_asset_accounts(pool: &SqlitePool) {
+    // 0) Ensure parent "11 - الأصول الثابتة" exists (under 1 = الأصول)
+    let _ = sqlx::query(
+        "INSERT OR IGNORE INTO accounts
+         (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at)
+         VALUES
+         ('00000000-0000-0000-0000-000000000011', '11', 'الأصول الثابتة', 'Fixed Assets', 'Assets',
+          (SELECT id FROM accounts WHERE code = '1'), 'Summary', 2, '0', '0', 1, datetime('now'), datetime('now'))"
+    ).execute(pool).await;
+
+    // 1) Renumbering legacy/misplaced codes:
+    let _ = sqlx::query(
+        "UPDATE accounts SET code = '114', updated_at = datetime('now') WHERE code IN ('1103', '113') AND name_ar LIKE '%أثاث%' AND code != '114'"
+    ).execute(pool).await;
+
+    let _ = sqlx::query(
+        "UPDATE accounts SET code = '112_tmp', updated_at = datetime('now') WHERE code IN ('1102', '112') AND name_ar LIKE '%معدات%' AND code != '112_tmp'"
+    ).execute(pool).await;
+
+    // 2) Ensure "112 - آليات" exists and has correct name and code
+    let _ = sqlx::query(
+        "INSERT OR IGNORE INTO accounts
+         (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at)
+         VALUES
+         ('00000000-0000-0000-0000-000000000112', '112', 'آليات', 'Automotive & Machinery', 'Assets',
+          (SELECT id FROM accounts WHERE code = '11'), 'Detail', 3, '0', '0', 1, datetime('now'), datetime('now'))"
+    ).execute(pool).await;
+    let _ = sqlx::query(
+        "UPDATE accounts SET name_ar = 'آليات', name_en = 'Automotive & Machinery', updated_at = datetime('now') WHERE code = '112' AND name_ar != 'آليات'"
+    ).execute(pool).await;
+
+    // 3) Move temporary '112_tmp' to '113' (معدات وتجهيزات) or insert 113 if missing
+    let _ = sqlx::query(
+        "UPDATE accounts SET code = '113', name_ar = 'معدات وتجهيزات', name_en = 'Equipment', updated_at = datetime('now') WHERE code = '112_tmp'"
+    ).execute(pool).await;
+    let _ = sqlx::query(
+        "INSERT OR IGNORE INTO accounts
+         (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at)
+         VALUES
+         ('00000000-0000-0000-0000-000000001102', '113', 'معدات وتجهيزات', 'Equipment', 'Assets',
+          (SELECT id FROM accounts WHERE code = '11'), 'Detail', 3, '0', '0', 1, datetime('now'), datetime('now'))"
+    ).execute(pool).await;
+
+    // 4) Ensure "111 - أبنية وأراضي" exists
+    let _ = sqlx::query(
+        "UPDATE accounts SET code = '111', updated_at = datetime('now') WHERE code = '1101' AND code != '111'"
+    ).execute(pool).await;
+    let _ = sqlx::query(
+        "INSERT OR IGNORE INTO accounts
+         (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at)
+         VALUES
+         ('00000000-0000-0000-0000-000000001101', '111', 'أبنية وأراضي', 'Buildings & Land', 'Assets',
+          (SELECT id FROM accounts WHERE code = '11'), 'Detail', 3, '0', '0', 1, datetime('now'), datetime('now'))"
+    ).execute(pool).await;
+
+    // 5) Ensure "114 - أثاث ومفروشات" exists
+    let _ = sqlx::query(
+        "INSERT OR IGNORE INTO accounts
+         (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at)
+         VALUES
+         ('00000000-0000-0000-0000-000000001103', '114', 'أثاث ومفروشات', 'Furniture', 'Assets',
+          (SELECT id FROM accounts WHERE code = '11'), 'Detail', 3, '0', '0', 1, datetime('now'), datetime('now'))"
+    ).execute(pool).await;
+
+    // 6) Re-parent 111, 112, 113, 114 under account 11 ("الأصول الثابتة")
+    let _ = sqlx::query(
+        "UPDATE accounts SET parent_id = (SELECT id FROM accounts WHERE code = '11'), level = 3, updated_at = datetime('now')
+         WHERE code IN ('111', '112', '113', '114')"
+    ).execute(pool).await;
+
+    // 7) Ensure "آليات" exists in asset_categories
+    let _ = sqlx::query(
+        "INSERT INTO asset_categories (id, name, asset_type)
+         SELECT '00000000-0000-0000-0000-00000000c101', 'آليات', 'Fixed'
+         WHERE NOT EXISTS (SELECT 1 FROM asset_categories WHERE name = 'آليات')"
+    ).execute(pool).await;
 }
 
 pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::migrate::MigrateError> {
@@ -254,6 +334,7 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::migrate::Migr
                 ensure_discount_earned_account(pool).await;
                 ensure_discount_granted_account(pool).await;
                 ensure_opening_balance_equity_account(pool).await;
+                ensure_fixed_asset_accounts(pool).await;
                 return Ok(());
             }
             Err(sqlx::migrate::MigrateError::VersionMismatch(version)) => {
@@ -290,6 +371,8 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::migrate::Migr
                     ensure_currency_columns(pool).await;
                     ensure_discount_earned_account(pool).await;
                     ensure_discount_granted_account(pool).await;
+                    ensure_opening_balance_equity_account(pool).await;
+                    ensure_fixed_asset_accounts(pool).await;
 
                     // Mark all remaining migrations as applied so they won't be retried
                     let applied_versions: Vec<i64> =

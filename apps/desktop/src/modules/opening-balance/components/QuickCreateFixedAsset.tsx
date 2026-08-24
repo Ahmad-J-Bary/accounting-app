@@ -6,10 +6,11 @@ import { Badge } from "@shared/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import type { WarehouseDto } from "@erp/shared-types";
 
-type AssetType = "buildings_land" | "equipment" | "furniture";
+type AssetType = "buildings_land" | "automotive" | "equipment" | "furniture";
 
 const ASSET_TYPE_OPTIONS: { value: AssetType; label: string }[] = [
   { value: "buildings_land", label: "أبنية وأراضي" },
+  { value: "automotive", label: "آليات" },
   { value: "equipment", label: "معدات وتجهيزات" },
   { value: "furniture", label: "أثاث ومفروشات" },
 ];

@@ -57,7 +57,7 @@ function isPurposeOf(purpose: string | undefined, ...tags: string[]): boolean {
 
 function isFixedAsset(code: string, name: string, purpose?: string): boolean {
   if (isPurposeOf(purpose, "fixed_asset")) return true;
-  const fixedIndicators = ["11", "ثابت", "عقار", "أرض", "مبنى", "بناء", "أبنية", "أراضي", "معدات", "تجهيز", "أثاث", "مفروش", "مجمع إهلاك"];
+  const fixedIndicators = ["11", "ثابت", "عقار", "أرض", "مبنى", "بناء", "أبنية", "أراضي", "آليات", "سيارات", "مركبات", "نقليات", "معدات", "تجهيز", "أثاث", "مفروش", "مجمع إهلاك"];
   if (fixedIndicators.some(i => code.startsWith(i) || name.includes(i))) return true;
   return false;
 }

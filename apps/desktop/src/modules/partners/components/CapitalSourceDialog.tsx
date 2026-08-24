@@ -39,7 +39,7 @@ function accountCandidates(accounts: AccountDto[], source: CapitalSource): Accou
     case 'Bank':
       return detail.filter((a) => match(a).includes('بنك') || match(a).includes('مصرف'));
     case 'InKind':
-      return detail.filter((a) => byPurpose(a, 'fixed_asset', 'inventory') || match(a).includes('أصل') || match(a).includes('عيني') || match(a).includes('معدات') || match(a).includes('مخزون'));
+      return detail.filter((a) => byPurpose(a, 'fixed_asset', 'inventory') || match(a).includes('أصل') || match(a).includes('عيني') || match(a).includes('آليات') || match(a).includes('سيارات') || match(a).includes('معدات') || match(a).includes('مخزون'));
     case 'Owed':
       return detail.filter((a) => byPurpose(a, 'receivable') || match(a).includes('ذمة') || match(a).includes('مستحق') || match(a).includes('عميل') || match(a).includes('قبض') || match(a).includes('مدين'));
     default:

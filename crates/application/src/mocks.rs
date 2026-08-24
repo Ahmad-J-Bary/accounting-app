@@ -116,6 +116,11 @@ impl AssetRepository for MockAssetRepository {
         self.delete_asset(id).await?;
         self.delete_movements_by_asset(&id.0).await
     }
+
+    async fn get_next_asset_number(&self) -> Result<i32, AppError> {
+        let assets = self.assets.lock().unwrap();
+        Ok((assets.len() + 1) as i32)
+    }
 }
 
 pub struct MockJournalRepository {

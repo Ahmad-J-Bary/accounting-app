@@ -33,6 +33,14 @@ pub fn derive_journal_type_display(
     }) {
         "أبنية وأراضي"
     } else if names.iter().any(|s| {
+        s.contains("آليات")
+            || s.contains("سيارات")
+            || s.contains("مركبات")
+            || s.contains("السيارات")
+            || s.contains("الآليات")
+    }) {
+        "آليات"
+    } else if names.iter().any(|s| {
         s.contains("معدات")
             || s.contains("تجهيزات")
             || s.contains("الآلات")

@@ -31,6 +31,7 @@ import {
 
 const TYPE_CATEGORY_NAMES: Record<string, string[]> = {
   buildings_land: ["أبنية وأراضي"],
+  automotive: ["آليات"],
   equipment: ["معدات وتجهيزات"],
   furniture: ["أثاث ومفروشات"],
 };
@@ -53,7 +54,7 @@ export default function FixedAssetsPage() {
 
   const [categories, setCategories] = useState<AssetCategoryDto[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
-  const [assetTypeFilter, setAssetTypeFilter] = useState<"all" | "buildings_land" | "equipment" | "furniture">("all");
+  const [assetTypeFilter, setAssetTypeFilter] = useState<"all" | "buildings_land" | "automotive" | "equipment" | "furniture">("all");
   const [warehouseFilter, setWarehouseFilter] = useState<string>("all");
   const [showForm, setShowForm] = useState(false);
   const [editingAsset, setEditingAsset] = useState<FixedAssetDto | null>(null);
@@ -103,7 +104,7 @@ export default function FixedAssetsPage() {
   }, [warehouses]);
 
   // Determine if warehouse filter is applicable (only for equipment and furniture)
-  const isWarehouseApplicable = assetTypeFilter === "equipment" || assetTypeFilter === "furniture";
+  const isWarehouseApplicable = assetTypeFilter === "equipment" || assetTypeFilter === "furniture" || assetTypeFilter === "automotive";
 
   // Only show warehouse filter when applicable AND there are multiple active warehouses
   const showWarehouseFilter = isWarehouseApplicable && activeWarehouses.length > 1;
@@ -447,7 +448,7 @@ export default function FixedAssetsPage() {
               <Select
                 dir="rtl"
                 value={assetTypeFilter}
-                onValueChange={(v: "all" | "buildings_land" | "equipment" | "furniture") => {
+                onValueChange={(v: "all" | "buildings_land" | "automotive" | "equipment" | "furniture") => {
                   setAssetTypeFilter(v);
                   setWarehouseFilter("all");
                 }}
@@ -458,6 +459,7 @@ export default function FixedAssetsPage() {
                 <SelectContent>
                   <SelectItem value="all" className="text-xs">كل الأصول</SelectItem>
                   <SelectItem value="buildings_land" className="text-xs">أبنية وأراضي</SelectItem>
+                  <SelectItem value="automotive" className="text-xs">آليات</SelectItem>
                   <SelectItem value="equipment" className="text-xs">معدات وتجهيزات</SelectItem>
                   <SelectItem value="furniture" className="text-xs">أثاث ومفروشات</SelectItem>
                 </SelectContent>

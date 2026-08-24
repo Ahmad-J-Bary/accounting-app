@@ -44,9 +44,10 @@ interface FixedAssetFormProps {
   initialCategoryId?: string;
 }
 
-function detectAssetTypeFromCategory(catName: string): "buildings_land" | "equipment" | "furniture" | "" {
+function detectAssetTypeFromCategory(catName: string): "buildings_land" | "automotive" | "equipment" | "furniture" | "" {
   const lower = catName.toLowerCase();
   if (lower.includes("أبنية") || lower.includes("أراضي") || lower.includes("land") || lower.includes("building")) return "buildings_land";
+  if (lower.includes("آليات") || lower.includes("سيارات") || lower.includes("مركبات") || lower.includes("automotive")) return "automotive";
   if (lower.includes("معدات") || lower.includes("تجهيزات") || lower.includes("equipment")) return "equipment";
   if (lower.includes("أثاث") || lower.includes("مفروشات") || lower.includes("furniture")) return "furniture";
   return "";
@@ -55,6 +56,7 @@ function detectAssetTypeFromCategory(catName: string): "buildings_land" | "equip
 // ===== Constants =====
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   buildings_land: <Landmark className="w-4 h-4" />,
+  automotive: <Wrench className="w-4 h-4" />,
   equipment: <Wrench className="w-4 h-4" />,
   furniture: <Armchair className="w-4 h-4" />,
   default: <Building2 className="w-4 h-4" />,
@@ -115,7 +117,7 @@ export function FixedAssetForm({
   // --- Basic info ---
   const code = asset?.code ?? "";
   const [name, setName] = useState(asset?.name ?? "");
-  const [assetType, setAssetType] = useState<"buildings_land" | "equipment" | "furniture" | "">("");
+  const [assetType, setAssetType] = useState<"buildings_land" | "automotive" | "equipment" | "furniture" | "">("");
   const [categoryId, setCategoryId] = useState(asset?.category_id ?? "");
   const [warehouseId, setWarehouseId] = useState<string | undefined>(asset?.warehouse_id ?? undefined);
   const [location, setLocation] = useState(asset?.location ?? "");
@@ -151,6 +153,9 @@ export function FixedAssetForm({
       if (assetType === "buildings_land") {
         return lower.includes("أبنية") || lower.includes("أراضي") || lower.includes("land") || lower.includes("building");
       }
+      if (assetType === "automotive") {
+        return lower.includes("آليات") || lower.includes("سيارات") || lower.includes("مركبات") || lower.includes("automotive");
+      }
       if (assetType === "equipment") {
         return lower.includes("معدات") || lower.includes("تجهيزات") || lower.includes("equipment");
       }
@@ -167,6 +172,7 @@ export function FixedAssetForm({
       const fallback = categories.find((c) => {
         const lower = c.name.toLowerCase();
         if (assetType === "buildings_land") return lower.includes("أرض") || lower.includes("مبنى");
+        if (assetType === "automotive") return lower.includes("آلة") || lower.includes("سيارة") || lower.includes("مركبة");
         if (assetType === "equipment") return lower.includes("آلة") || lower.includes("آلات") || lower.includes("جهاز");
         if (assetType === "furniture") return lower.includes("كرسي") || lower.includes("طاولة");
         return false;
@@ -179,6 +185,7 @@ export function FixedAssetForm({
   useEffect(() => {
     const DEFAULT_CATEGORIES = [
       { name: "أبنية وأراضي", assetType: "buildings_land" },
+      { name: "آليات", assetType: "automotive" },
       { name: "معدات وتجهيزات", assetType: "equipment" },
       { name: "أثاث ومفروشات", assetType: "furniture" },
     ];
@@ -262,6 +269,8 @@ export function FixedAssetForm({
     let assetKeywords: string[];
     if (assetType === "buildings_land") {
       assetKeywords = ["أبنية", "أراضي", "أصول ثابتة"];
+    } else if (assetType === "automotive") {
+      assetKeywords = ["آليات", "سيارات", "مركبات", "نقليات", "ثقيلة"];
     } else if (assetType === "equipment") {
       assetKeywords = ["معدات", "تجهيزات"];
     } else {
@@ -385,12 +394,13 @@ export function FixedAssetForm({
       {/* ── Section 1: Basic Info ── */}
       <SidebarSection title="البيانات الأساسية" icon={<FileText className="w-3.5 h-3.5" />} defaultOpen>
         <FormField label="نوع الأصل" required>
-          <Select dir="rtl" value={assetType} onValueChange={(v) => setAssetType(v as "buildings_land" | "equipment" | "furniture")}>
+          <Select dir="rtl" value={assetType} onValueChange={(v) => setAssetType(v as "buildings_land" | "automotive" | "equipment" | "furniture")}>
             <SelectTrigger className="bg-white border-slate-200 h-9 w-full text-right text-xs font-bold text-slate-800">
               <SelectValue placeholder="اختر نوع الأصل" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="buildings_land" className="text-xs">أبنية وأراضي</SelectItem>
+              <SelectItem value="automotive" className="text-xs">آليات</SelectItem>
               <SelectItem value="equipment" className="text-xs">معدات وتجهيزات</SelectItem>
               <SelectItem value="furniture" className="text-xs">أثاث ومفروشات</SelectItem>
             </SelectContent>
