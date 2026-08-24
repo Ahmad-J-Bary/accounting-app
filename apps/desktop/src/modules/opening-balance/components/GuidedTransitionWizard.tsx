@@ -1,7 +1,7 @@
 import { useMemo, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Check } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
 import { TabContext } from "@app/providers/TabContext";
 import type { AccountDto, ResidualClassificationSpecDto } from "@erp/shared-types";
 import { Input } from "@shared/ui/input";
@@ -295,8 +295,9 @@ export function GuidedTransitionWizard() {
                   direction="debit"
                   onCreate={(name, amount) => w.createCustomer(name, amount)}
                   navLink={
-                    <Button size="sm" variant="outline" onClick={() => goTo("/customers", "العملاء")} className="h-8 shrink-0 border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
-                      صفحة العملاء ←
+                    <Button size="sm" variant="outline" onClick={() => goTo("/customers", "العملاء")} className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all">
+                      صفحة العملاء
+                      <ArrowLeft className="w-3.5 h-3.5 mr-1" />
                     </Button>
                   }
                 />
@@ -332,8 +333,9 @@ export function GuidedTransitionWizard() {
                   warehouses={warehouses}
                   onCreate={(data) => w.createFixedAssetQuick(data)}
                   navLink={
-                    <Button size="sm" variant="outline" onClick={() => goTo("/fixed-assets", "الأصول الثابتة")} className="h-8 shrink-0 border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
-                      صفحة الأصول الثابتة ←
+                    <Button size="sm" variant="outline" onClick={() => goTo("/fixed-assets", "الأصول الثابتة")} className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all">
+                      صفحة الأصول الثابتة
+                      <ArrowLeft className="w-3.5 h-3.5 mr-1" />
                     </Button>
                   }
                 />
@@ -359,8 +361,9 @@ export function GuidedTransitionWizard() {
                   direction="credit"
                   onCreate={(name, amount) => w.createSupplier(name, amount)}
                   navLink={
-                    <Button size="sm" variant="outline" onClick={() => goTo("/suppliers", "الموردون")} className="h-8 shrink-0 border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
-                      صفحة الموردين ←
+                    <Button size="sm" variant="outline" onClick={() => goTo("/suppliers", "الموردون")} className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all">
+                      صفحة الموردين
+                      <ArrowLeft className="w-3.5 h-3.5 mr-1" />
                     </Button>
                   }
                 />
@@ -400,8 +403,9 @@ export function GuidedTransitionWizard() {
                 <QuickCreatePartner
                   onCreate={(data) => w.createPartnerQuick(data)}
                   navLink={
-                    <Button size="sm" variant="outline" onClick={() => goTo("/partners", "الشركاء")} className="h-8 shrink-0 border-blue-200 text-blue-700 font-bold hover:bg-blue-50">
-                      صفحة الشركاء ←
+                    <Button size="sm" variant="outline" onClick={() => goTo("/partners", "الشركاء")} className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all">
+                      صفحة الشركاء
+                      <ArrowLeft className="w-3.5 h-3.5 mr-1" />
                     </Button>
                   }
                 />
@@ -656,31 +660,18 @@ export function GuidedTransitionWizard() {
     };
   }, [w.cashBanks, w.derivedAr, w.arManualLines, w.inventoryTotal, w.faRows, w.derivedAp, w.loans, w.liabilitiesManual, w.partnerEquity, w.partnerCurrentManual, w.equityManual, w.reconciliation, w.effectiveInventory, w.materials, w.missingAccountHints]);
 
-  // ── Progress checklist (§15): every section's done-state, derived from data
-  // and the reached step so the user never has to remember what is finished.
-  const checklistItems: ChecklistItem[] = useMemo(() => {
-    const ar = sumLines(w.derivedAr) + sumLines(w.arManualLines);
-    const ap = sumLines(w.derivedAp);
-    const loansT = sumLines(w.loans);
-    const otherLiab = sumLines(w.liabilitiesManual);
-    const cap = sumLines(w.partnerEquity);
-    const partnerCurr = sumLines(w.partnerCurrentManual);
-    const otherEq = sumLines(w.equityManual);
-    const cashBank = sumLines(w.cashBanks);
-    const fa = sumLines(w.faRows);
-    return [
-      { key: "cutover", label: "تاريخ القطع", done: !!w.cutoverDate },
-      { key: "cash", label: "أرصدة النقد والبنوك", done: cashBank > 0 || w.step > 1 },
-      { key: "customers", label: "العملاء (الذمم المدينة)", done: ar > 0 || w.step > 2 },
-      { key: "inventory", label: "المخزون", done: w.inventoryTotal === 0 || w.step > 3 },
-      { key: "fixed-assets", label: "الأصول الثابتة", done: fa > 0 || w.step > 4 },
-      { key: "suppliers-loans", label: "الموردون والالتزامات", done: ap > 0 || loansT > 0 || otherLiab > 0 || w.step > 5 },
-      { key: "partners", label: "حقوق الشركاء", done: cap > 0 || partnerCurr > 0 || otherEq > 0 || w.step > 6 },
-      { key: "reconcile", label: "التسوية", done: !!w.reconciliation && w.reconciliation.all_reconciled },
-      { key: "balanced", label: "متوازن", done: w.savedTotals.balanced },
-      { key: "ready", label: "جاهز للترحيل", done: w.step >= STEP_REVIEW && w.canNext },
-    ].sort((a, b) => (a.done === b.done ? 0 : a.done ? -1 : 1));
-  }, [w.derivedAr, w.arManualLines, w.derivedAp, w.loans, w.liabilitiesManual, w.partnerEquity, w.partnerCurrentManual, w.equityManual, w.cashBanks, w.faRows, w.inventoryTotal, w.step, w.cutoverDate, w.reconciliation, w.savedTotals, w.canNext]);
+  // ── Progress checklist (§15): a direct mirror of the wizard's own stepper —
+  // same labels, same dynamic order (stepOrder), same done-state
+  // (completedSteps) — so the two can never drift apart.
+  const checklistItems: ChecklistItem[] = useMemo(
+    () =>
+      w.stepOrder.map((idx) => ({
+        key: w.steps[idx]?.id ?? String(idx),
+        label: w.steps[idx]?.label ?? "",
+        done: w.completedSteps.has(idx),
+      })),
+    [w.stepOrder, w.steps, w.completedSteps],
+  );
 
   // Use stepOrder from the hook (single source of truth).
   const stepOrder = w.stepOrder;

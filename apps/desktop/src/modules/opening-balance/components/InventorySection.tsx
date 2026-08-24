@@ -1,5 +1,6 @@
 import { Input } from "@shared/ui/input";
 import { Button } from "@shared/ui/button";
+import { ArrowLeft } from "lucide-react";
 import { toFixed } from "@shared/lib/format";
 import type { InventoryEntry } from "@modules/opening-balance/lib/derive-rows";
 
@@ -80,9 +81,10 @@ export function InventorySection({ rows, onRowChange, total, onNavigateToInvoice
           size="sm"
           variant="outline"
           onClick={onNavigateToInvoice}
-          className="border-blue-200 text-blue-700 font-bold hover:bg-blue-50"
+          className="h-8 shrink-0 rounded-full border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all"
         >
-          صفحة فاتورة أول المدة ←
+          صفحة فاتورة أول المدة
+          <ArrowLeft className="w-3.5 h-3.5 mr-1" />
         </Button>
       </div>
     </div>
