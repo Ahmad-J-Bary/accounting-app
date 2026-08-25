@@ -270,7 +270,7 @@ export function FixedAssetForm({
 
     let assetKeywords: string[];
     if (assetType === "buildings_land") {
-      assetKeywords = ["أبنية", "أراضي", "أصول ثابتة"];
+      assetKeywords = ["أبنية", "أراضي"];
     } else if (assetType === "automotive") {
       assetKeywords = ["آليات", "سيارات", "مركبات", "نقليات", "ثقيلة"];
     } else if (assetType === "equipment") {

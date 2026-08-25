@@ -886,7 +886,7 @@ export function useOpeningBalanceWizard() {
 
       let assetKeywords: string[];
       if (data.assetType === "buildings_land") {
-        assetKeywords = ["أبنية", "أراضي", "أصول ثابتة"];
+        assetKeywords = ["أبنية", "أراضي"];
       } else if (data.assetType === "automotive") {
         assetKeywords = ["آليات", "سيارات", "مركبات", "نقليات", "ثقيلة"];
       } else if (data.assetType === "equipment") {
@@ -959,7 +959,7 @@ export function useOpeningBalanceWizard() {
         asset_account_id: assetAcc.id,
         depreciation_account_id: depAcc.id,
         accumulated_depreciation_account_id: accDepAcc.id,
-        payment_account_id: assetAcc.id,
+        payment_account_id: findAccount(["رأس المال", "رأس مال", "capital", "أول المدة"], "Equity")?.id || assetAcc.id,
         addition_type: "existing",
       });
 
