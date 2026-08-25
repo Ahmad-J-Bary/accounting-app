@@ -96,6 +96,20 @@ export function lineNet(line: JournalLineDto): number {
 
 const ALL_GL_TYPES: Set<string> = new Set(["Assets", "Liabilities", "Equity", "Revenue", "Expenses"]);
 
+/** Opening-migration pivot entries — always included regardless of date range.
+ *  These are the same markers `ledgerTotals.ts` uses to classify pre-period. */
+function isOpeningMigrationEntry(entry: JournalEntryDto): boolean {
+  const source = entry.source_id || "";
+  return (
+    source.startsWith("opening_balance:") ||
+    source.startsWith("residual_classification:") ||
+    source.startsWith("ob_reversal:") ||
+    entry.journal_type === "CashOpeningBalance" ||
+    entry.journal_type === "AccountOpeningBalance" ||
+    entry.journal_type === "MaterialOpeningBalance"
+  );
+}
+
 export function computeGlAccountNets(
   entries: JournalEntryDto[],
   opts?: { fromTs?: number; toTs?: number; accounts?: AccountDto[] },
@@ -120,11 +134,17 @@ export function computeGlAccountNets(
   for (const entry of entries) {
     if (!isPostedLedgerEntry(entry)) continue;
 
-    const entryTs = new Date(entry.entry_date).getTime();
-    if (inRange) {
-      if (!Number.isFinite(entryTs)) continue;
-      if (opts?.fromTs !== undefined && entryTs < opts.fromTs) continue;
-      if (opts?.toTs !== undefined && entryTs > opts.toTs) continue;
+    // Opening-migration entries are ALWAYS included — they represent the
+    // cumulative opening position, not a period movement. Excluding them
+    // by date range causes balance-sheet tiles (cash, bank, AR, AP, loans)
+    // to show 0 on the Dashboard.
+    if (!isOpeningMigrationEntry(entry)) {
+      const entryTs = new Date(entry.entry_date).getTime();
+      if (inRange) {
+        if (!Number.isFinite(entryTs)) continue;
+        if (opts?.fromTs !== undefined && entryTs < opts.fromTs) continue;
+        if (opts?.toTs !== undefined && entryTs > opts.toTs) continue;
+      }
     }
 
     for (const line of entry.lines) {

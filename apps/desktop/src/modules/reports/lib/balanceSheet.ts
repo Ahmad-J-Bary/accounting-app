@@ -71,7 +71,7 @@ function isCurrentAsset(code: string, name: string, purpose?: string): boolean {
 
 /** حسابات البضاعة التي يجب استثناؤها من الميزانية العمومية (تُعالَج في قائمة الدخل) */
 function isInventoryTradingAccount(name: string): boolean {
-  return name.includes("بضاعة أول المدة") || name.includes("بضاعة آخر المدة") || name.includes("بضاعة");
+  return name.includes("بضاعة أول المدة") || name.includes("بضاعة آخر المدة");
 }
 
 function isFixedLiability(code: string, name: string): boolean {
