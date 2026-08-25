@@ -62,27 +62,28 @@ export function InlineBalanceRow({ row, onSave, onDelete, label, nativeHint = "d
             />
             <span className="text-2xs text-slate-400">{nativeHint === "debit" ? "مدين" : "دائن"}</span>
           </div>
-          <div className="flex flex-col items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => void save()}
+              disabled={disabled || saving}
+              className="h-8 px-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+              aria-label="حفظ الرصيد"
+            >
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              حفظ
+            </Button>
             <Button
               type="button"
               size="sm"
               variant="ghost"
               onClick={() => { setEditing(false); setValue(row.amount); }}
               disabled={disabled}
-              className="h-7 w-7 p-0 text-slate-400 hover:text-slate-600"
+              className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 shrink-0"
               aria-label="إلغاء التعديل"
             >
               <X className="w-3.5 h-3.5" />
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => void save()}
-              disabled={disabled || saving}
-              className="h-7 px-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
-              aria-label="حفظ الرصيد"
-            >
-              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
             </Button>
           </div>
         </>

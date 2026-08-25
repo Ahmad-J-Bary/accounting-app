@@ -11,13 +11,7 @@ import { cn } from "@shared/lib/utils";
 import { StatusBadge } from "@shared/ui/status-badge";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { toLocalDateStr, toFixed, fmtMoney } from "@shared/lib/format";
-import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
-import { QUERY_KEYS } from "@shared/hooks/queryClient";
-import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
 import { warehouseService } from "@modules/inventory/api/warehouseService";
-import {
-  type OpeningBalanceMigrationDto,
-} from "@modules/accounting/api/openingBalanceService";
 import { WizardShell } from "@modules/opening-balance/components/WizardShell";
 import { WizardLineEditor } from "@modules/opening-balance/components/WizardLineEditor";
 import { QuickCreateInline } from "@modules/opening-balance/components/QuickCreateInline";
@@ -104,7 +98,7 @@ export function GuidedTransitionWizard() {
             {isNew ? (
               "أول فترة مالية جاهزة — الشركة الآن في وضع المحاسبة العادي ويمكن تسجيل الحركات اليومية."
             ) : locked ? (
-              "التحويل مكتمل: الرصيد الافتتاحي مقفول نهائياً وأول فترة تشغيلية جاهزة — الشركة الآن في وضع المحاسبة العادي."
+              "التحويل مكتمل: الرصيد الافتتاحي مقفول نهائياً — الشركة الآن في وضع المحاسبة العادي."
             ) : (
               <>حالة الترحيل النهائية: <StatusBadge status={w.migration?.status || ""} /> — تاريخ القطع: {toLocalDateStr(w.migration?.cutover_date || "")}</>
             )}
@@ -114,17 +108,6 @@ export function GuidedTransitionWizard() {
           <div className="rounded-lg p-3 text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
             أول فترة مالية: {toLocalDateStr(w.firstPeriod.start_date)} ← {toLocalDateStr(w.firstPeriod.end_date)}
           </div>
-        )}
-        {locked && w.migration && (
-          <RetainedEarningsOverview
-            migration={w.migration}
-            firstPeriod={w.firstPeriod}
-            onViewBalanceSheet={() => goTo("/accounting/reports/balance-sheet", "الميزانية العمومية")}
-            onDistribute={() => goTo(
-              `/accounting/profit-distribution?source=opening&migration=${w.migration!.id}`,
-              "توزيع الأرباح",
-            )}
-          />
         )}
         <div className="flex justify-center pt-1">
           <Button size="sm" onClick={goDashboard} className="bg-green-600 hover:bg-green-700 text-white font-bold">
@@ -393,6 +376,7 @@ export function GuidedTransitionWizard() {
               title="الشركاء ورأس المال"
               rows={w.partnerEquity}
               onSave={w.savePartnerCapital}
+              onDelete={w.deletePartner}
               label="رأس المال"
               nativeHint="credit"
               addForm={
@@ -514,71 +498,7 @@ export function GuidedTransitionWizard() {
           </div>
         );
       }
-      case 9: {
-        // Post-lock onboarding: once the migration is Locked this step sets up
-        // the first operational period.
-        const locked = w.migration?.status === "Locked";
-        const showCompletionPanel = locked && !w.firstPeriod && !w.onboardingStarted;
-        return (
-          <div className="space-y-4">
-            {locked && !w.firstPeriod && (
-              <>
-                <LockedCompletionPanel
-                  posted={!!w.migration && ["Posted", "Locked"].includes(w.migration.status)}
-                  reconciled={w.reconciliation?.all_reconciled === true}
-                  locked={locked}
-                />
-                <RetainedEarningsOverview
-                  migration={w.migration}
-                  firstPeriod={w.firstPeriod}
-                  onViewBalanceSheet={() => goTo("/accounting/reports/balance-sheet", "الميزانية العمومية")}
-                  onDistribute={() => goTo(
-                    `/accounting/profit-distribution?source=opening&migration=${w.migration!.id}`,
-                    "توزيع الأرباح",
-                  )}
-                />
-                {!w.onboardingStarted && (
-                  <div className="flex justify-center">
-                    <Button
-                      size="sm"
-                      onClick={w.beginFirstPeriodSetup}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
-                    >
-                      بدء أول فترة تشغيلية
-                    </Button>
-                  </div>
-                )}
-              </>
-            )}
-            {(w.onboardingStarted || !locked || !!w.firstPeriod) && (
-              <div className="space-y-3">
-                {!showCompletionPanel && (
-                  <p className="text-xs text-slate-500">
-                    أُقفل الرصيد الافتتاحي. حدّد الآن نافذة أول فترة تشغيلية ستُقيد عليها الحركات الجديدة
-                    (عادةً من اليوم التالي لتاريخ القطع حتى نهاية السنة). لا يمكن ترحيل أي حركة خارج فترة
-                    مفتوحة.
-                  </p>
-                )}
-                <FirstPeriodFields
-                  start={w.firstPeriodStart}
-                  end={w.firstPeriodEnd}
-                  onStart={w.setFirstPeriodStart}
-                  onEnd={w.setFirstPeriodEnd}
-                  created={w.firstPeriod}
-                />
-                {w.firstPeriod ? (
-                  <div className="rounded-lg p-3 text-xs font-bold bg-green-50 text-green-700 border border-green-200">
-                    تم إنشاء أول فترة تشغيلية ✓ — اضغط «التالي» لإكمال الإعداد أو انتقل إلى لوحة التحكم.
-                  </div>
-                ) : w.onboardingStarted ? (
-                  <p className="text-xs text-slate-400">اضغط «إنشاء أول فترة تشغيلية» لإنشائها ثم تابع.</p>
-                ) : null}
-              </div>
-            )}
-          </div>
-        );
-      }
-      case 10:
+      case 9:
         return renderDone();
       default:
         return null;
@@ -677,7 +597,7 @@ export function GuidedTransitionWizard() {
       title={isNew ? "بدء محاسبة شركة جديدة" : "معالج التحويل الموجه (شركة قائمة)"}
       subtitle={isNew
         ? "أنشئ أول فترة مالية وابدأ تسجيل الحركات اليومية — لا يوجد رصيد افتتاحي في هذا الوضع."
-        : "جمع الأرصدة قسماً بقسم (نقد وبنوك، عملاء، مخزون، أصول ثابتة، مورden والالتزامات، شركاء) ثم إتمام الترحيل ثم إنشاء أول فترة تشغيلية."}
+        : "جمع الأرصدة قسماً بقسم (نقد وبنوك، عملاء، مخزون، أصول ثابتة، مورden والالتزامات، شركاء) ثم إتمام الترحيل."}
       steps={w.steps}
       stepIndex={w.step}
       stepOrder={stepOrder}
@@ -798,133 +718,6 @@ function FirstPeriodFields({
           تم إنشاء الفترة: {toLocalDateStr(created.start_date)} ← {toLocalDateStr(created.end_date)}
         </div>
       )}
-    </div>
-  );
-}
-
-// ── Locked-completion panel: shown after the migration is sealed.
-// Presents the four confirmation checkmarks then the "next step" call-to-action.
-export function LockedCompletionPanel({
-  posted,
-  reconciled,
-  locked,
-}: {
-  posted: boolean;
-  reconciled: boolean;
-  locked: boolean;
-}) {
-  const items = [
-    { label: "الأرصدة الافتتاحية مُرحّلة إلى دفتر الأستاذ", done: posted },
-    { label: "التسوية مكتملة ومتوازنة (دليل الحسابات = السجلات المساعدة)", done: reconciled },
-    { label: "التحويل مقفول نهائياً — لا يُقبل أي تعديل لاحق", done: locked },
-    { label: "الشركة في وضع المحاسبة العادي — الحركات اليومية متاحة", done: locked },
-  ];
-  return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 space-y-2">
-      <p className="text-sm font-black text-emerald-700">تم التحويل بنجاح ✓</p>
-      <p className="text-xs text-emerald-600">اكتملت مرحلة الرصيد الافتتاحي بجميع خطواتها:</p>
-      <ul className="space-y-1.5">
-        {items.map((it) => (
-          <li key={it.label} className="flex items-center gap-2 text-xs font-semibold text-emerald-800">
-            <span className={"rounded-full p-0.5 " + (it.done ? "bg-emerald-600 text-white" : "bg-amber-400 text-amber-900")}>
-              <Check className="w-3.5 h-3.5" />
-            </span>
-            {it.label}
-          </li>
-        ))}
-      </ul>
-      <div className="pt-0.5 rounded-lg bg-white border border-emerald-200 p-3 space-y-1">
-        <p className="text-xs font-bold text-emerald-800">الخطوة التالية: إعداد أول فترة تشغيلية</p>
-        <p className="text-xs text-emerald-600">
-          تُقيد الحركات الجديدة على فترة مالية مفتوحة — عادةً من اليوم التالي لتاريخ القطع حتى نهاية السنة.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// ── Retained-earnings overview: shown once the migration is locked. It reads
-// the historical retained balance (as at cutover) and — once the first
-// operational period exists — the current retained balance and the amount
-// available for distribution. The [توزيع الأرباح] action navigates INTO the
-// general-purpose profit-distribution workflow with the source preselected
-// (`source=opening&migration=<id>`) — the SAME engine, never a second mechanism.
-function RetainedEarningsOverview({
-  migration,
-  firstPeriod,
-  onViewBalanceSheet,
-  onDistribute,
-}: {
-  migration: OpeningBalanceMigrationDto;
-  firstPeriod: { start_date: string; end_date: string } | null;
-  onViewBalanceSheet: () => void;
-  onDistribute: () => void;
-}) {
-  const AS_AT_CUTOVER_START = "1970-01-01T00:00:00Z";
-  const endOfCutover = useMemo(() => {
-    const day = migration.cutover_date.slice(0, 10);
-    return day ? new Date(`${day}T23:59:59Z`).toISOString() : "";
-  }, [migration.cutover_date]);
-
-  const asAtLock = useQuery({
-    queryKey: QUERY_KEYS.distributableProfit(AS_AT_CUTOVER_START, endOfCutover),
-    queryFn: () => fiscalPeriodService.getDistributableProfit(AS_AT_CUTOVER_START, endOfCutover),
-    enabled: !!migration.id && !!endOfCutover,
-  });
-
-  const current = useQuery({
-    queryKey: QUERY_KEYS.distributableProfit(firstPeriod?.start_date ?? "", firstPeriod?.end_date ?? ""),
-    queryFn: () =>
-      fiscalPeriodService.getDistributableProfit(firstPeriod?.start_date ?? "", firstPeriod?.end_date ?? ""),
-    enabled: !!firstPeriod?.start_date && !!firstPeriod?.end_date,
-  });
-
-  const historicalRetained = parseSafeNumber(asAtLock.data?.retained_earnings_balance);
-  const currentRetained = current.data
-    ? parseSafeNumber(current.data.retained_earnings_balance)
-    : historicalRetained;
-  const currentDistributed = current.data
-    ? parseSafeNumber(current.data.allocated_to_date)
-    : parseSafeNumber(asAtLock.data?.allocated_to_date);
-  const available =
-    current.data
-      ? parseSafeNumber(current.data.distributable)
-      : parseSafeNumber(asAtLock.data?.distributable);
-
-  return (
-    <div className="rounded-lg border border-indigo-200 bg-white p-3 space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-black text-slate-700">الأرباح المبقاة</p>
-        <span className="text-[11px] font-semibold text-slate-400">المتاح للتوزيع حسب النموذج المحاسبي</span>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3 space-y-1">
-          <p className="text-[11px] font-semibold text-slate-500">الأرباح المبقاة التاريخية</p>
-          <p className="text-lg font-black tabular-nums text-slate-800">{fmtMoney(historicalRetained)}</p>
-        </div>
-        <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3 space-y-1">
-          <p className="text-[11px] font-semibold text-slate-500">الأرباح المبقاة الحالية</p>
-          <p className="text-lg font-black tabular-nums text-slate-800">{fmtMoney(currentRetained)}</p>
-        </div>
-        <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3 space-y-1">
-          <p className="text-[11px] font-semibold text-slate-500">المُوزَّع سابقاً</p>
-          <p className="text-lg font-black tabular-nums text-slate-800">{fmtMoney(currentDistributed)}</p>
-        </div>
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 space-y-1">
-          <p className="text-[11px] font-semibold text-emerald-600">المتبقي للتوزيع</p>
-          <p className="text-lg font-black tabular-nums text-emerald-700">{fmtMoney(available)}</p>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2 justify-between pt-0.5">
-        <Button variant="outline" size="sm" onClick={onViewBalanceSheet} className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold">
-          عرض الأرباح المبقاة
-        </Button>
-        <Button size="sm" onClick={onDistribute} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
-          توزيع الأرباح
-        </Button>
-      </div>
     </div>
   );
 }

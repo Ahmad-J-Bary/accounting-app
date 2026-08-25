@@ -20,10 +20,10 @@ WHERE code IN ('1102', '112') AND code != '112_tmp';
 
 -- 3) Insert آليات at code 112 (idempotent with deterministic ID)
 INSERT OR IGNORE INTO accounts
-(id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at)
+(id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, purpose, created_at, updated_at)
 VALUES
 ('00000000-0000-0000-0000-000000000112', '112', 'آليات', 'Automotive & Machinery', 'Assets',
- (SELECT id FROM accounts WHERE code = '11'), 'Detail', 3, '0', '0', 1, datetime('now'), datetime('now'));
+ (SELECT id FROM accounts WHERE code = '11'), 'Detail', 3, '0', '0', 1, 'fixed_asset', datetime('now'), datetime('now'));
 
 -- 4) معدات: temporary → 113 (new position)
 UPDATE accounts SET code = '113', updated_at = datetime('now') WHERE code = '112_tmp';

@@ -240,10 +240,10 @@ async fn ensure_fixed_asset_accounts(pool: &SqlitePool) {
     // 0) Ensure parent "11 - الأصول الثابتة" exists (under 1 = الأصول)
     let _ = sqlx::query(
         "INSERT OR IGNORE INTO accounts
-         (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at)
+         (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, purpose, created_at, updated_at)
          VALUES
          ('00000000-0000-0000-0000-000000000011', '11', 'الأصول الثابتة', 'Fixed Assets', 'Assets',
-          (SELECT id FROM accounts WHERE code = '1'), 'Summary', 2, '0', '0', 1, datetime('now'), datetime('now'))"
+          (SELECT id FROM accounts WHERE code = '1'), 'Summary', 2, '0', '0', 1, 'fixed_asset', datetime('now'), datetime('now'))"
     ).execute(pool).await;
 
     // 1) Renumbering legacy/misplaced codes:
@@ -258,10 +258,10 @@ async fn ensure_fixed_asset_accounts(pool: &SqlitePool) {
     // 2) Ensure "112 - آليات" exists and has correct name and code
     let _ = sqlx::query(
         "INSERT OR IGNORE INTO accounts
-         (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at)
+         (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, purpose, created_at, updated_at)
          VALUES
          ('00000000-0000-0000-0000-000000000112', '112', 'آليات', 'Automotive & Machinery', 'Assets',
-          (SELECT id FROM accounts WHERE code = '11'), 'Detail', 3, '0', '0', 1, datetime('now'), datetime('now'))"
+          (SELECT id FROM accounts WHERE code = '11'), 'Detail', 3, '0', '0', 1, 'fixed_asset', datetime('now'), datetime('now'))"
     ).execute(pool).await;
     let _ = sqlx::query(
         "UPDATE accounts SET name_ar = 'آليات', name_en = 'Automotive & Machinery', updated_at = datetime('now') WHERE code = '112' AND name_ar != 'آليات'"
@@ -273,10 +273,10 @@ async fn ensure_fixed_asset_accounts(pool: &SqlitePool) {
     ).execute(pool).await;
     let _ = sqlx::query(
         "INSERT OR IGNORE INTO accounts
-         (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at)
+         (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, purpose, created_at, updated_at)
          VALUES
          ('00000000-0000-0000-0000-000000001102', '113', 'معدات وتجهيزات', 'Equipment', 'Assets',
-          (SELECT id FROM accounts WHERE code = '11'), 'Detail', 3, '0', '0', 1, datetime('now'), datetime('now'))"
+          (SELECT id FROM accounts WHERE code = '11'), 'Detail', 3, '0', '0', 1, 'fixed_asset', datetime('now'), datetime('now'))"
     ).execute(pool).await;
 
     // 4) Ensure "111 - أبنية وأراضي" exists
@@ -285,19 +285,19 @@ async fn ensure_fixed_asset_accounts(pool: &SqlitePool) {
     ).execute(pool).await;
     let _ = sqlx::query(
         "INSERT OR IGNORE INTO accounts
-         (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at)
+         (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, purpose, created_at, updated_at)
          VALUES
          ('00000000-0000-0000-0000-000000001101', '111', 'أبنية وأراضي', 'Buildings & Land', 'Assets',
-          (SELECT id FROM accounts WHERE code = '11'), 'Detail', 3, '0', '0', 1, datetime('now'), datetime('now'))"
+          (SELECT id FROM accounts WHERE code = '11'), 'Detail', 3, '0', '0', 1, 'fixed_asset', datetime('now'), datetime('now'))"
     ).execute(pool).await;
 
     // 5) Ensure "114 - أثاث ومفروشات" exists
     let _ = sqlx::query(
         "INSERT OR IGNORE INTO accounts
-         (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, created_at, updated_at)
+         (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, purpose, created_at, updated_at)
          VALUES
          ('00000000-0000-0000-0000-000000001103', '114', 'أثاث ومفروشات', 'Furniture', 'Assets',
-          (SELECT id FROM accounts WHERE code = '11'), 'Detail', 3, '0', '0', 1, datetime('now'), datetime('now'))"
+          (SELECT id FROM accounts WHERE code = '11'), 'Detail', 3, '0', '0', 1, 'fixed_asset', datetime('now'), datetime('now'))"
     ).execute(pool).await;
 
     // 6) Re-parent 111, 112, 113, 114 under account 11 ("الأصول الثابتة")
@@ -306,7 +306,15 @@ async fn ensure_fixed_asset_accounts(pool: &SqlitePool) {
          WHERE code IN ('111', '112', '113', '114')"
     ).execute(pool).await;
 
-    // 7) Ensure "آليات" exists in asset_categories
+    // 7) Backfill purpose for any fixed-asset-range accounts that were inserted
+    //    without it (e.g. by migration 164 or earlier healing loops).
+    let _ = sqlx::query(
+        "UPDATE accounts SET purpose = 'fixed_asset', updated_at = datetime('now')
+         WHERE code LIKE '11%' AND account_type = 'Assets'
+         AND (purpose IS NULL OR purpose = 'general')"
+    ).execute(pool).await;
+
+    // 8) Ensure "آليات" exists in asset_categories
     let _ = sqlx::query(
         "INSERT INTO asset_categories (id, name, asset_type)
          SELECT '00000000-0000-0000-0000-00000000c101', 'آليات', 'Fixed'

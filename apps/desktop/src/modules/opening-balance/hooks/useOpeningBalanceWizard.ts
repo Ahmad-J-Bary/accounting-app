@@ -56,10 +56,9 @@ import {
   selectLatestOpenMigration,
 } from "@modules/opening-balance/lib/migration-labels";
 
-// Step indices for the ExistingCompany 11-step layout.
+// Step indices for the ExistingCompany 10-step layout.
 export const STEP_REVIEW = 7;
 export const STEP_ACTION = 8;       // Merged: validate + post + lock
-export const STEP_FIRST_PERIOD = 9;
 
 /**
  * Dynamic visual step order logic:
@@ -227,9 +226,6 @@ export function useOpeningBalanceWizard() {
   const [firstPeriodStart, setFirstPeriodStart] = useState(() => toLocalDatePart(new Date()));
   const [firstPeriodEnd, setFirstPeriodEnd] = useState(() => `${new Date().getFullYear()}-12-31`);
   const [firstPeriod, setFirstPeriod] = useState<FiscalPeriodDto | null>(null);
-  // Post-lock onboarding: until the accountant presses [بدء أول فترة تشغيلية] the
-  // locked-completion panel is shown instead of the first-period form.
-  const [onboardingStarted, setOnboardingStarted] = useState(false);
   const [userCompletedSteps, setUserCompletedSteps] = useState<Set<number>>(new Set());
   const [stepOrder, setStepOrder] = useState<number[]>(() => [...Array(STEPS_EXISTING.length).keys()]);
 
@@ -461,8 +457,7 @@ export function useOpeningBalanceWizard() {
     if (!migration || migration.status !== "Locked") return;
     if (!fiscalPeriodsLoaded) return;
     postLockJumped.current = true;
-    const hasPeriod = fiscalPeriods.length > 0 || !!firstPeriod;
-    setStep(hasPeriod ? STEPS_EXISTING.length - 1 : STEP_FIRST_PERIOD);
+    setStep(STEPS_EXISTING.length - 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settingsReady, startMode, migration, fiscalPeriods, fiscalPeriodsLoaded]);
 
@@ -801,6 +796,19 @@ export function useOpeningBalanceWizard() {
     [],
   );
 
+  const deletePartner = useCallback(async (row: DerivedRow): Promise<boolean> => {
+    try {
+      await partnerService.deletePartner(row.entity_id);
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.partners });
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts });
+      toast.success("تم حذف الشريك");
+      return true;
+    } catch (e) {
+      toast.error("فشل حذف الشريك: " + e);
+      return false;
+    }
+  }, []);
+
   const partnerCurrentManualRows: DerivedRow[] = useMemo(() => {
     const byKey = new Map(partnerCurrentManual.map((l) => [l.key, l]));
     return partnerCurrentDerived.map((dr) => {
@@ -965,6 +973,7 @@ export function useOpeningBalanceWizard() {
 
       await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.fixedAssets });
       await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chartOfAccounts });
+      await queryClient.invalidateQueries({ queryKey: ["asset-categories"] });
       toast.success(`تم إنشاء الأصل "${data.name}" بنجاح`);
       return true;
     } catch (e) {
@@ -1262,12 +1271,10 @@ export function useOpeningBalanceWizard() {
       case STEP_ACTION:
         // Merged gate: can validate + residual resolved
         return canValidateOpening(migration, reconciliation) && residualResolved;
-      case STEP_FIRST_PERIOD:
-        return (migration?.status !== "Locked" || onboardingStarted || !!firstPeriod) && datesValid;
       default:
         return true;
     }
-  }, [step, startMode, cutoverDate, totals, savedTotals, migration, reconciliation, residualResolved, firstPeriodStart, firstPeriodEnd, onboardingStarted]);
+  }, [step, startMode, cutoverDate, totals, savedTotals, migration, reconciliation, residualResolved, firstPeriodStart, firstPeriodEnd]);
 
   // Back-navigation stays open until the migration is sealed: Draft/Validated/
   // Approved may all be edited again by going back to the review step. Only a
@@ -1289,7 +1296,6 @@ export function useOpeningBalanceWizard() {
     switch (step) {
       case STEP_REVIEW: return "حفظ وفحص التسوية";
       case STEP_ACTION: return "تنفيذ (تحقق + ترحيل + قفل)";
-      case STEP_FIRST_PERIOD: return "إنشاء أول فترة تشغيلية";
       default: return undefined;
     }
   }, [step, startMode, userCompletedSteps]);
@@ -1299,9 +1305,6 @@ export function useOpeningBalanceWizard() {
   // unbalanced equation, or unreconciled sub-ledgers all show here).
   const nextDisabledReason = useMemo(() => {
     if (startMode === START_MODE_NEW) return undefined;
-    if (step === STEP_FIRST_PERIOD && migration?.status === "Locked" && !onboardingStarted) {
-      return "اضغط «بدء أول فترة تشغيلية» لبدء إعداد أول فترة تشغيلية";
-    }
     if (step !== STEP_ACTION) return undefined;
     if (!migration) return "احفظ الأرصدة وفحص التسوية أولاً (خطوة المراجعة)";
     if (["Posted", "Locked", "Cancelled"].includes(migration.status)) return "التحويل مقفول بالفعل";
@@ -1313,20 +1316,12 @@ export function useOpeningBalanceWizard() {
     }
     if (!residualResolved) return "الفرق غير محلول: صنّف الرصيد المتبقي قبل التنفيذ";
     return undefined;
-  }, [startMode, step, migration, reconciliation, residualResolved, onboardingStarted]);
+  }, [startMode, step, migration, reconciliation, residualResolved]);
 
   const runStep = async () => {
     try {
       // NewCompany: Step 1 creates the first financial period and nothing else.
       if (startMode === START_MODE_NEW && step === 0) {
-        setBusy(true);
-        const ok = await createFirstPeriod();
-        setBusy(false);
-        return ok;
-      }
-
-      // Existing: Step 14 creates the first operational period after opening Lock.
-      if (step === STEP_FIRST_PERIOD) {
         setBusy(true);
         const ok = await createFirstPeriod();
         setBusy(false);
@@ -1458,8 +1453,6 @@ export function useOpeningBalanceWizard() {
         set.add(i);
       } else if (i === STEP_ACTION && migration) {
         if (["Validated", "Posted", "Locked"].includes(migration.status)) set.add(i);
-      } else if (i === STEP_FIRST_PERIOD && firstPeriod) {
-        set.add(i);
       }
     }
     return set;
@@ -1467,7 +1460,7 @@ export function useOpeningBalanceWizard() {
     steps, cashBanks, derivedAr, inventoryTotal,
     faRows, derivedAp, loans, liabilitiesManual,
     partnerEquity, partnerCurrentManual, equityManual,
-    userCompletedSteps, migration, firstPeriod,
+    userCompletedSteps, migration,
   ]);
 
   // Dynamic visual step order state.
@@ -1562,6 +1555,7 @@ export function useOpeningBalanceWizard() {
     saveFixedAssetOverride,
     deleteFixedAsset,
     partnerEquity,
+    deletePartner,
     partnerCurrentManual,
     setPartnerCurrentManual,
     partnerCurrentManualRows,
@@ -1612,8 +1606,6 @@ export function useOpeningBalanceWizard() {
     setFirstPeriodEnd,
     firstPeriod,
     createFirstPeriod,
-    onboardingStarted,
-    beginFirstPeriodSetup: () => setOnboardingStarted(true),
     customers,
     suppliers,
     materials,
@@ -1626,7 +1618,7 @@ export function useOpeningBalanceWizard() {
   };
 }
 
-// ExistingCompany: full 11-step guided transition incl. the first period.
+// ExistingCompany: full 10-step guided transition.
 export const STEPS_EXISTING: WizardStepDef[] = [
   { id: "company-start",      label: "بدء الحسابات" },
   { id: "cash-banks",         label: "النقد والبنوك" },
@@ -1637,7 +1629,6 @@ export const STEPS_EXISTING: WizardStepDef[] = [
   { id: "partners-equity",    label: "حقوق الشركاء" },
   { id: "review",             label: "المراجعة والحفظ" },
   { id: "action",             label: "إتمام الترحيل" },
-  { id: "first-period",       label: "أول فترة تشغيلية" },
   { id: "done",               label: "اكتمال" },
 ];
 

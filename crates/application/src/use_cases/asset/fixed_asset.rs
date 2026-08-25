@@ -6,6 +6,7 @@ use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::settings_repository::SettingsRepository;
 use chrono::Utc;
 use domain::accounting::{JournalEntry, JournalLine, MigrationStatus};
+use domain::accounting::account::AccountPurpose;
 use domain::settings::START_MODE_EXISTING;
 use domain::assets::{
     AssetCategory, AssetMovement, AssetMovementType, AssetType, DepreciationMethod, FixedAsset, FixedAssetId,
@@ -91,6 +92,23 @@ impl FixedAssetUseCases {
         Ok(pending > 0)
     }
 
+    /// Ensures the account has `purpose = FixedAsset` if it is currently
+    /// `General`. This prevents the reconciliation from silently skipping the
+    /// account's opening line (Sec 46 / migration 148/164/166).
+    async fn ensure_account_fixed_asset_purpose(
+        &self,
+        account_id: &AccountId,
+    ) -> Result<(), AppError> {
+        if let Some(mut account) = self.account_repo.find_by_id(account_id).await? {
+            if account.purpose == AccountPurpose::General {
+                account.purpose = AccountPurpose::FixedAsset;
+                account.updated_at = Utc::now();
+                self.account_repo.save(&account).await?;
+            }
+        }
+        Ok(())
+    }
+
     pub async fn create_asset(
         &self,
         mut req: CreateAssetRequest,
@@ -151,6 +169,12 @@ impl FixedAssetUseCases {
             req.purchase_cost.clone(),
             movement_desc,
         );
+
+        // Ensure the GL accounts linked to this asset have purpose=FixedAsset
+        // so the reconciliation classifies them correctly (migration 148/164/166).
+        self.ensure_account_fixed_asset_purpose(&AccountId(req.asset_account_id)).await?;
+        self.ensure_account_fixed_asset_purpose(&AccountId(req.depreciation_account_id)).await?;
+        self.ensure_account_fixed_asset_purpose(&AccountId(req.accumulated_depreciation_account_id)).await?;
 
         // Opening-preparation window: while the company is preparing
         // its opening migration, fixed-asset records are SUBLEDGER data only —
@@ -341,6 +365,12 @@ impl FixedAssetUseCases {
             }
         }
         asset.updated_at = Utc::now();
+
+        // Ensure the GL accounts linked to this asset have purpose=FixedAsset
+        // so the reconciliation classifies them correctly (migration 148/164/166).
+        self.ensure_account_fixed_asset_purpose(&AccountId(req.asset_account_id)).await?;
+        self.ensure_account_fixed_asset_purpose(&AccountId(req.depreciation_account_id)).await?;
+        self.ensure_account_fixed_asset_purpose(&AccountId(req.accumulated_depreciation_account_id)).await?;
 
         // Collect the acquisition movement and journal updates; all persisted
         // atomically below (Sec 9 atomicity).

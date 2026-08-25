@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@shared/ui/button";
 import { Plus, Download } from "lucide-react";
 import { fixedAssetService } from "@modules/fixed-assets/api/fixedAssetService";
@@ -53,8 +54,14 @@ export default function FixedAssetsPage() {
     searchFields: ["code", "name", "location", "notes"],
   });
 
-  const [categories, setCategories] = useState<AssetCategoryDto[]>([]);
-  const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
+  const { data: categories = [] } = useQuery<AssetCategoryDto[]>({
+    queryKey: ["asset-categories"],
+    queryFn: () => fixedAssetService.listCategories("Fixed"),
+  });
+  const { data: warehouses = [] } = useQuery<WarehouseDto[]>({
+    queryKey: ["warehouses"],
+    queryFn: () => warehouseService.list(),
+  });
   const [assetTypeFilter, setAssetTypeFilter] = useState<"all" | "buildings_land" | "automotive" | "equipment" | "furniture">("all");
   const [warehouseFilter, setWarehouseFilter] = useState<string>("all");
   const [showForm, setShowForm] = useState(false);
@@ -62,18 +69,6 @@ export default function FixedAssetsPage() {
   const [selectedAsset, setSelectedAsset] = useState<FixedAssetDto | null>(null);
   const [movements, setMovements] = useState<AssetMovement[]>([]);
   const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    Promise.all([
-      fixedAssetService.listCategories("Fixed"),
-      warehouseService.list(),
-    ])
-      .then(([cats, whs]) => {
-        setCategories(cats);
-        setWarehouses(whs);
-      })
-      .catch(() => {});
-  }, []);
 
   const categoryMap = useMemo(() => {
     const m = new Map<string, string>();

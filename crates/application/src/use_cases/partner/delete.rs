@@ -17,25 +17,14 @@ impl DeletePartnerUseCase {
     pub async fn execute(&self, id: String) -> Result<(), AppError> {
         let partner_id = id.parse::<PartnerId>().map_err(|_| AppError::NotFound("معرف الشريك غير صالح".into()))?;
         
-        let partner = self.repo.find_by_id(&partner_id).await?
+        let _partner = self.repo.find_by_id(&partner_id).await?
             .ok_or_else(|| AppError::NotFound("الشريك غير موجود".into()))?;
 
-        // Collect the linked accounts (capital + drawings) so the whole
-        // partner + accounts removal is atomic in a single transaction.
-        let mut linked = Vec::new();
-        if let Some(cap_id) = partner.linked_account_id {
-            linked.push(cap_id);
-        }
-        if let Some(draw_id) = partner.drawings_account_id {
-            linked.push(draw_id);
-        }
-        if let Some(curr_id) = partner.current_account_id {
-            if !linked.contains(&curr_id) {
-                linked.push(curr_id);
-            }
-        }
-
-        self.repo.delete_with_accounts(&partner_id, &linked).await?;
+        // Delete only the partner record. Linked accounts stay in the chart
+        // of accounts — journal_lines.account_id has a FK to accounts(id)
+        // without ON DELETE CASCADE, so deleting the accounts first would
+        // fail with a FOREIGN KEY constraint violation.
+        self.repo.delete(&partner_id).await?;
         Ok(())
     }
 }

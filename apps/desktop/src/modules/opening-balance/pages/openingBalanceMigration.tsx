@@ -217,18 +217,16 @@ export default function OpeningBalanceMigration() {
       tableContent={
         <div className="flex flex-col h-full overflow-auto p-4 gap-4">
           <Tabs value={openingClosed ? "wizard" : tab} onValueChange={(v) => !openingClosed && setTab(v)} dir="rtl">
-            <TabsList className="bg-white border border-slate-200 p-1 h-11 rounded-xl shadow-sm mb-1">
               {!openingClosed && (
-                <>
+                <TabsList className="bg-white border border-slate-200 p-1 h-11 rounded-xl shadow-sm mb-1">
                   <TabsTrigger value="overview" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">نظرة عامة</TabsTrigger>
                   <TabsTrigger value="list" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">قائمة الترحيلات</TabsTrigger>
                   <TabsTrigger value="position" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">المركز والتسوية</TabsTrigger>
-                </>
+                  <TabsTrigger value="wizard" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">
+                    المعالج
+                  </TabsTrigger>
+                </TabsList>
               )}
-              <TabsTrigger value="wizard" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">
-                {openingClosed ? "إعداد أول فترة تشغيلية" : "المعالج"}
-              </TabsTrigger>
-            </TabsList>
 
             <TabsContent value="overview" className="mt-2 space-y-4">
               {latestMigration === null ? (
