@@ -11,8 +11,12 @@ type OpeningLineLike = Pick<AccountLedgerLineDto, "journal_type" | "description"
 
 /**
  * Detect opening lines. Uses the canonical `isOpeningEntry()` classifier
- * for structured fields, with a legacy Arabic fallback for backward
- * compatibility with fixtures that predate the `is_opening` flag.
+ * for structured fields, with a legacy Arabic journal-type fallback for
+ * backward compatibility with fixtures that predate the `is_opening` flag.
+ *
+ * RULE: NEVER uses description matching for classification — a normal
+ * post-opening transaction that mentions "رصيد افتتاحي" in its description
+ * is NOT an opening line.
  */
 export function isOpeningLine(l: OpeningLineLike): boolean {
   // Explicit false from backend: never override with heuristics
@@ -21,16 +25,12 @@ export function isOpeningLine(l: OpeningLineLike): boolean {
   // Fast path: canonical classifier handles is_opening, source_id, journal_type
   if (isOpeningEntry(l)) return true;
 
-  // Legacy fallback: Arabic journal types and description keywords.
-  // Kept for backward compatibility with old fixtures; new code should
-  // NEVER rely on description matching for classification.
-  const desc = l.description || "";
+  // Legacy fallback: Arabic journal types only (old DB entries predate the
+  // enum standardization). Description matching is NEVER used.
   return (
     l.journal_type === "رصيد افتتاحي" ||
     l.journal_type === "رصيد افتتاحي لحساب" ||
-    l.journal_type === "رصيد افتتاحي للخزينة" ||
-    desc.includes("رصيد افتتاحي") ||
-    desc.includes("أول المدة")
+    l.journal_type === "رصيد افتتاحي للخزينة"
   );
 }
 

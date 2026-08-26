@@ -16,15 +16,15 @@ describe("isOpeningLine", () => {
     expect(isOpeningLine({ journal_type: "MaterialOpeningBalance", description: "" })).toBe(true);
   });
 
-  it("matches Arabic opening journal types", () => {
+  it("matches Arabic opening journal types (legacy)", () => {
     expect(isOpeningLine({ journal_type: "رصيد افتتاحي", description: "" })).toBe(true);
     expect(isOpeningLine({ journal_type: "رصيد افتتاحي لحساب", description: "" })).toBe(true);
     expect(isOpeningLine({ journal_type: "رصيد افتتاحي للخزينة", description: "" })).toBe(true);
   });
 
-  it("matches descriptions containing opening phrases", () => {
-    expect(isOpeningLine({ journal_type: "GeneralJournal", description: "إثبات رصيد افتتاحي للمورد" })).toBe(true);
-    expect(isOpeningLine({ journal_type: "GeneralJournal", description: "مواد أول المدة" })).toBe(true);
+  it("does NOT use description for classification", () => {
+    expect(isOpeningLine({ journal_type: "GeneralJournal", description: "إثبات رصيد افتتاحي للمورد" })).toBe(false);
+    expect(isOpeningLine({ journal_type: "GeneralJournal", description: "مواد أول المدة" })).toBe(false);
   });
 
   it("rejects ordinary lines", () => {
@@ -34,6 +34,7 @@ describe("isOpeningLine", () => {
   it("lets the backend is_opening flag win over the legacy heuristic", () => {
     expect(isOpeningLine({ journal_type: "GeneralJournal", description: "إثبات رصيد افتتاحي للمورد", is_opening: false })).toBe(false);
     expect(isOpeningLine({ journal_type: "GeneralJournal", description: "فاتورة بيع", is_opening: true })).toBe(true);
+    expect(isOpeningLine({ journal_type: "AccountOpeningBalance", description: "", is_opening: false })).toBe(false);
   });
 });
 

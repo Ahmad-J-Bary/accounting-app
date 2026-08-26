@@ -19,6 +19,7 @@ import { getHeaderText, getPrimitiveCellValue, SHARED_COLUMN_IDS } from "./group
 import type { JournalEntryDto } from "@erp/shared-types";
 import type { JournalFilters } from "@modules/accounting/api/journalEntryService";
 import { auditGroupKey, toJournalLines, toJournalLinesSingleLine, journalTwoLineCompare, type JournalRowLine, type JournalSingleLineRow, type ReversalContext } from "../lib/journal-view";
+import { isOpeningEntry } from "@modules/reports/lib/accountingEntryClassifier";
 
 type DisplayMode = "two-line" | "one-line";
 
@@ -193,7 +194,7 @@ export function JournalTable({
                   ملغي
                 </span>
               )}
-              {e.status === "Posted" && !e.is_contra && onReverse && (
+              {e.status === "Posted" && !e.is_contra && !isOpeningEntry(e) && onReverse && (
                 <Button
                   size="sm"
                   variant="ghost"
@@ -318,7 +319,7 @@ export function JournalTable({
                   ملغي
                 </span>
               )}
-              {e.status === "Posted" && !e.is_contra && onReverse && (
+              {e.status === "Posted" && !e.is_contra && !isOpeningEntry(e) && onReverse && (
                 <Button
                   size="sm"
                   variant="ghost"

@@ -169,7 +169,9 @@ export interface JournalRowLine {
   group_key: string;
   id: string;
   entry_number: string;
+  journal_type: string;
   journal_type_display: string;
+  source_id?: string;
   status?: string;
   /** True when this entry is a reversal contra of another entry (display-only
    * derivation of `reversal_of_entry_id`). A reversal is a relationship, not a
@@ -227,7 +229,9 @@ export function toJournalLines(entry: JournalEntryDto, ctx?: ReversalContext): J
         group_key: entry.id,
         id: entry.id,
         entry_number: entry.entry_number,
+        journal_type: entry.journal_type,
         journal_type_display: journalTypeDisplay,
+        source_id: entry.source_id,
         status: entry.status,
         is_contra: Boolean(entry.reversal_of_entry_id),
         reversal_entry_number: reversalNumber,
@@ -249,7 +253,9 @@ export function toJournalLines(entry: JournalEntryDto, ctx?: ReversalContext): J
         group_key: entry.id,
         id: entry.id,
         entry_number: entry.entry_number,
+        journal_type: entry.journal_type,
         journal_type_display: journalTypeDisplay,
+        source_id: entry.source_id,
         status: entry.status,
         is_contra: Boolean(entry.reversal_of_entry_id),
         reversal_entry_number: reversalNumber,
@@ -333,7 +339,9 @@ export interface JournalSingleLineRow {
   group_key: string;
   id: string;
   entry_number: string;
+  journal_type: string;
   journal_type_display: string;
+  source_id?: string;
   status?: string;
   /** True when this entry is a reversal contra (see JournalRowLine.is_contra). */
   is_contra?: boolean;
@@ -409,7 +417,9 @@ export function toJournalLinesSingleLine(entry: JournalEntryDto, ctx?: ReversalC
     group_key: entry.id,
     id: entry.id,
     entry_number: entry.entry_number,
+    journal_type: entry.journal_type,
     journal_type_display: journalTypeDisplay,
+    source_id: entry.source_id,
     status: entry.status,
     is_contra: Boolean(entry.reversal_of_entry_id),
     reversal_entry_number: reversalNumber,

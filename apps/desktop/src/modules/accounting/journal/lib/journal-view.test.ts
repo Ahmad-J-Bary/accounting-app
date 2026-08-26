@@ -11,6 +11,7 @@ const makeLine = (
   group_key: "entry",
   id: "entry",
   entry_number: "10",
+  journal_type: "JournalEntry",
   journal_type_display: "قيد اليومية",
   status: "Posted",
   description: "ترحيل تصنيف الرصيد المتبقي",
