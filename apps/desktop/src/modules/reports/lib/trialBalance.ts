@@ -1,7 +1,7 @@
 import type { AccountDto } from "@erp/shared-types";
 import type { AccountLedgerTotal } from "./ledgerTotals";
 import { isInventoryAccount } from "@modules/reports/lib/accountingEntryClassifier";
-import { buildAccountTree, type TreeNode } from "./accountTree";
+import { buildAccountTree } from "./accountTree";
 
 export interface TrialBalanceRow {
   account: AccountDto;

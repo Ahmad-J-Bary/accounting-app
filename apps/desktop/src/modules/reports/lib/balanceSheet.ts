@@ -5,7 +5,7 @@ import {
   isInventoryTradingAccount,
   isCreditNatureAccount,
 } from "@modules/reports/lib/accountingEntryClassifier";
-import { buildAccountTree, type TreeNode } from "./accountTree";
+import { buildAccountTree } from "./accountTree";
 
 export type BalanceSheetFilters = {
   from_date: string;
@@ -63,7 +63,7 @@ function isPurposeOf(purpose: string | undefined, ...tags: string[]): boolean {
 
 function isFixedAsset(code: string, name: string, purpose?: string): boolean {
   if (isPurposeOf(purpose, "fixed_asset")) return true;
-  const fixedIndicators = ["11", "ثابت", "عقار", "أرض", "مبنى", "بناء", "أبنية", "أراضي", "آليات", "سيارات", "مركبات", "نقليات", "معدات", "تجهيز", "أثاث", "مفروش", "مجمع إهلاك"];
+  const fixedIndicators = ["11", "ثابت", "عقار", "أرض", "مبنى", "بناء", "أبنية", "أراضي", "آليات", "سيارات", "مركبات", "نقليات", "معدات", "تجهيز", "أثاث", "مفروش"];
   if (fixedIndicators.some(i => code.startsWith(i) || name.includes(i))) return true;
   return false;
 }
@@ -75,7 +75,8 @@ function isCurrentAsset(code: string, name: string, purpose?: string): boolean {
   return false;
 }
 
-function isFixedLiability(code: string, name: string): boolean {
+function isFixedLiability(code: string, name: string, purpose?: string): boolean {
+  if (isPurposeOf(purpose, "loan")) return true;
   const fixedIndicators = ["21", "ثابت", "طويل", "قرض"];
   if (fixedIndicators.some(i => code.startsWith(i) || name.includes(i))) return true;
   return false;
@@ -233,7 +234,7 @@ export function computeBalanceSheet(
         continue;
       }
 
-      if (a.name.includes("مخزون")) {
+      if (a.purpose === "inventory" || a.name.includes("مخزون")) {
         if (!inventoryHandled) {
           cleaned.push({
             ...a,
