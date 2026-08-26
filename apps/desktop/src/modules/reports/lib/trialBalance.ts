@@ -1,6 +1,7 @@
 import type { AccountDto } from "@erp/shared-types";
 import type { AccountLedgerTotal } from "./ledgerTotals";
 import { isInventoryAccount } from "@modules/reports/lib/accountingEntryClassifier";
+import { buildAccountTree, type TreeNode } from "./accountTree";
 
 export interface TrialBalanceRow {
   account: AccountDto;
@@ -81,66 +82,64 @@ export function isBalanceDebit(balance: number): "مدين" | "دائن" | null 
 export function computeTreeTotals(
   accounts: AccountDto[],
   ltMap: Map<string, AccountLedgerTotal>,
-  parentId: string | null = null,
-  depth = 0,
 ): AccountTreeTotals[] {
-  const children = accounts
-    .filter((a) =>
-      parentId === null
-        ? !a.parent_id || a.parent_id === a.id || !accounts.find((p) => p.id === a.parent_id)
-        : a.parent_id === parentId,
-    )
-    .sort((a, b) => a.code.localeCompare(b.code));
+  function extractData(nodes: ReturnType<typeof buildAccountTree<AccountTreeTotals>>): AccountTreeTotals[] {
+    return nodes.map((n) => ({
+      ...n.data,
+      children: extractData(n.children),
+    }));
+  }
 
-  return children.map((acc) => {
-    const subTree = computeTreeTotals(accounts, ltMap, acc.id, depth + 1);
-    const lt = ltMap.get(acc.id);
+  return extractData(
+    buildAccountTree<AccountTreeTotals>(
+      accounts,
+      (acc, { depth, hasChildren, keepOwn, childrenData }) => {
+        const lt = ltMap.get(acc.id);
 
-    // A parent node is a rollup: its amounts are derived ONLY from its
-    // descendants. Any stray posting/static opening on a parent must never be
-    // double-counted on top of the children — this matches the balance sheet
-    // (`children.length > 0 ? childrenBalance : ownBalance`) and the backend
-    // chart rollup, which computes parent balances as the children sum.
-    const hasChildren = subTree.length > 0;
-    const hasOwnPostings =
-      !!lt &&
-      (lt.openingDebit !== 0 ||
-        lt.openingCredit !== 0 ||
-        lt.periodDebit !== 0 ||
-        lt.periodCredit !== 0);
-    const keepOwn = isInventoryAccount({ purpose: acc.purpose, name_ar: acc.name_ar }) && hasOwnPostings;
-    let openingDebit = hasChildren && !keepOwn ? 0 : (lt?.openingDebit ?? 0);
-    let openingCredit = hasChildren && !keepOwn ? 0 : (lt?.openingCredit ?? 0);
-    let periodDebit = hasChildren && !keepOwn ? 0 : (lt?.periodDebit ?? 0);
-    let periodCredit = hasChildren && !keepOwn ? 0 : (lt?.periodCredit ?? 0);
-    let totDebit = hasChildren && !keepOwn ? 0 : (lt?.debit ?? 0);
-    let totCredit = hasChildren && !keepOwn ? 0 : (lt?.credit ?? 0);
+        let openingDebit = hasChildren && !keepOwn ? 0 : (lt?.openingDebit ?? 0);
+        let openingCredit = hasChildren && !keepOwn ? 0 : (lt?.openingCredit ?? 0);
+        let periodDebit = hasChildren && !keepOwn ? 0 : (lt?.periodDebit ?? 0);
+        let periodCredit = hasChildren && !keepOwn ? 0 : (lt?.periodCredit ?? 0);
+        let totDebit = hasChildren && !keepOwn ? 0 : (lt?.debit ?? 0);
+        let totCredit = hasChildren && !keepOwn ? 0 : (lt?.credit ?? 0);
 
-    if (hasChildren && !keepOwn) {
-      openingDebit += subTree.reduce((s, c) => s + c.openingDebit, 0);
-      openingCredit += subTree.reduce((s, c) => s + c.openingCredit, 0);
-      periodDebit += subTree.reduce((s, c) => s + c.periodDebit, 0);
-      periodCredit += subTree.reduce((s, c) => s + c.periodCredit, 0);
-      totDebit += subTree.reduce((s, c) => s + c.totDebit, 0);
-      totCredit += subTree.reduce((s, c) => s + c.totCredit, 0);
-    }
+        if (hasChildren && !keepOwn) {
+          openingDebit += childrenData.reduce((s, c) => s + c.openingDebit, 0);
+          openingCredit += childrenData.reduce((s, c) => s + c.openingCredit, 0);
+          periodDebit += childrenData.reduce((s, c) => s + c.periodDebit, 0);
+          periodCredit += childrenData.reduce((s, c) => s + c.periodCredit, 0);
+          totDebit += childrenData.reduce((s, c) => s + c.totDebit, 0);
+          totCredit += childrenData.reduce((s, c) => s + c.totCredit, 0);
+        }
 
-    const endingBalance = (openingDebit - openingCredit) + periodDebit - periodCredit;
+        const endingBalance = (openingDebit - openingCredit) + periodDebit - periodCredit;
 
-    return {
-      id: acc.id,
-      name: acc.name_ar,
-      depth,
-      openingDebit,
-      openingCredit,
-      periodDebit,
-      periodCredit,
-      totDebit,
-      totCredit,
-      endingBalance,
-      children: subTree,
-    };
-  });
+        return {
+          id: acc.id,
+          name: acc.name_ar,
+          depth,
+          openingDebit,
+          openingCredit,
+          periodDebit,
+          periodCredit,
+          totDebit,
+          totCredit,
+          endingBalance,
+          children: [],
+        };
+      },
+      (acc, { hasChildren }) => {
+        const lt = ltMap.get(acc.id);
+        const hasOwnPostings =
+          !!lt &&
+          (lt.openingDebit !== 0 ||
+            lt.openingCredit !== 0 ||
+            lt.periodDebit !== 0 ||
+            lt.periodCredit !== 0);
+        return isInventoryAccount({ purpose: acc.purpose, name_ar: acc.name_ar }) && hasOwnPostings && hasChildren;
+      },
+    ),
+  );
 }
 
 export function flattenTreeRows(nodes: AccountTreeTotals[], maxDepth: number): TrialBalanceTreeRow[] {

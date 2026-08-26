@@ -5,6 +5,7 @@ import {
   isInventoryTradingAccount,
   isCreditNatureAccount,
 } from "@modules/reports/lib/accountingEntryClassifier";
+import { buildAccountTree, type TreeNode } from "./accountTree";
 
 export type BalanceSheetFilters = {
   from_date: string;
@@ -87,41 +88,62 @@ function isCurrentLiability(code: string, name: string, purpose?: string): boole
   return false;
 }
 
-function buildAccountTree(
+function buildBalanceSheetTree(
   accounts: AccountDto[],
   ledgerTotals?: Map<string, { debit: number; credit: number }>,
-  parentId: string | null = null,
 ): AccountBalance[] {
-  return accounts
-    .filter(a => parentId === null ? (!a.parent_id || a.parent_id === a.id) : a.parent_id === parentId)
-    .sort((a, b) => a.code.localeCompare(b.code))
-    .map(acc => {
-      const children = buildAccountTree(accounts, ledgerTotals, acc.id);
-      let ownBalance: number;
-      if (ledgerTotals) {
-        const lt = ledgerTotals.get(acc.id);
-        if (lt) {
-          const net = lt.debit - lt.credit;
-          ownBalance = isCreditNatureAccount(acc.account_type) ? -net : net;
+  function extractData(nodes: ReturnType<typeof buildAccountTree<AccountBalance>>): AccountBalance[] {
+    return nodes.map((n) => ({
+      ...n.data,
+      children: extractData(n.children),
+    }));
+  }
+
+  return extractData(
+    buildAccountTree<AccountBalance>(
+      accounts,
+      (acc, { depth, hasChildren, keepOwn, childrenData }) => {
+        let ownBalance: number;
+        if (ledgerTotals) {
+          const lt = ledgerTotals.get(acc.id);
+          if (lt) {
+            const net = lt.debit - lt.credit;
+            ownBalance = isCreditNatureAccount(acc.account_type) ? -net : net;
+          } else {
+            ownBalance = 0;
+          }
         } else {
-          ownBalance = 0;
+          ownBalance = parseNum(acc.balance);
         }
-      } else {
-        ownBalance = parseNum(acc.balance);
-      }
-      const childrenBalance = children.reduce((s, c) => s + c.balance, 0);
-      const inventoryOwn = isInventoryAccount({ purpose: acc.purpose, name_ar: acc.name_ar }) && ownBalance !== 0;
-      return {
-        id: acc.id,
-        code: acc.code,
-        name: acc.name_ar,
-        balance: inventoryOwn ? ownBalance : children.length > 0 ? childrenBalance : ownBalance,
-        accountType: acc.account_type,
-        depth: 0,
-        purpose: acc.purpose ?? undefined,
-        children,
-      };
-    });
+        const childrenBalance = childrenData.reduce((s, c) => s + c.balance, 0);
+        return {
+          id: acc.id,
+          code: acc.code,
+          name: acc.name_ar,
+          balance: keepOwn ? ownBalance : hasChildren ? childrenBalance : ownBalance,
+          accountType: acc.account_type,
+          depth,
+          purpose: acc.purpose ?? undefined,
+          children: [],
+        };
+      },
+      (acc, { hasChildren }) => {
+        let ownBalance: number;
+        if (ledgerTotals) {
+          const lt = ledgerTotals.get(acc.id);
+          if (lt) {
+            const net = lt.debit - lt.credit;
+            ownBalance = isCreditNatureAccount(acc.account_type) ? -net : net;
+          } else {
+            ownBalance = 0;
+          }
+        } else {
+          ownBalance = parseNum(acc.balance);
+        }
+        return isInventoryAccount({ purpose: acc.purpose, name_ar: acc.name_ar }) && ownBalance !== 0 && hasChildren;
+      },
+    ),
+  );
 }
 
 export function computeBalanceSheet(
@@ -130,7 +152,7 @@ export function computeBalanceSheet(
   ledgerTotals?: Map<string, { debit: number; credit: number }>,
   inventory?: { closingInventory: number },
 ): BalanceSheetComputed {
-  const tree = buildAccountTree(accounts, ledgerTotals);
+  const tree = buildBalanceSheetTree(accounts, ledgerTotals);
 
 
   // --- التصنيف الصحيح: يعتمد على accountType أولاً ثم الكود/الاسم ---
