@@ -3,6 +3,10 @@ import { SYSTEM_ACCOUNT_IDS } from "@erp/shared-types";
 import { toLocalDateStr } from "@shared/lib/format";
 import type { AccountDto, JournalEntryDto } from "@erp/shared-types";
 import { isPostedLedgerEntry } from "@modules/reports/lib/report-policies";
+import {
+  isOpeningEntry,
+  isCreditNatureAccount as classifierIsCreditNature,
+} from "@modules/reports/lib/accountingEntryClassifier";
 
 export interface AccountLedgerTotal {
   openingDebit: number;
@@ -20,25 +24,7 @@ export interface LedgerTotalsResult {
 }
 
 function isCreditNatureAccount(account: AccountDto): boolean {
-  return ["Liabilities", "Equity", "Revenue"].includes(account.account_type);
-}
-
-/**
- * An opening-migration pivot source: the canonical aggregate posting
- * (`opening_balance:{id}`), its residual reclassification
- * (`residual_classification:{id}`) and its cancellation contra
- * (`ob_reversal:{id}`). These are official opening-workflow steps — the
- * residual must be treated as part of the opening position (pre-period), never
- * as an operational period movement, and its account rows must not double-add
- * a stale static `opening_balance`.
- */
-function isOpeningMigrationPivot(entry: JournalEntryDto): boolean {
-  const source = entry.source_id || "";
-  return (
-    source.startsWith("opening_balance:") ||
-    source.startsWith("residual_classification:") ||
-    source.startsWith("ob_reversal:")
-  );
+  return classifierIsCreditNature(account.account_type);
 }
 
 /**
@@ -77,13 +63,7 @@ export function computeLedgerTotals(
     // source markers ONLY — never by description keywords ("رصيد افتتاحي" /
     // "أول المدة") so a NORMAL post-opening transaction that merely mentions
     // the words can never be misclassified as an opening movement.
-    const isOpeningEntry =
-      isOpeningMigrationPivot(entry) ||
-      entry.journal_type === "CashOpeningBalance" ||
-      entry.journal_type === "AccountOpeningBalance" ||
-      entry.journal_type === "MaterialOpeningBalance";
-
-    if (isOpeningEntry) {
+    if (isOpeningEntry(entry)) {
       for (const line of entry.lines) {
         // Mark ALL accounts in any opening entry so their static opening_balance
         // is not double-applied on top of the journal
@@ -131,13 +111,7 @@ export function computeLedgerTotals(
     // source markers ONLY — never by description keywords ("رصيد افتتاحي" /
     // "أول المدة") so a NORMAL post-opening transaction that merely mentions
     // the words can never be misclassified as an opening movement.
-    const isOpeningEntry =
-      isOpeningMigrationPivot(entry) ||
-      entry.journal_type === "CashOpeningBalance" ||
-      entry.journal_type === "AccountOpeningBalance" ||
-      entry.journal_type === "MaterialOpeningBalance";
-
-    const isPrePeriod = isOpeningEntry || (fromDateStr != null && entryDate < fromDateStr);
+    const isPrePeriod = isOpeningEntry(entry) || (fromDateStr != null && entryDate < fromDateStr);
 
     const targetMap = isPrePeriod ? prePeriodNetMap : periodNetMap;
 

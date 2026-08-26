@@ -297,17 +297,32 @@ describe("computeBalanceSheet", () => {
     expect(section.rows.some(r => r.label === "صندوق")).toBe(true);
   });
 
-  it("excludes any account containing بضاعة from current assets", () => {
+  it("excludes only بضاعة أول المدة and بضاعة آخر المدة from current assets", () => {
     const accounts: AccountDto[] = [
       acc({ id: "1", code: "121", name_ar: "صندوق", account_type: "Assets", balance: "10000" }),
       acc({ id: "2", code: "122", name_ar: "بضاعة", account_type: "Assets", balance: "5000" }),
+      acc({ id: "3", code: "123", name_ar: "المخزون", account_type: "Assets", balance: "7000" }),
+      acc({ id: "4", code: "311", name_ar: "رأس المال", account_type: "Equity", balance: "22000" }),
+    ];
+    const result = computeBalanceSheet(accounts, { netProfit: 0, totalDrawings: 0 });
+    expect(result.totalCurrentAssets).toBe(22000);
+    const section = result.sections.find(s => s.id === "current-assets")!;
+    expect(section.rows.some(r => r.label === "بضاعة")).toBe(true);
+    expect(section.rows.some(r => r.label === "المخزون")).toBe(true);
+    expect(section.rows.some(r => r.label === "صندوق")).toBe(true);
+  });
+
+  it("excludes بضاعة أول المدة from current assets but keeps other بضاعة accounts", () => {
+    const accounts: AccountDto[] = [
+      acc({ id: "1", code: "121", name_ar: "صندوق", account_type: "Assets", balance: "10000" }),
+      acc({ id: "2", code: "122", name_ar: "بضاعة أول المدة", account_type: "Assets", balance: "5000" }),
       acc({ id: "3", code: "123", name_ar: "المخزون", account_type: "Assets", balance: "7000" }),
       acc({ id: "4", code: "311", name_ar: "رأس المال", account_type: "Equity", balance: "17000" }),
     ];
     const result = computeBalanceSheet(accounts, { netProfit: 0, totalDrawings: 0 });
     expect(result.totalCurrentAssets).toBe(17000);
     const section = result.sections.find(s => s.id === "current-assets")!;
-    expect(section.rows.some(r => r.label.includes("بضاعة"))).toBe(false);
+    expect(section.rows.some(r => r.label.includes("بضاعة أول المدة"))).toBe(false);
     expect(section.rows.some(r => r.label === "المخزون")).toBe(true);
     expect(section.rows.some(r => r.label === "صندوق")).toBe(true);
   });

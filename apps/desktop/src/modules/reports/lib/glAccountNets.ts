@@ -1,23 +1,13 @@
 import type { AccountDto, JournalEntryDto, JournalLineDto } from "@erp/shared-types";
 import { isPostedLedgerEntry } from "@modules/reports/lib/report-policies";
+import {
+  isOpeningEntry,
+  normalSign as classifierNormalSign,
+  purposeTypeFallback as classifierPurposeTypeFallback,
+  type GlAccountType,
+} from "@modules/reports/lib/accountingEntryClassifier";
 
-/**
- * Shared posted-ledger account projection. Every financial statement consumer
- * (Dashboard, Income Statement, Trial Balance inputs) routes through ONE
- * computation so a Dr/Cr never moves one report and disappears from another.
- *
- * The feed is the POSTED-LEDGER policy (`isPostedLedgerEntry`: Posted with no
- * reversal relationship) — the same set the backend ledger surfaces
- * (`list_by_accounts`) — so Reversed originals and Posted contra journals are
- * mathematically neutral and never reach any GL number.
- *
- * Account nature (normal balance) comes from the enriched `account_type`
- * (Assets/Liabilities/Equity/Revenue/Expenses) with an `account_purpose`
- * fallback, so the projection keeps working even when a line was fetched
- * through a path that did not enrich the account type.
- */
-
-export type GlAccountType = "Assets" | "Liabilities" | "Equity" | "Revenue" | "Expenses";
+export type { GlAccountType } from "@modules/reports/lib/accountingEntryClassifier";
 
 /** Raw Dr/Cr accumulation for one account plus its signed normal-balance net. */
 export interface AccountNet {
@@ -46,36 +36,11 @@ export interface GlAccountNets {
   netForAccounts(accountIds: string[]): number;
 }
 
-const CREDIT_NORMAL_TYPES = new Set(["Liabilities", "Equity", "Revenue"]);
-
 /** 1 for credit-normal accounts, −1 for debit-normal (Assets / Expenses). */
-export function normalSign(accountType?: string): 1 | -1 {
-  return accountType && CREDIT_NORMAL_TYPES.has(accountType) ? 1 : -1;
-}
+export const normalSign = classifierNormalSign;
 
 /** Purpose → account-type fallback for the (rare) un-enriched line. */
-export function purposeTypeFallback(accountPurpose?: string): GlAccountType | undefined {
-  if (!accountPurpose) return undefined;
-  if (accountPurpose === "receivable" || accountPurpose === "inventory" || accountPurpose === "bank") {
-    return "Assets";
-  }
-  if (accountPurpose === "payable" || accountPurpose === "loan") {
-    return "Liabilities";
-  }
-  if (
-    accountPurpose === "partner_capital" ||
-    accountPurpose === "partner_drawings" ||
-    accountPurpose === "partner_current" ||
-    accountPurpose === "retained_earnings" ||
-    accountPurpose === "opening_balance_equity" ||
-    accountPurpose === "opening_equity_adjustment" ||
-    accountPurpose === "prior_period_adjustment" ||
-    accountPurpose === "other_equity"
-  ) {
-    return "Equity";
-  }
-  return undefined;
-}
+export const purposeTypeFallback = classifierPurposeTypeFallback;
 
 /** Semantic account type of a line (enriched or purpose fallback). */
 export function lineType(line: JournalLineDto): GlAccountType | undefined {
@@ -95,20 +60,6 @@ export function lineNet(line: JournalLineDto): number {
 }
 
 const ALL_GL_TYPES: Set<string> = new Set(["Assets", "Liabilities", "Equity", "Revenue", "Expenses"]);
-
-/** Opening-migration pivot entries — always included regardless of date range.
- *  These are the same markers `ledgerTotals.ts` uses to classify pre-period. */
-function isOpeningMigrationEntry(entry: JournalEntryDto): boolean {
-  const source = entry.source_id || "";
-  return (
-    source.startsWith("opening_balance:") ||
-    source.startsWith("residual_classification:") ||
-    source.startsWith("ob_reversal:") ||
-    entry.journal_type === "CashOpeningBalance" ||
-    entry.journal_type === "AccountOpeningBalance" ||
-    entry.journal_type === "MaterialOpeningBalance"
-  );
-}
 
 export function computeGlAccountNets(
   entries: JournalEntryDto[],
@@ -138,7 +89,7 @@ export function computeGlAccountNets(
     // cumulative opening position, not a period movement. Excluding them
     // by date range causes balance-sheet tiles (cash, bank, AR, AP, loans)
     // to show 0 on the Dashboard.
-    if (!isOpeningMigrationEntry(entry)) {
+    if (!isOpeningEntry(entry)) {
       const entryTs = new Date(entry.entry_date).getTime();
       if (inRange) {
         if (!Number.isFinite(entryTs)) continue;

@@ -1,5 +1,6 @@
 import type { AccountDto } from "@erp/shared-types";
 import type { AccountTreeNode } from "./types";
+import { isInventoryAccount } from "@modules/reports/lib/accountingEntryClassifier";
 
 export const isSummaryAccount = (
   _account: Pick<AccountDto, "category" | "level">,

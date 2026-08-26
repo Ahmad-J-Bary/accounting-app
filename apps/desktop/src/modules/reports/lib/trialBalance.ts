@@ -1,5 +1,6 @@
 import type { AccountDto } from "@erp/shared-types";
 import type { AccountLedgerTotal } from "./ledgerTotals";
+import { isInventoryAccount } from "@modules/reports/lib/accountingEntryClassifier";
 
 export interface TrialBalanceRow {
   account: AccountDto;
@@ -107,7 +108,7 @@ export function computeTreeTotals(
         lt.openingCredit !== 0 ||
         lt.periodDebit !== 0 ||
         lt.periodCredit !== 0);
-    const keepOwn = acc.name_ar.includes("مخزون") && hasOwnPostings;
+    const keepOwn = isInventoryAccount({ purpose: acc.purpose, name_ar: acc.name_ar }) && hasOwnPostings;
     let openingDebit = hasChildren && !keepOwn ? 0 : (lt?.openingDebit ?? 0);
     let openingCredit = hasChildren && !keepOwn ? 0 : (lt?.openingCredit ?? 0);
     let periodDebit = hasChildren && !keepOwn ? 0 : (lt?.periodDebit ?? 0);

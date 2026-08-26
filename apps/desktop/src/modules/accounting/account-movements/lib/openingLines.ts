@@ -1,5 +1,6 @@
 import type { AccountLedgerLineDto } from "@erp/shared-types";
 import { toLocalDateStr } from "@shared/lib/format";
+import { isOpeningEntry } from "@modules/reports/lib/accountingEntryClassifier";
 
 // Opening classification is computed ONCE by the backend (`is_opening`).
 // The legacy type/description heuristic below is only a fallback for
@@ -8,13 +9,23 @@ type OpeningLineLike = Pick<AccountLedgerLineDto, "journal_type" | "description"
   is_opening?: boolean;
 };
 
+/**
+ * Detect opening lines. Uses the canonical `isOpeningEntry()` classifier
+ * for structured fields, with a legacy Arabic fallback for backward
+ * compatibility with fixtures that predate the `is_opening` flag.
+ */
 export function isOpeningLine(l: OpeningLineLike): boolean {
-  if (l.is_opening !== undefined) return l.is_opening;
+  // Explicit false from backend: never override with heuristics
+  if (l.is_opening === false) return false;
+
+  // Fast path: canonical classifier handles is_opening, source_id, journal_type
+  if (isOpeningEntry(l)) return true;
+
+  // Legacy fallback: Arabic journal types and description keywords.
+  // Kept for backward compatibility with old fixtures; new code should
+  // NEVER rely on description matching for classification.
   const desc = l.description || "";
   return (
-    l.journal_type === "AccountOpeningBalance" ||
-    l.journal_type === "CashOpeningBalance" ||
-    l.journal_type === "MaterialOpeningBalance" ||
     l.journal_type === "رصيد افتتاحي" ||
     l.journal_type === "رصيد افتتاحي لحساب" ||
     l.journal_type === "رصيد افتتاحي للخزينة" ||

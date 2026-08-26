@@ -1,5 +1,10 @@
 import type { AccountDto } from "@erp/shared-types";
 import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
+import {
+  isInventoryAccount,
+  isInventoryTradingAccount,
+  isCreditNatureAccount,
+} from "@modules/reports/lib/accountingEntryClassifier";
 
 export type BalanceSheetFilters = {
   from_date: string;
@@ -69,11 +74,6 @@ function isCurrentAsset(code: string, name: string, purpose?: string): boolean {
   return false;
 }
 
-/** حسابات البضاعة التي يجب استثناؤها من الميزانية العمومية (تُعالَج في قائمة الدخل) */
-function isInventoryTradingAccount(name: string): boolean {
-  return name.includes("بضاعة أول المدة") || name.includes("بضاعة آخر المدة");
-}
-
 function isFixedLiability(code: string, name: string): boolean {
   const fixedIndicators = ["21", "ثابت", "طويل", "قرض"];
   if (fixedIndicators.some(i => code.startsWith(i) || name.includes(i))) return true;
@@ -102,7 +102,7 @@ function buildAccountTree(
         const lt = ledgerTotals.get(acc.id);
         if (lt) {
           const net = lt.debit - lt.credit;
-          ownBalance = ["Liabilities", "Equity", "Revenue"].includes(acc.account_type) ? -net : net;
+          ownBalance = isCreditNatureAccount(acc.account_type) ? -net : net;
         } else {
           ownBalance = 0;
         }
@@ -110,13 +110,12 @@ function buildAccountTree(
         ownBalance = parseNum(acc.balance);
       }
       const childrenBalance = children.reduce((s, c) => s + c.balance, 0);
-      const makhzoonOwn = acc.name_ar.includes("خزون") && ownBalance !== 0;
-      const openingStockOwn = acc.name_ar.includes("بضاعة أول المدة") && ownBalance !== 0;
+      const inventoryOwn = isInventoryAccount({ purpose: acc.purpose, name_ar: acc.name_ar }) && ownBalance !== 0;
       return {
         id: acc.id,
         code: acc.code,
         name: acc.name_ar,
-        balance: makhzoonOwn || openingStockOwn ? ownBalance : children.length > 0 ? childrenBalance : ownBalance,
+        balance: inventoryOwn ? ownBalance : children.length > 0 ? childrenBalance : ownBalance,
         accountType: acc.account_type,
         depth: 0,
         purpose: acc.purpose ?? undefined,
