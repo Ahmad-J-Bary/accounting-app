@@ -133,7 +133,7 @@ export function ProfitDistributionWorkflow({
             type="number"
             min={0}
             max={available || undefined}
-            className="h-9 text-right tabular-nums"
+            className="h-9 text-end tabular-nums"
           />
         </div>
         <div className="flex gap-2 flex-wrap">

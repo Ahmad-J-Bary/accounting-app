@@ -55,7 +55,7 @@ export function ProfitDistributionSidePanel({
             <p className="text-sm font-semibold text-red-600 mb-2">تعذر تحميل بيانات الأرباح القابلة للتوزيع.</p>
             <p className="text-xs text-slate-500 mb-4">{String(error)}</p>
             <Button size="sm" variant="outline" onClick={() => refetch()} className="border-red-200 text-red-700 hover:bg-red-50">
-              <RefreshCw className="w-3 h-3 ml-1" />
+              <RefreshCw className="w-3 h-3 me-1" />
               إعادة المحاولة
             </Button>
           </div>

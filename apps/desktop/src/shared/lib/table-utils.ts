@@ -4,9 +4,9 @@ export type Align = "right" | "left" | "center";
 
 export function getAlignmentClass(align?: Align): string {
   switch (align) {
-    case "left": return "text-left";
+    case "left": return "text-end";
     case "center": return "text-center";
-    default: return "text-right";
+    default: return "text-start";
   }
 }
 
@@ -30,7 +30,7 @@ export function getRowBorderClass(borderStyle: string): string {
 }
 
 export function getLeftBorderClass(borderStyle: string): string {
-  return borderStyle === "full" ? "border-l border-slate-200" : "";
+  return borderStyle === "full" ? "border-s border-slate-200" : "";
 }
 
 export function getRowBackgroundClass(

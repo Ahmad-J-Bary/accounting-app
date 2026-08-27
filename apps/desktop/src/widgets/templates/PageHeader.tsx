@@ -32,7 +32,7 @@ export function PageHeader({
         {badge && <div className="shrink-0">{badge}</div>}
         {pinAction && <SidebarAddAction label={pinLabel || title} />}
         {subtitle && (
-          <span className="text-[11px] text-muted-foreground font-medium hidden sm:inline border-s border-border pr-2 ml-1">
+          <span className="text-[11px] text-muted-foreground font-medium hidden sm:inline border-s border-border ps-2 me-1">
             {subtitle}
           </span>
         )}

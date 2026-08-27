@@ -262,15 +262,25 @@ export function UnifiedTable<T>({
     [renderColumns],
   );
 
-  // ── Row cell style — centered, no ellipsis. The grid column widens to
-  //    fit the content; neighboring columns absorb the remaining change
-  //    so total width stays constant.
-  const getCellStyle = (): React.CSSProperties => ({
+  // ── Row cell style — respects column alignment for RTL. The grid column
+  //    widens to fit the content; neighboring columns absorb the remaining
+  //    change so total width stays constant.
+  const getCellStyle = (col: UnifiedColumn<T>): React.CSSProperties => ({
     minWidth: 0,
     display: "flex",
     alignItems: "center",
-    justifyContent: "center",
-    textAlign: "center",
+    justifyContent:
+      col.align === "right"
+        ? "flex-start"
+        : col.align === "left"
+          ? "flex-end"
+          : "center",
+    textAlign:
+      col.align === "right"
+        ? "start"
+        : col.align === "left"
+          ? "end"
+          : "center",
     fontSize: `${settings.fontSize}px`,
     fontFamily: settings.fontFamily,
   });
@@ -295,10 +305,10 @@ export function UnifiedTable<T>({
                 className={cn(
                   "h-3.5 rounded",
                   col.align === "left"
-                    ? "mr-auto ml-0 w-3/4"
+                    ? "ms-auto me-0 w-3/4"
                     : col.align === "center"
                     ? "mx-auto w-1/2"
-                    : "ml-auto mr-0 w-3/4",
+                    : "me-auto ms-0 w-3/4",
                 )}
               />
             </div>
@@ -345,7 +355,7 @@ export function UnifiedTable<T>({
                   "text-slate-600 transition-colors group-hover:text-slate-900",
                   col.className,
                 )}
-                style={getCellStyle()}
+                style={getCellStyle(col)}
               >
                 {typeof col.accessor === "function"
                   ? col.accessor(row, rowIdx)

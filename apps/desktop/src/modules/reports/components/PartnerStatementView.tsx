@@ -43,6 +43,7 @@ function usePartnerStatementColumns(formatValue: (value: number) => string) {
       header: "اسم الشريك",
       label: "اسم الشريك",
       accessor: (row) => <span className="font-bold text-slate-800">{row.partnerName}</span>,
+      align: "right",
       className: "justify-start",
     },
     {
@@ -50,6 +51,7 @@ function usePartnerStatementColumns(formatValue: (value: number) => string) {
       header: "رأس المال",
       label: "رأس المال",
       accessor: (row) => formatValue(row.capitalAmount),
+      align: "left",
       className: "justify-end tabular-nums font-black text-slate-900",
     },
     {
@@ -57,6 +59,7 @@ function usePartnerStatementColumns(formatValue: (value: number) => string) {
       header: "أرباح سنوات سابقة",
       label: "أرباح سنوات سابقة",
       accessor: (row) => formatValue(row.accumulatedProfits),
+      align: "left",
       className: "justify-end tabular-nums font-black text-emerald-700",
     },
     {
@@ -64,6 +67,7 @@ function usePartnerStatementColumns(formatValue: (value: number) => string) {
       header: "مسحوبات سنوات سابقة",
       label: "مسحوبات سنوات سابقة",
       accessor: (row) => formatValue(row.accumulatedDrawings),
+      align: "left",
       className: "justify-end tabular-nums font-black text-rose-700",
     },
     {
@@ -71,6 +75,7 @@ function usePartnerStatementColumns(formatValue: (value: number) => string) {
       header: "الحساب الجاري",
       label: "الحساب الجاري",
       accessor: (row) => formatValue(row.currentAccount),
+      align: "left",
       className: "justify-end tabular-nums font-black text-indigo-700",
     },
     {
@@ -78,6 +83,7 @@ function usePartnerStatementColumns(formatValue: (value: number) => string) {
       header: "أرباح هذه السنة",
       label: "أرباح هذه السنة",
       accessor: (row) => formatValue(row.thisYearProfit),
+      align: "left",
       className: "justify-end tabular-nums font-black text-emerald-700",
     },
     {
@@ -85,6 +91,7 @@ function usePartnerStatementColumns(formatValue: (value: number) => string) {
       header: "مسحوبات هذه السنة",
       label: "مسحوبات هذه السنة",
       accessor: (row) => formatValue(row.thisYearDrawings),
+      align: "left",
       className: "justify-end tabular-nums font-black text-rose-700",
     },
     {
@@ -92,6 +99,7 @@ function usePartnerStatementColumns(formatValue: (value: number) => string) {
       header: "المبلغ النهائي",
       label: "المبلغ النهائي",
       accessor: (row) => formatValue(row.finalAmount),
+      align: "left",
       className: "justify-end tabular-nums font-black text-indigo-700",
     },
   ], [formatValue]);
@@ -139,28 +147,28 @@ export function PartnerStatementView({ computed, formatValue }: PartnerStatement
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     return enrichedColumns.map((col) => {
       if (col.id === "partnerName") {
-        return { id: "count", columnId: "partnerName", label: "", value: `${totals.count} شريك`, className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: "partnerName", align: "right", label: "", value: `${totals.count} شريك`, className: "text-slate-500 font-medium" };
       }
       if (col.id === "capitalAmount") {
-        return { id: "capitalAmount_summary", columnId: "capitalAmount", label: "إجمالي رأس المال", value: formatValue(totals.capitalAmount), className: "text-indigo-700 font-black" };
+        return { id: "capitalAmount_summary", columnId: "capitalAmount", align: "left", label: "إجمالي رأس المال", value: formatValue(totals.capitalAmount), className: "text-indigo-700 font-black" };
       }
       if (col.id === "accumulatedProfits") {
-        return { id: "accumulatedProfits_summary", columnId: "accumulatedProfits", label: "إجمالي أرباح سابقة", value: formatValue(totals.accumulatedProfits), className: "text-emerald-700 font-black" };
+        return { id: "accumulatedProfits_summary", columnId: "accumulatedProfits", align: "left", label: "إجمالي أرباح سابقة", value: formatValue(totals.accumulatedProfits), className: "text-emerald-700 font-black" };
       }
       if (col.id === "accumulatedDrawings") {
-        return { id: "accumulatedDrawings_summary", columnId: "accumulatedDrawings", label: "إجمالي مسحوبات سابقة", value: formatValue(totals.accumulatedDrawings), className: "text-rose-700 font-black" };
+        return { id: "accumulatedDrawings_summary", columnId: "accumulatedDrawings", align: "left", label: "إجمالي مسحوبات سابقة", value: formatValue(totals.accumulatedDrawings), className: "text-rose-700 font-black" };
       }
       if (col.id === "currentAccount") {
-        return { id: "currentAccount_summary", columnId: "currentAccount", label: "الحساب الجاري", value: formatValue(totals.currentAccount), className: "text-indigo-700 font-black" };
+        return { id: "currentAccount_summary", columnId: "currentAccount", align: "left", label: "الحساب الجاري", value: formatValue(totals.currentAccount), className: "text-indigo-700 font-black" };
       }
       if (col.id === "thisYearProfit") {
-        return { id: "thisYearProfit_summary", columnId: "thisYearProfit", label: "أرباح هذه السنة", value: formatValue(totals.thisYearProfit), className: "text-emerald-700 font-black" };
+        return { id: "thisYearProfit_summary", columnId: "thisYearProfit", align: "left", label: "أرباح هذه السنة", value: formatValue(totals.thisYearProfit), className: "text-emerald-700 font-black" };
       }
       if (col.id === "thisYearDrawings") {
-        return { id: "thisYearDrawings_summary", columnId: "thisYearDrawings", label: "مسحوبات هذه السنة", value: formatValue(totals.thisYearDrawings), className: "text-rose-700 font-black" };
+        return { id: "thisYearDrawings_summary", columnId: "thisYearDrawings", align: "left", label: "مسحوبات هذه السنة", value: formatValue(totals.thisYearDrawings), className: "text-rose-700 font-black" };
       }
       if (col.id === "finalAmount") {
-        return { id: "finalAmount_summary", columnId: "finalAmount", label: "المبلغ النهائي", value: formatValue(totals.finalAmount), className: "text-indigo-700 font-black" };
+        return { id: "finalAmount_summary", columnId: "finalAmount", align: "left", label: "المبلغ النهائي", value: formatValue(totals.finalAmount), className: "text-indigo-700 font-black" };
       }
       return createSummarySpacer(col.id);
     });
@@ -170,7 +178,7 @@ export function PartnerStatementView({ computed, formatValue }: PartnerStatement
     <div className="flex flex-col h-full">
       <ReportMeta title="كشف حساب الشريك" description="تقرير شامل يوضح تفاصيل رأس المال والأرباح المتراكمة والمسحوبات والحسابات الجارية لكل شريك" />
       <SummaryCards computed={computed} formatValue={formatValue} />
-      <div className="flex-1 min-h-0 overflow-hidden px-4 pb-4">
+      <div className="flex-1 min-h-0 overflow-hidden pb-4">
         <TableShell
           search={search}
           onSearchChange={setSearch}

@@ -50,7 +50,7 @@ export default function PartnerRightsReport() {
                 className="h-9 rounded-lg bg-white font-black text-slate-700 border border-slate-200 hover:bg-slate-50"
                 onClick={() => setShowProfitDistribution(true)}
               >
-                <Coins className="ml-2 h-4 w-4" />
+                <Coins className="me-2 h-4 w-4" />
                 توزيع الأرباح
               </Button>
             }
@@ -69,9 +69,9 @@ export default function PartnerRightsReport() {
           ) : (
             <Tabs defaultValue="profit-share" className="flex flex-col h-full">
               <div className="px-4 pt-3">
-                <TabsList>
-                  <TabsTrigger value="profit-share">تقاسم الأرباح</TabsTrigger>
-                  <TabsTrigger value="statement">كشف الحساب</TabsTrigger>
+                <TabsList className="bg-white border border-slate-200 p-1 h-11 rounded-xl shadow-sm" dir="rtl">
+                  <TabsTrigger value="profit-share" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">تقاسم الأرباح</TabsTrigger>
+                  <TabsTrigger value="statement" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">كشف الحساب</TabsTrigger>
                 </TabsList>
               </div>
               <TabsContent value="profit-share" className="flex-1 min-h-0 mt-0">

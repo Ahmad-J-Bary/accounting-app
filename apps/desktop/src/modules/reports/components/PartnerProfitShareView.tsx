@@ -41,6 +41,7 @@ function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
       header: "اسم الشريك",
       label: "اسم الشريك",
       accessor: (row) => <span className="font-bold text-slate-800">{row.partnerName}</span>,
+      align: "right",
       className: "justify-start",
     },
     {
@@ -48,6 +49,7 @@ function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
       header: "نسبة المشاركة برأس المال",
       label: "نسبة المشاركة برأس المال",
       accessor: (row) => toFixed(row.capitalRatio, 2) + "%",
+      align: "left",
       className: "justify-end tabular-nums text-slate-600 font-bold",
     },
     {
@@ -55,6 +57,7 @@ function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
       header: "المبلغ المشارك به",
       label: "المبلغ المشارك به",
       accessor: (row) => formatValue(row.capitalAmount),
+      align: "left",
       className: "justify-end tabular-nums font-black text-slate-900",
     },
     {
@@ -62,6 +65,7 @@ function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
       header: "نسبة تقاسم الأرباح",
       label: "نسبة تقاسم الأرباح",
       accessor: (row) => toFixed(row.profitShareRatio, 2) + "%",
+      align: "left",
       className: "justify-end tabular-nums text-slate-600 font-bold",
     },
     {
@@ -69,6 +73,7 @@ function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
       header: "حصته من الأرباح",
       label: "حصته من الأرباح",
       accessor: (row) => formatValue(row.profitShareAmount),
+      align: "left",
       className: "justify-end tabular-nums font-black text-emerald-700",
     },
     {
@@ -76,6 +81,7 @@ function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
       header: "المسحوبات",
       label: "المسحوبات",
       accessor: (row) => formatValue(row.drawings),
+      align: "left",
       className: "justify-end tabular-nums font-black text-rose-700",
     },
     {
@@ -83,6 +89,7 @@ function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
       header: "المبلغ النهائي للشريك",
       label: "المبلغ النهائي للشريك",
       accessor: (row) => formatValue(row.finalAmount),
+      align: "left",
       className: "justify-end tabular-nums font-black text-indigo-700",
     },
     {
@@ -90,6 +97,7 @@ function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
       header: "حصته من البضاعة",
       label: "حصته من البضاعة",
       accessor: (row) => formatValue(row.inventoryShare),
+      align: "left",
       className: "justify-end tabular-nums font-medium text-amber-700",
     },
     {
@@ -97,6 +105,7 @@ function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
       header: "حصته من الأصول الثابتة",
       label: "حصته من الأصول الثابتة",
       accessor: (row) => formatValue(row.fixedAssetsShare),
+      align: "left",
       className: "justify-end tabular-nums font-medium text-violet-700",
     },
     {
@@ -104,6 +113,7 @@ function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
       header: "حصته من الأصول التشغيلية",
       label: "حصته من الأصول التشغيلية",
       accessor: (row) => formatValue(row.operationalAssetShare),
+      align: "left",
       className: "justify-end tabular-nums font-medium text-slate-700",
     },
   ], [formatValue]);
@@ -155,34 +165,34 @@ export function PartnerProfitShareView(props: PartnerProfitShareViewProps) {
   const summaryColumns = useMemo<SummaryColumn[]>(() => {
     return enrichedColumns.map((col) => {
       if (col.id === "partnerName") {
-        return { id: "count", columnId: "partnerName", label: "", value: `${totals.count} شريك`, className: "text-slate-500 font-medium" };
+        return { id: "count", columnId: "partnerName", align: "right", label: "", value: `${totals.count} شريك`, className: "text-slate-500 font-medium" };
       }
       if (col.id === "capitalRatio") {
-        return { id: "capitalRatio_summary", columnId: "capitalRatio", label: "نسبة المشاركة", value: toFixed(totals.capitalRatio, 2) + "%", className: "text-slate-700 font-bold" };
+        return { id: "capitalRatio_summary", columnId: "capitalRatio", align: "left", label: "نسبة المشاركة", value: toFixed(totals.capitalRatio, 2) + "%", className: "text-slate-700 font-bold" };
       }
       if (col.id === "capitalAmount") {
-        return { id: "capitalAmount_summary", columnId: "capitalAmount", label: "إجمالي رأس المال", value: formatValue(totals.capitalAmount), className: "text-indigo-700 font-black" };
+        return { id: "capitalAmount_summary", columnId: "capitalAmount", align: "left", label: "إجمالي رأس المال", value: formatValue(totals.capitalAmount), className: "text-indigo-700 font-black" };
       }
       if (col.id === "profitShareRatio") {
-        return { id: "profitShareRatio_summary", columnId: "profitShareRatio", label: "نسبة الأرباح", value: toFixed(totals.profitShareRatio, 2) + "%", className: "text-slate-700 font-bold" };
+        return { id: "profitShareRatio_summary", columnId: "profitShareRatio", align: "left", label: "نسبة الأرباح", value: toFixed(totals.profitShareRatio, 2) + "%", className: "text-slate-700 font-bold" };
       }
       if (col.id === "profitShareAmount") {
-        return { id: "profitShareAmount_summary", columnId: "profitShareAmount", label: "إجمالي الأرباح", value: formatValue(totals.profitShareAmount), className: "text-emerald-700 font-black" };
+        return { id: "profitShareAmount_summary", columnId: "profitShareAmount", align: "left", label: "إجمالي الأرباح", value: formatValue(totals.profitShareAmount), className: "text-emerald-700 font-black" };
       }
       if (col.id === "drawings") {
-        return { id: "drawings_summary", columnId: "drawings", label: "إجمالي المسحوبات", value: formatValue(totals.drawings), className: "text-rose-700 font-black" };
+        return { id: "drawings_summary", columnId: "drawings", align: "left", label: "إجمالي المسحوبات", value: formatValue(totals.drawings), className: "text-rose-700 font-black" };
       }
       if (col.id === "finalAmount") {
-        return { id: "finalAmount_summary", columnId: "finalAmount", label: "المبلغ النهائي", value: formatValue(totals.finalAmount), className: "text-indigo-700 font-black" };
+        return { id: "finalAmount_summary", columnId: "finalAmount", align: "left", label: "المبلغ النهائي", value: formatValue(totals.finalAmount), className: "text-indigo-700 font-black" };
       }
       if (col.id === "inventoryShare") {
-        return { id: "inventoryShare_summary", columnId: "inventoryShare", label: "حصص البضاعة", value: formatValue(totals.inventoryShare), className: "text-amber-700 font-bold" };
+        return { id: "inventoryShare_summary", columnId: "inventoryShare", align: "left", label: "حصص البضاعة", value: formatValue(totals.inventoryShare), className: "text-amber-700 font-bold" };
       }
       if (col.id === "fixedAssetsShare") {
-        return { id: "fixedAssetsShare_summary", columnId: "fixedAssetsShare", label: "حصص الأصول الثابتة", value: formatValue(totals.fixedAssetsShare), className: "text-violet-700 font-bold" };
+        return { id: "fixedAssetsShare_summary", columnId: "fixedAssetsShare", align: "left", label: "حصص الأصول الثابتة", value: formatValue(totals.fixedAssetsShare), className: "text-violet-700 font-bold" };
       }
       if (col.id === "operationalAssetShare") {
-        return { id: "operationalAssetShare_summary", columnId: "operationalAssetShare", label: "حصص الأصول التشغيلية", value: formatValue(totals.operationalAssetShare), className: "text-slate-700 font-bold" };
+        return { id: "operationalAssetShare_summary", columnId: "operationalAssetShare", align: "left", label: "حصص الأصول التشغيلية", value: formatValue(totals.operationalAssetShare), className: "text-slate-700 font-bold" };
       }
       return createSummarySpacer(col.id);
     });
@@ -192,7 +202,7 @@ export function PartnerProfitShareView(props: PartnerProfitShareViewProps) {
     <div className="flex flex-col h-full">
       <ReportMeta title="الشركاء وحقوقهم" description="تقرير مفصل يوضح نسب الشراكة وتوزيع الأرباح بين الشركاء بناءً على رؤوس أموالهم والأرباح التشغيلية" />
       <SummaryCards computed={computed} formatValue={formatValue} />
-      <div className="flex-1 min-h-0 overflow-hidden px-4 pb-4">
+      <div className="flex-1 min-h-0 overflow-hidden pb-4">
         <TableShell
           search={search}
           onSearchChange={setSearch}
