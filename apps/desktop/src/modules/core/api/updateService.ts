@@ -31,63 +31,18 @@ function compareVersions(current: string, latest: string): boolean {
 
 export const updateService = {
   async checkForUpdates(currentVersion: string): Promise<UpdateInfo> {
-    const url = `https://api.github.com/repos/${OWNER}/${REPO}/releases/latest`;
-
-    // Attempt with Token if available in environment (useful for developers/CI)
-    const token = typeof process !== 'undefined' && process.env ? process.env.GITHUB_TOKEN : undefined;
-    const headers: Record<string, string> = {
-      Accept: "application/vnd.github.v3+json",
-    };
-    if (token) {
-      headers["Authorization"] = `token ${token}`;
-    }
+    // Primary source: raw.githubusercontent.com (no rate limits) — avoids the
+    // unauthenticated `api.github.com` 403 (60 req/hr per IP) that otherwise
+    // floods the console with network errors. The version lives in package.json.
+    const versionUrl = `https://raw.githubusercontent.com/${OWNER}/${REPO}/main/apps/desktop/package.json`;
 
     try {
-      const res = await fetch(url, { headers });
-
-      if (!res.ok) {
-        throw new Error(`GitHub API returned ${res.status}`);
+      const versionRes = await fetch(versionUrl);
+      if (!versionRes.ok) {
+        throw new Error(`فشل التحقق من إصدار التطبيق (${versionRes.status})`);
       }
 
-      const release = await res.json();
-      const latestVersion = release.tag_name.replace(/^v/, "");
-      const hasUpdate = compareVersions(currentVersion, latestVersion);
-
-      const ua = navigator.userAgent.toLowerCase();
-      const isWindows = ua.includes("win");
-      const isMac = ua.includes("mac");
-
-      const asset = (release.assets || []).find((a: { name: string; browser_download_url: string }) => {
-        if (isWindows) {
-          return a.name.endsWith(".exe") || a.name.endsWith(".msi");
-        } else if (isMac) {
-          return a.name.endsWith(".dmg");
-        } else {
-          return a.name.endsWith(".AppImage") || a.name.endsWith(".deb") || a.name.endsWith(".rpm");
-        }
-      });
-
-      return {
-        has_update: hasUpdate,
-        current_version: currentVersion,
-        latest_version: latestVersion,
-        release_name: release.name || latestVersion,
-        release_body: release.body || "",
-        release_url: release.html_url,
-        download_url: asset?.browser_download_url ?? null,
-      };
-    } catch (_e) {
-      // Silent fallback: GitHub API rate-limited or unreachable.
-      // Proceed to backup check via raw.githubusercontent.com (no rate limits).
-
-      // Fallback: Fetch package.json from raw.githubusercontent.com (No Rate Limits)
-      const fallbackUrl = `https://raw.githubusercontent.com/${OWNER}/${REPO}/main/apps/desktop/package.json`;
-      const fallbackRes = await fetch(fallbackUrl);
-      if (!fallbackRes.ok) {
-        throw new Error(`فشل التحقق من التحديثات: تم تجاوز حد طلبات GitHub وفشل الاتصال الاحتياطي (${fallbackRes.status})`);
-      }
-
-      const pkgJson = await fallbackRes.json();
+      const pkgJson = await versionRes.json();
       const latestVersion = pkgJson.version;
       const hasUpdate = compareVersions(currentVersion, latestVersion);
 
@@ -111,10 +66,14 @@ export const updateService = {
         current_version: currentVersion,
         latest_version: latestVersion,
         release_name: `الإصدار ${latestVersion}`,
-        release_body: "يتوفر تحديث جديد للتطبيق. تم استخدام الفحص الاحتياطي نظراً لقيود شبكة GitHub API. يمكنك تنزيل التحديث الآن أو الاطلاع على التفاصيل على موقع GitHub.",
+        release_body: hasUpdate
+          ? "يتوفر تحديث جديد للتطبيق. يمكنك تنزيل التحديث الآن أو الاطلاع على التفاصيل على موقع GitHub."
+          : "التطبيق محدّث بالفعل.",
         release_url: `https://github.com/${OWNER}/${REPO}/releases/tag/${latestVersion}`,
         download_url: downloadUrl,
       };
+    } catch (e) {
+      throw new Error(`فشل التحقق من التحديثات: ${e}`);
     }
   },
 };

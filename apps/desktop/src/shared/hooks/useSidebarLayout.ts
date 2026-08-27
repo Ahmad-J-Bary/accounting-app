@@ -38,7 +38,7 @@ function mergeWithDefaults(saved: SidebarLayoutConfig): SidebarLayoutConfig {
 
     const mergedItems = [...keptItems, ...newItems].map((item, idx) => {
       const codeDefault = defaultGroup.items.find(di => di.id === item.id);
-      return { ...item, defaultLabel: codeDefault?.defaultLabel ?? item.defaultLabel, order: idx };
+      return { ...item, defaultLabel: codeDefault?.defaultLabel ?? item.defaultLabel, to: codeDefault?.to ?? item.to, order: idx };
     });
     return { ...savedGroup, items: mergedItems };
   });
