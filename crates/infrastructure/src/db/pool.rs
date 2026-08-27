@@ -234,8 +234,8 @@ async fn ensure_opening_balance_equity_account(pool: &SqlitePool) {
     }
 }
 
-/// Ensure fixed asset accounts (111 أبنية وأراضي, 112 آليات, 113 معدات وتجهيزات, 114 أثاث ومفروشات)
-/// and asset_categories ("آليات") are correctly initialized and numbered in the database.
+/// Ensure fixed asset accounts (111 أبنية وأراضي, 112 آليات ومركبات, 113 معدات وتجهيزات, 114 أثاث ومفروشات)
+/// and asset_categories ("آليات ومركبات") are correctly initialized and numbered in the database.
 async fn ensure_fixed_asset_accounts(pool: &SqlitePool) {
     // 0) Ensure parent "11 - الأصول الثابتة" exists (under 1 = الأصول)
     let _ = sqlx::query(
@@ -255,16 +255,16 @@ async fn ensure_fixed_asset_accounts(pool: &SqlitePool) {
         "UPDATE accounts SET code = '112_tmp', updated_at = datetime('now') WHERE code IN ('1102', '112') AND name_ar LIKE '%معدات%' AND code != '112_tmp'"
     ).execute(pool).await;
 
-    // 2) Ensure "112 - آليات" exists and has correct name and code
+    // 2) Ensure "112 - آليات ومركبات" exists and has correct name and code
     let _ = sqlx::query(
         "INSERT OR IGNORE INTO accounts
          (id, code, name_ar, name_en, account_type, parent_id, category, level, opening_balance, balance, is_active, purpose, created_at, updated_at)
          VALUES
-         ('00000000-0000-0000-0000-000000000112', '112', 'آليات', 'Automotive & Machinery', 'Assets',
+         ('00000000-0000-0000-0000-000000000112', '112', 'آليات ومركبات', 'Automotive & Machinery', 'Assets',
           (SELECT id FROM accounts WHERE code = '11'), 'Detail', 3, '0', '0', 1, 'fixed_asset', datetime('now'), datetime('now'))"
     ).execute(pool).await;
     let _ = sqlx::query(
-        "UPDATE accounts SET name_ar = 'آليات', name_en = 'Automotive & Machinery', updated_at = datetime('now') WHERE code = '112' AND name_ar != 'آليات'"
+        "UPDATE accounts SET name_ar = 'آليات ومركبات', name_en = 'Automotive & Machinery', updated_at = datetime('now') WHERE code = '112' AND name_ar != 'آليات ومركبات'"
     ).execute(pool).await;
 
     // 3) Move temporary '112_tmp' to '113' (معدات وتجهيزات) or insert 113 if missing
@@ -314,11 +314,11 @@ async fn ensure_fixed_asset_accounts(pool: &SqlitePool) {
          AND (purpose IS NULL OR purpose = 'general')"
     ).execute(pool).await;
 
-    // 8) Ensure "آليات" exists in asset_categories
+    // 8) Ensure "آليات ومركبات" exists in asset_categories
     let _ = sqlx::query(
         "INSERT INTO asset_categories (id, name, asset_type)
-         SELECT '00000000-0000-0000-0000-00000000c101', 'آليات', 'Fixed'
-         WHERE NOT EXISTS (SELECT 1 FROM asset_categories WHERE name = 'آليات')"
+         SELECT '00000000-0000-0000-0000-00000000c101', 'آليات ومركبات', 'Fixed'
+         WHERE NOT EXISTS (SELECT 1 FROM asset_categories WHERE name = 'آليات ومركبات')"
     ).execute(pool).await;
 }
 

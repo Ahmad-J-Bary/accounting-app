@@ -39,7 +39,6 @@ export const ALL_SYSTEM_ROUTES: SystemRouteEntry[] = [
   // ── الأصول الثابتة (ضمن المحاسبة العامة) ──
   { id: "fixed-assets", to: "/fixed-assets", label: "الأصول الثابتة", icon: "Building2", groupId: "accounting", groupLabel: "المحاسبة العامة" },
   { id: "fiscal-periods", to: "/accounting/fiscal-periods", label: "الفترات المالية", icon: "CalendarDays", groupId: "accounting", groupLabel: "المحاسبة العامة" },
-  { id: "profit-distribution", to: "/accounting/profit-distribution", label: "توزيع الأرباح", icon: "Coins", groupId: "accounting", groupLabel: "المحاسبة العامة" },
 
   // ── المخزون ──
   { id: "categories", to: "/categories", label: "تصنيفات المواد", icon: "Folders", groupId: "inventory", groupLabel: "المخزون" },

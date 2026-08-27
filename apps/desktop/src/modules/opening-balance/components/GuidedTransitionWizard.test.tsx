@@ -131,7 +131,7 @@ function renderWizard(initialPath = "/opening-balance-migration") {
         <TabProvider>
           <Routes>
             <Route path="/opening-balance-migration" element={<GuidedTransitionWizard />} />
-            <Route path="/accounting/profit-distribution" element={<div>PROFIT_DISTRIBUTION_ROOT</div>} />
+            <Route path="/partners" element={<div>PARTNERS_ROOT</div>} />
             <Route path="/dashboard" element={<div>DASHBOARD_ROOT</div>} />
           </Routes>
         </TabProvider>
@@ -253,10 +253,9 @@ describe("GuidedTransitionWizard", () => {
     // The retained-earnings summary card shows the available distribution figure.
     expect(await screen.findByText(/المتبقي للتوزيع/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "عرض الأرباح المبقاة" })).toBeInTheDocument();
-    // [توزيع الأرباح] navigates INTO the general-purpose distribution workflow
-    // with the opening source preselected — the same engine, no inline re-entry.
+    // [توزيع الأرباح] navigates to the partners page with profit distribution dialog
     await user.click(screen.getByRole("button", { name: "توزيع الأرباح" }));
-    expect(await screen.findByText("PROFIT_DISTRIBUTION_ROOT")).toBeInTheDocument();
+    expect(await screen.findByText("PARTNERS_ROOT")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "احسب من اليومية" })).not.toBeInTheDocument();
   });
 
@@ -271,7 +270,7 @@ describe("GuidedTransitionWizard", () => {
     expect(await screen.findByText("سيتم عند «حفظ وفحص التسوية»:")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "توزيع الأرباح" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "توزيع الأرباح" }));
-    expect(await screen.findByText("PROFIT_DISTRIBUTION_ROOT")).toBeInTheDocument();
+    expect(await screen.findByText("PARTNERS_ROOT")).toBeInTheDocument();
   });
 
   it("review step hides [توزيع الأرباح] when the residual classification is not retained earnings", async () => {

@@ -39,7 +39,7 @@ pub fn derive_journal_type_display(
             || s.contains("السيارات")
             || s.contains("الآليات")
     }) {
-        "آليات"
+        "آليات ومركبات"
     } else if names.iter().any(|s| {
         s.contains("معدات")
             || s.contains("تجهيزات")

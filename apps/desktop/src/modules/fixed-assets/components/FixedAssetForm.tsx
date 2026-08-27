@@ -185,7 +185,7 @@ export function FixedAssetForm({
   useEffect(() => {
     const DEFAULT_CATEGORIES = [
       { name: "أبنية وأراضي", assetType: "buildings_land" },
-      { name: "آليات", assetType: "automotive" },
+      { name: "آليات ومركبات", assetType: "automotive" },
       { name: "معدات وتجهيزات", assetType: "equipment" },
       { name: "أثاث ومفروشات", assetType: "furniture" },
     ];
@@ -402,7 +402,7 @@ export function FixedAssetForm({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="buildings_land" className="text-xs">أبنية وأراضي</SelectItem>
-              <SelectItem value="automotive" className="text-xs">آليات</SelectItem>
+              <SelectItem value="automotive" className="text-xs">آليات ومركبات</SelectItem>
               <SelectItem value="equipment" className="text-xs">معدات وتجهيزات</SelectItem>
               <SelectItem value="furniture" className="text-xs">أثاث ومفروشات</SelectItem>
             </SelectContent>

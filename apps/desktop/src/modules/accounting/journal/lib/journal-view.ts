@@ -7,7 +7,7 @@ const isOriginalAmount = (currencyCode?: string, fxRate?: string) => {
 };
 
 /** نوع فرعي لعنوان تلخيص القيد (عرض فقط). يرتكز على الغرض أولاً ثم الكود/الاسم. */
-function classifyAssetSubType(line: JournalLineDto): "أبنية وأراضي" | "آليات" | "معدات وتجهيزات" | "أثاث ومفروشات" | null {
+function classifyAssetSubType(line: JournalLineDto): "أبنية وأراضي" | "آليات ومركبات" | "معدات وتجهيزات" | "أثاث ومفروشات" | null {
   const accName = line.account_name || "";
   const accCode = line.account_code || "";
   if (
@@ -24,7 +24,7 @@ function classifyAssetSubType(line: JournalLineDto): "أبنية وأراضي" |
     accName.includes("مركبات") ||
     accName.includes("نقليات")
   ) {
-    return "آليات";
+    return "آليات ومركبات";
   }
   if (
     accName.includes("معدات") ||
@@ -45,7 +45,7 @@ function classifyAssetSubType(line: JournalLineDto): "أبنية وأراضي" |
     return "أبنية وأراضي";
   }
   if (accCode.startsWith("1102") || accCode.startsWith("112")) {
-    return "آليات";
+    return "آليات ومركبات";
   }
   if (accCode.startsWith("1103") || accCode.startsWith("113")) {
     return "معدات وتجهيزات";

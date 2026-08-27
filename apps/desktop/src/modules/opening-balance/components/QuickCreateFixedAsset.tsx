@@ -10,7 +10,7 @@ type AssetType = "buildings_land" | "automotive" | "equipment" | "furniture";
 
 const ASSET_TYPE_OPTIONS: { value: AssetType; label: string }[] = [
   { value: "buildings_land", label: "أبنية وأراضي" },
-  { value: "automotive", label: "آليات" },
+  { value: "automotive", label: "آليات ومركبات" },
   { value: "equipment", label: "معدات وتجهيزات" },
   { value: "furniture", label: "أثاث ومفروشات" },
 ];

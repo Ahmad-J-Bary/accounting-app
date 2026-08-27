@@ -453,8 +453,8 @@ export function GuidedTransitionWizard() {
                 <Button
                   size="sm"
                   onClick={() => goTo(
-                    `/accounting/profit-distribution?source=opening&migration=${w.migration?.id ?? ""}`,
-                    "توزيع الأرباح",
+                    `/partners?profit-distribution=open&migration=${w.migration?.id ?? ""}`,
+                    "الشركاء ورأس المال",
                   )}
                   className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
                 >

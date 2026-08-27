@@ -927,7 +927,7 @@ export function useOpeningBalanceWizard() {
       let matchedCategory = findCat(assetCategories);
 
       if (!matchedCategory) {
-        const DEFAULTS = ["أبنية وأراضي", "آليات", "معدات وتجهيزات", "أثاث ومفروشات"];
+        const DEFAULTS = ["أبنية وأراضي", "آليات ومركبات", "معدات وتجهيزات", "أثاث ومفروشات"];
         const existing = new Set(assetCategories.map((c) => c.name));
         let changed = false;
         for (const name of DEFAULTS) {

@@ -33,7 +33,7 @@ import {
 
 const TYPE_CATEGORY_NAMES: Record<string, string[]> = {
   buildings_land: ["أبنية وأراضي"],
-  automotive: ["آليات"],
+  automotive: ["آليات ومركبات"],
   equipment: ["معدات وتجهيزات"],
   furniture: ["أثاث ومفروشات"],
 };
@@ -454,7 +454,7 @@ export default function FixedAssetsPage() {
                 <SelectContent>
                   <SelectItem value="all" className="text-xs">كل الأصول</SelectItem>
                   <SelectItem value="buildings_land" className="text-xs">أبنية وأراضي</SelectItem>
-                  <SelectItem value="automotive" className="text-xs">آليات</SelectItem>
+                  <SelectItem value="automotive" className="text-xs">آليات ومركبات</SelectItem>
                   <SelectItem value="equipment" className="text-xs">معدات وتجهيزات</SelectItem>
                   <SelectItem value="furniture" className="text-xs">أثاث ومفروشات</SelectItem>
                 </SelectContent>

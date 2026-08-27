@@ -1,32 +1,37 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import {
   TrendingUp,
   PieChart as PieChartIcon,
 } from "lucide-react";
 import { partnerService, type PartnerDto, type PartnerRequest } from '@modules/partners/api/partnerService';
 import { settingsService } from '@modules/core/api/settingsService';
+import { openingBalanceService } from '@modules/accounting/api/openingBalanceService';
 
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { PartnerTable } from '../components/PartnerTable';
 import { PartnersToolbar } from '../components/PartnersToolbar';
 import { PartnersSidePanel } from '../components/PartnersSidePanel';
 import { ChartCard } from '@modules/partners/components/ChartCard';
-import { PartnerEquityCard } from '@modules/partners/components/PartnerEquityCard';
 import { CapitalSourceDialog, type CapitalSource } from '../components/CapitalSourceDialog';
 import { useDataTable } from '@shared/hooks';
 import { useTabs } from "@app/providers/TabContext";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@shared/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@shared/ui/dialog";
 import { toast } from "sonner";
 import { paymentService } from '@modules/payments/api/paymentService';
 import { type CreatePaymentRequest } from '@erp/shared-types';
 import { usePartnerRatios } from '@modules/partners/hooks/usePartnerRatios';
 import { queryClient, PARTNER_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { START_MODE_EXISTING } from "@modules/opening-balance/lib/wizard-types";
+import { ProfitDistributionWorkflow } from "@modules/accounting/profit-distribution/components/ProfitDistributionWorkflow";
 
 export default function Partners() {
   const { openTab } = useTabs();
   const { formatAmount, baseCurrency, currencies } = useCurrencyContext();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [globalStrategy, setGlobalStrategy] = useState(() => localStorage.getItem("partnerProfitStrategy") || "auto");
   const persistStrategy = (v: string) => { setGlobalStrategy(v); localStorage.setItem("partnerProfitStrategy", v); };
 
@@ -58,11 +63,40 @@ export default function Partners() {
 
   const [startMode, setStartMode] = useState<string>(START_MODE_EXISTING);
 
+  const [showProfitDistribution, setShowProfitDistribution] = useState(false);
+
   useEffect(() => {
     settingsService.getSettings()
       .then((s) => setStartMode(s.accounting_start_mode || START_MODE_EXISTING))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get("profit-distribution") === "open") {
+      setShowProfitDistribution(true);
+      searchParams.delete("profit-distribution");
+      searchParams.delete("migration");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+  const { data: migrations = [] } = useQuery<import("@modules/accounting/api/openingBalanceService").OpeningBalanceMigrationDto[]>({
+    queryKey: ["opening-balance-migrations"],
+    queryFn: () => openingBalanceService.listMigrations(),
+  });
+
+  const profitDistributionSource = useMemo(() => {
+    const latest = [...migrations]
+      .filter((m) => m.status === "Posted" || m.status === "Locked")
+      .sort((a, b) => b.cutover_date.localeCompare(a.cutover_date))[0];
+    if (!latest) return null;
+    return {
+      source: { OpeningMigration: { migration_id: latest.id } } as const,
+      windowStart: "1970-01-01T00:00:00Z",
+      windowEnd: `${latest.cutover_date}T23:59:59Z`,
+      sourceLabel: `ترحيل الرصيد الافتتاحي — ${latest.cutover_date}`,
+    };
+  }, [migrations]);
 
   const {
     partnersWithRatios,
@@ -192,6 +226,7 @@ export default function Partners() {
               closable: true,
             })
           }
+          onOpenProfitDistribution={() => setShowProfitDistribution(true)}
         />
       }
 
@@ -238,12 +273,9 @@ export default function Partners() {
         />
       }
       bottomWidgets={
-        <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <ChartCard title="حصص رأس المال" icon={PieChartIcon} data={partnersWithRatios.map(p => ({ name: p.name, value: p.calculatedCapitalRatio }))} formatter={(v: number) => `${v.toFixed(2)}%`} />
-                  <ChartCard title="توزيع الأرباح" icon={TrendingUp} data={partnersWithRatios.map(p => ({ name: p.name, value: p.calculatedRatio }))} formatter={(v: number) => `${v.toFixed(2)}%`} />
-              </div>
-              <PartnerEquityCard />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ChartCard title="حصص رأس المال" icon={PieChartIcon} data={partnersWithRatios.map(p => ({ name: p.name, value: p.calculatedCapitalRatio }))} formatter={(v: number) => `${v.toFixed(2)}%`} />
+          <ChartCard title="توزيع الأرباح" icon={TrendingUp} data={partnersWithRatios.map(p => ({ name: p.name, value: p.calculatedRatio }))} formatter={(v: number) => `${v.toFixed(2)}%`} />
         </div>
       }
       sidePanel={
@@ -274,6 +306,28 @@ export default function Partners() {
         onClose={() => setPendingCapital(null)}
         onConfirm={handleCapitalConfirm}
       />
+      <Dialog open={showProfitDistribution} onOpenChange={setShowProfitDistribution}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>توزيع الأرباح</DialogTitle>
+            <DialogDescription>
+              توزيع الأرباح المتاحة على الشركاء وفقاً لنسب التقاسم
+            </DialogDescription>
+          </DialogHeader>
+          {profitDistributionSource ? (
+            <ProfitDistributionWorkflow
+              source={profitDistributionSource.source}
+              windowStart={profitDistributionSource.windowStart}
+              windowEnd={profitDistributionSource.windowEnd}
+              sourceLabel={profitDistributionSource.sourceLabel}
+            />
+          ) : (
+            <p className="text-sm text-slate-500 py-4">
+              لا توجد ترحيلات رصيد افتتاحي متاحة. يجب ترحيل الرصيد الافتتاحي أولاً قبل توزيع الأرباح.
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
