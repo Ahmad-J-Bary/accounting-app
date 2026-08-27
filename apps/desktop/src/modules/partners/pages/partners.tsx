@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
   TrendingUp,
@@ -7,7 +6,6 @@ import {
 } from "lucide-react";
 import { partnerService, type PartnerDto, type PartnerRequest } from '@modules/partners/api/partnerService';
 import { settingsService } from '@modules/core/api/settingsService';
-import { openingBalanceService } from '@modules/accounting/api/openingBalanceService';
 
 import { OperationalTableTemplate } from '@widgets/templates/OperationalTableTemplate';
 import { PartnerTable } from '../components/PartnerTable';
@@ -26,6 +24,7 @@ import { type CreatePaymentRequest } from '@erp/shared-types';
 import { usePartnerRatios } from '@modules/partners/hooks/usePartnerRatios';
 import { queryClient, PARTNER_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { START_MODE_EXISTING } from "@modules/opening-balance/lib/wizard-types";
+import { useDistributionSource } from "@modules/accounting/profit-distribution/hooks/useDistributionSource";
 import { ProfitDistributionWorkflow } from "@modules/accounting/profit-distribution/components/ProfitDistributionWorkflow";
 
 export default function Partners() {
@@ -80,23 +79,7 @@ export default function Partners() {
     }
   }, [searchParams, setSearchParams]);
 
-  const { data: migrations = [] } = useQuery<import("@modules/accounting/api/openingBalanceService").OpeningBalanceMigrationDto[]>({
-    queryKey: ["opening-balance-migrations"],
-    queryFn: () => openingBalanceService.listMigrations(),
-  });
-
-  const profitDistributionSource = useMemo(() => {
-    const latest = [...migrations]
-      .filter((m) => m.status === "Posted" || m.status === "Locked")
-      .sort((a, b) => b.cutover_date.localeCompare(a.cutover_date))[0];
-    if (!latest) return null;
-    return {
-      source: { OpeningMigration: { migration_id: latest.id } } as const,
-      windowStart: "1970-01-01T00:00:00Z",
-      windowEnd: `${latest.cutover_date}T23:59:59Z`,
-      sourceLabel: `ترحيل الرصيد الافتتاحي — ${latest.cutover_date}`,
-    };
-  }, [migrations]);
+  const { source, sourceLabel, windowStart, windowEnd, isLoading: sourceLoading } = useDistributionSource();
 
   const {
     partnersWithRatios,
@@ -220,9 +203,9 @@ export default function Partners() {
           onAddPartner={() => { setEditPartner(null); setActivePanel("edit"); setSelectedId("new"); }}
           onOpenPartnerStatement={() =>
             openTab({
-              id: "partner-statement",
-              title: "تقاسم الأرباح ومبالغ الشركاء",
-              path: "/accounting/reports/partner-statement",
+              id: "partner-rights",
+              title: "الشركاء وحقوقهم",
+              path: "/accounting/reports/partners",
               closable: true,
             })
           }
@@ -314,16 +297,18 @@ export default function Partners() {
               توزيع الأرباح المتاحة على الشركاء وفقاً لنسب التقاسم
             </DialogDescription>
           </DialogHeader>
-          {profitDistributionSource ? (
+          {sourceLoading ? (
+            <p className="text-sm text-slate-400 py-4">جارٍ تحميل البيانات...</p>
+          ) : source ? (
             <ProfitDistributionWorkflow
-              source={profitDistributionSource.source}
-              windowStart={profitDistributionSource.windowStart}
-              windowEnd={profitDistributionSource.windowEnd}
-              sourceLabel={profitDistributionSource.sourceLabel}
+              source={source}
+              windowStart={windowStart}
+              windowEnd={windowEnd}
+              sourceLabel={sourceLabel}
             />
           ) : (
             <p className="text-sm text-slate-500 py-4">
-              لا توجد ترحيلات رصيد افتتاحي متاحة. يجب ترحيل الرصيد الافتتاحي أولاً قبل توزيع الأرباح.
+              لا توجد مصدر أرباح متاحة. يجب ترحيل الرصيد الافتتاحي أو إغلاق فترة مالية أولاً.
             </p>
           )}
         </DialogContent>

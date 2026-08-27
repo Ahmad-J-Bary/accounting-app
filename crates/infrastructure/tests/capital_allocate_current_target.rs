@@ -19,7 +19,7 @@ use application::use_cases::opening_balance::{
 };
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{
-    SqliteAccountRepository, SqliteJournalEntryRepository, SqliteOpeningMigrationRepository,
+    SqliteAccountRepository, SqliteFiscalPeriodRepository, SqliteJournalEntryRepository, SqliteOpeningMigrationRepository,
     SqlitePartnerRepository,
 };
 use rust_decimal::Decimal;
@@ -335,6 +335,7 @@ async fn new_allocate(pool: &Arc<sqlx::SqlitePool>) -> AllocateNetProfitUseCase 
         Arc::new(SqlitePartnerRepository::new(pool.clone())),
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
+        Arc::new(SqliteFiscalPeriodRepository::new(pool.clone())),
     )
 }
 
@@ -397,6 +398,7 @@ async fn allocation_credits_current_account_not_capital() {
         Arc::new(SqlitePartnerRepository::new(pool.clone())),
         account_repo.clone(),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
+        Arc::new(SqliteFiscalPeriodRepository::new(pool.clone())),
     );
     let event_key = uuid::Uuid::new_v4().to_string();
     let result = allocate
@@ -513,6 +515,7 @@ async fn allocation_is_rejected_beyond_available() {
         Arc::new(SqlitePartnerRepository::new(pool.clone())),
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
+        Arc::new(SqliteFiscalPeriodRepository::new(pool.clone())),
     );
     let err = allocate
         .execute(DistributeProfitCommand {
@@ -546,6 +549,7 @@ async fn allocation_is_allowed_within_available() {
         Arc::new(SqlitePartnerRepository::new(pool.clone())),
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
+        Arc::new(SqliteFiscalPeriodRepository::new(pool.clone())),
     );
     let result = allocate
         .execute(DistributeProfitCommand {
@@ -573,6 +577,7 @@ async fn allocation_after_lock_is_allowed() {
         Arc::new(SqlitePartnerRepository::new(pool.clone())),
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
+        Arc::new(SqliteFiscalPeriodRepository::new(pool.clone())),
     );
     let event_key = uuid::Uuid::new_v4().to_string();
     let result = allocate
@@ -780,6 +785,7 @@ async fn preview_projects_without_posting() {
         Arc::new(SqlitePartnerRepository::new(pool.clone())),
         Arc::new(SqliteAccountRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
+        Arc::new(SqliteFiscalPeriodRepository::new(pool.clone())),
     )
     .execute(PreviewProfitDistributionCommand {
         source: ProfitDistributionSource::OpeningMigration { migration_id },

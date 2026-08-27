@@ -19,7 +19,7 @@ use application::use_cases::partner::{
 };
 use infrastructure::db::pool::run_migrations;
 use infrastructure::repositories::{
-    SqliteAccountRepository, SqliteJournalEntryRepository, SqliteOpeningMigrationRepository,
+    SqliteAccountRepository, SqliteFiscalPeriodRepository, SqliteJournalEntryRepository, SqliteOpeningMigrationRepository,
     SqlitePartnerRepository,
 };
 use rust_decimal::Decimal;
@@ -191,6 +191,7 @@ async fn equity_statement_reconciles_with_partner_ledgers() {
         partner_repo.clone(),
         account_repo.clone(),
         journal_repo.clone(),
+        Arc::new(SqliteFiscalPeriodRepository::new(pool.clone())),
     )
     .execute(DistributeProfitCommand {
         source: ProfitDistributionSource::OpeningMigration { migration_id: migration_id.clone() },

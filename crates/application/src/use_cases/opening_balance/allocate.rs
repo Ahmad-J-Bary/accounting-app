@@ -9,6 +9,7 @@ use domain::shared::{AccountId, Currency, MonetaryAmount};
 
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
+use crate::ports::fiscal_period_repository::FiscalPeriodRepository;
 use crate::ports::journal_entry_repository::{JournalEntryRepository, ReversalScope};
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::ports::partner_repository::PartnerRepository;
@@ -19,6 +20,7 @@ use crate::use_cases::opening_balance::types::{
     DistributeProfitCommand, NetProfitAllocationDto, PartnerAllocationShare,
     PreviewProfitDistributionCommand, ProfitDistributionSource,
 };
+use domain::shared::ids::FiscalPeriodId;
 
 /// Retained-earnings account used as the debit source when distributing profit.
 const RETAINED_EARNINGS_ACCOUNT_CODE: &str = "52";
@@ -229,6 +231,7 @@ pub struct AllocateNetProfitUseCase {
     partner_repo: Arc<dyn PartnerRepository>,
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
+    fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
 }
 
 impl AllocateNetProfitUseCase {
@@ -237,42 +240,56 @@ impl AllocateNetProfitUseCase {
         partner_repo: Arc<dyn PartnerRepository>,
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
+        fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
     ) -> Self {
-        Self { migration_repo, partner_repo, account_repo, journal_repo }
+        Self { migration_repo, partner_repo, account_repo, journal_repo, fiscal_period_repo }
     }
 
     pub async fn execute(&self, cmd: DistributeProfitCommand) -> Result<NetProfitAllocationDto, AppError> {
         let net_profit = Decimal::from_str(&cmd.net_profit)
             .map_err(|_| AppError::Invalid("قيمة صافي الربح غير صالحة".into()))?;
 
-        // ONE distribution engine, explicit source/context (Sec 2). Opening
-        // retained earnings are supported now; closed-period profits are
-        // reserved for a later phase and rejected up front.
-        let (migration_id, legacy_source_id) = match &cmd.source {
+        // ONE distribution engine, explicit source/context (Sec 2).
+        // OpeningMigration: retains opening retained earnings.
+        // ClosedPeriod: distributes profits from a closed/locked fiscal period.
+        let (source_id_prefix, window_end, journal_date, legacy_source_id) = match &cmd.source {
             ProfitDistributionSource::OpeningMigration { migration_id } => {
-                (migration_id.clone(), Some(format!("{AUTH_ALLOCATION_SOURCE_PREFIX}{migration_id}")))
+                let migration = self.migration_repo.find_by_id(migration_id).await?
+                    .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
+                if !matches!(migration.status, MigrationStatus::Posted | MigrationStatus::Locked) {
+                    return Err(AppError::Forbidden("يجب ترحيل الرصيد الافتتاحي قبل توزيع الأرباح".into()));
+                }
+                (
+                    format!("{AUTH_ALLOCATION_SOURCE_PREFIX}{migration_id}"),
+                    cutover_end_of_day(migration.cutover_date),
+                    migration.cutover_date,
+                    Some(format!("{AUTH_ALLOCATION_SOURCE_PREFIX}{migration_id}")),
+                )
             }
             ProfitDistributionSource::ClosedPeriod { period_id } => {
-                return Err(AppError::Invalid(format!(
-                    "توزيع أرباح فترات مالية مغلقة غير مدعوم بعد (المصدر: {period_id})"
-                )));
+                let fiscal_id: FiscalPeriodId = period_id.parse().map_err(|_| AppError::Invalid(format!("معرف الفترة المالية غير صالح: {period_id}")))?;
+                let period = self.fiscal_period_repo.find_by_id(&fiscal_id).await?
+                    .ok_or_else(|| AppError::NotFound("الفترة المالية غير موجودة".into()))?;
+                if !matches!(period.status, domain::accounting::fiscal_period::FiscalPeriodStatus::Closed | domain::accounting::fiscal_period::FiscalPeriodStatus::Locked) {
+                    return Err(AppError::Forbidden("يجب إغلاق أو قفل الفترة المالية قبل توزيع الأرباح".into()));
+                }
+                let window_end = cutover_end_of_day(period.end_date);
+                let journal_date = period.end_date.clone();
+                (
+                    format!("profit_distribution:period:{period_id}"),
+                    window_end,
+                    journal_date,
+                    None::<String>,
+                )
             }
         };
-
-        let migration = self.migration_repo.find_by_id(&migration_id).await?
-            .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
-        // Distribution stays possible after the migration is sealed (Sec 10:
-        // "توزيع الأرباح" remains reachable post-lock).
-        if !matches!(migration.status, MigrationStatus::Posted | MigrationStatus::Locked) {
-            return Err(AppError::Forbidden("يجب ترحيل الرصيد الافتتاحي قبل توزيع الأرباح".into()));
-        }
 
         // Idempotency: the SAME event key resolves the already-posted
         // distribution instead of creating a second journal (Sec 15). The
         // DB-level UNIQUE(source_type, source_id) backs this up. Legacy single
         // distributions keyed only by the migration (`profit_distribution:{id}`)
         // are still resolved so an existing distribution is never duplicated.
-        let event_source_id = format!("{AUTH_ALLOCATION_SOURCE_PREFIX}{migration_id}:{}", cmd.idempotency_key);
+        let event_source_id = format!("{source_id_prefix}:{}", cmd.idempotency_key);
         for source_id in [legacy_source_id.as_ref(), Some(&event_source_id)].into_iter().flatten() {
             if let Some(existing) = self.journal_repo.find_by_source_id(source_id).await? {
                 return self.dto_from_existing(&existing, net_profit).await;
@@ -290,7 +307,7 @@ impl AllocateNetProfitUseCase {
         }
 
         // Sec 7: never distribute more than the amount actually available. The
-        // available pool over the migration's window mirrors
+        // available pool over the source's window mirrors
         // `GetDistributableProfitUseCase` (current-period profit + retained
         // earnings); retained ALREADY nets prior distributions, so partial
         // distributions shrink the pool correctly. A loss (negative net profit)
@@ -301,7 +318,7 @@ impl AllocateNetProfitUseCase {
                 .journal_repo
                 .list_with_filters(
                     None,
-                    Some(cutover_end_of_day(migration.cutover_date)),
+                    Some(window_end),
                     None,
                     None,
                     None,
@@ -378,8 +395,8 @@ impl AllocateNetProfitUseCase {
             entry_number.clone(),
             JournalType::ProfitDistribution,
             lines,
-            migration.cutover_date,
-            "توزيع صافي أرباح الترحيل على الشركاء".to_string(),
+            journal_date,
+            "توزيع صافي أرباح على الشركاء".to_string(),
             Some(event_source_id),
         ).map_err(|e| AppError::Invalid(e.to_string()))?;
 
@@ -458,6 +475,7 @@ pub struct PreviewProfitDistributionUseCase {
     partner_repo: Arc<dyn PartnerRepository>,
     account_repo: Arc<dyn AccountRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
+    fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
 }
 
 impl PreviewProfitDistributionUseCase {
@@ -466,28 +484,34 @@ impl PreviewProfitDistributionUseCase {
         partner_repo: Arc<dyn PartnerRepository>,
         account_repo: Arc<dyn AccountRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
+        fiscal_period_repo: Arc<dyn FiscalPeriodRepository>,
     ) -> Self {
-        Self { migration_repo, partner_repo, account_repo, journal_repo }
+        Self { migration_repo, partner_repo, account_repo, journal_repo, fiscal_period_repo }
     }
 
     pub async fn execute(&self, cmd: PreviewProfitDistributionCommand) -> Result<NetProfitAllocationDto, AppError> {
         let net_profit = Decimal::from_str(&cmd.net_profit)
             .map_err(|_| AppError::Invalid("قيمة صافي الربح غير صالحة".into()))?;
 
-        let (migration_id, _legacy) = match &cmd.source {
-            ProfitDistributionSource::OpeningMigration { migration_id } => (migration_id.clone(), None::<String>),
+        let window_end = match &cmd.source {
+            ProfitDistributionSource::OpeningMigration { migration_id } => {
+                let migration = self.migration_repo.find_by_id(migration_id).await?
+                    .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
+                if !matches!(migration.status, MigrationStatus::Posted | MigrationStatus::Locked) {
+                    return Err(AppError::Forbidden("يجب ترحيل الرصيد الافتتاحي قبل توزيع الأرباح".into()));
+                }
+                cutover_end_of_day(migration.cutover_date)
+            }
             ProfitDistributionSource::ClosedPeriod { period_id } => {
-                return Err(AppError::Invalid(format!(
-                    "توزيع أرباح فترات مالية مغلقة غير مدعوم بعد (المصدر: {period_id})"
-                )));
+                let fiscal_id: FiscalPeriodId = period_id.parse().map_err(|_| AppError::Invalid(format!("معرف الفترة المالية غير صالح: {period_id}")))?;
+                let period = self.fiscal_period_repo.find_by_id(&fiscal_id).await?
+                    .ok_or_else(|| AppError::NotFound("الفترة المالية غير موجودة".into()))?;
+                if !matches!(period.status, domain::accounting::fiscal_period::FiscalPeriodStatus::Closed | domain::accounting::fiscal_period::FiscalPeriodStatus::Locked) {
+                    return Err(AppError::Forbidden("يجب إغلاق أو قفل الفترة المالية قبل توزيع الأرباح".into()));
+                }
+                cutover_end_of_day(period.end_date)
             }
         };
-
-        let migration = self.migration_repo.find_by_id(&migration_id).await?
-            .ok_or_else(|| AppError::NotFound("ترحيل الرصيد الافتتاحي غير موجود".into()))?;
-        if !matches!(migration.status, MigrationStatus::Posted | MigrationStatus::Locked) {
-            return Err(AppError::Forbidden("يجب ترحيل الرصيد الافتتاحي قبل توزيع الأرباح".into()));
-        }
 
         if net_profit == Decimal::ZERO {
             return Ok(NetProfitAllocationDto {
@@ -505,7 +529,7 @@ impl PreviewProfitDistributionUseCase {
                 .journal_repo
                 .list_with_filters(
                     None,
-                    Some(cutover_end_of_day(migration.cutover_date)),
+                    Some(window_end),
                     None,
                     None,
                     None,

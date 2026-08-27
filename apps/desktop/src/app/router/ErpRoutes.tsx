@@ -44,8 +44,7 @@ import AccountMovement from '@modules/accounting/account-movements/pages/account
 import IncomeStatementReport from '@modules/reports/pages/IncomeStatementReport';
 import TrialBalanceReport from '@modules/reports/pages/TrialBalanceReport';
 import BalanceSheetReport from '@modules/reports/pages/BalanceSheetReport';
-import PartnerProfitShareReport from '@modules/reports/pages/PartnerProfitShareReport';
-import PartnerStatementReport from '@modules/reports/pages/PartnerStatementReport';
+import PartnerRightsReport from '@modules/reports/pages/PartnerRightsReport';
 import FiscalPeriodsPage from '@modules/accounting/fiscal-periods/pages/FiscalPeriodsPage';
 
 // While an EXISTING company is still in its opening workflow
@@ -91,8 +90,9 @@ export function ErpRoutes({ location }: { location?: string | Partial<Location> 
       <Route path="/accounting/reports/income" element={<IncomeStatementReport />} />
       <Route path="/accounting/reports/trial-balance" element={<TrialBalanceReport />} />
       <Route path="/accounting/reports/balance-sheet" element={<BalanceSheetReport />} />
-      <Route path="/accounting/reports/partner-profit-share" element={<PartnerProfitShareReport />} />
-      <Route path="/accounting/reports/partner-statement" element={<PartnerStatementReport />} />
+      <Route path="/accounting/reports/partner-profit-share" element={<Navigate to="/accounting/reports/partners" replace />} />
+      <Route path="/accounting/reports/partner-statement" element={<Navigate to="/accounting/reports/partners" replace />} />
+      <Route path="/accounting/reports/partners" element={<PartnerRightsReport />} />
       <Route path="/accounting/fiscal-periods" element={<FiscalPeriodsPage />} />
       <Route path="/accounting/reports/fiscal-periods" element={<Navigate to="/accounting/fiscal-periods" replace />} />
       <Route path="/accounting/account-ledger/:accountId" element={<AccountMovement />} />

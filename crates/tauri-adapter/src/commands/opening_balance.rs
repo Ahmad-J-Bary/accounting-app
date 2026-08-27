@@ -86,6 +86,7 @@ pub async fn allocate_net_profit(
         state.partner_repo.clone(),
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
+        state.fiscal_period_repo.clone(),
     )
     .execute(request)
     .await
@@ -102,6 +103,7 @@ pub async fn preview_profit_distribution(
         state.partner_repo.clone(),
         state.account_repo.clone(),
         state.journal_entry_repo.clone(),
+        state.fiscal_period_repo.clone(),
     )
     .execute(request)
     .await

@@ -72,7 +72,7 @@ export function PartnersToolbar({
         onClick={onOpenPartnerStatement}
         className="border-slate-200 text-slate-700 hover:bg-slate-50"
       >
-        <TrendingUp className="w-4 h-4 ml-2 text-emerald-500" /> تقاسم الأرباح ومبالغ الشركاء
+        <TrendingUp className="w-4 h-4 ml-2 text-emerald-500" /> الشركاء وحقوقهم
       </Button>
 
       <Button
