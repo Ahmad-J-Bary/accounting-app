@@ -108,10 +108,10 @@ export function usePartnerProfitShareReport(filters: IncomeStatementFilters): Re
         const customerDebts = parseFloat(receivables?.customers_debit || "0");
         const toDateStr = filters.to_date.split("T")[0];
         const fixedAssetsValue = fixedAssets
-          .filter((asset) => asset.status === "Active" && asset.purchase_date.split("T")[0] <= toDateStr)
+          .filter((asset) => asset.status === "Active" && (asset.purchase_date?.split("T")[0] ?? "") <= toDateStr)
           .reduce((sum, asset) => {
-            const purchaseCost = parseFloat(asset.purchase_cost.amount || "0");
-            const accumulated = parseFloat(asset.accumulated_depreciation.amount || "0");
+            const purchaseCost = parseFloat(asset.purchase_cost?.amount ?? "0");
+            const accumulated = parseFloat(asset.accumulated_depreciation?.amount ?? "0");
             return sum + (purchaseCost - accumulated);
           }, 0);
 

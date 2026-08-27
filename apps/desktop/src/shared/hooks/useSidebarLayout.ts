@@ -36,7 +36,10 @@ function mergeWithDefaults(saved: SidebarLayoutConfig): SidebarLayoutConfig {
     const savedItemsInThisGroupIds = new Set(keptItems.map(i => i.id));
     const newItems = defaultGroup.items.filter(item => !allSavedItemIds.has(item.id) && !savedItemsInThisGroupIds.has(item.id));
 
-    const mergedItems = [...keptItems, ...newItems].map((item, idx) => ({ ...item, order: idx }));
+    const mergedItems = [...keptItems, ...newItems].map((item, idx) => {
+      const codeDefault = defaultGroup.items.find(di => di.id === item.id);
+      return { ...item, defaultLabel: codeDefault?.defaultLabel ?? item.defaultLabel, order: idx };
+    });
     return { ...savedGroup, items: mergedItems };
   });
 

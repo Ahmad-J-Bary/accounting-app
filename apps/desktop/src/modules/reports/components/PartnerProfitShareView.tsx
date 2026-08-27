@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import type { PartnerProfitShareComputed, PartnerProfitShareRow } from "@modules/reports/lib/partnerProfitShare";
-import { cn } from "@shared/lib/utils";
 import { Users, TrendingUp, Package, CreditCard, Building2, BarChart3 } from "lucide-react";
 import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
 import { TableShell } from "@widgets/table-shell/TableShell";
@@ -191,7 +190,7 @@ export function PartnerProfitShareView(props: PartnerProfitShareViewProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <ReportMeta title="الشركاء وتقاسم الأرباح" description="تقرير مفصل يوضح نسب الشراكة وتوزيع الأرباح بين الشركاء بناءً على رؤوس أموالهم والأرباح التشغيلية" />
+      <ReportMeta title="الشركاء وحقوقهم" description="تقرير مفصل يوضح نسب الشراكة وتوزيع الأرباح بين الشركاء بناءً على رؤوس أموالهم والأرباح التشغيلية" />
       <SummaryCards computed={computed} formatValue={formatValue} />
       <div className="flex-1 min-h-0 overflow-hidden px-4 pb-4">
         <TableShell

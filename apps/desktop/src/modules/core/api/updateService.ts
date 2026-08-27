@@ -76,8 +76,9 @@ export const updateService = {
         release_url: release.html_url,
         download_url: asset?.browser_download_url ?? null,
       };
-    } catch (e) {
-      console.warn("GitHub API rate limited or failed, executing fallback check:", e);
+    } catch (_e) {
+      // Silent fallback: GitHub API rate-limited or unreachable.
+      // Proceed to backup check via raw.githubusercontent.com (no rate limits).
 
       // Fallback: Fetch package.json from raw.githubusercontent.com (No Rate Limits)
       const fallbackUrl = `https://raw.githubusercontent.com/${OWNER}/${REPO}/main/apps/desktop/package.json`;

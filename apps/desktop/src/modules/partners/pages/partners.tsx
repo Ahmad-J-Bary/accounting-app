@@ -17,15 +17,13 @@ import { useDataTable } from '@shared/hooks';
 import { useTabs } from "@app/providers/TabContext";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@shared/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@shared/ui/dialog";
 import { toast } from "sonner";
 import { paymentService } from '@modules/payments/api/paymentService';
 import { type CreatePaymentRequest } from '@erp/shared-types';
 import { usePartnerRatios } from '@modules/partners/hooks/usePartnerRatios';
 import { queryClient, PARTNER_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { START_MODE_EXISTING } from "@modules/opening-balance/lib/wizard-types";
-import { useDistributionSource } from "@modules/accounting/profit-distribution/hooks/useDistributionSource";
-import { ProfitDistributionWorkflow } from "@modules/accounting/profit-distribution/components/ProfitDistributionWorkflow";
+import { ProfitDistributionSidePanel } from "@modules/accounting/profit-distribution/components/ProfitDistributionSidePanel";
 
 export default function Partners() {
   const { openTab } = useTabs();
@@ -78,8 +76,6 @@ export default function Partners() {
       setSearchParams(searchParams, { replace: true });
     }
   }, [searchParams, setSearchParams]);
-
-  const { source, sourceLabel, windowStart, windowEnd, isLoading: sourceLoading } = useDistributionSource();
 
   const {
     partnersWithRatios,
@@ -289,30 +285,10 @@ export default function Partners() {
         onClose={() => setPendingCapital(null)}
         onConfirm={handleCapitalConfirm}
       />
-      <Dialog open={showProfitDistribution} onOpenChange={setShowProfitDistribution}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>توزيع الأرباح</DialogTitle>
-            <DialogDescription>
-              توزيع الأرباح المتاحة على الشركاء وفقاً لنسب التقاسم
-            </DialogDescription>
-          </DialogHeader>
-          {sourceLoading ? (
-            <p className="text-sm text-slate-400 py-4">جارٍ تحميل البيانات...</p>
-          ) : source ? (
-            <ProfitDistributionWorkflow
-              source={source}
-              windowStart={windowStart}
-              windowEnd={windowEnd}
-              sourceLabel={sourceLabel}
-            />
-          ) : (
-            <p className="text-sm text-slate-500 py-4">
-              لا توجد مصدر أرباح متاحة. يجب ترحيل الرصيد الافتتاحي أو إغلاق فترة مالية أولاً.
-            </p>
-          )}
-        </DialogContent>
-      </Dialog>
+      <ProfitDistributionSidePanel
+        isOpen={showProfitDistribution}
+        onClose={() => setShowProfitDistribution(false)}
+      />
     </>
   );
 }

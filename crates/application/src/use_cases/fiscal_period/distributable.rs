@@ -56,7 +56,7 @@ impl GetDistributableProfitUseCase {
         let accounts = self.account_repo.list_all().await?;
         // The POSTED-LEDGER policy (see `ReversalScope`): only Posted entries
         // with no reversal relationship feed the distributable-profit window.
-        let entries = self
+        let period_entries = self
             .journal_repo
             .list_with_filters(
                 Some(from),
@@ -70,17 +70,35 @@ impl GetDistributableProfitUseCase {
             .await?;
 
         let totals =
-            crate::use_cases::opening_balance::net_profit::compute_ledger_totals(&accounts, &entries);
+            crate::use_cases::opening_balance::net_profit::compute_ledger_totals(&accounts, &period_entries);
 
         // Retained earnings balance: the retained-earnings (52) account balance
-        // derived from the ledger, NOT the stored/注册 balance.
-        let retained = retained_earnings_balance(&accounts, &entries);
+        // derived from the ledger, NOT the stored/registered balance.
+        //
+        // IMPORTANT: Retained earnings is a cumulative equity account. Its
+        // balance may include entries from BEFORE the period window (e.g.,
+        // opening balance migration posted earlier). We must compute it from
+        // ALL posted entries up to the period end, not just from entries
+        // within the window.
+        let all_entries = self
+            .journal_repo
+            .list_with_filters(
+                None,
+                Some(to),
+                None,
+                None,
+                None,
+                Some(JournalEntryStatus::Posted),
+                ReversalScope::PostedLedger,
+            )
+            .await?;
+        let retained = retained_earnings_balance(&accounts, &all_entries);
 
         // Allocated-to-date = sum of profit_distribution source journals posted
         // for the window. `find_all_by_source_id` prefix not supported, so we
         // scan the window's posted entries by their source prefix instead.
         let mut allocated = Decimal::ZERO;
-        for entry in &entries {
+        for entry in &period_entries {
             if let Some(source_id) = &entry.source_id {
                 if source_id.starts_with(AUTH_ALLOCATION_SOURCE_PREFIX) {
                     allocated += entry.total_base_debit();
@@ -209,5 +227,24 @@ mod tests {
         let mut entry = posted_entry(retained.id, 0, 500);
         entry.status = JournalEntryStatus::Draft;
         assert_eq!(retained_earnings_balance(&[retained], &[entry]), Decimal::ZERO);
+    }
+
+    #[test]
+    fn retained_earnings_includes_entries_outside_window() {
+        let retained = account("5201", AccountPurpose::RetainedEarnings);
+        // Entry from before the period window (e.g., opening balance migration)
+        let old_entry = posted_entry(retained.id, 0, 1000);
+        // Entry within the current period
+        let new_entry = posted_entry(retained.id, 0, 500);
+        // A distribution that debited retained earnings
+        let distribution = posted_entry_with_source(
+            retained.id,
+            200,
+            0,
+            Some("profit_distribution:prev".into()),
+        );
+        let all_entries = vec![old_entry, new_entry, distribution];
+        // retained_earnings_balance must include ALL posted entries: 1000 + 500 - 200 = 1300
+        assert_eq!(retained_earnings_balance(&[retained], &all_entries), Decimal::new(1300, 0));
     }
 }

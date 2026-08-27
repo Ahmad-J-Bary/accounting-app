@@ -20,8 +20,6 @@ export const ALL_SYSTEM_ROUTES: SystemRouteEntry[] = [
   { id: "income-statement", to: "/accounting/reports/income", label: "قائمة الدخل", icon: "DollarSign", groupId: "", groupLabel: "" },
   { id: "trial-balance", to: "/accounting/reports/trial-balance", label: "ميزان المراجعة", icon: "Scale", groupId: "", groupLabel: "" },
   { id: "balance-sheet", to: "/accounting/reports/balance-sheet", label: "الميزانية العمومية", icon: "BarChart3", groupId: "", groupLabel: "" },
-  { id: "partner-profit-share", to: "/accounting/reports/partners", label: "الشركاء وحقوقهم", icon: "Users", groupId: "", groupLabel: "" },
-
   // ── الجهات والعمليات المالية ──
   { id: "partners", to: "/partners", label: "الشركاء ورأس المال", icon: "Users", groupId: "parties", groupLabel: "الجهات والعمليات المالية" },
   { id: "customers", to: "/customers", label: "العملاء", icon: "Users", groupId: "parties", groupLabel: "الجهات والعمليات المالية" },
@@ -57,7 +55,7 @@ export const ALL_SYSTEM_ROUTES: SystemRouteEntry[] = [
   { id: "report-trial-balance", to: "/accounting/reports/trial-balance", label: "ميزان المراجعة", icon: "Scale", groupId: "reports", groupLabel: "التقارير" },
   { id: "report-balance-sheet", to: "/accounting/reports/balance-sheet", label: "الميزانية العمومية", icon: "BarChart3", groupId: "reports", groupLabel: "التقارير" },
   { id: "sep-reports-2", to: "", label: "", icon: "", groupId: "reports", groupLabel: "التقارير", isSeparator: true },
-  { id: "report-partner-profit", to: "/accounting/reports/partner-profit-share", label: "الشركاء وتقاسم الأرباح", icon: "Users", groupId: "reports", groupLabel: "التقارير" },
+  { id: "report-partner-profit", to: "/accounting/reports/partners", label: "الشركاء وحقوقهم", icon: "Users", groupId: "reports", groupLabel: "التقارير" },
   { id: "sep-reports-3", to: "", label: "", icon: "", groupId: "reports", groupLabel: "التقارير", isSeparator: true },
   { id: "report-inventory-valuation", to: "/inventory/reports/valuation", label: "جرد وقيمة المخزون", icon: "Package", groupId: "reports", groupLabel: "التقارير" },
   { id: "report-low-stock", to: "/inventory/reports/low-stock", label: "نواقص المخزون", icon: "AlertTriangle", groupId: "reports", groupLabel: "التقارير" },

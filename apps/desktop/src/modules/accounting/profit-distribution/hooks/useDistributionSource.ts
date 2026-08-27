@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { openingBalanceService, type OpeningBalanceMigrationDto, type ProfitDistributionSource } from "@modules/accounting/api/openingBalanceService";
 import { fiscalPeriodService } from "@modules/accounting/api/fiscalPeriodService";
 import { QUERY_KEYS } from "@shared/hooks/queryClient";
+import { normalizeToUtcIso } from "@shared/lib/dateUtils";
 import type { FiscalPeriodDto } from "@erp/shared-types";
 
 interface DistributionSourceResult {
@@ -40,21 +41,21 @@ export function useDistributionSource(): DistributionSourceResult {
         source: { OpeningMigration: { migration_id: latestMigration.id } } as const,
         sourceLabel: `ترحيل الرصيد الافتتاحي — ${latestMigration.cutover_date}`,
         windowStart: "1970-01-01T00:00:00Z",
-        windowEnd: `${latestMigration.cutover_date}T23:59:59Z`,
+        windowEnd: normalizeToUtcIso(latestMigration.cutover_date, true),
         isLoading: false,
       };
     }
 
     const activePeriod = periods
-      .filter((p) => p.status === "Open" || p.status === "Closed" || p.status === "Locked")
+      .filter((p) => p.status === "Closed" || p.status === "Locked")
       .sort((a, b) => b.end_date.localeCompare(a.end_date))[0];
 
     if (activePeriod) {
       return {
         source: { ClosedPeriod: { period_id: activePeriod.id } } as const,
         sourceLabel: `الفترة المالية — ${activePeriod.start_date} إلى ${activePeriod.end_date}`,
-        windowStart: `${activePeriod.start_date}T00:00:00Z`,
-        windowEnd: `${activePeriod.end_date}T23:59:59Z`,
+        windowStart: normalizeToUtcIso(activePeriod.start_date, false),
+        windowEnd: normalizeToUtcIso(activePeriod.end_date, true),
         isLoading: false,
       };
     }

@@ -2,18 +2,15 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@shared/ui/tabs";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Button } from "@shared/ui/button";
-import { Coins } from "lucide-react";
+import { Coins, Users } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { Users } from "lucide-react";
 import { PartnerProfitShareView } from "@modules/reports/components/PartnerProfitShareView";
 import { PartnerStatementView } from "@modules/reports/components/PartnerStatementView";
 import { ReportFilterBar } from "@widgets/reports/ReportFilterBar";
 import { ReportLoadingSkeleton, ReportErrorState } from "@widgets/reports";
 import { useReportFilters } from "@shared/hooks/useReportFilters";
-import { useDistributionSource } from "@modules/accounting/profit-distribution/hooks/useDistributionSource";
-import { useDistributionPool } from "@modules/accounting/profit-distribution/hooks/useDistributionPool";
 import { usePartnerRightsReport } from "@modules/reports/hooks/usePartnerRightsReport";
-import { ProfitDistributionWorkflow } from "@modules/accounting/profit-distribution/components/ProfitDistributionWorkflow";
+import { ProfitDistributionSidePanel } from "@modules/accounting/profit-distribution/components/ProfitDistributionSidePanel";
 
 export default function PartnerRightsReport() {
   const { baseCurrency, currencies, formatAmount, hasMultipleCurrencies } = useCurrencyContext();
@@ -24,9 +21,6 @@ export default function PartnerRightsReport() {
   const { loading, refreshing, lastLoadedAt, reportData, error, loadReportData, computed } = usePartnerRightsReport(filters);
 
   const [showProfitDistribution, setShowProfitDistribution] = useState(false);
-
-  const { source, sourceLabel, windowStart, windowEnd, isLoading: sourceLoading } = useDistributionSource();
-  const { pool, isLoading: poolLoading } = useDistributionPool(source, windowStart, windowEnd);
 
   const formatValue = (value: number) =>
     formatAmount(value, {
@@ -63,7 +57,7 @@ export default function PartnerRightsReport() {
           />
         }
         tableContent={
-          loading || sourceLoading ? (
+          loading ? (
             <ReportLoadingSkeleton />
           ) : error ? (
             <ReportErrorState onRetry={loadReportData} />
@@ -90,74 +84,10 @@ export default function PartnerRightsReport() {
           )
         }
       />
-      {showProfitDistribution && (
-        <ProfitDistributionSidePanel
-          source={source}
-          sourceLabel={sourceLabel}
-          pool={pool}
-          poolLoading={poolLoading}
-          windowStart={windowStart}
-          windowEnd={windowEnd}
-          onClose={() => setShowProfitDistribution(false)}
-        />
-      )}
+      <ProfitDistributionSidePanel
+        isOpen={showProfitDistribution}
+        onClose={() => setShowProfitDistribution(false)}
+      />
     </>
-  );
-}
-
-function ProfitDistributionSidePanel({
-  source,
-  sourceLabel,
-  pool,
-  poolLoading,
-  windowStart,
-  windowEnd,
-  onClose,
-}: {
-  source: import("@modules/accounting/api/openingBalanceService").ProfitDistributionSource | null;
-  sourceLabel: string;
-  pool: import("@modules/accounting/profit-distribution/lib/types").DistributionPool | null;
-  poolLoading: boolean;
-  windowStart: string;
-  windowEnd: string;
-  onClose: () => void;
-}) {
-  if (!source) {
-    return (
-      <div className="fixed inset-y-0 left-0 w-[480px] bg-white border-r shadow-xl z-50 flex flex-col">
-        <div className="p-4 border-b flex items-center justify-between">
-          <h2 className="font-bold text-lg">توزيع الأرباح</h2>
-          <Button variant="ghost" size="sm" onClick={onClose}>✕</Button>
-        </div>
-        <div className="flex-1 flex items-center justify-center p-6">
-          <p className="text-sm text-slate-500 text-center">
-            لا توجد مصدر أرباح متاحة. يجب ترحيل الرصيد الافتتاحي أو إغلاق فترة مالية أولاً.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="fixed inset-y-0 left-0 w-[480px] bg-white border-r shadow-xl z-50 flex flex-col">
-      <div className="p-4 border-b flex items-center justify-between">
-        <h2 className="font-bold text-lg">توزيع الأرباح</h2>
-        <Button variant="ghost" size="sm" onClick={onClose}>✕</Button>
-      </div>
-      <div className="flex-1 overflow-y-auto p-4">
-        {poolLoading ? (
-          <p className="text-sm text-slate-400">جارٍ تحميل البيانات...</p>
-        ) : pool ? (
-          <ProfitDistributionWorkflow
-            source={source}
-            windowStart={windowStart}
-            windowEnd={windowEnd}
-            sourceLabel={sourceLabel}
-          />
-        ) : (
-          <p className="text-sm text-slate-400">لا توجد بيانات متاحة</p>
-        )}
-      </div>
-    </div>
   );
 }

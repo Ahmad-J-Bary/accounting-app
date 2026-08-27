@@ -149,7 +149,7 @@ describe("computePartnerStatement", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Partner Profit Share — same regression surface for «الشركاء وتقاسم الأرباح».
+// Partner Profit Share — same regression surface for «الشركاء وحقوقهم».
 // ---------------------------------------------------------------------------
 describe("computePartnerProfitShare", () => {
   it("keeps partners whose capital is carried as static opening entries (empty lines)", () => {

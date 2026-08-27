@@ -41,7 +41,7 @@ export function computePartnerStatement(
 
     let accumulatedProfits = 0;
     if (currentLedger) {
-      for (const line of currentLedger.lines) {
+      for (const line of currentLedger.lines ?? []) {
         const lineTs = new Date(line.date).getTime();
         if (Number.isFinite(lineTs) && lineTs < fromTs) {
           accumulatedProfits += parseFloat(line.credit_base || "0") - parseFloat(line.debit_base || "0");
@@ -51,7 +51,7 @@ export function computePartnerStatement(
 
     let accumulatedDrawings = 0;
     if (drawingsLedger) {
-      for (const line of drawingsLedger.lines) {
+      for (const line of drawingsLedger.lines ?? []) {
         const lineTs = new Date(line.date).getTime();
         if (Number.isFinite(lineTs) && lineTs < fromTs) {
           accumulatedDrawings += parseFloat(line.debit_base || "0");
