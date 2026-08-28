@@ -98,9 +98,9 @@ export function usePartnerRightsReport(filters: IncomeStatementFilters): ReportS
           const capitalAmount = parseFloat(r.capital_registered);
           const capitalRatio = parseFloat(r.capital_ratio);
           const profitShareRatio = parseFloat(r.profit_share_ratio);
-          const profitShareAmount = incomeStatementResult.netProfit * (profitShareRatio / 100);
+          const profitShareAmount = parseFloat(r.profit_allocated);
           const drawings = parseFloat(r.drawings);
-          const finalAmount = capitalAmount + profitShareAmount - drawings;
+          const finalAmount = parseFloat(r.total_equity);
           const inventoryShare = inventoryValue * (profitShareRatio / 100);
           const fixedAssetsShare = fixedAssetsValue * (profitShareRatio / 100);
           const operationalAssetShare = totalOperationalAssets * (profitShareRatio / 100);
@@ -134,10 +134,10 @@ export function usePartnerRightsReport(filters: IncomeStatementFilters): ReportS
           const capitalAmount = parseFloat(r.capital_registered);
           const accumulatedProfits = parseFloat(r.accumulated_profit_prior);
           const accumulatedDrawings = parseFloat(r.accumulated_drawings_prior);
-          const currentAccount = capitalAmount + accumulatedProfits - accumulatedDrawings;
+          const currentAccount = parseFloat(r.current_balance);
           const thisYearProfit = parseFloat(r.period_profit);
           const thisYearDrawings = parseFloat(r.period_drawings);
-          const finalAmount = currentAccount + thisYearProfit - thisYearDrawings;
+          const finalAmount = parseFloat(r.total_equity);
 
           return {
             partnerId: r.partner_id,
