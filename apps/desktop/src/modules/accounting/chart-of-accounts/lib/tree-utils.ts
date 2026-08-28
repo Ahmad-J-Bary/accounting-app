@@ -1,6 +1,5 @@
 import type { AccountDto } from "@erp/shared-types";
 import type { AccountTreeNode } from "./types";
-import { isInventoryAccount } from "@modules/reports/lib/accountingEntryClassifier";
 
 /**
  * Account purposes hidden from the Chart of Accounts tree.

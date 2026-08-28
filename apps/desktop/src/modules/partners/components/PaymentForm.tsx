@@ -34,7 +34,7 @@ interface PaymentFormProps {
 export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProps) {
   const { currencies, baseCurrency, rateMap } = useCurrencyContext();
   const defaultCurrency = config.entityCurrency || baseCurrency?.code || "";
-  const idField = config.getIdField(config);
+  const idFieldName = config.getIdField(config);
 
   const [form, setForm] = useState<Partial<CreatePaymentRequest>>({
     payment_type: config.paymentType,
@@ -42,7 +42,7 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
     payment_date: new Date().toISOString(),
     currency_code: defaultCurrency,
     exchange_rate: getExchangeRate(defaultCurrency, rateMap, baseCurrency?.code),
-    [config.getIdField(config)]: idField,
+    [idFieldName]: config.entityId,
     notes: `${config.notesPrefix}${config.entityName}`,
   });
 
@@ -52,7 +52,7 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
   };
 
   const handleSave = async () => {
-    if (!form.amount || !idField) return;
+    if (!form.amount || !config.entityId) return;
 
     await onSave({
       payment_type: config.paymentType,
@@ -60,12 +60,12 @@ export function PaymentForm({ config, onSave, onClose, saving }: PaymentFormProp
       currency_code: form.currency_code || baseCurrency?.code || "",
       exchange_rate: form.exchange_rate || 1,
       payment_date: form.payment_date || new Date().toISOString(),
-      [config.getIdField(config)]: idField,
+      [idFieldName]: config.entityId,
       notes: form.notes || undefined,
     });
   };
 
-  const isSaveDisabled = !form.amount || form.amount <= 0 || !idField;
+  const isSaveDisabled = !form.amount || form.amount <= 0 || !config.entityId;
 
   return (
     <FormPanel
@@ -182,7 +182,7 @@ export const PAYMENT_CONFIGS = {
 
   partner: (partner: { id: string; name: string; currency?: string; drawings_account_id?: string }): PaymentFormConfig => ({
     paymentType: "DrawingsVoucher",
-    entityId: partner.drawings_account_id || partner.id,
+    entityId: partner.drawings_account_id ?? "",
     entityName: partner.name,
     entityCurrency: partner.currency,
     drawingsAccountId: partner.drawings_account_id,

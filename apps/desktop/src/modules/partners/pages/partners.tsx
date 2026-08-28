@@ -139,6 +139,10 @@ export default function Partners() {
   }, [refresh]);
 
   const handleSaveDrawings = async (payload: CreatePaymentRequest) => {
+    if (!selectedPartner?.drawings_account_id) {
+      toast.error("لم يتم إعداد حساب المسحوبات لهذا الشريك");
+      return;
+    }
     try {
       setDrawingsSaving(true);
       await paymentService.createPayment(payload);

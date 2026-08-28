@@ -100,7 +100,7 @@ pub async fn build_journal_lines(
         }
         PaymentType::DrawingsVoucher => {
             let debit_drawings = payment.debit_account_id
-                .ok_or_else(|| AppError::Invalid("يجب اختيار حساب المسحوبات لسند المسحوبات".into()))?;
+                .ok_or_else(|| AppError::Invalid("حساب المدين (المسحوبات) مفقود — تأكد من ربط الشريك بحساب مسحوبات صحيح".into()))?;
             let credit_cash = payment.credit_account_id.unwrap_or(cash_account_id);
             payment.credit_account_id = Some(credit_cash);
             lines.push(JournalLine::new(debit_drawings, amount_ma.clone(), zero_ma.clone(), "سند مسحوبات".to_string()));

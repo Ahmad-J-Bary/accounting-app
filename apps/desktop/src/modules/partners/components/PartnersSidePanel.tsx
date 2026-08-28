@@ -4,6 +4,7 @@ import type { PartnerRequest } from "@modules/partners/api/partnerService";
 import { PartnerForm } from '@modules/partners/components/PartnerForm';
 import { PaymentForm, PAYMENT_CONFIGS } from '@modules/partners/components/PaymentForm';
 import { PartnerDetailView } from '@modules/partners/components/PartnerDetailView';
+import { toast } from "sonner";
 
 type PartnerWithRatios = PartnerDto & {
   calculatedRatio: number;
@@ -53,9 +54,13 @@ export function PartnersSidePanel({
   }
 
   if (activePanel === "drawings" && selectedPartner) {
+    if (!selectedPartner.drawings_account_id) {
+      toast.error("لم يتم إعداد حساب المسحوبات لهذا الشريك");
+      return null;
+    }
     return (
       <PaymentForm
-        config={PAYMENT_CONFIGS.partner({ ...selectedPartner, drawings_account_id: selectedPartner.drawings_account_id ?? undefined })}
+        config={PAYMENT_CONFIGS.partner({ ...selectedPartner, drawings_account_id: selectedPartner.drawings_account_id })}
         onSave={onSaveDrawings}
         onClose={onClose}
         saving={drawingsSaving}
