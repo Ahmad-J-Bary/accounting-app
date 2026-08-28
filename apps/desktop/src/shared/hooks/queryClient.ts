@@ -16,7 +16,7 @@ export const QUERY_KEYS = {
   partners: ["partners"] as const,
   partner: (id: string) => ["partners", id] as const,
   partnerLedger: (id: string) => ["partners", id, "ledger"] as const,
-  partnerEquityStatement: ["partner-equity-statement"] as const,
+  partnerEquityStatement: (from?: string, to?: string) => ["partner-equity-statement", from, to] as const,
 
   customers: ["customers"] as const,
   customer: (id: string) => ["customers", id] as const,
@@ -66,7 +66,6 @@ export const QUERY_KEYS = {
 
   incomeStatement: ["reports", "income-statement"] as const,
   balanceSheet: ["reports", "balance-sheet"] as const,
-  partnerProfitShare: ["reports", "partner-profit-share"] as const,
   trialBalance: (from?: string, to?: string) => ["reports", "trial-balance", from, to] as const,
   dashboard: ["reports", "dashboard"] as const,
 
@@ -90,7 +89,6 @@ export const ALL_REPORT_KEYS: readonly (readonly unknown[])[] = [
   ["reports", "trial-balance"] as const,
   QUERY_KEYS.incomeStatement,
   QUERY_KEYS.balanceSheet,
-  QUERY_KEYS.partnerProfitShare,
   QUERY_KEYS.dashboard,
   ["journal-entries"] as const,
   QUERY_KEYS.chartOfAccounts,
@@ -141,7 +139,6 @@ const REPORT_CORE_KEYS: readonly (readonly unknown[])[] = [
   QUERY_KEYS.dashboard,
   QUERY_KEYS.incomeStatement,
   QUERY_KEYS.balanceSheet,
-  QUERY_KEYS.partnerProfitShare,
   ["reports", "trial-balance"] as const,
   QUERY_KEYS.receivablesPayables,
   QUERY_KEYS.salesReturns,
@@ -211,7 +208,7 @@ export const JOURNAL_MUTATION_KEYS: readonly (readonly unknown[])[] = [
 export const PARTNER_MUTATION_KEYS: readonly (readonly unknown[])[] = [
   ...REPORT_CORE_KEYS,
   QUERY_KEYS.partners,
-  QUERY_KEYS.partnerEquityStatement,
+  QUERY_KEYS.partnerEquityStatement(),
   QUERY_KEYS.fixedAssets,
   QUERY_KEYS.receivablesPayables,
   QUERY_KEYS.payments,
@@ -231,7 +228,7 @@ export const FISCAL_MUTATION_KEYS: readonly (readonly unknown[])[] = [
 export const PROFIT_DISTRIBUTION_KEYS: readonly (readonly unknown[])[] = [
   ...ALL_ACCOUNTING_MUTATION_KEYS,
   QUERY_KEYS.distributableProfit(),
-  QUERY_KEYS.partnerEquityStatement,
+  QUERY_KEYS.partnerEquityStatement(),
 ];
 
 /** Settings changes (company, localization, warehouse setup, currencies, backup

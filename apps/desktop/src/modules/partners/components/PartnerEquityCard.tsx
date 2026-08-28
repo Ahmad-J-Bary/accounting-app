@@ -4,11 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
 import { Skeleton } from "@shared/ui/skeleton";
 import { partnerService, type PartnerEquityStatementDto } from "@modules/partners/api/partnerService";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
+import { QUERY_KEYS } from "@shared/hooks/queryClient";
 
 export function PartnerEquityCard() {
   const { formatAmount, baseCurrency } = useCurrencyContext();
   const { data, isLoading, error } = useQuery<PartnerEquityStatementDto>({
-    queryKey: ["partner-equity-statement"],
+    queryKey: QUERY_KEYS.partnerEquityStatement(),
     queryFn: () => partnerService.getPartnerEquityStatement(),
   });
 

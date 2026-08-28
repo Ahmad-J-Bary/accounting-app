@@ -36,20 +36,28 @@ export function usePartnerRightsReport(filters: IncomeStatementFilters): ReportS
 
   const { loadMaterialExpenseLedgers } = useMaterialExpenseLedgers();
 
+  // Equity statement: cached by React Query with date-range-aware key
+  const fromIso = toUtcBound(filters.from_date, false);
+  const toIso = toUtcBound(filters.to_date, true);
+  const equityQuery = useQuery({
+    queryKey: QUERY_KEYS.partnerEquityStatement(fromIso, toIso),
+    queryFn: () => partnerService.getPartnerEquityStatement(fromIso, toIso),
+    enabled: !baseLoading && !partnersQuery.isLoading,
+  });
+
   const [resolvedData, setResolvedData] = useState<PartnerRightsReportData>(emptyData);
-  const [loadingLedgers, setLoadingLedgers] = useState(false);
   const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
 
-  const isLoading = baseLoading || partnersQuery.isLoading || receivablesQuery.isLoading || fixedAssetsQuery.isLoading;
-  const isError = baseError || partnersQuery.isError || receivablesQuery.isError || fixedAssetsQuery.isError;
-  const isRefetching = baseRefetching || partnersQuery.isRefetching || receivablesQuery.isRefetching || fixedAssetsQuery.isRefetching;
+  const isLoading = baseLoading || partnersQuery.isLoading || receivablesQuery.isLoading || fixedAssetsQuery.isLoading || equityQuery.isLoading;
+  const isError = baseError || partnersQuery.isError || receivablesQuery.isError || fixedAssetsQuery.isError || equityQuery.isError;
+  const isRefetching = baseRefetching || partnersQuery.isRefetching || receivablesQuery.isRefetching || fixedAssetsQuery.isRefetching || equityQuery.isRefetching;
 
   useEffect(() => {
-    if (isLoading || isError) return;
+    if (isLoading || isError || !equityQuery.data) return;
 
     let active = true;
+
     const run = async () => {
-      setLoadingLedgers(true);
       try {
         const stockMovementsByMaterial = await loadMaterialExpenseLedgers(
           baseData.materials
@@ -71,6 +79,7 @@ export function usePartnerRightsReport(filters: IncomeStatementFilters): ReportS
 
         const receivables = receivablesQuery.data;
         const fixedAssets = fixedAssetsQuery.data ?? [];
+        const equityStatement = equityQuery.data;
 
         const customerDebts = parseFloat(receivables?.customers_debit || "0");
         const toDateStr = filters.to_date.split("T")[0];
@@ -82,12 +91,6 @@ export function usePartnerRightsReport(filters: IncomeStatementFilters): ReportS
             return sum + (purchaseCost - accumulated);
           }, 0);
 
-        // Fetch the equity statement from the backend with date params
-        const fromIso = toUtcBound(filters.from_date, false);
-        const toIso = toUtcBound(filters.to_date, true);
-        const equityStatement = await partnerService.getPartnerEquityStatement(fromIso, toIso);
-
-        // Map backend rows to PartnerProfitShareRow
         const inventoryValue = incomeStatementResult.closingInventory;
         const totalOperationalAssets = inventoryValue + fixedAssetsValue + customerDebts;
 
@@ -127,7 +130,6 @@ export function usePartnerRightsReport(filters: IncomeStatementFilters): ReportS
           rows: profitShareRows,
         };
 
-        // Map backend rows to PartnerStatementRow
         const statementRows: PartnerStatementRow[] = equityStatement.rows.map((r) => {
           const capitalAmount = parseFloat(r.capital_registered);
           const accumulatedProfits = parseFloat(r.accumulated_profit_prior);
@@ -158,8 +160,6 @@ export function usePartnerRightsReport(filters: IncomeStatementFilters): ReportS
         }
       } catch (e) {
         console.error("Failed to load partner report data:", e);
-      } finally {
-        if (active) setLoadingLedgers(false);
       }
     };
 
@@ -177,10 +177,11 @@ export function usePartnerRightsReport(filters: IncomeStatementFilters): ReportS
     partnersQuery.data,
     receivablesQuery.data,
     fixedAssetsQuery.data,
+    equityQuery.data,
   ]);
 
   return {
-    loading: isLoading || loadingLedgers,
+    loading: isLoading,
     refreshing: isRefetching,
     lastLoadedAt,
     reportData: resolvedData,
@@ -191,6 +192,7 @@ export function usePartnerRightsReport(filters: IncomeStatementFilters): ReportS
         partnersQuery.refetch(),
         receivablesQuery.refetch(),
         fixedAssetsQuery.refetch(),
+        equityQuery.refetch(),
       ]);
     },
     computed: resolvedData,
