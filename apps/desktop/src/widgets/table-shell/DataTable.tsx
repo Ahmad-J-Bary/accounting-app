@@ -55,7 +55,7 @@ export function DataTable<T>({
               <td key={colIdx} className="px-4 py-4">
                 <Skeleton className={cn(
                   "h-4 w-full rounded-md",
-                  align === "left" ? "ms-auto me-0" : align === "center" ? "mx-auto" : "me-auto ms-0",
+                  align === "left" ? "mr-auto ml-0" : align === "center" ? "mx-auto" : "ml-auto mr-0",
                   idx % 2 === 0 ? "opacity-60" : "opacity-40"
                 )} />
               </td>

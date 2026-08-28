@@ -67,12 +67,7 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
             key={`${col.id}-label`}
             data-summary-col={col.columnId ?? col.id}
             className={cn(
-              "px-2 py-1.5 flex items-center select-none transition-colors",
-              col.align === "right"
-                ? "justify-start text-start"
-                : col.align === "left"
-                  ? "justify-end text-end"
-                  : "justify-center text-center",
+              "px-2 py-1.5 flex items-center justify-center text-center select-none transition-colors",
               hasValue
                 ? asPageFooter
                   ? "text-2xs font-black text-slate-500 uppercase tracking-wider"
@@ -83,16 +78,7 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
             )}
             style={
               gridTemplate
-                ? {
-                    minWidth: 0,
-                    fontFamily: settings.fontFamily,
-                    textAlign:
-                      col.align === "right"
-                        ? "start"
-                        : col.align === "left"
-                          ? "end"
-                          : "center",
-                  }
+                ? { minWidth: 0, fontFamily: settings.fontFamily }
                 : { flex: columnWidths && col.columnId && columnWidths[col.columnId] ? `0 0 ${columnWidths[col.columnId]}px` : 1 }
             }
           >
@@ -120,12 +106,7 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
             data-summary-col={col.columnId ?? col.id}
             className={cn(
               getDensityPadding(),
-              "tabular-nums flex items-center transition-colors",
-              col.align === "right"
-                ? "justify-start text-start"
-                : col.align === "left"
-                  ? "justify-end text-end"
-                  : "justify-center text-center",
+              "tabular-nums flex items-center justify-center text-center transition-colors",
               hasValue
                 ? asPageFooter
                   ? "font-extrabold text-slate-900"
@@ -141,20 +122,10 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
                     fontSize: `${settings.fontSize}px`,
                     fontFamily: settings.fontFamily,
                     minWidth: 0,
-                    textAlign:
-                      col.align === "right"
-                        ? "start"
-                        : col.align === "left"
-                          ? "end"
-                          : "center",
+                    textAlign: 'center',
                     display: "flex",
                     alignItems: "center",
-                    justifyContent:
-                      col.align === "right"
-                        ? "flex-start"
-                        : col.align === "left"
-                          ? "flex-end"
-                          : "center",
+                    justifyContent: 'center',
                   }
                 : {
                     flex: columnWidths && col.columnId && columnWidths[col.columnId]
@@ -183,7 +154,7 @@ export const TableSummary: React.FC<TableSummaryProps> = ({
         )}
       >
         {hasAnyActive && (
-          <div className="absolute top-0 start-4 -translate-y-1/2 px-2 py-0.5 bg-slate-700 text-white text-3xs font-black uppercase tracking-wider rounded-full shadow-sm">
+          <div className="absolute top-0 right-4 -translate-y-1/2 px-2 py-0.5 bg-slate-700 text-white text-3xs font-black uppercase tracking-wider rounded-full shadow-sm">
             ملخص
           </div>
         )}

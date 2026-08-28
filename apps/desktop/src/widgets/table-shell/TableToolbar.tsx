@@ -63,12 +63,12 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
     <div className="flex flex-wrap items-center gap-2 mb-2" dir="rtl">
       {(onSearchChange !== undefined) && (
         <div className="relative flex-[2] min-w-[160px] max-w-[320px]">
-          <Search className="absolute start-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+          <Search className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
           <Input
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
-            className="h-8 pe-7 ps-3 text-sm bg-white border-slate-200 focus:bg-white transition-all w-full"
+            className="h-8 pr-7 pl-3 text-sm bg-white border-slate-200 focus:bg-white transition-all w-full"
           />
         </div>
       )}
@@ -77,19 +77,19 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
           {filterBar}
         </div>
       )}
-      <div className="flex items-center gap-1 ms-auto">
+      <div className="flex items-center gap-1 mr-auto">
         {actions}
         {showViewOptions && (
           <>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 px-2 border-slate-200 bg-white text-slate-600">
-                  <LayoutGrid className="w-3.5 h-3.5 me-1" />
+                  <LayoutGrid className="w-3.5 h-3.5 ml-1" />
                   <span className="text-xs">العرض</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56">
-                <DropdownMenuLabel className="text-start">كثافة الجدول</DropdownMenuLabel>
+                <DropdownMenuLabel className="text-right">كثافة الجدول</DropdownMenuLabel>
                 <DropdownMenuRadioGroup
                   value={settings.density}
                   onValueChange={(v) => updateSetting('density', v as TableDensity)}
@@ -99,7 +99,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                   <DropdownMenuRadioItem value="spacious" className="flex-row-reverse">واسع</DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-start">خيارات أخرى</DropdownMenuLabel>
+                <DropdownMenuLabel className="text-right">خيارات أخرى</DropdownMenuLabel>
                 <DropdownMenuCheckboxItem
                   checked={settings.zebraRows}
                   onCheckedChange={(v) => updateSetting('zebraRows', !!v)}
@@ -116,7 +116,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={resetSettings} className="flex-row-reverse text-rose-600 focus:text-rose-600">
-                  <RotateCcw className="w-4 h-4 me-2" />
+                  <RotateCcw className="w-4 h-4 ml-2" />
                   إعادة ضبط المصنع
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -132,11 +132,11 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                     columnsModified && "border-amber-300 bg-amber-50 text-amber-700"
                   )}
                 >
-                  <Columns className="w-3.5 h-3.5 me-1" />
+                  <Columns className="w-3.5 h-3.5 ml-1" />
                   <span className="text-xs">الأعمدة</span>
                   {hasColumns && (
                     <span className={cn(
-                      "ms-1 text-3xs font-bold px-1 py-0.5 rounded tabular-nums",
+                      "mr-1 text-3xs font-bold px-1 py-0.5 rounded tabular-nums",
                       columnsModified
                         ? "bg-amber-200 text-amber-800"
                         : "bg-slate-100 text-slate-600"
@@ -147,7 +147,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-64 max-h-[420px] overflow-y-auto">
-                <DropdownMenuLabel className="flex items-center justify-between text-start gap-2">
+                <DropdownMenuLabel className="flex items-center justify-between text-right gap-2">
                   <span>إظهار / إخفاء الأعمدة</span>
                   {hasColumns && (
                     <span className="text-2xs tabular-nums text-slate-500 font-medium">
@@ -174,7 +174,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                       disabled={!columnsModified}
                       className="flex-row-reverse text-blue-600 focus:text-blue-600 disabled:text-slate-400 disabled:opacity-50"
                     >
-                      <RotateCcw className="w-4 h-4 me-2" />
+                      <RotateCcw className="w-4 h-4 ml-2" />
                       استعادة الأعمدة الافتراضية
                     </DropdownMenuItem>
                   </>

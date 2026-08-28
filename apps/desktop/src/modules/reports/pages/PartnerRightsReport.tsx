@@ -67,9 +67,9 @@ export default function PartnerRightsReport() {
               <p className="text-sm font-bold">لا يوجد شركاء نشطون لعرض التقرير</p>
             </div>
           ) : (
-            <Tabs defaultValue="profit-share" className="flex flex-col h-full">
+            <Tabs defaultValue="profit-share" className="flex flex-col h-full" dir="rtl">
               <div className="px-4 pt-3">
-                <TabsList className="bg-white border border-slate-200 p-1 h-11 rounded-xl shadow-sm" dir="rtl">
+                <TabsList className="bg-white border border-slate-200 p-1 h-11 rounded-xl shadow-sm">
                   <TabsTrigger value="profit-share" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">تقاسم الأرباح</TabsTrigger>
                   <TabsTrigger value="statement" className="rounded-lg px-5 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold">كشف الحساب</TabsTrigger>
                 </TabsList>

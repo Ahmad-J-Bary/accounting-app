@@ -122,11 +122,7 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
           className={cn(
             getDensityPadding(),
             'relative text-slate-700 font-black uppercase tracking-wider select-text flex items-center',
-            col.align === "right"
-              ? "justify-start"
-              : col.align === "left"
-                ? "justify-end"
-                : "justify-center",
+            'justify-center',
             getLeftBorderClass(borderStyle ?? ""),
             !useGrid && !columnWidths[col.id] && col.width,
           )}
@@ -135,23 +131,13 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
             fontSize: `${fontSize}px`,
             fontFamily: fontFamily || 'inherit',
             ...(useGrid ? { minWidth: 0 } : {}),
-            textAlign:
-              col.align === "right"
-                ? "start"
-                : col.align === "left"
-                  ? "end"
-                  : "center",
+            textAlign: 'center',
           }}
           onClick={() => onHeaderCellClick?.(col.id)}
         >
           <div
             className={cn(
-              'flex-1 min-w-0 whitespace-normal break-words leading-tight hyphens-auto',
-              col.align === "right"
-                ? "text-start"
-                : col.align === "left"
-                  ? "text-end"
-                  : "text-center",
+              'flex-1 min-w-0 whitespace-normal break-words leading-tight hyphens-auto text-center',
             )}
             style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
           >
@@ -159,7 +145,7 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
           </div>
 
           {col.id === sortField && (
-            <span className="shrink-0 ms-1">
+            <span className="shrink-0 mr-1">
               {sortDirection === 'asc' ? (
                 <ChevronUp className="w-3.5 h-3.5 text-blue-500" />
               ) : (
@@ -171,7 +157,7 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
           {enableResize && onResizeStart && idx < columns.length - 1 && (
             <div
               className="absolute top-0 bottom-0 w-2 cursor-col-resize z-20 hover:bg-blue-500/10 active:bg-blue-500/20 transition-colors flex items-center justify-center group/resize"
-              style={{ insetInlineStart: -4 }}
+              style={{ left: -4 }}
               onMouseDown={(e) => {
                 e.stopPropagation();
                 onResizeStart(e, col.id);

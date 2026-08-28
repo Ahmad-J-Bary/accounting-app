@@ -28,7 +28,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
   if (totalPages <= 1) return null;
 
   return (
-    <div className={cn("flex items-center justify-between px-2 py-1", className)} dir="rtl">
+    <div className={cn("flex items-center justify-between px-2 py-1", className)}>
       <div className="flex-1 text-sm text-slate-500 font-medium">
         {totalItems !== undefined && (
           <span>
@@ -36,7 +36,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
           </span>
         )}
       </div>
-      <div className="flex items-center space-x-2 space-x-reverse">
+      <div className="flex items-center gap-2">
         <Button
           variant="outline"
           size="icon"
