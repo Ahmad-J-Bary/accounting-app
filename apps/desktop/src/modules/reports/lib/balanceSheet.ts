@@ -321,6 +321,15 @@ export function computeBalanceSheet(
    * standalone leaves and non-tree parents keep the legacy flat walk, so
    * charts without a container produce byte-identical output.
    */
+  // Account purposes hidden from the Balance Sheet display
+  // (but their balances are still counted in totalEquity)
+  const HIDDEN_EQUITY_PURPOSES = new Set([
+    "opening_equity_adjustment",
+    "prior_period_adjustment",
+    "other_equity",
+    "opening_balance_equity",
+  ]);
+
   function buildGroupedEquityRows(accounts: AccountBalance[]): BalanceSheetRow[] {
     const result: BalanceSheetRow[] = [];
     const consumed = new Set<string>();
@@ -328,6 +337,8 @@ export function computeBalanceSheet(
     const bucketLabel = (leaf: AccountBalance): string => {
       if (leaf.purpose === "partner_capital") return "رأس مال الشركاء";
       if (leaf.purpose === "retained_earnings") return "الأرباح المبقاة";
+      if (leaf.purpose === "partner_drawings") return "إجمالي المسحوبات";
+      if (leaf.purpose === "partner_current") return "حسابات جارية الشركاء";
       return "حقوق ملكية أخرى";
     };
 
@@ -338,21 +349,30 @@ export function computeBalanceSheet(
           ? "partner_capital"
           : leaf.purpose === "retained_earnings"
             ? "retained_earnings"
-            : "other";
+            : leaf.purpose === "partner_drawings"
+              ? "partner_drawings"
+              : leaf.purpose === "partner_current"
+                ? "partner_current"
+                : "other";
         const group = buckets.get(key) ?? [];
         group.push(leaf);
         buckets.set(key, group);
       }
-      return Array.from(buckets.entries()).map(([key, bucketLeaves]) => ({
-        label: key === "other" ? "حقوق ملكية أخرى" : bucketLabel(bucketLeaves[0]),
-        value: bucketLeaves.reduce((s, l) => s + l.balance, 0),
-        depth,
-        children: bucketLeaves.map((l) => ({
-          label: isAccDep(l.name) ? `(-) ${l.name}` : l.name,
-          value: isAccDep(l.name) ? Math.abs(l.balance) : l.balance,
-          depth: depth + 1,
-        })),
-      }));
+      return Array.from(buckets.entries()).map(([key, bucketLeaves]) => {
+        const row: BalanceSheetRow = {
+          label: key === "other" ? "حقوق ملكية أخرى" : bucketLabel(bucketLeaves[0]),
+          value: bucketLeaves.reduce((s, l) => s + l.balance, 0),
+          depth,
+        };
+        if (key !== "retained_earnings") {
+          row.children = bucketLeaves.map((l) => ({
+            label: isAccDep(l.name) ? `(-) ${l.name}` : l.name,
+            value: isAccDep(l.name) ? Math.abs(l.balance) : l.balance,
+            depth: depth + 1,
+          }));
+        }
+        return row;
+      });
     };
 
     for (const a of accounts) {
@@ -360,19 +380,15 @@ export function computeBalanceSheet(
         const leaves: AccountBalance[] = [];
         const collect = (n: AccountBalance) => {
           if (n.children.length > 0) {
+            consumed.add(n.id);
             n.children.forEach(collect);
-          } else {
+          } else if (!HIDDEN_EQUITY_PURPOSES.has(n.purpose ?? "")) {
             leaves.push(n);
             consumed.add(n.id);
           }
         };
         collect(a);
-        result.push({
-          label: a.name,
-          value: a.balance,
-          depth: 0,
-          children: groupedChildren(leaves, 1),
-        });
+        result.push(...groupedChildren(leaves, 0));
       } else if (!consumed.has(a.id)) {
         result.push(...buildSectionRows([a]));
       }
@@ -430,7 +446,6 @@ export function computeBalanceSheet(
       rows: [
         ...buildGroupedEquityRows(allEquity),
         { label: "صافي الأرباح", value: profitLoss.netProfit, depth: 0 },
-        { label: "إجمالي المسحوبات", value: -profitLoss.totalDrawings, depth: 0 },
       ],
     },
   ];

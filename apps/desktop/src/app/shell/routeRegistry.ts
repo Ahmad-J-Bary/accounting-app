@@ -63,7 +63,6 @@ export const ALL_SYSTEM_ROUTES: SystemRouteEntry[] = [
   // ── الإدارة ──
   { id: "users", to: "/users", label: "المستخدمون والصلاحيات", icon: "Shield", groupId: "admin", groupLabel: "الإدارة" },
   { id: "settings", to: "/settings", label: "الإعدادات", icon: "Settings", groupId: "admin", groupLabel: "الإدارة" },
-  { id: "backups", to: "/backups", label: "البيانات والنسخ الاحتياطية", icon: "Database", groupId: "admin", groupLabel: "الإدارة" },
   { id: "audit-log", to: "/audit-log", label: "سجل النشاط", icon: "History", groupId: "admin", groupLabel: "الإدارة" },
 ];
 

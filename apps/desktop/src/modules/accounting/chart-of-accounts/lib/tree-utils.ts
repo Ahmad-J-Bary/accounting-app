@@ -2,6 +2,22 @@ import type { AccountDto } from "@erp/shared-types";
 import type { AccountTreeNode } from "./types";
 import { isInventoryAccount } from "@modules/reports/lib/accountingEntryClassifier";
 
+/**
+ * Account purposes hidden from the Chart of Accounts tree.
+ * These are equity adjustment accounts (521, 525, 526) that are
+ * managed by the opening balance wizard but should not appear
+ * in the regular chart of accounts view.
+ */
+const HIDDEN_ACCOUNT_PURPOSES = new Set([
+  "opening_equity_adjustment",
+  "prior_period_adjustment",
+  "other_equity",
+  "opening_balance_equity",
+]);
+
+export const isHiddenAccount = (purpose?: string | null): boolean =>
+  !!purpose && HIDDEN_ACCOUNT_PURPOSES.has(purpose);
+
 export const isSummaryAccount = (
   _account: Pick<AccountDto, "category" | "level">,
 ): boolean => true; // All accounts are Summary (can have children)
@@ -18,7 +34,10 @@ export function buildTree(accounts: AccountDto[]): AccountTreeNode[] {
   const map = new Map<string, AccountTreeNode>();
   const roots: AccountTreeNode[] = [];
 
-  const sorted = [...accounts].sort((a, b) => a.code.localeCompare(b.code));
+  // Filter out hidden equity adjustment accounts
+  const visible = accounts.filter(a => !isHiddenAccount(a.purpose));
+
+  const sorted = [...visible].sort((a, b) => a.code.localeCompare(b.code));
 
   for (const account of sorted) {
     map.set(account.id, { ...account, children: [] });
