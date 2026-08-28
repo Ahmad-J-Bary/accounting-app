@@ -1,16 +1,7 @@
 export interface PartnerDto {
   id: string;
-  code: string;
   name: string;
-  phone: string | null;
-  address: string | null;
-  debit: string;
-  credit: string;
-  opening_balance: string;
-  balance: string;
   currency: string;
-  notes: string | null;
-  is_active: boolean;
   exchange_rate: string;
   amount_local: string;
   amount_original: string;

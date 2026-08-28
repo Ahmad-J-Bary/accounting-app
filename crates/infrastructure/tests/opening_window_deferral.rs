@@ -182,6 +182,8 @@ async fn customer_update_defers_adjustment_while_window_open() {
         Arc::new(SqliteCustomerRepository::new(pool.clone()));
     let account_repo: Arc<dyn AccountRepository> =
         Arc::new(SqliteAccountRepository::new(pool.clone()));
+    let currency_repo: Arc<dyn CurrencyRepository> =
+        Arc::new(SqliteCurrencyRepository::new(pool.clone()));
     let journal_repo: Arc<dyn JournalEntryRepository> =
         Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
     let migration_repo: Arc<dyn OpeningMigrationRepository> =
@@ -218,6 +220,7 @@ async fn customer_update_defers_adjustment_while_window_open() {
     let updated = UpdateCustomerUseCase::new(
         customer_repo.clone(),
         account_repo.clone(),
+        currency_repo.clone(),
         journal_repo.clone(),
         migration_repo.clone(),
     )
@@ -264,6 +267,8 @@ async fn supplier_update_defers_adjustment_while_window_open() {
         Arc::new(SqliteSupplierRepository::new(pool.clone()));
     let account_repo: Arc<dyn AccountRepository> =
         Arc::new(SqliteAccountRepository::new(pool.clone()));
+    let currency_repo: Arc<dyn CurrencyRepository> =
+        Arc::new(SqliteCurrencyRepository::new(pool.clone()));
     let journal_repo: Arc<dyn JournalEntryRepository> =
         Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
     let migration_repo: Arc<dyn OpeningMigrationRepository> =
@@ -297,6 +302,7 @@ async fn supplier_update_defers_adjustment_while_window_open() {
     application::use_cases::supplier::UpdateSupplierUseCase::new(
         supplier_repo.clone(),
         account_repo.clone(),
+        currency_repo.clone(),
         journal_repo.clone(),
         migration_repo.clone(),
     )
@@ -334,6 +340,8 @@ async fn customer_update_posts_adjustment_outside_window() {
         Arc::new(SqliteCustomerRepository::new(pool.clone()));
     let account_repo: Arc<dyn AccountRepository> =
         Arc::new(SqliteAccountRepository::new(pool.clone()));
+    let currency_repo: Arc<dyn CurrencyRepository> =
+        Arc::new(SqliteCurrencyRepository::new(pool.clone()));
     let journal_repo: Arc<dyn JournalEntryRepository> =
         Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
     let migration_repo: Arc<dyn OpeningMigrationRepository> =
@@ -371,6 +379,7 @@ async fn customer_update_posts_adjustment_outside_window() {
     application::use_cases::customer::UpdateCustomerUseCase::new(
         customer_repo.clone(),
         account_repo.clone(),
+        currency_repo.clone(),
         journal_repo.clone(),
         migration_repo.clone(),
     )

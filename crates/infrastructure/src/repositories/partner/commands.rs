@@ -183,6 +183,7 @@ pub async fn update_with_accounts(
     partner: &Partner,
     capital_replacement: Option<&Account>,
     drawings_replacement: Option<&Account>,
+    current_replacement: Option<&Account>,
 ) -> Result<(), AppError> {
     let mut tx = pool
         .begin()
@@ -195,6 +196,9 @@ pub async fn update_with_accounts(
     }
     if let Some(drawings) = drawings_replacement {
         upsert_account_tx(&mut tx, drawings).await?;
+    }
+    if let Some(current) = current_replacement {
+        upsert_account_tx(&mut tx, current).await?;
     }
 
     tx.commit()

@@ -62,7 +62,7 @@ export function derivePartnerEquity(partners: readonly PartnerDto[], accounts: r
     .map((p) => ({
       key: `eq_${p.id}`,
       entity_id: p.id,
-      label: `${p.code || ""} — ${p.name}`,
+      label: p.name,
       account_id: p.linked_account_id as string,
       account_code: codeOf(accounts, p.linked_account_id),
       amount: String(toNum(p.amount_local)),
@@ -76,7 +76,7 @@ export function derivePartnerCurrentAccounts(partners: readonly PartnerDto[], ac
     .map((p) => ({
       key: `pc_${p.id}`,
       entity_id: p.id,
-      label: `${p.code || ""} — ${p.name} (جاري)`,
+      label: `${p.name} (جاري)`,
       account_id: p.current_account_id as string,
       account_code: codeOf(accounts, p.current_account_id),
       amount: "0",

@@ -269,3 +269,108 @@ async fn equity_statement_reconciles_with_partner_ledgers() {
     assert_eq!(Decimal::from_str(&row_a.profit_allocated).unwrap() - loss_a, cur_a);
     assert_eq!(Decimal::from_str(&row_b.profit_allocated).unwrap() - loss_b, cur_b);
 }
+
+/// Date-range filtering must return the same equity totals when no entries
+/// fall outside the range (all entries are within the range).
+#[tokio::test]
+async fn equity_statement_date_range_filtering() {
+    let pool = build_pool().await;
+
+    let (a_id, _a_capital, _a_drawings, _a_current) =
+        seed_partner(&pool, "P1", "518811", "448811", "548811", Decimal::from(1000)).await;
+
+    let migration_id = uuid::Uuid::new_v4().to_string();
+    insert_posted_migration(pool.as_ref(), &migration_id).await;
+
+    let account_repo: Arc<dyn AccountRepository> = Arc::new(SqliteAccountRepository::new(pool.clone()));
+    let cash = new_account(&pool, "1201", "نقدية", "12").await;
+    account_repo.save(&cash).await.unwrap();
+    let partner_repo: Arc<dyn PartnerRepository> = Arc::new(SqlitePartnerRepository::new(pool.clone()));
+    let journal_repo: Arc<dyn JournalEntryRepository> =
+        Arc::new(SqliteJournalEntryRepository::new(pool.clone()));
+
+    // Seed retained earnings + profit allocation
+    let retained = account_repo.find_by_code("52").await.unwrap().expect("retained earnings");
+    let obe = account_repo.find_by_code("53").await.unwrap().expect("opening balance equity");
+    let c = test_currency();
+    let mut seed = JournalEntry::new(
+        uuid::Uuid::new_v4().to_string(),
+        JournalType::AccountOpeningBalance,
+        vec![
+            JournalLine::new(obe.id, MonetaryAmount::from_base(Decimal::from(300), c.clone()), MonetaryAmount::zero(c.clone()), "تغذية".to_string()),
+            JournalLine::new(retained.id, MonetaryAmount::zero(c.clone()), MonetaryAmount::from_base(Decimal::from(300), c.clone()), "تمييز".to_string()),
+        ],
+        chrono::Utc::now(),
+        "تغذية الأرباح المبقاة".to_string(),
+        Some(format!("dr_seed_{}", uuid::Uuid::new_v4())),
+    )
+    .unwrap();
+    seed.post().unwrap();
+    journal_repo.save(&seed).await.unwrap();
+
+    AllocateNetProfitUseCase::new(
+        Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
+        partner_repo.clone(),
+        account_repo.clone(),
+        journal_repo.clone(),
+        Arc::new(SqliteFiscalPeriodRepository::new(pool.clone())),
+    )
+    .execute(DistributeProfitCommand {
+        source: ProfitDistributionSource::OpeningMigration { migration_id: migration_id.clone() },
+        net_profit: "300".to_string(),
+        idempotency_key: uuid::Uuid::new_v4().to_string(),
+    })
+    .await
+    .unwrap();
+    sqlx::query("UPDATE opening_balance_migrations SET status = 'Locked', locked_at = datetime('now') WHERE id = ?")
+        .bind(&migration_id)
+        .execute(pool.as_ref())
+        .await
+        .unwrap();
+
+    // Capital contribution
+    CreateCapitalContributionUseCase::new(
+        partner_repo.clone(), account_repo.clone(), journal_repo.clone(),
+        Arc::new(SqliteOpeningMigrationRepository::new(pool.clone())),
+    )
+    .execute(a_id.to_string(), cash.id.0.to_string(), Decimal::from(500), false, Some("dr-contrib".into()))
+    .await
+    .unwrap();
+
+    // Full-range statement (no date filter) — baseline
+    let full = GetPartnerEquityStatementUseCase::new(partner_repo.clone(), journal_repo.clone())
+        .execute(None, None)
+        .await
+        .unwrap();
+
+    // Wide date range that covers all entries — should match baseline
+    let wide_from = chrono::Utc::now() - chrono::Duration::days(365);
+    let wide_to = chrono::Utc::now() + chrono::Duration::days(1);
+    let wide = GetPartnerEquityStatementUseCase::new(partner_repo.clone(), journal_repo.clone())
+        .execute(Some(wide_from), Some(wide_to))
+        .await
+        .unwrap();
+
+    assert_eq!(full.rows.len(), wide.rows.len(), "same partner count");
+    for (full_row, wide_row) in full.rows.iter().zip(wide.rows.iter()) {
+        assert_eq!(full_row.partner_id, wide_row.partner_id);
+        assert_eq!(full_row.total_equity, wide_row.total_equity,
+            "wide range must match full for {}", full_row.partner_name);
+    }
+
+    // Narrow range that excludes everything — should have zero period figures
+    // but still show accumulated balances
+    let narrow_from = chrono::Utc::now() + chrono::Duration::days(100);
+    let narrow_to = chrono::Utc::now() + chrono::Duration::days(200);
+    let narrow = GetPartnerEquityStatementUseCase::new(partner_repo.clone(), journal_repo.clone())
+        .execute(Some(narrow_from), Some(narrow_to))
+        .await
+        .unwrap();
+
+    assert_eq!(full.rows.len(), narrow.rows.len(), "same partner count even with narrow range");
+    // No entries in the narrow range, so period profit/drawings must be zero
+    for row in &narrow.rows {
+        assert_eq!(row.period_profit, "0", "no period profit for {}", row.partner_name);
+        assert_eq!(row.period_drawings, "0", "no period drawings for {}", row.partner_name);
+    }
+}

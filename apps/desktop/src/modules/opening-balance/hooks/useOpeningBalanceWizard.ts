@@ -759,7 +759,7 @@ export function useOpeningBalanceWizard() {
       try {
         await partnerService.updatePartner({
           id: p.id,
-          code: p.code,
+          code: "",
           name: p.name,
           currency: p.currency,
           exchangeRate: p.exchange_rate,

@@ -1,6 +1,6 @@
 import { Pencil, Trash2 } from "lucide-react";
-import type { PartnerDto } from "@erp/shared-types";
 import type { Currency } from "@modules/core/api/currencyService";
+import type { PartnerWithRatios } from "@modules/partners/hooks/usePartnerRatios";
 import {
   SidebarShell,
   SidebarHeader,
@@ -11,12 +11,6 @@ import {
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { toFixed } from "@shared/lib/format";
 import { resolveProfitShareRatio } from "@modules/reports/lib/partnerProfitShare";
-
-type PartnerWithRatios = PartnerDto & {
-  calculatedRatio: number;
-  calculatedCapitalRatio: number;
-  displayAmountBase: number;
-};
 
 interface PartnerDetailViewProps {
   partner: PartnerWithRatios;
@@ -37,7 +31,7 @@ export function PartnerDetailView({
 
   const actualProfitRatio = resolveProfitShareRatio(
     partner.calculatedCapitalRatio,
-    partner.calculatedCapitalRatio,
+    partner.calculatedOriginalRatio,
     partner
   );
 
@@ -72,7 +66,7 @@ export function PartnerDetailView({
     <SidebarShell isOpen={true} onClose={onClose}>
       <SidebarHeader
         title={partner.name}
-        subtitle={`${partner.code} · ملف الشريك`}
+        subtitle={`ملف الشريك`}
         onClose={onClose}
       />
       <SidebarActionBar actions={actions} />

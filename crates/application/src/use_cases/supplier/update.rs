@@ -4,6 +4,7 @@ use domain::shared::ids::{AccountId, SupplierId};
 
 use crate::ports::supplier_repository::SupplierRepository;
 use crate::ports::account_repository::AccountRepository;
+use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::dto::supplier_dto::{UpdateSupplierRequest, SupplierDto};
@@ -14,6 +15,7 @@ use crate::use_cases::shared::partner_account::{PartnerKind, build_balance_adjus
 pub struct UpdateSupplierUseCase {
     supplier_repo: Arc<dyn SupplierRepository>,
     account_repo: Arc<dyn AccountRepository>,
+    currency_repo: Arc<dyn CurrencyRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
     opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
 }
@@ -22,10 +24,11 @@ impl UpdateSupplierUseCase {
     pub fn new(
         supplier_repo: Arc<dyn SupplierRepository>,
         account_repo: Arc<dyn AccountRepository>,
+        currency_repo: Arc<dyn CurrencyRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
         opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
     ) -> Self {
-        Self { supplier_repo, account_repo, journal_repo, opening_migration_repo }
+        Self { supplier_repo, account_repo, currency_repo, journal_repo, opening_migration_repo }
     }
 
     pub async fn execute(&self, req: UpdateSupplierRequest) -> Result<SupplierDto, AppError> {
@@ -107,6 +110,7 @@ impl UpdateSupplierUseCase {
                     PartnerKind::Supplier,
                     &self.account_repo,
                     &self.journal_repo,
+                    &self.currency_repo,
                 ).await?
             } else {
                 None

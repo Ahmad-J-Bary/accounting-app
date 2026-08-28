@@ -7,6 +7,7 @@ use domain::shared::ids::{AccountId, CustomerId, SupplierId};
 use domain::shared::{Currency, MonetaryAmount, Money};
 use crate::errors::AppError;
 use crate::ports::account_repository::AccountRepository;
+use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 
 /// Determines the debit/credit balance sign convention for a partner type.
@@ -222,6 +223,7 @@ pub async fn build_balance_adjustment_entry(
     kind: PartnerKind,
     account_repo: &Arc<dyn AccountRepository>,
     journal_repo: &Arc<dyn JournalEntryRepository>,
+    currency_repo: &Arc<dyn CurrencyRepository>,
 ) -> Result<Option<JournalEntry>, AppError> {
     if balance_change == Decimal::ZERO {
         return Ok(None);
@@ -232,7 +234,8 @@ pub async fn build_balance_adjustment_entry(
         .await?
         .ok_or_else(|| AppError::NotFound("حساب الرصيد الافتتاحي غير موجود: 53".into()))?;
 
-    let base_currency = Currency::new("SAR", "SAR", "ريال", "ر.س", 2, false);
+    let base_currency = currency_repo.get_base_currency().await?
+        .ok_or_else(|| AppError::Invalid("لم يتم تعيين العملة الأساسية".into()))?;
     let amount = MonetaryAmount::from_base(balance_change.abs(), base_currency.clone());
     let zero = MonetaryAmount::zero(base_currency);
     let label = kind.label();

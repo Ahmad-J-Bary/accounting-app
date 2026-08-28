@@ -55,8 +55,9 @@ impl PartnerRepository for SqlitePartnerRepository {
         partner: &Partner,
         capital_replacement: Option<&Account>,
         drawings_replacement: Option<&Account>,
+        current_replacement: Option<&Account>,
     ) -> Result<(), AppError> {
-        commands::update_with_accounts(&self.pool, partner, capital_replacement, drawings_replacement).await
+        commands::update_with_accounts(&self.pool, partner, capital_replacement, drawings_replacement, current_replacement).await
     }
 
     async fn delete(&self, id: &PartnerId) -> Result<(), AppError> {

@@ -1,16 +1,11 @@
 import type { PartnerDto, CreatePaymentRequest } from "@erp/shared-types";
 import type { Currency } from "@modules/core/api/currencyService";
 import type { PartnerRequest } from "@modules/partners/api/partnerService";
+import type { PartnerWithRatios } from '@modules/partners/hooks/usePartnerRatios';
 import { PartnerForm } from '@modules/partners/components/PartnerForm';
 import { PaymentForm, PAYMENT_CONFIGS } from '@modules/partners/components/PaymentForm';
 import { PartnerDetailView } from '@modules/partners/components/PartnerDetailView';
 import { toast } from "sonner";
-
-type PartnerWithRatios = PartnerDto & {
-  calculatedRatio: number;
-  calculatedCapitalRatio: number;
-  displayAmountBase: number;
-};
 
 interface PartnersSidePanelProps {
   activePanel: "edit" | "drawings" | "view" | null;

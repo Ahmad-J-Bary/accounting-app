@@ -6,14 +6,9 @@ import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { useUnifiedColumns, useSortable, useBaseCurrencyColumns } from "@shared/hooks";
 import { toFixed } from "@shared/lib/format";
 import type { PartnerDto } from "@erp/shared-types";
+import type { PartnerWithRatios } from '@modules/partners/hooks/usePartnerRatios';
 import { NotebookText, Receipt, Users } from "lucide-react";
 import { TableActions } from "@widgets/table-shell/TableActions";
-
-type PartnerWithRatios = PartnerDto & {
-  calculatedRatio: number;
-  calculatedCapitalRatio: number;
-  displayAmountBase: number;
-};
 
 interface PartnerTableProps {
   partners: PartnerWithRatios[];

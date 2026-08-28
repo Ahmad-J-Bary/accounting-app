@@ -4,6 +4,7 @@ use domain::shared::ids::{AccountId, CustomerId};
 
 use crate::ports::customer_repository::CustomerRepository;
 use crate::ports::account_repository::AccountRepository;
+use crate::ports::currency_repository::CurrencyRepository;
 use crate::ports::journal_entry_repository::JournalEntryRepository;
 use crate::ports::opening_migration_repository::OpeningMigrationRepository;
 use crate::dto::customer_dto::{UpdateCustomerRequest, CustomerDto};
@@ -14,6 +15,7 @@ use crate::use_cases::shared::partner_account::{PartnerKind, build_balance_adjus
 pub struct UpdateCustomerUseCase {
     customer_repo: Arc<dyn CustomerRepository>,
     account_repo: Arc<dyn AccountRepository>,
+    currency_repo: Arc<dyn CurrencyRepository>,
     journal_repo: Arc<dyn JournalEntryRepository>,
     opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
 }
@@ -22,10 +24,11 @@ impl UpdateCustomerUseCase {
     pub fn new(
         customer_repo: Arc<dyn CustomerRepository>,
         account_repo: Arc<dyn AccountRepository>,
+        currency_repo: Arc<dyn CurrencyRepository>,
         journal_repo: Arc<dyn JournalEntryRepository>,
         opening_migration_repo: Arc<dyn OpeningMigrationRepository>,
     ) -> Self {
-        Self { customer_repo, account_repo, journal_repo, opening_migration_repo }
+        Self { customer_repo, account_repo, currency_repo, journal_repo, opening_migration_repo }
     }
 
     pub async fn execute(&self, req: UpdateCustomerRequest) -> Result<CustomerDto, AppError> {
@@ -113,6 +116,7 @@ impl UpdateCustomerUseCase {
                     PartnerKind::Customer,
                     &self.account_repo,
                     &self.journal_repo,
+                    &self.currency_repo,
                 ).await?
             } else {
                 None

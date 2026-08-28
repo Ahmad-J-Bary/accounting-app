@@ -21,12 +21,13 @@ pub trait PartnerRepository: Send + Sync {
     ) -> Result<(), AppError>;
     async fn update(&self, partner: &Partner) -> Result<(), AppError>;
     /// Atomically persists a partner update plus any linked-account renames
-    /// (capital + drawings accounts carry the partner name) in ONE transaction.
+    /// (capital + drawings + current accounts carry the partner name) in ONE transaction.
     async fn update_with_accounts(
         &self,
         partner: &Partner,
         capital_replacement: Option<&Account>,
         drawings_replacement: Option<&Account>,
+        current_replacement: Option<&Account>,
     ) -> Result<(), AppError>;
     async fn delete(&self, id: &PartnerId) -> Result<(), AppError>;
     /// Atomically deletes a partner together with its linked capital, drawings

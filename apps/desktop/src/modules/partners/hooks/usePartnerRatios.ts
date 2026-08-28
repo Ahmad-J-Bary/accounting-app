@@ -1,10 +1,16 @@
 import { useMemo } from "react";
-import { useCurrencyContext } from "@app/providers/CurrencyContext";
-import { resolveProfitShareRatio } from "@modules/reports/lib/partnerProfitShare";
+import { resolveProfitShareRatio } from "@shared/lib/partner-utils";
 import type { PartnerDto } from '@modules/partners/api/partnerService';
 
 
 export type ProfitSharingStrategy = "auto" | "BasedOnCapitalLocal" | "BasedOnCapitalOriginal" | "Manual";
+
+export type PartnerWithRatios = PartnerDto & {
+  calculatedRatio: number;
+  calculatedCapitalRatio: number;
+  calculatedOriginalRatio: number;
+  displayAmountBase: number;
+};
 
 interface UsePartnerRatiosProps {
   partners: PartnerDto[];
@@ -23,30 +29,25 @@ interface UsePartnerRatiosProps {
  * - `Manual`: an explicitly-set per-partner profit ratio wins.
  */
 export function usePartnerRatios({ partners, strategy }: UsePartnerRatiosProps) {
-  const { toBase } = useCurrencyContext();
-
-  // Base-currency total for the local-capital strategy.
-  const totals = useMemo(() => {
-    const base = partners.reduce((sum, p) => {
-      const amt = parseFloat(p.amount_original || "0");
-      return sum + toBase(amt, p.currency);
-    }, 0);
-
-    return { base };
-  }, [partners, toBase]);
+  // Base-currency totals come straight from the registered `amount_local`
+  // (the exact figure the backend equity statement uses), never from a
+  // current-market-rate conversion of `amount_original`.
+  const totalLocal = useMemo(() => {
+    return partners.reduce((sum, p) => sum + parseFloat(p.amount_local || "0"), 0);
+  }, [partners]);
 
   // Own-currency total for the original-capital strategy (sum of original amounts).
   const totalOriginal = useMemo(() => {
     return partners.reduce((sum, p) => sum + parseFloat(p.amount_original || "0"), 0);
   }, [partners]);
 
-  const partnersWithRatios = useMemo(() => {
-    const ratioOfLocal = (baseAmount: number) => (totals.base > 0 ? (baseAmount / totals.base) * 100 : 0);
+  const partnersWithRatios: PartnerWithRatios[] = useMemo(() => {
+    const ratioOfLocal = (localAmount: number) => (totalLocal > 0 ? (localAmount / totalLocal) * 100 : 0);
     const ratioOfOriginal = (original: number) => (totalOriginal > 0 ? (original / totalOriginal) * 100 : 0);
 
     return partners.map(p => {
       const amountOriginal = parseFloat(p.amount_original || "0");
-      const baseAmount = toBase(amountOriginal, p.currency);
+      const localAmount = parseFloat(p.amount_local || "0");
       const ownType: ProfitSharingStrategy =
         p.profit_sharing_type === "Manual" || p.profit_sharing_type === "BasedOnCapitalOriginal"
           ? p.profit_sharing_type
@@ -54,7 +55,7 @@ export function usePartnerRatios({ partners, strategy }: UsePartnerRatiosProps) 
       const eff: ProfitSharingStrategy =
         strategy === "auto" ? ownType : (strategy as ProfitSharingStrategy);
 
-      const localRatio = ratioOfLocal(baseAmount);
+      const localRatio = ratioOfLocal(localAmount);
       const originalRatio = ratioOfOriginal(amountOriginal);
 
       // When strategy is overridden, force the effective type to match
@@ -65,10 +66,11 @@ export function usePartnerRatios({ partners, strategy }: UsePartnerRatiosProps) 
         ...p,
         calculatedRatio: ratio,
         calculatedCapitalRatio: localRatio,
-        displayAmountBase: baseAmount
+        calculatedOriginalRatio: originalRatio,
+        displayAmountBase: localAmount
       };
     });
-  }, [partners, totals, totalOriginal, strategy, toBase]);
+  }, [partners, totalLocal, totalOriginal, strategy]);
 
   const chartCapitalData = useMemo(() =>
     partnersWithRatios.map(p => ({
@@ -84,7 +86,7 @@ export function usePartnerRatios({ partners, strategy }: UsePartnerRatiosProps) 
   );
 
   return {
-    totals,
+    totalLocal,
     partnersWithRatios,
     chartCapitalData,
     chartProfitData

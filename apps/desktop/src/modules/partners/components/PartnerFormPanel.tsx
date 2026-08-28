@@ -93,18 +93,19 @@ export function PartnerFormPanel({
 
   useEffect(() => {
     if (partner) {
+      const cs = partner as CustomerDto | SupplierDto;
       setForm({
-        name: partner.name,
-        phone: partner.phone || "",
-        address: partner.address || "",
-        notes: partner.notes || ""
+        name: cs.name,
+        phone: cs.phone || "",
+        address: cs.address || "",
+        notes: cs.notes || ""
       });
-      setOpeningBalance(partner.opening_balance || "0");
-      const pDebit = parseFloat(partner.debit || "0");
+      setOpeningBalance(cs.opening_balance || "0");
+      const pDebit = parseFloat(cs.debit || "0");
       setBalanceDirection(pDebit > 0 ? "debit" : "credit");
-      setCurrency(partner.currency || baseCurrency?.code || "");
-      oldDebitRef.current = partner.debit || "0";
-      oldCreditRef.current = partner.credit || "0";
+      setCurrency(cs.currency || baseCurrency?.code || "");
+      oldDebitRef.current = cs.debit || "0";
+      oldCreditRef.current = cs.credit || "0";
     } else {
       setForm({ name: "", phone: "", address: "", notes: "" });
       setOpeningBalance("0");
@@ -136,8 +137,9 @@ export function PartnerFormPanel({
       exchange_rate: exchangeRate.toString(),
     };
 
+    const cs = partner as CustomerDto | SupplierDto;
     const fullPayload: PartnerFormPayload = partner
-      ? { ...payload, id: partner.id, code: partner.code, account_id: ("account_id" in partner) ? partner.account_id : (("linked_account_id" in partner) ? (partner as PartnerDto).linked_account_id : null), is_active: partner.is_active }
+      ? { ...payload, id: cs.id, code: cs.code, account_id: ("account_id" in cs) ? cs.account_id : null, is_active: cs.is_active }
       : { ...payload, code: "", account_id: parentAccount?.id || null, is_active: true };
 
     if (balanceChanged) {

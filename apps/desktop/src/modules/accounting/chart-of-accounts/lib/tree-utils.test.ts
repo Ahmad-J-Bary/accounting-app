@@ -109,7 +109,8 @@ describe("buildTree — chart of accounts hierarchy", () => {
     const roots = buildTree(canonicalChart());
     const equity = roots.find((r) => r.code === "5")!;
     const equityChildCodes = equity.children.map((c) => c.code);
-    expect(equityChildCodes).toEqual(["44", "51", "52", "53", "54"]);
+    expect(equityChildCodes).toEqual(["44", "51", "52", "54"]);
+    expect(equityChildCodes).not.toContain("53");
 
     const expenses = roots.find((r) => r.code === "4")!;
     expect(expenses.children.map((c) => c.code)).not.toContain("44");

@@ -75,7 +75,7 @@ describe("deriveFa", () => {
   });
 });
 
-const partners = [{ id: "p1", code: "P1", name: "شريك أ", linked_account_id: "a2", amount_local: "10000" }] as PartnerDto[];
+const partners = [{ id: "p1", name: "شريك أ", linked_account_id: "a2", amount_local: "10000", currency: "S", exchange_rate: "1", amount_original: "10000", is_amount_in_original: false, profit_sharing_ratio: null, profit_sharing_type: "BasedOnCapitalLocal", drawings_account_id: null, current_account_id: null }] as PartnerDto[];
 
 describe("derivePartnerEquity", () => {
   it("maps a linked partner to its equity line", () => {

@@ -204,13 +204,13 @@ impl GetPartnerEquityStatementUseCase {
     }
 
     /// (net credit−debit balance, debit magnitude) for an account across all
-    /// Posted/Reversed journal lines, from the ledgers themselves.
+    /// Posted journal lines only, from the ledgers themselves.
     async fn ledger_breakdown(&self, account_id: &AccountId) -> Result<(Decimal, Decimal), AppError> {
         let entries = self.journal_repo.list_by_account(account_id).await?;
         let mut balance = Decimal::ZERO;
         let mut debits = Decimal::ZERO;
         for entry in &entries {
-            if entry.status == JournalEntryStatus::Draft {
+            if entry.status != JournalEntryStatus::Posted {
                 continue;
             }
             for line in &entry.lines {
@@ -236,7 +236,7 @@ impl GetPartnerEquityStatementUseCase {
         let mut period_net = Decimal::ZERO;
         let mut prior_balance = Decimal::ZERO;
         for entry in &entries {
-            if entry.status == JournalEntryStatus::Draft {
+            if entry.status != JournalEntryStatus::Posted {
                 continue;
             }
             for line in &entry.lines {
@@ -266,7 +266,7 @@ impl GetPartnerEquityStatementUseCase {
         let mut period_debits = Decimal::ZERO;
         let mut prior_debits = Decimal::ZERO;
         for entry in &entries {
-            if entry.status == JournalEntryStatus::Draft {
+            if entry.status != JournalEntryStatus::Posted {
                 continue;
             }
             for line in &entry.lines {

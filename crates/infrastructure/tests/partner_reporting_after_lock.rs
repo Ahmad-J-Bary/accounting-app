@@ -325,3 +325,72 @@ async fn update_partner_re_syncs_capital_opening_balance_in_existing_mode() {
     assert_eq!(cap.opening_balance, Decimal::from(220), "capital opening balance must follow the registered amount");
     assert_eq!(cap.balance, Decimal::from(220), "capital balance must follow the registered amount");
 }
+
+// ---------------------------------------------------------------------------
+// Renaming a partner must atomically rename all three linked accounts (capital,
+// drawings, current) so the chart of accounts and the partner record stay in
+// sync (Sec: account names carry the partner name).
+// ---------------------------------------------------------------------------
+#[tokio::test]
+async fn update_partner_renames_capital_drawings_and_current_accounts() {
+    let pool = build_pool().await;
+    set_start_mode(&pool, START_MODE_EXISTING).await;
+
+    let partner_id = register_partner(&pool, "اسم قديم", 150).await;
+
+    let partner_repo: Arc<dyn PartnerRepository> =
+        Arc::new(SqlitePartnerRepository::new(pool.clone()));
+    let account_repo: Arc<dyn AccountRepository> =
+        Arc::new(SqliteAccountRepository::new(pool.clone()));
+    let currency_repo: Arc<dyn CurrencyRepository> =
+        Arc::new(SqliteCurrencyRepository::new(pool.clone()));
+
+    let partner = partner_repo
+        .find_by_id(&PartnerId::from_str(&partner_id).unwrap())
+        .await
+        .unwrap()
+        .expect("partner exists");
+    let cap_id = partner.linked_account_id.expect("capital account");
+    let drawings_id = partner.drawings_account_id.expect("drawings account");
+    let current_id = partner.current_account_id.expect("current account");
+    assert!(current_id != cap_id && current_id != drawings_id && cap_id != drawings_id,
+        "three distinct linked accounts");
+
+    UpdatePartnerUseCase::new(partner_repo.clone(), account_repo.clone(), currency_repo)
+        .execute(
+            UpdatePartnerRequest {
+                id: partner_id.clone(),
+                name: "اسم جديد".into(),
+                currency_code: "S".into(),
+                exchange_rate: Decimal::ONE,
+                amount: Decimal::from(150),
+                is_amount_in_original: false,
+                sharing_type: "BasedOnCapitalLocal".into(),
+                manual_ratio: None,
+            },
+            START_MODE_EXISTING.into(),
+        )
+        .await
+        .expect("rename partner");
+
+    let renamed = partner_repo
+        .find_by_id(&PartnerId::from_str(&partner_id).unwrap())
+        .await
+        .unwrap()
+        .expect("partner still exists");
+    assert_eq!(renamed.name, "اسم جديد");
+
+    for (id, what) in [(cap_id, "capital"), (drawings_id, "drawings"), (current_id, "current")] {
+        let account = account_repo.find_by_id(&id).await.unwrap().expect("account exists");
+        assert!(
+            account.name_ar.contains("اسم جديد"),
+            "{what} account must carry the new partner name, got: {}",
+            account.name_ar
+        );
+        assert!(
+            !account.name_ar.contains("اسم قديم"),
+            "{what} account must no longer carry the old name, got: {}",
+            account.name_ar
+        );
+    }
+}

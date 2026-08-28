@@ -169,14 +169,13 @@ export function PartnerDetailPanel({
             <SidebarDetailGrid
               columns={2}
               fields={[
-                { label: "رقم الحساب", value: partner.code || "" },
                 { label: "الاسم", value: partner.name },
               ]}
             />
             <SidebarDetailGrid
               columns={2}
               fields={[
-                { label: "المبلغ الأصли", value: `${partner.amount_original || "0"} ${currencyName?.symbol || partner.currency || ""}` },
+                { label: "المبلغ الأصلي", value: `${partner.amount_original || "0"} ${currencyName?.symbol || partner.currency || ""}` },
                 { label: `المعادل (${baseCurrency?.symbol || baseCurrency?.code || ""})`, value: partner.amount_local || "0" },
                 { label: "نسبة الأرباح", value: partner.profit_sharing_type === "Manual" && partner.profit_sharing_ratio
                   ? `${toFixed(parseFloat(partner.profit_sharing_ratio), 2)}%`
@@ -184,21 +183,16 @@ export function PartnerDetailPanel({
                 { label: "طريقة التوزيع", value: PROFIT_TYPE_LABELS[partner.profit_sharing_type || "BasedOnCapitalLocal"] },
               ]}
             />
-            {partner.notes && (
-              <SidebarDetailGrid
-                fields={[{ label: "ملاحظات", value: partner.notes }]}
-              />
-            )}
           </div>
         ) : (
           <div className="space-y-4 text-right">
             <SidebarDetailGrid
               columns={2}
               fields={[
-                { label: "رقم الحساب", value: partner.code || "" },
+                { label: "رقم الحساب", value: (partner as CustomerDto | SupplierDto).code || "" },
                 { label: isCustomer ? "اسم العميل" : "اسم المورد", value: partner.name },
-                { label: "رقم الهاتف", value: partner.phone || "—" },
-                { label: "العنوان", value: partner.address || "—" },
+                { label: "رقم الهاتف", value: (partner as CustomerDto | SupplierDto).phone || "—" },
+                { label: "العنوان", value: (partner as CustomerDto | SupplierDto).address || "—" },
               ]}
             />
             <SidebarDetailGrid
@@ -206,17 +200,17 @@ export function PartnerDetailPanel({
               fields={[
                 ...(canAccessOpeningWorkflow
                   ? [
-                      { label: "الرصيد الافتتاحي", value: partner.opening_balance || "0" },
-                      { label: "اتجاه الرصيد", value: settled ? "—" : balanceDirectionLabel(parseFloat(partner.debit || "0"), parseFloat(partner.credit || "0"), type) },
+                      { label: "الرصيد الافتتاحي", value: (partner as CustomerDto | SupplierDto).opening_balance || "0" },
+                      { label: "اتجاه الرصيد", value: settled ? "—" : balanceDirectionLabel(parseFloat((partner as CustomerDto | SupplierDto).debit || "0"), parseFloat((partner as CustomerDto | SupplierDto).credit || "0"), type) },
                     ]
                   : []),
                 { label: "العملة", value: currencyName ? `${currencyName.code} - ${currencyName.name_ar}` : baseCurrency?.code || "" },
                 { label: "الرصيد الحالي", value: settled ? "0" : String(bal) },
               ]}
             />
-            {partner.notes && (
+            {(partner as CustomerDto | SupplierDto).notes && (
               <SidebarDetailGrid
-                fields={[{ label: "ملاحظات", value: partner.notes }]}
+                fields={[{ label: "ملاحظات", value: (partner as CustomerDto | SupplierDto).notes || "" }]}
               />
             )}
           </div>

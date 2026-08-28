@@ -178,7 +178,7 @@ describe("computeBalanceSheet", () => {
     ]);
   });
 
-  it("equity section includes net profit and drawings rows", () => {
+  it("equity section includes net profit row and subtracts drawings from equity", () => {
     const accounts: AccountDto[] = [
       acc({ id: "1", code: "121", name_ar: "صندوق", account_type: "Assets", balance: "50000" }),
       acc({ id: "2", code: "311", name_ar: "رأس المال", account_type: "Equity", balance: "30000" }),
@@ -186,7 +186,8 @@ describe("computeBalanceSheet", () => {
     const result = computeBalanceSheet(accounts, { netProfit: 10000, totalDrawings: 2000 });
     const equitySection = result.sections.find(s => s.id === "equity")!;
     expect(equitySection.rows.some(r => r.label === "صافي الأرباح" && r.value === 10000)).toBe(true);
-    expect(equitySection.rows.some(r => r.label === "إجمالي المسحوبات" && r.value === -2000)).toBe(true);
+    expect(result.totalDrawings).toBe(2000);
+    expect(result.totalEquity).toBe(38000);
   });
 
   it("handles accounts with NaN/invalid balance gracefully", () => {
@@ -416,10 +417,10 @@ describe("computeBalanceSheet", () => {
     expect(obeRow?.value).toBe(200);
   });
 
-  it("groups equity container children by purpose (retained earnings separated)", () => {
+  it("groups equity container children by purpose (hidden purposes excluded)", () => {
     // Real-chart shape: "حقوق الملكية" (5) is a tree container holding capital
     // (51 partner_capital), retained earnings (52 retained_earnings) and the
-    // opening-clearing account (53).
+    // opening-clearing account (53) which is hidden from display.
     const accounts: AccountDto[] = [
       acc({ id: "e5", code: "5", name_ar: "حقوق الملكية", account_type: "Equity", parent_id: null, balance: "0" }),
       acc({ id: "e51", code: "51", name_ar: "رأس المال", account_type: "Equity", parent_id: "e5", balance: "300", purpose: "partner_capital" }),
@@ -428,22 +429,18 @@ describe("computeBalanceSheet", () => {
     ];
     const result = computeBalanceSheet(accounts, { netProfit: 0, totalDrawings: 0 });
     const eqSection = result.sections.find(s => s.id === "equity")!;
+    const labels = eqSection.rows.map(r => r.label);
 
-    // Container keeps its exact balance (the purpose buckets must sum to it).
-    const container = eqSection.rows.find(r => r.label === "حقوق الملكية");
-    expect(container?.value).toBe(345);
-    expect(container?.children).toBeDefined();
-
-    const partnerCapital = container!.children!.find(r => r.label === "رأس مال الشركاء");
-    const retained = container!.children!.find(r => r.label === "الأرباح المبقاة");
-    const other = container!.children!.find(r => r.label === "حقوق ملكية أخرى");
+    const partnerCapital = eqSection.rows.find(r => r.label === "رأس مال الشركاء");
+    const retained = eqSection.rows.find(r => r.label === "الأرباح المبقاة");
 
     expect(partnerCapital?.value).toBe(300);
     expect(partnerCapital?.children?.map(r => r.label)).toEqual(["رأس المال"]);
     expect(retained?.value).toBe(45);
-    expect(retained?.children?.map(r => r.label)).toEqual(["الأرباح المبقاة"]);
-    expect(other?.value).toBe(0);
-    expect(other?.children?.map(r => r.label)).toEqual(["رصيد افتتاحي"]);
+    expect(retained?.children).toBeUndefined();
+    expect(labels).not.toContain("حقوق ملكية أخرى");
+    expect(labels).not.toContain("رصيد افتتاحي");
+    expect(labels).not.toContain("حقوق الملكية");
 
     expect(result.totalEquity).toBe(345);
   });

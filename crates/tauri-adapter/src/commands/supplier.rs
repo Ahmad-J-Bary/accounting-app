@@ -41,6 +41,7 @@ pub async fn update_supplier(
     UpdateSupplierUseCase::new(
         state.supplier_repo.clone(),
         state.account_repo.clone(),
+        state.currency_repo.clone(),
         state.journal_entry_repo.clone(),
         state.opening_migration_repo.clone(),
     )

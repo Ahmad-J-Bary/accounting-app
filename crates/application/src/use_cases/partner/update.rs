@@ -82,6 +82,7 @@ impl UpdatePartnerUseCase {
         // write is then atomic in one tx.
         let mut capital_replacement = None;
         let mut drawings_replacement = None;
+        let mut current_replacement = None;
         let sync_capital_amount = accounting_start_mode == START_MODE_EXISTING;
         if old_name != req.name || sync_capital_amount {
             if let Some(cap_id) = partner.linked_account_id {
@@ -112,11 +113,20 @@ impl UpdatePartnerUseCase {
                         drawings_replacement = Some(acc);
                     }
                 }
+                if let Some(cur_id) = partner.current_account_id {
+                    if let Some(mut acc) = self.account_repo.find_by_id(&cur_id).await? {
+                        let cur_account_name = format!("حساب جاري {}", req.name);
+                        acc.name_ar = cur_account_name.clone();
+                        acc.name_en = cur_account_name;
+                        acc.updated_at = Utc::now();
+                        current_replacement = Some(acc);
+                    }
+                }
             }
         }
 
         self.repo
-            .update_with_accounts(&partner, capital_replacement.as_ref(), drawings_replacement.as_ref())
+            .update_with_accounts(&partner, capital_replacement.as_ref(), drawings_replacement.as_ref(), current_replacement.as_ref())
             .await?;
 
         Ok(())

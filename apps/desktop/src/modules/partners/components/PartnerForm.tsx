@@ -20,7 +20,6 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
   const { currencies, baseCurrency, rateMap } = useCurrencyContext();
   
   const [formData, setFormData] = useState({
-    code: "",
     name: "",
     amount: "0",
     currency: baseCurrency?.code || "",
@@ -30,7 +29,6 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
   useEffect(() => {
     if (partner) {
       setFormData({
-        code: partner.code,
         name: partner.name,
         amount: partner.is_amount_in_original ? (partner.amount_original || "0") : (partner.amount_local || "0"),
         currency: partner.currency || baseCurrency?.code || "",
@@ -38,7 +36,6 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
       });
     } else {
       setFormData({
-        code: "",
         name: "",
         amount: "0",
         currency: baseCurrency?.code || "",
@@ -61,7 +58,7 @@ export function PartnerForm({ open, onClose, partner, onSave, saving }: PartnerF
 
     onSave({
       id: partner?.id,
-      code: formData.code || formData.name.slice(0, 4).toUpperCase().replace(/\s+/g, "") || "P000",
+      code: "",
       name: formData.name,
       currency: formData.currency,
       exchangeRate,
