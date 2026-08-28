@@ -225,7 +225,7 @@ async fn equity_statement_reconciles_with_partner_ledgers() {
         .unwrap();
 
     let dto = GetPartnerEquityStatementUseCase::new(partner_repo, journal_repo)
-        .execute()
+        .execute(None, None)
         .await
         .unwrap();
 

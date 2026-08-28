@@ -13,6 +13,12 @@ export interface PartnerEquityRow {
   profit_allocated: string;
   loss_allocated: string;
   total_equity: string;
+  capital_ratio: string;
+  profit_share_ratio: string;
+  accumulated_profit_prior: string;
+  accumulated_drawings_prior: string;
+  period_profit: string;
+  period_drawings: string;
 }
 
 export interface PartnerEquityStatementDto {
@@ -49,5 +55,9 @@ export const partnerService = {
     amount: string;
     effectiveDate?: string;
   }) => invoke<string>("capitalize_retained_earnings", args),
-  getPartnerEquityStatement: () => invoke<PartnerEquityStatementDto>("get_partner_equity_statement"),
+  getPartnerEquityStatement: (fromDate?: string, toDate?: string) =>
+    invoke<PartnerEquityStatementDto>("get_partner_equity_statement", {
+      from_date: fromDate ?? null,
+      to_date: toDate ?? null,
+    }),
 };

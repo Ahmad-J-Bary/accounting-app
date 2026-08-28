@@ -489,7 +489,7 @@ async fn equity_statement_profit_equals_current_balance() {
         Arc::new(SqlitePartnerRepository::new(pool.clone())),
         journal_repo,
     )
-    .execute()
+    .execute(None, None)
     .await
     .unwrap();
 
@@ -642,7 +642,7 @@ async fn full_distribution_of_45_splits_27_and_18_and_touches_only_current() {
         Arc::new(SqlitePartnerRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
     )
-    .execute()
+    .execute(None, None)
     .await
     .unwrap();
     let arow = equity.rows.iter().find(|r| r.partner_id == ahmad.to_string()).unwrap();

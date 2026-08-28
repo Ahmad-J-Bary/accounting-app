@@ -18,7 +18,7 @@ export default function PartnerRightsReport() {
     new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
     new Date().toISOString().split("T")[0]
   );
-  const { loading, refreshing, lastLoadedAt, reportData, error, loadReportData, computed } = usePartnerRightsReport(filters);
+  const { loading, refreshing, lastLoadedAt, error, loadReportData, computed } = usePartnerRightsReport(filters);
 
   const [showProfitDistribution, setShowProfitDistribution] = useState(false);
 
@@ -61,7 +61,7 @@ export default function PartnerRightsReport() {
             <ReportLoadingSkeleton />
           ) : error ? (
             <ReportErrorState onRetry={loadReportData} />
-          ) : reportData.partners.length === 0 ? (
+          ) : computed.profitShare.rows.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
               <Users className="mb-3 h-12 w-12" />
               <p className="text-sm font-bold">لا يوجد شركاء نشطون لعرض التقرير</p>

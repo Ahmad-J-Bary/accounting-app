@@ -4,6 +4,7 @@ use application::use_cases::partner::{
     CreatePartnerUseCase, CreateCapitalContributionUseCase, CreatePartnerDrawingUseCase,
     CapitalizeRetainedEarningsUseCase, PartnerQueries, UpdatePartnerUseCase, UpdatePartnerRequest, DeletePartnerUseCase, PartnerDto
 };
+use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use tauri::State;
 use std::str::FromStr;
@@ -122,12 +123,16 @@ pub async fn list_partners(
 #[tauri::command]
 pub async fn get_partner_equity_statement(
     state: State<'_, AppState>,
+    from_date: Option<String>,
+    to_date: Option<String>,
 ) -> Result<application::use_cases::equity::PartnerEquityStatementDto, String> {
+    let from = from_date.and_then(|s| DateTime::parse_from_rfc3339(&s).ok()).map(|dt| dt.with_timezone(&Utc));
+    let to = to_date.and_then(|s| DateTime::parse_from_rfc3339(&s).ok()).map(|dt| dt.with_timezone(&Utc));
     GetPartnerEquityStatementUseCase::new(
         state.partner_repo.clone(),
         state.journal_entry_repo.clone(),
     )
-    .execute()
+    .execute(from, to)
     .await
     .map_err(|e| e.to_string())
 }

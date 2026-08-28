@@ -160,7 +160,7 @@ async fn contribution_keeps_master_static_and_ledger_is_truth() {
         Arc::new(SqlitePartnerRepository::new(pool.clone())),
         Arc::new(SqliteJournalEntryRepository::new(pool.clone())),
     )
-    .execute()
+    .execute(None, None)
     .await
     .unwrap();
     let row = statement.rows.iter().find(|r| r.partner_id == partner_id).expect("row");
