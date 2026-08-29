@@ -53,55 +53,56 @@ export default function PartnerRightsReport() {
   );
 
   return (
-    <>
-      <OperationalTableTemplate
-        title="الشركاء وحقوقهم"
-        toolbar={
-          <ReportFilterBar
-            filters={filters}
-            onFiltersChange={setFilters}
-            showCurrencySelect={hasMultipleCurrencies}
-            selectedCurrency={selectedCurrency}
-            onCurrencyChange={setSelectedCurrency}
-            currencies={currencies}
-            baseCurrencyCode={baseCurrency?.code}
-            refreshing={refreshing}
-            onRefresh={() => void loadReportData()}
-            lastLoadedAt={lastLoadedAt}
-            extraFilters={
-              <Button
-                size="sm"
-                className="h-9 rounded-lg bg-white font-black text-slate-700 border border-slate-200 hover:bg-slate-50"
-                onClick={() => setShowProfitDistribution(true)}
-              >
-                <Coins className="me-2 h-4 w-4" />
-                توزيع الأرباح
-              </Button>
-            }
-          />
-        }
-        tableContent={
-          loading ? (
-            <ReportLoadingSkeleton />
-          ) : error ? (
-            <ReportErrorState onRetry={loadReportData} />
-          ) : computed.profitShare.rows.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <Users className="mb-3 h-12 w-12" />
-              <p className="text-sm font-bold">لا يوجد شركاء نشطون لعرض التقرير</p>
-            </div>
-          ) : viewMode === "profit-share" ? (
-            <PartnerProfitShareView computed={computed.profitShare} formatValue={formatValue} filterBar={viewSwitcher} />
-          ) : (
-            <PartnerStatementView computed={computed.statement} formatValue={formatValue} filterBar={viewSwitcher} />
-          )
-        }
-      />
-      {showProfitDistribution && (
-        <ProfitDistributionSidePanel
-          onClose={() => setShowProfitDistribution(false)}
+    <OperationalTableTemplate
+      title="الشركاء وحقوقهم"
+      toolbar={
+        <ReportFilterBar
+          filters={filters}
+          onFiltersChange={setFilters}
+          showCurrencySelect={hasMultipleCurrencies}
+          selectedCurrency={selectedCurrency}
+          onCurrencyChange={setSelectedCurrency}
+          currencies={currencies}
+          baseCurrencyCode={baseCurrency?.code}
+          refreshing={refreshing}
+          onRefresh={() => void loadReportData()}
+          lastLoadedAt={lastLoadedAt}
+          extraFilters={
+            <Button
+              size="sm"
+              className="h-9 rounded-lg bg-white font-black text-slate-700 border border-slate-200 hover:bg-slate-50"
+              onClick={() => setShowProfitDistribution(true)}
+            >
+              <Coins className="me-2 h-4 w-4" />
+              توزيع الأرباح
+            </Button>
+          }
         />
-      )}
-    </>
+      }
+      tableContent={
+        loading ? (
+          <ReportLoadingSkeleton />
+        ) : error ? (
+          <ReportErrorState onRetry={loadReportData} />
+        ) : computed.profitShare.rows.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+            <Users className="mb-3 h-12 w-12" />
+            <p className="text-sm font-bold">لا يوجد شركاء نشطون لعرض التقرير</p>
+          </div>
+        ) : viewMode === "profit-share" ? (
+          <PartnerProfitShareView computed={computed.profitShare} formatValue={formatValue} filterBar={viewSwitcher} />
+        ) : (
+          <PartnerStatementView computed={computed.statement} formatValue={formatValue} filterBar={viewSwitcher} />
+        )
+      }
+      sidePanel={
+        showProfitDistribution ? (
+          <ProfitDistributionSidePanel
+            onClose={() => setShowProfitDistribution(false)}
+          />
+        ) : null
+      }
+      isPanelOpen={showProfitDistribution}
+    />
   );
 }

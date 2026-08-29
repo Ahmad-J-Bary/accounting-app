@@ -5,10 +5,11 @@ import type { PartnerWithRatios } from '@modules/partners/hooks/usePartnerRatios
 import { PartnerForm } from '@modules/partners/components/PartnerForm';
 import { PaymentForm, PAYMENT_CONFIGS } from '@modules/partners/components/PaymentForm';
 import { PartnerDetailView } from '@modules/partners/components/PartnerDetailView';
+import { ProfitDistributionSidePanel } from '@modules/accounting/profit-distribution/components/ProfitDistributionSidePanel';
 import { toast } from "sonner";
 
 interface PartnersSidePanelProps {
-  activePanel: "edit" | "drawings" | "view" | null;
+  activePanel: "edit" | "drawings" | "view" | "profit-distribution" | null;
   selectedPartner: PartnerWithRatios | null;
   editPartner: PartnerDto | null;
   baseCurrency: Currency | null;
@@ -36,6 +37,14 @@ export function PartnersSidePanel({
   onSaveForm,
   onSaveDrawings,
 }: PartnersSidePanelProps) {
+  if (activePanel === "profit-distribution") {
+    return (
+      <ProfitDistributionSidePanel
+        onClose={onClose}
+      />
+    );
+  }
+
   if (activePanel === "edit") {
     return (
       <PartnerForm

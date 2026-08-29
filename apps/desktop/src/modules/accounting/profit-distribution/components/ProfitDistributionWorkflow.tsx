@@ -1,11 +1,22 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Calculator, CheckCircle2, Coins } from "lucide-react";
+import { AlertTriangle, Calculator, CheckCircle2, Coins, RefreshCw } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { FieldLabel } from "@widgets/sidebar-shell/FieldLabel";
 import { SidebarSection } from "@widgets/sidebar-shell/SidebarSection";
+import { FormPanel } from "@widgets/form-shell/FormPanel";
+import { Alert, AlertDescription } from "@shared/ui/alert";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableFooter,
+} from "@shared/ui/table";
 import { fmtMoney } from "@shared/lib/format";
 import { parseSafeNumber } from "@shared/lib/parseSafeNumber";
 import { PROFIT_DISTRIBUTION_KEYS, invalidateKeys, QUERY_KEYS } from "@shared/hooks/queryClient";
@@ -17,10 +28,17 @@ import {
 } from "@modules/accounting/api/openingBalanceService";
 
 interface ProfitDistributionWorkflowProps {
-  source: ProfitDistributionSource;
+  source: ProfitDistributionSource | null | undefined;
   windowStart: string;
   windowEnd: string;
   sourceLabel: string;
+  onClose: () => void;
+  /** Passed from SidePanel — avoids double-fetching */
+  pool: unknown;
+  isLoading: boolean;
+  isError: boolean;
+  error: unknown;
+  refetch: () => void;
 }
 
 /**
@@ -35,8 +53,15 @@ export function ProfitDistributionWorkflow({
   windowStart,
   windowEnd,
   sourceLabel,
+  onClose,
+  pool,
+  isLoading,
+  isError,
+  error,
+  refetch,
 }: ProfitDistributionWorkflowProps) {
   const qc = useQueryClient();
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [amount, setAmount] = useState("");
   const [idemKey, setIdemKey] = useState(() => crypto.randomUUID());
   const [postedResult, setPostedResult] = useState<NetProfitAllocationDto | null>(null);
@@ -67,7 +92,7 @@ export function ProfitDistributionWorkflow({
     queryKey: ["profit-distribution", "preview", source, amount],
     queryFn: () =>
       openingBalanceService.previewProfitDistribution({ source, net_profit: amount }),
-    enabled: !!amount && amountNum > 0 && !overCap,
+    enabled: step === 2 && !!amount && amountNum > 0 && !overCap && !!source,
   });
 
   const confirm = useMutation({
@@ -82,126 +107,338 @@ export function ProfitDistributionWorkflow({
       toast.success(`تم توزيع الأرباح على الشركاء — ${res.entry_number}`);
       await invalidateKeys(qc, PROFIT_DISTRIBUTION_KEYS);
       await refetchDistributable();
+      setStep(3);
     },
     onError: (e) => {
       toast.error("فشل توزيع الأرباح: " + e);
     },
   });
 
+  const renderFooter = () => {
+    if (step === 1) {
+      return (
+        <div className="flex items-center justify-end gap-3 w-full">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            className="h-9 px-4 rounded-lg text-slate-600 border-slate-200 text-xs font-bold"
+          >
+            إلغاء
+          </Button>
+          <Button
+            type="button"
+            onClick={() => setStep(2)}
+            disabled={overCap || isZero || amount === ""}
+            className="h-9 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-100"
+          >
+            مراجعة
+          </Button>
+        </div>
+      );
+    }
+
+    if (step === 2) {
+      return (
+        <div className="flex items-center justify-end gap-3 w-full">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setStep(1)}
+            disabled={confirm.isPending}
+            className="h-9 px-4 rounded-lg text-slate-600 border-slate-200 text-xs font-bold"
+          >
+            رجوع
+          </Button>
+          <Button
+            type="button"
+            onClick={() => confirm.mutate()}
+            disabled={confirm.isPending || preview.isLoading || preview.isError}
+            className="h-9 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-100"
+          >
+            {confirm.isPending ? "جارٍ التوزيع..." : "تأكيد التوزيع"}
+          </Button>
+        </div>
+      );
+    }
+
+    if (step === 3) {
+      return (
+        <div className="flex items-center justify-end gap-3 w-full">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            className="h-9 px-4 rounded-lg text-slate-600 border-slate-200 text-xs font-bold"
+          >
+            إغلاق
+          </Button>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  const getSubtitle = () => {
+    if (step === 1) return sourceLabel;
+    if (step === 2) return "مراجعة ومعاينة التوزيع على الشركاء";
+    return "تم التوزيع بنجاح";
+  };
+
   return (
-    <div className="space-y-6 text-right">
-      <SidebarSection title="بيانات التوزيع" icon={<Coins className="w-3.5 h-3.5" />}>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3 space-y-1">
-            <p className="text-[11px] font-semibold text-slate-500">الأرباح المبقاة</p>
-            <p className="text-lg font-black tabular-nums text-slate-800">{fmtMoney(retained)}</p>
+    <FormPanel
+      title="توزيع الأرباح"
+      subtitle={getSubtitle()}
+      icon={<Coins className="w-5 h-5 text-blue-600" />}
+      onClose={onClose}
+      footer={renderFooter()}
+    >
+      <div className="space-y-6 text-right">
+        {/* ── Loading ─────────────────────────────────────────────────── */}
+        {isLoading && (
+          <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+            <RefreshCw className="w-6 h-6 mb-3 animate-spin" />
+            <p className="text-sm font-medium">جارٍ تحميل بيانات الأرباح...</p>
           </div>
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 space-y-1">
-            <p className="text-[11px] font-semibold text-emerald-600">المتاح للتوزيع</p>
-            <p className="text-lg font-black tabular-nums text-emerald-700">{fmtMoney(available)}</p>
-          </div>
-          <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3 space-y-1">
-            <p className="text-[11px] font-semibold text-slate-500">المُوزَّع سابقاً</p>
-            <p className="text-lg font-black tabular-nums text-slate-800">{fmtMoney(distributed)}</p>
-          </div>
-          <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 space-y-1">
-            <p className="text-[11px] font-semibold text-indigo-600">المتبقي للتوزيع</p>
-            <p className="text-lg font-black tabular-nums text-indigo-700">{fmtMoney(available)}</p>
-          </div>
-        </div>
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
-          <span className="font-bold text-slate-700">المصدر: {sourceLabel}</span>
-        </div>
-      </SidebarSection>
+        )}
 
-      <SidebarSection title="مبلغ التوزيع" icon={<Calculator className="w-3.5 h-3.5" />}>
-        <div className="grid grid-cols-1 sm:grid-cols-[280px_auto] gap-3 items-end">
-          <div className="space-y-1.5">
-            <FieldLabel htmlFor="distribution-amount">مبلغ التوزيع</FieldLabel>
-            <Input
-              id="distribution-amount"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              type="number"
-              min={0}
-              max={available || undefined}
-              className="h-9 text-end tabular-nums bg-white"
-            />
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setAmount(String(available))}
-              disabled={available <= 0}
-              className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold"
-            >
-              توزيع كامل المتبقي
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => confirm.mutate()}
-              disabled={overCap || isZero || confirm.isPending || available <= 0}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
-            >
-              {confirm.isPending ? "جارٍ التوزيع..." : "تأكيد التوزيع"}
+        {/* ── Error ───────────────────────────────────────────────────── */}
+        {!isLoading && isError && (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
+            <p className="text-sm font-semibold text-red-600 mb-2">تعذر تحميل بيانات الأرباح.</p>
+            <p className="text-xs text-slate-500 mb-4">{String(error)}</p>
+            <Button size="sm" variant="outline" onClick={refetch} className="border-red-200 text-red-700 hover:bg-red-50">
+              <RefreshCw className="w-3 h-3 me-1" />
+              إعادة المحاولة
             </Button>
           </div>
-        </div>
-
-        {overCap && (
-          <p className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg p-2">
-            المبلغ المطلوب توزيعه ({fmtMoney(amountNum)}) يتجاوز الأرباح المتاحة للتوزيع بمقدار{" "}
-            {fmtMoney(amountNum - available)} — لا يُسمح بتوزيع أكثر من المتاح.
-          </p>
-        )}
-        {isZero && amount !== "" && (
-          <p className="text-xs text-slate-500">مبلغ صفر لا يُنشئ قيداً ولا يسجَّل توزيعاً.</p>
         )}
 
-        {preview.isLoading && <p className="text-xs text-slate-400">جارٍ احتساب المعاينة...</p>}
-        {preview.data && (
-          <div className="border border-indigo-200 bg-indigo-50/60 rounded-lg p-3 space-y-2">
-            <div className="text-xs font-semibold text-indigo-700">
-              معاينة التوزيع (لم يُرحَّل بعد) — الموزع: {fmtMoney(preview.data.allocated_total)}
-            </div>
-            <div className="divide-y divide-indigo-100">
-              {preview.data.shares.map((s) => (
-                <div key={s.partner_id} className="flex items-center justify-between py-1 text-xs text-slate-700">
-                  <span className="font-semibold">{s.partner_name}</span>
-                  <span className="text-slate-400">رأس المال {fmtMoney(s.capital)} · نسبة {fmtMoney(s.ratio_percent)}%</span>
-                  <span className="font-bold tabular-nums">{fmtMoney(s.share)}</span>
-                </div>
-              ))}
-            </div>
+        {/* ── Empty ───────────────────────────────────────────────────── */}
+        {!isLoading && !isError && (!source || !pool) && (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Coins className="w-10 h-10 text-slate-300 mb-3" />
+            <p className="text-sm font-semibold text-slate-500">لا توجد أرباح قابلة للتوزيع حالياً.</p>
+            <p className="text-xs text-slate-400 mt-1 max-w-[240px] leading-relaxed">
+              تأكد من ترحيل الرصيد الافتتاحي أو إغلاق فترة مالية.
+            </p>
           </div>
         )}
 
-        {postedResult && (
-          <div className="border border-green-200 bg-green-50 rounded-lg p-3 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-green-700">
-              <CheckCircle2 className="w-4 h-4" />
-              تم الترحيل — قيد رقم {postedResult.entry_number}
-            </div>
-            <div className="divide-y divide-green-100">
-              {postedResult.shares.map((s) => (
-                <div key={s.partner_id} className="flex items-center justify-between py-1 text-xs text-slate-700">
-                  <span className="font-semibold">{s.partner_name}</span>
-                  <span className="text-slate-400">النسبة {fmtMoney(s.ratio_percent)}%</span>
-                  <span className="font-bold tabular-nums">{fmtMoney(s.share)}</span>
+        {/* ── Steps (only when data is ready) ─────────────────────────── */}
+        {!isLoading && !isError && source && pool && (
+          <>
+        {step === 1 && (
+          <>
+            <SidebarSection title="بيانات الأرباح المتاحة" icon={<Coins className="w-3.5 h-3.5" />}>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3 space-y-1">
+                  <p className="text-[11px] font-semibold text-slate-500">الأرباح المبقاة</p>
+                  <p className="text-lg font-black tabular-nums text-slate-800">{fmtMoney(retained)}</p>
                 </div>
-              ))}
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 space-y-1">
+                  <p className="text-[11px] font-semibold text-emerald-600">المتاح للتوزيع</p>
+                  <p className="text-lg font-black tabular-nums text-emerald-700">{fmtMoney(available)}</p>
+                </div>
+                <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3 space-y-1">
+                  <p className="text-[11px] font-semibold text-slate-500">المُوزَّع سابقاً</p>
+                  <p className="text-lg font-black tabular-nums text-slate-800">{fmtMoney(distributed)}</p>
+                </div>
+                <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 space-y-1">
+                  <p className="text-[11px] font-semibold text-indigo-600">المتبقي للتوزيع</p>
+                  <p className="text-lg font-black tabular-nums text-indigo-700">{fmtMoney(available)}</p>
+                </div>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
+                <span className="font-bold text-slate-700">المصدر: {sourceLabel}</span>
+              </div>
+            </SidebarSection>
+
+            <SidebarSection title="مبلغ التوزيع" icon={<Calculator className="w-3.5 h-3.5" />}>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <FieldLabel htmlFor="distribution-amount">المبلغ المطلوب توزيعه</FieldLabel>
+                  <div className="flex gap-2">
+                    <Input
+                      id="distribution-amount"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="0.00"
+                      type="number"
+                      min={0}
+                      max={available || undefined}
+                      className="h-9 text-end tabular-nums bg-white"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setAmount(String(available))}
+                      disabled={available <= 0}
+                      className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold shrink-0 h-9"
+                    >
+                      توزيع كامل المتبقي
+                    </Button>
+                  </div>
+                </div>
+
+                {overCap && (
+                  <Alert variant="destructive" className="p-3 bg-red-50 border-red-200 text-red-700 rounded-lg">
+                    <AlertDescription className="text-xs font-semibold leading-relaxed">
+                      المبلغ المطلوب توزيعه ({fmtMoney(amountNum)}) يتجاوز الأرباح المتاحة للتوزيع بمقدار{" "}
+                      {fmtMoney(amountNum - available)} — لا يُسمح بتوزيع أكثر من المتاح.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {isZero && amount !== "" && (
+                  <p className="text-xs text-slate-500 font-medium">مبلغ صفر لا يُنشئ قيداً ولا يسجَّل توزيعاً.</p>
+                )}
+              </div>
+            </SidebarSection>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 flex flex-col items-center justify-center space-y-1 text-center">
+              <span className="text-xs font-semibold text-blue-600">المبلغ المراد توزيعه</span>
+              <span className="text-2xl font-black text-blue-800 tabular-nums">{fmtMoney(amountNum)}</span>
             </div>
-            <div className="flex items-center gap-2 text-xs">
-              <Calculator className="w-4 h-4 text-slate-400" />
-              <span className="text-slate-500">
-                أُعيد احتساب المتاح — إن بقي مبلغ فيمكن توزيعه عبر توزيع جزئي جديد.
-              </span>
+
+            {preview.isLoading && (
+              <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+                <RefreshCw className="w-6 h-6 mb-3 animate-spin" />
+                <p className="text-sm font-medium">جارٍ احتساب المعاينة...</p>
+              </div>
+            )}
+
+            {preview.isError && (
+              <Alert variant="destructive" className="p-3 bg-red-50 border-red-200 text-red-700 rounded-lg">
+                <AlertDescription className="text-xs font-semibold leading-relaxed">
+                  فشل احتساب المعاينة: {String(preview.error)}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {preview.data && (
+              <div className="space-y-4">
+                <div className="border border-slate-100 rounded-xl overflow-hidden shadow-sm">
+                  <Table>
+                    <TableHeader className="bg-slate-50/50">
+                      <TableRow>
+                        <TableHead className="text-right text-xs font-bold text-slate-500 py-3">الشريك</TableHead>
+                        <TableHead className="text-center text-xs font-bold text-slate-500 py-3">النسبة</TableHead>
+                        <TableHead className="text-left text-xs font-bold text-slate-500 py-3">الحصة</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {preview.data.shares.map((s) => (
+                        <TableRow key={s.partner_id} className="hover:bg-slate-50/30">
+                          <TableCell className="text-right py-3 text-xs font-semibold text-slate-700">
+                            {s.partner_name}
+                          </TableCell>
+                          <TableCell className="text-center py-3 text-xs text-slate-400 font-medium">
+                            {fmtMoney(parseSafeNumber(s.ratio_percent))}%
+                          </TableCell>
+                          <TableCell className="text-left py-3 text-xs font-bold text-slate-800 tabular-nums">
+                            {fmtMoney(parseSafeNumber(s.share))}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                    <TableFooter className="bg-slate-50/30 font-bold border-t border-slate-100">
+                      <TableRow>
+                        <TableCell className="text-right py-3 text-xs text-slate-600">المجموع الموزع</TableCell>
+                        <TableCell className="text-center py-3 text-xs text-slate-400">-</TableCell>
+                        <TableCell className="text-left py-3 text-xs text-blue-700 font-extrabold tabular-nums">
+                          {fmtMoney(parseSafeNumber(preview.data.allocated_total))}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-right py-3 text-xs text-slate-600">المبلغ المتبقي</TableCell>
+                        <TableCell className="text-center py-3 text-xs text-slate-400">-</TableCell>
+                        <TableCell className="text-left py-3 text-xs text-emerald-700 font-extrabold tabular-nums">
+                          {fmtMoney(available - parseSafeNumber(preview.data.allocated_total))}
+                        </TableCell>
+                      </TableRow>
+                    </TableFooter>
+                  </Table>
+                </div>
+
+                <div className="rounded-lg border border-slate-100 bg-slate-50/50 p-3 text-xs text-slate-500">
+                  * يتم احتساب وتوزيع المبالغ بناءً على نسب رأس المال المعتمدة لكل شريك في النظام.
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-6">
+            <div className="flex flex-col items-center justify-center py-6 text-center space-y-3">
+              <div className="p-3 bg-green-50 text-green-600 rounded-full border border-green-200 shadow-sm">
+                <CheckCircle2 className="w-10 h-10" />
+              </div>
+              <h3 className="text-base font-extrabold text-green-700">تم توزيع الأرباح بنجاح</h3>
+              <p className="text-xs text-slate-500 max-w-[280px] leading-relaxed">
+                تم ترحيل قيد التوزيع بنجاح تحت رقم القيد{" "}
+                <span className="font-extrabold text-slate-800">{postedResult?.entry_number}</span>.
+              </p>
             </div>
+
+            <div className="border border-slate-100 rounded-xl bg-slate-50/30 overflow-hidden divide-y divide-slate-100">
+              <div className="p-3.5 flex justify-between items-center text-xs">
+                <span className="font-semibold text-slate-500">المبلغ الموزع</span>
+                <span className="font-black text-slate-800 tabular-nums">
+                  {fmtMoney(parseSafeNumber(postedResult?.allocated_total ?? "0"))}
+                </span>
+              </div>
+              <div className="p-3.5 flex justify-between items-center text-xs">
+                <span className="font-semibold text-slate-500">عدد الشركاء الموزع لهم</span>
+                <span className="font-black text-slate-800 tabular-nums">
+                  {postedResult?.shares.length ?? 0}
+                </span>
+              </div>
+              <div className="p-3.5 flex justify-between items-center text-xs">
+                <span className="font-semibold text-slate-500">المبلغ المتبقي</span>
+                <span className="font-black text-emerald-700 tabular-nums">
+                  {fmtMoney(available - parseSafeNumber(postedResult?.allocated_total ?? "0"))}
+                </span>
+              </div>
+            </div>
+
+            {postedResult && postedResult.shares.length > 0 && (
+              <div className="border border-slate-100 rounded-xl overflow-hidden shadow-sm">
+                <Table>
+                  <TableHeader className="bg-slate-50/50">
+                    <TableRow>
+                      <TableHead className="text-right text-xs font-bold text-slate-500 py-3">الشريك</TableHead>
+                      <TableHead className="text-left text-xs font-bold text-slate-500 py-3">الحصة الموزعة</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {postedResult.shares.map((s) => (
+                      <TableRow key={s.partner_id} className="hover:bg-slate-50/30">
+                        <TableCell className="text-right py-3 text-xs font-semibold text-slate-700">
+                          {s.partner_name}
+                        </TableCell>
+                        <TableCell className="text-left py-3 text-xs font-bold text-slate-800 tabular-nums">
+                          {fmtMoney(parseSafeNumber(s.share))}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </div>
         )}
-      </SidebarSection>
-    </div>
+          </>
+        )}
+      </div>
+    </FormPanel>
   );
 }

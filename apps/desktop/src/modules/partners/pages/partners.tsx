@@ -23,7 +23,6 @@ import { type CreatePaymentRequest } from '@erp/shared-types';
 import { usePartnerRatios } from '@modules/partners/hooks/usePartnerRatios';
 import { queryClient, PARTNER_MUTATION_KEYS, invalidateKeys } from "@shared/hooks/queryClient";
 import { START_MODE_EXISTING } from "@modules/opening-balance/lib/wizard-types";
-import { ProfitDistributionSidePanel } from "@modules/accounting/profit-distribution/components/ProfitDistributionSidePanel";
 
 export default function Partners() {
   const { openTab } = useTabs();
@@ -45,7 +44,7 @@ export default function Partners() {
     errorLabel: "فشل جلب الشركاء",
   });
 
-  const [activePanel, setActivePanel] = useState<"edit" | "drawings" | "view" | null>(null);
+  const [activePanel, setActivePanel] = useState<"edit" | "drawings" | "view" | "profit-distribution" | null>(null);
   const [editPartner, setEditPartner] = useState<PartnerDto | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -60,8 +59,6 @@ export default function Partners() {
 
   const [startMode, setStartMode] = useState<string>(START_MODE_EXISTING);
 
-  const [showProfitDistribution, setShowProfitDistribution] = useState(false);
-
   useEffect(() => {
     settingsService.getSettings()
       .then((s) => setStartMode(s.accounting_start_mode || START_MODE_EXISTING))
@@ -70,7 +67,7 @@ export default function Partners() {
 
   useEffect(() => {
     if (searchParams.get("profit-distribution") === "open") {
-      setShowProfitDistribution(true);
+      setActivePanel("profit-distribution");
       searchParams.delete("profit-distribution");
       searchParams.delete("migration");
       setSearchParams(searchParams, { replace: true });
@@ -209,7 +206,7 @@ export default function Partners() {
               closable: true,
             })
           }
-          onOpenProfitDistribution={() => setShowProfitDistribution(true)}
+          onOpenProfitDistribution={() => setActivePanel("profit-distribution")}
         />
       }
 
@@ -289,11 +286,7 @@ export default function Partners() {
         onClose={() => setPendingCapital(null)}
         onConfirm={handleCapitalConfirm}
       />
-      {showProfitDistribution && (
-        <ProfitDistributionSidePanel
-          onClose={() => setShowProfitDistribution(false)}
-        />
-      )}
+
     </>
   );
 }
