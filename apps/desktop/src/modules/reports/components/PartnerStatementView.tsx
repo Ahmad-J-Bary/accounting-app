@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { PartnerStatementComputed, PartnerStatementRow } from "@modules/reports/lib/partnerStatement";
 import { Users, TrendingUp, Wallet, Percent } from "lucide-react";
 import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
@@ -12,6 +12,7 @@ import { StatCard } from "@widgets/stats/StatCard";
 type PartnerStatementViewProps = {
   computed: PartnerStatementComputed;
   formatValue: (value: number) => string;
+  filterBar?: ReactNode;
 };
 
 function SummaryCards({ computed, formatValue }: { computed: PartnerStatementComputed; formatValue: (value: number) => string }) {
@@ -105,7 +106,7 @@ function usePartnerStatementColumns(formatValue: (value: number) => string) {
   ], [formatValue]);
 }
 
-export function PartnerStatementView({ computed, formatValue }: PartnerStatementViewProps) {
+export function PartnerStatementView({ computed, formatValue, filterBar }: PartnerStatementViewProps) {
   const [search, setSearch] = useState("");
 
   const allColumns = usePartnerStatementColumns(formatValue);
@@ -187,6 +188,7 @@ export function PartnerStatementView({ computed, formatValue }: PartnerStatement
           onColumnToggle={toggleColumn}
           onColumnsReset={resetToDefault}
           columnsModified={isModified}
+          filterBar={filterBar}
         >
           <UnifiedTable
             data={filteredRows}

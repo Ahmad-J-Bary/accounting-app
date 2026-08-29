@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { PartnerProfitShareComputed, PartnerProfitShareRow } from "@modules/reports/lib/partnerProfitShare";
 import { Users, TrendingUp, Package, CreditCard, Building2, BarChart3 } from "lucide-react";
 import { UnifiedTable, type UnifiedColumn } from "@widgets/table-shell/UnifiedTable";
@@ -13,6 +13,7 @@ import { StatCard } from "@widgets/stats/StatCard";
 type PartnerProfitShareViewProps = {
   computed: PartnerProfitShareComputed;
   formatValue: (value: number) => string;
+  filterBar?: ReactNode;
 };
 
 const summaryCards = [
@@ -136,7 +137,7 @@ function usePartnerProfitShareColumns(formatValue: (value: number) => string) {
 }
 
 export function PartnerProfitShareView(props: PartnerProfitShareViewProps) {
-  const { computed, formatValue } = props;
+  const { computed, formatValue, filterBar } = props;
   const [search, setSearch] = useState("");
 
   const allColumns = usePartnerProfitShareColumns(formatValue);
@@ -237,6 +238,7 @@ export function PartnerProfitShareView(props: PartnerProfitShareViewProps) {
           onColumnToggle={toggleColumn}
           onColumnsReset={resetToDefault}
           columnsModified={isModified}
+          filterBar={filterBar}
         >
           <UnifiedTable
             data={filteredRows}

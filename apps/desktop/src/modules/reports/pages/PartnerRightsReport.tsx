@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { OperationalTableTemplate } from "@widgets/templates/OperationalTableTemplate";
 import { Button } from "@shared/ui/button";
-import { BarChart3, Coins, Users } from "lucide-react";
+import { Coins, Users } from "lucide-react";
 import { useCurrencyContext } from "@app/providers/CurrencyContext";
 import { PartnerProfitShareView } from "@modules/reports/components/PartnerProfitShareView";
 import { PartnerStatementView } from "@modules/reports/components/PartnerStatementView";
@@ -36,6 +36,22 @@ export default function PartnerRightsReport() {
       withCode: true,
     });
 
+  const viewSwitcher = (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap">العرض:</span>
+      <Select value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+        <SelectTrigger className="w-[125px] h-8 bg-white font-bold shadow-sm border-slate-200 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {Object.entries(VIEW_OPTIONS).map(([value, label]) => (
+            <SelectItem key={value} value={value} className="text-xs font-bold">{label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
   return (
     <>
       <OperationalTableTemplate
@@ -53,27 +69,14 @@ export default function PartnerRightsReport() {
             onRefresh={() => void loadReportData()}
             lastLoadedAt={lastLoadedAt}
             extraFilters={
-              <>
-                <Select value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-                  <SelectTrigger className="h-9 w-auto min-w-[140px] rounded-lg border-slate-200 bg-white text-xs">
-                    <BarChart3 className="w-3.5 h-3.5 ms-1.5 text-slate-400" />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(VIEW_OPTIONS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  size="sm"
-                  className="h-9 rounded-lg bg-white font-black text-slate-700 border border-slate-200 hover:bg-slate-50"
-                  onClick={() => setShowProfitDistribution(true)}
-                >
-                  <Coins className="me-2 h-4 w-4" />
-                  توزيع الأرباح
-                </Button>
-              </>
+              <Button
+                size="sm"
+                className="h-9 rounded-lg bg-white font-black text-slate-700 border border-slate-200 hover:bg-slate-50"
+                onClick={() => setShowProfitDistribution(true)}
+              >
+                <Coins className="me-2 h-4 w-4" />
+                توزيع الأرباح
+              </Button>
             }
           />
         }
@@ -88,9 +91,9 @@ export default function PartnerRightsReport() {
               <p className="text-sm font-bold">لا يوجد شركاء نشطون لعرض التقرير</p>
             </div>
           ) : viewMode === "profit-share" ? (
-            <PartnerProfitShareView computed={computed.profitShare} formatValue={formatValue} />
+            <PartnerProfitShareView computed={computed.profitShare} formatValue={formatValue} filterBar={viewSwitcher} />
           ) : (
-            <PartnerStatementView computed={computed.statement} formatValue={formatValue} />
+            <PartnerStatementView computed={computed.statement} formatValue={formatValue} filterBar={viewSwitcher} />
           )
         }
       />
