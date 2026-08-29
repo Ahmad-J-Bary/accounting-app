@@ -1,6 +1,6 @@
 {
   "productName": "Almowakeb",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "identifier": "com.almowakeb.app",
   "build": {
     "frontendDist": "../../apps/desktop/dist",
